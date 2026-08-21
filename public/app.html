@@ -2838,7 +2838,33 @@ function themeVal(k, v){
 function themeVarsStyle(k){
   return Object.keys(THEME_BASE).map(function(v){ return v + ':' + themeVal(k, v); }).join(';');
 }
-function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
+/**
+ * ⭐⭐ THE DEFAULT FOLLOWS THE DEVICE, AND ONLY THE DEFAULT. Athi, 2026-08-16, comparing the app to a mockup:
+ * *"this panel looks good, with black background, letters are sharp and very professional, but our design not
+ * getting the same, why?"* Four causes were measured that day; the fourth was "no dark mode at all", and it was
+ * the one that accounted for most of the difference before typography entered into it.
+ *
+ * ⚠️⚠️ FIFTEEN THEMES SHIPPED SINCE AND THE COMPLAINT WAS STILL UNFIXED, which is the part worth recording.
+ * `dark`, `hcdark` and `contrast` all exist and all pass a11y-contrast — but `prefers-color-scheme` appeared
+ * NOWHERE in the codebase, so someone on a dark system still got the bright cream page unless they went and
+ * found the setting. Building the themes felt like solving it; nothing connected them to the question the
+ * operating system was already answering.
+ *
+ * ⚠️ AN EXPLICIT CHOICE ALWAYS WINS, INCLUDING AN EXPLICIT LIGHT ONE. This reads the OS only when nothing is
+ * stored. Someone on a dark laptop who deliberately picked Cream must keep Cream — a preference that gets
+ * overruled by the environment is not a preference.
+ *
+ * ⚠️ AND IT IS NOT LIVE-REACTIVE, deliberately. Re-theming mid-session because the OS crossed into night mode
+ * would repaint the screen under someone's hands. The device is consulted at the moment there is no answer yet.
+ */
+function themeGet(){
+  try{
+    var stored = localStorage.getItem('cb_theme');
+    if(stored) return stored;
+    if(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
+  }catch(_){ }
+  return 'cream';
+}
 /**
  * ⚠️ APPLIED BY WRITING THE TOKENS, not by swapping a stylesheet. Every theme starts from a clean slate — each
  * key any theme declares is REMOVED first — so switching Contrast → Cream cannot leave Contrast's darker `--ink`
