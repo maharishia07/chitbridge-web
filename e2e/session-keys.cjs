@@ -72,6 +72,9 @@ if (orphan.length) {
  * and a check that reports `Math.round` as undefined would be switched off within a day.
  */
 const defined = new Set();
+/* ⚠️ WHERE each top-level name was declared, not just that it was — the shadowing check at the bottom needs
+   the file, and `defined` is a flat Set that has thrown that away since the day it was written. */
+const byName = new Map();
 const called = new Map();
 const BUILTIN = new Set(['if','for','while','switch','catch','return','function','typeof','new','do','else',
   'try','with','case','delete','void','in','of','await','yield','super','this','constructor']);
@@ -94,6 +97,13 @@ const CSS_OR_BROWSER = new Set(['scalex','scaley','translatex','translatey','tra
 for (const f of files) {
   const src = stripComments(fs.readFileSync(path.join(ROOT, f), 'utf8'));
   for (const m of src.matchAll(/(?:^|\n)\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/g)) defined.add(m[1]);
+  /* ⚠️ THE SAME SCAN, ANCHORED TO COLUMN ZERO AND REMEMBERED PER FILE — the shadowing check at the bottom needs
+     to know WHERE a name was declared, not only that it was. Indented declarations are nested and share no
+     scope with another file's; only column zero enters the one global namespace these classic scripts share. */
+  for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
+    if (!byName.has(m[1])) byName.set(m[1], new Set());
+    byName.get(m[1]).add(f);
+  }
   for (const m of src.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\()/g)) defined.add(m[1]);
   /* parameters count as defined — a callback is not a missing function */
   for (const m of src.matchAll(/function\s*[A-Za-z_$\w]*\s*\(([^)]*)\)/g))
@@ -135,6 +145,38 @@ if (missing.length) {
   console.error('\n  Either it was deleted by mistake, or the name is wrong. Both are invisible to node --check.\n');
 } else {
   console.log(`✓ Call graph — ${called.size} bare calls, every app-shaped name is defined somewhere`);
+}
+
+/**
+ * ⭐⭐ AND THE OPPOSITE FAILURE — DEFINED TWICE. This guard has always asked "is every name defined
+ * somewhere"; it never asked "is any name defined TWICE", and that is a different bug with worse symptoms.
+ *
+ * ⚠️⚠️ IT COST WEEKS ONCE ALREADY. `networkScreen` and `loadNetwork` were declared in BOTH app.html and
+ * app/cap-network.js. The later script wins, so the design-first builder is what ran — but which one wins is a
+ * coin toss decided by load order, and nothing failed, nothing warned, and `node --check` is perfectly happy
+ * with two declarations of one name in two files. It was found by reading, not by any test, and only after the
+ * static guard had been printing it as a WARNING that nobody acted on.
+ *
+ * ⚠️ THE SYMPTOM IS THE PROBLEM: the dead one is not dead, it is *shadowed* — reachable the instant load order
+ * changes, or before the later file loads. Deleting the app.html pair was safe only because the router waits
+ * for `_capLoading` to clear; without that it would have been a crash rather than a stale screen.
+ *
+ * ⚠️ TOP-LEVEL DECLARATIONS ONLY. A nested helper named the same as another file's nested helper is fine —
+ * they never share a scope. Only `^function x(` at column zero enters the one global namespace these classic
+ * scripts share.
+ */
+const dupes = [];
+for (const [name, files] of byName.entries()) {
+  if (files.size > 1) dupes.push([name, [...files]]);
+}
+if (dupes.length) {
+  failed = 1;
+  console.error('\n✗ DECLARED IN MORE THAN ONE FILE — the later script silently wins:\n');
+  dupes.forEach(([n, fs_]) => console.error(`   ${n}()   ${fs_.join('  →  ')}`));
+  console.error('\n  Both are live; which one runs depends on load order. Delete one, and check the router'
+    + '\n  cannot reach the name before the surviving file loads.\n');
+} else {
+  console.log(`✓ No shadowing — no top-level name is declared in two files`);
 }
 
 process.exit(failed);
