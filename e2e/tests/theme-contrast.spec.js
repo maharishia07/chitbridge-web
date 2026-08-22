@@ -88,7 +88,13 @@ const AUDIT = `(() => {
 })()`;
 
 test.describe('Theme contrast · every theme, every screen', () => {
-  test.describe.configure({ timeout: 180_000 });
+  /**
+   * ⚠️ RAISED FROM 180s FOR THE SEED. 13 themes × 6 screens fitted in three minutes only while the screens
+   * were EMPTY; a populated account is far more text to walk on every pass, and walking it is the entire
+   * point. ⭐ A timeout is not a contrast result — it reports nothing while looking like a failure, which is
+   * the one outcome this test must never produce.
+   */
+  test.describe.configure({ timeout: 420_000 });
 
   /**
    * ⚠️⚠️ THE STATE THE SCREEN IS IN WHEN IT LOADS IS NOT THE STATE THE USER SEES.
