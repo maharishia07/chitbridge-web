@@ -1194,6 +1194,29 @@ img.attImg{object-fit:cover;display:block}
 .rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
 .rflag.high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
 .keypanel{position:absolute;inset-inline-end:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
+/**
+ * ⚠️⚠️ `vw` IS THE WRONG RULER INSIDE THE PHONE PREVIEW. Athi, 2026-08-22: *"key in the task panel shows the
+ * details, but in mobile view only half is visible."*
+ *
+ * ⭐ MEASURED, NOT GUESSED — and the two mobile modes disagree:
+ *     preview      panel 327→847 (520 wide) inside a shell of 420→860   ⚠️ starts 93px OUTSIDE the frame
+ *     real 393px   panel  34→380 (346 wide) inside a shell of   0→393   ✅ fits
+ *
+ * `body.vpmob` is a DESKTOP PREVIEW of a 440px phone, so `max-width:88vw` measured 88% of the 1280px desktop
+ * — 1126px — and constrained nothing. The panel kept its full 520px inside a 440px frame, and
+ * `.appwrap.m .shell{overflow:hidden}` cut off the half that did not fit.
+ *
+ * ⭐ SO THE BUG IS THE PREVIEW'S, AND IT STILL MATTERS: the preview exists to REPRODUCE the phone, and a
+ * frame that lies about what fits is worse than no frame — you design against it and ship the fault.
+ *
+ * `100%` resolves against the containing block, which IS the frame, so it is right in both modes and needs no
+ * `calc(50% - 220px)` correction like #assistfab does. ⚠️ Scoped to `.appwrap.m` on purpose: on the desktop
+ * the containing block is the narrow list header, and `100%` there would SHRINK a panel that works today.
+ */
+.appwrap.m .keypanel{max-width:100%}
+/* ⭐ AND ONE COLUMN ON A PHONE. Two columns of ~165px turn a six-line explanation into a column of single
+   words; the panel already scrolls (max-height + overflow-y), so height is the cheap axis and width is not. */
+.appwrap.m .keygrid{grid-template-columns:1fr}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);line-height:1.5}
