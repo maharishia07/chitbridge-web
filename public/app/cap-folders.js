@@ -349,7 +349,7 @@ function _groupSumPane(){
      we asked for a selection, and if the server did not confirm one, say the selection was ignored. */
   if (_FLD.gsIds && _FLD.gsIds.length && !g.selected) {
     out += '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp-2);margin-bottom:10px">'
-      + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
+      + '' + txf('⚠️ {ignored} This server cannot total a ticked set yet, so the figures below cover the {whole}, not your {n} chits.', { ignored: '<b>' + tx('Your selection was ignored.') + '</b>', whole: '<b>' + tx('whole track') + '</b>', n: _FLD.gsIds.length }) + '</div>';
   } else if (g.selected) {
     var miss = (g.selection_requested || 0) - (g.chits || 0);
     out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:10px">'

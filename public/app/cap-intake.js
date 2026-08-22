@@ -38,7 +38,7 @@ function intakeScreen(){
     + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' + tx('↻ Refresh') + '</button>'
     + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' + tx('✚ Record a message') + '</button>'
     + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">' + txf('A message is a {notice}; a chit is an {obligation}. Nothing here becomes a chit until you confirm it.', { notice: '<b>' + tx('notice') + '</b>', obligation: '<b>' + tx('obligation') + '</b>' }) + '</div>'
     /**
      * ⚠️ WHICH SIDE OF THE TRADE THIS ENTITY IS ON LIVES IN SETTINGS, NOT HERE.
      *
