@@ -1024,7 +1024,17 @@
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:var(--fs-2);min-height:46px;resize:vertical}
   .custreq{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
-  .rows{flex:1;overflow-y:auto;padding-bottom:var(--scroll-tail)}
+  /**
+   * ⚠️⚠️ WIDE CONTENT MUST SCROLL INSIDE ITS OWN BOX, NOT PUSH THE PAGE SIDEWAYS. Athi, 2026-08-22, after
+   * shrinking the window: the list header's column minimums add up to more than a narrow pane, and with only
+   * `overflow-y` here the excess escaped all the way to the document — measured 438px of content in a 420px
+   * window, so the WHOLE APP slid horizontally and the chrome went with it.
+   *
+   * ⭐ THE HEADER IS INSIDE `.rows`, which is what makes this the right place: header and rows scroll together,
+   * so a column stays over its own values. Putting the scroll on `.list` instead would have moved the rows and
+   * left the sticky header behind — a worse fault than the one being fixed, and one that looks deliberate.
+   */
+  .rows{flex:1;overflow-y:auto;overflow-x:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   /**
    * ⚠️⚠️ A SURFACE THAT SETS NO TEXT COLOUR AT ALL — the seventh way the pairing rule gets broken, and the only

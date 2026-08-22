@@ -98,12 +98,33 @@ function _netBusy(on){
                 || document.getElementById('mainbody') || null;
       const r = host && host.getBoundingClientRect();
       b.style.display = 'block';
+      /**
+       * ⚠️⚠️ CENTRING ON A PANE THAT RUNS OFF THE SCREEN PUTS THE MESSAGE OFF THE SCREEN. Athi, 2026-08-22:
+       * *"I have reduced the size of the window much smaller… the messages were overlapping / going away from
+       * the screen."* Measured: at a 700px window the detail pane's centre computes to **869→971** — the card
+       * was painted entirely outside the viewport, so "Reading data…" simply never appeared.
+       *
+       * ⭐ THE HOST IS STILL THE RIGHT ANCHOR — the message belongs where the eye already is, which is why it
+       * follows the detail pane rather than sitting in the chrome. What was missing is that a pane can be only
+       * PARTLY on screen. Centre on the part you can actually see, and if almost none of it is visible, fall
+       * back to the viewport rather than to a point beyond it.
+       *
+       * ⚠️ THEN CLAMP, using the card's own width. Centring the visible strip is not enough on its own: a
+       * 102px card centred 20px from the edge still hangs half off. Measured after `display:block`, so the
+       * number is the card's real width rather than a guess that rots when the text changes.
+       */
+      var vw = window.innerWidth || 0, vh = window.innerHeight || 0;
+      var cx = vw / 2, cy = vh / 2;
       if (r && r.width > 40 && r.height > 40){
-        b.style.left = Math.round(r.left + r.width / 2) + 'px';
-        b.style.top  = Math.round(r.top + r.height / 2) + 'px';
-      } else {
-        b.style.left = '50%'; b.style.top = '50%';
+        var vl = Math.max(0, r.left),  vr = Math.min(vw, r.right);
+        var vt = Math.max(0, r.top),   vb = Math.min(vh, r.bottom);
+        if (vr - vl > 60) cx = (vl + vr) / 2;      /* enough of it is on screen to aim at */
+        if (vb - vt > 60) cy = (vt + vb) / 2;
       }
+      var hw = Math.min((b.offsetWidth || 120) / 2 + 8, vw / 2);
+      var hh = Math.min((b.offsetHeight || 40) / 2 + 8, vh / 2);
+      b.style.left = Math.round(Math.max(hw, Math.min(vw - hw, cx))) + 'px';
+      b.style.top  = Math.round(Math.max(hh, Math.min(vh - hh, cy))) + 'px';
       b.style.transform = 'translate(-50%,-50%)';
     };
     if(b.style.display === 'block') paint();                    // already up — just refresh the count
