@@ -235,7 +235,7 @@ function c2PaneOrd(d){
        * thrown away, leaving a row that was nothing but a padlock. It parsed cleanly and rendered nonsense.
        */
       + ((((d.line_delivery||{})[e.line_id]||{}).delivered)
-         ? '<span title="Part of this line has been delivered. It can still be corrected, but not below what has gone out, and its unit is fixed." style="font-size:var(--fs-1);color:var(--warn-2);font-weight:700">◧ '
+         ? '<span title="Part-delivered — correctable, but not below what has gone out" style="font-size:var(--fs-1);color:var(--warn-2);font-weight:700">◧ '
            + (((d.line_delivery||{})[e.line_id]||{}).delivered) + ' out</span>'
          : '')
       + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
@@ -294,7 +294,7 @@ function c2PickBadge(l, i){
   var n = ((l && (l.ambiguous || l.variant_candidates)) || []).length;
   if (!n) return '';
   return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
-    + ' title="The catalogue has more than one of these — pick which, and the price comes with it"'
+    + ' title="More than one match — pick which"'
     + ' style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;'
     + 'border-radius:5px;padding:2px 7px;white-space:nowrap">' + tx('⚠️ pick item') + '</span>';
 }

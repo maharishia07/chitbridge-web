@@ -532,10 +532,10 @@ function acDetailHTML(){ const x=UI.acDet;
     body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){
       bar=(x.type==='human'?(x.pinSet
-            ? `<button onclick="acResetPin('${x.id}')" title="They have a PIN but forgot or locked it — clear it and issue a fresh one-time code so they set a new PIN.">${tx('🔑 Reset PIN')}</button>`
-            : `<button onclick="acReinvite('${x.id}')" title="They haven't set a PIN yet — re-issue their one-time code (e.g. if they lost it). A new code won't help once a PIN is set.">${tx('✉️ Re-invite')}</button>`)
+            ? `<button onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
+            : `<button onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`)
           :'')+
-          `<button class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — they can no longer sign in and their active tasks return to the pool. Reversible via Reactivate.">${tx('🚫 Deactivate')}</button>`;
+          `<button class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
       bar=`<button class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">${tx('↩ Reactivate')}</button><button class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">${tx('🗑 Remove permanently')}</button>`;
     }
