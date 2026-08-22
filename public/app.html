@@ -1357,6 +1357,15 @@ img.attImg{object-fit:cover;display:block}
    every other label — the list would read as ragged rather than as two tidy groups. */
 .mv-sp{width:24px;flex:0 0 auto}
 .lhcell{position:relative}
+/**
+ * ⭐ SPEC MODE — visibly not part of the product. The detail is true and useful, and it must never be mistaken
+ * for something the reader has to act on, so it is set apart: monospace, a dashed rule, and its key shown.
+ * ⚠️ It renders only when the reader chose 🧾 Spec, so no ordinary screen pays for it.
+ */
+.specnote{border:1px dashed var(--line);border-radius:8px;padding:7px 10px;margin:8px 0;
+  font-family:'Space Mono',ui-monospace,monospace;font-size:var(--fs-1);color:var(--grey);line-height:1.55}
+.specnote .speck{display:inline-block;margin-inline-end:8px;padding:1px 6px;border-radius:5px;
+  background:var(--line);color:var(--on-card);font-weight:700;letter-spacing:.03em}
 .colrz{position:absolute;inset-inline-end:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
 .colrz:hover{background:var(--blue);opacity:.5}
 .sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--card);color:var(--ink);cursor:pointer;font-family:inherit}
@@ -5490,6 +5499,35 @@ const HELP_TEXT = {
  * ⭐ ONE DEFINITION, so "pending" looks the same everywhere and a reader learns the mark once. Every sentence
  * removed here is also a sentence that never needs translating — see e2e/text-budget.cjs.
  */
+/**
+ * ⭐⭐ specNote(key, html) — DETAIL THAT BELONGS TO A SCREEN BUT NOT ON IT. Athi, 2026-08-22: *"make the app
+ * simple and push any detail as spec, and we can open it in spec mode."*
+ *
+ * ⚠️⚠️ THE TRIM KEPT RUNNING INTO THE SAME OBJECTION: the sentence being removed is usually TRUE and someone
+ * needs it. *"Multi-source fill = PIM built on MDM golden records, edited with RFC 7386 JSON Merge Patch,
+ * de-duplicated by GS1 GTIN/SKU"* is exactly right, and exactly wrong on a screen where a person is adding a
+ * product. Deleting it loses something real; leaving it makes the product a manual.
+ *
+ * ⭐ SO IT MOVES RATHER THAN DIES. One call does both jobs: it REGISTERS the detail under a key, and RENDERS
+ * it only when the reader has asked to see specs. On every other viewport it returns an empty string, so the
+ * screen is simply shorter.
+ *
+ * ⭐ AND IT CANNOT DRIFT, because there is no second document. The detail lives at the point it describes; a
+ * separate spec file would be a copy that goes stale the first time this line changes — the failure this
+ * codebase has produced three times this week alone.
+ *
+ * ⚠️ IT IS NOT TRANSLATED, ON PURPOSE. Spec text is standards, field names and mechanisms, read by integrators
+ * and reviewers; it is the one surface where our vocabulary is the RIGHT vocabulary. Wrapping it in tx() would
+ * add hundreds of strings to every language pack for an audience that reads English by definition.
+ */
+var CBSPEC = {};
+function specNote(key, html){
+  CBSPEC[key] = html;
+  if (typeof UI === 'undefined' || UI.vp !== 'spec') return '';
+  return '<div class="specnote" data-spec="' + esc(key) + '">'
+    + '<span class="speck">' + esc(key) + '</span>' + html + '</div>';
+}
+
 function pendingNote(why){
   return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;'
     + 'padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3)">⏳ <b>' + tx('Pending') + '</b>'
@@ -9497,7 +9535,7 @@ function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</di
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
   const st = STAGES[CFG.STAGE];
-  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span>` : '';
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button><button class="${UI.vp==='spec'?'on':''}" data-testid="vp-spec" onclick="setVP('spec')" title="Show the spec behind each screen — standards, field names, mechanisms">${tx('🧾 Spec')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;

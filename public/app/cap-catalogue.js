@@ -241,12 +241,19 @@ function catfStandardsModal(){
     + '</div>'; };
   var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
   var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
-    + '<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6">This catalogue is <b>not bespoke</b> — it is assembled from open, named standards. We arrange existing pieces our own way; the CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.</div>'
+    + specNote('catalogue.architecture',
+        'Not bespoke — assembled from open, named standards. The CB-unique layer '
+      + '(four-leg provenance · chit/seal · per-copy · governance) rides on top.')
     + grp('IMPLEMENTED IN CODE', 'in code')
     + grp('VOCABULARY ALIGNMENT (naming, not an engine)', 'vocabulary')
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>' + tx('PIM') + '</b> built on <b>' + tx('MDM golden records') + '</b>, edited with <b>' + tx('RFC 7386 JSON Merge Patch') + '</b>, de-duplicated by <b>' + tx('GS1 GTIN/SKU') + '</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
+    /* ⭐ STANDARDS, NOT INSTRUCTIONS — moved to spec (2026-08-22). PIM, MDM, RFC 7386 and GS1 are exactly
+       right and exactly wrong on a screen where someone is adding a product. */
+    + specNote('catalogue.standards',
+        'Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with '
+      + '<b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. '
+      + 'Cross-company sync (GDSN) is the same discipline, later.')
     + catfFieldMapHTML()
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📐 Built on open standards') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
@@ -726,7 +733,10 @@ function _cwStep3(w){
     var ref = sys !== '—' ? '<input value="' + esc(m.ref || '') + '" oninput="cwSetMapRef(\'' + esn + '\',this.value)" placeholder="field / code in ' + esc(sys) + '" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' : '<span style="font-size:var(--fs-1);color:var(--grey);flex:1">' + (f._bp ? '📎 from blueprint' : 'not mapped') + '</span>';
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:var(--fs-1);color:var(--ink-2)">' + esc(f.name) + (f._bp ? ' <span style="color:var(--purple-2);font-size:var(--fs-1)">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
   }).join('');
-  return '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
+  return '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:10px">' + txf('Map fields to your {systems} so they sync from there. These {rules} and stay for each selected item. {skip}', {
+      systems: '<b>' + tx('own systems (ERP / Tally / SAP)') + '</b>',
+      rules:   '<b>' + tx('mapping rules are saved with the catalogue design') + '</b>',
+      skip:    '<b>' + tx('Nothing from ERP? Skip.') + '</b>' }) + '</div>' + rows + (mapped ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
 }
 function _cwStep4(w){
   var mode = w.bulkMode || 'csv';
@@ -1145,7 +1155,13 @@ function _catfFaceView(){
     + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:var(--card);color:var(--purple-2);font-weight:600">' + tx('📢 Publish as blueprint') + '</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">' + tx('↺ Start over') + '</button>'
     + '</div>'
-    + '<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('📐 Built on open standards →') + '</span></div>'
+    /* ⭐ THE DOOR STAYS, THE LECTURE MOVES. The link is an action a person may want; the paragraph explaining
+       merge-patch semantics is spec. Removing the explanation and keeping the link leaves the knowledge one
+       click away instead of in the way. */
+    + specNote('catalogue.golden-records',
+        'Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, '
+      + 'keyed by SKU, edited via JSON Merge Patch.')
+    + '<div style="margin-top:14px;font-size:var(--fs-1)"><span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('📐 Built on open standards →') + '</span></div>'
     + '</div>';
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 20px var(--scroll-tail)">' + inner + '</div>';
 }
