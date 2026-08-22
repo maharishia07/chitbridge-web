@@ -241,19 +241,21 @@ function catfStandardsModal(){
     + '</div>'; };
   var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
   var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
-    + specNote('catalogue.architecture',
-        'Not bespoke — assembled from open, named standards. The CB-unique layer '
-      + '(four-leg provenance · chit/seal · per-copy · governance) rides on top.')
+    /* ⚠️ NOT a specNote. This is INSIDE catfStandardsModal — a modal a person opens BY ASKING "what is this
+       built on". Its prose is the answer, not clutter, and hiding it behind spec mode left the modal empty for
+       everyone who clicked the link. The mailbox/manual rule applies to a modal exactly as it does to a file. */
+    + '<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6">Not bespoke — assembled from open, named standards. The CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.</div>'
     + grp('IMPLEMENTED IN CODE', 'in code')
     + grp('VOCABULARY ALIGNMENT (naming, not an engine)', 'vocabulary')
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
-    /* ⭐ STANDARDS, NOT INSTRUCTIONS — moved to spec (2026-08-22). PIM, MDM, RFC 7386 and GS1 are exactly
-       right and exactly wrong on a screen where someone is adding a product. */
-    + specNote('catalogue.standards',
-        'Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with '
-      + '<b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. '
-      + 'Cross-company sync (GDSN) is the same discipline, later.')
+    /* ⚠️ ALSO NOT a specNote — same modal, same reason. ⭐ It DID lose its tx() wrappers, and that is the
+       right half of the change to keep: PIM · MDM · RFC 7386 · GS1 · GDSN are standards names, identical in
+       every language, and four language packs were carrying them as translatable keys. */
+    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:14px">'
+    + 'Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with '
+    + '<b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. '
+    + 'Cross-company sync (GDSN) is the same discipline, later.</div>'
     + catfFieldMapHTML()
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📐 Built on open standards') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
