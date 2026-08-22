@@ -4548,7 +4548,7 @@ function _chRow(c){
         ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
           + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
           + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">' + tx('Bind') + '</button></div>'
-          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address customers write TO. It is a <b>claim</b>: not active until your number is confirmed.</div>'
+          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + txf('{addr} — the address customers write TO. It is a {claim}: not active until your number is confirmed.', { addr: esc(c.address_label), claim: '<b>' + tx('claim') + '</b>' }) + '</div>'
         : '')
     + '</div>';
 }
