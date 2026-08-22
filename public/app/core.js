@@ -346,6 +346,27 @@ async function api(key, {params, query, body}={}){
   if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }
   _inflight++; _netBusy(true);
   const _t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();   /* for the spec call log */
+  /**
+   * ⭐⭐ THE CORRELATION ID, FROM THIS END. The server already mints one when the header is absent and echoes
+   * it as `X-Request-Id` — but nothing on the client sent one or kept it, so a person reporting *"it failed
+   * when I pressed Send"* could never be joined to the line that recorded why.
+   *
+   * ⭐ SENT RATHER THAN READ BACK, deliberately: the id then exists BEFORE the request leaves, so a failure
+   * with no response at all — a timeout, a dead connection, a CORS refusal — still has an identity. Reading it
+   * off the reply only works for requests that got one, which are the ones you least need to trace.
+   *
+   * ⚠️ NOT A UUID AND NOT A SECRET. Sixteen hex characters is plenty to join two logs, and it must carry no
+   * meaning: an id built from the entity or the user would leak identity into every proxy log on the path.
+   */
+  const _rid = (function(){
+    try {
+      if (window.crypto && crypto.getRandomValues) {
+        const a = new Uint8Array(8); crypto.getRandomValues(a);
+        return Array.from(a, (b) => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch(_) {}
+    return String(Date.now().toString(16)) + Math.floor(Math.random() * 1e6).toString(16);
+  })();
   try{
     const CB = (typeof window!=='undefined') ? window.CBOffline : null;
     const outboxSafe = ep.m!=='GET' && OUTBOX_KEYS.has(key);
@@ -356,15 +377,15 @@ async function api(key, {params, query, body}={}){
     // Offline + queue-safe → capture to the outbox instead of a doomed request; replays (idempotently) on reconnect.
     if(outboxSafe && CB && !CB.online()){
       CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey});
-      cblog('warn', ep.m+' '+key+' → queued offline'); return {queued:true, offline:true};
+      cblog('warn', ep.m+' '+key+' → queued offline ['+_rid+']'); return {queued:true, offline:true};
     }
     let res;
     try{
-      res = await fetch(url, {method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+      res = await fetch(url, {method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", "X-Request-Id": _rid, ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
     }catch(netErr){
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
-      if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued (net fail)'); return {queued:true, offline:true}; }
-      cblog('error', ep.m+' '+key+' → network unreachable');
+      if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued, net fail ['+_rid+']'); return {queued:true, offline:true}; }
+      cblog('error', ep.m+' '+key+' → network unreachable ['+_rid+']');
       throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved.");
     }
     if(!res.ok){
@@ -420,7 +441,7 @@ async function api(key, {params, query, body}={}){
     try {
       if (typeof specOn === 'function' && specOn()) {
         window.CBCALLS = window.CBCALLS || [];
-        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status,
+        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
