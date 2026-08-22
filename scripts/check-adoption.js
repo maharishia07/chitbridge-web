@@ -58,7 +58,28 @@ const ctx = {
   // default that could change underneath the assertions.
   SESSION: { currency: 'INR' },
   esc: (v) => String(v == null ? '' : v).replace(/[<>"&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c])),
+  /**
+   * ⚠️⚠️ ALL TEN FAILURES IN THIS FILE WERE ONE MISSING SANDBOX, NOT TEN DEFECTS. The localisation layer gave
+   * every renderer three new globals — `tx`, `txf`, `CBLocale` — and a lifted-source harness sees only what it
+   * is handed. So each case died on `CBLocale is not defined` or `tx is not defined` **before asserting
+   * anything**, and the suite reported ten red rows about the catalogue while testing nothing about it.
+   *
+   * ⭐ A test that fails for a reason unrelated to its subject is worse than a missing test: it is read as
+   * evidence the subject is broken, and the real subject stays unchecked behind the noise.
+   *
+   * `tx` is identity because English IS the key here (gettext semantics) — the faithful default, not a
+   * shortcut. `CBLocale` is the real module, evaluated below, so money formatting is tested and not imagined.
+   */
+  tx: (s) => s,
+  txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
 };
+/* CBLocale is the REAL module, not a stub — money formatting is the thing several of these cases assert on. */
+ctx.window = ctx;
+ctx.globalThis = ctx;
+ctx.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+try { new vm.Script(fs.readFileSync(path.join(root, 'public/app/locale.js'), 'utf8')).runInNewContext(ctx); }
+catch (e) { console.log('SETUP FAIL — locale.js did not evaluate: ' + e.message); process.exit(1); }
+
 try { new vm.Script(src).runInNewContext(ctx); }
 catch (e) { console.log('SETUP FAIL — lifted source did not evaluate: ' + e.message); process.exit(1); }
 
@@ -156,7 +177,12 @@ t('no field renders as the literal "undefined"', () => {
 // The wizard used to hardcode method:'cart' at finish, silently discarding the vertical's own declared method —
 // a gold or trade catalogue became a cart. These assertions run against the real cap-catalogue.js.
 const capSrc = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
+/* ⚠️ A SECOND SANDBOX IS A SECOND PLACE TO FORGET. The globals above fixed nine cases and left this one red for
+   the same reason, because cap-catalogue.js is evaluated in its own context — so the localisation globals belong
+   here too. Two contexts, one contract: whatever the app defines globally, every sandbox has to hand over. */
 const capCtx = { UI: {}, renderApp() {}, esc: (v) => String(v == null ? '' : v), val: () => '', toast() {},
+                 tx: (s) => s,
+                 txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
                  CBCatalogue: { ensure: (x) => x }, api: null, document: { getElementById: () => null } };
 try { new vm.Script(capSrc).runInNewContext(capCtx); }
 catch (e) { console.log('  XX  cap-catalogue.js did not evaluate — ' + e.message); fail++; }

@@ -54,8 +54,31 @@ const CAT = {
 
 /* ── the browser-shaped globals the browse path actually touches ───────────────────────────────────────────── */
 const painted = [];
+/**
+ * Every element the code asks for, remembered by id, so a paint is observable instead of discarded. Deliberately
+ * minimal: it answers the handful of properties a renderer touches and nothing more, because a stub that grows
+ * a whole DOM ends up testing the stub.
+ */
+const paints = new Map();
+const mount = (id) => {
+  if (!paints.has(id)) {
+    paints.set(id, {
+      id, _html: '', style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+      get innerHTML() { return this._html; },
+      set innerHTML(v) { this._html = String(v == null ? '' : v); },
+      set textContent(v) { this._html = String(v == null ? '' : v); },
+      get textContent() { return this._html; },
+      setAttribute() {}, removeAttribute() {}, getAttribute: () => null,
+      appendChild() {}, remove() {}, focus() {}, querySelector: () => null,
+      querySelectorAll: () => [], addEventListener() {}, scrollIntoView() {},
+    });
+  }
+  return paints.get(id);
+};
+
 const ctx = {
   console,
+  __painted: () => [...paints.values()].map((e) => e._html).join('\n'),
   UI: {},
   esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
@@ -65,13 +88,36 @@ const ctx = {
   // sendChit lives in app.html and is the ONE send. Stubbed here so the harness can read exactly what this screen
   // would put on the wire, without minting anything.
   sendChit: (v) => { ctx.__sent = v; return Promise.resolve({ chit_id: 'stub' }); },
+  /**
+   * ⚠️⚠️ THE HARNESS HAD BEEN FAILING SINCE THE L3 WRAP and nobody saw it, because `npm run check` was not being
+   * run. The wrap put `tx()` on labels throughout cap-network.js; the sandbox never declared it, so the screen
+   * threw `tx is not defined` before rendering anything — the one test that drives this code, dead.
+   *
+   * ⭐ Identity IS the faithful stub, not a shortcut: this codebase adopted gettext semantics, where **English
+   * is the key**. `tx('Needed by')` returns 'Needed by' whenever no pack overrides it, which is exactly the
+   * default the assertions below were written against. A stub returning a marker like `[[Needed by]]` would
+   * have been the lie.
+   */
+  tx: (s) => s,
+  txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
   SESSION: { entity: 'North Depot' },
   toast: () => {},
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   // No real DOM: every paint target resolves to nothing, which is the honest shape for a headless run. What we
   // assert on is the HTML the screen BUILDS, not where it would have put it. body/head DO accept appends, because
   // the cart mounts its popup host on create() and a stub that threw there would be testing the stub.
-  document: { getElementById: (id) => { painted.push(id); return null; },
+  /**
+   * ⚠️⚠️ RETURNING null FROM getElementById IS WHY FIVE ASSERTIONS WERE FAILING, and the product was never at
+   * fault. When this harness was written the screen built its own item rows and handed them back as a string,
+   * so reading `_netBrowseBody()` saw everything. The catalogue redesign moved row rendering INTO the shared
+   * cart, which paints through `document.getElementById(id).innerHTML` — so the rows now go somewhere the
+   * harness threw away, and the assertions were reading a surface the code had stopped using.
+   *
+   * ⭐ So the mount node is now a RECORDER: it accepts the write and keeps it. `ctx.__painted()` returns
+   * everything painted anywhere, and the assertions read the body plus the paints — which is what "did this
+   * screen render the catalogue?" actually means once a shared component owns the rows.
+   */
+  document: { getElementById: (id) => { painted.push(id); return mount(id); },
               createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }),
               querySelector: () => null,
               body: { appendChild() {} }, head: { appendChild() {} }, documentElement: { appendChild() {} } },
@@ -81,6 +127,9 @@ ctx.window = undefined;
 createContext(ctx);
 
 /* The REAL modules, in the order app.html loads them. */
+/* ⚠ locale.js FIRST. cart-ui and catalogue-ui both reach for CBLocale to format money, and without it
+   the cart bar throws mid-paint — which the old null-returning DOM stub hid, because paintBar never ran. */
+runInContext(read('public/app/locale.js'), ctx, { filename: 'locale.js' });
 runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
 runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });

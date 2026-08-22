@@ -2722,7 +2722,17 @@ async function setShop(s){
   if (s === 'closed') {
     _shopSync(prev);                                   /* not closed until it is confirmed AND saved */
     confirmAsk(tx('Close the shop?'),
-      tx('New orders will be <b>refused</b> — a customer trying to order is told the shop is closed. Chits already in flight are not affected.'),
+      /**
+       * ⚠️⚠️ THIS SENTENCE WAS HALF THE TRUTH AND THE MISSING HALF IS THE BIGGER ONE. It described only the
+       * pre-2026-08-20 behaviour — orders refused — and since `16bd665` "closed" also takes the CATALOGUE
+       * private, to everyone including the entity's own network. Athi hit exactly this while testing: another
+       * id could not read Alpha Timbers' catalogue, and nothing anywhere said why.
+       *
+       * ⭐ A confirmation that understates what it does is worse than no confirmation, because the person read
+       * it and decided. So it now names the consequence a shopkeeper would actually care about FIRST — the
+       * shutter — and says plainly that it is reversible, which is the fact that makes the choice safe to make.
+       */
+      tx('Your <b>catalogue is hidden</b> while closed — nobody can open it, not even your network. New orders are refused. Chits already in flight are not affected, and reopening restores everything.'),
       tx('Close the shop'), function(){ _shopSave(s, prev); }, true);
     return;
   }
