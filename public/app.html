@@ -178,7 +178,28 @@
      "typography" everywhere and the guard's remaining count stays a short, explainable list instead of a
      permanent nag. ⚠️ Do not add to that list — new text takes --fs-1 or larger. */
   :root{
-    --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;
+    /**
+     * ⭐⭐ TWO DISPLAY STEPS, AND THE SCALE CHOSE THEM. Athi, 2026-08-22: *"what is the industry standard, and
+     * accordingly carry out."*
+     *
+     * The steps below expand as they climb — 1.14 · 1.12 · 1.14 · 1.25 · 1.40 — so continuing at about 1.28
+     * gives 36 and 46. That is not an imported scale; it is this one carried on, and it lands where the major
+     * systems already agree: Material 3 display-small is 36, Tailwind's 4xl is 36 and its 5xl 48, Carbon's
+     * heading-04/05 are 32 and 42. 46 keeps the ratio (28→36 is 1.286, 36→46 is 1.278) and is exact for the
+     * file glyphs that were already using it.
+     *
+     * ⚠️ THE POINT IS NOT TIDINESS, IT IS THAT A RAW px DOES NOT MOVE. appearanceApply scales these tokens by
+     * 0.92 / 1 / 1.15 / 1.32, so a reader who picks Extra large gets every tokenised size — and got nothing at
+     * all from the eleven declarations written in px. The MIS hero figure, the largest number on the screen,
+     * was one of them.
+     *
+     * ⭐ AND THE GLYPHS SCALE TOO, ON PURPOSE. Nine of the eleven are emoji used as illustrations. Both Apple
+     * (Dynamic Type scales SF Symbols) and Material (Symbols carry an optical-size axis) size icons off the
+     * reader's text preference rather than pinning them — someone who needs larger text needs a larger 🚃, not
+     * a large caption beside a small picture. They take the same steps rather than a second scale nobody would
+     * remember to keep in sync.
+     */
+    --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;--fs-7:36px;--fs-8:46px;
     --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
     /**
      * ⭐⭐ --scroll-tail — EVERY SCROLLING PANE ENDS ABOVE THE FOLD, NOT AT IT (Athi, 2026-08-17: "when the page
@@ -628,7 +649,7 @@
   .misval small{display:block;font-family:inherit;font-size:var(--fs-1);font-weight:600;color:var(--grey)}
   .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
   .mislbl{font-size:var(--fs-1);font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--grey)}
-  .mishero{font-family:'Space Mono';font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:3px 0 2px}
+  .mishero{font-family:'Space Mono';font-size:var(--fs-7);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:3px 0 2px}
   .misfore{font-family:'Space Mono';font-size:var(--fs-5);font-weight:600;color:var(--grey)}
   .misbig{font-family:'Space Mono';font-size:var(--fs-6);font-weight:700}
   .misdelta{font-size:var(--fs-2);font-weight:600;color:var(--ok)}
@@ -1054,7 +1075,7 @@
   .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:var(--warn-3);background:var(--gold-soft)}
   .dback{display:none;align-items:center;gap:4px;border:0;background:none;color:var(--blue);font-weight:700;font-size:var(--fs-2);margin-bottom:8px;padding:5px 0;cursor:pointer}
   .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
-  .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink)}
+  .empty .big{font-size:var(--fs-7)}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink)}
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-4);color:var(--ink);margin-bottom:6px}
   .toast{position:fixed;inset-inline-start:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:var(--fs-2);font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -1123,7 +1144,7 @@
   .attGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:6px 0 8px;width:100%}
   .attTile{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
   .attTile:hover{background:var(--card);border-color:var(--blue)}
-  .attTileIcon{font-size:30px;line-height:1}
+  .attTileIcon{font-size:var(--fs-6);line-height:1}
   .attTileName{font-size:var(--fs-1);color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .attTileMeta{font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
   .attImg .vlen{position:absolute;bottom:4px;inset-inline-end:6px;font-size:var(--fs-1);background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
@@ -3049,7 +3070,10 @@ function themeApply(key){
  * than a heading for a reason, and that relationship has to survive the change. Setting one flat font size would
  * make every screen legible and structureless at the same time.
  */
-var FS_BASE = { '--fs-1':11, '--fs-2':12.5, '--fs-3':14, '--fs-4':16, '--fs-5':20, '--fs-6':28 };
+/* ⚠️ THE TWO LISTS MUST AGREE — :root states the default, this states what the reader's size preference
+   multiplies. A token missing here keeps its default forever and silently stops responding to Extra large,
+   which is the exact failure the display steps were added to end. See the note beside :root. */
+var FS_BASE = { '--fs-1':11, '--fs-2':12.5, '--fs-3':14, '--fs-4':16, '--fs-5':20, '--fs-6':28, '--fs-7':36, '--fs-8':46 };
 /**
  * ⭐⭐ SMALL · MEDIUM · LARGE · EXTRA LARGE. Athi, 2026-08-21: *"large, medium, small — people understand it
  * quickly."*
@@ -9413,8 +9437,8 @@ function attMedia(a,size){
      had it. */
   if(a&&a.t==='text'&&big) return a.text!=null
     ? '<pre class="atttext">'+esc(a.text)+'</pre>'
-    : '<div class="attfile"><div style="font-size:46px">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4)">reading…</div></div>';
-  if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">' + tx('Open / download') + '</a>':'')+'</div>';
+    : '<div class="attfile"><div style="font-size:var(--fs-8)">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4)">reading…</div></div>';
+  if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:var(--fs-8)">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">' + tx('Open / download') + '</a>':'')+'</div>';
   const bg=a.t==='image'?'var(--blue-tint-bg)':a.t==='video'?'var(--gold-soft)':'var(--warn-tint)';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }

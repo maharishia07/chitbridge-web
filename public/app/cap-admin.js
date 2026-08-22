@@ -527,7 +527,7 @@ function misOverview(m){
   var tot = m.committed + m.forecast, pct = tot ? Math.round(m.committed / tot * 100) : 0;
   return _misHead('Overview', '')
     + sec('Position', 'How much of the pipeline is real?',
-        '<div class="mistwo"><div><div class="mishero" style="font-size:30px">' + inr(m.committed) + '</div>'
+        '<div class="mistwo"><div><div class="mishero" style="font-size:var(--fs-6)">' + inr(m.committed) + '</div>'
         + '<div class="misnote">committed · ' + pct + '% of the book</div></div><div>' + _misSplitBar(m) + '</div></div>')
     + sec('Flow', 'What is moving through the rail?',
         '<div class="mistwo"><div>' + _misStack(m) + '</div><div>' + _misSpark(m.series) + '</div></div>')

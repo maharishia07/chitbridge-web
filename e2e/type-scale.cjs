@@ -27,14 +27,27 @@ for(const f of files){ const s=fs.readFileSync(f,'utf8');
   for(const m of s.matchAll(/font-size: *([0-9.]+)px/g)){ const v=parseFloat(m[1]); raw[v]=(raw[v]||0)+1; rawTotal++; }
   tokTotal += (s.match(/var\(--fs-[0-9]\)/g)||[]).length;
 }
-const SCALE=[11,12.5,14,16,20,28];
+/**
+ * ⚠️⚠️ READ THE SCALE, DO NOT RESTATE IT. This was `[11,12.5,14,16,20,28]` written out by hand, and the moment
+ * display steps were added the guard was measuring against a scale the app no longer had — reporting 36px and
+ * 46px as strays from a list that now contains them, and printing a header naming six sizes when there are
+ * eight.
+ *
+ * ⭐ A CHECK THAT HARDCODES WHAT IT CHECKS IS A SECOND SOURCE OF TRUTH, and it drifts exactly like the legend
+ * that fell one flag behind every time someone added a chip. `FS_BASE` is where appearanceApply reads the
+ * scale, so it is the one that is true by construction.
+ */
+const fsSrc = fs.readFileSync(path.join(__dirname,'..','public','app.html'),'utf8');
+const fsDecl = (fsSrc.match(/var FS_BASE = \{([^}]*)\}/)||[])[1] || '';
+const SCALE = [...fsDecl.matchAll(/:\s*([0-9.]+)/g)].map(m=>parseFloat(m[1])).sort((a,b)=>a-b);
+if(!SCALE.length){ console.error('  ✗ could not read FS_BASE from app.html — this report would be fiction'); process.exit(1); }
 const nearest=v=>SCALE.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a);
 let unchanged=0, shrink=0, grow=0, worst=0;
 Object.entries(raw).forEach(([v,n])=>{ v=parseFloat(v); const t=nearest(v);
   if(t===v) unchanged+=n; else if(t<v) shrink+=n; else grow+=n;
   worst=Math.max(worst, Math.abs(t-v)/v);
 });
-console.log('\n  A · MOVE THE CODE TO THE TOKENS  (scale stays 11 · 12.5 · 14 · 16 · 20 · 28)\n');
+console.log('\n  A · MOVE THE CODE TO THE TOKENS  (scale stays '+SCALE.join(' · ')+')\n');
 console.log('    '+rawTotal+' raw declarations  ->  '+unchanged+' unchanged, '+shrink+' get SMALLER, '+grow+' get BIGGER');
 console.log('    largest single jump: '+Math.round(worst*100)+'%   (and '+tokTotal+' existing token uses are untouched)');
 

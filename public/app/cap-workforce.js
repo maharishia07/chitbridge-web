@@ -221,7 +221,7 @@ async function awFinish(){
     try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,access_level:_lvl,hat:_hatCompat}});
       var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
       var otp=(r&&(r.otp||r.dev_otp))||'';
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Invite ready') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
+      UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Invite ready') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
       /**
        * ⭐⭐ TWO STEPS, AND THEY CANNOT BE ONE. A document is filed AGAINST an identity, and the identity does
        * not exist until addActor returns — so the fields are held client-side through the wizard and posted
@@ -260,7 +260,7 @@ async function awFinish(){
   }
   // Pull mode (subscribe to the customer's broker) is not built yet — gate it as coming-soon, never create a dead connector.
   if(t==='iot' && (d.aw_mode||'push')==='pull'){
-    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Pull mode — coming soon') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>' + tx('Push') + '</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
+    UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Pull mode — coming soon') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>' + tx('Push') + '</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
     UI.awStep='done'; UI.awErr=null; awRender(); return;
   }
   var cfg = t==='iot' ? {mode:d.aw_mode||'push'} : {base_url:(d.aw_baseurl||'').trim()||undefined, auth_ref:(d.aw_authref||'').trim()||undefined};
@@ -276,13 +276,13 @@ async function awFinish(){
         if(typeof _buildInstaller==='function')
           UI.awInstaller=_buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] });
       }catch(_){}
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Gateway created') + '</div>'
+      UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Gateway created') + '</div>'
         +(UI.awInstaller
           ? '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">Its one-drop installer is <b>ready</b> (key inside). Download it whenever you\'re ready to set up the Pi:</div><button class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">' + tx('📦 Download install package') + '</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px">Then run <span style="background:var(--chrome);color:var(--blue-tint-line);border-radius:6px;padding:1px 6px;font:11px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span> on the Pi, and add its <b>devices</b> here.<br><b>Didn\'t download, or lost it?</b> Open the gateway <span class=arw>→</span> <b>' + tx('📦 Create package') + '</b> — a re-created package is identical (same gateway, fresh key). Re-creation and creation give you the exact same thing.</div>'
           : '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:10px">Open it in Co-assists <span class=arw>→</span> <b>' + tx('📦 Create package') + '</b> to get the installer.</div>')
         +'</div>';
     } else {
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('System connected') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:10px">Add its endpoints in Connectors.</div></div>';
+      UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('System connected') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:10px">Add its endpoints in Connectors.</div></div>';
     }
     UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
     if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();   // refresh the panel so the new Pi/system shows immediately
@@ -292,7 +292,7 @@ function _awPreviewHtml(t){
   var m={ erp:{ic:'🔌',nm:'ERP / API',how:'The system\'s endpoints exchange records over the governed rail — processed then forgotten (receipt only).'},
           ai:{ic:'🤖',nm:'AI agent',how:'A governed AI drafts / answers under your rules — every action it takes is a chit you can see and dispute.'},
           iot:{ic:'🛰️',nm:'IoT device',how:'A Pi publishes readings to the connection string we issue — they become chits over the rail.'} }[t]||{ic:'',nm:t,how:''};
-  return '<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:var(--fs-4)">'+m.nm+' — how it works</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
+  return '<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:var(--fs-4)">'+m.nm+' — how it works</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
 }
 function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
