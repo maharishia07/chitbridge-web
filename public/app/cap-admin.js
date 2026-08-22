@@ -383,7 +383,7 @@ function misPosition(m){
       + '<div class="misnote">' + pct + '% of the book is authoritative — accepted, in progress or completed.</div>'
       + _misSplitBar(m)
     + '</div><div>'
-      + '<div class="mislbl">Forecast · nobody has committed</div>'
+      + '<div class="mislbl">' + tx('Forecast · nobody has committed') + '</div>'
       + '<div class="misfore">' + inr(m.forecast) + '</div>'
       + '<div class="misnote" style="margin-top:7px">Sent or received but not yet accepted. Real work — nobody has promised it.</div>'
       + (m.dead ? '<div class="miswarn">' + inr(m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '')
@@ -4043,7 +4043,7 @@ function _localeSettingsBody(){
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
         + 'The <b>order matters</b>. When a catalogue exists in more than one language you are shown the highest '
         + 'one on this list that its author actually wrote. This is a <b>language priority list</b> (RFC 4647) — '
-        + 'the same thing your browser sends every website as <code>Accept-Language</code>.'
+        + 'the same thing your browser sends every website as <code>' + tx('Accept-Language') + '</code>.'
         + (region ? '' : '<br>⚠️ No region set, so every language we name is offered. Pick a region above to see only the ones that fit.')
         + '</div>')
 
@@ -4086,7 +4086,7 @@ function _localeSettingsBody(){
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
         + (CBLocale.hasWorkdayOverride()
             ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' + tx('Use the regional default') + '</a> instead.'
-            : 'These come from <b>CLDR</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.')
+            : 'These come from <b>' + tx('CLDR') + '</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.')
         + '<br>⚠️ <b>' + tx('The weekend is not Saturday and Sunday everywhere.') + '</b> Saudi Arabia\'s is Friday + Saturday; '
         + 'India\'s is Sunday alone; the UAE moved to Saturday + Sunday in 2022. Any due date counted in '
         + '<i>working</i> days lands on a different day in Riyadh, Mumbai and Berlin.'

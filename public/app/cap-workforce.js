@@ -328,7 +328,7 @@ function awRender(){
          does not exist yet; noButton because the wizard's own Next/Finish drives the submit. */
       else if(sk==='docs') body=(typeof CBIdDocs!=='undefined'
           ? CBIdDocs.html([], 'owner', {noButton:true})
-          : '<div class="misnote">Loading…</div>')
+          : '<div class="misnote">' + tx('Loading…') + '</div>')
         + how('Optional now — they can add or correct these themselves later.');
       else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
       else if(sk==='mode') body=selF('aw_mode','What is sending the data?',[['push','📟 A Pi / edge box I will set up — recommended'],['pull','🔌 My existing MQTT broker / cloud — coming soon']])+how('Push: we generate a one-line installer to flash on the Pi. Pull (we subscribe to your broker) is on the roadmap — not live yet.');

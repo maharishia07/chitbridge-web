@@ -1952,7 +1952,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join("")}</div>
-      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">Ask</button></div>
+      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">${tx('Ask')}</button></div>
       ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:var(--card)">Honest by design · sample answers from the library · richer AI coming.</div>
@@ -1982,10 +1982,10 @@ function ccRender(res){
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
   modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
     <div style="font-size:var(--fs-1);color:var(--warn-3);margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
-    <label style="font-size:var(--fs-1);color:var(--grey-2)">Standard</label>
+    <label style="font-size:var(--fs-1);color:var(--grey-2)">${tx('Standard')}</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
     <div>${fields}</div>
-    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:var(--on-accent);font-weight:700;font-size:var(--fs-2);cursor:pointer">Check compliance</button>
+    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:var(--on-accent);font-weight:700;font-size:var(--fs-2);cursor:pointer">${tx('Check compliance')}</button>
     <div id="cc_result" style="margin-top:12px">${res||''}</div>`, true);
 }
 async function ccRun(){
@@ -2050,7 +2050,7 @@ function cbRenderCatalogue(v){
       txn('{count} schema field', '{count} schema fields', v.counts.fields) ].join(' · ')
   + '</div>':'';
   var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
-  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Save to my catalogue</button><button class="composebtn" onclick="cbViewMine()">' + tx('View saved') + '</button></div><div id="cb_result" style="margin-top:8px"></div>';
+  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">' + tx('Save to my catalogue') + '</button><button class="composebtn" onclick="cbViewMine()">' + tx('View saved') + '</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey-4);font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
   window._cbCat=v;
   modal(head+intro+layers+counts+items+adopt+prov, true);
@@ -2083,7 +2083,7 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--accent)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
-    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">Clear</button></div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${tx('Clear')}</button></div>
     <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
@@ -2347,7 +2347,7 @@ function renderWelcome(){
     const roles=[["business","🏪","Run my business","I sell, supply, or serve customers and want my orders on a signed rail."],["agent","🤝","Bring businesses (Agent)","I onboard shops, set them up, and earn from each one I bring that stays active."]];
     const bps = ONB.role ? ONB_BP[ONB.role] : [];
     body = `
-      <div class="welsec"><div class="welh2">I am here to…</div>
+      <div class="welsec"><div class="welh2">${tx('I am here to…')}</div>
         <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" data-testid="onb-role-${r[0]}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
       ${ONB.role?`<div class="welsec"><div class="welh2">${tx('Choose your vertical')}</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
         <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" data-testid="onb-bp-${b.k}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
@@ -2355,7 +2355,7 @@ function renderWelcome(){
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="welwrap">
-    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-inline-end:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">Sign in</button></div>
+    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-inline-end:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">${tx('Sign in')}</button></div>
     ${welPips()}
     ${body}
     <div class="welfoot">Preview <span class=arw>→</span> vertical <span class=arw>→</span> register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
@@ -2468,7 +2468,7 @@ function renderLogin(){
   let form="";
   if(L.cust){
     form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
-       <label class="fl">Your mobile OTP</label><input class="inp" id="l_cotp" placeholder="6-digit code">
+       <label class="fl">${tx('Your mobile OTP')}</label><input class="inp" id="l_cotp" placeholder="6-digit code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
        <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> Back to sign in</a></div>`;
   } else if(L.step==="id"){
@@ -2481,11 +2481,11 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
   } else if(L.step==="pin"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
-       <label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
+       <label class="fl">${tx('Your PIN')}</label><input class="inp" id="l_pin" placeholder="••••" type="password">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift <span class=arw>→</span>"}</button>`;
   } else if(L.step==="setpin"){
     form = `<div ${who}>First time — set a PIN for <b>${esc(L.id)}</b></div>
-       <label class="fl">Choose a PIN</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password">
+       <label class="fl">${tx('Choose a PIN')}</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Set PIN & enter <span class=arw>→</span>"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
@@ -3306,7 +3306,7 @@ function themePaletteHTML(){
       + "<span style=\"width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto\"></span>"
       + "<span style=\"height:4px;border-radius:2px;background:var(--ink);opacity:.7;flex:1\"></span></div>"
       + "<div style=\"display:flex;gap:3px;margin-top:5px\">"
-      + "<span style=\"font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px\">Aa</span>"
+      + "<span style=\"font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px\">' + tx('Aa') + '</span>"
       + "<span style=\"font-size:8px;font-weight:700;background:var(--ok-tint);color:var(--ok-2);border-radius:3px;padding:0 4px\">ok</span>"
       + "<span style=\"font-size:8px;font-weight:700;background:var(--danger-tint);color:var(--disp);border-radius:3px;padding:0 4px\">!</span>"
       + "</div></div></div>"
@@ -3384,7 +3384,7 @@ function themePaletteHTML(){
     + "</div>"
     + needs.map(a11yRow).join("")
     + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:4px\">"
-    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
+    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>' + tx('Okabe–Ito') + '</b>."
     + "</div>";
 }
 
@@ -4845,7 +4845,7 @@ function ccOriginHTML(){
   const who=esc(o.from||o.channel||'a message');
   return `<div data-testid="cc-origin" style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin:0 0 10px;font-size:var(--fs-2);color:var(--on-card)">
     <div style="font-weight:700">✨ ${n?(n+' line'+(n===1?'':'s')+' brought in'):'Bringing the lines in…'} from ${esc(o.channelName||o.channel||'a message')} — ${who}</div>
-    <div style="color:var(--grey);margin-top:3px">Read by a co-assist. <b>Proposed, not evidence</b> — check the quantities and prices before you send.</div>
+    <div style="color:var(--grey);margin-top:3px">Read by a co-assist. <b>${tx('Proposed, not evidence')}</b> — check the quantities and prices before you send.</div>
     ${unpriced?`<div style="margin-top:5px;color:var(--warn-3)">⚠️ ${unpriced} line${unpriced===1?'':'s'} ${unpriced===1?'has':'have'} no price — your catalogue does not stock ${unpriced===1?'it':'them'}. Set one below, or send it as a quantity-only chit.</div>`:''}
     ${ref.length?`<div style="margin-top:5px;color:var(--disp)">⚠️ ${ref.length} line${ref.length===1?'':'s'} could not be placed: ${esc(ref.map(r=>(r.name||'unnamed')+' — '+r.why).join('; '))}</div>`:''}
   </div>`;
@@ -4875,7 +4875,7 @@ function ccStepTo(){
     ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Recipient · <b>supplier order</b> <span style="font-weight:400">— locked, no CC/For</span></div>
      <div id="cc_rcpts" style="margin-top:4px"></div>
      <div id="cc_rcap" style="display:none"></div>`
-    : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>${tx('For')}</b> = on behalf of</div>
+    : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>${tx('CC')}</b> is informed · <b>${tx('For')}</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
@@ -4886,7 +4886,7 @@ function ccStepTo(){
      <div id="cc_rcpts" style="margin-top:8px"></div>
      <div id="cc_rcap" style="font-size:var(--fs-1);color:var(--grey);margin-top:4px"></div>`)
     + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
-       <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas" onchange="CC.sendas=this.value">${ccSendAsOptions()}</select></div>
+       <div style="flex:1;min-width:150px"><label class="fl">${tx('Send as')}</label><select class="inp" id="cc_sendas" onchange="CC.sendas=this.value">${ccSendAsOptions()}</select></div>
        <div style="min-width:120px"><label class="fl">External priority <span style="font-weight:400;color:var(--grey)">· informed, locked once sent</span></label><select class="inp" id="cc_priority" onchange="CC.priority=this.value">${['normal','high','urgent'].map(function(p){ return '<option value="'+p+'"'+((CC.priority||'normal')===p?' selected':'')+'>'+p.charAt(0).toUpperCase()+p.slice(1)+'</option>'; }).join('')}</select></div>
      </div>`;
 }
@@ -5309,15 +5309,15 @@ function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(ke
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   modal(`<div class="mhd"><div class="t">${tx('🧑‍💼 Add co-assist')}</div><div class="s">someone who acts for you</div></div>
-   <div class="mbody"><label class="fl">Display name</label><input class="inp" id="ac_name" placeholder="e.g. Anitha">
+   <div class="mbody"><label class="fl">${tx('Display name')}</label><input class="inp" id="ac_name" placeholder="e.g. Anitha">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">What you &amp; your team see in lists — can be their full name.</div>
      <label class="fl" style="margin-top:11px">User ID <span style="color:var(--grey);font-weight:400">— how they sign in (not their name)</span></label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. anitha">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
      <div style="background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:9px;font-size:var(--fs-2);color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
-     <label class="fl" style="margin-top:11px">Hat (what they do)</label><select class="inp" id="ac_hat"><option value="act">Act — does the work (assignable)</option><option value="manager">Manager — acts + assigns/manages</option><option value="audit">Audit — review only</option><option value="mis">MIS — reports only</option><option value="view_only">View-only</option></select>
-     <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>Editor</b> can be assigned work.</div>
+     <label class="fl" style="margin-top:11px">${tx('Hat (what they do)')}</label><select class="inp" id="ac_hat"><option value="act">${tx('Act — does the work (assignable)')}</option><option value="manager">${tx('Manager — acts + assigns/manages')}</option><option value="audit">${tx('Audit — review only')}</option><option value="mis">${tx('MIS — reports only')}</option><option value="view_only">${tx('View-only')}</option></select>
+     <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>${tx('User ID')}</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>${tx('Editor')}</b> can be assigned work.</div>
      <div class="err" id="ac_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
+   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
 }
 async function submitActor(){
   const name=val("ac_name"), key=(val("ac_key")||"").toLowerCase().trim(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
@@ -5341,10 +5341,10 @@ function actorInviteModal(head, name, login, otp){
   modal(`<div class="mhd"><div class="t">${esc(head)}</div><div class="s">share these so ${esc(name||'they')} can sign in</div></div>
    <div class="mbody">
      <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
-     <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:var(--fs-5);color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
-     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
+     <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">${tx('One-time code')}</div><div style="font-family:'Space Mono';font-weight:800;font-size:var(--fs-5);color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
+     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>${tx('Re-invite')}</b> on their card for a fresh code.</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
+   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
 }
 // In-app confirm (replaces browser confirm()). bodyHtml is raw HTML — esc() dynamic parts in the caller.
 function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel){
@@ -5448,14 +5448,14 @@ function scr(title,id,helpKey){
 const HELP_TEXT = {
   'work.assignment': {
     t: 'Task assignment',
-    b: '<b>Pull</b> — people take work from the pool.<br>'
-     + '<b>Push</b> — work is assigned to them.<br>'
-     + '<b>Both</b> — either.'
+    b: '<b>' + tx('Pull') + '</b> — people take work from the pool.<br>'
+     + '<b>' + tx('Push') + '</b> — work is assigned to them.<br>'
+     + '<b>' + tx('Both') + '</b> — either.'
   },
   'work.autoassign': {
     t: 'Auto-assign',
     b: 'Only an <b>Editor</b> can be assigned.<br><br>'
-     + '<b>Least-loaded</b> — ties go to whoever went longest without a new task. '
+     + '<b>' + tx('Least-loaded') + '</b> — ties go to whoever went longest without a new task. '
      + 'When everyone is at capacity it overflows to the default assignee.<br><br>'
      + 'Anyone on leave routes to their delegate.'
   },
@@ -5500,7 +5500,7 @@ function showHelp(key){
   if (!h) { toast('No note for "' + key + '" yet.'); return; }
   modal('<div class="mhd"><div class="t">' + esc(h.t) + '</div></div>'
     + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink)">' + h.b + '</div></div>'
-    + '<div class="mfoot"><button class="pri" onclick="closeModal()">Close</button></div>');
+    + '<div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Close') + '</button></div>');
 }
 
 /**
@@ -5563,7 +5563,7 @@ function suppliersScreen(){
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-inline-start:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-inline-start:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">' + tx('A–Z') + '</button></span></div>`}
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
@@ -6694,7 +6694,7 @@ function prodPickBarHTML(){
     <span class="cbx ${n&&n===vis?'on':''}" onclick="prodPickAll()" title="Select everything shown">${n&&n===vis?'✓':''}</span>
     <span style="font-size:var(--fs-2);font-weight:600">${n} selected</span>
     <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()" style="margin-inline-start:auto">🏷️ Categorise</button>
-    <button onclick="prodPickMode(false)">Done</button>
+    <button onclick="prodPickMode(false)">${tx('Done')}</button>
   </div>`;
 }
 /**
@@ -6732,7 +6732,7 @@ function prodCategoriseAsk(){
    <div class="mbody"><div class="bulklist">${rows}</div>
      <div class="err" id="bulk_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button>
-     <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">Apply</button></div>`);
+     <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">${tx('Apply')}</button></div>`);
 }
 function prodBulkToggle(id, which, btn){
   const B=UI._catgBulk; if(!B) return;
@@ -7055,7 +7055,7 @@ async function declareVariants(){
     const NOT = ['quantity','price','price_min','price_max','price_currency','available_qty','availability','order_input'];
     const pick = fields.filter(function(f){ return NOT.indexOf(f.field_key) < 0; });
     if(!pick.length){
-      modal('<div class="mhd">' + tx('🔗 Variants') + '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">OK</button></div>');
+      modal('<div class="mhd">' + tx('🔗 Variants') + '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('OK') + '</button></div>');
       return;
     }
     const opt = function(f, sel){ return '<option value="'+esc(f.field_key)+'"'+(sel===f.field_key?' selected':'')+'>'+esc(f.field_name||f.field_key)+'</option>'; };
@@ -7197,7 +7197,7 @@ async function _cfRun(btn){
     var badge = blocking
       ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
       : (r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">Every column is placed</span>'
+        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Every column is placed') + '</span>'
         : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
       var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
@@ -7615,7 +7615,7 @@ function prodAvailBlock(d, id){
           <option value="erp">from the ERP</option>
           <option value="iot">from a sensor</option>
         </select>
-        <button class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">Report it</button>
+        <button class="pri" onclick="saveAvail('${id}')" style="padding:7px 13px">${tx('Report it')}</button>
       </div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">Stamped with the time you report
         it. A connector can write this far more often than a person — the number is only as good as its date.</div>
@@ -8153,17 +8153,17 @@ function setFilter(k,v){ UI.filter={...(UI.filter||{}),[k]:v}; paintRowsOnly(); 
 function clearFilter(){ UI.filter={}; renderApp(); }
 function filterPanel(){ const f=UI.filter||{};
   return `<div class="filterpanel">
-    <div class="fp-row"><span>Kind</span><select onchange="setFilter('kind',this.value)">
-      <option value=""${!f.kind?' selected':''}>All</option>
-      <option value="order"${f.kind==='order'?' selected':''}>Order</option>
-      <option value="counter"${f.kind==='counter'?' selected':''}>Counter</option>
-      <option value="service"${f.kind==='service'?' selected':''}>Service</option></select></div>
+    <div class="fp-row"><span>${tx('Kind')}</span><select onchange="setFilter('kind',this.value)">
+      <option value=""${!f.kind?' selected':''}>${tx('All')}</option>
+      <option value="order"${f.kind==='order'?' selected':''}>${tx('Order')}</option>
+      <option value="counter"${f.kind==='counter'?' selected':''}>${tx('Counter')}</option>
+      <option value="service"${f.kind==='service'?' selected':''}>${tx('Service')}</option></select></div>
     <div class="fp-row"><label><input type="checkbox" ${f.disputeOnly?'checked':''} onchange="setFilter('disputeOnly',this.checked)"> Disputed only</label></div>
-    <div class="fp-row"><span>Sort</span><select onchange="setFilter('sort',this.value)">
-      <option value=""${!f.sort?' selected':''}>Default</option>
-      <option value="priority"${f.sort==='priority'?' selected':''}>Priority (queue)</option>
+    <div class="fp-row"><span>${tx('Sort')}</span><select onchange="setFilter('sort',this.value)">
+      <option value=""${!f.sort?' selected':''}>${tx('Default')}</option>
+      <option value="priority"${f.sort==='priority'?' selected':''}>${tx('Priority (queue)')}</option>
       <option value="amount"${f.sort==='amount'?' selected':''}>Amount (high <span class=arw>→</span> low)</option>
-      <option value="code"${f.sort==='code'?' selected':''}>Code</option></select></div>
+      <option value="code"${f.sort==='code'?' selected':''}>${tx('Code')}</option></select></div>
     <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
@@ -8460,7 +8460,7 @@ function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagat
    only row mark that reports something we could NOT confirm, so leaving it unexplained is the costliest gap
    of the three: a `?` a reader cannot decode is easy to read as a rendering glitch. */
  +'<div class="kbox"><div class="kt"><span class="unver">?</span> ' + tx('Unverified sender') + '</div><div class="kd">The name beside this mark is what the sender CLAIMS. We have not verified that entity, so treat it as unconfirmed until it carries a verification.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="chipst st-open">' + tx('OPEN') + '</span> <span class="chipst st-act">ACT</span> <span class="chipst st-close">' + tx('CLOSE') + '</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="chipst st-open">' + tx('OPEN') + '</span> <span class="chipst st-act">' + tx('ACT') + '</span> <span class="chipst st-close">' + tx('CLOSE') + '</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
  +'<div class="kbox"><div class="kt">' + tx('♿ Voice') + '</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
  +'</div></div>'; }
 function toggleVoice(){ UI.voice=!UI.voice; try{ localStorage.setItem('cb_voice', UI.voice?'1':''); }catch(_){ } if(UI.voice) announce('Voice announcements on'); }
@@ -8494,10 +8494,10 @@ function delAdv(k){ const a=UI.adv||{}; if(k==='amt'){delete a.amount_min;delete
 function advPanel(){ const a=UI.adv||{};
   return `<div class="advpanel" onclick="event.stopPropagation()">
     <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
-    <div class="advrow"><label>Amount</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min||''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max||''}"></div>
-    <div class="advrow"><label>Date</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
-    <div class="advrow"><label>Status</label><select class="advin" id="adv_status"><option value="">Any</option><option value="open" ${a.fstatus==='open'?'selected':''}>Open</option><option value="act" ${a.fstatus==='act'?'selected':''}>Act</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
-    <div class="advrow"><label>Priority</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>Urgent</option><option value="high" ${a.priority==='high'?'selected':''}>High</option><option value="normal" ${a.priority==='normal'?'selected':''}>Normal</option></select></div>
+    <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min||''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max||''}"></div>
+    <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
+    <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus==='open'?'selected':''}>${tx('Open')}</option><option value="act" ${a.fstatus==='act'?'selected':''}>${tx('Act')}</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
+    <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>${tx('Urgent')}</option><option value="high" ${a.priority==='high'?'selected':''}>${tx('High')}</option><option value="normal" ${a.priority==='normal'?'selected':''}>${tx('Normal')}</option></select></div>
     ${(typeof dispSearchRow==='function')?dispSearchRow(a):''}
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
   </div>`; }
@@ -8963,7 +8963,7 @@ function detailSkeleton(){
   return `<div class="loadbox" aria-busy="true" aria-label="Loading record">
     <div class="loadcard">
       <span class="spin spin-lg"></span>
-      <div class="lc-t">Loading record</div>
+      <div class="lc-t">${tx('Loading record')}</div>
       <div class="lc-s">fetching the latest details…</div>
       <div class="ribbon"></div>
     </div>
@@ -9258,8 +9258,8 @@ function detailInner(){
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">' + tx('Value') + '</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">' + tx('State') + '</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
@@ -9493,7 +9493,7 @@ function modeRibbon(){
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
   }).join("");
   return `<div class="moderibbon">
-    <b>Build preview</b><span class="pill">${st.label}</span>
+    <b>' + tx('Build preview') + '</b><span class="pill">${st.label}</span>
     <span style="font-size:var(--fs-1)">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
     <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-inline-start:8px;color:var(--on-card)">🧪 Log</button>
     ${vpsw}

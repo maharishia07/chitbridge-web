@@ -442,7 +442,7 @@ function _edgeTabHtml(){
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
   const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:start;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>' + tx('This is a positioning hypothesis') + '</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-inline-start:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
       +'<div style="position:absolute;inset-inline-start:50%;top:0;bottom:0;border-inline-start:1px dashed var(--line)"></div>'
       +'<div style="position:absolute;top:50%;inset-inline-start:0;inset-inline-end:0;border-top:1px dashed var(--line)"></div>'
@@ -698,8 +698,8 @@ function _openLegendImpl(){
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
-        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-2);font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
-        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-3);font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
+        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-2);font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">${tx('A−')}</button>
+        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-3);font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">${tx('A+')}</button>
         <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>

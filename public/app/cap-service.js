@@ -173,7 +173,7 @@ function svcPauseAsk(){
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">The other party sees this pause and can accept or reject it. If they reject it, both figures are shown and neither is overruled.</div>'
     + '<label class="fl">' + tx('Why') + '</label><select id="svc_reason" class="inp" style="width:100%;margin-bottom:10px">'
     + reasons.map(function(x){ return '<option value="' + esc(x) + '">' + esc(String(x).replace(/_/g, ' ')) + '</option>'; }).join('') + '</select>'
-    + '<label class="fl">Note (what you are waiting for)</label>'
+    + '<label class="fl">' + tx('Note (what you are waiting for)') + '</label>'
     + '<input id="svc_note" class="inp" style="width:100%;margin-bottom:10px" placeholder="asked for the serial number on 14 Aug">'
     + '<label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" id="svc_onother"> This is waiting on <b>them</b></label>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'

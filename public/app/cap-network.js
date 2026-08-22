@@ -856,7 +856,7 @@ function netMintGo(){
       + (invited.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">' + tx('INVITED — awaiting their acceptance') + '</div>'
           + invited.map(function(i){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">🤝 ' + esc(i.name) + ' <span style="color:var(--grey)">' + esc(i.handle || '') + ' · ' + esc(i.status || '') + '</span></div>'; }).join('') : '')
       + (probs.length ? probs.map(function(x){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--disp-2)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
-      + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">I have the codes — done</button></div>'
+      + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">' + tx('I have the codes — done') + '</button></div>'
       + '</div>';
     if (typeof modal === 'function') modal('<div class="mhd"><div class="t">✅ ' + esc(r.message || 'Built') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   }).catch(function(e){
@@ -1143,7 +1143,7 @@ function _netAvailBody(){
     return '<div style="padding:11px 2px;border-bottom:1px solid var(--line);' + (unknown || none ? 'opacity:.75;' : '') + '">'
       + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
       + '<b style="font-size:var(--fs-3)">' + esc(r.store) + '</b>'
-      + (r.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">YOU</span>' : '')
+      + (r.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">' + tx('YOU') + '</span>' : '')
       + (r.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(r.city) + '</span>' : '')
       + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (r.km === null || r.km === undefined ? 'distance unknown' : r.km + ' km') + '</span>'
       + '<b style="margin-inline-start:auto;font-size:var(--fs-3);color:' + qtyCol + '">' + qtyTxt + '</b></div>'
@@ -1172,7 +1172,7 @@ function _netAvailBody(){
       + (f.stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)') + '">'
       + esc((r.source || 'no source') + ' · ' + (f.label || 'no date')) + '</span></div>'
       + (unknown
-          ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">This store carries the item but has never reported a quantity. <b>Unknown is not zero</b> — worth asking before routing around it.</div>'
+          ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">This store carries the item but has never reported a quantity. <b>' + tx('Unknown is not zero') + '</b> — worth asking before routing around it.</div>'
           : (f.stale ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">This figure is ' + esc(f.label) + '. Acting on it is a guess.</div>' : ''))
       // ── ASK FOR IT ────────────────────────────────────────────────────────────────────────────────────────
       // The point of knowing who has it. This is an ordinary chit — the same rail as every other request between
@@ -2186,7 +2186,7 @@ function _transactConfig(n){
     + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + '<div style="font-size:var(--fs-1);font-weight:800;color:#2b6f8f;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">COPY THE OPERATOR (HQ)?</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">If yes, HQ keeps a copy of this node\'s transactions — this is what powers <b>traceability</b> + <b>MIS</b> across the network.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">If yes, HQ keeps a copy of this node\'s transactions — this is what powers <b>traceability</b> + <b>' + tx('MIS') + '</b> across the network.</div>'
     + _radioOpt("netSetTransactCopy('" + n.key + "',true)", copy, 'Yes — copy HQ', 'The operator sees this node\'s transactions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransactCopy('" + n.key + "',false)", !copy, 'No — node only', 'Only the counterparties hold copies; HQ does not see them.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + '</div>';
@@ -2801,7 +2801,7 @@ function _netGeneralTab(n){
     + (n.owned || isRoot ? '' :
         '<div style="margin-top:16px"><label style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em">' + tx('THEIR USER ID') + '</label>'
         + '<input value="' + esc(n.partner_ref || '') + '" oninput="netSetPartnerRef(\'' + n.key + '\', this.value)" placeholder="e.g. ravi.timbers — ask them for it" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);box-sizing:border-box">'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">Build sends them an invitation. <b>They have to accept it</b> — you cannot add another business to your network on your own.</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">Build sends them an invitation. <b>' + tx('They have to accept it') + '</b> — you cannot add another business to your network on your own.</div>'
         + (n.invited ? '<div style="font-size:var(--fs-1);color:var(--ok-2);margin-top:6px">✓ invited · ' + esc(n.invited.status || 'pending') + '</div>' : '')
         + '</div>')
     + (n.built ? '<div style="margin-top:16px;padding:11px 13px;border:1px solid #cfe0cf;border-radius:9px;background:var(--card);font-size:var(--fs-2);color:var(--ok-2);line-height:1.6">✓ <b>Built.</b> Signs in as <b style="font-family:ui-monospace,Menlo,monospace">' + esc(n.built.user_id) + '</b> · ' + esc(n.built.bridge_id) + '<br><button onclick="netReissueKey(\'' + esc(n.built.user_id) + '\')" style="margin-top:7px;padding:5px 11px;font-size:var(--fs-1)">' + tx('Issue a new sign-in code') + '</button></div>' : '')
@@ -2934,7 +2934,7 @@ function _netInheritBlock(n){
       + '</div>';
   };
   return '<div style="margin-top:16px;padding:4px 15px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 0 0">WHAT IT TAKES FROM THE NETWORK</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 0 0">' + tx('WHAT IT TAKES FROM THE NETWORK') + '</div>'
     + row('CURRENCY', cur, 'Stamped when the store is created, and never converted afterwards.')
     + row('COUNTRY', cty)
     + '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'

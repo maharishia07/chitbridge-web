@@ -703,7 +703,7 @@ function c2AssignOpen(line_id){
     + '<div style="display:flex;gap:9px;margin-bottom:14px">'
     + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + tx('TASK') + '</label>'
     + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div>'
-    + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">DUE</label>'
+    + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + tx('DUE') + '</label>'
     + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div></div>'
     + ((a.history || []).length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'

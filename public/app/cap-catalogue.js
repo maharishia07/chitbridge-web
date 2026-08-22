@@ -246,7 +246,7 @@ function catfStandardsModal(){
     + grp('VOCABULARY ALIGNMENT (naming, not an engine)', 'vocabulary')
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>' + tx('PIM') + '</b> built on <b>' + tx('MDM golden records') + '</b>, edited with <b>' + tx('RFC 7386 JSON Merge Patch') + '</b>, de-duplicated by <b>' + tx('GS1 GTIN/SKU') + '</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
     + catfFieldMapHTML()
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📐 Built on open standards') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);

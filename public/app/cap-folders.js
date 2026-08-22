@@ -549,7 +549,7 @@ function _folderMetricsPane(){
     + '<div style="margin-top:14px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' + tx('Value') + '</div>'
     + money + moneyNote + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. '
-    + '“Overdue” is <b>your</b> setting — change it in Settings <span class=arw>→</span> Policy flags, and every folder and scorecard follows.</div>'
+    + '“Overdue” is <b>your</b> setting — change it in Settings <span class=arw>→</span> Business rules, and every folder and scorecard follows.</div>'
     + '</div>';
 }
 

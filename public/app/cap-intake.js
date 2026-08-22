@@ -50,7 +50,7 @@ function intakeScreen(){
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
-    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> Policy flags</a>.</div>'
+    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> Business rules</a>.</div>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
@@ -68,7 +68,7 @@ function intakeSimHTML(){
     + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">' + tx('Record an inbound message') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' + tx('WhatsApp') + '</option><option value="email">' + tx('Email') + '</option><option value="web">' + tx('Web') + '</option><option value="sms">SMS</option></select>'
+    + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' + tx('WhatsApp') + '</option><option value="email">' + tx('Email') + '</option><option value="web">' + tx('Web') + '</option><option value="sms">' + tx('SMS') + '</option></select>'
     + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email" style="flex:1;min-width:150px">'
     + '</div>'
     + '<textarea class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>'

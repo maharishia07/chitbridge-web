@@ -21,7 +21,7 @@ function scrErr(e, subject, retry){
   return '<div class="empty"><div class="big">⚠</div>'
     + '<div class="t">'+esc("Couldn't load"+(subject?' '+subject:''))+'</div>'
     + '<div>'+esc(e&&e.message)+'</div>'
-    + (retry ? '<button class="btn" data-testid="err-retry" onclick="'+esc(retry)+'" style="margin-top:4px">Try again</button>' : '')
+    + (retry ? '<button class="btn" data-testid="err-retry" onclick="'+esc(retry)+'" style="margin-top:4px">' + tx('Try again') + '</button>' : '')
     + '</div>';
 }
 

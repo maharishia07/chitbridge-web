@@ -17,7 +17,7 @@ var STANDARDS = [
   { g:'Localisation', n:'BCP 47 (RFC 5646)',      w:'Language tags — en-IN, ar-AE, ta',                 ex:"ta-IN", exWhy:"A browser sends exactly this as <code>Accept-Language</code>. Any system on earth reads it as \"Tamil, as written in India\" — no lookup table, no mapping file.",
     s:'live',
     at:'Localisation', go:'locale', why:'A language tag nobody else parses means every counterparty re-guesses what "Tamil" meant.' },
-  { g:'Localisation', n:'UTS #35 · CLDR',         w:'Locale data and the -u- extensions (nu·hc·ca·fw)',  ex:"en-IN-u-nu-latn-hc-h23", exWhy:"One tag carrying four decisions: English, Indian grouping, Western digits, 24-hour clock. Hand it to <code>Intl</code> anywhere and you get the same answer.",
+  { g:'Localisation', n:'UTS #35 · CLDR',         w:'Locale data and the -u- extensions (nu·hc·ca·fw)',  ex:"en-IN-u-nu-latn-hc-h23", exWhy:"One tag carrying four decisions: English, Indian grouping, Western digits, 24-hour clock. Hand it to <code>' + tx('Intl') + '</code> anywhere and you get the same answer.",
     s:'live',
     at:'Localisation', go:'locale', why:'Lakh vs million, month names, which days are the weekend — facts about 200 countries we would otherwise guess. CLDR told us the UAE weekend changed in 2022 when our own comments said otherwise.' },
   { g:'Localisation', n:'RFC 4647',               w:'Language priority list and matching',               ex:"ta, en, hi", exWhy:"Your priority list. A catalogue written in <b>en</b> and <b>hi</b> shows you the <b>en</b> one — the version its author wrote, chosen not translated.",
@@ -259,7 +259,7 @@ function stdRecordHTML(opts){
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">' + tx('One chit, every standard in it') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:6px">'
     +   '500 kg of pepper leaving Chennai for Dubai. Each field carries somebody else\'s standard, so the record '
-    +   'arrives already legible to a system that has never heard of us. <b>Greyed fields are not built yet</b> — '
+    +   'arrives already legible to a system that has never heard of us. <b>' + tx('Greyed fields are not built yet') + '</b> — '
     +   'shown rather than omitted, because a demonstration that quietly includes what we have not done is worse '
     +   'than the list it was meant to make concrete.'
     + '</div>'
