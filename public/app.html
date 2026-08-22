@@ -9498,6 +9498,39 @@ function setVP(v){
   try{ document.body.classList.toggle('vpmob', v==='mob'); }catch(_){}
   renderApp();
 }
+/**
+ * ⭐⭐ AND THE SAME QUESTION, ASKED AGAIN WHEN THE WINDOW CHANGES. Athi, 2026-08-22: *"I have reduced the size
+ * of the window much smaller… the messages were overlapping / going away from the screen."*
+ *
+ * ⚠️⚠️ THE LAYOUT MODE WAS DECIDED ONCE, AT BOOT, AND NEVER REVISITED —
+ * `UI.vp = lsGet('cb_vp', innerWidth <= 820 ? 'mob' : 'lap')`. The rule was right and it ran exactly one time.
+ * Open the app wide and then drag the window narrow and you keep the LAPTOP grid — a ~212px nav beside a 340px
+ * list — inside a 360px window. Measured: the list header started at **x=424** in a 420px viewport, so the
+ * page slid sideways and took the chrome with it. Nothing was mis-sized; the app was answering a question
+ * about a window that no longer existed.
+ *
+ * ⭐ AN EXPLICIT CHOICE STILL WINS. `cb_vp` is written ONLY by `setVP`, which is the dev ribbon's Laptop /
+ * Mobile toggle — boot merely reads it with a default. So a stored value means a person chose, and this leaves
+ * it alone; it re-decides only for everyone who never expressed a preference, which is every real user.
+ *
+ * ⚠️ IT DOES NOT PERSIST WHAT IT DECIDES. Writing `cb_vp` here would turn one accidental drag into a permanent
+ * preference and stop this rule ever running again — the same "decided once" bug, re-created by its own fix.
+ *
+ * ⚠️ DEBOUNCED, because a drag fires resize continuously and `renderApp()` rebuilds the shell. It also only
+ * acts when the answer CHANGES, so dragging around inside one mode costs nothing.
+ */
+var _vpAutoT = null;
+function _vpAutoCheck(){
+  try{
+    if (lsGet('cb_vp', '')) return;                    /* a deliberate choice — not ours to override */
+    var want = (window.innerWidth <= 820) ? 'mob' : 'lap';
+    if (UI.vp === want) return;
+    UI.vp = want;
+    try{ document.body.classList.toggle('vpmob', want === 'mob'); }catch(_){}
+    renderApp();
+  }catch(_){}
+}
+try{ window.addEventListener('resize', function(){ clearTimeout(_vpAutoT); _vpAutoT = setTimeout(_vpAutoCheck, 160); }); }catch(_){}
 let DRAG=false;
 /**
  * ⚠️ THE DIVIDER MUST WRITE THE WIDTH THE CURRENT SCREEN READS. It always wrote `UI.lw` — the chit list's width
