@@ -336,8 +336,25 @@ function _misSplitBar(m){
 }
 function _misStack(m){
   var t = m.chits || 1;
-  var seg = function(n, col){ return n ? '<span style="background:' + col + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
-  return '<div class="misstack">' + seg(m.open, 'var(--blue)') + seg(m.in_progress, 'var(--prog)') + seg(m.closed, 'var(--ok)') + '</div>'
+  /**
+   * ⚠️⚠️ EVERY BACKGROUND MUST NAME ITS TEXT COLOUR, and this was the one renderer that did not. Found by
+   * THEME-01 once the account was seeded: `hcdark / mis` — white on `rgb(143,190,255)` at **1.91:1**.
+   *
+   * ⭐ IT IS THE ONLY BAR THAT PUTS THE NUMBER INSIDE THE FILL. `_misSplitBar` and both `miskey` swatches pair
+   * each background with its `--on-*` token; this one wrote the count onto the segment and let it inherit the
+   * card's ink — white in every dark theme.
+   *
+   * ⭐⭐ AND IT FAILED IN THE HIGH-CONTRAST DARK THEME, which exists precisely for people who need contrast.
+   * `--blue` is LIGHTENED in dark themes so it reads as an accent ON dark; using it as a BACKGROUND inverts
+   * that relationship, and inherited white then sits on a pale blue. A token is readable in one direction
+   * only — which is exactly what the paired `--on-*` tokens are for.
+   *
+   * ⚠️ IT COULD NOT HAVE BEEN CAUGHT ON AN EMPTY ACCOUNT: `seg()` returns '' when the count is zero, so with
+   * no chits there is no segment, no text, and nothing to measure. This is the bug M3 was worth doing for.
+   */
+  var seg = function(n, col, on){ return n ? '<span style="background:' + col + ';color:' + on + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
+  return '<div class="misstack">' + seg(m.open, 'var(--blue)', 'var(--on-accent)')
+    + seg(m.in_progress, 'var(--prog)', 'var(--on-warn)') + seg(m.closed, 'var(--ok)', 'var(--on-ok)') + '</div>'
     + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Open</span>'
     + '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> In progress</span>'
     + '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> Closed</span></div>';
