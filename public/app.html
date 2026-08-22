@@ -5461,6 +5461,31 @@ const HELP_TEXT = {
   },
 };
 
+/**
+ * ⭐⭐ WORK STATUS: PENDING — the short, honest form. Athi, 2026-08-22: *"if we have not completed the work, say
+ * work status pending. Reduce the text."*
+ *
+ * ⚠️⚠️ EVERY UNFINISHED CORNER HAD GROWN ITS OWN PARAGRAPH. Settings alone carried *"The channels API is not on
+ * this server yet (the panel shipped ahead of it). Nothing is wrong with your account — deploy…"* and *"Policy
+ * flags are not migrated on this environment (b130). The card is here; the column is not — changes will not
+ * save."* Each was written to be reassuring and each is a paragraph a person has to read to learn one bit:
+ * **this does not work yet.**
+ *
+ * ⭐ AND THE PARAGRAPH DOES NOT EVEN HELP THE READER IT WAS WRITTEN FOR. A migration number and a deploy order
+ * are OUR vocabulary; the only thing that changes what they do next is whether to expect it to work.
+ *
+ * ⚠️ IT STILL SAYS *WHY* IN A CLAUSE, because "Pending" alone invites a support message. One clause, in their
+ * words, not ours: what is not there, never which migration is missing.
+ *
+ * ⭐ ONE DEFINITION, so "pending" looks the same everywhere and a reader learns the mark once. Every sentence
+ * removed here is also a sentence that never needs translating — see e2e/text-budget.cjs.
+ */
+function pendingNote(why){
+  return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;'
+    + 'padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3)">⏳ <b>' + tx('Pending') + '</b>'
+    + (why ? ' — ' + esc(why) : '') + '</div>';
+}
+
 function helpQ(key, title){
   return '<button type="button" data-testid="help-q-' + key + '" onclick="showHelp(\'' + key + '\')"'
     + ' title="' + esc(title || 'Explain this') + '" aria-label="' + esc(title || 'Explain this') + '"'

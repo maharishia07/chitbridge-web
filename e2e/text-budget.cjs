@@ -73,8 +73,34 @@ function classify(s) {
   return 'LONG LABEL';
 }
 
+/**
+ * ⭐⭐ TRIM THE MAILBOX, KEEP THE MANUAL — the split that makes this number actionable (L3, 2026-08-22).
+ *
+ * The first version reported one pile of 579 explanations and read as an instruction to delete them all. But
+ * **cap-legend.js alone holds 69, and the Legend is the screen whose entire job is to explain.** Trimming
+ * there is not tightening the product, it is deleting its documentation — and `cap-readiness` (what a standard
+ * requires) and `cap-network` (a design tool you reason inside) are the same kind of surface.
+ *
+ * ⚠️ SO A BIG TOTAL WAS THE WRONG TARGET. Athi's rule is "mailbox not manual": the screens a person works in
+ * every day must be terse, and the ones they visit to LEARN are allowed prose. Only the first group is debt.
+ *
+ * ⚠️ THIS LIST IS A JUDGEMENT AND SHOULD BE ARGUED WITH, not treated as measurement. It is here so the
+ * judgement is visible and revisable rather than applied silently inside a trim.
+ */
+const MANUAL = [
+  'cap-legend.js',      /* the capability map — it exists to explain */
+  'cap-readiness.js',   /* what a standard demands, and why */
+  'cap-network.js',     /* a design tool: you reason inside it, you do not run your day in it */
+  'cap-help.js',        /* the help itself */
+  'cap-assist.js',      /* the assistant's own copy */
+];
+const isManual = (src) => MANUAL.some((m) => String(src).indexOf(m) >= 0);
+
 const bucket = { LABEL: [], 'LONG LABEL': [], EXPLANATION: [] };
 for (const e of entries) bucket[classify(e.msgid)].push(e);
+
+const mailboxProse = bucket.EXPLANATION.filter((e) => !isManual(e.source));
+const manualProse  = bucket.EXPLANATION.filter((e) => isManual(e.source));
 
 const words = (arr) => arr.reduce((a, e) => a + e.msgid.trim().split(/\s+/).length, 0);
 const total = entries.length;
@@ -88,12 +114,20 @@ for (const k of ['LABEL', 'LONG LABEL', 'EXPLANATION']) {
 console.log('  ' + '-'.repeat(62));
 console.log('  TOTAL        ' + String(total).padStart(4) + '   100%   ' + String(words(entries)).padStart(5) + ' words');
 
+/* ⭐ The number that is actually work, separated from the number that is the product doing its job. */
+console.log('\n  AND OF THE EXPLANATIONS\n  ' + '-'.repeat(62));
+console.log('  MAILBOX      ' + String(mailboxProse.length).padStart(4) + '         ' + String(words(mailboxProse)).padStart(5)
+  + ' words   ← the debt: screens worked in daily');
+console.log('  MANUAL       ' + String(manualProse.length).padStart(4) + '         ' + String(words(manualProse)).padStart(5)
+  + ' words   ← legend · readiness · network · help (prose IS the job)');
+console.log('  ' + '-'.repeat(62));
+
 /* the worst offenders — longest explanations, which cost the most in every language */
-const worst = bucket.EXPLANATION
+const worst = mailboxProse
   .slice()
   .sort((a, b) => b.msgid.length - a.msgid.length)
   .slice(0, 15);
-console.log('\n  THE LONGEST EXPLANATIONS — each of these is a sentence per language, forever\n');
+console.log('\n  THE LONGEST MAILBOX EXPLANATIONS — the trim list (the manual is left alone)\n');
 worst.forEach((e) => console.log('   ' + e.source.padEnd(30) + e.msgid.slice(0, 88)));
 
 const byFile = {};

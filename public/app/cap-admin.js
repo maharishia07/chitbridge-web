@@ -433,7 +433,7 @@ function _misOverdue(m){
   var s = m.srv;
   if (!s || !s.all) {
     return '<div class="misnote" style="margin-top:14px">⚠️ Overdue is unavailable — the server measurement could not be read. '
-      + 'It is deliberately <b>not</b> recomputed here: a second count that quietly disagreed with the folder pane would be worse than none.</div>';
+      + 'It is deliberately <b>not</b> as shown in the folder pane.</div>';
   }
   var n = s.all.overdue || 0, d = s.overdue_days;
   var mine = (s.received && s.received.overdue) || 0, theirs = (s.sent && s.sent.overdue) || 0;
@@ -490,7 +490,7 @@ function misTrust(m){
         + '<div class="misnote">' + chanTxt + '</div></div>'
     + '</div>'
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
-    + '<div class="miswhy">⚠️ <b>' + tx('Counterparty reliability') + '</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. It needs behaviour over time that nothing currently records. Shown as plain counts until that exists, rather than as a score.</div>';
+    + '<div class="miswhy">⚠️ <b>' + tx('Counterparty reliability') + '</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. Shown as plain counts, not a score.</div>';
 }
 /**
  * ⭐ USAGE AGAINST THE DECLARED PLAN. The limits come from PLAN (declared in Governance → Constitution); this band
@@ -535,7 +535,7 @@ function misPlan(m){
     + meter('Networks formed', 0, null, 'not counted on this screen')
     + meter('Data stored', 0, null, 'not counted on this screen')
     + '<div class="miswhy">These four sat on the governance card as <b>metered</b> rows, two of them showing '
-      + '<b>—</b> while this screen was already counting chits. Limits are declared there; what you used is measured here.</div>';
+      + '<b>—</b> while this screen counted chits. Your plan sets the limit; this is what you have used.</div>';
 }
 function misOverview(m){
   var sec = function(name, q, inner){
@@ -2944,7 +2944,7 @@ function govDecl(label){
    the value; it does not own it. */
 function govRefHTML(label){
   var d = govDecl(label);
-  if (!d) return '<div class="misnote">⚠️ <b>'+esc(label)+'</b> is not declared in Governance — nothing to show.</div>';
+  if (!d) return '<div class="misnote">⚠️ <b>'+esc(label)+'</b> is not set — nothing to show.</div>';
   return '<div class="govref"><span class="govref-k">'+esc(label)+'</span>'
     + '<span class="govref-v">'+esc(d.value)+'</span>'
     + '<button class="govref-go" onclick="govGoTo('+d.layerIndex+')" title="Open the layer that declares this">'
@@ -4333,7 +4333,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        */
       + '<div style="border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px">'
         + '<div class="sec" style="margin:0 0 8px">' + tx('📎 Attachment policy') + '</div>'
-        + '<div class="misnote" style="margin-bottom:9px">Declared once, in the governance layers. Shown here so you can see what applies.</div>'
+        + '<div class="misnote" style="margin-bottom:9px">Set for your business. Shown here.</div>'
         + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
       + '</div>';
     else if (k === "channels"){ out = _misHead('Channels', '') + channelsCard();
@@ -4451,12 +4451,12 @@ function channelsCard(){
 function channelsInner(){
   var head = '<div class="sec" style="margin:0 0 4px">📡 Channels '
     + '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">inbound · live</span></div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Where messages come in from. Bind the number or address a customer writes to, and anything sent there lands in <b>' + tx('📨 Intake') + '</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Bind the number or address customers write to. Anything sent there lands in <b>' + tx('📨 Intake') + '</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
   if(_CH.busy && !_CH.data) return head+'<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
   /* ⚠️ A MISSING ENDPOINT IS NOT A BROKEN SCREEN, and must not be reported as one. The API deploys separately from
      this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
      fault in their own account. Name the actual state: the server has not shipped this yet. */
-  if(_CH.notDeployed) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--warn-3)">The channels API is not on this server yet (the panel shipped ahead of it). Nothing is wrong with your account — deploy the API and reload.</div>';
+  if(_CH.notDeployed) return head+pendingNote('this server has not shipped channels yet');
   if(_CH.err) return head+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:var(--fs-2);color:var(--disp)">'+esc(_CH.err)+'</div>';
   if(!_CH.data) return head+'<div style="font-size:var(--fs-2);color:var(--grey)">Not loaded.</div>';
   /* The route answers 200 with a note when the table is not there — say which it is, because "no channels" and
@@ -4530,14 +4530,14 @@ function _chRow(c){
                    approved, and a template whose text differs from the approved one is simply rejected. */
                 + '<div style="margin-top:4px;color:var(--grey)">Submit this to Meta word for word:</div>'
                 + '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);white-space:pre-wrap;color:var(--on-bg)">'+esc(t.body)+'</div>'
-                + (state!=='approved' ? '<div style="margin-top:3px;color:var(--warn-2)">Until Meta approves this, nothing can be sent more than 24 hours after the customer last wrote.</div>' : '')
+                + (state!=='approved' ? '<div style="margin-top:3px;color:var(--warn-2)">Until approved: no sending beyond 24h after the customer writes.</div>' : '')
                 + '</div>'; }).join('') : '')
           ; }).join('')
     + (_CH.adding===c.key
         ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
           + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
           + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">' + tx('Bind') + '</button></div>'
-          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address your customers write TO, not theirs. It is a <b>claim</b>: it starts inert and receives nothing until the platform confirms the number is yours.</div>'
+          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address customers write TO. It is a <b>claim</b>: not active until your number is confirmed.</div>'
         : '')
     + '</div>';
 }
@@ -4604,12 +4604,12 @@ function policyFlagsInner(){
     +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
-  var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';
+  var warn = !_POL.migrated ? pendingNote('not available on this environment — changes will not save')+'<div style="height:7px"></div>' : '';
   var err = _POL.err ? '<div style="color:var(--disp);font-size:var(--fs-1);margin-top:6px">'+esc(_POL.err)+'</div>' : '';
-  return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
+  return '<div class="sec" style="margin:0 0 4px">🚩 Business rules <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>' + tx('7-layer block above') + '</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
     +warn+rows+err
-    +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> self-chit copy, and which side of the trade you are on (inbound pricing). Expiry and retention are declared, not yet enforced.</div>';
+    +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ pending.</div>';
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
