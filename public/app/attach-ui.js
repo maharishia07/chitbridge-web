@@ -258,6 +258,39 @@ function cbAttachUnstage(bucket, key){
 }
 
 /**
+ * ⭐⭐ cbAttachAccept — THE ONE PLACE THAT DECIDES WHETHER A FILE MAY BE ATTACHED (M13).
+ *
+ * ⚠️⚠️ THIS RULE WAS WRITTEN THREE TIMES: twice in this file (stage and the immediate upload) and once in
+ * compose's `ccAddFiles`. Three copies of one decision, and they had already drifted — **compose never checked
+ * for an empty file.** Pick a 0-byte photo in compose and it was accepted, held, sent, and became an
+ * attachment row with no bytes behind it: the exact broken promise this codebase keeps refusing.
+ *
+ * ⭐ AND THE DRIFT WAS INVISIBLE because each copy was correct on the day it was written. Nothing compares
+ * them, nothing fails when they disagree, and the one that matters most is on the most-used screen.
+ *
+ * ⚠️ THE SIZE MESSAGE IS PART OF THE RULE, NOT DECORATION. Compose's copy said "over 6MB — skipped"; this one
+ * names the actual size AND the limit, because "your file is too big" without either number leaves a person
+ * guessing how much smaller is small enough.
+ *
+ * ⚠️ REFUSED HERE, NOT AT THE SERVER. base64 inflates by about a third, so a 9 MB file becomes a 12 MB request
+ * that is read, encoded and posted in full before the 413 comes back — on a phone connection that is a long
+ * wait for a rejection that was knowable before the first byte moved.
+ *
+ * Returns true if the file may proceed; toasts and returns false if not.
+ */
+function cbAttachAccept(file) {
+  if (!file) return false;
+  if (file.size > CBATT.maxBytes) {
+    toast('"' + file.name + '" is ' + cbAttachSize(file.size) + ' — the limit is ' + cbAttachSize(CBATT.maxBytes) + '. Send a smaller copy.');
+    return false;
+  }
+  /* ⚠️ A 0-BYTE FILE IS NOT A SMALL FILE. It uploads happily and produces an attachment that opens to nothing —
+     worse than a refusal, because it looks like evidence was sent. */
+  if (!file.size) { toast('"' + file.name + '" is empty'); return false; }
+  return true;
+}
+
+/**
  * stage — choose a file now, send it later. Returns the staged entry, or null if cancelled/refused.
  *
  * ⚠️ THE SAME LIMITS AS AN IMMEDIATE UPLOAD, APPLIED HERE. A staged file that is too large is refused at the
@@ -267,11 +300,7 @@ async function cbAttachStage(bucket, opts){
   opts = opts || {};
   var file = await cbAttachChoose();
   if (!file) return null;                                  // cancelled — silent, cancelling is not an error
-  if (file.size > CBATT.maxBytes) {
-    toast('"' + file.name + '" is ' + cbAttachSize(file.size) + ' — the limit is ' + cbAttachSize(CBATT.maxBytes) + '. Send a smaller copy.');
-    return null;
-  }
-  if (!file.size) { toast('"' + file.name + '" is empty'); return null; }
+  if (!cbAttachAccept(file)) return null;
 
   var entry = { key: 'stg' + (++CBATT.stageSeq), file: file, name: file.name, size: file.size,
                 mime: file.type || 'application/octet-stream',
@@ -395,11 +424,7 @@ async function cbAttachPick(ctxJson){
   /* ⚠️ REFUSED HERE, NOT AT THE SERVER. base64 inflates by about a third, so a 9 MB file becomes a 12 MB request
      that is read, encoded, and posted in full before the 413 comes back — on a phone connection that is a long
      wait for a rejection that was knowable before the first byte moved. Same 6 MB ceiling as MAX_BYTES. */
-  if (file.size > CBATT.maxBytes) {
-    toast('"' + file.name + '" is ' + cbAttachSize(file.size) + ' — the limit is ' + cbAttachSize(CBATT.maxBytes) + '. Send a smaller copy.');
-    return null;
-  }
-  if (!file.size) { toast('"' + file.name + '" is empty'); return null; }
+  if (!cbAttachAccept(file)) return null;
 
   CBATT.busy = true;
   toast('Attaching "' + file.name + '"…');

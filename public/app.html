@@ -5126,11 +5126,24 @@ async function sendChit(v){
  *
  * ⭐ One number, read from the shared surface. Falls back to the literal only if attach-ui has not loaded —
  * it is a `<script src>` in this file, so that is a defensive branch, not an expected one.
+ *
+ * ⚠️⚠️ M13, 2026-08-22 — SHARING THE NUMBER WAS NOT SHARING THE RULE, and the gap had already produced a bug.
+ * The cap was read from `CBATT.maxBytes`, but the DECISION built around it was still written here, and this
+ * copy **never checked for an empty file**. A 0-byte photo picked in compose was accepted, held, sent, and
+ * became an attachment row with no bytes behind it — which is worse than a refusal, because it looks like
+ * evidence was sent. Both of attach-ui's own paths had refused it since the day they were written.
+ *
+ * ⭐ SO THE GATE MOVED, NOT JUST THE CONSTANT. `cbAttachAccept()` is now the single place that decides whether
+ * a file may be attached, and all three callers ask it. The old comment was right that a shared NUMBER beats
+ * three literals; it just stopped one step short of the thing that actually diverged.
+ *
+ * ⚠️ NO FALLBACK BRANCH ON PURPOSE. attach-ui.js is a plain `<script src>` in this file, so it is loaded before
+ * any of this can run — and a fallback would be a fourth copy of the rule, reintroducing the bug for the case
+ * nobody can reach.
  */
 function ccAddFiles(files){ CC.files=CC.files||[];
-  var cap=(typeof CBATT!=='undefined'&&CBATT.maxBytes)||6*1024*1024;
   for(var k=0;k<files.length;k++){ var f=files[k];
-    if(f.size>cap){ toast(f.name+' is over '+Math.round(cap/1024/1024)+'MB — skipped.'); continue; }
+    if(!cbAttachAccept(f)) continue;
     CC.files.push(f); }
   ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
