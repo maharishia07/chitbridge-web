@@ -1133,7 +1133,10 @@
   body.vpmob .modal,body.vpmob .modal.wide{width:440px;max-width:440px}
   /* ⚠️ z-index 270 sits BELOW .mover (280) deliberately — see mountAssist. At 300 this pill covered compose's
      primary button on a narrow screen and the wizard could not be advanced at all. */
-  #assistfab{position:fixed;inset-inline-end:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:270}
+  /* --fab-lift is set by fabClear() after every paint: 0 when nothing actionable is under the pill, otherwise
+     just enough to clear it. A transition so the move reads as the pill stepping aside, not as a jump. */
+  #assistfab{position:fixed;inset-inline-end:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + var(--fab-lift,0px) + env(safe-area-inset-bottom,0px));z-index:270;transition:bottom .18s ease}
+  @media (prefers-reduced-motion: reduce){ #assistfab{transition:none} }
   body.vpmob #assistfab{inset-inline-end:calc(50% - 220px + 16px)}
   body.vpmob .composepill{inset-inline-start:calc(50% - 220px + 16px)}
   /**
@@ -1896,6 +1899,53 @@ function _screenChain(){ var sc=curScreen(); var chain=[sc];
                 'chit-detail':['task'], 'chit-messages':['chit-detail','task'] };
   (parents[sc]||[]).forEach(function(p){ if(chain.indexOf(p)<0) chain.push(p); }); return chain.join(','); }
 function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return _fineScreen(); const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
+/**
+ * ⭐⭐ THE ASSISTANT GETS OUT OF THE WAY OF REAL WORK. Athi, 2026-08-22, with a screenshot of a supplier order:
+ * *"assistant is not floating, and hence it is hiding the checkout button. Under assistant if something else is
+ * there it has to automatically move, or at least it has to float so it will not disturb the valid operation."*
+ *
+ * ⚠️⚠️ AND `--scroll-tail` COULD NOT HAVE HELPED, THOUGH IT LOOKS LIKE THE SAME BUG. That fix ends every
+ * SCROLLING pane above the fold, so the last row can be pushed out from under the pill. A step-flow footer
+ * (`.cbst-foot` — Their details · Save draft · Check out) is not in the scroll area at all: it is the last row
+ * of the pane, pinned there by the layout. There is nothing to scroll, so the pill sits on the button forever
+ * and takes every tap meant for it. Same symptom, different mechanism, and the earlier fix quietly did not
+ * cover it.
+ *
+ * ⭐ SO THE PILL ASKS WHAT IS BENEATH IT rather than anyone maintaining a list of screens that have footers.
+ * `elementsFromPoint` along the pill's own width finds whatever is really underneath after layout; if any of it
+ * is actionable, the pill lifts just above that thing. A rule about BUTTONS beats a rule about screens: the
+ * next screen with a footer inherits it for free, and a screen that loses its footer gets its 16px back.
+ */
+function fabClear(){
+  var fab = document.getElementById('assistfab');
+  if(!fab) return;
+  var root = document.documentElement;
+  try{
+    root.style.setProperty('--fab-lift','0px');           // measure from the resting position, never from the last lift
+    var r = fab.getBoundingClientRect();
+    if(!r.width || fab.offsetParent === null) return;
+    var mid = r.top + r.height/2, lift = 0;
+    /* Three probes: a pill can straddle the edge of a button and miss it with a single centre hit. */
+    [r.left + 6, r.left + r.width/2, r.right - 6].forEach(function(x){
+      var stack = (document.elementsFromPoint ? document.elementsFromPoint(x, mid) : []);
+      for(var i=0;i<stack.length;i++){
+        var el = stack[i];
+        if(el === fab || fab.contains(el)) continue;
+        /* Actionable, or the bar that holds the actions. Plain text underneath is fine — it can be read around
+           a floating pill; a button cannot be pressed through one. */
+        var hit = el.closest && el.closest('button, a[href], [onclick], input, select, .cbst-foot');
+        if(!hit) continue;
+        var hr = hit.getBoundingClientRect();
+        if(hr.height && hr.height < window.innerHeight * 0.6){
+          lift = Math.max(lift, (window.innerHeight - hr.top) + 10 - 16);
+        }
+        break;
+      }
+    });
+    root.style.setProperty('--fab-lift', (lift > 0 ? Math.round(lift) : 0) + 'px');
+  }catch(_){ root.style.setProperty('--fab-lift','0px'); }
+}
+
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   /**
    * ⚠️ z-index 270 — BELOW `.mover` (280), and that is the whole point. At 300 the pill floated OVER every modal,
@@ -3665,6 +3715,9 @@ function renderApp(){
     _rendering = false;
     /* One catch-up pass, on a new task so the stack unwinds first. Not a loop: the flag is cleared before it. */
     if(_renderAgain){ _renderAgain = false; setTimeout(renderApp, 0); }
+    /* ⚠️ AFTER paint and on a new task — the footer has to EXIST and be laid out before anything can ask what
+       is underneath the pill. Measuring inside the render reads the previous screen's geometry. */
+    setTimeout(fabClear, 0);
   }
 }
 var _rendering = false, _renderAgain = false;
@@ -6460,6 +6513,13 @@ function supCartHTML(){
   return CBCatUI.pickerHTML(c, {
     checkoutLabel:'Check out →', emptyHint:'Press + on what you need',
     empty:'Nothing in their catalogue matches that.',
+    /* The no-search states. `emptyAll` is the honest one when they have simply published nothing; the hidden
+       variant fires when the server dropped priced-less items, which looks identical on screen and is not. */
+    emptyAll: txf('{name} has not published anything you can order yet.', { name: supName(x) }),
+    emptyHidden: txf('{name} lists {n} item(s) with no price yet — a price is needed before they can be ordered.', { name: supName(x), n: '{n}' }),
+    /* Read from the payload already held for this supplier — a second copy of the same fact would be one more
+       thing to keep in step, and this screen already keeps `cat` for exactly as long as the supplier is open. */
+    hiddenCount: (UI.supDet && UI.supDet.cat && UI.supDet.cat.unpriced_hidden) || 0,
     barEl:'cbcartbar_sup', listEl:'cbpick_sup',
     searchTestid:'pick-search-sup', listTestid:'sup-catalogue'
   });

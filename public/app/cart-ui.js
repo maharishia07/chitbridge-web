@@ -1085,6 +1085,10 @@
       group: function (i) { group(ns, i); return h; },
       clear: function () { clear(ns); return h; },
       search: function (q) { search(ns, q); return h; },
+      /* ⚠️ A SETTER WITHOUT A GETTER IS WHY AN EMPTY CATALOGUE SAID "nothing matches that". The picker could
+         set a search term but never ask whether one existed, so it printed the no-match sentence over a screen
+         with an empty search box — telling the reader their query was too narrow when they had not typed one. */
+      queryText: function () { return (C[ns] || {}).q || ''; },
       /* Repaint the chips alone — for a host whose category shelf lands after the picker is already on screen. */
       paintCategories: function () { paintCatgs(ns); return h; },
       /* the cart popup */

@@ -1769,7 +1769,7 @@ function iamTradeBody(){
      row is the same answer and costs no attention. */
   var flags = [];
   if (s.expiring) flags.push(['⚠️', s.expiring + ' ' + tx('expiring'), 'var(--warn-3)']);
-  if (s.expired)  flags.push(['✕',  s.expired  + ' ' + tx('expired'),  'var(--bad-3)']);
+  if (s.expired)  flags.push(['✕',  s.expired  + ' ' + tx('expired'),  'var(--disp-2)']);
   if (s.pending)  flags.push(['○',  s.pending  + ' ' + tx('not started'), 'var(--grey)']);
 
   return rungs

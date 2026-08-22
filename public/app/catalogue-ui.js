@@ -298,7 +298,29 @@
   function listHTML(cart, opts) {
     var rows = cart.rows() || [];
     if (!rows.length) {
-      return '<div class="cbcat-empty">' + esc(opts.empty || 'Nothing matches that.') + '</div>';
+      /**
+       * ⭐⭐ TWO DIFFERENT NOTHINGS, AND THEY NEEDED DIFFERENT SENTENCES. Athi, 2026-08-22, looking at a
+       * supplier whose catalogue would not appear: the screen said *"Nothing in their catalogue matches that"*
+       * **with an empty search box**. He was told his search was too narrow when he had not searched, so the
+       * real state — this supplier has nothing you can order — never reached him, and he went looking for a
+       * broken connection instead.
+       *
+       * ⚠️ The distinction is not cosmetic: one sentence says CHANGE YOUR QUERY, the other says ASK THEM TO
+       * PUBLISH. Sending someone to the wrong one costs them the afternoon.
+       *
+       * ⚠️ And a catalogue can be non-empty and still show nothing here: the server DROPS every item with no
+       * price (`unpriced_hidden` in the payload) — so when it says items were hidden, say that instead of
+       * implying the supplier has listed nothing at all.
+       */
+      var q = (typeof cart.queryText === 'function' ? cart.queryText() : '') || '';
+      var msg;
+      if (q) msg = opts.empty || 'Nothing matches that.';
+      else if (opts.hiddenCount > 0) {
+        msg = opts.emptyHidden
+          ? opts.emptyHidden.replace('{n}', opts.hiddenCount)
+          : opts.hiddenCount + ' item(s) here have no price yet, so none can be ordered.';
+      } else msg = opts.emptyAll || opts.empty || 'Nothing to order here yet.';
+      return '<div class="cbcat-empty">' + esc(msg) + '</div>';
     }
     var w = windowOf(cart, opts, rows.length);
     var out = '';

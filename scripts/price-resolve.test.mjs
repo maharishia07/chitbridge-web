@@ -13,7 +13,16 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
-const ctx = createContext({ console, module: { exports: {} } });
+/**
+ * ⚠ THE THIRD HARNESS TO GO RED FOR THE SAME REASON. price-resolve returns REASONS a price does not apply
+ * (“needs 20+, this order has 5”), and once those sentences were wrapped for translation the module needed
+ * `txf` — which a bare sandbox does not have. Identity + interpolation is the faithful default, because
+ * English IS the key here.
+ */
+const ctx = createContext({ console, module: { exports: {} },
+  tx: (s) => s,
+  txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
+});
 runInContext(readFileSync(join(ROOT, 'public/app/catalogue-model.js'), 'utf8'), ctx, { filename: 'catalogue-model.js' });
 runInContext(readFileSync(join(ROOT, 'public/app/price-resolve.js'), 'utf8'), ctx, { filename: 'price-resolve.js' });
 const P = ctx.CBPrice;

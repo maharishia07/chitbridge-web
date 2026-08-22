@@ -46,7 +46,7 @@ var CBIdDocs = (function () {
     verified:   ['✓', 'var(--ok-3)',   'Verified'],
     pending:    ['◔', 'var(--warn-2)', 'Waiting to be checked'],
     unverified: ['○', 'var(--grey)',   'Not checked'],
-    rejected:   ['✕', 'var(--bad-3)',  'Not accepted'],
+    rejected:   ['✕', 'var(--disp-2)',  'Not accepted'],
     expired:    ['○', 'var(--grey)',   'Expired']
   };
 
@@ -205,7 +205,7 @@ var CBIdDocs = (function () {
     }
 
     if (errEl) {
-      errEl.style.color = failed.length ? 'var(--bad-3)' : 'var(--ok-3)';
+      errEl.style.color = failed.length ? 'var(--disp-2)' : 'var(--ok-3)';
       errEl.textContent = failed.length
         ? (saved ? saved + ' saved. ' : '') + 'Not saved: ' + failed.join(' · ')
         : (saved ? saved + ' submitted for verification.' : 'Nothing to save — fill in a field first.');
