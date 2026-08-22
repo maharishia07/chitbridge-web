@@ -78,7 +78,25 @@ for (const [file, list] of Object.entries(byFile)) {
       .replace(/\/\*[\s\S]*?\*\//g, ' ')          /* block comments */
       .replace(/(^|\n)\s*(\/\/|\*)[^\n]*/g, '$1') /* line comments and jsdoc continuation lines */
       .replace(/\\`/g, ' ');                      /* an escaped backtick is not a delimiter */
-    const inTemplate = ((prefix.match(/`/g) || []).length % 2) === 1;
+    let inTemplate = ((prefix.match(/`/g) || []).length % 2) === 1;
+
+    /**
+     * ⚠️⚠️ THE BACKTICK COUNT STILL MISSED THREE, AND A BROWSER FOUND THEM, NOT A TEST. `' + tx('Build
+     * preview') + '` was printed literally at the top of every screen; two more sat on the chit detail, which
+     * `render-smoke` does not render. **Both forms are valid JavaScript, so nothing throws and no syntax check
+     * fires — only looking at the page catches it.**
+     *
+     * ⭐ SO THE LINE ITSELF IS ASKED A SECOND QUESTION, and it is a stronger one than the parity count: if the
+     * text between here and the label contains an ACTIVE `${…}` interpolation, we are unambiguously inside a
+     * template literal, because `${}` is inert anywhere else. A line cannot be both.
+     *
+     * ⚠️ IT ONLY LOOKS AT THE SEGMENT AFTER THE LAST `}`. A `${cond ? '<b>' + tx('X') + '</b>' : ''}` is a
+     * concat INSIDE an interpolation and is correct as it stands — counting the whole line would flip those
+     * and break five sites that were right.
+     */
+    const seg = line.slice(0, at);
+    const afterLastClose = seg.slice(seg.lastIndexOf('}') + 1);
+    if (/\$\{[a-zA-Z_(!]/.test(afterLastClose)) inTemplate = true;
     const wrap = inTemplate ? ('>${tx(\'' + item.msgid + '\')}<') : ('>\' + tx(\'' + item.msgid + '\') + \'<');
 
     lines[idx] = line.slice(0, at) + wrap + line.slice(at + needle.length);

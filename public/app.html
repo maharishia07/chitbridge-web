@@ -9258,8 +9258,8 @@ function detailInner(){
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">' + tx('Value') + '</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">' + tx('State') + '</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx('Value')}</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx('State')}</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
@@ -9493,7 +9493,7 @@ function modeRibbon(){
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
   }).join("");
   return `<div class="moderibbon">
-    <b>' + tx('Build preview') + '</b><span class="pill">${st.label}</span>
+    <b>${tx('Build preview')}</b><span class="pill">${st.label}</span>
     <span style="font-size:var(--fs-1)">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
     <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-inline-start:8px;color:var(--on-card)">🧪 Log</button>
     ${vpsw}
