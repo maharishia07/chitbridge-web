@@ -3839,7 +3839,7 @@ function _renderApp(){
     <div class="main">
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
-  </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>`;
+  </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
@@ -5617,6 +5617,29 @@ function specCalls(){
       }).join('')
     + '</div>';
 }
+/**
+ * ⭐⭐ ONE PANEL FOR THE WHOLE APP, NOT ONE CALL PER SCREEN. Athi, 2026-08-22, asking what "put specCalls on the
+ * other screens" meant — and the question exposed that the plan was wrong.
+ *
+ * ⚠️⚠️ OPTING TWENTY SCREENS IN BY HAND IS TWENTY CHANCES TO MISS ONE, and a screen written next month would
+ * silently have no spec at all. That is the same shape as the legend that fell a flag behind and the backlog
+ * row that sent me to rebuild a shipped fix: a thing that must be remembered, rather than a thing that
+ * happens.
+ *
+ * ⭐ AND THE CALL LOG WAS NEVER PER-SCREEN CONTENT. `specNote` and `specStandards` annotate a particular
+ * thing, so they belong where that thing is rendered. The requests the app made are a property of the APP —
+ * so this hangs off the shell, once, and every screen has it including ones that do not exist yet.
+ *
+ * ⚠️ FIXED TO THE BOTTOM, not in the flow, so turning spec on never reflows the screen you are inspecting.
+ * The whole value of a toggle is that the only thing that changed is the thing you toggled.
+ */
+function specCallsBar(){
+  if (!specOn()) return '';
+  return '<div id="speccalls" style="position:fixed;inset-inline:10px;bottom:10px;z-index:9998;max-height:38vh;'
+    + 'overflow:auto;background:var(--card);border:1px dashed var(--line);border-radius:10px;'
+    + 'box-shadow:0 6px 22px rgba(15,46,61,.18);padding:4px 10px 8px">' + specCalls() + '</div>';
+}
+
 function specToggleBody(i){
   var el = document.getElementById('specbody' + i);
   if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
