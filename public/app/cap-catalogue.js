@@ -268,7 +268,7 @@ function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(
 function catfReset(){
   confirmAsk('Start the catalogue setup over?',
     'The setup choices are cleared and you begin again.'
-    + '<div style="margin-top:7px">Your <b>items are not affected</b> — nothing in the catalogue is removed.</div>',
+    + '<div style="margin-top:7px">' + txf('Your {items} — nothing in the catalogue is removed.', { items: '<b>' + tx('items are not affected') + '</b>' }) + '</div>',
     'Start over', _catfReset, true);
 }
 function _catfReset(){ UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} _catfSetDirty(true); _catfQueuePush(); renderApp(); }

@@ -320,9 +320,12 @@ function cbcatDetailHTML(){
       + '<div class="ds">' + (editing ? 'products follow the new name' : 'goes on the shelf live') + '</div></div>'
       + '<div class="db">'
       + (editing
-          ? '<div class="cbcat-note">Renaming is safe. Every product cites this category by <b>id</b>, never by '
-            + 'the word — so they all follow. ⚠️ A copy of the old name travels with items already in a '
-            + 'counterparty’s catalogue, and that copy deliberately does not change.</div>'
+          ? '<div class="cbcat-note">'
+            + txf('Renaming is safe — every product follows. ⚠️ A copy of the old name travels with items already in a {other} catalogue, and that copy deliberately does not change.', {
+                other: tx('counterparty’s') })
+            /* ⭐ WHY it is safe is the mechanism: products cite the category by id, not by the word. */
+            + specNote('categories.rename', 'Products cite a category by <b>id</b>, never by its word, so a rename propagates without touching any item.')
+            + '</div>'
           : '')
       + '<label class="fl">' + tx('Name') + '</label>'
       + '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' + esc(f.name || '') + '"'

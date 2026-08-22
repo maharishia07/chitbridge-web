@@ -4580,7 +4580,7 @@ function chSetAutoRaise(id, on){
   confirmAsk('Raise messages on this line automatically?',
     'A chit will appear in your Task list <b>without anyone present</b>. It is an inquiry — a record, not an '
     + 'obligation — and it still says the sender is unverified.'
-    + '<div style="margin-top:7px">Anything the co-assist cannot read stays in <b>' + tx('Intake') + '</b> for you.</div>',
+    + '<div style="margin-top:7px">' + txf('Anything the co-assist cannot read stays in {intake} for you.', { intake: '<b>' + tx('Intake') + '</b>' }) + '</div>',
     'Turn it on', function(){ _chSetAutoRaise(id, true); });
   /* ⚠️ The toggle already moved on screen. Cancelling must put it back, and only a reload knows the real state. */
   loadChannels();
