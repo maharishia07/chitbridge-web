@@ -692,7 +692,7 @@ function c2AssignOpen(line_id){
      the honest answer — "you have not added any co-assists" — is also the instruction. */
   if (!roster.length) {
     return modal('<h3 style="margin:0 0 8px">Assign · ' + esc(l.particulars || '') + '</h3>'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">No co-assists yet — add someone under <b>' + tx('Co-assists') + '</b> and they will appear here.</div>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">' + txf('No co-assists yet — add someone under {where} and they will appear here.', { where: '<b>' + tx('Co-assists') + '</b>' }) + '</div>'
       + '<button class="btn" style="width:100%" onclick="closeModal()">' + tx('Close') + '</button>');
   }
   var opts = roster.map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');

@@ -9201,8 +9201,14 @@ function viaBlock(c){
     + (v.raw_excerpt ? '<div style="margin-top:7px"><div style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:3px">' + tx('What they wrote') + '</div>'
         + '<div style="font-size:var(--fs-2);white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--on-bg)">'
         + esc(v.raw_excerpt) + (v.raw_excerpt.length>=400?'<span style="color:var(--grey)"> … (full text attached)</span>':'') + '</div></div>' : '')
-    + (v.media_count ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-3)">📎 '+v.media_count+' attachment'+(v.media_count===1?'':'s')+' came with the message and '
-        + '<b>are not on this chit</b> — they are still held at the provider.</div>' : '')
+    /* ⚠️ THE COUNT AND THE PLURAL ARE BOTH PLACEHOLDERS. English switches on 1-vs-many; many languages switch
+       on more than that, and none of them can if the sentence arrives in three pieces. */
+    + (v.media_count ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-3)">'
+        + txf('📎 {n} {attachments} came with the message and {notonchit} — they are still held at the provider.', {
+            n: v.media_count,
+            attachments: v.media_count === 1 ? tx('attachment') : tx('attachments'),
+            notonchit: '<b>' + tx('are not on this chit') + '</b>' })
+        + '</div>' : '')
     /* ⚠️ WHERE EACH PRICE CAME FROM. A figure off your shelf, a figure the customer named, and no figure at all
        look identical in a total. Which one it was is the difference between a quote and a guess. */
     + _viaPricing(v.priced)
