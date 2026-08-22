@@ -8263,12 +8263,43 @@ function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)r
 async function loadList(silent){
   // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
   // fetch and patch the rows in place. The spinner shows only on the FIRST / manual load (silent falsy).
+  /**
+   * ⚠️⚠️ A RESPONSE THAT ARRIVES AFTER YOU HAVE LEFT MUST NOT PAINT. Athi, 2026-08-22: *"find the race, that
+   * empty state is bad."*
+   *
+   * ⭐ WHAT HE SAW: clicking Settings › Localisation and being told **"Your bogie is empty · Compose"**. Not a
+   * blank pane, not an error — the CHIT LIST'S empty state, rendered inside Settings, telling someone who asked
+   * about date formats that they have no chits.
+   *
+   * ⚠️ THE SETTINGS SCREEN REUSES `#detailpane` — `#setbody` lives inside it. So this function's
+   * `dp.innerHTML=renderDetail()` does not merely paint the wrong thing, it DELETES the element the settings
+   * pane is about to be written into. `paintSettings` and `loadSettings` both open with
+   * `getElementById("setbody"); if(!h)return;`, so the settings load then resolves into silence: no paint, no
+   * error, no console message. Two functions failing safely add up to a screen that fails invisibly.
+   *
+   * ⚠️ IT ONLY EVER HAPPENED ON THE FIRST VISIT, which is why it looked random. A list load is in flight only
+   * while the app is starting; navigate to Settings inside that window and the stale response lands on top of
+   * you. Come back later and `UI._set` is cached and nothing is in flight, so it never reproduces on a retry —
+   * six consecutive attempts passed before the trace showed the first one had been the only cold one.
+   *
+   * ⭐ THE GUARD IS THE SCREEN, NOT THE ELEMENT. Checking `if(dp)` was already there and was never the
+   * question — the element existed; it belonged to someone else. Capturing `UI.nav` at call time and refusing
+   * to paint when it has moved is the only check that knows the difference.
+   *
+   * ⚠️ AND IT FIXES A SECOND ONE NOBODY HAD REPORTED: switching Task → Order while Task's list is still
+   * loading painted TASK's rows and counts into ORDER. Same stale response, same missing question, and far
+   * harder to notice because the result looks like a list rather than like a mistake.
+   */
+  const _nav0=UI.nav, _left=function(){ return UI.nav!==_nav0; };
   UI.loading=true;
   if(!silent){ const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
     const dp0=document.getElementById("detailpane"); if(dp0){dp0.className="detail"; dp0.innerHTML=detailSkeleton();} }
   try{
     UI.rows=[]; await pgFirst('list');
     UI.loading=false;
+    /* ⚠️ THE ONE THAT MATTERED — everything below this line writes to the screen. `UI.loading` is still cleared
+       above, because the flag describes THIS load and must not be left true for a screen nobody is watching. */
+    if(_left()) return;
     // select the first record and kick off its detail load IMMEDIATELY — don't wait on the rollup below.
     // The rollup only refines the per-state counts; it must not sit between "list shown" and "record selected".
     // Foreground load only — a silent refresh must not hijack the detail pane or flash anything.
@@ -8296,9 +8327,9 @@ async function loadList(silent){
       ? api("rollup",{query:rollupQuery()}).catch(function(){ return null; }) : null;
     const _unreadP = (SESSION.role==="actor" && CFG.MODE!=='demo')
       ? api("unread").catch(function(){ return null; }) : null;
-    if(_rollupP){ try{ const rl=await _rollupP; UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
-    if(_unreadP){ try{ const u=await _unreadP; const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
-  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=scrErr(e, '', 'loadList()'); } }
+    if(_rollupP){ try{ const rl=await _rollupP; UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; if(_left()) return; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
+    if(_unreadP){ try{ const u=await _unreadP; const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); if(_left()) return; paintRowsOnly(); }catch(_){} }
+  }catch(e){ UI.loading=false; if(!silent && !_left()){ const b=document.getElementById("rows"); if(b)b.innerHTML=scrErr(e, '', 'loadList()'); } }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
