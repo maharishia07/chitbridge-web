@@ -2744,7 +2744,7 @@ async function loadActorProfile(h){
   h2.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
     + iamSelfEmployeeHTML(e)
     + pinCard
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">${txf('Set your {what} from the top bar.', { what: '<b>' + tx('Duty / Break') + '</b>' })}</div>`;
 }
 
 async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";

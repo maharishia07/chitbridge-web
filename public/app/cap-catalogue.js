@@ -635,7 +635,7 @@ function _cwMethodBlock(w){
     + '<b>You receive:</b> ' + esc(sel.receives) + '</div></div>';
 }
 function _cwStep1(w){
-  var left = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
+  var left = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">' + txf('Tell me the {purpose} — the exact catalogue you want.', { purpose: '<b>' + tx('purpose') + '</b>' }) + '</div>'
     + '<textarea id="cw_purpose" placeholder="e.g. a chemical catalogue especially focusing on paint" rows="4" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);resize:vertical">' + esc(w.purpose || '') + '</textarea>'
     + '<button class="pri" onclick="cwUnderstand()" style="margin-top:8px;padding:9px 15px">Understand <span class=arw>→</span> suggest fields</button>'
     + (w.vertical ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">reads as: <b>' + esc(w.vertical) + '</b></div>' : '');

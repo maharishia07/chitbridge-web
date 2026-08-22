@@ -2237,7 +2237,7 @@ function cbKeysOverlay(show) {
     + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-3);margin-bottom:4px">' + tx('Keyboard') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
     + rows
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px">Press <b>' + tx('Esc') + '</b> to close.</div></div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px">' + txf('Press {esc} to close.', { esc: '<b>' + tx('Esc') + '</b>' }) + '</div></div>';
   (document.body || document.documentElement).appendChild(d);
 }
 
@@ -5448,7 +5448,7 @@ function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; co
   try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
 function scr(title,id,helpKey){
   const q = helpKey?`<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
-  const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:var(--blue)">?</b> to know more about this screen.</div>`:'';
+  const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">${txf('Explore {q} to know more about this screen.', { q: '<b onclick="openAssist(\'' + helpKey + '\')" style="cursor:pointer;color:var(--blue)">?</b>' })}</div>`:'';
   return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:var(--fs-3);margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /**
@@ -7656,7 +7656,8 @@ function prodSetStatus(id, status){
   if (status === 'redundant') {
     return promptAsk('Replaced by which item?',
       { label:'Replacement', okLabel:'Set',
-        hint:'The point of <b>redundant</b> is that there is a right answer. If there is none, use <b>' + tx('Retired') + '</b>.' },
+        hint: txf('The point of {redundant} is that there is a right answer. If there is none, use {retired}.', {
+          redundant: '<b>' + tx('redundant') + '</b>', retired: '<b>' + tx('Retired') + '</b>' }) },
       function(r){ _prodStatus(id, status, { replaced_by:r }); });
   }
   _prodStatus(id, status, {});
@@ -7691,8 +7692,8 @@ function prodAvailBlock(d, id){
         : mins < 1440 ? Math.round(mins / 60) + ' h ago' : Math.round(mins / 1440) + ' days ago';
   }
   const state = !a
-    ? `<div style="font-size:var(--fs-2);color:var(--warn-2)">Not reported. Other stores in your network will see this as
-       <b>unknown</b> — which is not the same as zero, and is the honest answer until you say.</div>`
+    ? `<div style="font-size:var(--fs-2);color:var(--warn-2)">${txf('Not reported. Other stores in your network will see this as {unknown} — which is not the same as zero, and is the honest answer until you say.', {
+        unknown: '<b>' + tx('unknown') + '</b>' })}</div>`
     : `<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
          <b style="font-size:var(--fs-4);color:${a.qty > 0 ? 'var(--ok-2)' : 'var(--disp-2)'}">${a.qty} in stock</b>
          <span style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;${stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)'}">${esc(a.source || 'unknown')} · ${esc(age)}</span>
