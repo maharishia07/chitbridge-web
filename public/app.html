@@ -428,7 +428,19 @@
      last children lose. These two are the way OUT of the app — they never shrink and never overflow. */
   .topbar .who .av,.topbar .so{flex:0 0 auto}
   .topbar .who{min-width:0}
-  .topbar .who .dutytog,.topbar .who .shoptog{min-width:0;flex:0 1 auto}
+  .topbar .who .dutytog,.topbar .who .shoptog,.topbar .who .shopsel{min-width:0;flex:0 1 auto}
+  /**
+   * ⭐ ONE CONTROL INSTEAD OF THREE PILLS — Athi: *"three status in the same place is too much of a space."*
+   * It reads as part of the dark topbar rather than as a form field dropped into it: transparent ground, the
+   * same hairline border the pills used, and the accent only on focus.
+   * ⚠️ `color-scheme:dark` is what makes the OPEN list dark too. Without it the popup renders in the platform's
+   * light palette — white list, near-white text — and the options are unreadable in exactly the theme this
+   * control lives in.
+   */
+  .topbar .who .shopsel{background:rgba(255,255,255,.05);color:#e8f0f5;border:1px solid rgba(255,255,255,.18);
+    border-radius:9px;padding:6px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer;color-scheme:dark}
+  .topbar .who .shopsel:hover{background:rgba(255,255,255,.10)}
+  .topbar .who .shopsel:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
   .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:var(--fs-1);font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
   .dutytog button.on.duty,.shoptog button.on.open{background:#1f7a4d;color:#fff}
@@ -2610,11 +2622,25 @@ function statusControl(role){
     return `<div class="dutytog" role="group" aria-label="Duty status">
       <button data-d="duty" class="${d==='duty'?'on duty':''}" onclick="setDuty('duty')">● Duty</button>
       <button data-d="break" class="${d==='break'?'on brk':''}" onclick="setDuty('break')">❚❚ Break</button></div>`;}
+  /**
+   * ⭐⭐ ONE CONTROL, SHOWING THE STATUS IT IS IN. Athi, 2026-08-22: *"three status in the same place is too
+   * much of a space, keep in the dropdown list and show the active one as visible."*
+   *
+   * ⚠️⚠️ AND IT USED TO BE WIRED TO NOTHING. The three pills set `SESSION.shop`, repainted themselves, toasted
+   * *"Shop Closed — new orders are blocked"* and stopped. **No API call.** The value reached localStorage and
+   * no further: invisible to every other device, and to the server that actually refuses orders.
+   *
+   * ⭐ THE ENFORCEMENT WAS ALWAYS REAL AND ALWAYS SOMEWHERE ELSE. `routes/catalogue.js` returns
+   * `403 Shop closed` when `identities.business_status = 'closed'` — a persisted, validated field that only
+   * the PROFILE screen could set. Two controls for one fact, and the prominent one was the decoration.
+   */
   if(role==="entity"){const sh=SESSION.shop||"open";
-    return `<div class="shoptog" role="group" aria-label="Shop status">
-      <button data-s="open" class="${sh==='open'?'on open':''}" onclick="setShop('open')">${tx('Open')}</button>
-      <button data-s="closed" class="${sh==='closed'?'on closed':''}" onclick="setShop('closed')">${tx('Closed')}</button>
-      <button data-s="away" class="${sh==='away'?'on away':''}" onclick="setShop('away')">${tx('Away')}</button></div>`;}
+    const opt=(v,l)=>`<option value="${v}"${sh===v?' selected':''}>${l}</option>`;
+    return `<select class="shopsel" data-testid="shop-status" aria-label="${tx('Shop status')}"
+        title="${tx('Whether this shop is accepting orders')}" onchange="setShop(this.value)">
+      ${opt('open',   tx('🟢 Open'))}
+      ${opt('away',   tx('🌙 Away'))}
+      ${opt('closed', tx('⛔ Closed'))}</select>`;}
   return "";
 }
 async function setDuty(d){ const prev=SESSION.duty||'duty';
@@ -2624,10 +2650,49 @@ async function setDuty(d){ const prev=SESSION.duty||'duty';
     toast(d==='break'?"On break — chits won't route to you.":"Back on duty."); }
   catch(e){ setSession({duty:prev}); document.querySelectorAll('.dutytog button').forEach(b=>{b.classList.remove('on','duty','brk');if(b.dataset.d===prev){b.classList.add('on',prev==='duty'?'duty':'brk');}}); toast(MSG.fail("update your status", e)); }
 }
-function setShop(s){SESSION.shop=s;
-  document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
-  toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
+/**
+ * ⚠️⚠️ THE OLD BODY WAS THREE LINES AND NONE OF THEM LEFT THE BROWSER. It set `SESSION.shop`, restyled the
+ * pills, and toasted "new orders are blocked" — a consequence nothing had been told about. A customer could
+ * still order. **A control that announces an outcome it does not cause is worse than a control that does
+ * nothing, because the toast is read as confirmation.**
+ *
+ * ⭐ NOW IT WRITES `business_status`, which is the field `routes/catalogue.js` actually refuses orders on. The
+ * PATCH is partial — the route `COALESCE`s every other column — so this touches nothing else on the profile.
+ *
+ * ⚠️ THE SELECT IS NOT TRUSTED UNTIL THE SERVER AGREES. On failure the dropdown is put back and the reason is
+ * said out loud. Showing a status the server does not hold is the exact bug this replaces, and an optimistic
+ * repaint would reintroduce it in a smaller, harder-to-see form.
+ *
+ * ⭐ CONFIRM ONLY THE DIRECTION THAT STOPS BUSINESS. Going to Closed refuses new orders, so it earns a
+ * question; Open and Away do not, and a modal on every toggle would be ceremony people learn to click through.
+ */
+function _shopSync(v){ const el=document.querySelector('.shopsel'); if(el) el.value=v; }
+
+async function setShop(s){
+  const prev = SESSION.shop || 'open';
+  if (s === prev) return;
+  if (s === 'closed') {
+    _shopSync(prev);                                   /* not closed until it is confirmed AND saved */
+    confirmAsk(tx('Close the shop?'),
+      tx('New orders will be <b>refused</b> — a customer trying to order is told the shop is closed. Chits already in flight are not affected.'),
+      tx('Close the shop'), function(){ _shopSave(s, prev); }, true);
+    return;
+  }
+  _shopSave(s, prev);
 }
+
+async function _shopSave(s, prev){
+  _shopSync(s);
+  try {
+    await api('saveProfile', { body: { business_status: s } });
+    setSession({ shop: s });   /* setSession persists to cb_sess — SESSION.shop = s alone would not survive a refresh */
+    toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are refused.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
+  } catch (e) {
+    _shopSync(prev);
+    toast(tx('Could not change the shop status') + ' — ' + ((e && e.message) || tx('please try again')), true);
+  }
+}
+
 /**
  * ⭐⭐ THEMES — Athi, 2026-08-16: *"provide a theme in the menu bar, so user can select their own themes."*
  *
@@ -7736,9 +7801,24 @@ function taskPanel(){
   const _tdesc = {order:tx("chits you've sent"), task:tx('chits received'), drafts:tx('unsent chits'), trash:tx('deleted chits'), archive:tx('archived chits')}[UI.folder] || tx('chits received');
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
-  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">${tx('📊 Metrics')}</button>
-      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">🧮 Group sum</button>
-      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">⚙️ Rules</button>` : '';
+  /**
+   * ⭐ ICON ONLY — Athi, 2026-08-22: *"change the metrics, groupsum, rule as icon only."*
+   *
+   * ⚠️⚠️ AN ICON WITHOUT AN ACCESSIBLE NAME IS AN UNLABELLED BUTTON. Dropping the visible word is a layout
+   * decision; dropping the NAME is a different thing entirely — a screen reader then announces "button" and a
+   * keyboard user has nothing to go on. `aria-label` carries what the text used to, so the only thing that
+   * changed is how much room it takes on screen.
+   *
+   * ⚠️ AND THE TOOLTIP NOW HAS TO CARRY THE NAME TOO, because it is the only place a sighted mouse user can
+   * still read it. Each `title` starts with the word that used to be printed beside the icon.
+   *
+   * ⚠️ 🧮 IS THE WEAK ONE. 📊 for metrics and ⚙️ for rules are near-universal; an abacus for "what does this
+   * pile add up to" is not, and nobody learns it by looking. Its title therefore says what it does in full,
+   * and its panel names its own scope out loud — see `_groupSumPane`.
+   */
+  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" aria-label="${tx('Metrics')}" title="${tx('Metrics')} — ${_fsel?'for this folder':'for this whole track, and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">📊</button>
+      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" aria-label="${tx('Group sum')}" title="${tx('Group sum')} — what this whole ${_fsel?'folder':'track'} adds up to: quantity per item, cost, and who asked. Counts every chit regardless of the Open / Act / Close tab you are on." style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">🧮</button>
+      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" aria-label="${tx('Rules')}" title="${tx('Rules')} — ${_fsel?'that file into this folder':'on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">⚙️</button>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:var(--fs-2);color:var(--warn-3);flex-wrap:wrap">
       <b style="font-family:'Space Grotesk';font-size:var(--fs-2);display:flex;align-items:center;gap:6px;min-width:0">
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`

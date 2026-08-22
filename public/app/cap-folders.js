@@ -361,6 +361,28 @@ function _groupSumPane(){
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
+  /**
+   * ⭐⭐ AND IT IGNORES THE STATUS TAB — SAID OUT LOUD. Athi, 2026-08-22: *"the top icon groups irrespective of
+   * the status? open, act, assign etc — is it the difference? If so it has to be spelt loud."*
+   *
+   * He was right. `GET /folders/groupsum` takes `scope`, `folder_id`, `archived` and an optional ticked
+   * `chit_ids` — **no status filter anywhere**. So standing on "Open 6" and opening this pane gives you a
+   * total that also counts Act and Close.
+   *
+   * ⚠️ THAT IS THE RIGHT BEHAVIOUR AND THE WRONG SILENCE. "What does this pile add up to" is a question about
+   * the whole pile — filtering it by the tab you happen to be standing on would make the answer change as you
+   * browsed. But a reader looking at a 6 and a total built from 19 has no way to know why, and the number is
+   * more trustworthy the moment it names its own scope.
+   *
+   * ⚠️ NOT SHOWN FOR A TICKED SELECTION, because there the scope is exactly what the reader chose and the
+   * banner above already says so. A caveat that appears when it does not apply teaches people to skip it.
+   */
+  if (!g.selected) {
+    out += '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">'
+      + '⚑ Counts <b style="color:var(--ink)">every status</b> — Open, Act and Close alike, not just the tab you are on.'
+      + '</div>';
+  }
+
   /* ⚠️ SAID FIRST, NOT BURIED. A pile of 47 chits where only 9 carry line items produces a requirement built from
      9 — and without this line that total reads as though it covered all 47. */
   out += '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">'
