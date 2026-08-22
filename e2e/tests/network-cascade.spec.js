@@ -1,3 +1,4 @@
+/** @covers FR-N8 — the cascade as a customer actually experiences it */
 // network-cascade.spec.js — the parent/child visibility cascade, as a CUSTOMER actually experiences it.
 //
 // WHY THIS EXISTS

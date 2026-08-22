@@ -9843,6 +9843,10 @@ function _vpAutoCheck(){
   }catch(_){}
 }
 try{ window.addEventListener('resize', function(){ clearTimeout(_vpAutoT); _vpAutoT = setTimeout(_vpAutoCheck, 160); }); }catch(_){}
+/* ⚠️ The pill's clearance is geometry, so it has to be re-decided when the geometry changes. A rotation or a
+   window drag moves the footer without repainting the screen, and the lift computed for the old size would be
+   either wrong or stranded. Same debounce as the viewport check, for the same reason. */
+try{ var _fabT; window.addEventListener('resize', function(){ clearTimeout(_fabT); _fabT = setTimeout(fabClear, 180); }); }catch(_){}
 let DRAG=false;
 /**
  * ⚠️ THE DIVIDER MUST WRITE THE WIDTH THE CURRENT SCREEN READS. It always wrote `UI.lw` — the chit list's width

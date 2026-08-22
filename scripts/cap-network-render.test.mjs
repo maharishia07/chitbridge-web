@@ -1,3 +1,5 @@
+/** @covers FR-N10 — repainting does not empty the cart */
+/** @covers FR-N9 — it sends through the one createChit compose uses */
 /**
  * cap-network-render.test.mjs — DOES THE NETWORK BROWSE SCREEN ACTUALLY RENDER?
  *
