@@ -1193,6 +1193,10 @@ img.attImg{object-fit:cover;display:block}
 .rflag.cust{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
 .rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
 .rflag.high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
+/* ⚠️ THE RESOLVED CHIP CARRIED ITS THREE COLOURS AS AN INLINE STYLE, and the legend became the second place
+   that had to state them. Two literals for one appearance is how a chip comes to look different from itself;
+   the other four variants have always been classes, and this is the fifth. */
+.rflag.ok{background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2)}
 .keypanel{position:absolute;inset-inline-end:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 /**
  * ⚠️⚠️ `vw` IS THE WRONG RULER INSIDE THE PHONE PREVIEW. Athi, 2026-08-22: *"key in the task panel shows the
@@ -8226,9 +8230,29 @@ function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaint
 function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
 function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>' + tx('Legend / key') + '</h4><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="rflag disp">' + tx('⚑ dispute') + '</span></div><div class="kd">An open dispute (red bar). Resolve from the chit.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="rflag urg">' + tx('⚑ urgent') + '</span> <span class="rflag high">' + tx('⚑ high') + '</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
+/**
+ * ⚠️⚠️ THE LEGEND EXPLAINED THREE OF THE FIVE FLAGS A ROW CAN SHOW. Athi, 2026-08-22: *"in the flag, we added
+ * resolved when dispute resolved. Can you check in code if we have any other flag created and it has to be
+ * added in the legend."* — `⚑ resolved` was missing, and so was `⚑ flagged`, and so was the `?` beside an
+ * unverified sender.
+ *
+ * ⭐ A KEY THAT IS INCOMPLETE IS WORSE THAN NO KEY, because it is read as complete: a reader who finds four of
+ * five marks explained concludes the fifth is decorative rather than that the key is out of date.
+ *
+ * ⚠️ AND THE GAP GROWS SILENTLY. Nothing links a new chip to this list, so the legend falls behind by exactly
+ * one flag every time someone adds one — which is how `⚑ resolved` and `⚑ flagged` both got here.
+ *
+ * ⭐ PAIRED, NOT APPENDED. Three more boxes would make nine in a flat grid; these are the two STATES of a
+ * dispute and the three levels of ONE attention flag, so they belong in the boxes that already answer those
+ * questions. Only the sender-verification mark asks something new, and it gets the one new box.
+ */
+ +'<div class="kbox"><div class="kt"><span class="rflag disp">' + tx('⚑ dispute') + '</span> <span class="rflag ok">' + tx('⚑ resolved') + '</span></div><div class="kd">An open dispute (red bar) — resolve it from the chit. Once every dispute on the chit is settled the flag turns green; it stays on the row so the history is visible at a glance.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="rflag urg">' + tx('⚑ urgent') + '</span> <span class="rflag high">' + tx('⚑ high') + '</span> <span class="rflag cust">' + tx('⚑ flagged') + '</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
  +'<div class="kbox"><div class="kt">' + tx('Ext / Int pri') + '</div><div class="kd">Ext = sender-set at compose, locked · Int = your own queue, you change it. Shown as their own columns.</div></div>'
+/* ⭐ THE ONE MARK THAT IS NOT A PRIORITY. It answers "who is this", not "how urgent is this" — and it is the
+   only row mark that reports something we could NOT confirm, so leaving it unexplained is the costliest gap
+   of the three: a `?` a reader cannot decode is easy to read as a rendering glitch. */
+ +'<div class="kbox"><div class="kt"><span class="unver">?</span> ' + tx('Unverified sender') + '</div><div class="kd">The name beside this mark is what the sender CLAIMS. We have not verified that entity, so treat it as unconfirmed until it carries a verification.</div></div>'
  +'<div class="kbox"><div class="kt"><span class="chipst st-open">' + tx('OPEN') + '</span> <span class="chipst st-act">ACT</span> <span class="chipst st-close">' + tx('CLOSE') + '</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
  +'<div class="kbox"><div class="kt">' + tx('♿ Voice') + '</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
  +'</div></div>'; }
@@ -8401,7 +8425,7 @@ const LISTCOLS = [
           +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
       }
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2)" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag ok" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
