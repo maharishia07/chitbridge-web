@@ -342,7 +342,7 @@ function catfPublishBlueprint(){
   api('catSourcePut', { body: body }).then(function(r){
     if (r && r.ok) {
       if (typeof toast === 'function') toast('Published as blueprint ✓');
-      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📢 Published as a blueprint') + '</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> ' + tx('Blueprint') + '</b> and pick:'
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📢 Published as a blueprint') + '</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6">' + txf('Your catalogue is now a {bp}. In {store}, open {path} and pick:', { bp: '<b>' + tx('reusable blueprint') + '</b>', store: '<b>' + tx('another store') + '</b>', path: '<b>🗂️ ' + tx('Catalogue') + ' <span class=arw>→</span> ⚙ ' + tx('Set up (new)') + ' <span class=arw>→</span> ' + tx('Blueprint') + '</b>' }) + ''
         + '<div style="margin-top:8px;font-weight:700;color:var(--blue-2)">' + esc(body.title) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
         + '<div style="margin-top:10px">' + txf('Each distributor sets its {up} (e.g. wholesale in {ton}, retail in {kg}) — the names &amp; design travel {byref}, not copied.',
@@ -747,7 +747,7 @@ function _cwStep4(w){
   var body;
   if (mode === 'csv') {
     var n = (w.manualItems || []).filter(function(i){ return i._src === 'csv'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>' + tx('Export to CSV from Excel / Tally') + '</b> and paste it. We match your column headings to the right fields.</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">' + txf('Have a list? {export} and paste it. We match your column headings to the right fields.', { export: '<b>' + tx('Export to CSV from Excel / Tally') + '</b>' }) + '</div>'
       + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace;resize:vertical"></textarea>'
       + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">' + tx('Import rows') + '</button>'
       + (n ? '<div style="margin-top:8px;font-size:var(--fs-1);color:var(--ok-2)">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')

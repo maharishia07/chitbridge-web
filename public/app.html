@@ -1858,7 +1858,12 @@ function blueprintCardHTML(id){
 function openBlueprint(id){ if(typeof modal!=='function')return; modal(blueprintCardHTML(id)+'<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button></div>', false); }
 function blueprintSettingsHTML(){
   return '<div class="sec" style="margin-top:18px">' + tx('⚙ Governed by work pattern') + '</div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.5">' + txf('Each action is a governed {wp}. Open one to see what it carries. {ro}', {
+      wp: '<b>' + tx('work pattern') + '</b>', ro: '<i>' + tx('Read-only showcase.') + '</i>' })
+    /* ⭐ THE CASCADE LEGEND IS THE MECHANISM — licence, sealed, which layer sealed it, open knobs, what it
+       reports up. Someone opening a work pattern can see all four on the card itself. */
+    + specNote('governance.cascade-legend',
+        'A cascade shows: 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up.') + '</div>'
     +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
       return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:var(--fs-3)">ℹ️</span></button>';
     }).join('');
@@ -6050,7 +6055,7 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-    <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">Your CRM — everyone who ordered from your storefront. They live <b>only under your shop</b>.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from your storefront. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
     <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
   const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
@@ -7298,7 +7303,8 @@ async function _cfRun(btn){
       + ((r.notes||[]).length ? '<ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
       + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:var(--fs-2);line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
           + ((r.issues||[]).length>25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>' + tx('Import') + '</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">' + txf('Reading the file changed nothing. {import} applies the choices above — it adds and updates products, and never deletes one.', {
+      import: '<b>' + tx('Import') + '</b>' }) + '</div>';
 
     // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
     // the server refuses them too, and offering the button anyway teaches people to ignore it.
