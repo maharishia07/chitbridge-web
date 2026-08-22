@@ -473,7 +473,11 @@ function misFriction(m){
       ? '<div class="mislbl" style="margin-top:18px">' + tx('The queue · oldest first') + '</div>'
         + '<div class="misscroll"><table class="mistable"><thead><tr><th>' + tx('Waiting on') + '</th><th>' + tx('Chit') + '</th><th>' + tx('Age') + '</th><th>' + tx('Value') + '</th><th>' + tx('Whose clock') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
       : '<div class="misnote" style="margin-top:12px">Nothing is waiting — every chit has been accepted or closed.</div>')
-    + '<div class="miswhy">Disputes sit here as a <b>status</b>, not a count: <b>0</b> in a plain tile read exactly like <b>' + tx('Suppliers 2') + '</b>, when one is a health signal and the other is inventory.</div>';
+    /* ⭐ DESIGN RATIONALE → SPEC. Why a dispute is shown as a status rather than a number is a good decision
+       and not one the reader has to agree with before using the screen. */
+    + specNote('mis.disputes-as-status',
+        'Disputes are a <b>status</b>, not a count: a plain <b>0</b> tile reads exactly like <b>Suppliers 2</b>, '
+      + 'when one is a health signal and the other is inventory.');
 }
 function misTrust(m){
   var chan = m.byChannel;
@@ -490,7 +494,8 @@ function misTrust(m){
         + '<div class="misnote">' + chanTxt + '</div></div>'
     + '</div>'
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
-    + '<div class="miswhy">⚠️ <b>' + tx('Counterparty reliability') + '</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. Shown as plain counts, not a score.</div>';
+    + '<div class="miswhy">' + txf('⚠️ {what} — who confirms fast, who delivers short — is the most valuable thing this could report, and is {notbuilt}. Shown as plain counts, not a score.', {
+        what: '<b>' + tx('Counterparty reliability') + '</b>', notbuilt: '<b>' + tx('not built') + '</b>' }) + '</div>';
 }
 /**
  * ⭐ USAGE AGAINST THE DECLARED PLAN. The limits come from PLAN (declared in Governance → Constitution); this band
@@ -3183,7 +3188,12 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
   if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
-  var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — your business inherits this. <i>⏳ Pending — these will be set for you, not here.</i>':(t===6)?'These come down into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>⏳ Pending.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
+  /* ⭐ THE INSTRUCTION STAYS, THE MECHANISM MOVES. "boilerplate every entity copies at registration" and
+     "freeze onto each chit at send" are how it works; a person on this tab is choosing a value. */
+  var foot=(t===0)?('Change a value above, then open <b>tab 7 · Consolidation</b>. <i>⏳ ' + tx('Pending') + '</i>'
+      + specNote('governance.inherit', 'Values are inherited by the entity from the layer that set them.'))
+    :(t===6)?('<i>⏳ ' + tx('Pending') + '</i>'
+      + specNote('governance.boilerplate', 'These come down into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send.'))/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
    not on the page is the stale-copy bug in its purest form: correct once, then quietly describing nothing. */
 :'';
@@ -4514,7 +4524,8 @@ function _chRow(c){
              + '<input type="checkbox" data-testid="ch-autoraise" '+(b.auto_raise?'checked':'')+' onchange="chSetAutoRaise(\''+esc(b.id)+'\',this.checked)">'
              + '<span>Raise messages on this line <b>automatically</b>'
              + (b.auto_raise && b.status!=='verified' ? ' <span style="color:var(--warn-2);font-weight:700">— waiting on verification</span>' : '')
-             + '<br><span style="font-size:var(--fs-1)">A chit appears in your Task list with nobody present. It is still an <b>inquiry</b> — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.</span></span></label>')
+             + '<br><span style="font-size:var(--fs-1)">' + txf('A chit appears in your Task list with nobody present. It is still an {inquiry} — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.',
+                 { inquiry: '<b>' + tx('inquiry') + '</b>' }) + '</span></span></label>')
           /* ⚠️ TEMPLATES ARE PER-NUMBER, so they hang off the BINDING and not the channel. Meta approves for one
              WhatsApp account; another business's approval says nothing about this one. */
           + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
@@ -4607,9 +4618,16 @@ function policyFlagsInner(){
   var warn = !_POL.migrated ? pendingNote('not available on this environment — changes will not save')+'<div style="height:7px"></div>' : '';
   var err = _POL.err ? '<div style="color:var(--disp);font-size:var(--fs-1);margin-top:6px">'+esc(_POL.err)+'</div>' : '';
   return '<div class="sec" style="margin:0 0 4px">🚩 Business rules <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>' + tx('7-layer block above') + '</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
+    /* ⭐ GOVERNANCE GRAMMAR → SPEC. "class + level", "platform-bound", "tighten-only" is our vocabulary for
+       our mechanism. The person here is deciding one toggle; the grammar behind it is what a reviewer wants. */
+    + specNote('settings.policy-flags.grammar',
+        'Per-entity toggles cover what the 7-layer block does not yet carry — same governance grammar '
+      + '(<b>class</b> + <b>level</b>): 🔒 <b>platform-bound</b> cannot be relaxed · <b>tighten-only</b> may be '
+      + 'made stricter · <b>entity</b> is set freely.')
     +warn+rows+err
-    +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ pending.</div>';
+    +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">'
+    + txf('Stored on your business, not on this device. {enforced} whether you keep a copy, and whether you buy or sell. Expiry and retention: ⏳ {pending}.', {
+        enforced: '<b>' + tx('Working today:') + '</b>', pending: tx('pending') }) + '</div>';
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
@@ -4647,7 +4665,11 @@ async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)retu
       +'<label class="fl">' + tx('Answer') + '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
       +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
       +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' + tx('📣 Publish to catalogue') + '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Add a new answer, or press <b>' + tx('Edit') + '</b> on one below to refine it. Served to the assistant instantly (catalogue <span class=arw>→</span> projection).</div></div>'
+      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + txf('Add a new answer, or press {edit} on one below to refine it.', {
+          edit: '<b>' + tx('Edit') + '</b>' }) + '</div>'
+      /* ⭐ "catalogue → projection" is how it works, not what to do. */
+      + specNote('assist.answers.projection', 'Answers are served to the assistant instantly (catalogue <span class=arw>→</span> projection).')
+      + '</div>'
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   h.innerHTML=form+'<div style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
