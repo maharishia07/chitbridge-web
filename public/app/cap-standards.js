@@ -14,7 +14,7 @@
  * payload — loaded by ensureCap('standards') from whichever surface asks first.
  */
 var STANDARDS = [
-  { g:'Localisation', n:'BCP 47 (RFC 5646)',      w:'Language tags — en-IN, ar-AE, ta',                 ex:"ta-IN", exWhy:"A browser sends exactly this as <code>Accept-Language</code>. Any system on earth reads it as \"Tamil, as written in India\" — no lookup table, no mapping file.",
+  { g:'Localisation', n:'BCP 47 (RFC 5646)',      w:'Language tags — en-IN, ar-AE, ta',                 ex:"ta-IN", exWhy:"A browser sends exactly this as <code>' + tx('Accept-Language') + '</code>. Any system on earth reads it as \"Tamil, as written in India\" — no lookup table, no mapping file.",
     s:'live',
     at:'Localisation', go:'locale', why:'A language tag nobody else parses means every counterparty re-guesses what "Tamil" meant.' },
   { g:'Localisation', n:'UTS #35 · CLDR',         w:'Locale data and the -u- extensions (nu·hc·ca·fw)',  ex:"en-IN-u-nu-latn-hc-h23", exWhy:"One tag carrying four decisions: English, Indian grouping, Western digits, 24-hour clock. Hand it to <code>' + tx('Intl') + '</code> anywhere and you get the same answer.",

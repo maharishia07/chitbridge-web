@@ -50,7 +50,7 @@ function intakeScreen(){
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
-    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> Business rules</a>.</div>'
+    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> ' + tx('Business rules') + '</a>.</div>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }

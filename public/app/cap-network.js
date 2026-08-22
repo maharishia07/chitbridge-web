@@ -1562,7 +1562,7 @@ function _netBrowseBody(){
     return '<div onclick="netBrowse(\'' + esc(st.entity_id) + '\',\'' + esc(String(st.name).replace(/'/g, '')) + '\',\'' + esc(st.bridge_id || '') + '\')"'
       + ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
       + '<b style="font-size:var(--fs-3)">' + esc(st.name) + '</b>'
-      + (st.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">YOU</span>' : '')
+      + (st.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">' + tx('YOU') + '</span>' : '')
       + (st.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(st.city) + '</span>' : '')
       + (st.km !== null && st.km !== undefined ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + st.km + ' km</span>' : '')
       + (st.currency ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.currency) + '</span>' : '')

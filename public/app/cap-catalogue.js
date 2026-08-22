@@ -333,7 +333,7 @@ function catfPublishBlueprint(){
   api('catSourcePut', { body: body }).then(function(r){
     if (r && r.ok) {
       if (typeof toast === 'function') toast('Published as blueprint ✓');
-      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📢 Published as a blueprint') + '</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> Blueprint</b> and pick:'
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📢 Published as a blueprint') + '</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> ' + tx('Blueprint') + '</b> and pick:'
         + '<div style="margin-top:8px;font-weight:700;color:var(--blue-2)">' + esc(body.title) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
         + '<div style="margin-top:10px">Each distributor sets its <b>own unit + price</b> (e.g. wholesale in <b>ton</b>, retail in <b>kg</b>) — the names &amp; design travel <b>by reference</b>, not copied.</div></div></div>', true);

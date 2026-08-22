@@ -390,7 +390,7 @@ function _lifeTabHtml(){
       ${g.rows.map(row).join('')}
     </div>`;
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">${tx('✅ verified-live')}</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">${tx('○ backlog')}</span>.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> ${tx('Test')}</b>. <span style="color:var(--ok-3)">${tx('✅ verified-live')}</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">${tx('○ backlog')}</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ <span class=arw>→</span> ✅ at scale.</div>
   </div>`;

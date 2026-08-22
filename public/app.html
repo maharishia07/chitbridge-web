@@ -2339,7 +2339,7 @@ function renderWelcome(){
         <div class="welh2">Ask Chit &amp; Bridge <span class="welask-tag">sample answers</span></div>
         <div class="welsub">A product guide can answer whether it fits your business. (Real version: answers from the Prospect Knowledge Base, with its guardrails.)</div>
         <div class="welchips">${ONB_FAQ.map((f,i)=>`<button class="welchip" onclick="askPick(${i})">${f.q}</button>`).join("")}</div>
-        <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">Ask</button></div>
+        <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">${tx('Ask')}</button></div>
         <div class="welask-ans" id="ask_ans"></div>
       </div>
       <div class="welbtns"><button class="btn" data-testid="onb-getstarted" onclick="setWStep('select')">Get started <span class=arw>→</span></button></div>`;
@@ -2399,7 +2399,7 @@ function renderRegister(){
     <div class="body">
       ${form}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
-      <div class="swap">Already registered? <a onclick="go('#/login')">Sign in</a></div>
+      <div class="swap">Already registered? <a onclick="go('#/login')">${tx('Sign in')}</a></div>
     </div>
   </div></div>`;
   const b=document.getElementById("r_go"); if(b) b.onclick=doRegister;
@@ -2470,7 +2470,7 @@ function renderLogin(){
     form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
        <label class="fl">${tx('Your mobile OTP')}</label><input class="inp" id="l_cotp" placeholder="6-digit code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
-       <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> Back to sign in</a></div>`;
+       <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> ${tx('Back to sign in')}</a></div>`;
   } else if(L.step==="id"){
     form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id &middot; co-assist: key@user-id)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue <span class=arw>→</span>"}</button>`;
@@ -4877,7 +4877,7 @@ function ccStepTo(){
      <div id="cc_rcap" style="display:none"></div>`
     : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>${tx('CC')}</b> is informed · <b>${tx('For')}</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
-       <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
+       <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">${tx('CC')}</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
        <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
      </div>
@@ -5340,9 +5340,9 @@ async function submitActor(){
 function actorInviteModal(head, name, login, otp){
   modal(`<div class="mhd"><div class="t">${esc(head)}</div><div class="s">share these so ${esc(name||'they')} can sign in</div></div>
    <div class="mbody">
-     <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
+     <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">${tx('User ID')}</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
      <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">${tx('One-time code')}</div><div style="font-family:'Space Mono';font-weight:800;font-size:var(--fs-5);color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
-     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>${tx('Re-invite')}</b> on their card for a fresh code.</div>
+     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>${tx('User ID')}</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>${tx('Re-invite')}</b> on their card for a fresh code.</div>
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
 }
@@ -5350,7 +5350,7 @@ function actorInviteModal(head, name, login, otp){
 function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel){
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${bodyHtml}</div></div>
-   <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">Cancel</button><button class="${danger?'danger':'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel||'Confirm')}</button></div>`);
+   <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">${tx('Cancel')}</button><button class="${danger?'danger':'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel||'Confirm')}</button></div>`);
   UI._modalDismiss = onCancel || null;                       // fires on Cancel, Escape or the backdrop — see closeModal
   const b=document.getElementById('_cfmok'); if(b)b.onclick=function(){ UI._modalDismiss=null; closeModal(); onOk(); };
 }
@@ -5396,7 +5396,7 @@ function actorCleanupModal(action, name, parts){
    <div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">${esc(name||'They')} can no longer sign in.${action==='deactivate'?' Reactivate any time to restore access — note the bindings below are <b>not</b> auto-restored.':''}</div>
      <div style="${_CARD};margin-top:9px"><div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:700;margin-bottom:4px">Bindings cleaned</div>${rows}</div>
    </div>
-   <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
+   <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
   if(typeof announce==='function') announce((name||'Co-assist')+' '+(action==='remove'?'removed':'deactivated')+(parts&&parts.length?'. '+parts.join('. '):'.'));
 }
 /* ---------------- shared screen helpers ---------------- */
@@ -5454,7 +5454,7 @@ const HELP_TEXT = {
   },
   'work.autoassign': {
     t: 'Auto-assign',
-    b: 'Only an <b>Editor</b> can be assigned.<br><br>'
+    b: 'Only an <b>' + tx('Editor') + '</b> can be assigned.<br><br>'
      + '<b>' + tx('Least-loaded') + '</b> — ties go to whoever went longest without a new task. '
      + 'When everyone is at capacity it overflows to the default assignee.<br><br>'
      + 'Anyone on leave routes to their delegate.'
@@ -6731,7 +6731,7 @@ function prodCategoriseAsk(){
     <div class="s">attaching adds a category — it never removes the others</div></div>
    <div class="mbody"><div class="bulklist">${rows}</div>
      <div class="err" id="bulk_err"></div></div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button>
+   <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button>
      <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">${tx('Apply')}</button></div>`);
 }
 function prodBulkToggle(id, which, btn){
@@ -8158,13 +8158,13 @@ function filterPanel(){ const f=UI.filter||{};
       <option value="order"${f.kind==='order'?' selected':''}>${tx('Order')}</option>
       <option value="counter"${f.kind==='counter'?' selected':''}>${tx('Counter')}</option>
       <option value="service"${f.kind==='service'?' selected':''}>${tx('Service')}</option></select></div>
-    <div class="fp-row"><label><input type="checkbox" ${f.disputeOnly?'checked':''} onchange="setFilter('disputeOnly',this.checked)"> Disputed only</label></div>
+    <div class="fp-row"><label><input type="checkbox" ${f.disputeOnly?'checked':''} onchange="setFilter('disputeOnly',this.checked)"> ${tx('Disputed only')}</label></div>
     <div class="fp-row"><span>${tx('Sort')}</span><select onchange="setFilter('sort',this.value)">
       <option value=""${!f.sort?' selected':''}>${tx('Default')}</option>
       <option value="priority"${f.sort==='priority'?' selected':''}>${tx('Priority (queue)')}</option>
       <option value="amount"${f.sort==='amount'?' selected':''}>Amount (high <span class=arw>→</span> low)</option>
       <option value="code"${f.sort==='code'?' selected':''}>${tx('Code')}</option></select></div>
-    <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
+    <div class="fp-foot"><button onclick="clearFilter()">${tx('Clear')}</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
 let _notifs=[];
@@ -8436,7 +8436,7 @@ function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaint
 function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
 function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><div class="keyhead"><h4>' + tx('Legend / key') + '</h4>'
  + '<button class="keyx" onclick="toggleLegend()" title="' + tx('Close') + '" aria-label="' + tx('Close') + '">✕</button></div><div class="keygrid">'
- +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="udot"></span> ' + tx('Unread') + '</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
 /**
  * ⚠️⚠️ THE LEGEND EXPLAINED THREE OF THE FIVE FLAGS A ROW CAN SHOW. Athi, 2026-08-22: *"in the flag, we added
  * resolved when dispute resolved. Can you check in code if we have any other flag created and it has to be
@@ -8461,7 +8461,7 @@ function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagat
    of the three: a `?` a reader cannot decode is easy to read as a rendering glitch. */
  +'<div class="kbox"><div class="kt"><span class="unver">?</span> ' + tx('Unverified sender') + '</div><div class="kd">The name beside this mark is what the sender CLAIMS. We have not verified that entity, so treat it as unconfirmed until it carries a verification.</div></div>'
  +'<div class="kbox"><div class="kt"><span class="chipst st-open">' + tx('OPEN') + '</span> <span class="chipst st-act">' + tx('ACT') + '</span> <span class="chipst st-close">' + tx('CLOSE') + '</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
- +'<div class="kbox"><div class="kt">' + tx('♿ Voice') + '</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
+ +'<div class="kbox"><div class="kt">' + tx('♿ Voice') + '</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> ' + tx('Speak status changes aloud') + '</label>. Screen-reader announcements are always on.</div></div>'
  +'</div></div>'; }
 function toggleVoice(){ UI.voice=!UI.voice; try{ localStorage.setItem('cb_voice', UI.voice?'1':''); }catch(_){ } if(UI.voice) announce('Voice announcements on'); }
 function announce(msg){ var el=document.getElementById('live'); if(el)el.textContent=msg; if(UI.voice && window.speechSynthesis){ try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); }catch(_){ } } }
@@ -8496,10 +8496,10 @@ function advPanel(){ const a=UI.adv||{};
     <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
     <div class="advrow"><label>${tx('Amount')}</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min||''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max||''}"></div>
     <div class="advrow"><label>${tx('Date')}</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
-    <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus==='open'?'selected':''}>${tx('Open')}</option><option value="act" ${a.fstatus==='act'?'selected':''}>${tx('Act')}</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
-    <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>${tx('Urgent')}</option><option value="high" ${a.priority==='high'?'selected':''}>${tx('High')}</option><option value="normal" ${a.priority==='normal'?'selected':''}>${tx('Normal')}</option></select></div>
+    <div class="advrow"><label>${tx('Status')}</label><select class="advin" id="adv_status"><option value="">${tx('Any')}</option><option value="open" ${a.fstatus==='open'?'selected':''}>${tx('Open')}</option><option value="act" ${a.fstatus==='act'?'selected':''}>${tx('Act')}</option><option value="close" ${a.fstatus==='close'?'selected':''}>${tx('Close')}</option></select></div>
+    <div class="advrow"><label>${tx('Priority')}</label><select class="advin" id="adv_pri"><option value="">${tx('Any')}</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>${tx('Urgent')}</option><option value="high" ${a.priority==='high'?'selected':''}>${tx('High')}</option><option value="normal" ${a.priority==='normal'?'selected':''}>${tx('Normal')}</option></select></div>
     ${(typeof dispSearchRow==='function')?dispSearchRow(a):''}
-    <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
+    <div class="advfoot"><button class="composebtn" onclick="clearAdv()">${tx('Clear')}</button><button class="composebtn pri" onclick="applyAdv()">${tx('Apply')}</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
   /**

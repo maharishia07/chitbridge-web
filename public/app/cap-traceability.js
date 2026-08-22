@@ -35,7 +35,7 @@ function traceabilityScreen(){
         + 'oninput="UI.traceId=this.value" onkeydown="if(event.key===\'Enter\')runTrace(\'forward\')" '
         + 'style="flex:1;min-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace">'
       + '<button class="pri" onclick="runTrace(\'forward\')" style="padding:9px 14px">🚨 Recall set <span class=arw>▸</span></button>'
-      + '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> To source</button>'
+      + '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> ' + tx('To source') + '</button>'
     + '</div>'
     + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:var(--fs-1);color:var(--grey)">'
       + '<label>₹ / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '

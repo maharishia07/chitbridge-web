@@ -490,7 +490,7 @@ function acDetailHTML(){ const x=UI.acDet;
             ⚠️ mode is 'owner' here: it names who filed each document and ASKS for consent, which self-service
             does not need because submitting your own IS consenting. */''}
       <div class="sec" style="margin-top:14px">${tx('Identity record')}</div>
-      ${typeof CBIdDocs!=='undefined' ? CBIdDocs.html(UI._idocsFor||[], 'owner', {subject:x.id}) : '<div class="misnote">Loading…</div>'}
+      ${typeof CBIdDocs!=='undefined' ? CBIdDocs.html(UI._idocsFor||[], 'owner', {subject:x.id}) : '<div class="misnote">' + tx('Loading…') + '</div>'}
       <div class="err" id="ac_ederr" style="margin-top:8px"></div>
       <div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5"><b>${tx('Stage B')}</b> — profile edit needs <span class="mono">${tx('PATCH /api/actors/:id')}</span>  2014 23f3 pending on this server.</div>`;
     /* ⚠️ LATCHED PER SUBJECT, not a plain boolean — opening Ravi then Priya must refetch, and a single

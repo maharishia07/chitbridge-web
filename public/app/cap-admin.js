@@ -355,9 +355,9 @@ function _misStack(m){
   var seg = function(n, col, on){ return n ? '<span style="background:' + col + ';color:' + on + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
   return '<div class="misstack">' + seg(m.open, 'var(--blue)', 'var(--on-accent)')
     + seg(m.in_progress, 'var(--prog)', 'var(--on-warn)') + seg(m.closed, 'var(--ok)', 'var(--on-ok)') + '</div>'
-    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Open</span>'
-    + '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> In progress</span>'
-    + '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> Closed</span></div>';
+    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> ' + tx('Open') + '</span>'
+    + '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> ' + tx('In progress') + '</span>'
+    + '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> ' + tx('Closed') + '</span></div>';
 }
 /* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
 function _misSpark(series){
@@ -3431,7 +3431,7 @@ function standardsSettingsHTML(){
        * and an explanation. Where it is USED makes it checkable; what it REMOVES makes it worth having.
        */
       + (st.at ? '<div style="font-size:var(--fs-1);margin-top:4px;line-height:1.5">'
-          + '<span style="color:var(--grey)">Used in </span>'
+          + '<span style="color:var(--grey)">' + tx('Used in') + ' </span>'
           + (st.go
               ? '<a href="#" data-testid="std-go-' + esc(st.go) + '" onclick="stdGoto(' + Q + esc(st.go) + Q + ');return false" style="color:var(--blue);font-weight:600">' + esc(st.at) + ' <span class=arw>→</span></a>'
               : '<b style="color:var(--on-card)">' + esc(st.at) + '</b>')
@@ -3641,7 +3641,7 @@ function appearanceSettingsHTML(){
 
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">'
     +   'Standards: <b>WCAG 2.2</b> (1.4.3 / 1.4.6 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · '
-    +   'colour-blind palette <b>Okabe–Ito</b>.'
+    +   'colour-blind palette <b>' + tx('Okabe–Ito') + '</b>.'
     + '</div>';
 }
 
@@ -4308,7 +4308,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
-      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> ${tx('Auto-return tasks on short break')}</label>
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>`
       /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
          set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
