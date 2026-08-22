@@ -57,7 +57,7 @@ function acHowItWorks(iot){
         'Your ERP or middleware {push} over the governed rail. We {pf}: only the {summary} travels on as a co-held chit, and we keep a {receipt} — a hash of the payload plus the outcome — {never}. Retries are safe (idempotent by hash). It stays auditable and disputable against the hash, with neither side holding your ERP data.',
         { push: '<b>pushes a document</b>', pf: '<b>process then forget</b>', summary: '<b>summary</b>',
           receipt: '<b>receipt</b>', never: '<b>never the raw document</b>' }) + '</div>'
-      +'<div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:12px">Tap <b>' + tx('📄 Send a test document') + '</b> below to run the whole loop once and watch a receipt appear.</div>';
+      +'<div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:12px">' + txf('Tap {btn} below to run the whole loop once and watch a receipt appear.', { btn: '<b>' + tx('📄 Send a test document') + '</b>' }) + '</div>';
   modal('<div style="padding:2px 2px">'+body+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Got it') + '</button></div></div>', false);
 }
 // The ERP receipt ledger — hash + outcome only, NEVER the raw payload. Chit link opens the co-held record.
@@ -66,7 +66,7 @@ function _erpReceiptsHTML(){
   var head='<div class="sec" style="margin-top:16px">Receipts'+(Array.isArray(rs)?(' <span style="color:var(--grey);font-weight:400">('+rs.length+')</span>'):'')+'</div>';
   if(rs===undefined) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
   if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:var(--disp);font-size:var(--fs-2)">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">' + tx('Retry') + '</button></div>';
-  if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No documents yet. Tap <b>' + tx('📄 Send a test document') + '</b> to run the cycle.</div>';
+  if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">' + txf('No documents yet. Tap {btn} to run the cycle.', { btn: '<b>' + tx('📄 Send a test document') + '</b>' }) + '</div>';
   var rows=rs.map(function(r){
     var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'var(--disp)':(oc==='duplicate'?'var(--warn-2)':'var(--grey-2)'));
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'

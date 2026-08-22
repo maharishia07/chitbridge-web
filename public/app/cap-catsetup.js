@@ -386,8 +386,10 @@ function catsetUnitsHTML(){
     + groups
     /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
        already priced in barrels; saying so up front is cheaper than them not daring to touch it. */
-    + '<div class="catset-src">Unticking stops a unit being <b>offered</b>. Products already saved in it keep it — '
-    + 'nothing is rewritten. Spellings under <i>also accepted</i> fold onto the unit when a message arrives.</div>');
+    + '<div class="catset-src">'
+    + txf('Unticking stops a unit being {offered}. Products already saved in it keep it — nothing is rewritten. Spellings under {also} fold onto the unit when a message arrives.', {
+        offered: '<b>' + tx('offered') + '</b>', also: '<i>' + tx('also accepted') + '</i>' })
+    + '</div>');
 }
 async function catsetUnitsLoad(){
   try { var f = await api('policyGet'); var fl = (f && f.flags) || {};

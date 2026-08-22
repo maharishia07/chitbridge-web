@@ -945,9 +945,10 @@ function cbDefHTML(){
     +   ' style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;'
     +   'height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
     + '</div>'
-    + '<div class="cbdef-lede">Everything a catalogue can be built from. These are the <b>kinds</b> the system '
-    + 'knows — the shapes available to you. Naming your own (a category list, an offer, “Carton of 6”) and '
-    + 'attaching them to a catalogue comes next.</div>'
+    + '<div class="cbdef-lede">'
+    + txf('Everything a catalogue can be built from — the {kinds} available to you. Naming your own (a category list, an offer, “Carton of 6”) and attaching them to a catalogue comes next.', {
+        kinds: '<b>' + tx('kinds') + '</b>' })
+    + '</div>'
     /**
      * ⚠️ SAYING WHAT IS NOT HERE, IN THE PRODUCT, NOT ONLY IN A SPEC. A showcase that looks like a finished
      * feature invites someone to hunt for the Create button and conclude the screen is broken. The honest
