@@ -1136,6 +1136,24 @@
   #assistfab{position:fixed;inset-inline-end:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:270}
   body.vpmob #assistfab{inset-inline-end:calc(50% - 220px + 16px)}
   body.vpmob .composepill{inset-inline-start:calc(50% - 220px + 16px)}
+  /**
+   * ⚠️⚠️ THE FRAME MATHS IS FOR THE PREVIEW, AND ON A REAL NARROW WINDOW IT GOES NEGATIVE. `calc(50% - 220px)`
+   * centres a viewport-fixed thing inside the simulated 440px phone. At 360px wide that is `180 - 220 = -40`,
+   * so the element is pushed OFF the edge it was meant to hug — measured: `#assistfab` at 265→384 in a 360px
+   * window, and `.modal{width:440px}` is simply wider than the screen it is on.
+   *
+   * ⭐ IT NEVER BIT BEFORE BECAUSE A REAL NARROW WINDOW NEVER ENTERED MOBILE MODE — the layout was decided once
+   * at boot and stayed on the laptop grid. Making the mode follow the window (see `_vpAutoCheck`) is what
+   * exposed this: a fix that reaches a code path nobody had reached before inherits whatever was waiting there.
+   *
+   * ⭐ SO: below the real-phone breakpoint the frame is the screen, and these hug the actual edges. Same idiom
+   * as `.keypanel` — the preview keeps its calc, a real device gets its viewport.
+   */
+  @media (max-width:680px){
+    body.vpmob #assistfab{inset-inline-end:16px}
+    body.vpmob .composepill{inset-inline-start:16px}
+    body.vpmob .modal,body.vpmob .modal.wide{width:auto;max-width:97vw}
+  }
   .divider{background:var(--line);display:flex;align-items:center;justify-content:center;cursor:col-resize;transition:background .15s}
   .divider:hover{background:var(--blue)}
   .divider .grip{width:3px;height:26px;border-radius:3px;background:var(--grey);opacity:.55}
