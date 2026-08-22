@@ -1217,11 +1217,37 @@ img.attImg{object-fit:cover;display:block}
  * `calc(50% - 220px)` correction like #assistfab does. ⚠️ Scoped to `.appwrap.m` on purpose: on the desktop
  * the containing block is the narrow list header, and `100%` there would SHRINK a panel that works today.
  */
-.appwrap.m .keypanel{max-width:100%}
+/**
+ * ⚠️ `max-width:100%` FIXED THE CLIPPING AND LEFT IT 245px WIDE. Athi, 2026-08-22: *"you can make the legend
+ * panel a little wider if required, so all can fit in the same page."* The percentage resolves against the
+ * CONTAINING BLOCK, and that is `.lttools` — the small tools cluster the 🔑 button sits in, measured at
+ * 602→847. Escaping the clipper was never the same as filling the frame.
+ *
+ * ⭐ `position:fixed` LEAVES THE CLIPPER ALTOGETHER, so `.appwrap.m .shell{overflow:hidden}` can no longer
+ * reach it — and the panel is then sized by the FRAME rather than by whichever little box holds its trigger.
+ *
+ * ⚠️ WHICH NEEDS BOTH RULES BELOW, because `body.vpmob` is set in the preview AND on a real phone. The calc
+ * pins the sheet into the 440px simulated frame (the same correction #assistfab and .composepill already
+ * carry); on a real phone 50%−220px goes NEGATIVE — −13px at 393px wide — and would hang off both edges, so
+ * the media query hands it the viewport instead. This is the idiom already used for the compose modal.
+ */
+.appwrap.m .keypanel{position:fixed;top:auto;bottom:76px;inset-inline:calc(50% - 220px + 10px);width:auto;max-width:none;max-height:70vh}
+@media (max-width:680px){ .appwrap.m .keypanel{inset-inline:10px} }
+/* ⚠️ CLEARS THE ASSISTANT PILL rather than sitting on top of it — 76px is the pill plus its margin. A sheet
+   that covers the one always-present control is a worse trade than a sheet that starts slightly higher. */
 /* ⭐ AND ONE COLUMN ON A PHONE. Two columns of ~165px turn a six-line explanation into a column of single
    words; the panel already scrolls (max-height + overflow-y), so height is the cheap axis and width is not. */
 .appwrap.m .keygrid{grid-template-columns:1fr}
-.keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
+.keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
+/* ⭐ A WAY OUT THAT IS VISIBLE. Athi, 2026-08-22: *"also an x mark to close if required."* The panel closed on
+   an outside click and on the 🔑 button, and neither announces itself — on a phone especially, an overlay with
+   no visible exit reads as stuck. The header is sticky so the way out stays reachable while the list scrolls. */
+.keyhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;position:sticky;top:-12px;background:var(--card);padding:2px 0 6px;z-index:2}
+.keyx{background:none;border:0;color:var(--grey);font-size:var(--fs-3);line-height:1;cursor:pointer;padding:2px 7px;border-radius:7px}
+.keyx:hover{background:var(--line);color:var(--on-card)}
+/* ⚠️ A BUTTON THAT ONLY SHOWS ITS STATE ON HOVER IS UNREACHABLE BY KEYBOARD — this is the exit, so it needs a
+   focus ring of its own rather than inheriting whatever the browser removes. */
+.keyx:focus-visible{outline:2px solid var(--blue);outline-offset:2px;color:var(--on-card)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);line-height:1.5}
 .kbox .kt{font-family:'Space Grotesk';font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -8228,7 +8254,8 @@ function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaint
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
    control would have vanished in exactly the views where you most want the space back. */
 function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
-function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>' + tx('Legend / key') + '</h4><div class="keygrid">'
+function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><div class="keyhead"><h4>' + tx('Legend / key') + '</h4>'
+ + '<button class="keyx" onclick="toggleLegend()" title="' + tx('Close') + '" aria-label="' + tx('Close') + '">✕</button></div><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
 /**
  * ⚠️⚠️ THE LEGEND EXPLAINED THREE OF THE FIVE FLAGS A ROW CAN SHOW. Athi, 2026-08-22: *"in the flag, we added

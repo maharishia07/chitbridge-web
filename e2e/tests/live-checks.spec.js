@@ -241,7 +241,18 @@ test.describe('Live checks · 2026-08-21/22', () => {
     test.setTimeout(120000);
     await mintEntity(page);
     await clickNav(page, 'task');
-    await page.waitForTimeout(3000);
+    /**
+     * ⚠️⚠️ WAIT FOR STARTUP TO FINISH BEFORE COUNTING — 3 SECONDS WAS NOT ENOUGH AND THE CHECK BLAMED THE POLL.
+     * It reported 3–4 list reads on an idle screen and read like a broken optimisation. It was not: tracing the
+     * watermark over four ticks returned "0.0.0.0" every time, so the pulse never moved and the gate never
+     * opened. The reads came from `_renderApp`, which calls `loadList()` on every render while nav is a list
+     * track — and startup renders several times as its once-per-session probes land (capabilities, helpdesk,
+     * folders), each one a `bgRenderApp`.
+     *
+     * ⭐ SO THE WINDOW WAS THE BUG. Counting from t+3s caught the tail of app start and attributed it to the
+     * 20-second poll. This waits for the renders to stop, THEN measures.
+     */
+    await page.waitForTimeout(12000);
 
     let pulses = 0, lists = 0;
     page.on('request', (r) => {
