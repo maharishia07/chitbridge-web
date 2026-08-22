@@ -55,8 +55,21 @@ for (const f of FILES) {
        it, or a run that is clearly mid-sentence (starts lowercase). Three <button> labels on one line are
        three labels, not a broken sentence — counting those would inflate the job with work that does not
        exist. */
+    /**
+     * ⚠️⚠️ `OR` COUNTED 43 LABEL ROWS AS BROKEN SENTENCES IN app.html ALONE. "Recipients · To acts · is
+     * informed · = on behalf of" is a legend strip: four separate labels sharing one source line, each already
+     * a whole translatable unit. Reassembling it into a `txf()` would invent a sentence nobody wrote.
+     *
+     * ⭐ THE TEST IS `AND`, and both halves are load-bearing. Terminal punctuation says a sentence exists on
+     * this line; a run STARTING LOWERCASE says a sentence was CUT — "…is informed" cannot be the beginning of
+     * anything. Either alone is a guess; together they describe the actual fault.
+     *
+     * ⚠️ IT WILL MISS SOME — a sentence split so that every part happens to start with a capital reads as
+     * labels. Under-counting the job is the safe direction here: the cost of a miss is one sentence left in
+     * English, and the cost of a false positive is prose invented on a screen.
+     */
     const joined = runs.join(' ');
-    const looksProse = /[.!?]/.test(joined) || runs.some((r) => /^[a-z]/.test(r));
+    const looksProse = /[.!?]/.test(joined) && runs.some((r) => /^[a-z]/.test(r));
     if (!looksProse) return;
     lines.push({ rel, n: i + 1, runs, words: joined.split(/\s+/).length });
   });

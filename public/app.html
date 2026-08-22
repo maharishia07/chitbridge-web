@@ -1841,7 +1841,8 @@ function blueprintCardHTML(id){
     +'<div style="font-size:var(--fs-1);font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
     +(wp.workflow?('<div style="font-size:var(--fs-1);font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
       +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'var(--ok-tint)':'var(--purple-tint)')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">The first steps are built today; the rest are the <b>same shape</b> — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches <b>as deep as you declare it</b> — this is the depth, in one place.</div>'):'')
+      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">${txf('The first steps are built today; the rest are the {same} — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches {deep} — this is the depth, in one place.', {
+        same: '<b>' + tx('same shape') + '</b>', deep: '<b>' + tx('as deep as you declare it') + '</b>' })}</div>'):'')
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
     +'</div>';
 }
@@ -2041,7 +2042,7 @@ function cbRenderCatalogue(v){
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
   var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
-    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Fields + design + colour + images. Used by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">' + txf('Fields + design + colour + images. Used by {ref} — Beta stores no copy.', { ref: '<b>' + tx('reference') + '</b>' }) + '</div></div>'
     +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Beta fills · per-entity') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:9px">'
   + [ txn('{count} finish',       '{count} finishes',      v.counts.finishes),
@@ -2332,7 +2333,7 @@ function renderWelcome(){
         <!-- the demo CTA lived here; the Theatre and its generated demo.html are gone --></div>
       <div class="welcaps">${ONB_CAP.map(c=>`<div class="welcap"><div class="ci">${c[0]}</div><div class="cn">${c[1]}</div><div class="cd">${c[2]}</div></div>`).join("")}</div>
       <div class="welsplit">
-        <div class="welcol is"><div class="welh2">What Chit &amp; Bridge is</div><ul><li>The rail that carries and co-signs your records, A to B.</li><li>One shared, signed record per deal — order, message, dispute.</li><li>Yours to control: your prices, catalogue, customers and rules.</li></ul></div>
+        <div class="welcol is"><div class="welh2">${tx('What Chit &amp; Bridge is')}</div><ul><li>${tx('The rail that carries and co-signs your records, A to B.')}</li><li>${tx('One shared, signed record per deal — order, message, dispute.')}</li><li>${tx('Yours to control: your prices, catalogue, customers and rules.')}</li></ul></div>
         <div class="welcol isnot"><div class="welh2">What it's not — not our aim</div><ul><li>We don't hold or sell your customers or your data.</li><li>We don't take over your relationships or become the marketplace.</li><li>Not a place that owns what's yours — disconnect any time.</li></ul></div>
       </div>
       <div class="welask">
@@ -2450,7 +2451,9 @@ function regVerticalChooser(){
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
         return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:' + (sel ? 'var(--on-card)' : 'var(--on-card)') + ';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">' + txf('None fits? {tailor} — or {contact} to wire it quickly.', {
+        tailor:  '<a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a>',
+        contact: '<a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('contact the team') + '</a>' }) + '</div>'
     + '</div>';
 }
 function regTailor(){ if(typeof toast==='function') toast("Tailoring — we'll wire a custom setup with you. For now, pick the closest and refine later."); }
@@ -4921,7 +4924,8 @@ function ccStepReview(){
         var v=ccField(f.field_key);
         return row(esc(f.field_name), v?esc(v):(f.required?'<span style="color:var(--disp)">required</span>':'—')); }).join('')
         + row('Attachments', nAtt?String(nAtt):'—'), 2)
-    + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>${tx('Order')}</b> (sent), one in <b>${tx('Task')}</b> (received), same thread.</div>`;
+    + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> ${txf('A self-addressed chit is a real chit: one copy in {order} (sent), one in {task} (received), same thread.', {
+        order: '<b>' + tx('Order') + '</b>', task: '<b>' + tx('Task') + '</b>' })}</div>`;
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
@@ -6007,7 +6011,7 @@ function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.custom
         +kv('Joined',c.customer_since?esc(custDate(c.customer_since)):'—')
         +kv('Segment',custSeg(c.segment))
         +kv('Added via',esc(c.added_via||'—')))
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">Signed in / ordered through your storefront. This customer exists <b>only under your shop</b> — the platform never shares them with anyone else.</div></div>';
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">Signed in / ordered through your storefront. ' + txf('This customer exists {only} — the platform never shares them with anyone else.', { only: '<b>' + tx('only under your shop') + '</b>' }) + '</div></div>';
 }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ var r=await api('custList'); UI.custs=(r&&r.customers)||(Array.isArray(r)?r:[]); UI._custLoading=false; paintCustList();
@@ -6470,7 +6474,7 @@ function supDetailHTML(){
   /* ⚠️ loader(), NOT emptyState. "Searching" is work in progress, not an absence — dressing it as an empty
      state told the reader there was nothing to find at the exact moment we were finding it. */
   if(UI.supFind) return loader(tx('Searching every supplier'))
-    + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open <span class=arw>→</span></b> on one to bring their catalogue back here.</div></div>`;
+    + `<div>${txf('Results are on the left, grouped by who stocks it. Pick {open} on one to bring their catalogue back here.', { open: '<b>' + tx('Open') + ' <span class=arw>→</span></b>' })}</div></div>`;
   if(!x) return emptyState('🏭', tx('Select a supplier'), tx('Pick one to see their profile and catalogue, then compose an order.'));
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
   /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
@@ -8135,7 +8139,7 @@ async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toas
   if(ids.length>1) showBusy(txn('Unarchiving {count} record…', 'Unarchiving {count} records…', ids.length)); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
 function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
   confirmAsk('Delete '+ids.length+' item'+(ids.length===1?'':'s')+' permanently?',
-    "This <b>can't be undone</b>.<div style=\"margin-top:7px\">Only <b>drafts</b> can be purged — sent and received chits stay where they are, because the other party holds a copy.</div>",
+    "This <b>can't be undone</b>.<div style=\"margin-top:7px\">${txf('Only {drafts} can be purged — sent and received chits stay where they are, because the other party holds a copy.', { drafts: '<b>' + tx('drafts') + '</b>' })}</div>",
     'Delete', function(){ _bulkPurge(ids); }, true); }
 async function _bulkPurge(ids){
   if(ids.length>1) showBusy(txn('Deleting {count} record…', 'Deleting {count} records…', ids.length));
