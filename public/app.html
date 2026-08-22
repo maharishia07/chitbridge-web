@@ -2382,7 +2382,9 @@ function renderRegister(){
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
     form = `${onbBanner()}<label class="fl">User ID <span ${muted}>(Register.UserID)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
-       <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">8 characters or more · letters, numbers and dashes · no <b>@</b> or <b>.</b> — those make an employee or a network store.<br><b>This cannot be changed later.</b> Your business name can be anything, and you set it after signing in.</div>
+       <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · letters, numbers and dashes · no {at} or {dot} — those make an employee or a network store.{br}{fixed} Your business name can be anything, and you set it after signing in.', {
+        at: '<b>@</b>', dot: '<b>.</b>', br: '<br>',
+        fixed: '<b>' + tx('This cannot be changed later.') + '</b>' })}</div>
        <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity <span class=arw>→</span>"}</button>`;
@@ -5315,7 +5317,9 @@ function addActorModal(){
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
      <div style="background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:9px;font-size:var(--fs-2);color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
      <label class="fl" style="margin-top:11px">${tx('Hat (what they do)')}</label><select class="inp" id="ac_hat"><option value="act">${tx('Act — does the work (assignable)')}</option><option value="manager">${tx('Manager — acts + assigns/manages')}</option><option value="audit">${tx('Audit — review only')}</option><option value="mis">${tx('MIS — reports only')}</option><option value="view_only">${tx('View-only')}</option></select>
-     <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>${tx('User ID')}</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>${tx('Editor')}</b> can be assigned work.</div>
+     <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">${txf('They sign in with this {uid} under {ent} + a one-time code, then set their own PIN. Starts {onshift}. Only an {editor} can be assigned work.', {
+        uid: '<b>' + tx('User ID') + '</b>', ent: '<b>' + esc(ent) + '</b>',
+        onshift: '<b>' + tx('on shift') + '</b>', editor: '<b>' + tx('Editor') + '</b>' })}</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="submitActor()">${tx('Create')}</button></div>`);
 }
@@ -5342,7 +5346,9 @@ function actorInviteModal(head, name, login, otp){
    <div class="mbody">
      <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">${tx('User ID')}</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
      <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">${tx('One-time code')}</div><div style="font-family:'Space Mono';font-weight:800;font-size:var(--fs-5);color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
-     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>${tx('User ID')}</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>${tx('Re-invite')}</b> on their card for a fresh code.</div>
+     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('They sign in at the login screen with the {uid} + this {code}, then set their own PIN. Lost it? Use {reinvite} on their card for a fresh code.', {
+        uid: '<b>' + tx('User ID') + '</b>', code: '<b>' + tx('one-time code') + '</b>',
+        reinvite: '<b>' + tx('Re-invite') + '</b>' })}</div>
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">${tx('Got it')}</button></div>`);
 }
