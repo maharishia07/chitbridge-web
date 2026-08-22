@@ -3854,10 +3854,19 @@ function _locPendingBar() {
       + '<b style="min-width:132px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">'
       + esc(o.what) + '</b><div style="flex:1;min-width:0">' + esc(shown) + '</div></div>';
   };
-  return /* ⚠️ A SURFACE MUST NAME ITS TEXT COLOUR. guard-static flagged this: painting a background and letting
-       the text inherit means the two themes can disagree — warn-tint is light in both, so dark-mode inherited
-       ink would be pale text on a pale panel. */
-    '<div data-testid="loc-pending" style="position:sticky;top:0;z-index:3;background:var(--warn-tint);color:var(--on-card);'
+  /* ⚠️ A SURFACE MUST NAME ITS TEXT COLOUR. guard-static flagged this: painting a background and letting
+     the text inherit means the two themes can disagree — warn-tint is light in both, so dark-mode inherited
+     ink would be pale text on a pale panel.
+
+     ⚠️⚠️ AND THIS COMMENT USED TO SIT BETWEEN `return` AND ITS VALUE. A block comment containing a newline
+     counts as a line terminator, so AUTOMATIC SEMICOLON INSERTION turned the statement into a bare `return;`
+     — the bar below became unreachable, the function returned undefined, and `_locPendingBar() + body`
+     rendered the literal word "undefined" at the top of the pane. Nothing threw and nothing logged.
+
+     ⭐ THE UNSAVED-CHANGES BAR WAS THE ONE THING THAT COULD NOT AFFORD TO FAIL SILENTLY: staging still
+     worked, so a change was held and never announced. You would edit a setting, see no confirmation, and
+     reasonably conclude it had saved. A comment moved one line up is the whole fix. */
+  return '<div data-testid="loc-pending" style="position:sticky;top:0;z-index:3;background:var(--warn-tint);color:var(--on-card);'
     + 'border:1px solid var(--warn-2);border-radius:9px;padding:10px 12px;margin-bottom:10px">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
     + 'color:var(--on-card);margin-bottom:6px">' + tx('Not saved yet') + '</div>'

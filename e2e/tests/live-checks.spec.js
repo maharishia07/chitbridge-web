@@ -233,6 +233,12 @@ test.describe('Live checks · 2026-08-21/22', () => {
    * the timer happened to land outside it; two ticks means a list fetch has had two chances to appear.
    */
   test('[LIVE-08] an idle list polls the pulse, not the list', async ({ page }) => {
+    /**
+     * ⚠️ THIS CHECK HAS TO SIT AND WAIT, and its own budget was the thing that failed. The poll ticks every 20
+     * seconds, so watching it needs three quarters of a minute of doing nothing — past the 60s default, which
+     * reported "Test timeout exceeded" and read like a broken poll rather than a short stopwatch.
+     */
+    test.setTimeout(120000);
     await mintEntity(page);
     await clickNav(page, 'task');
     await page.waitForTimeout(3000);
