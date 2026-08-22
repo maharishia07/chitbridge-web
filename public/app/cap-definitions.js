@@ -746,7 +746,7 @@ function cbDefGoHome(nav, sec){
 }
 function cbDefRetire(id, name){
   confirmAsk('Retire “' + cbDefEsc(name) + '”?',
-    'It leaves the shelf and <b>cannot be adopted again</b>.'
+    'It leaves the shelf and <b>cannot be used again</b>.'
     + '<div style="margin-top:7px">It is <b>not deleted</b> — chits that already cite it stay explainable.</div>',
     'Retire', function(){ _cbDefRetire(id); }, true);
 }
@@ -923,7 +923,7 @@ function cbDefMineHTML(){
       + (mopen ? ('<div class="cbdef-body">'
       +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'
       /* ⚠️ An empty shelf says what to do, not "0 results". Nobody arrives here knowing what a definition is for. */
-      +   (rows || '<div class="cbdef-none">None yet. <b>+ New</b> to name one — then a catalogue can adopt it.</div>')
+      +   (rows || '<div class="cbdef-none">None yet. <b>+ New</b> to name one — then a catalogue can use it.</div>')
       /* The vocabulary this kind is built from, in the same section rather than a second one further down. Still
          read STRAIGHT from the registry — folding the sections together must not fold in a copy of the list. */
       +   cbDefKindsInline(kind)
@@ -960,7 +960,7 @@ function cbDefHTML(){
      */
     + '<div class="cbdef-note-box">Name your own below — a category, an order model, an offer. '
     + 'A definition stays <b>loose while a catalogue references it</b>: edit it and every catalogue that adopted '
-    + 'it sees the new terms. It is <b>frozen by value the moment a chit is stamped</b>, so a chit keeps the '
+    + 'it sees the new terms. It is <b>fixed the moment a chit is sent</b>, so a chit keeps the '
     + 'version it agreed even after you change the shelf. '
     + '<span style="opacity:.8">Adoption — attaching one to a catalogue — comes next.</span></div>'
     /**

@@ -496,7 +496,7 @@ function catsetBody(k){
       'Give a quantity rule a name, and a product adopts “Carton of 6” instead of repeating pack/step 6. The '
       + 'kinds come from the cart itself — whole units, a decimal amount, a pack multiple, a range, a metre, or '
       + 'an offer line where the buyer names their price.'
-      + '<div class="catset-std">⚠️ Change “Carton of 6” to 12 and <b>every product that adopted it moves</b> — '
+      + '<div class="catset-std">⚠️ Change “Carton of 6” to 12 and <b>every product using it moves</b> — '
       + 'which is either exactly what you want or a catastrophe. Chits already stamped keep the version they '
       + 'froze, which is why adoption freezes at the mint.</div>',
       '<button class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>')

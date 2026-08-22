@@ -2041,7 +2041,7 @@ function cbRenderCatalogue(v){
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
   var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
-    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Fields + design + colour + images. Used by <b>reference</b> — Beta stores no copy.</div></div>'
     +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Beta fills · per-entity') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:9px">'
   + [ txn('{count} finish',       '{count} finishes',      v.counts.finishes),
@@ -2050,7 +2050,7 @@ function cbRenderCatalogue(v){
       txn('{count} schema field', '{count} schema fields', v.counts.fields) ].join(' · ')
   + '</div>':'';
   var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
-  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">' + tx('View saved') + '</button></div><div id="cb_result" style="margin-top:8px"></div>';
+  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Save to my catalogue</button><button class="composebtn" onclick="cbViewMine()">' + tx('View saved') + '</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey-4);font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
   window._cbCat=v;
   modal(head+intro+layers+counts+items+adopt+prov, true);
@@ -2069,7 +2069,7 @@ async function cbAdopt(){
 async function cbViewMine(){
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:var(--fs-2);color:var(--grey-4)">' + tx('Loading…') + '</span>';
   try{ var r=await api('catalogueMine');
-    if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--grey-2)">Nothing saved yet — set prices and Adopt above.</div>'; return; }
+    if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--grey-2)">Nothing saved yet — set prices and Save above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
     if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--ink-2);background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?(esc(inr(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
   }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'load failed')+'</div>'; }
@@ -5626,7 +5626,7 @@ function supInfoCardHTML(x){
    */
   const dec=(sm&&sm.met)||0, ver=(sm&&sm.verified)||0;
   const clr = !sm ? '<span style="color:var(--grey)">not loaded</span>'
-    : dec===0 ? '<span style="color:var(--warn-2);font-weight:700">none declared yet</span>'
+    : dec===0 ? '<span style="color:var(--warn-2);font-weight:700">none set yet</span>'
               : '<span style="color:var(--ok-2);font-weight:700">'+dec+' declared</span>'
                 + (ver? ' <span style="color:var(--ok-2)">· '+ver+' verified</span>'
                       : ' <span style="color:var(--grey)">· none verified</span>');
@@ -7524,7 +7524,7 @@ async function prodAllFields(id){
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:var(--fs-2);margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">🔒 Set by another system — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button>'
@@ -9122,7 +9122,7 @@ function clearancesBlock(c){
     var vu=it.valid_until?'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-2)">'+esc(it.title||it.standard||it.doc||"clearance")+'</div><div style="font-size:var(--fs-1);color:var(--grey)">'+esc(it.standard||"")+(it.doc?" · "+esc(it.doc):"")+'</div>'+vinfo+'</div>'+vu+_rungChipCB(it.rung)+'</div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">' + tx('🛡 Supplier clearances') + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">' + tx('🛡 Supplier clearances') + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">What the supplier held when they sent this order — your own copy, fixed at that moment.</div>'+rows+'</div>';
 }
 function _aiMd(md){
   var L=String(md||'').replace(/\r/g,'').split('\n'),o=[],i=0;

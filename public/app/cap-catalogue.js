@@ -477,7 +477,7 @@ function catfCaptureItem(){
   var out = document.getElementById('cat_je_out'); if (!out) return;   // draft preview → just show the JSON
   out.innerHTML = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('CAPTURED ITEM — conforms to the schema') + '</div>'
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:9px;padding:10px 12px;font-size:var(--fs-1);overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:4px">A real item — this is exactly what goes onto the chit.</div>';
 }
 function _catfItemToRow(it){ it = it || {}; var name = it.product || it.name || 'item'; var unit = it.unit || ''; var price = (it.price != null ? it.price : (it.rate != null ? it.rate : '')); var values = {}; Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['product', 'name', 'unit', 'price', 'rate'].indexOf(k) < 0 && it[k] !== '' && it[k] != null) values[k] = it[k]; }); return { name: name, unit: unit, price: price, values: values }; }
 function catfCustomerPreview(){
@@ -733,7 +733,7 @@ function _cwStep4(w){
   var body;
   if (mode === 'csv') {
     var n = (w.manualItems || []).filter(function(i){ return i._src === 'csv'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>' + tx('Export to CSV from Excel / Tally') + '</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>' + tx('Export to CSV from Excel / Tally') + '</b> and paste it. We match your column headings to the right fields.</div>'
       + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace;resize:vertical"></textarea>'
       + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">' + tx('Import rows') + '</button>'
       + (n ? '<div style="margin-top:8px;font-size:var(--fs-1);color:var(--ok-2)">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
@@ -1009,7 +1009,7 @@ function cwFinish(){
     var noPrice = Math.max(0, picked.length - priced.length);
     var li = function(t){ return '<div style="display:flex;gap:7px;margin-top:5px"><span>•</span><span>' + t + '</span></div>'; };
     var msg = li('<b>' + priced.length + '</b> item' + (priced.length===1?'':'s') + ' with your price — these <b>go live</b>')
-      + (noPrice ? li('<b>' + noPrice + '</b> item' + (noPrice===1?'':'s') + ' with <b>no price</b> — adopted, but <b>not shown in your shop</b> until you price them') : '')
+      + (noPrice ? li('<b>' + noPrice + '</b> item' + (noPrice===1?'':'s') + ' with <b>no price</b> — saved, but <b>not shown in your shop</b> until you price them') : '')
       + '<div style="margin-top:9px">The brand keeps its names, images and colours. <b>You own only your prices.</b></div>';
     /* ⚠️ afterAdopt RUNS ON EVERY PATH — it persists the OWNED items, which have nothing to do with whether you
        adopt the brand by reference. Saying no to the reference adopt must not silently drop the items you typed
@@ -1072,7 +1072,7 @@ function _catfAppearsTab(f, c, facets){
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
 function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', 'var(--purple-2)'] : src === 'value' ? ['📋 by value (copy)', 'var(--blue-2)'] : src === 'erp' ? ['🔗 from ERP', 'var(--warn-2)'] : src === 'csv' ? ['📄 imported', 'var(--ok-2)'] : src === 'capture' ? ['📷 photo', 'var(--purple-2)'] : ['✍ entered', 'var(--ok-2)']; }
 function _catfItemsHtml(f){
-  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">' + tx('YOUR ITEMS · 0') + '</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
+  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">' + tx('YOUR ITEMS · 0') + '</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — add one, or bring them in from a supplier or your ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
   var rows = items.map(function(it, i){
     var t = _catfSrcTag(it._src);

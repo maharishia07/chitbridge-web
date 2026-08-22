@@ -303,7 +303,7 @@ function worklistScreen(){
     var rows = wlRows(d);
 
     if (!d.migrated) {
-      body = '<div style="padding:18px 16px;font-size:var(--fs-2);color:var(--grey)">Per-line assignment is not migrated on this environment (b143), so there is nothing to list.</div>';
+      body = '<div style="padding:18px 16px;font-size:var(--fs-2);color:var(--grey)">Per-line assignment is not available here yet.</div>';
     } else if (!rows.length) {
       /* ⚠️ TWO DIFFERENT EMPTIES. "Nothing is assigned to you" and "nothing is assigned to anyone" send opposite
          signals — one means you are free, the other means the work has not been handed out. */

@@ -90,7 +90,7 @@ function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
       +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+' (floor)</span>'
       +'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--blue-d)">human gate · '+esc(st.gate)+'</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a governed chit stamped <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a chit, recorded <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
     +'<div style="display:flex;gap:10px;margin-top:16px">'+((st.enabled&&s.status==='live'&&s.invoke)?'<button class="composebtn pri" style="flex:1" onclick="closeModal();'+esc(s.invoke)+'()">' + tx('▶ Invoke') + '</button>':'')+'<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button></div></div>', false);
 }
 function aiRowsHTML(){
@@ -492,7 +492,7 @@ function acDetailHTML(){ const x=UI.acDet;
       <div class="sec" style="margin-top:14px">${tx('Identity record')}</div>
       ${typeof CBIdDocs!=='undefined' ? CBIdDocs.html(UI._idocsFor||[], 'owner', {subject:x.id}) : '<div class="misnote">Loading…</div>'}
       <div class="err" id="ac_ederr" style="margin-top:8px"></div>
-      <div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5"><b>${tx('Stage B')}</b> — profile edit needs <span class="mono">${tx('PATCH /api/actors/:id')}</span> (no migration). Save shows an error until that endpoint is deployed.</div>`;
+      <div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5"><b>${tx('Stage B')}</b> — profile edit needs <span class="mono">${tx('PATCH /api/actors/:id')}</span>  2014 23f3 pending on this server.</div>`;
     /* ⚠️ LATCHED PER SUBJECT, not a plain boolean — opening Ravi then Priya must refetch, and a single
        "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
        for this particular screen. */

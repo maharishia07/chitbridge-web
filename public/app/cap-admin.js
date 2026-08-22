@@ -3183,7 +3183,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
   if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
-  var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
+  var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — your business inherits this. <i>⏳ Pending — these will be set for you, not here.</i>':(t===6)?'These come down into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>⏳ Pending.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
    not on the page is the stale-copy bug in its purest form: correct once, then quietly describing nothing. */
 :'';
@@ -3224,7 +3224,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
      * sending a reader from the rule to the place the choice is made.
      */
     + '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line);font-size:var(--fs-1);line-height:1.6">'
-    +   '<div style="color:var(--grey);margin-bottom:5px"><b>This layer sets the envelope. You choose inside it:</b></div>'
+    +   '<div style="color:var(--grey);margin-bottom:5px"><b>This sets the limits. You choose inside them:</b></div>'
     +   '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' + "'locale'" + ');return false" style="color:var(--blue);font-weight:600">Localisation <span class=arw>→</span></a>'
     +   '<span style="color:var(--grey)"> language, formats, time zone, working days &nbsp;·&nbsp; </span>'
     +   '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' + "'appearance'" + ');return false" style="color:var(--blue);font-weight:600">Appearance <span class=arw>→</span></a>'

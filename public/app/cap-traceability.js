@@ -27,7 +27,7 @@ function traceabilityScreen(){
 
   var controls =
     '<div style="padding:14px 18px;border-bottom:1px solid var(--line)">'
-    + '<div style="font-size:var(--fs-4);font-weight:800">🧭 Traceability — recall &amp; provenance</div>'
+    + '<div style="font-size:var(--fs-4);font-weight:800">🧭 Traceability — recall &amp; where it came from</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">Flag a batch to see exactly who it reached; trace any node back to its source. '
       + 'You see topology + product only — <b>commercial terms stay per-party</b>.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">'
@@ -176,7 +176,7 @@ function _traceBwd(r){
   var path = r.path || [], nodes = r.nodes || [];
   var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
   var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px;color:var(--on-card)">'
-    + '<div style="font-size:var(--fs-4);font-weight:800;color:var(--blue-2)"><span class=arw>◂</span> Provenance — to source</div>'
+    + '<div style="font-size:var(--fs-4);font-weight:800;color:var(--blue-2)"><span class=arw>◂</span> Where it came from — back to source</div>'
     + '<div style="font-size:var(--fs-2);color:var(--blue);margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
   var steps = path.map(function(cid, i){
     var n = byId[cid] || { chit_id: cid };
