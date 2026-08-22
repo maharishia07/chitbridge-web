@@ -103,7 +103,9 @@ function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.
 }
 function aiRowsHTML(){
   var slots=window.AI_SLOTS||[];
-  var intro='<div style="padding:11px 13px;font-size:var(--fs-1);color:var(--grey-2);line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:var(--grey-4)">Rung sets the floor — you can only tighten the human gate.</span></div>';
+  var intro='<div style="padding:11px 13px;font-size:var(--fs-1);color:var(--grey-2);line-height:1.5;border-bottom:1px solid var(--line)">' + txf('🤖 AI assists act for you as co-assists — each is one {slot}. Turn one on and set its rule; every action it takes is a chit you can see and dispute.', {
+      slot: '<b>' + tx('slot') + '</b>' })
+    + specNote('ai.rung', 'The rung sets the floor — the human gate can only be tightened, never loosened.') + '</div>';
   /* ⚠️ NO ACTION. A slot is minted by the governance layer, not created from this screen — offering a button
      here would promise a power this reader does not have. */
   if(!slots.length) return intro + emptyState('🤖', tx('No AI assists yet'),

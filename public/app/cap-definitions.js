@@ -747,7 +747,7 @@ function cbDefGoHome(nav, sec){
 function cbDefRetire(id, name){
   confirmAsk('Retire “' + cbDefEsc(name) + '”?',
     'It leaves the shelf and <b>cannot be used again</b>.'
-    + '<div style="margin-top:7px">It is <b>not deleted</b> — chits that already cite it stay explainable.</div>',
+    + '<div style="margin-top:7px">' + txf('It is {notdeleted} — chits that already cite it stay explainable.', { notdeleted: '<b>' + tx('not deleted') + '</b>' }) + '</div>',
     'Retire', function(){ _cbDefRetire(id); }, true);
 }
 async function _cbDefRetire(id){
