@@ -758,7 +758,7 @@ function _cwStep4(w){
       + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:var(--fs-2);color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></div>'; }).join('') : '<div style="font-size:var(--fs-2);color:var(--ok-2)">Nothing left — the blueprint / ERP covered it.</div>');
   } else {
     var ph = w.photos || []; var committed = (w.manualItems || []).filter(function(i){ return i._src === 'capture'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>' + tx('Capture') + '</b> connector uses).</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">' + txf('Only have {photos}? Add the pictures — each becomes an item, and you confirm the name and price.', { photos: '<b>' + tx('photos or product labels') + '</b>' }) + specNote('catalogue.photos.confirm', 'The same human-confirm step the <b>Capture</b> connector uses.') + '</div>'
       + '<input id="cw_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="cwPhotoPick(this)">'
       + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">' + tx('📷 Add photos') + '</button>'
       /**

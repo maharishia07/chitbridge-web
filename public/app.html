@@ -8202,7 +8202,13 @@ function quickDelete(){ const ids=needTarget(); if(!ids.length)return;
   const sent  =rows.filter(c=>!isDraft(c)).map(c=>c.id);
   if(sent.length){
     MODALS.arch={ids:sent};
-    modal(`<div class="mhd"><div class="t">Sent / received chit — can't delete</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${sent.length>1?sent.length+' of these are':'This is'} a <b>co-held record</b> — the counterparty holds a matching copy, so ${sent.length>1?'they':'it'} can't be deleted (removal is governed by the <b>deletion policy</b>). You can <b>${tx('Archive')}</b> ${sent.length>1?'them':'it'} to clear ${sent.length>1?'them':'it'} from your list.${drafts.length?`<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length>1?'s':''} in your selection can still be deleted separately.</span>`:''}</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`);
+    modal(`<div class="mhd"><div class="t">Sent / received chit — can't delete</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--ink);line-height:1.6">${txf('{subject} a {coheld} — the other party holds a matching copy, so {them} cannot be deleted. You can {archive} {them2} to clear {them3} from your list.', {
+        subject: sent.length > 1 ? (sent.length + ' ' + tx('of these are')) : tx('This is'),
+        coheld:  '<b>' + tx('co-held record') + '</b>',
+        them:    sent.length > 1 ? tx('they') : tx('it'),
+        archive: '<b>' + tx('Archive') + '</b>',
+        them2:   sent.length > 1 ? tx('them') : tx('it'),
+        them3:   sent.length > 1 ? tx('them') : tx('it') })}${specNote('chit.deletion-policy', 'Removal of a co-held record is governed by the <b>deletion policy</b>.')}${drafts.length?`<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length>1?'s':''} in your selection can still be deleted separately.</span>`:''}</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`);
     return;
   }
   MODALS.del={ids:drafts};
