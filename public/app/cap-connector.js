@@ -131,7 +131,7 @@ function acDeleteConnector(id, name){
       if(typeof loadCoassists==='function') loadCoassists();
     }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Delete failed — it may have devices attached.'); }
   };
-  if(typeof confirmAsk==='function') confirmAsk('Delete connector', 'Delete <b>'+esc(name||'this connector')+'</b>? Only allowed if it has <b>no devices attached</b> — remove its devices first otherwise. This cannot be undone.', 'Delete', run, true);
+  if(typeof confirmAsk==='function') confirmAsk('Delete connector', 'Delete <b>'+esc(name||'this connector')+'</b>? ' + txf('Only allowed if it has {none} — remove its devices first otherwise. This cannot be undone.', { none: '<b>' + tx('no devices attached') + '</b>' }) + '', 'Delete', run, true);
   else if(window.confirm('Delete '+(name||'this connector')+'? Only if it has no devices attached.')) run();
 }
 function acRegenKey(id){ acReissueGate(id, 'key'); }   // gated: name + one-time code (see acReissueGate)

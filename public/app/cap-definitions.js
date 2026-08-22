@@ -923,7 +923,7 @@ function cbDefMineHTML(){
       + (mopen ? ('<div class="cbdef-body">'
       +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'
       /* ⚠️ An empty shelf says what to do, not "0 results". Nobody arrives here knowing what a definition is for. */
-      +   (rows || '<div class="cbdef-none">None yet. <b>+ New</b> to name one — then a catalogue can use it.</div>')
+      +   (rows || '<div class="cbdef-none">' + txf('None yet. {new} to name one — then a catalogue can use it.', { new: '<b>+ ' + tx('New') + '</b>' }) + '</div>')
       /* The vocabulary this kind is built from, in the same section rather than a second one further down. Still
          read STRAIGHT from the registry — folding the sections together must not fold in a copy of the list. */
       +   cbDefKindsInline(kind)

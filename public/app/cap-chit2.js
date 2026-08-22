@@ -324,7 +324,7 @@ function c2RepricePaint(){
 
   if (!p.has_catalogue) {
     return modal('<h3 style="margin:0 0 6px">₹ Price from catalogue</h3>'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">There is no catalogue on this entity yet, so there are no prices to pull. Add items under <b>' + tx('Catalogue') + '</b> and this will fill them in.</div>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">' + txf('You have no catalogue yet, so there are no prices to pull. Add items under {cat}', { cat: '<b>' + tx('Catalogue') + '</b>' }) + ' and this will fill them in.</div>'
       + '<button class="btn" style="width:100%" onclick="closeModal()">' + tx('Close') + '</button>');
   }
 
