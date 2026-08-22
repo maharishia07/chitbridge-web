@@ -5520,6 +5520,44 @@ const HELP_TEXT = {
  * and reviewers; it is the one surface where our vocabulary is the RIGHT vocabulary. Wrapping it in tx() would
  * add hundreds of strings to every language pack for an audience that reads English by definition.
  */
+/**
+ * ⭐⭐ specStandards(screen) — WHICH STANDARDS APPLY HERE, AND HOW FAR. Athi, 2026-08-22: *"bring it in spec
+ * mode as well — where and how it is implemented."*
+ *
+ * ⭐ GENERATED FROM THE REGISTER, NEVER WRITTEN. `STANDARDS` already records, per row: what it is, a real
+ * example, where it applies (`at`), which screen it belongs to (`go`), and a status — live · part · plan. This
+ * reads that and shows the rows for the screen you are on. Nothing is authored twice, so nothing can drift —
+ * which was the one condition worth insisting on when this was backlogged.
+ *
+ * ⭐ THE STATUS IS THE HONEST PART. `part` and `plan` rows carry a `note` saying exactly what is missing:
+ * *"Codes are carried and matched; check-digit validation is not enforced."* A spec that only listed what we
+ * do would be marketing; naming the gap is what makes it useful to an integrator.
+ *
+ * ⚠️ `STANDARDS` LIVES IN A LAZY CAPABILITY. If it has not loaded, this asks for it and returns nothing this
+ * paint — the next render shows it. Spec mode is a deliberate act, so one extra paint is not worth blocking a
+ * screen for.
+ */
+function specStandards(screen){
+  if (typeof UI === 'undefined' || UI.vp !== 'spec') return '';
+  if (typeof STANDARDS === 'undefined') {
+    try { ensureCap('standards').then(function(){ if (UI.vp === 'spec') renderApp(); }).catch(function(){}); } catch(_){}
+    return '';
+  }
+  var rows = STANDARDS.filter(function(s){ return s && s.go === screen; });
+  if (!rows.length) return '';
+  var badge = { live:'in force', part:'partly', plan:'planned' };
+  return '<div class="specnote" data-spec="standards.' + esc(screen) + '">'
+    + '<span class="speck">standards · ' + esc(screen) + '</span>'
+    + rows.map(function(s){
+        return '<div style="margin:5px 0 0"><b>' + esc(s.n) + '</b> — ' + esc(s.w)
+          + ' <span style="opacity:.75">[' + (badge[s.s] || esc(s.s)) + ']</span>'
+          + (s.at ? '<div style="opacity:.75">applies at: ' + esc(s.at) + '</div>' : '')
+          + (s.note ? '<div style="opacity:.75">⚠ ' + esc(s.note) + '</div>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
 var CBSPEC = {};
 function specNote(key, html){
   CBSPEC[key] = html;

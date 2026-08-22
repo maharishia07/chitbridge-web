@@ -561,7 +561,11 @@ function catalogueSetupHubScreen(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
     + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span>, '
     + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Categories') + '</span>.</div>'
-    + '</div><div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
+    /* ⭐ WHERE AND HOW THE CATALOGUE STANDARDS ARE IMPLEMENTED — read from the STANDARDS register, so this
+       screen states nothing of its own and cannot fall out of step with Settings › Standards. Renders only in
+       🧾 Spec, so an ordinary setup screen is unchanged. */
+    + '</div>' + specStandards('catalogue')
+    + '<div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   var showDetail = (UI.vp === 'mob') && UI.mdetail;

@@ -70,7 +70,30 @@ var STANDARDS = [
     s:'part',
     note:'Codes are carried and matched; check-digit validation is not enforced.',
     at:'Catalogue · product identity', go:'catalogue', why:'⭐ The three-way match only works if both sides agree this is the SAME product. Without a shared identifier, matching is fuzzy string comparison and a dispute has nothing to stand on.' },
-  { g:'Records & data', n:'ISO 17442 (LEI)',      w:'Legal Entity Identifier',                           ex:"5493001KJTIIGC8Y1R12", exWhy:"20 characters that identify one legal entity globally. Checkable against GLEIF — which we do not yet do, hence \"partly\".",
+  /**
+   * ⭐⭐ THE CATALOGUE DISCIPLINES, REGISTERED RATHER THAN RESTATED (Athi, 2026-08-22: *"how do we cover the
+   * standards so it is not lost and informative"*).
+   *
+   * ⚠️ PIM · MDM · GDSN were named only in a catalogue modal, as a sentence. RFC 7386 and GS1 were in BOTH —
+   * this register and that sentence — which is a second source of truth, and the exact shape that produced
+   * three bugs this week. A standard belongs in one place, with what it is, an example, and why we care.
+   *
+   * ⚠️ These three are DISCIPLINES, not wire formats: nobody sends you a "PIM". Their status says so, so the
+   * register does not claim conformance to something that has no conformance test.
+   */
+  { g:'Records & data', n:'PIM (discipline)',     w:'One place holds product information; every channel reads it', ex:"name · unit · price · images · codes", exWhy:"The fields a buyer sees, held once instead of per storefront.",
+    s:'live',
+    note:'A practice, not a wire format — there is nothing to conform to.',
+    at:'Catalogue', go:'catalogue', why:'A price edited in one place and stale in three others is how two parties end up quoting different numbers for the same item.' },
+  { g:'Records & data', n:'MDM · golden record',  w:'One authoritative record per real product, however many sources describe it', ex:"blueprint + ERP + CSV + capture → 1 item", exWhy:"Four sources, one item, keyed by SKU.",
+    s:'live',
+    note:'A practice, not a wire format. The merge itself is RFC 7386 (above).',
+    at:'Catalogue · golden records', go:'catalogue', why:'Without it, importing the same list twice gives you two of every product and no way to tell which one a chit cited.' },
+  { g:'Records & data', n:'GDSN',                 w:'Sharing product data BETWEEN companies, on GS1 identity', ex:"GS1 data pools", exWhy:"The network suppliers and retailers already use to exchange item data.",
+    s:'plan',
+    note:'Not implemented. The identity it needs (GS1) is carried already, which is what makes it reachable later.',
+    at:'Catalogue · cross-company', go:'catalogue', why:'The same discipline as our own catalogue, one boundary further out — worth naming so it is a decision, not an oversight.' },
+  { g:'Records & data', n:'ISO 17442 (LEI)',      w:'Legal Entity Identifier',                         ex:"5493001KJTIIGC8Y1R12", exWhy:"20 characters that identify one legal entity globally. Checkable against GLEIF — which we do not yet do, hence \"partly\".",
     s:'part',
     note:'A field exists to record it; the value is not verified against GLEIF.',
     at:'Trade readiness', go:'readiness', why:'The same company recognised across registers and borders.' },
