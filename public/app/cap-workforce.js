@@ -90,7 +90,15 @@ function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
       +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+' (floor)</span>'
       +'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--blue-d)">human gate · '+esc(st.gate)+'</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a chit, recorded <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">' + txf('The model {proposes}, the rail {authorises}, {you} confirm.', {
+        proposes: '<b>' + tx('proposes') + '</b>', authorises: '<b>' + tx('authorises') + '</b>',
+        you: '<b>' + tx('you') + '</b>' })
+    /* ⭐ THE GUARANTEE STAYS, THE COLUMN NAMES GO. "the model proposes, the rail authorises, you confirm" is
+       the promise a person needs before switching an AI on. `acted_by (deputy · model · delegator ·
+       confirmed_by)` is the schema that keeps it, and "the rung sets the floor" is our governance grammar. */
+    + specNote('ai.acted-by',
+        'Every run is a chit recording <b>acted_by</b> (deputy · model · delegator · confirmed_by). '
+      + 'The rung sets the floor — the gate can only be tightened.') + '</div>'
     +'<div style="display:flex;gap:10px;margin-top:16px">'+((st.enabled&&s.status==='live'&&s.invoke)?'<button class="composebtn pri" style="flex:1" onclick="closeModal();'+esc(s.invoke)+'()">' + tx('▶ Invoke') + '</button>':'')+'<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button></div></div>', false);
 }
 function aiRowsHTML(){
@@ -260,7 +268,7 @@ async function awFinish(){
   }
   // Pull mode (subscribe to the customer's broker) is not built yet — gate it as coming-soon, never create a dead connector.
   if(t==='iot' && (d.aw_mode||'push')==='pull'){
-    UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Pull mode — coming soon') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>' + tx('Push') + '</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
+    UI.awResult='<div style="text-align:center"><div style="font-size:var(--fs-7);margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Pull mode — coming soon') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">' + txf('Subscribing to {your} MQTT broker: ⏳ pending. For now use', { your: '<b>' + tx('your') + '</b>' }) + ' <b>' + tx('Push') + '</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:var(--fs-1);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
     UI.awStep='done'; UI.awErr=null; awRender(); return;
   }
   var cfg = t==='iot' ? {mode:d.aw_mode||'push'} : {base_url:(d.aw_baseurl||'').trim()||undefined, auth_ref:(d.aw_authref||'').trim()||undefined};

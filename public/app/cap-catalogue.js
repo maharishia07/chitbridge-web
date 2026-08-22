@@ -789,7 +789,9 @@ function _cwStep4(w){
         : '')
       /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
          still says a feature is missing while the button for it sits above is worse than no footnote. */
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>' + tx('✨ Read the labels') + '</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;font-style:italic">' + txf('{read} asks the co-assist to read what it can see into the cards — always a {proposal}, never a value it commits, and it fills only empty fields so anything you typed stays yours.', {
+        read: '<b>' + tx('✨ Read the labels') + '</b>', proposal: '<b>' + tx('proposal you check') + '</b>' })
+    + specNote('catalogue.photos', 'Photos are downscaled and stored on the item.') + '</div>';
   }
   return '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
@@ -798,7 +800,8 @@ function _cwStep5(w){
   // the PAYLOAD pipeline receives declared data, not a purchase — there is nothing to price.
   if (CATF_PIPELINE[_cwMethod(w)] === 'payload') {
     var _mp = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || {};
-    return '<div style="font-size:var(--fs-2);color:var(--ink-2)">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>' + tx('How customers order') + '</b> in step 1 if you want to take orders.</div>';
+    return '<div style="font-size:var(--fs-2);color:var(--ink-2)">' + txf('This catalogue receives {what} — nothing is bought, so no prices are collected. Change {setting} in step 1 if you want to take orders.', {
+        what: '<b>' + esc(_mp.receives || 'data') + '</b>', setting: '<b>' + tx('How customers order') + '</b>' }) + '</div>';
   }
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
   if (pk) return '<div style="font-size:var(--fs-2);color:var(--ink-2)">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
