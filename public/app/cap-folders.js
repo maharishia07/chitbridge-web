@@ -463,7 +463,7 @@ function _groupSumPane(){
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">' + tx('Agreed value of these chits') + '</div>'
     + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + txf('⚠️ This is the {agreed}, which is a different question from the {cost} above — a chit can carry priced lines and no agreed total, or the reverse.', { agreed: '<b>' + tx('agreed value of the chits') + '</b>', cost: '<b>' + tx('cost of the requirement') + '</b>' }) + '</div>'
     + '</div></div>';
   return out;
 }
@@ -527,7 +527,7 @@ function _folderMetricsPane(){
     ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
     : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
-  var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
+  var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + txf('⚠️ More than one currency — these are {not} added together. A single total across currencies is a number that means nothing.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
 
   return '<div style="padding:14px 18px">'
@@ -699,7 +699,7 @@ function _folderRulesPane(){
             return '<div style="font-size:var(--fs-1);padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
           + (p.matched > p.sample.length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
           : '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
-        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">This is a preview only. Saving affects <b>new arrivals</b>; nothing already filed moves.</div></div>';
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + txf('This is a preview only. Saving affects {new}; nothing already filed moves.', { new: '<b>' + tx('new arrivals') + '</b>' }) + '</div></div>';
     }
     out += '</div>';
   }
