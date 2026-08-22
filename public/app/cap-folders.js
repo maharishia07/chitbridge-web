@@ -435,7 +435,7 @@ function _groupSumPane(){
               + '<span style="width:74px"></span></div>';
           }).join('')
         + '</div>' : '';
-      var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
+      var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — ' + txf('the cost above is the priced part only, {not} the cost of this line.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '';
       var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
     }).join('');

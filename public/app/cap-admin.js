@@ -75,7 +75,7 @@ function vaultCardHTML(vault, encrypted){
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
     ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>' + tx('Encrypted at rest') + '</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
+    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — the vault won\'t save until the platform sets its encryption key. ' + txf('Use {dummy} for now.', { dummy: '<b>' + tx('dummy data only') + '</b>' }) + '</div>';
   var secs=(UI._vault&&UI._vault.sections)||[];
   var body=secs.length ? secs.map(vaultSectionHTML).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2);padding:9px 0">Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.</div>';
@@ -433,7 +433,7 @@ function _misOverdue(m){
   var s = m.srv;
   if (!s || !s.all) {
     return '<div class="misnote" style="margin-top:14px">⚠️ Overdue is unavailable — the server measurement could not be read. '
-      + 'It is deliberately <b>not</b> as shown in the folder pane.</div>';
+      + txf('It is deliberately {not} as shown in the folder pane.', { not: '<b>' + tx('not') + '</b>' }) + '</div>';
   }
   var n = s.all.overdue || 0, d = s.overdue_days;
   var mine = (s.received && s.received.overdue) || 0, theirs = (s.sent && s.sent.overdue) || 0;

@@ -7336,7 +7336,7 @@ function _cfImport(btn){
   if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
   confirmAsk('Import using ' + using + ' column' + (using===1?'':'s') + '?',
     (creating ? 'It also adds <b>' + creating + ' new column' + (creating===1?'':'s') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>')
-    + 'Products are <b>added or updated</b>. Nothing is deleted.</div>',
+    + txf('Products are {au}. Nothing is deleted.', { au: '<b>' + tx('added or updated') + '</b>' }) + '</div>',
     'Import', function(){ _cfImportRun(btn, decisions, out); });
 }
 async function _cfImportRun(btn, decisions, out){
@@ -7616,7 +7616,7 @@ async function prodAllFields(id){
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:var(--fs-2);margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">🔒 Set by another system — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + txf('🔒 Set by another system — shown, never edited. {notset} marks a field this catalogue has and this item leaves blank.', { notset: '<i>' + tx('Not set') + '</i>' }) + '</div>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button>'
