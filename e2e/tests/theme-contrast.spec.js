@@ -21,7 +21,7 @@
 // failure — that is the question when adding one — so the baseline is whatever Cream already scores.
 
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, seedDemo } = require('../fixtures');
 
 const SCREENS = ['task', 'order', 'suppliers', 'catalogue', 'catsetup', 'mis'];
 /* Below this a screen is an empty state — a heading and a "nothing here yet" line — and measuring it proves
@@ -114,6 +114,20 @@ test.describe('Theme contrast · every theme, every screen', () => {
 
   test('[THEME-01] no theme makes text unreadable that the default theme does not', async ({ page }) => {
     await mintEntity(page);
+    /**
+     * ⭐⭐ THE SEED THIS TEST ASKED FOR, IN ITS OWN WORDS. The `thin` guard below already said *"the fix is to
+     * SEED the screen, never to lower the bar"* — it just had nothing to seed with. `seedDemo` (backlog M3)
+     * files six chits with two disputes, three priorities and two catalogue items, so the audit walks real
+     * rows, real flags and real chips instead of an empty state.
+     *
+     * ⚠️ AND IT IS WHY THIS TEST FAILED IN A FULL BATCH AND PASSED ALONE — not flakiness. A 64-spec run leaves
+     * the shared account full, so the batch reached states the solo run never did. **The batch was the honest
+     * measurement and the solo run was the optimistic one.** Seeding gives the honest one at the cost of one
+     * spec instead of sixty-four.
+     *
+     * ⚠️ Idempotent, so a re-run measures the same page rather than a bigger one.
+     */
+    await seedDemo(page);
     const themes = await page.evaluate(() => Object.keys(window.THEMES || {}));
     expect(themes.length, 'THEMES must be readable from the page').toBeGreaterThan(1);
 
