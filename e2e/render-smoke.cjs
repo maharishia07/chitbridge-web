@@ -76,6 +76,39 @@ try {
   process.exit(1);
 }
 
+/**
+ * ⭐⭐ THE SUPPLIER CATALOGUE SCREEN, ADDED 2026-08-22 BECAUSE THIS FILE'S OWN PREMISE PROVED ITSELF AGAIN — on
+ * me. I wrote `supName(x)` inside `supCartHTML()`, which takes NO ARGUMENTS. A ReferenceError, live for twenty
+ * minutes, and it would have blanked the entire supplier catalogue the moment Athi opened one. `node -c`
+ * passed. `check-syntax` passed. The tx/token guards passed. **Only calling the function finds this**, which is
+ * exactly what the header above says, and the coverage simply had not reached this screen.
+ *
+ * ⚠️ It is also the SECOND of this class in one day: the `chit.send` meter passed an `entity_id` that does not
+ * exist in that handler. Two in a day is a pattern, not bad luck — an undefined identifier is legal JavaScript
+ * until the line runs, so every screen that nothing calls is a screen where this is waiting.
+ */
+try {
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-lines.js'), 'utf8'), ctx, { filename: 'catalogue-lines.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cart-ui.js'), 'utf8'), ctx, { filename: 'cart-ui.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-ui.js'), 'utf8'), ctx, { filename: 'catalogue-ui.js' });
+} catch (e) {
+  console.error('✗ a shared module failed to LOAD: ' + e.message);
+  process.exit(1);
+}
+
+/**
+ * Lifted from app.html rather than stubbed — a stub of the thing under test proves the stub. Same approach, and
+ * the same reason, as scripts/check-adoption.js.
+ */
+const APP_HTML = fs.readFileSync(path.join(ROOT, 'app.html'), 'utf8');
+for (const fn of ['supName', 'supCartHTML']) {
+  const m = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^const |^\\/\\*\\*)', 'm').exec(APP_HTML);
+  if (!m) { console.error('✗ could not lift ' + fn + '() out of app.html'); process.exit(1); }
+  try { vm.runInContext(m[0], ctx, { filename: 'app.html:' + fn }); }
+  catch (e) { console.error('✗ lifting ' + fn + ' failed: ' + e.message); process.exit(1); }
+}
+
 const ENTITY = {
   identity_id: 'ent-1', bridge_id: 'CBTEST0001', display_name: 'mystorex', user_id: 'mystorex',
   gstn: null, address: null, business_status: 'open', catalogue_visibility: 'private',
@@ -98,7 +131,34 @@ function srvChannels(rows){
   return payload.channels.reduce((all, t) => all.concat(t.bindings || []), []);
 }
 
+/** A supplier whose catalogue has arrived, so the picker renders rather than short-circuiting on a null cart. */
+const SUP_CAT = {
+  shop: { bridge_id: 'CBSUP0001', display_name: 'alpha timers' },
+  groups: [{ label: 'Tussar', lines: [{ item_id: 't1', variant: '1L' }] }],
+  items: [{ item_id: 't1', item_data: { name: 'Tussar', unit: '1L', price: 950 } }],
+};
+
 const CASES = [
+  /**
+   * ⚠️ THE THREE STATES THAT PRODUCE AN EMPTY LIST, because they take different branches and one of them is
+   * where `supName(x)` was hiding: a normal catalogue never reaches the empty-message code at all, so a case
+   * that only tests the happy path would still have shipped the ReferenceError.
+   */
+  ['supCartHTML — a catalogue with items', () => {
+    ctx.UI.supDet = { supplier: { display_name: 'alpha timers' }, cat: SUP_CAT };
+    ctx.UI._supCart = ctx.CBCart.create(SUP_CAT, { ns: 'sup' });
+    return ctx.supCartHTML();
+  }],
+  ['supCartHTML — nothing published (the emptyAll branch)', () => {
+    ctx.UI.supDet = { supplier: { display_name: 'alpha timers' }, cat: { items: [], groups: [] } };
+    ctx.UI._supCart = ctx.CBCart.create({ items: [], groups: [] }, { ns: 'sup' });
+    return ctx.supCartHTML();
+  }],
+  ['supCartHTML — everything hidden for having no price (the emptyHidden branch)', () => {
+    ctx.UI.supDet = { supplier: { display_name: 'alpha timers' }, cat: { items: [], groups: [], unpriced_hidden: 4 } };
+    ctx.UI._supCart = ctx.CBCart.create({ items: [], groups: [] }, { ns: 'sup' });
+    return ctx.supCartHTML();
+  }],
   ['iamMeHTML — entity, private + open',    () => ctx.iamMeHTML(ENTITY)],
   ['iamMeHTML — public + away',             () => ctx.iamMeHTML({ ...ENTITY, catalogue_visibility: 'public', business_status: 'away' })],
   ['iamMeHTML — capped to private',         () => ctx.iamMeHTML({ ...ENTITY, visibility_cap: { max: 'private', reason: 'Set by your network.' } })],

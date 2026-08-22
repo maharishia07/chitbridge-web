@@ -6506,6 +6506,16 @@ async function supCatalogueFull(sid){
  */
 function supCartHTML(){
   const c=UI._supCart; if(!c) return '';
+  /**
+   * ⚠️⚠️ THIS FUNCTION TAKES NO ARGUMENTS, AND I WROTE `supName(x)` INTO IT ANYWAY — a ReferenceError that
+   * would have blanked the whole supplier catalogue screen, shipped and live for twenty minutes before Athi's
+   * next question happened to make me re-read it.
+   *
+   * ⭐ It is the SAME MISTAKE as the `chit.send` meter that passed a non-existent `entity_id` earlier today,
+   * and `node -c` cannot see either one: an undefined variable is legal JavaScript until the line runs. The
+   * supplier is held on `UI.supDet`, which is where every other line in this function already reads it from.
+   */
+  const _sup = (UI.supDet && UI.supDet.supplier) || null;
   /* ⭐ The redesigned row (app/catalogue-ui.js), shared with Compose and Network. The two testids are the
      published hooks named above, so they are passed IN rather than left to the helper to guess.
      No `committed` here: Suppliers checks out straight into the step flow, so there is no separate "already on
@@ -6515,8 +6525,8 @@ function supCartHTML(){
     empty:'Nothing in their catalogue matches that.',
     /* The no-search states. `emptyAll` is the honest one when they have simply published nothing; the hidden
        variant fires when the server dropped priced-less items, which looks identical on screen and is not. */
-    emptyAll: txf('{name} has not published anything you can order yet.', { name: supName(x) }),
-    emptyHidden: txf('{name} lists {n} item(s) with no price yet — a price is needed before they can be ordered.', { name: supName(x), n: '{n}' }),
+    emptyAll: txf('{name} has not published anything you can order yet.', { name: supName(_sup) }),
+    emptyHidden: txf('{name} lists {n} item(s) with no price yet — a price is needed before they can be ordered.', { name: supName(_sup), n: '{n}' }),
     /* Read from the payload already held for this supplier — a second copy of the same fact would be one more
        thing to keep in step, and this screen already keeps `cat` for exactly as long as the supplier is open. */
     hiddenCount: (UI.supDet && UI.supDet.cat && UI.supDet.cat.unpriced_hidden) || 0,
