@@ -18,11 +18,47 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('Visual regression · settled screens only', () => {
-  test('[VIS-01] entry / sign-in screen matches baseline', async ({ page }) => {
+  /**
+   * ⚠️⚠️ IT WAS CALLED "entry / sign-in screen" AND HAS NEVER CAPTURED ONE. This runs in the `authed` project,
+   * where a restored session boots `/app.html` straight past sign-in — so the baseline committed under that
+   * name is the signed-in TASK LIST. A test whose name and subject disagree sends the next reader to the wrong
+   * screen looking for a fault that is not there.
+   *
+   * ⚠️⚠️ AND IT COULD NEVER HAVE STAYED GREEN, re-baselined or not. The snapshot included the top-right
+   * IDENTITY STRIP — the entity's display name and handle — which is different on every mint. `E2E Co 473892`
+   * became `e2eco-mt3uwo8w965` with no design change whatsoever. So the baseline was guaranteed to rot on a
+   * schedule set by the fixtures, and the header above blames three weeks of design change for what was partly
+   * just a new account.
+   *
+   * ⭐ MASK THE VOLATILE, KEEP THE STRUCTURE. Playwright paints masked regions a flat colour in BOTH images, so
+   * the layout of the strip is still compared — its width, its position, whether it overlaps the sign-out
+   * button — while the text inside it stops voting. That is the difference between a test that measures the
+   * design and one that measures the test data.
+   *
+   * ⭐ RE-BASED 2026-08-22 after LOOKING at both images, which is the rule this file already states. The 39,424
+   * differing pixels were: the empty state gaining a real Compose button where it used to name Compose in
+   * prose and make you go find it (M11); `Messages` moving from RAIL to WORK, which shifts every item below it
+   * by a pixel or two; and the account name above. No overlap, no clipping, nothing unreadable — a deliberate
+   * change, confirmed by eye before the number was allowed to go away.
+   */
+  test('[VIS-01] the signed-in task screen matches baseline', async ({ page }) => {
     await page.goto('/app.html');
     await page.waitForLoadState('networkidle').catch(() => {});
     await page.waitForTimeout(500);                         // let it settle before the snapshot
-    await expect(page).toHaveScreenshot('entry.png', { maxDiffPixelRatio: 0.02, animations: 'disabled' });
+    await expect(page).toHaveScreenshot('entry.png', {
+      maxDiffPixelRatio: 0.02,
+      animations: 'disabled',
+      /**
+       * ⚠️ MASK THE NAME AND THE AVATAR, NOT THE WHOLE STRIP. My first version masked `.who`, which also
+       * contains the Open / Closed / Away presence pills — so a break in those would have stopped being
+       * visible to this test. Over-masking buys a green run by removing the thing under test; the mask has to
+       * be exactly as wide as the volatility, and no wider.
+       *
+       * ⚠️ THE AVATAR IS VOLATILE TOO — it renders the first letter of the account name, so `E` became `e`
+       * with no design change at all.
+       */
+      mask: [page.locator('.topbar .nmwrap'), page.locator('.topbar .av')],
+    });
   });
 });
 
