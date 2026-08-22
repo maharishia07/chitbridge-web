@@ -345,6 +345,7 @@ async function api(key, {params, query, body}={}){
   const lockKey = (ep.m!=='GET') ? (key+':'+JSON.stringify(params||{})) : null;
   if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }
   _inflight++; _netBusy(true);
+  const _t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();   /* for the spec call log */
   try{
     const CB = (typeof window!=='undefined') ? window.CBOffline : null;
     const outboxSafe = ep.m!=='GET' && OUTBOX_KEYS.has(key);
@@ -403,7 +404,29 @@ async function api(key, {params, query, body}={}){
       if(res.status>=500){ throw new Error(msg||"Server error — please try again."); }                 // generic
       throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p));
     }
-    return unwrap(res.status===204?null:await res.json());
+    /**
+     * ⭐⭐ THE SPEC RECORDS WHAT ACTUALLY HAPPENED. Athi, 2026-08-22: *"possibly we can use spec mode to see
+     * the actual specification, api calls, and any endpoints, output in json."*
+     *
+     * ⭐ RECORDED FROM THE REAL CALL, NOT DECLARED. A hand-written list of "endpoints this screen uses" is a
+     * second source of truth that drifts the first time a screen gains a request. This is the request that
+     * just went out: its name, method, resolved path, status and duration.
+     *
+     * ⚠️ ONLY WHILE SPEC IS ON. Off, this is one boolean check and nothing is kept — no memory held, and no
+     * response body sitting around in a tab that is merely open. The body is also capped, because the point is
+     * to see the SHAPE of the answer, not to build a network log.
+     */
+    const _out = unwrap(res.status===204?null:await res.json());
+    try {
+      if (typeof specOn === 'function' && specOn()) {
+        window.CBCALLS = window.CBCALLS || [];
+        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status,
+          ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
+          body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
+        CBCALLS.length = Math.min(CBCALLS.length, 40);
+      }
+    } catch(_) {}
+    return _out;
   } finally {
     if(lockKey) _lockKeys.delete(lockKey);
     if(--_inflight<=0){ _inflight=0; _netBusy(false); }

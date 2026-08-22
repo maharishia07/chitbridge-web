@@ -5543,10 +5543,31 @@ const HELP_TEXT = {
  * paint — the next render shows it. Spec mode is a deliberate act, so one extra paint is not worth blocking a
  * screen for.
  */
+/**
+ * ⭐⭐ SPEC IS A TOGGLE, NOT A THIRD SIZE. Athi, 2026-08-22: *"keep it toggle so we can see the difference."*
+ *
+ * ⚠️⚠️ I BUILT IT AS A THIRD VALUE OF `UI.vp` AND THAT CONTRADICTED MY OWN REASONING. The backlog note said
+ * spec answers *"who is reading"* while Laptop and Mobile answer *"what size is your screen"* — and then I
+ * made it exclusive with size anyway. Choosing Spec dropped you out of Mobile, because `appwrap` only carries
+ * the `m` class when `UI.vp === 'mob'`, so the spec for a phone screen could never be seen at all. Twenty-four
+ * places read `UI.vp === 'mob'` and every one of them saw 'spec' as "not mobile".
+ *
+ * ⭐ TWO AXES, TWO CONTROLS. `UI.vp` keeps the size; `UI.spec` is a boolean laid over whichever size you are
+ * in. Toggling it changes exactly one thing, which is what makes the difference legible — the point of a
+ * toggle is that you can flip it back and see what moved.
+ */
+function specOn(){ return typeof UI !== 'undefined' && !!UI.spec; }
+
+function toggleSpec(){
+  UI.spec = !UI.spec;
+  try { lsSet('cb_spec', UI.spec ? '1' : ''); } catch(_) {}
+  renderApp();
+}
+
 function specStandards(screen){
-  if (typeof UI === 'undefined' || UI.vp !== 'spec') return '';
+  if (!specOn()) return '';
   if (typeof STANDARDS === 'undefined') {
-    try { ensureCap('standards').then(function(){ if (UI.vp === 'spec') renderApp(); }).catch(function(){}); } catch(_){}
+    try { ensureCap('standards').then(function(){ if (specOn()) renderApp(); }).catch(function(){}); } catch(_){}
     return '';
   }
   var rows = STANDARDS.filter(function(s){ return s && s.go === screen; });
@@ -5564,10 +5585,47 @@ function specStandards(screen){
     + '</div>';
 }
 
+/**
+ * ⭐⭐ specCalls() — THE API CALLS THIS SCREEN ACTUALLY MADE. Athi: *"the actual specification, api calls, and
+ * any endpoints, output in json."*
+ *
+ * ⭐ It reads `CBCALLS`, which `api()` fills from real requests while spec is on — so it shows what happened,
+ * not what someone wrote down about what usually happens. Method, resolved path, status and duration, with the
+ * response body one click away.
+ *
+ * ⚠️ THE PATH IS THE RESOLVED ONE, not the `EP` template. `/api/chits/:id/disputes` tells you the shape;
+ * `/api/chits/79d0…/disputes` tells you what this screen asked for, which is the thing a person debugging or
+ * integrating actually needs.
+ *
+ * ⚠️ NEWEST FIRST, and capped at 40 — a spec panel that becomes a network log stops being read.
+ */
+function specCalls(){
+  if (!specOn()) return '';
+  var rows = (window.CBCALLS || []);
+  if (!rows.length) return '<div class="specnote"><span class="speck">api</span>'
+    + tx('No calls yet on this screen — spec records them as they happen.') + '</div>';
+  return '<div class="specnote" data-testid="spec-calls"><span class="speck">api · ' + rows.length + '</span>'
+    + rows.map(function(c, i){
+        var ok = c.status >= 200 && c.status < 300;
+        return '<div style="margin:5px 0 0;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+          + '<b>' + esc(c.m) + '</b> <span style="opacity:.8">' + esc(c.path) + '</span>'
+          + '<span style="color:' + (ok ? 'var(--ok-2)' : 'var(--disp)') + '">' + c.status + '</span>'
+          + '<span style="opacity:.6">' + c.ms + 'ms · ' + esc(c.key) + '</span>'
+          + '<span onclick="specToggleBody(' + i + ')" style="cursor:pointer;color:var(--blue)">json ▾</span>'
+          + '<div id="specbody' + i + '" style="display:none;width:100%;white-space:pre-wrap;word-break:break-all;'
+          + 'opacity:.85;margin-top:3px">' + esc(c.body || 'null') + '</div></div>';
+      }).join('')
+    + '</div>';
+}
+function specToggleBody(i){
+  var el = document.getElementById('specbody' + i);
+  if (el) el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+}
+
 var CBSPEC = {};
 function specNote(key, html){
   CBSPEC[key] = html;
-  if (typeof UI === 'undefined' || UI.vp !== 'spec') return '';
+  if (!specOn()) return '';
   return '<div class="specnote" data-spec="' + esc(key) + '">'
     + '<span class="speck">' + esc(key) + '</span>' + html + '</div>';
 }
@@ -9593,7 +9651,7 @@ function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</di
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
   const st = STAGES[CFG.STAGE];
-  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button><button class="${UI.vp==='spec'?'on':''}" data-testid="vp-spec" onclick="setVP('spec')" title="Show the spec behind each screen — standards, field names, mechanisms">${tx('🧾 Spec')}</button></span>` : '';
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
@@ -9623,6 +9681,8 @@ function applyPrefs(){
      after the screen appears — which reads as a rendering bug rather than a preference being honoured. */
   try{ appearanceApply(); }catch(_){ }
   UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
+  /* ⭐ Spec is remembered separately from size, because it is a separate question. */
+  UI.spec = !!lsGet('cb_spec','');
   try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;
   /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
      kind of pane and must not share a number; 320 is the menu default MIS and Profile already use. */

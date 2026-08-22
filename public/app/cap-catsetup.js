@@ -566,7 +566,7 @@ function catalogueSetupHubScreen(){
     /* ⭐ WHERE AND HOW THE CATALOGUE STANDARDS ARE IMPLEMENTED — read from the STANDARDS register, so this
        screen states nothing of its own and cannot fall out of step with Settings › Standards. Renders only in
        🧾 Spec, so an ordinary setup screen is unchanged. */
-    + '</div>' + specStandards('catalogue')
+    + '</div>' + specStandards('catalogue') + specCalls()
     + '<div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
