@@ -1231,7 +1231,17 @@ img.attImg{object-fit:cover;display:block}
  * carry); on a real phone 50%−220px goes NEGATIVE — −13px at 393px wide — and would hang off both edges, so
  * the media query hands it the viewport instead. This is the idiom already used for the compose modal.
  */
-.appwrap.m .keypanel{position:fixed;top:auto;bottom:76px;inset-inline:calc(50% - 220px + 10px);width:auto;max-width:none;max-height:70vh}
+/**
+ * ⭐⭐ TWO COLUMNS MAKES IT TALLER, NOT SHORTER — measured, and the opposite of what "use the width" suggests:
+ * one column 727px, two columns 774px, because 170px boxes wrap a two-line description into four. Halving the
+ * width does not halve the height when the content is prose. So one column stays, and the height comes from
+ * giving the sheet the room it actually has rather than a round 70vh.
+ */
+.appwrap.m .keypanel{position:fixed;top:auto;bottom:64px;inset-inline:calc(50% - 220px + 10px);width:auto;max-width:none;max-height:calc(100vh - 124px)}
+/* ⚠️ TIGHTER, NOT DENSER — the same seven boxes with the same words, 3px less padding each. Athi's rule is
+   that detail arrives as more panes, never as a busier one; this removes whitespace, not explanation. */
+.appwrap.m .keygrid{gap:6px}
+.appwrap.m .keypanel .kbox{padding:8px 10px}
 @media (max-width:680px){ .appwrap.m .keypanel{inset-inline:10px} }
 /* ⚠️ CLEARS THE ASSISTANT PILL rather than sitting on top of it — 76px is the pill plus its margin. A sheet
    that covers the one always-present control is a worse trade than a sheet that starts slightly higher. */
