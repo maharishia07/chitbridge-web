@@ -40,17 +40,50 @@ const FILES = [];
 const lines = [];
 for (const f of FILES) {
   const rel = path.relative(ROOT, f).replace(/\\/g, '/');
-  fs.readFileSync(f, 'utf8').split(/\r?\n/).forEach((line, i) => {
+  const all = fs.readFileSync(f, 'utf8').split(/\r?\n/);
+  all.forEach((line, i) => {
     if (/^\s*(\*|\/\/|\/\*)/.test(line)) return;
-    const runs = [];
+    /**
+     * ⭐⭐ INLINE MARKUP SPLITS A SENTENCE; BLOCK MARKUP SEPARATES TWO OF THEM. This is the distinction the
+     * word-based tests kept missing. `The <b>quantity</b> is fixed.` is one sentence cut by an inline tag.
+     * `<div>Invite ready</div><div>User ID</div><div>Share these — they set a PIN.</div>` is three finished
+     * things that happen to share a source line, and gluing them into one `txf()` would hand a translator a
+     * string they cannot split — the same mistake as forcing the welcome bullets together.
+     *
+     * ⚠️ SO THE SEPARATOR IS READ, NOT JUST THE TEXT. Runs are collected in groups, and a block-level
+     * boundary between two runs starts a new group. Only a group with more than one run is a broken sentence.
+     */
+    const BLOCK = /<\/?(div|p|li|ul|ol|tr|td|th|table|section|button|h[1-6]|br)\b/i;
+    const groups = [];
+    let cur = [], lastEnd = 0;
     const RE = />([^<>{}`'"]{2,200})</g;
     let m;
     while ((m = RE.exec(line))) {
       const t = m[1].trim();
       if (!/[A-Za-z]{2}/.test(t)) continue;
-      runs.push(t);
+      const between = line.slice(lastEnd, m.index);
+      if (cur.length && BLOCK.test(between)) { groups.push(cur); cur = []; }
+      cur.push(t);
+      lastEnd = m.index + m[0].length;
     }
+    if (cur.length) groups.push(cur);
+    const runs = groups.sort((a, b) => b.length - a.length)[0] || [];
     if (runs.length < 2) return;                      /* one run = already a whole string */
+    /**
+     * ⚠️⚠️ A LINE THAT ALREADY CALLS txf() IS DONE, AND THIS COUNTED IT AS OUTSTANDING. The placeholder VALUES
+     * of a finished reassembly — `{ bp: '<b>blueprint</b>', products: '<b>products</b>' }` — look exactly like
+     * the fragments they replaced, because they ARE the same markup, now passed as arguments instead of
+     * spliced into a sentence.
+     *
+     * ⭐ So the count could never reach zero: every sentence fixed added itself straight back to the worklist.
+     * A tracker that reports completed work as remaining is worse than no tracker — it makes finishing look
+     * impossible, and the natural response is to stop believing the number.
+     */
+    /* ⚠️ AND THE CALL USUALLY OPENS ON AN EARLIER LINE — a reassembly is written as `txf('…',` then the
+       placeholder object beneath it, so the args line carries the markup and none of the call. Looking only at
+       the line itself skipped none of them. */
+    const near = [line, all[i - 1] || '', all[i - 2] || '', all[i - 3] || ''].join('\n');
+    if (/\btxf\(/.test(near)) return;
     /* ⚠️ AND IT MUST LOOK LIKE PROSE, not a row of buttons. A sentence has terminal punctuation somewhere in
        it, or a run that is clearly mid-sentence (starts lowercase). Three <button> labels on one line are
        three labels, not a broken sentence — counting those would inflate the job with work that does not

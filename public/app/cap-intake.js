@@ -343,10 +343,14 @@ async function intakeShowJson(id){
         : _jsonBlock('3 · WHAT THE CHIT WOULD CARRY — after the catalogue is applied',
             payload||'(only available once it has been read)'))
     + '<div style="padding:10px 14px;font-size:var(--fs-1);color:var(--grey);line-height:1.6;border-top:1px solid var(--line)">'
-    + '\u26A0\uFE0F <b>Read stage 2 against stage 3.</b> A qualifier the sender wrote should appear as <b>comment</b> on its line; '
-    + 'a size like &ldquo;periya&rdquo; or &ldquo;500ml&rdquo; as <b>unit_size</b>; a stated price as <b>unit_price</b>. '
-    + 'Anything the reader could not place lands in <b>unplaced</b> \u2014 if that is empty and something is still missing from '
-    + 'the message, the reader dropped it silently, and that is the bug worth telling us about.</div>';
+    + txf('\u26A0\uFE0F {read} A qualifier the sender wrote should appear as {comment} on its line; a size like {size} as {unitsize}; a stated price as {unitprice}. Anything the reader could not place lands in {unplaced} \u2014 if that is empty and something is still missing from the message, the reader dropped it silently, and that is the bug worth telling us about.', {
+        read:      '<b>' + tx('Read stage 2 against stage 3.') + '</b>',
+        comment:   '<b>comment</b>',
+        size:      '&ldquo;periya&rdquo; ' + tx('or') + ' &ldquo;500ml&rdquo;',
+        unitsize:  '<b>unit_size</b>',
+        unitprice: '<b>unit_price</b>',
+        unplaced:  '<b>unplaced</b>' })
+    + '</div>';
 }
 
 /* Pretty, escaped, scrollable, and copyable. ⚠️ esc() is not optional: this is a stranger's words plus an AI's

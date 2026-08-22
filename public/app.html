@@ -2373,7 +2373,8 @@ function renderWelcome(){
     <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-inline-end:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">${tx('Sign in')}</button></div>
     ${welPips()}
     ${body}
-    <div class="welfoot">Preview <span class=arw>→</span> vertical <span class=arw>→</span> register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
+    <div class="welfoot">${txf('Preview {a} vertical {a2} register', { a: '<span class=arw>→</span>', a2: '<span class=arw>→</span>' })}</div>
+    ${specNote('onboarding.blueprint', 'Selection defaults to one Blueprint for now — the settings/schema cascade is a later juncture.')}
   </div>`;
 }
 let REG = {step:"form", name:"", email:"", busy:false, err:""};
