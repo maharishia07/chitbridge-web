@@ -8034,7 +8034,14 @@ function mainBody(){
   /* ⚠️ DESIGN 2 — a SEPARATE screen, not a variant of the detail pane. Athi: "do not alter the existing one, keep
      it." Design 1 is the chit as one unit of work; this is the chit as many. Reached only from the ⧉ Lines button,
      renders through its own module, and if cap-chit2.js never loads nothing else notices. */
-  if(UI.nav==="chit2" && typeof chit2Screen==="function") return chit2Screen();      // app/cap-chit2.js (lazy)
+  /* ⚠ NOT A SCREEN ANY MORE — design 2 renders in the DETAIL PANE beside the list, like every other
+     detail page. A stale bookmark or an old `cb_nav` can still arrive here, so it is redirected to the list
+     the chit belongs to rather than left on a screen that no longer exists. See renderDetail().
+
+     ⚠️ This line was written once as `UI.nav===chit2` — bash ate the quotes on the way in, and BOTH syntax
+     checks passed because bare identifiers are legal JavaScript until they run. Same class as the two
+     ReferenceErrors of 2026-08-22. Only reading the rendered line caught it. */
+  if(UI.nav === "chit2") UI.nav = (UI.folder === "order") ? "order" : "task";
   /**
    * ⚠️ `definitions` IS NO LONGER A SCREEN — it redirects (2026-08-16). Everything it held was rehomed first;
    * this catches an old bookmark, a stale `cb_nav` in someone's localStorage, or a link written before the move,
@@ -9268,7 +9275,22 @@ async function openChit(id, silent){
 }
 function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();}}
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
-function renderDetail(){return detailInner();}
+/**
+ * ⭐⭐ DESIGN 1 AND DESIGN 2 ARE ALTERNATIVES IN THE SAME SLOT. Athi, 2026-08-23: *"design 2 and design 1 can be
+ * switchable, right? Basically each type of service will settle with one type of detail page. Not too many
+ * designs."* — so they are two ways of showing ONE chit, and a business picks the one its work is shaped like.
+ * Two ways of reading the same record belong in the same place; only the reading changes.
+ *
+ * ⚠️⚠️ IT WAS A WHOLE SCREEN, AND THAT IS WHY IT SWALLOWED THE PAGE. `openChit2()` set `UI.nav='chit2'`, which
+ * replaced the entire body — so opening a chit in design 2 threw away the list on the left, and Athi got one
+ * column stretched across a laptop while *"every other screen"* keeps list-left, detail-right. The original
+ * instruction behind that was **"do not alter the existing one, keep it"**, which was about protecting design 1
+ * — not about design 2 having to own the window. It renders in the detail pane now and design 1 is untouched.
+ */
+function renderDetail(){
+  if (UI.chit2 && typeof chit2Screen === 'function') return chit2Screen();
+  return detailInner();
+}
 function _rungChipCB(r){
   var M={verified:['✅','var(--ok-2)','var(--ok-tint)'],attested:['🔗','var(--blue-2)','var(--blue-tint-bg)'],documented:['📄','var(--warn-2)','var(--warn-tint)'],declared:['✍️','var(--grey-2)','var(--neutral-tint)']};
   var m=M[r]||M.declared; return '<span style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+String(r||'declared').toUpperCase()+'</span>';

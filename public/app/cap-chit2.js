@@ -39,15 +39,34 @@ var C2_TABS = {
   us:   [['work', 'Work'], ['notes', 'Notes'], ['cost', 'Cost']],
 };
 
+/**
+ * ⚠️⚠️ THIS USED TO SET `UI.nav = 'chit2'`, WHICH REPLACED THE WHOLE SCREEN and threw away the list on the
+ * left. Athi, 2026-08-23: *"the entire screen is occupied with the details, it is not two sided… this is how
+ * every other screen is, but design 2 is entirely occupying both left and right half."*
+ *
+ * ⭐ Design 2 is an ALTERNATIVE DETAIL PAGE, not another screen — his framing: *"each type of service will
+ * settle with one type of detail page."* So it sets a flag the detail pane reads, and the nav stays wherever
+ * the person was. The list keeps its place, the divider keeps working, and going back is a change of renderer
+ * rather than a change of screen.
+ */
 async function openChit2(id){
   C2.id = id; C2.side = 'them'; C2.tab = 'msg'; C2.data = null; C2.costs = null; C2.err = null;
-  UI.nav = 'chit2';
+  UI.chit2 = id;
+  /* Keep the row selected in the list, so the left half still shows WHICH chit is open. */
+  if (typeof UI.sel !== 'undefined') UI.sel = id;
+  /* An old bookmark may still land on nav='chit2'; send it to the list this chit belongs to. */
+  if (UI.nav === 'chit2') UI.nav = (UI.folder === 'order') ? 'order' : 'task';
   renderApp();
   await loadChit2();
 }
 function c2Side(s){ C2.side = s; C2.tab = C2_TABS[s][0][0]; c2Paint(); }
 function c2Tab(t){ C2.tab = t; c2Paint(); if (t === 'cost' && !C2.costs) loadChit2Costs(); }
-function c2Back(){ UI.nav = UI.folder === 'order' ? 'order' : 'task'; C2.id = null; renderApp(); }
+/**
+ * ⭐ "Back" is now a change of RENDERER, not of screen: the same chit, read the other way. That is what makes
+ * the two designs switchable rather than two destinations — the list never moved, so there is nothing to
+ * return to.
+ */
+function c2Back(){ UI.chit2 = null; C2.id = null; if (UI.nav === 'chit2') UI.nav = (UI.folder === 'order') ? 'order' : 'task'; renderApp(); }
 /* ⚠️ c2Toggle AND C2.open ARE GONE. They existed to expand a form INSIDE a row, which is the thing that made
    the page jump — every line below the tapped one moved down, then back up on close. Everything that edits now
    opens as an overlay, so there is no in-place expansion left to toggle. Leaving a dead toggle behind would
@@ -863,7 +882,17 @@ function chit2Screen(){
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>'
     + '<span style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
-    + '<span style="font-size:var(--fs-1);color:var(--grey)">design 2</span></div>'
+    /**
+     * ⭐⭐ THE SWITCH IS A CONTROL NOW, NOT A LABEL. It read "design 2" as plain grey text — a statement of
+     * where you were with no way to leave, so the only exit was Back to the list and then in again by another
+     * door. Athi: *"design 2 and design 1 can be switchable, right?"* Two readings of ONE chit; the way to the
+     * other reading belongs on the reading you are in.
+     */
+    + '<button type="button" data-testid="c2-to-design1" onclick="c2Back()"'
+    +   ' title="' + esc(tx('Read this chit as one unit of work instead of line by line')) + '"'
+    +   ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;'
+    +   'padding:3px 9px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">'
+    +   tx('design 2') + ' <span style="opacity:.6">→ ' + tx('design 1') + '</span></button></div>'
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'
     + '<div style="padding:7px 16px 0;font-size:var(--fs-1);color:var(--grey);text-align:center">'
     + (C2.side === 'them' ? 'Both parties hold everything on this side' : 'Assignment, notes and cost — they never see this') + '</div>'
