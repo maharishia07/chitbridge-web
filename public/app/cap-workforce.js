@@ -365,7 +365,26 @@ function awRender(){
   // Reuses the app's own coordinates instead of guessing — content lives inside via head/mid(scroll)/footbar.
   var pane=document.getElementById('panel')||document.querySelector('.panel');
   var r=pane?pane.getBoundingClientRect():null;
-  var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;inset-inline-start:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;inset-inline-start:0;inset-inline-end:0;bottom:0');
+  /**
+   * ⚠️⚠️ CLAMP TO THE VIEWPORT, OR THE FOOTER FALLS OFF THE BOTTOM OF THE WORLD. Athi, 2026-08-23, on the IoT
+   * wizard: *"I couldn't progress after the first step"* — with a screenshot showing the fields and NO Next
+   * button anywhere.
+   *
+   * The cause is this line. It copies #panel's rect onto a `position:fixed` box, and a fixed box is measured
+   * from the VIEWPORT while the rect it is copying is not: whenever `#panel` is taller than what remains below
+   * its top — a long screen, or a page scrolled down so `r.top` is small and `r.height` still large — the box
+   * runs past the bottom edge. The frame is `overflow:hidden` and fixed, so nothing scrolls it back: the
+   * footer exists, is painted, and cannot be reached or clicked. Playwright says it plainly — *"element is
+   * outside of the viewport"* — after 45 attempts to scroll to something that will never come into view.
+   *
+   * ⚠️ The height must be what is AVAILABLE, never what was measured. Both are needed: `top` clamped at 0 for
+   * a pane scrolled above the fold, and height capped at the space left under it.
+   */
+  var vh=(typeof window!=='undefined'&&window.innerHeight)||0;
+  var top=r?Math.max(0,Math.round(r.top)):barH;
+  var avail=vh?Math.max(0,vh-top):(r?Math.round(r.height):0);
+  var h=r?Math.min(Math.round(r.height),avail):0;
+  var pos=(r&&h>240)?('top:'+top+'px;inset-inline-start:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+h+'px'):('top:'+barH+'px;inset-inline-start:0;inset-inline-end:0;bottom:0');
   host.innerHTML='<div style="position:fixed;'+pos+';background:var(--card);z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08);color:var(--on-card)">'+head+mid+footbar+'</div>';
 }
 /* ══ CONNECTOR (Pi / system) handled IN Co-assists — the separate Connectors page is dismounted. When the
