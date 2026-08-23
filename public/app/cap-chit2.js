@@ -66,7 +66,26 @@ function c2Tab(t){ C2.tab = t; c2Paint(); if (t === 'cost' && !C2.costs) loadChi
  * the two designs switchable rather than two destinations — the list never moved, so there is nothing to
  * return to.
  */
-function c2Back(){ UI.chit2 = null; C2.id = null; if (UI.nav === 'chit2') UI.nav = (UI.folder === 'order') ? 'order' : 'task'; renderApp(); }
+function c2Back(){
+  /**
+   * ⚠️⚠️ HAND THE FRESH NUMBERS BACK, OR DESIGN 1 SHOWS THE JOB AS IT WAS BEFORE THE WORK. The two designs are
+   * two readings of ONE chit, and `UI.detail` was loaded when the chit was opened — before any part was taken
+   * or any line delivered here. Switching renderer without carrying the delivery state across means the
+   * employer presses Back from a job he just watched being done and the task window says nothing was spent.
+   *
+   * ⭐ Not a re-read: `GET /chits/:id` is twelve round trips and design 2 already holds the answer, applied
+   * from the write responses. Copying it is the same fact, not a second opinion.
+   */
+  try {
+    if (UI.detail && C2.data && UI.detail.id === C2.id) {
+      if (C2.data.line_delivery) UI.detail.line_delivery = C2.data.line_delivery;
+      if (C2.data.delivery_summary) UI.detail.delivery_summary = C2.data.delivery_summary;
+    }
+  } catch (e) { /* the switch must happen even if the carry cannot */ }
+  UI.chit2 = null; C2.id = null;
+  if (UI.nav === 'chit2') UI.nav = (UI.folder === 'order') ? 'order' : 'task';
+  renderApp();
+}
 /* ⚠️ c2Toggle AND C2.open ARE GONE. They existed to expand a form INSIDE a row, which is the thing that made
    the page jump — every line below the tapped one moved down, then back up on close. Everything that edits now
    opens as an overlay, so there is no in-place expansion left to toggle. Leaving a dead toggle behind would

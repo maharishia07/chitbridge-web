@@ -111,7 +111,8 @@ function design2(page) {
     /** design 1 → ⧉ Lines → design 2, opened on Them · Message (where openChit2 always starts). */
     async open(subject) {
       await page.getByTestId('nav-task').click();
-      await page.getByText(subject).first().click();
+      /* ⚠️ :visible — the same subject sits in the hidden detail header; matching it clicks nothing. */
+      await page.getByText(subject).locator('visible=true').first().click();
       const door = page.getByTestId('open-design2');
       await expect(door, `design 1 offered no way into design 2 for "${subject}" — the ⧉ Lines button is missing`)
         .toBeVisible({ timeout: 20000 });

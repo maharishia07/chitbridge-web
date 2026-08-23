@@ -9480,7 +9480,21 @@ async function openChit(id, silent){
           const _items=_live.map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
-          UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false)};
+          /**
+           * ⚠️⚠️ `line_delivery` AND `delivery_summary` WERE DROPPED HERE, AND TWO THINGS SILENTLY DIED WITH
+           * THEM. Athi, 2026-08-23: *"as an employer when I go to the main task window I am not able to see
+           * the cost spent on a particular service."* He could not, because this line rebuilt the detail from
+           * `base` and the API's own delivery payload never reached the screen.
+           *
+           * ⚠️ The second casualty is quieter: `contentItems` reads `c.line_delivery` to show 🔒 on a
+           * delivered line instead of ✎ — *"offering an edit that will be refused is worse than not offering
+           * it"* — and against an always-empty map it has been offering ✎ on every settled line since.
+           *
+           * ⭐ The API has sent both all along (`GET /chits/:id` → line_delivery + delivery_summary). This is
+           * a carry, not a new fetch.
+           */
+          UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false),
+            line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null)};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
@@ -9775,7 +9789,7 @@ function detailInner(){
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
-   ${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
+   ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
 function setDtab(t){UI.dtab=t;paintDetail();}
@@ -10233,10 +10247,67 @@ function contentItems(c){
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which"
       style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
+
+/**
+ * ── WHAT THIS JOB HAS COST, ON THE SCREEN WHERE THE JOB LIVES ──────────────────────────────────────────────
+ *
+ * Athi, 2026-08-23: *"I raised a task, assigned a subtask to an employee, he ordered some material for the
+ * service and closed the subtask. Now as an employer when I go to the main task window I am not able to see
+ * the cost spent on a particular service."*
+ *
+ * ⚠️⚠️ HE COULD NOT, AND NOTHING WAS BROKEN — IT WAS SIMPLY NEVER RENDERED. The parts his mechanic took are
+ * `add` events on the line; `line_delivery[id].charged` sums them and `delivery_summary.charged` sums those
+ * across the chit. Both have been in the API's answer all along, and design 1 — the main task window, the
+ * screen an employer actually opens — read neither. The money existed, was correct, and was invisible.
+ *
+ * ⭐ TWO PLACES, BECAUSE HE ASKED TWO QUESTIONS. "The cost spent on a particular service" is per LINE, so it
+ * goes on the line. "How the overall cost accumulates at the task level" is the chit, so it goes on top.
+ *
+ * ⚠️ IT IS A RUNNING TOTAL, NOT AN INVOICE, and the wording carries that: on a service job the number rises
+ * while the work happens and is only final when the last complaint closes. Calling it a total would invite
+ * someone to quote it to a customer mid-job.
+ */
+function lineSpend(dlv){
+  const v=Number((dlv||{}).charged||0);
+  if(!v) return '';
+  const n=((dlv||{}).added||[]).length;
+  return `<span class="lspend" title="${esc(txf('{n} item(s) recorded against this line so far', {n:n||1}))}"
+    style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2,#2f6b4f);background:var(--wash);border-radius:5px;padding:1px 7px;white-space:nowrap;font-variant-numeric:tabular-nums">${esc(inr(v))}</span>`;
+}
+
+/**
+ * The strip on top of the task window: what was quoted, what has been spent against it so far, and how much of
+ * the work is done — the three numbers an employer opens the screen for.
+ *
+ * ⚠️ IT RENDERS ONLY WHEN THERE IS LINE-LEVEL WORK. A plain two-line order that nobody assigned has no spend
+ * and no line progress, and a strip of dashes on every chit in the product would teach people to stop reading
+ * the one place the number will eventually appear.
+ *
+ * ⭐ THE HISTORY IS A CLICK, NOT A FOURTH SCREEN. Design 2's "Delivered & paid" already lists every part and
+ * every hour with who recorded it and when — so the strip opens that rather than growing its own copy, which
+ * would be a second answer to the same question and would disagree the first time either changed.
+ */
+function chitSpendStrip(c){
+  const s=c.delivery_summary; if(!s) return '';
+  const spent=Number(s.charged||0);
+  const quoted=Number(c.amt||0);
+  if(!spent && !s.lines) return '';
+  const done=(s.complete||0)+' '+tx('of')+' '+(s.lines||0)+' '+tx('done');
+  const cell=(label,val,extra)=>`<div style="flex:1;min-width:0"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
+    <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra||''}">${val}</div></div>`;
+  return `<div data-testid="chit-spend" style="display:flex;gap:14px;align-items:flex-end;padding:9px 14px;margin:0 0 2px;background:var(--wash);border:1px solid var(--line);border-radius:9px">
+    ${quoted?cell(tx('Quoted'), esc(inr(quoted))):''}
+    ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent?esc(inr(spent)):'—'}</span>`, spent?'color:var(--ok-2,#2f6b4f)':'color:var(--grey)')}
+    ${cell(tx('Work'), esc(done))}
+    <div><button type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
+      title="${esc(tx('Every part and every hour recorded against this job, and who recorded it'))}"
+      style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('History →'))}</button></div>
+  </div>`;
+}
 
 /* ═══ b138 · FIX A LINE ════════════════════════════════════════════════════════════════════════════════════════
    Athi, 2026-08-11: *"how does he update? json format, no, some other easy means"* and

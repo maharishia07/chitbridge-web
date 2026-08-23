@@ -28,7 +28,7 @@
  */
 const { test, expect } = require('@playwright/test');
 const { mintEntity, composeChit, addProduct, addCoassist, settle } = require('../fixtures');
-const { design2 } = require('../flows/design2');
+const { design2, money } = require('../flows/design2');
 
 const stamp = () => Date.now().toString().slice(-6);
 
@@ -178,12 +178,36 @@ test.describe('Design 2 · a service job end to end', () => {
       expect(await d2.marginShown(), 'margin is back on the design-2 cost pane — it is calculated for other '
         + 'systems, never shown here, because this product does not hold the cost price or the P&L').toBe(false);
 
+      /**
+       * ⭐⭐ AND NOW THE SCREEN AN EMPLOYER ACTUALLY OPENS. Athi, 2026-08-23: *"as an employer when I go to the
+       * main task window I am not able to see the cost spent on a particular service."* Design 2 knew the
+       * number all along; design 1 dropped `line_delivery`/`delivery_summary` when it built its detail, so the
+       * main task window rendered none of it. This asserts the money is on THAT screen, because that is where
+       * he looked for it.
+       */
+      /* ⚠️ THE EMPLOYER'S PATH, NOT A SHORTCUT: back to the task list and in again, which is how he arrives —
+         he did not watch the work being done, he opened the job afterwards. Returning from design 2 carries
+         the numbers across too, but proving the carry would prove the easier of the two. */
+      await page.getByTestId('nav-task').click();
+      /* ⚠️ :visible — the subject is ALSO in the detail header that is currently hidden, and getByText matched
+         that one first. A locator that resolves to something nobody can click is the least useful kind of pass. */
+      await page.getByText(subject).locator('visible=true').first().click();
+      const strip = page.getByTestId('chit-spend');
+      await expect(strip, 'the main task window shows no spend at all').toBeVisible({ timeout: 20000 });
+      const shown = money(await page.getByTestId('chit-spend-amt').textContent());
+      expect(shown, 'the task window disagrees with the lines about what has been spent').toBe(parts);
+      await expect(strip, 'the task window does not say how much of the work is done').toContainText('2');
+      expect(await page.getByTestId('chit-spend-history').count(),
+        'there is no way from the task window to the history of what was recorded').toBe(1);
+
       console.log(`\n  ── ${subject} ──`
         + `\n  quoted    ${QUOTE[L1] + QUOTE[L2]}`
         + `\n  parts     ${parts}   (2 × ${PART_A.name} @${PART_A.price}, 1 × ${PART_B.name} @${PART_B.price})`
         + `\n  labour    ${labour}   (${LABOUR.minutes} min @ ${LABOUR.rate}/hr)`
         + `\n  recorded  ${m.recorded}   (margin: calculated server-side, shown nowhere)`
-        + `\n  lines     ${(await d2.progress()).text}\n`);
+        /* ⚠️ Report the screen we are ON. This printed `d2.progress()`, which reads design 2's header — and by
+           this point the spec is back on the task window, so it printed an empty string every run. */
+        + `\n  task window   ${(await strip.textContent()).replace(/\s+/g, ' ').trim()}\n`);
       await settle(page);
     });
   });
