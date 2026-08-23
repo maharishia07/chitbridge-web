@@ -420,6 +420,7 @@
     'Mailbox': 'Boîte aux lettres',
     'Make these changes': 'Appliquer ces modifications',
     'Margin': 'Marge',
+    'Recorded so far': 'Enregistré à ce jour',
     'Mark responded': 'Marquer comme répondu',
     'Max concurrent tasks': 'Tâches simultanées max',
     'Messages · latest first': 'Messages · les plus récents d’abord',

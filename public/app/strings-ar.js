@@ -449,6 +449,7 @@
     'Mailbox': 'صندوق البريد',
     'Make these changes': 'تنفيذ هذه التغييرات',
     'Margin': 'الهامش',
+    'Recorded so far': 'المسجَّل حتى الآن',
     'Mark responded': 'وضع علامة تم الرد',
     'Max concurrent tasks': 'الحد الأقصى للمهام المتزامنة',
     'Messages · latest first': 'الرسائل · الأحدث أولًا',

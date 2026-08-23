@@ -419,6 +419,7 @@
     'Mailbox': 'அஞ்சல் பெட்டி',
     'Make these changes': 'இந்த மாற்றங்களைச் செய்',
     'Margin': 'இலாப வரம்பு',
+    'Recorded so far': 'இதுவரை பதிவானது',
     'Mark responded': 'பதிலளிக்கப்பட்டதாகக் குறி',
     'Max concurrent tasks': 'ஒரே நேரத்தில் அதிகபட்சப் பணிகள்',
     'Messages · latest first': 'செய்திகள் · சமீபத்தியது முதலில்',

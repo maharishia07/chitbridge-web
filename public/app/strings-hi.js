@@ -421,6 +421,7 @@
     'Mailbox': 'मेलबॉक्स',
     'Make these changes': 'ये बदलाव करें',
     'Margin': 'मार्जिन',
+    'Recorded so far': 'अब तक दर्ज',
     'Mark responded': 'उत्तर दिया चिह्नित करें',
     'Max concurrent tasks': 'अधिकतम एक साथ कार्य',
     'Messages · latest first': 'संदेश · नवीनतम पहले',

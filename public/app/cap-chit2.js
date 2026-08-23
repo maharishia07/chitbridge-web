@@ -12,7 +12,7 @@
  *
  * ── ⭐ TWO LEVELS, AND THE SWITCH IS THE PRIVACY BOUNDARY ───────────────────────────────────────────────────────
  *   THEM — the shared record: their message, the order, what was delivered and paid. Both parties hold it.
- *   US   — ours alone: who is doing what, internal notes, cost and margin. The counterparty sees NONE of it.
+ *   US   — ours alone: who is doing what, internal notes, and what the job has cost. The counterparty sees NONE of it.
  * That is not a UI convenience; it is the isolation decision made visible. Assignment and cost are private tables
  * under RLS, delivery is replicated to both copies. The switch shows a person which world they are typing into.
  *
@@ -1110,14 +1110,28 @@ function c2PaneCost(d){
      than shown a zero — a masked or empty figure still says a figure exists and roughly when it moved. */
   if (!c.can_see_totals) {
     out += '<div style="padding:14px 16px;font-size:var(--fs-2);color:var(--grey);border-bottom:1px solid var(--line)">'
-      + 'You can record what you spend, and see what you recorded. Totals and margin are not shown to you.</div>';
+      + 'You can record what you spend, and see what you recorded. The totals for this job are not shown to you.</div>';
   } else {
     out += '<div style="padding:13px 16px;border-bottom:1px solid var(--line);background:var(--wash);color:var(--on-card);font-variant-numeric:tabular-nums">'
       + c2Row('Invoiced', c2Money(c.invoiced), 'c2-cost-invoiced')
       + Object.keys(c.by_kind || {}).map(function(k){ return c2Row(k.charAt(0).toUpperCase() + k.slice(1), c2Money(c.by_kind[k]), 'c2-cost-kind-' + k); }).join('')
+      /**
+       * ⚠️⚠️ MARGIN IS COMPUTED AND DELIBERATELY NOT SHOWN. Athi, 2026-08-23: *"generally we have to calculate
+       * the margin, but if we don't know the cost price we may not be able to calculate it. Also margin need
+       * not be known to everyone — so calculate it but do not showcase anywhere, as we are not the P&L holder.
+       * If required we just pass it on to other systems. Let us just worry about workflow alone."*
+       *
+       * ⭐⭐ AND HE IS RIGHT ON THE ARITHMETIC BEFORE HE IS RIGHT ON THE POLICY. A part fitted is recorded at
+       * the CATALOGUE price — what we charge for it — and what it COST us is nowhere in this product. So
+       * `invoiced − spent` was never margin; it was a number that looked like one, printed in green with a
+       * percentage beside it, on a screen a mechanic reads. A confident wrong number is worse than no number.
+       *
+       * ⭐ The computation stays (`lib/cost.js` still returns `margin` and `margin_pct`) because it is for
+       * whatever system holds the P&L — the API is the channel, this screen is not. What replaces it here is
+       * a WORKFLOW fact: what has been booked against this job so far.
+       */
       + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'
-      + '<span>' + tx('Margin') + '</span><span data-testid="c2-cost-margin" style="color:' + ((c.margin || 0) < 0 ? 'var(--disp)' : 'var(--ok-2)') + '">' + c2Money(c.margin)
-      + (c.margin_pct == null ? '' : ' · ' + c.margin_pct + '%') + '</span></div>'
+      + '<span>' + tx('Recorded so far') + '</span><span data-testid="c2-cost-recorded">' + c2Money(c.spent) + '</span></div>'
       + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
       + '</div>';
   }

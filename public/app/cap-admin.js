@@ -1090,7 +1090,7 @@ var IAM_PARTY = {
           'Sees everything including external threads, and may reply to colleagues. Cannot answer the other party, and cannot raise a dispute — someone auditing who participates is not auditing.'],
         ['Editor', 'Changes records · messages anyone', 0, 'Inside or outside.'],
         ['Sees the whole business', 'A separate switch', 0, 'Reach normally follows their node. This lifts it — inside this entity only.'],
-        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin. Also a separate switch.'],
+        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and what a job has cost. Margin is never shown. Also a separate switch.'],
         ['Who can change it', 'The account owner, never themselves', 0, 'Every change is recorded — who, when, from what, and why.'],
 
         ['Role', 'Free text', 0, 'A label. It grants nothing — access does that.'],

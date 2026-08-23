@@ -155,32 +155,31 @@ test.describe('Design 2 · a service job end to end', () => {
       /* ⭐ The running charge on the SHARED side is the parts and hours accrued against the lines. */
       expect(m.accrued, `the running charge is not the sum of what was fitted (${parts})`).toBe(parts);
 
-      /* ⭐ Our side: what we quoted, what it cost us, and the difference. This is the number the whole
-         design-2 "US" side exists to produce, and nothing else in the product computes it. */
+      /* ⭐ Our side: what we quoted, and what has been booked against the job. Both are workflow facts. */
       expect(m.invoiced, 'invoiced must stay the quoted value of the two complaints').toBe(QUOTE[L1] + QUOTE[L2]);
       expect(m.byKind.labour, 'the labour total moved after the job closed').toBe(labour);
+      expect(m.recorded, 'the recorded total must be every cost row on the job').toBe(labour);
 
       /**
-       * ⚠️ THE INVARIANT, NOT A FROZEN NUMBER: margin is invoiced − everything recorded as a cost. Asserting
-       * "5,700" instead would pass forever on whatever the screen happens to print today.
+       * ⚠️⚠️ MARGIN IS CALCULATED AND MUST NOT BE ON THE SCREEN. Athi, 2026-08-23: *"calculate it but do not
+       * showcase anywhere, as we are not the P&L holder. If required we just pass it on to other systems."*
        *
-       * ⚠️⚠️ AND IT DOES NOT INCLUDE THE PARTS — deliberately asserted here so the gap is visible rather than
-       * assumed. A part fitted is an `add` EVENT (chit_line_delivery); a cost is a ROW (chit_line_cost). They
-       * are different tables, and `lib/cost.js` sums only the second. So ₹2,550 of parts sits in `accrued` on
-       * the shared side and in NEITHER half of the margin — the catalogue price is what we charge for the
-       * part, and what the part cost US is nowhere recorded. Whether parts should raise invoiced, lower
-       * margin, or both, is a modelling decision, not something to patch quietly under a test.
+       * ⭐ An absence nothing checks comes back. This is the only thing standing between that decision and the
+       * next person who touches the cost pane, so it is asserted as loudly as any value.
+       *
+       * ⚠️ AND THE ARITHMETIC AGREED WITH HIM BEFORE THE POLICY DID. A part is recorded at the CATALOGUE price
+       * — what we CHARGE — and what it COST us is nowhere in this product: an `add` EVENT (chit_line_delivery)
+       * is not a cost ROW (chit_line_cost), and `lib/cost.js` sums only rows. So ₹2,550 of parts sat in
+       * `accrued` and in neither half of what was being printed as "margin". The number was never margin.
        */
-      const spent = Object.values(m.byKind).reduce((t, v) => t + (v || 0), 0);
-      expect(m.margin, 'margin must be invoiced less every recorded cost').toBe(m.invoiced - spent);
-      expect(spent, 'parts reached the cost ledger — the model changed, and this test should say so')
-        .toBe(labour);
+      expect(await d2.marginShown(), 'margin is back on the design-2 cost pane — it is calculated for other '
+        + 'systems, never shown here, because this product does not hold the cost price or the P&L').toBe(false);
 
       console.log(`\n  ── ${subject} ──`
         + `\n  quoted    ${QUOTE[L1] + QUOTE[L2]}`
         + `\n  parts     ${parts}   (2 × ${PART_A.name} @${PART_A.price}, 1 × ${PART_B.name} @${PART_B.price})`
         + `\n  labour    ${labour}   (${LABOUR.minutes} min @ ${LABOUR.rate}/hr)`
-        + `\n  margin    ${m.margin}`
+        + `\n  recorded  ${m.recorded}   (margin: calculated server-side, shown nowhere)`
         + `\n  lines     ${(await d2.progress()).text}\n`);
       await settle(page);
     });

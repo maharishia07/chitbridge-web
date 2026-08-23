@@ -257,10 +257,23 @@ function design2(page) {
       return {
         accrued,
         invoiced: money(await page.getByTestId('c2-cost-invoiced').textContent().catch(() => null)),
-        margin: money(await page.getByTestId('c2-cost-margin').textContent().catch(() => null)),
+        /* What has been BOOKED against this job — a workflow fact. Margin is deliberately not on this screen;
+           `marginShown()` below is the guard that keeps it that way. */
+        recorded: money(await page.getByTestId('c2-cost-recorded').textContent().catch(() => null)),
         byKind,
         rows,
       };
+    },
+
+    /**
+     * ⚠️ THE GUARD FOR A DELIBERATE ABSENCE. Athi, 2026-08-23: *"calculate it but do not showcase anywhere, as
+     * we are not the P&L holder."* An absence nothing checks comes back — someone adds the row again next time
+     * the cost pane is touched, and it looks like a feature. Returns true if margin has reappeared anywhere on
+     * the screen, by hook or by label.
+     */
+    async marginShown() {
+      if (await page.getByTestId('c2-cost-margin').count()) return true;
+      return (await page.getByText(/\bmargin\b/i).count()) > 0;
     },
 
     /** Which materials the picker is offering on a line — used to prove the catalogue is actually reachable. */
