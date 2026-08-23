@@ -3646,6 +3646,15 @@ const PURPOSE = {
 const CAP_OF = { definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
+/**
+ * The build this shell belongs to. Bumped by hand on any deploy that changes a `cap-*.js`, and used as the
+ * cache key for every lazily-loaded capability (see ensureCap below).
+ *
+ * ⚠️ A DATE IS NOT ENOUGH AND A RANDOM NUMBER IS TOO MUCH. `Date.now()` would re-download twenty modules on
+ * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
+ * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
+ */
+const CB_BUILD = '2026-08-23a';
 const CAP_LOADED = {};
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {};
@@ -3653,7 +3662,21 @@ function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
   if(_capPromise[name]) return _capPromise[name];
   return _capPromise[name] = new Promise(function(resolve, reject){
-    var s=document.createElement('script'); s.src='/app/cap-'+name+'.js'; s.async=false;
+    /**
+     * ⭐⭐ CACHE-BUSTED, AND THE LACK OF IT COST A REAL DEBUGGING SESSION. Athi, 2026-08-23, after design 2 was
+     * fixed and deployed: *"I am checking in localhost and still appear as whole page only, is the issue
+     * sorted out?"* It was — in `app.html`. But `cap-chit2.js` is injected by URL with no version, so the
+     * browser kept serving the OLD copy whose `openChit2()` still set `UI.nav='chit2'`. **Half the app was new
+     * and half was cached**, which is worse than either: the two halves disagreed about what a screen is.
+     *
+     * ⚠️ EVERY LAZY CAPABILITY HAD THIS, not just this one — twenty modules that update only when a browser
+     * happens to feel like it. The shell reloads because `app.html` is network-first through the service
+     * worker; these ride in behind it and were never covered.
+     *
+     * ⭐ `CB_BUILD` changes whenever the shell is deployed, so the query string changes with it and the cache
+     * key dies honestly. A capability is fetched again exactly when the app it belongs to has moved.
+     */
+    var s=document.createElement('script'); s.src='/app/cap-'+name+'.js?v='+CB_BUILD; s.async=false;
     s.onload=function(){ CAP_LOADED[name]=true; resolve(); };
     s.onerror=function(){ delete _capPromise[name]; reject(new Error(txf('Could not load the {capability} capability.', { capability: name }))); };
     document.head.appendChild(s);
@@ -8022,6 +8045,13 @@ function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(-
 // CO-ASSISTS screen/render/actions + loadCoassists -> app/cap-workforce.js (lazy via ensureCap('workforce')); helpers (acLbl/acType/hat*) stay above in Core.
 
 function mainBody(){
+  /**
+   * ⚠⚠ THIS MUST SIT ABOVE THE taskPanel BRANCH, and my first version of it did not. Redirecting the nav
+   * AFTER the line that consumes it fixes nothing: `task` had already failed to match, so a stale
+   * `nav='chit2'` fell past both and rendered whatever came next. A redirect that runs after the thing it
+   * redirects TO is not a redirect.
+   */
+  if(UI.nav === "chit2") UI.nav = (UI.folder === "order") ? "order" : "task";
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
   /* A folder opened from the nav renders the folder view directly — same screen, reached from where it lives.
      The old standalone Folders panel still works for anyone who has it bookmarked. */
@@ -8041,7 +8071,6 @@ function mainBody(){
      ⚠️ This line was written once as `UI.nav===chit2` — bash ate the quotes on the way in, and BOTH syntax
      checks passed because bare identifiers are legal JavaScript until they run. Same class as the two
      ReferenceErrors of 2026-08-22. Only reading the rendered line caught it. */
-  if(UI.nav === "chit2") UI.nav = (UI.folder === "order") ? "order" : "task";
   /**
    * ⚠️ `definitions` IS NO LONGER A SCREEN — it redirects (2026-08-16). Everything it held was rehomed first;
    * this catches an old bookmark, a stale `cb_nav` in someone's localStorage, or a link written before the move,
