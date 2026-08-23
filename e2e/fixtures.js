@@ -209,14 +209,20 @@ async function composeStepNext(page, expectStep) {
  *
  * `recipients` are added by name from the suggest list; `self: true` adds the Self recipient instead.
  */
-async function composeChit(page, { subject, item = 'Widget', qty, price, recipients = [], self = false, send = true } = {}) {
+async function composeChit(page, { subject, item = 'Widget', qty, price, items, recipients = [], self = false, send = true } = {}) {
   await clickNav(page, 'compose');
 
   // ── 1 · ITEMS. The line comes first now: the chit is about what is on it.
-  await page.getByTestId('chit-item-name').fill(item);
-  if (qty !== undefined) await page.getByTestId('chit-item-qty').fill(String(qty));
-  if (price !== undefined) await page.getByTestId('chit-item-price').fill(String(price));
-  await clickInModal(page, 'chit-item-add', HAS_TOTAL);       // add the line item (verify it registered)
+  /* `items: [{item, qty, price}, …]` authors a MULTI-LINE chit — the shape design 2 exists for, where each
+     line is a separate piece of work with its own assignee, delivery and cost. `item/qty/price` stays as the
+     one-line shorthand every older spec uses, so both go through the same wizard walk. */
+  const lines = items && items.length ? items : [{ item, qty, price }];
+  for (const ln of lines) {
+    await page.getByTestId('chit-item-name').fill(ln.item);
+    if (ln.qty !== undefined) await page.getByTestId('chit-item-qty').fill(String(ln.qty));
+    if (ln.price !== undefined) await page.getByTestId('chit-item-price').fill(String(ln.price));
+    await clickInModal(page, 'chit-item-add', HAS_TOTAL);     // add the line item (verify it registered)
+  }
   await composeStepNext(page, 'to');
 
   // ── 2 · TO. Compose keeps this step precisely because the recipient is genuinely unknown here.
@@ -282,4 +288,75 @@ async function poolContext(browser, i) {
 }
 
 const { seedDemo } = require('./seed');
-module.exports = { seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+/**
+ * addProduct — put one thing on our own shelf, through the Catalogue screen.
+ *
+ * ⭐ Extracted rather than inlined a second time: `catalogue.spec.js` already walks this form, and a second
+ * copy is how two specs end up disagreeing about what "add a product" means. A driver that needs materials
+ * (design 2 takes parts from the catalogue) needs exactly this walk and nothing more.
+ */
+async function addProduct(page, { name, price, desc } = {}) {
+  await clickNav(page, 'catalogue');
+  const add = page.getByTestId('cat-new-product');
+  if (!(await add.isVisible().catch(() => false))) {
+    // A catalogue that has never been set up offers the starter pick first.
+    const setup = page.getByTestId('cat-setup');
+    if (await setup.isVisible().catch(() => false)) await setup.click();
+  }
+  await add.waitFor({ state: 'visible', timeout: 20000 });
+  await add.click();
+  await page.getByTestId('cat-field-name').fill(name);
+  if (price !== undefined) await page.getByTestId('cat-field-price').fill(String(price));
+  const d = page.getByTestId('cat-field-desc');
+  if (desc && await d.count()) await d.fill(desc);
+  /**
+   * ⚠️ WAIT FOR THE WRITE, NOT FOR THE CLICK. The first version returned as soon as it had pressed Add, so a
+   * second call that silently did nothing was invisible until a LATER step failed for an unrelated-looking
+   * reason ("no material matching AC gas kit" — three steps and a minute after the shelf failed to gain it).
+   * A helper that does not confirm its own effect turns one broken thing into a mysterious other thing.
+   */
+  const saved = page.waitForResponse(
+    (r) => /\/api\/products/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400,
+    { timeout: 45000 });
+  await page.getByTestId('cat-add').click();
+  await saved;
+  await settle(page);
+  await dismissModal(page);
+  return { name, price };
+}
+
+/**
+ * addCoassist — a person to give work to. Design 2's whole point is division of labour, and an empty roster
+ * makes the Work tab say so honestly ("no co-assists yet") rather than assign to nobody.
+ *
+ * ⚠️ `key` is the login id, and it must be unique WITHIN the entity — the DB constraint is real
+ * (uq_actor_key_per_entity), so a fixed key collides on the second run of the same suite.
+ */
+async function addCoassist(page, { name, key } = {}) {
+  key = key || (String(name || 'mate').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) + Date.now().toString().slice(-5));
+  await clickNav(page, 'coassists');
+  await page.getByTestId('coassist-new').click();
+  await page.getByTestId('coassist-type-human').click();
+  await page.getByTestId('aw_name').fill(name);
+  await page.getByTestId('aw_key').fill(key);
+  /**
+   * ⚠️ WALK THE WIZARD, DO NOT COUNT ITS STEPS. `AW_STEPS.human` was ['who','hat'] and is now
+   * ['who','hat','docs'] — a driver that clicked Next exactly twice stopped on the last step with the wizard
+   * still up, and then intercepted every later click in the run. Pressing Next until it is gone survives the
+   * next step being added too.
+   */
+  for (let i = 0; i < 6; i++) {
+    const next = page.getByTestId('coassist-wiz-next');
+    if (!(await next.isVisible().catch(() => false))) break;
+    await next.click();
+    await page.waitForTimeout(150);
+  }
+  const done = page.getByTestId('coassist-wiz-done');
+  await done.waitFor({ state: 'visible', timeout: 30000 });   // the create has answered by the time this shows
+  await done.click();
+  await settle(page);
+  await dismissModal(page);
+  return { name, key };
+}
+
+module.exports = { addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };

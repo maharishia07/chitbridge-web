@@ -28,6 +28,17 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 | `tests/disputes.spec.js` | Raise → resolve (mechanics); USP 3-party skeleton | ✅ mechanics |
 | `tests/messages.spec.js` | Internal note + external message; privacy skeleton | ✅ |
 | `tests/redproof.spec.js` | **RED-proof** — the suite can fail on a broken screen | ✅ written |
+| `tests/design2-service.spec.js` | **Design 2 · a service job end to end** — parts picked from the catalogue, hours, a person, and the cost they come to | ✅ written (drives `flows/design2.js`) |
+
+### `flows/` — drivers, not tests
+A **flow module** knows how one screen is *operated*; a spec supplies the job. `flows/design2.js` is the first:
+it holds no assertions about any particular chit, and gives a spec `open · side · tab · assign · takeMaterial ·
+deliver · addCost · line · money · progress`. The reason to separate them is that the *walk* to a control
+(side → tab → row → control) is what breaks when a screen moves — written inside a spec it gets copied into the
+next spec and the two drift; written once here, a screen change is one edit. Two rules the drivers follow:
+**wait on the write, never on a repaint** (a POST that answers is proof; painted text is not), and **address by
+`data-testid`, never by CSS shape** — where the app had no hook, one was added to the app rather than reaching
+through its styling.
 
 ### Multiparty — the real capability (watch it live)
 The product is a **shared record between parties**, so the important flows use **multiple browser contexts** — one per

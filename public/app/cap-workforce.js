@@ -326,8 +326,8 @@ function awRender(){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
       // make a 2nd connector). Only Done. Explore/preview created nothing, so Back is safe there.
-      foot = rdy ? '<button class="composebtn pri" style="flex:1" onclick="awClose()">' + tx('Done') + '</button>'
-                 : '<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awClose()">' + tx('Got it') + '</button>';
+      foot = rdy ? '<button class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' + tx('Done') + '</button>'
+                 : '<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" data-testid="coassist-wiz-done" style="flex:1" onclick="awClose()">' + tx('Got it') + '</button>';
     } else {
       var sk=steps[UI.awStep];
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');

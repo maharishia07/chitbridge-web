@@ -3,7 +3,7 @@
 // FLOW B (CRUD·create): create a human co-assist end to end → an invite is issued.
 // LOCATORS: nav-coassists · coassist-new · coassist-type-{human|iot|erp|ai} · coassist-wiz-next · coassist-wiz-back · aw_name · aw_key
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, addCoassist } = require('../fixtures');
 
 test.describe('Module · Co-assists', () => {
   test('[COA-01] every co-assist type is reachable (human · IoT · ERP · AI)', async ({ page }) => {
@@ -24,13 +24,16 @@ test.describe('Module · Co-assists', () => {
 
   test('[COA-02] CRUD·create — add a human co-assist → invite issued', async ({ page }) => {
     await mintEntity(page);
-    await page.getByTestId('nav-coassists').click();
-    await page.getByTestId('coassist-new').click();
-    await page.getByTestId('coassist-type-human').click();
-    await page.getByTestId('aw_name').fill('Anitha E2E');
-    await page.getByTestId('aw_key').fill('anitha' + Date.now().toString().slice(-5));
-    await page.getByTestId('coassist-wiz-next').click();     // who → hat
-    await page.getByTestId('coassist-wiz-next').click();     // hat → finish (addActor)
-    await expect(page.getByText(/Invite ready|one-time code/i).first()).toBeVisible();
+    /**
+     * ⚠️ THIS WALK WENT STALE AND THE SPEC WENT WITH IT. It clicked Next exactly twice, because
+     * `AW_STEPS.human` was ['who','hat'] when it was written. A third step ('docs') was added, so two clicks
+     * now stop ON the last step — the invite never issues, and the wizard is left covering the screen for
+     * whatever runs next.
+     *
+     * ⭐ So the walk moved into `addCoassist()` and both call sites use it: a wizard that grows a step is now
+     * one edit, not a hunt through the specs that happen to open it.
+     */
+    await addCoassist(page, { name: 'Anitha E2E' });
+    await expect(page.getByText(/Anitha E2E/).first(), 'the new co-assist is not on the roster').toBeVisible();
   });
 });
