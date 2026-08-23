@@ -671,6 +671,8 @@ function c2PaneWork(d){
      the view everyone lands on was the one view that never told you the totals. Found by DEL-03, not by looking —
      the grouped views looked complete, and the default looked normal because it always had. */
   out += c2Grp('What is left', c2RollupText(lines, asg, prog));
+  /* Appears only once something is ticked — an empty toolbar teaches nothing and costs a row of height. */
+  out += c2PickBarHTML();
   out += lines.map(function(e){ return c2WorkRow(e, asg, prog); }).join('');
   return out;
 }
@@ -703,8 +705,27 @@ function c2WorkRow(e, asg, prog, ctx){
   var left = (ord == null) ? null : Math.max(0, Math.round((ord - got) * 1000) / 1000);
   var done = (left === 0 && ord != null);
   /* Opens an OVERLAY rather than expanding underneath — the row keeps its height, so nothing below it moves. */
-  return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
+  /**
+   * ⭐⭐ THE TICK IS WHY THIS EXISTS. Athi, 2026-08-23: *"I am trying to assign the task to individuals, need
+   * multiselect here — group assign should be possible. Example, oil change and filter change should be for
+   * the same person."* One person does the whole oil service; assigning it as two separate acts is the screen
+   * making him say twice what he decided once.
+   *
+   * ⚠️ It is also the answer to *"each assignment takes time"*: the API already accepts `edits: [...]` as an
+   * ARRAY and the UI was sending one edit per call, each followed by a FULL chit reload. Six lines meant six
+   * writes and six re-reads, in sequence. Ticking six and assigning once is a single call and a single reload.
+   *
+   * ⚠️ The checkbox stops the click from opening the row overlay — `stopPropagation`, or ticking a line would
+   * also open it, and the overlay would swallow the very selection being built.
+   */
+  var _ticked = !!(C2.pick && C2.pick[e.line_id]);
+  return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;'
+      + (_ticked ? 'background:var(--blue-tint)' : '') + '">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
+      + '<input type="checkbox" data-testid="c2-pick-' + e.line_id + '"' + (_ticked ? ' checked' : '')
+      +   ' onclick="event.stopPropagation();c2Pick(\'' + e.line_id + '\')"'
+      +   ' title="' + esc(tx('Tick several, then assign them together')) + '"'
+      +   ' style="margin-top:3px;cursor:pointer;flex:0 0 auto">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
@@ -763,6 +784,68 @@ function c2AssignOpen(line_id){
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">' + tx('Assign') + '</button></div>');
 }
+/* ── GROUP ASSIGN ──────────────────────────────────────────────────────────────────────────────────────── */
+function c2Pick(line_id){
+  C2.pick = C2.pick || {};
+  if (C2.pick[line_id]) delete C2.pick[line_id]; else C2.pick[line_id] = true;
+  c2Paint();
+}
+function c2PickCount(){ return Object.keys(C2.pick || {}).length; }
+function c2PickClear(){ C2.pick = {}; c2Paint(); }
+
+/**
+ * The bar that appears once anything is ticked. It sits at the top of the list rather than the bottom because
+ * the tick that opens it is at the top, and a control that appears somewhere the eye is not already looking
+ * gets missed.
+ */
+function c2PickBarHTML(){
+  var n = c2PickCount();
+  if (!n) return '';
+  /* ⚠️ Same rule the single-assign modal already states: an empty dropdown is indistinguishable from a broken
+     one, and the honest answer is also the instruction. */
+  if (!(UI.actors || []).length) {
+    return '<div style="padding:9px 16px;background:var(--blue-tint);border-bottom:1px solid var(--line);'
+      + 'font-size:var(--fs-2)">' + esc(txf('{n} selected', { n: n })) + ' — '
+      + esc(tx('no co-assists yet; add someone under Co-assists and they will appear here.')) + '</div>';
+  }
+  var opts = '<option value="">' + esc(tx('Choose a person…')) + '</option>'
+    + (UI.actors || []).map(function(a){
+        return '<option value="' + esc(a.id) + '">' + esc(a.name) + '</option>';
+      }).join('');
+  return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px 16px;'
+    + 'background:var(--blue-tint);border-bottom:1px solid var(--line)">'
+    + '<b style="font-size:var(--fs-2)">' + esc(txf('{n} selected', { n: n })) + '</b>'
+    + '<select id="c2pick_actor" style="flex:1;min-width:150px;padding:6px 9px;border:1px solid var(--line);'
+    +   'border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">' + opts + '</select>'
+    + '<button class="btn pri" data-testid="c2-assign-many" onclick="c2AssignMany()" style="padding:6px 14px">'
+    +   esc(tx('Assign together')) + '</button>'
+    + '<button onclick="c2PickClear()" style="border:1px solid var(--line);background:var(--card);'
+    +   'color:var(--on-card);border-radius:8px;padding:6px 11px;font-size:var(--fs-2);cursor:pointer">'
+    +   esc(tx('Clear')) + '</button></div>';
+}
+
+/**
+ * ⭐ ONE CALL, ONE RELOAD. `edits` was always an array; sending it one element at a time was the whole cost.
+ * Six lines used to be six writes and six full chit reads in sequence — this is one of each.
+ */
+async function c2AssignMany(){
+  var ids = Object.keys(C2.pick || {});
+  if (!ids.length) return;
+  var sel = document.getElementById('c2pick_actor');
+  var actor = sel ? sel.value : '';
+  var name = (sel && sel.selectedIndex > 0) ? sel.options[sel.selectedIndex].text : null;
+  if (!actor) { toast(tx('Choose a person first')); return; }
+  try {
+    await api('c2AssignLines', { params: { id: C2.id }, body: {
+      edits: ids.map(function(line_id){
+        return { line_id: line_id, assignee_actor_id: actor, assignee_name: name, assignee_type: 'human' };
+      }) } });
+    C2.pick = {};
+    await loadChit2();
+    toast(txf('{n} assigned to {name}', { n: ids.length, name: name }));
+  } catch (e) { toast(MSG.fail('assign the lines', e)); }
+}
+
 async function c2Assign(line_id){
   var sel = document.getElementById('c2a_' + line_id);
   var actor = sel ? sel.value : '';
