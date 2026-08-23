@@ -59,7 +59,12 @@ const sandbox = {
   ACCESS_LABEL: { viewer: 'Viewer', commenter: 'Commenter', editor: 'Editor' },
   ACCESS_CHOICES: [['editor', 'Editor'], ['commenter', 'Commenter'], ['viewer', 'Viewer']],
   accessLevelOf: () => 'editor', hatLabel: () => 'Editor', hatAssignable: () => true,
-  govCardHTML: () => '<div>rights</div>', _CARD: '', _misHead: () => '', scrErr: () => '',
+  govCardHTML: () => '<div>rights</div>', _CARD: '', _misHead: () => '',
+  /* ⚠️ scrErr RETURNED '' AND THAT MADE EVERY ERROR PATH LOOK DEAD. A renderer whose failure branch is "show
+     the error" correctly returns only what scrErr gives it, so an empty stub turns a working branch into
+     "returned nothing" — the harness reporting its own stub as a defect. It now returns the message, which is
+     what the real one does. */
+  scrErr: (m) => '<div class="err">' + String(m == null ? 'error' : m) + '</div>',
   MIS_BANDS: [], PLAN: { chitsPerDay: 1 }, GOV: {}, ACTOR_TYPES: {}, AC_TYPE: {},
   inr: (n) => String(n), CAP_LOADED: {},
 };
@@ -164,6 +169,18 @@ const CASES = [
    * three of them are the branches a happy-path case never reaches — and the ReferenceError of 2026-08-22 was
    * hiding in exactly such a branch.
    */
+  /**
+   * ⭐⭐ THE REACHABILITY CASE, added after the renderer shipped UNREACHABLE. The three cases below call
+   * usageHTML() directly and all passed while nothing in the app could reach it, because it had been wired
+   * into PROF_SECS whose rail no longer exists. A renderer test proves a renderer; only rendering the SCREEN
+   * proves the screen.
+   */
+  ['iamMeHTML — the usage section is REACHABLE from the profile', () => {
+    ctx.UI._iamOpen = {};
+    const h = ctx.iamMeHTML(ENTITY);
+    if (!/iam-sec-usage/.test(h)) throw new Error('no usage section in the rendered profile');
+    return h;
+  }],
   ['usageHTML — nothing read yet (kicks the loader)', () => { ctx.UI._usage = null; ctx.UI._usageBusy = false; return ctx.usageHTML(); }],
   ['usageHTML — a ledger with rows', () => {
     ctx.UI._usage = { window_days: 30, counts: { billed: 3 }, total_cost_usd: 0, rate_card: 'rc-2026-08-dev',

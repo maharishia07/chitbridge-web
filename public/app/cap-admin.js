@@ -729,10 +729,7 @@ var PROF_SECS = [
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
      Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
   { key:'governance', name:'Your rights',  q:'What this entity may do' },
-  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' },
-  /* Athi, 2026-08-23: *"give me a screen to look at the details in the profile."* Last, because it is the one
-     section you consult rather than maintain. */
-  { key:'usage',      name:'Usage',       q:'What you have been billed for' }
+  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
 ];
 function profSec(){ return UI.profSec || 'identity'; }
 /**
@@ -1586,7 +1583,11 @@ function iamMeHTML(e){
        business do", one from the platform and one from the world. Neither takes a Save. */
     + iamSection('trade', tx('Trade ready'), iamTradeBody(), { hint: iamTradeHint() })
     + iamSection('rights', tx('Rights'), iamRightsBody(e), { hint: tx('resolved') })
-    + iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' });
+    + iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' })
+    /* Last, and collapsed: consulted, not maintained. The hint carries the total so the number is readable
+       without opening the panel — the one figure anyone actually wants at a glance. */
+    + iamSection('usage', tx('Usage'), usageBody(),
+        { hint: (UI._usage && UI._usage.total_cost_usd != null) ? _usageMoney(UI._usage.total_cost_usd) : '' });
 }
 
 /**
@@ -2439,16 +2440,32 @@ function _usageMoney(n){
   return '$' + (Math.round(v * 10000) / 10000).toFixed(4).replace(/0+$/, '').replace(/\.$/, '.00');
 }
 
+/**
+ * ⚠️⚠️ THE FIRST VERSION OF THIS WAS UNREACHABLE, and the test suite could not have told me. I added it to
+ * `PROF_SECS` — a registry whose rail was removed weeks ago, so `profSec()` now only ever returns 'identity'
+ * and the four panels live as sections inside `iamMeHTML`. render-smoke went green because it called
+ * `usageHTML()` directly: **it proved the renderer works, not that anything reaches it.** Athi found it in
+ * about a minute by opening the profile and not seeing it.
+ *
+ * ⭐ So it is an `iamSection` like every other panel, and the body is only built when the section is OPEN —
+ * which is also what keeps the profile's read count where it is.
+ */
+function usageBody(){
+  var open = !!(UI._iamOpen && UI._iamOpen.usage);
+  if (!open) return '<div class="mut" style="font-size:var(--fs-2)">' + tx('Open to read your usage.') + '</div>';
+  return usageHTML();
+}
+
 function usageHTML(){
   var u = UI._usage;
-  if (!u) { iamLoadUsage(); return '<div class="sec">' + tx('Usage') + '</div><div class="mut">' + tx('Reading your usage…') + '</div>'; }
-  if (u._err) return '<div class="sec">' + tx('Usage') + '</div>' + scrErr(u._err);
+  /* No outer heading: iamSection supplies the title, and two would read as two panels. */
+  if (!u) { iamLoadUsage(); return '<div class="mut">' + tx('Reading your usage…') + '</div>'; }
+  if (u._err) return scrErr(u._err);
   if (u.not_enabled) {
-    return '<div class="sec">' + tx('Usage') + '</div><div class="mut">'
-      + tx('Usage recording is not switched on for this deployment yet.') + '</div>';
+    return '<div class="mut">' + tx('Usage recording is not switched on for this deployment yet.') + '</div>';
   }
 
-  var out = '<div class="sec">' + tx('Usage') + '</div>';
+  var out = '';
 
   /* ── the headline, and the caveat as part of it ── */
   out += '<div class="card" style="padding:12px 14px">'
@@ -2518,7 +2535,6 @@ function profSecHTML(k, e){
 }
 function _profSecBody(k, e){
   if (k === 'identity') return iamHTML(e);
-  if (k === 'usage') return usageHTML();
   /* ⚠️⚠️ THE __iam_old BRANCH WAS DELETED HERE, AND IT TOOK namingRulesHTML WITH IT.
      No section key is ever '__iam_old' — PROF_SECS has identity/storefront/governance/vault — so this was
      unreachable, and it was the ONLY caller of namingRulesHTML. That table explained what a Bridge ID is,
