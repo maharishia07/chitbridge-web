@@ -1197,10 +1197,65 @@ function wlMatCart(){
   return WLL.matCart;
 }
 
+/**
+ * ⭐⭐ A DOOR, NOT THE WHOLE SHOP. Athi, 2026-08-23, looking at the picker crammed into the line card: *"if it
+ * comes as an overlay screen that will be good — so you can select few items and then once confirmed its cost
+ * can be added."*
+ *
+ * ⚠️ HE IS RIGHT AND THE SCREENSHOT PROVED IT. The shared picker is a full browsing surface — grouped rows,
+ * media, variants, a commit strip — and squeezing it into a fold inside an already-crowded card gave it no
+ * width to lay out in: every row collapsed to "Diagnostic chargehour₹750". The component was not wrong; the
+ * space was. Browsing a catalogue and recording one line are two different jobs and want two different rooms.
+ *
+ * ⭐ So the card carries a BUTTON, and the picker gets the overlay to itself. Select several, confirm once,
+ * and every pick lands on the line in one call — which is also the answer to "each assignment takes time".
+ */
 function wlMatPickHTML(){
-  if (!wlMatCart()) return '';
-  /* The shared picker draws into these two hosts; CBCatUI paints them once the card is in the DOM. */
-  return '<div id="wl_matbar" style="margin-bottom:6px"></div><div id="wl_matlist"></div>';
+  var n = ((typeof STORE !== 'undefined' && STORE.catalogue) || []).length;
+  return '<button type="button" data-testid="wl-open-catalogue" onclick="wlMatOpen()"'
+    + ' style="width:100%;padding:9px 12px;margin-bottom:9px;border:1px dashed var(--line);border-radius:9px;'
+    + 'background:var(--card);color:var(--on-card);font-size:var(--fs-2);cursor:pointer;text-align:start">'
+    + '🛒 ' + esc(tx('Take materials from the catalogue'))
+    + (n ? '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(txf('{n} items', { n: n })) + '</span>' : '')
+    + '</button>';
+}
+
+/**
+ * The picker, in the app's own modal. It REPLACES the line card for as long as it is open — nested overlays
+ * are how a person loses track of what closes what — and returns to it on confirm or cancel.
+ */
+function wlMatOpen(){
+  var cart = wlMatCart();
+  if (!cart) return;
+  if (!((typeof STORE !== 'undefined' && STORE.catalogue) || []).length) {
+    toast(tx('Your catalogue is empty — add parts under Catalogue first'));
+    return;
+  }
+  WLL.matOpen = true;
+  wlMatPaintPicker();
+}
+
+function wlMatPaintPicker(){
+  var cart = WLL.matCart;
+  var r = WLL.row || {};
+  modal('<div class="mhd"><div class="t">' + esc(tx('Take materials')) + '</div>'
+      + '<div class="s">' + esc(r.particulars || '') + '</div></div>'
+    + '<div class="mbody" style="padding:0">'
+    +   '<div id="wl_matbar" style="padding:10px 14px 0"></div>'
+    +   '<div id="wl_matlist"></div>'
+    + '</div>'
+    + '<div class="mfoot"><button onclick="wlMatCancel()">' + esc(tx('Cancel')) + '</button>'
+    + '<button class="pri" data-testid="wl-mat-confirm" onclick="wlMatCommit()">'
+    +   esc(tx('Add to this line')) + '</button></div>', true);
+  /* Paint AFTER the hosts exist — the same ordering rule the card's own picker needed. */
+  try { cart.paint(); } catch (_) {}
+}
+
+function wlMatCancel(){
+  WLL.matOpen = false;
+  if (WLL.matCart) WLL.matCart.clear();
+  /* Back to the line card, not to nothing: the person was in the middle of a line. */
+  wlPaintCard(false);
 }
 
 /**

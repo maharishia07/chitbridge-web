@@ -3674,7 +3674,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-23k';
+const CB_BUILD = '2026-08-23l';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -6029,8 +6029,35 @@ function supInfoCardHTML(x){
  * It is now a panel that SLIDES OVER the list, with a back button. The list keeps its full height and stays
  * dense; the record gets the room it needs; neither is traded for the other.
  */
-function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return emptyState('🏭','No suppliers yet','Add one by their User ID or email.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"});
-  return rows.map(supRowHTML).join(''); }
+/**
+ * ⭐⭐ OUR OWN STOCK IS THE FIRST ROW IN THE SUPPLIER LIST. Athi, 2026-08-23: *"on top of the supplier bring the
+ * own catalogue — as an employee you can add your own catalogue in the supplier panel, so bringing the supplier
+ * panel allows all the suppliers in one place. If the own catalogue is on the top, that would be perfect."*
+ *
+ * ⭐ It is the right shape because the QUESTION a person has is "where do I get this part from", and our own
+ * shelf is one answer among several. Splitting it into a different screen made the mechanic decide where to
+ * look before deciding what to take.
+ *
+ * ⚠️ It is not a supplier and must not pretend to be: no confidence rung, no clearances, no record panel. It is
+ * a source of parts that happens to sit in the same list, and `supplier_list_id === 'own'` is what every branch
+ * downstream checks rather than inferring it from a name.
+ */
+function supOwnRowHTML(){
+  const n = ((typeof STORE !== 'undefined' && STORE.catalogue) || []).length;
+  const on = (UI.supSel === 'own') ? ' sel' : '';
+  return `<div class="row${on}" data-testid="sup-row-own" onclick="selectSupplier('own')">
+    <span style="width:18px;text-align:center">🏠</span>
+    <div class="main2"><div class="l1"><span class="code">${esc(tx('Our own stock'))}</span>
+      <span class="optchip" style="background:var(--ok-tint,var(--card));color:var(--ok-3);border-color:var(--ok-3)">${esc(tx('ours'))}</span></div>
+    <div class="l2">${esc(n ? txf('{n} items in your catalogue', { n: n }) : tx('your catalogue is empty'))}</div></div></div>`;
+}
+function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return supOwnRowHTML() + emptyState('🏭','No suppliers yet','Add one by their User ID or email.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"});
+  /* ⭐ Own stock FIRST, always — not only when the supplier list is empty. Athi: *"if the own catalogue is on
+     the top, that would be perfect."* And for a co-assist it is the ONLY door: the actor rail carries
+     Rail · Work · Suppliers and has no Catalogue entry, so without this row an employee cannot open the
+     catalogue at all — which is exactly what he hit. The API already allows it (entityOf resolves an actor to
+     its parent business); only the screen was missing. */
+  return supOwnRowHTML() + rows.map(supRowHTML).join(''); }
 function supSlideHTML(){
   const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===UI.supSel; });
   if(!x || !UI.supPanel) return '';
@@ -6403,6 +6430,36 @@ function supCartRelease(){
  */
 function supOrderState(){ if(!UI._supOrder) UI._supOrder={subject:'',by:'',addr:'',note:''}; return UI._supOrder; }
 function supStepsFor(x){
+  /**
+   * ⭐⭐ OUR OWN SHELF IS NOT SOMEONE TO ORDER FROM. Athi, 2026-08-23: *"so you can open your own catalogue and
+   * send a chit or use it elsewhere."* Sending "an order to Our own stock" would be a chit to ourselves, which
+   * is the one counterparty a trade cannot have — so the terminal action changes: the picked lines are handed
+   * to COMPOSE, where they become whatever the person actually needs them to be.
+   *
+   * ⚠️ One step, not three: there is nobody to give a delivery date or a note to. Asking for them would be a
+   * form pretending to have a reader.
+   */
+  if(x && x._own){
+    return CBSteps.create({
+      steps:[{k:'items',n:'Items',t:tx('What do you need from your own stock?')}],
+      railEl:'sup_rail', bodyEl:'sup_body', footEl:'sup_foot', subEl:'sup_sub',
+      render:function(){ return supStepItems(); },
+      guard:function(){ return (UI._supCart && UI._supCart.lines().length) ? null : tx('Add at least one item.'); },
+      sendLabel:function(){ return tx('Use these lines →'); },
+      cancelLabel:tx('Back'),
+      onCancel:function(){ backToList(); },
+      onSend:function(){
+        var lines=(UI._supCart && UI._supCart.lines()) || [];
+        if(!lines.length) return;
+        /* ⭐ compose() already knows how to take lines — the same door the catalogue screen uses. */
+        compose({ items:lines.map(function(l){
+          var raw=(l.price&&l.price.amount!=null)?l.price.amount:l.price;
+          return { particulars:l.name||l.particulars||'', unit:l.unit||'unit',
+                   quantity:Number(l.qty||l.quantity||1)||1, price:Number(raw)||0 };
+        }) });
+      }
+    });
+  }
   return CBSteps.create({
     steps:[{k:'items',n:'Items',t:'What do you need from them?'},
            {k:'details',n:'Details',t:'When, where, and anything they should know'},
@@ -6552,6 +6609,36 @@ function supCartOpts(x){
 }
 async function selectSupplier(id, silent){
   UI.supSel=id;
+  /**
+   * ⭐⭐ OUR OWN SHELF, OPENED THROUGH THE SAME DOOR. Athi, 2026-08-23: *"first allow the employee to have their
+   * catalogue… then use the supplier menu and open the catalogue."*
+   *
+   * ⚠️⚠️ AND FOR A CO-ASSIST THIS IS THE ONLY DOOR THERE IS. The actor rail is Rail · Work · Suppliers — there
+   * is no Catalogue entry on it, so an employee could not open the business's catalogue at all: not to take a
+   * part, not to quote one, not to put one on a chit. The API was never the obstacle (`entityOf` resolves an
+   * actor to its parent business, so `GET /products` already answers for them); the screen simply had no way in.
+   *
+   * ⚠️ It reuses the supplier browse deliberately — same cart, same search, same rows. A separate own-catalogue
+   * screen would be the third picker again.
+   */
+  if(id==='own'){
+    if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+    supCartRelease();
+    const own={ supplier_list_id:'own', supplier_entity_id:'own', display_name:tx('Our own stock'),
+                nickname:null, bridge_id:null, has_catalogue:true, _own:true };
+    UI.supDet={supplier:own, items:null, loading:true}; paintSupDetail();
+    if(typeof ensureCatalogue==='function') await ensureCatalogue();
+    const arr=(STORE.catalogue||[]);
+    /* The picker's shape, built once — the same mapping compose and the worklist use. */
+    const cat={ shop:{ bridge_id:'self', display_name:tx('Our own stock') },
+      items:arr.map((p,i)=>({ item_id:'own'+i, item_data:Object.assign({}, p,
+        { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
+    UI.supDet={ supplier:own, cat:cat, items:arr.slice() };
+    supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(own)); UI._supCartFor='own';
+    UI._supFlow=supStepsFor(own);
+    paintSupDetail();
+    return;
+  }
   /**
    * ⚠️ SELECTING DOES NOT OPEN THE RECORD PANEL. It did, and that was wrong twice over: the slide-over covers the
    * list, so after picking one supplier you could not click the next without pressing back first — and the e2e
