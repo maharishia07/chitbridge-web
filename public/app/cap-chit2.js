@@ -383,7 +383,19 @@ function c2PaneDel(d){
   var lines = (d.live_set || []).filter(function(e){ return !e.removed; });
   if (!sum) return c2Head('Delivered & paid') + '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">Nothing delivered yet.</div>';
 
+  /**
+   * ⭐⭐ THE MONEY WAS COMPUTED AND NEVER SHOWN. Athi, 2026-08-23: *"can I see some tickets with real cost and
+   * completion status now?"* — the completion half was here, the cost half was not. `line_delivery[id].charged`
+   * sums the `add` events on a line (parts fitted, hours worked) and **no screen in the product rendered it**,
+   * so a service job displayed its progress and never what it had come to.
+   *
+   * ⚠️ IT IS A RUNNING TOTAL, NOT AN INVOICE, and the wording has to carry that. On a service job the number
+   * rises while the work happens and is only final when the last complaint closes — labelling it "total" would
+   * invite someone to quote it to a customer mid-job.
+   */
+  var accrued = lines.reduce(function(t, e){ return t + Number((prog[e.line_id] || {}).charged || 0); }, 0);
   var out = c2Head('Delivered & paid', sum.complete + ' of ' + sum.lines + ' complete'
+    + (accrued ? ' · <b>' + esc(inr(accrued)) + '</b> ' + tx('so far') : '')
     + (sum.divergent ? ' · <span style="color:var(--warn-2)">' + sum.divergent + ' disagreed</span>' : ''));
 
   out += lines.map(function(e){
@@ -406,6 +418,29 @@ function c2PaneDel(d){
       + ((p.events || []).length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">' + p.events.map(function(v){
             return (v.quantity > 0 ? '+' : '') + v.quantity + ' ' + esc(v.unit || '') + ' · ' + esc(v.mine ? 'you' : (v.by || 'them')) + (v.reference ? ' · ' + esc(v.reference) : '');
           }).join('<br>') + '</div>' : '')
+      /**
+       * ⭐⭐ WHAT WAS FITTED AND WHO SPENT THE HOURS. `added` is the other half of a line's history — the `add`
+       * events that accrue rather than draw down — and it is the whole of a service job: parts consumed, hours
+       * worked, and a charge for each. Rendering only `events` showed a repair as "not started" while three
+       * people had spent an afternoon on it.
+       *
+       * ⚠️ `by_actor`, not `by`. `by` is the entity that holds the copy; the PERSON is `by_actor`, and reading
+       * the wrong one turns three mechanics into one company — the same mistake the proof made before Athi
+       * asked to see the people.
+       */
+      + ((p.added || []).length ? '<div style="margin-top:7px;font-size:var(--fs-1)">'
+          + p.added.map(function(v){
+              var qty = (v.quantity ? v.quantity + ' ' + esc(v.unit || '') + ' · ' : '');
+              return '<div style="display:flex;justify-content:space-between;gap:8px;padding:1px 0">'
+                + '<span style="color:var(--grey)">' + qty + esc(v.particulars || '')
+                + (v.by_actor ? ' · ' + esc(v.by_actor) : '') + '</span>'
+                + (v.amount ? '<span style="color:var(--ink);font-variant-numeric:tabular-nums">' + esc(inr(v.amount)) + '</span>' : '')
+                + '</div>';
+            }).join('')
+          + (p.charged ? '<div style="display:flex;justify-content:space-between;gap:8px;margin-top:3px;'
+              + 'padding-top:3px;border-top:1px solid var(--line)"><span style="color:var(--grey)">' + tx('this line, so far')
+              + '</span><b style="font-variant-numeric:tabular-nums">' + esc(inr(p.charged)) + '</b></div>' : '')
+          + '</div>' : '')
       /* ⚠️ RECORDING LIVES ON THE LINE ITSELF. The first version of this pane was read-only — you could watch a
          delivery but never make one, which meant the whole tab was a demo. Recording is the point; it is the
          action he performs twenty times a day, so it is one tap from the line rather than behind a menu. */
