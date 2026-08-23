@@ -296,6 +296,24 @@ const { seedDemo } = require('./seed');
  * (design 2 takes parts from the catalogue) needs exactly this walk and nothing more.
  */
 async function addProduct(page, { name, price, desc } = {}) {
+  /**
+   * ⚠️⚠️ REUSE WHAT IS ALREADY ON THE SHELF — the `authed` project shares ONE entity across every spec and
+   * every re-run, so a fixture that always creates is a fixture that grows the catalogue without bound. Nine
+   * runs of the design-2 flow left eighteen products behind, and `[CAT-02]` then edited one copy and read
+   * another: "expected 999, received 250". Sound alone, unsound in a batch — the shared-account drift again.
+   *
+   * ⭐ Asked through the app's OWN read, with the app's own session, because that is the same list the pickers
+   * will offer. Matching on name is the identity a person uses when looking for a part.
+   */
+  const already = await page.evaluate(async (n) => {
+    try {
+      const r = await api('prodList', { query: { limit: 200 } });
+      const list = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
+      return list.some((x) => String(((x.item_data || x).name) || '').toLowerCase() === String(n).toLowerCase());
+    } catch (e) { return false; }
+  }, name).catch(() => false);
+  if (already) return { name, price, reused: true };
+
   await clickNav(page, 'catalogue');
   const add = page.getByTestId('cat-new-product');
   if (!(await add.isVisible().catch(() => false))) {

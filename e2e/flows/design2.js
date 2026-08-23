@@ -75,6 +75,32 @@ async function pickOption(select, needle, what) {
   return hit.text;
 }
 
+/**
+ * ⭐⭐ DRIVE THE PICKER, WHEREVER IT WAS OPENED FROM. `CBPick` is one module over any screen, so this is one
+ * driver for it — the worklist, design 2, and whatever opens it next all present the same modal, so none of
+ * them needs its own picking code. That is the test-side half of the reason the module exists.
+ *
+ * Search → press + on the row → set the quantity. It does NOT confirm: the caller confirms, because only the
+ * caller knows which write to wait for.
+ */
+async function pick(page, { item, qty = 1 }) {
+  const search = page.getByTestId('pick-search');
+  await expect(search, 'the catalogue picker did not open').toBeVisible({ timeout: 30000 });
+  await search.fill(item);
+  const row = page.locator('[data-testid^="cbcat-row-"]').filter({ hasText: item }).first();
+  await expect(row, `"${item}" is not in the catalogue this picker is showing`).toBeVisible({ timeout: 20000 });
+  const name = ((await row.textContent()) || '').trim();
+  await row.getByTestId('cart-add').first().click();
+  if (Number(qty) > 1) {
+    /* The row turns into a stepper once it holds one; typing the number beats pressing + n times. */
+    const box = row.locator('.cbcat-stp input');
+    await expect(box, 'the row did not become a stepper after +').toBeVisible({ timeout: 10000 });
+    await box.fill(String(qty));
+    await box.blur();
+  }
+  return name;
+}
+
 function design2(page) {
   const wrote = (re) => page.waitForResponse(
     (r) => re.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 45000 });
@@ -154,12 +180,12 @@ function design2(page) {
       const row = d2.delRow(line);
       await expect(row, `no delivery row for "${line}"`).toBeVisible({ timeout: 20000 });
       if (from) await pickOption(row.getByTestId('c2-mat-src'), from, 'source');
-      const chosen = await pickOption(row.getByTestId('c2-mat-item'), item, 'material');
-      await row.getByTestId('c2-mat-qty').fill(String(qty));
-      const done = wrote(/\/deliver-lines/);
       await row.getByTestId('c2-take-material').click();
+      const picked = await pick(page, { item, qty });
+      const done = wrote(/\/deliver-lines/);
+      await page.getByTestId('pick-confirm').click();
       await done;
-      return { line, item: chosen, qty };
+      return { line, item: picked, qty };
     },
 
     /** THEM · DELIVERED & PAID — claim `qty` of the line delivered. This is what closes a line. */
@@ -276,12 +302,19 @@ function design2(page) {
       return (await page.getByText(/\bmargin\b/i).count()) > 0;
     },
 
-    /** Which materials the picker is offering on a line — used to prove the catalogue is actually reachable. */
+    /** Which materials the picker offers on a line — proves the catalogue is actually reachable from here. */
     async materialsOffered(line) {
       await d2.tab('del');
-      const sel = d2.delRow(line).getByTestId('c2-mat-item');
-      await expect(sel, 'the material picker never appeared — is the catalogue empty?').toBeVisible({ timeout: 20000 });
-      return sel.evaluate((el) => [...el.options].slice(1).map((o) => o.textContent.trim()));
+      await d2.delRow(line).getByTestId('c2-take-material').click();
+      await expect(page.getByTestId('pick-search'), 'the catalogue picker never opened').toBeVisible({ timeout: 30000 });
+      /* ⚠️ Wait for the read to finish before reading the rows — the picker shows a skeleton first, and
+         counting skeleton rows as products is exactly the confusion the reading state exists to prevent. */
+      await expect(page.locator('.cbcat-skelrow'), 'the catalogue never finished loading')
+        .toHaveCount(0, { timeout: 30000 });
+      const names = await page.locator('[data-testid^="cbcat-row-"]').allTextContents();
+      await page.getByTestId('pick-cancel').click();
+      await expect(page.getByTestId('pick-search')).toBeHidden({ timeout: 10000 });
+      return names.map((t) => t.replace(/\s+/g, ' ').trim());
     },
   };
   return d2;

@@ -871,100 +871,100 @@ function c2MatSources(){
 
 function c2MatSrc(){ return C2.matSrc || C2_OWN; }
 
-function c2MatSetSrc(id){
-  C2.matSrc = id;
-  C2.mats = null;              // a different shelf is a different list
-  c2MatLoad();
-  c2Paint();
-}
+/** A different shelf is a different list; nothing is cached, because the picker reads on open. */
+function c2MatSetSrc(id){ C2.matSrc = id; c2Paint(); }
 
-function c2MatLoad(){
-  if (C2.mats || C2.matsBusy) return;
-  C2.matsBusy = true;
+/**
+ * The chosen shelf, read when the picker asks for it.
+ *
+ * ⚠️ 'sid', not 'id' — the EP was registered with that name, and a wrong param name does not throw: it leaves
+ * ':sid' unfilled in the path and the call quietly 404s.
+ */
+function c2MatFetch(){
   var src = c2MatSrc();
   var got = (src === C2_OWN)
     ? api('prodList', { query: { limit: 200 } }).then(function(r){ return Array.isArray(r) ? r : ((r && (r.items || r.products)) || []); })
     /* ⚠️ Their catalogue, read through the supplier link — the same one the Suppliers screen uses, so a store
        that has published nothing to us shows nothing here either, rather than a different answer. */
-    /* ⚠️ `sid`, not `id` — the EP was already registered with that name, and a wrong param name does not
-       throw: it leaves `:sid` unfilled in the path and the call quietly 404s. Checked against the table. */
     : api('supCatalogue', { params: { sid: src } })
         .then(function(r){ return Array.isArray(r) ? r : ((r && r.items) || []); });
-
-  got.then(function(items){
-    C2.mats = items.map(function(x){
+  return got.then(function(items){
+    return items.map(function(x){
       var d = x.item_data || x;
-      var pr = d.price && typeof d.price === 'object' ? d.price.amount : d.price;
-      return { id: x.item_id || d.item_id, name: d.name || '', unit: d.unit || '', price: Number(pr) || 0 };
+      return Object.assign({}, d, { item_id: x.item_id || d.item_id, name: d.name || d.particulars || '' });
     }).filter(function(m){ return m.name; });
-  }).catch(function(){ C2.mats = []; }).then(function(){ C2.matsBusy = false; c2Paint(); });
+  });
 }
 
+/**
+ * ── TAKING MATERIAL FROM A SHELF ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THIS WAS A <select> AND A qty BOX, WHICH IS THE PICKER ATHI HAD ALREADY REJECTED ONCE. He said it about
+ * the worklist first — *"why can you not bring our storefront catalogue menu which has everything"* — and then
+ * again here: *"it has to bring the existing UI with the search bar and pass the data back to the screen it
+ * called."* A dropdown cannot search, cannot show a picture, cannot take three parts at once, and behaves
+ * unlike the catalogue people already know from Compose and Suppliers.
+ *
+ * ⭐ So the line offers WHICH SHELF (a real choice — our own stock, or any supplier), and the picker itself is
+ * 'CBPick', the one module. One button, one catalogue, several parts in one act.
+ */
 function c2MatRowHTML(line_id){
   var srcs = c2MatSources();
-  if (!C2.mats) { c2MatLoad(); return ''; }
-  /* The source picker shows even when a shelf is empty — "this supplier has nothing" is an answer, and
-     hiding the control would read as the feature being missing. */
+  /* The source picker shows even when a shelf is empty — "this supplier has nothing" is an answer, and hiding
+     the control would read as the feature being missing. */
   var srcSel = (srcs.length > 1)
-    ? '<select id="c2msrc_' + line_id + '" data-testid="c2-mat-src" onchange="c2MatSetSrc(this.value)" style="padding:6px 8px;'
+    ? '<select data-testid="c2-mat-src" onchange="c2MatSetSrc(this.value)" style="padding:6px 8px;'
       + 'border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
       + srcs.map(function(s){
           return '<option value="' + esc(s.id) + '"' + (s.id === c2MatSrc() ? ' selected' : '') + '>' + esc(s.name) + '</option>';
         }).join('') + '</select>'
     : '';
-  if (!C2.mats.length) {
-    return '<div style="flex-basis:100%;height:0"></div>' + srcSel
-      + '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(tx('nothing published here')) + '</span>';
-  }
-  var opts = '<option value="">' + esc(tx('take material from the catalogue…')) + '</option>'
-    + C2.mats.map(function(m){
-        return '<option value="' + esc(m.id) + '">' + esc(m.name) + ' · ' + esc(m.unit)
-             + (m.price ? ' · ' + esc(inr(m.price)) : '') + '</option>';
-      }).join('');
   return '<div style="flex-basis:100%;height:0"></div>' + srcSel
-    + '<select id="c2m_' + line_id + '" data-testid="c2-mat-item" style="flex:1;min-width:170px;padding:6px 8px;border:1px solid var(--line);'
-    +   'border-radius:6px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">' + opts + '</select>'
-    + '<input id="c2mq_' + line_id + '" data-testid="c2-mat-qty" inputmode="decimal" placeholder="' + esc(tx('qty')) + '" style="width:64px;'
-    +   'padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
     + '<button class="btn" data-testid="c2-take-material" onclick="c2TakeMaterial(\'' + line_id + '\')"'
-    +   ' title="' + esc(tx('Records the part against this line, at the catalogue price')) + '">'
-    +   esc(tx('Take')) + '</button>';
+    +   ' title="' + esc(tx('Records what was used against this line, at the catalogue price')) + '">'
+    +   '🛒 ' + esc(tx('Take materials')) + '</button>';
 }
 
+/**
+ * ⚠️ 'add', NOT 'deliver'. Fitting a compressor is not "2 of a brake service" — the part accrues against the
+ * job, it does not draw the job down. That is the rule the whole service model rests on.
+ *
+ * ⚠️⚠️ THE SOURCE IS PART OF THE RECORD, NOT A DETAIL. Our own shelf and a supplier's shelf produce the same
+ * cost on the job and mean completely different things afterwards: one is stock consumed, the other is money
+ * owed to another business. Writing them identically would make the two indistinguishable a week later, when
+ * it matters.
+ *
+ * ⚠️ THE PURCHASE IS NOT RAISED HERE, AND THAT IS DELIBERATE. A part taken from a supplier ought to end in a
+ * chit to them — their copy, their price, both sides holding it. Doing that silently from a picker would
+ * commit an entity to an order it never saw. Recorded with its origin so the purchase CAN be raised against
+ * it; whether per part, per job or per day is Athi's call, not a default.
+ */
 async function c2TakeMaterial(line_id){
-  var sel = document.getElementById('c2m_' + line_id);
-  var id = sel ? sel.value : '';
-  if (!id) return toast(tx('Choose a material first'));
-  var m = (C2.mats || []).find(function(x){ return x.id === id; });
-  if (!m) return;
-  var q = Number(((document.getElementById('c2mq_' + line_id) || {}).value || '').trim());
-  if (!Number.isFinite(q) || q <= 0) return toast(tx('How many? (a number, and more than zero)'));
+  var src = c2MatSrc();
+  var srcName = (c2MatSources().find(function(s){ return s.id === src; }) || {}).name || '';
+  var own = (src === C2_OWN);
+  var picked = await CBPick.open({
+    title: tx('Take materials'),
+    subtitle: own ? tx('Our own stock') : srcName,
+    confirm: tx('Add to this line'),
+    cartTitle: tx('Materials to add'),
+    emptyHint: tx('Press + on what was used'),
+    emptyAll: own
+      ? tx('Your catalogue is empty — add parts under Catalogue and they can be taken from here.')
+      : txf('{name} has not published anything you can take yet.', { name: srcName }),
+    catalogue: c2MatFetch,
+  });
+  if (!picked || !picked.length) return;
   try {
-    /**
-     * ⚠️ `add`, NOT `deliver`. Fitting a compressor is not "2 of a brake service" — the part accrues against
-     * the job, it does not draw the job down. That is the same rule the whole service model rests on.
-     */
-    /**
-     * ⚠️⚠️ THE SOURCE IS PART OF THE RECORD, NOT A DETAIL. Our own shelf and a supplier's shelf produce the
-     * same cost on the job and mean completely different things afterwards: one is stock consumed, the other
-     * is money owed to another business. Writing them identically would make the two indistinguishable a week
-     * later, when it matters.
-     *
-     * ⚠️ THE PURCHASE IS NOT RAISED HERE, AND THAT IS DELIBERATE. A part taken from a supplier ought to end in
-     * a chit to them — their copy, their price, both sides holding it. Doing that silently from a dropdown
-     * would commit an entity to an order it never saw. Recorded with its origin so the purchase CAN be raised
-     * against it; whether it is raised per part, per job or per day is Athi's call, not a default.
-     */
-    var src = c2MatSrc();
-    var srcName = (c2MatSources().find(function(s){ return s.id === src; }) || {}).name || '';
-    var r = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: [
-      { line_id: line_id, kind: 'add',
-        particulars: m.name + (src === C2_OWN ? '' : ' (' + srcName + ')'),
-        quantity: q, unit: m.unit,
-        amount: Math.round(q * m.price * 100) / 100, reference: m.id,
-        note: src === C2_OWN ? null : ('from ' + srcName) } ] } });
+    var rows = picked.map(function(l){
+      return { line_id: line_id, kind: 'add',
+               particulars: l.name + (own ? '' : ' (' + srcName + ')'),
+               quantity: l.qty, unit: l.unit, amount: l.amount, reference: l.item_id,
+               note: own ? null : ('from ' + srcName) };
+    });
+    var r = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: rows } });
     if (!c2ApplyProgress(r)) await loadChit2();
-    toast(txf('{qty} {unit} {name} taken', { qty: q, unit: m.unit, name: m.name }));
+    toast(txf('{n} added to this line', { n: rows.length }));
   } catch (e) { toast(MSG.fail('record the material', e)); }
 }
 

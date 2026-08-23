@@ -37,8 +37,11 @@ test.describe('Design 2 · a service job end to end', () => {
     test.setTimeout(15 * 60 * 1000);   // a full transaction: mint, seed, then ~10 writes through the UI
 
     const s = stamp();
-    const PART_A = { name: 'Oil filter ' + s, price: 450 };
-    const PART_B = { name: 'AC gas kit ' + s, price: 1650 };
+    /* ⚠️ FIXED NAMES, deliberately not stamped. The parts are the SHOP's standing catalogue, not this run's
+       data — stamping them made a new pair of products on every run and left the shared entity with a shelf
+       nobody could read. The chit and its lines still carry the stamp, because those genuinely are this run. */
+    const PART_A = { name: 'E2E oil filter', price: 450 };
+    const PART_B = { name: 'E2E AC gas kit', price: 1650 };
     const L1 = 'Engine service ' + s;
     const L2 = 'AC repair ' + s;
     const QUOTE = { [L1]: 3500, [L2]: 2800 };

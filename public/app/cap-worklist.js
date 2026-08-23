@@ -786,12 +786,9 @@ function wlPaintCard(loading){
   wlRestoreFields(keep);
   /* ⚠ The search box is restored with everything else, but the LIST it filters is rebuilt full. Re-applying
      the filter keeps the two consistent — otherwise the query still reads 'oil' over all 200 rows. */
-  /* ⚠️ The picker paints itself AFTER the card is in the DOM — its hosts (`wl_matbar`, `wl_matlist`) exist
-     only once modal() has written them, so the paint cannot happen inside wlLineHTML(). */
-  /* ⭐ `cart.paint()` — the handle's own method, which routes through the renderer it was created with. Calling
-     CBCatUI.paint directly would be reaching past the cart to its renderer, which is the coupling cart-ui
-     exists to prevent. */
-  try { if (WLL.matCart && document.getElementById('wl_matlist')) WLL.matCart.paint(); } catch (_) {}
+  /* ⚠️ NO PICKER PAINT HERE ANY MORE. The card used to host the catalogue itself, so it had to repaint it after
+     every field restore — and getting that ordering right was one of the four things the hand-wired picker had
+     to do. CBPick owns its own modal and its own hosts, so the card has nothing to paint. */
 }
 
 function wlSec(k){
@@ -1158,58 +1155,6 @@ function wlLineHTML(loading){
  */
 /* ⚠️ Spread, never enumerate — compose states the same rule: `name` is the alias cart-ui reads, and everything
    else rides along, which is what lets a row keep its unit, its code and its quantity model. */
-function wlMatCatalogue(){
-  return { shop: { bridge_id: 'self' }, items: ((typeof STORE !== 'undefined' && STORE.catalogue) || [])
-    .map(function(p, i){
-      return { item_id: 'wm' + i, item_data: Object.assign({}, p,
-        { name: p.particulars, unit: p.unit || 'unit', price: p.price }) };
-    }) };
-}
-
-function wlMatCart(){
-  if (typeof CBCart === 'undefined' || typeof CBCatUI === 'undefined') return null;
-  /**
-   * ⚠️⚠️ `STORE.catalogue` IS NOT ALWAYS THERE, and assuming it was is why Athi saw a cart symbol with nothing
-   * behind it. It is populated by whoever loaded it first — which, until now, was Compose alone. Open the
-   * worklist without having opened Compose and the picker had no products to show.
-   *
-   * ⭐ `ensureCatalogue()` is the ONE loader, shared, fetching only when the list is empty and repainting this
-   * card when it lands. Not a second fetch of my own — building beside what exists is what started this detour.
-   */
-  if (!(((typeof STORE !== 'undefined' && STORE.catalogue) || []).length)
-      && !WLL.matLoading && typeof ensureCatalogue === 'function') {
-    WLL.matLoading = true;
-    ensureCatalogue().then(function(){
-      WLL.matLoading = false;
-      if (WLL.matCart) WLL.matCart.setCatalogue(wlMatCatalogue());
-      if (WLL.row) wlPaintCard(false);
-    });
-  }
-  var cat = wlMatCatalogue();
-  if (WLL.matCart) { WLL.matCart.setCatalogue(cat); return WLL.matCart; }
-  WLL.matCart = CBCart.create(cat, {
-    listEl: 'wl_matlist', barEl: 'wl_matbar', renderer: CBCatUI,
-    checkoutLabel: '+ Add to this line', cartTitle: 'Materials to add',
-    emptyHint: 'Press + on what was used',
-    noCatalogue: 'Your catalogue is empty — add parts under Catalogue and they can be taken from here.',
-    onCheckout: wlMatCommit
-  });
-  return WLL.matCart;
-}
-
-/**
- * ⭐⭐ A DOOR, NOT THE WHOLE SHOP. Athi, 2026-08-23, looking at the picker crammed into the line card: *"if it
- * comes as an overlay screen that will be good — so you can select few items and then once confirmed its cost
- * can be added."*
- *
- * ⚠️ HE IS RIGHT AND THE SCREENSHOT PROVED IT. The shared picker is a full browsing surface — grouped rows,
- * media, variants, a commit strip — and squeezing it into a fold inside an already-crowded card gave it no
- * width to lay out in: every row collapsed to "Diagnostic chargehour₹750". The component was not wrong; the
- * space was. Browsing a catalogue and recording one line are two different jobs and want two different rooms.
- *
- * ⭐ So the card carries a BUTTON, and the picker gets the overlay to itself. Select several, confirm once,
- * and every pick lands on the line in one call — which is also the answer to "each assignment takes time".
- */
 function wlMatPickHTML(){
   var n = ((typeof STORE !== 'undefined' && STORE.catalogue) || []).length;
   return '<button type="button" data-testid="wl-open-catalogue" onclick="wlMatOpen()"'
@@ -1224,67 +1169,63 @@ function wlMatPickHTML(){
  * The picker, in the app's own modal. It REPLACES the line card for as long as it is open — nested overlays
  * are how a person loses track of what closes what — and returns to it on confirm or cancel.
  */
+
+/* ── TAKING MATERIAL, THROUGH THE ONE PICKER ───────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ EVERYTHING BETWEEN HERE AND wlCardClose USED TO BE A SECOND ASSEMBLY OF THE PICKER — its own catalogue
+ * mapping, its own CBCart.create, its own two hosts, its own modal, its own commit. It looked like reuse
+ * because it named CBCart and CBCatUI. It was not: the three screens that work call
+ * `CBCatUI.pickerHTML()` — *"the whole picker: cart bar, search box, list"*, and the only place `ensureCss()`
+ * runs — while this called `cart.paint()`, which paints rows into a host and nothing else.
+ *
+ * So it shipped a list with NO SEARCH BOX and NO STYLESHEET, and "your catalogue is empty" while the read was
+ * still in flight. Athi: *"it has to state it is reading the catalogue… the catalogue UI is not there… it is
+ * such a simple flow, I am getting pissed off now."* He was right, and right about the fix:
+ * *"if it is a module, we should be able to call it on top of any other screen and pass the selection back."*
+ *
+ * ⭐ That module is `CBPick` (app/pick.js). What is left here is the two things that are genuinely this
+ * screen's business: WHAT catalogue to offer, and WHAT to do with what comes back.
+ */
 function wlMatOpen(){
-  var cart = wlMatCart();
-  if (!cart) return;
-  if (!((typeof STORE !== 'undefined' && STORE.catalogue) || []).length) {
-    toast(tx('Your catalogue is empty — add parts under Catalogue first'));
-    return;
-  }
-  WLL.matOpen = true;
-  wlMatPaintPicker();
-}
-
-function wlMatPaintPicker(){
-  var cart = WLL.matCart;
-  var r = WLL.row || {};
-  modal('<div class="mhd"><div class="t">' + esc(tx('Take materials')) + '</div>'
-      + '<div class="s">' + esc(r.particulars || '') + '</div></div>'
-    + '<div class="mbody" style="padding:0">'
-    +   '<div id="wl_matbar" style="padding:10px 14px 0"></div>'
-    +   '<div id="wl_matlist"></div>'
-    + '</div>'
-    + '<div class="mfoot"><button onclick="wlMatCancel()">' + esc(tx('Cancel')) + '</button>'
-    + '<button class="pri" data-testid="wl-mat-confirm" onclick="wlMatCommit()">'
-    +   esc(tx('Add to this line')) + '</button></div>', true);
-  /* Paint AFTER the hosts exist — the same ordering rule the card's own picker needed. */
-  try { cart.paint(); } catch (_) {}
-}
-
-function wlMatCancel(){
-  WLL.matOpen = false;
-  if (WLL.matCart) WLL.matCart.clear();
-  /* Back to the line card, not to nothing: the person was in the middle of a line. */
-  wlPaintCard(false);
+  var r = WLL.row;
+  if (!r) return;
+  CBPick.open({
+    title: tx('Take materials'),
+    subtitle: r.particulars || '',
+    confirm: tx('Add to this line'),
+    cartTitle: tx('Materials to add'),
+    emptyHint: tx('Press + on what was used'),
+    emptyAll: tx('Your catalogue is empty — add parts under Catalogue and they can be taken from here.'),
+    /* ⭐ ensureCatalogue() is the ONE loader, shared with compose. The picker shows its reading state until
+       this resolves, so the empty-catalogue sentence is only ever said about an actually empty catalogue. */
+    catalogue: function(){
+      return (typeof ensureCatalogue === 'function' ? ensureCatalogue() : Promise.resolve())
+        .then(function(){ return (typeof STORE !== 'undefined' && STORE.catalogue) || []; });
+    },
+    /* ⚠️ #modalhost holds one thing, so the picker REPLACED the line card. Whichever way it closed, the person
+       was in the middle of a line and belongs back on it. */
+    onClose: function(){ wlPaintCard(false); },
+  }).then(wlMatRecord);
 }
 
 /**
  * ⭐ Every picked line becomes ONE `add` event, in a single call. Oil and a filter go on together — the same
  * reason group-assign exists: a person decided once and should only have to say it once.
  *
- * ⚠️ The catalogue price is what is recorded, not a typed one. What a part costs is the shop's decision made
- * once; two mechanics pricing the same filter differently on the same day is what this prevents.
+ * ⚠️ `add`, NOT `deliver`. A part fitted ACCRUES against the job; it does not draw the job down. And the
+ * CATALOGUE price is what is recorded, never a typed one — what a part costs is the shop's decision made once,
+ * and two mechanics pricing the same filter differently on the same day is what this prevents.
  */
-async function wlMatCommit(){
+async function wlMatRecord(picked){
   var r = WLL.row;
-  var cart = WLL.matCart;
-  if (!r || !cart) return;
-  var lines = cart.lines() || [];
-  if (!lines.length) { toast(tx('Press + on what was used')); return; }
+  if (!picked || !picked.length || !r) return;          // null = cancelled
   try {
-    var rows = lines.map(function(l){
-      var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
-      var price = Number(raw) || 0;
-      var qty = Number(l.qty || l.quantity || 1) || 1;
-      return { line_id: r.line_id, kind: 'add',
-        particulars: l.name || l.particulars || '',
-        quantity: qty, unit: l.unit || null,
-        amount: Math.round(qty * price * 100) / 100,
-        reference: l.item_id || null };
+    var rows = picked.map(function(l){
+      return { line_id: r.line_id, kind: 'add', particulars: l.name,
+               quantity: l.qty, unit: l.unit, amount: l.amount, reference: l.item_id };
     });
     var res = await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: rows } });
     if (res && res.progress && WLL.det) WLL.det.line_delivery = res.progress;
-    cart.clear();
     /* ⚠️ dirty, and repaint the CARD — never the container. The list behind is refreshed when the card closes. */
     WLL.dirty = true;
     wlPaintCard(false);
