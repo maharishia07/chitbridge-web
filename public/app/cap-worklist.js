@@ -784,6 +784,9 @@ function wlPaintCard(loading){
   /* ⚠️ AFTER everything else. makeMovable can restore geometry and re-lay the panel out; putting values back
      before that runs risks them being wiped by the very repaint they were saved from. */
   wlRestoreFields(keep);
+  /* ⚠ The search box is restored with everything else, but the LIST it filters is rebuilt full. Re-applying
+     the filter keeps the two consistent — otherwise the query still reads 'oil' over all 200 rows. */
+  try { if ((document.getElementById('wl_matq') || {}).value) wlMatFilter(); } catch (_) {}
 }
 
 function wlSec(k){
@@ -1119,7 +1122,19 @@ function wlMatLoad(){
       return { id: x.item_id || d.item_id, name: d.name || '', unit: d.unit || '', price: Number(pr) || 0 };
     }).filter(function(m){ return m.name; });
   }).catch(function(){ WLL.mats = []; })
-    .then(function(){ WLL.matsBusy = false; if (typeof wlPaint === 'function') wlPaint(); });
+    .then(function(){
+      WLL.matsBusy = false;
+      /**
+       * ⚠️⚠️ NEVER `wlPaint()` HERE — THAT IS WHAT CLOSED THE OVERLAY. Athi, 2026-08-23: *"when I try to add
+       * the cost, it is not adding the cost, it is just coming out from the screen."* `wlPaint()` rewrites
+       * `mainbody`, and the line overlay lives inside it, so the catalogue arriving mid-edit destroyed the
+       * open card and everything typed into it. The feature meant to speed the job up was deleting the work.
+       *
+       * ⭐ `wlPaintCard()` is the overlay's OWN repaint and it already preserves typed fields (`wlKeepFields`),
+       * which is exactly why it exists. Repaint the thing that changed, never its container.
+       */
+      if (WLL.row && typeof wlPaintCard === 'function') wlPaintCard(false);
+    });
 }
 
 function wlMatPickHTML(){
@@ -1129,15 +1144,49 @@ function wlMatPickHTML(){
     return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:7px">'
       + esc(tx('No catalogue items yet — add them under Catalogue and they can be taken from here.')) + '</div>';
   }
+  /**
+   * ⭐⭐ A SEARCH, BECAUSE A DROPDOWN OF TWO HUNDRED PARTS IS NOT A CATALOGUE. Athi, 2026-08-23: *"a proper
+   * catalogue form and a search would be useful here."* A workshop's parts list is long and a mechanic knows
+   * the word, not the position — scrolling a select to find "oil filter" is slower than typing it, which is
+   * the whole thing this picker was meant to fix.
+   *
+   * ⚠️ THE FILTER TOUCHES THE SELECT ONLY, never the card. Repainting the overlay on every keystroke is what
+   * broke it a moment ago; this rewrites one element's options and leaves everything else — including what has
+   * already been typed — exactly where it was.
+   */
   return '<div style="margin-bottom:8px">'
-    + '<select id="wl_mat" data-testid="wl-mat" onchange="wlMatPick()" style="width:100%;padding:8px 9px;'
+    + '<input id="wl_matq" data-testid="wl-matq" oninput="wlMatFilter()" placeholder="'
+    +   esc(tx('Search the catalogue — name, unit')) + '" style="width:100%;padding:8px 9px;margin-bottom:6px;'
     +   'border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
-    + '<option value="">' + esc(tx('Take from the catalogue…')) + '</option>'
-    + WLL.mats.map(function(m){
+    + '<select id="wl_mat" data-testid="wl-mat" size="1" onchange="wlMatPick()" style="width:100%;padding:8px 9px;'
+    +   'border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
+    + wlMatOptionsHTML(WLL.mats)
+    + '</select>'
+    + '<div id="wl_matn" style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">'
+    +   esc(txf('{n} in the catalogue', { n: WLL.mats.length })) + '</div></div>';
+}
+
+function wlMatOptionsHTML(list){
+  return '<option value="">' + esc(tx('Take from the catalogue…')) + '</option>'
+    + list.map(function(m){
         return '<option value="' + esc(m.id) + '">' + esc(m.name) + ' · ' + esc(m.unit)
-             + (m.price ? ' · ' + esc(cbAmount ? inr(m.price) : m.price) : '') + '</option>';
-      }).join('')
-    + '</select></div>';
+             + (m.price ? ' · ' + esc(typeof inr === 'function' ? inr(m.price) : m.price) : '') + '</option>';
+      }).join('');
+}
+
+function wlMatFilter(){
+  var q = String(((document.getElementById('wl_matq') || {}).value) || '').trim().toLowerCase();
+  var all = WLL.mats || [];
+  var hit = !q ? all : all.filter(function(m){
+    return (m.name + ' ' + m.unit).toLowerCase().indexOf(q) >= 0;
+  });
+  var sel = document.getElementById('wl_mat');
+  if (sel) sel.innerHTML = wlMatOptionsHTML(hit);
+  var n = document.getElementById('wl_matn');
+  /* ⚠️ "0 of 35" rather than an empty box: a filter that hides everything looks identical to a broken list. */
+  if (n) n.textContent = q ? (hit.length + ' of ' + all.length) : (all.length + ' in the catalogue');
+  /* One hit and a typed query — select it, so the common case is type-three-letters-and-go. */
+  if (sel && q && hit.length === 1) { sel.value = hit[0].id; wlMatPick(); }
 }
 
 /**
