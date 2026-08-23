@@ -489,9 +489,18 @@ async function c2Deliver(line_id, unit, back){
   if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
   var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
   try {
-    await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: [
+    var _r = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: [
       { line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref } ] } });
-    await loadChit2();
+    /**
+     * ⭐⭐ THE WRITE NOW CARRIES THE NEW STATE, so the screen stops asking for it. This ran `loadChit2()` — a
+     * twelve-round-trip re-read measured at ~4.9s, MORE than the ~3.5s write it was confirming. Recording
+     * effort and materials is the action a mechanic performs all day; it was the slowest thing in the product.
+     *
+     * ⚠️ Falls back to the full reload when the response has no `progress` — an older API, or the one moment
+     * after a deploy when the two halves disagree. Slow and correct beats fast and stale.
+     */
+    if (_r && _r.progress && C2.data) { C2.data.line_delivery = _r.progress; c2Paint(); }
+    else await loadChit2();
     toast(back ? 'Taken back — the original claim stays on the record' : 'Recorded');
   } catch (e) { toast(MSG.fail('record the delivery', e)); }
 }
@@ -784,6 +793,42 @@ function c2AssignOpen(line_id){
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">' + tx('Assign') + '</button></div>');
 }
+/**
+ * ⭐⭐ APPLY THE ANSWER; DO NOT ASK THE QUESTION AGAIN. Measured 2026-08-23, against the live API:
+ *
+ *     assign one line          3,481 ms
+ *     the reload right after   4,892 ms      ← MORE than the write it was confirming
+ *     one assignment           8,373 ms
+ *     six, one at a time      50,238 ms
+ *
+ * Athi: *"it drags like hell… people will forget using computer."* More than half of every action was the app
+ * re-reading the WHOLE chit to learn a fact the server had just handed back in the response. `GET /chits/:id`
+ * is twelve round trips; nothing on this screen needed eleven of them.
+ *
+ * ⚠️ THE SERVER'S ANSWER WINS WHERE IT GIVES ONE. `out.assignments` is what was actually stored — using the
+ * values we SENT would make the screen show our intention rather than the record, and those differ exactly
+ * when something went wrong. The sent values are the fallback only, for an older API that returns nothing.
+ *
+ * ⚠️ And this is a LOCAL APPLY, not an optimistic one: the write has already succeeded when this runs. Nothing
+ * is painted before the server agrees, so there is no state to roll back.
+ */
+function c2ApplyAssignments(resp, ids, actor, name){
+  var d = C2.data; if (!d) return;
+  d.line_assignment = d.line_assignment || {};
+  var served = (resp && resp.assignments) || null;
+  if (served && served.length) {
+    served.forEach(function(a){ if (a && a.line_id) d.line_assignment[a.line_id] = a; });
+  } else {
+    ids.forEach(function(line_id){
+      var prev = d.line_assignment[line_id] || {};
+      d.line_assignment[line_id] = Object.assign({}, prev, {
+        line_id: line_id, assignee_actor_id: actor || null,
+        assignee_name: actor ? name : null, assignee_type: actor ? 'human' : null });
+    });
+  }
+  c2Paint();
+}
+
 /* ── GROUP ASSIGN ──────────────────────────────────────────────────────────────────────────────────────── */
 function c2Pick(line_id){
   C2.pick = C2.pick || {};
@@ -836,12 +881,12 @@ async function c2AssignMany(){
   var name = (sel && sel.selectedIndex > 0) ? sel.options[sel.selectedIndex].text : null;
   if (!actor) { toast(tx('Choose a person first')); return; }
   try {
-    await api('c2AssignLines', { params: { id: C2.id }, body: {
+    var r = await api('c2AssignLines', { params: { id: C2.id }, body: {
       edits: ids.map(function(line_id){
         return { line_id: line_id, assignee_actor_id: actor, assignee_name: name, assignee_type: 'human' };
       }) } });
     C2.pick = {};
-    await loadChit2();
+    c2ApplyAssignments(r, ids, actor, name);
     toast(txf('{n} assigned to {name}', { n: ids.length, name: name }));
   } catch (e) { toast(MSG.fail('assign the lines', e)); }
 }
@@ -855,10 +900,10 @@ async function c2Assign(line_id){
   try {
     /* ⚠️ assignee_actor_id IS SENT EXPLICITLY, null included — the API refuses an omitted key, because
        "unassign" and "never assigned" are different facts and it will not guess which was meant. */
-    await api('c2AssignLines', { params: { id: C2.id }, body: { edits: [
+    var _r = await api('c2AssignLines', { params: { id: C2.id }, body: { edits: [
       { line_id: line_id, assignee_actor_id: actor || null, assignee_name: name, assignee_type: 'human',
         task: task, due_date: due } ] } });
-    await loadChit2();
+    c2ApplyAssignments(_r, [line_id], actor, name);
     toast(actor ? ('Assigned to ' + name) : 'Unassigned');
   } catch (e) { toast(MSG.fail('assign the line', e)); }
 }
