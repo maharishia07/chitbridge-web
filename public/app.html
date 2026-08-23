@@ -3676,6 +3676,48 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  */
 const CB_BUILD = '2026-08-23b';
 const CAP_LOADED = {};
+/**
+ * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
+ * renderer with no guard, so the FIRST visit to any of them hit a ReferenceError mid-render: the shell and
+ * nav had already painted, the body never completed, and the PREVIOUS screen’s detail pane survived on the
+ * right. Athi, 2026-08-23: *"I have moved from task tab to coassist tab, right side still showing task data."*
+ * It corrected itself when he clicked a row — by then the capability had loaded and the next render worked,
+ * which is exactly the signature of a first-paint failure rather than a wrong screen.
+ *
+ * ⚠️ The name is a STRING on purpose. `typeof fn === "function"` cannot help when the identifier itself is
+ * undeclared — evaluating it to pass it in is what throws. A lookup on the global object is the only form that
+ * is safe to ask before the script exists.
+ */
+/**
+ * ⭐⭐ SAY WHAT IS HAPPENING — an empty pane is honest, and honest is not enough. Athi, 2026-08-23: *"if it is
+ * a lazy loading issue, we can specify lazy loading as a message and show a timer, not an issue, but cannot
+ * show a wrong information."* Both halves of that are the rule: WRONG is unacceptable, SLOW is fine as long as
+ * it is stated. The first version of this cleared the stale pane and then said nothing, which turns a
+ * three-hundred-millisecond wait into a blank screen with no explanation.
+ *
+ * ⚠️ AND THE MESSAGE GOES IN BOTH COLUMNS. The bug being fixed was the DETAIL pane keeping another screen's
+ * data, so a loading state that only fills the list would leave the exact half that misled him empty and
+ * unexplained.
+ */
+var CAP_TITLES = { misScreen:'Insight', profileScreen:'Profile', settingsScreen:'Settings',
+  coassistsScreen:'Co-assists', assistReviewScreen:'Assistant review', disputesScreen:'Disputes',
+  foldersScreen:'Folders', readinessScreen:'Trade ready', traceabilityScreen:'Traceability',
+  networkScreen:'Network' };
+function capScreen(name){
+  var f = (typeof window !== "undefined") ? window[name] : undefined;
+  if (typeof f === "function") return f();
+  var what = CAP_TITLES[name] || '';
+  var msg = what ? txf('Loading {screen}…', { screen: what }) : tx('Loading…');
+  var note = '<div style="display:flex;flex-direction:column;align-items:center;gap:9px;padding:34px 16px;'
+    + 'color:var(--grey);font-size:var(--fs-2);text-align:center">'
+    + '<span class="spin"></span><span>' + esc(msg) + '</span>'
+    + '<span style="font-size:var(--fs-1)">' + esc(tx('This screen loads on demand, so it arrives a moment after you open it.')) + '</span>'
+    + '</div>';
+  return '<div class="panel" id="panel" style="--lw:' + UI.lw + 'px"><div class="list"><div class="rows">'
+    + note + '</div></div>'
+    + '<div class="divider" id="divider"></div><div class="detail" id="detailpane">' + note + '</div></div>';
+}
+
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {};
 function ensureCap(name){
@@ -8078,7 +8120,7 @@ function mainBody(){
   /* A folder opened from the nav renders the folder view directly — same screen, reached from where it lives.
      The old standalone Folders panel still works for anyone who has it bookmarked. */
   if(String(UI.nav).indexOf('folder:')===0 && typeof _folderView==='function') return _folderView();
-  if(UI.nav==="folders") return foldersScreen();
+  if(UI.nav==="folders") return capScreen("foldersScreen");
   if(UI.nav==="intake" && typeof intakeScreen==="function") return intakeScreen();   // app/cap-intake.js (lazy)
   if(UI.nav==="messages" && typeof messagesScreen==="function") return messagesScreen();   // app/cap-messages.js (lazy)
   if(UI.nav==="worklist") return (typeof worklistScreen==="function") ? worklistScreen()
@@ -8100,12 +8142,12 @@ function mainBody(){
    * ⚠️ Catalogue setup, not Catalogue: seven of the nine things that lived here are catalogue STRUCTURE.
    */
   if(UI.nav==="definitions"){ UI.nav="catsetup"; try{localStorage.setItem("cb_nav","catsetup");}catch(_){ } }
-  if(UI.nav==="traceability") return traceabilityScreen();
-  if(UI.nav==="readiness") return readinessScreen();
-      if(UI.nav==="disputes") return disputesScreen();
-  if(UI.nav==="profile") return profileScreen();
-  if(UI.nav==="settings") return settingsScreen();
-  if(UI.nav==="network") return networkScreen();
+  if(UI.nav==="traceability") return capScreen("traceabilityScreen");
+  if(UI.nav==="readiness") return capScreen("readinessScreen");
+      if(UI.nav==="disputes") return capScreen("disputesScreen");
+  if(UI.nav==="profile") return capScreen("profileScreen");
+  if(UI.nav==="settings") return capScreen("settingsScreen");
+  if(UI.nav==="network") return capScreen("networkScreen");
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="customers") return customersScreen();
   if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();  // LOCAL PROTOTYPE
@@ -8114,10 +8156,10 @@ function mainBody(){
     : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;
   if(UI.nav==="categories") return (typeof categoriesScreen==="function") ? categoriesScreen()
     : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;
-  if(UI.nav==="mis") return misScreen();
-  if(UI.nav==="coassists") return coassistsScreen();
-  if(UI.nav==="connectors"){ UI.nav="coassists"; return coassistsScreen(); }
-  if(UI.nav==="assistreview") return assistReviewScreen();
+  if(UI.nav==="mis") return capScreen("misScreen");
+  if(UI.nav==="coassists") return capScreen("coassistsScreen");
+  if(UI.nav==="connectors"){ UI.nav="coassists"; return capScreen("coassistsScreen"); }
+  if(UI.nav==="assistreview") return capScreen("assistReviewScreen");
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
 
