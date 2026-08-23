@@ -468,6 +468,7 @@ function c2PaneDel(d){
       + '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(l.unit || '') + '</span>'
       + '<input id="c2dr_' + e.line_id + '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
       + '<button class="btn pri" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\')">' + tx('Delivered') + '</button>'
+      + c2MatRowHTML(e.line_id)
       + (p.delivered ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\',true)">' + tx('Take back') + '</button>' : '')
       + '</div>'
       + '</div>';
@@ -793,6 +794,161 @@ function c2AssignOpen(line_id){
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">' + tx('Assign') + '</button></div>');
 }
+/**
+ * ── TAKING MATERIAL FROM THE STORE ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-23: *"when the employee is trying to fix the car, he takes material from the store — how does
+ * he take it? In this screen how does he invoke his own or another network store catalogue?"*
+ *
+ * ⭐⭐ HE PICKS IT; HE DOES NOT TYPE IT. Until now a part was free text in "Add a cost" — a name and a number
+ * typed by hand — so *"6 materials changed"* could never be reconciled against anything. `chit_line_cost` has
+ * no catalogue column at all (kind · amount · minutes · rate · note), which is why the picker lives on the
+ * LINE EVENT instead: an `add` event carries `particulars`, `quantity`, `unit`, `amount` **and `reference`**,
+ * and the reference is the catalogue item id.
+ *
+ * ⚠️⚠️ AND HIS OWN STORE IS NOT THE SAME ACT AS ANOTHER STORE, which is why only one of them belongs here.
+ * Taking oil off your own shelf is CONSUMPTION — it happens inside the job and needs no counterparty. Taking
+ * it from another business is a PURCHASE: it needs their price, their agreement and a record both sides hold,
+ * which is a chit, and the product already does it (Suppliers → browse → cart → order). Putting another
+ * entity's catalogue behind this button would let someone consume stock they have not bought.
+ *
+ * ⚠️ The price comes from the CATALOGUE, not from the person. What a part costs is the shop's decision, made
+ * once; a mechanic typing it at the car is how two invoices for the same filter end up different.
+ */
+/**
+ * ⭐⭐ THREE SOURCES, ONE PICKER. Athi, 2026-08-23: *"here we should be able to pick up from own catalogue,
+ * network store catalogue or maybe a supplier catalogue — but mostly the network store catalogue, accessed via
+ * the supplier link."*
+ *
+ * ⭐ AND THE SUPPLIER LINK IS WHAT MAKES ALL THREE ONE MECHANISM. A network store is another entity, so its
+ * parts are not ours to take — they are reachable because someone established a relationship, and that
+ * relationship is the supplier link. So the source list is: our own shelf, then every supplier we have,
+ * whether that supplier is a branch of our own network or an outside business. Nothing here needs to know
+ * which, because the LINK already decided we may read their catalogue.
+ *
+ * ⚠️ WHAT IS RECORDED DIFFERS BY SOURCE, AND THAT MUST NOT BE BLURRED. Taking oil off our own shelf is
+ * CONSUMPTION — no counterparty, no agreement. Taking it from another entity is a PURCHASE: they have a price,
+ * they hold their own copy, and a record neither side can edit alone. The event below carries the source on
+ * every non-own line so the purchase can be raised against it — see the note in c2TakeMaterial.
+ */
+var C2_OWN = '__own__';
+
+function c2MatSources(){
+  if (C2.matSrcs) return C2.matSrcs;
+  C2.matSrcs = [{ id: C2_OWN, name: tx('Our own stock') }];
+  api('supList').then(function(r){
+    var sups = (r && (r.suppliers || r)) || [];
+    if (Array.isArray(sups)) {
+      C2.matSrcs = [{ id: C2_OWN, name: tx('Our own stock') }].concat(sups.map(function(s){
+        return { id: s.supplier_entity_id, name: s.nickname || s.display_name || tx('supplier'),
+                 listId: s.supplier_list_id };
+      }).filter(function(s){ return s.id; }));
+      c2Paint();
+    }
+  }).catch(function(){ /* no suppliers reachable — our own stock is still a source */ });
+  return C2.matSrcs;
+}
+
+function c2MatSrc(){ return C2.matSrc || C2_OWN; }
+
+function c2MatSetSrc(id){
+  C2.matSrc = id;
+  C2.mats = null;              // a different shelf is a different list
+  c2MatLoad();
+  c2Paint();
+}
+
+function c2MatLoad(){
+  if (C2.mats || C2.matsBusy) return;
+  C2.matsBusy = true;
+  var src = c2MatSrc();
+  var got = (src === C2_OWN)
+    ? api('prodList', { query: { limit: 200 } }).then(function(r){ return Array.isArray(r) ? r : ((r && (r.items || r.products)) || []); })
+    /* ⚠️ Their catalogue, read through the supplier link — the same one the Suppliers screen uses, so a store
+       that has published nothing to us shows nothing here either, rather than a different answer. */
+    /* ⚠️ `sid`, not `id` — the EP was already registered with that name, and a wrong param name does not
+       throw: it leaves `:sid` unfilled in the path and the call quietly 404s. Checked against the table. */
+    : api('supCatalogue', { params: { sid: src } })
+        .then(function(r){ return Array.isArray(r) ? r : ((r && r.items) || []); });
+
+  got.then(function(items){
+    C2.mats = items.map(function(x){
+      var d = x.item_data || x;
+      var pr = d.price && typeof d.price === 'object' ? d.price.amount : d.price;
+      return { id: x.item_id || d.item_id, name: d.name || '', unit: d.unit || '', price: Number(pr) || 0 };
+    }).filter(function(m){ return m.name; });
+  }).catch(function(){ C2.mats = []; }).then(function(){ C2.matsBusy = false; c2Paint(); });
+}
+
+function c2MatRowHTML(line_id){
+  var srcs = c2MatSources();
+  if (!C2.mats) { c2MatLoad(); return ''; }
+  /* The source picker shows even when a shelf is empty — "this supplier has nothing" is an answer, and
+     hiding the control would read as the feature being missing. */
+  var srcSel = (srcs.length > 1)
+    ? '<select id="c2msrc_' + line_id + '" onchange="c2MatSetSrc(this.value)" style="padding:6px 8px;'
+      + 'border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
+      + srcs.map(function(s){
+          return '<option value="' + esc(s.id) + '"' + (s.id === c2MatSrc() ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+        }).join('') + '</select>'
+    : '';
+  if (!C2.mats.length) {
+    return '<div style="flex-basis:100%;height:0"></div>' + srcSel
+      + '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(tx('nothing published here')) + '</span>';
+  }
+  var opts = '<option value="">' + esc(tx('take material from the catalogue…')) + '</option>'
+    + C2.mats.map(function(m){
+        return '<option value="' + esc(m.id) + '">' + esc(m.name) + ' · ' + esc(m.unit)
+             + (m.price ? ' · ' + esc(inr(m.price)) : '') + '</option>';
+      }).join('');
+  return '<div style="flex-basis:100%;height:0"></div>' + srcSel
+    + '<select id="c2m_' + line_id + '" style="flex:1;min-width:170px;padding:6px 8px;border:1px solid var(--line);'
+    +   'border-radius:6px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">' + opts + '</select>'
+    + '<input id="c2mq_' + line_id + '" inputmode="decimal" placeholder="' + esc(tx('qty')) + '" style="width:64px;'
+    +   'padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+    + '<button class="btn" data-testid="c2-take-material" onclick="c2TakeMaterial(\'' + line_id + '\')"'
+    +   ' title="' + esc(tx('Records the part against this line, at the catalogue price')) + '">'
+    +   esc(tx('Take')) + '</button>';
+}
+
+async function c2TakeMaterial(line_id){
+  var sel = document.getElementById('c2m_' + line_id);
+  var id = sel ? sel.value : '';
+  if (!id) return toast(tx('Choose a material first'));
+  var m = (C2.mats || []).find(function(x){ return x.id === id; });
+  if (!m) return;
+  var q = Number(((document.getElementById('c2mq_' + line_id) || {}).value || '').trim());
+  if (!Number.isFinite(q) || q <= 0) return toast(tx('How many? (a number, and more than zero)'));
+  try {
+    /**
+     * ⚠️ `add`, NOT `deliver`. Fitting a compressor is not "2 of a brake service" — the part accrues against
+     * the job, it does not draw the job down. That is the same rule the whole service model rests on.
+     */
+    /**
+     * ⚠️⚠️ THE SOURCE IS PART OF THE RECORD, NOT A DETAIL. Our own shelf and a supplier's shelf produce the
+     * same cost on the job and mean completely different things afterwards: one is stock consumed, the other
+     * is money owed to another business. Writing them identically would make the two indistinguishable a week
+     * later, when it matters.
+     *
+     * ⚠️ THE PURCHASE IS NOT RAISED HERE, AND THAT IS DELIBERATE. A part taken from a supplier ought to end in
+     * a chit to them — their copy, their price, both sides holding it. Doing that silently from a dropdown
+     * would commit an entity to an order it never saw. Recorded with its origin so the purchase CAN be raised
+     * against it; whether it is raised per part, per job or per day is Athi's call, not a default.
+     */
+    var src = c2MatSrc();
+    var srcName = (c2MatSources().find(function(s){ return s.id === src; }) || {}).name || '';
+    var r = await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: [
+      { line_id: line_id, kind: 'add',
+        particulars: m.name + (src === C2_OWN ? '' : ' (' + srcName + ')'),
+        quantity: q, unit: m.unit,
+        amount: Math.round(q * m.price * 100) / 100, reference: m.id,
+        note: src === C2_OWN ? null : ('from ' + srcName) } ] } });
+    if (r && r.progress && C2.data) { C2.data.line_delivery = r.progress; c2Paint(); }
+    else await loadChit2();
+    toast(txf('{qty} {unit} {name} taken', { qty: q, unit: m.unit, name: m.name }));
+  } catch (e) { toast(MSG.fail('record the material', e)); }
+}
+
 /**
  * ⭐⭐ APPLY THE ANSWER; DO NOT ASK THE QUESTION AGAIN. Measured 2026-08-23, against the live API:
  *

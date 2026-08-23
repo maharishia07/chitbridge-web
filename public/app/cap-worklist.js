@@ -692,6 +692,9 @@ function wlInput(id, opts){
       + 'border:1px solid var(--line);border-radius:9px;resize:vertical;min-height:' + (opts.lines * 22 + 20) + 'px"></textarea>';
   }
   return '<input id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
+    /* ⚠️ Unknown options were dropped silently, so a caller passing `oninput` got nothing and no warning —
+       the handler simply never fired. Declared here so the option exists rather than being assumed. */
+    + (opts.oninput ? ' oninput="' + esc(opts.oninput) + '"' : '')
     + (opts.type ? ' type="' + opts.type + '" step="any" inputmode="decimal"' : '')
     + (opts.value != null ? ' value="' + esc(String(opts.value)) + '"' : '')
     + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
@@ -968,11 +971,26 @@ function wlLineHTML(loading){
   body += sec('cost', 'Add a cost', added.length ? added.length + ' added' : 'part, labour, charge');
   if (WLL.tab === 'cost') {
     body += '<div style="padding:2px 0 12px">'
+      /**
+       * ⭐⭐ TAKE IT FROM THE CATALOGUE INSTEAD OF TYPING IT. Athi, 2026-08-23: *"when the employee is trying
+       * to fix the car, he takes material from the store — how does he take it? How do I invoke the catalogue
+       * from this screen?"*
+       *
+       * ⚠️ The three fields below were all hand-typed, so a part had no connection to the thing on the shelf:
+       * *"6 materials changed"* could not be reconciled against a catalogue, and two mechanics could price the
+       * same filter differently on the same day. Picking fills the name, the unit and the amount from the
+       * item's own price, and carries its `reference` so the record points back at the catalogue row.
+       *
+       * ⭐ Own stock first — Athi: *"will use own catalogue to make it simple"* — with suppliers reachable
+       * through the same picker, because a network store's parts are readable exactly when a supplier link
+       * exists and that link is what grants it.
+       */
+      + wlMatPickHTML()
       + wlInput('wl_what', { testid: 'wl-what', placeholder: 'What was it for — brake shoe, labour, call-out' })
       /* ⚠️ FOUR FIELDS AND A BUTTON DO NOT FIT ONE ROW ON A PHONE. The quantity pair goes on its own line so each
          box stays wide enough to read, rather than four slivers and a button that ate them. */
       + '<div style="display:flex;gap:8px;margin-top:8px">'
-      +   wlInput('wl_cqty', { type: 'number', placeholder: 'how many' })
+      +   wlInput('wl_cqty', { type: 'number', placeholder: 'how many', oninput: 'wlMatQty()' })
       +   wlInput('wl_cunit', { placeholder: 'unit' })
       + '</div>'
       + '<div style="margin-top:8px">'
@@ -1085,6 +1103,70 @@ function wlLineHTML(loading){
  * and the record now reads 180 out of 120. Not a slip — the screen supplied the wrong number and hid the evidence
  * that would have corrected it.
  */
+/* ── THE MATERIALS PICKER ──────────────────────────────────────────────────────────────────────────────────
+ *
+ * Loaded once per session and kept on WLL, because a workshop's parts list does not change while one line is
+ * open, and re-reading it per overlay would add a round trip to the action a mechanic performs all day.
+ */
+function wlMatLoad(){
+  if (WLL.mats || WLL.matsBusy) return;
+  WLL.matsBusy = true;
+  api('prodList', { query: { limit: 200 } }).then(function(r){
+    var items = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
+    WLL.mats = items.map(function(x){
+      var d = x.item_data || x;
+      var pr = (d.price && typeof d.price === 'object') ? d.price.amount : d.price;
+      return { id: x.item_id || d.item_id, name: d.name || '', unit: d.unit || '', price: Number(pr) || 0 };
+    }).filter(function(m){ return m.name; });
+  }).catch(function(){ WLL.mats = []; })
+    .then(function(){ WLL.matsBusy = false; if (typeof wlPaint === 'function') wlPaint(); });
+}
+
+function wlMatPickHTML(){
+  if (!WLL.mats) { wlMatLoad(); return ''; }
+  /* ⚠️ Say so rather than showing an empty select: an empty dropdown is indistinguishable from a broken one. */
+  if (!WLL.mats.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:7px">'
+      + esc(tx('No catalogue items yet — add them under Catalogue and they can be taken from here.')) + '</div>';
+  }
+  return '<div style="margin-bottom:8px">'
+    + '<select id="wl_mat" data-testid="wl-mat" onchange="wlMatPick()" style="width:100%;padding:8px 9px;'
+    +   'border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
+    + '<option value="">' + esc(tx('Take from the catalogue…')) + '</option>'
+    + WLL.mats.map(function(m){
+        return '<option value="' + esc(m.id) + '">' + esc(m.name) + ' · ' + esc(m.unit)
+             + (m.price ? ' · ' + esc(cbAmount ? inr(m.price) : m.price) : '') + '</option>';
+      }).join('')
+    + '</select></div>';
+}
+
+/**
+ * ⚠️ FILLS THE FIELDS, DOES NOT REPLACE THEM. The person still sees the name, the quantity and the amount
+ * before saving, and can change any of them — a workshop gives a discount, or fits half a tin. Picking is a
+ * shortcut to the truth on the shelf, not a lock.
+ */
+function wlMatPick(){
+  var sel = document.getElementById('wl_mat');
+  var m = (WLL.mats || []).find(function(x){ return x.id === (sel && sel.value); });
+  if (!m) { WLL.matPicked = null; return; }
+  WLL.matPicked = m;
+  var set = function(id, v){ var e = document.getElementById(id); if (e) e.value = v; };
+  set('wl_what', m.name);
+  set('wl_cunit', m.unit);
+  var qEl = document.getElementById('wl_cqty');
+  var q = Number((qEl && qEl.value) || 0);
+  if (!q) { set('wl_cqty', 1); q = 1; }
+  if (m.price) set('wl_amt', Math.round(q * m.price * 100) / 100);
+}
+
+/* Recompute the amount when the quantity changes after a pick — otherwise 4 litres is priced as one. */
+function wlMatQty(){
+  var m = WLL.matPicked; if (!m || !m.price) return;
+  var q = Number((document.getElementById('wl_cqty') || {}).value || 0);
+  var a = document.getElementById('wl_amt');
+  if (a && q > 0) a.value = Math.round(q * m.price * 100) / 100;
+}
+
 async function wlActSave(kind){
   var r = WLL.row; if (!r) return;
   var g = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
@@ -1095,6 +1177,9 @@ async function wlActSave(kind){
     row.quantity = g('wl_cqty') === '' ? 0 : Number(g('wl_cqty'));
     row.unit = g('wl_cunit') || null;
     row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
+    /* ⭐ The reference is what turns a typed name into a catalogue fact. Only set when the person actually
+       picked one — a hand-typed 'brake shoe' must not claim to be a catalogue row. */
+    if (WLL.matPicked && g('wl_what') === WLL.matPicked.name) row.reference = WLL.matPicked.id;
     if (!row.particulars) { toast('Say what the cost was for'); return; }
     if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
   } else {
