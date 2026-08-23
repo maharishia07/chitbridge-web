@@ -1003,6 +1003,33 @@ function wlLineHTML(loading){
       + '</div>'
       /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly
          the confusion merging the windows was meant to end. */
+      /**
+       * ⭐⭐ WHAT IS ALREADY ON THIS LINE, UNDER THE FORM THAT ADDS TO IT. Athi, 2026-08-23: *"when I select a
+       * data and add, it has to be in the same screen at the bottom and it should allow me to add more items —
+       * the history details should be showcased at the bottom of the cost data, so it is visible what has been
+       * already added."*
+       *
+       * ⚠️ It WAS visible — in the History section, which is a different fold. So adding a second part meant
+       * closing this one, opening that one to check, and coming back: the list you need while adding was the
+       * one place you could not see while adding. A running total belongs beside the thing that changes it.
+       */
+      + (added.length
+          ? '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px">'
+            + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">'
+            +   esc(txf('Already on this line — {n}', { n: added.length })) + '</div>'
+            + added.map(function(a){
+                return '<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;font-size:var(--fs-2)">'
+                  + '<span style="flex:1">' + esc(a.particulars || '')
+                  + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '')
+                  + (a.by_actor ? ' <span style="color:var(--grey);font-size:var(--fs-1)">· ' + esc(a.by_actor) + '</span>' : '')
+                  + '</span>'
+                  + '<span style="font-variant-numeric:tabular-nums">' + esc(wlMoney(a.amount)) + '</span></div>';
+              }).join('')
+            + '<div style="display:flex;justify-content:space-between;padding-top:6px;margin-top:3px;'
+            +   'border-top:1px solid var(--line);font-size:var(--fs-2)"><b>' + esc(tx('this line, so far')) + '</b>'
+            +   '<b style="font-variant-numeric:tabular-nums">'
+            +   esc(wlMoney(added.reduce(function(t, a){ return t + (Number(a.amount) || 0); }, 0))) + '</b></div></div>'
+          : '')
       + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — only the money totals.</div>'
       + '</div>';
   }
@@ -1092,7 +1119,7 @@ function wlLineHTML(loading){
   return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:var(--fs-2);color:#3d7a4e">' + tx('✓ done') + '</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
     + '<div class="mbody">' + bar + wlParties(WLL.det) + asked + body + '</div>'
-    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button>'
+    + '<div class="mfoot"><button onclick="wlCardClose()">' + tx('Close') + '</button>'
     + '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">' + tx('Open the order') + '</button></div>';
 }
 /**
@@ -1216,6 +1243,15 @@ function wlMatQty(){
   if (a && q > 0) a.value = Math.round(q * m.price * 100) / 100;
 }
 
+/**
+ * ⭐ Closing is when the list behind may safely be refreshed — while the card is open, repainting its
+ * container would destroy it. `WLL.dirty` is set by anything that changed the underlying data.
+ */
+function wlCardClose(){
+  closeModal();
+  if (WLL.dirty) { WLL.dirty = false; wlLoad(); }
+}
+
 async function wlActSave(kind){
   var r = WLL.row; if (!r) return;
   var g = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
@@ -1238,9 +1274,39 @@ async function wlActSave(kind){
     if (!isFinite(row.quantity) || row.quantity === 0) { toast('A delivery needs a quantity'); return; }
   }
   try {
-    await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
-    closeModal();
+    var _res = await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
     toast(kind === 'cost' ? 'Added to the line' : 'Delivery recorded');
+
+    /**
+     * ⭐⭐ A COST IS RARELY ONE THING. Athi, 2026-08-23: *"it should allow me to add more items."* A brake job
+     * is a shoe, a fluid and two hours — closing the card after each one made him reopen it three times and
+     * find his place again. Delivery still closes, because a delivery IS the end of that line's work; adding a
+     * cost is a step in the middle of it.
+     *
+     * ⚠️ The fields are cleared so the next part starts from empty rather than from the last one — a
+     * pre-filled amount is how the second item silently inherits the first one's price.
+     */
+    if (kind === 'cost') {
+      ['wl_what', 'wl_cqty', 'wl_cunit', 'wl_amt', 'wl_matq'].forEach(function(id){
+        var e = document.getElementById(id); if (e) e.value = '';
+      });
+      var ms = document.getElementById('wl_mat'); if (ms) ms.value = '';
+      WLL.matPicked = null;
+      /* The event the server just wrote — apply it so the list below updates without a full worklist reload. */
+      if (_res && _res.progress && WLL.det) { WLL.det.line_delivery = _res.progress; }
+      /**
+       * ⚠️⚠️ DO NOT CALL wlLoad() HERE. It repaints `mainbody` — twice — and the overlay lives inside it, so
+       * refreshing the list behind the card CLOSES the card. That is the identical fault that made "add a
+       * cost" throw him off the screen an hour ago, and I nearly reintroduced it in the fix for it.
+       *
+       * ⭐ The roll-ups behind the card are stale for as long as it stays open, and that is the right trade:
+       * they are a summary of work he is in the middle of doing. Flagged, and refreshed when the card closes.
+       */
+      WLL.dirty = true;
+      wlPaintCard(false);
+      return;
+    }
+    closeModal();
     /* ⚠️ RELOAD RATHER THAN PATCH THE ROW. The roll-ups above it are derived from every row in the group, so a
        local edit would leave the headings stating a total that no longer matches what is under them. */
     await wlLoad();
