@@ -159,6 +159,23 @@ const CASES = [
     ctx.UI._supCart = ctx.CBCart.create({ items: [], groups: [] }, { ns: 'sup' });
     return ctx.supCartHTML();
   }],
+  /**
+   * ⭐ THE USAGE SECTION, COVERED THE DAY IT WAS WRITTEN rather than the day it breaks. Four states, because
+   * three of them are the branches a happy-path case never reaches — and the ReferenceError of 2026-08-22 was
+   * hiding in exactly such a branch.
+   */
+  ['usageHTML — nothing read yet (kicks the loader)', () => { ctx.UI._usage = null; ctx.UI._usageBusy = false; return ctx.usageHTML(); }],
+  ['usageHTML — a ledger with rows', () => {
+    ctx.UI._usage = { window_days: 30, counts: { billed: 3 }, total_cost_usd: 0, rate_card: 'rc-2026-08-dev',
+      by_meter: [{ meter: 'chit.send', events: 3, quantity: 3, cost: 0 }],
+      daily: [{ day: '2026-08-23', events: 3, cost: 0 }],
+      recent: [{ meter: 'chit.send', detail: 'abcdef12-3456', quantity: 1, cost_usd: 0,
+                 meta: { basis: 12500, basis_currency: 'INR', rate: { card: 'rc-2026-08-dev', model: 'per-event' } },
+                 created_at: '2026-08-23T04:10:00Z' }] };
+    return ctx.usageHTML();
+  }],
+  ['usageHTML — the read failed', () => { ctx.UI._usage = { _err: 'Could not read your usage.' }; return ctx.usageHTML(); }],
+  ['usageHTML — the ledger table is not applied here', () => { ctx.UI._usage = { not_enabled: true }; return ctx.usageHTML(); }],
   ['iamMeHTML — entity, private + open',    () => ctx.iamMeHTML(ENTITY)],
   ['iamMeHTML — public + away',             () => ctx.iamMeHTML({ ...ENTITY, catalogue_visibility: 'public', business_status: 'away' })],
   ['iamMeHTML — capped to private',         () => ctx.iamMeHTML({ ...ENTITY, visibility_cap: { max: 'private', reason: 'Set by your network.' } })],

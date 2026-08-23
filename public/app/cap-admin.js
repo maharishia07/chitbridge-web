@@ -729,7 +729,10 @@ var PROF_SECS = [
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
      Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
   { key:'governance', name:'Your rights',  q:'What this entity may do' },
-  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
+  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' },
+  /* Athi, 2026-08-23: *"give me a screen to look at the details in the profile."* Last, because it is the one
+     section you consult rather than maintain. */
+  { key:'usage',      name:'Usage',       q:'What you have been billed for' }
 ];
 function profSec(){ return UI.profSec || 'identity'; }
 /**
@@ -2403,6 +2406,111 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
 /* ⚠️ AN ASYNC SECTION PAINTS ITS OWN END MARKER. "— end —" says the panel is complete; appended here it landed
    directly under the vault's "loading…", telling the reader they had seen everything while nothing had arrived.
    The vault is the only section whose body is a placeholder rather than its content — see loadVault(). */
+/**
+ * ── USAGE ──────────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-23: *"complete cost on the chit if it is small, and give me a screen to look at the details in
+ * the profile."*
+ *
+ * ⚠️⚠️ THE ONE THING THIS SCREEN MUST NEVER DO IS CALL THIS "CHITS SENT". A meter is best-effort by design —
+ * it may never fail a send — so the ledger counts what was BILLED, and that can legitimately sit below the
+ * number of chits in the mailbox. **The gap is the finding**: it means events were not billed. A screen that
+ * blurs the two invites someone to reconcile the difference away and throw the finding out, so the word
+ * "billed" is on the number itself, not in a footnote.
+ *
+ * ⭐ Loaded only when the section is opened — nothing here is needed to paint a profile.
+ */
+function iamLoadUsage(){
+  if (UI._usageBusy) return;
+  UI._usageBusy = true;
+  api('entityUsage').then(function(r){
+    UI._usage = r || {};
+  }).catch(function(e){
+    /* A read that failed and a ledger that is empty are different claims; say which. */
+    UI._usage = { _err: (e && e.message) || 'Could not read your usage.' };
+  }).then(function(){
+    UI._usageBusy = false;
+    if (profSec() === 'usage') renderApp();
+  });
+}
+
+function _usageMoney(n){
+  var v = Number(n || 0);
+  return '$' + (Math.round(v * 10000) / 10000).toFixed(4).replace(/0+$/, '').replace(/\.$/, '.00');
+}
+
+function usageHTML(){
+  var u = UI._usage;
+  if (!u) { iamLoadUsage(); return '<div class="sec">' + tx('Usage') + '</div><div class="mut">' + tx('Reading your usage…') + '</div>'; }
+  if (u._err) return '<div class="sec">' + tx('Usage') + '</div>' + scrErr(u._err);
+  if (u.not_enabled) {
+    return '<div class="sec">' + tx('Usage') + '</div><div class="mut">'
+      + tx('Usage recording is not switched on for this deployment yet.') + '</div>';
+  }
+
+  var out = '<div class="sec">' + tx('Usage') + '</div>';
+
+  /* ── the headline, and the caveat as part of it ── */
+  out += '<div class="card" style="padding:12px 14px">'
+    + '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline">'
+    + '<div><div style="font-size:var(--fs-6);font-weight:700">' + _usageMoney(u.total_cost_usd) + '</div>'
+    + '<div class="mut" style="font-size:var(--fs-1)">' + txf('billed over {n} days', { n: u.window_days }) + '</div></div>'
+    + '<div><div style="font-size:var(--fs-5);font-weight:600">' + ((u.counts && u.counts.billed) || 0) + '</div>'
+    + '<div class="mut" style="font-size:var(--fs-1)">' + tx('events billed') + '</div></div>'
+    + (u.rate_card ? '<div><div class="mono" style="font-size:var(--fs-2)">' + esc(u.rate_card) + '</div>'
+        + '<div class="mut" style="font-size:var(--fs-1)">' + tx('rate card') + '</div></div>' : '')
+    + '</div>'
+    /* ⚠️ Stated on the screen, not only in the code: this is billed, not sent. */
+    + '<div class="mut" style="font-size:var(--fs-1);margin-top:8px">'
+    + tx('Counts what was billed. Recording never blocks a send, so this can sit below the chits in your mailbox — that difference means those events were not billed.')
+    + '</div></div>';
+
+  /* ── by meter ── */
+  if ((u.by_meter || []).length) {
+    out += '<div class="sec">' + tx('By kind') + '</div><div class="card" style="padding:4px 0">';
+    u.by_meter.forEach(function(m){
+      out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-bottom:1px solid var(--line)">'
+        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(m.meter) + '</span>'
+        + '<span class="mut" style="font-size:var(--fs-2)">' + m.events + ' × &nbsp;' + _usageMoney(m.cost) + '</span></div>';
+    });
+    out += '</div>';
+  }
+
+  /* ── per day: the accumulation Athi described ── */
+  if ((u.daily || []).length) {
+    out += '<div class="sec">' + tx('Per day') + '</div><div class="card" style="padding:4px 0">';
+    u.daily.slice(0, 14).forEach(function(d){
+      out += '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 14px">'
+        + '<span style="font-size:var(--fs-2)">' + esc(String(d.day).slice(0, 10)) + '</span>'
+        + '<span class="mut" style="font-size:var(--fs-2)">' + d.events + ' × &nbsp;' + _usageMoney(d.cost) + '</span></div>';
+    });
+    out += '</div>';
+  }
+
+  /* ── the rows, with what they charged FOR and on what basis ── */
+  if ((u.recent || []).length) {
+    out += '<div class="sec">' + tx('Recent') + '</div><div class="card" style="padding:4px 0">';
+    u.recent.slice(0, 25).forEach(function(r){
+      var meta = r.meta || {};
+      var rate = meta.rate || {};
+      var basis = (meta.basis != null) ? meta.basis : rate.basis;
+      out += '<div style="padding:8px 14px;border-bottom:1px solid var(--line)">'
+        + '<div style="display:flex;justify-content:space-between;gap:10px">'
+        + '<span class="mono" style="font-size:var(--fs-2)">' + esc(r.meter) + '</span>'
+        + '<span style="font-size:var(--fs-2)">' + _usageMoney(r.cost_usd) + '</span></div>'
+        + '<div class="mut" style="font-size:var(--fs-1);margin-top:2px">'
+        + esc(String(r.created_at).slice(0, 16).replace('T', ' '))
+        /* ⭐ the reference back to the trade — this is what makes the ledger row explainable */
+        + (r.detail ? ' · ' + tx('ref') + ' ' + esc(String(r.detail).slice(0, 8)) : '')
+        + (basis != null ? ' · ' + txf('on {v}', { v: basis }) + (meta.basis_currency ? ' ' + esc(meta.basis_currency) : '') : '')
+        + (rate.card ? ' · ' + esc(rate.model || '') : '')
+        + '</div></div>';
+    });
+    out += '</div>';
+  }
+  return out;
+}
+
 function profSecHTML(k, e){
   var b = _profSecBody(k, e);
   if (!b) return '';
@@ -2410,6 +2518,7 @@ function profSecHTML(k, e){
 }
 function _profSecBody(k, e){
   if (k === 'identity') return iamHTML(e);
+  if (k === 'usage') return usageHTML();
   /* ⚠️⚠️ THE __iam_old BRANCH WAS DELETED HERE, AND IT TOOK namingRulesHTML WITH IT.
      No section key is ever '__iam_old' — PROF_SECS has identity/storefront/governance/vault — so this was
      unreachable, and it was the ONLY caller of namingRulesHTML. That table explained what a Bridge ID is,

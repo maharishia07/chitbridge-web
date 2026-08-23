@@ -1628,6 +1628,9 @@ const EP = {
   disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
   me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
+  /* The billing ledger for the CALLER's own entity — there is no entity parameter, so it cannot be asked about
+     anyone else. Read on demand when the Usage section is opened, never as part of painting a profile. */
+  entityUsage:     {m:"GET",   p:"/api/entities/usage",          ok:"✓"},
   saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
   savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
