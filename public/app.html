@@ -3674,7 +3674,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-23h';
+const CB_BUILD = '2026-08-23i';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -8542,7 +8542,7 @@ async function loadReplyCount(){
   try {
     const r = await api('msgCount');
     const n = (r && (r.count || 0)) || 0;
-    if (n !== UI.replyCount) { UI.replyCount = n; renderApp(); }
+    if (n !== UI.replyCount) { UI.replyCount = n; bgRenderApp(); }
   } catch (e) { /* a badge that cannot load is a badge that shows nothing, not an error on the screen */ }
 }
 async function loadNotifs(){ if(CFG.MODE==='demo') return;

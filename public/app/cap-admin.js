@@ -846,7 +846,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
      cannot return different shapes. See mePrefetchStart in app.html. */
   try{ const e=(await meTake())||{}; UI._me=e;
     _profSeedIncluded(e);
-    /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. renderApp() rebuilds the screen wholesale, so a repaint that lands
+    /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. bgRenderApp() rebuilds the screen wholesale, so a repaint that lands
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
        Writing to that stale reference paints into a node no longer in the document and the panel stays blank
        with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
@@ -1804,7 +1804,7 @@ async function iamLoadTrade(){
       { headers: { Authorization: 'Bearer ' + SESSION.token } });
     UI._rdSum = r.ok ? ((await r.json()).summary || null) : null;
   } catch (_) { UI._rdSum = null; }
-  renderApp(); _capShowDetail(); loadProfile();
+  bgRenderApp(); _capShowDetail(); loadProfile();
 }
 
 /**
@@ -1823,7 +1823,7 @@ async function iamLoadDocs(){
     /* ⚠️ loadProfile() TOO — the employee screen is painted by loadActorProfile, which renderApp alone does
        not re-run. Without it the documents arrive, sit in UI._idocs, and the section keeps showing "Loading…"
        until something else happens to repaint. Same trio iamToggle uses; anything less is a half-repaint. */
-    renderApp(); _capShowDetail(); loadProfile();
+    bgRenderApp(); _capShowDetail(); loadProfile();
   } catch (_) { /* the record is additive — its absence must not take the profile down */ }
 }
 
@@ -1917,7 +1917,7 @@ async function iamLoadChannels(){
       ? j.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
       : null;
   } catch (_) { UI._chans = null; }
-  renderApp(); _capShowDetail(); loadProfile();
+  bgRenderApp(); _capShowDetail(); loadProfile();
 }
 
 /**
@@ -2431,7 +2431,7 @@ function iamLoadUsage(){
     UI._usage = { _err: (e && e.message) || 'Could not read your usage.' };
   }).then(function(){
     UI._usageBusy = false;
-    if (profSec() === 'usage') renderApp();
+    if (profSec() === 'usage') bgRenderApp();
   });
 }
 

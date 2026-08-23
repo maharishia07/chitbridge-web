@@ -67,7 +67,7 @@ async function acLoadDocs(id){
   try {
     await ensureCap('iddocs');
     UI._idocsFor = await CBIdDocs.load(id);
-    renderApp(); _capShowDetail();
+    bgRenderApp(); _capShowDetail();
   } catch (_) { /* additive — its absence must not take the edit form down */ }
 }
 

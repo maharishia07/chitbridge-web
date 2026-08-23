@@ -69,7 +69,7 @@ function traceabilityScreen(){
 async function loadTraceBatches(){
   try { var r = await api('traceBatches'); UI.traceBatches = (r && r.batches) || []; }
   catch(e){ UI.traceBatches = []; }
-  if (typeof renderApp === 'function') renderApp();
+  if (typeof renderApp === 'function') bgRenderApp();
 }
 function _traceBatchPicker(){
   if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading your batches…') + '</div>'; }

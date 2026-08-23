@@ -146,7 +146,7 @@ async function rdLoadDeclaration(){
   /* ⭐ meNow() — the entity's country is almost always already in UI._me by the time the readiness screen
      opens, and this only wants that one field. */
   try{ var me=await meNow(); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
-  if(typeof renderApp==='function') renderApp();
+  if(typeof renderApp==='function') bgRenderApp();
 }
   // has evidence + not expired
 function _rdIdType(it){ return it ? (({gstn:'gstn'})[it.doc]||null) : null; }  // registry ID with a LIVE source-check (GSTIN — confirmed via Sandbox.co.in)
@@ -255,7 +255,7 @@ function _rdDetailPane(it){
 async function loadCommerce(){
   try{ UI.commerce = await api('instruments', {query:{incoterm:'CIF', cross_border:1}}); }
   catch(e){ UI.commerce = {error:(e&&e.message)||'x'}; }
-  UI.commerceLoading=false; if(typeof renderApp==='function') renderApp();
+  UI.commerceLoading=false; if(typeof renderApp==='function') bgRenderApp();
 }
 function _frmBadge(c){
   var map={market:['var(--blue-2)','market'],credit:['var(--warn-2)','credit'],liquidity:['var(--blue-2)','liquidity'],operational:['var(--purple-2)','operational']};
@@ -270,13 +270,13 @@ async function loadLanes(){
     if(!UI.laneDest || !UI.laneMatrix.lanes.some(function(l){return l.dest_key===UI.laneDest;})) UI.laneDest = UI.laneMatrix.lanes[0].dest_key;
     loadLaneReadiness(UI.laneDest);
   }
-  if(typeof renderApp==='function') renderApp();
+  if(typeof renderApp==='function') bgRenderApp();
 }
 async function loadLaneReadiness(dest){
   UI.laneRd = undefined;
   try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:(UI.laneVertical||'paint'), origin:UI.laneOrigin||'IN'}}); }
   catch(e){ UI.laneRd = {error:(e&&e.message)||'Could not load'}; }
-  if(typeof renderApp==='function') renderApp();
+  if(typeof renderApp==='function') bgRenderApp();
 }
 function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); saveLane(); }
 function setLaneVertical(v){ UI.laneVertical=v; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); saveLane(); }

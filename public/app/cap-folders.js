@@ -35,7 +35,7 @@ async function loadFolders(){
      the shell — including the empty #modalhost — so a folder list arriving while someone is in Compose deleted
      their draft. Measured 2026-08-18: this was the last of seven such callers. The user-initiated callers
      (folderCreate, rename, move) repaint themselves or navigate, so nothing loses a refresh it needed. */
-  if(typeof bgRenderApp==='function') bgRenderApp(); else if(typeof renderApp==='function') renderApp();
+  if(typeof bgRenderApp==='function') bgRenderApp(); else if(typeof renderApp==='function') bgRenderApp();
 }
 // recursive tree render — parent_id makes it nestable (same pattern as the Network tree)
 function _folderTree(parentId, depth){
