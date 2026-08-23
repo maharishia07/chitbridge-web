@@ -786,7 +786,12 @@ function wlPaintCard(loading){
   wlRestoreFields(keep);
   /* ⚠ The search box is restored with everything else, but the LIST it filters is rebuilt full. Re-applying
      the filter keeps the two consistent — otherwise the query still reads 'oil' over all 200 rows. */
-  try { if ((document.getElementById('wl_matq') || {}).value) wlMatFilter(); } catch (_) {}
+  /* ⚠️ The picker paints itself AFTER the card is in the DOM — its hosts (`wl_matbar`, `wl_matlist`) exist
+     only once modal() has written them, so the paint cannot happen inside wlLineHTML(). */
+  /* ⭐ `cart.paint()` — the handle's own method, which routes through the renderer it was created with. Calling
+     CBCatUI.paint directly would be reaching past the cart to its renderer, which is the coupling cart-ui
+     exists to prevent. */
+  try { if (WLL.matCart && document.getElementById('wl_matlist')) WLL.matCart.paint(); } catch (_) {}
 }
 
 function wlSec(k){
@@ -993,7 +998,7 @@ function wlLineHTML(loading){
       /* ⚠️ FOUR FIELDS AND A BUTTON DO NOT FIT ONE ROW ON A PHONE. The quantity pair goes on its own line so each
          box stays wide enough to read, rather than four slivers and a button that ate them. */
       + '<div style="display:flex;gap:8px;margin-top:8px">'
-      +   wlInput('wl_cqty', { type: 'number', placeholder: 'how many', oninput: 'wlMatQty()' })
+      +   wlInput('wl_cqty', { type: 'number', placeholder: 'how many' })
       +   wlInput('wl_cunit', { placeholder: 'unit' })
       + '</div>'
       + '<div style="margin-top:8px">'
@@ -1135,112 +1140,80 @@ function wlLineHTML(loading){
  */
 /* ── THE MATERIALS PICKER ──────────────────────────────────────────────────────────────────────────────────
  *
- * Loaded once per session and kept on WLL, because a workshop's parts list does not change while one line is
- * open, and re-reading it per overlay would add a round trip to the action a mechanic performs all day.
+ * ⚠️⚠️ THE FIRST VERSION OF THIS WAS A THIRD CATALOGUE PICKER, and building it was the mistake. Athi,
+ * 2026-08-23: *"I asked a search on top of the product list, but you got two different things and it is not
+ * working together — why can you not bring our storefront catalogue menu which has everything?"*
+ *
+ * He is right, and `catalogue-ui.js` says so in its own header: *"a second renderer is safe ONLY while it
+ * stays a second renderer. The moment it grows its own coerce(), there are two carts again and they will
+ * disagree."* A select plus a hand-rolled filter IS that second renderer — no grouping, no variants, no media,
+ * no quantity models, and a search that behaved differently from the one people already know. Two controls
+ * that did not cooperate, exactly as he saw.
+ *
+ * ⭐ So this uses the SHARED picker — `CBCart.create()` + `CBCatUI`, the same pairing Compose uses at
+ * app.html:4792. Search, grouping, variants, prices and the commit strip arrive with it, and they behave the
+ * same here as everywhere else because they ARE the same code.
+ *
+ * ⭐ And `STORE.catalogue` is already in hand, so the extra `prodList` fetch was redundant as well as wrong.
  */
-function wlMatLoad(){
-  if (WLL.mats || WLL.matsBusy) return;
-  WLL.matsBusy = true;
-  api('prodList', { query: { limit: 200 } }).then(function(r){
-    var items = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
-    WLL.mats = items.map(function(x){
-      var d = x.item_data || x;
-      var pr = (d.price && typeof d.price === 'object') ? d.price.amount : d.price;
-      return { id: x.item_id || d.item_id, name: d.name || '', unit: d.unit || '', price: Number(pr) || 0 };
-    }).filter(function(m){ return m.name; });
-  }).catch(function(){ WLL.mats = []; })
-    .then(function(){
-      WLL.matsBusy = false;
-      /**
-       * ⚠️⚠️ NEVER `wlPaint()` HERE — THAT IS WHAT CLOSED THE OVERLAY. Athi, 2026-08-23: *"when I try to add
-       * the cost, it is not adding the cost, it is just coming out from the screen."* `wlPaint()` rewrites
-       * `mainbody`, and the line overlay lives inside it, so the catalogue arriving mid-edit destroyed the
-       * open card and everything typed into it. The feature meant to speed the job up was deleting the work.
-       *
-       * ⭐ `wlPaintCard()` is the overlay's OWN repaint and it already preserves typed fields (`wlKeepFields`),
-       * which is exactly why it exists. Repaint the thing that changed, never its container.
-       */
-      if (WLL.row && typeof wlPaintCard === 'function') wlPaintCard(false);
-    });
+function wlMatCart(){
+  if (typeof CBCart === 'undefined' || typeof CBCatUI === 'undefined') return null;
+  /* ⚠️ Spread, never enumerate — compose states the same rule: `name` is the alias cart-ui reads, and
+     everything else rides along, which is what lets a row keep its unit, its code and its quantity model. */
+  var cat = { shop: { bridge_id: 'self' }, items: ((typeof STORE !== 'undefined' && STORE.catalogue) || [])
+    .map(function(p, i){
+      return { item_id: 'wm' + i, item_data: Object.assign({}, p,
+        { name: p.particulars, unit: p.unit || 'unit', price: p.price }) };
+    }) };
+  if (WLL.matCart) { WLL.matCart.setCatalogue(cat); return WLL.matCart; }
+  WLL.matCart = CBCart.create(cat, {
+    listEl: 'wl_matlist', barEl: 'wl_matbar', renderer: CBCatUI,
+    checkoutLabel: '+ Add to this line', cartTitle: 'Materials to add',
+    emptyHint: 'Press + on what was used',
+    noCatalogue: 'Your catalogue is empty — add parts under Catalogue and they can be taken from here.',
+    onCheckout: wlMatCommit
+  });
+  return WLL.matCart;
 }
 
 function wlMatPickHTML(){
-  if (!WLL.mats) { wlMatLoad(); return ''; }
-  /* ⚠️ Say so rather than showing an empty select: an empty dropdown is indistinguishable from a broken one. */
-  if (!WLL.mats.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:7px">'
-      + esc(tx('No catalogue items yet — add them under Catalogue and they can be taken from here.')) + '</div>';
-  }
-  /**
-   * ⭐⭐ A SEARCH, BECAUSE A DROPDOWN OF TWO HUNDRED PARTS IS NOT A CATALOGUE. Athi, 2026-08-23: *"a proper
-   * catalogue form and a search would be useful here."* A workshop's parts list is long and a mechanic knows
-   * the word, not the position — scrolling a select to find "oil filter" is slower than typing it, which is
-   * the whole thing this picker was meant to fix.
-   *
-   * ⚠️ THE FILTER TOUCHES THE SELECT ONLY, never the card. Repainting the overlay on every keystroke is what
-   * broke it a moment ago; this rewrites one element's options and leaves everything else — including what has
-   * already been typed — exactly where it was.
-   */
-  return '<div style="margin-bottom:8px">'
-    + '<input id="wl_matq" data-testid="wl-matq" oninput="wlMatFilter()" placeholder="'
-    +   esc(tx('Search the catalogue — name, unit')) + '" style="width:100%;padding:8px 9px;margin-bottom:6px;'
-    +   'border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
-    + '<select id="wl_mat" data-testid="wl-mat" size="1" onchange="wlMatPick()" style="width:100%;padding:8px 9px;'
-    +   'border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--on-card);font-size:var(--fs-2)">'
-    + wlMatOptionsHTML(WLL.mats)
-    + '</select>'
-    + '<div id="wl_matn" style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">'
-    +   esc(txf('{n} in the catalogue', { n: WLL.mats.length })) + '</div></div>';
-}
-
-function wlMatOptionsHTML(list){
-  return '<option value="">' + esc(tx('Take from the catalogue…')) + '</option>'
-    + list.map(function(m){
-        return '<option value="' + esc(m.id) + '">' + esc(m.name) + ' · ' + esc(m.unit)
-             + (m.price ? ' · ' + esc(typeof inr === 'function' ? inr(m.price) : m.price) : '') + '</option>';
-      }).join('');
-}
-
-function wlMatFilter(){
-  var q = String(((document.getElementById('wl_matq') || {}).value) || '').trim().toLowerCase();
-  var all = WLL.mats || [];
-  var hit = !q ? all : all.filter(function(m){
-    return (m.name + ' ' + m.unit).toLowerCase().indexOf(q) >= 0;
-  });
-  var sel = document.getElementById('wl_mat');
-  if (sel) sel.innerHTML = wlMatOptionsHTML(hit);
-  var n = document.getElementById('wl_matn');
-  /* ⚠️ "0 of 35" rather than an empty box: a filter that hides everything looks identical to a broken list. */
-  if (n) n.textContent = q ? (hit.length + ' of ' + all.length) : (all.length + ' in the catalogue');
-  /* One hit and a typed query — select it, so the common case is type-three-letters-and-go. */
-  if (sel && q && hit.length === 1) { sel.value = hit[0].id; wlMatPick(); }
+  if (!wlMatCart()) return '';
+  /* The shared picker draws into these two hosts; CBCatUI paints them once the card is in the DOM. */
+  return '<div id="wl_matbar" style="margin-bottom:6px"></div><div id="wl_matlist"></div>';
 }
 
 /**
- * ⚠️ FILLS THE FIELDS, DOES NOT REPLACE THEM. The person still sees the name, the quantity and the amount
- * before saving, and can change any of them — a workshop gives a discount, or fits half a tin. Picking is a
- * shortcut to the truth on the shelf, not a lock.
+ * ⭐ Every picked line becomes ONE `add` event, in a single call. Oil and a filter go on together — the same
+ * reason group-assign exists: a person decided once and should only have to say it once.
+ *
+ * ⚠️ The catalogue price is what is recorded, not a typed one. What a part costs is the shop's decision made
+ * once; two mechanics pricing the same filter differently on the same day is what this prevents.
  */
-function wlMatPick(){
-  var sel = document.getElementById('wl_mat');
-  var m = (WLL.mats || []).find(function(x){ return x.id === (sel && sel.value); });
-  if (!m) { WLL.matPicked = null; return; }
-  WLL.matPicked = m;
-  var set = function(id, v){ var e = document.getElementById(id); if (e) e.value = v; };
-  set('wl_what', m.name);
-  set('wl_cunit', m.unit);
-  var qEl = document.getElementById('wl_cqty');
-  var q = Number((qEl && qEl.value) || 0);
-  if (!q) { set('wl_cqty', 1); q = 1; }
-  if (m.price) set('wl_amt', Math.round(q * m.price * 100) / 100);
-}
-
-/* Recompute the amount when the quantity changes after a pick — otherwise 4 litres is priced as one. */
-function wlMatQty(){
-  var m = WLL.matPicked; if (!m || !m.price) return;
-  var q = Number((document.getElementById('wl_cqty') || {}).value || 0);
-  var a = document.getElementById('wl_amt');
-  if (a && q > 0) a.value = Math.round(q * m.price * 100) / 100;
+async function wlMatCommit(){
+  var r = WLL.row;
+  var cart = WLL.matCart;
+  if (!r || !cart) return;
+  var lines = cart.lines() || [];
+  if (!lines.length) { toast(tx('Press + on what was used')); return; }
+  try {
+    var rows = lines.map(function(l){
+      var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
+      var price = Number(raw) || 0;
+      var qty = Number(l.qty || l.quantity || 1) || 1;
+      return { line_id: r.line_id, kind: 'add',
+        particulars: l.name || l.particulars || '',
+        quantity: qty, unit: l.unit || null,
+        amount: Math.round(qty * price * 100) / 100,
+        reference: l.item_id || null };
+    });
+    var res = await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: rows } });
+    if (res && res.progress && WLL.det) WLL.det.line_delivery = res.progress;
+    cart.clear();
+    /* ⚠️ dirty, and repaint the CARD — never the container. The list behind is refreshed when the card closes. */
+    WLL.dirty = true;
+    wlPaintCard(false);
+    toast(txf('{n} added to this line', { n: rows.length }));
+  } catch (e) { toast(MSG.fail('record the materials', e)); }
 }
 
 /**
@@ -1264,7 +1237,9 @@ async function wlActSave(kind){
     row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
     /* ⭐ The reference is what turns a typed name into a catalogue fact. Only set when the person actually
        picked one — a hand-typed 'brake shoe' must not claim to be a catalogue row. */
-    if (WLL.matPicked && g('wl_what') === WLL.matPicked.name) row.reference = WLL.matPicked.id;
+    /* ⚠️ No catalogue reference on a HAND-TYPED cost, and that is correct: this form is for the things that
+       are not in the catalogue — a call-out, a one-off charge, labour. Anything that IS in the catalogue is
+       added through the picker above, which carries the item id itself. */
     if (!row.particulars) { toast('Say what the cost was for'); return; }
     if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
   } else {
@@ -1287,11 +1262,10 @@ async function wlActSave(kind){
      * pre-filled amount is how the second item silently inherits the first one's price.
      */
     if (kind === 'cost') {
-      ['wl_what', 'wl_cqty', 'wl_cunit', 'wl_amt', 'wl_matq'].forEach(function(id){
+      ['wl_what', 'wl_cqty', 'wl_cunit', 'wl_amt'].forEach(function(id){
         var e = document.getElementById(id); if (e) e.value = '';
       });
       var ms = document.getElementById('wl_mat'); if (ms) ms.value = '';
-      WLL.matPicked = null;
       /* The event the server just wrote — apply it so the list below updates without a full worklist reload. */
       if (_res && _res.progress && WLL.det) { WLL.det.line_delivery = _res.progress; }
       /**
