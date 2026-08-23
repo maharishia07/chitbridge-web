@@ -1156,15 +1156,36 @@ function wlLineHTML(loading){
  *
  * ⭐ And `STORE.catalogue` is already in hand, so the extra `prodList` fetch was redundant as well as wrong.
  */
-function wlMatCart(){
-  if (typeof CBCart === 'undefined' || typeof CBCatUI === 'undefined') return null;
-  /* ⚠️ Spread, never enumerate — compose states the same rule: `name` is the alias cart-ui reads, and
-     everything else rides along, which is what lets a row keep its unit, its code and its quantity model. */
-  var cat = { shop: { bridge_id: 'self' }, items: ((typeof STORE !== 'undefined' && STORE.catalogue) || [])
+/* ⚠️ Spread, never enumerate — compose states the same rule: `name` is the alias cart-ui reads, and everything
+   else rides along, which is what lets a row keep its unit, its code and its quantity model. */
+function wlMatCatalogue(){
+  return { shop: { bridge_id: 'self' }, items: ((typeof STORE !== 'undefined' && STORE.catalogue) || [])
     .map(function(p, i){
       return { item_id: 'wm' + i, item_data: Object.assign({}, p,
         { name: p.particulars, unit: p.unit || 'unit', price: p.price }) };
     }) };
+}
+
+function wlMatCart(){
+  if (typeof CBCart === 'undefined' || typeof CBCatUI === 'undefined') return null;
+  /**
+   * ⚠️⚠️ `STORE.catalogue` IS NOT ALWAYS THERE, and assuming it was is why Athi saw a cart symbol with nothing
+   * behind it. It is populated by whoever loaded it first — which, until now, was Compose alone. Open the
+   * worklist without having opened Compose and the picker had no products to show.
+   *
+   * ⭐ `ensureCatalogue()` is the ONE loader, shared, fetching only when the list is empty and repainting this
+   * card when it lands. Not a second fetch of my own — building beside what exists is what started this detour.
+   */
+  if (!(((typeof STORE !== 'undefined' && STORE.catalogue) || []).length)
+      && !WLL.matLoading && typeof ensureCatalogue === 'function') {
+    WLL.matLoading = true;
+    ensureCatalogue().then(function(){
+      WLL.matLoading = false;
+      if (WLL.matCart) WLL.matCart.setCatalogue(wlMatCatalogue());
+      if (WLL.row) wlPaintCard(false);
+    });
+  }
+  var cat = wlMatCatalogue();
   if (WLL.matCart) { WLL.matCart.setCatalogue(cat); return WLL.matCart; }
   WLL.matCart = CBCart.create(cat, {
     listEl: 'wl_matlist', barEl: 'wl_matbar', renderer: CBCatUI,

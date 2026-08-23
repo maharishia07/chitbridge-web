@@ -3674,7 +3674,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-23j';
+const CB_BUILD = '2026-08-23k';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -4868,6 +4868,33 @@ function ccSetLineNote(i, v){
   CC.items[i].comment = String(v == null ? '' : v).slice(0, 300);
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
+/**
+ * ensureCatalogue — THE ENTITY OWN PRODUCTS, LOADED ONCE, SHARED BY EVERY SCREEN THAT NEEDS THEM.
+ *
+ * ⚠️⚠️ `STORE.catalogue` IS ONLY POPULATED BY WHOEVER LOADED IT FIRST, and until 2026-08-23 that was compose
+ * alone. So the worklist materials picker read an EMPTY list unless the person happened to have opened
+ * Compose earlier in the session — a cart symbol with nothing behind it, which is exactly what Athi saw.
+ *
+ * ⭐ The MAPPING is the part worth sharing, not just the fetch. `particulars` is the display alias the flat
+ * shape uses, and the spread is load-bearing: compose once enumerated three fields here and silently killed
+ * the quantity models, so the same product obeyed different rules depending on which screen you opened.
+ */
+async function ensureCatalogue(force){
+  if (!force && (STORE.catalogue || []).length) return STORE.catalogue;
+  if (_catLoading) return _catLoading;
+  _catLoading = (async function(){
+    try {
+      const rows = (await api("prodList")) || [];
+      STORE.catalogue = rows.map(function(x){ var d = x.item_data || x;
+        return Object.assign({}, d, { particulars: d.name || d.product || "item",
+          unit: d.unit || "unit", price: cbAmount(d.price) }); });
+    } catch (e) { STORE.catalogue = STORE.catalogue || []; }
+    _catLoading = null;
+    return STORE.catalogue;
+  })();
+  return _catLoading;
+}
+var _catLoading = null;
 async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[],fields:{}}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
   /**
    * ⚠️ WHERE THE LINES CAME FROM, SAID ON SCREEN. Athi, 2026-08-09: *"it just opened the compose screen, the data is
@@ -4914,7 +4941,10 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
   if(!UI._supplier){
     try{
-      const _prods=(await api("prodList"))||[];
+      /* ⭐ Through the SHARED loader — the mapping below moved into ensureCatalogue() so the worklist picker
+         and compose fill STORE.catalogue the same way. Two mappings of one record is how the same product
+         obeyed different rules on different screens, which the note below records happening once already. */
+      await ensureCatalogue(true);
       /**
        * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
        *
@@ -4933,9 +4963,10 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
        * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
        * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
        */
-      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x;
-        return Object.assign({}, d, { particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price) }); });
-      UI._catState='ready';
+      /* ⚠️ The map that stood here is now inside ensureCatalogue(), called above. It is deliberately NOT left
+         duplicated here: two mappings of one record is precisely how the quantity models died on this line
+         once before, with Suppliers and Network enforcing a rule compose had quietly dropped. */
+      UI._catState=(STORE.catalogue||[]).length?'ready':'error';
     }catch(e){ UI._catState=(STORE.catalogue||[]).length?'ready':'error'; }
     ccCartSync();          // the products just arrived — point the cart at them before painting it
     ccRenderCatPick();
