@@ -1709,8 +1709,28 @@ function freshStore(){ return blankStore(); }
 let STORE = freshStore();
 /* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
 
-/* The entity's BUSINESS NAME — the co-assist login domain (matches the API: actor_key @ display_name). */
-function entBiz(){return (typeof SESSION!=="undefined"&&SESSION.entity)||"";}
+/**
+ * ⚠️⚠️ THE RULE WAS WRITTEN ONE LINE ABOVE THE CODE THAT BROKE IT. ATH-114, directly overhead, says the
+ * identity is `<handle>@<entity.user_id>` — and this returned `SESSION.entity`, the DISPLAY NAME, producing
+ * `arun@chola auto care`. Athi, 2026-08-23, looking at the Co-assists list: *"as the user id there should not
+ * be any space allowed. It has to be employeename@entity-user-id."*
+ *
+ * ⚠️ The old comment even said it was "matching the API" — and it was, faithfully: the API built the same
+ * wrong string from `display_name` in six places. Two implementations agreeing is not evidence they are right,
+ * and here it was the reason nobody noticed for months.
+ *
+ * ⭐ `user_id` is the DURABLE half: chosen at registration and never changed, while a display name may be
+ * edited any day. A login taught from the display name stops working the moment someone renames the business.
+ * The slug fallback is there so a session that has not loaded the profile yet still shows a space-free handle
+ * rather than a wrong one.
+ */
+function entHandle(){
+  if (typeof SESSION === 'undefined') return '';
+  if (SESSION.handle) return SESSION.handle;
+  return String(SESSION.entity || '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function entBiz(){ return entHandle(); }
 /* Co-assist login id = <login key>@<business name>. */
 function coId(k){return String(k||"").trim()+"@"+entBiz();}
 function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k=(val("ac_key")||"").trim(); e.textContent = k ? coId(k) : ('…@'+entBiz()); } }
@@ -3654,7 +3674,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-23a';
+const CB_BUILD = '2026-08-23b';
 const CAP_LOADED = {};
 function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {};
@@ -3769,7 +3789,7 @@ function _renderApp(){
       // saw "Price (INR)". Now that a price is STAMPED with the entity's currency on write, showing the wrong one
       // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
       // `unwrap()` returns j.entity for /me, so read both shapes.
-      var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.country) SESSION.country=_e.country;
+      var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.user_id) SESSION.handle=_e.user_id; if(_e.country) SESSION.country=_e.country;
       // b165 — THE READER'S OWN LOCALISATION, arriving from their identity row rather than from this browser.
       // hydrate() returns true only when the server actually differs from the local cache, so the common case
       // (same device, same person) costs nothing; the new-device case repaints once, in their language.
@@ -8039,7 +8059,9 @@ function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
 function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
 function acFlt(){ return UI.acFlt||'active'; }
 function acDate(ts){ if(!ts)return '—'; try{ return CBLocale.date(ts, {day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ return '—'; } }
-function acLogin(x){ return esc(x.key)+'@'+esc((SESSION.entity||'').toLowerCase()); }
+/* ⚠️ One builder, not three. This lowercased the DISPLAY NAME and so printed `arun@chola auto care` in the
+   co-assist list — the same defect as entBiz(), in a second place, which is exactly how it survived a fix. */
+function acLogin(x){ return esc(x.key)+'@'+esc(entHandle()); }
 // Unambiguous label — name + User ID (names collide; the key is unique). Returns HTML (already escaped).
 function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">'+esc(a.key||'')+'</span>'):'—'; }
 // CO-ASSISTS screen/render/actions + loadCoassists -> app/cap-workforce.js (lazy via ensureCap('workforce')); helpers (acLbl/acType/hat*) stay above in Core.
