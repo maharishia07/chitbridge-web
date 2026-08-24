@@ -8564,7 +8564,25 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
   const single = ids.length===1 ? ids[0] : null; const pos = single ? chitPos(single) : null;
   if(ids.length>1) showBusy(txn('Moving {count} record to {status}…', 'Moving {count} records to {status}…',
                               ids.length, { status: cap(to) }));
-  try{ for(const id of ids){ try{ const _sr=await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
+  /**
+   * ⚠️⚠️ SAY WHICH ONE IT IS ON. Athi, 2026-08-23, closing 26 tasks: *"it takes a while — it has to showcase
+   * what it is progressing, say 1 of 26 record kind of."* It showed one frozen sentence for the whole run, so
+   * a minute of correct work was indistinguishable from a hang, and the only way to tell was to wait it out.
+   *
+   * ⚠️ AND IT STOPPED ON THE FIRST FAILURE WITHOUT SAYING HOW FAR IT GOT — `return` inside the loop, after a
+   * bare "could not change status". Seven may have moved; the person was told nothing about the seven. The
+   * count is now in the message, because "where did it stop" is the only question that matters at that point.
+   *
+   * ⭐ It still stops rather than churning through 26 failures: the second failure is almost never new
+   * information, and 25 more attempts is a minute spent proving it.
+   */
+  let _done=0;
+  try{ for(const id of ids){
+      if(ids.length>1) showBusy(txf('{done} of {total} · moving to {status}…', {done:_done+1, total:ids.length, status:cap(to)}));
+      try{ const _sr=await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; _done++; }
+      catch(e){ toast(_done ? txf('Moved {done} of {total}, then: {why}', {done:_done, total:ids.length, why:MSG.fail("change status", e)}) : MSG.fail("change status", e));
+        if(_done){ UI.selectMode=false; UI.selected.clear(); renderApp(); }   // the ones that moved must not look unmoved
+        return; } }
     if(single){ afterChitAction(single, pos); }                             // same email-style cursor as advance
     else { UI.selectMode=false; UI.selected.clear(); renderApp(); }         // bulk: clear selection, full re-render
     toast(MSG.statusSet(ids.length, to, single?((UI.rows.find(x=>x.id===single)||UI.detail||{}).code):null)); announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}',
