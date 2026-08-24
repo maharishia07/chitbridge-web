@@ -793,10 +793,23 @@ function c2WorkRow(e, asg, prog, ctx){
        * ⚠️ Blank, not ₹0, when nothing has been recorded. A zero here would be indistinguishable from a line
        * that genuinely cost nothing, and on this pane most lines legitimately have nothing yet.
        */
+      /**
+       * ⭐ THE SAME STATUS WORD DESIGN 1 SHOWS — `lineStatePill()` from the shell, not a third opinion. Athi,
+       * 2026-08-24: *"do we have line level status, that should be visible outside in the same screen."* This
+       * pane had a status all along and it was a **glyph**: `—` for nothing and `✓` for done, in a numeric
+       * column, which reads as punctuation rather than as a state. Two screens now say "not started",
+       * "in progress" and "done" in the same words, from the same delivery record.
+       */
+      + (typeof lineStatePill === 'function' ? lineStatePill(p) : '')
       + '<span data-testid="c2-work-charged" style="width:74px;text-align:end;font-variant-numeric:tabular-nums;'
       +   'font-size:var(--fs-2);color:var(--ok-2,#2f6b4f)">' + (p.charged ? esc(inr(p.charged)) : '') + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
+      /* ⚠️ Say that the row goes somewhere. The row has carried `cursor:pointer` all along, which only tells
+         you once the mouse is already on it — and tells a phone nothing at all. */
+      + '<a class="lineopen" data-testid="c2-work-open" role="button" tabindex="0"'
+      +   ' title="' + esc(tx('Open this line — history, delivery, cost, who and when')) + '"'
+      +   ' onclick="event.stopPropagation();openLineCard(C2.id,\'' + e.line_id + '\')">' + esc(tx('Open')) + '</a>'
       + '<span data-testid="c2-work-assign" title="' + esc(tx('Assign this line')) + '"'
       +   ' onclick="event.stopPropagation();c2AssignOpen(\'' + e.line_id + '\')"'
       +   ' style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2);cursor:pointer">✎</span></div>'

@@ -157,7 +157,14 @@ function design2(page) {
       await d2.tab('work');
       const row = d2.workRow(line);
       await expect(row, `no work row for "${line}"`).toBeVisible({ timeout: 20000 });
-      await row.click();
+      /**
+       * ⚠️ THE ✎, NOT THE ROW. The row used to open the assign overlay; it now opens the line card (history,
+       * delivery, cost, who and when), and assign moved to its own control. This driver clicked the row and
+       * caught the change on the first run — which is the whole reason a driver exists rather than a habit.
+       */
+      const pencil = row.getByTestId('c2-work-assign');
+      if (await pencil.count()) await pencil.click();
+      else await row.click();                       // an older build where the row still opens assign
       const chosen = await pickOption(page.getByTestId('c2-assign-who'), who, 'co-assist');
       if (task) await page.getByTestId('c2-assign-task').fill(task);
       if (due) await page.getByTestId('c2-assign-due').fill(due);

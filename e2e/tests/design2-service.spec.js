@@ -196,6 +196,8 @@ test.describe('Design 2 · a service job end to end', () => {
       await expect(strip, 'the main task window shows no spend at all').toBeVisible({ timeout: 20000 });
       const shown = money(await page.getByTestId('chit-spend-amt').textContent());
       expect(shown, 'the task window disagrees with the lines about what has been spent').toBe(parts);
+      /* Captured while the pane is still the top thing on screen — the line card opens over it below. */
+      const stripText = (await strip.textContent()).replace(/\s+/g, ' ').trim();
       await expect(strip, 'the task window does not say how much of the work is done').toContainText('2');
       expect(await page.getByTestId('chit-spend-history').count(),
         'there is no way from the task window to the history of what was recorded').toBe(1);
@@ -215,12 +217,30 @@ test.describe('Design 2 · a service job end to end', () => {
       const perLine = await page.locator('.lspend').allTextContents();
       expect(perLine.length, 'the money is not on the lines').toBeGreaterThanOrEqual(2);
 
-      /* Tapping a line must show what was actually recorded against it — the part, and the delivery. */
-      await page.getByTestId('line-open').first().click();
-      const hist = page.locator('.linehist').first();
-      await expect(hist, 'the line opened onto nothing').toBeVisible({ timeout: 10000 });
-      await expect(hist, 'the part fitted is not in the line history').toContainText(PART_A.name);
-      await expect(hist, 'the running total for the line is missing').toContainText('so far');
+      /**
+       * ⚠️ A BARE GLYPH IS NOT AN AFFORDANCE. Athi: *"it has to be a hyperlink or something, note that it is
+       * clickable."* Asserted as a LINK — colour and underline — because the first version was a lone ⧉ in the
+       * icon strip that nobody would press.
+       */
+      const open = page.getByTestId('line-open').first();
+      await expect(open, 'no way into the line from the row').toBeVisible();
+      const looksClickable = await open.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { deco: cs.textDecorationLine, cursor: cs.cursor };
+      });
+      expect(looksClickable.deco, 'the way into the line does not read as a link').toContain('underline');
+
+      /**
+       * ⭐⭐ AND IT OPENS THE CARD THAT ALREADY EXISTS — cap-worklist's, not a second one built here. This
+       * asserts the five sections by name, because "it opened something" is exactly the assertion that would
+       * still pass on a reinvented panel.
+       */
+      await open.click();
+      const card = page.locator('#modalhost');
+      await expect(card, 'the line opened onto nothing').toContainText('History', { timeout: 20000 });
+      for (const section of ['Add a delivery', 'Add a cost', 'Who and when', 'Internal notes']) {
+        await expect(card, `the line card is missing "${section}" — is this the real one?`).toContainText(section);
+      }
 
       console.log(`\n  ── ${subject} ──`
         + `\n  quoted    ${QUOTE[L1] + QUOTE[L2]}`
@@ -229,7 +249,9 @@ test.describe('Design 2 · a service job end to end', () => {
         + `\n  recorded  ${m.recorded}   (margin: calculated server-side, shown nowhere)`
         /* ⚠️ Report the screen we are ON. This printed `d2.progress()`, which reads design 2's header — and by
            this point the spec is back on the task window, so it printed an empty string every run. */
-        + `\n  task window   ${(await strip.textContent()).replace(/\s+/g, ' ').trim()}\n`);
+        /* ⚠️ The CAPTURED text. Reading the strip here times out — by this point the line card is open over
+           the pane, which is the correct end state and the wrong moment to be reading what is underneath. */
+        + `\n  task window   ${stripText}\n`);
       await settle(page);
     });
   });

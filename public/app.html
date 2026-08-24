@@ -1195,7 +1195,12 @@
   .itab .ir.hasatt{cursor:pointer}
   .lineclip{margin-inline-start:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
   .lineImgs{display:flex;gap:7px;padding:9px 11px;background:var(--card);border-bottom:0.5px solid var(--line);overflow-x:auto}
-  /* (the per-line history styles are gone with the block they styled — the real card is cap-worklist's) */
+  /* (the per-line history styles are gone with the block they styled — the real card is cap-worklist's)
+     The way INTO that card, on a line row. A link, because that is what it is. */
+  .lineopen{color:var(--blue);text-decoration:underline;text-underline-offset:2px;cursor:pointer;
+    font-size:var(--fs-1);white-space:nowrap;margin-inline-start:6px}
+  .lineopen:hover{opacity:.78}
+  .lineopen:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:3px}
   .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
   .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
   .lbbox{width:560px;max-width:100%;background:#0f2530;border-radius:14px;overflow:hidden}
@@ -3679,7 +3684,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-24c';
+const CB_BUILD = '2026-08-24d';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10223,7 +10228,15 @@ function contentItems(c){
     /* ⚠️ The paperclip still toggles the PHOTOS in place — a thumbnail strip belongs on the row it belongs to.
        Everything else about the line opens the real card. */
     const clipAtt=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
-    const clip=clipAtt+(e.line_id?`<span class="lineclip" data-testid="line-open" title="${esc(tx('Open this line — history, delivery, cost, who and when'))}" onclick="event.stopPropagation();openLineCard('${c.id}','${e.line_id}')">⧉</span>`:"");
+    /**
+     * ⚠️ A BARE GLYPH IS NOT AN AFFORDANCE. Athi, 2026-08-24: *"it has to be a hyperlink or something, note
+     * that it is clickable."* The first version was a lone ⧉ in the row's icon strip, the same weight and
+     * colour as the 📎 beside it — nothing said it led anywhere, so nobody would press it. It reads as a link
+     * now: link colour, underlined, and a word.
+     */
+    const clip=clipAtt+(e.line_id?`<a class="lineopen" data-testid="line-open" role="button" tabindex="0"
+      title="${esc(tx('Open this line — history, delivery, cost, who and when'))}"
+      onclick="event.stopPropagation();openLineCard('${c.id}','${e.line_id}')">${tx('Open')}</a>`:"");
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
     /**
      * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
