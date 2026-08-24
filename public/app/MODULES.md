@@ -40,7 +40,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-workforce.js` | lazy · coassists | the CO-ASSIST (workforce) capability: FUNCTIONALITY only |
 | `cap-worklist.js` | lazy · on demand | MY WORK, across every chit. Lazy (ensureCap('worklist')) |
 
-## Shared (16)
+## Shared (17)
 
 | file | loading | what it is |
 |---|---|---|
@@ -54,6 +54,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `helpers.js` | eager | generic, dependency-free helpers (module 2 of the app split) |
 | `locale.js` | eager |  |
 | `offers.js` | eager | OFFERS AS A SUBJECT OF THEIR OWN. (classic script, shared global scope) |
+| `pick.js` | eager | CBPick: open the catalogue over any screen and hand the selection back |
 | `price-resolve.js` | eager | WHICH PRICE APPLIES, AND WHY. (classic script, shared global scope) |
 | `step-flow.js` | eager |  |
 | `strings-ar.js` | — |  |
@@ -63,4 +64,4 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 
 ---
 
-*36 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*
+*37 modules. Regenerate with `node tools/gen-modules-doc.cjs`.*

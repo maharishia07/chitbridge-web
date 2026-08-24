@@ -1,4 +1,5 @@
-/* app/pick.js — CBPick: OPEN THE CATALOGUE OVER ANY SCREEN AND HAND THE SELECTION BACK ────────────────────────
+/* app/pick.js — CBPick: open the catalogue over any screen and hand the selection back.
+ *
  *
  * Athi, 2026-08-23: *"if it is a module, we should be able to call it on top of any other screen on its own and
  * pass the selection back to the calling system, can't we?"* — after the worklist's picker came up with no
