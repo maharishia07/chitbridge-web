@@ -768,7 +768,15 @@ function c2WorkRow(e, asg, prog, ctx){
    * also open it, and the overlay would swallow the very selection being built.
    */
   var _ticked = !!(C2.pick && C2.pick[e.line_id]);
-  return '<div data-testid="c2-work-row" data-line="' + e.line_id + '" onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;'
+  /**
+   * ⭐ THE ROW OPENS THE LINE CARD — the one in cap-worklist, which already carries the original message,
+   * History, Add a delivery, Add a cost, Who and when and Internal notes for a single line. Athi, 2026-08-24:
+   * *"if you open the panel here, all the details will be available… why can't you reuse?"*
+   *
+   * ⚠️ The ✎ still opens ASSIGN, so nothing that worked before needs a new habit — the row gained a
+   * destination, it did not lose one.
+   */
+  return '<div data-testid="c2-work-row" data-line="' + e.line_id + '" onclick="openLineCard(C2.id,\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;'
       + (_ticked ? 'background:var(--blue-tint)' : '') + '">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<input type="checkbox" data-testid="c2-pick-' + e.line_id + '"' + (_ticked ? ' checked' : '')
@@ -789,7 +797,9 @@ function c2WorkRow(e, asg, prog, ctx){
       +   'font-size:var(--fs-2);color:var(--ok-2,#2f6b4f)">' + (p.charged ? esc(inr(p.charged)) : '') + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
-      + '<span style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2)">✎</span></div>'
+      + '<span data-testid="c2-work-assign" title="' + esc(tx('Assign this line')) + '"'
+      +   ' onclick="event.stopPropagation();c2AssignOpen(\'' + e.line_id + '\')"'
+      +   ' style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2);cursor:pointer">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (function(){
           /* Each view puts what it groups by in the HEADING, so the row shows only what is left to say.

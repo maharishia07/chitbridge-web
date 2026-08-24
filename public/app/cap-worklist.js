@@ -598,6 +598,40 @@ function wlMoney(v){
   var code = (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR';
   return (typeof fmtMoney === 'function') ? fmtMoney(v, code) : (code + ' ' + v);
 }
+/**
+ * ── ⭐⭐ THE LINE CARD, OPENED FROM ANY SCREEN ─────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-24: *"where is the status and other hyperlink for messages, history etc, that is already
+ * available in my work — if you open the panel here, all the details will be available. You are always
+ * reinventing. Why can't you reuse what is there?"*
+ *
+ * ⚠️⚠️ HE IS RIGHT, AND I HAD JUST DONE IT AGAIN. I built a history block into design 1's line rows while
+ * THIS card already existed and carries every one of the things he listed: the original message, History, Add
+ * a delivery, Add a cost, Who and when, Internal notes — for one line, in one place. A second implementation
+ * of the same panel is two panels to keep in step, and they part company the first time either changes.
+ *
+ * ⭐ So this is the seam that was missing: a caller with a chit id and a line id gets the real card. It does
+ * not rebuild the row — the fourteen fields the card reads (particulars, quantity, delivered, left, state,
+ * who, due_date, raw_phrase, …) are produced by the WORKLIST endpoint, and rebuilding them from a chit
+ * payload in two more screens would be the same mistake one layer down. It loads the worklist the capability
+ * already loads, and hands the lookup to `wlLine`.
+ *
+ * ⚠️ It says so when the line is not there. The worklist is every line of every chit that has one — including
+ * an Unassigned bucket — but a chit outside it would otherwise open onto nothing, silently.
+ */
+async function wlOpenLine(chit_id, line_id){
+  if (!line_id) return;
+  if (!WL.data && typeof wlLoad === 'function') { try { await wlLoad(); } catch (e) { /* reported below */ } }
+  var found = wlRows(WL.data || {}).some(function(x){ return x.line_id === line_id; });
+  if (!found && typeof WL !== 'undefined' && !WL.showDone) {
+    /* A finished line is filtered out of the worklist by default — it still has a card worth reading. */
+    WL.showDone = true;
+    found = wlRows(WL.data || {}).some(function(x){ return x.line_id === line_id; });
+  }
+  if (!found) { if (typeof toast === 'function') toast(tx('That line is not on the worklist — open it from My work.')); return; }
+  return wlLine(line_id);
+}
+
 async function wlLine(line_id){
   var r = wlRows(WL.data || {}).filter(function(x){ return x.line_id === line_id; })[0];
   if (!r) return;
