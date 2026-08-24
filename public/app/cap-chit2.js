@@ -800,7 +800,7 @@ function c2WorkRow(e, asg, prog, ctx){
        * column, which reads as punctuation rather than as a state. Two screens now say "not started",
        * "in progress" and "done" in the same words, from the same delivery record.
        */
-      + (typeof lineStatePill === 'function' ? lineStatePill(p) : '')
+      + (typeof lineStatePill === 'function' ? lineStatePill(p, a) : '')
       + '<span data-testid="c2-work-charged" style="width:74px;text-align:end;font-variant-numeric:tabular-nums;'
       +   'font-size:var(--fs-2);color:var(--ok-2,#2f6b4f)">' + (p.charged ? esc(inr(p.charged)) : '') + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'

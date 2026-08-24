@@ -3684,7 +3684,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-24d';
+const CB_BUILD = '2026-08-24e';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -9518,7 +9518,11 @@ async function openChit(id, silent){
            * a carry, not a new fetch.
            */
           UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false),
-            line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null)};
+            line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
+            /* ⚠️ THE ASSIGNMENT TOO, and its absence is why the row and the card disagreed: the card reads
+               `state` here ('open'/'done' — what the PERSON declares) while the row had only the delivery
+               record to go on. Two facts, both real, and the screen showed a different one in each place. */
+            line_assignment:(r.line_assignment||{})};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
@@ -10287,7 +10291,7 @@ function contentItems(c){
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which"
       style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineStatePill(_dlv)}${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineStatePill(_dlv, (c.line_assignment||{})[e.line_id])}${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
@@ -10328,9 +10332,37 @@ function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.del
  * tried to show four parts, two mechanics and a message thread would be unreadable at four lines, let alone
  * fourteen.
  */
-function lineStatePill(dlv){
-  const d=dlv||{}; if(d.ordered==null && !(d.added||[]).length) return '';
-  const done=!!d.complete, part=!done && (Number(d.delivered||0)>0 || (d.added||[]).length>0);
+/**
+ * ⚠️⚠️ THE ROW SAID "in progress" WHILE THE CARD FOR THE SAME LINE SAID "✓ done". Athi, 2026-08-24, with the
+ * two on screen together: *"I have opened the tab, inside the status shows done, whereas outside it is showing
+ * in progress. Also the status is not visible for every line item."*
+ *
+ * ⭐⭐ BOTH WERE TRUE, AND THAT IS THE BUG. A line has TWO records, and I read the wrong one:
+ *   · `line_assignment.state` — 'open' / 'done' — **what the person doing the work declares.** The card's
+ *     header and its "Who and when" both read this.
+ *   · `line_delivery` — ordered, delivered, what was fitted — **the quantity record.**
+ * A brake repair can be finished by the mechanic (`done`) with nothing "delivered" against it, because the
+ * order never carried a quantity. Deriving a status from the second while the card showed the first put two
+ * different answers to one question a centimetre apart.
+ *
+ * ⭐ THE PERSON'S DECLARATION WINS, because it is the one a human set deliberately; the delivery record only
+ * distinguishes "started" from "not started" underneath it.
+ *
+ * ⚠️ AND IT ALWAYS RENDERS. It used to return '' for a line with no ordered quantity and nothing recorded —
+ * which is most lines on a WhatsApp job — so the status was missing exactly where "has anyone begun this?" is
+ * the only question worth asking. "not started" IS the status.
+ */
+function lineStatePill(dlv, asg){
+  const d=dlv||{}, a=asg||{};
+  const declared=String(a.state||'').toLowerCase();
+  /**
+   * ⚠️ EITHER CLAIM OF FINISHED COUNTS. My first attempt was `declared==='done' || (!declared && complete)`,
+   * which reads as deference to the person but is worse: a line whose full quantity has been DELIVERED, whose
+   * assignee simply never flipped their own task, would have read "in progress" — the same class of
+   * disagreement, pointing the other way. Both records claim completion in their own terms; either is enough.
+   */
+  const done=(declared==='done') || !!d.complete;
+  const part=!done && (Number(d.delivered||0)>0 || (d.added||[]).length>0);
   const txt=done?tx('done'):(part?tx('in progress'):tx('not started'));
   const col=done?'var(--ok-2,#2f6b4f)':(part?'var(--warn-2)':'var(--grey)');
   const bg=done?'var(--ok-tint,var(--wash))':(part?'var(--warn-tint)':'var(--wash)');
