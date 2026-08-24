@@ -200,6 +200,28 @@ test.describe('Design 2 · a service job end to end', () => {
       expect(await page.getByTestId('chit-spend-history').count(),
         'there is no way from the task window to the history of what was recorded').toBe(1);
 
+      /**
+       * ⭐⭐ AND EVERY LINE SAYS WHERE IT HAS GOT TO. Athi, 2026-08-24: *"the value and the history, message
+       * details and the current status should appear on every line item in the whole chit. Then only someone
+       * will understand what the progress is."* The chit could previously say only whether it was open or
+       * closed; every fact about a line lived in design 2.
+       *
+       * ⚠️ Asserted on the ROW, not on the expanded block, because the row is what a person scans. A detail
+       * that is only true after a tap does not tell anyone what is happening to a fourteen-line job.
+       */
+      const pills = await page.locator('.lstate').allTextContents();
+      expect(pills.length, 'no line carries a status').toBeGreaterThanOrEqual(2);
+      expect(pills.join(' '), 'a fully delivered line does not read as done').toContain('done');
+      const perLine = await page.locator('.lspend').allTextContents();
+      expect(perLine.length, 'the money is not on the lines').toBeGreaterThanOrEqual(2);
+
+      /* Tapping a line must show what was actually recorded against it — the part, and the delivery. */
+      await page.getByTestId('line-open').first().click();
+      const hist = page.locator('.linehist').first();
+      await expect(hist, 'the line opened onto nothing').toBeVisible({ timeout: 10000 });
+      await expect(hist, 'the part fitted is not in the line history').toContainText(PART_A.name);
+      await expect(hist, 'the running total for the line is missing').toContainText('so far');
+
       console.log(`\n  ── ${subject} ──`
         + `\n  quoted    ${QUOTE[L1] + QUOTE[L2]}`
         + `\n  parts     ${parts}   (2 × ${PART_A.name} @${PART_A.price}, 1 × ${PART_B.name} @${PART_B.price})`

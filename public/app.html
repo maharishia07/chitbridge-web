@@ -1195,6 +1195,11 @@
   .itab .ir.hasatt{cursor:pointer}
   .lineclip{margin-inline-start:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
   .lineImgs{display:flex;gap:7px;padding:9px 11px;background:var(--card);border-bottom:0.5px solid var(--line);overflow-x:auto}
+  /* One line's history — what was fitted, what was delivered, what was said. Indented under its row so it
+     reads as belonging to that line and not as more lines. */
+  .linehist{padding:6px 11px 9px 22px;background:var(--wash);border-bottom:0.5px solid var(--line);font-size:var(--fs-1)}
+  .linehist .lhrow{display:flex;justify-content:space-between;gap:10px;padding:2px 0;color:var(--on-card)}
+  .linehist .lhrow span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
   .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
   .lbbox{width:560px;max-width:100%;background:#0f2530;border-radius:14px;overflow:hidden}
@@ -8898,7 +8903,7 @@ function fmtLine(e){
      inserted: [0]/[1]/[2] have three other call sites. */
   return [name, qty+money, [], e];
 }
-function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
+function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, line_id:m.line_id||null, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
    pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
@@ -10214,7 +10219,14 @@ function contentItems(c){
     const atts=attsVis(it[2]);
     const e=it[3]||{};                      // live-set entry: {live, original, history, removed, reason_code}
     const open=UI.openLines.has('line'+idx);
-    const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
+    /**
+     * ⚠️ THE ROW WAS ONLY EXPANDABLE WHEN IT HAD AN ATTACHMENT. Everything else a line knows — what was
+     * fitted, who did it, what was said — had no way to open, so the chevron appeared on the few lines with a
+     * photo and nowhere else. Now anything with history opens, and the paperclip is just one kind of history.
+     */
+    const _hasHist=!!(_dlvPeek(c,e).added||[]).length || !!(_dlvPeek(c,e).events||[]).length
+      || (c.msgs||[]).some(m=>m.line_id && m.line_id===e.line_id);
+    const clip=(atts.length||_hasHist)?`<span class="lineclip" data-testid="line-open" onclick="event.stopPropagation();toggleLine(${idx})">${atts.length?`📎 ${atts.length} `:''}${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
     /**
      * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
@@ -10265,7 +10277,7 @@ function contentItems(c){
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which"
       style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineStatePill(_dlv)}${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}${open?lineHistory(_dlv, c.msgs, e.line_id):''}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
@@ -10289,6 +10301,68 @@ function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.del
  * while the work happens and is only final when the last complaint closes. Calling it a total would invite
  * someone to quote it to a customer mid-job.
  */
+/**
+ * ── ⭐⭐ WHAT IS HAPPENING TO THIS LINE, ON THIS LINE ───────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-24: *"the value and the history, message details and the current status should appear on every
+ * line item in the whole chit. Then only someone will understand what the progress is… even if it is
+ * progressing, whatever is happening should appear in the whole chit."*
+ *
+ * ⚠️ THE CHIT COULD ONLY SAY WHETHER IT WAS OPEN OR CLOSED. Every fact about a line's progress — what was
+ * delivered, what was fitted, who did it, what it came to, what was said about it — existed and was reachable
+ * only by switching to design 2. So a person reading the job could see that SOMETHING was happening and never
+ * what, which is the state he is describing.
+ *
+ * ⭐ TWO LEVELS, NOT A DENSER ROW. The row carries the two things you scan for — a state and a number — and
+ * everything else opens on a tap. His own rule: *"add detail via panes/steps, never a denser pane."* A row that
+ * tried to show four parts, two mechanics and a message thread would be unreadable at four lines, let alone
+ * fourteen.
+ */
+/* The line's delivery record, looked up the same way in both places that need it before `_dlv` is in scope. */
+function _dlvPeek(c, e){ return ((c && c.line_delivery) || {})[(e||{}).line_id] || {}; }
+
+function lineStatePill(dlv){
+  const d=dlv||{}; if(d.ordered==null && !(d.added||[]).length) return '';
+  const done=!!d.complete, part=!done && (Number(d.delivered||0)>0 || (d.added||[]).length>0);
+  const txt=done?tx('done'):(part?tx('in progress'):tx('not started'));
+  const col=done?'var(--ok-2,#2f6b4f)':(part?'var(--warn-2)':'var(--grey)');
+  const bg=done?'var(--ok-tint,var(--wash))':(part?'var(--warn-tint)':'var(--wash)');
+  /* The numbers matter more than the word once something is part-done: "3 of 5" is the progress, "part" is not. */
+  const n=(d.ordered!=null && Number(d.ordered)>0) ? ' ' + (d.delivered||0) + '/' + d.ordered : '';
+  return `<span class="lstate" style="font-size:var(--fs-1);font-weight:700;color:${col};background:${bg};border-radius:5px;padding:1px 7px;white-space:nowrap">${esc(txt)}${esc(n)}</span>`;
+}
+
+/**
+ * The history of one line: what was fitted or worked, what was delivered, and what was said about it.
+ *
+ * ⚠️ `by_actor`, NOT `by`. `by` is the ENTITY that holds the copy; the PERSON is `by_actor`. Reading the wrong
+ * one turns three mechanics into one company — the same mistake the service proof made before he asked to see
+ * the people.
+ */
+function lineHistory(dlv, msgs, line_id){
+  const d=dlv||{};
+  const bits=[];
+  (d.added||[]).forEach(v=>{
+    const qty=v.quantity?`${v.quantity} ${esc(v.unit||'')} · `:'';
+    bits.push(`<div class="lhrow"><span>${qty}${esc(v.particulars||'')}${v.by_actor?` · ${esc(v.by_actor)}`:''}</span>`
+      + `<span style="font-variant-numeric:tabular-nums">${v.amount?esc(inr(v.amount)):''}</span></div>`);
+  });
+  (d.events||[]).forEach(v=>{
+    bits.push(`<div class="lhrow"><span>${v.quantity>0?'+':''}${v.quantity} ${esc(v.unit||'')} ${tx('delivered')}`
+      + ` · ${esc(v.mine?tx('you'):(v.by||tx('them')))}${v.reference?` · ${esc(v.reference)}`:''}</span><span></span></div>`);
+  });
+  const mine=(msgs||[]).filter(m=>m.line_id && line_id && m.line_id===line_id);
+  mine.forEach(m=>{
+    bits.push(`<div class="lhrow"><span>💬 ${esc(m.author||'')}: ${esc(String(m.body||'').slice(0,90))}`
+      + `${m.scope==='internal'?` · <b>${tx('internal')}</b>`:''}</span><span style="color:var(--grey)">${esc(m.at||'')}</span></div>`);
+  });
+  if(!bits.length) return `<div class="linehist"><div class="lhrow" style="color:var(--grey)">${tx('Nothing recorded against this line yet.')}</div></div>`;
+  return `<div class="linehist">${bits.join('')}`
+    + (d.charged?`<div class="lhrow" style="border-top:1px solid var(--line);margin-top:3px;padding-top:4px"><span>${tx('this line, so far')}</span>`
+       + `<b style="font-variant-numeric:tabular-nums">${esc(inr(d.charged))}</b></div>`:'')
+    + `</div>`;
+}
+
 function lineSpend(dlv){
   const v=Number((dlv||{}).charged||0);
   if(!v) return '';
