@@ -776,6 +776,17 @@ function c2WorkRow(e, asg, prog, ctx){
       +   ' title="' + esc(tx('Tick several, then assign them together')) + '"'
       +   ' style="margin-top:3px;cursor:pointer;flex:0 0 auto">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
+      /**
+       * ⭐ WHAT THE LINE HAS COST, ON THE WORK VIEW TOO. Athi, 2026-08-24: *"the value… should appear on every
+       * line item in the whole chit."* This pane answered "how much is left and who has it" and never "what
+       * has it come to" — so the one screen a supervisor scans to decide what to chase could not show which
+       * jobs were consuming money.
+       *
+       * ⚠️ Blank, not ₹0, when nothing has been recorded. A zero here would be indistinguishable from a line
+       * that genuinely cost nothing, and on this pane most lines legitimately have nothing yet.
+       */
+      + '<span data-testid="c2-work-charged" style="width:74px;text-align:end;font-variant-numeric:tabular-nums;'
+      +   'font-size:var(--fs-2);color:var(--ok-2,#2f6b4f)">' + (p.charged ? esc(inr(p.charged)) : '') + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
       + '<span style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2)">✎</span></div>'
