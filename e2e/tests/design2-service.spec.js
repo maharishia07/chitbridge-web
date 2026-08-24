@@ -81,7 +81,7 @@ test.describe('Design 2 · a service job end to end', () => {
       await expect(page.getByText(L2).first(), 'the AC complaint is missing from the order').toBeVisible();
     });
 
-    await test.step('THEM · MESSAGE and US · NOTES — both panes render (read-only today)', async () => {
+    await test.step('THEM · MESSAGE (read-only) and US · SUMMARY (present from the start)', async () => {
       /**
        * ⚠️ THESE TWO SECTIONS CANNOT BE FILLED FROM DESIGN 2 — asserted here so the gap is recorded rather
        * than quietly skipped. `c2PaneMsg` and `c2PaneNotes` render the threads and contain no composer: no
@@ -92,9 +92,9 @@ test.describe('Design 2 · a service job end to end', () => {
       await expect(page.getByTestId('c2-tab-msg'), 'the message pane did not open').toBeVisible();
       expect(await page.locator('[data-testid="c2-tab-msg"] ~ * textarea').count(),
         'a composer appeared in design 2 — this spec should stop calling the pane read-only').toBe(0);
-      await d2.tab('notes');
-      await expect(page.getByText(/never shared with the other party/i),
-        'the internal-notes pane did not open').toBeVisible();
+      /* The Summary exists from the start — empty, but present, so the tab is never a dead end. */
+      await d2.tab('summary');
+      await expect(page.getByTestId('c2-summary'), 'the Summary pane did not open').toBeVisible();
     });
 
     await test.step('US · WORK — the engine line is given to Arun, with a task and a date', async () => {
@@ -121,12 +121,18 @@ test.describe('Design 2 · a service job end to end', () => {
       expect(l1.state.toLowerCase(), 'a line with a part fitted but no work claimed is not started').toContain('not started');
     });
 
-    await test.step('US · COST — 90 minutes at ₹400/hr lands as ₹600 of labour', async () => {
-      await d2.addCost({ kind: 'labour', ...LABOUR, note: 'engine diagnosis' });
+    await test.step('US · SUMMARY — the tree shows the part under its service', async () => {
+      /**
+       * ⚠️⚠️ THE COST TAB IS RETIRED AND THIS STEP REPLACES IT. It wrote `chit_line_cost` rows with no
+       * `line_id`, so they hung off the chit, belonged to no service and never reached the total — two money
+       * ledgers, one of which nobody could see. Athi, 2026-08-24: *"at the chit level we have to see a tree of
+       * cost, for each service what are the item cost and labour cost."* One ledger, read as a tree.
+       */
       const m = await d2.money();
-      expect(m.byKind.labour, '90 min × ₹400/hr is ₹600, and the screen says otherwise').toBe(600);
-      expect(m.invoiced, 'the invoiced figure is not the two quoted lines').toBe(QUOTE[L1] + QUOTE[L2]);
-      expect(m.rows.length, 'the recorded cost is not in the list').toBeGreaterThan(0);
+      const engine = m.lines.find((x) => x.name.includes(L1));
+      expect(engine, 'the engine service is not in the Summary').toBeTruthy();
+      expect(engine.amount, 'the service does not carry what it has come to').toBe(2 * PART_A.price);
+      expect(engine.items.join(' | '), 'the part is not itemised under its service').toContain(PART_A.name);
     });
 
     await test.step('THEM · the second complaint — its own part', async () => {
@@ -159,9 +165,16 @@ test.describe('Design 2 · a service job end to end', () => {
       expect(m.accrued, `the running charge is not the sum of what was fitted (${parts})`).toBe(parts);
 
       /* ⭐ Our side: what we quoted, and what has been booked against the job. Both are workflow facts. */
-      expect(m.invoiced, 'invoiced must stay the quoted value of the two complaints').toBe(QUOTE[L1] + QUOTE[L2]);
-      expect(m.byKind.labour, 'the labour total moved after the job closed').toBe(labour);
-      expect(m.recorded, 'the recorded total must be every cost row on the job').toBe(labour);
+      expect(m.quoted, 'the quoted figure is not the two complaints').toBe(QUOTE[L1] + QUOTE[L2]);
+      /* ⭐ ONE LEDGER, so the tree's total IS the strip's "spent so far" IS the running charge. Three readings
+         of the same number: if any two disagree, the screen is lying somewhere. */
+      expect(m.recorded, 'the Summary total is not the parts recorded').toBe(parts);
+      expect(m.accrued, 'the running charge disagrees with the Summary total').toBe(m.recorded);
+      const treeSum = m.lines.reduce((t, x) => t + (x.amount || 0), 0);
+      expect(treeSum, 'the services do not add up to the total the tree prints').toBe(m.recorded);
+      /* ⚠️ NO LABOUR IN THIS RUN. It used to be recorded through the Cost tab, which is retired; the line
+         card's own 'Add a cost' writes it as an add event on the line, and no driver covers that yet. Said
+         plainly rather than left as a number that quietly stopped being checked. */
 
       /**
        * ⚠️⚠️ MARGIN IS CALCULATED AND MUST NOT BE ON THE SCREEN. Athi, 2026-08-23: *"calculate it but do not
@@ -203,44 +216,20 @@ test.describe('Design 2 · a service job end to end', () => {
         'there is no way from the task window to the history of what was recorded').toBe(1);
 
       /**
-       * ⭐⭐ AND EVERY LINE SAYS WHERE IT HAS GOT TO. Athi, 2026-08-24: *"the value and the history, message
-       * details and the current status should appear on every line item in the whole chit. Then only someone
-       * will understand what the progress is."* The chit could previously say only whether it was open or
-       * closed; every fact about a line lived in design 2.
+       * ⚠️⚠️ AND DESIGN 1'S ROWS MUST STAY AS THEY WERE. Athi, 2026-08-24: *"the current design 1 should see
+       * no change of this implementation, only should be visible in design 2 only."*
        *
-       * ⚠️ Asserted on the ROW, not on the expanded block, because the row is what a person scans. A detail
-       * that is only true after a tap does not tell anyone what is happening to a fourteen-line job.
+       * ⭐ The two designs differ in the ATOM OF WORK — design 1 is the chit as one unit, design 2 is the line
+       * as the unit — so per-line status, per-line money and a way into a line's card belong to the second.
+       * Putting them on design 1 made it a worse design 2 instead of leaving it the thing it is. Asserted as
+       * an ABSENCE, because an absence nobody checks is one that quietly comes back.
        */
-      const pills = await page.locator('.lstate').allTextContents();
-      expect(pills.length, 'no line carries a status').toBeGreaterThanOrEqual(2);
-      expect(pills.join(' '), 'a fully delivered line does not read as done').toContain('done');
-      const perLine = await page.locator('.lspend').allTextContents();
-      expect(perLine.length, 'the money is not on the lines').toBeGreaterThanOrEqual(2);
-
-      /**
-       * ⚠️ A BARE GLYPH IS NOT AN AFFORDANCE. Athi: *"it has to be a hyperlink or something, note that it is
-       * clickable."* Asserted as a LINK — colour and underline — because the first version was a lone ⧉ in the
-       * icon strip that nobody would press.
-       */
-      const open = page.getByTestId('line-open').first();
-      await expect(open, 'no way into the line from the row').toBeVisible();
-      const looksClickable = await open.evaluate((el) => {
-        const cs = getComputedStyle(el);
-        return { deco: cs.textDecorationLine, cursor: cs.cursor };
-      });
-      expect(looksClickable.deco, 'the way into the line does not read as a link').toContain('underline');
-
-      /**
-       * ⭐⭐ AND IT OPENS THE CARD THAT ALREADY EXISTS — cap-worklist's, not a second one built here. This
-       * asserts the five sections by name, because "it opened something" is exactly the assertion that would
-       * still pass on a reinvented panel.
-       */
-      await open.click();
-      const card = page.locator('#modalhost');
-      await expect(card, 'the line opened onto nothing').toContainText('History', { timeout: 20000 });
-      for (const section of ['Add a delivery', 'Add a cost', 'Who and when', 'Internal notes']) {
-        await expect(card, `the line card is missing "${section}" — is this the real one?`).toContainText(section);
-      }
+      expect(await page.locator('.lstate').count(),
+        'design 1 grew a per-line status again — that belongs to design 2').toBe(0);
+      expect(await page.locator('.lspend').count(),
+        'design 1 grew a per-line value again — that belongs to design 2').toBe(0);
+      expect(await page.getByTestId('line-open').count(),
+        'design 1 grew a per-line opener again — that belongs to design 2').toBe(0);
 
       console.log(`\n  ── ${subject} ──`
         + `\n  quoted    ${QUOTE[L1] + QUOTE[L2]}`

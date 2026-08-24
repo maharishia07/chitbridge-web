@@ -16,9 +16,8 @@
  *   await d2.open('Complaint 4471');          // design 1 → ⧉ Lines → design 2
  *   await d2.assign({ line: 'Engine', who: 'Arun', task: 'diagnose', due: '2026-08-30' });
  *   await d2.takeMaterial({ line: 'Engine', item: 'Oil filter', qty: 2 });   // ← from the catalogue, priced
- *   await d2.addCost({ minutes: 90, rate: 400, note: 'diagnosis' });
  *   await d2.deliver({ line: 'Engine', qty: 1 });
- *   const money = await d2.money();           // { invoiced, byKind, margin, accrued, rows }
+ *   const money = await d2.money();           // { invoiced, recorded, accrued, lines[] }
  *
  * ── ⚠️ TWO RULES IT FOLLOWS THROUGHOUT, BOTH LEARNED THE HARD WAY ─────────────────────────────────────────────
  *
@@ -129,10 +128,10 @@ function design2(page) {
       return d2;
     },
 
-    /** msg · ord · del  (them)   ·   work · notes · cost  (us) — switching sides resets the tab, so side first. */
+    /** msg · ord · del  (them)   ·   work · summary  (us) — switching sides resets the tab, so side first. */
     async tab(t) {
       const tab = page.getByTestId(`c2-tab-${t}`);
-      if (!(await tab.isVisible().catch(() => false))) await d2.side(['work', 'notes', 'cost'].includes(t) ? 'us' : 'them');
+      if (!(await tab.isVisible().catch(() => false))) await d2.side(['work', 'summary'].includes(t) ? 'us' : 'them');
       await tab.click();
       return d2;
     },
@@ -210,31 +209,23 @@ function design2(page) {
     },
 
     /**
-     * US · COST — our own numbers, which the other party never sees. Either `minutes` + `rate`, or `amount`.
-     * ⚠️ The screen refuses a half-filled pair rather than guessing, so the driver passes both or neither.
+     * ⚠️⚠️ addCost IS GONE WITH THE COST TAB. It drove `chit_line_cost` rows that carried no `line_id`, so
+     * they hung off the chit, belonged to no service, and never reached the total the rest of the screen
+     * shows. Athi retired that ledger on 2026-08-24: everything a person records — a part, a service charge —
+     * is an `add` event ON THE LINE, and the Summary reads those.
+     *
+     * ⚠️ A driver for the line card's own "Add a cost" is NOT written yet, so labour recorded that way is
+     * not yet covered end to end. Said here rather than left as a silent gap.
      */
-    async addCost({ kind = 'labour', minutes, rate, amount, note }) {
-      await d2.tab('cost');
-      await page.getByTestId('c2-cost-kind').selectOption(kind);
-      await page.getByTestId('c2-cost-min').fill(minutes == null ? '' : String(minutes));
-      await page.getByTestId('c2-cost-rate').fill(rate == null ? '' : String(rate));
-      await page.getByTestId('c2-cost-amt').fill(amount == null ? '' : String(amount));
-      await page.getByTestId('c2-cost-note').fill(note || '');
-      const before = await page.getByTestId('c2-cost-row').count();
-      const done = wrote(/\/costs/);
-      await page.getByTestId('c2-cost-add').click();
-      await done;
-      /* The pane re-reads after the write, so the row count is the honest confirmation it landed. */
-      await expect(page.getByTestId('c2-cost-row'), 'the cost was accepted but never appeared in the list')
-        .toHaveCount(before + 1, { timeout: 20000 });
-      return { kind, minutes, rate, amount, note };
-    },
 
     /* ── reading it back ───────────────────────────────────────────────────────────────────────────────── */
 
     /** '3 of 4 lines delivered' → { complete: 3, lines: 4 } — the header, visible from every pane. */
     async progress() {
-      const t = (await page.getByTestId('c2-progress').textContent().catch(() => '')) || '';
+      /* ⚠️ The strip replaced the old c2-progress line — same fact, better place, and it is on BOTH designs
+         now, so one reader serves both. */
+      const t = (await page.getByTestId('chit-spend-work').textContent().catch(() => ''))
+        || (await page.getByTestId('c2-progress').textContent().catch(() => '')) || '';
       const m = t.match(/(\d+)\s+of\s+(\d+)/);
       return m ? { complete: Number(m[1]), lines: Number(m[2]), text: t.trim() } : { text: t.trim() };
     },
@@ -267,35 +258,46 @@ function design2(page) {
     },
 
     /**
-     * The money, from both places design 2 keeps it:
-     *   `accrued` — the running charge on the shared side (parts + hours, summed over the lines)
-     *   `invoiced` / `byKind` / `margin` — our side only
+     * The money, read from the two places design 2 now shows it — and they must agree:
+     *   `accrued`  — the running charge in the Delivered & paid header
+     *   `recorded` — the Summary tree's total, and the strip's "Spent so far"
+     *   `invoiced` — what was quoted, from the strip
+     *   `lines`    — one entry per service in the tree, with what it came to
+     *
+     * ⭐ There is ONE ledger now, so there is one number: a caller comparing `recorded` against the sum of
+     * `lines` is checking the tree adds up, not reconciling two records that were never the same thing.
      */
     async money() {
       await d2.tab('del');
-      /* The header's own running total — the app's claim, which the caller can compare against the lines. */
       const accrued = money(await page.getByTestId('c2-accrued').textContent().catch(() => null));
 
-      await d2.tab('cost');
-      await expect(page.getByTestId('c2-cost-add'), 'the cost pane never finished reading').toBeVisible({ timeout: 30000 });
-      const byKind = {};
-      for (const el of await page.locator('[data-testid^="c2-cost-kind-"]').all()) {
-        const k = (await el.getAttribute('data-testid')).replace('c2-cost-kind-', '');
-        byKind[k] = money(await el.textContent());
+      await d2.tab('summary');
+      const tree = page.getByTestId('c2-summary');
+      await expect(tree, 'the Summary never rendered').toBeVisible({ timeout: 30000 });
+
+      const lines = [];
+      for (const g of await tree.locator('.c2sgrp').all()) {
+        const name = ((await g.locator('.c2sname').textContent()) || '').trim();
+        const amt = money(await g.locator('.c2samt').textContent().catch(() => null));
+        const items = [];
+        for (const it of await g.locator('.c2sitem').all()) {
+          items.push(((await it.textContent()) || '').replace(/\s+/g, ' ').trim());
+        }
+        lines.push({ name, amount: amt, items });
       }
-      const rows = [];
-      for (const el of await page.getByTestId('c2-cost-row').all()) {
-        const text = ((await el.textContent()) || '').replace(/\s+/g, ' ').trim();
-        rows.push({ text, amount: money(text.split(/\s/).pop()) });
-      }
+
+      const strip = page.getByTestId('chit-spend');
+      const invoiced = (await strip.count())
+        ? money(await strip.locator('div').filter({ hasText: /Quoted/i }).first().textContent().catch(() => null))
+        : null;
+
       return {
         accrued,
-        invoiced: money(await page.getByTestId('c2-cost-invoiced').textContent().catch(() => null)),
-        /* What has been BOOKED against this job — a workflow fact. Margin is deliberately not on this screen;
-           `marginShown()` below is the guard that keeps it that way. */
-        recorded: money(await page.getByTestId('c2-cost-recorded').textContent().catch(() => null)),
-        byKind,
-        rows,
+        recorded: money(await tree.locator('.c2stot b').textContent().catch(() => null)),
+        invoiced: (await page.getByTestId('chit-spend-amt').count())
+          ? money(await page.getByTestId('chit-spend-amt').textContent()) : invoiced,
+        quoted: invoiced,
+        lines,
       };
     },
 

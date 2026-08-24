@@ -36,7 +36,17 @@ var C2 = { id: null, side: 'them', tab: 'msg', data: null, costs: null, busy: fa
 /* ── the shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
 var C2_TABS = {
   them: [['msg', 'Message'], ['ord', 'Order'], ['del', 'Delivered &amp; paid']],
-  us:   [['work', 'Work'], ['notes', 'Notes'], ['cost', 'Cost']],
+  /**
+   * ⚠️⚠️ THERE WERE TWO MONEY LEDGERS AND ONLY ONE COUNTED. The retired **Cost** tab wrote `chit_line_cost`
+   * rows and never sent a `line_id`, so they attached to the chit, never reached a line, and never reached the
+   * total the rest of the product shows. Meanwhile everything a person actually records — a part from the
+   * catalogue, a hand-typed service charge — is written as an `add` EVENT on the line, with its money.
+   *
+   * ⭐⭐ Athi, 2026-08-24: *"at the chit level we have to see a tree of cost, for each service what are the item
+   * cost and labour cost, so the final summary with the details are known… instead of notes, name it Summary,
+   * so all the information can be seen at one place."* One ledger, one total, one place to read it.
+   */
+  us:   [['work', 'Work'], ['summary', 'Summary']],
 };
 
 /**
@@ -60,7 +70,7 @@ async function openChit2(id){
   await loadChit2();
 }
 function c2Side(s){ C2.side = s; C2.tab = C2_TABS[s][0][0]; c2Paint(); }
-function c2Tab(t){ C2.tab = t; c2Paint(); if (t === 'cost' && !C2.costs) loadChit2Costs(); }
+function c2Tab(t){ C2.tab = t; c2Paint(); }
 /**
  * ⭐ "Back" is now a change of RENDERER, not of screen: the same chit, read the other way. That is what makes
  * the two designs switchable rather than two destinations — the list never moved, so there is nothing to
@@ -115,13 +125,7 @@ async function loadChit2(){
   catch (e) { C2.err = (e && e.message) || 'Could not open this chit.'; }
   C2.busy = false; c2Paint();
 }
-async function loadChit2Costs(){
-  /* ⚠️ FETCHED ONLY WHEN THE COST TAB IS OPENED. An unpermitted reader gets their own rows and no totals at all,
-     so there is nothing to hide client-side — but there is also no reason to ask for money on every chit open. */
-  try { C2.costs = await api('c2CostsGet', { params: { id: C2.id } }); }
-  catch (e) { C2.costs = { error: (e && e.message) || 'Could not read costs.' }; }
-  c2Paint();
-}
+/* (loadChit2Costs is gone with the Cost tab — the Summary reads the line events, not a second ledger) */
 function c2Paint(){ var el = document.getElementById('mainbody'); if (el) el.innerHTML = chit2Screen(); }
 
 /* ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -778,7 +782,9 @@ function c2WorkRow(e, asg, prog, ctx){
    */
   return '<div data-testid="c2-work-row" data-line="' + e.line_id + '" onclick="openLineCard(C2.id,\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer;'
       + (_ticked ? 'background:var(--blue-tint)' : '') + '">'
-      + '<div style="display:flex;align-items:baseline;gap:8px">'
+      /* ⭐  so the phone can wrap it: the description takes the first line, and the status, money and
+         controls sit underneath. On a laptop it stays the single row it has always been. */
+      + '<div class="c2wrow" style="display:flex;align-items:baseline;gap:8px">'
       + '<input type="checkbox" data-testid="c2-pick-' + e.line_id + '"' + (_ticked ? ' checked' : '')
       +   ' onclick="event.stopPropagation();c2Pick(\'' + e.line_id + '\')"'
       +   ' title="' + esc(tx('Tick several, then assign them together')) + '"'
@@ -1140,82 +1146,90 @@ async function c2Assign(line_id){
   } catch (e) { toast(MSG.fail('assign the line', e)); }
 }
 
-/* ── US · notes ────────────────────────────────────────────────────────────────────────────────────────────── */
-function c2PaneNotes(d){
-  /* ⚠️ INTERNAL ONLY. The counterparty thread lives on THEM; this one never crosses. Both read from the same
-     chit_messages table and are separated by scope, so a note cannot leak by being posted to the wrong screen. */
-  var msgs = (d.msgs || []).filter(function(m){ return (m.scope || 'internal') === 'internal'; });
-  return '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Internal notes — never shared with the other party.</div>'
-    + (msgs.length ? msgs.map(function(m){
-        return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:var(--fs-3);margin-top:2px">' + esc(m.body || '') + '</div></div>';
-      }).join('')
-      : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No internal notes yet.</div>');
-}
+/* ── US · summary ─────────────────────────────────────────────────────────────────────────────────────── */
+/**
+ * ⭐⭐ THE TREE: EVERY SERVICE, WHAT WENT INTO IT, AND WHAT IT CAME TO.
+ *
+ * Athi, 2026-08-24: *"at the chit level we have to see a tree of cost — for each service, what are the item
+ * cost and labour cost etc, so the final summary with the details are known. Instead of notes, name it
+ * Summary, so all the information can be seen at one place."*
+ *
+ * ⭐ EVERY NUMBER HERE ALREADY EXISTED. A person working a line records a part from the catalogue or a
+ * hand-typed charge, and both are written as an `add` EVENT on that line carrying particulars, quantity,
+ * unit, amount and who. So this is a reading of what is already recorded — no new table, no new write, and
+ * nothing that can drift from the figure the rest of the screen shows, because it IS that figure.
+ *
+ * ⚠️⚠️ AND IT REPLACES THE COST TAB, WHICH WAS A SECOND LEDGER THAT NEVER COUNTED. `c2AddCost` wrote
+ * `chit_line_cost` rows without a `line_id`, so they hung off the chit, belonged to no service, and never
+ * reached the total. Two money records in one screen is how "what we spent" and "what the lines came to"
+ * became different numbers. One ledger now.
+ *
+ * ⚠️ A LINE WITH NOTHING AGAINST IT IS STILL LISTED, showing a dash. A summary that hides the untouched
+ * services answers "what has been spent" and quietly refuses "what is left to do" — which on a seven-fault
+ * job is the more urgent of the two.
+ */
+function c2PaneSummary(d){
+  var prog = d.line_delivery || {};
+  var asg = d.line_assignment || {};
+  var lines = (d.live_set || []).filter(function(e){ return !e.removed; });
+  var total = 0, items = 0;
 
-/* ── US · cost ─────────────────────────────────────────────────────────────────────────────────────────────── */
-function c2PaneCost(d){
-  var c = C2.costs;
-  var out = '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Your numbers. The other party sees only the price they were quoted.</div>';
-  if (!c) return out + '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading…</div>';
-  if (c.error) return out + '<div style="padding:16px;color:var(--disp);font-size:var(--fs-2)">' + esc(c.error) + '</div>';
+  var body = lines.map(function(e){
+    var l = e.live || e.original || {};
+    var p = prog[e.line_id] || {};
+    var a = asg[e.line_id] || {};
+    var added = p.added || [];
+    var charged = Number(p.charged || 0);
+    total += charged; items += added.length;
 
-  /* ⚠️ WRITE-WITHOUT-READ, RENDERED HONESTLY. An unpermitted reader is TOLD they cannot see the totals rather
-     than shown a zero — a masked or empty figure still says a figure exists and roughly when it moved. */
-  if (!c.can_see_totals) {
-    out += '<div style="padding:14px 16px;font-size:var(--fs-2);color:var(--grey);border-bottom:1px solid var(--line)">'
-      + 'You can record what you spend, and see what you recorded. The totals for this job are not shown to you.</div>';
-  } else {
-    out += '<div style="padding:13px 16px;border-bottom:1px solid var(--line);background:var(--wash);color:var(--on-card);font-variant-numeric:tabular-nums">'
-      + c2Row('Invoiced', c2Money(c.invoiced), 'c2-cost-invoiced')
-      + Object.keys(c.by_kind || {}).map(function(k){ return c2Row(k.charAt(0).toUpperCase() + k.slice(1), c2Money(c.by_kind[k]), 'c2-cost-kind-' + k); }).join('')
-      /**
-       * ⚠️⚠️ MARGIN IS COMPUTED AND DELIBERATELY NOT SHOWN. Athi, 2026-08-23: *"generally we have to calculate
-       * the margin, but if we don't know the cost price we may not be able to calculate it. Also margin need
-       * not be known to everyone — so calculate it but do not showcase anywhere, as we are not the P&L holder.
-       * If required we just pass it on to other systems. Let us just worry about workflow alone."*
-       *
-       * ⭐⭐ AND HE IS RIGHT ON THE ARITHMETIC BEFORE HE IS RIGHT ON THE POLICY. A part fitted is recorded at
-       * the CATALOGUE price — what we charge for it — and what it COST us is nowhere in this product. So
-       * `invoiced − spent` was never margin; it was a number that looked like one, printed in green with a
-       * percentage beside it, on a screen a mechanic reads. A confident wrong number is worse than no number.
-       *
-       * ⭐ The computation stays (`lib/cost.js` still returns `margin` and `margin_pct`) because it is for
-       * whatever system holds the P&L — the API is the channel, this screen is not. What replaces it here is
-       * a WORKFLOW fact: what has been booked against this job so far.
-       */
-      + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'
-      + '<span>' + tx('Recorded so far') + '</span><span data-testid="c2-cost-recorded">' + c2Money(c.spent) + '</span></div>'
-      + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
-      + '</div>';
-  }
+    /* The service heading: what it is, who has it, where it has got to, what it has come to. */
+    var head = '<div class="c2sline">'
+      + '<span class="c2sname">' + esc(l.particulars || '') + '</span>'
+      + (typeof lineStatePill === 'function' ? lineStatePill(p, a) : '')
+      + (a.assignee_name ? '<span class="c2swho">' + esc(a.assignee_name) + '</span>' : '')
+      + '<span class="c2samt">' + (charged ? esc(inr(charged)) : '—') + '</span></div>';
 
-  out += c2Grp(c.can_see_totals ? 'Every cost' : 'What you recorded', String((c.costs || []).length));
-  out += (c.costs || []).length ? c.costs.map(function(x){
-    return '<div data-testid="c2-cost-row" style="padding:9px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-size:var(--fs-2)">'
-      + '<span>' + esc(x.kind) + (x.note ? ' <span style="color:var(--grey)">· ' + esc(x.note) + '</span>' : '')
-      + (x.minutes ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + x.minutes + ' min × ' + c2Money(x.rate_per_hour) + '/hr</div>' : '')
-      + (x.recorded_by_actor_name ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(x.recorded_by_actor_name) + '</div>' : '')
-      + '</span><span style="font-variant-numeric:tabular-nums">' + c2Money(Number(x.amount)) + '</span></div>';
-  }).join('') : '<div style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">Nothing recorded yet.</div>';
+    /* ⚠️ Grouped by KIND, not left as one list: "what did the parts come to, and what did the labour" is the
+       question a shop asks, and a flat list of six rows makes a person add them up by eye. */
+    var byKind = {};
+    added.forEach(function(v){
+      /* An entry priced by the hour is labour; anything carrying a catalogue reference is a part; the rest
+         is a charge someone typed. The words are the shop's, not the schema's. */
+      var k = /hour|hr/i.test(String(v.unit || '')) ? 'Labour'
+        : (v.reference ? 'Parts' : 'Other charges');
+      (byKind[k] = byKind[k] || []).push(v);
+    });
 
-  out += '<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
-    + '<select id="c2ck" data-testid="c2-cost-kind" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"><option value="labour">labour</option><option value="goods">goods</option><option value="transport">transport</option><option value="other">other</option></select>'
-    + '<input id="c2cm" data-testid="c2-cost-min" placeholder="minutes" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
-    + '<input id="c2cr" data-testid="c2-cost-rate" placeholder="₹/hr" style="width:70px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
-    + '<input id="c2ca" data-testid="c2-cost-amt" placeholder="or amount" style="width:90px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
-    + '<input id="c2cn" data-testid="c2-cost-note" placeholder="note" style="flex:1;min-width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
-    + '<button class="btn pri" data-testid="c2-cost-add" onclick="c2AddCost()">' + tx('Add') + '</button></div>';
-  return out;
-}
-function c2Row(k, v, tid){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:var(--fs-3)"><span>' + esc(k) + '</span><span' + (tid ? ' data-testid="' + tid + '"' : '') + '>' + v + '</span></div>'; }
-async function c2AddCost(){
-  var g = function(i){ var e = document.getElementById(i); return e ? e.value.trim() : ''; };
-  var body = { kind: g('c2ck'), note: g('c2cn') || null };
-  if (g('c2cm') && g('c2cr')) { body.minutes = Number(g('c2cm')); body.rate_per_hour = Number(g('c2cr')); }
-  else if (g('c2ca')) { body.amount = Number(g('c2ca')); }
-  else return toast('Give minutes + rate, or an amount');
-  try { await api('c2CostsAdd', { params: { id: C2.id }, body: { rows: [body] } }); C2.costs = null; await loadChit2Costs(); toast('Recorded'); }
-  catch (e) { toast(MSG.fail('record the cost', e)); }
+    var detail = Object.keys(byKind).map(function(k){
+      var rows = byKind[k];
+      var sub = rows.reduce(function(t, v){ return t + Number(v.amount || 0); }, 0);
+      /* ⚠️ NO SUBTOTAL FOR A KIND WITH ONE ITEM — it would print the same figure twice, one line apart, and
+         a number repeated for no reason is a number a reader has to stop and reconcile. */
+      return '<div class="c2skind"><span>' + esc(tx(k)) + '</span>'
+        + '<span>' + ((sub && rows.length > 1) ? esc(inr(sub)) : '') + '</span></div>'
+        + rows.map(function(v){
+            var q = v.quantity ? (v.quantity + ' ' + esc(v.unit || '')) : '';
+            return '<div class="c2sitem"><span class="c2sit">' + esc(v.particulars || '') + '</span>'
+              + '<span class="c2sq">' + q + '</span>'
+              + '<span class="c2sby">' + esc(v.by_actor || '') + '</span>'
+              + '<span class="c2sm">' + (v.amount ? esc(inr(v.amount)) : '') + '</span></div>';
+          }).join('');
+    }).join('');
+
+    return '<div class="c2sgrp">' + head + detail + '</div>';
+  }).join('');
+
+  /* The one figure the whole screen agrees on — the same sum the strip above shows. */
+  var foot = '<div class="c2stot"><span>' + tx('Total recorded') + '</span>'
+    + '<b>' + esc(inr(total)) + '</b></div>'
+    + '<div class="c2snote">' + esc(txf('{n} entr(y/ies) across {m} service(s)', { n: items, m: lines.length })
+        .replace('(y/ies)', items === 1 ? 'y' : 'ies').replace('(s)', lines.length === 1 ? '' : 's'))
+    + '</div>';
+
+  return '<div class="c2sum" data-testid="c2-summary">'
+    + '<div class="c2shdr">' + esc(tx('Everything recorded on this job, service by service.')) + '</div>'
+    + (lines.length ? body : '<div class="c2sempty">' + esc(tx('No services on this chit yet.')) + '</div>')
+    + foot + '</div>';
 }
 
 /* ── the screen ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -1237,7 +1251,7 @@ function chit2Screen(){
     return '<button data-testid="c2-tab-' + t[0] + '" onclick="c2Tab(\'' + t[0] + '\')" style="flex:1;background:none;border:0;border-bottom:2px solid ' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';font:inherit;font-size:var(--fs-2);color:' + (on ? 'var(--ink)' : 'var(--grey)') + ';padding:10px 4px;cursor:pointer;font-weight:' + (on ? '600' : '400') + '">' + t[1] + '</button>';
   }).join('');
 
-  var pane = { msg: c2PaneMsg, ord: c2PaneOrd, del: c2PaneDel, work: c2PaneWork, notes: c2PaneNotes, cost: c2PaneCost }[C2.tab];
+  var pane = { msg: c2PaneMsg, ord: c2PaneOrd, del: c2PaneDel, work: c2PaneWork, summary: c2PaneSummary }[C2.tab] || c2PaneWork;
 
   /**
    * ⚠️ THE MENU IS FROZEN; ONLY THE LINES SCROLL. Athi, 2026-08-13: *"you need to always freeze the menu part and
@@ -1288,7 +1302,20 @@ function chit2Screen(){
     + (C2.side === 'us' ? '<div style="padding:6px 16px 0;text-align:center">'
         + '<span data-testid="c2-service-clock" onclick="openServiceClock(\'' + C2.id + '\')"'
         + ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">⏱ Service clock &amp; SLA</span></div>' : '')
-    + (sum ? '<div data-testid="c2-progress" style="padding:6px 16px 0;font-size:var(--fs-2);color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
+    /**
+     * ⭐⭐ THE SAME STRIP DESIGN 1 CARRIES — quoted, spent so far, how much of the work is done — because a
+     * person switching between the two readings of one chit must not have to relearn where the money is.
+     * Athi, 2026-08-24: *"the spend strip you have in design 1 has to be there in design 2 as well."*
+     *
+     * ⚠️ chitSpendStrip() lives in the shell and takes a CHIT-SHAPED object, so design 2 hands it one rather
+     * than growing a second strip that would drift the first time either changed.
+     */
+    + ((typeof chitSpendStrip === 'function')
+        ? '<div style="padding:8px 14px 2px">' + chitSpendStrip({
+            id: C2.id, amt: (d.detail && d.detail.total_value) || h.total_value || 0,
+            delivery_summary: sum, line_delivery: d.line_delivery, line_assignment: d.line_assignment,
+          }) + '</div>'
+        : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
     + '</div>'
     + '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">' + pane(d) + '</div>'   // ← the only thing that rolls

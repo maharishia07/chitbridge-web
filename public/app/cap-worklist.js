@@ -53,7 +53,22 @@ async function wlLoad(){
   catch (e) { WL.err = (e && e.message) || 'Could not read the work list.'; }
   WL.busy = false; wlPaint();
 }
-function wlPaint(){ var el = document.getElementById('mainbody'); if (el) el.innerHTML = worklistScreen(); }
+/**
+ * ⚠️⚠️ ONLY WHEN THE WORKLIST IS THE SCREEN ON DISPLAY. Athi, 2026-08-24: *"when I click the line item, it is
+ * directly going to Everyone's work panel, not sure why?"*
+ *
+ * This wrote `worklistScreen()` straight into `#mainbody` with no idea which screen was there. It never
+ * mattered while only the worklist called `wlLoad()` — and the moment a chit could open a line card, clicking
+ * a line loaded the worklist and PAINTED IT OVER the chit the person was reading.
+ *
+ * ⭐ Same class as the modal-repaint bug this codebase has had three times: a loader must never repaint over
+ * the screen someone is on. `bgRenderApp()` was the answer for `renderApp`; this is the same answer for a
+ * screen painter that only one screen owns.
+ */
+function wlPaint(){
+  if (typeof UI !== 'undefined' && UI.nav !== 'worklist') return;
+  var el = document.getElementById('mainbody'); if (el) el.innerHTML = worklistScreen();
+}
 function wlDue(v){ WL.due = v || ''; wlLoad(); }
 function wlPrimary(k){ WL.primary = k; if (WL.then === k) WL.then = null; WL.open = {}; wlPaint(); }
 /* A checkbox, so the second key can be switched OFF entirely — "every line under its date, never mind who". */

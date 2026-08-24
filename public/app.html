@@ -1085,6 +1085,20 @@
   .itab{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px}
   .itab .ir{display:flex;padding:9px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-2)}.itab .ir:last-child{border-bottom:0}
   .itab .ir .qt{margin-inline-start:auto;color:var(--grey)}.itab .tot{background:var(--paper);font-weight:700}
+  /* ── ⭐ ON A PHONE, THE DESCRIPTION GETS ITS OWN LINE ────────────────────────────────────────────────────
+     Athi, 2026-08-24: *"in mobile design keep the description on top and the status, value etc in the next
+     line."* A service description is a sentence — "brake noise diagnosis and repair" — and squeezing it into
+     the same row as a quantity, a status and a figure left every one of them truncated to nothing on a 360px
+     screen. The name takes the full width; everything that qualifies it sits underneath, right-aligned so the
+     money still lines up down the edge. ⚠️ Laptop is untouched: there the single row is the readable one. */
+  /* design 2's work row, same idea: the service name first, everything that qualifies it underneath. */
+  .appwrap.m .c2wrow{flex-wrap:wrap;row-gap:4px}
+  .appwrap.m .c2wrow > span:nth-child(2){flex:1 1 100%;min-width:0}
+  .appwrap.m .c2wrow > .lstate{margin-inline-start:26px}
+  .appwrap.m .itab .ir{flex-wrap:wrap;row-gap:3px}
+  .appwrap.m .itab .ir .nm{flex:1 1 100%;min-width:0}
+  .appwrap.m .itab .ir .qt{margin-inline-start:0}
+  .appwrap.m .itab .ir .qt ~ *{margin-inline-start:auto}
   .sec{font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin:14px 0 8px}
   .tl{position:relative;padding-inline-start:15px}.tl .ev{position:relative;padding:0 0 12px}
   .tl .ev::before{content:"";position:absolute;inset-inline-start:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
@@ -1197,6 +1211,43 @@
   .lineImgs{display:flex;gap:7px;padding:9px 11px;background:var(--card);border-bottom:0.5px solid var(--line);overflow-x:auto}
   /* (the per-line history styles are gone with the block they styled — the real card is cap-worklist's)
      The way INTO that card, on a line row. A link, because that is what it is. */
+  /* The chit-level money strip, on both designs. ⚠️ On a phone three columns squeeze "SPENT SO FAR" onto two
+     lines and "2 of 2 done" onto two more; wrapping to two rows is what keeps each figure on one line. */
+  .spendstrip{display:flex;gap:14px;align-items:flex-end;padding:9px 14px;margin:0 0 2px;
+    background:var(--wash);border:1px solid var(--line);border-radius:9px}
+  .appwrap.m .spendstrip{flex-wrap:wrap;row-gap:9px;align-items:baseline}
+  .appwrap.m .spendstrip > div{flex:1 1 42%}
+  .appwrap.m .spendstrip > div:last-child{flex:0 0 auto;margin-inline-start:auto}
+  /* ── design 2 · SUMMARY, the cost tree ──────────────────────────────────────────────────────────────────
+     ⭐ Read as an OUTLINE, not a table: the service is the loudest thing, its kinds sit under it, and the
+     items sit under those. Indentation carries the nesting so no row needs a label saying what it is.
+     ⚠️ Money is the only column that must align — everything else is prose and flows. `tabular-nums` on the
+     figures and a fixed money column is what lets a person add them up by eye down the right edge. */
+  .c2sum{font-size:var(--fs-2)}
+  .c2shdr{padding:9px 16px;color:var(--grey);font-size:var(--fs-1);border-bottom:1px solid var(--line)}
+  .c2sgrp{border-bottom:1px solid var(--line)}
+  .c2sline{display:flex;align-items:baseline;gap:8px;padding:11px 16px 5px;flex-wrap:wrap}
+  .c2sname{font-weight:600;font-size:var(--fs-3);flex:1 1 auto;min-width:0}
+  .c2swho{font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 7px}
+  .c2samt{font-variant-numeric:tabular-nums;font-weight:700;font-size:var(--fs-3);min-width:96px;text-align:end}
+  .c2skind{display:flex;justify-content:space-between;padding:5px 16px 2px 30px;color:var(--grey);
+    font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;font-weight:600}
+  .c2skind span:last-child{font-variant-numeric:tabular-nums;letter-spacing:0;min-width:96px;text-align:end}
+  .c2sitem{display:flex;align-items:baseline;gap:8px;padding:2px 16px 2px 40px}
+  .c2sit{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .c2sq{color:var(--grey);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .c2sby{color:var(--grey);font-size:var(--fs-1);white-space:nowrap}
+  .c2sm{font-variant-numeric:tabular-nums;min-width:96px;text-align:end}
+  .c2sgrp:last-of-type{border-bottom:0}
+  .c2stot{display:flex;justify-content:space-between;align-items:baseline;padding:13px 16px 4px;
+    border-top:2px solid var(--line);background:var(--wash);font-size:var(--fs-3)}
+  .c2stot b{font-variant-numeric:tabular-nums;font-size:var(--fs-4)}
+  .c2snote{padding:0 16px 13px;background:var(--wash);color:var(--grey);font-size:var(--fs-1)}
+  .c2sempty{padding:18px 16px;color:var(--grey)}
+  /* ⚠️ On a phone the money cannot keep its own column — it wraps under the name and right-aligns there. */
+  .appwrap.m .c2sitem{flex-wrap:wrap;padding-inline-start:30px}
+  .appwrap.m .c2sit{flex:1 1 100%}
+  .appwrap.m .c2sm,.appwrap.m .c2samt,.appwrap.m .c2skind span:last-child{min-width:0;margin-inline-start:auto}
   .lineopen{color:var(--blue);text-decoration:underline;text-underline-offset:2px;cursor:pointer;
     font-size:var(--fs-1);white-space:nowrap;margin-inline-start:6px}
   .lineopen:hover{opacity:.78}
@@ -3684,7 +3735,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-24e';
+const CB_BUILD = '2026-08-24f';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -9518,10 +9569,12 @@ async function openChit(id, silent){
            * a carry, not a new fetch.
            */
           UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false),
+            /* ⚠️ ALL THREE ARE CARRIED, and none of them puts anything on design 1's ROWS — that stays as it
+               was. `line_delivery` lets `contentItems` show 🔒 on a delivered line instead of an ✎ the server
+               will refuse; `delivery_summary` feeds the chit-level spend strip; and `line_assignment` is what
+               lets the strip's "n of m done" count the way the lines do, rather than counting deliveries and
+               contradicting them. */
             line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
-            /* ⚠️ THE ASSIGNMENT TOO, and its absence is why the row and the card disagreed: the card reads
-               `state` here ('open'/'done' — what the PERSON declares) while the row had only the delivery
-               record to go on. Two facts, both real, and the screen showed a different one in each place. */
             line_assignment:(r.line_assignment||{})};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
@@ -10233,14 +10286,17 @@ function contentItems(c){
        Everything else about the line opens the real card. */
     const clipAtt=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
     /**
-     * ⚠️ A BARE GLYPH IS NOT AN AFFORDANCE. Athi, 2026-08-24: *"it has to be a hyperlink or something, note
-     * that it is clickable."* The first version was a lone ⧉ in the row's icon strip, the same weight and
-     * colour as the 📎 beside it — nothing said it led anywhere, so nobody would press it. It reads as a link
-     * now: link colour, underlined, and a word.
+     * ⚠️⚠️ DESIGN 1'S ROW IS UNCHANGED, AND THAT IS THE DECISION. Athi, 2026-08-24: *"the current design 1
+     * should see no change of this implementation, only should be visible in design 2 only."*
+     *
+     * ⭐ The two designs differ in the ATOM OF WORK, which this file has said from the start: design 1 is the
+     * chit as ONE unit, design 2 is the LINE as the unit. Per-line status, per-line money and a way into a
+     * line's card are all line-level facts — so they belong on the screen whose unit is the line, and putting
+     * them here made design 1 into a worse design 2 rather than leaving it the thing it is.
+     *
+     * The paperclip still toggles the photos in place, exactly as before any of this.
      */
-    const clip=clipAtt+(e.line_id?`<a class="lineopen" data-testid="line-open" role="button" tabindex="0"
-      title="${esc(tx('Open this line — history, delivery, cost, who and when'))}"
-      onclick="event.stopPropagation();openLineCard('${c.id}','${e.line_id}')">${tx('Open')}</a>`:"");
+    const clip=clipAtt;
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
     /**
      * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
@@ -10291,7 +10347,7 @@ function contentItems(c){
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which"
       style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${lineStatePill(_dlv, (c.line_assignment||{})[e.line_id])}${lineSpend(_dlv)}${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
@@ -10419,13 +10475,32 @@ function chitSpendStrip(c){
   const spent=Number(s.charged||0);
   const quoted=Number(c.amt||0);
   if(!spent && !s.lines) return '';
-  const done=(s.complete||0)+' '+tx('of')+' '+(s.lines||0)+' '+tx('done');
+  /**
+   * ⚠️⚠️ COUNTED THE SAME WAY THE LINES ARE, or the header and the rows disagree in public. `s.complete` is
+   * the SERVER's count and it is delivery-only — so a job whose mechanic has declared three services finished
+   * read "0 of 7 lines delivered" while three rows read "done". A service line often has no quantity, so
+   * delivery alone can never call it finished.
+   *
+   * ⭐ Same rule as `lineStatePill`: either record claiming completion is enough. Falls back to the server's
+   * figure when the per-line records are not to hand, which is the honest degradation — a smaller truth, not
+   * a different one.
+   */
+  const _dl=c.line_delivery, _la=c.line_assignment;
+  let _done=s.complete||0;
+  if(_dl && Object.keys(_dl).length){
+    _done=Object.keys(_dl).filter(k=>{
+      const p=_dl[k]||{}; if(p.removed) return false;
+      const declared=String(((_la||{})[k]||{}).state||'').toLowerCase();
+      return declared==='done' || !!p.complete;
+    }).length;
+  }
+  const done=_done+' '+tx('of')+' '+(s.lines||0)+' '+tx('done');
   const cell=(label,val,extra)=>`<div style="flex:1;min-width:0"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra||''}">${val}</div></div>`;
-  return `<div data-testid="chit-spend" style="display:flex;gap:14px;align-items:flex-end;padding:9px 14px;margin:0 0 2px;background:var(--wash);border:1px solid var(--line);border-radius:9px">
+  return `<div data-testid="chit-spend" class="spendstrip">
     ${quoted?cell(tx('Quoted'), esc(inr(quoted))):''}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent?esc(inr(spent)):'—'}</span>`, spent?'color:var(--ok-2,#2f6b4f)':'color:var(--grey)')}
-    ${cell(tx('Work'), esc(done))}
+    ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
     <div><button type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
       title="${esc(tx('Every part and every hour recorded against this job, and who recorded it'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('History →'))}</button></div>
