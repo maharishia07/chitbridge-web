@@ -3735,7 +3735,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-24f';
+const CB_BUILD = '2026-08-25a';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -3893,6 +3893,9 @@ function _renderApp(){
       // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
       // `unwrap()` returns j.entity for /me, so read both shapes.
       var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.user_id) SESSION.handle=_e.user_id; if(_e.country) SESSION.country=_e.country;
+      /* ⭐ The entity's policy flags ride /me — the detail-page preference has to be known before any chit is
+         opened, and a second fetch at boot would cost a round trip on the hottest path. */
+      if(_e.policy_flags) SESSION.policy_flags=_e.policy_flags;
       // b165 — THE READER'S OWN LOCALISATION, arriving from their identity row rather than from this browser.
       // hydrate() returns true only when the server actually differs from the local cache, so the common case
       // (same device, same person) costs nothing; the new-device case repaints once, in their language.
@@ -8923,7 +8926,10 @@ function mapApiChit(c){
   const fors=recips.filter(r=>r.role==='for').map(r=>r.display_name);
   const rsummary=[tos.length?('To: '+tos.join(', ')):'', ccs.length?('CC: '+ccs.join(', ')):'', fors.length?('For: '+fors.join(', ')):''].filter(Boolean).join(' · ');
   const sum=c.summary_json||{};
-  return { clearances:sum.clearances||null, commercial:sum.commercial||null, via:sum.via||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+  /* ⚠️ `detail_design` is a summary rider like clearances and via — named here or it never reaches the row, and
+     the list would then have no idea which detail page each chit belongs to. Absent = Order level. */
+  return { clearances:sum.clearances||null, commercial:sum.commercial||null, via:sum.via||null,
+           detail_design:sum.detail_design||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
@@ -9530,8 +9536,49 @@ function detailSkeleton(){
     </div>
   </div>`;
 }
+/**
+ * ── ⭐⭐ WHICH DETAIL PAGE A CHIT OPENS ON ────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-24: *"attach design 1 or design 2 as per the choice in the settings, in the header record — so
+ * we avoid complication of moving from one record type to another."* And, on what to do with everything raised
+ * before today: *"just to cover the existing chit, if nothing found, keep it as design 1."*
+ *
+ * ⭐ SO THE CHIT DECIDES, NOT THE SETTING. The design was stamped into `summary_json` when the chit was created;
+ * this only reads it. An unstamped chit — every one raised before this shipped — is Order level, which is
+ * exactly what it already looks like, so nothing anyone is holding changes shape today or ever.
+ *
+ * ⚠️ The SETTING is consulted nowhere here. That is the point: were it read at render time, every open job
+ * would silently change shape the moment somebody touched Settings.
+ */
+function detailDesignPref(){
+  try { return ((SESSION.policy_flags || {}).detail_design === 'lines') ? 'lines' : 'chit'; }
+  catch (e) { return 'chit'; }
+}
+function chitDesign(c){
+  /* The stamp, wherever the row carries it — mapped rows keep summary_json's riders on the object itself. */
+  var v = c && (c.detail_design || (c.summary_json && c.summary_json.detail_design));
+  return (v === 'lines') ? 'lines' : 'chit';
+}
+
 async function openChit(id, silent){
   UI.sel=id;
+  /**
+   * ⚠️⚠️ LEAVE THE OTHER CHIT'S READING BEHIND. `UI.chit2` is what makes `renderDetail()` return design 2, and
+   * nothing cleared it when a DIFFERENT chit was opened — so once any Line level chit had been read, every
+   * chit opened afterwards kept rendering line by line, including ones with no stamp at all. Caught by
+   * [DD-01]'s last step, which opens a stamped chit and then an unstamped one.
+   *
+   * ⭐ Cleared unconditionally here; the chit's own stamp puts it back a few lines below if it earns it. That
+   * ordering is deliberate — a per-chit reading must never outlive the chit it was chosen for.
+   */
+  if(UI.chit2 && UI.chit2!==id){
+    UI.chit2=null;
+    try{ if(typeof C2!=='undefined') C2.id=null; }catch(e){}
+    /* ⚠️ AND REBUILD THE SHELL. Design 2 paints into #mainbody; design 1 repaints only #detailpane. Clearing
+       the flag without a renderApp() leaves design 2's markup sitting in mainbody, so the next chit opens
+       "into" the previous chit's line-by-line screen — which is what the flag was supposed to stop. */
+    renderApp();
+  }
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
   // OPTIMISTIC: the list row already holds every header field the detail header shows — paint it NOW and load
   // only the body, so on laptop the record appears instantly and just the line-items/messages fill a beat later.
@@ -9580,6 +9627,17 @@ async function openChit(id, silent){
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
+        /**
+         * ⭐ THE CHIT'S OWN STAMP DECIDES WHICH PAGE IT OPENS ON — read here, once, from the record. A chit
+         * raised Line level opens line by line for the rest of its life; one with no stamp is Order level.
+         *
+         * ⚠️ The ⧉ Lines button and the design 2 → design 1 switch still work: a person may read one chit the
+         * other way whenever they like. That is a READING, not a change to the record — nothing is written and
+         * the next open returns to the stamped design.
+         */
+        if(chitDesign(UI.detail)==='lines' && typeof ensureCap==='function'){
+          ensureCap('chit2').then(function(){ if(typeof openChit2==='function') openChit2(id); }).catch(function(){});
+        }
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
 }

@@ -1577,6 +1577,16 @@ function iamMeHTML(e){
        empty section: a button that does nothing is worse than no button, because a reader who presses it and
        sees 'saved' believes something was written. */
     + iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint })
+    /**
+     * ⭐ HOW THIS BUSINESS READS ITS WORK — stated here because a person looking at their own profile should not
+     * have to open Settings to find out. Athi, 2026-08-24: *"show the same in profile as the selected choice."*
+     *
+     * ⚠️ READ-ONLY, and pointing at where it IS changed. Two places that both edit one setting is two places to
+     * keep in step, and the first time they disagree nobody can tell which one is the setting.
+     */
+    /* ⚠️ THE VALUE GOES IN THE HINT, not only in the body — a section is collapsed until someone opens it, and
+       a choice you have to expand a panel to read is not "shown in the profile". The body carries the why. */
+    + iamSection('detail', tx('Detail page'), iamDetailDesignRow(e), { hint: iamDetailDesignName() })
     + iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint })
     + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
     /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
@@ -1988,6 +1998,36 @@ function _tzDiffers(a, b){
     var f = function(z){ return new Intl.DateTimeFormat('en-GB', { timeZone: z, dateStyle: 'short', timeStyle: 'short' }).format(t); };
     return f(a) !== f(b);
   } catch (_) { return false; }   /* an unknown zone is not evidence of a difference */
+}
+
+/**
+ * The detail-page choice, as the profile states it.
+ *
+ * ⚠️ IT READS THE SAME SOURCE THE SETTING WRITES — `SESSION.policy_flags`, carried on `/entities/me` — not a
+ * second copy. A profile that renders a remembered value is a profile that eventually contradicts Settings.
+ */
+/**
+ * The chosen design's NAME — one source, read by the collapsed hint and the open body alike.
+ *
+ * ⚠️ typeof-guarded: the shell owns SESSION and this module is rendered standalone by the guards. That is the
+ * codebase's own pattern for a cross-module call — a bare call passes in the browser and fails the guard.
+ */
+function iamDetailDesignName(){
+  var v = (typeof detailDesignPref === 'function') ? detailDesignPref() : 'chit';
+  return (v === 'lines') ? tx('Line level') : tx('Order level');
+}
+
+function iamDetailDesignRow(e){
+  var v = (typeof detailDesignPref === 'function') ? detailDesignPref() : 'chit';
+  var name = iamDetailDesignName();
+  var why = (v === 'lines')
+    ? tx('Each line has its own person, parts and cost.')
+    : tx('The chit is the unit of work — one state, one value.');
+  return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0">'
+    + '<div style="min-width:0"><div style="font-weight:600;font-size:var(--fs-3)">' + esc(name) + '</div>'
+    + '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + esc(why) + '</div></div>'
+    + '<span data-testid="prof-detail-design" style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">'
+    + esc(tx('change in Settings')) + '</span></div>';
 }
 
 function iamGovernedRows(e){
@@ -4513,6 +4553,22 @@ var POLICY_FLAGS = [
   { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['received','both','sent'],
     labels:{ received:'Task only', both:'Both Task and Order', sent:'Order only' },
     def:'received', level:'entity',        gov:'entity',   help:'' },
+  /**
+   * ⭐⭐ WHICH DETAIL PAGE THIS BUSINESS READS ITS WORK ON. Athi, 2026-08-24: *"we have to attach design 1 or
+   * design 2 per entity so we can attach only one design for a store."*
+   *
+   * ⭐ THE NAMES ARE ERP'S, NOT OURS — SAP, Oracle and every dealer system call this distinction the ATOM OF
+   * WORK, and it is the same distinction in a workshop, a kitchen and a trading desk. "Design 1" and "design 2"
+   * were our internal shorthand and meant nothing to anyone else.
+   *
+   * ⚠️ A DEFAULT, NOT THE RECORD. A chit is stamped with the design when it is created and keeps it for life,
+   * so changing this decides how the NEXT job reads — never how an existing one does. That is the whole point:
+   * *"so we avoid complication of moving from one record type to another."*
+   */
+  { key:'detail_design',     label:'Detail page',           type:'enum',   options:['chit','lines'],
+    labels:{ chit:'Order level', lines:'Line level' },
+    def:'chit', level:'entity',        gov:'entity',
+    help:'Order level — the chit is the unit of work. Line level — each line has its own person, parts and cost. Applies to new chits.' },
   { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry' },
   { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep' },
   { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Set by the platform' },

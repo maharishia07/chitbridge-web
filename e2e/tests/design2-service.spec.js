@@ -228,7 +228,9 @@ test.describe('Design 2 · a service job end to end', () => {
         'design 1 grew a per-line status again — that belongs to design 2').toBe(0);
       expect(await page.locator('.lspend').count(),
         'design 1 grew a per-line value again — that belongs to design 2').toBe(0);
-      expect(await page.getByTestId('line-open').count(),
+      /* ⚠️ By CLASS, not by a testid that now exists nowhere: naming a dead testid makes the locator guard
+         report the app as missing something it was never meant to emit. design 2 still uses .lineopen. */
+      expect(await page.locator('.ir .lineopen').count(),
         'design 1 grew a per-line opener again — that belongs to design 2').toBe(0);
 
       console.log(`\n  ── ${subject} ──`

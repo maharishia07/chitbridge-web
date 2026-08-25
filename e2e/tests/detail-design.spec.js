@@ -1,0 +1,143 @@
+'use strict';
+/* ── THE DETAIL-PAGE CHOICE ────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-24: *"attach design 1 or design 2 as per the choice in the settings, in the header record — so we
+ * avoid complication of moving from one record type to another and both can be tested independently."* And on
+ * everything raised before it shipped: *"just to cover the existing chit, if nothing found, keep it as design 1."*
+ *
+ * ⭐⭐ TWO CLAIMS, TESTED WHERE EACH ONE LIVES:
+ *
+ *   THE RECORD  — a chit is stamped at creation and the stamp never moves. That is a fact about stored data, so
+ *                 it is read back from the API. A UI check could not tell a stamp from a lucky render.
+ *   THE SCREEN  — a stamped chit opens line by line. That is a fact about rendering, so it is read off the page.
+ *
+ * ⚠️ AND NOT BY SUBJECT. `composeChit` types a subject that a fresh entity's blueprint does not carry, so the
+ * chit is created with an AUTO subject ("Order from e2eco-… — 25 Aug 2026") and every search for the typed one
+ * fails forty seconds later as "not in the task list" — which reads like a broken list and is not. The send
+ * response carries the chit_id; that is what this follows.
+ */
+const { test, expect } = require('@playwright/test');
+const { mintEntity, composeChit, clickNav, openAvatarItem, settle } = require('../fixtures');
+
+const stamp = () => Date.now().toString().slice(-6);
+
+/** Set the preference the way a person does: avatar → Settings → policy → the Detail page control. */
+async function setDetailDesign(page, value) {
+  await openAvatarItem(page, 'nav-settings');
+  await page.waitForTimeout(2000);
+  /* ⚠️ Settings has its own rail — the flags live under 'policy' and the screen opens on 'work'. */
+  const sec = page.getByTestId('set-sec-policy');
+  await expect(sec, 'the Settings screen has no policy section').toBeVisible({ timeout: 20000 });
+  await sec.click();
+  await page.waitForTimeout(2500);
+  const sel = page.getByTestId('pol-detail_design');
+  await expect(sel, 'the Detail page setting is not on the Settings screen').toBeVisible({ timeout: 20000 });
+  await sel.selectOption(value);
+  /* ⚠️ Wait for the WRITE — the card repaints from what the server returns, so the response is the truth. */
+  await page.waitForResponse((r) => /\/entities\/policy/.test(r.url()) && r.request().method() === 'PATCH'
+    && r.status() < 400, { timeout: 30000 });
+  await settle(page);
+}
+
+/** What the RECORD says — read back through the app's own session, so it is the same answer the app gets. */
+async function storedDesign(page, chitId) {
+  return page.evaluate(async (id) => {
+    try {
+      const r = await api('chit', { params: { id } });
+      const h = (r && r.header) || {};
+      return ((h.summary_json || {}).detail_design) || null;
+    } catch (e) { return 'ERROR ' + (e && e.message); }
+  }, chitId);
+}
+
+test.describe('Detail page · Order level or Line level', () => {
+  test('[DD-01] the setting stamps the next chit, and never an existing one', async ({ page }) => {
+    test.setTimeout(10 * 60 * 1000);
+    const s = stamp();
+
+    await mintEntity(page);
+    await settle(page);
+    await page.waitForTimeout(2500);
+
+    /* Every send's chit_id, in order — the only reliable handle on a chit this spec created. */
+    const sent = [];
+    page.on('response', async (r) => {
+      if (!/\/chits\/send/.test(r.url()) || r.request().method() !== 'POST') return;
+      try { const j = await r.json(); if (j && j.chit_id) sent.push({ id: j.chit_id, status: r.status() }); }
+      catch (e) { /* a body we cannot read is reported by the assertions below */ }
+    });
+    const compose = async (label) => {
+      const before = sent.length;
+      await composeChit(page, { subject: label, self: true, item: 'Widget ' + s, qty: 1, price: 100 });
+      await expect.poll(() => sent.length, { timeout: 30000 }).toBeGreaterThan(before);
+      const last = sent[sent.length - 1];
+      expect(last.status, 'the chit was refused, so nothing could be stamped').toBeLessThan(400);
+      return last.id;
+    };
+
+    let orderChit;
+    let lineChit;
+
+    await test.step('DEFAULT — no preference means Order level, and nothing is stamped', async () => {
+      orderChit = await compose('Order job ' + s);
+      /**
+       * ⚠️ NULL, not 'chit'. The flag is written only when it is NOT the default, so an entity that never chose
+       * does not get a stamp claiming it did — which is exactly what makes every chit raised before this
+       * shipped read as Order level, per Athi: *"if nothing found, keep it as design 1."*
+       */
+      expect(await storedDesign(page, orderChit),
+        'a chit raised with no preference must carry no stamp at all').toBe(null);
+    });
+
+    await test.step('PROFILE — it states the choice without being expanded', async () => {
+      await openAvatarItem(page, 'nav-profile');
+      await page.waitForTimeout(2500);
+      await expect(page.getByText(/Order level/).first(),
+        'the profile does not state which detail page is in force').toBeVisible({ timeout: 20000 });
+    });
+
+    await test.step('SWITCH — Line level stamps the next chit', async () => {
+      await setDetailDesign(page, 'lines');
+      lineChit = await compose('Line job ' + s);
+      expect(await storedDesign(page, lineChit),
+        'a chit raised under Line level was not stamped').toBe('lines');
+    });
+
+    await test.step('⭐⭐ THE EARLIER CHIT DID NOT MOVE', async () => {
+      /**
+       * ⚠️ THIS IS THE ASSERTION THAT MATTERS, and it is why the stamp is a stored fact rather than a lookup.
+       * The chit raised before the switch must still carry no stamp — if this fails, changing a setting has
+       * reshaped work that was already recorded.
+       */
+      expect(await storedDesign(page, orderChit),
+        'the earlier chit gained a stamp when the setting changed — the design is being resolved at read '
+        + 'time instead of being written once at creation').toBe(null);
+    });
+
+    await test.step('AND BACK — Order level again leaves the stamped chit stamped', async () => {
+      await setDetailDesign(page, 'chit');
+      expect(await storedDesign(page, lineChit),
+        'the Line level chit lost its stamp when the setting changed — same fault, other direction').toBe('lines');
+      expect(await storedDesign(page, orderChit), 'the unstamped chit changed too').toBe(null);
+    });
+
+    await test.step('THE SCREEN — a stamped chit opens line by line', async () => {
+      /**
+       * ⭐ The record is proved above; this proves the screen obeys it. Design 1 always paints first — design 2
+       * is a lazy module that fetches the chit again before replacing it — so its ARRIVAL is the signal, and
+       * only its absence needs waiting out.
+       */
+      await clickNav(page, 'task');
+      await page.waitForTimeout(3000);
+      await page.evaluate((id) => { if (typeof openChit === 'function') openChit(id); }, lineChit);
+      const lines = page.getByTestId('c2-side-them');
+      const opened = await lines.waitFor({ state: 'visible', timeout: 30000 }).then(() => true).catch(() => false);
+      expect(opened, 'a Line level chit did not open line by line').toBe(true);
+
+      await page.evaluate((id) => { if (typeof openChit === 'function') openChit(id); }, orderChit);
+      await page.waitForTimeout(6000);
+      expect(await page.getByTestId('c2-side-them').count(),
+        'an unstamped chit opened line by line — it must read Order level').toBe(0);
+    });
+  });
+});
