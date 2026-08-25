@@ -58,7 +58,18 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
   // A FIXED email makes this create-or-reuse: register() re-issues the OTP for an existing entity instead of erroring,
   // so the same email always lands in the SAME entity. Omit for a throwaway unique one.
   email = email || uniqueEmail();
-  name = name || uniqueName();
+  /**
+   * ⚠⚠ THE NAME THIS RETURNS MUST BE THE NAME THE ENTITY ACTUALLY HAS. It used to be `uniqueName()` — a
+   * pretty label ("E2E Co 089347") that was computed, returned, and NEVER TYPED ANYWHERE. Registration asks for
+   * one name, the handle in `reg-name`, and that is what becomes both user_id and display_name. So every spec
+   * that addressed a party by `who.name` was searching for a string no entity had ever been given, and the
+   * suggestion list was correctly empty — MP-01, disputes, message-privacy and notif-clear all failed on it,
+   * and every one of them looked like a broken recipient search.
+   *
+   * ⭐ The handle is also the RIGHT thing to address by: user_id is the public one, it is exact, and display
+   * names repeat. A fixture that invents an identity teaches every spec above it a fiction.
+   */
+  const handle = (name && /^[a-z0-9-]+$/.test(name)) ? name : uniqueHandle();
   await useApiBase(page);
   await page.goto('/app.html');
   // SAVED SESSION: in the `authed` project a restored token boots straight into the app shell (a nav item is present) →
@@ -80,7 +91,6 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
   await page.getByTestId('onb-continue').click();
   /* ⚠️ reg-name IS THE USER ID FIELD — see uniqueHandle. Filling it with a display name is what broke the
      whole suite: spaces and capitals fail checkRoot, the form refuses, and every spec times out on #/register. */
-  const handle = uniqueHandle();
   await page.getByTestId('reg-name').fill(handle);
   await page.getByTestId('reg-email').fill(email);
   await page.getByTestId('reg-submit').click();                     // → create → verify (OTP) step
@@ -95,7 +105,7 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
     await page.getByTestId('reg-submit').click().catch(() => {});
   }
   await page.waitForURL(/#\/app/, { timeout: 15000 }).catch(() => {});   // land in the app
-  return { email, name };
+  return { email, name: handle, handle };
 }
 
 // Wait out the busy overlay (#busyhost .busyov) that covers the screen during a post-mutation full-list refresh —

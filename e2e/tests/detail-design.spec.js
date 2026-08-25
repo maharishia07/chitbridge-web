@@ -18,37 +18,11 @@
  */
 const { test, expect } = require('@playwright/test');
 const { mintEntity, composeChit, clickNav, openAvatarItem, settle } = require('../fixtures');
+/* ⭐ The choice is operated and read back by flows/detail-design.js — the same driver the two-party spec uses,
+   so "set the preference" cannot come to mean two different things in two files. */
+const { setDetailDesign, storedDesign, watchSends } = require('../flows/detail-design');
 
 const stamp = () => Date.now().toString().slice(-6);
-
-/** Set the preference the way a person does: avatar → Settings → policy → the Detail page control. */
-async function setDetailDesign(page, value) {
-  await openAvatarItem(page, 'nav-settings');
-  await page.waitForTimeout(2000);
-  /* ⚠️ Settings has its own rail — the flags live under 'policy' and the screen opens on 'work'. */
-  const sec = page.getByTestId('set-sec-policy');
-  await expect(sec, 'the Settings screen has no policy section').toBeVisible({ timeout: 20000 });
-  await sec.click();
-  await page.waitForTimeout(2500);
-  const sel = page.getByTestId('pol-detail_design');
-  await expect(sel, 'the Detail page setting is not on the Settings screen').toBeVisible({ timeout: 20000 });
-  await sel.selectOption(value);
-  /* ⚠️ Wait for the WRITE — the card repaints from what the server returns, so the response is the truth. */
-  await page.waitForResponse((r) => /\/entities\/policy/.test(r.url()) && r.request().method() === 'PATCH'
-    && r.status() < 400, { timeout: 30000 });
-  await settle(page);
-}
-
-/** What the RECORD says — read back through the app's own session, so it is the same answer the app gets. */
-async function storedDesign(page, chitId) {
-  return page.evaluate(async (id) => {
-    try {
-      const r = await api('chit', { params: { id } });
-      const h = (r && r.header) || {};
-      return ((h.summary_json || {}).detail_design) || null;
-    } catch (e) { return 'ERROR ' + (e && e.message); }
-  }, chitId);
-}
 
 test.describe('Detail page · Order level or Line level', () => {
   test('[DD-01] the setting stamps the next chit, and never an existing one', async ({ page }) => {
@@ -59,13 +33,7 @@ test.describe('Detail page · Order level or Line level', () => {
     await settle(page);
     await page.waitForTimeout(2500);
 
-    /* Every send's chit_id, in order — the only reliable handle on a chit this spec created. */
-    const sent = [];
-    page.on('response', async (r) => {
-      if (!/\/chits\/send/.test(r.url()) || r.request().method() !== 'POST') return;
-      try { const j = await r.json(); if (j && j.chit_id) sent.push({ id: j.chit_id, status: r.status() }); }
-      catch (e) { /* a body we cannot read is reported by the assertions below */ }
-    });
+    const sent = watchSends(page);
     const compose = async (label) => {
       const before = sent.length;
       await composeChit(page, { subject: label, self: true, item: 'Widget ' + s, qty: 1, price: 100 });

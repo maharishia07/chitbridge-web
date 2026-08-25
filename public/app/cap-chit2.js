@@ -209,7 +209,27 @@ function c2PaneMsg(d){
       out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">' + tx('📄 open the full original') + '</span></div>';
     }
   } else {
+    /**
+     * ⚠️⚠️ "COMPOSED HERE" AND "NO CAPTURED MESSAGE" ARE NOT THE SAME FACT, and this said the first while
+     * meaning the second. A job a CUSTOMER sent us through the app has no raw_excerpt — there was never a
+     * message to excerpt — so the supplier's Them pane announced that their customer's order was something
+     * they had written themselves. That is the same class of wrong as the heading naming the account holder.
+     *
+     * ⭐ What the customer asked for, on a chit like that, IS the lines they sent. So say who it came from and
+     * point at them, rather than denying the customer exists. `live_set` is the current set — the supplier's
+     * own interpretation is made of the same lines, which is exactly Athi's model: *"we store the customer
+     * request but interpret the same according to job item."*
+     */
+    var _fromEntity = h.sender_entity_id && (typeof SESSION === 'undefined' || h.sender_entity_id !== SESSION.entity);
+    if (_fromEntity) {
+      var _n = ((d.live_set || []).filter(function(e){ return !e.removed; })).length;
+      out += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:7px">What they asked for</div>'
+        + '<div style="font-size:var(--fs-3);line-height:1.9">' + esc(h.sender_entity_display_name || 'They')
+        + ' sent this as ' + _n + (_n === 1 ? ' line' : ' lines') + '. There is no written message — the order itself is the request.</div>'
+        + '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:8px">Work them on the Work tab; how you read them stays on your side.</div>';
+    } else {
     out += '<div style="color:var(--grey);font-size:var(--fs-2)">No original message on this chit — it was composed here rather than received.</div>';
+    }
   }
   out += (raw.from ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
     + '</div>';
