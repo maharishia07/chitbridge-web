@@ -835,6 +835,10 @@
   .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
   .viafrom{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The `?` is deliberately quiet but always present — an unverified name must never read as a verified party. */
+  /* "who asked for this" — one sentence, three screens (the line card, design 2 Them, design 1 header). */
+  .askedby{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:var(--fs-2)}
+  .askedby .askedref{color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)}
+  .askedby .askedch{color:var(--grey);font-size:var(--fs-1)}
   .unver{margin-inline-start:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-1);line-height:15px;text-align:center;cursor:help}
   /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
      Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
@@ -3735,7 +3739,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-25a';
+const CB_BUILD = '2026-08-25b';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -9636,7 +9640,13 @@ async function openChit(id, silent){
          * the next open returns to the stamped design.
          */
         if(chitDesign(UI.detail)==='lines' && typeof ensureCap==='function'){
-          ensureCap('chit2').then(function(){ if(typeof openChit2==='function') openChit2(id); }).catch(function(){});
+          /* ⚠️⚠️ STILL THE CURRENT CHIT? `ensureCap` resolves whenever the module arrives, which may be after
+             the person has opened something else — and then design 2 would open over a chit that never asked
+             for it. The same late-callback fault as a loader repainting someone's screen; the guard is the
+             same shape: do nothing if the world moved on. */
+          ensureCap('chit2').then(function(){
+            if(UI.sel===id && typeof openChit2==='function') openChit2(id);
+          }).catch(function(){});
         }
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
@@ -9735,6 +9745,51 @@ function _viaPricing(p){
   if(p.unpriced) out.push('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">'+p.unpriced+' line'+(p.unpriced===1?'':'s')+' carr'+(p.unpriced===1?'ies':'y')+' no price — as asked for.</div>');
   return out.length?'<div style="margin-top:6px">'+out.join('')+'</div>':'';
 }
+/**
+ * ── ⭐⭐ WHO ASKED FOR THIS ───────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-24, on testing design 2 with WhatsApp jobs: *"data was not moving from customer to supplier."*
+ * It was not, because those chits are the workshop to ITSELF — the customer is a phone number, never an entity —
+ * so every party line read "Chola Auto Care → Chola Auto Care" and the screen warned there was no other party.
+ *
+ * ⚠️⚠️ THE ORIGINATOR WAS RECORDED ALL ALONG, in `summary_json.via`: the channel, the number, the name they
+ * gave, when it arrived. The list has named them for weeks; the DETAIL never did. So a job that plainly came
+ * from a customer read as though nobody had asked for it.
+ *
+ * ⭐ ONE ANSWER, THREE SCREENS — the line card, design 2's Them side, and design 1's header all ask the same
+ * question and must not answer it three ways.
+ *
+ * ⚠️ AS CLAIMED, NEVER AS VERIFIED. `sender_verified` is false for everything captured today: a WhatsApp display
+ * name is whatever its owner typed. `verified:false` is carried so every caller can mark it, and none of them
+ * may render this as a counterparty.
+ */
+function askedBy(via){
+  var v = via || null;
+  if(!v || !v.channel) return null;
+  var CH = { whatsapp:['🟢','WhatsApp'], email:['✉️','Email'], sms:['💬','SMS'], telegram:['🔵','Telegram'], web:['🌐','Web'] };
+  var m = CH[v.channel] || ['⇢', String(v.channel||'')];
+  return {
+    who: v.from_name || v.from || tx('an unknown sender'),
+    ref: (v.from_name && v.from) ? v.from : '',      // the number, when the name is doing the naming
+    icon: m[0], channel: m[1],
+    verified: v.sender_verified === true,
+    at: String(v.received_at||'').slice(0,16).replace('T',' '),
+  };
+}
+/** One line: "🟢 Ramesh · +91… · asked over WhatsApp ?" — the same sentence wherever it is shown. */
+function askedByLine(via, opts){
+  var a = askedBy(via); if(!a) return '';
+  var o = opts || {};
+  return '<span class="askedby" title="' + esc(txf('Arrived over {ch} — {v}',
+      { ch: a.channel, v: a.verified ? tx('sender verified') : tx('sender NOT verified') })) + '">'
+    + a.icon + ' <b>' + esc(a.who) + '</b>'
+    + (a.ref ? ' <span class="askedref">' + esc(a.ref) + '</span>' : '')
+    + '<span class="askedch">' + esc(txf('asked over {ch}', { ch: a.channel })) + '</span>'
+    + (a.verified ? '' : '<span class="unver" title="' + esc(tx('Not a verified entity — as claimed by the sender')) + '">?</span>')
+    + (o.at && a.at ? '<span class="askedch">' + esc(a.at) + '</span>' : '')
+    + '</span>';
+}
+
 function viaBlock(c){
   var v=c&&c.via; if(!v||!v.channel) return "";
   var CH={ whatsapp:['var(--ok-2)','WhatsApp'], email:['var(--blue)','Email'], sms:['var(--warn-2)','SMS'], web:['var(--purple-2)','Web'] };
@@ -9927,7 +9982,7 @@ function detailInner(){
     : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">${tx('➤ Forward')}</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">${tx('📁 Move')}</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">${tx('✉ Unread')}</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">${tx('Status ▾')}</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">${tx('👥 Assign')}</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">${tx('⊘ Void')}</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
+     <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
    ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }

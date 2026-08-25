@@ -580,6 +580,9 @@ function wlParties(det){
   var h = (det && det.header) || {};
   var list = h.all_recipients || [];
   if (!list.length) return '';
+  /* ⭐ Who asked for this, if anyone outside the rail did — one shared answer, `askedByLine` in the shell. */
+  var _asked = (typeof askedByLine === 'function')
+    ? askedByLine((h.summary_json && h.summary_json.via) || null, { at: true }) : '';
   var seen = {}, out = [];
   list.forEach(function(p){
     var k = (p.entity_id || p.display_name) + '·' + p.role;
@@ -597,7 +600,17 @@ function wlParties(det){
           + (p.user_id||p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.user_id||p.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
-    + (everyoneIsMe ? '<div style="font-size:var(--fs-1);color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
+    /**
+     * ⭐⭐ NAME THE CUSTOMER WHEN THERE IS ONE. Athi, 2026-08-24: *"data was not moving from customer to
+     * supplier."* On a captured job every party IS us — the customer is a phone number, not an entity — so this
+     * warned there was no other party while `summary_json.via` held their number, their name and the channel
+     * they wrote in on. A job that plainly came from a customer read as though nobody had asked for it.
+     *
+     * ⚠️ THE WARNING STILL STANDS WHERE IT IS TRUE. A self-chit with no origin at all has genuinely no other
+     * party, and saying so is the point of the line. It is replaced only when there is a real asker to name.
+     */
+    + (everyoneIsMe && _asked ? '<div style="padding-top:2px">' + _asked + '</div>' : '')
+    + (everyoneIsMe && !_asked ? '<div style="font-size:var(--fs-1);color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
     + '</div>';
 }
 /**

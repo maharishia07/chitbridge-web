@@ -69,7 +69,7 @@ function intakeSimHTML(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
     + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' + tx('WhatsApp') + '</option><option value="email">' + tx('Email') + '</option><option value="web">' + tx('Web') + '</option><option value="sms">' + tx('SMS') + '</option></select>'
-    + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email" style="flex:1;min-width:150px">'
+    + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email (required)" style="flex:1;min-width:150px">'
     + '</div>'
     + '<textarea class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>'
     + '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">' + tx('Add to the queue') + '</button></div>'
@@ -167,8 +167,20 @@ async function loadIntake(){
   _INTAKE.busy=false; paintIntake();
 }
 async function intakeSimulate(){
-  var ch=val('in_ch')||'whatsapp', from=val('in_from')||'', text=(val('in_text')||'').trim();
+  var ch=val('in_ch')||'whatsapp', from=(val('in_from')||'').trim(), text=(val('in_text')||'').trim();
   if(!text){ toast('Type what they wrote first.', true); return; }
+  /**
+   * ⚠️⚠️ WHO IT IS FROM IS NOT OPTIONAL. Athi, 2026-08-24, on testing design 2 with captured jobs: *"data was
+   * not moving from customer to supplier."* The jobs he tested on had this box empty, so `sender_ref` was null,
+   * `summary_json.via.from` was null, and every screen that asks "who asked for this" had nobody to name — the
+   * chit read as the workshop writing to itself, which is what made the whole Them side look hollow.
+   *
+   * ⭐ A REAL WEBHOOK ALWAYS CARRIES IT (the provider supplies the number), so this only ever bites the
+   * hand-driven path — which is precisely the path used for testing, and therefore the path that decides what
+   * the product is believed to do.
+   */
+  if(!from){ toast('Say who it is from — a phone number or an email. Without it the job has no customer.', true);
+    var f=document.getElementById('in_from'); if(f)f.focus(); return; }
   try{
     await api('captureSimulate',{body:{channel:ch, sender_ref:from, sender_name:from, raw_text:text}});
     var t=document.getElementById('in_text'); if(t)t.value='';

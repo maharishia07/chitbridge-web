@@ -126,7 +126,19 @@ async function loadChit2(){
   C2.busy = false; c2Paint();
 }
 /* (loadChit2Costs is gone with the Cost tab — the Summary reads the line events, not a second ledger) */
-function c2Paint(){ var el = document.getElementById('mainbody'); if (el) el.innerHTML = chit2Screen(); }
+/**
+ * ⚠️⚠️ ONLY WHILE THIS CHIT IS STILL THE ONE ON SCREEN. This wrote `#mainbody` unconditionally, so a load that
+ * was still in flight when someone opened a DIFFERENT chit painted design 2 back over it — design 2 for a chit
+ * they had already left. It cost three test runs and looked like the design switch failing.
+ *
+ * ⭐ The third time today the same fault has appeared in a different function: `wlPaint` did it to whatever
+ * screen you were on, a loader's `renderApp()` did it to an open modal, and this does it to another chit. A
+ * paint that runs later than the thing that asked for it must check the world has not moved.
+ */
+function c2Paint(){
+  if (typeof UI !== 'undefined' && UI.chit2 !== C2.id) return;
+  var el = document.getElementById('mainbody'); if (el) el.innerHTML = chit2Screen();
+}
 
 /* ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────── */
 var c2n = function(v){ return (v === null || v === undefined || v === '') ? null : Number(v); };
@@ -170,7 +182,16 @@ function c2PaneMsg(d){
   if (typeof UI !== 'undefined') { UI.attGroups = UI.attGroups || {}; UI.attGroups.chit2 = atts; }
   var origin = atts.filter(function(a){ return /original-message/i.test(a.n || ''); });
 
-  var out = c2Head(esc(h.sender_entity_display_name || 'Them'),
+  /**
+   * ⭐⭐ THE HEADING NAMES WHOEVER ASKED, NOT THE ACCOUNT HOLDER. On a captured job the sender IS us — the
+   * customer is a phone number that will never be an entity — so this read "Chola Auto Care" at the top of the
+   * pane whose entire purpose is *their* side of the record, while their number sat at the bottom.
+   *
+   * Athi, 2026-08-24: *"data was not moving from customer to supplier."* It was captured, not moved, and the
+   * screen told him neither.
+   */
+  var _asked = (typeof askedBy === 'function') ? askedBy(raw) : null;
+  var out = c2Head(esc(_asked ? _asked.who : (h.sender_entity_display_name || 'Them')),
     (raw.channel ? esc(String(raw.channel).toUpperCase()) + ' · ' : '') + esc(typeof fmtAt === 'function' ? fmtAt(h.created_at) : ''));
 
   /* ⚠️ NOT A VERIFIED PARTY, said on the screen where their words are read. A phone number that messaged a

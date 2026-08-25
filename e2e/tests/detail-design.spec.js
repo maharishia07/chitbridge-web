@@ -134,10 +134,33 @@ test.describe('Detail page · Order level or Line level', () => {
       const opened = await lines.waitFor({ state: 'visible', timeout: 30000 }).then(() => true).catch(() => false);
       expect(opened, 'a Line level chit did not open line by line').toBe(true);
 
+      /**
+       * ⚠️⚠️ DRIVEN THE WAY A PERSON DOES — back to the list, then the other row. Calling `openChit()` from
+       * `page.evaluate` underneath design 2 does not switch the screen: design 2 owns `#mainbody` and the
+       * function that repaints it, so the call lands somewhere nobody is looking. That is a fair thing for a
+       * test to discover and the wrong thing for a test to assert against.
+       *
+       * The rows are newest first, so the Line level chit is row 0 and the Order level one is row 1.
+       */
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByTestId('nav-compose').waitFor({ timeout: 30000 });
+      await page.waitForTimeout(3000);
       await page.evaluate((id) => { if (typeof openChit === 'function') openChit(id); }, orderChit);
-      await page.waitForTimeout(6000);
-      expect(await page.getByTestId('c2-side-them').count(),
-        'an unstamped chit opened line by line — it must read Order level').toBe(0);
+      await page.waitForTimeout(8000);
+      /**
+       * ⚠️ REPORT WHAT IS ACTUALLY THERE. "count is 1" says design 2 is on screen and nothing about WHOSE — and
+       * three separate fixes were aimed at this line before it was clear which chit the screen was showing.
+       */
+      const seen = await page.evaluate(() => ({
+        design2: document.querySelectorAll('[data-testid="c2-side-them"]').length,
+        design1: document.querySelectorAll('[data-testid="open-design2"]').length,
+        showing: (document.querySelector('#mainbody .dh, #detailpane .dh, #mainbody') || {}).textContent
+          ? (document.querySelector('#mainbody .dh, #detailpane .dh, #mainbody').textContent || '')
+              .replace(/\s+/g, ' ').trim().slice(0, 70) : '(nothing)',
+      }));
+      expect(seen.design2,
+        `an unstamped chit opened line by line — it must read Order level. On screen: ${JSON.stringify(seen)}`)
+        .toBe(0);
     });
   });
 });
