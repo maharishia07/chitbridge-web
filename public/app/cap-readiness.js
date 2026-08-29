@@ -329,7 +329,19 @@ async function openSectorMatrix(){
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
     modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">' + tx('🧮 Sector × standard — common vs specific') + '</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
-    try{ var mp=document.querySelector('#modalhost .modal'); if(mp) mp.setAttribute('data-movable','1'); }catch(_){}   // plain closeable modal — no movable-panel controls
+    /**
+     * ⚠️⚠️ THIS LINE USED TO SET data-movable='1' TO **BLOCK** makeMovable — the flag is how the primitive
+     * knows it has already run, so stamping it by hand opted the matrix OUT of drag and resize. Athi,
+     * 2026-08-29: *"the matrix icon brings a screen when it renders, it has to be an excellent overlay screen,
+     * resizable."*
+     *
+     * ⭐ The reason it was blocked has expired. The comment on makeMovable records it: the A−/A+/grip bar sat
+     * on top of the title and the ✕, so movable was switched off for modals — a PLACEMENT problem written down
+     * as a capability decision. opts.barAt:'right' fixed the placement, and the A buttons are gone entirely.
+     *
+     * Nothing replaces it: modal() now makes every modal movable, and this one is the reason to check that it
+     * does. A six-column table is exactly the content a reader wants to make bigger.
+     */
   }
   var rows={};
   for(var i=0;i<secs.length;i++){

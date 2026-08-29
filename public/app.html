@@ -3739,7 +3739,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-29a';
+const CB_BUILD = '2026-08-29b';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -8490,9 +8490,19 @@ function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit
 let MODALS={};
 
 /* ===== movable panels (drag / resize / font, persisted) ===== */
-/* makeMovable(panel, opts) — make a panel draggable + resizable + font-adjustable, geometry persisted per opts.key.
-   Best-effort & idempotent: if anything throws it never breaks the panel. Adds a grip + A-/A+ (top-left) and a
-   corner resize handle. opts: { key, minW, minH }. Uses CSS zoom for font scale (Chromium/Edge/Safari). */
+/* makeMovable(panel, opts) — make a panel draggable + resizable, geometry persisted per opts.key.
+   Best-effort & idempotent: if anything throws it never breaks the panel. Adds a grip (and an optional minimise)
+   plus a corner resize handle. opts: { key, minW, minH, barAt, minimise, fit }.
+
+   ⚠️⚠️ THE A− / A+ BUTTONS WERE REMOVED 2026-08-29. Athi: *"A+, A- as font resizing is not required any more as
+   we have the visuals standards."* He is right, and the DUPLICATION was the problem: Settings › Appearance sets
+   text size (Small/Medium/Large/Extra large) for the whole app through the --fs-* tokens, which 2,372
+   declarations already obey. A per-panel CSS `zoom` on top of that is a second, invisible source of truth — a
+   reader who shrank one panel months ago and forgot sees that panel disagree with every other screen, with
+   nothing on any settings page to explain it. One text-size control, in the place that names itself.
+
+   ⚠️ A SAVED `fs` IS NOW IGNORED AND STRIPPED. Leaving it would strand anyone who had zoomed a panel at that
+   zoom forever with the control that set it gone — the worst possible way to remove a feature. */
 function makeMovable(panel, opts){
   opts = opts || {};
   try{
@@ -8501,19 +8511,39 @@ function makeMovable(panel, opts){
     var key = opts.key || 'cb_panel', minW = opts.minW || 280, minH = opts.minH || 160;
     if(getComputedStyle(panel).position === 'static') panel.style.position = 'relative';
     var saved = null; try{ saved = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){}
-    var fs = (saved && saved.fs) || 1;
+    /* ⚠️ A stale `fs` written before 2026-08-29 is DROPPED here, not honoured — see the note at the top. */
+    if (saved && saved.fs != null) { try { delete saved.fs; localStorage.setItem(key, JSON.stringify(saved)); } catch(e){} }
     function save(){ try{ localStorage.setItem(key, JSON.stringify({
       /* ⚠️ `left` HERE IS A JAVASCRIPT PROPERTY NAME, NOT A CSS ONE. The logical-properties sweep rewrote it to
        `inset-inline-start:` and broke the parse — an object key cannot contain hyphens unquoted. A find-and-
        replace over files that are half CSS-in-strings and half JS will always find one of these; the lesson is
        that the parse check is what catches it, so run it every time. */
     left: parseFloat(panel.style.left), top: parseFloat(panel.style.top),
-      width: parseFloat(panel.style.width), height: parseFloat(panel.style.height), fs: fs })); }catch(e){} }
+      width: parseFloat(panel.style.width), height: parseFloat(panel.style.height) })); }catch(e){} }
     function clampIntoView(){
       var r = panel.getBoundingClientRect();
       var l = parseFloat(panel.style.left), t = parseFloat(panel.style.top);
       if(!isNaN(l)) panel.style.left = Math.min(Math.max(0, l), Math.max(0, window.innerWidth - r.width)) + 'px';
       if(!isNaN(t)) panel.style.top  = Math.min(Math.max(0, t), Math.max(0, window.innerHeight - r.height)) + 'px';
+    }
+    /**
+     * ⭐⭐ RESIZING A PANEL HAS TO RESIZE WHAT IS INSIDE IT. Every modal body carries `max-height:54vh` from the
+     * stylesheet (`72vh` when wide), so dragging the corner taller grew the FRAME and left a band of empty card
+     * underneath — the panel got bigger and showed no more of the thing you made it bigger to see. That is why
+     * "resizable" was not worth turning on before, and it reads as a bug rather than a missing feature.
+     *
+     * ⚠️ ONLY ONCE A HEIGHT EXISTS. Until the reader drags, the panel keeps the stylesheet's own sizing and
+     * nothing here applies — so no modal changes shape merely by becoming movable.
+     */
+    function fitBody(){
+      try{
+        var body = panel.querySelector(opts.fit || '[data-mv-fit], .mbody');
+        if(!body) return;
+        if(isNaN(parseFloat(panel.style.height))) return;
+        panel.style.display = 'flex'; panel.style.flexDirection = 'column';
+        body.style.maxHeight = 'none'; body.style.flex = '1 1 auto';
+        body.style.minHeight = '0'; body.style.overflowY = 'auto';
+      }catch(e){}
     }
     function floatOut(){ var r = panel.getBoundingClientRect();
       panel.style.position = 'fixed'; panel.style.margin = '0'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
@@ -8521,7 +8551,7 @@ function makeMovable(panel, opts){
       if(!panel.style.top)   panel.style.top   = r.top + 'px';
       if(!panel.style.width) panel.style.width = r.width + 'px';
     }
-    // control bar: grip + A-/A+
+    // control bar: grip (+ optional minimise)
     var bar = document.createElement('div');
     bar.setAttribute('data-mv','bar');
     /* ⚠️ THE BAR'S POSITION IS WHY THIS WAS DISABLED FOR MODALS. Pinned top-left it sat on top of the title and
@@ -8536,10 +8566,7 @@ function makeMovable(panel, opts){
       b.style.cssText = 'border:1px solid rgba(0,0,0,.13);background:rgba(255,255,255,.92);cursor:pointer;border-radius:5px;width:22px;height:22px;font-size:var(--fs-1);font-weight:700;color:#5a6472;line-height:1;padding:0';
       b.onmousedown = function(e){ e.stopPropagation(); };
       b.onclick = function(e){ e.stopPropagation(); e.preventDefault(); fn(); }; return b; };
-    function setFs(d){ fs = Math.max(0.8, Math.min(1.6, Math.round((fs + d) * 100) / 100)); panel.style.zoom = fs; save(); }
     bar.appendChild(grip);
-    bar.appendChild(btn('A−','Smaller text', function(){ setFs(-0.1); }));
-    bar.appendChild(btn('A+','Larger text', function(){ setFs(0.1); }));
     /**
      * ⭐ MINIMISE — Athi, 2026-08-15: *"minimize icon all required."*
      *
@@ -8577,7 +8604,7 @@ function makeMovable(panel, opts){
     panel.appendChild(rz);
     var z = null;
     function zmove(e){ if(!z) return; panel.style.width = Math.max(minW, z.w + e.clientX - z.x) + 'px';
-      panel.style.height = Math.max(minH, z.h + e.clientY - z.y) + 'px'; panel.style.maxHeight = 'none'; }
+      panel.style.height = Math.max(minH, z.h + e.clientY - z.y) + 'px'; panel.style.maxHeight = 'none'; fitBody(); }
     function zup(){ if(!z) return; z = null; save(); document.removeEventListener('mousemove', zmove); document.removeEventListener('mouseup', zup); }
     rz.addEventListener('mousedown', function(e){ floatOut(); var r = panel.getBoundingClientRect();
       z = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
@@ -8587,24 +8614,72 @@ function makeMovable(panel, opts){
       if(saved.left  != null && !isNaN(saved.left))  panel.style.left = saved.left + 'px';
       if(saved.top   != null && !isNaN(saved.top))   panel.style.top = saved.top + 'px';
       if(saved.width != null && !isNaN(saved.width)) panel.style.width = saved.width + 'px';
-      if(saved.height!= null && !isNaN(saved.height)){ panel.style.height = saved.height + 'px'; panel.style.maxHeight = 'none'; }
-      if(saved.fs != null){ fs = saved.fs; panel.style.zoom = fs; }
+      if(saved.height!= null && !isNaN(saved.height)){ panel.style.height = saved.height + 'px'; panel.style.maxHeight = 'none'; fitBody(); }
+      panel.style.zoom = '';                     // clear a zoom a previous build may have left on the element
       clampIntoView();
     }
   }catch(e){ /* best-effort — never break the panel */ }
 }
 
-/* movable-panels: apply makeMovable to the compose/large modal + the assistant when they appear (best-effort, idempotent). */
+/* movable-panels: the assistant panel is not built by modal(), so it is picked up here when it appears
+   (best-effort, idempotent). ⚠️ THE LINE THAT USED TO SIT HERE SAID modals were "kept plain + centered"
+   because the A-/A+/grip bar overlapped titles & close. Both halves of that are gone: the A buttons no longer
+   exist, and modal() applies makeMovable itself with barAt:'right'. */
 (function(){
   function tryMove(){
-    /* modals kept plain + centered — the movable A-/A+/grip bar overlapped titles & close; disabled for standard modals */
     try{ var ap=document.querySelector('#assisthost > div'); if(ap && !ap.getAttribute('data-movable')) makeMovable(ap,{key:'cb_assist',minW:300,minH:220}); }catch(e){}
   }
   function start(){ try{ new MutationObserver(tryMove).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
   if(document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
 
-function modal(html, wide){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
+/**
+ * ⭐⭐ EVERY MODAL IS MOVABLE AND RESIZABLE — Athi, 2026-08-29: *"check any screen if does not have resize
+ * options, then it has to be looked at."*
+ *
+ * ⚠️⚠️ THE SURVEY ANSWER WAS: ALMOST NONE OF THEM. makeMovable() has existed since 2026-08-15 and was reaching
+ * exactly TWO surfaces — the assistant panel and the worklist line card. There are 62 modal() call sites, and
+ * every one of the other 60 was a fixed box. Adding the sixty-first by hand is how it stayed at two: this is
+ * one function, so a modal cannot be born without it.
+ *
+ * ⚠️ RE-APPLIED ON EVERY PAINT, DELIBERATELY. modal() replaces innerHTML, so each repaint builds a NEW element
+ * that has never been made movable — and a repaint is common (a background fetch finishing repaints the
+ * worklist card). Restoring from the saved key is what makes a resized modal keep its size across one.
+ *
+ * ⚠️ THE KEY IS THE TITLE, NORMALISED — letters only, so "Order #123" and "Order #456" are ONE remembered
+ * size rather than one entry per record. A modal with no title falls back to its width class, which is the
+ * coarsest honest answer: wide modals and standard ones should not share a remembered geometry.
+ */
+/**
+ * ⚠️⚠️ opt IS OPTIONS, NOT JUST A KEY, AND THAT IS THE WHOLE POINT. makeMovable is idempotent on data-movable,
+ * so once modal() has made a panel movable a LATER makeMovable() call on it silently does nothing. The worklist
+ * line card called it afterwards for its own key and its minimise button — which would have quietly stopped
+ * working the moment modal() started doing this. A caller with its own needs passes them THROUGH, not after.
+ */
+function mvModal(host, wide, opt){
+  try{
+    var p = host.querySelector('.modal'); if(!p || typeof makeMovable !== 'function') return;
+    /**
+     * ⚠️⚠️ NOT ON A TOUCH SCREEN, AND THIS IS NOT A NICETY. makeMovable binds mousedown ONLY — there is no
+     * touchstart anywhere in it. Painting a grip and a resize corner onto every modal on a phone would add two
+     * controls to every dialog that CANNOT BE OPERATED: the reader presses them and nothing happens.
+     *
+     * ⭐ That is the same defect this codebase already removed once — the co-assist card's fake "Notify me →",
+     * blue and bold and arrowed with no onclick. A control that does nothing is worse than no control, because
+     * the reader spends time deciding they used it wrongly. Dragging a full-width sheet is also meaningless.
+     */
+    var mob = (typeof UI !== 'undefined' && UI.vp === 'mob') || (window.innerWidth || 0) <= 680;
+    if(mob) return;
+    var o = (opt && typeof opt === 'object') ? opt : { key: opt };
+    var k = o.key;
+    if(!k){ var t = p.querySelector('.mhd .t');
+      k = (t && t.textContent) ? t.textContent.replace(/[^A-Za-z]+/g, '-').replace(/^-|-$/g, '').toLowerCase().slice(0, 40) : '';
+      k = 'cb_mv_' + (k || (wide ? 'wide' : 'std')); }
+    makeMovable(p, { key: k, minW: o.minW || (wide ? 480 : 300), minH: o.minH || 200,
+                     barAt: o.barAt || 'right', minimise: !!o.minimise, fit: o.fit });
+  }catch(e){ /* best-effort — a modal that cannot be moved must still open */ }
+}
+function modal(html, wide, opt){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; mvModal(h, wide, opt); }
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }

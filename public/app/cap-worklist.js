@@ -832,16 +832,18 @@ function wlPaintCard(loading){
   var shell = document.querySelector('.shell');
   var cap = shell ? Math.round(shell.getBoundingClientRect().width) : 0;
   var mob = (typeof UI !== 'undefined' && UI.vp === 'mob');
-  modal(wlLineHTML(loading), !mob);   // `wide` on a laptop — 360px is what folded "0 kg left" in two
+  /* ⚠️ THE MOVABLE OPTIONS RIDE ON modal() NOW. They used to be a makeMovable() call on the NEXT line, which
+     stopped being reachable the moment modal() started making every panel movable itself — makeMovable is
+     idempotent on data-movable, so the second call would have returned silently and taken the minimise button
+     and this card's own remembered size with it. Nothing about the card changed; where it asks did. */
+  modal(wlLineHTML(loading), !mob, { key: 'cb_wl_line', minW: 320, minH: 240, minimise: true });   // `wide` on a laptop — 360px is what folded "0 kg left" in two
   try {
     var p = document.querySelector('#modalhost .modal');
     if (p && cap) p.style.maxWidth = cap + 'px';
-    if (p && typeof makeMovable === 'function') {
-      makeMovable(p, { key: 'cb_wl_line', minW: 320, minH: 240, barAt: 'right', minimise: true });
-      /* ⚠️ A SAVED WIDTH CAN OUTLIVE THE VIEWPORT IT WAS SET IN. Drag it wide on a laptop, switch to the phone
-         preview, and makeMovable restores 820px inside a 440px frame. The cap has to apply AFTER the restore. */
-      if (p && cap && parseFloat(p.style.width) > cap) p.style.width = cap + 'px';
-    }
+    /* ⚠️ A SAVED WIDTH CAN OUTLIVE THE VIEWPORT IT WAS SET IN. Drag it wide on a laptop, switch to the phone
+       preview, and makeMovable restores 820px inside a 440px frame. The cap has to apply AFTER the restore,
+       which is why it stayed here rather than moving into the options above. */
+    if (p && cap && parseFloat(p.style.width) > cap) p.style.width = cap + 'px';
   } catch (e) { /* best-effort — a card that will not drag is still a usable card */ }
   /* ⚠️ AFTER everything else. makeMovable can restore geometry and re-lay the panel out; putting values back
      before that runs risks them being wiped by the very repaint they were saved from. */

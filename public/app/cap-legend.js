@@ -375,8 +375,19 @@ function _lbTabBar(){
   return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('stories','📖 The Life of…')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('work','⬡ Work patterns')}${btn('std','📐 Standards')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
-var _lbFontScale; try{ _lbFontScale=parseFloat(localStorage.getItem('cb_lb_fs'))||1; }catch(_){ _lbFontScale=1; }
-function lbFont(d){ _lbFontScale=Math.max(0.85,Math.min(1.6,(_lbFontScale||1)+d*0.1)); try{ localStorage.setItem('cb_lb_fs',_lbFontScale); }catch(_){} var b=document.getElementById('lbbody'); if(b) b.style.zoom=_lbFontScale; }
+/**
+ * ⚠️⚠️ THE LEGEND HAD ITS OWN A− / A+ — a SECOND implementation of panel zoom, with its own storage key
+ * (`cb_lb_fs`) and its own clamp, beside makeMovable's. Both are gone as of 2026-08-29. Athi: *"A+, A- as font
+ * resizing is not required any more as we have the visuals standards."*
+ *
+ * ⭐ Two copies of a control is the argument against it in miniature: they disagreed. makeMovable clamped
+ * 0.8–1.6, this clamped 0.85–1.6, and neither knew about Settings › Appearance, which is the one that actually
+ * governs text size across all 2,372 tokenised declarations.
+ *
+ * ⚠️ THE STORED VALUE IS CLEARED, NOT JUST IGNORED. A reader who had shrunk the Legend would otherwise keep a
+ * permanently small board with nothing left on screen to undo it.
+ */
+try{ localStorage.removeItem('cb_lb_fs'); }catch(_){}
 
 function _lifeTabHtml(){
   const SS={ ok:['var(--ok-3)','✅'], built:['var(--warn-2)','◐'], todo:['var(--grey-4)','○'] };
@@ -698,12 +709,10 @@ function _openLegendImpl(){
       <span style="font-size:var(--fs-5)">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
-        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-2);font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">${tx('A−')}</button>
-        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-3);font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">${tx('A+')}</button>
         <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>
     <div style="flex:none">${_lbTabBar()}</div>
-    <div style="flex:1;overflow:auto;min-height:0"><div id="lbbody" style="max-width:1040px;margin:0 auto;zoom:${(typeof _lbFontScale!=='undefined'?_lbFontScale:1)}">${body}</div></div>
+    <div style="flex:1;overflow:auto;min-height:0"><div id="lbbody" style="max-width:1040px;margin:0 auto">${body}</div></div>
   </div></div>`;
 }
