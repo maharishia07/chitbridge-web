@@ -2018,16 +2018,32 @@ function iamDetailDesignName(){
 }
 
 function iamDetailDesignRow(e){
+  var Q = String.fromCharCode(39);
   var v = (typeof detailDesignPref === 'function') ? detailDesignPref() : 'chit';
   var name = iamDetailDesignName();
   var why = (v === 'lines')
     ? tx('Each line has its own person, parts and cost.')
     : tx('The chit is the unit of work — one state, one value.');
+  /**
+   * ⚠️⚠️ THIS SAID "change in Settings" IN GREY, AND WAS NOT A LINK. Athi, 2026-08-29: *"where in settings
+   * we are changing it, it is not directly taking us to change in settings?"* A row that names the place you
+   * must go and does not take you there is worse than one that says nothing — it looks like a control, so the
+   * reader clicks it, nothing happens, and they go hunting through eight sections.
+   *
+   * ⚠️ AND "Settings" WAS NOT ENOUGH OF AN ANSWER EITHER. Settings has eight sections and this lives under
+   * Policy, which is not the word anyone would guess for how a job reads. The destination is named now.
+   *
+   * ⭐ The idiom was already on THIS screen five times — navTo('settings') then setSetSec(<section>), used by
+   * Channels twice, Localisation, Appearance and Governance. Detail page was the only row that told the reader
+   * to go and left them to find it.
+   */
   return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0">'
     + '<div style="min-width:0"><div style="font-weight:600;font-size:var(--fs-3)">' + esc(name) + '</div>'
     + '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + esc(why) + '</div></div>'
-    + '<span data-testid="prof-detail-design" style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">'
-    + esc(tx('change in Settings')) + '</span></div>';
+    + '<a href="#" data-testid="prof-detail-design"'
+    +   ' onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'policy' + Q + ');return false"'
+    +   ' style="font-size:var(--fs-1);color:var(--blue);white-space:nowrap">'
+    + esc(tx('change in Settings › Policy')) + ' <span class=arw>→</span></a></div>';
 }
 
 function iamGovernedRows(e){
