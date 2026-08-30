@@ -3790,7 +3790,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-30k';
+const CB_BUILD = '2026-08-30l';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10245,29 +10245,24 @@ function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().include
  * the topbar is for state that changes while you work.
  */
 /**
- * ⭐⭐ THE REGISTER MOVED OUT — app/cap-register.js, lazy. This is the door, and it stays the door: navTo('raida')
+ * ⭐⭐ THE REGISTER LIVES IN app/cap-register.js, lazy. This is the door and it stays the door: navTo('raida')
  * and the message centre both call `openRaidReport`, and renaming it would break every caller for no gain.
  *
- * ⚠️ IT WAS 81 LINES OF LIST RENDERING IN THE SHELL. That was right while the register WAS a list; it now has
- * three views, writes to standalone registers and draws a graph, none of which anybody who never opens it
- * should have to download. The capability defines its own `openRaidReport` on load, so this shim runs exactly
- * once per session.
+ * ⚠️ IT OPENS AS A WIDE MODAL, not the notification panel. A register is a table — inherent score, treatment and
+ * residual score have to sit beside each other or the comparison it exists to support cannot be made — and a
+ * ~300px stacked pane cannot do that. See cap-register.js.
  */
 async function openRaidReport() {
-  var host = document.getElementById('lbhost');
-  if (host) {
-    host.innerHTML = '<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid"'
-      + ' onclick="event.stopPropagation()"><div class="notifhd">' + tx('📋 Register') + '</div>'
-      + '<div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">'
-      + '<span class="spin"></span> ' + tx('opening…') + '</div></div></div></div>';
-  }
+  var loading = '<div class="mhd"><div class="t">' + tx('📋 Register') + '</div></div>'
+    + '<div class="mbody" style="padding:16px;color:var(--grey);font-size:var(--fs-2)">'
+    + '<span class="spin"></span> ' + tx('opening…') + '</div>';
+  if (typeof modal === 'function') modal(loading, true);
   try { await ensureCap('register'); }
   catch (e) {
-    if (host) {
-      host.innerHTML = '<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid"'
-        + ' onclick="event.stopPropagation()"><div class="notifhd">' + tx('📋 Register') + '</div>'
-        + '<div class="raidbody"><div style="padding:14px 2px;color:var(--disp);font-size:var(--fs-2)">'
-        + esc((e && e.message) || tx('Could not load the register.')) + '</div></div></div></div>';
+    if (typeof modal === 'function') {
+      modal('<div class="mhd"><div class="t">' + tx('📋 Register') + '</div></div>'
+        + '<div class="mbody" style="padding:16px;color:var(--disp);font-size:var(--fs-2)">'
+        + esc((e && e.message) || tx('Could not load the register.')) + '</div>', true);
     }
     return;
   }

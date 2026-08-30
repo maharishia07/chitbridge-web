@@ -7,7 +7,7 @@
 //           raida-save · raida-item · raida-close · raida-disposition · raida-close-note · raida-close-save
 //           closure-item · register-close
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, composeSelfChit, clickNav } = require('../fixtures');
 
 /**
  * ⚠️⚠️ FORCED LOGGED-OUT, so this file ALWAYS mints its own entity. The authed project carries a saved
@@ -124,5 +124,60 @@ test.describe('Module · Register', () => {
     await page.getByTestId('raida-close-save').click();
     await page.getByTestId('register-tab-closure').click();
     await expect(page.getByText('Work came out of it')).toBeVisible({ timeout: 20000 });
+  });
+
+
+  /**
+   * ⭐⭐ Athi, 2026-08-30: *"how can the RAID capability be attached to the task or the line item — the risk
+   * created for any task should be reflected here."*
+   *
+   * The path already exists: the worklist line card posts `line_id` to `/api/chits/:id/raida`, `add()` opens a
+   * register for the chit on first use, and `report()` returns the entry with `particulars` and `chit_id`. That
+   * half is covered by tests/raida.test.cjs.
+   *
+   * ⚠️⚠️ THIS TEST COVERS THE OTHER HALF ONLY — that such an entry RENDERS naming its line and linking to its
+   * order. It injects the report row rather than composing a real chit, and that is a deliberate, stated limit:
+   * `composeSelfChit` produces nothing for a freshly minted entity (no catalogue to pick an item from), so an
+   * end-to-end version of this fails in the fixture, three steps before it reaches the register. Writing it that
+   * way would have made a compose problem look like a register problem every time it broke.
+   *
+   * The gap that leaves: nothing here proves the two halves meet on a live order. That needs a chit fixture
+   * that works, and it is on the backlog rather than pretended away.
+   */
+  test('[REG-04] a line-scoped entry names its line and links to its order', async ({ page }) => {
+    await mintEntity(page);
+    await openRegister(page);
+
+    await page.evaluate(() => {
+      /* One row shaped exactly as report() returns a line-scoped entry. */
+      RG.report = { migrated: true, full: true, open: 1, closed: 0, closed_by_order: 0,
+        by_kind: [], by_disposition: {},
+        entries: [{
+          raida_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+          chit_id: '11111111-2222-3333-4444-555555555555',
+          line_id: '99999999-8888-7777-6666-555555555555',
+          kind: 'risk', body: 'Pads may not clear inspection',
+          particulars: 'Brake pads 40mm', subject: 'Brake pads for the E-7 rig',
+          owner: 'Rao', by: 'Rao', at: '2026-08-30T00:00:00Z',
+          likelihood: 3, severity: 4, score: 12,
+          treatment: 'Second source identified', verification_method: 'inspection',
+          visibility: 'internal', open: true, ending: null, disposition: null,
+        }] };
+      RG.subjects = []; RG.sel = null;
+      rgPaint();
+    });
+
+    const row = page.getByTestId('raida-item').filter({ hasText: 'Pads may not clear inspection' });
+    await expect(row).toBeVisible();
+    /* ⭐ THE LINE is what "Where" says — not the order, and not a blank. */
+    await expect(row).toContainText('Brake pads 40mm');
+    /* ⭐ And it is a LINK, so the risk navigates to the order it belongs to. */
+    await expect(row.getByTestId('raida-chit-link')).toBeVisible();
+    /* The register it hangs off is named after the order. */
+    await expect(row).toContainText('Brake pads for the E-7 rig');
+    /* And the columns a register is judged on actually carry their values. */
+    await expect(row).toContainText('Second source identified');
+    await expect(row).toContainText('inspection');
+    await expect(row).toContainText('12');
   });
 });
