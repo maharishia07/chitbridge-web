@@ -1571,6 +1571,9 @@ const CFG = {
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
 const EP = {
+  /* b182 — the register rolled up across every chit. Declared before the :chit_id routes on the server for the
+     same reason it reads oddly here: 'report' is a perfectly good chit id. */
+  raidaReport:     {m:"GET",  p:"/api/chits/raida/report",      ok:"y"},
   notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},
   /* b164 — clear one Activity row, several, or all. Records a DISMISSAL; the state_log event is untouched. */
   notifDismiss:    {m:"POST", p:"/api/notifications/dismiss", ok:"y"},   // b157 — move the badge watermark
@@ -3589,6 +3592,24 @@ const MTYPES = {
   dependency:{label:"Dependency", short:"Dep",  icon:"🔗", cls:"dependency"},
   action:    {label:"Action",     short:"Actn", icon:"➡️", cls:"action"}
 };
+/**
+ * ⭐⭐ THE SIX REGISTER KINDS (b182) — in the SHELL, not in a capability, because two screens read them and one
+ * of them is lazily loaded. The report first read this list from cap-worklist.js, so opening Insight → Register
+ * without having visited the worklist printed a bullet and the raw key: correct data, unreadable labels, and a
+ * defect that only appears in the order a person happens to click.
+ *
+ * ⚠️ THE KEYS MATCH MTYPES ABOVE ON PURPOSE — same words, same .mtype CSS classes, so a risk looks like a risk
+ * whether it was tagged on a message or recorded in the register. What differs is what they ARE: MTYPES tags a
+ * thing somebody SAID; these name a thing that is TRUE until closed.
+ */
+const RAIDA_KINDS = {
+  risk:       { icon:'⚠️', label:'Risk',       hint:'might happen' },
+  assumption: { icon:'📌', label:'Assumption', hint:'taken as true, unproven' },
+  issue:      { icon:'🔴', label:'Issue',      hint:'has happened' },
+  dependency: { icon:'🔗', label:'Dependency', hint:'we need something' },
+  action:     { icon:'➡️', label:'Action',     hint:'someone must do it' },
+  decision:   { icon:'✅', label:'Decision',   hint:'settled, recorded' },
+};
 const MT_LEAN=["info","query","action"];
 const MT_GOV=["info","query","risk","assumption","issue","dependency","decision","action"];
 function surfacedTypes(){ return SESSION.msgTypes==="gov"?MT_GOV:MT_LEAN; }
@@ -3655,7 +3676,10 @@ const MENUS = {
      */
     ["Catalogue",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
     ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
-    ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
+    /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
+       report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
+       key, which is where things that WATCH you live; a report is a place you GO. */
+    ["Insight", [["mis","📊","MIS"],["raida","📋","Register"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
      existed and the actor rail had no door to it, so a co-assist could be asked a direct question by a customer
@@ -3739,7 +3763,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-30e';
+const CB_BUILD = '2026-08-30g';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -3923,7 +3947,9 @@ function _renderApp(){
            chits already in memory, and mapApiMsg sets unread:false on every message it builds — so that badge was
            structurally always zero. Messages under RAIL does the same job with real server-side read state.
            The panel's one unique thing was the RAID report, which now has its own door. -->
-      <button class="msgc" id="raidbtn" data-testid="icon-raid" onclick="openRaidReport()" title="RAID report — governance overview" aria-label="RAID report">📋</button>
+      <!-- ⚠️ THE 📋 ICON MOVED TO INSIGHT → Register (Athi, 2026-08-30). The topbar is for state that changes
+           while you work — unread counts, open/closed, who you are. A report is a place you go to, and it was
+           sitting next to the key answering a question nobody had just asked. -->
       <!-- ⚠️ GREYED ON PURPOSE — Athi, 2026-08-15: *"is it push notification? … if not we have to bring it now or
            make it as backlog, and grey the icon so we know that we have to work on."*
            It is NOT push. There is no WebSocket, no SSE, no web-push, no FCM anywhere in the API — the only
@@ -4742,7 +4768,15 @@ async function newFolderIn(track){
       catch(e){ toast((e&&e.message)||'Could not create the folder', true); }
     });
 }
-function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
+/**
+ * ⚠️ REGISTER IS AN OVERLAY, NOT A SCREEN, so it opens instead of navigating — the same shape as the Legend
+ * behind the key. Without this the rail item would set UI.nav to something no renderer answers to and the app
+ * would go blank: the worst possible outcome for a menu item, because nothing on screen says what happened.
+ *
+ * ⚠️ AND THE DRAWER IS CLOSED FIRST. On a phone the rail sits over the page; leaving it open would put the
+ * report behind the menu that opened it.
+ */
+function navTo(k){if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
@@ -10167,11 +10201,82 @@ function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host
 function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
 function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().includes(UI.msgKind))UI.msgKind=surfacedTypes()[0]; if(UI.msgTypeSel&&UI.msgTypeSel.length)UI.msgTypeSel=UI.msgTypeSel.filter(k=>surfacedTypes().includes(k)); closeMsgCenter(); openMsgCenter(); paintDetail(); }
-function openRaidReport(){ const host=document.getElementById("lbhost"); if(!host)return; UI.msgcOpen=false;
-  const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
-  const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
-  const rows=keys.length?keys.map(k=>{ const d=MTYPES[k]; const w=Math.round(counts[k]/max*100); return `<div class="raidrow"><div class="rl"><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><b>${counts[k]}</b></div><div class="rbar"><span class="rbarfill ${d.cls}" style="width:${w}%"></span></div><div class="rsamp">${samples[k].map(x=>`<div>· <b>${x.code}</b> ${x.body.length>50?x.body.slice(0,50)+'…':x.body}</div>`).join("")}</div></div>`; }).join(""):'<div class="msgempty">No tagged messages in this period yet.</div>';
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">${tx('📊 RAID report')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
+/**
+ * ⭐⭐ THE RAIDA REPORT — every entry this entity holds, across every chit, in one place.
+ * Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida report so we can see all the open and
+ * closed stuff in a single place."*
+ *
+ * ⚠️⚠️ THIS USED TO COUNT SOMETHING ELSE ENTIRELY. The old report rolled up TAGGED MESSAGES — `MTYPES` on a
+ * message — from `STORE.chits` in the browser. That was the pre-b182 shape, and the design's own verdict on it
+ * is that a tag is a MENTION: no owner, no state, no answer to "what is open", and hanging on a chit so nothing
+ * could be said about a line. It also read the local store, so it only ever saw chits already loaded.
+ *
+ * It reads the REGISTER now, from the server, across everything — which is what makes "all the open and closed
+ * stuff in a single place" a true sentence rather than a hopeful one.
+ *
+ * ⚠️ AND IT LIVES UNDER INSIGHT, not on the topbar. A report is a place you go, not a thing that watches you;
+ * the topbar is for state that changes while you work.
+ */
+async function openRaidReport(){
+  const host = document.getElementById("lbhost"); if (!host) return;
+  UI.msgcOpen = false;
+  const shell = (body) => `<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()">${body}</div></div>`;
+  host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> ${tx('reading every chit…')}</div></div>`);
+
+  let r;
+  try { r = await api('raidaReport'); }
+  catch (e) {
+    host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--disp);font-size:var(--fs-2)">${tx('Could not read the register just now — this does NOT mean there is nothing on it.')}</div></div>`);
+    return;
+  }
+
+  /* ⚠️ Deploy-before-migration is normal here and is not a fault. Say what is true. */
+  if (r && r.migrated === false) {
+    host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">${tx('The register is not switched on for this environment yet (b182).')}</div></div>`);
+    return;
+  }
+
+  const entries = (r && r.entries) || [];
+  const K = RAIDA_KINDS;
+  const icon = (k) => (K[k] && K[k].icon) || '•';
+  const label = (k) => (K[k] && K[k].label) || k;
+
+  /* ── the counts, by kind ───────────────────────────────────────────────────────────────────────────────── */
+  const byKind = (r && r.by_kind) || [];
+  const max = Math.max(1, ...byKind.map((k) => k.open + k.closed + k.closed_by_order));
+  const bars = byKind.length ? byKind.map((k) => {
+    const total = k.open + k.closed + k.closed_by_order;
+    return `<div class="raidrow"><div class="rl"><span class="mtype ${k.kind}">${icon(k.kind)} ${esc(label(k.kind))}</span>`
+      + `<b>${k.open}</b><span style="color:var(--grey);font-weight:400"> ${tx('open')}</span></div>`
+      + `<div class="rbar"><span class="rbarfill ${k.kind}" style="width:${Math.round(total / max * 100)}%"></span></div>`
+      + `<div class="rsamp">${k.closed} ${tx('closed')}`
+      /* ⚠️ NAMED, not folded into "closed". An entry the order closed AROUND is unresolved, not resolved. */
+      + (k.closed_by_order ? ` · <span style="color:var(--warn-2)">${k.closed_by_order} ${tx('closed with the order')}</span>` : '')
+      + `</div></div>`;
+  }).join('') : `<div class="msgempty">${tx('Nothing recorded yet — which is usually the right answer.')}</div>`;
+
+  /* ── the open ones, because that is what a person came for ─────────────────────────────────────────────── */
+  const open = entries.filter((e) => e.open);
+  const openList = open.length ? open.map((e) => `<div class="raidrow" style="cursor:pointer" onclick="closeMsgCenter();openChit(&quot;${e.chit_id}&quot;)">`
+      + `<div class="rl"><span class="mtype ${e.kind}">${icon(e.kind)} ${esc(label(e.kind))}</span></div>`
+      + `<div style="font-size:var(--fs-2);color:var(--on-card);line-height:1.5">${esc(e.body)}</div>`
+      + `<div class="rsamp">${esc(e.particulars || tx('the whole order'))}`
+      + (e.subject ? ` · ${esc(e.subject)}` : '')
+      + (e.by ? ` · ${esc(e.by)}` : '')
+      + (e.visibility === 'shared' ? ` · <span style="color:var(--blue-2)">${tx('shared')}</span>` : '')
+      + `</div></div>`).join('')
+    : `<div class="msgempty">${tx('Nothing open.')}</div>`;
+
+  host.innerHTML = shell(
+    `<div class="notifhd">${tx('📋 Register')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">`
+    + `${r.open} ${tx('open')} · ${r.closed} ${tx('closed')}`
+    + (r.closed_by_order ? ` · ${r.closed_by_order} ${tx('with the order')}` : '')
+    + `</span></div>`
+    + `<div class="raidbody">${bars}`
+    + (open.length ? `<div style="margin-top:14px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Still open')}</div>${openList}` : '')
+    + `</div>`
+    /* ⚠️ Say where the number came from. A report that does not is a number nobody can check. */
+    + `<div class="notiffoot">${tx('Every entry recorded against a line or an order, across every chit. An order that closes takes its entries with it — those are counted separately, because nobody answered them.')}</div>`);
 }
 
 /* actions wired to API */

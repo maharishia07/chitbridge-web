@@ -84,8 +84,12 @@ test.describe('Smoke · every menu item + icon renders', () => {
     });
     /* ⚠️ `icon-messages` IS GONE, and this step is why the removal was not free. The 💬 message centre duplicated
        the Messages screen and counted `m.unread`, which mapApiMsg hardcodes false — a badge that was structurally
-       always zero. It was dropped on 2026-08-15 and the RAID report, its one unique feature, took its place. */
-    await test.step('raid report', async () => { await page.getByTestId('icon-raid').click(); await dismissModal(page); });
+       always zero. It was dropped on 2026-08-15 and the RAID report, its one unique feature, took its place.
+
+       ⚠️ AND NOW `icon-raid` IS GONE TOO — the report moved to Insight → Register on 2026-08-30, because the
+       topbar is for state that changes while you work and a report is a place you go. Same step, new door: the
+       point of walking it was never the icon, it was that the report opens and closes without leaving wreckage. */
+    await test.step('register report', async () => { await page.getByTestId('nav-raida').click(); await dismissModal(page); });
     await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); await dismissModal(page); });
     await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); await dismissModal(page); });
   });

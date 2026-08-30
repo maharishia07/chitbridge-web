@@ -910,14 +910,10 @@ function wlSecHead(k, name, hint, tone){
  * quiet; on a transformer line it carries three open entries. The heading says the count and nothing else, so an
  * empty register costs one line of screen — and WHICH lines are empty is itself a description of the trade.
  */
-var WLRK = {
-  risk:       { icon: '⚠️',  label: 'Risk',       hint: 'might happen' },
-  assumption: { icon: '📌',  label: 'Assumption', hint: 'taken as true, unproven' },
-  issue:      { icon: '🔴',  label: 'Issue',      hint: 'has happened' },
-  dependency: { icon: '🔗',  label: 'Dependency', hint: 'we need something' },
-  action:     { icon: '➡️',  label: 'Action',     hint: 'someone must do it' },
-  decision:   { icon: '✅',  label: 'Decision',   hint: 'settled, recorded' },
-};
+/* ⭐ ONE REGISTRY, IN THE SHELL. This was a second copy of the six kinds; the report read THIS one, which is
+   lazily loaded, so opening Insight → Register before the worklist printed raw keys. A list of labels defined
+   twice is two lists the day one of them gains a seventh. */
+var WLRK = (typeof RAIDA_KINDS !== 'undefined') ? RAIDA_KINDS : {};
 
 async function wlRaidaLoad(){
   var r = WLL.row; if (!r) return;
