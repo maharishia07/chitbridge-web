@@ -568,7 +568,8 @@ var WLL = { row: null, det: null, actors: null, loading: false, failed: false,
   /* Two threads, kept apart in state as well as on screen — see wlThreadSec. */
   msgs: null, msgErr: false, ext: null, extErr: false,
   /* b182 — null means NOT ASKED YET, which is not the same as an empty register. */
-  raida: null, raidaErr: false, raidaKind: 'risk', raidaBusy: false, raidaClosing: null };
+  raida: null, raidaErr: false, raidaKind: 'risk', raidaBusy: false,
+  raidaClosing: null, raidaDisp: null };
 
 /**
  * ⭐ WHO THE OTHER PARTY IS — Athi, 2026-08-15: *"if we bring the contact details of the external party on the
@@ -959,13 +960,24 @@ async function wlRaidaAdd(){
  * test is a control nobody should ship.
  */
 function wlRaidaClosing(rid){ WLL.raidaClosing = (WLL.raidaClosing === rid) ? null : rid; wlPaintCard(WLL.loading); }
+/**
+ * ⭐⭐ AN ENDING NEEDS A DISPOSITION, AND THAT IS THE WHOLE POINT OF b185. "Resolved" and "accepted" are both
+ * closed and are not the same fact: one is fixed, the other is a residual risk somebody is carrying. At the end
+ * of a campaign the difference between them IS the audit.
+ *
+ * ⚠️ AND THE TWO SILENT ONES ARE WHY THIS CANNOT DEFAULT. `accepted` and `constraint` produce nothing that will
+ * ever nag anybody again — a default would quietly file them as "resolved" and the register would report a
+ * campaign as clean when it shipped carrying four things nobody fixed.
+ */
+function wlRaidaDisp(d){ WLL.raidaDisp = d; wlPaintCard(WLL.loading); }
 async function wlRaidaClose(rid){
   var r = WLL.row; if (!r) return;
   var box = document.getElementById('wl_raida_why');
   var why = box ? String(box.value || '').trim() : '';
-  WLL.raidaClosing = null;
+  var disp = WLL.raidaDisp || 'resolved';
+  WLL.raidaClosing = null; WLL.raidaDisp = null;
   try {
-    await api('wlRaidaEnd', { params: { id: r.chit_id, rid: rid }, body: { body: why } });
+    await api('wlRaidaEnd', { params: { id: r.chit_id, rid: rid }, body: { body: why, disposition: disp } });
     WLL.raida = null; await wlRaidaLoad(); toast('Closed');
   } catch (e) { toast((e && e.message) || 'Could not close it.'); }
 }
@@ -985,7 +997,8 @@ function wlRaidaRow(e){
     +     (e.inherited ? ' · <span title="Recorded against the whole order">' + tx('from the order') + '</span>' : '')
     +     (e.visibility === 'shared' ? ' · <span style="color:var(--blue-2)">' + tx('shared') + '</span>' : '')
     +     (e.by ? ' · ' + esc(e.by) : '')
-    +     (e.open ? '' : ' · ' + tx('closed') + (e.closed_note ? ' — ' + esc(e.closed_note) : ''))
+    +     (e.open ? '' : ' · ' + esc(tx((RAIDA_ENDINGS[e.disposition] || { label: 'closed' }).label))
+           + (e.closed_note ? ' — ' + esc(e.closed_note) : ''))
     +   '</div>'
     + '</div>'
     + (e.open && !e.inherited
@@ -996,12 +1009,23 @@ function wlRaidaRow(e){
     + '</div>'
     /* The field appears under the entry it closes, so there is never a question about which one is ending. */
     + (WLL.raidaClosing === e.raida_id
-        ? '<div style="display:flex;gap:7px;padding:0 0 9px 30px">'
+        ? '<div style="padding:0 0 9px 30px">'
+          + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">'
+          + Object.keys(RAIDA_ENDINGS).map(function(d){
+              var on = (WLL.raidaDisp || 'resolved') === d;
+              return '<button type="button" data-testid="wl-raida-disp-' + d + '" onclick="wlRaidaDisp(&quot;' + d + '&quot;)"'
+                + ' title="' + esc(RAIDA_ENDINGS[d].hint) + '" aria-pressed="' + (on ? 'true' : 'false') + '"'
+                + ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' + (on ? 800 : 500) + ';'
+                + 'border:' + (on ? '2px solid var(--blue)' : '1px solid var(--line)') + ';border-radius:8px;'
+                + 'padding:3px 8px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
+                + esc(tx(RAIDA_ENDINGS[d].label)) + '</button>';
+            }).join('')
+          + '</div><div style="display:flex;gap:7px">'
           + '<input id="wl_raida_why" data-testid="wl-raida-why" placeholder="' + esc(tx('What happened? (optional)')) + '"'
           +   ' style="flex:1;border:1px solid var(--line);border-radius:8px;padding:6px 9px;font:inherit;font-size:var(--fs-2)">'
           + '<button data-testid="wl-raida-close-go" onclick="wlRaidaClose(&quot;' + e.raida_id + '&quot;)"'
           +   ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:8px;padding:5px 12px">'
-          + tx('Close it') + '</button></div>'
+          + tx('Close it') + '</button></div></div>'
         : '');
 }
 

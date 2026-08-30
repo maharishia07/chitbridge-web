@@ -3610,6 +3610,24 @@ const RAIDA_KINDS = {
   action:     { icon:'➡️', label:'Action',     hint:'someone must do it' },
   decision:   { icon:'✅', label:'Decision',   hint:'settled, recorded' },
 };
+/**
+ * ⭐⭐ THE SIX ENDINGS (b185). Only some of them are ACTIONS, and the two silent ones are why this list exists.
+ * `accepted` and `constraint` produce nothing that will ever nag anybody again — an accepted residual risk and
+ * an operating limitation are invisible by construction — so the register is the only thing that will raise them
+ * later. Folding them into "closed" would report a campaign as clean when it shipped carrying four things
+ * nobody fixed.
+ *
+ * ⚠️ IN THE SHELL, beside RAIDA_KINDS, for the reason that list moved here: two screens read them and one is
+ * lazily loaded, so a copy in a capability prints raw keys depending on the order somebody clicks.
+ */
+const RAIDA_ENDINGS = {
+  resolved:       { label:'Resolved',   hint:'fixed, and the fix was verified' },
+  action:         { label:'Action',     hint:'work still to do, with an owner and a date' },
+  carried_forward:{ label:'Carried',    hint:'it belongs to the next stage — name where it went' },
+  accepted:       { label:'Accepted',   hint:'residual risk, carried knowingly — needs a signature' },
+  constraint:     { label:'Constraint', hint:'no fix; the operating limits narrow instead' },
+  waived:         { label:'Waived',     hint:'formally waived against a stated requirement' },
+};
 const MT_LEAN=["info","query","action"];
 const MT_GOV=["info","query","risk","assumption","issue","dependency","decision","action"];
 function surfacedTypes(){ return SESSION.msgTypes==="gov"?MT_GOV:MT_LEAN; }
@@ -3763,7 +3781,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-30i';
+const CB_BUILD = '2026-08-30j';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
