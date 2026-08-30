@@ -74,4 +74,55 @@ test.describe('Module · Register', () => {
     await expect(page.getByTestId('closure-item').filter({ hasText: 'Rig availability' })).toBeVisible();
     await expect(page.getByTestId('register-close')).toBeVisible();
   });
+
+  /**
+   * ⚠️⚠️ BOTH HALVES OF THIS WERE MISSING AND NEITHER FAILED LOUDLY — found by the showcase driver once it was
+   * made to verify its own writes:
+   *
+   *   1. the add form had NO target field, so `to_id` was never set, every dependency stayed a sentence, and
+   *      the Impact view could not be populated through the product no matter what anyone typed;
+   *   2. `carried_forward` was offered in the endings list while the server refuses it without a destination,
+   *      so choosing it ALWAYS failed — an affordance that will refuse, which reads as the user's mistake.
+   */
+  test('[REG-03] a dependency that names a target becomes a walkable edge', async ({ page }) => {
+    await mintEntity(page);
+    await openRegister(page);
+
+    const newRegister = async (type, name) => {
+      await page.getByTestId('register-new').click();
+      await page.getByTestId('register-new-type').selectOption(type);
+      await page.getByTestId('register-new-name').fill(name);
+      await page.getByTestId('register-new-save').click();
+      await expect(page.getByTestId('register-subject').filter({ hasText: name.split(' ')[0] }))
+        .toBeVisible({ timeout: 20000 });
+    };
+    await newRegister('release', 'Pad refurbishment');
+    await newRegister('campaign', 'Engine E-7 qualification');
+
+    await page.getByTestId('raida-add-open').click();
+    await page.getByTestId('raida-kind').selectOption('dependency');
+    /* The target fields appear ONLY for a dependency — the other five kinds do not point. */
+    await expect(page.getByTestId('raida-to')).toBeVisible();
+    await page.getByTestId('raida-body').fill('Cannot start hot-fire until the pad is signed off');
+    await page.getByTestId('raida-to').selectOption({ label: 'Pad refurbishment' });
+    await page.getByTestId('raida-save').click();
+    await expect(page.getByTestId('raida-item').filter({ hasText: 'hot-fire' }))
+      .toBeVisible({ timeout: 20000 });
+
+    /* ⭐ THE GRAPH. Before the target field existed this pane could only ever say "nothing points anywhere". */
+    await page.getByTestId('register-tab-impact').click();
+    await expect(page.getByTestId('walk-graph')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('walk-graph')).toContainText('Pad refurbishment');
+
+    /* And carrying it forward names where it went, rather than failing silently. */
+    await page.getByTestId('register-tab-live').click();
+    await page.getByTestId('raida-close').first().click();
+    await page.getByTestId('raida-disposition').selectOption('carried_forward');
+    await expect(page.getByTestId('raida-carry')).toBeVisible();
+    await page.getByTestId('raida-carry').selectOption({ label: 'Pad refurbishment' });
+    await page.getByTestId('raida-close-note').fill('Moves to the pad register');
+    await page.getByTestId('raida-close-save').click();
+    await page.getByTestId('register-tab-closure').click();
+    await expect(page.getByText('Work came out of it')).toBeVisible({ timeout: 20000 });
+  });
 });

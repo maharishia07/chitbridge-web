@@ -160,7 +160,9 @@ function rgRegisterRail() {
 function rgSel(id) { RG.sel = id; RG.walk = null; rgPaint(); }
 
 function rgRow(e) {
-  var where = e.particulars ? esc(e.particulars) : (e.chit_id ? tx('the whole order') : tx('the register'));
+  /* ⚠️ NOT 'the register' when there is no line — the subject name follows immediately and says it better.
+     Two labels for one fact is how a pane gets dense without getting more informative. */
+  var where = e.particulars ? esc(e.particulars) : (e.chit_id ? tx('the whole order') : '');
   var end = e.ending === 'closed'
       ? (rgEnding(e.disposition) + (e.closed_note ? ' — ' + esc(e.closed_note) : ''))
     : e.ending === 'closed_by_order'
@@ -176,7 +178,7 @@ function rgRow(e) {
     + '<div style="font-size:var(--fs-2);color:var(--on-card);line-height:1.5'
     + (e.open ? '' : ';text-decoration:line-through') + '">' + esc(e.body) + '</div>'
     + '<div class="rsamp">' + where
-    + (e.subject ? ' · ' + esc(e.subject) : '')
+    + (e.subject ? (where ? ' · ' : '') + esc(e.subject) : '')
     + (e.owner ? ' · ' + esc(e.owner) : (e.by ? ' · ' + esc(e.by) : ''))
     + (e.due_date ? ' · ' + tx('due') + ' ' + esc(String(e.due_date).slice(0, 10)) : '')
     + (e.visibility === 'shared' ? ' · <span style="color:var(--blue-2)">' + tx('shared') + '</span>' : '')
@@ -224,7 +226,7 @@ function rgAddBar() {
     return '<option value="' + k + '">' + rgIcon(k) + ' ' + esc(RAIDA_KINDS[k].label) + '</option>';
   }).join('');
   return '<div class="raidadd" style="padding:8px 0;border-bottom:1px solid var(--line)">'
-    + '<select id="rgKind" class="inp" data-testid="raida-kind" style="width:100%;margin-bottom:6px">' + kinds + '</select>'
+    + '<select id="rgKind" class="inp" data-testid="raida-kind" onchange="rgKindChanged()" style="width:100%;margin-bottom:6px">' + kinds + '</select>'
     + '<input id="rgBody" class="inp" data-testid="raida-body" style="width:100%;margin-bottom:6px"'
     + ' placeholder="' + esc(tx('What is it? Say it in one line.')) + '">'
     + '<div style="display:flex;gap:6px;margin-bottom:6px">'
@@ -237,10 +239,49 @@ function rgAddBar() {
     + '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Severity') + '</span>'
     + '<input id="rgS" class="inp" type="number" min="1" max="5" style="width:64px">'
     + '</div>'
+    + rgEdgeFields()
     + '<div style="display:flex;gap:6px">'
     + '<button class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' + tx('Record it') + '</button>'
     + '<button class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>'
     + '</div></div>';
+}
+
+/**
+ * ⭐⭐ THE FIELDS THAT MAKE A DEPENDENCY AN EDGE — and without them the Impact view can never populate.
+ *
+ * ⚠️ THIS WAS THE HOLE. The register could record "we are waiting on the crane" all day, but nothing in the UI
+ * ever set `to_id`, so every dependency stayed a sentence and the graph — the thing this capability exists to
+ * produce — had no data by construction. It looked finished because the empty state was honest.
+ *
+ * ⚠️ SHOWN ONLY FOR A DEPENDENCY. The other five kinds do not point, and offering a target on a Decision would
+ * invite an edge the walk would never traverse.
+ */
+function rgEdgeFields() {
+  var subs = (RG.subjects || []).filter(function (s) { return s.subject_id !== RG.sel && !s.closed_at; });
+  var rels = [['finish_to_start', tx('starts after')], ['start_to_start', tx('starts with')],
+              ['finish_to_finish', tx('finishes with')], ['start_to_finish', tx('finishes after')]];
+  return '<div id="rgEdge" style="display:none;border-top:1px dashed var(--line);margin-top:6px;padding-top:6px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">'
+    + tx('What does it wait on? Leave blank and it stays a note, not a link.') + '</div>'
+    + '<select id="rgTo" class="inp" data-testid="raida-to" style="width:100%;margin-bottom:6px">'
+    + '<option value="">' + esc(tx('— nothing named —')) + '</option>'
+    + subs.map(function (s) {
+        return '<option value="' + s.subject_id + '|' + s.type_key + '|' + esc(s.name) + '">'
+          + esc(s.name) + '</option>';
+      }).join('')
+    + '</select>'
+    + '<div style="display:flex;gap:6px">'
+    + '<select id="rgRel" class="inp" style="flex:1">'
+    + rels.map(function (r) { return '<option value="' + r[0] + '">' + r[1] + '</option>'; }).join('')
+    + '</select>'
+    + '<input id="rgNeed" class="inp" type="date" style="flex:1" title="' + esc(tx('Needed by')) + '">'
+    + '</div></div>';
+}
+
+/* Shown on 'dependency', hidden otherwise — one listener, set when the bar is painted. */
+function rgKindChanged() {
+  var el = document.getElementById('rgEdge');
+  if (el) el.style.display = (rgVal('rgKind') === 'dependency') ? '' : 'none';
 }
 
 function rgAdd(on) { RG.adding = !!on; rgPaint(); }
@@ -256,6 +297,17 @@ async function rgSave() {
   var d = rgVal('rgDue'); if (d) p.due_date = d;
   var l = rgVal('rgL'); if (l) p.likelihood = +l;
   var s = rgVal('rgS'); if (s) p.severity = +s;
+  /* ⭐ An edge only exists when a target is NAMED. Blank leaves it a note, which the Impact view then lists
+     apart rather than pretending it can be walked. */
+  if (p.kind === 'dependency') {
+    var to = rgVal('rgTo');
+    if (to) {
+      var bits = to.split('|');
+      p.to_id = bits[0]; p.to_type = bits[1]; p.to_label = bits.slice(2).join('|');
+      p.rel_type = rgVal('rgRel') || 'finish_to_start';
+      var nb = rgVal('rgNeed'); if (nb) p.needed_by = nb;
+    }
+  }
   try {
     await api('regEntryAdd', { params: { sid: RG.sel }, body: p });
     RG.adding = false;
@@ -314,10 +366,25 @@ function rgClosePaint(id) {
   var opts = Object.keys(RAIDA_ENDINGS).map(function (k) {
     return '<option value="' + k + '">' + esc(RAIDA_ENDINGS[k].label) + ' — ' + esc(RAIDA_ENDINGS[k].hint) + '</option>';
   }).join('');
+  var moves = (RG.subjects || []).filter(function (s) { return s.subject_id !== RG.sel && !s.closed_at; });
   var el = document.createElement('div');
   el.style.cssText = 'margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:8px';
-  el.innerHTML = '<select id="rgDisp" class="inp" data-testid="raida-disposition" style="width:100%;margin-bottom:6px">'
-    + opts + '</select>'
+  el.innerHTML = '<select id="rgDisp" class="inp" data-testid="raida-disposition" onchange="rgDispChanged()"'
+    + ' style="width:100%;margin-bottom:6px">' + opts + '</select>'
+    /**
+     * ⭐⭐ "CARRIED FORWARD" MUST NAME WHERE IT WENT, and the server refuses without it — *"we will deal with it
+     * later" without a later is how a finding disappears while looking dispositioned*.
+     *
+     * ⚠️ THIS FIELD WAS MISSING AND THE OPTION WAS STILL OFFERED, so choosing it always failed. An affordance
+     * that will refuse is worse than no affordance: the reader assumes they used it wrongly. Found by the
+     * showcase driver, which now verifies its own writes.
+     */
+    + '<select id="rgCarry" class="inp" data-testid="raida-carry" style="width:100%;margin-bottom:6px;display:none">'
+    + '<option value="">' + esc(tx('— which register? —')) + '</option>'
+    + moves.map(function (s) {
+        return '<option value="' + s.subject_id + '">' + esc(s.name) + '</option>';
+      }).join('')
+    + '</select>'
     + '<input id="rgNote" class="inp" data-testid="raida-close-note" style="width:100%;margin-bottom:6px"'
     + ' placeholder="' + esc(tx('What happened? One line.')) + '">'
     + '<div style="display:flex;gap:6px">'
@@ -327,11 +394,23 @@ function rgClosePaint(id) {
   rows[idx].appendChild(el);
 }
 
+/* Only "carried forward" needs somewhere to go. */
+function rgDispChanged() {
+  var el = document.getElementById('rgCarry');
+  if (el) el.style.display = (rgVal('rgDisp') === 'carried_forward') ? '' : 'none';
+}
+
 async function rgCloseSave(id) {
   var disp = rgVal('rgDisp');
   if (!disp) { toast(tx('Say how it ended.')); return; }
   try {
-    await api('regEntryClose', { params: { rid: id }, body: { disposition: disp, body: rgVal('rgNote') } });
+    var payload = { disposition: disp, body: rgVal('rgNote') };
+    if (disp === 'carried_forward') {
+      var to = rgVal('rgCarry');
+      if (!to) { toast(tx('Name the register it moves to.')); return; }
+      payload.carried_to_subject_id = to;
+    }
+    await api('regEntryClose', { params: { rid: id }, body: payload });
     RG.closing = null;
     toast(tx('Ended.'));
     await openRegister(true);
@@ -481,41 +560,47 @@ async function rgWalkLoad() {
 function rgWalkDir() { RG.walkBack = !RG.walkBack; rgWalkLoad(); }
 function rgWalkFrom(id) { RG.walkFrom = id; rgWalkLoad(); }
 
-/* One column per depth, one box per hop. Plain SVG — no library, and it scales with the panel. */
+/**
+ * ⭐⭐ TOP-TO-BOTTOM, NOT LEFT-TO-RIGHT — because of the pane it lives in. A wide flow reads left-to-right, and
+ * that is what this drew first: at 240px per column inside a ~300px panel it put the ONE box that carries the
+ * answer off the right edge, every time. A layered stack in a narrow column reads downward.
+ *
+ * ⚠️ DEPTH IS THE INDENT, so a chain still reads as a chain rather than a flat list.
+ */
 function rgGraph(hops) {
-  var byDepth = {};
-  hops.forEach(function (h) { (byDepth[h.depth] = byDepth[h.depth] || []).push(h); });
-  var depths = Object.keys(byDepth).map(Number).sort(function (a, b) { return a - b; });
-  var COL = 200, ROW = 62, PAD = 12;
-  var maxRows = Math.max.apply(null, depths.map(function (d) { return byDepth[d].length; }).concat([1]));
-  var W = PAD * 2 + (depths.length + 1) * COL, H = PAD * 2 + maxRows * ROW + 24;
+  var W = 300, PAD = 10, BOXH = 44, GAP = 30, INDENT = 14;
+  var H = PAD * 2 + BOXH + hops.length * (BOXH + GAP);
   var parts = [];
 
-  parts.push('<rect x="' + PAD + '" y="' + (PAD + 10) + '" width="150" height="40" rx="8" fill="none"'
-    + ' stroke="currentColor" stroke-width="2"/>');
-  parts.push('<text x="' + (PAD + 10) + '" y="' + (PAD + 35) + '" font-size="12" fill="currentColor"'
-    + ' font-weight="700">' + esc(tx('this')) + '</text>');
+  parts.push('<rect x="' + PAD + '" y="' + PAD + '" width="' + (W - PAD * 2) + '" height="' + BOXH
+    + '" rx="8" fill="none" stroke="currentColor" stroke-width="2"/>');
+  parts.push('<text x="' + (PAD + 10) + '" y="' + (PAD + 27) + '" font-size="12" font-weight="700"'
+    + ' fill="currentColor">' + esc(tx('this')) + '</text>');
 
-  depths.forEach(function (d, di) {
-    byDepth[d].forEach(function (h, ri) {
-      var x = PAD + (di + 1) * COL, y = PAD + ri * ROW + 10;
-      var sev = h.severity >= 4 ? 'var(--disp)' : 'currentColor';
-      parts.push('<line x1="' + (x - COL + 150) + '" y1="' + (PAD + 30) + '" x2="' + x + '" y2="' + (y + 20)
-        + '" stroke="currentColor" stroke-width="1.5" opacity=".55" marker-end="url(#rgarrow)"/>');
-      parts.push('<text x="' + (x - COL + 158) + '" y="' + (PAD + 24) + '" font-size="10" fill="currentColor"'
-        + ' opacity=".7">' + esc(String(h.rel_type || '').replace(/_/g, ' ')) + '</text>');
-      parts.push('<rect x="' + x + '" y="' + y + '" width="176" height="40" rx="8" fill="none" stroke="' + sev
-        + '" stroke-width="1.5"/>');
-      var lab = String(h.to_label || h.body || '');
-      parts.push('<text x="' + (x + 9) + '" y="' + (y + 18) + '" font-size="11" fill="currentColor">'
-        + esc(lab.length > 24 ? lab.slice(0, 24) + '…' : lab) + '</text>');
-      parts.push('<text x="' + (x + 9) + '" y="' + (y + 32) + '" font-size="10" fill="currentColor" opacity=".65">'
-        + esc((h.owner || '') + (h.needed_by ? ' · ' + String(h.needed_by).slice(0, 10) : '')) + '</text>');
-    });
+  var y = PAD + BOXH;
+  hops.forEach(function (h) {
+    var x = PAD + Math.min(h.depth, 3) * INDENT;
+    var sev = h.severity >= 4 ? 'var(--disp)' : 'currentColor';
+    parts.push('<line x1="' + (x + 14) + '" y1="' + y + '" x2="' + (x + 14) + '" y2="' + (y + GAP)
+      + '" stroke="currentColor" stroke-width="1.5" opacity=".55" marker-end="url(#rgarrow)"/>');
+    parts.push('<text x="' + (x + 24) + '" y="' + (y + GAP - 10) + '" font-size="10" fill="currentColor"'
+      + ' opacity=".7">' + esc(String(h.rel_type || '').replace(/_/g, ' ')) + '</text>');
+    y += GAP;
+    parts.push('<rect x="' + x + '" y="' + y + '" width="' + (W - x - PAD) + '" height="' + BOXH
+      + '" rx="8" fill="none" stroke="' + sev + '" stroke-width="1.5"/>');
+    var lab = String(h.to_label || h.body || '');
+    parts.push('<text x="' + (x + 10) + '" y="' + (y + 19) + '" font-size="11" fill="currentColor">'
+      + esc(lab.length > 30 ? lab.slice(0, 30) + '…' : lab) + '</text>');
+    var sub = (h.owner || '') + (h.needed_by ? ' · ' + String(h.needed_by).slice(0, 10) : '');
+    if (sub) {
+      parts.push('<text x="' + (x + 10) + '" y="' + (y + 34) + '" font-size="10" fill="currentColor"'
+        + ' opacity=".65">' + esc(sub) + '</text>');
+    }
+    y += BOXH;
   });
 
-  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" style="max-width:100%;height:auto;color:var(--on-card)"'
-    + ' aria-label="' + esc(tx('Impact walk')) + '">'
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" style="max-width:100%;height:auto;'
+    + 'color:var(--on-card)" aria-label="' + esc(tx('Impact walk')) + '">'
     + '<defs><marker id="rgarrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"'
     + ' orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>'
     + parts.join('') + '</svg>';
@@ -573,7 +658,8 @@ function rgImpact() {
     + (hops.length
         ? '<div style="overflow-x:auto" data-testid="walk-graph">' + rgGraph(hops) + '</div>'
           + '<div style="font-size:var(--fs-1);color:var(--grey);padding:6px 0">'
-          + txf('{n} hops, {d} deep.', { n: hops.length, d: (RG.walk && RG.walk.depth_reached) || 0 })
+          + (hops.length === 1 ? tx('1 hop') : txf('{n} hops', { n: hops.length }))
+            + ' · ' + txf('{d} deep', { d: (RG.walk && RG.walk.depth_reached) || 0 })
           + (RG.walk && RG.walk.truncated ? ' ' + tx('Stopped at the depth limit — there is more.') : '')
           + '</div>'
         : '<div class="msgempty">' + tx('Nothing on this path.') + '</div>')
