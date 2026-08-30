@@ -22,9 +22,13 @@ require('fs').mkdirSync(OUT, { recursive: true });
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 },
     baseURL: process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app' });
   const page = await ctx.newPage();
+  /* ⚠️ THE PANEL, NOT THE PAGE. A full-viewport shot is 90% app chrome around a 300px pane — the thing being
+     shown ends up a tenth of the picture and unreadable wherever it is pasted. */
   const shot = async (name) => {
     await page.waitForTimeout(600);
-    await page.screenshot({ path: path.join(OUT, name + '.png') });
+    const el = page.locator('[data-testid="register-panel"]');
+    if (await el.count()) await el.screenshot({ path: path.join(OUT, name + '.png') });
+    else await page.screenshot({ path: path.join(OUT, name + '.png') });
     console.log('  ✓ ' + name + '.png');
   };
 
