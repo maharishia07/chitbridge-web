@@ -3763,7 +3763,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-30g';
+const CB_BUILD = '2026-08-30i';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10241,42 +10241,57 @@ async function openRaidReport(){
   const icon = (k) => (K[k] && K[k].icon) || '•';
   const label = (k) => (K[k] && K[k].label) || k;
 
-  /* ── the counts, by kind ───────────────────────────────────────────────────────────────────────────────── */
-  const byKind = (r && r.by_kind) || [];
-  const max = Math.max(1, ...byKind.map((k) => k.open + k.closed + k.closed_by_order));
-  const bars = byKind.length ? byKind.map((k) => {
-    const total = k.open + k.closed + k.closed_by_order;
-    return `<div class="raidrow"><div class="rl"><span class="mtype ${k.kind}">${icon(k.kind)} ${esc(label(k.kind))}</span>`
-      + `<b>${k.open}</b><span style="color:var(--grey);font-weight:400"> ${tx('open')}</span></div>`
-      + `<div class="rbar"><span class="rbarfill ${k.kind}" style="width:${Math.round(total / max * 100)}%"></span></div>`
-      + `<div class="rsamp">${k.closed} ${tx('closed')}`
-      /* ⚠️ NAMED, not folded into "closed". An entry the order closed AROUND is unresolved, not resolved. */
-      + (k.closed_by_order ? ` · <span style="color:var(--warn-2)">${k.closed_by_order} ${tx('closed with the order')}</span>` : '')
-      + `</div></div>`;
-  }).join('') : `<div class="msgempty">${tx('Nothing recorded yet — which is usually the right answer.')}</div>`;
-
-  /* ── the open ones, because that is what a person came for ─────────────────────────────────────────────── */
-  const open = entries.filter((e) => e.open);
-  const openList = open.length ? open.map((e) => `<div class="raidrow" style="cursor:pointer" onclick="closeMsgCenter();openChit(&quot;${e.chit_id}&quot;)">`
+  /**
+   * ⭐⭐ A LIST OF ENTRIES, AND NOTHING ELSE — Athi, 2026-08-30: *"it has to list down the RAID only, and on
+   * click of any of the items it has to show the related chit."*
+   *
+   * ⚠️ MY FIRST VERSION OPENED THE LINE CARD when the entry sat on a line, on the reasoning that it was more
+   * precise. It is the wrong screen: the line card is the TASK PANEL — deliveries, costs, who has it, message
+   * threads — and someone arriving from a register wants the ORDER the entry belongs to, not the workbench for
+   * one item on it. Every row opens the chit.
+   *
+   * ⚠️ AND THE BAR CHART BY KIND WENT WITH IT. It restated the header line ("1 open · 0 closed") as geometry and
+   * pushed the actual entries below the fold — the thing a person came to read, made second to a picture of how
+   * many of them there are.
+   */
+  const rows = (es) => es.map((e) => {
+    const where = e.particulars ? esc(e.particulars) : tx('the whole order');
+    /* ⚠️ The two closures stay apart. "closed" is somebody ending it and saying why; "closed with the order" is
+       the order finishing while nobody ever answered it — unresolved, not resolved. */
+    const end = e.ending === 'closed' ? `${tx('closed')}${e.closed_note ? ' — ' + esc(e.closed_note) : ''}`
+              : e.ending === 'closed_by_order' ? `<span style="color:var(--warn-2)">${tx('closed with the order')}</span>`
+              : '';
+    return `<div class="raidrow" data-testid="raida-item" style="cursor:pointer${e.open ? '' : ';opacity:.6'}"`
+      + ` onclick="closeMsgCenter();openChit(&quot;${e.chit_id}&quot;)" title="${esc(tx('Open the order'))}">`
       + `<div class="rl"><span class="mtype ${e.kind}">${icon(e.kind)} ${esc(label(e.kind))}</span></div>`
-      + `<div style="font-size:var(--fs-2);color:var(--on-card);line-height:1.5">${esc(e.body)}</div>`
-      + `<div class="rsamp">${esc(e.particulars || tx('the whole order'))}`
+      + `<div style="font-size:var(--fs-2);color:var(--on-card);line-height:1.5${e.open ? '' : ';text-decoration:line-through'}">${esc(e.body)}</div>`
+      + `<div class="rsamp">${where}`
       + (e.subject ? ` · ${esc(e.subject)}` : '')
       + (e.by ? ` · ${esc(e.by)}` : '')
       + (e.visibility === 'shared' ? ` · <span style="color:var(--blue-2)">${tx('shared')}</span>` : '')
-      + `</div></div>`).join('')
-    : `<div class="msgempty">${tx('Nothing open.')}</div>`;
+      + (end ? ` · ${end}` : '')
+      + `</div></div>`;
+  }).join('');
+
+  const open = entries.filter((e) => e.open);
+  const shut = entries.filter((e) => !e.open);
+  const band = (t) => `<div style="margin-top:12px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${t}</div>`;
 
   host.innerHTML = shell(
     `<div class="notifhd">${tx('📋 Register')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">`
     + `${r.open} ${tx('open')} · ${r.closed} ${tx('closed')}`
     + (r.closed_by_order ? ` · ${r.closed_by_order} ${tx('with the order')}` : '')
     + `</span></div>`
-    + `<div class="raidbody">${bars}`
-    + (open.length ? `<div style="margin-top:14px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Still open')}</div>${openList}` : '')
+    + `<div class="raidbody">`
+    + (entries.length
+        ? (open.length ? band(tx('Open')) + rows(open) : '')
+          /* ⚠️ Closed entries stay on the list, greyed — Athi asked to see open AND closed in one place, and a
+             register that hides what it settled cannot show you that it settled anything. */
+          + (shut.length ? band(tx('Closed')) + rows(shut) : '')
+        : `<div class="msgempty">${tx('Nothing recorded yet — which is usually the right answer.')}</div>`)
     + `</div>`
     /* ⚠️ Say where the number came from. A report that does not is a number nobody can check. */
-    + `<div class="notiffoot">${tx('Every entry recorded against a line or an order, across every chit. An order that closes takes its entries with it — those are counted separately, because nobody answered them.')}</div>`);
+    + `<div class="notiffoot">${tx('Every entry recorded against a line or an order, across every chit. Tap one to open its order. An order that closes takes its entries with it — those are counted apart, because nobody answered them.')}</div>`);
 }
 
 /* actions wired to API */
