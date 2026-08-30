@@ -3739,7 +3739,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-29b';
+const CB_BUILD = '2026-08-30a';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10275,8 +10275,48 @@ function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test
 function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="var(--gold)"/><circle cx="25" cy="19" r="1.6" fill="var(--gold)"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
+/**
+ * ⚠️⚠️ THIS RIBBON EXISTS TO ANSWER "WHICH API AM I ON", AND IT WAS ANSWERING THE WRONG QUESTION.
+ * It printed `st.base` — the STAGE's configured base — while requests actually go to `CFG.API_BASE`,
+ * which honours `localStorage.cb_api_base` first and, on localhost, defaults to a LOCAL API. So the
+ * two disagree in exactly the case a person needs the truth: developing locally.
+ *
+ * Athi's standard setup (2026-08-30) is local web + CLOUD api — *"it was working as if from web, and
+ * parallely i was checking in cloud as well"* — which is the override. Cleared site data silently
+ * drops you back to `localhost:3000`, every call fails with "You're offline", and the ribbon would
+ * still have said it was hitting Railway. Now it reports what is actually being called.
+ *
+ * ⚠️ THE localhost DEFAULT IS NOT CHANGED, DELIBERATELY. e2e/fixtures.js depends on it: *"Unset,
+ * nothing changes — the local API stays the default, so this cannot quietly start pointing a
+ * developer's run at production."* Flipping it would let a Playwright run register real entities in
+ * production. The switch below is explicit and per-browser; the default stays safe.
+ */
+function apiSwitchBtn(){
+  var local = false;
+  try { local = location.hostname === 'localhost' || location.hostname === '127.0.0.1'; } catch (e) {}
+  if (!local) return '';                                   // never rendered on Vercel
+  var cloud = STAGES[CFG.STAGE] && STAGES[CFG.STAGE].base;
+  var onCloud = CFG.API_BASE === cloud;
+  return '<button onclick="setApiTarget(' + (onCloud ? "'local'" : "'cloud'") + ')"'
+    + ' title="' + (onCloud ? 'Switch this browser to the local API on :3000'
+                            : 'Switch this browser to the cloud API — the standard local setup') + '"'
+    + ' style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);'
+    + 'background:var(--card);cursor:pointer;margin-inline-start:6px;color:var(--on-card)">'
+    + (onCloud ? tx('use local API') : tx('use cloud API')) + '</button>';
+}
+/* One place sets it, so the console paste is no longer the only way in. Reloads, because API_BASE is
+   read at call time by a dozen callers and a half-switched page is worse than a reload. */
+function setApiTarget(which){
+  try {
+    if (which === 'cloud') localStorage.setItem('cb_api_base', STAGES[CFG.STAGE].base || '');
+    else localStorage.removeItem('cb_api_base');
+  } catch (e) { toast('This browser is blocking local storage — cannot switch.'); return; }
+  location.reload();
+}
 function modeRibbon(){
   const st = STAGES[CFG.STAGE];
+  const eff = CFG.API_BASE;                                  // what is ACTUALLY called
+  const overridden = !st.mock && eff !== (st.base || '');
   const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
@@ -10284,7 +10324,8 @@ function modeRibbon(){
   }).join("");
   return `<div class="moderibbon">
     <b>${tx('Build preview')}</b><span class="pill">${st.label}</span>
-    <span style="font-size:var(--fs-1)">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
+    <span style="font-size:var(--fs-1)" data-testid="ribbon-api">${st.mock?st.note:(eff?"hitting "+eff+(overridden?" · override":""):"(API base not set!)")}</span>
+    ${apiSwitchBtn()}
     <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-inline-start:8px;color:var(--on-card)">🧪 Log</button>
     ${vpsw}
     <span class="sw" style="${SESSION.token?'':'margin-inline-start:auto'}">${stageBtns}</span>
