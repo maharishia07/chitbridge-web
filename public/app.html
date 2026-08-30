@@ -1574,6 +1574,15 @@ const EP = {
   /* b182 — the register rolled up across every chit. Declared before the :chit_id routes on the server for the
      same reason it reads oddly here: 'report' is a perfectly good chit id. */
   raidaReport:     {m:"GET",  p:"/api/chits/raida/report",      ok:"y"},
+  /* ── b185 · the register as a capability. All of these are declared BEFORE the :chit_id routes on the server,
+     for the same reason they read oddly here: 'register' is a perfectly good chit id. */
+  regAttachables:  {m:"GET",  p:"/api/chits/register/attachables", ok:"y"},
+  regSubjects:     {m:"GET",  p:"/api/chits/register/subjects",    ok:"y"},
+  regSubjectNew:   {m:"POST", p:"/api/chits/register/subjects",    ok:"y"},
+  regSubjectClose: {m:"POST", p:"/api/chits/register/subjects/:sid/close", ok:"y"},
+  regEntryAdd:     {m:"POST", p:"/api/chits/register/subjects/:sid/entries", ok:"y"},
+  regEntryClose:   {m:"POST", p:"/api/chits/register/entries/:rid/close", ok:"y"},
+  regWalk:         {m:"GET",  p:"/api/chits/register/walk/:from",  ok:"y"},
   notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},
   /* b164 — clear one Activity row, several, or all. Records a DISMISSAL; the state_log event is untouched. */
   notifDismiss:    {m:"POST", p:"/api/notifications/dismiss", ok:"y"},   // b157 — move the badge watermark
@@ -3781,7 +3790,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-30j';
+const CB_BUILD = '2026-08-30k';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10235,83 +10244,35 @@ function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().include
  * ⚠️ AND IT LIVES UNDER INSIGHT, not on the topbar. A report is a place you go, not a thing that watches you;
  * the topbar is for state that changes while you work.
  */
-async function openRaidReport(){
-  const host = document.getElementById("lbhost"); if (!host) return;
-  UI.msgcOpen = false;
-  const shell = (body) => `<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()">${body}</div></div>`;
-  host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> ${tx('reading every chit…')}</div></div>`);
-
-  let r;
-  try { r = await api('raidaReport'); }
+/**
+ * ⭐⭐ THE REGISTER MOVED OUT — app/cap-register.js, lazy. This is the door, and it stays the door: navTo('raida')
+ * and the message centre both call `openRaidReport`, and renaming it would break every caller for no gain.
+ *
+ * ⚠️ IT WAS 81 LINES OF LIST RENDERING IN THE SHELL. That was right while the register WAS a list; it now has
+ * three views, writes to standalone registers and draws a graph, none of which anybody who never opens it
+ * should have to download. The capability defines its own `openRaidReport` on load, so this shim runs exactly
+ * once per session.
+ */
+async function openRaidReport() {
+  var host = document.getElementById('lbhost');
+  if (host) {
+    host.innerHTML = '<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid"'
+      + ' onclick="event.stopPropagation()"><div class="notifhd">' + tx('📋 Register') + '</div>'
+      + '<div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">'
+      + '<span class="spin"></span> ' + tx('opening…') + '</div></div></div></div>';
+  }
+  try { await ensureCap('register'); }
   catch (e) {
-    host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--disp);font-size:var(--fs-2)">${tx('Could not read the register just now — this does NOT mean there is nothing on it.')}</div></div>`);
+    if (host) {
+      host.innerHTML = '<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid"'
+        + ' onclick="event.stopPropagation()"><div class="notifhd">' + tx('📋 Register') + '</div>'
+        + '<div class="raidbody"><div style="padding:14px 2px;color:var(--disp);font-size:var(--fs-2)">'
+        + esc((e && e.message) || tx('Could not load the register.')) + '</div></div></div></div>';
+    }
     return;
   }
-
-  /* ⚠️ Deploy-before-migration is normal here and is not a fault. Say what is true. */
-  if (r && r.migrated === false) {
-    host.innerHTML = shell(`<div class="notifhd">${tx('📋 Register')}</div><div class="raidbody"><div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">${tx('The register is not switched on for this environment yet (b182).')}</div></div>`);
-    return;
-  }
-
-  const entries = (r && r.entries) || [];
-  const K = RAIDA_KINDS;
-  const icon = (k) => (K[k] && K[k].icon) || '•';
-  const label = (k) => (K[k] && K[k].label) || k;
-
-  /**
-   * ⭐⭐ A LIST OF ENTRIES, AND NOTHING ELSE — Athi, 2026-08-30: *"it has to list down the RAID only, and on
-   * click of any of the items it has to show the related chit."*
-   *
-   * ⚠️ MY FIRST VERSION OPENED THE LINE CARD when the entry sat on a line, on the reasoning that it was more
-   * precise. It is the wrong screen: the line card is the TASK PANEL — deliveries, costs, who has it, message
-   * threads — and someone arriving from a register wants the ORDER the entry belongs to, not the workbench for
-   * one item on it. Every row opens the chit.
-   *
-   * ⚠️ AND THE BAR CHART BY KIND WENT WITH IT. It restated the header line ("1 open · 0 closed") as geometry and
-   * pushed the actual entries below the fold — the thing a person came to read, made second to a picture of how
-   * many of them there are.
-   */
-  const rows = (es) => es.map((e) => {
-    const where = e.particulars ? esc(e.particulars) : tx('the whole order');
-    /* ⚠️ The two closures stay apart. "closed" is somebody ending it and saying why; "closed with the order" is
-       the order finishing while nobody ever answered it — unresolved, not resolved. */
-    const end = e.ending === 'closed' ? `${tx('closed')}${e.closed_note ? ' — ' + esc(e.closed_note) : ''}`
-              : e.ending === 'closed_by_order' ? `<span style="color:var(--warn-2)">${tx('closed with the order')}</span>`
-              : '';
-    return `<div class="raidrow" data-testid="raida-item" style="cursor:pointer${e.open ? '' : ';opacity:.6'}"`
-      + ` onclick="closeMsgCenter();openChit(&quot;${e.chit_id}&quot;)" title="${esc(tx('Open the order'))}">`
-      + `<div class="rl"><span class="mtype ${e.kind}">${icon(e.kind)} ${esc(label(e.kind))}</span></div>`
-      + `<div style="font-size:var(--fs-2);color:var(--on-card);line-height:1.5${e.open ? '' : ';text-decoration:line-through'}">${esc(e.body)}</div>`
-      + `<div class="rsamp">${where}`
-      + (e.subject ? ` · ${esc(e.subject)}` : '')
-      + (e.by ? ` · ${esc(e.by)}` : '')
-      + (e.visibility === 'shared' ? ` · <span style="color:var(--blue-2)">${tx('shared')}</span>` : '')
-      + (end ? ` · ${end}` : '')
-      + `</div></div>`;
-  }).join('');
-
-  const open = entries.filter((e) => e.open);
-  const shut = entries.filter((e) => !e.open);
-  const band = (t) => `<div style="margin-top:12px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${t}</div>`;
-
-  host.innerHTML = shell(
-    `<div class="notifhd">${tx('📋 Register')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">`
-    + `${r.open} ${tx('open')} · ${r.closed} ${tx('closed')}`
-    + (r.closed_by_order ? ` · ${r.closed_by_order} ${tx('with the order')}` : '')
-    + `</span></div>`
-    + `<div class="raidbody">`
-    + (entries.length
-        ? (open.length ? band(tx('Open')) + rows(open) : '')
-          /* ⚠️ Closed entries stay on the list, greyed — Athi asked to see open AND closed in one place, and a
-             register that hides what it settled cannot show you that it settled anything. */
-          + (shut.length ? band(tx('Closed')) + rows(shut) : '')
-        : `<div class="msgempty">${tx('Nothing recorded yet — which is usually the right answer.')}</div>`)
-    + `</div>`
-    /* ⚠️ Say where the number came from. A report that does not is a number nobody can check. */
-    + `<div class="notiffoot">${tx('Every entry recorded against a line or an order, across every chit. Tap one to open its order. An order that closes takes its entries with it — those are counted apart, because nobody answered them.')}</div>`);
+  return openRegister(true);
 }
-
 /* actions wired to API */
 async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); announce(((c&&c.code)||'Chit')+((c&&c.star)?' starred':' unstarred')); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
 async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); announce(((c&&c.code)||'This chit')+' marked unread'); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
