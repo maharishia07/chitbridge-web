@@ -328,7 +328,7 @@ async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','var(--blue-2)'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','var(--purple-2)'],['electronics','🔌','Electronics','var(--warn-2)'],['pharma','💊','Pharma','var(--blue-2)'],['automobile','🚗','Auto','var(--disp)']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
-    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">' + tx('🧮 Sector × standard — common vs specific') + '</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
+    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1;padding-inline-end:30px">' + tx('🧮 Sector × standard — common vs specific') + '</div></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
     /**
      * ⚠️⚠️ THIS LINE USED TO SET data-movable='1' TO **BLOCK** makeMovable — the flag is how the primitive
      * knows it has already run, so stamping it by hand opted the matrix OUT of drag and resize. Athi,
