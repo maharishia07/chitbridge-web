@@ -673,8 +673,20 @@ async function wlLine(line_id){
      next line you opened had a section already expanded and tapping that heading COLLAPSED it — a toggle that
      does the opposite of what it looks like it will do, depending on what you did last. */
   WLL.row = r; WLL.det = null; WLL.tab = null; WLL.loading = true; WLL.failed = false;
-  /* ⚠️ Cleared per line, or the next card opens showing the previous line's notes as its own. */
+  /**
+   * ⚠️⚠️ CLEARED PER LINE, OR THE NEXT CARD OPENS SHOWING THE PREVIOUS LINE'S DATA AS ITS OWN.
+   *
+   * ⚠️ THIS LINE SAID THAT AND ONLY DID IT FOR ONE OF THE THREE. `msgs` was cleared; `ext` never was, so the
+   * EXTERNAL thread — the one the counterparty can read — carried across from whichever line you looked at
+   * last. Found 2026-08-30 when the register showed a deleted entry on a line that had none: the same bug,
+   * newly arrived, sitting beside an older one the comment already described.
+   *
+   * ⭐ A comment that states a rule the code half-keeps is worse than no comment — it makes the next reader
+   * trust the line instead of checking it. All three are cleared here, and anything added later belongs here too.
+   */
   WLL.msgs = null; WLL.msgErr = false;
+  WLL.ext = null; WLL.extErr = false;
+  WLL.raida = null; WLL.raidaErr = false; WLL.raidaClosing = null; WLL.raidaKind = 'risk';
   wlPaintCard(true);
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
