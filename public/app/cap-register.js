@@ -36,12 +36,19 @@ var RG = { view: 'live', subjects: null, sel: null, report: null, attach: null,
  * ⭐ REUSES modal(html, true): 820px, movable and resizable via makeMovable, with its own close control. No new
  * frame, no new coordinates — see UI placement standards.
  */
-function rgShell(body, right) {
+function rgShell(body, right, loading) {
   return '<div class="mhd" style="display:flex;align-items:center;gap:10px">'
     + '<div class="t" style="flex:1;padding-inline-end:30px">' + tx('📋 Register') + '</div>'
-    + (right ? '<div style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">' + right + '</div>' : '')
+    /* ⚠️ 72px of clearance. modal() puts its close button at inset-inline-end:9px and mvModal defaults
+       barAt:'right', which parks the drag grip at 42px — so anything flush right in this header lands
+       UNDER both. The counts were doing exactly that. */
+    + (right ? '<div style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap;padding-inline-end:72px">' + right + '</div>' : '')
     + '</div>'
-    + '<div class="mbody" data-testid="register-panel" style="padding:12px 16px 16px">' + body + '</div>';
+    /* ⚠️ data-ready SEPARATES 'open' FROM 'opening'. Both states carried the same testid, so anything waiting
+       for the panel — a spec, a screen reader — was told it had arrived while it was still a spinner. A
+       surface that announces itself ready before it is is a wrong answer, not a slow one. */
+    + '<div class="mbody" data-testid="register-panel" data-ready="' + (loading ? '0' : '1') + '"'
+    + ' style="padding:12px 16px 16px">' + body + '</div>';
 }
 
 function rgTabs() {
@@ -83,7 +90,7 @@ async function rgLoad(force) {
 async function openRegister(force) {
   if (!RG.report || force) {
     modal(rgShell('<div style="padding:14px 2px;color:var(--grey);font-size:var(--fs-2)">'
-      + '<span class="spin"></span> ' + tx('reading every register…') + '</div>'), true);
+      + '<span class="spin"></span> ' + tx('reading every register…') + '</div>', '', true), true);
     await rgLoad(force);
   }
   rgPaint();
@@ -224,7 +231,7 @@ function rgRegisterRail() {
   return '<div class="raidtoggle" style="padding:0 0 8px">'
     + chip(null, tx('All registers'), es.filter(function (e) { return e.open; }).length, false)
     + subs.map(function (s) { return chip(s.subject_id, s.name, countFor(s.subject_id), !!s.closed_at); }).join('')
-    + '<button onclick="rgNewAsk()" data-testid="register-new" title="' + esc(tx('Open a register on something else'))
+    + '<button onclick="rgQuickAdd()" data-testid="register-new" title="' + esc(tx('Record something in a new register'))
     + '">＋ ' + tx('New') + '</button>'
     + '</div>';
 }
@@ -412,19 +419,55 @@ function rgLive() {
 /* ── writing to it ──────────────────────────────────────────────────────────────────────────────────────── */
 
 /**
- * ⚠️⚠️ INLINE FIELDS, NEVER window.prompt(). A prompt cannot be styled, cannot be tested, and blocks the
- * browser extension outright — it shipped once in this capability's close flow and had to come straight back
- * out. Everything that asks a question here asks it in the panel.
+ * ⭐⭐ ONE RECORD FORM, AND IT IS THE EMPTY STATE — Athi, 2026-08-31: *"a simple screen with the record format
+ * has to be appearing at empty state"* and *"a plus icon can bring a new tab to add any risk, so we can embed
+ * the + icon anywhere we want."*
+ *
+ * ⚠️ NOT A BLANK TABLE WITH HEADERS. That is the one empty state Carbon, Cloudscape and NN/G all warn against:
+ * a screen reader reads the whole header row before reaching "there is nothing here". What they prescribe is to
+ * say what will fill the space and give the step that fills it — and for a register that step IS the record
+ * form. So the form is the empty state, not a link to one.
+ *
+ * ⚠️ AND IT CREATES THE REGISTER IF THERE ISN'T ONE. A finding has to live in a register; asking for one first
+ * and refusing the entry meanwhile is exactly how this was a dead end. Naming it is a field IN this form.
+ *
+ * ⭐ SELF-CONTAINED, so rgQuickAdd() can open it from anywhere — a + on a line card, a chit, a dashboard.
  */
-function rgAddBar() {
-  if (!RG.adding) {
-    return '<div style="padding:8px 0"><button class="msglink" data-testid="raida-add-open"'
-      + ' onclick="rgAdd(true)">＋ ' + tx('Record something') + '</button></div>';
-  }
+function rgAddPanel(opt) {
+  opt = opt || {};
+  var subs = (RG.subjects || []).filter(function (s) { return !s.closed_at; });
+  var into = opt.into || RG.sel || (subs.length === 1 ? subs[0].subject_id : '');
   var kinds = Object.keys(RAIDA_KINDS).map(function (k) {
-    return '<option value="' + k + '">' + rgIcon(k) + ' ' + esc(RAIDA_KINDS[k].label) + '</option>';
+    return '<option value="' + k + '"' + (opt.kind === k ? ' selected' : '') + '>'
+      + rgIcon(k) + ' ' + esc(RAIDA_KINDS[k].label) + '</option>';
   }).join('');
-  return '<div class="raidadd" style="padding:8px 0;border-bottom:1px solid var(--line)">'
+  var newFields = '<select id="rgNewType" class="inp" data-testid="register-new-type" style="flex:0 0 40%">'
+      + (RG.attach || []).map(function (a) {
+          return '<option value="' + a.type_key + '">' + esc(a.label) + '</option>';
+        }).join('')
+      + '</select>'
+      + '<input id="rgNewName" class="inp" data-testid="register-new-name" style="flex:1"'
+      + ' placeholder="' + esc(tx('Name the register')) + '">';
+
+  var where;
+  if (!subs.length) {
+    where = '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">'
+      + tx('Findings live in a register — one per order, campaign, audit or release.') + '</div>'
+      + '<div style="display:flex;gap:6px;margin-bottom:6px">' + newFields + '</div>';
+  } else {
+    where = '<select id="rgInto" class="inp" data-testid="raida-into" onchange="rgIntoChanged()"'
+      + ' style="width:100%;margin-bottom:6px">'
+      + subs.map(function (s) {
+          return '<option value="' + s.subject_id + '"' + (s.subject_id === into ? ' selected' : '') + '>'
+            + esc(tx('into')) + ' ' + esc(s.name) + '</option>';
+        }).join('')
+      + '<option value="__new">' + esc(tx('a new register…')) + '</option>'
+      + '</select>'
+      + '<div id="rgNewWrap" style="display:none;gap:6px;margin-bottom:6px">' + newFields + '</div>';
+  }
+
+  return '<div class="raidadd" data-testid="raida-form" style="padding:8px 0">'
+    + where
     + '<select id="rgKind" class="inp" data-testid="raida-kind" onchange="rgKindChanged()" style="width:100%;margin-bottom:6px">' + kinds + '</select>'
     + '<input id="rgBody" class="inp" data-testid="raida-body" style="width:100%;margin-bottom:6px"'
     + ' placeholder="' + esc(tx('What is it? Say it in one line.')) + '">'
@@ -442,19 +485,52 @@ function rgAddBar() {
     + rgEdgeFields()
     + '<div style="display:flex;gap:6px">'
     + '<button class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' + tx('Record it') + '</button>'
-    + '<button class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>'
+    + (opt.bare ? '' : '<button class="btn ghost" style="flex:1" onclick="rgAdd(false)">' + tx('Cancel') + '</button>')
     + '</div></div>';
 }
 
+/* The register select can ask for a new one; that reveals the two fields rather than sending you elsewhere. */
+function rgIntoChanged() {
+  var w = document.getElementById('rgNewWrap');
+  if (w) w.style.display = (rgVal('rgInto') === '__new') ? 'flex' : 'none';
+}
+
+function rgAddBar() {
+  /* ⭐ Nothing recorded and nowhere to record it: the form IS the screen. No link, no second click. */
+  if (!rgEntries().length && !(RG.subjects || []).length) return rgAddPanel({ bare: true });
+  if (!RG.adding) {
+    return '<div style="padding:8px 0"><button class="msglink" data-testid="raida-add-open"'
+      + ' onclick="rgAdd(true)">＋ ' + tx('Record something') + '</button></div>';
+  }
+  return '<div style="border-bottom:1px solid var(--line)">' + rgAddPanel({}) + '</div>';
+}
+
+var RG_RESPONSES = {
+  tolerate:  { label: 'Tolerate',  hint: 'accept it and carry on — recorded, not ignored' },
+  treat:     { label: 'Treat',     hint: 'act to reduce likelihood or severity' },
+  transfer:  { label: 'Transfer',  hint: 'move the exposure — insure it, contract it out' },
+  terminate: { label: 'Terminate', hint: 'stop doing the thing that carries it' },
+};
+
+function rgRespLabel(k) { return (RG_RESPONSES[k] && RG_RESPONSES[k].label) || k; }
+
+function rgRespFields() {
+  if (!RG.report || !RG.report.resp) return '';
+  return '<div id="rgRespWrap" style="display:none;margin-bottom:6px">'
+    + '<select id="rgResp" class="inp" data-testid="raida-response" style="width:100%">'
+    + '<option value="">' + esc(tx('— response not decided —')) + '</option>'
+    + Object.keys(RG_RESPONSES).map(function (k) {
+        return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + ' — ' + esc(RG_RESPONSES[k].hint) + '</option>';
+      }).join('')
+    + '</select></div>';
+}
+
 /**
- * ⭐⭐ THE FIELDS THAT MAKE A DEPENDENCY AN EDGE — and without them the Impact view can never populate.
+ * ⭐⭐ THE FIELDS THAT MAKE A DEPENDENCY AN EDGE — without them the Impact view can never populate. The register
+ * could record "we are waiting on the crane" all day, but nothing set `to_id`, so every dependency stayed a
+ * sentence and the graph had no data by construction.
  *
- * ⚠️ THIS WAS THE HOLE. The register could record "we are waiting on the crane" all day, but nothing in the UI
- * ever set `to_id`, so every dependency stayed a sentence and the graph — the thing this capability exists to
- * produce — had no data by construction. It looked finished because the empty state was honest.
- *
- * ⚠️ SHOWN ONLY FOR A DEPENDENCY. The other five kinds do not point, and offering a target on a Decision would
- * invite an edge the walk would never traverse.
+ * ⚠️ SHOWN ONLY FOR A DEPENDENCY. The other five kinds do not point.
  */
 function rgEdgeFields() {
   var subs = (RG.subjects || []).filter(function (s) { return s.subject_id !== RG.sel && !s.closed_at; });
@@ -478,39 +554,7 @@ function rgEdgeFields() {
     + '</div></div>';
 }
 
-/**
- * ⭐⭐ THE FOUR T's. `treatment` says what we are doing; this says what the decision IS, and it is the column a
- * risk report pivots on — *"how much of this register are we simply tolerating"* is a question free text cannot
- * answer.
- *
- * ⚠️ SHOWN FOR A RISK ONLY. An assumption is not tolerated or transferred, and an action is the work itself.
- * Offering it everywhere would collect a category on rows nothing will ever group.
- *
- * ⚠️ AND ONLY WHEN THE DATABASE CAN STORE IT. `RG.report.resp` is reported by the server (b192), not guessed —
- * an all-null column looks the same whether the migration has not run or nobody has answered yet, and a field
- * that silently drops what you type is worse than no field.
- */
-var RG_RESPONSES = {
-  tolerate:  { label: 'Tolerate',  hint: 'accept it and carry on — recorded, not ignored' },
-  treat:     { label: 'Treat',     hint: 'act to reduce likelihood or severity' },
-  transfer:  { label: 'Transfer',  hint: 'move the exposure — insure it, contract it out' },
-  terminate: { label: 'Terminate', hint: 'stop doing the thing that carries it' },
-};
-
-function rgRespLabel(k) { return (RG_RESPONSES[k] && RG_RESPONSES[k].label) || k; }
-
-function rgRespFields() {
-  if (!RG.report || !RG.report.resp) return '';
-  return '<div id="rgRespWrap" style="display:none;margin-bottom:6px">'
-    + '<select id="rgResp" class="inp" data-testid="raida-response" style="width:100%">'
-    + '<option value="">' + esc(tx('— response not decided —')) + '</option>'
-    + Object.keys(RG_RESPONSES).map(function (k) {
-        return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + ' — ' + esc(RG_RESPONSES[k].hint) + '</option>';
-      }).join('')
-    + '</select></div>';
-}
-
-/* Shown on 'risk', hidden otherwise — one listener, set when the bar is painted. */
+/* One listener, set when the bar is painted: the edge fields belong to a dependency, the response to a risk. */
 function rgKindChanged() {
   var k = rgVal('rgKind');
   var edge = document.getElementById('rgEdge');
@@ -523,19 +567,37 @@ function rgAdd(on) { RG.adding = !!on; rgPaint(); }
 
 function rgVal(id) { var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; }
 
+/**
+ * ⭐⭐ ONE SAVE, WHICH OPENS THE REGISTER IF THE FORM ASKED FOR ONE. Two round trips only when a register is
+ * genuinely being created; otherwise one. The register-then-entry split used to be two screens and a refusal
+ * in between.
+ */
 async function rgSave() {
   var body = rgVal('rgBody');
   if (!body) { toast(tx('It needs to say something.')); return; }
-  if (!RG.sel) { toast(tx('Pick a register first — or open a new one.')); return; }
+
+  var into = rgVal('rgInto');
+  var wantNew = (!into || into === '__new');
+  if (wantNew) {
+    var name = rgVal('rgNewName');
+    if (!name) { toast(tx('Name the register it goes into.')); return; }
+    try {
+      var made = await api('regSubjectNew', { body: { type_key: rgVal('rgNewType') || 'other', name: name } });
+      into = made && made.subject_id;
+      RG.sel = into;
+    } catch (e) { toast(MSG.fail('open the register', e)); return; }
+  }
+  if (!into) { toast(tx('Pick a register.')); return; }
+
   var p = { kind: rgVal('rgKind') || 'risk', body: body };
   var o = rgVal('rgOwner'); if (o) p.owner_name = o;
   var d = rgVal('rgDue'); if (d) p.due_date = d;
   var l = rgVal('rgL'); if (l) p.likelihood = +l;
   var s = rgVal('rgS'); if (s) p.severity = +s;
-  /* ⭐ An edge only exists when a target is NAMED. Blank leaves it a note, which the Impact view then lists
-     apart rather than pretending it can be walked. */
   /* ⭐ Only for a risk, and only when the column exists — see rgRespFields. */
   if (p.kind === 'risk') { var rsp = rgVal('rgResp'); if (rsp) p.response = rsp; }
+  /* ⭐ An edge only exists when a target is NAMED. Blank leaves it a note, which Impact lists apart rather
+     than pretending it can be walked. */
   if (p.kind === 'dependency') {
     var to = rgVal('rgTo');
     if (to) {
@@ -545,53 +607,45 @@ async function rgSave() {
       var nb = rgVal('rgNeed'); if (nb) p.needed_by = nb;
     }
   }
+
   try {
-    await api('regEntryAdd', { params: { sid: RG.sel }, body: p });
+    await api('regEntryAdd', { params: { sid: into }, body: p });
     RG.adding = false;
     toast(tx('Recorded.'));
     await openRegister(true);
   } catch (e) { toast(MSG.fail('record it', e)); }
 }
 
-function rgNewAsk() { RG.opening = !RG.opening; RG.adding = false; rgPaint(); if (RG.opening) rgNewPaint(); }
-
-/* The kinds come from register_attachable — a ROW, not an enum, so a new one needs no deploy. */
-function rgNewPaint() {
-  /* ⚠️ The panel body, not the old .raidbody — that class went with the notification shell. */
-  var body = document.querySelector('[data-testid="register-panel"]'); if (!body) return;
-  var opts = (RG.attach || []).map(function (a) {
-    return '<option value="' + a.type_key + '">' + esc(a.label) + '</option>';
-  }).join('');
-  var el = document.createElement('div');
-  el.className = 'raidadd';
-  el.style.cssText = 'padding:8px 0;border-bottom:1px solid var(--line)';
-  el.innerHTML = '<select id="rgNewType" class="inp" data-testid="register-new-type" style="width:100%;margin-bottom:6px">'
-    + opts + '</select>'
-    + '<input id="rgNewName" class="inp" data-testid="register-new-name" style="width:100%;margin-bottom:6px"'
-    + ' placeholder="' + esc(tx('Name it')) + '">'
-    + '<div style="display:flex;gap:6px">'
-    + '<button class="btn" data-testid="register-new-save" style="flex:1" onclick="rgNewSave()">' + tx('Open it') + '</button>'
-    + '<button class="btn ghost" style="flex:1" onclick="rgNewAsk()">' + tx('Cancel') + '</button></div>';
-  body.insertBefore(el, body.children[1] || null);
-}
-
-async function rgNewSave() {
-  var name = rgVal('rgNewName');
-  if (!name) { toast(tx('Give it a name.')); return; }
-  try {
-    var r = await api('regSubjectNew', { body: { type_key: rgVal('rgNewType') || 'other', name: name } });
-    RG.opening = false;
-    RG.sel = r && r.subject_id;
-    toast(tx('Register opened.'));
-    await openRegister(true);
-  } catch (e) { toast(MSG.fail('open the register', e)); }
+/**
+ * ⭐⭐ THE + ANYWHERE. Athi: *"a plus icon can bring a new tab to add any risk, so we can embed the + icon
+ * anywhere we want."* This is that entry point — a line card, a chit header, a dashboard tile can all call it.
+ *
+ * ⚠️ IT LOADS ITS OWN DATA. A caller elsewhere in the app has never opened the register, so RG.subjects and
+ * RG.attach are null and the form would offer an empty picker. It fetches before painting.
+ */
+async function rgQuickAdd(opt) {
+  opt = opt || {};
+  if (typeof modal === 'function') {
+    modal('<div class="mhd"><div class="t" style="padding-inline-end:72px">' + tx('＋ Record a finding')
+      + '</div></div><div class="mbody" style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">'
+      + '<span class="spin"></span> ' + tx('opening…') + '</div>', false);
+  }
+  if (!RG.report) { await rgLoad(false); }
+  modal('<div class="mhd"><div class="t" style="padding-inline-end:72px">' + tx('＋ Record a finding')
+    + '</div></div><div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">'
+    + rgAddPanel({ into: opt.into, kind: opt.kind, bare: true }) + '</div>', false);
 }
 
 /**
- * ⭐⭐ ENDING SOMETHING ASKS HOW, AND WILL NOT DEFAULT. Six endings, and only some are actions — `accepted` and
- * `constraint` produce nothing that will ever nag anyone again, so folding them into "closed" would let the
- * register report clean while carrying things nobody fixed.
+ * ⚠️⚠️ THE SEPARATE new-register FORM IS GONE. There were two forms that both created a register, carrying the
+ * SAME testids — which is how a spec ended up matching two elements and how a reader ends up with two answers
+ * to one question. Creating a register is now a field inside the record form: you name it while recording the
+ * first thing that goes in it.
+ *
+ * ⭐ A register with nothing in it holds no information, and a chit gets one automatically on first use, so
+ * nothing is lost by removing the standalone path.
  */
+
 function rgCloseAsk(id) { RG.closing = (RG.closing === id ? null : id); rgPaint(); if (RG.closing) rgClosePaint(id); }
 
 /**

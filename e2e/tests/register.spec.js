@@ -20,7 +20,38 @@ test.use({ storageState: { cookies: [], origins: [] } });
    rail button opens a panel and leaves UI.nav where it was. Every wait below is on the panel, never on a URL. */
 async function openRegister(page) {
   await page.getByTestId('nav-raida').click();
-  await expect(page.getByTestId('register-panel')).toBeVisible({ timeout: 15000 });
+  /* ⚠️ READY, not merely present. The loading state carries the same testid, so waiting for the panel alone
+     returned while it was still a spinner — which is why the first record() ran against a half-built screen
+     and failed intermittently on timing rather than on anything real. */
+  await expect(page.locator('[data-testid="register-panel"][data-ready="1"]'))
+    .toBeVisible({ timeout: 30000 });
+}
+
+/**
+ * ⭐ ONE FORM CREATES THE REGISTER AND RECORDS THE FIRST THING IN IT. There is no separate "open a register"
+ * step any more — two forms that both created a register carried the same testids, which is how a spec matched
+ * two elements at once.
+ */
+async function record(page, { register, type = 'campaign', kind = 'risk', body, owner, l, s, waitsOn, response }) {
+  const form = page.getByTestId('raida-form');
+  if (!(await form.count())) await page.getByTestId('raida-add-open').click();
+  /* Naming a register is a field when there is none, and an option in the picker when there is. */
+  if (register) {
+    const into = page.getByTestId('raida-into');
+    if (await into.count()) { await into.selectOption('__new'); }
+    await page.getByTestId('register-new-type').selectOption(type);
+    await page.getByTestId('register-new-name').fill(register);
+  }
+  await page.getByTestId('raida-kind').selectOption(kind);
+  await page.getByTestId('raida-body').fill(body);
+  if (owner) await page.locator('#rgOwner').fill(owner);
+  if (l) await page.locator('#rgL').fill(String(l));
+  if (s) await page.locator('#rgS').fill(String(s));
+  if (response) await page.getByTestId('raida-response').selectOption(response);
+  if (waitsOn) await page.getByTestId('raida-to').selectOption({ label: waitsOn });
+  await page.getByTestId('raida-save').click();
+  await expect(page.getByTestId('raida-item').filter({ hasText: body.slice(0, 18) }))
+    .toBeVisible({ timeout: 20000 });
 }
 
 test.describe('Module · Register', () => {
@@ -39,20 +70,10 @@ test.describe('Module · Register', () => {
     await mintEntity(page);
     await openRegister(page);
 
-    /* A register on something that is NOT an order — the whole point of register_subject. */
-    await page.getByTestId('register-new').click();
-    await page.getByTestId('register-new-type').selectOption('campaign');
-    await page.getByTestId('register-new-name').fill('E2E qualification');
-    await page.getByTestId('register-new-save').click();
-    await expect(page.getByTestId('register-subject').filter({ hasText: 'E2E qualification' }))
-      .toBeVisible({ timeout: 15000 });
-
-    await page.getByTestId('raida-add-open').click();
-    await page.getByTestId('raida-kind').selectOption('risk');
-    await page.getByTestId('raida-body').fill('Rig availability may slip past week 3');
-    await page.getByTestId('raida-save').click();
-    await expect(page.getByTestId('raida-item').filter({ hasText: 'Rig availability' }))
-      .toBeVisible({ timeout: 15000 });
+    /* A register on something that is NOT an order — the whole point of register_subject — named in the same
+       form that records the first finding. */
+    await record(page, { register: 'E2E qualification', type: 'campaign',
+                         kind: 'risk', body: 'Rig availability may slip past week 3' });
 
     /* ⭐⭐ THE GATE, stated before the button rather than discovered by pressing it. While anything is open the
        close control must not be offered at all — an affordance that will refuse is worse than none. */
@@ -70,7 +91,7 @@ test.describe('Module · Register', () => {
     /* ⭐ THE OUTCOME. Athi: "at the end of the test, it has to clearly come out as actions?" — it does, and it
        is grouped by what it LANDS ON someone, not by the fact that it stopped being open. */
     await page.getByTestId('register-tab-closure').click();
-    await expect(page.getByText('Work came out of it')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Work came out of it')).toBeVisible({ timeout: 20000 });
     await expect(page.getByTestId('closure-item').filter({ hasText: 'Rig availability' })).toBeVisible();
     await expect(page.getByTestId('register-close')).toBeVisible();
   });
@@ -88,16 +109,11 @@ test.describe('Module · Register', () => {
     await mintEntity(page);
     await openRegister(page);
 
-    const newRegister = async (type, name) => {
-      await page.getByTestId('register-new').click();
-      await page.getByTestId('register-new-type').selectOption(type);
-      await page.getByTestId('register-new-name').fill(name);
-      await page.getByTestId('register-new-save').click();
-      await expect(page.getByTestId('register-subject').filter({ hasText: name.split(' ')[0] }))
-        .toBeVisible({ timeout: 20000 });
-    };
-    await newRegister('release', 'Pad refurbishment');
-    await newRegister('campaign', 'Engine E-7 qualification');
+    /* Two registers, so the dependency has somewhere to point. */
+    await record(page, { register: 'Pad refurbishment', type: 'release',
+                         kind: 'issue', body: 'Pad liner wear beyond limit' });
+    await record(page, { register: 'Engine E-7 qualification', type: 'campaign',
+                         kind: 'risk', body: 'Chamber pressure margin is thin' });
 
     await page.getByTestId('raida-add-open').click();
     await page.getByTestId('raida-kind').selectOption('dependency');
@@ -237,4 +253,59 @@ test.describe('Module · Register', () => {
     await page.getByTestId('raida-kind').selectOption('assumption');
     await expect(page.getByTestId('raida-response')).toBeHidden();
   });
+
+  /**
+   * ⚠️⚠️ THE FIRST THING A NEW USER MEETS. With no registers open, "Record something" used to take a whole
+   * entry and then REFUSE it — *"pick a register first"* — the affordance-that-refuses defect this capability's
+   * own closure gate is written to avoid, shipped in the empty state. Athi hit it on a real entity:
+   * *"is this expected result when i click the register panel?"*
+   *
+   * ⭐ The answer he asked for: *"a simple screen with the record format has to be appearing at empty state."*
+   * Not a blank table with headers — Carbon, Cloudscape and NN/G all warn against that, because a screen reader
+   * reads the whole header row before reaching "nothing here". The RECORD FORM is the empty state.
+   */
+  test('[REG-06] the empty state IS the record form, and it creates the register it needs', async ({ page }) => {
+    await mintEntity(page);
+    await openRegister(page);
+
+    /* ⭐ The form, straight away — no link, no second click, and nothing that will refuse. */
+    await expect(page.getByTestId('raida-form')).toBeVisible();
+    await expect(page.getByTestId('raida-body')).toBeVisible();
+    await expect(page.getByTestId('raida-add-open')).toHaveCount(0);
+    /* ⚠️ NOT an empty table with column headers — the pattern every design system warns against. */
+    await expect(page.getByTestId('register-table')).toHaveCount(0);
+
+    /* One form: it names the register AND records the first finding. */
+    await page.getByTestId('register-new-type').selectOption('audit');
+    await page.getByTestId('register-new-name').fill('ISO 9001 surveillance');
+    await page.getByTestId('raida-kind').selectOption('risk');
+    await page.getByTestId('raida-body').fill('Calibration records not yet sampled');
+    await page.getByTestId('raida-save').click();
+
+    await expect(page.getByTestId('raida-item').filter({ hasText: 'Calibration records' }))
+      .toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('register-subject').filter({ hasText: 'ISO 9001' })).toBeVisible();
+    /* Once there is something to show, the table appears and the form steps back behind a + . */
+    await expect(page.getByTestId('register-table')).toBeVisible();
+    await expect(page.getByTestId('raida-add-open')).toBeVisible();
+  });
+
+  /**
+   * ⭐⭐ *"a plus icon can bring a new tab to add any risk, so we can embed the + icon anywhere we want."*
+   * rgQuickAdd() is that entry point, and this proves it stands on its own — it loads what the form needs
+   * rather than assuming the register screen has already been opened.
+   */
+  test('[REG-07] the + opens the record form from anywhere', async ({ page }) => {
+    await mintEntity(page);
+    /* Never opened the register in this session — exactly the state a + on a line card would call from. */
+    await page.evaluate(() => ensureCap('register'));
+    await page.evaluate(() => rgQuickAdd({ kind: 'issue' }));
+
+    await expect(page.getByTestId('raida-quickadd')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('raida-body')).toBeVisible();
+    /* It carried the kind it was asked for, and offers a way to name the register it needs. */
+    await expect(page.getByTestId('raida-kind')).toHaveValue('issue');
+    await expect(page.getByTestId('register-new-name')).toBeVisible();
+  });
+
 });
