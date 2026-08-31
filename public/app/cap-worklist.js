@@ -46,7 +46,6 @@ if (typeof EP !== 'undefined') {
     wlMsgAdd:  { m: 'POST', p: '/api/chits/:id/messages',       ok: 'y' },
     /* b182 — the register on this line. Reads the line AND the order-level entries it inherits. */
     wlRaida:   { m: 'GET',  p: '/api/chits/:id/raida',           ok: 'y' },
-    wlRaidaAdd:{ m: 'POST', p: '/api/chits/:id/raida',           ok: 'y' },
     wlRaidaEnd:{ m: 'POST', p: '/api/chits/:id/raida/:rid/close', ok: 'y' },
   });
 }
@@ -568,7 +567,7 @@ var WLL = { row: null, det: null, actors: null, loading: false, failed: false,
   /* Two threads, kept apart in state as well as on screen — see wlThreadSec. */
   msgs: null, msgErr: false, ext: null, extErr: false,
   /* b182 — null means NOT ASKED YET, which is not the same as an empty register. */
-  raida: null, raidaErr: false, raidaKind: 'risk', raidaBusy: false,
+  raida: null, raidaErr: false, raidaBusy: false,
   raidaClosing: null, raidaDisp: null };
 
 /**
@@ -687,7 +686,7 @@ async function wlLine(line_id){
    */
   WLL.msgs = null; WLL.msgErr = false;
   WLL.ext = null; WLL.extErr = false;
-  WLL.raida = null; WLL.raidaErr = false; WLL.raidaClosing = null; WLL.raidaKind = 'risk';
+  WLL.raida = null; WLL.raidaErr = false; WLL.raidaClosing = null;
   wlPaintCard(true);
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
@@ -928,25 +927,31 @@ async function wlRaidaLoad(){
   wlPaintCard(WLL.loading);
 }
 
-function wlRaidaKind(k){ WLL.raidaKind = k; wlPaintCard(WLL.loading); }
 
-async function wlRaidaAdd(){
-  var r = WLL.row; if (!r || WLL.raidaBusy) return;
-  var box = document.getElementById('wl_raida_body');
-  var body = box ? String(box.value || '').trim() : '';
-  if (!body) { toast('Say what it is first.'); return; }
-  /* ⭐ SCOPE IS A CHOICE ON THE FORM, not a guess. The credit is an order fact and the crane is a line fact, and
-     only the person typing knows which they mean. Default is the line, because that is the card they are on. */
-  var onOrder = !!(document.getElementById('wl_raida_order') || {}).checked;
-  WLL.raidaBusy = true; wlPaintCard(WLL.loading);
+/**
+ * ⭐⭐ OPEN THE REGISTER'S OWN FORM, WITH THIS LINE IN SCOPE. The capability is lazy, so it is loaded on demand
+ * — a co-assist who never records a risk downloads none of it.
+ *
+ * ⚠️ `onSaved` is a NAME, not a function. The register is a separate lazily-loaded capability and this is a
+ * classic-script app; a name is the only handle that survives the boundary.
+ */
+async function wlRaidaOpen(){
+  var r = WLL.row; if (!r) return;
   try {
-    await api('wlRaidaAdd', { params: { id: r.chit_id }, body: {
-      kind: WLL.raidaKind, body: body, line_id: onOrder ? null : r.line_id } });
-    WLL.raida = null;                       // re-read rather than splice — the server computes open/closed
-    await wlRaidaLoad();
-    toast(WLRK[WLL.raidaKind].label + ' recorded');
-  } catch (e) { toast((e && e.message) || 'Could not record it.'); }
-  WLL.raidaBusy = false; wlPaintCard(WLL.loading);
+    if (typeof ensureCap === 'function') await ensureCap('register');
+    if (typeof rgQuickAdd !== 'function') { toast('Could not open the risk form.'); return; }
+    rgQuickAdd({
+      chit_id: r.chit_id, line_id: r.line_id,
+      chit_label: r.subject || r.code || null,
+      line_label: r.particulars || null,
+      kind: 'risk', onSaved: 'wlRaidaAfterSave' });
+  } catch (e) { toast((e && e.message) || 'Could not open the risk form.'); }
+}
+
+/* Re-read rather than splice: the server computes open/closed, and this list is the same read the panel does. */
+async function wlRaidaAfterSave(){
+  WLL.raida = null;
+  try { await wlRaidaLoad(); } catch (_) {}
 }
 
 /**
@@ -1050,30 +1055,25 @@ function wlRaidaSec(){
       ? R.entries.map(wlRaidaRow).join('')
       : '<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 0">Nothing recorded against this line — which is usually the right answer.</div>');
 
-    /* ── record one ─────────────────────────────────────────────────────────────────────────────────────── */
+    /**
+     * ⭐⭐ RECORD THROUGH THE REGISTER CAPABILITY, NOT A SECOND FORM — Athi, 2026-08-31: *"instead, change the
+     * name to Risk and call the module there, so a risk can be registered against a line item and the same
+     * should be visible here."*
+     *
+     * ⚠️ THIS USED TO BE ITS OWN FORM: kind chips, a textarea and an "against the whole order" checkbox — a
+     * second way to record a finding, which could only ever carry kind + body. So a risk raised here arrived in
+     * the register with no rating, no owner, no treatment and no response, and the only way to fill them was to
+     * raise it again somewhere else. One form now, opened from here with this line already in scope.
+     */
     out += '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px">'
-      + '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px">'
-      + Object.keys(WLRK).map(function(k){
-          var on = WLL.raidaKind === k;
-          return '<button type="button" data-testid="wl-raida-kind-' + k + '" onclick="wlRaidaKind(&quot;' + k + '&quot;)"'
-            + ' title="' + esc(WLRK[k].hint) + '" aria-pressed="' + (on ? 'true' : 'false') + '"'
-            + ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' + (on ? 800 : 500) + ';'
-            + 'border:' + (on ? '2px solid var(--blue)' : '1px solid var(--line)') + ';border-radius:8px;'
-            + 'padding:4px 9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
-            + WLRK[k].icon + ' ' + tx(WLRK[k].label) + '</button>';
-        }).join('')
-      + '</div>'
-      + '<textarea id="wl_raida_body" rows="2" data-testid="wl-raida-body" placeholder="' + esc(tx('What is it? One sentence.')) + '"'
-      +   ' style="width:100%;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:var(--fs-2);box-sizing:border-box"></textarea>'
-      + '<div style="display:flex;gap:9px;align-items:center;margin-top:7px">'
-      +   '<label style="font-size:var(--fs-1);color:var(--grey);display:flex;gap:5px;align-items:center;cursor:pointer">'
-      +     '<input type="checkbox" id="wl_raida_order" data-testid="wl-raida-order"> ' + tx('against the whole order')
-      +   '</label>'
-      +   '<button data-testid="wl-raida-add" onclick="wlRaidaAdd()"' + (WLL.raidaBusy ? ' disabled' : '')
-      +     ' style="margin-inline-start:auto;cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;'
-      +     'border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:9px;padding:6px 14px">'
-      +     (WLL.raidaBusy ? tx('recording…') : tx('Record')) + '</button>'
-      + '</div></div>';
+      + '<button data-testid="wl-raida-add" onclick="wlRaidaOpen()"'
+      +   ' style="cursor:pointer;font:inherit;font-size:var(--fs-2);font-weight:700;'
+      +   'border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);border-radius:9px;padding:6px 14px">'
+      +   '＋ ' + tx('Record something') + '</button>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);padding-top:6px">'
+      + tx('Rating, owner, treatment and response are on the form — and it rolls up into the Register.') + '</div>'
+      + '</div>';
+
   }
   out += '</div>';
   return out;

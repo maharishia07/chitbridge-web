@@ -308,4 +308,117 @@ test.describe('Module · Register', () => {
     await expect(page.getByTestId('register-new-name')).toBeVisible();
   });
 
+
+  /**
+   * ⭐⭐ Athi, 2026-08-31: *"we should be able to call this risk capability from anywhere at task level or line
+   * item level... a risk can be registered against a line item and the same should be visible here."*
+   *
+   * The line card no longer carries its own form. It opens THIS one with the line already in scope, so a risk
+   * raised there arrives with the rating, owner, treatment and response a register is judged on — the old form
+   * could only ever carry kind and body.
+   */
+  test('[REG-08] a risk recorded with a chit in scope shows in the Register, named and linked', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => ensureCap('register'));
+
+    /* Stand in for the line card: open the shared form with a chit and line in scope. */
+    const ok = await page.evaluate(async () => {
+      const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token };
+      /* A chit to hang it off — created directly, because composeSelfChit produces nothing for a fresh entity. */
+      const r = await fetch(CFG.API_BASE + '/api/chits/register/subjects', { method: 'POST', headers: H,
+        body: JSON.stringify({ type_key: 'campaign', name: 'Line-scope check' }) });
+      return r.ok;
+    });
+    expect(ok).toBeTruthy();
+
+    await page.evaluate(() => rgQuickAdd({ kind: 'risk' }));
+    await expect(page.getByTestId('raida-quickadd')).toBeVisible({ timeout: 20000 });
+    /* ⚠️ With no chit context the register is a CHOICE, so the picker is offered. */
+    await expect(page.getByTestId('raida-into')).toBeVisible();
+
+    /* Now with a chit in scope: the picker is replaced by the only decision that is actually the person's —
+       this line, or the whole order. Offering a register list here would invite filing a line's risk against
+       a campaign. */
+    await page.evaluate(() => rgQuickAdd({
+      chit_id: '11111111-2222-3333-4444-555555555555', line_id: '99999999-8888-7777-6666-555555555555',
+      chit_label: 'Brake pads for the E-7 rig', line_label: 'Brake pads 40mm', kind: 'risk' }));
+    await expect(page.getByTestId('raida-quickadd')).toBeVisible({ timeout: 20000 });
+    await expect(page.getByTestId('raida-into')).toHaveCount(0);
+    await expect(page.getByTestId('raida-scope-line')).toBeVisible();
+    await expect(page.getByTestId('raida-scope-order')).toBeVisible();
+    await expect(page.getByTestId('raida-quickadd')).toContainText('Brake pads for the E-7 rig');
+    /* And the full field set travels with it — this is what the old line-card form could not carry. */
+    await expect(page.getByTestId('raida-response')).toBeAttached();
+    await expect(page.locator('#rgOwner')).toBeVisible();
+    await expect(page.locator('#rgL')).toBeVisible();
+  });
+
+  /**
+   * ⭐⭐ Athi: *"we should be able to update the same from register panel as well."*
+   *
+   * ⚠️ A REVISION, NOT AN EDIT. The server appends a row carrying only what changed and folds the latest over
+   * the original on read — reassignment is normal, and *who held it when this went wrong* is the question
+   * afterwards, which an UPDATE in place destroys.
+   */
+  test('[REG-09] an entry can be updated from the register, and the change folds over it', async ({ page }) => {
+    await mintEntity(page);
+    await openRegister(page);
+
+    await record(page, { register: 'Update check', type: 'campaign', kind: 'risk',
+                         body: 'Coolant pump spares are single-sourced', owner: 'Rao', l: 2, s: 3 });
+
+    const row = page.getByTestId('raida-item').filter({ hasText: 'Coolant pump' });
+    await expect(row).toContainText('Rao');
+    await expect(row).toContainText('2×3');
+
+    await row.getByTestId('raida-edit').click();
+    await page.getByTestId('raida-edit-owner').fill('Priya');
+    await page.locator('#rgEL').fill('4');
+    await page.locator('#rgES').fill('4');
+    await page.getByTestId('raida-edit-treatment').fill('Second source qualified');
+    await page.getByTestId('raida-edit-save').click();
+
+    /* ⭐ The revision wins on what it changed... */
+    const after = page.getByTestId('raida-item').filter({ hasText: 'Coolant pump' });
+    await expect(after).toContainText('Priya', { timeout: 20000 });
+    await expect(after).toContainText('4×4');
+    await expect(after).toContainText('Second source qualified');
+    /* ...and the entry is still ONE row, not two — a revision is folded, never listed. */
+    await expect(page.getByTestId('raida-item').filter({ hasText: 'Coolant pump' })).toHaveCount(1);
+  });
+
+  /**
+   * ⭐⭐ *"the same may have to be invoked at task level for design1."* The spend strip on a chit (Quoted ·
+   * Spent · Work · History) now carries a ＋ Register beside History, and it goes through one shared helper so
+   * every + in the app opens the SAME form.
+   *
+   * ⚠️ The button itself only renders on a chit detail, and composeSelfChit produces no chit for a freshly
+   * minted entity — so this drives the helper the button calls, and asserts the markup separately. Stated
+   * rather than pretended: nothing here proves the button is on screen in a real order.
+   */
+  test('[REG-10] the task-level + opens the register with the order in scope', async ({ page }) => {
+    await mintEntity(page);
+
+    /* The helper is in the shell, so it is available before the capability has ever loaded. */
+    expect(await page.evaluate(() => typeof cbRegisterFor)).toBe('function');
+
+    await page.evaluate(() => cbRegisterFor('11111111-2222-3333-4444-555555555555', 'Brake pads for the E-7 rig'));
+    await expect(page.getByTestId('raida-quickadd')).toBeVisible({ timeout: 25000 });
+    await expect(page.getByTestId('raida-quickadd')).toContainText('Brake pads for the E-7 rig');
+    /* ⚠️ Order level: no line to choose between, so no scope toggle — and never a register picker, because the
+       chit decides its own register. */
+    await expect(page.getByTestId('raida-scope-line')).toHaveCount(0);
+    await expect(page.getByTestId('raida-into')).toHaveCount(0);
+    await expect(page.getByTestId('raida-body')).toBeVisible();
+
+    /* And the button is wired into design 1's spend strip through that same helper. */
+    const wired = await page.evaluate(async () => {
+      const r = await fetch('/app.html');
+      const html = await r.text();
+      return { hasBtn: html.indexOf('data-testid="chit-register"') >= 0,
+               usesHelper: /data-testid="chit-register"[\s\S]{0,220}cbRegisterFor/.test(html) };
+    });
+    expect(wired.hasBtn, 'the ＋ Register button is in the spend strip').toBeTruthy();
+    expect(wired.usesHelper, 'and it goes through the shared helper').toBeTruthy();
+  });
 });

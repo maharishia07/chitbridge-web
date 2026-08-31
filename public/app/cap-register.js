@@ -17,7 +17,8 @@
  */
 var RG = { view: 'live', subjects: null, sel: null, report: null, attach: null,
            walk: null, walkFrom: null, walkBack: true,
-           busy: false, err: null, adding: false, closing: null, opening: false };
+           busy: false, err: null, adding: false, closing: null, editing: null, opening: false,
+           ctx: null, ctxWhole: false };
 
 /* ── the shell ──────────────────────────────────────────────────────────────────────────────────────────── */
 
@@ -312,8 +313,10 @@ function rgTr(e) {
       ? '<span style="color:var(--grey)">' + esc(rgEnding(e.disposition)) + '</span>'
     : e.ending === 'closed_by_order'
       ? '<span style="color:var(--warn-2)">' + tx('with the order') + '</span>'
-    : '<button class="rg-act" data-testid="raida-close" onclick="rgCloseAsk(&quot;' + e.raida_id + '&quot;)">'
-      + tx('End →') + '</button>';
+    : '<button class="rg-act" data-testid="raida-edit" onclick="rgEditAsk(&quot;' + e.raida_id + '&quot;)">'
+        + tx('Edit') + '</button> '
+      + '<button class="rg-act" data-testid="raida-close" onclick="rgCloseAsk(&quot;' + e.raida_id + '&quot;)">'
+        + tx('End →') + '</button>';
 
   var cell = {
     id:        { c: 'rg-id', h: esc(String(e.raida_id).slice(0, 6)), t: e.raida_id },
@@ -450,7 +453,10 @@ function rgAddPanel(opt) {
       + ' placeholder="' + esc(tx('Name the register')) + '">';
 
   var where;
-  if (!subs.length) {
+  /* ⭐ A chit decides its own register — the person only decides line vs order. */
+  if (RG.ctx && RG.ctx.chit_id) {
+    where = rgScopeFields();
+  } else if (!subs.length) {
     where = '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">'
       + tx('Findings live in a register — one per order, campaign, audit or release.') + '</div>'
       + '<div style="display:flex;gap:6px;margin-bottom:6px">' + newFields + '</div>';
@@ -576,6 +582,11 @@ async function rgSave() {
   var body = rgVal('rgBody');
   if (!body) { toast(tx('It needs to say something.')); return; }
 
+  /* ⭐⭐ A CHIT CONTEXT GOES THROUGH THE CHIT ROUTE, which proves ownership and opens the order's register on
+     first use. Posting to a subject here would file a line's finding against whatever register happened to be
+     selected on a screen the person is not looking at. */
+  if (RG.ctx && RG.ctx.chit_id) { return rgSaveOnChit(); }
+
   var into = rgVal('rgInto');
   var wantNew = (!into || into === '__new');
   if (wantNew) {
@@ -617,24 +628,105 @@ async function rgSave() {
 }
 
 /**
- * ⭐⭐ THE + ANYWHERE. Athi: *"a plus icon can bring a new tab to add any risk, so we can embed the + icon
- * anywhere we want."* This is that entry point — a line card, a chit header, a dashboard tile can all call it.
+ * ⭐ Recording against an order or one of its lines. Same fields as anywhere else — the register a finding
+ * lands in is decided by the chit, not by the form.
  *
- * ⚠️ IT LOADS ITS OWN DATA. A caller elsewhere in the app has never opened the register, so RG.subjects and
- * RG.attach are null and the form would offer an empty picker. It fetches before painting.
+ * ⚠️ `line_id` NULL means the whole order, which is the scope toggle's only job. b182's comment is the reason
+ * the distinction exists: the credit is an order fact and the crane is a line fact, and only the person typing
+ * knows which they mean.
+ */
+async function rgSaveOnChit() {
+  var body = rgVal('rgBody');
+  if (!body) { toast(tx('It needs to say something.')); return; }
+  var c = RG.ctx;
+  var p = { kind: rgVal('rgKind') || 'risk', body: body,
+            line_id: RG.ctxWhole ? null : (c.line_id || null) };
+  var o = rgVal('rgOwner'); if (o) p.owner_name = o;
+  var d = rgVal('rgDue'); if (d) p.due_date = d;
+  var l = rgVal('rgL'); if (l) p.likelihood = +l;
+  var s = rgVal('rgS'); if (s) p.severity = +s;
+  if (p.kind === 'risk') { var rsp = rgVal('rgResp'); if (rsp) p.response = rsp; }
+  if (p.kind === 'dependency') {
+    var to = rgVal('rgTo');
+    if (to) {
+      var bits = to.split('|');
+      p.to_id = bits[0]; p.to_type = bits[1]; p.to_label = bits.slice(2).join('|');
+      p.rel_type = rgVal('rgRel') || 'finish_to_start';
+      var nb = rgVal('rgNeed'); if (nb) p.needed_by = nb;
+    }
+  }
+  try {
+    await api('regChitAdd', { params: { id: c.chit_id }, body: p });
+    toast(tx('Recorded.'));
+    if (typeof closeModal === 'function') closeModal();
+    /* ⚠️ A NAME, not a function reference. The caller is a different lazily-loaded capability and this is a
+       classic-script app — a name is the only handle that survives that boundary. */
+    if (c.onSaved && typeof window[c.onSaved] === 'function') { try { window[c.onSaved](); } catch (_) {} }
+    RG.ctx = null;
+    /* If the register screen is behind this, it is now stale. */
+    if (RG.report) { RG.report = null; }
+  } catch (e) { toast(MSG.fail('record it', e)); }
+}
+
+
+/**
+ * ⭐⭐ WHERE THE FORM WAS OPENED FROM. Athi: *"we should be able to call this risk capability from anywhere at
+ * task level or line item level."*
+ *
+ * With a chit context the register is not a CHOICE — the finding belongs to that order, and its register is
+ * opened for it automatically on first use. So the picker is replaced by the one thing the person actually
+ * decides: whether it is against this LINE or the whole ORDER. Offering a register list there would invite
+ * filing a line's risk against a campaign.
+ */
+function rgScopeFields() {
+  var c = RG.ctx;
+  if (!c || !c.chit_id) return '';
+  var lineLabel = c.line_label || tx('this line');
+  return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">'
+    + tx('Against') + ' <b style="color:var(--on-card)">' + esc(c.chit_label || tx('this order')) + '</b></div>'
+    + (c.line_id
+        ? '<div class="raidtoggle" style="padding:0 0 6px">'
+          + '<button type="button" data-testid="raida-scope-line" class="' + (RG.ctxWhole ? '' : 'on') + '"'
+          + ' onclick="rgScope(false)">' + esc(lineLabel) + '</button>'
+          + '<button type="button" data-testid="raida-scope-order" class="' + (RG.ctxWhole ? 'on' : '') + '"'
+          + ' onclick="rgScope(true)">' + tx('the whole order') + '</button>'
+          + '</div>'
+        : '');
+}
+
+function rgScope(whole) {
+  RG.ctxWhole = !!whole;
+  var host = document.querySelector('[data-testid="raida-quickadd"]');
+  if (host) host.innerHTML = rgAddPanel({ kind: rgVal('rgKind'), bare: true });
+}
+
+/**
+ * ⭐⭐ THE + FROM ANYWHERE. A line card, a chit header, a dashboard tile can all call this.
+ *
+ * ⚠️ IT LOADS ITS OWN DATA. A caller elsewhere has never opened the register, so RG.subjects and RG.attach are
+ * null and the form would otherwise offer an empty picker.
+ *
+ * opts: { chit_id, line_id, chit_label, line_label, kind, into, onSaved }
+ * `onSaved` is the NAME of a global to call after a successful save — this is a classic-script app and the
+ * caller is a different lazily-loaded capability, so a name is the only handle that survives the boundary.
  */
 async function rgQuickAdd(opt) {
   opt = opt || {};
+  RG.ctx = opt.chit_id ? { chit_id: opt.chit_id, line_id: opt.line_id || null,
+                           chit_label: opt.chit_label || null, line_label: opt.line_label || null,
+                           onSaved: opt.onSaved || null } : null;
+  RG.ctxWhole = false;
+  var title = tx('＋ Record a finding');
+  var head = '<div class="mhd"><div class="t" style="padding-inline-end:72px">' + title + '</div></div>';
   if (typeof modal === 'function') {
-    modal('<div class="mhd"><div class="t" style="padding-inline-end:72px">' + tx('＋ Record a finding')
-      + '</div></div><div class="mbody" style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">'
+    modal(head + '<div class="mbody" style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">'
       + '<span class="spin"></span> ' + tx('opening…') + '</div>', false);
   }
   if (!RG.report) { await rgLoad(false); }
-  modal('<div class="mhd"><div class="t" style="padding-inline-end:72px">' + tx('＋ Record a finding')
-    + '</div></div><div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">'
+  modal(head + '<div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">'
     + rgAddPanel({ into: opt.into, kind: opt.kind, bare: true }) + '</div>', false);
 }
+
 
 /**
  * ⚠️⚠️ THE SEPARATE new-register FORM IS GONE. There were two forms that both created a register, carrying the
@@ -645,6 +737,75 @@ async function rgQuickAdd(opt) {
  * ⭐ A register with nothing in it holds no information, and a chit gets one automatically on first use, so
  * nothing is lost by removing the standalone path.
  */
+
+/**
+ * ⭐⭐ UPDATE FROM THE REGISTER — Athi: *"we should be able to update the same from register panel as well."*
+ *
+ * ⚠️ A REVISION, NOT AN EDIT. The server appends a row carrying only what changed and folds the latest over the
+ * original on read. Reassignment is normal, and *who held it when this went wrong* is the question afterwards —
+ * an UPDATE in place destroys exactly that.
+ *
+ * ⚠️ BLANK MEANS UNCHANGED, not cleared. Every field starts empty rather than pre-filled, because a pre-filled
+ * form that submits everything would record a "revision" of nine fields when one was touched, and the changed
+ * list is what a reader scans.
+ */
+function rgEditAsk(id) { RG.editing = (RG.editing === id ? null : id); rgPaint(); if (RG.editing) rgEditPaint(id); }
+
+function rgEditPaint(id) {
+  var el = document.querySelector('[data-rid="' + id + '"]');
+  if (!el) return;
+  var e = rgEntries().filter(function (x) { return x.raida_id === id; })[0] || {};
+  var resp = (RG.report && RG.report.resp)
+    ? '<select id="rgEResp" class="inp" data-testid="raida-edit-response" style="min-width:150px">'
+      + '<option value="">' + esc(tx('response — unchanged')) + '</option>'
+      + Object.keys(RG_RESPONSES).map(function (k) {
+          return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + '</option>';
+        }).join('') + '</select>'
+    : '';
+  var row = document.createElement('div');
+  row.className = 'rg-editrow';
+  row.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:4px 0">'
+    + '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Change only what moved:') + '</span>'
+    + '<input id="rgEOwner" class="inp" data-testid="raida-edit-owner" style="min-width:130px"'
+    + ' placeholder="' + esc(tx('owner')) + (e.owner ? ' · ' + esc(e.owner) : '') + '">'
+    + '<input id="rgEL" class="inp" type="number" min="1" max="5" style="width:72px"'
+    + ' placeholder="' + esc(tx('L')) + (e.likelihood ? ' ' + e.likelihood : '') + '">'
+    + '<input id="rgES" class="inp" type="number" min="1" max="5" style="width:72px"'
+    + ' placeholder="' + esc(tx('S')) + (e.severity ? ' ' + e.severity : '') + '">'
+    + '<input id="rgERL" class="inp" type="number" min="1" max="5" style="width:96px"'
+    + ' placeholder="' + esc(tx('resid L')) + '">'
+    + '<input id="rgERS" class="inp" type="number" min="1" max="5" style="width:96px"'
+    + ' placeholder="' + esc(tx('resid S')) + '">'
+    + resp
+    + '<input id="rgETreat" class="inp" data-testid="raida-edit-treatment" style="flex:1;min-width:180px"'
+    + ' placeholder="' + esc(tx('treatment')) + '">'
+    + '<input id="rgEDue" class="inp" type="date" style="min-width:140px" title="' + esc(tx('due')) + '">'
+    + '<button class="btn" data-testid="raida-edit-save" onclick="rgEditSave(&quot;' + id + '&quot;)">'
+    + tx('Save change') + '</button>'
+    + '<button class="btn ghost" onclick="rgEditAsk(&quot;' + id + '&quot;)">' + tx('Cancel') + '</button>'
+    + '</div>';
+  el.parentNode.insertBefore(row, el.nextSibling);
+}
+
+async function rgEditSave(id) {
+  var f = {};
+  var owner = rgVal('rgEOwner'); if (owner) f.owner_name = owner;
+  var l = rgVal('rgEL'); if (l) f.likelihood = +l;
+  var s = rgVal('rgES'); if (s) f.severity = +s;
+  var rl = rgVal('rgERL'); if (rl) f.residual_likelihood = +rl;
+  var rs = rgVal('rgERS'); if (rs) f.residual_severity = +rs;
+  var t = rgVal('rgETreat'); if (t) f.treatment = t;
+  var d = rgVal('rgEDue'); if (d) f.due_date = d;
+  var r = rgVal('rgEResp'); if (r) f.response = r;
+  if (!Object.keys(f).length) { toast(tx('Nothing changed.')); return; }
+  try {
+    await api('regEntryRevise', { params: { rid: id }, body: f });
+    RG.editing = null;
+    toast(tx('Updated.'));
+    await openRegister(true);
+  } catch (e) { toast(MSG.fail('update it', e)); }
+}
+
 
 function rgCloseAsk(id) { RG.closing = (RG.closing === id ? null : id); rgPaint(); if (RG.closing) rgClosePaint(id); }
 

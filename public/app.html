@@ -1583,6 +1583,10 @@ const EP = {
   regEntryAdd:     {m:"POST", p:"/api/chits/register/subjects/:sid/entries", ok:"y"},
   regEntryClose:   {m:"POST", p:"/api/chits/register/entries/:rid/close", ok:"y"},
   regWalk:         {m:"GET",  p:"/api/chits/register/walk/:from",  ok:"y"},
+  /* ⚠️ The chit-scoped add, so the register capability can record against a LINE without the worklist
+     being loaded. Same route the line card uses; declared here because cap-register may be opened first. */
+  regChitAdd:      {m:"POST", p:"/api/chits/:id/raida",           ok:"y"},
+  regEntryRevise:  {m:"POST", p:"/api/chits/register/entries/:rid/revise", ok:"y"},
   notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},
   /* b164 — clear one Activity row, several, or all. Records a DISMISSAL; the state_log event is untouched. */
   notifDismiss:    {m:"POST", p:"/api/notifications/dismiss", ok:"y"},   // b157 — move the badge watermark
@@ -3790,7 +3794,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-31b';
+const CB_BUILD = '2026-08-31d';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -4803,6 +4807,26 @@ async function newFolderIn(track){
  * ⚠️ AND THE DRAWER IS CLOSED FIRST. On a phone the rail sits over the page; leaving it open would put the
  * report behind the menu that opened it.
  */
+/**
+ * ⭐⭐ THE REGISTER, FROM ANYWHERE — Athi, 2026-08-31: *"we should be able to call this risk capability from
+ * anywhere at task level or line item level... the same may have to be invoked at task level for design 1."*
+ *
+ * One helper so every + in the app opens the SAME form. The capability is lazy, so a person who never records
+ * a finding downloads none of it, and the button still has to work the first time it is pressed.
+ *
+ * ⚠️ NO line_id HERE. This is the order-level entry point; the line-level one is on the line card, which passes
+ * its own. The form's scope toggle only appears when there is a line to choose between.
+ */
+function cbRegisterFor(chitId, label) {
+  if (typeof ensureCap !== 'function') return;
+  ensureCap('register').then(function () {
+    if (typeof rgQuickAdd !== 'function') { if (typeof toast === 'function') toast('Could not open the register.'); return; }
+    rgQuickAdd({ chit_id: chitId, chit_label: label || null, kind: 'risk' });
+  }).catch(function (e) {
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not open the register.');
+  });
+}
+
 function navTo(k){if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
@@ -10824,6 +10848,10 @@ function chitSpendStrip(c){
     ${quoted?cell(tx('Quoted'), esc(inr(quoted))):''}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent?esc(inr(spent)):'—'}</span>`, spent?'color:var(--ok-2,#2f6b4f)':'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
+    <div><button type="button" data-testid="chit-register" data-label="${esc(c.subject||'')}"
+      onclick="cbRegisterFor('${c.id}', this.dataset.label)"
+      title="${esc(tx('Record a risk, issue or dependency against this order'))}"
+      style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('＋ Register'))}</button></div>
     <div><button type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
       title="${esc(tx('Every part and every hour recorded against this job, and who recorded it'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('History →'))}</button></div>
