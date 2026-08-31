@@ -100,8 +100,19 @@ async function openRegister(force) {
 /* max-width:94vw on .modal.wide still applies, so this asks for room and never overflows a narrow screen. */
 function rgWiden() {
   var m = document.querySelector('#modalhost .modal');
-  if (m) m.classList.add('rg-modal');
+  if (!m) return;
+  /* ⭐ WIDE ONLY WHEN THERE IS A TABLE. 1240px exists so fifteen columns can be read across; wrapped around a
+     560px form it is just empty space, and an empty state that looks broken is its own problem. */
+  var wide = rgEntries().length > 0 || (RG.subjects || []).length > 0;
+  m.classList[wide ? 'add' : 'remove']('rg-modal');
 }
+
+/**
+ * ⚠️ THE CONDITIONAL FIELDS MUST MATCH THE KIND THAT IS ALREADY SELECTED. rgKindChanged is an onchange, so on
+ * first paint the response and edge blocks stayed hidden even with Risk pre-selected — the field a person came
+ * to fill was invisible until they changed the dropdown to something else and back.
+ */
+function rgSyncFields() { try { if (document.getElementById('rgKind')) rgKindChanged(); } catch (_) {} }
 
 function rgPaint() {
   var r = RG.report;
@@ -126,6 +137,7 @@ function rgPaint() {
   body = RG.view === 'closure' ? rgClosure() : RG.view === 'impact' ? rgImpact() : rgLive();
   modal(rgShell(rgTabs() + body, head), true);
   rgWiden();
+  rgSyncFields();
 }
 
 /* ── shared bits ────────────────────────────────────────────────────────────────────────────────────────── */
@@ -218,6 +230,9 @@ function rgHeat(entries) {
 function rgRegisterRail() {
   var subs = RG.subjects;
   if (!subs) return '';
+  /* ⚠️ Nothing to choose between, and the form below already offers the only action — a lone "All registers"
+     chip beside a + that opens what is on screen is two answers to one question. */
+  if (!subs.length) return '';
   var es = rgEntries();
   var countFor = function (id) {
     return es.filter(function (e) { return e.subject_id === id && e.open; }).length;
@@ -416,7 +431,11 @@ function rgLive() {
           /* ⚠️ Closed entries stay, greyed — a register that hides what it settled cannot show it settled
              anything, and "what did we decide about that" is most of why anyone opens an old one. */
           + (shut.length ? rgBand(tx('Closed'), shut.length) + rgTable(shut) : '')
-        : '<div class="msgempty">' + tx('Nothing recorded yet — which is usually the right answer.') + '</div>');
+        /* ⚠️ Only when there IS somewhere to record: with no register the form is already the empty state,
+           and saying 'nothing recorded' under it answers a question nobody asked twice. */
+        : ((RG.subjects || []).length
+            ? '<div class="msgempty">' + tx('Nothing recorded yet — which is usually the right answer.') + '</div>'
+            : ''));
 }
 
 /* ── writing to it ──────────────────────────────────────────────────────────────────────────────────────── */
@@ -446,7 +465,8 @@ function rgAddPanel(opt) {
   }).join('');
   var newFields = '<select id="rgNewType" class="inp" data-testid="register-new-type" style="flex:0 0 40%">'
       + (RG.attach || []).map(function (a) {
-          return '<option value="' + a.type_key + '">' + esc(a.label) + '</option>';
+          return '<option value="' + a.type_key + '"' + (a.type_key === 'chit' ? ' selected' : '') + '>'
+            + esc(a.label) + '</option>';
         }).join('')
       + '</select>'
       + '<input id="rgNewName" class="inp" data-testid="register-new-name" style="flex:1"'
@@ -472,7 +492,9 @@ function rgAddPanel(opt) {
       + '<div id="rgNewWrap" style="display:none;gap:6px;margin-bottom:6px">' + newFields + '</div>';
   }
 
-  return '<div class="raidadd" data-testid="raida-form" style="padding:8px 0">'
+  /* ⚠️ CAPPED. The panel is 1240px so a register can be read across; a form stretched to that width puts the
+     Owner box a hand-span from its label and reads as a broken layout. */
+  return '<div class="raidadd" data-testid="raida-form" style="padding:8px 0;max-width:560px">'
     + where
     + '<select id="rgKind" class="inp" data-testid="raida-kind" onchange="rgKindChanged()" style="width:100%;margin-bottom:6px">' + kinds + '</select>'
     + '<input id="rgBody" class="inp" data-testid="raida-body" style="width:100%;margin-bottom:6px"'
@@ -725,6 +747,7 @@ async function rgQuickAdd(opt) {
   if (!RG.report) { await rgLoad(false); }
   modal(head + '<div class="mbody" data-testid="raida-quickadd" style="padding:8px 16px 16px">'
     + rgAddPanel({ into: opt.into, kind: opt.kind, bare: true }) + '</div>', false);
+  rgSyncFields();
 }
 
 
