@@ -54,7 +54,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
     await newRegister('campaign', 'Engine E-7 qualification');
 
     /* Three entries, rated differently, so Live has something to sort worst-first. */
-    const add = async (kind, body, l, s, owner, waitsOn) => {
+    const add = async (kind, body, l, s, owner, waitsOn, response) => {
       await page.getByTestId('raida-add-open').click();
       await page.getByTestId('raida-kind').selectOption(kind);
       await page.getByTestId('raida-body').fill(body);
@@ -62,6 +62,8 @@ require('fs').mkdirSync(OUT, { recursive: true });
       if (l) await page.locator('#rgL').fill(String(l));
       if (s) await page.locator('#rgS').fill(String(s));
       /* ⭐ The target is what turns a dependency into an EDGE the walk can traverse. */
+      /* ⭐ The 4 T's (b192) — what the decision IS, beside the treatment that says what we are doing. */
+      if (response) await page.getByTestId('raida-response').selectOption(response);
       if (waitsOn) {
         await page.locator('#rgTo').selectOption({ label: waitsOn });
         await page.locator('#rgNeed').fill('2026-09-15');
@@ -70,7 +72,7 @@ require('fs').mkdirSync(OUT, { recursive: true });
       await page.getByTestId('raida-item').filter({ hasText: body.slice(0, 18) })
         .waitFor({ state: 'visible', timeout: 20000 });
     };
-    await add('risk', 'Rig availability may slip past week 3', 3, 4, 'Rao');
+    await add('risk', 'Rig availability may slip past week 3', 3, 4, 'Rao', null, 'treat');
     await add('issue', 'Igniter delay measured 40ms over spec', 4, 4, 'Priya');
     await add('assumption', 'Fuel batch B12 matches the qualification lot', 2, 3, 'Rao');
     await add('dependency', 'Cannot start hot-fire until the pad is signed off', 3, 5, 'Rao',

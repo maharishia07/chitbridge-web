@@ -89,6 +89,12 @@ async function openRegister(force) {
   rgPaint();
 }
 
+/* max-width:94vw on .modal.wide still applies, so this asks for room and never overflows a narrow screen. */
+function rgWiden() {
+  var m = document.querySelector('#modalhost .modal');
+  if (m) m.classList.add('rg-modal');
+}
+
 function rgPaint() {
   var r = RG.report;
   var body;
@@ -111,6 +117,7 @@ function rgPaint() {
         + (r.closed_by_order ? ' · ' + r.closed_by_order + ' ' + tx('with the order') : '')) : '');
   body = RG.view === 'closure' ? rgClosure() : RG.view === 'impact' ? rgImpact() : rgLive();
   modal(rgShell(rgTabs() + body, head), true);
+  rgWiden();
 }
 
 /* ── shared bits ────────────────────────────────────────────────────────────────────────────────────────── */
@@ -248,72 +255,86 @@ function rgLinkTo(e) {
 }
 
 /**
- * ⭐⭐ THE APP'S OWN LIST, NOT A TABLE OF MY OWN — Athi: *"see how this can follow our standard design."*
+ * ⭐⭐ ORDERED BY WHAT A REGISTER IS READ FOR, not by what the table happens to hold. The first pass put
+ * Register and Where in positions 4 and 5 — so at any sane window width the visible columns were id, type,
+ * description, and two pieces of CONTEXT, while inherent score, response, treatment and residual were all off
+ * the right edge. A register whose scores need a horizontal scroll is barely better than the stacked rows this
+ * replaced.
  *
- * Every list in this product is `.lhead` + `.lrow` sharing one `grid-template-columns`, and that is what the
- * register is: records with columns. Adopting it brings the sticky header, the type scale, the hover state, the
- * borders and the spacing for free, and — more to the point — means the register cannot drift away from the
- * rest of the app the next time any of those change. A hand-rolled `<table>` had already reinvented all five.
- *
- * ⚠️ ONE DELIBERATE DEPARTURE: `.lrow` is `cursor:pointer` because rows in this app open things. A register row
- * does not — it is read ACROSS, and the chit is a link inside it. The cursor is reset for that reason alone.
+ * ⭐ The risk story now reads left to right without moving: what it is → how bad → what we decided → what we
+ * are doing → what is left. Context and dates follow.
  */
 var RG_COLS = [
-  { k: 'id',        w: '68px',              h: 'ID' },
-  { k: 'type',      w: '112px',             h: 'Type' },
-  { k: 'what',      w: 'minmax(220px,1.4fr)', h: 'What' },
-  { k: 'register',  w: 'minmax(140px,1fr)', h: 'Register' },
-  { k: 'where',     w: 'minmax(130px,1fr)', h: 'Where' },
-  { k: 'owner',     w: '104px',             h: 'Owner' },
-  { k: 'inherent',  w: '92px',              h: 'Inherent' },
-  { k: 'treatment', w: 'minmax(150px,1fr)', h: 'Treatment' },
-  { k: 'response',  w: '104px',             h: 'Response' },
-  { k: 'verify',    w: '96px',              h: 'Verify' },
-  { k: 'residual',  w: '92px',              h: 'Residual' },
-  { k: 'due',       w: '94px',              h: 'Due' },
-  { k: 'review',    w: '94px',              h: 'Review' },
-  { k: 'raised',    w: '94px',              h: 'Raised' },
-  { k: 'status',    w: '104px',             h: 'Status' },
+  { k: 'id',        w: '64px',                h: 'ID' },
+  { k: 'type',      w: '108px',               h: 'Type' },
+  { k: 'what',      w: 'minmax(200px,1.3fr)', h: 'What' },
+  { k: 'inherent',  w: '86px',                h: 'Inherent' },
+  { k: 'response',  w: '96px',                h: 'Response' },
+  { k: 'treatment', w: 'minmax(140px,1fr)',   h: 'Treatment' },
+  { k: 'residual',  w: '86px',                h: 'Residual' },
+  { k: 'verify',    w: '92px',                h: 'Verify' },
+  { k: 'owner',     w: '96px',                h: 'Owner' },
+  { k: 'where',     w: 'minmax(120px,1fr)',   h: 'Where' },
+  { k: 'due',       w: '92px',                h: 'Due' },
+  { k: 'review',    w: '92px',                h: 'Review' },
+  { k: 'register',  w: 'minmax(130px,1fr)',   h: 'Register' },
+  { k: 'raised',    w: '92px',                h: 'Raised' },
+  { k: 'status',    w: '100px',               h: 'Status' },
 ];
+
 function rgTpl() { return RG_COLS.map(function (c) { return c.w; }).join(' '); }
 
+/* ⚠️ Each heading carries its key, so a spec can assert the header and the cells agree on ORDER and not merely
+   on count — a reorder that misaligns every column is otherwise completely silent. */
 function rgHead() {
   return '<div class="lhead" style="grid-template-columns:' + rgTpl() + '">'
-    + RG_COLS.map(function (c) { return '<div>' + tx(c.h) + '</div>'; }).join('')
+    + RG_COLS.map(function (c) { return '<div data-col="' + c.k + '">' + tx(c.h) + '</div>'; }).join('')
     + '</div>';
 }
 
+/**
+ * ⚠️⚠️ THE CELLS ARE KEYED, AND RENDERED IN RG_COLS ORDER. They used to be written out as a hand-ordered list
+ * of divs beside a hand-ordered list of headings — two orderings of one fact. Reordering the columns then
+ * misaligns every cell after the change with NO error anywhere, and a count check does not catch it because the
+ * count is still right. Deriving the order from RG_COLS makes that class of bug unrepresentable.
+ */
 function rgTr(e) {
+  var dash = '<span style="color:var(--grey)">—</span>';
+  var d = function (v) { return v ? esc(String(v).slice(0, 10)) : ''; };
   var end = e.ending === 'closed'
       ? '<span style="color:var(--grey)">' + esc(rgEnding(e.disposition)) + '</span>'
     : e.ending === 'closed_by_order'
       ? '<span style="color:var(--warn-2)">' + tx('with the order') + '</span>'
     : '<button class="rg-act" data-testid="raida-close" onclick="rgCloseAsk(&quot;' + e.raida_id + '&quot;)">'
       + tx('End →') + '</button>';
-  var resid = (e.residual_likelihood && e.residual_severity)
-    ? rgCell(e.residual_likelihood, e.residual_severity, e.residual_likelihood * e.residual_severity)
-    : '<span style="color:var(--grey)">—</span>';
-  var dash = '<span style="color:var(--grey)">—</span>';
-  var d = function (v) { return v ? esc(String(v).slice(0, 10)) : ''; };
+
+  var cell = {
+    id:        { c: 'rg-id', h: esc(String(e.raida_id).slice(0, 6)), t: e.raida_id },
+    type:      { h: '<span class="mtype ' + e.kind + '">' + rgIcon(e.kind) + ' ' + esc(rgLabel(e.kind)) + '</span>' },
+    what:      { c: 'rg-what', h: esc(e.body) },
+    inherent:  { c: 'rg-num', h: rgCell(e.likelihood, e.severity, e.score) },
+    response:  { c: 'rg-clip', h: e.response ? esc(rgRespLabel(e.response)) : dash },
+    treatment: { c: 'rg-what', h: e.treatment ? esc(e.treatment) : dash },
+    residual:  { c: 'rg-num', h: (e.residual_likelihood && e.residual_severity)
+                   ? rgCell(e.residual_likelihood, e.residual_severity, e.residual_likelihood * e.residual_severity)
+                   : dash },
+    verify:    { c: 'rg-clip', h: e.verification_method ? esc(e.verification_method) : dash },
+    owner:     { c: 'rg-clip', h: esc(e.owner || e.by || '') },
+    where:     { c: 'rg-clip', h: rgLinkTo(e) },
+    due:       { c: 'rg-dt', h: d(e.due_date) },
+    review:    { c: 'rg-dt', h: d(e.review_date) },
+    register:  { c: 'rg-clip', h: esc(e.subject || '') },
+    raised:    { c: 'rg-dt', h: d(e.at) },
+    status:    { h: end },
+  };
+
   return '<div class="lrow rg-row' + (e.open ? '' : ' rg-shut') + '" data-testid="raida-item"'
     + ' data-rid="' + e.raida_id + '" style="grid-template-columns:' + rgTpl() + '">'
-    + '<div class="rg-id" title="' + esc(e.raida_id) + '">' + esc(String(e.raida_id).slice(0, 6)) + '</div>'
-    + '<div><span class="mtype ' + e.kind + '">' + rgIcon(e.kind) + ' ' + esc(rgLabel(e.kind)) + '</span></div>'
-    + '<div class="rg-what">' + esc(e.body) + '</div>'
-    + '<div class="rg-clip">' + esc(e.subject || '') + '</div>'
-    + '<div class="rg-clip">' + rgLinkTo(e) + '</div>'
-    + '<div class="rg-clip">' + esc(e.owner || e.by || '') + '</div>'
-    + '<div class="rg-num">' + rgCell(e.likelihood, e.severity, e.score) + '</div>'
-    + '<div class="rg-what">' + (e.treatment ? esc(e.treatment) : dash) + '</div>'
-    /* ⭐ Beside the treatment it categorises. A tolerated risk with no treatment is a complete answer, and
-       reading them apart makes it look like a gap. */
-    + '<div class="rg-clip">' + (e.response ? esc(rgRespLabel(e.response)) : dash) + '</div>'
-    + '<div class="rg-clip">' + (e.verification_method ? esc(e.verification_method) : dash) + '</div>'
-    + '<div class="rg-num">' + resid + '</div>'
-    + '<div class="rg-dt">' + d(e.due_date) + '</div>'
-    + '<div class="rg-dt">' + d(e.review_date) + '</div>'
-    + '<div class="rg-dt">' + d(e.at) + '</div>'
-    + '<div>' + end + '</div>'
+    + RG_COLS.map(function (col) {
+        var v = cell[col.k] || { h: '' };
+        return '<div data-col="' + col.k + '"' + (v.c ? ' class="' + v.c + '"' : '')
+          + (v.t ? ' title="' + esc(v.t) + '"' : '') + '>' + v.h + '</div>';
+      }).join('')
     + '</div>';
 }
 
@@ -333,6 +354,10 @@ function rgTable(es) {
 function rgCss() {
   return '<style>'
     /* the scroll frame — a register is wider than any pane, and the page must never scroll sideways with it */
+    /* ⭐ A register is a WIDE object. modal(…, true) is 820px — right for a form, wrong here: at 820 the
+       scores sit off the right edge, which is most of why the first attempt read as a stacked panel.
+       Scoped to this capability rather than widening every modal in the app. */
+    + '#modalhost .modal.rg-modal{width:1240px}'
     + '.rg-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}'
     + '.rg-grid{min-width:1620px}'
     + '.rg-wrap .lhead,.rg-wrap .lrow{display:grid;align-items:start}'

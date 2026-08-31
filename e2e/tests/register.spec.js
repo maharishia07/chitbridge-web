@@ -208,12 +208,16 @@ test.describe('Module · Register', () => {
       rgPaint();
       const head = document.querySelector('.rg-wrap .lhead');
       const row = document.querySelector('.rg-wrap .lrow');
-      return { headCells: head ? head.children.length : -1,
-               rowCells: row ? row.children.length : -1,
-               declared: (typeof RG_COLS !== 'undefined') ? RG_COLS.length : -1 };
+      const keys = (el) => el ? Array.prototype.map.call(el.children, function (c) { return c.getAttribute('data-col'); }) : [];
+      return { headKeys: keys(head), rowKeys: keys(row),
+               declared: (typeof RG_COLS !== 'undefined') ? RG_COLS.map(function (c) { return c.k; }) : [] };
     });
-    expect(aligned.headCells, 'header vs declared columns').toBe(aligned.declared);
-    expect(aligned.rowCells, 'row cells vs declared columns').toBe(aligned.declared);
+    /* ⭐⭐ ORDER, not just count. The header and the cells are two renderings of RG_COLS, and a reorder that
+       misaligns every column leaves the COUNT correct — so a count check passes while every value sits under
+       the wrong heading. Both are now compared against the declaration itself. */
+    expect(aligned.headKeys.join(','), 'header order vs RG_COLS').toBe(aligned.declared.join(','));
+    expect(aligned.rowKeys.join(','), 'cell order vs RG_COLS').toBe(aligned.declared.join(','));
+    expect(aligned.declared.length, 'columns declared').toBeGreaterThan(10);
 
     const row = page.getByTestId('raida-item').filter({ hasText: 'Rig availability' });
     await expect(row).toContainText('Treat');
