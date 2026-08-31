@@ -180,4 +180,57 @@ test.describe('Module · Register', () => {
     await expect(row).toContainText('inspection');
     await expect(row).toContainText('12');
   });
+
+  /**
+   * ⭐⭐ Athi, 2026-08-31: *"add the 4 T's response category."*
+   *
+   * `treatment` is free text and says what we are doing; the CATEGORY says what the decision IS, and it is the
+   * column a risk report pivots on.
+   *
+   * ⚠️ THIS TEST IS ALSO THE GRID GUARD. The header comes from RG_COLS and the cells are written out by hand in
+   * rgTr — add a column to one and not the other and every cell after it lands under the wrong heading, with no
+   * error anywhere. That is a silent wrong answer of exactly the kind this capability keeps producing.
+   */
+  test('[REG-05] the response category is offered for a risk, and only for a risk', async ({ page }) => {
+    await mintEntity(page);
+    await openRegister(page);
+
+    /* The header and the cells must agree, migration or not. */
+    const aligned = await page.evaluate(() => {
+      RG.report = { migrated: true, full: true, resp: true, open: 1, closed: 0, closed_by_order: 0,
+        by_kind: [], by_disposition: {},
+        entries: [{ raida_id: 'r-1', chit_id: null, line_id: null, kind: 'risk',
+                    body: 'Rig availability', subject: 'Campaign', owner: 'Rao',
+                    likelihood: 3, severity: 4, score: 12, treatment: 'Book earlier',
+                    response: 'treat', verification_method: 'test',
+                    at: '2026-08-31T00:00:00Z', open: true, ending: null }] };
+      RG.subjects = []; RG.sel = null;
+      rgPaint();
+      const head = document.querySelector('.rg-wrap .lhead');
+      const row = document.querySelector('.rg-wrap .lrow');
+      return { headCells: head ? head.children.length : -1,
+               rowCells: row ? row.children.length : -1,
+               declared: (typeof RG_COLS !== 'undefined') ? RG_COLS.length : -1 };
+    });
+    expect(aligned.headCells, 'header vs declared columns').toBe(aligned.declared);
+    expect(aligned.rowCells, 'row cells vs declared columns').toBe(aligned.declared);
+
+    const row = page.getByTestId('raida-item').filter({ hasText: 'Rig availability' });
+    await expect(row).toContainText('Treat');
+    /* ⚠️ Beside the treatment it categorises — apart, a tolerated risk with no treatment reads as a gap. */
+    await expect(row).toContainText('Book earlier');
+
+    /* ⭐ Asserted against the INJECTED report, which carries resp:true — so this holds whether or not b192
+       has been run on the database behind it. What it proves is the UI contract: the picker exists exactly
+       when the column does.
+       The picker itself only exists once the column does — a field that silently drops what you type is worse
+       than no field, and an all-null column cannot tell you which state you are in. */
+    await page.getByTestId('register-tab-live').click();
+    await page.getByTestId('raida-add-open').click();
+    await page.getByTestId('raida-kind').selectOption('risk');
+    await expect(page.getByTestId('raida-response')).toBeVisible();
+    /* ⚠️ Not on an assumption. It is not tolerated or transferred, and an action is the work itself. */
+    await page.getByTestId('raida-kind').selectOption('assumption');
+    await expect(page.getByTestId('raida-response')).toBeHidden();
+  });
 });

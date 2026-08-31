@@ -267,6 +267,7 @@ var RG_COLS = [
   { k: 'owner',     w: '104px',             h: 'Owner' },
   { k: 'inherent',  w: '92px',              h: 'Inherent' },
   { k: 'treatment', w: 'minmax(150px,1fr)', h: 'Treatment' },
+  { k: 'response',  w: '104px',             h: 'Response' },
   { k: 'verify',    w: '96px',              h: 'Verify' },
   { k: 'residual',  w: '92px',              h: 'Residual' },
   { k: 'due',       w: '94px',              h: 'Due' },
@@ -304,6 +305,9 @@ function rgTr(e) {
     + '<div class="rg-clip">' + esc(e.owner || e.by || '') + '</div>'
     + '<div class="rg-num">' + rgCell(e.likelihood, e.severity, e.score) + '</div>'
     + '<div class="rg-what">' + (e.treatment ? esc(e.treatment) : dash) + '</div>'
+    /* ⭐ Beside the treatment it categorises. A tolerated risk with no treatment is a complete answer, and
+       reading them apart makes it look like a gap. */
+    + '<div class="rg-clip">' + (e.response ? esc(rgRespLabel(e.response)) : dash) + '</div>'
     + '<div class="rg-clip">' + (e.verification_method ? esc(e.verification_method) : dash) + '</div>'
     + '<div class="rg-num">' + resid + '</div>'
     + '<div class="rg-dt">' + d(e.due_date) + '</div>'
@@ -330,7 +334,7 @@ function rgCss() {
   return '<style>'
     /* the scroll frame — a register is wider than any pane, and the page must never scroll sideways with it */
     + '.rg-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}'
-    + '.rg-grid{min-width:1520px}'
+    + '.rg-grid{min-width:1620px}'
     + '.rg-wrap .lhead,.rg-wrap .lrow{display:grid;align-items:start}'
     /* ⚠️ departure 1 — a register row is READ, not opened. The chit inside it is the link. */
     + '.rg-row{cursor:default}'
@@ -409,6 +413,7 @@ function rgAddBar() {
     + '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Severity') + '</span>'
     + '<input id="rgS" class="inp" type="number" min="1" max="5" style="width:64px">'
     + '</div>'
+    + rgRespFields()
     + rgEdgeFields()
     + '<div style="display:flex;gap:6px">'
     + '<button class="btn" data-testid="raida-save" style="flex:1" onclick="rgSave()">' + tx('Record it') + '</button>'
@@ -448,10 +453,45 @@ function rgEdgeFields() {
     + '</div></div>';
 }
 
-/* Shown on 'dependency', hidden otherwise — one listener, set when the bar is painted. */
+/**
+ * ⭐⭐ THE FOUR T's. `treatment` says what we are doing; this says what the decision IS, and it is the column a
+ * risk report pivots on — *"how much of this register are we simply tolerating"* is a question free text cannot
+ * answer.
+ *
+ * ⚠️ SHOWN FOR A RISK ONLY. An assumption is not tolerated or transferred, and an action is the work itself.
+ * Offering it everywhere would collect a category on rows nothing will ever group.
+ *
+ * ⚠️ AND ONLY WHEN THE DATABASE CAN STORE IT. `RG.report.resp` is reported by the server (b192), not guessed —
+ * an all-null column looks the same whether the migration has not run or nobody has answered yet, and a field
+ * that silently drops what you type is worse than no field.
+ */
+var RG_RESPONSES = {
+  tolerate:  { label: 'Tolerate',  hint: 'accept it and carry on — recorded, not ignored' },
+  treat:     { label: 'Treat',     hint: 'act to reduce likelihood or severity' },
+  transfer:  { label: 'Transfer',  hint: 'move the exposure — insure it, contract it out' },
+  terminate: { label: 'Terminate', hint: 'stop doing the thing that carries it' },
+};
+
+function rgRespLabel(k) { return (RG_RESPONSES[k] && RG_RESPONSES[k].label) || k; }
+
+function rgRespFields() {
+  if (!RG.report || !RG.report.resp) return '';
+  return '<div id="rgRespWrap" style="display:none;margin-bottom:6px">'
+    + '<select id="rgResp" class="inp" data-testid="raida-response" style="width:100%">'
+    + '<option value="">' + esc(tx('— response not decided —')) + '</option>'
+    + Object.keys(RG_RESPONSES).map(function (k) {
+        return '<option value="' + k + '">' + esc(RG_RESPONSES[k].label) + ' — ' + esc(RG_RESPONSES[k].hint) + '</option>';
+      }).join('')
+    + '</select></div>';
+}
+
+/* Shown on 'risk', hidden otherwise — one listener, set when the bar is painted. */
 function rgKindChanged() {
-  var el = document.getElementById('rgEdge');
-  if (el) el.style.display = (rgVal('rgKind') === 'dependency') ? '' : 'none';
+  var k = rgVal('rgKind');
+  var edge = document.getElementById('rgEdge');
+  if (edge) edge.style.display = (k === 'dependency') ? '' : 'none';
+  var resp = document.getElementById('rgRespWrap');
+  if (resp) resp.style.display = (k === 'risk') ? '' : 'none';
 }
 
 function rgAdd(on) { RG.adding = !!on; rgPaint(); }
@@ -469,6 +509,8 @@ async function rgSave() {
   var s = rgVal('rgS'); if (s) p.severity = +s;
   /* ⭐ An edge only exists when a target is NAMED. Blank leaves it a note, which the Impact view then lists
      apart rather than pretending it can be walked. */
+  /* ⭐ Only for a risk, and only when the column exists — see rgRespFields. */
+  if (p.kind === 'risk') { var rsp = rgVal('rgResp'); if (rsp) p.response = rsp; }
   if (p.kind === 'dependency') {
     var to = rgVal('rgTo');
     if (to) {
