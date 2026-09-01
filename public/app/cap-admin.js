@@ -823,7 +823,17 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
   if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
   /* ⚠️ THE SNAPSHOT IS RE-TAKEN AFTER EVERY PAINT. A baseline captured once at load goes stale the first time
      a section is collapsed, and every later edit then reads as clean. See profSnapshot. */
-  if(UI._me){ h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
+  /**
+   * ⚠️⚠️ SEED THE LATCHES HERE TOO, AND THIS IS THE WHOLE DEFECT. The one-read work below already collapses
+   * /me + readiness + channels + vault into a single request — but only on the COLD path, after meTake().
+   * /me is PREFETCHED at sign-in, so by the time anyone opens Profile  is usually already set and
+   * this early return fires instead: the sub-loaders find their latches unset and each fetches on its own.
+   *
+   * ⭐ So the optimisation worked exactly on the path nobody takes, and silently degraded back to four reads
+   * on the common one. Measured 2026-09-01: three extra requests (actors, readiness, channels) on a warm
+   * open. _profSeedIncluded is defensive — no , or one that errored, simply leaves the latch alone.
+   */
+  if(UI._me){ _profSeedIncluded(UI._me); h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
   if(_profBusy) return;
   _profBusy = true;
   /**
