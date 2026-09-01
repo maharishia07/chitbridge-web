@@ -265,8 +265,8 @@ function cbDefRegistries(){
    */
   out.push({
     key: 'standard', icon: '📐', title: 'Standards',
-    blurb: 'Classification schemes a product can cite. ⚠️ Always BY REFERENCE — you cite the code, you never '
-         + 'copy the scheme. The issuing body owns it and keeps it current.',
+    blurb: 'Classification schemes a product can cite. You cite the code; the issuing body owns the scheme '
+         + 'and keeps it current.',
     source: 'app/catalogue-model.js · STD_SCHEMES',
     rows: P && P.standards ? P.standards.map(function (s) {
       var e = CBDEF_EG[s] || {};
@@ -798,6 +798,25 @@ function cbDefRepaint(){
 }
 function cbDefToggle(k){ CBDEF.open[k] = !CBDEF.open[k]; cbDefRepaint(); }
 
+/**
+ * ⚠️⚠️ THE LABEL NEVER REPEATS THE CODE. Athi, 2026-09-01: *"HS and HS-Harmonized system, do we need two HS?"*
+ * We did not: the chip says `HS` and the label is written `HS — Harmonized System`, so every row said the name
+ * twice. The registry entries are written with the prefix because the label also stands ALONE elsewhere (a
+ * dropdown of schemes with no chip beside it), so the fix trims at RENDER rather than editing the data — and any
+ * future entry written the same way renders once too, without anyone having to remember a convention.
+ *
+ * ⭐ IT LIVES HERE BECAUSE TWO SCREENS DRAW THESE ROWS. The registry showcase in this file, and the Classification
+ * schemes block on the Categories screen — which is the one Athi was actually looking at. Writing the trim into
+ * whichever screen was in front of me would have fixed one of them and left the other saying HS twice.
+ */
+function cbDefLabelOnce(r){
+  var lab = String((r && r.label) == null ? '' : r.label);
+  var code = String((r && r.code) == null ? '' : r.code);
+  if (!code) return lab;
+  if (lab === code) return '';
+  return lab.replace(new RegExp('^' + code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*[—–:-]\\s*'), '');
+}
+
 function cbDefSectionHTML(s){
   var open = !!CBDEF.open[s.key];
   var count = s.rows ? s.rows.length : 0;
@@ -817,10 +836,18 @@ function cbDefSectionHTML(s){
           + 'It is not that there are none.</div>';
   } else {
     body += s.rows.map(function (r) {
+      var lab = cbDefLabelOnce(r);
+      var code = String(r.code == null ? '' : r.code);
       return '<div class="cbdef-row">'
-        + '<code class="cbdef-code">' + cbDefEsc(r.code) + '</code>'
-        + '<span class="cbdef-lab">' + cbDefEsc(r.label) + '</span>'
-        + (r.who ? '<span class="cbdef-who">' + cbDefEsc(r.who) + '</span>' : '')
+        /* ⭐ THE NAME IS ITS OWN LINE and everything that explains it sits underneath — Athi: *"bring the
+           explanation below the HS-, this will give a better look… your own scheme in one line and the
+           explanation can be given below."* The issuing body moved down with the rest: it is an explanation of
+           the scheme, not part of its name, and inline it made the one line people scan the crowded one. */
+        + '<div class="cbdef-name">'
+        + '<code class="cbdef-code">' + cbDefEsc(code) + '</code>'
+        + (lab ? '<span class="cbdef-lab">' + cbDefEsc(lab) + '</span>' : '')
+        + '</div>'
+        + (r.who ? '<div class="cbdef-who">' + cbDefEsc(r.who) + '</div>' : '')
         + (r.note ? '<div class="cbdef-note">' + cbDefEsc(r.note) + '</div>' : '')
         /* ⭐ A worked example is what turns a scheme name into something someone can act on. */
         + (r.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + cbDefEsc(r.eg) + '</div>' : '')
@@ -830,9 +857,19 @@ function cbDefSectionHTML(s){
         + '</div>';
     }).join('');
   }
-  /* ⭐ THE SOURCE IS ON SCREEN. This screen's whole claim is that it does not keep its own list; saying WHERE
-     each list comes from is what makes that checkable rather than a promise in a comment. */
-  body += '<div class="cbdef-src">read from <code>' + cbDefEsc(s.source) + '</code></div>';
+  /**
+   * ⭐ THE SOURCE IS ON SCREEN — BUT ONLY UNDER 🧾 Spec. Athi, 2026-09-01: *"read from app/catalogue-model.js ·
+   * STD_SCHEMES, is it necessary?"* For the person choosing a scheme, no: it is a file path, and a file path
+   * cannot help anyone decide anything.
+   *
+   * ⚠️ It is not deleted either. This screen's whole claim is that it keeps no list of its own, and naming WHERE
+   * each list comes from is what makes that checkable rather than a promise in a comment. Spec mode already
+   * exists for exactly this reader — *"standards, mechanisms, and the API calls it makes"* — so the claim stays
+   * verifiable by whoever wants to verify it, and stops being a footnote on everybody else's screen.
+   */
+  if (typeof specOn === 'function' && specOn()) {
+    body += '<div class="cbdef-src">read from <code>' + cbDefEsc(s.source) + '</code></div>';
+  }
   return '<div class="cbdef-sec">' + head + '<div class="cbdef-body">' + body + '</div></div>';
 }
 
@@ -1029,7 +1066,9 @@ function cbDefCss(){
     'background:var(--warn-tint);border-radius:5px;padding:1px 6px;margin-inline-end:8px;color:var(--warn-3)}',
     '.cbdef-lab{font-size:var(--fs-2);font-weight:600}',
     '.cbdef-note{font-size:var(--fs-2);color:var(--grey);margin-top:3px;line-height:1.5;max-width:66ch}',
-    '.cbdef-who{font-size:var(--fs-1);color:var(--grey-4);margin-inline-start:8px}',
+    /* The name line: the code chip and its words, together, with nothing else competing on it. */
+    '.cbdef-name{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}',
+    '.cbdef-who{font-size:var(--fs-1);color:var(--grey-4);margin-top:3px}',
     '.cbdef-eg{font-size:var(--fs-2);margin-top:4px;background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));',
     'border-radius:6px;padding:4px 9px;display:inline-block;max-width:66ch;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}',
     '.cbdef-eglab{font-weight:700;color:var(--warn-2);font-family:inherit}',

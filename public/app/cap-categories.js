@@ -417,12 +417,46 @@ function cbcatSchemesHTML(){
     + '<div class="cbcat-note" style="margin-bottom:8px">' + esc(s.blurb) + '</div>'
     + '<div class="cbcat-plist">'
     + s.rows.map(function(r){
-        return '<div class="cbcat-prow"><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)">'
-          + esc(r.code) + '</code><span style="margin-inline-start:8px">' + esc(r.label || '') + '</span>'
-          + (r.note ? '<span class="cbcat-also">' + esc(r.note) + '</span>' : '') + '</div>';
+        /**
+         * ⭐ THE NAME ON ONE LINE, THE EXPLANATION UNDER IT — Athi, 2026-09-01: *"bring the explanation below the
+         * HS-, this will give a better look. Ie: customer your own scheme in one line and the explanation can be
+         * given below."* The note used to sit on the same line as the name, so the line people scan to find a
+         * scheme was the longest line in the block.
+         *
+         * ⚠️ And the name is printed ONCE — `cbDefLabelOnce` drops the `HS — ` the label carries for use
+         * elsewhere. That is the *"do we need two HS?"* he asked about.
+         */
+        var lab = (typeof cbDefLabelOnce === 'function') ? cbDefLabelOnce(r) : (r.label || '');
+        return '<div class="cbcat-prow" style="display:block">'
+          + '<div><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)">'
+          + esc(r.code) + '</code>'
+          + (lab ? '<span style="margin-inline-start:8px;font-weight:600">' + esc(lab) + '</span>' : '')
+          + '</div>'
+          /**
+           * ⚠️ `white-space:normal` AND `margin-inline-start:0` OVERRIDE THE SHARED CLASS ON PURPOSE.
+           * `.cbcat-also` was built for the product list above, where it is a SHORT trailing hint pushed to the
+           * right of one line and must not wrap. A scheme's note is three sentences, so under that class it ran
+           * off the edge and gave the box a sideways scrollbar — visible in e2e/schemes.png before this, and
+           * exactly the *"can we redesign the details in the boxes"* Athi asked about.
+           *
+           * ⭐ Overridden HERE rather than in the class, because the product list still wants the old behaviour.
+           * Changing the shared rule would have fixed this box and broken that one.
+           */
+          + (r.note ? '<div class="cbcat-also" style="margin-inline-start:0;margin-top:2px;display:block;'
+                    + 'white-space:normal;line-height:1.5;max-width:78ch">' + esc(r.note) + '</div>' : '') + '</div>';
       }).join('')
     + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>';
+    /**
+     * ⭐ THE SOURCE LINE MOVED BEHIND 🧾 Spec — Athi: *"read from app/catalogue-model.js · STD_SCHEMES, is it
+     * necessary?"* For someone choosing a scheme, no: a file path cannot help anyone decide anything.
+     *
+     * ⚠️ Not deleted, though. Naming where the list comes from is what makes "we keep no list of our own"
+     * checkable instead of a promise in a comment. Spec mode exists for exactly that reader, so the claim stays
+     * verifiable and stops being a footnote on everybody else's screen.
+     */
+    + ((typeof specOn === 'function' && specOn())
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">read from <code>'
+          + esc(s.source) + '</code></div>' : '');
 }
 /**
  * The parent picker. ⚠️ Options are indented with the same depth the list uses, so "sits under" is answered by

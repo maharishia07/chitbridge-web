@@ -1399,6 +1399,10 @@ function _netStepDetails(){
 }
 function _netStepReview(){
   var o = _netOrderState(), c = UI._netCart, T = c ? c.total() : { amount:0 }, sel = c ? c.selected() : [];
+  /* ⭐ THE CART FORMATS ITS OWN MONEY — see cart-ui's money(). This screen printed String(line_total), copied
+     verbatim from the supplier review, so both said an amount with no currency on the last page before an order
+     goes out. Athi reported the supplier one; this is the same defect on a screen he had not reached yet. */
+  var _netMoney = function(n){ return c ? c.money(n) : (n==null||!isFinite(n)?'—':String(n)); };
   var s = UI._brSel || {};
   var row = function(k, v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-2)">'
     + '<span style="min-width:96px;color:var(--grey);font-size:var(--fs-1)">' + k + '</span><span style="flex:1">' + v + '</span></div>'; };
@@ -1410,10 +1414,10 @@ function _netStepReview(){
         '<div style="padding:8px 12px;font-size:var(--fs-2)"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(s.user_id||s.bridge_id || '') + '</span></div>')
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
-          + '<b style="float:inline-end">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
+          + '<b style="float:inline-end">' + esc(_netMoney(l.line_total)) + '</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
-        + '<span data-testid="net-total">' + (T.amount ? esc(String(T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>', 0)
+        + '<span data-testid="net-total">' + (T.amount ? esc(_netMoney(T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>', 0)
     + card('Details', row('Subject', esc(o.subject)) + row('Needed by', o.by ? esc(o.by) : '—')
         + row('Deliver to', o.addr ? esc(o.addr) : '—') + row('Note', o.note ? esc(o.note) : '—'), 1)
     /* Money is stamped per entity and NEVER converted. A store trading in another currency shows its own. */

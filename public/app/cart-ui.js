@@ -1074,6 +1074,19 @@
       lines: function () { return lines(ns); },
       units: function () { return units(ns); },
       total: function () { return total(ns); },
+      /**
+       * ⭐⭐ THE CART FORMATS ITS OWN MONEY. Athi: *"the amount does not carry a currency symbol."* Two review
+       * screens — supplier and network — printed `String(line_total)` and `String(total.amount)`, bare numbers on
+       * the last page before an order goes out. Both had been written by copying the other.
+       *
+       * ⚠️ The fix is NOT a helper in each screen. This file's own note says a renderer that formats money its own
+       * way will one day print a different number from the cart beside it, and two screens had already proved it.
+       * The cart knows the shop's currency, so the cart is asked.
+       *
+       * An unpriced line returns the em-dash rather than "0": no price and a price of zero are different claims,
+       * and only one of them is a promise.
+       */
+      money: function (n) { return (n == null || !isFinite(n)) ? '—' : fmt(ns, n); },
       qtyOf: function (id) { return qtyOf(ns, id); },
       offerState: function (id) { return offerState(ns, id); },
       /* changing — every one routes through the same gate as the + button */

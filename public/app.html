@@ -6714,15 +6714,38 @@ function supStepsFor(x){
       steps:[{k:'items',n:'Items',t:tx('What do you need from your own stock?')}],
       railEl:'sup_rail', bodyEl:'sup_body', footEl:'sup_foot', subEl:'sup_sub',
       render:function(){ return supStepItems(); },
-      guard:function(){ return (UI._supCart && UI._supCart.lines().length) ? null : tx('Add at least one item.'); },
+      /**
+       * ⚠️⚠️ `lines()` IS A COUNT, NOT AN ARRAY — and this guard read `.lines().length`, which is `undefined` on a
+       * number. Falsy, always, whatever is in the cart. So the primary button could never enable: you press +,
+       * the row shows a quantity, the cart bar says "🛒 1 ₹100", and the footer goes on saying "Add at least one
+       * item." That is Athi's *"the entire cycle not completing… but hangs"* — nothing hung, the terminal action
+       * was unreachable by construction.
+       *
+       * ⭐ SECOND TIME. `app/pick.js` carries the same finding from the worklist's commit, where `(cart.lines()
+       * || []).map(...)` threw into its own catch and recorded nothing. Documented, not guarded — so the next
+       * branch to be written repeated it. `e2e/cart-api.cjs` now fails the build on it.
+       */
+      guard:function(){ return (UI._supCart && UI._supCart.lines()) ? null : tx('Add at least one item.'); },
       sendLabel:function(){ return tx('Use these lines →'); },
       cancelLabel:tx('Back'),
       onCancel:function(){ backToList(); },
       onSend:function(){
-        var lines=(UI._supCart && UI._supCart.lines()) || [];
+        /* ⚠️ THE SAME MISTAKE'S OTHER HALF: this took `lines()` for the rows, so even past the guard it would have
+           thrown "map is not a function" on a number. `selected()` is the accessor that returns the rows, each
+           already carrying the price that COUNTS for it after any offer. */
+        var lines=(UI._supCart && UI._supCart.selected()) || [];
         if(!lines.length) return;
-        /* ⭐ compose() already knows how to take lines — the same door the catalogue screen uses. */
-        compose({ items:lines.map(function(l){
+        /**
+         * ⭐ compose() already knows how to take lines — the same door the catalogue screen uses.
+         *
+         * ⭐⭐ AND THE RECIPIENT IS ALREADY KNOWN, so it is filled rather than asked. Athi: *"It has to create a
+         * self chit."* Taking from your OWN shelf has exactly one possible addressee — yourself — and Compose's
+         * To step is there for the case where the recipient is genuinely unknown. Prefilling it is the same
+         * reasoning that gives a supplier order three steps instead of four: a question with one answer is not
+         * a question. The step stays on the rail, satisfied, so the record still says who it went to.
+         */
+        compose({ recipients:[{ name:tx('Self'), role:'to', self:true }],
+          items:lines.map(function(l){
           var raw=(l.price&&l.price.amount!=null)?l.price.amount:l.price;
           return { particulars:l.name||l.particulars||'', unit:l.unit||'unit',
                    quantity:Number(l.qty||l.quantity||1)||1, price:Number(raw)||0 };
@@ -6787,6 +6810,18 @@ function supStepDetails(x){
 }
 function supStepReview(x){
   var o=supOrderState(), c=UI._supCart, T=c?c.total():{amount:0}, sel=c?c.selected():[];
+  /**
+   * ⚠️⚠️ MONEY IS FORMATTED BY THE CART, NOT BY String(). Athi: *"the cycle completes, the amount does not carry
+   * a currency symbol."* It did not, because this screen — the LAST one before an order goes out — printed
+   * `String(l.line_total)` and `String(T.amount)`, two bare numbers, on the page whose whole job is to show what
+   * is about to be committed to. Every other surface (the row, the bar, the popup, the picker) goes through
+   * `CBCart.fmt`, which knows the shop's currency.
+   *
+   * ⭐ AND THE CART IS ASKED RATHER THAN A HELPER WRITTEN HERE — `c.money()`. cart-ui's own note says a renderer
+   * that formats money its own way will one day print a different number from the cart beside it, and the Network
+   * review had already copied this screen's `String()` verbatim. A helper in this file would have been the third.
+   */
+  var money=function(n){ return c ? c.money(n) : (n==null||!isFinite(n)?'—':String(n)); };
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-2)">'
     + '<span style="min-width:96px;color:var(--grey);font-size:var(--fs-1)">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
@@ -6798,10 +6833,10 @@ function supStepReview(x){
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
           + (l.offered?'<span style="color:var(--grey);font-size:var(--fs-1)"> · your offer</span>':'')
-          + '<b style="float:inline-end">'+(l.line_total==null?'—':esc(String(l.line_total)))+'</b>'); }).join('')
+          + '<b style="float:inline-end">'+esc(money(l.line_total))+'</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
-        + '<span data-testid="sup-total">'+(T.amount?esc(String(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
+        + '<span data-testid="sup-total">'+(T.amount?esc(money(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
     + card('Details', row('Subject', esc(o.subject)||'<span style="color:var(--disp)">required</span>')
         + row('Needed by', o.by?esc(o.by):'—') + row('Deliver to', o.addr?esc(o.addr):'—')
         + row('Note', o.note?esc(o.note):'—'), 1)
