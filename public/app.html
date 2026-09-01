@@ -3911,7 +3911,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01i';
+const CB_BUILD = '2026-09-01j';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -7350,8 +7350,7 @@ function catalogueScreen(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
-      ${prodCatgStripHTML()}
-      ${prodAvailChipsHTML()}
+      <div id="ct_strips">${prodCatgStripHTML()}${prodAvailChipsHTML()}</div>
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
@@ -7418,6 +7417,27 @@ function prodPickAll(){
   vis.forEach(id=>{ if(every) UI.prodPicked.delete(id); else UI.prodPicked.add(id); });
   paintProdList(); prodPickBarPaint();
 }
+/**
+ * ⚠️⚠️ THE HEADER STRIPS MUST BE REPAINTED WITH THE LIST, AND THEY WERE NOT.
+ *
+ * `catalogueScreen()` builds the category strip and the availability chips from `UI.prods` — which is EMPTY
+ * when the screen first renders, because `loadCatalogue()` has not returned yet. Both correctly return '' at
+ * that moment. `loadCatalogue()` then fills `UI.prods` and calls `paintProdList()`, which repaints only
+ * `#ct_rows` — so the rows arrive and the strips above them stay as they were: absent.
+ *
+ * ⭐ The result reads as a missing feature rather than a stale paint: the products are right there, and the
+ * filters that describe them are simply not on screen. It affected the category strip too, which predates
+ * this — so it was never "my new chips do not show", it was "this header never refreshes".
+ *
+ * ⚠️ THE FIX IS THE PATTERN THE PICK BAR ALREADY USES: a host with an id, and a paint function called wherever
+ * the list is painted. Rebuilding the whole screen instead would throw away the search box's focus and
+ * whatever was typed in it.
+ */
+function prodStripsPaint(){
+  const h = document.getElementById('ct_strips');
+  if (h) h.innerHTML = prodCatgStripHTML() + prodAvailChipsHTML();
+}
+
 function prodPickBarPaint(){ const b=document.getElementById('ct_pickbar'); if(b) b.innerHTML=prodPickBarHTML(); }
 function prodPickBarHTML(){
   if(!UI.prodPick) return '';
@@ -7599,6 +7619,56 @@ async function prodCategoriseApply(){
  * to "not available", tick the rows and set them back, and a server round trip per filter change would make
  * that worse, not better. The full list is already in memory.
  */
+/**
+ * ⭐⭐ HOW MANY, OR N/A — NEVER A ZERO WE DID NOT MEASURE. Athi, 2026-09-01: *"Can we show the available
+ * quantity as part of the catalogue and to the customer as well. If the information not available, then say
+ * N/A, but don't say zero."*
+ *
+ * ⚠️⚠️ AND ZERO IS NOT N/A. They are opposite claims and the whole value of this field is telling them apart:
+ * `0` means somebody counted and the shelf is empty; N/A means nobody has said. Printing 0 for an unmeasured
+ * item invents a fact, and printing N/A for a measured empty shelf hides one. The server already draws this
+ * line — `availability.stamp()` returns null when nothing usable was said — so `avail` being ABSENT is the
+ * only thing that reads as unknown.
+ *
+ * ⚠️ A STOCK FIGURE WITH NO TIMESTAMP IS A RUMOUR (lib/availability.js). When the count is old enough to
+ * matter, the age is shown beside it rather than the number standing alone looking current.
+ */
+function availOf(d){
+  var a = d && d.avail;
+  if (!a || a.qty === null || a.qty === undefined || a.qty === '') return null;
+  var n = Number(a.qty);
+  return isFinite(n) ? { qty: n, as_of: a.as_of || null, source: a.source || null } : null;
+}
+
+function availText(d){
+  var a = availOf(d);
+  return a ? String(a.qty) : tx('N/A');
+}
+
+/** How old the count is, in words — '' when it is fresh enough not to matter, or when there is no count. */
+function availAge(d){
+  var a = availOf(d);
+  if (!a || !a.as_of) return '';
+  var t = Date.parse(a.as_of);
+  if (isNaN(t)) return '';
+  var hrs = (Date.now() - t) / 36e5;
+  if (hrs < 24) return '';
+  var days = Math.floor(hrs / 24);
+  return days === 1 ? tx('counted yesterday') : txf('counted {n} days ago', { n: days });
+}
+
+/** The chip the catalogue row and the storefront both use, so the two can never say different things. */
+function availChipHTML(d){
+  var a = availOf(d);
+  var age = availAge(d);
+  var col = !a ? 'var(--grey)' : (a.qty === 0 ? 'var(--warn-2)' : 'var(--ok-2)');
+  return '<span class="availchip" title="' + esc(a ? (tx('On the shelf') + (age ? ' · ' + age : ''))
+      : tx('No stock figure has been recorded for this item.')) + '"'
+    + ' style="font-size:var(--fs-1);font-weight:700;color:' + col + ';white-space:nowrap;'
+    + 'font-variant-numeric:tabular-nums">' + esc(availText(d)) + '</span>'
+    + (age ? '<span style="font-size:var(--fs-1);color:var(--grey)"> · ' + esc(age) + '</span>' : '');
+}
+
 function prodAvailFilter(v){ UI._prodAvail = (UI._prodAvail === v) ? '' : v; renderApp(); }
 
 function prodAvailChipsHTML(){
@@ -7690,7 +7760,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:''}
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-inline-start:auto">${inr(pPrice(d))}</span></div>
-    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
+    <div class="l2">${availChipHTML(d)} · ${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
     ${catChips?`<div class="l3cat">${catChips}</div>`:''}</div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
@@ -7768,7 +7838,7 @@ function refFinishDetail(it){
   +'</div>';
   return head+body;
 }
-function paintProdList(){ const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
+function paintProdList(){ prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
 function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
 async function loadCatalogue(){
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';

@@ -194,4 +194,63 @@ test.describe('Module · UX list 2026-09-01', () => {
     expect(await page.evaluate(() =>
       document.documentElement.style.getPropertyValue('--font-ui'))).toBe('');
   });
+
+  /**
+   * ⭐⭐ Athi, 2026-09-01: *"Can we show the available quantity as part of the catalogue and to the customer as
+   * well. If the information not available, then say N/A, but don't say zero."*
+   *
+   * ⚠️⚠️ AND ZERO IS NOT N/A. They are opposite claims and telling them apart is the whole value of the field:
+   * 0 means somebody counted and the shelf is empty; N/A means nobody has said. Printing 0 for an unmeasured
+   * item invents a fact; printing N/A for a measured empty shelf hides one.
+   *
+   * ⚠️ IT ALSO COVERS A STALE-PAINT BUG THIS FOUND. catalogueScreen() builds the header strips from UI.prods,
+   * which is EMPTY on first render; loadCatalogue() then repainted only #ct_rows, so the rows arrived and the
+   * filters above them stayed absent. It read as a missing feature rather than a stale paint — and it affected
+   * the category strip too, which predates this work.
+   */
+  test('[UX-06] quantity reads 0 or N/A distinctly, and the filters repaint with the list', async ({ page }) => {
+    test.setTimeout(180000);
+    await mintEntity(page);
+
+    await page.evaluate(async () => {
+      const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token };
+      const made = await (await fetch(CFG.API_BASE + '/api/products/bulk', { method: 'POST', headers: H,
+        body: JSON.stringify({ items: [
+          { name: 'QtyCheck counted', price: 100, unit: 'piece' },
+          { name: 'QtyCheck empty', price: 100, unit: 'piece' },
+          { name: 'QtyCheck unknown', price: 100, unit: 'piece' },
+          { name: 'QtyCheck off', price: 100, unit: 'piece' } ] }) })).json();
+      const id = (made.items || []).map((x) => x.item_id);
+      await fetch(CFG.API_BASE + '/api/products/' + id[0] + '/availability',
+        { method: 'PUT', headers: H, body: JSON.stringify({ qty: 14 }) });
+      await fetch(CFG.API_BASE + '/api/products/' + id[1] + '/availability',
+        { method: 'PUT', headers: H, body: JSON.stringify({ qty: 0 }) });
+      /* id[2] deliberately never counted */
+      await fetch(CFG.API_BASE + '/api/products/status/bulk', { method: 'POST', headers: H,
+        body: JSON.stringify({ ids: [id[3]], status: 'unavailable' }) });
+    });
+
+    await page.evaluate(() => navTo('catalogue'));
+    /* ⭐ The strips only appear after loadCatalogue returns — which is exactly the bug this guards. */
+    await expect(page.getByTestId('cat-availfilter-available')).toBeVisible({ timeout: 40000 });
+    await expect(page.getByTestId('cat-availfilter-unavailable')).toBeVisible();
+
+    const rowText = async (name) =>
+      (await page.locator('.row', { hasText: name }).first().innerText()).replace(/\s+/g, ' ');
+
+    expect(await rowText('QtyCheck counted')).toContain('14');
+    /* ⚠️ A counted-empty shelf shows 0 — it is a measurement, not an absence. */
+    expect(await rowText('QtyCheck empty')).toMatch(/(^|\s)0(\s|$)/);
+    /* ⚠️ And an uncounted one shows N/A — never 0. */
+    expect(await rowText('QtyCheck unknown')).toContain('N/A');
+    expect(await rowText('QtyCheck unknown')).not.toMatch(/(^|\s)0(\s|$)/);
+    /* The filter narrows to what is off, so it can be ticked and set back.
+       ⚠️ POLLED, NOT SNAPSHOTTED. Clicking the chip calls renderApp(), and counting the rows at a fixed delay
+       catches the moment mid-rebuild — which reads as "the filter removed everything" when it has simply not
+       finished painting. */
+    await page.getByTestId('cat-availfilter-unavailable').click();
+    await expect(page.locator('.row', { hasText: 'QtyCheck off' })).toBeVisible({ timeout: 15000 });
+    await expect.poll(async () => page.locator('[data-testid^="cat-product-"]').count(),
+      { timeout: 15000, message: 'only the unavailable one should remain' }).toBe(1);
+  });
 });
