@@ -3906,7 +3906,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01f';
+const CB_BUILD = '2026-09-01g';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -9257,7 +9257,6 @@ async function pgNext(id){ const p=PG[id]; if(!p||p.loading||p.done) return;
   finally{ p.loading=false; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}; } }
 function pgFirst(id){ pgReset(id); return pgNext(id); }
 function pgScroll(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) pgNext(id); }
-function pgFill(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollHeight <= el.clientHeight+8) pgNext(id); }
 /* ⚠️ SAID THE SAME THING TWICE: this line read "Showing 16 of 16 · all loaded" while the sentinel at the bottom
    of the same list read "16 total · end of list". Once everything is loaded there is no progress left to report,
    so this one states the count plainly and lets the bottom marker be the thing that says the list has ended. */
@@ -11000,14 +10999,6 @@ function openLineCard(chit_id, line_id){
     if(typeof wlOpenLine==='function') wlOpenLine(chit_id, line_id);
     else if(typeof toast==='function') toast(tx('The work panel is still loading — try again.'));
   }).catch(function(){ if(typeof toast==='function') toast(tx('Could not open the work panel.')); });
-}
-
-function lineSpend(dlv){
-  const v=Number((dlv||{}).charged||0);
-  if(!v) return '';
-  const n=((dlv||{}).added||[]).length;
-  return `<span class="lspend" title="${esc(txf('{n} item(s) recorded against this line so far', {n:n||1}))}"
-    style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2,#2f6b4f);background:var(--wash);border-radius:5px;padding:1px 7px;white-space:nowrap;font-variant-numeric:tabular-nums">${esc(inr(v))}</span>`;
 }
 
 /**
