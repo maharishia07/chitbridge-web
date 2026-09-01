@@ -15,7 +15,8 @@
     "parsecheck": "node scripts/check-app-parses.cjs",
     "check:reads": "node e2e/screen-reads.cjs",
     "check:lazy": "node e2e/lazy-screen-guard.cjs",
-    "check:modal": "node e2e/modal-safe-repaint.cjs"
+    "check:modal": "node e2e/modal-safe-repaint.cjs",
+    "report:card": "node e2e/report-card.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",
