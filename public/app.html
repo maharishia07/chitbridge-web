@@ -199,6 +199,10 @@
      * a large caption beside a small picture. They take the same steps rather than a second scale nobody would
      * remember to keep in sync.
      */
+    /* ⭐ THE READING FACE, AS A TOKEN. body is the only base declaration — everything else inherits unless
+       it sets its own — so one token changes the whole product. The display face (Space Grotesk) is NOT
+       tokenised: it is the brand, and a reader changing how they READ should not restyle the masthead. */
+    --font-ui:Inter,system-ui,sans-serif;
     --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;--fs-7:36px;--fs-8:46px;
     --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
     /**
@@ -241,7 +245,7 @@
     --r-sm:6px;--r-md:9px;--r-lg:12px;
   }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
-  body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:var(--paper);color:var(--ink);font-family:var(--font-ui);-webkit-font-smoothing:antialiased}
   button,input,select{font:inherit}/* ⚠️ A button with no colour of its own inherits the UA default, which is BLACK — invisible on a dark
      surface. Inheriting from the page instead means every unstyled control follows the theme for free,
      which is also why this belongs here and not on each button. */
@@ -3376,6 +3380,48 @@ var TEXT_SIZES = [
 function apGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(_){ return d; } }
 function apSet(k, v){ try{ localStorage.setItem(k, v); }catch(_){} }
 
+/**
+ * ⭐⭐ THE READING FACE. Athi, 2026-09-01: *"can we provide facility to change the font? … we don't need to
+ * bring all fonts, just whatever is possible within the product limit."*
+ *
+ * ⚠️ NOTHING NEW IS DOWNLOADED. Inter, Space Grotesk and Space Mono are already loaded by this page; the other
+ * two are system stacks. A font picker that fetches a face per choice would make the first paint after every
+ * change wait on the network, and a reader who picked it for legibility would get a flash of the one they
+ * rejected.
+ *
+ * ⭐ WHY THESE FIVE, AND NOT A LIST OF EVERYTHING. Each is here because it answers a different reading problem:
+ *   default   the product's own face, tuned for UI at small sizes
+ *   grotesk   the display face used for reading too — larger apertures, some find it clearer
+ *   serif     serifs guide the eye along a line; better for long passages on a good screen
+ *   wide      ⭐ Verdana/Tahoma — wide letterforms and distinct shapes. The recognised low-vision and dyslexia
+ *             choice available without a download; OpenDyslexic would need one.
+ *   mono      fixed width, so every character occupies the same track. Some readers track lines better.
+ *
+ * ⚠️ THE DISPLAY FACE IS DELIBERATELY NOT CHANGED. Space Grotesk stays on headings — a reader changing how they
+ * READ has not asked to restyle the masthead, and one token that moved both would make every choice a rebrand.
+ */
+var FONTS = [
+  ['default', 'Default',   'Inter,system-ui,sans-serif',            'the product\u2019s own face'],
+  ['grotesk', 'Grotesk',   '\'Space Grotesk\',Inter,sans-serif',    'larger apertures'],
+  ['serif',   'Serif',     'Georgia,\'Times New Roman\',serif',     'serifs guide the line'],
+  ['wide',    'Wide',      'Verdana,Tahoma,sans-serif',             'wide letterforms \u00b7 low vision'],
+  ['mono',    'Monospace', '\'Space Mono\',ui-monospace,monospace', 'every character the same width'],
+];
+
+function fontPref(){ return apGet('cb_font', 'default'); }
+function fontStack(k){
+  var row = FONTS.filter(function(f){ return f[0] === (k || fontPref()); })[0] || FONTS[0];
+  return row[2];
+}
+function fontSet(v){
+  apSet('cb_font', v);
+  appearanceApply();
+  if (typeof appearancePush === 'function') appearancePush();
+  renderApp();
+  if (typeof _capShowDetail === 'function') _capShowDetail();
+  if (typeof loadSettings === 'function') loadSettings();
+}
+
 function textSize(){ return apGet('cb_fs', 'm'); }
 function motionPref(){ return apGet('cb_motion', 'auto'); }
 
@@ -3392,6 +3438,12 @@ function appearanceApply(){
       if (row[2] === 1) r.style.removeProperty(tok);
       else r.style.setProperty(tok, (Math.round(FS_BASE[tok] * row[2] * 10) / 10) + 'px');
     });
+    /* ⭐ Same mechanism as the type scale: the look changes by writing a token, never by a class. */
+    if (typeof fontStack === 'function') {
+      var fk = fontPref();
+      if (fk === 'default') r.style.removeProperty('--font-ui');
+      else r.style.setProperty('--font-ui', fontStack(fk));
+    }
     /* ⚠️ THREE STATES, NOT TWO. "auto" means follow the operating system, which is what a person who set
        reduce-motion in Windows or iOS has already asked for once and should not have to ask again. The explicit
        values exist for the reverse cases: a device that cannot express it, and someone who wants motion back. */
@@ -3441,6 +3493,61 @@ function appearanceHydrate(prefs){
 
 function textSizeSet(v){ apSet('cb_fs', v); appearanceApply(); appearancePush(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
 function motionSet(v){ apSet('cb_motion', v); appearanceApply(); appearancePush(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
+
+/**
+ * ⭐⭐ SIZE AND FACE, WHERE THE LOOK IS CHANGED — Athi, 2026-09-01: *"the resize of the screen is in settings,
+ * 100%, 132% etc, but can we bring it under theme as well? not in detail, but just show it here on the top with
+ * the current selection, and allow it to change."*
+ *
+ * ⚠️ SHOWN, NOT DUPLICATED. Settings keeps the full explanation — what each level does, who it is for, the
+ * measured contrast. This is the same preference read and written through the same functions (`textSizeSet`,
+ * `fontSet`), so the two cannot drift: there is one store and one applier, and this is a second door to them.
+ *
+ * ⭐ THE PERCENTAGE IS THE LABEL because that is the number he reads it by. The stored value is still the
+ * named step — s · m · l · xl — so nothing downstream has to parse a percentage, and the scale can be retuned
+ * without invalidating what people have already chosen.
+ */
+function apBarHTML(){
+  var Q = String.fromCharCode(39);
+  var cur = textSize();
+  var pct = function(mult){ return Math.round(mult * 100) + '%'; };
+  var sizes = TEXT_SIZES.map(function(row){
+    var on = row[0] === cur;
+    return '<button type="button" data-testid="apbar-fs-' + row[0] + '"'
+      + ' onclick="textSizeSet(' + Q + row[0] + Q + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '" title="' + esc(row[1]) + '"'
+      + ' style="flex:1;cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' + (on ? 800 : 500) + ';'
+      + 'padding:5px 0;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card);'
+      + 'border-radius:7px">' + pct(row[2]) + '</button>';
+  }).join('');
+
+  var curFont = fontPref();
+  var fonts = FONTS.map(function(f){
+    return '<option value="' + f[0] + '"' + (f[0] === curFont ? ' selected' : '') + '>'
+      + esc(f[1]) + ' — ' + esc(f[3]) + '</option>';
+  }).join('');
+
+  return '<div data-testid="apbar" style="padding:2px 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">'
+    +   '<span style="font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey);font-weight:700">'
+    +     tx('Text size') + '</span>'
+    +   '<span data-testid="apbar-fs-now" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'
+    +     esc((TEXT_SIZES.filter(function(r){ return r[0] === cur; })[0] || TEXT_SIZES[1])[1]) + '</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:5px;margin-bottom:9px">' + sizes + '</div>'
+    + '<div style="display:flex;align-items:center;gap:8px">'
+    +   '<span style="font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey);font-weight:700;white-space:nowrap">'
+    +     tx('Font') + '</span>'
+    +   '<select data-testid="apbar-font" onchange="fontSet(this.value)"'
+    +     ' style="flex:1;min-width:0;font:inherit;font-size:var(--fs-1);padding:4px 6px;border:1px solid var(--line);'
+    +     'border-radius:7px;background:var(--card);color:var(--on-card)">' + fonts + '</select>'
+    + '</div>'
+    /* ⚠️ Say where the rest lives, so this reads as a shortcut rather than the whole of it. */
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'
+    +   tx('Settings › Appearance has the full set, with what each one is for.') + '</div>'
+    + '</div>';
+}
 
 function themeSet(key){
   if(!THEMES[key]) return;
@@ -3558,7 +3665,7 @@ function themePaletteHTML(){
   var dark  = Object.keys(THEMES).filter(function(k){ return DARK[k] && !isA11y(k); });
   var needs = Object.keys(THEMES).filter(isA11y);
 
-  return head("Light") + grid(light)
+  return apBarHTML() + head("Light") + grid(light)
     + "<div style=\"height:10px\"></div>" + head("Dark") + grid(dark)
     + "<div style=\"height:12px\"></div>"
     + head("Designed for specific needs")
@@ -3797,7 +3904,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01d';
+const CB_BUILD = '2026-09-01e';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their

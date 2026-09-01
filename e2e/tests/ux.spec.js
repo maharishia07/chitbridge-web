@@ -141,4 +141,57 @@ test.describe('Module · UX list 2026-09-01', () => {
       document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, 'the page must not scroll sideways on a phone').toBeLessThanOrEqual(1);
   });
+
+  /**
+   * ⭐⭐ Athi, 2026-09-01: *"the resize of the screen is in settings, 100%, 132% etc, but can we bring it under
+   * theme as well? just show it here on the top with the current selection, and allow it to change."* — and
+   * *"can we provide facility to change the font?"*
+   *
+   * ⚠️ SHOWN, NOT DUPLICATED. Settings keeps the explanation; this reads and writes the SAME preference through
+   * the same functions, so the two doors cannot drift.
+   */
+  test('[UX-05] text size and font are on the Theme menu, and both apply', async ({ page }) => {
+    await mintEntity(page);
+    await page.getByTestId('icon-avatar').click();
+    await page.waitForTimeout(600);
+    const theme = page.getByText('Theme', { exact: false }).first();
+    if (await theme.count()) await theme.click();
+    await expect(page.getByTestId('apbar')).toBeVisible({ timeout: 10000 });
+
+    /* ⭐ The percentage is the label, because that is the number he reads it by — but the STORED value stays
+       the named step, so the scale can be retuned without invalidating anyone's choice. */
+    await expect(page.getByTestId('apbar-fs-m')).toContainText('100%');
+    await expect(page.getByTestId('apbar-fs-xl')).toContainText('132%');
+
+    const px = () => page.evaluate(() =>
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--fs-3')) || 0);
+    const base = await px();
+    await page.getByTestId('apbar-fs-xl').click();
+    await page.waitForTimeout(700);
+    expect(await px(), 'the type scale must actually grow').toBeGreaterThan(base);
+    expect(await page.evaluate(() => localStorage.getItem('cb_fs'))).toBe('xl');
+
+    /* The face. Nothing new is downloaded — every option is already loaded or a system stack. */
+    const face = () => page.evaluate(() => getComputedStyle(document.body).fontFamily);
+    const f0 = await face();
+    await page.evaluate(() => fontSet('wide'));
+    await page.waitForTimeout(700);
+    const f1 = await face();
+    expect(f1).not.toBe(f0);
+    expect(f1.toLowerCase()).toContain('verdana');
+    expect(await page.evaluate(() => localStorage.getItem('cb_font'))).toBe('wide');
+
+    /* ⚠️ The DISPLAY face is deliberately untouched — changing how you read is not a rebrand. */
+    const heads = await page.evaluate(() => {
+      const h = document.querySelector('h1, .mhd .t, .brand');
+      return h ? getComputedStyle(h).fontFamily : '';
+    });
+    if (heads) expect(heads.toLowerCase()).not.toContain('verdana');
+
+    /* Back to default clears the override rather than pinning the current stack. */
+    await page.evaluate(() => fontSet('default'));
+    await page.waitForTimeout(500);
+    expect(await page.evaluate(() =>
+      document.documentElement.style.getPropertyValue('--font-ui'))).toBe('');
+  });
 });
