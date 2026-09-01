@@ -502,7 +502,7 @@ function c2PaneDel(d){
     var p = prog[e.line_id] || {};
     var l = e.live || e.original || {};
     var pct = (p.ordered ? Math.min(100, Math.round((p.delivered || 0) / p.ordered * 100)) : 0);
-    var state = p.complete ? '<span style="color:#2f6b4f;font-size:var(--fs-2)">complete</span>'
+    var state = p.complete ? '<span style="color:var(--ok-2);font-size:var(--fs-2)">complete</span>'
       : (p.delivered ? '<span style="color:var(--warn-2);font-size:var(--fs-2)">part</span>'
       : '<span style="color:var(--grey);font-size:var(--fs-2)">not started</span>');
     return '<div data-testid="c2-del-row" data-line="' + e.line_id + '" style="padding:11px 16px;border-bottom:1px solid var(--line)">'
@@ -512,7 +512,7 @@ function c2PaneDel(d){
       + '<div style="margin-top:6px;height:4px;background:var(--line);border-radius:2px;overflow:hidden"><i style="display:block;height:100%;width:' + pct + '%;background:#2f6b4f"></i></div>'
       /* ⚠️ THE THREE STATES ARE KEPT APART. "They have not confirmed yet" is the NORMAL case and must not wear the
          same badge as a real disagreement, or the badge stops being read. */
-      + (p.both_agree ? '<div style="margin-top:6px;font-size:var(--fs-1);color:#2f6b4f">' + tx('✓ both of you recorded the same') + '</div>' : '')
+      + (p.both_agree ? '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--ok-2)">' + tx('✓ both of you recorded the same') + '</div>' : '')
       + (p.divergent ? '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ you recorded ' + p.delivered + ', they recorded ' + p.theirs + ' — both are shown, neither is corrected</div>' : '')
       + (p.unacknowledged ? '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">they have not confirmed this yet</div>' : '')
       + ((p.events || []).length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">' + p.events.map(function(v){

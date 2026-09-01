@@ -3037,7 +3037,7 @@ function planWindow(){
   return { state:'active', to:to, days: to ? Math.ceil((to-now)/864e5) : null };
 }
 function govPlanBlock(){
-  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#5b4a86">' + tx('↑ Your plan · what it entitles you to') + '</div>'
+  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--purple-2)">' + tx('↑ Your plan · what it entitles you to') + '</div>'
     + govRowHtml('Plan tier', esc(PLAN.tier), 'bound')
     /* The subscription period. `free` is the honest class: not yours to set, and not set by anyone else either. */
     + govRowHtml('Valid from', PLAN.validFrom ? esc(PLAN.validFrom) : 'no subscription record yet', PLAN.validFrom ? 'bound' : 'free')
@@ -3377,7 +3377,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
     + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
-  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
+  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:var(--grey-2)">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
   /* ⭐ THE INSTRUCTION STAYS, THE MECHANISM MOVES. "boilerplate every entity copies at registration" and
      "freeze onto each chit at send" are how it works; a person on this tab is choosing a value. */

@@ -133,7 +133,7 @@ function svcPaint(){
   var iPaused = pauses.some(function(p){ return p.mine && !p.paused_to; });
 
   modal('<h3 style="margin:0 0 3px">Service clock'
-    + (c.priority ? ' <span style="font-size:var(--fs-2);color:#245a9e;font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
+    + (c.priority ? ' <span style="font-size:var(--fs-2);color:var(--blue-2);font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">'
     + (r.impact ? esc(r.impact) + ' impact · ' + esc(r.urgency) + ' urgency · ' : '')
     + (c.resolved ? 'resolved' : (c.paused_now ? 'paused' : 'running')) + '</div>'

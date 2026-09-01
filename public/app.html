@@ -1966,9 +1966,9 @@ function blueprintCardHTML(id){
     +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:var(--fs-5)">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
     +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>' + tx('Licence') + '</b> · '+esc(wp.licence)+'</div>'
     +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
-    +'<div style="font-size:var(--fs-1);font-weight:800;color:#1f7a3d;margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
-    +'<div style="font-size:var(--fs-1);font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
-    +(wp.workflow?('<div style="font-size:var(--fs-1);font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
+    +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
+    +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
+    +(wp.workflow?('<div style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
       +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'var(--ok-tint)':'var(--purple-tint)')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">' + txf('The first steps are built today; the rest are the {same} — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches {deep} — this is the depth, in one place.', {
         same: '<b>' + tx('same shape') + '</b>', deep: '<b>' + tx('as deep as you declare it') + '</b>' }) + '</div>'):'')
@@ -2132,7 +2132,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
     <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
-      <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
+      <div id="assist_ans" style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">${tx('Ask')}</button></div>
       ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
@@ -11519,7 +11519,7 @@ function amdShortlistHTML(cands, cat, totalItems){
       + 'style="width:19px;height:19px;flex:none;accent-color:var(--blue)">'
       + '<span style="flex:1;min-width:0">'
       + '<span style="font-size:var(--fs-3);font-weight:700">' + esc(x.name || x.label || '') + '</span>'
-      + (x.variant ? '<span style="font-size:var(--fs-2);color:#245a9e;font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
+      + (x.variant ? '<span style="font-size:var(--fs-2);color:var(--blue-2);font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
       + (st ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
       + '</span>'
       + '<span style="text-align:end;flex:none">'
@@ -11569,7 +11569,7 @@ function amendPaint(){
           <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
           <span style="flex:1;min-width:0">
             <span style="font-size:var(--fs-3);font-weight:700">${esc(x.name||x.label)}</span>
-            ${x.variant?`<span style="font-size:var(--fs-2);color:#245a9e;font-weight:700"> · ${esc(x.variant)}</span>`:''}
+            ${x.variant?`<span style="font-size:var(--fs-2);color:var(--blue-2);font-weight:700"> · ${esc(x.variant)}</span>`:''}
             ${st?`<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
           </span>
           <span style="text-align:end;flex:none">
@@ -11618,7 +11618,7 @@ function amendPaint(){
   const changed=(o.quantity!=null&&Number(o.quantity)!==Number(l.quantity))||(o.particulars&&o.particulars!==l.particulars)||(o.unit&&o.unit!==l.unit);
   const diff=changed?`<div style="font-size:var(--fs-2);text-align:center;margin-bottom:12px">
       <s style="opacity:.5">${esc([o.particulars,o.quantity,o.unit].filter(Boolean).join(' '))}</s>
-      &nbsp;<span class=arw>→</span>&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
+      &nbsp;<span class=arw>→</span>&nbsp;<b style="color:var(--blue-2)">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
   const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:var(--fs-5);${col||''}">${g}</button>`;
 
   /**

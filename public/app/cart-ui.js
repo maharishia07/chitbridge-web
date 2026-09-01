@@ -720,10 +720,10 @@
         // price still shown, struck through, because hiding what they asked for is its own dishonesty.
         + (u.offered
             ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, u.asking)) + '</span> '
-              + '<b style="color:#1d2530">' + esc(fmt(ns, p)) + '</b> <span style="font-size:var(--fs-1)">your offer</span>'
+              + '<b style="color:var(--ink-2)">' + esc(fmt(ns, p)) + '</b> <span style="font-size:var(--fs-1)">your offer</span>'
             : (isFinite(p) ? esc(fmt(ns, p)) : 'no price'))
         // The line's own total, only once there is a quantity to multiply by — a price × 1 restated is noise.
-        + (q && isFinite(p) ? ' <span style="color:#1d2530;font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')
+        + (q && isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')
         + hintHTML(ns, r) + availHTML(ns, r)
         + '</div></span>' + stepperHTML(ns, r.item_id, q) + '</div>';
     }).join('');
@@ -758,7 +758,7 @@
               + '<div style="font-size:var(--fs-2);color:var(--grey-2)">'
               + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
               + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
-              + (isFinite(p) ? ' <span style="color:#1d2530;font-weight:800">· ' + esc(fmt(ns, p * l.qty)) + '</span>' : '') + '</div></span>'
+              + (isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * l.qty)) + '</span>' : '') + '</div></span>'
               + stepperHTML(ns, l.item_id, l.qty)
               + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(l.item_id) + '\',0)" title="remove"'
               + ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>';

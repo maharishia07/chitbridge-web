@@ -204,8 +204,8 @@ function disputeRoomBox(c, d){
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'
       +(parties.length?'<span style="font-size:var(--fs-2);color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
       +'<span style="margin-inline-start:auto;display:inline-flex;gap:9px;align-items:center">'+st+resolveWrap+'</span></div>'
-    +'<div style="font-size:var(--fs-2);color:#5a6066;margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
-    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:#5a6066">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey-2);margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
+    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:var(--grey-2)">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
     +compose
     +'<div style="border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px;max-height:340px;overflow:auto;color:var(--on-card)">'+thread+'</div></div>';
 }

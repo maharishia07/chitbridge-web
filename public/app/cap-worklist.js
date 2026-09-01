@@ -243,7 +243,7 @@ function wlRow(r, ctx, depth){
     + (done ? ';opacity:.5' : '') + '">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
     + '<span style="flex:1;font-weight:500;font-size:var(--fs-3);color:var(--ink-2,#41474e)' + (done ? ';text-decoration:line-through' : '') + '">'
-    + (done ? '<span style="color:#3d7a4e;font-weight:800;text-decoration:none">✓ </span>' : '') + lead
+    + (done ? '<span style="color:var(--ok-2);font-weight:800;text-decoration:none">✓ </span>' : '') + lead
     + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)">' + tail + '</span>' : '') + '</span>'
     /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
        the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
@@ -1172,7 +1172,7 @@ function wlLineHTML(loading){
     + '<div style="white-space:nowrap"><span style="font-size:var(--fs-6);font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
     +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-inline-start:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
-    + (prog.charged ? '<div style="margin-inline-start:auto;font-size:var(--fs-2);color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
+    + (prog.charged ? '<div style="margin-inline-start:auto;font-size:var(--fs-2);color:var(--blue-2);font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
 
   /* ── a heading: caret · name · a hint of what is inside, so you can choose without opening ───────────────── */
@@ -1199,7 +1199,7 @@ function wlLineHTML(loading){
       }).join('')
       + added.map(function(a){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
-          + '<span style="color:#2c5d7c;font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
+          + '<span style="color:var(--blue-2);font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
           + '<span style="flex:1">' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
       }).join('');
@@ -1377,12 +1377,12 @@ function wlLineHTML(loading){
     asked = '<div style="margin-top:12px;background:var(--warn-tint);border-inline-start:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
       + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
-      + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
+      + (r.comment ? '<div style="color:var(--blue-2)">' + esc(r.comment) + '</div>' : '')
       + (r.needs_human ? '<div style="font-size:var(--fs-2);color:var(--disp);font-weight:700">' + tx('⚠️ flagged for a person to check') + '</div>' : '')
       + '</div>';
   }
 
-  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:var(--fs-2);color:#3d7a4e">' + tx('✓ done') + '</span>' : '') + '</div>'
+  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:var(--fs-2);color:var(--ok-2)">' + tx('✓ done') + '</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
     + '<div class="mbody">' + bar + wlParties(WLL.det) + asked + body + '</div>'
     + '<div class="mfoot"><button onclick="wlCardClose()">' + tx('Close') + '</button>'

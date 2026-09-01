@@ -1807,7 +1807,7 @@ function _adoptedPricing(n, c){
     // The rollover. This part is NOT speculation — adoption by reference and hiding unpriced adopted lines from a
     // price-showing shop are both live behaviour today, and the second was a real defect once.
     + '<div style="margin-top:11px;border-top:1px dashed var(--line);padding-top:9px;font-size:var(--fs-1);line-height:1.7;color:var(--grey)">'
-    + '<b style="color:#1c2128">When the network changes the catalogue</b><br>'
+    + '<b style="color:var(--ink-2)">When the network changes the catalogue</b><br>'
     + '· a new item appears here, because the catalogue is held by reference<br>'
     + '· on <b>' + tx('Convert') + '</b> it arrives with a proposed price · on <b>' + tx('Decide') + '</b> it arrives <b style="color:var(--disp-2)">unpriced</b>, '
     + 'and an unpriced adopted item stays out of a shop that shows prices — that is live behaviour, not a plan<br>'
@@ -2008,13 +2008,13 @@ function _catInfer(n){
   if (/combine|combined|consolidat|merge|aggregat/.test(s)) computes.push('combined view');
   var bits = [];
   if (systems.length) bits.push('<b style="color:var(--warn-2)">' + tx('System feed') + '</b> — ' + systems.map(function(x){ return x.toUpperCase(); }).join(', '));
-  if (fromCust) bits.push('<b style="color:#2b6f8f">' + tx('From customer') + '</b> — order details at request time');
-  if (computes.length) bits.push('<b style="color:#8a5cc4">' + tx('Computed') + '</b> — ' + computes.join(', ') + ' (a co-assist computes, the rail seals)');
+  if (fromCust) bits.push('<b style="color:var(--blue-2)">' + tx('From customer') + '</b> — order details at request time');
+  if (computes.length) bits.push('<b style="color:var(--purple)">' + tx('Computed') + '</b> — ' + computes.join(', ') + ' (a co-assist computes, the rail seals)');
   bits.push('<b style="color:var(--ok-2)">' + tx('Store in CB') + '</b> — the consolidated record (the gap CB fills)');
   if (feedsBack) bits.push('<b style="color:var(--purple-2)">' + tx('Feed back') + '</b> — suppliers / the named system');
   return '<div style="margin-top:8px;padding:8px 10px;border:1px solid #bcd0e8;border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--blue-2);margin-bottom:4px">Reading your purpose <span style="font-weight:500;color:var(--grey);text-transform:none">— a first guess; confirm it as you route the requirements</span></div>'
-    + '<div style="font-size:var(--fs-1);color:#1c2128;line-height:1.6">' + bits.join('<br>') + '</div></div>';
+    + '<div style="font-size:var(--fs-1);color:var(--ink-2);line-height:1.6">' + bits.join('<br>') + '</div></div>';
 }
 function _catRecordPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
@@ -2025,7 +2025,7 @@ function _catRecordPreview(n){
   var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
   var refs = (c.refs || []).filter(function(r){ return r.system && r.code; });
   var refsLine = refs.length ? refs.map(function(r){ return esc(r.system) + ':' + esc(r.code); }).join(' · ') : '';
-  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:var(--fs-1)"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
+  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:var(--fs-1)"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:var(--ink-2)">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
   return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);color:var(--faint,var(--grey-3));text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">' + tx('📄 Stored as a record — one item') + '</div>'
     + '<div style="font-weight:700;font-size:var(--fs-2)">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:var(--fs-1)"><span class=arw>▸</span> ' + esc(v0.name) + '</span>' : '') + '</div>'
@@ -2043,7 +2043,7 @@ function _chitPreview(n){
   var expBadge = '<span style="font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:' + (e === 'public' ? 'var(--ok-2)' : 'var(--warn-2)') + ';background:' + (e === 'public' ? 'var(--ok-tint)' : 'var(--warn-tint)') + ';border-radius:4px;padding:1px 5px">' + esc(e) + '</span>';
   var specRows = fs.slice(0, 6).map(function(f){ return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(f.name || '—') + '</span><span style="color:var(--faint,var(--grey-3));font-family:monospace">' + _sampleVal(f.type) + '</span></div>'; }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey)">no fields</div>';
   var cb = (o.collectBack || []).filter(function(x){ return x.name; });
-  var collectLine = cb.length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:#2b6f8f">You provide: <b>' + cb.map(function(x){ return esc(x.name); }).join(', ') + '</b></div>' : '';
+  var collectLine = cb.length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--blue-2)">You provide: <b>' + cb.map(function(x){ return esc(x.name); }).join(', ') + '</b></div>' : '';
   var arrive = ['on the rail'].concat((o.inlets || []).filter(function(x){ return x.channel; }).map(function(x){ return x.channel; })).join(' · ');
   var st = (o.states || []).filter(function(x){ return x.name; });
   var stateFlow = st.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + st.map(function(x, i){ return (i ? '<span style="color:var(--faint,var(--grey-3));font-size:var(--fs-1)"><span class=arw>→</span></span>' : '') + '<span style="font-size:var(--fs-1);font-weight:600;color:var(--ink-2);background:var(--blue-tint-bg);border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
@@ -2185,7 +2185,7 @@ function _transactConfig(n){
     + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
-    + '<div style="font-size:var(--fs-1);font-weight:800;color:#2b6f8f;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">COPY THE OPERATOR (HQ)?</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">COPY THE OPERATOR (HQ)?</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">If yes, HQ keeps a copy of this node\'s transactions — this is what powers <b>traceability</b> + <b>' + tx('MIS') + '</b> across the network.</div>'
     + _radioOpt("netSetTransactCopy('" + n.key + "',true)", copy, 'Yes — copy HQ', 'The operator sees this node\'s transactions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransactCopy('" + n.key + "',false)", !copy, 'No — node only', 'Only the counterparties hold copies; HQ does not see them.', 'var(--blue-2)', 'var(--blue-tint-bg)')
@@ -2542,7 +2542,7 @@ function _netVisChip(n){
   if (pl && pl.kind === 'create') {
     return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.02em;color:var(--blue-2);background:var(--blue-tint-bg);'
       + 'border:1px dashed var(--blue-2);border-radius:5px;padding:0 5px;margin-inline-start:6px;vertical-align:middle">' + tx('TO BE CREATED') + '</span>'
-      + '<span style="font-size:var(--fs-1);font-weight:700;color:#6b7280;margin-inline-start:5px">' + esc(_netPlatLab[pl.to] || pl.to) + '</span>';
+      + '<span style="font-size:var(--fs-1);font-weight:700;color:var(--grey-3);margin-inline-start:5px">' + esc(_netPlatLab[pl.to] || pl.to) + '</span>';
   }
   var p = _netPending(n);
   if (p) {

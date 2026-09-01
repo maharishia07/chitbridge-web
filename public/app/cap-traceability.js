@@ -109,9 +109,9 @@ function _traceFwd(r){
   var blanket = (UI.traceBlanket == null ? 200 : UI.traceBlanket);
   var saved = Math.max(0, blanket - targeted) * cost;
 
-  var banner = '<div style="margin:16px 18px;padding:16px 18px;border:1px solid #e6a79f;background:linear-gradient(180deg,#fef6f5,#fdeceae0);border-radius:12px">'
+  var banner = '<div style="margin:16px 18px;padding:16px 18px;border:1px solid #e6a79f;background:var(--danger-tint);border-radius:12px">'
     + '<div style="font-size:var(--fs-5);font-weight:800;color:var(--disp-2)">🚨 Recall set — ' + targeted + ' place' + (targeted === 1 ? '' : 's') + ' hold this batch</div>'
-    + '<div style="font-size:var(--fs-2);color:#7a4139;margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
+    + '<div style="font-size:var(--fs-2);color:var(--disp-2);margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:var(--fs-3);font-weight:800;color:var(--ok-2)">' + _traceRs(saved) + ' saved'
       + '<span style="font-weight:600;color:var(--grey);font-size:var(--fs-2)"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'

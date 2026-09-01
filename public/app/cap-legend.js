@@ -680,7 +680,7 @@ function _openLegendImpl(){
     const badge=na
       ? `<span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);background:var(--neutral-tint);border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
       : `<span title="Governance maturity — 1 to 5, see the Legend" style="font-size:var(--fs-1);font-weight:800;color:var(--ink-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
-    const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
+    const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:var(--ok-2);font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
     const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'var(--ok-2)','var(--ok-tint)','var(--ok-tint)')}</div>`:'';
     const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'var(--warn-2)','var(--warn-tint)','var(--warn-tint)')}</div>`:'';
     return `<div style="border:1px solid #d7e6dc;background:var(--card);border-radius:9px;padding:7px 9px;margin:0 0 9px;color:var(--on-card)">
