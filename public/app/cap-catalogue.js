@@ -983,18 +983,48 @@ function cwFinish(){
   var owned = acc.filter(function(it){ return it._src !== 'reference'; });
   var priced = owned.filter(function(it){ return it.price != null && it.price !== ''; });
   var unpriced = owned.length - priced.length;
+  /**
+   * ⭐⭐ ONE ROUND TRIP FOR THE WHOLE SET — Athi, 2026-09-01: *"why does it take loads of time, are you going
+   * round trip for each product? gather all information at once for the products selected and update instead."*
+   *
+   * ⚠️ IT WAS ONE HTTP REQUEST PER ITEM, STRICTLY SEQUENTIAL — each waiting for the one before, and each paying
+   * for its own schema lookup, currency lookup, BEGIN, set_config, INSERT and COMMIT. At the measured ~500 ms
+   * floor for an authed round trip, forty items was twenty seconds of watching a toast.
+   *
+   * ⚠️ AND IT SWALLOWED FAILURES. `.catch(function(){ step(); })` moved to the next item, so a typo in item 30
+   * left 29 created and no record of what went missing. The bulk route validates everything BEFORE writing
+   * anything and names the failing indexes, so nothing is half-done.
+   */
   var persistProducts = function(next){
-    if (!(typeof api === 'function') || !priced.length) { if (unpriced && typeof toast === 'function') toast(unpriced + ' item(s) need a price before they go live.'); return next(); }
+    if (!(typeof api === 'function') || !priced.length) {
+      if (unpriced && typeof toast === 'function') toast(unpriced + ' item(s) need a price before they go live.');
+      return next();
+    }
     if (typeof toast === 'function') toast('Adding ' + priced.length + ' item(s) to your Catalogue…');
-    var i = 0, ok = 0;
-    var step = function(){
-      if (i >= priced.length) { if (typeof toast === 'function') toast(ok + ' item(s) added to Catalogue' + (unpriced ? ' · ' + unpriced + ' still need a price' : '') + ' ✓'); return next(); }
-      var it = priced[i++];
-      api('prodAdd', { body: { item_data: _catfProductData(it, units[0]) } })
-        .then(function(r){ var id = r && r.item && (r.item.item_id || r.item.id); if (id) it._pid = id; ok++; step(); })
-        .catch(function(){ step(); });   // one failure shouldn't abort the batch; the item still shows in the face
-    };
-    step();
+    var payload = priced.map(function(it){ return _catfProductData(it, units[0]); });
+    api('prodAddMany', { body: { items: payload } })
+      .then(function(r){
+        var rows = (r && r.items) || [];
+        /* Returned in the order they were sent, so the local items can carry their new ids. */
+        for (var i = 0; i < priced.length && i < rows.length; i++) {
+          var id = rows[i] && (rows[i].item_id || rows[i].id);
+          if (id) priced[i]._pid = id;
+        }
+        if (typeof toast === 'function') {
+          toast(rows.length + ' item(s) added to Catalogue' + (unpriced ? ' · ' + unpriced + ' still need a price' : '') + ' ✓');
+        }
+        next();
+      })
+      .catch(function(e){
+        /* ⚠️ SAY WHICH ONES. The old loop reported a count that had quietly skipped whatever failed. */
+        var inv = e && e.invalid;
+        if (typeof toast === 'function') {
+          toast(inv && inv.length
+            ? inv.length + ' item(s) were refused — nothing was added. First: item ' + (inv[0].index + 1) + ', ' + inv[0].message
+            : ((e && e.message) || 'Could not add the items.'));
+        }
+        next();
+      });
   };
 
   // Reference vs value are MUTUALLY EXCLUSIVE (no double-create):

@@ -1754,6 +1754,8 @@ const EP = {
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
+  /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
+  prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
   prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
@@ -2646,7 +2648,8 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
        <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> ${tx('Back to sign in')}</a></div>`;
   } else if(L.step==="id"){
-    form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id &middot; co-assist: key@user-id)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
+    form = `<label class="fl">${tx("User ID")}</label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
+       <div style="font-size:var(--fs-1);color:var(--grey);margin:5px 0 2px;line-height:1.5">${tx("An email, or an 8+ character User ID. A co-assist signs in as key@user-id.")}</div>
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue <span class=arw>→</span>"}</button>`;
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
@@ -2664,7 +2667,7 @@ function renderLogin(){
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
-    <div class="top">${logo()}<h1>Sign in</h1><p class="sub">Chit &amp; Bridge — one field, the system knows who you are</p></div>
+    <div class="top">${logo()}<h1>Sign in</h1></div>
     <div class="body">
       ${form}
       ${L.err?`<div class="err">${L.err}</div>`:""}
@@ -3591,7 +3594,7 @@ function logout(){
     'Anything you have not saved on this screen is lost. You will need your one-time code to sign back in.',
     'Sign out', logoutNow, true);
 }
-function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -3794,7 +3797,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-08-31f';
+const CB_BUILD = '2026-09-01a';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
