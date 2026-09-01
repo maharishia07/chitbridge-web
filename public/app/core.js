@@ -40,7 +40,24 @@ function unwrap(j){
    */
   if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j || "searched" in j) return j; // auth / structured / compound -> whole, untouched
   for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; for(const mk of ["total","page","limit"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
-  if(j.entity) return j.entity;
+  /**
+   * ⚠️⚠️ `included` IS A SIBLING OF `entity`, AND THIS LINE WAS EATING IT — the fourth instance of the exact bug
+   * the comments above describe, and the most expensive one, because nothing looked wrong.
+   *
+   * `/entities/me?include=readiness,channels,vault` returns `{entity, capabilities, governance, included}` and
+   * the server gathers all three sub-reads in ONE transaction. `return j.entity` handed back the entity alone,
+   * so `included` never reached a caller. `_profSeedIncluded(e)` read `e.included`, found nothing, and returned
+   * without seeding — and the sub-loaders each went to the network exactly as if the bundle did not exist.
+   *
+   * ⭐ So the whole one-read optimisation has been dead since it was written: the server did the work and the
+   * client discarded it, with no error and no visible symptom beyond a screen that felt slow. Measured
+   * 2026-09-01 — a warm profile open still fetched governance/readiness and channels.
+   *
+   * ⚠️ ATTACHED TO THE ENTITY RATHER THAN RETURNING THE WHOLE OBJECT. Every caller of `api('me')` reads fields
+   * off the flattened entity — `r.display_name`, `r.currency_code` — so returning `j` would change the shape
+   * under all of them. Carrying one key across keeps both contracts true.
+   */
+  if(j.entity){ if(j.included && j.entity && typeof j.entity === "object"){ try{ j.entity.included = j.included; }catch(_){} } return j.entity; }
   if(j.settings) return j.settings;
   if(j.chit) return j.chit;
   return j;
