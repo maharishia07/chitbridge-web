@@ -3797,7 +3797,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01a';
+const CB_BUILD = '2026-09-01c';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10142,7 +10142,32 @@ function detailInner(){
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">${tx('➤ Forward')}</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">${tx('📁 Move')}</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">${tx('✉ Unread')}</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">${tx('Status ▾')}</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">${tx('👥 Assign')}</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">${tx('⊘ Void')}</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`;
+    : (function(){
+        /* ⭐ Each action declares itself once; `dactShows` decides whether it is pinned to the row or waits
+           under ⋯. The visibility RULES are unchanged — they are in DACT's `on`, and a preference cannot
+           override them. */
+        var A = {
+          lines:   '<button data-testid="open-design2" onclick="ensureCap(\'chit2\').then(function(){openChit2(\'' + c.id + '\')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button>',
+          forward: '<button onclick="forwardChit(\'' + c.id + '\')" title="Forward as a new chit">' + tx('➤ Forward') + '</button>',
+          move:    '<button onclick="ensureCap(\'folders\').then(function(){moveChit(\'' + c.id + '\')})" title="File into a folder">' + tx('📁 Move') + '</button>',
+          unread:  '<button data-testid="chit-unread" onclick="markUnread(\'' + c.id + '\')" title="Mark as unread">' + tx('✉ Unread') + '</button>',
+          status:  '<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus(\'' + c.id + '\')">' + tx('Status ▾') + '</button>',
+          assign:  '<button onclick="pickAssign(\'' + c.id + '\')">' + tx('👥 Assign') + '</button>',
+          dispute: '<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">' + tx('⚑ Dispute') + '</button>',
+          void:    '<button class="warn pend" data-testid="chit-void" onclick="todo(\'voidChit\')">' + tx('⊘ Void') + '</button>',
+          doc:     '<button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">' + tx('✨ Draft doc') + '</button>',
+          ai:      '<button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">' + tx('✨ Ask AI') + '</button>',
+          pdf:     '<button onclick="todo(\'pdf\')">⬇ PDF</button>',
+        };
+        var allowed = DACT.filter(function(d){ try { return d.on(); } catch(_) { return false; } });
+        var shown = allowed.filter(function(d){ return dactShows(d.id); });
+        /* ⚠️ The picker is ALWAYS offered, and it says how many are waiting — an action a reader unpinned and
+           cannot find again is worse than one they never hid. */
+        var hidden = allowed.length - shown.length;
+        return shown.map(function(d){ return A[d.id] || ''; }).join('')
+          + '<button data-testid="dact-open" onclick="dactPick()" title="' + esc(tx('Choose which actions to show')) + '">'
+          + '⋯' + (hidden ? ' ' + hidden : '') + '</button>';
+      })();
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
@@ -10459,6 +10484,74 @@ function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 /* ⚠️ THE BODY CLASS IS SET HERE TOO, NOT ONLY IN setVP. `vp` is restored from localStorage on load, so someone
    who left the app in Mobile and reloads never passes through setVP — and the modals would break out of the
    frame again on exactly the reload that looks like a fresh start. */
+/**
+ * ⭐⭐ THE DETAIL ACTIONS ARE A REGISTRY, AND WHICH ONES SHOW IS THE READER'S CHOICE — Athi, 2026-09-01:
+ * *"there are chips, can we keep all the chips in a selection box, so whatever required can be picked up by the
+ * user and can be kept as a user preference, like Fwd etc."*
+ *
+ * Eleven buttons sat in one row, the same eleven for everybody. A workshop uses Status and Assign every day and
+ * has never pressed Draft doc; a trader is the other way round. So the row shows what THIS reader picked and
+ * the rest live one press away — nothing is removed, only unpinned.
+ *
+ * ⚠️ `on` IS THE VISIBILITY RULE AND IT STILL DECIDES FIRST. A preference cannot summon Assign for a role that
+ * may not assign, or Void for a co-assist. The picker only ever offers what the rules already allow.
+ *
+ * ⚠️ THE DEFAULT IS EVERYTHING. A reader who never opens the picker must see exactly what they saw before —
+ * an upgrade that silently hides controls is indistinguishable from a bug.
+ */
+const DACT = [
+  { id:'lines',   label:'⧉ Lines',      on:() => true },
+  { id:'forward', label:'➤ Forward',    on:() => true },
+  { id:'move',    label:'📁 Move',      on:() => true },
+  { id:'unread',  label:'✉ Unread',     on:() => UI.folder !== 'order' },
+  { id:'status',  label:'Status ▾',     on:() => UI.folder !== 'order' },
+  { id:'assign',  label:'👥 Assign',    on:() => SESSION.role === 'actor' && UI.folder !== 'order' },
+  { id:'dispute', label:'⚑ Dispute',    on:() => true },
+  { id:'void',    label:'⊘ Void',       on:() => SESSION.role === 'entity' },
+  { id:'doc',     label:'✨ Draft doc',  on:() => true },
+  { id:'ai',      label:'✨ Ask AI',     on:() => true },
+  { id:'pdf',     label:'⬇ PDF',        on:() => true },
+];
+
+/* Stored as a comma-separated id list. Absent — not empty — means "everything", so a first-time reader is
+   unchanged and someone who deliberately unpins them all still gets an empty row rather than a full one. */
+function dactPicked(){
+  var raw = lsGet('cb_dact', null);
+  if (raw == null) return null;
+  var set = {};
+  String(raw).split(',').filter(Boolean).forEach(function(k){ set[k] = 1; });
+  return set;
+}
+function dactShows(id){ var p = dactPicked(); return p ? !!p[id] : true; }
+function dactToggle(id){
+  var p = dactPicked() || DACT.reduce(function(a, d){ a[d.id] = 1; return a; }, {});
+  if (p[id]) delete p[id]; else p[id] = 1;
+  lsSet('cb_dact', Object.keys(p).join(','));
+  renderApp();
+  if (typeof dactPick === 'function') dactPick();      // keep the picker open while choosing
+}
+function dactReset(){ try { localStorage.removeItem('cb_dact'); } catch(_){ } renderApp(); dactPick(); }
+
+/** The selection box. Only what the rules allow is offered — see the `on` note above. */
+function dactPick(){
+  var avail = DACT.filter(function(d){ try { return d.on(); } catch(_) { return false; } });
+  var rows = avail.map(function(d){
+    var on = dactShows(d.id);
+    return '<label style="display:flex;align-items:center;gap:9px;padding:6px 2px;cursor:pointer">'
+      + '<input type="checkbox" data-testid="dact-' + d.id + '"' + (on ? ' checked' : '')
+      + ' onchange="dactToggle(\'' + d.id + '\')">'
+      + '<span style="font-size:var(--fs-2);font-weight:' + (on ? 600 : 400) + '">' + esc(tx(d.label)) + '</span>'
+      + '</label>';
+  }).join('');
+  modal('<div class="mhd"><div class="t" style="padding-inline-end:72px">' + tx('Which actions to show') + '</div></div>'
+    + '<div class="mbody" data-testid="dact-picker" style="padding:12px 16px 16px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">'
+    + tx('Unticked actions are not removed — they stay one press away under ⋯. Remembered on this device.')
+    + '</div>' + rows
+    + '<div style="margin-top:12px"><button class="btn ghost" data-testid="dact-reset" onclick="dactReset()">'
+    + tx('Show all again') + '</button></div></div>', false);
+}
+
 function applyPrefs(){
   /* ⚠️ THEME FIRST, and inside applyPrefs rather than after it. This runs before the first paint, so the chosen
      theme is already on <html> when anything renders — applying it later gives a visible flash of the default,

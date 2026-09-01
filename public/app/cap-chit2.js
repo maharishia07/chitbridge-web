@@ -137,7 +137,24 @@ async function loadChit2(){
  */
 function c2Paint(){
   if (typeof UI !== 'undefined' && UI.chit2 !== C2.id) return;
-  var el = document.getElementById('mainbody'); if (el) el.innerHTML = chit2Screen();
+  /**
+   * ⚠️⚠️ THE DETAIL PANE, NOT #mainbody — Athi, 2026-09-01: *"design 2 page comes for the full screen, not
+   * like two page screen like design 1."*
+   *
+   * #mainbody holds the WHOLE panel: the chit list, the divider and the detail. Writing it threw the list
+   * away on every repaint and left design 2 stretched across the window, while design 1 beside it keeps
+   * list-left / detail-right. The shell was already right — renderDetail() returns chit2Screen() while
+   * UI.chit2 is set — and this one line undid it on the very next paint.
+   *
+   * ⭐ paintSupDetail, paintCustDetail and paintProdDetail all write #detailpane and reset its class; this is
+   * the same pattern. It also fixes mobile for free: the narrow-screen rule that swaps list for detail applies to
+   * the pane this was bypassing, so design 2 never got it.
+   */
+  var dp = document.getElementById('detailpane');
+  if (dp) { dp.className = 'detail'; dp.innerHTML = chit2Screen(); return; }
+  /* Not built yet (first open from a screen with no detail pane) — let the shell build the panel. */
+  if (typeof bgRenderApp === 'function') bgRenderApp();
+  else if (typeof renderApp === 'function') renderApp();
 }
 
 /* ── helpers ───────────────────────────────────────────────────────────────────────────────────────────────── */
