@@ -3911,7 +3911,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01h';
+const CB_BUILD = '2026-09-01i';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -7351,6 +7351,7 @@ function catalogueScreen(){
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       ${prodCatgStripHTML()}
+      ${prodAvailChipsHTML()}
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
@@ -7385,6 +7386,9 @@ function prodVisible(){
   return (UI.prods||[]).filter(p=>{
     const d=pData(p);
     if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
+    /* ⭐ Availability, so the owner can filter to what is off and set it back — see prodAvailFilter. */
+    const av=UI._prodAvail||'';
+    if(av){ const st=d.status||'available'; if(av==='available' ? st!=='available' : st==='available') return false; }
     if(!q) return true;
     /* The category NAMES are searchable too — typing "grains" should find what is in Grains, which is what
        anyone expects of a search box sitting above a list that shows category chips. */
@@ -7586,6 +7590,43 @@ async function prodCategoriseApply(){
   toast(ok+' updated'+(failed?` · ${failed} could not be saved${why}`:' ✓'), failed?true:false);
   renderApp();
 }
+/**
+ * ⭐ FILTER BY AVAILABILITY — Athi, 2026-09-01: *"we should enable filter based on availability and so the flag
+ * can be set or reset."*
+ *
+ * ⚠️ CLIENT-SIDE, DELIBERATELY. `GET /products?status=` exists and is the right filter for the storefront,
+ * where the list is long and the shopper never sees the rest. Here the owner is MANAGING the flag: they filter
+ * to "not available", tick the rows and set them back, and a server round trip per filter change would make
+ * that worse, not better. The full list is already in memory.
+ */
+function prodAvailFilter(v){ UI._prodAvail = (UI._prodAvail === v) ? '' : v; renderApp(); }
+
+function prodAvailChipsHTML(){
+  const all = UI.prods || [];
+  if (!all.length) return '';
+  const statOf = function(p){ const d = pData(p) || {}; return d.status || 'available'; };
+  const nAvail = all.filter(function(p){ return statOf(p) === 'available'; }).length;
+  const nNot = all.length - nAvail;
+  /* ⚠️ Only offered when there is something to filter TO. A pair of chips reading "12 / 0" is a control that
+     can only ever narrow to nothing. */
+  if (!nNot) return '';
+  const cur = UI._prodAvail || '';
+  const chip = function(v, label, n){
+    const on = cur === v;
+    return '<button type="button" data-testid="cat-availfilter-' + v + '"'
+      + ' onclick="prodAvailFilter(\'' + v + '\')" aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="cursor:pointer;font:inherit;font-size:var(--fs-1);font-weight:' + (on ? 800 : 500) + ';'
+      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:8px;padding:3px 9px;'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
+      + label + ' <span class="cbpick-chipn">' + n + '</span></button>';
+  };
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0">'
+    + '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Availability') + '</span>'
+    + chip('available', '✅ ' + tx('Available'), nAvail)
+    + chip('unavailable', '⛔ ' + tx('Not available'), nNot)
+    + '</div>';
+}
+
 function prodCatgFilter(v){ UI._prodCatg=(UI._prodCatg===v)?'':v; renderApp(); }
 /**
  * The same chip row as the order picker, on the management side. ⚠️ Counts are MEMBERSHIPS — a product in two
