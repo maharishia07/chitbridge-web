@@ -1767,6 +1767,11 @@ const EP = {
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
      list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
   prodStatus:      {m:"PUT",   p:"/api/products/:id/status",     ok:"✓"},  // {status, until?, replaced_by?, note?}
+  /* ⭐ The TICKED SET in one round trip. available/unavailable only — retired and redundant carry a per-item
+     reason, so they stay on the single-item route. */
+  prodStatusBulk:  {m:"POST",  p:"/api/products/status/bulk", ok:"y"},  // {ids:[…], status}
+  /* ⭐ Many edits, one transaction. prodCategoriseApply looped one PATCH per product — this is that fix. */
+  prodBulkUpdate:  {m:"POST",  p:"/api/products/bulk-update", ok:"y"},  // {items:[{id,item_data}]}
   prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
   prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
   prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
@@ -3906,7 +3911,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01g';
+const CB_BUILD = '2026-09-01h';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -7417,7 +7422,8 @@ function prodPickBarHTML(){
   return `<div class="ctpick">
     <span class="cbx ${n&&n===vis?'on':''}" onclick="prodPickAll()" title="Select everything shown">${n&&n===vis?'✓':''}</span>
     <span style="font-size:var(--fs-2);font-weight:600">${n} selected</span>
-    <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()" style="margin-inline-start:auto">🏷️ Categorise</button>
+    <button data-testid="cat-availability" ${n?'':'disabled'} onclick="prodAvailAsk()" style="margin-inline-start:auto">📦 Availability</button>
+    <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()">🏷️ Categorise</button>
     <button onclick="prodPickMode(false)">${tx('Done')}</button>
   </div>`;
 }
@@ -7466,30 +7472,118 @@ function prodBulkToggle(id, which, btn){
     /* Attach and remove are mutually exclusive per category — asking for both is not a state worth modelling. */
     const sib=btn.parentElement.querySelector(which==='add'?'.brem':'.badd'); if(sib) sib.classList.remove('on'); }
 }
+/**
+ * ⭐⭐ AVAILABILITY FOR THE TICKED SET — Athi, 2026-09-01: *"in catalogue, I couldn't set the status of the
+ * product available / unavailable by selecting the product(s). this is very important feature."*
+ *
+ * ⚠️ THE CONTROL EXISTED AND WAS UNREACHABLE. `prodStatusPick` has been there since the status model was built
+ * — buried two clicks deep INSIDE the all-fields modal, a dialog about how complete an item's definition is.
+ * Nobody looking for "mark these out of stock" would open that, so in practice the feature did not exist.
+ *
+ * ⚠️ AVAILABLE AND UNAVAILABLE ONLY, and the dialog says why. `retired` and `redundant` carry a per-item
+ * argument — what replaced it, until when — which a bulk form cannot ask forty times without stamping one
+ * answer onto rows it was never about. They stay on the single-item path.
+ */
+function prodAvailAsk(){
+  const ids = Array.from(UI.prodPicked || []);
+  if (!ids.length) return;
+  const Q = String.fromCharCode(39);
+  const now = ids.map(function(id){
+    const p = (UI.prods || []).find(function(x){ return prodId(x) === id; });
+    return (p && pData(p) && pData(p).status) || 'available';
+  });
+  const nUn = now.filter(function(s){ return s !== 'available'; }).length;
+  modal('<h3 style="margin:0 0 4px">' + txn('Availability of {count} product', 'Availability of {count} products', ids.length) + '</h3>'
+    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">'
+    + (nUn ? txf('{n} of them are not available today.', { n: nUn }) : tx('All of them are available today.'))
+    + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:8px">'
+    + '<button class="btn" data-testid="cat-avail-available" onclick="prodAvailApply(' + Q + 'available' + Q + ')">'
+    +   '✅ ' + tx('Available') + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">'
+    +   tx('Customers can see and order these.') + '</div></button>'
+    + '<button class="btn" data-testid="cat-avail-unavailable" onclick="prodAvailApply(' + Q + 'unavailable' + Q + ')">'
+    +   '⛔ ' + tx('Not available') + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">'
+    +   tx('Hidden from the storefront until you set it back. Nothing is deleted.') + '</div></button>'
+    + '</div>'
+    /* ⚠️ Say where the other two live rather than offering them here and stamping one reason on forty rows. */
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px;line-height:1.5">'
+    + tx('Retired and redundant are set one item at a time — each needs its own reason, or what replaced it.')
+    + '</div>'
+    + '<div style="margin-top:12px"><button class="btn ghost" style="width:100%" onclick="closeModal()">'
+    + tx('Cancel') + '</button></div>');
+}
+
+async function prodAvailApply(status){
+  const ids = Array.from(UI.prodPicked || []);
+  if (!ids.length) return;
+  closeModal();
+  showBusy(txn('Updating {count} product…', 'Updating {count} products…', ids.length));
+  try {
+    const out = await api('prodStatusBulk', { body: { ids: ids, status: status } });
+    UI.prodPicked.clear(); UI.prodPick = false;
+    await loadCatalogue();
+    const missed = (out && out.missed && out.missed.length) || 0;
+    /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
+       nobody trusts bulk actions. */
+    toast(((out && out.updated) || 0) + ' set to ' + status + (missed ? ' · ' + missed + ' could not be found' : ' ✓'),
+      missed ? true : false);
+  } catch (e) { toast(MSG.fail('set availability', e)); }
+  finally { hideBusy(); renderApp(); }
+}
+
+/**
+ * ⚠️⚠️ ONE ROUND TRIP, NOT ONE PER PRODUCT — Athi, 2026-09-01: *"assigning a category to a set of products,
+ * why it takes loads of time, are you going round trip for each product?"*
+ *
+ * He was right and this was the loop he meant. It ran `await api('prodEdit')` once per product, SEQUENTIALLY,
+ * each waiting for the one before and each paying for its own schema lookup, currency lookup, validation,
+ * BEGIN, set_config, UPDATE and COMMIT. Tick forty rows and that is forty round trips before the screen
+ * returns — at the measured ~500ms floor, most of a minute.
+ *
+ * ⚠️ AND IT COUNTED FAILURES WITHOUT NAMING THEM. A rejected row left the category attached to 39 of 40 and the
+ * toast said "39 updated" without saying which one did not move. The bulk route validates everything before
+ * writing anything and reports the ids it could not find.
+ */
 async function prodCategoriseApply(){
   const B=UI._catgBulk; if(!B) return;
   const err=document.getElementById('bulk_err');
   if(!B.add.size && !B.remove.size){ if(err) err.textContent='Pick at least one category to attach or remove.'; return; }
   closeModal();
   showBusy(txn('Categorising {count} product…', 'Categorising {count} products…', B.ids.length));
-  let ok=0, failed=0;
+
+  /* Build every new item_data first — no network in this loop, so it is memory-fast whatever the count. */
+  const payload=[]; let unknown=0;
+  for(const id of B.ids){
+    const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p){ unknown++; continue; }
+    const d=Object.assign({}, pData(p));
+    const cur=catgIdsOf(d).slice();
+    /* ⚠️ ATTACH IS ADDITIVE and removal is explicit — a bulk action that REPLACED the set would silently strip
+       memberships that were never on screen. Unchanged from the loop this replaces. */
+    B.add.forEach(c=>{ if(cur.indexOf(c)<0) cur.push(c); });
+    const next=cur.filter(c=>!B.remove.has(c));
+    catgSetOn(d, next);
+    payload.push({ id:id, item_data:d });
+  }
+
+  let ok=0, failed=unknown, why='';
   try{
-    for(const id of B.ids){
-      const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p){ failed++; continue; }
-      const d=Object.assign({}, pData(p));
-      const cur=catgIdsOf(d).slice();
-      B.add.forEach(c=>{ if(cur.indexOf(c)<0) cur.push(c); });
-      const next=cur.filter(c=>!B.remove.has(c));
-      catgSetOn(d, next);
-      try{ await api('prodEdit',{params:{id:id},body:{item_data:d}}); ok++; }catch(e){ failed++; }
+    if(payload.length){
+      const out=await api('prodBulkUpdate',{ body:{ items:payload } });
+      ok=(out&&out.updated)||0;
+      failed+=((out&&out.missed&&out.missed.length)||0);
     }
-  } finally { hideBusy(); }
+  }catch(e){
+    failed+=payload.length;
+    const inv=e&&e.invalid;
+    why=inv&&inv.length ? ' · first refused: '+(inv[0].message||'') : ((e&&e.message)?' · '+e.message:'');
+  }finally{ hideBusy(); }
+
   UI.prodPicked.clear(); UI.prodPick=false; UI._catgBulk=null;
   await loadCatalogue();
   if(typeof cbcatLoad==='function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
   /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
      nobody trusts bulk actions. */
-  toast(ok+' updated'+(failed?` · ${failed} could not be saved`:' ✓'), failed?true:false);
+  toast(ok+' updated'+(failed?` · ${failed} could not be saved${why}`:' ✓'), failed?true:false);
   renderApp();
 }
 function prodCatgFilter(v){ UI._prodCatg=(UI._prodCatg===v)?'':v; renderApp(); }
