@@ -38,7 +38,7 @@
    * there too — a fill sits on paper or white, so more contrast is strictly better. Checked before changing:
    * there is no role in which a lighter value was the right one.
    */
-  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#494F56;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
+  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-d:#b8945a;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#494F56;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
   /**
    * ⭐⭐ THE SECOND COLOUR LAYER (2026-08-17) — the semantic colours the app actually uses, beyond the 14 originals.
    *
@@ -203,6 +203,8 @@
        it sets its own — so one token changes the whole product. The display face (Space Grotesk) is NOT
        tokenised: it is the brand, and a reader changing how they READ should not restyle the masthead. */
     --font-ui:Inter,system-ui,sans-serif;
+    /* set per paint by fabClear(); this is the value the FIRST paint uses, before it has run. */
+    --fab-lift:0px;
     --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;--fs-7:36px;--fs-8:46px;
     --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
     /**
