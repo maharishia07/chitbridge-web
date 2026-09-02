@@ -457,7 +457,7 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. '
       + '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different '
       + 'mechanisms, which is why categories live on their own screen.</div>',
-      '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">' + tx('📐 Add a standard set') + '</button>')
+      '<button class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>')
     /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
     + catsetUnitsHTML()
     + catsetRegistry(['datatype']);
@@ -530,6 +530,136 @@ function catsetBody(k){
     + catsetRegistry(['method', 'facet']);
   }
   return '';
+}
+
+/**
+ * ── ⭐⭐ THE COLUMNS PICKER — see the set, take part of it, add your own ───────────────────────────────────────
+ *
+ * Athi, 2026-09-02: *"how we showcased category, similarly is there any chance of showcasing the current standard
+ * catalogue here and explain what datatype it is? and add more column if you want."*
+ *
+ * ⚠️ WHAT WAS HERE WAS A DROPDOWN READING "Trade — 11 columns" AND AN ADD-ALL BUTTON. You could not see which
+ * eleven, or what type any of them was, and adopting to get eight left the other three on the template for ever
+ * — because a column with data in it must never be removed. A blind all-or-nothing choice is worse for a column
+ * than for a category, and the categories screen had already stopped making it.
+ *
+ * ⭐ SAME SHAPE AS `cbcatSeedPick`, DELIBERATELY. Athi: *"the current catalogue setup panel is good, it is as per
+ * our standard design principle."* Two pickers that answer the same question — *what is in this set and which of
+ * it do I want* — should be operated the same way, so learning one teaches the other.
+ *
+ * ⚠️ AND THE DATATYPE IS SHOWN, NOT GUESSED. Nothing infers a type from a field NAME anywhere in this codebase:
+ * the starter sets declare it, and a CSV import reads it from the VALUES (`csv-preflight.inferType`) and asks for
+ * confirmation. So the type beside each column is a fact being reported, not a suggestion being made.
+ */
+var CATCOL = { v: null, sel: null, starter: null };
+
+async function catcolPick(){
+  var r;
+  try { r = await api('prodStarters'); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not load the standard sets.'); return; }
+  var verts = (r && r.verticals) || [];
+  if (!verts.length) { if (typeof toast === 'function') toast('No standard sets are available.'); return; }
+  CATCOL = { v: verts[0].key, sel: null, starter: null };
+  modal('<div class="mhd"><div class="t">' + tx('📐 Columns your trade expects') + '</div>'
+    + '<div class="s">' + tx('pick the ones you want — you can add more later, but a column with data cannot be removed') + '</div></div>'
+    + '<div class="mbody">'
+    + '<label class="fl">' + tx('Trade') + '</label>'
+    + '<select class="inp" id="catcol_v" data-testid="catcol-trade" onchange="catcolLoad(this.value)">'
+    + verts.map(function(v){ return '<option value="' + esc(v.key) + '">' + esc(v.title) + ' — '
+        + v.field_count + ' ' + tx('columns') + '</option>'; }).join('')
+    + '</select>'
+    + '<div id="catcol_body" style="margin-top:10px">' + tx('loading…') + '</div>'
+    + '<div style="margin-top:11px"><label class="fl">' + tx('Add your own as well') + '</label>'
+    + '<div style="display:flex;gap:6px"><input class="inp" id="catcol_own" data-testid="catcol-own" style="flex:1"'
+    + ' placeholder="' + esc(tx('column name')) + '">'
+    + '<select class="inp" id="catcol_owntype" data-testid="catcol-own-type" style="width:120px">'
+    + ['text','number','boolean','date','choice'].map(function(t){ return '<option>' + t + '</option>'; }).join('')
+    + '</select></div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
+    + tx('One per line or separated by commas — they all take the type on the right. Nothing guesses it from the name.')
+    + '</div></div>'
+    + '</div>'
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button>'
+    + '<button class="pri" id="catcol_go" data-testid="catcol-go" onclick="catcolGo()">' + tx('Add columns') + '</button></div>', true);
+  catcolLoad(CATCOL.v);
+}
+
+/** One trade's columns, with what this catalogue already has marked — so nothing looks like a fresh choice twice. */
+async function catcolLoad(v){
+  CATCOL.v = v; CATCOL.sel = null;
+  var body = document.getElementById('catcol_body');
+  if (body) body.innerHTML = tx('loading…');
+  var r;
+  try { r = await api('prodStarters', { query: { vertical: v } }); }
+  catch (e) { if (body) body.innerHTML = '<div style="color:var(--disp)">' + esc((e && e.message) || 'Could not read that set.') + '</div>'; return; }
+  var set = (r && r.starter) || {};
+  var fields = set.fields || [];
+  CATCOL.starter = fields;
+  /* Everything ticked, which is what "Add these columns" always did — the old behaviour is one press away. */
+  CATCOL.sel = {};
+  fields.forEach(function(f){ CATCOL.sel[f.field_key] = 1; });
+
+  var have = {};
+  ((CATSET && CATSET.fields) || []).forEach(function(f){ have[f.field_key] = 1; });
+
+  if (body) {
+    body.innerHTML = '<div style="display:flex;gap:7px;align-items:center;margin-bottom:7px">'
+      + '<button type="button" data-testid="catcol-all" onclick="catcolAll(true)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('All') + '</button>'
+      + '<button type="button" data-testid="catcol-none" onclick="catcolAll(false)" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('None') + '</button>'
+      + '<span id="catcol_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap"></span></div>'
+      + '<div class="bulklist">' + fields.map(function(f){
+          var already = !!have[f.field_key];
+          return '<label class="bulkrow" style="cursor:' + (already ? 'default' : 'pointer') + (already ? ';opacity:.6' : '') + '">'
+            + '<input type="checkbox" ' + (already ? 'checked disabled' : 'checked')
+            + ' data-colkey="' + esc(f.field_key) + '" data-testid="catcol-f-' + esc(f.field_key) + '"'
+            + ' onchange="catcolTick(\'' + esc(f.field_key) + '\', this.checked)">'
+            + '<span class="bn">' + esc(f.field_name || f.field_key) + '</span>'
+            /* ⭐ The datatype, named — the question Athi asked of this screen. */
+            + '<span class="bh">' + esc(f.field_type || 'text') + (already ? ' · ' + tx('already there') : '') + '</span>'
+            + '</label>';
+        }).join('') + '</div>';
+    catcolCount();
+  }
+}
+
+function catcolCount(){
+  var n = Object.keys(CATCOL.sel || {}).length, tot = (CATCOL.starter || []).length;
+  var el = document.getElementById('catcol_n');
+  if (el) el.textContent = txf('{n} of {tot} selected', { n: n, tot: tot });
+}
+function catcolTick(k, on){
+  if (on) CATCOL.sel[k] = 1; else delete CATCOL.sel[k];
+  catcolCount();
+}
+function catcolAll(on){
+  CATCOL.sel = {};
+  (CATCOL.starter || []).forEach(function(f){ if (on) CATCOL.sel[f.field_key] = 1; });
+  document.querySelectorAll('[data-colkey]').forEach(function(b){ if (!b.disabled) b.checked = !!on; });
+  catcolCount();
+}
+
+async function catcolGo(){
+  var ownEl = document.getElementById('catcol_own');
+  var typeEl = document.getElementById('catcol_owntype');
+  var type = (typeEl && typeEl.value) || 'text';
+  var own = ((ownEl && ownEl.value) || '').split(/[\n,]/).map(function(s){ return s.trim(); }).filter(Boolean)
+    .map(function(nm){ return { field_name: nm, field_type: type }; });
+  var fields = Object.keys(CATCOL.sel || {});
+  if (!fields.length && !own.length) { if (typeof toast === 'function') toast(tx('Nothing selected.'), true); return; }
+  var btn = document.getElementById('catcol_go');
+  if (btn) { btn.disabled = true; btn.textContent = tx('Adding…'); }
+  try {
+    var r = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
+    closeModal();
+    if (typeof toast === 'function') {
+      toast((r && r.message) || 'Columns added'
+        + ((r && r.rejected && r.rejected.length) ? ' · ' + r.rejected.length + ' refused' : ''));
+    }
+    if (typeof catsetLoad === 'function') await catsetLoad(true); else renderApp();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = tx('Add columns'); }
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not add the columns.', true);
+  }
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
