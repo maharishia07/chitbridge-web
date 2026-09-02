@@ -23,9 +23,15 @@
  * exportCatalogueCSV · the face wizard). Moving a control must not become rewriting it — the point of the change
  * is WHERE things live, and a re-implementation would smuggle behaviour changes in under a re-organisation.
  */
-var CATSET = { sec: 'columns' };
+/* ⭐ OPENS ON BLUEPRINT, not Columns — the fastest way in is the one a reader should meet first. Someone with
+   no blueprint for their trade reads one card and moves down the rail; someone with one is already there. */
+var CATSET = { sec: 'blueprint' };
 
 var CATSET_SECS = [
+  /* ⭐⭐ FIRST, because adopting a published catalogue sets the columns, the units and the shape in ONE act.
+     Athi: 'if the user can use the prototype ie blueprint, that sets everything… if not then go step by step.'
+     Everything below this line IS the step-by-step, and the order says so. */
+  { key: 'blueprint', icon: '📋', name: 'Blueprint',        q: 'Copy a working catalogue' },
   { key: 'columns',  icon: '📐', name: 'Columns',          q: 'What every product records' },
   { key: 'variants', icon: '🔗', name: 'Variants',         q: 'One product, several sizes' },
   /**
@@ -128,7 +134,7 @@ function catsetDefListHTML(kind, one){
   return orphanNote + '<div class="catset-dlist">' + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
-function catsetSec(){ return CATSET.sec || 'columns'; }
+function catsetSec(){ return CATSET.sec || 'blueprint'; }
 function catsetSetSec(k){
   CATSET.sec = k;
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
@@ -449,6 +455,36 @@ function catsetCard(title, body, actions){
     + (actions ? '<div class="catset-ca">' + actions + '</div>' : '') + '</div>';
 }
 function catsetBody(k){
+  if (k === 'blueprint') {
+    /**
+     * ⭐⭐ THE FASTEST WAY IN, SO IT IS THE FIRST THING OFFERED — Athi, 2026-09-02: *"if the user can use the
+     * prototype ie blueprint, that sets everything, so possibly we have to showcase prototype to copy if not then
+     * go step by step."*
+     *
+     * ⚠️ COLUMNS USED TO BE THE FIRST PANEL, and that is the wrong order for the commonest case. Adopting a
+     * published catalogue sets the columns, the units and the shape in one act — so a merchant who has one
+     * available should never be walked through declaring them by hand first. The step-by-step panels below are
+     * the FALLBACK, and saying so is the whole point of putting this at the top.
+     *
+     * ⚠️ IT OPENS THE ADOPTION SCREEN RATHER THAN REBUILDING IT. Adopting takes a source AND a commercials
+     * overlay — your own prices over their shared design — and that is a real piece of working UI. Copying it
+     * into this panel would be a second implementation of the one thing on this screen that must not disagree
+     * with itself. The hub is the entry point; the screen it opens is the detail.
+     */
+    return catsetCard('Start from a working catalogue',
+      'Someone in your trade has published theirs as a <b>blueprint</b>. Adopt it and your columns, units and '
+      + 'shape are set in one act — you put your own prices over their design, and a correction they publish '
+      + 'reaches you.'
+      + '<div class="catset-std">In PIM terms a blueprint is a <b>reference catalogue</b>: you cite it rather '
+      + 'than copy it, so it stays THEIRS to correct. ⚠️ Adopting <b>by reference</b> shares the design and keeps '
+      + 'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below '
+      + 'asks which.</div>'
+      + '<div class="catset-std">⭐ <b>No blueprint for your trade?</b> Then the panels below are the step-by-step '
+      + 'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
+      '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">'
+      + tx('📋 See the blueprints available') + '</button>')
+    + catsetCard('What you have adopted', catsetAdoptedHTML(), '');
+  }
   if (k === 'columns') {
     return catsetCard('What every product records',
       'A catalogue starts with three columns — <b>name</b>, <b>unit</b> and <b>price</b>. A trade usually expects '
@@ -660,6 +696,48 @@ async function catcolGo(){
     if (btn) { btn.disabled = false; btn.textContent = tx('Add columns'); }
     if (typeof toast === 'function') toast((e && e.message) || 'Could not add the columns.', true);
   }
+}
+
+/**
+ * ⭐ WHAT THIS CATALOGUE HAS ALREADY ADOPTED. A panel offering blueprints that cannot say which one you already
+ * took is a panel that invites adopting the same thing twice.
+ */
+function catsetAdoptedHTML(){
+  var a = (CATSET && CATSET.adopted) || null;
+  if (a === null) { catsetAdoptedLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (!a.length) {
+    return '<div style="font-size:var(--fs-2);color:var(--grey)">'
+      + tx('Nothing adopted yet — your catalogue is entirely your own.') + '</div>';
+  }
+  return '<div class="bulklist">' + a.map(function(s){
+    return '<div class="bulkrow"><span class="bn">' + esc(s.title || s.source_key || '—') + '</span>'
+      + '<span class="bh">' + ((s.items && s.items.length) || s.item_count || 0) + ' ' + tx('items') + ' · '
+      + esc(s.visible === false ? tx('hidden') : tx('showing')) + '</span></div>';
+  }).join('') + '</div>';
+}
+async function catsetAdoptedLoad(){
+  if (CATSET._adoptedBusy) return;
+  CATSET._adoptedBusy = true;
+  try {
+    var r = await api('catalogueSources');
+    /* ⚠️ Only what THIS catalogue has taken — the endpoint also answers with what is available to take, and
+       showing those here would read as "you have adopted nine things" on a fresh account. */
+    CATSET.adopted = ((r && (r.adopted || r.mine)) || []);
+  } catch (e) { CATSET.adopted = []; }
+  CATSET._adoptedBusy = false;
+  catsetPaintDetail();
+}
+
+/**
+ * ⚠️ IT HANDS OFF, IT DOES NOT REBUILD. Adoption takes a source AND a commercials overlay — your prices over
+ * their shared design — and that screen exists and works. A second implementation here would be the one thing on
+ * this hub that could disagree with itself about what "adopted" means.
+ */
+function catsetBlueprint(){
+  UI.nav = 'cataloguesetup';
+  /* Land on the blueprint step rather than the top of the walk: the reader pressed a button that named it. */
+  try { UI.cw = UI.cw || {}; UI.cw.step = 1; } catch(_) {}
+  renderApp();
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
