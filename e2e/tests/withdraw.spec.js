@@ -115,6 +115,39 @@ test.describe('Withdraw · the cancel-request loop', () => {
       await expect(B.page.getByText(/cancel requested/i).first()).toBeVisible({ timeout: 15000 });
     });
 
+    await test.step('B answers — cancels their own copy from the banner', async () => {
+      /* ⭐ THE ANSWER IS WHERE THE QUESTION IS. Not the status picker three steps away — the button on the
+         banner that just told them. */
+      const agree = B.page.getByTestId('cancel-agree');
+      await expect(agree, 'the banner offers no way to answer it').toBeVisible({ timeout: 10000 });
+      await agree.click();
+      const done = B.page.waitForResponse(
+        (r) => /\/status$/.test(r.url()) && r.request().method() === 'PUT', { timeout: 30000 }).catch(() => null);
+      await B.page.getByTestId('confirm-ok').click();
+      const res = await done;
+      expect(res && res.status(), 'the cancellation did not reach the server').toBe(200);
+      await settle(B.page);
+    });
+
+    await test.step("⭐⭐ AND A IS TOLD — the return leg (b197)", async () => {
+      /**
+       * ⚠️ THIS IS THE HALF THAT WAS INERT FOR A WHOLE DAY. The column existed, the API stamped it, and it
+       * reached nobody because the SELECT never named it. Nothing failed; the sender simply went on seeing a
+       * request with no reply. So this asserts what A can SEE, not what the server wrote.
+       */
+      await A.page.reload();
+      await A.page.getByTestId('nav-order').click();
+      await A.page.getByText(subject).first().click();
+
+      const conf = A.page.getByTestId('chit-cancel-conf');
+      await expect(conf, 'A was never told that B agreed — the return leg is not connected')
+        .toBeVisible({ timeout: 20000 });
+      await expect(conf).toContainText(/cancelled their copy/);
+      /* ⚠️ A's copy has been terminal since they withdrew, so every "hide once settled" rule would have
+         suppressed exactly this. That it is visible IS the assertion. */
+      await expect(conf).toContainText(/agreed on both sides/);
+    });
+
     await A.context.close();
     await B.context.close();
   });
