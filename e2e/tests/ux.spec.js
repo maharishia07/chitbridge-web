@@ -1,6 +1,6 @@
 // MODULE: UX fine-tuning — Athi's list of 2026-09-01.
 // FLOW: sign-in copy · sign-out lands on the login step · the detail action row is the reader's choice.
-// LOCATORS: l_id · dact-open · dact-picker · dact-forward · dact-reset · chit-void
+// LOCATORS: l_id · dact-open · dact-picker · dact-forward · dact-reset · chit-void · dchip-picker · dchip-more · dchip-reset
 const { test, expect } = require('@playwright/test');
 const { mintEntity, seedDemo } = require('../fixtures');
 
@@ -252,5 +252,62 @@ test.describe('Module · UX list 2026-09-01', () => {
     await expect(page.locator('.row', { hasText: 'QtyCheck off' })).toBeVisible({ timeout: 15000 });
     await expect.poll(async () => page.locator('[data-testid^="cat-product-"]').count(),
       { timeout: 15000, message: 'only the unavailable one should remain' }).toBe(1);
+  });
+
+  /**
+   * [UX-07] THE DETAIL CHIPS FOLD THE SAME WAY THE ACTIONS DO — and share the mechanism.
+   *
+   * Athi, 2026-09-01: *"we can fold, register, history, ext, int priority chips also as foldable and it can be
+   * used by only who consider it required."*
+   *
+   * ⚠️ The point of this test is not that a second fold exists — it is that it behaves IDENTICALLY, because it
+   * is the same four functions (pickSet/pickShows/pickToggle/pickBox) with a different key and registry. If
+   * someone ever copies the mechanism instead of calling it, these assertions keep passing while the two rows
+   * drift apart — so the last one checks the generic layer is what both are built on.
+   */
+  test('[UX-07] the detail chips fold, and reuse the action row\'s mechanism', async ({ page }) => {
+    await mintEntity(page);
+
+    const shown = () => page.evaluate(() =>
+      DCHIP.filter((d) => { try { return d.on(); } catch (e) { return false; } })
+           .filter((d) => dchipShows(d.id)).map((d) => d.id));
+
+    /* Nothing stored → every allowed chip shows. An upgrade that silently hides things reads as a bug. */
+    expect(await page.evaluate(() => localStorage.getItem('cb_dchip'))).toBeNull();
+    const all = await shown();
+    expect(all).toContain('register');
+    expect(all).toContain('history');
+    expect(all).toContain('ext');
+
+    /* Unpin the two Athi named first. */
+    await page.evaluate(() => { dchipToggle('register'); dchipToggle('history'); });
+    const after = await shown();
+    expect(after).not.toContain('register');
+    expect(after).not.toContain('history');
+    expect(after.length).toBe(all.length - 2);
+
+    /* ⚠️ Unpinned is not removed — the picker still offers both, so nothing becomes unreachable. */
+    await page.evaluate(() => dchipPick());
+    await expect(page.getByTestId('dchip-picker')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('dchip-register')).not.toBeChecked();
+    await page.getByTestId('dchip-reset').click();
+    expect(await page.evaluate(() => localStorage.getItem('cb_dchip'))).toBeNull();
+    expect((await shown()).length).toBe(all.length);
+
+    /* ⭐ ONE MECHANISM, TWO REGISTRIES — the assertion that stops a future copy. Both rows must route through
+       the generic helpers, and the two stores must stay independent of each other. */
+    const shared = await page.evaluate(() => ({
+      generic: typeof pickSet === 'function' && typeof pickShows === 'function'
+            && typeof pickToggle === 'function' && typeof pickBox === 'function',
+      dactRoutes: /pickShows\(\s*'cb_dact'/.test(String(dactShows)),
+      dchipRoutes: /pickShows\(\s*'cb_dchip'/.test(String(dchipShows)),
+    }));
+    expect(shared.generic, 'the shared fold helpers are missing').toBe(true);
+    expect(shared.dactRoutes, 'the action row stopped using the shared helper').toBe(true);
+    expect(shared.dchipRoutes, 'the chip row stopped using the shared helper').toBe(true);
+
+    /* Independent stores: folding a chip must not touch the action row's preference. */
+    await page.evaluate(() => dchipToggle('ext'));
+    expect(await page.evaluate(() => localStorage.getItem('cb_dact'))).toBeNull();
   });
 });

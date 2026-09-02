@@ -22,6 +22,9 @@ const path = require('path');
 const BASE = process.env.CB_WEB_BASE || 'http://localhost:5173';
 const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.app';
 const STATE = path.join(__dirname, '.auth', 'user.json');
+/* A bridge_id on the command line asks about THAT shop instead of the signed-in one — the anonymous read needs
+   no session, so any published storefront can be checked from outside. */
+const ASK = process.argv[2] || null;
 
 (async () => {
   const browser = await chromium.launch();
@@ -57,6 +60,7 @@ const STATE = path.join(__dirname, '.auth', 'user.json');
   say('OWNER  bridge=' + owner.bridge_id + '  visibility=' + owner.catalogue_visibility
     + '  access=' + owner.storefront_access + '  own products=' + owner.owned_products);
 
+  if (ASK) owner.bridge_id = ASK;
   if (!owner.bridge_id) { say('no bridge_id — cannot address the storefront'); await browser.close(); return; }
 
   /**
