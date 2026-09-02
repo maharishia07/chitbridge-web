@@ -9487,6 +9487,9 @@ function mapApiChit(c){
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
+    /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
+       the sender's own copy: the route stamps every participant EXCEPT the one who withdrew. */
+    cancelReq:c.cancel_requested_at||null, cancelBy:c.cancel_requested_by||null, cancelWhy:c.cancel_reason||null,
     proof:'ok', pri:c.priority_flag||'normal', priExt:(c.summary_json&&c.summary_json.priority_external)||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
 /* fmtAt + inr_ → app/helpers.js */
@@ -10571,7 +10574,9 @@ function detailInner(){
           status:  '<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus(\'' + c.id + '\')">' + tx('Status ▾') + '</button>',
           assign:  '<button onclick="pickAssign(\'' + c.id + '\')">' + tx('👥 Assign') + '</button>',
           dispute: '<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">' + tx('⚑ Dispute') + '</button>',
-          void:    '<button class="warn pend" data-testid="chit-void" onclick="todo(\'voidChit\')">' + tx('⊘ Void') + '</button>',
+          void:    '<button class="warn" data-testid="chit-void" onclick="withdrawChit(\'' + c.id + '\')"'
+                 + ' title="' + esc(tx('Withdraw your copy and ask them to cancel — their copy stays until they act')) + '">'
+                 + tx('⊘ Withdraw') + '</button>',
           doc:     '<button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">' + tx('✨ Draft doc') + '</button>',
           ai:      '<button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">' + tx('✨ Ask AI') + '</button>',
           pdf:     '<button onclick="todo(\'pdf\')">⬇ PDF</button>',
@@ -10595,7 +10600,7 @@ function detailInner(){
     [["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]]);
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${dchipShows('ext')?`<span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>`:''}${(SESSION.role!=="customer"&&dchipShows('int'))?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${(c.custPri&&dchipShows('custpri'))?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}${dchipShows('assignee')?`<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span>`:''}${dchipMore()}</div></div>
-   ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
+   ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
 function setDtab(t){UI.dtab=t;paintDetail();}
@@ -10750,6 +10755,82 @@ async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const
 async function resumeDraft(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||{}, det=(r&&r.detail)||{}; const allr=h.all_recipients||[]; const rcpts=allr.filter(function(x){return x.role!=='sender';}).map(function(x){ return {name:x.display_name, role:(x.role==='receiver'?'to':x.role), self:ccIsSelf(x.display_name), bridge:x.bridge_id||null}; }); const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars, unit:li.unit||'unit', price:+li.price||0, qty:+li.quantity||1}; }); const pri=(h.summary_json&&h.summary_json.priority_external)||'normal'; compose({draftId:id, subject:h.manual_subject||'', items:items, recipients:rcpts, priority:pri}); }catch(e){ toast(MSG.fail("open the draft", e)); } }
 function purgeChit(id){ confirmAsk('Delete this draft permanently?','This <b>cannot be undone</b>. A draft was never sent, so nobody else holds a copy of it.','Delete',function(){ _purgeChit(id); },true); }
 async function _purgeChit(id){ try{ await api("purgeChit",{params:{id}}); toast("Draft deleted permanently"); UI.detail=null; UI.sel=null; await loadList(); renderApp(); }catch(e){ toast(MSG.fail("delete the draft", e)); } }
+/**
+ * ── ⭐⭐ WITHDRAW — take my copy back, and ASK them to cancel theirs ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-02: *"wire the button and rename it to Withdraw"* — it had been a `todo()` stub toasting "coming
+ * soon" against an API built since baseline-4.
+ *
+ * ⚠️⚠️ THE NAME WAS THE PROBLEM, NOT ONLY THE WIRING. *"Void"* reads as *"this order is now void"* — a fact about
+ * the trade — and it is not one. `PUT /chits/:id/void` sets the terminal status on the SENDER'S OWN COPY and
+ * sends every recipient a flagged `[cancel requested]` message. Their copy does not move. A supplier who cut the
+ * stock at 6am may refuse, and that disagreement stays visible and disputable rather than being overwritten.
+ * "Withdraw" says the thing that actually happens; "Void" claimed the counterparty's answer in advance.
+ *
+ * ⚠️ SO THE CONFIRM SPELLS OUT THE HALF NOBODY EXPECTS — that their copy stays as it is. A one-word warning on a
+ * button whose meaning is *"and now go and agree it with them"* is not a warning.
+ *
+ * ⚠️ THE REASON IS REQUIRED BY THE SERVER (400 without one), so it is asked for here rather than discovered as a
+ * failure after the press. `promptAsk` refuses to submit an empty box, which is the same rule stated once.
+ */
+/**
+ * ⭐⭐ CANCEL REQUESTED — the flag Athi asked for, on the order, not buried in Messages (b195).
+ *
+ * Athi, 2026-09-02: *"it has to be flagged against the order right away, so we need a flag to show cancel
+ * requested."*
+ *
+ * ⚠️ IT SAYS WHO ASKED AND WHY, because "cancel requested" alone starts an argument rather than settling one:
+ * the reason is what tells a supplier whether to stop the line or finish the batch.
+ *
+ * ⚠️ AND IT DOES NOT CLAIM THEIR ANSWER. The wording is *asked you to cancel* — their status is untouched and
+ * only they may move it. The route is emphatic about that and the screen must not undo it in words.
+ *
+ * ⭐ IT STOPS SHOWING ONCE THE COPY IS TERMINAL — a RENDER rule, not a delete. "They asked me to cancel on the
+ * 2nd" stays true in the record after the answer; it just stops being the most important thing on the screen.
+ * Nothing clears the column, so the history survives.
+ */
+function cancelBanner(c){
+  if (!c || !c.cancelReq) return '';
+  var st = String(c.state || '').toLowerCase();
+  if (st === 'void' || st === 'closed' || st === 'cancelled') return '';
+  var who = c.cancelBy ? esc(c.cancelBy) : esc(c.sender || tx('The sender'));
+  var when = ''; try { when = CBLocale.date(c.cancelReq); } catch(_) { when = String(c.cancelReq).slice(0, 10); }
+  return '<div data-testid="chit-cancel-req" style="display:flex;gap:9px;align-items:flex-start;'
+    + 'background:var(--warn-tint);border:1px solid var(--gold-line);border-radius:9px;'
+    + 'padding:9px 12px;margin:8px 0;font-size:var(--fs-2);color:var(--warn-3)">'
+    + '<span style="font-size:var(--fs-3);line-height:1">⊘</span><div>'
+    + '<b>' + txf('{who} asked you to cancel this', { who: who }) + '</b>'
+    + (when ? ' <span style="font-weight:400;color:var(--grey)">· ' + esc(when) + '</span>' : '')
+    + (c.cancelWhy ? '<div style="margin-top:2px;font-weight:400">' + esc(c.cancelWhy) + '</div>' : '')
+    + '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey)">'
+    + tx('Your copy is unchanged — decide and set your own status.') + '</div>'
+    + '</div></div>';
+}
+async function withdrawChit(id){
+  const c = (UI.rows || []).find(function(x){ return x.id === id; }) || (UI.detail || {});
+  const who = (c && (c.party || c.rsummary)) || tx('the other party');
+  promptAsk(tx('Withdraw this order?'), {
+    label: tx('Why are you withdrawing it?'),
+    placeholder: tx('e.g. the customer cancelled'),
+    okLabel: tx('⊘ Withdraw'),
+    maxlength: 200,
+    hint: txf('Your copy is marked withdrawn and {who} is sent a cancel request. '
+            + '<b>Their copy does not change</b> until they act on it — they may have already started work.',
+            { who: '<b>' + esc(who) + '</b>' }),
+  }, function(reason){ _withdrawChit(id, reason); });
+}
+async function _withdrawChit(id, reason){
+  try{
+    await api('voidChit', { params:{ id }, body:{ reason } });
+    toast(tx('Withdrawn — a cancel request has gone to them'));
+    announce(tx('Order withdrawn and a cancel request sent'));
+    /* The status moved on the server, so the row and the open record are both stale — reload rather than patch
+       two copies of the same fact in memory and hope they agree. */
+    UI.detail = null; UI.sel = null;
+    await loadList();
+    renderApp();
+  }catch(e){ toast(MSG.fail('withdraw this order', e)); }
+}
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
@@ -10931,7 +11012,20 @@ const DACT = [
   { id:'status',  label:'Status ▾',     on:() => UI.folder !== 'order' },
   { id:'assign',  label:'👥 Assign',    on:() => SESSION.role === 'actor' && UI.folder !== 'order' },
   { id:'dispute', label:'⚑ Dispute',    on:() => true },
-  { id:'void',    label:'⊘ Void',       on:() => SESSION.role === 'entity' },
+  /**
+   * ⭐⭐ SENT ONLY — Athi, 2026-09-02: *"it is in task? is it not suppose to be in order, if it is a withdraw?"*
+   *
+   * He is right, and it was a real defect rather than a tidiness point: the API refuses anyone who is not the
+   * sender (403 *"Only the sender can void a chit"*), so on a chit you RECEIVED the button was offered and could
+   * only ever fail. An action shown where it cannot work is worse than one that is missing — the reader learns
+   * the feature is broken rather than that it is not theirs.
+   *
+   * ⭐ AND THE FOLDER TEST IS THE MEANING, not a shortcut. Withdrawing says *"I am taking my copy back and asking
+   * you to cancel yours"* — it only means anything where a COUNTERPARTY holds a copy, which is the sent side. A
+   * self-chit files to Task and you are its sender, so the API would allow it; there is nobody to ask, and
+   * closing it is the honest action there. Same idiom the received-only actions above already use.
+   */
+  { id:'void',    label:'⊘ Withdraw',   on:() => SESSION.role === 'entity' && UI.folder === 'order' },
   { id:'doc',     label:'✨ Draft doc',  on:() => true },
   { id:'ai',      label:'✨ Ask AI',     on:() => true },
   { id:'pdf',     label:'⬇ PDF',        on:() => true },
