@@ -66,19 +66,35 @@ test.describe('Module · UX list 2026-09-01', () => {
    * ⚠️ A PREFERENCE MUST NOT SUMMON AN ACTION THE RULES FORBID. Void is entity-only and Assign is actor-only;
    * ticking them in the picker cannot make them appear for a role that may not use them.
    */
+  /**
+   * ⚠️ UPDATED 2026-09-02 — AND THE OLD ASSERTION WAS RIGHT ABOUT A WORLD THAT CHANGED ON PURPOSE.
+   *
+   * It read `expect(asEntity).toContain('void')` without setting a folder, so it proved "an entity sees
+   * Withdraw" and nothing about WHERE. Athi then found the defect that made the where matter: the API refuses
+   * anyone who is not the sender, so on a chit you RECEIVED the button was offered and could only ever 403.
+   *
+   * ⭐ So the rule now has two halves and the test asserts both, because asserting only the positive would pass
+   * just as happily if the folder gate were deleted tomorrow.
+   */
   test('[UX-03] the visibility rules still decide first', async ({ page }) => {
     await mintEntity(page);
-    const allowed = await page.evaluate(() => {
-      SESSION.role = 'actor';
+    const seen = (role, folder) => page.evaluate(([r, f]) => {
+      SESSION.role = r; UI.folder = f;
       return DACT.filter((d) => { try { return d.on(); } catch (e) { return false; } }).map((d) => d.id);
-    });
-    expect(allowed).not.toContain('void');       // entity-only
-    const asEntity = await page.evaluate(() => {
-      SESSION.role = 'entity';
-      return DACT.filter((d) => { try { return d.on(); } catch (e) { return false; } }).map((d) => d.id);
-    });
-    expect(asEntity).toContain('void');
-    expect(asEntity).not.toContain('assign');    // actor-only
+    }, [role, folder]);
+
+    /* An actor never gets it, wherever they are standing. */
+    expect(await seen('actor', 'order')).not.toContain('void');
+
+    /* An entity gets it on the SENT side… */
+    const sent = await seen('entity', 'order');
+    expect(sent, 'Withdraw belongs on the side you sent from').toContain('void');
+    expect(sent).not.toContain('assign');          // actor-only
+
+    /* …and NOT on the received side, where the server would refuse it. */
+    expect(await seen('entity', 'task'),
+      'Withdraw was offered on a chit you received — the API 403s a non-sender, so it could only ever fail')
+      .not.toContain('void');
   });
 
   /**
