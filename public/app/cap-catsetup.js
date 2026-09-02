@@ -495,6 +495,8 @@ function catsetBody(k){
       + 'mechanisms, which is why categories live on their own screen.</div>',
       '<button class="composebtn pri" data-testid="catset-columns" onclick="catcolPick()">' + tx('📐 See the columns your trade expects') + '</button>')
     /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
+    /* ⭐ WHAT IT RECORDS TODAY, before what it could record — the question a reader arrives with. */
+    + catsetCard('What your catalogue records today', catsetColsHTML(), '')
     + catsetUnitsHTML()
     + catsetRegistry(['datatype']);
   }
@@ -738,6 +740,121 @@ function catsetBlueprint(){
   /* Land on the blueprint step rather than the top of the walk: the reader pressed a button that named it. */
   try { UI.cw = UI.cw || {}; UI.cw.step = 1; } catch(_) {}
   renderApp();
+}
+
+/**
+ * ── ⭐⭐ THE COLUMNS THIS CATALOGUE ACTUALLY HAS ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-02: *"can they move the column up or down, depends on their own catalogue"* and *"if the data
+ * already there, then we should not allow to remove but column can be added."*
+ *
+ * ⚠️ THE PANEL COULD ONLY ADD. It offered a standard set and said nothing about what was already declared — so
+ * the one question a reader arrives with, *what does my catalogue record today*, had no answer on the screen
+ * whose title is exactly that.
+ *
+ * ⭐ REMOVABILITY IS THE SERVER'S ANSWER, NOT THIS SCREEN'S. Each row carries `removable` and `locked_because`
+ * computed by `lib/column-rules.js`, and the DELETE enforces the same function. A screen that decided for itself
+ * would eventually enable a control the server refuses, which is worse than not offering it.
+ *
+ * ⚠️ AND THE REASON IS ON THE ROW, not behind a failed press. "12 products record a value in Grade" is what
+ * tells someone what to do next; discovering it only by pressing Remove and being refused teaches the same fact
+ * at a worse moment.
+ */
+function catsetColsHTML(){
+  var f = (CATSET && CATSET.fields) || null;
+  if (f === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (!f.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
+
+  var rows = f.map(function(c, i){
+    var used = Number(c.used_by || 0);
+    var can = !!c.removable;
+    return '<div class="bulkrow" data-testid="catset-col-' + esc(c.field_key) + '">'
+      + '<span class="bn">' + esc(c.field_name || c.field_key)
+      + (c.required ? ' <span style="color:var(--disp);font-weight:400">· ' + tx('required') + '</span>' : '')
+      + '</span>'
+      + '<span class="bh">' + esc(c.field_type || 'text')
+      + (used ? ' · ' + txn('used by {count} product', 'used by {count} products', used) : ' · ' + tx('unused'))
+      + '</span>'
+      /* ⭐ Up and down are always live: order is presentation, so the tighten-once-loaded rule does not touch it. */
+      + '<button type="button" title="' + esc(tx('Move up')) + '" data-testid="catset-up-' + esc(c.field_key) + '"'
+      + (i === 0 ? ' disabled' : '') + ' onclick="catsetMove(\'' + esc(c.field_key) + '\',-1)">↑</button>'
+      + '<button type="button" title="' + esc(tx('Move down')) + '" data-testid="catset-dn-' + esc(c.field_key) + '"'
+      + (i === f.length - 1 ? ' disabled' : '') + ' onclick="catsetMove(\'' + esc(c.field_key) + '\',1)">↓</button>'
+      + '<button type="button" class="badd" data-testid="catset-rm-' + esc(c.field_key) + '"'
+      + (can ? '' : ' disabled')
+      + ' title="' + esc(can ? tx('Remove this column') : (c.locked_because || tx('This column cannot be removed.'))) + '"'
+      + ' onclick="catsetDrop(\'' + esc(c.field_key) + '\')">' + (can ? '✕' : '🔒') + '</button>'
+      + '</div>';
+  }).join('');
+
+  /* ⭐ AND THE ONES THE SYSTEM KEEPS, beside them — a product records these too, so a list headed "what every
+     product records" that omits them is short by three. Locked, and each says where it IS set. */
+  var sys = ((CATSET && CATSET.system) || []).map(function(c){
+    return '<div class="bulkrow" style="opacity:.72" data-testid="catset-sys-' + esc(c.field_key) + '">'
+      + '<span class="bn">' + esc(c.field_name) + ' <span style="font-weight:400;color:var(--grey)">· '
+      + esc(tx('kept by the system')) + '</span></span>'
+      + '<span class="bh">' + esc(c.field_type) + '</span>'
+      + '<button type="button" class="badd" disabled title="' + esc(tx('Set in ') + (c.managed_by || '')) + '">🔒</button>'
+      + '</div>';
+  }).join('');
+
+  return '<div class="bulklist">' + rows + '</div>'
+    + (sys ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;'
+      + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('Kept by the system') + '</div>'
+      + '<div class="bulklist">' + sys + '</div>' : '');
+}
+
+async function catsetFieldsLoad(force){
+  if (CATSET._fieldsBusy) return;
+  if (CATSET.fields && !force) return;
+  CATSET._fieldsBusy = true;
+  try {
+    var r = await api('schemaFields');
+    CATSET.fields = (r && r.fields) || [];
+    CATSET.system = (r && r.system) || [];
+  } catch (e) { CATSET.fields = []; CATSET.system = []; }
+  CATSET._fieldsBusy = false;
+  catsetPaintDetail();
+}
+
+/**
+ * ⚠️ THE WHOLE ORDER IS SENT, not "move this one". The endpoint takes a list and writes positions from it, so a
+ * screen that sent a single move would be asking the server to reconstruct an order it can already see. Sending
+ * the list means what is on screen and what is stored cannot drift apart by one press.
+ */
+async function catsetMove(key, dir){
+  var f = (CATSET.fields || []).slice();
+  var i = f.findIndex(function(x){ return x.field_key === key; });
+  var j = i + dir;
+  if (i < 0 || j < 0 || j >= f.length) return;
+  var t = f[i]; f[i] = f[j]; f[j] = t;
+  CATSET.fields = f;
+  catsetPaintDetail();                                    // move first, so the screen answers the press at once
+  try { await api('schemaFieldOrder', { body: { order: f.map(function(x){ return x.field_key; }) } }); }
+  catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not save the order.', true);
+    await catsetFieldsLoad(true);                         // and put it back if the server disagreed
+  }
+}
+
+function catsetDrop(key){
+  var c = (CATSET.fields || []).find(function(x){ return x.field_key === key; }) || {};
+  confirmAsk(txf('Remove the {name} column?', { name: '"' + esc(c.field_name || key) + '"' }),
+    tx('Nothing recorded in it is deleted — the column stops being part of your catalogue, and re-adding it '
+     + 'brings back anything products still hold.'),
+    tx('Remove'), function(){ _catsetDrop(key); }, true);
+}
+async function _catsetDrop(key){
+  try {
+    var r = await api('schemaFieldDrop', { params: { key: key } });
+    if (typeof toast === 'function') toast((r && r.message) || 'Column removed');
+    await catsetFieldsLoad(true);
+  } catch (e) {
+    /* ⚠️ The server's refusal carries the COUNT — pass it through rather than replacing it with a generic
+       failure, because the number is the whole usefulness of the message. */
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not remove the column.', true);
+    await catsetFieldsLoad(true);
+  }
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */

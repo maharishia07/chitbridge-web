@@ -1657,6 +1657,8 @@ const EP = {
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
   schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
+  schemaFieldDrop: {m:"DELETE", p:"/api/schemas/fields/:key",              ok:"✓"},  // remove a column — refused with a COUNT once anything records a value in it
+  schemaFieldOrder:{m:"PATCH", p:"/api/schemas/fields/order",             ok:"✓"},  // move one up or down — order is presentation, so it stays free for ever
   catSourcePut:    {m:"PUT",  p:"/api/assist/catalogue-source",          ok:"✓"},  // b78 — PUBLISH this store's catalogue as an adoptable blueprint (source-as-entity)
   catEnrich:       {m:"POST", p:"/api/governance/ai-draft",              ok:"✓"},  // reuse the deployed invokeSkill endpoint for catalogue-enrich (b113 skill)
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
