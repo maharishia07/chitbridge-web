@@ -101,6 +101,21 @@
     var s = F[ns]; if (!s) return;
     if (i < 0 || i >= s.steps.length) return;
     if (!canReach(s, i)) return;
+    /**
+     * ⭐⭐ onLeave(stepKey) — THE STEP GETS TO KEEP WHAT THE READER DID BEFORE THE SCREEN CHANGES.
+     *
+     * Athi, 2026-09-02: *"i clicked two items, but the chit came out with zero item, i understood, it asks add
+     * these items again."*
+     *
+     * ⚠️ A CART ACCUMULATES AND A CHECKOUT COMMITS, and on a step you can simply walk away from, that second
+     * press is a trap: the reader has said what they want by ticking it, and the only thing standing between
+     * their intent and the record is a button they had no reason to expect. Ticking IS the answer to "what are
+     * you sending?" — so the step commits its own selection on the way out.
+     *
+     * ⚠️ ON A DELIBERATE MOVE ONLY, and never when the index has not changed: paint() and paintFoot() run
+     * constantly, and committing on every repaint would double lines as fast as the screen redraws.
+     */
+    if (s.i !== i) call(s, 'onLeave', keyAt(s, s.i));
     s.i = i;
     var b = doc(opt(s, 'bodyEl'));
     if (b) b.scrollTop = 0;                 // a new step starts at its own top, never mid-scroll of the last one

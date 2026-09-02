@@ -296,6 +296,13 @@
   }
 
   function listHTML(cart, opts) {
+    /* ⚠️⚠️ THE LIST IS ALSO AN ENTRY POINT, AND ONLY IT WAS MISSING THIS. skeletonHTML and pickerHTML both
+       inject the stylesheet; listHTML did not, because every screen that existed when it was written reached
+       the rows THROUGH pickerHTML. The first screen to paint a bare list — Record a sale — rendered perfect
+       markup with no CSS at all: .cbcat-meat fell back to display:inline and the name, unit and price ran
+       together as "Sugar, 1kgpiece₹52". Every render entry injects its own styles, or the one that forgets
+       stays invisible until some screen takes the unusual door. */
+    ensureCss();
     var rows = cart.rows() || [];
     if (!rows.length) {
       /**

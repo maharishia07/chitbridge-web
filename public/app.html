@@ -3842,7 +3842,11 @@ const MENUS = {
      * lived there. ⚠️ `cap-definitions.js` REMAINS as the form provider — cbDefNew/cbDefEdit still own every
      * kind's form, read from the live registries. Dropping the screen must not mean rewriting the forms.
      */
-    ["Catalogue",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
+    /* ⭐ RECORD A SALE SITS WITH THE CATALOGUE, because that is what a sale is made OUT OF. Athi, 2026-09-02:
+       *"if you assume self chit is kind of billing application… just select the items and confirm the total and
+       send."* It is an ACT rather than a place a chit sits, which is why it is not in the Rail group — the same
+       reasoning that keeps Messages under Work. */
+    ["Catalogue",[["catalogue","🗂️","Catalogue"],["selfbill","🧾","Record a sale"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
     ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
@@ -4818,7 +4822,9 @@ function menuBtn(x){
   const label=t('nav.'+key, label0);
   // A track is "on" only when NO folder is selected — otherwise the folder below it is the one you are in.
   const on=(key==='task'||key==='order') ? (UI.nav===key && !UI.folderSel) : UI.nav===key;
-  const click=key==="compose"?`compose()`:`navTo('${key}')`;
+  /* ⚠️ Two entries are ACTS, not destinations — they open something rather than navigating, so they cannot
+     go through navTo. A third would want a registry; two do not. */
+  const click=key==="compose"?`compose()`:key==="selfbill"?`selfBillOpen()`:`navTo('${key}')`;
   /**
    * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
    *
@@ -4964,6 +4970,169 @@ function cbRegisterFor(chitId, label) {
   });
 }
 
+/**
+ * ── ⭐⭐ SELF-CHIT AS A BILL — one screen, three presses ────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-02: *"self chit is very complicated. if you assume self chit is kind of billing application, so
+ * almost all the details are available, so no need of too many forms, just select the items and confirm the total
+ * and send. other items like date and other things are not must or may be on a picker. not too many clicks."*
+ *
+ * ⚠️⚠️ THE FOUR-STEP WIZARD IS RIGHT FOR A CHIT AND WRONG FOR A BILL. Items → To → Details → Review exists
+ * because a counterparty is genuinely unknown and a subject genuinely has to be chosen. On a self-chit BOTH are
+ * already known: the recipient is you, and "what is this" is answerable from the date and the till. Asking anyway
+ * is three screens of ceremony around one act — and it is what made a two-item sale come out with zero items,
+ * because the one press that mattered was buried among the ones that did not.
+ *
+ * ⭐ SO: catalogue on the left, running total on the right, Record it. The subject is PRE-FILLED and editable in
+ * place; the date and a note sit behind "more", closed, because they have honest defaults and most sales need
+ * neither.
+ *
+ * ⚠️ IT REUSES THE CART AND THE SAME SEND CALL. Nothing here is a second way to make a chit — the lines come from
+ * CBCart exactly as compose's do, and the send is the same `createChit`. A billing screen that built its own
+ * lines would be a second definition of what a line is, and the two would disagree the first time either moved.
+ *
+ * ⚠️ AND THERE IS NO SEPARATE "ADD" PRESS. Ticking is the answer; the total updates as you tick, so the thing you
+ * are about to record is on screen the whole time rather than one screen later.
+ */
+function selfBillOpen(){
+  UI._sbNote = ''; UI._sbWhen = '';
+  UI._sbSubject = selfBillSubject();
+  modal('<div class="mhd"><div class="t">🧾 ' + tx('Record a sale') + '</div>'
+    + '<div class="s">' + tx('for yourself — pick what went out, check the total, record it') + '</div>'
+    + '<div id="cbcartbar_sb" class="cbpick-cartslot" style="position:absolute;inset-inline-end:42px;top:9px"></div></div>'
+    + '<div class="mbody" data-testid="selfbill">'
+    /**
+     * ⭐⭐ THE LIST SCROLLS, THE TOTAL DOES NOT. Athi asked to *"select the items and confirm the total"* — one
+     * act, not two — and at the picker's natural height the total sat below the fold behind a scroll. The
+     * screen then said "pick things" where you could see it and "here is what you are about to record" where
+     * you could not, which is the wizard's fault in miniature.
+     *
+     * ⚠️ max-height goes on the SCROLLER, not the modal body: the search box inside is position:sticky, and
+     * sticky is measured against the nearest scrolling ancestor. Scrolling the body instead would pin the
+     * search box to the wrong box and slide it away under the title.
+     */
+    + '<div id="sb_pick" style="max-height:min(46vh,380px);overflow-y:auto;overflow-x:hidden">'
+    +   CBCatUI.skeletonHTML({ rows: 6 }) + '</div>'
+    + '<div id="sb_foot" style="margin-top:12px"></div>'
+    + '</div>'
+    + '<div class="mfoot"><button data-testid="sb-cancel" onclick="closeModal()">' + tx('Cancel') + '</button>'
+    + '<button class="pri" id="sb_go" data-testid="sb-record" onclick="selfBillSend(this)"></button></div>', true);
+  selfBillCart();
+}
+
+/** A sale on a date needs no naming ceremony — but it stays editable, because some do. */
+function selfBillSubject(){
+  var d = '';
+  try { d = CBLocale.date(new Date().toISOString()); } catch(_) { d = new Date().toISOString().slice(0, 10); }
+  return tx('Counter sale') + ' · ' + d;
+}
+
+async function selfBillCart(){
+  if (typeof ensureCatalogue === 'function') await ensureCatalogue();
+  var arr = (STORE.catalogue || []);
+  var cat = { shop: { bridge_id: 'self', display_name: tx('Your catalogue') },
+    items: arr.map(function(p, i){ return { item_id: 'sb' + i,
+      item_data: Object.assign({}, p, { name: p.particulars, unit: p.unit || 'unit', price: p.price }) }; }) };
+  if (UI._sbCart) { try { UI._sbCart.destroy(); } catch(_) {} }
+  /**
+   * ⚠️⚠️ listEl NAMES THE INNER LIST, NOT THE HOST — and getting it wrong looks like a screen that works.
+   * I first pointed listEl at `sb_pick`, the div the picker is rendered INTO. The picker painted, search box
+   * and all; then the first press fired paintList, which wrote the bare rows over `sb_pick` — and the search
+   * box was gone. It reads as "the search box never rendered" and it is the opposite: it rendered and was
+   * overwritten one press later. pickerHTML emits its own <div id="sb_list"> around the rows precisely so a
+   * repaint can replace the ROWS and leave the furniture standing, which is why every other screen passes an
+   * id that appears nowhere in its own markup.
+   *
+   * ⭐ ONE opts OBJECT for both calls, because create() and pickerHTML() have to agree on that id or the
+   * repaint addresses an element the render never made.
+   */
+  var opts = { listEl: 'sb_list', barEl: 'cbcartbar_sb', renderer: CBCatUI,
+    cart: false, searchTestid: 'sb-search', listTestid: 'sb-list',
+    placeholder: tx('Search what you sell…'),
+    from: tx('Your catalogue'), cartTitle: tx('This sale'),
+    empty: tx('Nothing in your catalogue matches that.'),
+    /* ⭐ THE OTHER NOTHING. An empty search result says CHANGE YOUR QUERY; an empty catalogue says GO ADD
+       SOMETHING, and a till that only knows the first sentence dead-ends the person who has not set up their
+       products yet. The renderer already tells the two apart (see catalogue-ui listHTML) — it just has to be
+       given the second sentence. */
+    emptyAll: tx('You have nothing to sell yet — add a product in Catalogue first.'),
+    emptyHint: tx('Press + on what went out'),
+    /* ⚠️ NO onCheckout. There is nothing to check out TO — the total is on screen and the primary records it. */
+    onChange: selfBillFoot };
+  UI._sbCart = CBCart.create(cat, opts);
+  /* ⭐ THE FULL PICKER, NOT THE BARE LIST — a till with forty products needs the search box far more than one
+     with eight does, and searching is the shortest path to a line there is: type three letters, press +. */
+  document.getElementById('sb_pick').innerHTML = CBCatUI.pickerHTML(UI._sbCart, opts);
+  selfBillFoot();
+}
+
+/**
+ * The total, the subject, and the two things that are optional — kept together so the reader can see everything
+ * they are about to record without leaving the picker.
+ */
+function selfBillFoot(){
+  var c = UI._sbCart;
+  var n = c ? c.lines() : 0;
+  var t = c ? c.total() : { amount: 0 };
+  var el = document.getElementById('sb_foot');
+  if (el) {
+    el.innerHTML =
+      '<div style="display:flex;align-items:baseline;gap:9px;padding:9px 12px;border:1px solid var(--line);'
+      + 'border-radius:9px;background:var(--paper)">'
+      + '<b style="font-size:var(--fs-3)">' + tx('Total') + '</b>'
+      + '<span data-testid="sb-total" style="font-size:var(--fs-4);font-weight:800;font-variant-numeric:tabular-nums;'
+      + 'margin-inline-start:auto">' + esc(c ? c.money(t.amount) : '—') + (t.partial ? '+' : '') + '</span>'
+      + '</div>'
+      + '<div style="margin-top:9px"><input class="inp" data-testid="sb-subject" value="' + esc(UI._sbSubject || '') + '"'
+      + ' oninput="UI._sbSubject=this.value" placeholder="' + esc(tx('What is this?')) + '"></div>'
+      /* ⭐ "on a picker" — closed, because a date that defaults to today and a note most sales do not need are
+         exactly the things that should cost nothing when unused. */
+      + '<details style="margin-top:7px"><summary style="cursor:pointer;font-size:var(--fs-1);color:var(--grey)">'
+      + tx('Date and a note') + '</summary>'
+      + '<div style="display:flex;gap:7px;margin-top:6px">'
+      + '<input class="inp" type="date" data-testid="sb-when" value="' + esc(UI._sbWhen || '') + '"'
+      + ' oninput="UI._sbWhen=this.value" style="width:170px">'
+      + '<input class="inp" data-testid="sb-note" value="' + esc(UI._sbNote || '') + '"'
+      + ' oninput="UI._sbNote=this.value" placeholder="' + esc(tx('note (optional)')) + '" style="flex:1">'
+      + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
+      + tx('Left blank, it is recorded as of now.') + '</div></details>';
+  }
+  var go = document.getElementById('sb_go');
+  if (go) {
+    go.textContent = n ? txn('Record {count} item', 'Record {count} items', n) : tx('Pick something first');
+    go.disabled = !n;
+  }
+}
+
+async function selfBillSend(btn){
+  var c = UI._sbCart;
+  var lines = c ? c.selected() : [];
+  if (!lines.length) return;
+  var was = btn.textContent; btn.disabled = true; btn.textContent = tx('Recording…');
+  try {
+    var subj = (UI._sbSubject || '').trim() || selfBillSubject();
+    /* ⚠️ THE SAME SEND EVERY OTHER CHIT USES. A billing screen with its own create call would be a second
+       definition of what a chit is. */
+    await api('createChit', { body: {
+      recipients: [{ name: 'Self', role: 'to', self: true }],
+      manual_subject: subj, subject: subj, purpose: 'order',
+      line_items: lines.map(function(l){
+        var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
+        return { particulars: l.name || 'item', unit: l.unit || 'unit',
+                 quantity: Number(l.qty || 1) || 1, price: Number(raw) || 0,
+                 comment: UI._sbNote || undefined };
+      }) } });
+    closeModal();
+    if (typeof toast === 'function') toast(txn('Recorded {count} item', 'Recorded {count} items', lines.length));
+    if (UI._sbCart) { try { UI._sbCart.destroy(); } catch(_) {} UI._sbCart = null; }
+    await loadList();
+    renderApp();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = was;
+    if (typeof toast === 'function') toast(MSG.fail('record this sale', e));
+  }
+}
+
 function navTo(k){if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
@@ -5089,7 +5258,16 @@ function ccCartSync(){
             this is deliberately absent — see cart-ui `catgLabel`: their ids are not ours to read, and the name
             travels on the item instead. */
          categories:function(){ return (typeof _CATG !== 'undefined') ? _CATG : null; },
-         noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
+         noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked,
+         /**
+          * ⚠️ A GUARD IS ONLY RE-ASKED WHEN THE FOOTER REPAINTS. With the items guard now counting ticked
+          * cart lines, ticking has to repaint the footer or Next stays disabled while the answer is already
+          * on screen — a dead button beside a full cart, which reads as 'the app did not notice'.
+          *
+          * ⭐ THE SUPPLIER FLOW ALREADY DOES EXACTLY THIS (see supCartOpts' onChange). Same shape, deliberately:
+          * the fix belongs to 'a cart feeding a step', not to compose.
+          */
+         onChange:function(){ ccRenderCatPick(); if(UI._ccFlow) UI._ccFlow.paintFoot(); } });
 }
 /* The modal is the lifetime of BOTH the cart and the step flow. Closing compose and leaving either behind is the
    leak a handle can express and a namespace could not. */
@@ -5292,8 +5470,22 @@ function ccStepsFor(){
            {k:'review',n:'Review',t:'Check it, then send'}],
     railEl:'cc_rail', bodyEl:'cc_body', footEl:'cc_foot', subEl:'cc_sub',
     render:function(k){ return k==='items'?ccStepItems():k==='to'?ccStepTo():k==='details'?ccStepDetails():ccStepReview(); },
+    /* ⭐ Whatever is ticked when you leave Items IS the answer — see onLeave in step-flow.js. The cart's
+       Check out button still works and now does nothing a reader has to remember. */
+    onLeave:function(k){ if(k==='items') ccAddPicked(); },
     guard:function(k){
-      if(k==='items' && !(CC.items||[]).length) return 'Add at least one line item.';
+      /**
+       * ⚠️⚠️ THE GATE AND THE COMMIT WERE IN A DEADLOCK, AND THE HOOK LOOKED LIKE IT WORKED.
+       *
+       * onLeave('items') banks the ticked cart onto the chit — but this guard refused to LET you leave until
+       * CC.items was already filled, and onLeave is the only thing that fills it. Tick two products and Next
+       * stays disabled forever: the exact screen Athi hit, now with a fix installed behind a door that could
+       * never open. My own check called CBSteps.go() directly, which skips the guard, so it passed.
+       *
+       * ⭐ THE GUARD ASKS 'will this step yield anything', NOT 'has it already'. Ticked lines count, because
+       * ticking is the answer; onLeave banks them a moment later. Two questions, two places, no cycle.
+       */
+      if(k==='items' && !(CC.items||[]).length && !(UI._ccCart && UI._ccCart.lines())) return 'Add at least one line item.';
       if(k==='to' && !CC.rcpts.filter(function(r){return r.role==='to';}).length) return 'Add at least one To recipient.';
       if(k==='details' && !String(ccField('subject')||'').trim()) return 'A subject is required.';
       return null;
