@@ -210,8 +210,11 @@ function cbcatSeedAsk(){
     var s = CB_STARTER_CATEGORIES[v];
     return '<div class="bulkrow"><span class="bn">' + esc(s.title) + '</span>'
       + '<span class="bh">' + s.nodes.length + ' categories</span>'
+      /* ⭐ "See these" — Athi, 2026-09-02: *"there is no way of knowing what they are."* The button used to add
+         all 26 sight unseen; it now opens the list, which is where the choosing happens. Same testid, because
+         the specs address the SET, and which press it takes to finish is not what they are asserting. */
       + '<button type="button" class="badd" data-testid="catg-seed-' + esc(v) + '"'
-      + ' onclick="cbcatSeedRun(\'' + esc(v) + '\')">' + tx('Add these') + '</button></div>';
+      + ' onclick="cbcatSeedPick(\'' + esc(v) + '\')">' + tx('See these →') + '</button></div>';
   }).join('');
   modal('<div class="mhd"><div class="t">' + tx('Start from a standard set') + '</div>'
     + '<div class="s">real categories from the Google Product Taxonomy</div></div>'
@@ -224,16 +227,162 @@ function cbcatSeedAsk(){
     + '<div class="bulklist">' + opts + '</div></div>'
     + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button></div>');
 }
-async function cbcatSeedRun(vertical){
+/**
+ * ── ⭐⭐ SEE WHAT IS IN A SET, AND TAKE THE PART YOU WANT ──────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-02: *"we are providing option to opt from standard set, but there is no way of knowing what they
+ * are… say out of 26 they may be interested in 20 plus few more of their own, so if we can provide facility to
+ * add it, that would be good."*
+ *
+ * ⚠️ "26 categories · Add these" IS A BLIND ALL-OR-NOTHING BUTTON, and both halves of that are the problem. The
+ * count is not a description — nobody can tell whether those 26 are the right 26 — and even a reader who knew
+ * would have to accept every one and then delete six, which is exactly the "you cannot tell what you chose from
+ * what arrived" failure the seed was designed to avoid in the first place. So the list opens, everything starts
+ * ticked (the old behaviour is one press away, unchanged), and what is unticked is simply never created.
+ *
+ * ⭐ THE TREE HAS TO STAY A TREE, so the ticks cascade BOTH ways:
+ *     untick a parent → its children go too   (a child whose parent was never created is an orphan)
+ *     tick a child    → its parent comes back (the standard nests them; half a branch is not the standard)
+ * Said once on screen rather than discovered by a reader wondering why a box moved on its own.
+ *
+ * ⚠️ THE SELECTION IS HELD IN `CBCAT_SEED`, NOT READ OFF THE DOM AT THE END. A checkbox list read at submit time
+ * loses everything the moment anything repaints, and this modal repaints its own counter on every tick.
+ */
+var CBCAT_SEED = { v: null, sel: null };
+
+/** Children of a node, and their children — used by both cascade directions. */
+function cbcatSeedKids(nodes, gid){
+  var out = [], q = [gid];
+  while (q.length) {
+    var g = q.shift();
+    nodes.forEach(function(n){ if (n.parent === g) { out.push(n.gid); q.push(n.gid); } });
+  }
+  return out;
+}
+
+function cbcatSeedPick(v){
+  var set = CB_STARTER_CATEGORIES[v]; if (!set) return;
+  CBCAT_SEED = { v: v, sel: {} };
+  set.nodes.forEach(function(n){ CBCAT_SEED.sel[n.gid] = 1; });   // everything, as "Add these" always did
+
+  var rows = set.nodes.map(function(n){
+    var kid = !!n.parent;
+    return '<label class="bulkrow" style="cursor:pointer' + (kid ? ';padding-inline-start:30px' : '') + '">'
+      + '<input type="checkbox" checked data-seedgid="' + esc(n.gid) + '"'
+      + ' data-testid="catg-seed-node-' + esc(n.gid) + '"'
+      + ' onchange="cbcatSeedTick(\'' + esc(n.gid) + '\', this.checked)">'
+      + '<span class="bn" style="font-weight:' + (kid ? '400' : '700') + '">' + esc(n.name) + '</span>'
+      + '<span class="bh">' + esc(n.gid) + '</span></label>';
+  }).join('');
+
+  modal('<div class="mhd"><div class="t">' + esc(set.title) + '</div>'
+    + '<div class="s">' + tx('real categories from the Google Product Taxonomy') + '</div></div>'
+    + '<div class="mbody">'
+    + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:8px">'
+    + tx('Untick anything you do not want. A child needs its parent, so those two travel together.')
+    + '</div>'
+    /* ⚠️ SMALL PILLS, NOT `.btn ghost` — which is a full-width primary inside a modal footer and rendered these
+       two as the loudest things on a screen whose subject is the list below them. The same pill the set rows
+       already use (`.bulkrow button`), so the modal has one button vocabulary rather than two. */
+    + '<div style="display:flex;gap:7px;align-items:center;margin-bottom:8px">'
+    + '<button type="button" data-testid="catg-seed-all" onclick="cbcatSeedAll(true)"'
+    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;'
+    + 'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('All') + '</button>'
+    + '<button type="button" data-testid="catg-seed-none" onclick="cbcatSeedAll(false)"'
+    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:20px;'
+    + 'padding:3px 12px;font-size:var(--fs-1);cursor:pointer">' + tx('None') + '</button>'
+    + '<span id="cbcat_seed_n" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);'
+    + 'white-space:nowrap"></span>'
+    + '</div>'
+    + '<div class="bulklist">' + rows + '</div>'
+    /* ⭐ "plus few more of their own" — created alongside, as ordinary top-level categories. They are NOT part of
+       the standard, so they carry no `gpc` id: claiming a taxonomy code for a name somebody typed would put a
+       false citation on the record, and the whole point of the seed is that the codes are real. */
+    + '<div style="margin-top:11px">'
+    + '<label class="fl">' + tx('Add your own as well') + '</label>'
+    + '<input class="inp" id="cbcat_seed_own" data-testid="catg-seed-own"'
+    + ' placeholder="' + esc(tx('one per line, or separated by commas')) + '">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
+    + tx('Yours are created at the top level, with no standard code — they are not part of this taxonomy.')
+    + '</div></div>'
+    + '</div>'
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button>'
+    + '<button class="pri" id="cbcat_seed_go" data-testid="catg-seed-go" onclick="cbcatSeedGo()"></button></div>', true);
+  cbcatSeedCount();
+}
+
+/** The counter and the primary's label — the only two things a tick changes. */
+function cbcatSeedCount(){
+  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v] || { nodes: [] };
+  var n = Object.keys(CBCAT_SEED.sel || {}).length, tot = set.nodes.length;
+  var el = document.getElementById('cbcat_seed_n');
+  if (el) el.textContent = txf('{n} of {tot} selected', { n: n, tot: tot });
+  var go = document.getElementById('cbcat_seed_go');
+  if (go) {
+    go.textContent = n ? txn('Add {count} category', 'Add {count} categories', n) : tx('Add your own only');
+    go.disabled = false;
+  }
+}
+
+/**
+ * ⚠️ THE DOM IS UPDATED DIRECTLY, NOT BY REPAINTING THE LIST. Re-rendering would throw away whatever has been
+ * typed into "add your own" and drop the reader back at the top of a 26-row list mid-decision.
+ */
+function cbcatSeedTick(gid, on){
+  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v]; if (!set) return;
+  var touch = [gid].concat(on
+    ? cbcatSeedAncestors(set.nodes, gid)      // a child needs its parent
+    : cbcatSeedKids(set.nodes, gid));         // a parent's children cannot outlive it
+  touch.forEach(function(g){
+    if (on) CBCAT_SEED.sel[g] = 1; else delete CBCAT_SEED.sel[g];
+    var box = document.querySelector('[data-seedgid="' + g + '"]');
+    if (box) box.checked = !!on;
+  });
+  cbcatSeedCount();
+}
+
+function cbcatSeedAncestors(nodes, gid){
+  var out = [], by = {};
+  nodes.forEach(function(n){ by[n.gid] = n; });
+  var cur = by[gid];
+  while (cur && cur.parent) { out.push(cur.parent); cur = by[cur.parent]; }
+  return out;
+}
+
+function cbcatSeedAll(on){
+  var set = CB_STARTER_CATEGORIES[CBCAT_SEED.v]; if (!set) return;
+  CBCAT_SEED.sel = {};
+  set.nodes.forEach(function(n){ if (on) CBCAT_SEED.sel[n.gid] = 1; });
+  document.querySelectorAll('[data-seedgid]').forEach(function(b){ b.checked = !!on; });
+  cbcatSeedCount();
+}
+
+function cbcatSeedGo(){
+  var el = document.getElementById('cbcat_seed_own');
+  var own = (el ? el.value : '').split(/[\n,]/).map(function(s){ return s.trim(); }).filter(Boolean);
+  var sel = Object.assign({}, CBCAT_SEED.sel || {});
+  if (!Object.keys(sel).length && !own.length) { toast(tx('Nothing selected.'), true); return; }
+  cbcatSeedRun(CBCAT_SEED.v, sel, own);
+}
+
+/**
+ * @param only  {gid:1} of the nodes to create. ABSENT means every node — the pre-picker behaviour, kept so any
+ *              caller that has not learned about the picker still works exactly as it did.
+ * @param own   names the reader typed, created at the top level with no standard code.
+ */
+async function cbcatSeedRun(vertical, only, own){
   var set = CB_STARTER_CATEGORIES[vertical]; if (!set) return;
   closeModal();
-  showBusy(txn('Adding {count} category…', 'Adding {count} categories…', set.nodes.length));
+  /* ⚠️ Filtered BEFORE the count, or the progress line promises rows that were never going to be created. */
+  var picked = only ? set.nodes.filter(function(n){ return !!only[n.gid]; }) : set.nodes.slice();
+  var ownNames = (own || []).slice();
+  showBusy(txn('Adding {count} category…', 'Adding {count} categories…', picked.length + ownNames.length));
   var made = {}, added = 0, skipped = 0, failed = 0;
   try {
     var have = {};
     (CBCAT_UI.list || []).forEach(function(c){ have[c.name.toLowerCase()] = c.id; });
     /* Ordered so a parent always exists before its child asks for it. */
-    var ordered = set.nodes.slice().sort(function(a,b){ return (a.parent ? 1 : 0) - (b.parent ? 1 : 0); });
+    var ordered = picked.slice().sort(function(a,b){ return (a.parent ? 1 : 0) - (b.parent ? 1 : 0); });
     for (var i = 0; i < ordered.length; i++) {
       var n = ordered[i];
       if (have[n.name.toLowerCase()]) { made[n.gid] = have[n.name.toLowerCase()]; skipped++; continue; }
@@ -247,6 +396,26 @@ async function cbcatSeedRun(vertical){
         if (!id) { failed++; continue; }
         await api('defSave', { params: { id: id }, body: { status: 'live' } });
         made[n.gid] = id; have[n.name.toLowerCase()] = id; added++;
+      } catch (e) { failed++; }
+    }
+    /**
+     * ⭐ "plus few more of their own" — created in the SAME run so one press does the whole job.
+     *
+     * ⚠️ NO `gpc`. These are names somebody typed; stamping a taxonomy code on one would put a false citation on
+     * the record, and the codes being real is the entire reason the standard set is worth offering.
+     * ⚠️ Skipped if the name already exists, exactly like a standard node — the UNIQUE (entity_id, kind, name)
+     * constraint would otherwise fail the row, and silently renaming somebody's category to make room is worse.
+     */
+    for (var j = 0; j < ownNames.length; j++) {
+      var nm = ownNames[j];
+      if (have[nm.toLowerCase()]) { skipped++; continue; }
+      try {
+        var ro = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: nm, note: '',
+          rules: { parent: null } } });
+        var oid = ro && (ro.definition_id || (ro.definition && ro.definition.definition_id));
+        if (!oid) { failed++; continue; }
+        await api('defSave', { params: { id: oid }, body: { status: 'live' } });
+        have[nm.toLowerCase()] = oid; added++;
       } catch (e) { failed++; }
     }
   } finally { hideBusy(); }

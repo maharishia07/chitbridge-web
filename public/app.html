@@ -10502,7 +10502,33 @@ function detailInner(){
   let body="";
   // Provenance leads the content tab: before "what was asked for" is readable, "who asked, and are they anyone we
   // know" has to be. It is a no-op on every chit raised inside the rail.
-  if(UI.dtab==="content") body=`${viaBlock(c)}<div class="itab">${items}<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
+  /**
+   * ⭐⭐ WHAT ARRIVED, AND WHAT WE MADE OF IT, ARE TWO TABS — Athi, 2026-09-01: *"in design 1, the whatsapp
+   * content and the line item comes in the same page and couldn't make a difference. If we can split it stating
+   * input and then detail, that would be great."*
+   *
+   * They were stacked in one pane, and that is exactly why they blur: the message is EVIDENCE and the lines are
+   * an INTERPRETATION of it, and a reader scrolling one continuous column has nothing telling them where one
+   * stops and the other starts. Two tabs put a wall between the claim and the thing it is a claim about.
+   *
+   * ⚠️ THE TAB ONLY EXISTS WHEN THERE IS AN INPUT — *"If no input, then that tab need not visible."* — and the
+   * test for that is `viaBlock()` itself returning nothing, which it already did for any chit raised inside the
+   * rail. One rule, not a second condition that could disagree with the block it governs.
+   */
+  const inputHTML=viaBlock(c);
+  /**
+   * ⚠️⚠️ THE FALLBACK RUNS HERE, BEFORE THE BODY IS CHOSEN — and my first version put it beside the tab list
+   * fifty lines further down, which is one render too late. Opening a WhatsApp chit, landing on Input, then
+   * opening one raised inside the rail would leave `UI.dtab === 'input'` with no tab to match it and NOTHING in
+   * the pane: a blank screen with no error, which reads as the record having failed to load. Correcting it after
+   * the branches would have fixed the tab STRIP while the body it selected was already empty.
+   *
+   * The offending move is not a click — it is arriving at a different chit while holding a tab the new one does
+   * not have — which is why setDtab is the wrong place for it.
+   */
+  if(UI.dtab==="input" && !inputHTML) UI.dtab="content";
+  if(UI.dtab==="input") body=inputHTML;
+  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
@@ -10539,7 +10565,14 @@ function detailInner(){
           + '<button data-testid="dact-open" onclick="dactPick()" title="' + esc(tx('Choose which actions to show')) + '">'
           + '⋯' + (hidden ? ' ' + hidden : '') + '</button>';
       })();
-  const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
+  /**
+   * ⭐ INPUT LEADS WHEN THERE IS ONE, because it is what happened first and everything else on the screen is
+   * downstream of it. It is absent entirely for a chit raised inside the rail — see the note at `inputHTML`.
+   *
+   * The selection is protected where the body is chosen, not here — see the note at `inputHTML`.
+   */
+  const dtabs=(inputHTML?[["input","Input"]]:[]).concat(
+    [["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]]);
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties">${askedByLine(c.via) ? `<span class="ptag">${askedByLine(c.via)}</span>` : `<span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span>`}<span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${dchipShows('ext')?`<span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>`:''}${(SESSION.role!=="customer"&&dchipShows('int'))?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${(c.custPri&&dchipShows('custpri'))?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}${dchipShows('assignee')?`<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span>`:''}${dchipMore()}</div></div>
    ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
