@@ -16,10 +16,15 @@
  * Run: node e2e/catsetup-panels.cjs        (exit 1 if any panel is blank or throws)
  */
 const { chromium } = require('@playwright/test');
+const { attachSession } = require('./session.cjs');
 const path = require('path');
 (async () => {
   const b = await chromium.launch();
   const c = await b.newContext({ storageState: path.join(__dirname, '.auth', 'user.json'), viewport: { width: 1280, height: 1000 } });
+  /* ⚠️ storageState is keyed by ORIGIN and the API base is inherited — see session.cjs. Without this the page
+     sits on the login screen, no lazy capability ever loads, and the failure reads as "CATSET_SECS is not
+     defined", which looks like a broken screen and is really a probe that was never signed in. */
+  await attachSession(c);
   const p = await c.newPage();
   const say = (s) => console.log('  ' + s);
   await p.goto((process.env.CB_WEB_BASE || 'http://localhost:5173') + '/app.html');

@@ -841,10 +841,33 @@ function catsetColsHTML(){
       + '</div>';
   }).join('');
 
+  /**
+   * ⚠️⚠️ COLUMNS THAT ARE IN THE DATA AND IN NO DECLARATION — and this panel used to be silent about them.
+   *
+   * They are real: they appear in the export and in the template. A merchant reading a panel headed "what every
+   * product records" was shown a SHORTER list than their own spreadsheet, with nothing to explain the
+   * difference. That silence is what let three surfaces disagree without anyone being able to see it.
+   *
+   * ⭐ THIS BLOCK SHOULD BE EMPTY, ALWAYS. Every write path now declares what it stores, so the only way to get
+   * one is data written before that. If it appears, the backfill (migration b198) has not been run — and saying
+   * so is far better than a panel that quietly disagrees with the download.
+   */
+  var undec = ((CATSET && CATSET.undeclared) || []).map(function(c){
+    return '<div class="bulkrow" style="opacity:.8" data-testid="catset-undeclared-' + esc(c.field_key) + '">'
+      + '<span class="bn">' + esc(c.field_key) + '</span>'
+      + '<span class="bh">' + esc(String(c.used_by || 0)) + ' ' + esc(tx('product(s)')) + '</span>'
+      + '</div>';
+  }).join('');
+
   return '<div class="bulklist">' + rows + '</div>'
     + (sys ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;'
       + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('Kept by the system') + '</div>'
-      + '<div class="bulklist">' + sys + '</div>' : '');
+      + '<div class="bulklist">' + sys + '</div>' : '')
+    + (undec ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);text-transform:uppercase;'
+      + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('In your data, not yet declared') + '</div>'
+      + '<div class="bulklist">' + undec + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">'
+      + esc(tx('These are in your export and your template but are not columns yet, so they cannot be renamed, reordered or removed.')) + '</div>' : '');
 }
 
 async function catsetFieldsLoad(force){
@@ -855,7 +878,9 @@ async function catsetFieldsLoad(force){
     var r = await api('schemaFields');
     CATSET.fields = (r && r.fields) || [];
     CATSET.system = (r && r.system) || [];
-  } catch (e) { CATSET.fields = []; CATSET.system = []; }
+    /* Empty on any catalogue written since the declare-first writer; non-empty means b198 has not been run. */
+    CATSET.undeclared = (r && r.undeclared) || [];
+  } catch (e) { CATSET.fields = []; CATSET.system = []; CATSET.undeclared = []; }
   CATSET._fieldsBusy = false;
   catsetPaintDetail();
 }
