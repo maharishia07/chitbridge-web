@@ -908,31 +908,40 @@ async function _catsetDrop(key){
  */
 var CATSET_SYS = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
 
-async function catsetFaceLoad(force){
-  if (CATSET._faceBusy) return;
-  if (CATSET.face && !force) return;
-  CATSET._faceBusy = true;
-  try { var r = await api('catFaceGet'); CATSET.face = (r && (r.face || r)) || {}; }
-  catch (e) { CATSET.face = {}; }
-  CATSET._faceBusy = false;
-  catsetPaintDetail();
-}
+/**
+ * ⚠️⚠️ THERE IS ONE FACE, ONE LOADER AND ONE VARIABLE — AND FOR A FEW HOURS THERE WERE TWO OF EACH.
+ *
+ * The ERP and Tax panels arrived with their own `catsetFaceLoad` storing the face on `CATSET.face`, while the
+ * Variants panel had used `CATSET_FACE` since long before. Function declarations HOIST, so the second definition
+ * won silently: `CATSET_FACE` was never assigned, stayed `undefined` for ever, and `catsetVariantStateHTML`'s
+ * `if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); … }` re-entered on every paint —
+ * load → repaint → still undefined → load. **An infinite repaint loop, which is a frozen tab.**
+ *
+ * ⚠️ NOTHING THREW AND NOTHING LOGGED. A duplicate top-level function is legal JavaScript; the loser simply
+ * disappears. `node --check` passes, every guard passes, and the only symptom is a screen that stops answering —
+ * which is why `e2e/dup-functions.cjs` now fails the build on the CLASS rather than trusting anyone to notice.
+ *
+ * ⭐ Collapsed onto the OLDER pair (`CATSET_FACE` / `catsetFaceSet`) because they had the callers — `_vSave`
+ * calls `catsetFaceSet` from the catalogue screen, which knows nothing about this file's newer state object.
+ */
 
 /** ⚠️ Merged, never replaced — see the note above. */
+/** ⚠️ Merged, never replaced: the face is upserted WHOLE, so a panel saving only its own key would drop
+    everything else it holds. */
 async function catsetFaceSave(patch){
-  var face = Object.assign({}, CATSET.face || {}, patch || {});
-  CATSET.face = face;
+  var face = Object.assign({}, CATSET_FACE || {}, patch || {});
+  catsetFaceSet(face);
   try { await api('catFacePut', { body: { face: face } }); }
   catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true); }
 }
 
 function catsetErpHTML(){
-  if (!CATSET.face) { catsetFaceLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
   var cols = (CATSET && CATSET.fields) || null;
   if (cols === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
   if (!cols.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('Declare some columns first.') + '</div>';
 
-  var map = (CATSET.face && CATSET.face.erpMap) || {};
+  var map = (CATSET_FACE && CATSET_FACE.erpMap) || {};
   var mapped = Object.keys(map).filter(function(k){ var m = map[k]; return m && m.system && m.system !== '—'; }).length;
 
   return '<div class="bulklist">' + cols.map(function(c){
@@ -961,7 +970,7 @@ function catsetErpHTML(){
 }
 
 function catsetErpSet(key, prop, val){
-  var face = CATSET.face || {};
+  var face = CATSET_FACE || {};
   var map = Object.assign({}, face.erpMap || {});
   var m = Object.assign({}, map[key] || {});
   m[prop] = val;
@@ -974,8 +983,8 @@ function catsetErpSet(key, prop, val){
 
 /** The tax treatment the catalogue declares. Free text by design — see the panel note on what CB does not do. */
 function catsetTaxHTML(){
-  if (!CATSET.face) { catsetFaceLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
-  var t = (CATSET.face && CATSET.face.tax) || {};
+  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  var t = (CATSET_FACE && CATSET_FACE.tax) || {};
   var v = typeof t === 'string' ? t : (t.treatment || '');
   return '<label class="fl">' + tx('Treatment') + '</label>'
     + '<input class="inp" data-testid="catset-tax" value="' + esc(v) + '"'
