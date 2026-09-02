@@ -10831,7 +10831,10 @@ async function _purgeChit(id){ try{ await api("purgeChit",{params:{id}}); toast(
 function cancelBanner(c){
   if (!c || !c.cancelReq) return '';
   var st = String(c.state || '').toLowerCase();
-  if (st === 'void' || st === 'closed' || st === 'cancelled') return '';
+  /* ⚠️ 'close' IS THE BUCKET THE UI ACTUALLY HOLDS — ST maps every terminal status onto open|act|close, so
+     checking for 'closed' matched nothing and the banner would have kept asking after the chit was settled.
+     The row mark beside this got it right; this line did not, and only rendering both caught the difference. */
+  if (st === 'close' || st === 'closed' || st === 'cancelled' || st === 'void') return '';
   var who = c.cancelBy ? esc(c.cancelBy) : esc(c.sender || tx('The sender'));
   var when = ''; try { when = CBLocale.date(c.cancelReq); } catch(_) { when = String(c.cancelReq).slice(0, 10); }
   return '<div data-testid="chit-cancel-req" style="display:flex;gap:9px;align-items:flex-start;'
@@ -10843,7 +10846,71 @@ function cancelBanner(c){
     + (c.cancelWhy ? '<div style="margin-top:2px;font-weight:400">' + esc(c.cancelWhy) + '</div>' : '')
     + '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey)">'
     + tx('Your copy is unchanged — decide and set your own status.') + '</div>'
+    /**
+     * ⭐⭐ AND THE TWO THINGS THE READER CAN DO ABOUT IT — Athi, 2026-09-02: *"the receiver can actually cancel
+     * the request, the confirmation status will be visible in the status message."*
+     *
+     * ⚠️ A BANNER THAT ONLY INFORMS PUTS THE WORK BACK ON THE READER. Without these, being told "they asked you
+     * to cancel" left someone to find the status picker, remember which of nine values means agreement, and set
+     * it — three steps away from the sentence that told them. The answer belongs where the question is asked.
+     *
+     * ⭐ TWO ANSWERS, NOT ONE, AND THE SECOND IS A DISPUTE. Athi: *"this is something like dispute, correct."*
+     * Right about the shape — so agreement uses the STATUS vocabulary (`cancelled`, which already buckets as
+     * CLOSE) and refusal uses the DISPUTE machinery that already exists for exactly this: a disagreement one
+     * party raises and both can see. Neither is a new mechanism; a cancel request is simply a question with one
+     * of each already built to answer it.
+     *
+     * ⚠️ NEITHER IS AUTOMATIC. The request never moves this copy — the route is emphatic and the invariant is
+     * covered by WD-01. These buttons are how the reader moves it, deliberately, having read the reason.
+     */
+    + '<div style="display:flex;gap:7px;margin-top:8px;flex-wrap:wrap">'
+    + '<button type="button" class="btn" data-testid="cancel-agree" onclick="cancelAgree(\'' + esc(c.id) + '\')"'
+    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;'
+    + 'padding:4px 11px;font-size:var(--fs-1);cursor:pointer">' + tx('Cancel my copy too') + '</button>'
+    /* ⚠️ ensureCap FIRST — quickDispute lives in the dispute capability, which loads lazily. The button beside
+       the dispute chip can assume it is there; a button on a banner that renders the moment a chit opens cannot. */
+    + '<button type="button" data-testid="cancel-refuse" onclick="ensureCap(&quot;dispute&quot;).then(function(){quickDispute()})"'
+    + ' title="' + esc(tx('You cannot cancel — say why, and it becomes a dispute both sides can see')) + '"'
+    + ' style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;'
+    + 'padding:4px 11px;font-size:var(--fs-1);cursor:pointer">' + tx('I cannot — raise a dispute') + '</button>'
+    + '</div>'
     + '</div></div>';
+}
+
+/**
+ * ⭐⭐ THE RECEIVER AGREES — Athi, 2026-09-02: *"the receiver can actually cancel the request, the confirmation
+ * status will be visible in the status message."*
+ *
+ * ⚠️ IT SETS A STATUS, IT DOES NOT INVENT A STATE. `cancelled` has been in the lifecycle vocabulary all along
+ * and already buckets as CLOSE, so agreeing closes the chit through the same path every other status change
+ * uses — same endpoint, same log, same rollups. A dedicated "accept cancellation" verb would have been a second
+ * way to reach a state that already had one, and the two would disagree the first time either was touched.
+ *
+ * ⭐ THE SERVER DOES THE REST. `PUT /status` sees a non-sender moving to `cancelled` on a copy that carries a
+ * cancel request, stamps the SENDER's `cancel_confirmed_at` and posts `[cancel confirmed]` — so the person who
+ * asked learns the answer without anyone having to remember to tell them. That is the b197 return leg; this
+ * button is only the near half of it.
+ *
+ * ⚠️ CONFIRMED FIRST, because it is terminal. Closing a job somebody may still be working on should cost one
+ * deliberate press, and the wording says what the other side already did rather than only what this does.
+ */
+function cancelAgree(id){
+  var c = (UI.rows || []).find(function(x){ return x.id === id; }) || UI.detail || {};
+  var who = c.cancelBy ? esc(c.cancelBy) : esc(c.sender || tx('The sender'));
+  confirmAsk(tx('Cancel your copy as well?'),
+    txf('{who} has withdrawn theirs and asked you to cancel. This closes your copy as <b>cancelled</b> and '
+      + 'tells them you agreed. Anything already recorded against it stays on the record.', { who: '<b>' + who + '</b>' }),
+    tx('Cancel my copy'), function(){ _cancelAgree(id); }, false);
+}
+async function _cancelAgree(id){
+  try{
+    await api('status', { params:{ id }, body:{ status:'cancelled' } });
+    toast(tx('Cancelled — they have been told you agreed'));
+    announce(tx('Your copy is cancelled and the sender has been told'));
+    UI.detail = null; UI.sel = null;
+    await loadList();
+    renderApp();
+  }catch(e){ toast(MSG.fail('cancel your copy', e)); }
 }
 async function withdrawChit(id){
   const c = (UI.rows || []).find(function(x){ return x.id === id; }) || (UI.detail || {});
