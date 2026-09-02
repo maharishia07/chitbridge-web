@@ -9490,6 +9490,9 @@ function mapApiChit(c){
     /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
        the sender's own copy: the route stamps every participant EXCEPT the one who withdrew. */
     cancelReq:c.cancel_requested_at||null, cancelBy:c.cancel_requested_by||null, cancelWhy:c.cancel_reason||null,
+    /* ⭐ b197 — the RETURN leg, on the SENDER'S copy: they answered. The opposite question to cancelReq,
+       which is why it is a second pair and not the same one read differently. */
+    cancelConf:c.cancel_confirmed_at||null, cancelConfBy:c.cancel_confirmed_by||null,
     proof:'ok', pri:c.priority_flag||'normal', priExt:(c.summary_json&&c.summary_json.priority_external)||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
 /* fmtAt + inr_ → app/helpers.js */
@@ -10829,7 +10832,33 @@ async function _purgeChit(id){ try{ await api("purgeChit",{params:{id}}); toast(
  * Nothing clears the column, so the history survives.
  */
 function cancelBanner(c){
-  if (!c || !c.cancelReq) return '';
+  /**
+   * ⭐⭐ THE ANSWER COMES BACK — Athi, 2026-09-02: *"on cancelling the requester should be notified as well and
+   * his flag to set as cancelled, change from cancel requested to cancelled in the order copy as well."*
+   *
+   * ⚠️ THIS BRANCH RUNS BEFORE THE TERMINAL CHECK BELOW, AND IT HAS TO. The sender's own copy went `cancelled`
+   * the moment they withdrew — so every "hide once settled" rule would hide the one message they are waiting
+   * for. The request banner is about an OPEN question; this is the answer to a closed one, and the two are
+   * opposites wearing the same colour.
+   *
+   * ⭐ It names WHO answered, because a chit may have several recipients and "cancelled" with one of three
+   * agreed is not the same fact as all three. The count lives in the thread; this says the most recent, which
+   * is what the person who asked is refreshing to see.
+   */
+  if (c.cancelConf) {
+    var cwho = c.cancelConfBy ? esc(c.cancelConfBy) : esc(c.party || tx('They'));
+    var cwhen = ''; try { cwhen = CBLocale.date(c.cancelConf); } catch(_) { cwhen = String(c.cancelConf).slice(0, 10); }
+    return '<div data-testid="chit-cancel-conf" style="display:flex;gap:9px;align-items:flex-start;'
+      + 'background:var(--ok-tint);border:1px solid var(--ok-3);border-radius:9px;'
+      + 'padding:9px 12px;margin:8px 0;font-size:var(--fs-2);color:var(--ok-2)">'
+      + '<span style="font-size:var(--fs-3);line-height:1">✓</span><div>'
+      + '<b>' + txf('{who} cancelled their copy', { who: cwho }) + '</b>'
+      + (cwhen ? ' <span style="font-weight:400;color:var(--grey)">· ' + esc(cwhen) + '</span>' : '')
+      + '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey)">'
+      + tx('Your withdrawal is agreed on both sides.') + '</div>'
+      + '</div></div>';
+  }
+  if (!c || (!c.cancelReq && !c.cancelConf)) return '';
   var st = String(c.state || '').toLowerCase();
   /* ⚠️ 'close' IS THE BUCKET THE UI ACTUALLY HOLDS — ST maps every terminal status onto open|act|close, so
      checking for 'closed' matched nothing and the banner would have kept asking after the chit was settled.
