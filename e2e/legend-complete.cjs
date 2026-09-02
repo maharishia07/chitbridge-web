@@ -32,14 +32,38 @@ const t = (name, cond, extra) => {
 /* ── the key itself ──────────────────────────────────────────────────────────────────────────────────── */
 const li = src.indexOf('function listLegend()');
 t('the legend is where it was', li > 0);
-const legend = src.slice(li, li + 4000);
+
+/**
+ * ⚠️⚠️ THE LEGEND IS FOUND BY ITS OWN END, NOT BY A FIXED WINDOW. This read `src.slice(li, li + 4000)` — a
+ * magic byte count — so ADDING one entry to the key pushed the last box outside the window and this guard
+ * failed. A guard that breaks when the thing it protects grows correctly is worse than no guard: it trains
+ * whoever hits it to widen the number and move on, which is exactly how it would come to miss a real gap.
+ *
+ * The function ends at its own `return … ; }` — the marker every version of it has had.
+ */
+const legendEnd = (() => {
+  const close = src.indexOf("+'</div></div>'; }", li);
+  return close > 0 ? close + 20 : li + 6000;      // fallback only if the shape changes wholesale
+})();
+/**
+ * ⚠️⚠️ COMMENTS ARE STRIPPED BEFORE ANYTHING IS CHECKED, and leaving them in made this guard VACUOUS. The
+ * legend function carries a comment quoting Athi asking for the two new flags BY NAME — so deleting the actual
+ * key entry changed nothing: `legend.includes('cancel requested')` went on matching the prose that asked for it.
+ * Proven by removing the box and watching the check still pass.
+ *
+ * ⭐ A guard must read what the SCREEN renders, never what the source says ABOUT what the screen renders. Same
+ * mistake as a colour scan counting hexes inside comments — and the same fix.
+ */
+const decomment = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+const legendRaw = src.slice(li, legendEnd);
+const legend = decomment(legendRaw);
 
 /**
  * ⚠️ EXCLUDE THE LEGEND FROM THE SEARCH FOR FLAGS, or it satisfies itself: the key renders every chip it
  * explains, so scanning the whole file would find each flag "in the row code" and each one "in the legend"
  * and report a clean sweep however many rows had gone undocumented.
  */
-const rows = src.slice(0, li) + src.slice(li + 4000);
+const rows = src.slice(0, li) + src.slice(legendEnd);
 
 /* ── every rflag variant a ROW can render ────────────────────────────────────────────────────────────── */
 const variants = new Set();
@@ -73,6 +97,32 @@ const inlineChips = [...rows.matchAll(/class="rflag[^"]*"\s+style="[^"]*(backgro
 t('every flag takes its colour from a class', inlineChips.length === 0,
   inlineChips.length ? inlineChips[0][0].slice(0, 80) : '');
 
+
+/* ── ⭐⭐ AND THE WORDS, NOT ONLY THE CLASSES ──────────────────────────────────────────────────────────── */
+/**
+ * ⚠️⚠️ THIS GUARD PASSED ON A MARK IT HAD NEVER HEARD OF. Adding `⊘ cancel requested` to the rows changed
+ * nothing here, because it REUSES `rflag disp` — a class the key already explains — and the check above asks
+ * only whether the CLASS is documented. But a reader does not decode a class name. They read the words in the
+ * chip, and those words were new and unexplained.
+ *
+ * ⭐ SO THE GAP THIS FILE EXISTS TO CLOSE HAD REOPENED IN A SHAPE THE FILE COULD NOT SEE — which is the same
+ * failure it was written about, one level up. Every LABEL a row flag renders must appear in the key.
+ *
+ * ⚠️ It reads the literal inside each flag: `class="rflag …">' + tx('⚑ dispute') + '` and the plain form. A
+ * label built entirely from a variable cannot be read here and is not pretended to be — those are caught by
+ * the class check above, which is why both live in this file rather than one replacing the other.
+ */
+const labels = new Set();
+for (const m of rows.matchAll(/class="rflag[^"]*"[^>]*>'\s*\+\s*tx\('([^']+)'\)/g)) labels.add(m[1]);
+for (const m of rows.matchAll(/class="rflag[^"]*"[^>]*>([⚑⊘][^<'"]{2,24})</g)) labels.add(m[1].trim());
+
+console.log('\n── every word a flag shows is in the key ──');
+if (!labels.size) t('at least one flag label was readable', false, 'the extraction found nothing — check it');
+for (const lb of [...labels].sort()) {
+  /* Compared on the words alone: the key may render the same mark through a different chip. */
+  const words = lb.replace(/^[⚑⊘]\s*/, '').trim();
+  t('  ' + lb.padEnd(20) + ' is in the key', legend.includes(words), words ? '' : '(empty label)');
+}
 /* ── the marks that are not rflags ───────────────────────────────────────────────────────────────────── */
 console.log('\n── and the marks that are not flags ──');
 /**

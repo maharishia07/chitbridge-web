@@ -9582,6 +9582,19 @@ function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagat
  * questions. Only the sender-verification mark asks something new, and it gets the one new box.
  */
  +'<div class="kbox"><div class="kt"><span class="rflag disp">' + tx('⚑ dispute') + '</span> <span class="rflag ok">' + tx('⚑ resolved') + '</span></div><div class="kd">An open dispute (red bar) — resolve it from the chit. Once every dispute on the chit is settled the flag turns green; it stays on the row so the history is visible at a glance.</div></div>'
+/**
+ * ⭐⭐ THE TWO STATES OF A WITHDRAWAL — Athi, 2026-09-02: *"two more flags to be added in the legend also,
+ * cancel requested and cancelled."*
+ *
+ * ⭐ ONE BOX, PAIRED — the rule this key already follows for dispute/resolved directly above. They are not two
+ * unrelated marks: they are the same event before and after the answer, and a reader who sees them explained
+ * apart has to work out for themselves that one becomes the other.
+ *
+ * ⚠️ AND THE SECOND IS A STATUS, NOT A FLAG. `cancelled` is a real value in the lifecycle vocabulary and
+ * already buckets as CLOSE — so the box says where to look for it rather than inventing a chip that does not
+ * exist. Explaining a mark the screen never draws is the same failure as omitting one it does.
+ */
+ +'<div class="kbox"><div class="kt"><span class="rflag disp">' + tx('⊘ cancel requested') + '</span> <span class="chipst st-close">' + tx('CANCELLED') + '</span></div><div class="kd">The sender has withdrawn their copy and asked you to cancel yours — open it to answer. <b>Your copy does not change until you act.</b> Once you do, the chit closes as CANCELLED and the mark goes.</div></div>'
  +'<div class="kbox"><div class="kt"><span class="rflag urg">' + tx('⚑ urgent') + '</span> <span class="rflag high">' + tx('⚑ high') + '</span> <span class="rflag cust">' + tx('⚑ flagged') + '</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
  +'<div class="kbox"><div class="kt">' + tx('Ext / Int pri') + '</div><div class="kd">Ext = sender-set at compose, locked · Int = your own queue, you change it. Shown as their own columns.</div></div>'
 /* ⭐ THE ONE MARK THAT IS NOT A PRIORITY. It answers "who is this", not "how urgent is this" — and it is the
@@ -9728,6 +9741,32 @@ function visibleRows(){
    Column registry = the mechanism: any column can be shown via the chooser; headings sort (server-side). */
 // subject-bar attention flag — appears when Ext OR Int priority is non-normal, or the customer flagged it.
 // A glance cue; the exact values live in the Ext/Int columns. Worker acts per business rules.
+/**
+ * ⭐⭐ THE ROW MARK — Athi, 2026-09-02: *"a cancelled flag will be visible in the task"*.
+ *
+ * The b195 banner answers the question once the chit is OPEN. This answers it in the list, which is where
+ * somebody with forty rows decides what to open at all — a cancel request that can only be found by opening
+ * each chit in turn is a cancel request nobody finds in time.
+ *
+ * ⚠️ IT USES THE SAME RULE AS THE BANNER, not a second one: shown while the request stands, gone once this copy
+ * has answered. Two places deciding "is this still outstanding" differently is how a row and the record it
+ * points at end up disagreeing.
+ *
+ * ⭐ `rflag` — the existing row-mark primitive, not a new class. e2e/chip-audit.cjs already counts 48 chip-ish
+ * classes; a 49th for a mark that behaves exactly like the other flags would be one more thing for a reader to
+ * learn and one more thing for the key to explain.
+ *
+ * ⚠️ AND `disp` IS THE RIGHT COLOUR, deliberately: a standing cancel request is the same KIND of fact as an open
+ * dispute — something a counterparty has raised that is waiting on you — and colouring it as an ordinary
+ * priority would file it with things you chose yourself.
+ */
+function cancelFlag(c){
+  if (!c || !c.cancelReq) return '';
+  var st = String(c.state || '').toLowerCase();
+  if (st === 'close' || st === 'cancelled' || st === 'closed' || st === 'void') return '';
+  return '<span class="rflag disp" title="' + esc(tx('Someone has asked you to cancel this — open it to answer'))
+    + '">' + tx('⊘ cancel requested') + '</span>';
+}
 function attnFlag(c){ var ext=c.priExt||'normal', int=c.pri||'normal', cust=!!c.custPri;
   var urgent=(ext==='urgent'||int==='urgent'), high=(ext==='high'||int==='high');
   if(!urgent && !high && !cust) return '';
@@ -9760,7 +9799,7 @@ const LISTCOLS = [
           +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
       }
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag ok" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag ok" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c)+cancelFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },

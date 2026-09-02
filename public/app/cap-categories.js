@@ -272,7 +272,24 @@ function cbcatSeedPick(v){
       + ' data-testid="catg-seed-node-' + esc(n.gid) + '"'
       + ' onchange="cbcatSeedTick(\'' + esc(n.gid) + '\', this.checked)">'
       + '<span class="bn" style="font-weight:' + (kid ? '400' : '700') + '">' + esc(n.name) + '</span>'
-      + '<span class="bh">' + esc(n.gid) + '</span></label>';
+      /**
+       * ⚠️⚠️ THE TAXONOMY ID IS BEHIND 🧾 Spec — Athi, 2026-09-02: *"codes are there, what are those, are we
+       * using it inside… if it is something not useful to the person choosing we may not be required to
+       * showcase."*
+       *
+       * ⭐ MEASURED BEFORE ANSWERING: `gpc` appears in exactly ONE place in the whole codebase — the write, four
+       * lines from here. Nothing reads it, in the web or the API. It is stored so a category can one day carry
+       * its standard code to a feed or a counterparty's system (backlog 22 step 4), and it costs nothing to keep
+       * writing — but today it does nothing, and a category the person adds themselves never gets one at all.
+       *
+       * So on the row it was a bare number, meaning nothing to the reader, on the one screen whose entire job is
+       * choosing which NAMES to adopt. Kept for the reader who wants to verify the seed really is the published
+       * taxonomy — the same reader, and the same decision, as the STD_SCHEMES file path earlier today.
+       */
+      + ((typeof specOn === 'function' && specOn())
+          ? '<span class="bh" title="' + esc(tx('Google Product Taxonomy id — stored with the category, not yet read by anything'))
+            + '">' + esc(n.gid) + '</span>' : '')
+      + '</label>';
   }).join('');
 
   modal('<div class="mhd"><div class="t">' + esc(set.title) + '</div>'
