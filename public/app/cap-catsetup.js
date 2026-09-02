@@ -55,6 +55,10 @@ var CATSET_SECS = [
      everything definition-backed was. */
   { key: 'ordermodels', icon: '🔢', name: 'Order models',  q: 'Carton of 6, sold by the metre' },
   { key: 'data',     icon: '⇅',  name: 'Import & export',  q: 'Spreadsheets in and out' },
+  /* ⭐ Beside Import & export, because all three answer the same question — how does this catalogue meet
+     another system — and a reader who wants one usually wants the next. */
+  { key: 'erp',      icon: '🔌', name: 'Other systems',   q: 'ERP · Tally · SAP field names' },
+  { key: 'tax',      icon: '🧾', name: 'Tax',              q: 'The treatment you declare' },
   { key: 'face',     icon: '🛍️', name: 'Storefront',       q: 'How customers order from you' },
 ];
 /**
@@ -556,6 +560,40 @@ function catsetBody(k){
       + 'system.',
       '<button class="composebtn" data-testid="catset-export" onclick="exportCatalogueCSV(this)">⬇ Export CSV</button>');
   }
+  if (k === 'erp') {
+    /**
+     * ⭐⭐ THE FIELD MAP, AGAINST THE REAL COLUMNS — Athi, 2026-09-02: *"can we get their system catalogue to
+     * adjust ours to make it same as theirs so the data can be mapped"* and *"tally compatible, SAP compatible"*.
+     *
+     * ⚠️ THE WIZARD'S VERSION MAPPED WIZARD STATE — the fields ticked in step 1, which is a list that only exists
+     * while the walk is open. This maps what the catalogue ACTUALLY DECLARES, so the map keeps meaning after the
+     * setup is over, which is the point of putting it on a panel you return to.
+     *
+     * ⭐ AND ONE MAP READS BOTH WAYS. Outbound it says "our `code` is their `ITEM_CODE`" so an export lands in
+     * their shape; inbound it is the same statement, which is what `csv-preflight.matchHeader` proposes when
+     * their spreadsheet arrives. Two mechanisms for one relationship was the finding in the research note above;
+     * this is the half that declares it.
+     */
+    return catsetCard('Where each column lives in your other system',
+      'If an ERP, Tally or SAP already holds this, say what it is called there. A connector then knows which of '
+      + 'their fields fills which of yours — and an export can leave in their shape rather than ours.'
+      + '<div class="catset-std">⭐ <b>One map, read both ways.</b> Outbound it shapes an export for them; '
+      + 'inbound it is the same statement a spreadsheet import needs. ⚠️ Declaring a mapping does not move any '
+      + 'data — a connector does that, and it is told what to do by this.</div>'
+      + '<div class="catset-std">⚠️ <b>Tally and SAP are not the same kind of connection.</b> Tally exchanges '
+      + 'masters as a file somebody exports; SAP is a live service an IT department connects. This declares the '
+      + 'field names either way; what carries them differs.</div>', '')
+    + catsetCard('Your columns', catsetErpHTML(), '');
+  }
+  if (k === 'tax') {
+    return catsetCard('How tax is treated',
+      'The treatment that applies to what you sell. It rides with the catalogue rather than being retyped per '
+      + 'order, and travels into a chit so both sides read the same basis.'
+      + '<div class="catset-std">⚠️ <b>A rate is not a decision.</b> Which treatment applies is a jurisdiction '
+      + 'question, and CB records what you declare — it does not compute liability. That distinction is the same '
+      + 'one the price provenance draws: we carry what was said and who said it.</div>', '')
+    + catsetCard('Declared', catsetTaxHTML(), '');
+  }
   if (k === 'face') {
     return catsetCard('How customers order from you',
       'The order method (cart, quantity, enquiry, range), the units you trade in, the facets a buyer can filter '
@@ -855,6 +893,95 @@ async function _catsetDrop(key){
     if (typeof toast === 'function') toast((e && e.message) || 'Could not remove the column.', true);
     await catsetFieldsLoad(true);
   }
+}
+
+/**
+ * ── ⭐ THE FIELD MAP AND THE TAX TREATMENT — both live on the catalogue FACE (b112) ────────────────────────────
+ *
+ * ⚠️ THE FACE IS READ ONCE AND WRITTEN WHOLE. `PUT /api/catalogue-face` upserts the config, so a panel that
+ * saved only its own key would drop everything else the face holds. Every write here merges onto what was read.
+ */
+var CATSET_SYS = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
+
+async function catsetFaceLoad(force){
+  if (CATSET._faceBusy) return;
+  if (CATSET.face && !force) return;
+  CATSET._faceBusy = true;
+  try { var r = await api('catFaceGet'); CATSET.face = (r && (r.face || r)) || {}; }
+  catch (e) { CATSET.face = {}; }
+  CATSET._faceBusy = false;
+  catsetPaintDetail();
+}
+
+/** ⚠️ Merged, never replaced — see the note above. */
+async function catsetFaceSave(patch){
+  var face = Object.assign({}, CATSET.face || {}, patch || {});
+  CATSET.face = face;
+  try { await api('catFacePut', { body: { face: face } }); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true); }
+}
+
+function catsetErpHTML(){
+  if (!CATSET.face) { catsetFaceLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  var cols = (CATSET && CATSET.fields) || null;
+  if (cols === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  if (!cols.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('Declare some columns first.') + '</div>';
+
+  var map = (CATSET.face && CATSET.face.erpMap) || {};
+  var mapped = Object.keys(map).filter(function(k){ var m = map[k]; return m && m.system && m.system !== '—'; }).length;
+
+  return '<div class="bulklist">' + cols.map(function(c){
+    var m = map[c.field_key] || {};
+    var sys = m.system || '—';
+    return '<div class="bulkrow" data-testid="catset-erp-' + esc(c.field_key) + '">'
+      + '<span class="bn">' + esc(c.field_name || c.field_key) + '</span>'
+      + '<select data-testid="catset-erpsys-' + esc(c.field_key) + '"'
+      + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'system\',this.value)"'
+      + ' style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">'
+      + CATSET_SYS.map(function(s){ return '<option' + (s === sys ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('')
+      + '</select>'
+      /* ⚠️ The name box only appears once a system is named: asking "what is it called there" before "where" is
+         a question with no context, and an answer typed against "—" would be stored against nothing. */
+      + (sys !== '—'
+          ? '<input class="inp" data-testid="catset-erpref-' + esc(c.field_key) + '" style="width:170px;padding:3px 7px"'
+            + ' value="' + esc(m.ref || '') + '" placeholder="' + esc(tx('their field name')) + '"'
+            + ' onchange="catsetErpSet(\'' + esc(c.field_key) + '\',\'ref\',this.value)">'
+          : '<span class="bh">' + tx('not mapped') + '</span>')
+      + '</div>';
+  }).join('') + '</div>'
+  + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'
+  + (mapped ? txn('{count} column mapped', '{count} columns mapped', mapped)
+            : tx('Nothing mapped — this catalogue stands on its own.'))
+  + '</div>';
+}
+
+function catsetErpSet(key, prop, val){
+  var face = CATSET.face || {};
+  var map = Object.assign({}, face.erpMap || {});
+  var m = Object.assign({}, map[key] || {});
+  m[prop] = val;
+  /* A column set back to "—" is UNMAPPED, not mapped to a dash — otherwise the count and any exporter reading
+     this would treat the placeholder as a destination. */
+  if (prop === 'system' && val === '—') delete map[key]; else map[key] = m;
+  catsetFaceSave({ erpMap: map });
+  catsetPaintDetail();
+}
+
+/** The tax treatment the catalogue declares. Free text by design — see the panel note on what CB does not do. */
+function catsetTaxHTML(){
+  if (!CATSET.face) { catsetFaceLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  var t = (CATSET.face && CATSET.face.tax) || {};
+  var v = typeof t === 'string' ? t : (t.treatment || '');
+  return '<label class="fl">' + tx('Treatment') + '</label>'
+    + '<input class="inp" data-testid="catset-tax" value="' + esc(v) + '"'
+    + ' placeholder="' + esc(tx('e.g. GST 18% · zero-rated export · exempt')) + '"'
+    + ' onchange="catsetTaxSet(this.value)">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
+    + tx('Carried with the catalogue and into a chit, so both sides read the same basis.') + '</div>';
+}
+function catsetTaxSet(v){
+  catsetFaceSave({ tax: { treatment: String(v || '').slice(0, 200) } });
+  if (typeof toast === 'function') toast(tx('Tax treatment saved'));
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
