@@ -7711,6 +7711,37 @@ function availAge(d){
 }
 
 /** The chip the catalogue row and the storefront both use, so the two can never say different things. */
+/**
+ * ⭐⭐ WHERE A PRICE WAS READ, AND WHEN — Athi, 2026-09-02: *"if it is gold bullion, then the price changes
+ * according to market rate, so how do we bring it here?"*
+ *
+ * A bullion price off the morning fix and a price somebody typed in March are different claims, and a number
+ * alone cannot tell them apart. `market-ref` and `exchange` have been in the pricing registries all along and
+ * the Pricing panel already says *"a market-referenced price without a reading date is a rumour"* — this is that
+ * sentence made true on the screen it is said about.
+ *
+ * ⭐ THE SAME TREATMENT AS `availChipHTML`, DELIBERATELY. Stock shows its figure and then its age; a price does
+ * the same. One rule read twice — a number without a timestamp is not an answer — and a reader who has learnt it
+ * on the shelf figure does not have to learn it again on the price.
+ *
+ * ⚠️ SILENT WHEN THERE IS NOTHING TO SAY. Most prices are typed and carry no reading, and a dash or an
+ * "unsourced" label on every one of them would be noise that teaches nothing. Absent provenance is the norm, not
+ * a defect.
+ */
+function priceSrcHTML(d){
+  var p = d && d.price;
+  if (!p || typeof p !== 'object') return '';
+  var src = p.source ? String(p.source) : '';
+  var when = '';
+  if (p.as_of) { try { when = CBLocale.date(p.as_of); } catch(_) { when = String(p.as_of).slice(0, 10); } }
+  if (!src && !when) return '';
+  /* ⚠️ The AGE is what carries the warning, not the source: a reading from a trusted exchange five months ago is
+     the stale one, and naming the exchange without the date would read as reassurance. */
+  return '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'
+    + esc(tx('read from')) + ' <b style="font-weight:600">' + esc(src || tx('a market source')) + '</b>'
+    + (when ? ' · ' + esc(when) : '') + '</div>';
+}
+
 function availChipHTML(d){
   var a = availOf(d);
   var age = availAge(d);
@@ -8582,7 +8613,7 @@ async function _prodStatus(id, status, extra){
 }
 
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
-  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
+  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span>${priceSrcHTML(d)}</span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 /**
  * ── WHAT THIS STORE HAS, AND WHEN THAT WAS LAST TRUE ─────────────────────────────────────────────────────────
  * The other half of "where is it?" — the locator can only report what a store has said, so a store needs a place
