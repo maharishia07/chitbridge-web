@@ -7897,7 +7897,7 @@ function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
   var body=order.map(function(s){ var t=(rc[groups[s][0]]||{})._sourceTitle||s;
     return '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[s].map(function(i){ return refFinishRow(rc[i],i); }).join('');
   }).join('');
-  return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage in ⚙ Catalogue setup</span></div>'; }
+  return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage your prices for this source</span></div>'; }
 function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
   if(!ref && !r.length) return emptyState('🗂️','No products yet','Add your first, or adopt a whole catalogue via 🤖 AI.',{label:'+ New product',onclick:'newProduct()'});
   const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(prodRowHTML).join('')) : '';
@@ -8844,7 +8844,23 @@ function mainBody(){
   if(UI.nav==="network") return capScreen("networkScreen");
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="customers") return customersScreen();
-  if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();  // LOCAL PROTOTYPE
+  /**
+   * ⚠️⚠️ NOT AN ENTRY POINT — A DETAIL SCREEN. Athi, 2026-09-02: *"we have catalogue setup and set up your
+   * catalogue, we tried different options, but need to fix one flow… the current catalogue setup panel is good."*
+   *
+   * `catsetup` (the hub) is the one way in. This screen still does three jobs nothing else does — adopting a
+   * blueprint with its commercials overlay, the storefront steps, and managing a price overlay on a referenced
+   * source — and every one of them is now reached FROM a hub panel that names it.
+   *
+   * ⭐ RETIRING IT MEANT REMOVING IT AS A RIVAL SETUP FLOW, not deleting working UI. The hub took over its
+   * columns, ERP mapping and tax steps; the labels that pointed here stopped calling themselves "Catalogue
+   * setup", which was the actual source of the confusion — a button naming the screen you are already on reads
+   * as a second, realer version of it.
+   *
+   * ⚠️ It kept the "LOCAL PROTOTYPE" note for months while being live in production. Left reachable, named
+   * honestly, and no longer offered as a way to set up a catalogue from scratch.
+   */
+  if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();
   if(UI.nav==="catalogue") return catalogueScreen();
   if(UI.nav==="catsetup") return (typeof catalogueSetupHubScreen==="function") ? catalogueSetupHubScreen()
     : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;

@@ -601,7 +601,12 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>channel</b> — the same products, presented for a '
       + 'particular audience. ⚠️ It changes what buyers see, so it is deliberately behind its own step-by-step '
       + 'setup rather than a row of switches.</div>',
-      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">' + tx('⚙ Open catalogue setup') + '</button>')
+      /**
+       * ⚠️⚠️ IT SAID "⚙ Open catalogue setup" — ON THE CATALOGUE SETUP SCREEN. A button whose label is the name
+       * of the screen you are already on reads as a second, realer version of it, which is exactly how two setup
+       * flows came to exist in a reader's mind. It opens the storefront STEPS; the label says so now.
+       */
+      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">' + tx('🏪 Set up the storefront steps') + '</button>')
     /* Selling methods and facets describe what a buyer meets, so they read under the storefront control. */
     + catsetRegistry(['method', 'facet']);
   }
