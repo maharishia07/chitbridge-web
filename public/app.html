@@ -8507,7 +8507,27 @@ async function prodAllFields(id){
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:var(--fs-2);margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + txf('🔒 Set by another system — shown, never edited. {notset} marks a field this catalogue has and this item leaves blank.', { notset: '<i>' + tx('Not set') + '</i>' }) + '</div>'
+    /**
+     * ⭐ THE LEGEND FOLDS AWAY — Athi, 2026-09-01: *"The information on all 14 field from catalogue, the below
+     * screen, the text is it necessary? If it is required, we can provide it as a slider or something so it
+     * should be distracting the value content."*
+     *
+     * It is worth keeping — 🔒 and *Not set* are marks nobody can guess — but it is a legend, and a legend is
+     * read ONCE. Printed above the values every single time, it competes with the thing the screen exists to
+     * show. Closed by default; one press to read it.
+     *
+     * ⚠️ `<details>` RATHER THAN A TOGGLE OF MY OWN. It is native disclosure: keyboard-operable, announced to a
+     * screen reader as expandable, and it needs no state, no repaint and no click handler — this lives inside a
+     * modal whose innerHTML is replaced wholesale, so anything I stored would have to be rebuilt on every paint.
+     */
+    /* ⚠️ THE NATIVE MARKER STAYS. My first version set `list-style:none`, which strips the triangle and leaves a
+       line of grey text with nothing saying it opens — a disclosure nobody can see is worse than the sentence it
+       was hiding, because at least the sentence was readable. */
+    + '<details style="margin-bottom:6px"><summary data-testid="cat-legend" style="cursor:pointer;'
+    + 'font-size:var(--fs-1);color:var(--grey)">' + tx('What the marks mean') + '</summary>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
+    + txf('🔒 Set by another system — shown, never edited. {notset} marks a field this catalogue has and this item leaves blank.', { notset: '<i>' + tx('Not set') + '</i>' })
+    + '</div></details>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button>'
