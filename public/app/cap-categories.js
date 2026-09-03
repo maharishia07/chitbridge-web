@@ -502,8 +502,12 @@ function cbcatDetailHTML(){
     var f = CBCAT_UI.form || { name: '', note: '' };
     var editing = !!f.id;
     return '<div class="dh"><button class="dback" onclick="cbcatBack()">‹ Categories</button>'
-      + '<div class="dt">' + (editing ? 'Rename category' : 'New category') + '</div>'
-      + '<div class="ds">' + (editing ? 'products follow the new name' : 'goes on the shelf live') + '</div></div>'
+      /* ⭐ "EDIT", NOT "RENAME". Athi, 2026-09-03: *"You are bringing category organization (sits under) under
+         rename … Is it renaming? so do we have a proper name for that?"* The form edits three facts — name, PARENT,
+         note — and only one of them is a rename. Moving a category is a different act: every product under it
+         travels, so the parent field says how many. */
+      + '<div class="dt">' + (editing ? tx('Edit category') : tx('New category')) + '</div>'
+      + '<div class="ds">' + (editing ? tx('name · parent · note — products follow') : tx('goes on the shelf live')) + '</div></div>'
       + '<div class="db">'
       + (editing
           ? '<div class="cbcat-note">'
@@ -516,8 +520,14 @@ function cbcatDetailHTML(){
       + '<label class="fl">' + tx('Name') + '</label>'
       + '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' + esc(f.name || '') + '"'
       + ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">'
-      + '<label class="fl">' + tx('Sits under') + '</label>'
+      + '<label class="fl">' + tx('Parent category') + '</label>'
       + cbcatParentPickHTML(f)
+      + (editing
+          ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">'
+            + txf('Changing the parent MOVES this category — {n} product(s) travel with it, and every product under it inherits the new branch.',
+                  { n: String((CBCAT_UI.counts && CBCAT_UI.counts.by && CBCAT_UI.counts.by[f.id]) || 0) })
+            + '</div>'
+          : '')
       + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
@@ -547,6 +557,10 @@ function cbcatDetailHTML(){
     + (ret ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. '
            + 'Products that already cite it keep the citation.</div>' : '')
     + '<div class="cbcat-stat"><span class="v">' + n + '</span><span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
+    /* ⭐ THE REVERSE VIEW. An offer can target a category ("10% off Paints") and until now only the offer knew.
+       Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
+       under offer."* Same live-offers read the product page uses — one loader, one cache. */
+    + cbcatOffersHereHTML(c.id)
     + '<div class="sec">' + tx('Products') + '</div>'
     + (mine.length
         ? '<div class="cbcat-plist">' + mine.slice(0, 60).map(function(p){
@@ -563,9 +577,17 @@ function cbcatDetailHTML(){
     + '</div>'
     + '<div class="actbar">'
     +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
-            : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' + esc(c.id) + '\')">' + tx('Rename') + '</button>'
+            : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' + esc(c.id) + '\')">' + tx('Edit') + '</button>'
               + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">' + tx('Retire') + '</button>')
     + '</div>';
+}
+function cbcatOffersHereHTML(cid){
+  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
+  if (!list) return '';
+  var here = list.filter(function(o){ var at = (o.rules && o.rules.applies_to) || {}; return at.category === cid; });
+  if (!here.length) return '';
+  return '<div class="cbcat-stat"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
+    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' to this category — ' + here.map(function(o){ return esc(o.name); }).join(' · ') + '</span></div>';
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;

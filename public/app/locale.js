@@ -683,11 +683,21 @@
         try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
         catch (_) { return c + ' ' + n.toLocaleString(); }   /* an unknown currency code must still print */
       }
-      return L.dir() === 'rtl' ? s : s.replace(/[‎‏؜]/g, '');   /* LRM · RLM · ALM */
+      return L.ltr(s);
+    },
+
+    /**
+     * ⭐ ONE PLACE. The marks Intl inserts for Arabic-region formats (LRM · RLM · ALM) serve an RTL paragraph; on
+     * an LTR page they only mislead the bidi algorithm — first seen on a price ("10 / ₹ 620.00KG / bag"), then on
+     * a date ("022026/09/") the same afternoon. Every formatter passes through here, so the next one cannot recur.
+     */
+    ltr: function (s) {
+      s = String(s == null ? '' : s);
+      return L.dir() === 'rtl' ? s : s.replace(/[‎‏؜]/g, '');
     },
 
     number: function (n, opts) {
-      try { return new Intl.NumberFormat(L.tag(), opts || undefined).format(Number(n || 0)); }
+      try { return L.ltr(new Intl.NumberFormat(L.tag(), opts || undefined).format(Number(n || 0))); }
       catch (_) { return String(n); }
     },
 
@@ -740,13 +750,13 @@
 
     time: function (ts) {
       var d = L._d(ts); if (!d) return '';
-      try { return d.toLocaleTimeString(L.tag(), L.zoned({ hour: '2-digit', minute: '2-digit' })); }
+      try { return L.ltr(d.toLocaleTimeString(L.tag(), L.zoned({ hour: '2-digit', minute: '2-digit' }))); }
       catch (_) { return ''; }
     },
 
     date: function (ts, opts) {
       var d = L._d(ts); if (!d) return '';
-      try { return d.toLocaleDateString(L.tag(), L.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' })); }
+      try { return L.ltr(d.toLocaleDateString(L.tag(), L.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' }))); }
       catch (_) { return ''; }
     },
 
@@ -754,8 +764,8 @@
     datetime: function (ts, opts) {
       var d = L._d(ts); if (!d) return '';
       try {
-        return d.toLocaleString(L.tag(),
-          L.zoned(opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }));
+        return L.ltr(d.toLocaleString(L.tag(),
+          L.zoned(opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })));
       } catch (_) { return ''; }
     },
 

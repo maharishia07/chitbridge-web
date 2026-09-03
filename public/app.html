@@ -760,6 +760,14 @@
   .ctcatg.gone{background:var(--warn-tint);border-color:var(--gold-line);color:var(--warn-3)}
   .ctcatg.add{color:var(--blue);border-style:dashed;font-weight:600}
   .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  /* product row · labelled pairs + a media slot (obs 4, 2026-09-03) */
+  .row .pthumb{flex:0 0 38px;width:38px;height:38px;border-radius:9px;background:var(--wash);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--grey);font-size:var(--fs-3);overflow:hidden}
+  .row .pthumb img{width:100%;height:100%;object-fit:cover}
+  .row .l2.lbl{flex-wrap:wrap;row-gap:2px;column-gap:14px}
+  .row .l2.lbl b{font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em;color:var(--grey-4);margin-inline-end:4px}
+  .row .amt .per{font-weight:400;color:var(--grey);font-size:var(--fs-1)}
+  .row .pmore-t{margin-inline-start:auto;color:var(--blue);font-weight:600;cursor:pointer}
+  .row .l2.pmore{display:none}.row.open .l2.pmore{display:flex}
   .catgchip{background:var(--blue-tint-bg);color:var(--blue);border-color:#d5e2f7}
   .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
   /* ⚠️⚠️ IT WRAPS, because a fourth action overflowed it. This bar lives in the LEFT pane, which is ~340px wide;
@@ -8479,11 +8487,31 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
      away — the same rule the chit list follows. */
   const picking=!!UI.prodPick;
   const ticked=picking&&UI.prodPicked&&UI.prodPicked.has(id);
+  /**
+   * ⭐ THE ROW SAYS WHAT EACH NUMBER IS. Athi, 2026-09-03 (observation 4): *"the data is displayed, but no one
+   * knows what it means, so need to have the field name or its short form here. say Avl Qty : 100 as of Date …
+   * one or two fields per line, so it reads legibly."* Before: `100 · counted yesterday · RIC-P · Rice o Rice` —
+   * four facts, no labels. Now: labelled pairs, at most two per line, and the secondary facts (description,
+   * highlight, synonyms) folded behind "more" so the glance stays a glance.
+   *
+   * ⚠️ THE THUMBNAIL IS A SLOT, honestly empty. No product carries an image yet (photo-extract reads a photo to
+   * PROPOSE fields; it does not keep it). The box holds the initial until media lands, so the row does not have to
+   * change shape a second time when it does. Reads `image_url` when one exists.
+   */
+  const a=availOf(d);
+  /* Numeric on purpose: a row has no room for a month name, and under an Arabic-region format the name comes out
+     in Arabic script on an English screen. Digits read the same in every locale the format can produce. */
+  let asOf=''; if(a&&a.as_of){ try{ asOf=CBLocale.date(a.as_of,{day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ asOf=String(a.as_of).slice(0,10); } }
+  const img=d.image_url||d.photo_url||'';
+  const thumb=`<div class="pthumb" aria-hidden="true">${img?`<img src="${esc(img)}" alt="">`:esc(String(pName(d)||'?').trim().charAt(0).toUpperCase())}</div>`;
+  const lbl=(k,v)=>`<span><b>${k}</b>${v}</span>`;
+  const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('Synonyms'),String((d.synonyms||[]).length)):''].filter(Boolean);
   return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
-  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:''}
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-inline-start:auto">${inr(pPrice(d))}</span></div>
-    <div class="l2">${availChipHTML(d)} · ${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
-    ${catChips?`<div class="l3cat">${catChips}</div>`:''}</div>
+  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}<span class="amt" style="margin-inline-start:auto"><bdi>${inr(pPrice(d))}</bdi> <span class="per">/ <bdi>${esc(pUnit(d))}</bdi></span></span></div>
+    <div class="l2 lbl">${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
+    ${catChips?`<div class="l3cat">${catChips}</div>`:''}
+    ${more.length?`<div class="l2 lbl pmore">${more.join('')}</div>`:''}</div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
    (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
@@ -9014,6 +9042,22 @@ async function _cfImportRun(btn, decisions, out){
  *       means the offer learning a `get_item_id` and the engine adding a line that the customer never chose,
  *       which is a real design decision about what a cart may do on its own. Flagged, not faked.
  */
+/**
+ * The LIVE OFFERS, read once per session and kept on UI._ctOffers. Returns the list when it is already here;
+ * otherwise starts the one read, returns null, and calls `then` on arrival so the caller can repaint. Two readers
+ * (the product's Offers tab, the category's "offers apply here" line) — one loader, one cache.
+ */
+function ctOffersEnsure(then){
+  if (UI._ctOffers !== undefined) return UI._ctOffers;
+  UI._ctOffers = null;
+  api('defList', { query: { kind: 'offer', status: 'live' } })
+    .then(function(r){
+      UI._ctOffers = ((r && r.definitions) || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: x.rules || {} }; });
+      if (then) then(UI._ctOffers);
+    })
+    .catch(function(){ UI._ctOffers = []; if (then) then(UI._ctOffers); });
+  return null;
+}
 /** Open Catalogue setup ON a section. One helper, because the product page points at four of them. */
 function goCatsetSec(k){ navTo('catsetup'); setTimeout(function(){ if(typeof catsetSetSec==='function') catsetSetSec(k); },600); }
 function ctOfferField(d){
@@ -9022,16 +9066,8 @@ function ctOfferField(d){
   if (!pid) return '';   /* a new product has no id yet, so nothing can point at it — offered after the first save */
 
   if (UI._ctOffers === undefined) {
-    UI._ctOffers = null;
-    api('defList', { query: { kind: 'offer', status: 'live' } })
-      .then(function(r){
-        UI._ctOffers = ((r && r.definitions) || []).map(function(x){
-          return { id: x.definition_id, name: x.name, rules: x.rules || {} };
-        });
-        /* The Offers tab reads this in VIEW mode too now, so the arrival repaints either way. */
-        if (UI.nav === 'catalogue') paintProdDetail();
-      })
-      .catch(function(){ UI._ctOffers = []; });
+    /* The Offers tab reads this in VIEW mode too now, so the arrival repaints either way. */
+    ctOffersEnsure(function(){ if (UI.nav === 'catalogue') paintProdDetail(); });
     return '<label class="fl">' + tx('Offers') + '</label>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">' + tx('reading…') + '</div>';
   }
