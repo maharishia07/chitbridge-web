@@ -17,10 +17,6 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
      of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
      — the screen titled "What is stuck?" did not know what late meant. */
   misMetrics: {m:'GET', p:'/api/folders/mis', ok:'y'},
-  /* TAX — the month's ledger over my stamped chits, one copy's invoice, the GSTR shapes (routes/tax.js). Reads only. */
-  taxLedger:  {m:'GET', p:'/api/tax/ledger',        ok:'y'},
-  taxInvoice: {m:'GET', p:'/api/tax/invoice/:id',   ok:'y'},
-  taxGstr:    {m:'GET', p:'/api/tax/gstr',          ok:'y'},
 }); }
 // ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
 // matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──

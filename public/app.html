@@ -1819,6 +1819,10 @@ const EP = {
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
+  /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
+  taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
+  taxInvoice:      {m:"GET",   p:"/api/tax/invoice/:id",         ok:"✓"},
+  taxGstr:         {m:"GET",   p:"/api/tax/gstr",                ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
@@ -5699,7 +5703,25 @@ async function ccAiFill(){
   }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
   finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
 }
-function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } CC.items.push({particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); }
+function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } var it={particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}; CC.items.push(it); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); ccMatchMine(it); }
+/**
+ * ⭐ A TYPED LINE THAT NAMES MY PRODUCT IS THAT PRODUCT. Compose has no picker; a seller types "Basmati 5kg" from
+ * memory. The server already rates such a line by exact name at send (tax-lines.decorate); the offers must see the
+ * same identity BEFORE send, or a "Basmati: buy 2 get 1" never fires in compose while it does in the storefront
+ * ([OFF-02], 2026-09-04). Case-insensitive exact name, my own catalogue, loaded once and only when needed.
+ */
+async function ccMatchMine(it){
+  try{
+    if(!UI.prods){ UI.prods=(await api("prodList"))||[]; }
+    var nm=String(it.particulars||'').trim().toLowerCase(); if(!nm) return;
+    var p=(UI.prods||[]).find(function(x){ return String((x.item_data&&x.item_data.name)||x.name||'').trim().toLowerCase()===nm; });
+    if(!p || CC.items.indexOf(it)<0) return;
+    it.item_id=p.item_id||p.id||null; it.sku=(p.item_data&&p.item_data.sku)||p.sku||it.sku||null;
+    var cats=(typeof catgIdsOf==='function')?catgIdsOf(p.item_data||p):((p.item_data&&p.item_data.categories)||[]);
+    it.categories=Array.isArray(cats)?cats.slice():[];
+    if(typeof ccRenderTotal==='function') ccRenderTotal();
+  }catch(_){}
+}
 function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 /**
  * Change a line quantity. Athi, 2026-08-08: *"will anyone ask only one quantity? The provision should be there to
@@ -5747,7 +5769,7 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  */
 function cbOfferLine(key, it, qty){
   return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
-           categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
+           categories:(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[]))||[],
            /* cbAmount, not `+it.price`: a compose item carries a number, a catalogue product carries the money
               shape {amount, currency} — the product page's preview fed the engine NaN and priced every basket at
               ₹0 ([OFF-02], 2026-09-04) while the header beside it said ₹1,000. */
@@ -9913,11 +9935,18 @@ function prodTaxPreviewHTML(d,r){
       offWhy=(ev.adjustments||[]).map(a=>a.label).join(' · ');
     }
   }catch(_){ off=0; }
+  /* ⭐ THE SCHEME IS THE SLAB'S (b202). Under GST the two cells are same-state / other-state; under a VAT-type scheme
+     (DE-VAT-19, FR-VAT-20 …) they are domestic / cross-border, because VAT turns on the border, not the state. Same
+     engine, same line, one field different — that is the whole "other countries" story. */
+  const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
+  const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
   const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate),
-               cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'' };
-  const one=(pos)=>CBTax.determine({ seller:{ State:S, RegType: prodRegType() }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
-  const one0=(pos)=>CBTax.determine({ seller:{ State:S, RegType: prodRegType() }, buyer:{ Pos:pos }, lines:[Object.assign({}, line, { discount:0 })] }).ItemList[0];   /* at list, for "you save" */
-  const intra=one(S), inter=one(OTHER);
+               cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
+  const seller=isGST?{ State:S, RegType: prodRegType() }:{ Country:myC, RegType: prodRegType() };
+  const one=(pos)=>CBTax.determine({ seller, buyer:(isGST?{ Pos:pos }:{ Country:pos }), lines:[line] }).ItemList[0];
+  const one0=(pos)=>CBTax.determine({ seller, buyer:(isGST?{ Pos:pos }:{ Country:pos }), lines:[Object.assign({}, line, { discount:0 })] }).ItemList[0];   /* at list, for "you save" */
+  const HOME=isGST?S:myC, AWAY=isGST?OTHER:OTHERC;
+  const intra=one(HOME), inter=one(AWAY);
   const n=(v)=>`<bdi>${esc(String(v))}</bdi>`;
   /* INV-01's own field names, because they are what a buyer's system already speaks — and what makes "e-invoice
      ready" a mapping rather than a claim. The code is shown, not translated away. */
@@ -9947,17 +9976,25 @@ function prodTaxPreviewHTML(d,r){
        total is the same in both states; only the heads differ, which the cells below show. */
     + `<div data-testid="prod-tax-preview-final" data-before="${esc(intra.AssAmt)}" data-after="${esc(intra.TotItemVal)}" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-variant-numeric:tabular-nums">`
     + `<span><span style="color:var(--grey)">${tx('Before tax')}</span> <b><bdi>${inr(intra.AssAmt)}</bdi></b></span>`
-    + `<span><span style="color:var(--grey)">${txf('GST {rate}%', { rate: String(r.rate) })}</span> <b><bdi>${inr(Math.round((intra.TotItemVal-intra.AssAmt)*100)/100)}</bdi></b></span>`
+    + `<span><span style="color:var(--grey)">${txf('{scheme} {rate}%', { scheme: esc(scheme), rate: String(r.rate) })}</span> <b><bdi>${inr(Math.round((intra.TotItemVal-intra.AssAmt)*100)/100)}</bdi></b></span>`
     + `<span><span style="color:var(--grey)">${tx('After tax')}</span> <b><bdi>${inr(intra.TotItemVal)}</bdi></b></span>`
     + `</div>`
-    + (off>0 ? prodSavingsRowHTML(off, one0(S).TotItemVal, intra.TotItemVal, price, null) : '')
+    + (off>0 ? prodSavingsRowHTML(off, one0(HOME).TotItemVal, intra.TotItemVal, price, null) : '')
     + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
-    +   cell(tx('Same state'), intra, 'prod-tax-preview-intra',
+    + (isGST
+      ? cell(tx('Same state'), intra, 'prod-tax-preview-intra',
           (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]]).concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
-    +   cell(tx('Other state'), inter, 'prod-tax-preview-inter',
+      + cell(tx('Other state'), inter, 'prod-tax-preview-inter',
           (off>0?[['Discount','-'+inter.Discount]]:[]).concat([['AssAmt',inter.AssAmt],['GstRt',inter.GstRt+'%'],['IgstAmt',inter.IgstAmt]]).concat(cess(inter)).concat([['TotItemVal',inter.TotItemVal]]))
+      /* VAT-type: full rate at home, nothing across the border (the buyer accounts for it) — the rate stays on the line. */
+      : cell(tx('Domestic'), intra, 'prod-tax-preview-intra',
+          (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['Rate',intra.GstRt+'%'],[scheme,intra.TaxAmt]]).concat([['TotItemVal',intra.TotItemVal]]))
+      + cell(tx('Cross-border'), inter, 'prod-tax-preview-inter',
+          (off>0?[['Discount','-'+inter.Discount]]:[]).concat([['AssAmt',inter.AssAmt],['Rate',inter.GstRt+'%'],[scheme,inter.TaxAmt]]).concat([['TotItemVal',inter.TotItemVal]])))
     + `</div>`
-    + (st
+    + (!isGST
+        ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('{scheme} turns on the border: charged in full at home, not charged to a business abroad — they account for it.', { scheme: esc(scheme) })}${myC==='XX'?' ⚠️ '+tx('Your country is not set in Profile.'):''}</div>`
+        : st
         ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('Your state code is {s}, from your GSTIN.', { s: esc(st) })}</div>`
         /* ⚠️ SAID, NOT GUESSED. The split is exact regardless — it turns only on same vs other — but a state
            code shown as if it were ours would be read as one. */
