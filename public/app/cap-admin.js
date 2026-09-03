@@ -347,7 +347,7 @@ function misTax(){
   const head = (t, x) => '<div class="mistwo"><div>' + t + '</div><div>' + x + '</div></div>';
   const heads = (h) => '<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:var(--fs-2)">'
     + [['Taxable', h.taxable], ['CGST', h.cgst], ['SGST', h.sgst], ['IGST', h.igst]].concat(h.cess ? [['Cess', h.cess]] : []).concat([['Tax', h.tax]])
-      .map(function(r){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(r[0]) + '</td><td style="text-align:right;padding:2px 0"><bdi>' + inr(r[1]) + '</bdi></td></tr>'; }).join('')
+      .map(function(r){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(r[0]) + '</td><td style="text-align:end;padding:2px 0"><bdi>' + inr(r[1]) + '</bdi></td></tr>'; }).join('')
     + '</table>';
   const rows = (L.rows || []).map(function(r){
     const tone = r.side === 'output' ? 'var(--warn-3)' : r.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
