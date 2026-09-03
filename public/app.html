@@ -933,6 +933,16 @@
   .optchip{}
   .optchip.on{color:var(--ok-2);background:var(--ok-tint)}.optchip.brk{color:var(--warn-2);background:var(--warn-tint)}.optchip.off{color:var(--grey);background:var(--neutral-tint)}
   .dtabs{flex-wrap:wrap}
+  /* the cart preview on the product's Offers tab — one card per sample quantity */
+  .prodprev{margin:10px 12px 4px}
+  .prodprev-hd{font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:5px}
+  .prodprev-c{border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-bottom:8px;background:var(--card)}
+  .prodprev-l{display:flex;gap:9px;align-items:baseline;font-size:var(--fs-2)}
+  .prodprev-l .n{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .prodprev-l .q{flex:none;color:var(--grey);font-size:var(--fs-1)}
+  .prodprev-l .p{flex:none;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .prodprev-l.free{color:var(--ok-2)}
+  .prodprev-l.free .p{font-weight:700}
   .dh{position:relative}
   .dmsg{position:absolute;top:0;inset-inline-end:0;border:1px solid #cfe0ec;background:var(--blue-tint-bg);color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
   .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
@@ -5727,12 +5737,13 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  * cart displayed evaluated against anonymous rows on the way to the chit. A line shape written out three times
  * is a line shape that will differ in one of them, and the difference shows up as a price, not as an error.
  */
+function cbOfferLine(key, it, qty){
+  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
+           categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
+           qty:+qty||0, unitPrice:+it.price||0 };
+}
 function ccOfferLines(){
-  return (CC.items || []).map(function(it,i){
-    return { key:String(i), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
-             categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
-             qty:+it.qty||0, unitPrice:+it.price||0 };
-  });
+  return (CC.items || []).map(function(it,i){ return cbOfferLine(i, it, it.qty); });
 }
 /**
  * ⭐ AND ONE PLACE THAT PUTS THE MONEY ON THE LINE. CBOffers.perLine accumulates the line-scope adjustments and
@@ -9123,6 +9134,87 @@ function ctOfferField(d){
      */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 4px">'
     + tx('An offer is a term of trade, so ticking one saves to the OFFER straight away — not with this form.')
+    + '</div>'
+    /* ⭐ The outcome, under the ticks that produce it — ticking one repaints this pane, so the calculation moves
+       the moment the offer does. That is the "verified then and there" Athi asked for. */
+    + prodOfferPreviewHTML(d);
+}
+
+/**
+ * ── ⭐⭐ THE OFFERS ATTACHED TO THIS PRODUCT ────────────────────────────────────────────────────────────────────
+ * One filter, because three places ask (the ticks, the read-only list, and the cart preview under both) and a
+ * fourth answer to "is this offer on this product" is a fourth chance for them to disagree on the same screen.
+ */
+function prodOffersOn(d){
+  const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';
+  if (!pid) return [];
+  return (UI._ctOffers || []).filter(function(o){
+    const at = (o.rules && o.rules.applies_to) || {};
+    return Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0;
+  });
+}
+/**
+ * ── ⭐⭐ WHAT THE SHOPPING CART WILL DO, ON THE PRODUCT PAGE ────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-03: *"when we add an offer to a product, the ENTIRE calculation should showcase how it will be
+ * reflected in the shopping cart, so it can be verified then and there."*
+ *
+ * ⚠️⚠️ TWO OFFERS ON ONE PRODUCT WERE UNANSWERABLE FROM HERE. The tab listed each offer's own badge — "10% off",
+ * "₹25 off" — and said nothing about what happens when both are ticked: which runs first, whether one stops the
+ * other, what the buyer actually pays. `priority` and `exclusive` decide that, and until the commit before this
+ * one neither could even be authored. Two badges side by side are not an answer to "how does it apply".
+ *
+ * ⭐ IT IS THE CART'S OWN RENDERER, NOT A LOOKALIKE — CBOffers.evaluate for the money and CBCatUI.offersHTML for
+ * the breakdown, the same two the basket calls. A second implementation here would be a second opinion about
+ * the same price, which is the one thing "verify it then and there" cannot survive.
+ *
+ * ⚠️ NO READ. UI._ctOffers is already in hand (ctOffersEnsure) and the product is the record being displayed, so
+ * this paints from what the screen already holds — see e2e/screen-reads.cjs.
+ */
+function prodOfferPreviewHTML(d){
+  const on = prodOffersOn(d);
+  if (!on.length || typeof CBOffers === 'undefined' || typeof CBCatUI === 'undefined' || !CBCatUI.offersHTML) return '';
+  if (CBCatUI.ensureCss) CBCatUI.ensureCss();
+  const offers = on.map(function(o){ return o.rules; });
+  const price = +d.price || 0;
+  /* ⭐ THE SECOND QUANTITY IS DERIVED FROM THE RULES — a tier at 10 or a "spend ₹5,000" shows nothing at 1 or 3,
+     and an example where the offer does not fire teaches the author their offer is broken. */
+  const bulk = CBOffers.sampleQty(offers, price);
+  return '<div class="prodprev" data-testid="prod-offer-preview">'
+    + '<div class="prodprev-hd">' + tx('In the cart') + ' · '
+    + txn('{count} offer on this product', '{count} offers on this product', on.length) + '</div>'
+    + prodOfferCartHTML(d, offers, 1, 'prod-offer-preview-total')
+    + (bulk > 1 ? prodOfferCartHTML(d, offers, bulk, 'prod-offer-preview-total-bulk') : '')
+    + '</div>';
+}
+/** One basket, at one quantity, exactly as the cart builds and prices it. */
+function prodOfferCartHTML(d, offers, qty, totalTestid){
+  const pid = UI.prodSel || d.item_id || d.id || '';
+  /* ⚠️ cbOfferLine, the SAME builder the cart and the send use. The send path carried a different line shape for
+     months and every targeted offer silently evaluated against an anonymous row. */
+  const lines = [cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
+  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
+  let ev;
+  try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money }); }
+  catch(e){ return ''; }   /* the offers are a view of the product; a failing engine must not take the tab down */
+  const per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
+  const gross = Math.round(qty * (+d.price || 0) * 100) / 100;
+  return '<div class="prodprev-c">'
+    + '<div class="prodprev-l"><span class="n">' + esc(d.name || tx('This product')) + '</span>'
+    + '<span class="q">' + qty + ' × ' + esc(money(+d.price || 0)) + '</span>'
+    + '<span class="p">' + esc(money(gross)) + (per.off ? ' → <b>' + esc(money(Math.round((gross - per.off) * 100) / 100)) + '</b>' : '') + '</span></div>'
+    /**
+     * ⭐ THE FREEBIE LINES THE CART WOULD ADD, shown as what they are: a CONSEQUENCE, not something chosen.
+     * ⚠️ The engine never adds them itself (see offers.js) — claims() is what a cart acts on, and showing them
+     * here from the same call is how this preview stays the cart's answer rather than a friendlier one.
+     */
+    + CBOffers.claims(ev).map(function(c){
+        return '<div class="prodprev-l free"><span class="n">+ ' + esc(c.name || tx('free item')) + '</span>'
+          + '<span class="q">' + (c.qty || 1) + ' × ' + esc(money(0)) + '</span>'
+          + '<span class="p">' + tx('free') + '</span></div>'; }).join('')
+    + CBCatUI.offersHTML('prodprev', lines, offers, null,
+        { ev: ev, skipped: true, subtotal: true, testid: 'prod-offer-break-' + qty,
+          totalTestid: totalTestid, head: tx('How it applies') })
     + '</div>';
 }
 
@@ -9599,13 +9691,15 @@ function prodCatgViewHTML(d){
 }
 function prodOffersViewHTML(d){
   if (UI._ctOffers === undefined) return ctOfferField(d);   /* first visit: starts the one read, paints "reading…" */
-  const pid = UI.prodSel || d.item_id || d.id || '';
-  const on = (UI._ctOffers||[]).filter(function(o){ const at=(o.rules&&o.rules.applies_to)||{}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(pid)>=0; });
+  const on = prodOffersOn(d);
   const line = function(o){
     const terms=(typeof prodOfferTerms==='function')?prodOfferTerms(o.rules):'', win=(typeof prodOfferWindow==='function')?prodOfferWindow(o.rules):'';
     return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b><span style="color:var(--grey)">${esc(terms)}${win?' · '+esc(win):''}</span></div>`; };
   return `<div class="sec">${tx('Offers')}</div>`
     + (on.length ? `<div class="itab">${on.map(line).join('')}</div>` : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No offer is attached to this product.')}</div>`)
+    /* ⭐ The same calculation as Edit › Offers, from the same function — a read-only screen that showed a
+       different price from the one you just verified would be the worst of both. */
+    + prodOfferPreviewHTML(d)
     + `<div style="padding:8px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('Attach or remove one in Edit › Offers. An offer is authored once in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('offers')">${tx('Catalogue setup › Offers')}</span>.</div>`;
 }
 function prodVariantsTab(d){
