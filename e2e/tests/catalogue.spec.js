@@ -44,7 +44,14 @@ test.describe('Module · Catalogue (full CRUD)', () => {
       await price.waitFor({ state: 'visible' });
       await price.fill('999');
       await expect(price).toHaveValue('999');   // guard: the edit form actually holds the new value before saving
+      /* ⚠️ WAIT ON THE WRITE, NOT ON THE CLICK (the design-2 driver rule). This step asserted the view 10s after
+         pressing Save; the first run after an API deploy took longer than that to PATCH + reload, so the header
+         still read ₹250 — the old price — and the failure looked like a broken save. Waiting for the PATCH
+         itself makes a slow save a wait and a refused save a status code, which are different findings. */
+      const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH', { timeout: 45000 });
       await page.getByTestId('cat-save').click();
+      const resp = await saved;
+      expect(resp.status(), 'PATCH /products/:id refused the edit').toBeLessThan(400);
       await settle(page);
       /* ⭐ AND THE UPDATE IS ASSERTED THE SAME WAY — on the element, not on the page. §37 proved the feature
          healthy end to end (saveProduct → loadCatalogue → paintProdDetail all fine); what was failing was how

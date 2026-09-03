@@ -8563,7 +8563,14 @@ async function loadCatalogue(){
     try{ const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
-    if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
+    /* ⚠️⚠️ A RELOAD MUST NOT REPAINT OVER AN OPEN FORM — and it protected NEW but not EDIT. loadCatalogue() runs
+       on every renderApp() pass (the catalogue hook below the render), so any background re-render that landed
+       between typing into the Edit form and pressing Save re-rendered the form from UI.prods and threw the typing
+       away. [CAT-01] caught it as "PATCH sent price 250 after the test had typed 999 and ASSERTED the input held
+       999" — the write was correct for what the form held at the click; the form had been silently reset. Same
+       rule as the modal-safe-repaint guard: the list may refresh, the person's work-in-progress may not. */
+    const _formOpen = UI.prodMode==='new' || UI.prodMode==='edit';
+    if(!_formOpen){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
   }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=scrErr(e, tx('the catalogue'), 'loadCatalogue()'); }
 }
 function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
