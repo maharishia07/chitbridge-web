@@ -17,6 +17,10 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
      of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
      — the screen titled "What is stuck?" did not know what late meant. */
   misMetrics: {m:'GET', p:'/api/folders/mis', ok:'y'},
+  /* TAX — the month's ledger over my stamped chits, one copy's invoice, the GSTR shapes (routes/tax.js). Reads only. */
+  taxLedger:  {m:'GET', p:'/api/tax/ledger',        ok:'y'},
+  taxInvoice: {m:'GET', p:'/api/tax/invoice/:id',   ok:'y'},
+  taxGstr:    {m:'GET', p:'/api/tax/gstr',          ok:'y'},
 }); }
 // ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
 // matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──
@@ -213,7 +217,12 @@ var MIS_BANDS = [
   { key:'friction', name:'Friction', q:'What is stuck?' },
   { key:'trust',    name:'Trust',    q:'Who can I rely on?' },
   /* The outcome half of the plan declared in Governance → Constitution. It is a metric, so it lives here. */
-  { key:'plan',     name:'Plan',     q:'What have I used?' }
+  { key:'plan',     name:'Plan',     q:'What have I used?' },
+  /* ⭐ THE NETWORK CLAIM, AS A NUMBER. Athi, 2026-09-04: "if you use our networking capability your tax liability can
+     be computed or organised — is it possible?" — STUDY-gst-structure §4. Output tax on my sent chits, input credit
+     on my received ones (the seller's copy is the same record), net for the month. Provisional until a copy is
+     completed, which freezes its invoice. We compute and organise; we do not file. */
+  { key:'tax',      name:'Tax',      q:'What do I owe this month?' }
 ];
 /**
  * ⚠️ THE STATUS→MONEY MAPPING, AND THE TRAP IN IT. `cancelled` and `rejected` live in the `close` bucket beside
@@ -292,6 +301,11 @@ function misHeadline(k, m){
   }
   if (k === 'plan')     return { v: (UI._misToday==null?'·':UI._misToday), s:'of '+PLAN.chitsPerDay+' today' };
   if (k === 'trust')    return { v: m.suppliers, s: m.open_disputes ? (m.open_disputes + ' disputes') : '0 disputes', tone: m.open_disputes ? 'warn' : 'ok' };
+  if (k === 'tax'){
+    const L = UI._taxLedger;
+    if (!L) return { v: '·', s: 'this month' };
+    return { v: inr(L.net.total), s: (L.provisional ? 'provisional · ' : '') + 'net ' + L.month, tone: L.net.total > 0 ? 'warn' : 'ok' };
+  }
   return { v: '·', s: '' };
 }
 
@@ -304,8 +318,71 @@ function misBandHTML(k, m){
     : (k === 'flow')     ? misFlow(m)
     : (k === 'friction') ? misFriction(m)
     : (k === 'trust')    ? misTrust(m)
-    : (k === 'plan')     ? misPlan(m) : '';
+    : (k === 'plan')     ? misPlan(m)
+    : (k === 'tax')      ? misTax() : '';
   return body ? (body + _capEnd()) : '';
+}
+/**
+ * ⭐ THE TAX BAND — one GSTIN, one month: output by head over my SENT copies, input credit by head over my RECEIVED
+ * copies, net. Every row is a chit you can open; the figure on it is the same INV-01 block the copy carries (frozen
+ * once completed). The two export links hand back the offline-tool JSON a return preparer or Tally imports.
+ * ⚠️ Says PROVISIONAL while any copy in the month is not yet completed, and says what is NOT here: off-rail purchases.
+ */
+function misTaxMonth(){ return UI._taxMonth || new Date().toISOString().slice(0, 7); }
+function misTaxSetMonth(m){ UI._taxMonth = m; UI._taxLedger = null; loadTaxLedger(); }
+async function loadTaxLedger(){
+  try { UI._taxLedger = await api('taxLedger', { query: { month: misTaxMonth() } }); }
+  catch (e) { UI._taxLedger = { error: (e && e.message) || 'Could not read the ledger.' }; }
+  const h = document.getElementById('misbody'); if (h && misBand() === 'tax') h.innerHTML = misBandHTML('tax', UI._mis || {});
+  const rail = document.getElementById('mis_rail'); if (rail && UI._mis) { const b = MIS_BANDS.find(function(x){ return x.key === 'tax'; }); const hv = misHeadline('tax', UI._mis);
+    const el = rail.querySelector('[data-testid="mis-band-tax"] .misval'); if (el) el.innerHTML = hv.v + '<small>' + esc(hv.s) + '</small>'; }
+}
+function misTax(){
+  const L = UI._taxLedger;
+  if (L === undefined || L === null) { loadTaxLedger(); return _misHead('Tax', tx('What this month owes, from the chits on the rail.')) + '<div class="misnote">' + tx('reading…') + '</div>'; }
+  if (L.error) return _misHead('Tax', '') + '<div class="miswarn">' + esc(L.error) + '</div>';
+  const m = misTaxMonth();
+  const prev = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
+  const next = (function(){ const d = new Date(m + '-01T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + 1); return d.toISOString().slice(0, 7); })();
+  const head = (t, x) => '<div class="mistwo"><div>' + t + '</div><div>' + x + '</div></div>';
+  const heads = (h) => '<table style="width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:var(--fs-2)">'
+    + [['Taxable', h.taxable], ['CGST', h.cgst], ['SGST', h.sgst], ['IGST', h.igst]].concat(h.cess ? [['Cess', h.cess]] : []).concat([['Tax', h.tax]])
+      .map(function(r){ return '<tr><td style="color:var(--grey);padding:2px 0">' + esc(r[0]) + '</td><td style="text-align:right;padding:2px 0"><bdi>' + inr(r[1]) + '</bdi></td></tr>'; }).join('')
+    + '</table>';
+  const rows = (L.rows || []).map(function(r){
+    const tone = r.side === 'output' ? 'var(--warn-3)' : r.side === 'itc' ? 'var(--ok-2)' : 'var(--grey)';
+    return '<div class="row" style="cursor:pointer" onclick="openChit(\'' + esc(r.chit_id) + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(r.subject || r.purpose || 'chit') + '</span>'
+      + '<span class="optchip" style="color:' + tone + '">' + esc(r.side === 'output' ? tx('output') : r.side === 'itc' ? tx('input credit') : tx('no credit')) + '</span>'
+      + (r.provisional ? '<span class="optchip">' + tx('provisional') + '</span>' : '<span class="optchip" style="color:var(--ok-2)">' + tx('frozen') + '</span>')
+      + '<span class="amt" style="margin-inline-start:auto"><bdi>' + inr(r.heads.tax) + '</bdi></span></div>'
+      + '<div class="l2">' + esc((r.counterparty || '—') + (r.counterparty_gstin ? ' · ' + r.counterparty_gstin : ' · no GSTIN')) + ' · ' + tx('taxable') + ' ' + inr(r.heads.taxable)
+      + (r.unrated ? ' · <span style="color:var(--warn-3)">' + r.unrated + ' ' + tx('line(s) without a rate') + '</span>' : '') + '</div></div></div>';
+  }).join('');
+  return _misHead('Tax', tx('What this month owes, from the chits on the rail. Provisional until a copy is completed; off-rail purchases are not here; this is not a filing.'))
+    + '<div class="misbar" style="margin-bottom:8px"><span class="seg">'
+    + '<button onclick="misTaxSetMonth(\'' + prev + '\')">‹</button><button class="on">' + esc(m) + '</button><button onclick="misTaxSetMonth(\'' + next + '\')">›</button></span>'
+    + '<span class="misbar-r" style="font-size:var(--fs-1);color:var(--grey)">' + esc((L.gstin ? 'GSTIN ' + L.gstin : tx('no GSTIN on the profile')) + ' · ' + L.registration) + '</span></div>'
+    + head('<div class="mislbl">' + tx('Output · on what I sold') + '</div><div class="mishero" data-testid="mis-tax-output"><bdi>' + inr(L.output.tax) + '</bdi></div>' + heads(L.output),
+           '<div class="mislbl">' + tx('Input credit · on what I bought') + '</div><div class="mishero" data-testid="mis-tax-itc" style="color:var(--ok-2)"><bdi>' + inr(L.itc.tax) + '</bdi></div>' + heads(L.itc))
+    + '<div class="mislbl" style="margin-top:12px">' + tx('Net for the month') + '</div>'
+    + '<div class="mishero" data-testid="mis-tax-net"><bdi>' + inr(L.net.total) + '</bdi>' + (L.provisional ? ' <small>' + tx('provisional') + '</small>' : '') + '</div>'
+    + '<div class="misnote">CGST ' + inr(L.net.cgst) + ' · SGST ' + inr(L.net.sgst) + ' · IGST ' + inr(L.net.igst) + (L.net.cess ? ' · Cess ' + inr(L.net.cess) : '') + '</div>'
+    + '<div style="display:flex;gap:8px;margin:10px 0">'
+    + '<button class="composebtn" onclick="misTaxExport(\'gstr1\')">' + tx('⬇ GSTR-1 JSON') + '</button>'
+    + '<button class="composebtn" onclick="misTaxExport(\'gstr3b\')">' + tx('⬇ GSTR-3B JSON') + '</button></div>'
+    + '<div class="sec">' + tx('The chits behind it') + ' · ' + L.count + '</div>'
+    + (rows || '<div class="misnote">' + tx('No chit in this month.') + '</div>');
+}
+/* The offline-tool JSON, opened in a new tab (the browser saves it) — the same read the band shows, as a file. */
+function misTaxExport(form){
+  const base = (typeof apiBase === 'function') ? apiBase() : '';
+  const url = base + '/api/tax/gstr?month=' + encodeURIComponent(misTaxMonth()) + '&form=' + form;
+  api('taxGstr', { query: { month: misTaxMonth(), form: form } }).then(function(j){
+    const blob = new Blob([JSON.stringify(j, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = form + '-' + misTaxMonth() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  }).catch(function(e){ toast((e && e.message) || 'Could not build the export.', true); });
+  return url;
 }
 /**
  * ⚠️ THE BACK BUTTON IS PART OF THE HEADING, not an optional extra. On mobile the detail pane COVERS the rail,
