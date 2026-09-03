@@ -87,6 +87,8 @@ function catsetDefsLoad(kind, force){
    release — the same reason catalogue-ui delegates its category chips instead of copying them. */
 function catsetDefNew(kind){ ensureCap('definitions').then(function(){ cbDefNew(kind); }); }
 function catsetDefEdit(kind, id){ ensureCap('definitions').then(function(){ cbDefEdit(id); }); }
+/* Live ⇄ draft from here; the definitions capability owns the write and refreshes both lists. */
+function catsetDefStatus(id, status){ ensureCap('definitions').then(function(){ cbDefSetStatus(id, status); }); }
 function catsetDefRetire(kind, id, name){
   ensureCap('definitions').then(function(){
     cbDefRetire(id, name);
@@ -107,7 +109,12 @@ function catsetDefListHTML(kind, one){
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
       + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
       + (d.status === 'retired' ? ''
-          : '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">' + tx('Edit') + '</span>'
+          /* ⭐ THE STATUS SWITCH, HERE TOO. Athi, 2026-09-03: *"how will you attach to a product?"* — a product's
+             Offers tab lists LIVE offers only, and this list had Edit and Retire but no way to go live, so a
+             draft authored here could never reach a product without a detour through Definitions. */
+          : '<span class="da" data-testid="catset-' + kind + '-live-' + esc(d.id) + '" onclick="catsetDefStatus(\'' + esc(d.id) + '\',\'' + (d.status === 'live' ? 'draft' : 'live') + '\')">'
+            + (d.status === 'live' ? tx('Back to draft') : tx('Make live')) + '</span>'
+            + '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">' + tx('Edit') + '</span>'
             + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">' + tx('Retire') + '</span>')
       + '</div>';
   };

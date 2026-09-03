@@ -527,8 +527,13 @@ function cbDefNew(kind){
   cbDefPaintForm();
 }
 async function cbDefEdit(id){
+  /* ⚠️⚠️ EDIT DID NOTHING FROM CATALOGUE SETUP. Athi, 2026-09-03: *"i created one, couldn't edit."* This looked the
+     definition up in CBDEF.mine — the Definitions screen's OWN list, loaded only when THAT screen opens. From
+     Catalogue setup › Offers the capability is loaded but the list is not, so the lookup missed and the function
+     returned without a word. New worked because it needs no lookup. Load first, and say so if it is still missing. */
+  if (!CBDEF.mine) await cbDefLoad(true);
   var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0];
-  if (!d) return;
+  if (!d) { if (typeof toast === 'function') toast(tx('Could not find that definition — reload and try again.'), true); return; }
   CBDEF_FORM = { kind: d.kind, sub: d.sub_kind || '', name: d.name || '', note: d.note || '',
                  rules: JSON.parse(JSON.stringify(d.rules || {})), id: id, version: d.current_version };
   cbDefPaintForm();
@@ -671,7 +676,7 @@ function cbDefFormHTML(){
           + 'version they froze — they do not move. Currently at v' + cbDefEsc(f.version || 1) + '.</div>'
         : '')
     + (subs.length
-        ? '<label class="fl">' + tx('Kind') + '</label><select class="inp" onchange="cbDefSetSub(this.value)">'
+        ? '<label class="fl">' + tx('Kind') + '</label><select class="inp" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">'
           + subs.map(function (s) {
               return '<option value="' + cbDefEsc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
                 + cbDefEsc(s) + '</option>'; }).join('') + '</select>'
@@ -691,10 +696,11 @@ function cbDefFormHTML(){
         if (x.pick) return '<label class="fl">' + cbDefEsc(x.label) + '</label>' + cbDefPickHTML(x, v);
         return '<label class="fl">' + cbDefEsc(x.label) + '</label>'
           + (x.area
-              ? '<textarea class="inp" rows="4" placeholder="' + cbDefEsc(x.ph || '') + '"'
+              /* testid per rule key so a spec can drive the form; dots become dashes (applies_to.category → applies_to-category). */
+              ? '<textarea class="inp" rows="4" data-testid="cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-')) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
                 + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value.split(\'\\n\').filter(Boolean))">'
                 + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>'
-              : '<input class="inp" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
+              : '<input class="inp" data-testid="cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-')) + '" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
                 + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value,' + (x.num ? 'true' : 'false') + ')">');
       }).join('') + cbDefStdChipsHTML() + '</div>' : '')
     + '<label class="fl">' + tx('Note') + '</label>'
@@ -785,17 +791,31 @@ async function cbDefSave(){
                                     name: f.name.trim(), note: f.note, rules: f.rules } });
       toast('Created as a draft.');
     }
+    var savedKind = CBDEF_FORM && CBDEF_FORM.kind;
     closeModal(); CBDEF_FORM = null;
-    await cbDefLoad(true);
+    await cbDefAfterChange(savedKind);
   } catch (e) {
     if (err) err.textContent = (e && e.message) || 'Could not save that.';
+  }
+}
+/**
+ * ⭐ ONE PLACE TO REFRESH AFTER A DEFINITION CHANGES — both lists. The Definitions screen keeps CBDEF.mine; Catalogue
+ * setup keeps its own per-kind list (CATSET_DEFS). A save or a status change made from Setup used to refresh only the
+ * first, so the row a person was looking at kept its old name and status until they left and came back.
+ */
+async function cbDefAfterChange(kind, id){
+  await cbDefLoad(true);
+  if (!kind && id) { var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0]; kind = d && d.kind; }
+  if (kind && typeof UI !== 'undefined' && UI.nav === 'catsetup' && typeof catsetDefsLoad === 'function') {
+    await catsetDefsLoad(kind, true);
+    if (typeof catsetPaintDetail === 'function') catsetPaintDetail();
   }
 }
 
 async function cbDefSetStatus(id, status){
   try { await api('defSave', { params: { id: id }, body: { status: status } });
         toast(status === 'live' ? 'Live — it can be adopted now.' : 'Back to draft.');
-        await cbDefLoad(true); }
+        await cbDefAfterChange(null, id); }
   catch (e) { toast((e && e.message) || 'Could not change that.'); }
 }
 /* ⚠️ In-app dialog, not `confirm()` — Athi, on the supplier panel: *"the message appears from the browser it has
