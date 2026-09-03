@@ -20,7 +20,6 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | file | loading · nav key | what it is |
 |---|---|---|
 | `cap-admin.js` | lazy · mis, profile, settings, assistreview | the "admin" capability (progressively loaded on demand) |
-| `cap-catalogue.js` | eager | cap-catalogue.js — CATALOGUE SETUP capability (⚙ Set up (new)). LIVE in prod (main). Gate: `npm run check` |
 | `cap-categories.js` | lazy · categories |  |
 | `cap-catsetup.js` | lazy · catsetup |  |
 | `cap-chit2.js` | lazy · on demand | DESIGN 2: the chit as LINE-LEVEL work (lazy; ensureCap('chit2')) |
@@ -34,6 +33,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `cap-messages.js` | lazy · messages | REPLIES: every external conversation that still wants you, across every chit. Lazy |
 | `cap-network.js` | lazy · network | DESIGN-FIRST network builder. Lazy via ensureCap('network') |
 | `cap-readiness.js` | lazy · readiness | TRADE capability (lazy; ensureCap('readiness')). Two tabs: |
+| `cap-register.js` | lazy · on demand | THE REGISTER. Lazy (ensureCap('register')) |
 | `cap-service.js` | lazy · on demand | cap-service.js — a chit AS A SERVICE REQUEST. Lazy-loaded (ensureCap('service')) |
 | `cap-standards.js` | lazy · on demand |  |
 | `cap-traceability.js` | lazy · traceability | TRACEABILITY capability (lazy via ensureCap('traceability')) |
