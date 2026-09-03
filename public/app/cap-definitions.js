@@ -843,7 +843,9 @@ function cbDefRetire(id, name){
     'Retire', function(){ _cbDefRetire(id); }, true);
 }
 async function _cbDefRetire(id){
-  try { await api('defRetire', { params: { id: id } }); toast('Retired.'); await cbDefLoad(true); }
+  /* Same after-change path as save and status: refresh both lists AND drop the product page's live-offers cache —
+     [OFF-01] RETIRE found the retired offer still listed on the product until a reload. */
+  try { await api('defRetire', { params: { id: id } }); toast('Retired.'); await cbDefAfterChange(null, id); }
   catch (e) { toast((e && e.message) || 'Could not retire that.'); }
 }
 

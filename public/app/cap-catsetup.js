@@ -90,11 +90,8 @@ function catsetDefEdit(kind, id){ ensureCap('definitions').then(function(){ cbDe
 /* Live ⇄ draft from here; the definitions capability owns the write and refreshes both lists. */
 function catsetDefStatus(id, status){ ensureCap('definitions').then(function(){ cbDefSetStatus(id, status); }); }
 function catsetDefRetire(kind, id, name){
-  ensureCap('definitions').then(function(){
-    cbDefRetire(id, name);
-    /* The list here is a second reader of the same shelf, so it has to be told. */
-    setTimeout(function(){ catsetDefsLoad(kind, true).then(catsetPaintDetail); }, 900);
-  });
+  /* cbDefAfterChange (in the definitions capability) refreshes this list too once the retire lands — no timer. */
+  ensureCap('definitions').then(function(){ cbDefRetire(id, name); });
 }
 /** The shared list body for a definition-backed section. */
 function catsetDefListHTML(kind, one){
