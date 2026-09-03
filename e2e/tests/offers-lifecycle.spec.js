@@ -258,10 +258,11 @@ test('[OFF-02] two live offers on one product — the product page shows the com
   await test.step('THE CART IS FED THE SAME OFFERS — compose loads both', async () => {
     await clickNav(page, 'compose');
     await settle(page);
-    const loaded = await page.evaluate((names) => names.map(function (n) {
-      return (CC.offers || []).some(function (o) { return String(o.label || '').indexOf(n) >= 0; });
-    }), [nameA.slice(0, 14), nameB.slice(0, 14)]);
-    expect(loaded).toEqual([true, true]);
+    /* ccLoadOffers() runs when compose opens and resolves on its own time — poll for the arrival rather than
+       reading CC.offers once, the moment after the click. */
+    await expect.poll(async () => page.evaluate((names) => names.map(function (n) {
+      return (typeof CC !== 'undefined' && CC.offers || []).some(function (o) { return String(o.label || '').indexOf(n) >= 0; });
+    }), [nameA.slice(0, 14), nameB.slice(0, 14)]), { timeout: 20000 }).toEqual([true, true]);
     await dismissModal(page);
   });
 });
