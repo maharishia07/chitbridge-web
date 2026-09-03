@@ -1094,6 +1094,8 @@
   .parties{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;font-size:var(--fs-1)}
   .ptag{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:3px 8px}.ptag b{font-family:'Space Mono';font-size:var(--fs-1)}
   .dtabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line)}
+  /* The product page pins its header + tab strip: a no-op where only .db scrolls, the fix where the pane does. */
+  .dstick{position:sticky;top:0;z-index:2;background:var(--card);flex:0 0 auto}
   .dtabs button{border:0;background:none;color:var(--grey);font-size:var(--fs-2);font-weight:600;padding:11px 13px;border-bottom:2px solid transparent;margin-bottom:-1px}
   .dtabs button.on{color:var(--ink);border-bottom-color:var(--blue)}
   .db{flex:1;overflow-y:auto;padding:15px 16px var(--scroll-tail)}
@@ -9605,8 +9607,7 @@ function prodDetailHTML(){
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price"><bdi>${inr(pPrice(d))}</bdi> / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
   if(UI.prodMode==='edit'){
-    body=prodTabBar()
-      +ptabWrap('product',`<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`)
+    body=ptabWrap('product',`<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`)
       +ptabWrap('categories',ctCategoryField(d))
       +ptabWrap('offers',ctOfferField(d))
       +ptabWrap('stock',prodAvailBlock(d,id))
@@ -9619,8 +9620,7 @@ function prodDetailHTML(){
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = prodTabBar()
-      + ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
+    body = ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
         + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
         + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`)
       + ptabWrap('categories', prodCatgViewHTML(d))
@@ -9630,7 +9630,12 @@ function prodDetailHTML(){
       + ptabWrap('pricing', prodPricingTab(d));
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
-  return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
+  /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
+     stay … the basic information about the product should be visible in each tab, otherwise the user will forget,
+     like product name, unit and price alone enough in each tab."* The header already carries exactly those three,
+     so pinning it answers both: whichever tab is open and however far it is scrolled, name · price / unit · code
+     stay in view. On laptop only .db scrolls, so this is a no-op there; on mobile the pane itself scrolls. */
+  return `<div class="dstick">${head}${prodTabBar()}</div><div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 /**
  * ⭐ THE CATEGORY IS READ HERE, WHICH IS WHY IT IS ONE FIELD AND NOT TWO. Both saves — add and edit — go through
