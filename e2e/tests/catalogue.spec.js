@@ -94,8 +94,9 @@ test('[CAT-03] a column declared in Setup appears on the product form and round-
   await test.step('NEW PRODUCT — the declared column is on the form', async () => {
     await page.getByTestId('nav-catalogue').click();
     await settle(page);
-    const setup = page.getByTestId('cat-setup');
-    if (await setup.isVisible().catch(() => false)) await setup.click();
+    /* ⚠️ NOT the cat-setup guard addProduct uses: that button is the always-visible header Setup link and it
+       NAVIGATES to Catalogue setup — the first run of this spec left the catalogue that way and waited 20s for
+       a button on a screen it had just left. */
     const add = page.getByTestId('cat-new-product');
     await add.waitFor({ state: 'visible', timeout: 20000 });
     await add.click();
