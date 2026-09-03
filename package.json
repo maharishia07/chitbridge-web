@@ -11,12 +11,13 @@
     "check:adoption": "node scripts/check-adoption.js",
     "check:cart": "node scripts/cart-ui.test.mjs && node scripts/cap-network-render.test.mjs",
     "check:steps": "node scripts/step-flow.test.mjs",
-    "check": "npm run check:cart && npm run check:steps && node scripts/check-syntax.js && node scripts/check-adoption.js && npm run check:reads && npm run check:lazy && npm run check:modal",
+    "check": "npm run check:cart && npm run check:steps && node scripts/check-syntax.js && node scripts/check-adoption.js && npm run check:reads && npm run check:lazy && npm run check:modal && npm run check:tax",
     "parsecheck": "node scripts/check-app-parses.cjs",
     "check:reads": "node e2e/screen-reads.cjs",
     "check:lazy": "node e2e/lazy-screen-guard.cjs",
     "check:modal": "node e2e/modal-safe-repaint.cjs",
-    "report:card": "node e2e/report-card.cjs"
+    "report:card": "node e2e/report-card.cjs",
+    "check:tax": "node e2e/tax-slab.test.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",

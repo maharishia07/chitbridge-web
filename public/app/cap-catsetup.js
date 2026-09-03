@@ -58,7 +58,7 @@ var CATSET_SECS = [
   /* ⭐ Beside Import & export, because all three answer the same question — how does this catalogue meet
      another system — and a reader who wants one usually wants the next. */
   { key: 'erp',      icon: '🔌', name: 'Other systems',   q: 'ERP · Tally · SAP field names' },
-  { key: 'tax',      icon: '🧾', name: 'Tax',              q: 'The treatment you declare' },
+  { key: 'tax',      icon: '🧾', name: 'Tax',              q: 'Slabs your products cite' },
   { key: 'face',     icon: '🛍️', name: 'Storefront',       q: 'How customers order from you' },
 ];
 /**
@@ -616,13 +616,24 @@ function catsetBody(k){
     + catsetCard('Your columns', catsetErpHTML(), '');
   }
   if (k === 'tax') {
-    return catsetCard('How tax is treated',
-      'The treatment that applies to what you sell. It rides with the catalogue rather than being retyped per '
-      + 'order, and travels into a chit so both sides read the same basis.'
-      + '<div class="catset-std">⚠️ <b>A rate is not a decision.</b> Which treatment applies is a jurisdiction '
-      + 'question, and CB records what you declare — it does not compute liability. That distinction is the same '
-      + 'one the price provenance draws: we carry what was said and who said it.</div>', '')
-    + catsetCard('Declared', catsetTaxHTML(), '');
+    /**
+     * ⭐⭐ Athi, 2026-09-03: *"in india tax is not simple, each product has different tax criteria, so it has to be
+     * product specific, but there are slabs, so define slab and attach the slab to the product, check how other
+     * products are doing"*. Tally, Zoho and Odoo all reached the same shape independently — a named rate is its
+     * own record, the product points at it, and an unset product inherits — so that is what this is.
+     */
+    return catsetCard('Name a rate, then a product cites it',
+      'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names '
+      + 'none inherits — first from its category, then from the catalogue default below.'
+      + '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and '
+      + 'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>'
+      + '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product '
+      + 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you '
+      + 'declared, who declared it and when — and freezes it onto a chit at the mint.</div>',
+      '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
+    + catsetCard('Your slabs', catsetDefListHTML('tax', 'tax slab'), '')
+    + catsetCard('Falls back to', catsetTaxHTML(), '')
+    + catsetRegistry(['tax']);
   }
   /* ⭐ The storefront controls are REAL here now — see catsetSfHTML. This used to be a paragraph and a button
      that opened the six-step wizard, so the hub owned nine of its ten sections and handed the tenth back. */
@@ -1104,21 +1115,65 @@ function catsetErpSet(key, prop, val){
   catsetPaintDetail();
 }
 
-/** The tax treatment the catalogue declares. Free text by design — see the panel note on what CB does not do. */
+/**
+ * ⭐⭐ THE CATALOGUE DEFAULT SLAB — the last rung of the inheritance, and the one most catalogues will use alone.
+ *
+ * Athi, 2026-09-03: *"each product has different tax criteria, so it has to be product specific, but there are
+ * slabs"*. Both halves are true at once, and Tally resolves them the same way: the product answers if it has an
+ * answer, else its group, else the company. This picker is the company rung.
+ *
+ * ⚠️⚠️ THIS REPLACED A FREE-TEXT "Treatment" BOX, and the box was the problem it looks like it solved. Someone
+ * typed "GST 18%" into it and nothing could read that: not the order path, not a chit line, not a counterparty.
+ * A declaration nothing consumes is worse than a blank field, because it looks answered. A slab is cited by id,
+ * so every one of those readers resolves it.
+ *
+ * ⚠️ ONLY LIVE SLABS ARE OFFERED. A draft is one you are still writing, and a catalogue-wide default that is
+ * still being written would apply to every product that inherits — which is most of them.
+ */
 function catsetTaxHTML(){
   if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
+  var rows = CATSET_DEFS['tax'];
+  if (rows === undefined) { catsetDefsLoad('tax').then(catsetPaintDetail); return '<div class="catset-load">' + tx('reading…') + '</div>'; }
   var t = (CATSET_FACE && CATSET_FACE.tax) || {};
-  var v = typeof t === 'string' ? t : (t.treatment || '');
-  return '<label class="fl">' + tx('Treatment') + '</label>'
-    + '<input class="inp" data-testid="catset-tax" value="' + esc(v) + '"'
-    + ' placeholder="' + esc(tx('e.g. GST 18% · zero-rated export · exempt')) + '"'
-    + ' onchange="catsetTaxSet(this.value)">'
+  if (typeof t === 'string') t = { treatment: t };
+  var cur = t.default_slab || '';
+  var live = rows.filter(function(d){ return d.status === 'live'; });
+
+  /* ⚠️ An empty picker EXPLAINS ITSELF rather than rendering one blank option — the same rule the order-model
+     form follows. "You have no live slabs" and "this catalogue cannot have a default" look identical otherwise. */
+  var body = !live.length
+    ? '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No live slab yet — author one above and make it live.') + '</div>'
+    : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxDefault(this.value)">'
+      + '<option value="">— ' + esc(tx('none')) + ' —</option>'
+      + live.map(function(d){
+          return '<option value="' + esc(d.id) + '"' + (String(cur) === String(d.id) ? ' selected' : '') + '>'
+            + esc(d.name) + (d.rules && d.rules.rate != null ? ' · ' + esc(d.rules.rate) + '%' : '') + '</option>';
+        }).join('')
+      + '</select>';
+
+  return '<label class="fl">' + tx('Catalogue default') + '</label>' + body
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
-    + tx('Carried with the catalogue and into a chit, so both sides read the same basis.') + '</div>';
+    + tx('Applies to every product that names no slab and sits in no category that names one.') + '</div>'
+    /* ⚠️ SAID ONCE, ONLY WHERE IT HAPPENED. The old free-text treatment is kept in the face rather than deleted —
+       it is the owner's words — but nothing reads it any more, and a value nobody reads must not sit on a screen
+       looking authoritative. */
+    + (t.treatment ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">⚠️ '
+        + txf('Your old typed treatment ({t}) is kept but no longer read — cite a slab instead.', { t: esc(t.treatment) })
+        + '</div>' : '');
 }
-function catsetTaxSet(v){
-  catsetFaceSave({ tax: { treatment: String(v || '').slice(0, 200) } });
-  if (typeof toast === 'function') toast(tx('Tax treatment saved'));
+/**
+ * ⚠️ MERGED ONTO face.tax, NOT ASSIGNED OVER IT. `catsetFaceSave` merges one level only, so writing
+ * `{ tax: {default_slab} }` would drop `tax.treatment` — the exact class of loss the face's own header warns
+ * about ("a panel saving only its own key would drop everything else it holds"), one level deeper.
+ */
+function catsetTaxDefault(id){
+  var t = (CATSET_FACE && CATSET_FACE.tax) || {};
+  if (typeof t === 'string') t = { treatment: t };
+  var next = Object.assign({}, t);
+  /* Cleared means INHERIT NOTHING, not "nil-rated" — so the key is removed rather than set to ''. */
+  if (id) next.default_slab = String(id); else delete next.default_slab;
+  catsetFaceSave({ tax: next }).then(catsetPaintDetail);
+  if (typeof toast === 'function') toast(id ? tx('Catalogue default slab set') : tx('Catalogue default cleared'));
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
