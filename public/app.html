@@ -5755,24 +5755,78 @@ async function submitCompose(isDraft){
   try {
     if ((CC.offers||[]).length && typeof CBOffers !== 'undefined') {
       var _ev = CBOffers.evaluate({
-        lines: CC.items.map(function(it,i){ return { key:String(i), qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+        /**
+         * ⚠️⚠️ THE LINES CARRIED NO IDENTITY, so no TARGETED offer could ever fire on send. `applies_to.item_ids`,
+         * `applies_to.skus`, `applies_to.category` and the cross-item reward all match on fields this map did
+         * not include — the cart showed the discount (catalogue-ui builds a fuller line) and the SEND silently
+         * evaluated against anonymous rows. Exactly the whitelist trap offers.js warns about at the normaliser:
+         * a field dropped in between, with no error at either end.
+         */
+        lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
+          sku:it.sku||it.code||null, categories:catgIdsOf(it)||[],
+          qty:+it.qty||0, unitPrice:+it.price||0 }; }),
         offers: CC.offers
       });
+      /**
+       * ⭐⭐ THE DISCOUNT REACHES THE LINE, NOT ONLY THE SCREEN.
+       *
+       * Athi, 2026-09-03: *"many of the products are sold based on what is coming as free… first oil chosen
+       * and then the rice, the chit should automatically make the oil price as zero and should be informed as
+       * freebie."*
+       *
+       * ⚠️⚠️ THIS LOOP ONLY COLLECTED OFFER IDS. The cart said "1 × free Sunflower Oil — ₹132 off" and the chit
+       * was minted with the oil at ₹132: the offer was cited on the record and never applied to it. For a
+       * seller whose product moves BECAUSE of the freebie, that is the customer being charged for the reason
+       * they bought.
+       *
+       * ⚠️ THE LIST PRICE IS KEPT, NOT OVERWRITTEN. A chit is evidence — "free" is only meaningful beside what
+       * it would have cost, and a dispute needs both. So `price` stays, `discount` records what came off, and
+       * `total` is what is owed. That is also the shape lib/tax.js already reads (TotAmt · Discount · AssAmt),
+       * so an invoice built from this needs no second interpretation.
+       */
       _ev.adjustments.forEach(function(a){
         if (a.offer_id && _defIds.indexOf(a.offer_id) < 0) _defIds.push(a.offer_id);
+        if (a.scope !== 'line' || a.target == null) return;   /* cart-scope discounts belong to the order, not a line */
+        var it = CC.items[Number(a.target)];
+        if (!it) return;
+        var off = Math.abs(Number(a.amount) || 0);
+        if (!off) return;
+        it._offer_off = Math.round(((it._offer_off || 0) + off) * 100) / 100;
+        it._offer_why = a.why || '';
+        it._offer_id = a.offer_id || null;
+        it._offer_label = a.label || '';
       });
     }
   } catch (e) { /* an offer engine failure must not block a send — the lines and prices stand on their own */ }
 
-  const line_items=CC.items.map(it=>({
-    particulars:it.particulars,
-    unit:it.unit||'unit',
-    quantity:+it.qty||0,
-    price:+it.price||0,
-    total:ccLineTotal(it),
-    comment:it.comment||'',
-    ref:it.ref||null
-  }));
+  /**
+   * ⭐ THE LINE AS IT IS MINTED. _offer_off was written onto the item a moment ago by the offer pass above.
+   *
+   * ⚠️ price STAYS THE LIST PRICE and total carries what is owed — never price:0. A chit is evidence, and
+   * "free" only means something beside what it would have cost; a dispute months later needs both numbers and
+   * the reason. The freebie reads as free because total is 0, which is also what the reader is shown.
+   */
+  const line_items=CC.items.map(it=>{
+    const gross=ccLineTotal(it);
+    const off=Math.min(Math.round((+it._offer_off||0)*100)/100, gross);
+    const row={
+      particulars:it.particulars,
+      unit:it.unit||'unit',
+      quantity:+it.qty||0,
+      price:+it.price||0,
+      total:Math.round((gross-off)*100)/100,
+      comment:it.comment||'',
+      ref:it.ref||null
+    };
+    if(off>0){
+      row.discount=off;
+      /* ⭐ NAMED ON THE LINE, so a reader of the chit is TOLD why — not left to infer it from a number that
+         does not match the price. Athi: "should be informed as freebie". */
+      row.offer={ id:it._offer_id||null, label:it._offer_label||'', why:it._offer_why||'' };
+      row.freebie = (row.total===0);
+    }
+    return row;
+  });
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
     /* ⭐ The terms this chit cites — frozen inside sendChit at the mint, not here. */
