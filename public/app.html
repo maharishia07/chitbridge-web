@@ -8154,6 +8154,8 @@ async function prodOfferApply(offerId, add){
     if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
 
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
+    /* The Definitions/Setup edit form saves whole rules from ITS copy — it must not keep the pre-attach one. */
+    if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
     closeModal();
     UI.prodPicked.clear(); UI.prodPick = false;
     await loadCatalogue();

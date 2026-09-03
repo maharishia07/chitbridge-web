@@ -668,7 +668,12 @@ async function cbDefEdit(id){
      definition up in CBDEF.mine — the Definitions screen's OWN list, loaded only when THAT screen opens. From
      Catalogue setup › Offers the capability is loaded but the list is not, so the lookup missed and the function
      returned without a word. New worked because it needs no lookup. Load first, and say so if it is still missing. */
-  if (!CBDEF.mine) await cbDefLoad(true);
+  /* ⚠️⚠️ ALWAYS FRESH, NEVER THE CACHED COPY. The form saves the WHOLE rules object, so a stale copy is not a stale
+     screen — it is a write that erases whatever changed since the list was read. [OFF-02] EXCLUSIVE: products were
+     attached on the product page (rules.applies_to.item_ids), then Edit here ticked Exclusive and saved the copy
+     loaded before the attach — the offer silently left the product. One read per edit is the price of not doing
+     that. */
+  await cbDefLoad(true);
   var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0];
   if (!d) { if (typeof toast === 'function') toast(tx('Could not find that definition — reload and try again.'), true); return; }
   CBDEF_FORM = { kind: d.kind, sub: d.sub_kind || '', name: d.name || '', note: d.note || '',
