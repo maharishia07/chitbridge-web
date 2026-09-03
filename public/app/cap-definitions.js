@@ -91,6 +91,25 @@ var CBDEF_AUTHORABLE = {
    * and the one you cannot waive stays where it is. ⚠️ Destination and product regulatory requirements are NOT
    * this: a buyer does not get to declare away a customs rule.
    */
+  /**
+   * ⭐⭐ TAX SLABS — Athi, 2026-09-03: *"in india tax is not simple, each product has different tax criteria, so it
+   * has to be product specific, but there are slabs, so define slab and attach the slab to the product, check how
+   * other products are doing"*.
+   *
+   * What the other products do is the same thing three times over: Tally sets GST rate details on the item, the
+   * stock GROUP and the company and takes the most specific; Zoho keeps a named tax record an item selects; Odoo
+   * defaults `account.tax` per product category. So a slab is a DEFINITION like any other — named, versioned,
+   * frozen onto a chit at the mint — and a product cites one.
+   *
+   * ⚠️ WE SHIP NO RATES. The kinds list offers the rates the SCHEME defines (0 · 5 · 12 · 18 · 28 + cess) as a
+   * menu; which one a product attracts is per-HSN, changes at every Council meeting, and is the merchant's answer.
+   * A rate table in our repository would be wrong silently and discovered at filing time — see lib/tax.js.
+   */
+  tax:        { icon: '🧾', title: 'Tax slabs', one: 'tax slab',
+                home: { nav: 'catsetup', sec: 'tax', label: 'Open Catalogue setup →' },
+                blurb: 'A named rate — “GST 18%” — that a product cites instead of repeating the number. ⚠️ A '
+                     + 'product with no slab inherits: first from its category, then from the catalogue default. '
+                     + 'Blank means INHERIT, never nil-rated. Authored under <b>' + tx('Catalogue setup') + '</b>.' },
   requirement:{ icon: '📋', title: 'Required certificates', one: 'requirement',
                 blurb: 'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a GST '
                      + 'registration. Declare it once and every supplier is measured against your list instead of '
@@ -183,6 +202,26 @@ function cbDefRegistries(){
           return { code: k, label: cbDefOfferLabel(k),
                    note: 'scope: ' + (CBOffers.KINDS[k].scope || '—') };
         })
+      : null
+  });
+
+  /**
+   * ⭐ THE GST SLAB RATES — read from the SAME module that resolves them (app/tax-slab.js, the generated mirror of
+   * the API's lib/tax-slab.js). A second list here would be a second statement of what the scheme allows, and the
+   * second one always goes stale.
+   *
+   * ⚠️ A MENU, NOT A MAPPING. These are the rates the scheme defines, which is a different statement from "this
+   * product attracts this rate" — that one is per-HSN and the merchant's to make. Same rule tax.js states at
+   * length: we carry the determination, never the rate table.
+   */
+  out.push({
+    key: 'tax', icon: '🧾', title: 'GST slab rates',
+    blurb: 'The rates the scheme itself defines. Name one as a slab, then a product cites it. Cess rides on top '
+         + 'of the slab and is declared per slab, because it varies by product within one rate.',
+    source: 'app/tax-slab.js · GST_SLAB_RATES',
+    rows: (typeof CBTaxSlab !== 'undefined' && CBTaxSlab.GST_SLAB_RATES)
+      ? CBTaxSlab.GST_SLAB_RATES.map(function (r) {
+          return { code: String(r) + '%', label: 'GST ' + r + '%', note: cbDefSlabNote(r) }; })
       : null
   });
 
@@ -306,6 +345,22 @@ function cbDefModelNote(k){
     pick:    'One or none. No quantity control at all; a second press must not make it two.',
     offer:   'A quantity AND your price, inside the seller’s band. Two facts about one line.'
   })[k] || '';
+}
+/**
+ * What each GST rate is FOR, in the words a merchant uses. ⚠️ PROSE about the scheme, not a rate table — no
+ * product is named and nothing here resolves one. If these examples and the Council ever disagree, the Council is
+ * right and this is stale, which is exactly why no product may inherit a rate from this text.
+ */
+function cbDefSlabNote(r){
+  return ({
+    0:    'Nil-rated and exempt — fresh produce, unbranded staples. ⚠️ 0% is an ANSWER; “no slab” is not.',
+    0.25: 'Rough diamonds and a few precious stones.',
+    3:    'Gold, silver and jewellery.',
+    5:    'Essentials — packaged food, tea, edible oil, most transport.',
+    12:   'Processed food, some machinery.',
+    18:   'The standard rate. Most manufactured goods and services sit here.',
+    28:   'Luxury and demerit goods — ⚠️ usually with CESS on top, which is why cess is per slab.'
+  })[r] || '';
 }
 /**
  * What each facet MEANS, in the words a person would use. ⚠️ Prose about the model, not a second copy of it —
@@ -442,6 +497,30 @@ function cbDefRuleFields(kind, sub){
        chips to tap (cbDefStdChips), so the list is authored from the system's own vocabulary. */
     return [{ k: 'standards', label: 'Certificates you require', ph: 'one standard key per line', area: true }];
   }
+  /**
+   * ⭐⭐ A SLAB IS A RATE WITH A NAME. Athi, 2026-09-03: *"there are slabs, so define slab and attach the slab to
+   * the product"*. Four fields, and every one of them earns its place:
+   *
+   *   rate            the number. ⚠️ BLANK IS NOT ZERO — 0% is nil-rated, which is a real answer; an unanswered
+   *                   slab resolves to `rate: null` so a screen can say "not stated" instead of charging nothing.
+   *   cess            per SLAB, not per catalogue: 28% goods carry wildly different cess, so it cannot live one
+   *                   level up. Rides on top of the rate; lib/tax.js already emits CesRt/CesAmt per line.
+   *   hsn             the codes this slab covers, one per line. ⚠️ RECORDED, NEVER RESOLVED — nothing in CB looks
+   *                   a product's HSN up in this list to pick a slab for it. It is the merchant's own note of WHY
+   *                   this slab exists, and the thing their CA checks. Auto-picking from it would be shipping a
+   *                   rate table by the back door.
+   *   effective_from  when the Council's change starts. ⚠️ A future date is REPORTED, not silently ignored:
+   *                   falling through to the catalogue default because a rate starts next month would charge the
+   *                   old rate with nothing on screen to say why.
+   */
+  if (kind === 'tax') {
+    return [
+      { k: 'rate', label: 'Rate %', ph: '18', num: true },
+      { k: 'cess', label: 'Cess % on top (blank = none)', ph: '0', num: true },
+      { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
+      { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD' },
+    ];
+  }
   if (kind === 'ordermodel') {
     /* The shape each model actually uses. ⚠️ cart-ui's MODELS decide behaviour; these are the inputs those
        models read (`o.step`, `o.min`, `o.max`), so the names must match what coerce/next look for. */
@@ -508,6 +587,10 @@ function cbDefSubKinds(kind){
     return narrowed;
   }
   if (kind === 'offer')      return (typeof CBOffers !== 'undefined' && CBOffers.kinds) ? CBOffers.kinds : [];
+  /* ⚠️ ONE SUB-KIND TODAY, AND IT IS STILL DECLARED. `gst_slab` says WHICH tax scheme this rate belongs to, and a
+     VAT or a state-cess slab would be a sibling — a definition whose sub_kind is null cannot be told apart from
+     one authored before the scheme existed, which is the ambiguity every other kind here avoids. */
+  if (kind === 'tax')        return ['gst_slab'];
   return [];
 }
 
@@ -689,6 +772,9 @@ function cbDefFormHTML(){
     + ' placeholder="' + (f.kind === 'ordermodel' ? 'Carton of 6'
                         : f.kind === 'offer'      ? 'Diwali 10%'
                         : f.kind === 'requirement'? 'Minimum for food suppliers'
+                        /* ⚠️ The NAME is what a product cites and what a chit freezes, so it must read as a rate
+                           to someone who never opens this form. "GST 18%", not "standard". */
+                        : f.kind === 'tax'        ? 'GST 18%'
                         :                           'Spices') + '"'
     + ' oninput="cbDefSetField(\'name\',this.value)">'
     + (fields.length ? '<div class="cbdef-rules">' + fields.map(function (x) {
@@ -810,6 +896,13 @@ async function cbDefAfterChange(kind, id){
   if (typeof UI !== 'undefined') UI._ctOffers = undefined;
   await cbDefLoad(true);
   if (!kind && id) { var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0]; kind = d && d.kind; }
+  /**
+   * ⚠️⚠️ AND core.js's LIVE SHELF, which is a THIRD reader — the exact bug UI._ctOffers had, one cache along.
+   * `cbDefsLive` caches per kind for the session, so a product's Pricing & tax pane that painted before the first
+   * slab existed kept offering nothing until a reload: author a slab → make it live → open the product → the
+   * dropdown says "No live slab yet". Works when you test it in the other order, which is the worst kind.
+   */
+  if (kind && typeof cbDefsLive === 'function') await cbDefsLive(kind, true);
   if (kind && typeof UI !== 'undefined' && UI.nav === 'catsetup' && typeof catsetDefsLoad === 'function') {
     await catsetDefsLoad(kind, true);
     if (typeof catsetPaintDetail === 'function') catsetPaintDetail();

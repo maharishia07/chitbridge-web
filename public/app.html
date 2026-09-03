@@ -1562,6 +1562,14 @@ img.attImg{object-fit:cover;display:block}
 <!-- WHICH PRICE APPLIES — Part D declared tiered/regional/time-boxed pricing for months and nothing evaluated
      it. Pure resolver, same posture as offers.js; not wired to a screen yet. -->
 <script src="/app/price-resolve.js"></script>
+<!-- ⚠️⚠️ GENERATED MIRRORS of chitbridge-api/lib/tax.js and lib/tax-slab.js — see the header in each file, and
+     chitbridge-api/scripts/mirror-pure-libs.cjs, which writes them. NEVER edited here.
+     Athi, 2026-09-03: *"each tab in the catalogue is going to attach those and it has to showcase the outcome …
+     so it can be verified then and there."* Showing the invoice split on the product needs the REAL
+     determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
+     Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
+<script src="/app/tax.js"></script>
+<script src="/app/tax-slab.js"></script>
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
@@ -9614,7 +9622,16 @@ function prodVariantsTab(d){
 function prodPricingTab(d){
   /* The pane schedules its own fill, so it works whichever paint produced it (paintProdDetail or a full render). */
   setTimeout(prodPricingLoad, 0);
-  return `<div class="sec">${tx('Pricing & tax')}</div><div id="prod_pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
+  /**
+   * ⭐⭐ TWO HOSTS, ONE LOADER. Athi, 2026-09-03: *"each tab in the catalogue is going to attach those and it has
+   * to showcase the outcome … so it can be verified then and there."* The catalogue-wide read-outs and the
+   * product's OWN tax answer are different subjects, and `prodPricingLoad` rebuilds its host wholesale — so the
+   * tax block gets its own node rather than being redrawn by a function that knows nothing about it.
+   */
+  return `<div class="sec">${tx('Pricing & tax')}</div>`
+    + `<div id="prod_tax" data-testid="prod-tax" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`
+    + `<div class="sec">${tx('Catalogue-wide')}</div>`
+    + `<div id="prod_pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
 }
 /* Two reads, each once per session: the FACE (order method · units · tax treatment) and the PRICING definitions
    (the hub's Pricing section is a registry of definitions, not a face key). */
@@ -9625,13 +9642,136 @@ async function prodPricingLoad(){
   const f=UI._face||{}, h=document.getElementById('prod_pricing'); if(!h) return;
   const row=(l,v,sec)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)"><b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="flex:1">${v}</span><span style="color:var(--blue);cursor:pointer;font-weight:600;font-size:var(--fs-1)" onclick="goCatsetSec('${sec}')">${tx('change')}</span></div>`;
   const units=Array.isArray(f.units)&&f.units.length?f.units.map(esc).join(' · '):'—';
-  const tax=f.tax&&typeof f.tax==='object'?(f.tax.treatment||f.tax.regime||f.tax.label||JSON.stringify(f.tax)):(f.tax||'—');
   const pricing=(UI._pricingDefs&&UI._pricingDefs.length)?UI._pricingDefs.map(esc).join(' · '):tx('list price — no pricing rule declared');
+  /* ⚠️ THE FREE-TEXT "Tax treatment" ROW IS GONE. It showed whatever somebody had typed into a box, which no
+     order path, chit line or counterparty could read — a declaration nothing consumes, sitting on screen looking
+     authoritative. The slab above it is the readable answer; see the note in cap-catsetup.catsetTaxHTML. */
   h.innerHTML = row(tx('Order method'), esc(f.method||'—'), 'storefront')
     + row(tx('Units'), units, 'storefront')
-    + row(tx('Tax treatment'), esc(String(tax)), 'tax')
     + row(tx('Pricing rules'), pricing, 'pricing')
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">${tx('These are catalogue-wide rules that apply to this product. A product does not carry its own copy of them.')}</div>`;
+  prodTaxLoad();
+}
+/**
+ * ⭐⭐ THE PRODUCT'S TAX ANSWER, AND THE INVOICE IT PRODUCES.
+ *
+ * Athi, 2026-09-03: *"in india tax is not simple, each product has different tax criteria, so it has to be product
+ * specific, but there are slabs, so define slab and attach the slab to the product"* — and, on every attach
+ * screen: *"it has to showcase the outcome … so it can be verified then and there."*
+ *
+ * ⚠️⚠️ THE OUTCOME IS COMPUTED BY lib/tax.js ITSELF (app/tax.js is its generated mirror), NEVER BY ARITHMETIC
+ * WRITTEN HERE. A screen that halves the rate its own way agrees with the engine on every example anyone tries
+ * and diverges on the one that matters — an odd rate, an inclusive price, a discount. Same rule for the
+ * resolution: `CBTaxSlab.resolve` is the API's own function, so what this pane shows is what an order will do.
+ *
+ * ⚠️ THREE READS, EACH ONCE PER SESSION AND ONLY ON THIS TAB — the slab shelf, the category shelf (for their
+ * default_slab) and /me (for the seller's state). `cbDefsLive` is core.js's one live-definition loader and is
+ * already cached by every other screen that asks; opening this tab a second time costs nothing.
+ */
+async function prodTaxLoad(){
+  const h0=document.getElementById('prod_tax'); if(!h0) return;
+  if(typeof CBTaxSlab==='undefined'||typeof CBTax==='undefined'){ h0.textContent=tx('Tax module not loaded.'); return; }
+  await Promise.all([ cbDefsLive('tax'), cbDefsLive('category') ]);
+  /* The seller's STATE, and it is not a field we hold: it is the first two digits of the GSTIN, which is what the
+     standard says (GSTIN = 2-digit state code + PAN + …). Deriving it beats adding a column someone must keep in
+     step with their own registration number. ⚠️ Absent is said out loud below, never guessed. */
+  if(UI._meGstn===undefined){ UI._meGstn=null; try{ const m=await meNow(); UI._meGstn=(m&&(m.gstn||(m.entity&&m.entity.gstn)))||null; }catch(_){ UI._meGstn=null; } }
+  const h=document.getElementById('prod_tax'); if(!h) return;
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); if(!p){ h.textContent=''; return; }
+  h.innerHTML=prodTaxHTML(pData(p));
+}
+/** The seller's two-digit state code, from the GSTIN. Null when there is no GSTIN to read it from. */
+function prodSellerState(){
+  const g=String(UI._meGstn||'').trim();
+  return /^\d{2}/.test(g) ? g.slice(0,2) : null;
+}
+/**
+ * What the pane shows. Split out from the loader so the Edit select can repaint it on `change` WITHOUT re-reading
+ * anything — the whole point of "verified then and there" is that the outcome moves as you choose.
+ */
+function prodTaxHTML(d){
+  const slabs=cbDefsCached('tax')||[], cats=cbDefsCached('category')||[];
+  const editing=UI.prodMode==='edit';
+  /**
+   * ⚠️ THE PREVIEW FOLLOWS THE SELECT, NOT THE SAVED PRODUCT. In Edit the person is deciding; showing the outcome
+   * of what is still on disk would answer a question nobody asked. `setOn` builds the hypothetical row the same
+   * way Save will, so the preview cannot disagree with what saving produces.
+   */
+  let row=d;
+  const sel=document.getElementById('ct_tax_slab');
+  if(editing&&sel){ const chosen=slabs.find(x=>String(x.definition_id)===String(sel.value))||null;
+                    row=CBTaxSlab.setOn(Object.assign({},d),chosen); }
+  const r=CBTaxSlab.resolve({ item_data:row, face:UI._face||{}, slabs:slabs, categories:cats });
+
+  const pick=editing
+    ? (slabs.length
+        ? `<select class="inp" id="ct_tax_slab" data-testid="prod-tax-slab" onchange="prodTaxRepaint()">`
+          + `<option value="">— ${esc(tx('inherit'))} —</option>`
+          /* ⚠️⚠️ SELECTED FROM `row`, NOT FROM THE SAVED PRODUCT. The repaint below REPLACES this select, so
+             marking the saved value as selected would snap the dropdown back to the old slab the instant you
+             chose a new one — while the preview beside it showed the new rate. Two controls, one question,
+             visibly disagreeing. `row` is the hypothetical Save has not happened to yet. */
+          + slabs.map(s=>{ const rr=(s.rules&&s.rules.rate); return `<option value="${esc(s.definition_id)}"${String(row[CBTaxSlab.SLAB_KEY]||'')===String(s.definition_id)?' selected':''}>${esc(s.name)}${rr!=null?' · '+esc(rr)+'%':''}</option>`; }).join('')
+          + `</select>`
+          /* ⚠️ "inherit" is spelled out, because a blank select reads as "no tax" and that is the one thing it
+             does not mean. defaults.js: a blank cell means INHERIT, not CLEAR. */
+          + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Blank inherits — first this product’s category, then the catalogue default.')}</div>`
+        : `<div style="color:var(--grey)">${tx('No live slab yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`)
+    : `<div data-testid="prod-tax-resolved"><b>${esc(CBTaxSlab.describe(r))}</b></div>`;
+
+  return `<div style="padding-bottom:8px">${pick}</div>` + prodTaxPreviewHTML(d,r);
+}
+/** Re-render the pane in place on a select change. ⚠️ No read — everything it needs is already cached. */
+function prodTaxRepaint(){ const h=document.getElementById('prod_tax'); if(!h) return;
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); if(p) h.innerHTML=prodTaxHTML(pData(p)); }
+/**
+ * ⭐⭐ ONE LINE OF THIS PRODUCT, BOTH WAYS. Athi: *"showcase the outcome … so it can be verified then and there."*
+ *
+ * ⚠️⚠️ BOTH CASES ARE SHOWN BECAUSE THE PRODUCT DOES NOT DECIDE WHICH APPLIES. Same goods, same price, same
+ * buyer: the place of supply decides CGST+SGST against IGST (see the header of tax.js), and that is known at
+ * ORDER time, not at catalogue time. Showing only one would teach the merchant the wrong half.
+ *
+ * ⚠️ THE STATE CODES ARE A STAND-IN WHEN THE GSTIN IS NOT SET, AND IT IS LABELLED. The split depends only on
+ * SAME state vs OTHER state, never on which — so the arithmetic is exact either way, and the sentence says the
+ * state itself is missing rather than showing a number that looks like a fact.
+ */
+function prodTaxPreviewHTML(d,r){
+  const st=prodSellerState(), S=st||'29', OTHER=(S==='27'?'29':'27');
+  const price=Number(pPrice(d))||0;
+  const line={ name:pName(d), qty:1, unit_price:price, rate:(r.rate==null?0:r.rate),
+               cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'' };
+  const one=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
+  const intra=one(S), inter=one(OTHER);
+  const n=(v)=>`<bdi>${esc(String(v))}</bdi>`;
+  /* INV-01's own field names, because they are what a buyer's system already speaks — and what makes "e-invoice
+     ready" a mapping rather than a claim. The code is shown, not translated away. */
+  const cell=(t,it,tid,rows)=>`<div data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}"`
+    + ` data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}"`
+    + ` data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}"`
+    + ` style="flex:1 1 200px;border:1px solid var(--line);border-radius:9px;padding:9px 11px">`
+    + `<div style="font-weight:700;margin-bottom:5px">${esc(t)}</div>`
+    + rows.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--grey)">${esc(x[0])}</span>${n(x[1])}</div>`).join('')
+    + `</div>`;
+  const cess=(it)=>it.CesAmt?[['CesAmt',it.CesAmt]]:[];
+  if(r.rate==null) return `<div data-testid="prod-tax-preview" style="font-size:var(--fs-1);color:var(--grey)">`
+    + `${tx('No rate to show — attach a slab, or set one on the category or the catalogue.')}</div>`;
+  return `<div data-testid="prod-tax-preview">`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
+    + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })
+    + `</div>`
+    + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
+    +   cell(tx('Same state'), intra, 'prod-tax-preview-intra',
+          [['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]].concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
+    +   cell(tx('Other state'), inter, 'prod-tax-preview-inter',
+          [['AssAmt',inter.AssAmt],['GstRt',inter.GstRt+'%'],['IgstAmt',inter.IgstAmt]].concat(cess(inter)).concat([['TotItemVal',inter.TotItemVal]]))
+    + `</div>`
+    + (st
+        ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('Your state code is {s}, from your GSTIN.', { s: esc(st) })}</div>`
+        /* ⚠️ SAID, NOT GUESSED. The split is exact regardless — it turns only on same vs other — but a state
+           code shown as if it were ours would be read as one. */
+        : `<div style="font-size:var(--fs-1);color:var(--warn-3);margin-top:6px">⚠️ ${tx('Seller state not set — add your GSTIN in Profile. The split above is still exact; only the state is unknown.')}</div>`)
+    + (r.pending ? `<div style="font-size:var(--fs-1);color:var(--warn-3);margin-top:4px">⚠️ ${txf('Not in force until {d}.', { d: esc(r.effective_from) })}</div>` : '')
+    + `</div>`;
 }
 function prodDetailHTML(){
   if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
@@ -9708,6 +9848,22 @@ function ctReadForm(orig){
     if(raw === ''){ delete base[k]; return; }
     base[k] = (el.getAttribute('data-type') === 'number' && isFinite(+raw)) ? +raw : raw;
   }); }
+  /**
+   * ⭐⭐ THE TAX SLAB, READ THE SAME WAY THE DECLARED COLUMNS ARE — only when the control is ON SCREEN. The
+   * Pricing & tax pane fills asynchronously, so a Save pressed before it lands must leave the product's slab
+   * exactly as it was. Absent is not "cleared"; a form that cannot show a field must never erase it.
+   *
+   * ⚠️⚠️ WRITTEN THROUGH `CBTaxSlab.setOn`, which is the API's own writer, so the citation and its travelling
+   * copy (`tax_slab_name`, `gst_rate`) can never be written apart. A counterparty holding this product cannot
+   * resolve our definition_id and never will — [[reference-cb-core-principle]] — so the rate has to ride along.
+   * ⚠️ Choosing "— inherit —" REMOVES all three keys rather than writing a zero: a product with no slab falls to
+   * its category and then the catalogue, and 0% is a different, real answer.
+   */
+  const slabSel = document.getElementById('ct_tax_slab');
+  if(slabSel && typeof CBTaxSlab !== 'undefined'){
+    const chosen = (cbDefsCached('tax')||[]).find(x=>String(x.definition_id)===String(slabSel.value)) || null;
+    CBTaxSlab.setOn(base, chosen);
+  }
   const host = document.getElementById('ct_categories');
   /* No chips on screen (the shelf could not be read) → leave whatever the product already had. Absent is not
      "cleared": a form that cannot show a field must never be the thing that erases it. */

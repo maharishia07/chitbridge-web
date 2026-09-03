@@ -37,6 +37,9 @@ async function cbcatLoad(force){
          Same trick that let multi-category ship against live data this morning. */
       return { id: d.definition_id, name: d.name, note: d.note || '', status: d.status || 'draft',
                parent: (d.rules && d.rules.parent) || null,
+               /* ⭐ The middle rung of the tax inheritance, riding in `rules` beside `parent` for the same
+                  reason: free-form jsonb, so a second attribute on a category costs no migration. */
+               default_slab: (d.rules && d.rules.default_slab) || null,
                version: d.current_version || 1, created_at: d.created_at };
     });
     cbcatOrder();
@@ -121,6 +124,41 @@ function cbcatParentOptions(id){
   });
 }
 
+/**
+ * ⭐⭐ THE MIDDLE RUNG OF THE TAX INHERITANCE — Athi, 2026-09-03: *"each product has different tax criteria, so it
+ * has to be product specific, but there are slabs"*.
+ *
+ * Tally sets a GST rate on the stock item, the stock GROUP and the company, and takes the most specific that
+ * answers. This is the group rung: rice does not need its own slab if everything in Grains is 5%.
+ *
+ * ⚠️ IT RIDES IN `rules`, like `parent` — free-form jsonb, so a second attribute on a category costs no migration.
+ * ⚠️ LIVE SLABS ONLY, and read through `cbDefsLive` — core.js's one live-definition loader, cached per kind. A
+ * fourth private fetch here is how four screens come to disagree about what is on the shelf.
+ * ⚠️ A category in a product's list that names no slab is SKIPPED, not treated as "no tax" — see lib/tax-slab.js.
+ */
+function cbcatSlabPickHTML(f){
+  var slabs = (typeof cbDefsCached === 'function') ? cbDefsCached('tax') : null;
+  if (slabs === null) {
+    if (typeof cbDefsLive === 'function') cbDefsLive('tax').then(function(){ if (CBCAT_UI.form) cbcatPaint(); });
+    return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">' + tx('reading your slabs…') + '</div>';
+  }
+  /* ⚠️ An empty picker says WHY and where to go. A lone blank option reads as "this category cannot have one". */
+  if (!slabs.length) return '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">'
+    + txf('No live slab yet — name one under {where}.', { where: '<b>' + tx('Catalogue setup') + ' › ' + tx('Tax') + '</b>' })
+    + '</div>';
+  var cur = f.default_slab || '';
+  return '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">'
+    + '<option value="">— ' + esc(tx('inherit the catalogue default')) + ' —</option>'
+    + slabs.map(function(d){
+        var r = d.rules || {};
+        return '<option value="' + esc(d.definition_id) + '"' + (String(cur) === String(d.definition_id) ? ' selected' : '') + '>'
+          + esc(d.name) + (r.rate != null ? ' · ' + esc(r.rate) + '%' : '') + '</option>';
+      }).join('')
+    + '</select>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">'
+    + tx('Products here that name no slab of their own use this.') + '</div>';
+}
+
 /* ── write ───────────────────────────────────────────────────────────────────────────────────────────────────── */
 async function cbcatSave(){
   var f = CBCAT_UI.form; if (!f) return;
@@ -144,10 +182,13 @@ async function cbcatSave(){
   if (clash) { if (err) err.textContent = 'You already have a live category called “' + clash.name + '”.'; return; }
   try {
     if (f.id) {
-      await api('defSave', { params: { id: f.id }, body: { name: name, note: f.note || '', rules: { parent: f.parent || null } } });
+      /* ⚠️⚠️ EVERY RULE KEY IS RE-SENT, ALWAYS. PUT /definitions/:id replaces `rules` wholesale (it writes a new
+         version row from exactly what it is given), so sending `{parent}` alone would silently DROP the default
+         slab the moment anyone renamed a category — data loss with no error and nothing on screen to show it. */
+      await api('defSave', { params: { id: f.id }, body: { name: name, note: f.note || '', rules: cbcatRules(f) } });
       toast('Renamed — every product that cites it follows.');
     } else {
-      var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: { parent: f.parent || null } } });
+      var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: cbcatRules(f) } });
       var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
       /* Live immediately: a draft category cannot be attached to anything, so it would be a shelf you cannot use. */
       if (id) await api('defSave', { params: { id: id }, body: { status: 'live' } });
@@ -449,12 +490,17 @@ async function cbcatSeedRun(vertical, only, own){
 function cbcatSelect(id){ CBCAT_UI.sel = id; CBCAT_UI.mode = 'view'; CBCAT_UI.form = null;
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
   cbcatPaint(); }
-function cbcatNew(){ CBCAT_UI.mode = 'edit'; CBCAT_UI.sel = null; CBCAT_UI.form = { id: null, name: '', note: '', parent: CBCAT_UI.sel || null };
+/** The whole `rules` object a category writes. ⚠️ ONE builder, both call sites — see the note in cbcatSave. */
+function cbcatRules(f){
+  return { parent: f.parent || null, default_slab: f.default_slab || null };
+}
+function cbcatNew(){ CBCAT_UI.mode = 'edit'; CBCAT_UI.sel = null; CBCAT_UI.form = { id: null, name: '', note: '', parent: CBCAT_UI.sel || null, default_slab: null };
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
   cbcatPaint(); }
 function cbcatEdit(id){
   var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === id; })[0]; if (!c) return;
-  CBCAT_UI.mode = 'edit'; CBCAT_UI.form = { id: c.id, name: c.name, note: c.note, parent: c.parent || null }; cbcatPaint();
+  CBCAT_UI.mode = 'edit'; CBCAT_UI.form = { id: c.id, name: c.name, note: c.note, parent: c.parent || null,
+                                            default_slab: c.default_slab || null }; cbcatPaint();
 }
 function cbcatCancel(){ CBCAT_UI.mode = 'view'; CBCAT_UI.form = null; cbcatPaint(); }
 function cbcatField(k, v){ if (CBCAT_UI.form) CBCAT_UI.form[k] = v; }
@@ -528,6 +574,8 @@ function cbcatDetailHTML(){
                   { n: String((CBCAT_UI.counts && CBCAT_UI.counts.by && CBCAT_UI.counts.by[f.id]) || 0) })
             + '</div>'
           : '')
+      + '<label class="fl">' + tx('Default tax slab') + '</label>'
+      + cbcatSlabPickHTML(f)
       + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
