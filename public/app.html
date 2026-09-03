@@ -762,8 +762,13 @@
   .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
   .catgchip{background:var(--blue-tint-bg);color:var(--blue);border-color:#d5e2f7}
   .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
-  .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:var(--blue-tint-bg);
-          border:1px solid #d5e2f7;border-radius:9px}
+  /* ⚠️⚠️ IT WRAPS, because a fourth action overflowed it. This bar lives in the LEFT pane, which is ~340px wide;
+     "2 selected · Availability · Categorise · Offer · Done" does not fit on one line, and without wrapping the
+     last button escaped the panel entirely and sat on top of the detail view. A toolbar that grows by one button
+     and silently pushes a control off-screen is the failure to design against — the actions are a set, and a set
+     that outgrows its row belongs on two rows, not partly outside the box. */
+  .ctpick{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:8px;padding:7px 9px;
+          background:var(--blue-tint-bg);border:1px solid #d5e2f7;border-radius:9px}
   .ctpick button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:4px 10px;
                  font-size:var(--fs-1);cursor:pointer;color:var(--ink)}
   .ctpick button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
