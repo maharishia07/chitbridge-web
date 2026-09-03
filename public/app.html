@@ -5722,10 +5722,11 @@ async function ccMatchMine(it){
     var p=(UI.prods||[]).find(function(x){ return String((x.item_data&&x.item_data.name)||x.name||'').trim().toLowerCase()===nm; });
     if(!p || CC.items.indexOf(it)<0) return;
     it.item_id=p.item_id||p.id||null; it.sku=(p.item_data&&p.item_data.sku)||p.sku||it.sku||null;
-    var cats=(typeof catgIdsOf==='function')?catgIdsOf(p.item_data||p):((p.item_data&&p.item_data.categories)||[]);
+    /* the categories are a nicety; the RE-SYNC is the point — never let the first stop the second */
+    var cats=[]; try{ cats=(typeof catgIdsOf==='function')?catgIdsOf(p.item_data||p):((p.item_data&&p.item_data.categories)||[]); }catch(_){ cats=[]; }
     it.categories=Array.isArray(cats)?cats.slice():[];
-    if(typeof ccRenderTotal==='function') ccRenderTotal();
   }catch(_){}
+  try{ ccRenderTotal(); }catch(_){}
 }
 function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 /**

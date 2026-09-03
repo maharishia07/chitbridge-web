@@ -11,6 +11,11 @@ test('[TAX-03] a rated chit line → seller output · buyer ITC · frozen at com
   test.setTimeout(300000);
   /* SELLER in the default context */
   const seller = await mintEntity(page);
+  /* ⚠️ A LEDGER IS PER GSTIN. A fresh entity has none, so the engine honestly says "place of supply unknown" and
+     charges nothing (tax 0, not a guess). Both parties get one through the same save the Profile form uses —
+     Karnataka (29) sells to Maharashtra (27): inter-state, one IGST head. */
+  const setGstin = (pg, g) => pg.evaluate(async (gstn) => api('saveProfile', { body: { gstn } }), g);
+  await setGstin(page, '29ABCDE1234F1Z5');
   const prod = 'Taxed Rice ' + Date.now();
   await addProduct(page, { name: prod, price: 1000 });
 
@@ -29,6 +34,7 @@ test('[TAX-03] a rated chit line → seller output · buyer ITC · frozen at com
   /* BUYER in a clean context */
   const buyer = await mintInContext(browser, {});
   try {
+    await setGstin(buyer.page, '27ABCDE1234F1Z5');
     await test.step('SELLER sends a chit with that product line to BUYER', async () => {
       await composeChit(page, { subject: 'Tax ledger ' + Date.now(), item: prod, qty: 2, price: 1000, recipients: [buyer.name] });
     });
@@ -40,7 +46,9 @@ test('[TAX-03] a rated chit line → seller output · buyer ITC · frozen at com
       const row = led.rows.find((r) => r.side === 'output' && /Tax ledger/.test(r.subject || ''));
       expect(row, 'the sent chit appears as output').toBeTruthy();
       expect(row.heads.taxable).toBe(2000);
-      expect(row.heads.tax).toBe(360);
+      /* when this fails, say WHY: was the line rated at send, and could the engine decide the supply? */
+      const why = await page.evaluate(async (id) => { try { const i = await api('taxInvoice', { params: { id } }); const it = (i.invoice.ItemList || [])[0] || {}; const c = await api('chit', { params: { id } }).catch(() => null); const li = c && (c.line_items || (c.detail && c.detail.line_items) || (c.chit && c.chit.line_items)); return { line0: Array.isArray(li) ? li[0] : (li || 'no line_items on ' + Object.keys(c || {}).join(',')), rated: i.rated, unrated: i.unrated, GstRt: it.GstRt, supply: i.invoice._cb && i.invoice._cb.supply, notes: i.invoice._cb && i.invoice._cb.notes, seller: i.seller, buyer: i.buyer }; } catch (e) { return { error: String(e && e.message) }; } }, row.chit_id);
+      expect(row.heads.tax, 'tax on the row — ' + JSON.stringify(why)).toBe(360);
       expect(row.provisional).toBe(true);
       chitId = row.chit_id;
     });

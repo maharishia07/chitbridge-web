@@ -276,10 +276,17 @@ test('[OFF-02] two live offers on one product — the product page shows the com
     await page.getByTestId('chit-item-qty').fill('3');
     await page.getByTestId('chit-item-price').fill('1000');
     await page.getByTestId('chit-item-add').click();
-    await expect.poll(async () => page.evaluate(() => {
+    const probe = () => page.evaluate(() => {
       const items = (typeof CC !== 'undefined' && CC.items) || [];
       const mine = items.find((it) => !it._auto_offer);
-      return { matched: !!(mine && mine.item_id), off: items.some((it) => (it._offer_off || 0) > 0 || it._auto_offer), savings: (typeof CC !== 'undefined' && CC.savings) || 0 };
-    }), { timeout: 20000 }).toMatchObject({ matched: true, off: true });
+      let adj = null, lines = null, offers = null;
+      try { lines = ccOfferLines(); offers = (CC.offers || []).map((o) => ({ id: o.id, kind: o.kind, scope: o.scope, applies_to: o.applies_to, status: o.status })); adj = CBOffers.evaluate({ lines, offers: CC.offers }).adjustments; } catch (e) { adj = String(e && e.message); }
+      let sync = null, fm = null;
+      try { ccSyncOffers(); sync = { off: CC.items[0] && CC.items[0]._offer_off, savings: CC.savings, notes: CC.offerNotes }; } catch (e) { sync = 'ERR ' + String(e && e.message); }
+      try { fm = fmtMoney(3000, (typeof myCur === 'function') ? myCur() : 'INR'); } catch (e) { fm = 'ERR ' + String(e && e.message); }
+      return { matched: !!(mine && mine.item_id), off: items.some((it) => (it._offer_off || 0) > 0 || it._auto_offer), savings: (typeof CC !== 'undefined' && CC.savings) || 0, sync, fm, lines, offers, adj };
+    });
+    await expect.poll(async () => { const r = await probe(); return { matched: r.matched, off: r.off }; }, { timeout: 20000 }).toMatchObject({ matched: true, off: true })
+      .catch(async (e) => { throw new Error(e.message + ' PROBE ' + JSON.stringify(await probe()).slice(0, 1500)); });
   });
 });
