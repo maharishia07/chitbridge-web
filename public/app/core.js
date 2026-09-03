@@ -298,6 +298,43 @@ function cbDefsCached(kind){ return _DEFS[kind] || null; }
 
 var _CATG = null;          // [{id,name}] — the live shelf, as last read
 var _catgReq = null;       // in-flight promise, so a form opening twice does not fetch twice
+/**
+ * ── ⭐⭐ CREATING A CATEGORY, BESIDE THE CACHE IT UPDATES ───────────────────────────────────────────────────────
+ *
+ * Moved here from cap-catalogue.js when the six-step wizard was deleted (Athi, 2026-09-03: "delete the old
+ * wizard"). They were the only two things in that file the rest of the app still called.
+ *
+ * ⭐ AND THIS IS WHERE THEY BELONGED ALL ALONG. Both read and refresh `_CATG` / `cbCatgLive`, which live right
+ * here — so sitting in a LAZY module meant the product form had to `ensureCap('catalogue')` before it could
+ * offer "new category", and the old comment said exactly why that was dangerous: *"calling it directly works
+ * only if you happened to open the wizard earlier in the session — the worst kind of bug, because it works when
+ * you test it and not when someone else does."* core.js is eager, so the dance is gone with the wizard.
+ */
+async function cbCatgCreate(name){
+  name = String(name || '').trim();
+  if (name.length < 2) throw new Error('Give the category a name of at least 2 characters.');
+  var dup = (_CATG || []).filter(function(c){ return c.name.toLowerCase() === name.toLowerCase(); })[0];
+  if (dup) return dup;      // ⚠️ Silently reusing the existing one beats minting a second shelf with one name.
+  var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
+  var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+  if (!id) throw new Error('Created, but the server did not return an id.');
+  await api('defSave', { params: { id: id }, body: { status: 'live' } });
+  await cbCatgLive(true);
+  return { id: id, name: name };
+}
+
+function cbCatgAskNew(onDone){
+  if (typeof promptAsk !== 'function') return;
+  promptAsk('New category', { label:'What is it called?', placeholder:'e.g. Fasteners', maxlength:60,
+    okLabel:'Create',
+    hint:'It goes on the shelf as <b>live</b>, so you can use it straight away. Rename it any time under '
+       + 'Definitions — your products follow the rename.' },
+    function(v){
+      cbCatgCreate(v).then(function(c){ toast('“' + c.name + '” added ✓'); if (onDone) onDone(c); })
+                     .catch(function(e){ toast((e && e.message) || 'Could not create that.'); });
+    });
+}
+
 function cbCatgLive(force){
   if (!force && _CATG) return Promise.resolve(_CATG);
   if (!force && _catgReq) return _catgReq;

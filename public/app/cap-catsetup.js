@@ -433,13 +433,32 @@ async function catsetUnitToggle(u, on){
  * not a second pattern: `undefined` means not read yet, `null` means the read failed.
  */
 var CATSET_FACE;
+/**
+ * ⚠️⚠️ A STALE READ MUST NOT CLOBBER A NEWER WRITE — and this one did, visibly.
+ *
+ * Found 2026-09-03 driving the new Storefront panel: tick `kg`, tick `litre`, and the server ended up holding
+ * only `litre`. The read fired when the section opened was still in flight; it landed AFTER both saves and
+ * overwrote CATSET_FACE with the face as it had been before either of them. The next save then merged onto
+ * that stale object and posted it — so a unit the user had ticked was silently dropped, by the network, with
+ * no error anywhere.
+ *
+ * ⭐ THE GUARD IS A GENERATION, NOT A BUSY FLAG. A flag would only stop a SECOND read starting; the damage is
+ * done by a read that started legitimately and finished late. Every local write bumps the generation, and a
+ * response from an older generation is discarded — it cannot be newer than what we already hold.
+ */
+var _catsetFaceGen = 0;
 function catsetFaceLoad(){
+  var gen = _catsetFaceGen;
   return api('catFaceGet')
-    .then(function(r){ CATSET_FACE = (r && r.face) || null; })
-    .catch(function(){ CATSET_FACE = null; });
+    .then(function(r){ if (gen === _catsetFaceGen) CATSET_FACE = (r && r.face) || null; })
+    .catch(function(){ if (gen === _catsetFaceGen) CATSET_FACE = null; });
 }
-/* Called by _vSave so the card reflects a save without a round trip. */
-function catsetFaceSet(f){ CATSET_FACE = f || null; }
+/**
+ * Called by _vSave so the card reflects a save without a round trip.
+ * ⚠️ It also INVALIDATES any read in flight — see above. Setting the face locally is a statement that what we
+ * hold is newer than anything the server was asked for before now.
+ */
+function catsetFaceSet(f){ _catsetFaceGen++; CATSET_FACE = f || null; }
 function catsetVariantStateHTML(){
   if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div class="catset-load">reading…</div>'; }
   var id = (CATSET_FACE && CATSET_FACE.identity) || {};
@@ -594,22 +613,9 @@ function catsetBody(k){
       + 'one the price provenance draws: we carry what was said and who said it.</div>', '')
     + catsetCard('Declared', catsetTaxHTML(), '');
   }
-  if (k === 'face') {
-    return catsetCard('How customers order from you',
-      'The order method (cart, quantity, enquiry, range), the units you trade in, the facets a buyer can filter '
-      + 'by, and your tax treatment. This is what a customer meets on your storefront.'
-      + '<div class="catset-std">In PIM terms this is the <b>channel</b> — the same products, presented for a '
-      + 'particular audience. ⚠️ It changes what buyers see, so it is deliberately behind its own step-by-step '
-      + 'setup rather than a row of switches.</div>',
-      /**
-       * ⚠️⚠️ IT SAID "⚙ Open catalogue setup" — ON THE CATALOGUE SETUP SCREEN. A button whose label is the name
-       * of the screen you are already on reads as a second, realer version of it, which is exactly how two setup
-       * flows came to exist in a reader's mind. It opens the storefront STEPS; the label says so now.
-       */
-      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">' + tx('🏪 Set up the storefront steps') + '</button>')
-    /* Selling methods and facets describe what a buyer meets, so they read under the storefront control. */
-    + catsetRegistry(['method', 'facet']);
-  }
+  /* ⭐ The storefront controls are REAL here now — see catsetSfHTML. This used to be a paragraph and a button
+     that opened the six-step wizard, so the hub owned nine of its ten sections and handed the tenth back. */
+  if (k === 'face') return catsetSfHTML();
   return '';
 }
 
@@ -779,7 +785,7 @@ async function catsetAdoptedLoad(){
  * this hub that could disagree with itself about what "adopted" means.
  */
 function catsetBlueprint(){
-  UI.nav = 'cataloguesetup';
+  navTo('catsetup');
   /* Land on the blueprint step rather than the top of the walk: the reader pressed a button that named it. */
   try { UI.cw = UI.cw || {}; UI.cw.step = 1; } catch(_) {}
   renderApp();
@@ -1191,4 +1197,128 @@ function catsetCss(){
     '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
+}
+
+/**
+ * ── ⭐⭐ THE STOREFRONT CONTROLS, IN THE HUB ────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-03: *"delete the old wizard."*
+ *
+ * ⚠️ IT COULD NOT SIMPLY BE DELETED. This section used to be a paragraph and a button that opened the six-step
+ * wizard — so the hub owned nine of its ten sections and handed the tenth back to the screen it replaced. Deleting
+ * the wizard first would have left storefront setup with no editor at all, which is not a migration, it is a
+ * removal. The controls had to exist here before the other screen could go.
+ *
+ * ⭐ EVERY OPTION IS READ FROM THE REGISTRY THE CODE ALREADY PUBLISHES — CBCatalogue.METHODS · UNITS · FACETS.
+ * Re-listing them here is how two lists of "the methods we support" drift apart, and this screen has already made
+ * that argument twice (offers.js KINDS, cart-ui MODELS).
+ */
+function catsetSfHTML(){
+  /**
+   * ⚠️ THE CARD SURVIVES THE LOADING STATE. My first version returned a bare "reading…" while the face was in
+   * flight, so the whole section — heading, explanation, everything — vanished for a beat and came back. The
+   * catsetup-panels guard caught it as a THIN panel, which is exactly the shape it was built to catch: a screen
+   * that shows nothing is indistinguishable from a screen that is broken. Every sibling section here keeps its
+   * explanatory text outside the loading branch; this one now does too.
+   */
+  var _loading = (CATSET_FACE === undefined);
+  if (_loading) catsetFaceLoad().then(catsetPaintDetail);
+  var f = CATSET_FACE || {};
+  var P = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  if (!P) return '<div class="catset-none">' + tx('The catalogue model is not loaded.') + '</div>';
+
+  var method = f.method || (f.order_input && f.order_input.preset) || '';
+  var units = Array.isArray(f.units) ? f.units : [];
+  var facets = (f.facets && typeof f.facets === 'object') ? f.facets : {};
+  var defUnit = (f.defaults && f.defaults.unit) || '';
+
+  var methods = (P.METHODS || []).map(function(m){
+    return '<div class="bulkrow' + (method === m.k ? ' on' : '') + '" data-testid="catset-sf-method-' + esc(m.k) + '"'
+      + ' onclick="catsetSfMethod(\'' + esc(m.k) + '\')" style="cursor:pointer">'
+      + '<span class="bn">' + esc(m.label) + '</span>'
+      + '<span class="bh">' + (method === m.k ? esc(tx('in use')) : '') + '</span></div>';
+  }).join('');
+
+  /* The catalogue's ALLOWED SET. An item picks from it; with exactly one, nobody is asked per product. */
+  var known = (P.UNITS || []).slice();
+  units.forEach(function(u){ if (known.indexOf(u) < 0) known.push(u); });
+  var unitChips = known.map(function(u){
+    var on = units.indexOf(u) >= 0;
+    return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
+      + ' data-testid="catset-sf-unit-' + esc(u) + '" onclick="catsetSfUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
+  }).join(' ');
+
+  /**
+   * ⭐ THE DEFAULT UNIT LIVES HERE, and only appears once there is a choice to make. One allowed unit IS the
+   * default — asking then would be a question with one answer. See lib/defaults.js: a row that says nothing
+   * inherits this, and changing it moves every row that never overrode.
+   */
+  var defRow = '';
+  if (units.length > 1) {
+    defRow = '<div class="catset-drow" style="margin-top:9px"><span class="dn">' + esc(tx('Default unit'))
+      + '</span><span class="bh">' + units.map(function(u){
+          return '<button type="button" class="cbpick-chip' + (defUnit === u ? ' on' : '') + '"'
+            + ' data-testid="catset-sf-def-' + esc(u) + '" onclick="catsetSfDefUnit(\'' + esc(u) + '\')">' + esc(u) + '</button>';
+        }).join(' ') + '</span></div>'
+      + '<div class="catset-std">' + esc(tx('A product that names no unit uses this one. Change it and every '
+      + 'product that never set its own follows.')) + '</div>';
+  } else if (units.length === 1) {
+    defRow = '<div class="catset-std">' + esc(tx('One unit, so every product uses it — nothing to choose.')) + '</div>';
+  }
+
+  var facetRows = (P.FACETS || []).map(function(k){
+    var on = !!facets[k];
+    return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
+      + ' data-testid="catset-sf-facet-' + esc(k) + '" onclick="catsetSfFacet(\'' + esc(k) + '\')">' + esc(k) + '</button>';
+  }).join(' ');
+
+  return catsetCard(tx('How customers order from you'),
+      '<div class="catset-std">' + esc(tx('In PIM terms this is the channel — the same products, presented for a '
+      + 'particular audience. It changes what buyers see.')) + '</div>'
+    + (_loading ? '<div class="catset-load">' + tx('reading…') + '</div>' : '')
+    + '<div class="catset-sub">' + esc(tx('Order method')) + '</div>'
+    + '<div class="bulklist" data-testid="catset-sf-methods">' + methods + '</div>'
+    + '<div class="catset-sub" style="margin-top:12px">' + esc(tx('Units you trade in')) + '</div>'
+    + '<div data-testid="catset-sf-units">' + unitChips + '</div>'
+    + defRow
+    + '<div class="catset-sub" style="margin-top:12px">' + esc(tx('What a buyer can filter by')) + '</div>'
+    + '<div data-testid="catset-sf-facets">' + facetRows + '</div>', '')
+    + catsetRegistry(['method', 'facet']);
+}
+
+/** ⚠️ order_input is written BESIDE method, because the server resolves the contract from it — see order-input.js. */
+function catsetSfMethod(k){
+  var f = CATSET_FACE || {};
+  var oi = Object.assign({}, f.order_input || {}, { preset: k });
+  catsetFaceSave({ method: k, order_input: oi }).then(catsetPaintDetail);
+}
+
+function catsetSfUnit(u){
+  var f = CATSET_FACE || {};
+  var units = (Array.isArray(f.units) ? f.units : []).slice();
+  var i = units.indexOf(u);
+  if (i >= 0) units.splice(i, 1); else units.push(u);
+  /**
+   * ⚠️ A DEFAULT THAT IS NO LONGER ALLOWED IS NOT A DEFAULT. Removing the unit that products inherit would leave
+   * every silent row pointing at something this catalogue no longer trades in — so it is cleared here rather than
+   * left dangling, and with one unit remaining that unit becomes the answer on its own.
+   */
+  var d = Object.assign({}, f.defaults || {});
+  if (d.unit && units.indexOf(d.unit) < 0) delete d.unit;
+  catsetFaceSave({ units: units, defaults: d }).then(catsetPaintDetail);
+}
+
+function catsetSfDefUnit(u){
+  var f = CATSET_FACE || {};
+  var d = Object.assign({}, f.defaults || {});
+  d.unit = (d.unit === u) ? '' : u;      /* pressing the current one clears it — a default is optional */
+  if (!d.unit) delete d.unit;
+  catsetFaceSave({ defaults: d }).then(catsetPaintDetail);
+}
+
+function catsetSfFacet(k){
+  var f = CATSET_FACE || {};
+  var fa = Object.assign({}, f.facets || {});
+  fa[k] = !fa[k];
+  catsetFaceSave({ facets: fa }).then(catsetPaintDetail);
 }
