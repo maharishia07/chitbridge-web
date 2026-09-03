@@ -9250,15 +9250,33 @@ function prodOfferTaxFooterHTML(d, qty, off){
   const r = CBTaxSlab.resolve({ item_data: d, face: UI._face || {}, slabs: slabs || [], categories: cats || [] });
   if (r.rate == null) return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('No tax slab resolves for this product — see Pricing & tax.')}</div>`;
   const price = cbAmount(d.price) || 0;
-  const it = CBTax.determine({ seller: { State: prodSellerState() || '29' }, buyer: { Pos: prodSellerState() || '29' },
-    lines: [{ name: pName(d), qty: qty, unit_price: price, discount: off, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
+  const S = prodSellerState() || '29';
+  const one = (disc) => CBTax.determine({ seller: { State: S }, buyer: { Pos: S },
+    lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
+  const it = one(off);
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
-  const row = (l, v, strong) => `<div style="display:flex;justify-content:space-between;gap:8px${strong ? ';font-weight:700' : ''}"><span style="color:var(--grey)">${l}</span><bdi>${esc(money(v))}</bdi></div>`;
+  const row = (l, v, strong, tid) => `<div${tid ? ' data-testid="' + tid + '"' : ''} style="display:flex;justify-content:space-between;gap:8px${strong ? ';font-weight:700' : ''}"><span style="color:var(--grey)">${l}</span><bdi>${esc(money(v))}</bdi></div>`;
   return `<div class="prodprev-tax" data-testid="prod-offer-preview-tax-${qty}" data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}" style="border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:var(--fs-2);font-variant-numeric:tabular-nums">`
     + row(tx('Before tax'), it.AssAmt)
     + row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100)
     + row(tx('After tax'), it.TotItemVal, true)
+    + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row)
     + `</div>`;
+}
+/**
+ * ⭐ "YOU SAVE" — Athi, 2026-09-04: *"need to show total savings?"* Two honest numbers, not one: what came off the
+ * PRICE (every offer together, before tax) and what stays in the buyer's pocket ALL-IN — the discount plus the tax
+ * that would have been charged on it. The second is the larger and the truer; a screen that shows only the first
+ * under-sells the offer by exactly the tax rate. Both from the same determine() call, at list and at net.
+ */
+function prodSavingsRowHTML(off, totalAtList, totalNet, gross, row){
+  if (!(off > 0)) return '';
+  const allIn = Math.round((totalAtList - totalNet) * 100) / 100;
+  const pct = gross > 0 ? Math.round(off / gross * 1000) / 10 : 0;
+  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
+  return `<div data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="display:flex;justify-content:space-between;gap:8px;color:var(--ok-2);font-weight:700;margin-top:4px">`
+    + `<span>${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></span>`
+    + `<span><bdi>${esc(money(off))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('before tax')}</span> · <bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></span></div>`;
 }
 
 /**
@@ -9896,6 +9914,7 @@ function prodTaxPreviewHTML(d,r){
   const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate),
                cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'' };
   const one=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
+  const one0=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[Object.assign({}, line, { discount:0 })] }).ItemList[0];   /* at list, for "you save" */
   const intra=one(S), inter=one(OTHER);
   const n=(v)=>`<bdi>${esc(String(v))}</bdi>`;
   /* INV-01's own field names, because they are what a buyer's system already speaks — and what makes "e-invoice
@@ -9929,6 +9948,7 @@ function prodTaxPreviewHTML(d,r){
     + `<span><span style="color:var(--grey)">${txf('GST {rate}%', { rate: String(r.rate) })}</span> <b><bdi>${inr(Math.round((intra.TotItemVal-intra.AssAmt)*100)/100)}</bdi></b></span>`
     + `<span><span style="color:var(--grey)">${tx('After tax')}</span> <b><bdi>${inr(intra.TotItemVal)}</bdi></b></span>`
     + `</div>`
+    + (off>0 ? prodSavingsRowHTML(off, one0(S).TotItemVal, intra.TotItemVal, price, null) : '')
     + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
     +   cell(tx('Same state'), intra, 'prod-tax-preview-intra',
           (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]]).concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
