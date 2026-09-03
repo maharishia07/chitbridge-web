@@ -5035,7 +5035,8 @@ async function selfBillCart(){
   if (typeof ensureCatalogue === 'function') await ensureCatalogue();
   var arr = (STORE.catalogue || []);
   var cat = { shop: { bridge_id: 'self', display_name: tx('Your catalogue') },
-    items: arr.map(function(p, i){ return { item_id: 'sb' + i,
+    /* Same rule as compose — a real id where the product has one, so an offer can find it. */
+    items: arr.map(function(p, i){ return { item_id: (p.item_id || ('sb' + i)),
       item_data: Object.assign({}, p, { name: p.particulars, unit: p.unit || 'unit', price: p.price }) }; }) };
   if (UI._sbCart) { try { UI._sbCart.destroy(); } catch(_) {} }
   /**
@@ -5250,7 +5251,10 @@ function ccCartSync(){
      alias cart-ui reads; everything else rides along, which is what lets the cart honour `order` (the six
      quantity models) and what will let a row show an HSN code or a GI certificate without touching this line. */
   const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
-    item_id:'sc'+i, item_data:Object.assign({}, p, { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
+    /* ⭐ THE REAL ID WHERE THERE IS ONE. 'sc'+i is POSITIONAL, so it changed meaning the moment the catalogue
+       reordered, and it made every targeted offer unmatchable — applies_to names real product ids, and this line
+       handed the engine 'sc0'. The synthetic id survives only as a fallback for a row that has none. */
+    item_id:(p.item_id||('sc'+i)), item_data:Object.assign({}, p, { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
   else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer: CBCatUI,
          /* ⚠️ NO `barHideEmpty` — the chip is ALWAYS in the title bar. It used to appear only once the cart held
@@ -5358,7 +5362,15 @@ async function ensureCatalogue(force){
     try {
       const rows = (await api("prodList")) || [];
       STORE.catalogue = rows.map(function(x){ var d = x.item_data || x;
-        return Object.assign({}, d, { particulars: d.name || d.product || "item",
+        /**
+         * ⚠️⚠️ item_id LIVES ON THE ROW, NOT INSIDE item_data — and dropping it made every compose line
+         * ANONYMOUS. Spreading d alone loses the one field that says WHICH product this is, so
+         * applies_to.item_ids matched nothing, a cross-item reward could never find its trigger, and the send
+         * path I had just taught to read it was reading something that was never there. A product without its
+         * id is a name and a price — enough to show, not enough to reason about.
+         */
+        return Object.assign({}, d, { item_id: x.item_id || x.id || null,
+          particulars: d.name || d.product || "item",
           unit: d.unit || "unit", price: cbAmount(d.price) }); });
     } catch (e) { STORE.catalogue = STORE.catalogue || []; }
     _catLoading = null;
