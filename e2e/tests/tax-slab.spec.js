@@ -126,7 +126,7 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
     await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '18', { timeout: 15000 });
 
     const saved = page.waitForResponse(
-      (r) => /\/api\/products/.test(r.url()) && r.request().method() === 'PUT' && r.status() < 400,
+      (r) => /\/api\/products/.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400,   /* the product save is a PATCH (prodEdit), not a PUT */
       { timeout: 45000 });
     await page.getByTestId('cat-save').click();
     await saved;
