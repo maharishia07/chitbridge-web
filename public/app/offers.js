@@ -122,21 +122,26 @@
     threshold: {
       scope: 'cart',
       apply: function (o, ctx) {
-        var need = Number(o.min_amount || o.min_qty) || 0;
-        var have = o.min_qty ? ctx.eligibleQty : ctx.eligibleSubtotal;
-        var unit = o.min_qty ? '' : '';
-        if (have < need) {
-          return [note(o, 'not yet — ' + (o.min_qty
-            ? (need - have) + ' more item(s) needed'
-            : ctx.money(need - have) + ' more needed'), R2(need - have))];
+        var s = thresholdState(o, ctx);
+        /* ⚠️ A THRESHOLD WITH NO THRESHOLD IS NOT "always on" — it is an unfinished offer, and it says so
+           rather than firing on every basket or vanishing without a word. */
+        if (!s.stated) return [note(o, 'no minimum stated — this offer is unfinished', 0)];
+        if (!s.met) {
+          var g = s.gaps[0], g2 = s.gaps[1];
+          return [note(o, 'not yet — ' + thresholdGap(g, ctx.money)
+            + (g2 ? ' (or ' + thresholdGap(g2, ctx.money) + ')' : ''), g.short)];
         }
+        var met = s.by === 'qty'
+          ? 'order of ' + s.have + ' item' + (s.have === 1 ? '' : 's') + ' meets the ' + s.minQ + '-item threshold'
+          : 'order of ' + ctx.money(s.have) + ' meets the ' + ctx.money(s.minA) + ' threshold';
         if (o.percent) {
           return [adj(o, 'cart', null, -R2(ctx.eligibleSubtotal * Number(o.percent) / 100),
-            o.percent + '% off — order of ' + ctx.money(have) + ' meets the ' + ctx.money(need) + ' threshold')];
+            o.percent + '% off — ' + met)];
         }
         var amt = Math.min(Number(o.amount) || 0, ctx.eligibleSubtotal);
-        return [adj(o, 'cart', null, -R2(amt),
-          ctx.money(amt) + ' off — order meets the ' + (o.min_qty ? need + ' item' : ctx.money(need)) + ' threshold')];
+        /* ⚠️ Met, but nothing to give. Silence here reads as "you did not qualify", which is the opposite. */
+        if (!amt) return [note(o, 'threshold met, but no discount is stated on the offer', 0)];
+        return [adj(o, 'cart', null, -R2(amt), ctx.money(amt) + ' off — ' + met)];
       }
     },
 
@@ -235,6 +240,14 @@
     shipping: {
       scope: 'shipping',
       apply: function (o, ctx) {
+        /**
+         * ⚠️⚠️ A SHIPPING OFFER WITH NO TERM RETURNED NOTHING AND SAID NOTHING. The form's only shipping field is
+         * "% off shipping (blank = free)", so leaving it blank — which the label invites — produced an offer with
+         * no `free`, no `flat` and no `percent`: it evaluated to an empty list, appeared on no breakdown, and was
+         * indistinguishable from an offer nobody had triggered. An offer that cannot fire has to say so.
+         */
+        if (!(o.free || o.flat != null || Number(o.percent) > 0))
+          return [note(o, 'no shipping term stated — set free shipping, a flat rate, or a percentage', 0)];
         var ship = Number(ctx.shipping) || 0;
         if (!ship) return [];
         if (o.free) return [adj(o, 'shipping', null, -R2(ship), 'free shipping')];
@@ -276,6 +289,46 @@
   function note(o, why, shortfall, target) {
     return { offer_id: o.id || null, label: o.label || o.kind, kind: o.kind, scope: 'note',
              target: target || null, amount: 0, basis: 'note', why: why, shortfall: shortfall || 0 };
+  }
+
+  /**
+   * ── ⚠️⚠️ ONE ANSWER TO "WHAT DOES THIS THRESHOLD NEED" ──────────────────────────────────────────────────────
+   *
+   * `apply()` and `promise()` both had to ask, and they asked DIFFERENT FIELDS: apply read `min_amount || min_qty`
+   * and promise read `min_subtotal` — a key no author has ever written, because the form writes `min_amount` and
+   * `min_qty`. So every threshold offer somebody authored discounted the basket correctly and ADVERTISED NOTHING:
+   * promise() returned null, forLine() dropped the offer, and the row a buyer looks at said the product was on no
+   * offer at all. The badge and the basket disagreeing about the same offer is the exact failure promise()'s own
+   * comment warns about, and it was inside promise().
+   *
+   * ⚠️ AND `min_amount || min_qty` COMPARED MONEY TO A COUNT. The form offers "Spend at least" and "…or this many
+   * items" side by side, so both get filled; the old code then took the SPEND figure and measured it against the
+   * basket's item COUNT — "197 more item(s) needed" for a ₹300 basket against a ₹200 minimum.
+   *
+   * ⭐ The form says "or", so this honours "or": either minimum satisfies the offer, and when neither does, both
+   * shortfalls are reported — the buyer chooses which one to close.
+   */
+  function thresholdState(o, ctx) {
+    var minA = Number(o.min_amount != null ? o.min_amount : o.min_subtotal) || 0;
+    var minQ = Number(o.min_qty) || 0;
+    var st = { minA: minA, minQ: minQ, stated: !!(minA || minQ), met: false, by: null, have: 0, gaps: [] };
+    if (!st.stated || !ctx) return st;
+    var hA = Number(ctx.eligibleSubtotal) || 0, hQ = Number(ctx.eligibleQty) || 0;
+    if (minA && hA >= minA) { st.met = true; st.by = 'amount'; st.have = hA; return st; }
+    if (minQ && hQ >= minQ) { st.met = true; st.by = 'qty'; st.have = hQ; return st; }
+    if (minA) st.gaps.push({ qty: false, short: R2(minA - hA) });
+    if (minQ) st.gaps.push({ qty: true, short: minQ - hQ });
+    return st;
+  }
+  function thresholdGap(g, money) {
+    return g.qty ? g.short + ' more item(s) needed' : money(g.short) + ' more needed';
+  }
+  /** The CONDITION in words — what promise() puts in the badge, from the same fields apply() measures. */
+  function thresholdCond(o, money) {
+    var st = thresholdState(o, null), parts = [];
+    if (st.minA) parts.push('over ' + money(st.minA));
+    if (st.minQ) parts.push('of ' + st.minQ + '+ items');
+    return parts.join(' or ');
   }
 
   /* ── conditions ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -384,10 +437,10 @@
       }
 
       case 'threshold': {
-        var need = Number(o.min_subtotal) || 0;
-        if (!need) return null;
+        /* ⚠️ THE SAME FIELDS apply() MEASURES — see thresholdState. This read `min_subtotal`, which nothing writes. */
+        if (!thresholdState(o, null).stated) return null;
         var give = pct > 0 ? pct + '% off' : (amt > 0 ? money(amt) + ' off' : null);
-        return give ? give + ' orders over ' + money(need) : null;
+        return give ? give + ' orders ' + thresholdCond(o, money) : null;
       }
 
       case 'buy_x_get_y': {
@@ -567,6 +620,69 @@
     return ((res && res.notes) || []).map(function (n) { return n.claim; }).filter(Boolean);
   }
 
+  /**
+   * ── ⭐⭐ perLine(result, lines) → { <line key>: { off, why, offer_id, label, offers[], capped } } ─────────────
+   *
+   * The LINE-scope adjustments, accumulated onto the line each names, and CAPPED at what the line is worth.
+   *
+   * ⚠️ FOUR CALLERS WROTE THIS LOOP BY HAND — the cart's offer pass, its second pass after a reward is claimed,
+   * the compose SEND path, and the test's mint(). Identical code, and the cap (`Math.min(off, gross)`) lived only
+   * in two of them: `evaluate()` clamps the ORDER total at zero, never an individual line, so two 60% offers on
+   * one line produce a −120% line in any caller that forgot. A discount larger than the thing being discounted is
+   * not a rounding difference, it is a credit note nobody authorised — and it was one `Math.min` away in each of
+   * four places, which is three places too many to keep right.
+   *
+   * ⚠️ `lines` MUST BE THE SAME ARRAY passed to evaluate(): the cap needs each line's gross, and the keys here are
+   * the keys evaluate() assigned. Called without it the amounts accumulate uncapped, which is the old behaviour
+   * and is only safe when the caller caps.
+   */
+  function perLine(res, lines) {
+    var gross = {};
+    (lines || []).forEach(function (l, i) {
+      gross[l.key == null ? String(i) : String(l.key)] = R2((Number(l.qty) || 0) * (Number(l.unitPrice) || 0));
+    });
+    var out = {};
+    ((res && res.adjustments) || []).forEach(function (a) {
+      if (a.scope !== 'line' || a.target == null) return;
+      var off = Math.abs(Number(a.amount) || 0); if (!off) return;
+      var k = String(a.target);
+      var row = out[k] || (out[k] = { off: 0, why: '', offer_id: null, label: '', offers: [], capped: false });
+      row.off = R2(row.off + off);
+      row.why = a.why || ''; row.offer_id = a.offer_id || null; row.label = a.label || '';
+      if (a.offer_id && row.offers.indexOf(a.offer_id) < 0) row.offers.push(a.offer_id);
+    });
+    if (lines) Object.keys(out).forEach(function (k) {
+      var g = gross[k]; if (g == null) return;
+      if (out[k].off > g) { out[k].off = g; out[k].capped = true; }
+    });
+    return out;
+  }
+
+  /**
+   * ── ⭐ sampleQty(offers, unitPrice) → the quantity at which these offers become interesting ──────────────────
+   *
+   * Athi, 2026-09-03: *"each screen should showcase the outcome"*. A worked example at qty 1 shows nothing for
+   * a tier, a buy-x-get-y or a threshold — the three kinds a B2B seller reaches for first — so a preview that
+   * only ever shows one unit demonstrates that the offer does nothing.
+   *
+   * ⚠️ DERIVED FROM THE RULES, NEVER GUESSED. The trigger is in the offer: `min_qty`, the smallest tier, the
+   * buy+get set, or the spend divided by the unit price. A hard-coded 3 would show a 10+ tier not firing and
+   * invite the author to conclude their tier table is broken.
+   */
+  function sampleQty(offers, unitPrice) {
+    var q = 0, up = Number(unitPrice) || 0;
+    [].concat(offers || []).forEach(function (o) {
+      if (!o) return;
+      var st = thresholdState(o, null);
+      if (st.minQ) q = Math.max(q, st.minQ);
+      if (st.minA && up > 0) q = Math.max(q, Math.ceil(st.minA / up));
+      if (o.buy) q = Math.max(q, (Number(o.buy) || 0) + (o.get_item_id ? 0 : (Number(o.get) || 0)));
+      (o.tiers || []).forEach(function (t) { if (t && t.qty) q = Math.max(q, Number(t.qty) || 0); });
+    });
+    /* ⚠️ Capped. A tier that starts at 5,000 must not produce a "5,000 ×" example nobody can read. */
+    return q > 1 ? Math.min(q, 999) : 3;
+  }
+
   root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer, claims: claims,
-    KINDS: KINDS, kinds: Object.keys(KINDS) };
+    perLine: perLine, sampleQty: sampleQty, KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);

@@ -441,11 +441,22 @@
    * would hide the two most useful things a person can be told: what they nearly had, and why an offer they
    * expected did not fire.
    */
-  function offersHTML(ns, lines, offers, sym) {
+  /**
+   * ⚠️ THE COMMENT ABOVE SAID SKIPPED OFFERS WERE RENDERED AND THEY WERE NOT — only adjustments and notes were.
+   * They are now, behind `opt.skipped`, and the flag is the honest part: a cart holds every LIVE offer the entity
+   * has, so most of them are skipped as "no line qualifies" on any given basket and listing all of them would
+   * bury the two that fired. The PRODUCT page turns it on, because there the offers are the ones attached to
+   * that one product and "why did this one not apply" is the entire question being asked.
+   *
+   * ⚠️ `ev` MAY BE SUPPLIED (opt.ev). The product preview has already evaluated — running it a second time here
+   * would be a second answer to the same question, computed from a line built twice.
+   */
+  function offersHTML(ns, lines, offers, sym, opt) {
     if (!offers || !offers.length || !root.CBOffers) return '';
-    var ev;
+    opt = opt || {};
+    var ev = opt.ev || null;
     try {
-      ev = root.CBOffers.evaluate({
+      if (!ev) ev = root.CBOffers.evaluate({
         lines: lines.map(function (l, i) {
           return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category,
                    qty: Number(l.qty || l.quantity || 0), unitPrice: Number(l.price || 0) };
@@ -458,7 +469,9 @@
          correct without it; an offer failing to evaluate costs a discount, not the ability to order. */
       return '<div class="cbcat-offnote">Offers could not be applied just now — the prices above stand.</div>';
     }
-    if (!ev.adjustments.length && !ev.notes.length) return '';
+    /* ⚠️ `opt.subtotal` KEEPS THE BLOCK EVEN WHEN NOTHING FIRED. On the product page "at qty 1 this offer changes
+       nothing" IS the outcome being verified, and an empty space there reads as a screen that failed to load. */
+    if (!ev.adjustments.length && !ev.notes.length && !(opt.skipped && ev.skipped.length) && !opt.subtotal) return '';
 
     var rows = ev.adjustments.map(function (a) {
       return '<div class="cbcat-offrow"><span class="cbcat-offn">' + esc(a.label) + '</span>'
@@ -471,10 +484,25 @@
         + '<span class="cbcat-offw">' + esc(nte.why) + '</span></div>';
     }).join('');
 
-    return '<div class="cbcat-offers" data-testid="cbcat-offers">'
-      + '<div class="cbcat-offhd">' + tx('Offers applied') + '</div>' + rows + notes
-      + (ev.adjustments.length
-          ? '<div class="cbcat-offtot"><span>' + tx('After offers') + '</span><span>' + esc(money(ns, ev.total)) + '</span></div>'
+    /* ⭐ WHY AN OFFER DID NOT APPLY, in the offer's own words — "an exclusive offer already applied", "expired
+       (2026-08-01)", "no line qualifies". This is the half of the breakdown that answers a dispute. */
+    var skipped = (opt.skipped ? ev.skipped : []).map(function (s) {
+      return '<div class="cbcat-offrow skip"><span class="cbcat-offn">' + esc(s.label || s.offer_id) + '</span>'
+        + '<span class="cbcat-offw">' + esc(tx('not applied — ') + (s.why || '')) + '</span></div>';
+    }).join('');
+
+    /* ⚠️ THE TEST ID IS OVERRIDABLE because this block now renders on TWO screens at once — a page carrying two
+       copies of `cbcat-offers` would make every spec that addresses it ambiguous. */
+    return '<div class="cbcat-offers" data-testid="' + esc(opt.testid || 'cbcat-offers') + '">'
+      + '<div class="cbcat-offhd">' + esc(opt.head || tx('Offers applied')) + '</div>'
+      + (opt.subtotal
+          ? '<div class="cbcat-offrow"><span class="cbcat-offn">' + tx('Subtotal') + '</span>'
+            + '<span class="cbcat-offw"></span><span class="cbcat-offa plain">' + esc(money(ns, ev.subtotal)) + '</span></div>'
+          : '')
+      + rows + notes + skipped
+      + (ev.adjustments.length || opt.subtotal
+          ? '<div class="cbcat-offtot"><span>' + tx('After offers') + '</span>'
+            + '<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span></div>'
           : '')
       + '</div>';
   }
@@ -940,6 +968,9 @@
       '.cbcat-offhd{font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok-2);margin-bottom:4px}',
       '.cbcat-offrow{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:var(--fs-2)}',
       '.cbcat-offrow.note{color:var(--warn-2)}',
+      '.cbcat-offrow.skip{color:var(--grey,#7C8085)}',
+      '.cbcat-offrow.skip .cbcat-offn{font-weight:600;text-decoration:line-through}',
+      '.cbcat-offa.plain{color:var(--ink);font-weight:600}',
       '.cbcat-offn{font-weight:700;flex:none}',
       '.cbcat-offw{flex:1;min-width:0;color:var(--grey,#7C8085);font-size:var(--fs-1)}',
       '.cbcat-offa{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ok-2);white-space:nowrap}',
@@ -966,6 +997,10 @@
     listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
     isOnOffer: isOnOffer,
+    /* ⭐ THE BREAKDOWN RENDERER, EXPORTED. The product page shows what the cart will do with the offers attached
+       to a product, and a lookalike built there would be a second opinion about the same price — which is the one
+       thing "verify it then and there" cannot survive. */
+    offersHTML: offersHTML,
     commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
     paint: paint, observe: observe, ensureCss: ensureCss,
     mediaOf: mediaOf, tileFor: tileFor, hintOf: hintOf,

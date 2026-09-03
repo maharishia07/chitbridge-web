@@ -15,6 +15,13 @@
 # which is the workflow we are told to use.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
 [ -f /c/dev/inventory.cjs ] || exit 0
+# ⚠️⚠️ GIT_DIR MUST NOT REACH inventory.cjs. It runs `git ls-files` once per repo with cwd set to that repo, and
+# git exports GIT_DIR/GIT_INDEX_FILE/GIT_WORK_TREE into every hook. From a normal checkout GIT_DIR is the
+# RELATIVE ".git", so it happens to resolve correctly in each repo and nobody notices. From a WORKTREE it is
+# absolute — so chitbridge-api was listed with chitbridge-web's file names, every one of them classified under
+# the wrong repo, and the hook blocked the commit naming files that do not exist. Every commit made from a
+# `git worktree` was refused, with a message pointing at the wrong problem.
+unset GIT_DIR GIT_INDEX_FILE GIT_WORK_TREE GIT_PREFIX
 node /c/dev/inventory.cjs > /tmp/cb-inv.$$ 2>&1
 if [ $? -ne 0 ]; then
   echo ""
