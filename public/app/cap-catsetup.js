@@ -116,6 +116,13 @@ function catsetDefListHTML(kind, one){
             + (d.status === 'live' ? tx('Back to draft') : tx('Make live')) + '</span>'
             + '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">' + tx('Edit') + '</span>'
             + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">' + tx('Retire') + '</span>')
+      /**
+       * ⚠️⚠️ THE AUTHOR'S NOTE, WHICH NOTHING HAS EVER SHOWN. Athi, 2026-09-03: *"note — where will it
+       * reflect?"* — nowhere. It was written on the form, saved on the definition, and read back only by the
+       * form itself, so it was a field that swallowed what you typed. This is the list it belongs on: the
+       * author's own, beside the offer it is about, and never anywhere a buyer looks.
+       */
+      + (d.note ? '<div class="dnote">' + esc(d.note) + '</div>' : '')
       + '</div>';
   };
   /**
@@ -1197,6 +1204,8 @@ function catsetCss(){
     '.catset-drow.ret{opacity:.72}',
     '.catset-drow.ret .dn{text-decoration:line-through;color:var(--grey)}',
     '.catset-drow .dn{font-weight:600;flex:1;min-width:0}',
+    /* The author's own note — its own line under the name, so it never crowds the row a person scans. */
+    '.catset-drow .dnote{flex-basis:100%;font-size:var(--fs-1);color:var(--grey);line-height:1.4;margin:-2px 0 1px}',
     '.catset-drow .dk{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--grey)}',
     '.catset-drow .dst{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',

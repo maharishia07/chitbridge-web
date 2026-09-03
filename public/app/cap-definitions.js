@@ -466,10 +466,11 @@ function cbDefRuleFields(kind, sub){
      * only in the sense that it could be saved.
      */
     if (sub === 'tier_price') g.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true,
-      ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each. The engine never RAISES a price from this table.' });
+      ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each.' });
     if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true, half: true });
                                  g.push({ k: 'get', label: 'Get', ph: '1', num: true, half: true });
-                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true, half: true });
+                                 g.push({ k: 'get_percent', label: 'Reward discount', num: true, half: true,
+                                          ph: '100', hint: '100 = free.' });
                                  /**
                                   * ⭐⭐ THE REWARD MAY BE A DIFFERENT PRODUCT — Athi, 2026-09-03: *"include
                                   * another item from the catalogue as an offer"*. Blank keeps the original
@@ -477,7 +478,8 @@ function cbDefRuleFields(kind, sub){
                                   * it "buy rice, get oil free", which this kind could not say at all.
                                   */
                                  g.push({ k: 'get_item_id', label: 'Reward — a different product (blank = one of these)', pick: 'product' }); }
-    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true, half: true });
+    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true, half: true,
+                                          hint: 'Warns when a price falls outside. Never changes it.' });
                                  g.push({ k: 'max', label: 'Band maximum', num: true, half: true }); }
     /**
      * ⚠️ "blank = free" WAS A PROMISE THE ENGINE DID NOT KEEP. The only shipping field was the percentage, and
@@ -499,17 +501,35 @@ function cbDefRuleFields(kind, sub){
     }
     /* ⭐ TARGETING — "10% off Paints" (backlog 20). The engine has read `applies_to.category` all along; nothing
        ever SET it, and no cart line carried a category to match against, so the field was dead on both sides. */
-    g.push({ k: 'applies_to.category', label: 'Applies to', pick: 'category', half: true });
+    g.push({ k: 'applies_to.category', label: 'Only this category', pick: 'category', half: true });
     /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
     g.push({ k: 'valid_from', label: 'Valid from', date: true, half: true });
-    g.push({ k: 'valid_to',   label: 'Valid to',   date: true, half: true });
-    g.push({ k: 'region',     label: 'Region', ph: 'blank = everywhere', half: true });
+    g.push({ k: 'valid_to',   label: 'Valid to',   date: true, half: true,
+             hint: 'Runs to the end of that day.' });
+    /**
+     * ── ⚠️⚠️ REGION IS WITHHELD, AND IT IS NOT AN OVERSIGHT ────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-03: *"i am not sure what region means"*. Neither is the app. `within()` compares `o.region`
+     * to `ctx.region` — and NOTHING SUPPLIES ctx.region. Every caller of evaluate() (the cart's offer pass, its
+     * second pass, the compose SEND, catalogue-ui's breakdown) and every caller of promise()/forLine() (the
+     * product page, the storefront in shop.html) passes lines, offers and a money formatter, and no buyer
+     * region at all. So `o.region && ctx.region` is false on every path: typing "Tamil Nadu" here narrowed
+     * nothing, and the offer applied to every buyer everywhere.
+     *
+     * ⚠️ AN OPTION THAT DOES NOTHING IS A LIE, and this one is the expensive kind — the author believes they
+     * have restricted an offer and has no way to find out they have not until a buyer somewhere else claims it.
+     *
+     * ⭐ WHAT WOULD HAVE TO EXIST FIRST: an order that knows WHERE IT IS BEING SUPPLIED — the buyer's
+     * state/place of supply carried on the cart context, which is the same two-address context lib/tax.js needs
+     * to decide intra- vs inter-state. When that exists, this returns as "Only for buyers in …", naming where
+     * the value comes from. Offers already saved with a region keep it; it is still inert, as it always was.
+     */
     /**
      * ⭐ STACKING, WHICH THE ENGINE HAS ALWAYS READ AND THE FORM NEVER WROTE. evaluate() sorts by `priority` and
      * an `exclusive` offer that fires stops the ones after it — so two offers on one product were stacking in an
      * order nobody had chosen, and "this one instead of the others" was not expressible at all.
      */
-    g.push({ k: 'priority', label: 'Runs at', ph: '1', num: true, half: true,
+    g.push({ k: 'priority', label: 'Stacking order', ph: '1', num: true, half: true,
              hint: 'Lower runs first.' });
     g.push({ k: 'exclusive', label: 'Exclusive', check: true, half: true,
              hint: 'Once this applies, later offers do not.' });
@@ -680,9 +700,10 @@ function cbDefPickProductHTML(x, v){
         return '<option value="' + cbDefEsc(p.id) + '"' + (String(v) === String(p.id) ? ' selected' : '') + '>'
           + cbDefEsc(p.name) + '</option>'; }).join('')
     + '</select>'
-    + '<div class="cbdef-hint">⚠️ If the buyer has not added this to their order, the basket does NOT add it '
-    + 'for them — it says the reward has been earned and offers to add it. A line nobody chose must not arrive '
-    + 'inside a chit.</div>';
+    /* ⚠️ ONE LINE. This was three sentences of engine reasoning; the outcome strip below now SHOWS the same
+       thing ("earned 1 × Sunflower Oil free — added to your order"), so the paragraph was explaining a
+       demonstration. The rule it protects lives in offers.js, where it belongs. */
+    + '<div class="cbdef-hint">' + tx('If it is not in their order, the basket offers to add it.') + '</div>';
 }
 
 /** Sets the id AND the name in one act, so the two can never be written apart. */
@@ -777,7 +798,19 @@ function cbDefFormHTML(){
   var editing = !!f.id;
   var tail = subs.length ? cbDefSubTail(f.kind, f.sub) : '';
 
-  return '<div class="cbdef-formhd">' + cbDefEsc((editing ? tx('Edit') : tx('New')) + ' ' + (A.one || f.kind))
+  /**
+   * ⚠️⚠️ .mhd / .mbody / .mfoot — THE APP'S OWN MODAL FRAME, WHICH THIS FORM WAS NOT USING.
+   *
+   * Athi, 2026-09-03: *"there is no space between text box and the border"*. modal() drops the html straight
+   * into `.modal`, which has `overflow:hidden` and NO padding of its own — the padding lives on `.mhd`,
+   * `.mbody` and `.mfoot` (13px 16px / 12px 16px), and a form that supplies none of the three renders edge to
+   * edge. Every other dialog in the app uses these three; this one hand-rolled a header and a footer and got
+   * neither the padding nor the scrolling body nor the equal-width buttons. Adopting them also fixes the
+   * rhythm, because `label.fl` already carries the product form's 12px/5px spacing and my grid was overriding
+   * it tighter.
+   */
+  return '<div class="mhd cbdef-formhd"><div class="t">'
+    + cbDefEsc((editing ? tx('Edit') : tx('New')) + ' ' + (A.one || f.kind)) + '</div>'
     /**
      * ⭐ THE FREEZE RULE IS SAID ON THE EDIT FORM, WHERE IT MATTERS. Someone changing "Carton of 6" to 12 needs
      * to know, at that moment, that chits already stamped keep the 6 — otherwise the safe behaviour reads as a
@@ -789,7 +822,7 @@ function cbDefFormHTML(){
     + (editing ? '<span class="cbdef-vpill" title="' + cbDefEsc(tx('Saving the rules makes a new version. Chits already stamped keep the one they froze.'))
         + '">v' + cbDefEsc(f.version || 1) + ' · ' + tx('saving makes v') + (Number(f.version || 1) + 1) + '</span>' : '')
     + '</div>'
-    + '<div class="cbdef-body" data-mv-fit>'
+    + '<div class="mbody cbdef-body" data-mv-fit>'
     + '<div class="cbdef-grid">'
     + (subs.length
         ? '<label class="fl cbdef-w2">' + tx('Kind') + '</label>'
@@ -802,7 +835,8 @@ function cbDefFormHTML(){
           + '<div class="cbdef-hint cbdef-w2"><code>' + cbDefEsc(f.sub) + '</code>' + (tail ? ' · ' + cbDefEsc(tail) : '') + '</div>'
         : '')
     + '<label class="fl cbdef-w2">' + tx('Name') + '</label>'
-    + '<input class="inp cbdef-w2" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
+    + '<div class="cbdef-f cbdef-w2">'
+    + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
     /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
        teaches the wrong thing. */
@@ -811,6 +845,11 @@ function cbDefFormHTML(){
                         : f.kind === 'requirement'? 'Minimum for food suppliers'
                         :                           'Spices') + '"'
     + ' oninput="cbDefSetField(\'name\',this.value)">'
+    /* ⚠️ THE NAME IS NOT PRIVATE. defToOffer carries it as the offer's `label`, and every adjustment the engine
+       makes prints it — in the cart breakdown and again on the chit line's `offer.label`. Say so, because the
+       Note beneath it is the opposite and the two look identical. */
+    + (f.kind === 'offer' ? '<div class="cbdef-hint">' + tx('Buyers see this in the cart and on the chit.') + '</div>' : '')
+    + '</div>'
     /**
      * ⚠️ TWO COLUMNS, AND THE PAIRING IS THE POINT. Percent beside Applies to, Valid from beside Valid to,
      * Region beside Runs at — each pair is one question. Full-width stacking made eight short fields read as
@@ -826,16 +865,28 @@ function cbDefFormHTML(){
           + '</div>';
       }).join('')
     + (f.kind === 'requirement' ? '<div class="cbdef-w2">' + cbDefStdChipsHTML() + '</div>' : '')
-    + '<label class="fl cbdef-w2">' + tx('Note') + '</label>'
-    + '<input class="inp cbdef-w2" value="' + cbDefEsc(f.note) + '" placeholder="' + tx('optional') + '"'
-    + ' oninput="cbDefSetField(\'note\',this.value)">'
+    /**
+     * ⚠️⚠️ "NOTE — WHERE WILL IT REFLECT?" (Athi, 2026-09-03). Nowhere, was the answer. It was saved on every
+     * definition and read back by exactly one thing: this form. Neither the Catalogue setup row nor the
+     * Definitions row rendered it, so a note written here vanished the moment the modal closed.
+     *
+     * ⭐ MADE TRUE RATHER THAN DELETED. Dropping the field would strand every note already written — still in
+     * the record, invisible and uneditable — so both lists print it under the offer's name, and the label now
+     * says exactly who sees it. A field whose audience is not stated is a field somebody will type a price into.
+     */
+    + '<label class="fl cbdef-w2">' + tx('Note to yourself') + '</label>'
+    + '<div class="cbdef-f cbdef-w2">'
+    +   '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="' + tx('optional') + '"'
+    +   ' oninput="cbDefSetField(\'note\',this.value)">'
+    +   '<div class="cbdef-hint">' + tx('On your offers list. Buyers never see it.') + '</div>'
+    + '</div>'
     + '</div>'
     + '<div id="cbdef_prev">' + cbDefPreviewHTML() + '</div>'
     + '<div class="err" id="cbdef_err"></div>'
     + '</div>'
-    + '<div class="cbdef-foot">'
-    +   '<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
-    +   '<button class="composebtn pri" style="flex:1" data-testid="cbdef-save" onclick="cbDefSave()">'
+    + '<div class="mfoot">'
+    +   '<button onclick="closeModal()">' + tx('Cancel') + '</button>'
+    +   '<button class="pri" data-testid="cbdef-save" onclick="cbDefSave()">'
     +   (editing ? tx('Save') : tx('Create')) + '</button>'
     + '</div>';
 }
@@ -1231,7 +1282,11 @@ function cbDefMineHTML(){
         +   '<span onclick="cbDefSetStatus(\'' + cbDefEsc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
         +   (live ? 'Unpublish' : 'Publish') + '</span>'
         +   '<span onclick="cbDefRetire(\'' + cbDefEsc(d.definition_id) + '\',\'' + cbDefEsc(d.name) + '\')">' + tx('Retire') + '</span>'
-        + '</span></div>';
+        + '</span>'
+        /* ⚠️ The author's note, same as the Catalogue setup row — it was saved by the form and displayed by
+           nothing, on either list. See cbDefFormHTML's Note field. */
+        + (d.note ? '<div class="cbdef-mine-note">' + cbDefEsc(d.note) + '</div>' : '')
+        + '</div>';
     }).join('');
 
     /**
@@ -1392,6 +1447,7 @@ function cbDefCss(){
     '.cbdef-mine-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed #eee9e0;flex-wrap:wrap}',
     '.cbdef-mine-row:last-child{border-bottom:0}',
     '.cbdef-mine-n{font-size:var(--fs-3);font-weight:700}',
+    '.cbdef-mine-note{flex-basis:100%;font-size:var(--fs-1);color:var(--grey);line-height:1.4;margin:-3px 0 1px}',
     '.cbdef-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbdef-badge.live{background:var(--ok-tint);color:var(--ok-2)}',
     '.cbdef-badge.draft{background:var(--warn-tint);color:var(--warn-2)}',
@@ -1417,18 +1473,30 @@ function cbDefCss(){
     /* ── the authoring form ────────────────────────────────────────────────────────────────────────────────
        ⚠️ THE BODY SCROLLS AND THE FOOTER DOES NOT. The buttons were at the end of the flow, so a long form put
        Save below the fold while leaving empty card under it once a remembered height was restored. */
-    '.cbdef-formhd{display:flex;align-items:baseline;gap:9px;font-size:var(--fs-3);font-weight:800;padding:2px 0 9px}',
+    /* ⚠️ The frame is .mhd/.mbody/.mfoot — the app's own, which carry the padding modal() does not. These only
+       add what is specific to this form. */
+    '.cbdef-formhd{display:flex;align-items:baseline;gap:9px}',
     '.cbdef-vpill{margin-inline-start:auto;font-size:var(--fs-1);font-weight:700;color:var(--warn-3);'
       + 'background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:20px;padding:1px 9px;white-space:nowrap}',
-    '.cbdef-body{max-height:56vh;overflow-y:auto;padding-inline-end:2px}',
-    '.cbdef-foot{display:flex;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}',
-    /* ⚠️ TWO COLUMNS, EACH PAIR ONE QUESTION. `cbdef-w2` is the escape hatch for anything that needs the row. */
-    '.cbdef-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;align-items:end}',
+    /**
+     * ⚠️⚠️ THE ROW RHYTHM IS label.fl's OWN (12px above, 5px below) — the same one every field on the product
+     * Edit form uses, so the two screens read as one product. My first grid overrode it to 7px/1px "to fit more
+     * in", which is precisely the complaint: the labels sat on top of the boxes and nothing had room to breathe.
+     * Fields keep 12px between the input and the next label via .cbdef-f's bottom margin.
+     */
+    '.cbdef-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:0;align-items:end}',
     '.cbdef-grid>.cbdef-w2{grid-column:1/-1}',
-    '.cbdef-grid>.fl{margin:7px 0 1px}',
-    '.cbdef-grid>.cbdef-f{min-width:0}',
-    '.cbdef-grid .inp{margin:0}',
-    '.cbdef-check{display:flex;align-items:center;gap:7px;font-size:var(--fs-2);margin:9px 0 1px;cursor:pointer}',
+    '.cbdef-grid>.fl:first-child{margin-top:2px}',
+    '.cbdef-grid>.cbdef-f{min-width:0;margin-bottom:7px}',
+    '.cbdef-grid>.inp,.cbdef-grid>select.inp{margin:0 0 7px}',
+    '.cbdef-grid .cbdef-f .inp{margin:0}',
+    /* ⚠️ .cbdef-hint had NO RULE AT ALL — every one-line explanation rendered at body size in body colour,
+       indistinguishable from a label. A hint that looks like content is content. */
+    '.cbdef-hint{font-size:var(--fs-1);line-height:1.45;color:var(--grey);margin:4px 0 0}',
+    '.cbdef-grid .cbdef-hint{margin:4px 0 0}',
+    '.cbdef-grid>.cbdef-hint{margin:4px 0 7px}',
+    '.cbdef-check{display:flex;align-items:center;gap:8px;font-size:var(--fs-2);font-weight:700;color:var(--ink);'
+      + 'margin:12px 0 0;padding:10px 13px;border:1px solid var(--line);border-radius:9px;background:var(--paper);cursor:pointer}',
     '.cbdef-check input{width:16px;height:16px;margin:0;flex:none}',
     '@media (max-width:680px){ .cbdef-grid{grid-template-columns:1fr} .cbdef-grid>.cbdef-w2{grid-column:1} }',
     /* ── the outcome strip ─────────────────────────────────────────────────────────────────────────────── */
