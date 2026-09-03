@@ -8445,6 +8445,16 @@ function prodCatgStripHTML(){
     + (none?chip('__none','Uncategorised',none,g==='__none'):'')
     + `</div>`;
 }
+/** The categories a product carries, as chips — resolved through the live shelf so a rename shows at once; a retired
+    one still shows, struck, because the citation survives. Used by the row and by the product's Categories tab. */
+function catgChipsHTML(d){
+  const cids=catgIdsOf(d), cnames=catgNamesOf(d);
+  return cids.map(function(cid,i){
+    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(function(x){return x.id===cid;})[0];
+    const nm=live?live.name:(cnames[i]||cid);
+    return `<span class="catgchip${live?'':' gone'}" title="${live?'':'no longer live'}">${esc(nm)}</span>`;
+  }).join('');
+}
 function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
      list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
@@ -8462,12 +8472,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   /* ⭐ THE CATEGORIES THIS PRODUCT CARRIES, on the row. Athi asked to attach in bulk, and a bulk action you
      cannot verify from the list is a bulk action nobody trusts the second time. Resolved through the live shelf
      so a rename shows here immediately; a retired one still shows, struck, because the citation survives. */
-  const cids=catgIdsOf(d), cnames=catgNamesOf(d);
-  const catChips=cids.map(function(cid,i){
-    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(function(x){return x.id===cid;})[0];
-    const nm=live?live.name:(cnames[i]||cid);
-    return `<span class="catgchip${live?'':' gone'}" title="${live?'':'no longer live'}">${esc(nm)}</span>`;
-  }).join('');
+  const catChips=catgChipsHTML(d);
   /* ⭐ SELECT MODE. The tick replaces the row's normal click so a half-pressed selection can never also navigate
      away — the same rule the chit list follows. */
   const picking=!!UI.prodPick;
@@ -9007,6 +9012,8 @@ async function _cfImportRun(btn, decisions, out){
  *       means the offer learning a `get_item_id` and the engine adding a line that the customer never chose,
  *       which is a real design decision about what a cart may do on its own. Flagged, not faked.
  */
+/** Open Catalogue setup ON a section. One helper, because the product page points at four of them. */
+function goCatsetSec(k){ navTo('catsetup'); setTimeout(function(){ if(typeof catsetSetSec==='function') catsetSetSec(k); },600); }
 function ctOfferField(d){
   d = d || {};
   const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';
@@ -9019,7 +9026,8 @@ function ctOfferField(d){
         UI._ctOffers = ((r && r.definitions) || []).map(function(x){
           return { id: x.definition_id, name: x.name, rules: x.rules || {} };
         });
-        if (UI.nav === 'catalogue' && UI.prodMode !== 'view') paintProdDetail();
+        /* The Offers tab reads this in VIEW mode too now, so the arrival repaints either way. */
+        if (UI.nav === 'catalogue') paintProdDetail();
       })
       .catch(function(){ UI._ctOffers = []; });
     return '<label class="fl">' + tx('Offers') + '</label>'
@@ -9035,7 +9043,7 @@ function ctOfferField(d){
   if (!list.length) {
     return '<label class="fl">' + tx('Offers') + '</label>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">'
-      + tx('None live. ') + '<span onclick="navTo(\'catsetup\');setTimeout(function(){ if(typeof catsetSetSec===\'function\') catsetSetSec(\'offers\'); },600)"'
+      + tx('None live. ') + '<span onclick="goCatsetSec(\'offers\')"'
       + ' style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Author one') + '</span>'
       + tx(' in Catalogue setup, then attach it here.') + '</div>';
   }
@@ -9190,7 +9198,10 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+ctOfferField(d)+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d); }
+/* The product's OWN facts. Categories and offers are separate records that point at it, so they render on their own
+   tabs (prodDetailHTML); the New form, which has nothing to point at yet, lays everything out on one page. */
+function prodEditForm(d){ return prodEditFormCore(d)+ctCategoryField(d)+ctOfferField(d); }
+function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d); }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -9492,6 +9503,89 @@ async function saveAvail(id){
   }
 }
 
+/**
+ * ── ⭐⭐ THE PRODUCT PAGE IS WHERE EVERY SETUP DIMENSION MEETS ONE PRODUCT ──────────────────────────────────────
+ * Athi, 2026-09-03 (observation 4): *"bring multiple tabs each one for one of the catalogue setup panel … the
+ * first tab shows the basic information … 2nd the category … variants, offers, pricing, then tax and so on."*
+ *
+ * Catalogue setup has ten panels; each shapes a DIMENSION of a product. Until this, the product page met three of
+ * them (fields, categories, offers) on one long form, and the rest lived only in Setup — which is why the
+ * catalogue never read as one thing. The tabs are those dimensions, applied to THIS product.
+ *
+ * ⚠️ EVERY TAB'S INPUTS STAY IN THE DOM; a tab only toggles visibility. ctReadForm reads the whole form at Save,
+ * and it already treats "a field that is not on screen" as "leave the product's value alone" — so if switching
+ * tabs REMOVED inputs, saving from the Categories tab would either blank the name or erase the highlight. Hidden,
+ * not absent: a value typed on one tab survives a visit to another, and Save reads all of them.
+ *
+ * ⚠️ VIEW MODE IS READ-ONLY ON EVERY TAB. The old View mixed a "Report it" control into a read-only screen
+ * (Athi: *"you are updating availability under view section"*). Stock is now its own tab with the same control;
+ * offers in View list what is attached and point at Edit to change it. What you can change, you change in Edit.
+ *
+ * Variants · Pricing & tax are read-outs of what Setup declares FOR this product, each with a jump to the panel
+ * that owns it. Not editable here on purpose: those are catalogue-wide rules, and editing a rule from inside one
+ * product is how a rule stops being one. BOM ("consists of") is not a tab yet — see BACKLOG, the chit-shape
+ * decision is open. Publish-on-a-date is the next cut (catalogue_item_version.valid_from).
+ */
+const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax']];
+function prodTab(){ return UI.prodTab||'product'; }
+function prodTabBar(){
+  return `<div class="dtabs" data-testid="prod-tabs">`+PROD_TABS.map(function(t){
+    return `<button type="button" data-testid="prod-tab-${t[0]}" class="${prodTab()===t[0]?'on':''}" onclick="setProdTab('${t[0]}')">${tx(t[1])}</button>`; }).join('')+`</div>`;
+}
+function ptabWrap(k,html){ return `<div class="ptab" data-tab="${k}" data-testid="prod-pane-${k}"${prodTab()===k?'':' style="display:none"'}>${html}</div>`; }
+/* Switching a tab moves nothing through the DOM — it shows one pane and hides the others, so typed values survive. */
+function setProdTab(k){
+  UI.prodTab=k; const dp=document.getElementById('detailpane'); if(!dp) return;
+  Array.prototype.forEach.call(dp.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
+  Array.prototype.forEach.call(dp.querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
+  if(k==='pricing') prodPricingLoad();
+}
+function prodCatgViewHTML(d){
+  const chips=catgChipsHTML(d);
+  return `<div class="sec">${tx('Categories')}</div>`
+    + (chips ? `<div style="padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px">${chips}</div>`
+             : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('Not in any category yet.')}</div>`)
+    + `<div style="padding:0 12px;font-size:var(--fs-1);color:var(--grey)">${tx('A product can sit in many categories. Change them in Edit; manage the shelf itself in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="navTo('categories')">${tx('Categories')}</span>.</div>`;
+}
+function prodOffersViewHTML(d){
+  if (UI._ctOffers === undefined) return ctOfferField(d);   /* first visit: starts the one read, paints "reading…" */
+  const pid = UI.prodSel || d.item_id || d.id || '';
+  const on = (UI._ctOffers||[]).filter(function(o){ const at=(o.rules&&o.rules.applies_to)||{}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(pid)>=0; });
+  const line = function(o){
+    const terms=(typeof prodOfferTerms==='function')?prodOfferTerms(o.rules):'', win=(typeof prodOfferWindow==='function')?prodOfferWindow(o.rules):'';
+    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b><span style="color:var(--grey)">${esc(terms)}${win?' · '+esc(win):''}</span></div>`; };
+  return `<div class="sec">${tx('Offers')}</div>`
+    + (on.length ? `<div class="itab">${on.map(line).join('')}</div>` : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No offer is attached to this product.')}</div>`)
+    + `<div style="padding:8px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('Attach or remove one in Edit › Offers. An offer is authored once in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('offers')">${tx('Catalogue setup › Offers')}</span>.</div>`;
+}
+function prodVariantsTab(d){
+  return `<div class="sec">${tx('Variants')}</div>`
+    + (d.variant ? `<div class="kv" style="padding:8px 12px;font-size:var(--fs-2)">${tx('This line is the')} <b>${esc(d.variant)}</b> ${tx('variant.')}</div>` : '')
+    + `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('One product, several sizes: each size keeps its own code and price, and the catalogue declares which lines belong together and by what (size, colour, pack). That grouping lives in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('variants')">${tx('Catalogue setup › Variants')}</span>.</div>`;
+}
+/* Read-outs of the catalogue-wide rules that apply to this product — the face is read once and kept on UI._face. */
+function prodPricingTab(d){
+  /* The pane schedules its own fill, so it works whichever paint produced it (paintProdDetail or a full render). */
+  setTimeout(prodPricingLoad, 0);
+  return `<div class="sec">${tx('Pricing & tax')}</div><div id="prod_pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
+}
+/* Two reads, each once per session: the FACE (order method · units · tax treatment) and the PRICING definitions
+   (the hub's Pricing section is a registry of definitions, not a face key). */
+async function prodPricingLoad(){
+  if(!document.getElementById('prod_pricing')) return;
+  if(UI._face===undefined){ UI._face=null; try{ const r=await api('catFaceGet'); UI._face=(r&&r.face)||null; }catch(_){ UI._face=null; } }
+  if(UI._pricingDefs===undefined){ UI._pricingDefs=null; try{ const r=await api('defList',{query:{kind:'pricing',status:'live'}}); UI._pricingDefs=((r&&r.definitions)||[]).map(function(x){ return x.name; }); }catch(_){ UI._pricingDefs=[]; } }
+  const f=UI._face||{}, h=document.getElementById('prod_pricing'); if(!h) return;
+  const row=(l,v,sec)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)"><b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="flex:1">${v}</span><span style="color:var(--blue);cursor:pointer;font-weight:600;font-size:var(--fs-1)" onclick="goCatsetSec('${sec}')">${tx('change')}</span></div>`;
+  const units=Array.isArray(f.units)&&f.units.length?f.units.map(esc).join(' · '):'—';
+  const tax=f.tax&&typeof f.tax==='object'?(f.tax.treatment||f.tax.regime||f.tax.label||JSON.stringify(f.tax)):(f.tax||'—');
+  const pricing=(UI._pricingDefs&&UI._pricingDefs.length)?UI._pricingDefs.map(esc).join(' · '):tx('list price — no pricing rule declared');
+  h.innerHTML = row(tx('Order method'), esc(f.method||'—'), 'storefront')
+    + row(tx('Units'), units, 'storefront')
+    + row(tx('Tax treatment'), esc(String(tax)), 'tax')
+    + row(tx('Pricing rules'), pricing, 'pricing')
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">${tx('These are catalogue-wide rules that apply to this product. A product does not carry its own copy of them.')}</div>`;
+}
 function prodDetailHTML(){
   if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
   if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`; }
@@ -9510,16 +9604,30 @@ function prodDetailHTML(){
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price"><bdi>${inr(pPrice(d))}</bdi> / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
-  if(UI.prodMode==='edit'){ body=`<div class="sec">${tx('Edit product')}</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
+  if(UI.prodMode==='edit'){
+    body=prodTabBar()
+      +ptabWrap('product',`<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`)
+      +ptabWrap('categories',ctCategoryField(d))
+      +ptabWrap('offers',ctOfferField(d))
+      +ptabWrap('stock',prodAvailBlock(d,id))
+      +ptabWrap('variants',prodVariantsTab(d))
+      +ptabWrap('pricing',prodPricingTab(d))
+      +`<div class="err" id="ct_err" style="margin-top:8px"></div>`;
+    bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
-      + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
-      + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`
-      + prodAvailBlock(d,id);
+    body = prodTabBar()
+      + ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
+        + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
+        + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`)
+      + ptabWrap('categories', prodCatgViewHTML(d))
+      + ptabWrap('offers', prodOffersViewHTML(d))
+      + ptabWrap('stock', prodAvailBlock(d,id))
+      + ptabWrap('variants', prodVariantsTab(d))
+      + ptabWrap('pricing', prodPricingTab(d));
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
