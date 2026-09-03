@@ -9230,7 +9230,35 @@ function prodOfferCartHTML(d, offers, qty, totalTestid){
     + CBCatUI.offersHTML('prodprev', lines, offers, null,
         { ev: ev, skipped: true, subtotal: true, testid: 'prod-offer-break-' + qty,
           totalTestid: totalTestid, head: tx('How it applies') })
+    + prodOfferTaxFooterHTML(d, qty, per.off || 0)
     + '</div>';
+}
+/**
+ * ⭐ AND THEN THE TAX — on what remains after every offer. Athi, 2026-09-04: *"if multiple offers listed, that also
+ * should be considered and final amount should show, either before tax, after tax?"* The cart preview stopped at
+ * "After offers"; a buyer pays after tax. The product's resolved slab (its own, its category's, the catalogue's or
+ * the jurisdiction's) is applied by lib/tax.js's mirror to the SAME discounted line, so this footer and the
+ * Pricing & tax tab cannot disagree. Read-only; the two shelves it needs are cached per session (cbDefsLive).
+ */
+function prodOfferTaxFooterHTML(d, qty, off){
+  if (typeof CBTaxSlab === 'undefined' || typeof CBTax === 'undefined') return '';
+  const slabs = cbDefsCached('tax'), cats = cbDefsCached('category');
+  if (slabs === null || cats === null) {
+    Promise.all([cbDefsLive('tax'), cbDefsLive('category')]).then(function(){ if (UI.nav === 'catalogue') paintProdDetail(); }).catch(function(){});
+    return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('tax: reading…')}</div>`;
+  }
+  const r = CBTaxSlab.resolve({ item_data: d, face: UI._face || {}, slabs: slabs || [], categories: cats || [] });
+  if (r.rate == null) return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('No tax slab resolves for this product — see Pricing & tax.')}</div>`;
+  const price = cbAmount(d.price) || 0;
+  const it = CBTax.determine({ seller: { State: prodSellerState() || '29' }, buyer: { Pos: prodSellerState() || '29' },
+    lines: [{ name: pName(d), qty: qty, unit_price: price, discount: off, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
+  const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
+  const row = (l, v, strong) => `<div style="display:flex;justify-content:space-between;gap:8px${strong ? ';font-weight:700' : ''}"><span style="color:var(--grey)">${l}</span><bdi>${esc(money(v))}</bdi></div>`;
+  return `<div class="prodprev-tax" data-testid="prod-offer-preview-tax-${qty}" data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}" style="border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:var(--fs-2);font-variant-numeric:tabular-nums">`
+    + row(tx('Before tax'), it.AssAmt)
+    + row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100)
+    + row(tx('After tax'), it.TotItemVal, true)
+    + `</div>`;
 }
 
 /**
@@ -9892,6 +9920,14 @@ function prodTaxPreviewHTML(d,r){
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
     + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })
     + (off>0 ? ` · <span data-testid="prod-tax-preview-offer" data-discount="${esc(off)}">${txf('after offers −{off} ({why}) → tax on {net}', { off: inr(off), why: esc(offWhy), net: inr(Math.max(0, price-off)) })}</span>` : '')
+    + `</div>`
+    /* ⭐ THE FINAL NUMBER, BOTH WAYS. Athi, 2026-09-04: *"final amount should show, either before tax, after tax?"* —
+       both, named. Before tax = after every offer (the assessable amount); after tax = what the buyer pays. The
+       total is the same in both states; only the heads differ, which the cells below show. */
+    + `<div data-testid="prod-tax-preview-final" data-before="${esc(intra.AssAmt)}" data-after="${esc(intra.TotItemVal)}" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-variant-numeric:tabular-nums">`
+    + `<span><span style="color:var(--grey)">${tx('Before tax')}</span> <b><bdi>${inr(intra.AssAmt)}</bdi></b></span>`
+    + `<span><span style="color:var(--grey)">${txf('GST {rate}%', { rate: String(r.rate) })}</span> <b><bdi>${inr(Math.round((intra.TotItemVal-intra.AssAmt)*100)/100)}</bdi></b></span>`
+    + `<span><span style="color:var(--grey)">${tx('After tax')}</span> <b><bdi>${inr(intra.TotItemVal)}</bdi></b></span>`
     + `</div>`
     + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
     +   cell(tx('Same state'), intra, 'prod-tax-preview-intra',
