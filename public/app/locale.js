@@ -663,13 +663,27 @@
       catch (_) { return code; }
     },
 
+    /**
+     * ⚠️⚠️ AN ARABIC-REGION FORMAT CARRIES AN INVISIBLE DIRECTION MARK, AND IT REORDERED A PRICE. Athi, 2026-09-03,
+     * photographed "10 / ₹ 620.00KG / bag" for a ₹620 product sold per "10KG / bag". The template was plain —
+     * `price / unit` — but `Intl.NumberFormat('ar-AE', INR)` returns "‏620.00 ₹": a RIGHT-TO-LEFT MARK in
+     * front of the amount, put there so the number sits correctly inside Arabic prose. Composed with " / 10KG",
+     * a unit that STARTS WITH DIGITS, the bidi algorithm did exactly what the mark asked and swapped the numbers
+     * around the slashes. The same string alone on the list row was harmless, which is why it hid for so long.
+     *
+     * ⭐ Direction follows the LANGUAGE (see dir()), and the page is LTR whenever the language is. On an LTR page
+     * the marks serve nothing and can only mislead the bidi algorithm, so they are dropped here — once, for every
+     * caller. On an RTL page they stay: there they are what keeps a price readable. Callers that compose money
+     * with other text should still isolate it in <bdi> for the RTL case; this fixes the LTR one at the source.
+     */
     money: function (amount, code) {
-      var n = Number(amount || 0), c = code || 'INR', loc = L.tag();
-      try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'symbol' }).format(n); }
+      var n = Number(amount || 0), c = code || 'INR', loc = L.tag(), s;
+      try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'symbol' }).format(n); }
       catch (e) {
-        try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
+        try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
         catch (_) { return c + ' ' + n.toLocaleString(); }   /* an unknown currency code must still print */
       }
+      return L.dir() === 'rtl' ? s : s.replace(/[‎‏؜]/g, '');   /* LRM · RLM · ALM */
     },
 
     number: function (n, opts) {

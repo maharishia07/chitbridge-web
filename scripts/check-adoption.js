@@ -173,53 +173,16 @@ t('no field renders as the literal "undefined"', () => {
   }
 });
 
-// ── WIZARD CONTRACT · the order METHOD (what data the business gets back from a buyer) ──
-// The wizard used to hardcode method:'cart' at finish, silently discarding the vertical's own declared method —
-// a gold or trade catalogue became a cart. These assertions run against the real cap-catalogue.js.
-const capSrc = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
-/* ⚠️ A SECOND SANDBOX IS A SECOND PLACE TO FORGET. The globals above fixed nine cases and left this one red for
-   the same reason, because cap-catalogue.js is evaluated in its own context — so the localisation globals belong
-   here too. Two contexts, one contract: whatever the app defines globally, every sandbox has to hand over. */
-const capCtx = { UI: {}, renderApp() {}, esc: (v) => String(v == null ? '' : v), val: () => '', toast() {},
-                 tx: (s) => s,
-                 txf: (s, vars) => String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? vars[k] : m)),
-                 CBCatalogue: { ensure: (x) => x }, api: null, document: { getElementById: () => null } };
-try { new vm.Script(capSrc).runInNewContext(capCtx); }
-catch (e) { console.log('  XX  cap-catalogue.js did not evaluate — ' + e.message); fail++; }
-
-if (capCtx._cwMethod) {
-  t('wizard · each vertical keeps its OWN declared order method (not a hardcoded cart)', () => {
-    for (const v of Object.keys(capCtx.CATF_KB)) {
-      const want = capCtx.CATF_KB[v].method, got = capCtx._cwMethod({ vertical: v, method: '' });
-      if (got !== want) throw new Error(v + ' should default to ' + want + ', got ' + got);
-    }
-  });
-  t('wizard · an explicit pick overrides the vertical default', () => {
-    if (capCtx._cwMethod({ vertical: 'gold', method: 'qtyprice' }) !== 'qtyprice') throw new Error('explicit method ignored');
-  });
-  t('wizard · every order method states WHAT DATA the business receives', () => {
-    for (const m of capCtx.CATF_METHODS) {
-      if (!m.receives || !m.receives.length) throw new Error(m.k + ' has no `receives` — the choice must be made on the data, not the widget');
-      if (!m.label || !m.hint) throw new Error(m.k + ' missing label/hint');
-    }
-  });
-  // A PAYLOAD catalogue (enquiry / form) receives declared data, not a purchase — so the price step must collect
-  // nothing and must say what it DOES receive. Asserted on behaviour, not on wording.
-  t('wizard · payload presets collect no prices and name what they receive', () => {
-    for (const k of Object.keys(capCtx.CATF_PIPELINE).filter((k) => capCtx.CATF_PIPELINE[k] === 'payload')) {
-      const h = capCtx._cwStep5({ vertical: 'veg', method: k, erpMap: {}, prices: {}, chosen: {} });
-      if (h.indexOf('<input type="number"') >= 0) throw new Error(k + ' must not render price inputs');
-      const receives = (capCtx.CATF_METHODS.filter((m) => m.k === k)[0] || {}).receives;
-      if (!receives || h.indexOf(receives) < 0) throw new Error(k + ' must state what it receives');
-    }
-  });
-  t('wizard · every preset declares a pipeline, and commerce/payload is the only split', () => {
-    for (const m of capCtx.CATF_METHODS) {
-      const p = capCtx.CATF_PIPELINE[m.k];
-      if (p !== 'commerce' && p !== 'payload') throw new Error(m.k + ' has no valid pipeline');
-    }
-  });
-}
+// ── WIZARD CONTRACT · RETIRED WITH THE WIZARD (FIX-3, 163c255, 2026-09-03) ──
+// This block evaluated cap-catalogue.js and asserted that every order METHOD states WHAT DATA the business
+// receives (`receives`), that payload presets collect no prices, and that each preset declares a pipeline.
+// The file is gone, so `npm run check` crashed here on every run after FIX-3 — a dead guard that took the live
+// ones (check:reads, check:lazy, check:modal) down with it.
+//
+// ⚠️ THE CONTRACT WAS NOT RE-HOMED. The hub's Storefront section (cap-catsetup.js, catsetSfMethod) lists methods
+// by label and "in use" only; the `receives` sentence — the thing that let a person choose on the DATA rather than
+// the widget — did not survive the move. Logged in catalogue/OBSERVATIONS-4-REVIEW.md (obs 1, storefront tab).
+// When it comes back, these assertions come back with it, against the hub.
 
 console.log('\ncheck-adoption: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

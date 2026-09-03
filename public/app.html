@@ -1248,9 +1248,16 @@
      lines and "2 of 2 done" onto two more; wrapping to two rows is what keeps each figure on one line. */
   .spendstrip{display:flex;gap:14px;align-items:flex-end;padding:9px 14px;margin:0 0 2px;
     background:var(--wash);border:1px solid var(--line);border-radius:9px}
+  /* ⚠️ THE CELLS CARRIED AN INLINE `flex:1`, WHICH BEAT EVERY RULE BELOW. Athi, 2026-09-03: "with register and
+     history chip, mobile display goes for a toss." Five boxes — Quoted · Spent · Work · Register · History — fought
+     for one line, the two nowrap chips took their width, and the three labels overlapped. The position was right;
+     the inline override was wrong. Flex lives here now, so the mobile rule can actually win. */
+  .spendstrip > .spendcell{flex:1;min-width:0}
   .appwrap.m .spendstrip{flex-wrap:wrap;row-gap:9px;align-items:baseline}
-  .appwrap.m .spendstrip > div{flex:1 1 42%}
-  .appwrap.m .spendstrip > div:last-child{flex:0 0 auto;margin-inline-start:auto}
+  .appwrap.m .spendstrip > .spendcell{flex:1 1 28%}
+  .appwrap.m .spendstrip > .spendchip{flex:0 0 auto}
+  .appwrap.m .spendstrip > .spendchip:first-of-type,
+  .appwrap.m .spendstrip > .spendcell + .spendchip{margin-inline-start:auto}
   /* ── design 2 · SUMMARY, the cost tree ──────────────────────────────────────────────────────────────────
      ⭐ Read as an OUTLINE, not a table: the service is the loudest thing, its kinds sit under it, and the
      items sit under those. Indentation carries the nesting so no row needs a label saying what it is.
@@ -7132,6 +7139,27 @@ function supCartRelease(){
  * asking a question with one answer. Compose keeps its To step because there the recipient is genuinely unknown.
  */
 function supOrderState(){ if(!UI._supOrder) UI._supOrder={subject:'',by:'',addr:'',note:''}; return UI._supOrder; }
+/**
+ * ⭐ WHAT WE ALREADY KNOW ABOUT OURSELVES IS NOT A QUESTION. Athi, 2026-09-03: *"when you are sending a chit to
+ * the supplier … you already know about yourself, like your address … those things can be auto filled."* The
+ * buyer here is US; /me carries the address, the city and the phone. So "Deliver to" opens filled, and stays
+ * editable — a site address that differs from the registered one is the ordinary case, not the exception.
+ *
+ * ⚠️ SEEDED ONCE PER ORDER, NEVER OVER A TYPED VALUE. meNow() resolves after the form has painted, so the value
+ * is patched into the live input rather than triggering a repaint that would drop whatever else was being typed.
+ * A person who cleared the field on purpose is not re-filled: the seed only lands on an EMPTY field.
+ */
+function supSeedDeliverTo(){
+  var o=supOrderState(); if(o._seeded) return; o._seeded=true;
+  if(typeof meNow!=='function') return;
+  meNow().then(function(e){
+    if(!e || o.addr) return;
+    var where=[e.address, e.city].filter(Boolean).join(', ');
+    if(!where) return;
+    o.addr = e.phone ? where + ' · ☎ ' + e.phone : where;
+    var el=document.querySelector('[data-testid="sup-addr"]'); if(el && !el.value) el.value=o.addr;
+  }).catch(function(){});
+}
 function supStepsFor(x){
   /**
    * ⭐⭐ OUR OWN SHELF IS NOT SOMEONE TO ORDER FROM. Athi, 2026-08-23: *"so you can open your own catalogue and
@@ -7227,6 +7255,7 @@ function supAddAll(){
 function supStepDetails(x){
   var o=supOrderState();
   if(!o.subject) o.subject=supDefaultSubject(x);
+  supSeedDeliverTo();
   return '<div class="sec">Your order to '+esc(supName(x))+'</div>'
     + '<label class="fl">Subject <span style="color:var(--disp)">*</span></label>'
     + '<input class="inp" data-testid="sup-subject" value="'+esc(o.subject)+'" oninput="UI._supOrder.subject=this.value;UI._supFlow&&UI._supFlow.paintFoot()">'
@@ -9345,7 +9374,7 @@ async function _prodStatus(id, status, extra){
 }
 
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
-  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span>${priceSrcHTML(d)}</span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
+  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600"><bdi>${inr(pPrice(d))}</bdi> <span style="color:var(--grey);font-weight:400">/ <bdi>${esc(pUnit(d))}</bdi></span>${priceSrcHTML(d)}</span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 /**
  * ── WHAT THIS STORE HAS, AND WHEN THAT WAS LAST TRUE ─────────────────────────────────────────────────────────
  * The other half of "where is it?" — the locator can only report what a store has said, so a store needs a place
@@ -9419,7 +9448,7 @@ function prodDetailHTML(){
      photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
-  const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
+  const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price"><bdi>${inr(pPrice(d))}</bdi> / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
   if(UI.prodMode==='edit'){ body=`<div class="sec">${tx('Edit product')}</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
@@ -12454,17 +12483,17 @@ function chitSpendStrip(c){
     }).length;
   }
   const done=_done+' '+tx('of')+' '+(s.lines||0)+' '+tx('done');
-  const cell=(label,val,extra)=>`<div style="flex:1;min-width:0"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
+  const cell=(label,val,extra)=>`<div class="spendcell"><div style="font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--grey);font-weight:600">${esc(label)}</div>
     <div style="font-size:var(--fs-3);font-weight:700;font-variant-numeric:tabular-nums;${extra||''}">${val}</div></div>`;
   return `<div data-testid="chit-spend" class="spendstrip">
     ${quoted?cell(tx('Quoted'), esc(inr(quoted))):''}
     ${cell(tx('Spent so far'), `<span data-testid="chit-spend-amt">${spent?esc(inr(spent)):'—'}</span>`, spent?'color:var(--ok-2,#2f6b4f)':'color:var(--grey)')}
     ${cell(tx('Work'), '<span data-testid="chit-spend-work">' + esc(done) + '</span>')}
-    ${dchipShows('register')?`<div><button type="button" data-testid="chit-register" data-label="${esc(c.subject||'')}"
+    ${dchipShows('register')?`<div class="spendchip"><button type="button" data-testid="chit-register" data-label="${esc(c.subject||'')}"
       onclick="cbRegisterFor('${c.id}', this.dataset.label)"
       title="${esc(tx('Record a risk, issue or dependency against this order'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('＋ Register'))}</button></div>`:''}
-    ${dchipShows('history')?`<div><button type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
+    ${dchipShows('history')?`<div class="spendchip"><button type="button" data-testid="chit-spend-history" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})"
       title="${esc(tx('Every part and every hour recorded against this job, and who recorded it'))}"
       style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:5px 10px;font-size:var(--fs-1);cursor:pointer;white-space:nowrap">${esc(tx('History →'))}</button></div>`:''}
   </div>`;
