@@ -206,6 +206,9 @@ test('[TAX-02] a governed slab is inherited, picked on a product, and the split 
   await clickNav(page, 'catsetup');
   await page.getByTestId('catset-sec-tax').click();
   await settle(page);
+  /* ⚠️ The list paints "reading…" first and fills on its own read — count AFTER a row exists, not the instant the
+     section opens ([TAX-02] skipped twice on a catalogue that had the rows). */
+  await page.locator('.catset-drow').first().waitFor({ timeout: 20000 }).catch(() => {});
   const governed = page.locator('.catset-drow.gov');
   const n = await governed.count().catch(() => 0);
   test.skip(n === 0, 'no governed slabs listed — migration b201 (India GST on region_layer) has not been applied');
