@@ -1580,6 +1580,7 @@ img.attImg{object-fit:cover;display:block}
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
 <script src="/app/tax.js"></script>
 <script src="/app/tax-slab.js"></script>
+<script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
@@ -9751,7 +9752,7 @@ async function saveAvail(id){
  * product is how a rule stops being one. BOM ("consists of") is not a tab yet — see BACKLOG, the chit-shape
  * decision is open. Publish-on-a-date is the next cut (catalogue_item_version.valid_from).
  */
-const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax']];
+const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax'],['bom','Consists of'],['barcode','Barcode']];
 function prodTab(){ return UI.prodTab||'product'; }
 function prodTabBar(){
   return `<div class="dtabs" data-testid="prod-tabs">`+PROD_TABS.map(function(t){
@@ -9789,6 +9790,50 @@ function prodVariantsTab(d){
   return `<div class="sec">${tx('Variants')}</div>`
     + (d.variant ? `<div class="kv" style="padding:8px 12px;font-size:var(--fs-2)">${tx('This line is the')} <b>${esc(d.variant)}</b> ${tx('variant.')}</div>` : '')
     + `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('One product, several sizes: each size keeps its own code and price, and the catalogue declares which lines belong together and by what (size, colour, pack). That grouping lives in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('variants')">${tx('Catalogue setup › Variants')}</span>.</div>`;
+}
+/**
+ * ⭐ CONSISTS OF — the product's bill of materials, the `bom:[{item, qty}]` facet the Network tool authors on a node
+ * (catalogue-model.js). A READ-OUT here, on purpose: composition is designed where the flow is designed, and the
+ * catalogue shows what was decided. On a chit the BOM rides on the line as detail (tax-lines.decorate) — one line,
+ * components attached, totals untouched — which is the BACKLOG decision "one line with structure attached".
+ * The outcome shown: what ONE unit draws down, and what the whole order would, at the quantity typed.
+ */
+function prodBomTab(d){
+  const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item);
+  const nameOf=(ref)=>{ const p=(UI.prods||[]).find(x=>String(x.item_id||x.id)===String(ref)||String(pName(x.item_data||x)||'').toLowerCase()===String(ref).toLowerCase()); return p?pName(p.item_data||p):String(ref); };
+  const qty=Math.max(1, Number(UI._bomQty)||1);
+  if(!rows.length) return `<div class="sec">${tx('Consists of')}</div><div data-testid="prod-bom-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('Nothing declared. A product that is made of other products declares them on its node in Network — the components then draw down when this line is sold.')}</div>`;
+  return `<div class="sec">${tx('Consists of')}</div>`
+    + `<div style="padding:6px 12px;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><span style="color:var(--grey)">${tx('For')}</span><input class="inp" data-testid="prod-bom-qty" type="number" min="1" value="${esc(qty)}" style="width:80px" oninput="UI._bomQty=this.value;prodBomRepaint(this.closest('.ptab')||document)"><span style="color:var(--grey)">${esc(pUnit(d))}</span></div>`
+    + `<table data-testid="prod-bom" style="width:100%;border-collapse:collapse;font-size:var(--fs-2);font-variant-numeric:tabular-nums"><thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 12px">${tx('Component')}</th><th style="text-align:end;padding:4px 12px">${tx('Per unit')}</th><th style="text-align:end;padding:4px 12px">${txf('For {n}', { n: String(qty) })}</th></tr></thead><tbody>`
+    + rows.map(b=>`<tr><td style="padding:4px 12px;border-top:1px solid var(--line)">${esc(nameOf(b.item))}</td><td style="padding:4px 12px;border-top:1px solid var(--line);text-align:end"><bdi>${esc(Number(b.qty)||1)}</bdi></td><td style="padding:4px 12px;border-top:1px solid var(--line);text-align:end"><bdi>${esc(Math.round((Number(b.qty)||1)*qty*1000)/1000)}</bdi></td></tr>`).join('')
+    + `</tbody></table>`
+    + `<div style="padding:8px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('Edit the composition in Network › this node › Consists of. On a chit the components travel with the line.')}</div>`;
+}
+/**
+ * ⭐ THE BARCODE IS THE SKU. Code 128 of the product code, drawn in the page (app/barcode.js), printable from here.
+ * Internal today — a GS1 GTIN is an ASSIGNED number (the prefix is bought from GS1) and a different symbology; that
+ * is a catalogue-standards step, not a rendering one. The outcome shown: the label a scanner at the counter reads.
+ */
+function prodBarcodeTab(d){
+  const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim();
+  if(!code) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No product code yet — set a SKU on the Product tab and the barcode is drawn from it.')}</div>`;
+  if(typeof CBBarcode==='undefined') return `<div class="sec">${tx('Barcode')}</div><div style="padding:8px 12px;color:var(--grey)">${tx('Barcode renderer not loaded.')}</div>`;
+  const r=CBBarcode.code128(code, { module:2, height:56 });
+  if(!r.ok) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--warn-3)">⚠️ ${esc(code)} — ${esc(r.reason)}</div>`;
+  return `<div class="sec">${tx('Barcode')}</div>`
+    + `<div data-testid="prod-barcode" data-code="${esc(code)}" style="padding:10px 12px;overflow-x:auto;background:#fff;color:#000;border-radius:9px;margin:0 12px;max-width:100%">${r.svg}</div>`
+    + `<div style="padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:var(--fs-2)">`
+    + `<button class="composebtn" data-testid="prod-barcode-print" onclick="prodBarcodePrint('${esc(code)}')">🖨️ ${tx('Print label')}</button>`
+    + `<span style="color:var(--grey)">${tx('Code 128 · internal · a GS1 barcode needs an assigned prefix.')}</span></div>`;
+}
+function prodBomRepaint(scope){ const q=Math.max(1,Number(UI._bomQty)||1); const t=scope.querySelector('[data-testid="prod-bom"]'); if(!t) return; t.querySelectorAll('thead th')[2].textContent=txf('For {n}',{ n:String(q) }); t.querySelectorAll('tbody tr').forEach(tr=>{ const per=Number(tr.children[1].textContent)||1; tr.children[2].firstChild.textContent=String(Math.round(per*q*1000)/1000); }); }
+function prodBarcodePrint(code){
+  const r=(typeof CBBarcode!=='undefined')?CBBarcode.code128(code,{ module:3, height:70 }):null; if(!r||!r.ok) return;
+  const d=(UI.prods||[]).find(x=>String(x.item_id||x.id)===String(UI.prodSel)); const nm=d?pName(d.item_data||d):'';
+  const w=window.open('','_blank','width=520,height=360'); if(!w) { toast(tx('Allow pop-ups to print the label.')); return; }
+  w.document.write('<!doctype html><title>'+esc(code)+'</title><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:system-ui"><div style="font-size:14px;margin-bottom:6px">'+esc(nm)+'</div>'+r.svg+'<script>window.onload=function(){window.print()}<\/script></body>');
+  w.document.close();
 }
 /* Read-outs of the catalogue-wide rules that apply to this product — the face is read once and kept on UI._face. */
 function prodPricingTab(d){
@@ -10027,6 +10072,8 @@ function prodDetailHTML(){
       +ptabWrap('stock',prodAvailBlock(d,id))
       +ptabWrap('variants',prodVariantsTab(d))
       +ptabWrap('pricing',prodPricingTab(d))
+      +ptabWrap('bom',prodBomTab(d))
+      +ptabWrap('barcode',prodBarcodeTab(d))
       +`<div class="err" id="ct_err" style="margin-top:8px"></div>`;
     bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
@@ -10041,7 +10088,9 @@ function prodDetailHTML(){
       + ptabWrap('offers', prodOffersViewHTML(d))
       + ptabWrap('stock', prodAvailBlock(d,id))
       + ptabWrap('variants', prodVariantsTab(d))
-      + ptabWrap('pricing', prodPricingTab(d));
+      + ptabWrap('pricing', prodPricingTab(d))
+      + ptabWrap('bom', prodBomTab(d))
+      + ptabWrap('barcode', prodBarcodeTab(d));
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should

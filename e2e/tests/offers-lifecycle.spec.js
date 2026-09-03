@@ -265,4 +265,18 @@ test('[OFF-02] two live offers on one product — the product page shows the com
     }), [nameA.slice(0, 14), nameB.slice(0, 14)]), { timeout: 20000 }).toEqual([true, true]);
     await dismissModal(page);
   });
+
+  /* ⭐ THE HALF THAT WAS MISSING (2026-09-04): a typed line naming MY product IS that product (ccMatchMine), so the
+     product-targeted offers fire in compose exactly as on the storefront — the same evaluate, the same lines. */
+  await test.step('COMPOSE — typing the product name makes the targeted offers fire on the line', async () => {
+    await page.getByTestId('chit-item-name').fill(prod);
+    await page.getByTestId('chit-item-qty').fill('3');
+    await page.getByTestId('chit-item-price').fill('1000');
+    await page.getByTestId('chit-item-add').click();
+    await expect.poll(async () => page.evaluate(() => {
+      const items = (typeof CC !== 'undefined' && CC.items) || [];
+      const mine = items.find((it) => !it._auto_offer);
+      return { matched: !!(mine && mine.item_id), off: items.some((it) => (it._offer_off || 0) > 0 || it._auto_offer), savings: (typeof CC !== 'undefined' && CC.savings) || 0 };
+    }), { timeout: 20000 }).toMatchObject({ matched: true, off: true });
+  });
 });
