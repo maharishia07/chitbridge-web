@@ -5720,6 +5720,32 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  * the basket themselves, that line is theirs; the offer discounts it where it stands (see offers.js) and no
  * second line appears.
  */
+/**
+ * ⭐ THE CART LINE AS THE ENGINE READS IT — one builder, because there were three identical copies of this map
+ * (the offer pass, its second pass after a reward is claimed, and the SEND) and they were not identical for
+ * long: the send's copy carried no `item_id`, `sku` or `categories` at all, so every TARGETED offer that the
+ * cart displayed evaluated against anonymous rows on the way to the chit. A line shape written out three times
+ * is a line shape that will differ in one of them, and the difference shows up as a price, not as an error.
+ */
+function ccOfferLines(){
+  return (CC.items || []).map(function(it,i){
+    return { key:String(i), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
+             categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
+             qty:+it.qty||0, unitPrice:+it.price||0 };
+  });
+}
+/**
+ * ⭐ AND ONE PLACE THAT PUTS THE MONEY ON THE LINE. CBOffers.perLine accumulates the line-scope adjustments and
+ * CAPS each at what the line is worth — the cap two of the three copies had and the third did not.
+ */
+function ccMarkOffers(ev, lines){
+  var per = CBOffers.perLine(ev, lines);
+  Object.keys(per).forEach(function(k){
+    var it = CC.items[Number(k)]; if(!it) return;
+    it._offer_off = per[k].off; it._offer_why = per[k].why;
+    it._offer_id = per[k].offer_id; it._offer_label = per[k].label;
+  });
+}
 function ccSyncOffers(){
   if (!CC || !Array.isArray(CC.items)) return;
   /* 1 · drop what a previous pass added, and clear last pass's marks from every surviving line */
@@ -5731,22 +5757,15 @@ function ccSyncOffers(){
   if (!offers.length || typeof CBOffers === 'undefined') return;
 
   try {
+    var lines = ccOfferLines();
     var ev = CBOffers.evaluate({
-      lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
-        sku:it.sku||it.code||null, categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
-        qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+      lines: lines,
       offers: offers,
       money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
     });
 
     /* 2 · the discounts, onto the lines they name */
-    ev.adjustments.forEach(function(a){
-      if (a.scope !== 'line' || a.target == null) return;
-      var it = CC.items[Number(a.target)]; if (!it) return;
-      var off = Math.abs(Number(a.amount) || 0); if (!off) return;
-      it._offer_off = Math.round(((it._offer_off||0) + off) * 100) / 100;
-      it._offer_why = a.why || ''; it._offer_id = a.offer_id || null; it._offer_label = a.label || '';
-    });
+    ccMarkOffers(ev, lines);
 
     /**
      * 3 · the rewards, added on the buyer's behalf — and STATED as such.
@@ -5795,21 +5814,14 @@ function ccSyncOffers(){
      * a decision — an offer that rewards a reward is refused by silence rather than by a hang.
      */
     if (claims.length) {
+      lines = ccOfferLines();
       ev = CBOffers.evaluate({
-        lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
-          sku:it.sku||it.code||null, categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
-          qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+        lines: lines,
         offers: offers,
         money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
       });
       CC.items.forEach(function(it){ delete it._offer_off; delete it._offer_why; delete it._offer_id; delete it._offer_label; });
-      ev.adjustments.forEach(function(a){
-        if (a.scope !== 'line' || a.target == null) return;
-        var it = CC.items[Number(a.target)]; if (!it) return;
-        var off = Math.abs(Number(a.amount) || 0); if (!off) return;
-        it._offer_off = Math.round(((it._offer_off||0) + off) * 100) / 100;
-        it._offer_why = a.why || ''; it._offer_id = a.offer_id || null; it._offer_label = a.label || '';
-      });
+      ccMarkOffers(ev, lines);
     }
 
     /* 5 · what they saved — the whole point of showing it. Athi: "so you can show what is the savings as well." */
@@ -5933,19 +5945,16 @@ async function submitCompose(isDraft){
    */
   try {
     if ((CC.offers||[]).length && typeof CBOffers !== 'undefined') {
-      var _ev = CBOffers.evaluate({
-        /**
-         * ⚠️⚠️ THE LINES CARRIED NO IDENTITY, so no TARGETED offer could ever fire on send. `applies_to.item_ids`,
-         * `applies_to.skus`, `applies_to.category` and the cross-item reward all match on fields this map did
-         * not include — the cart showed the discount (catalogue-ui builds a fuller line) and the SEND silently
-         * evaluated against anonymous rows. Exactly the whitelist trap offers.js warns about at the normaliser:
-         * a field dropped in between, with no error at either end.
-         */
-        lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
-          sku:it.sku||it.code||null, categories:catgIdsOf(it)||[],
-          qty:+it.qty||0, unitPrice:+it.price||0 }; }),
-        offers: CC.offers
-      });
+      /**
+       * ⚠️⚠️ THE LINES CARRIED NO IDENTITY, so no TARGETED offer could ever fire on send. `applies_to.item_ids`,
+       * `applies_to.skus`, `applies_to.category` and the cross-item reward all match on fields this map did
+       * not include — the cart showed the discount (catalogue-ui builds a fuller line) and the SEND silently
+       * evaluated against anonymous rows. Exactly the whitelist trap offers.js warns about at the normaliser:
+       * a field dropped in between, with no error at either end. It is ccOfferLines() now, so the send and the
+       * cart cannot describe the same basket differently again.
+       */
+      var _lines = ccOfferLines();
+      var _ev = CBOffers.evaluate({ lines: _lines, offers: CC.offers });
       /**
        * ⭐⭐ THE DISCOUNT REACHES THE LINE, NOT ONLY THE SCREEN.
        *
@@ -5963,18 +5972,12 @@ async function submitCompose(isDraft){
        * `total` is what is owed. That is also the shape lib/tax.js already reads (TotAmt · Discount · AssAmt),
        * so an invoice built from this needs no second interpretation.
        */
+      /* ⚠️ The IDS come from EVERY adjustment, the money only from the line-scope ones — a cart-scope discount is
+         still an offer this chit received, and it has to be cited even though it lands on no single line. */
       _ev.adjustments.forEach(function(a){
         if (a.offer_id && _defIds.indexOf(a.offer_id) < 0) _defIds.push(a.offer_id);
-        if (a.scope !== 'line' || a.target == null) return;   /* cart-scope discounts belong to the order, not a line */
-        var it = CC.items[Number(a.target)];
-        if (!it) return;
-        var off = Math.abs(Number(a.amount) || 0);
-        if (!off) return;
-        it._offer_off = Math.round(((it._offer_off || 0) + off) * 100) / 100;
-        it._offer_why = a.why || '';
-        it._offer_id = a.offer_id || null;
-        it._offer_label = a.label || '';
       });
+      ccMarkOffers(_ev, _lines);
     }
   } catch (e) { /* an offer engine failure must not block a send — the lines and prices stand on their own */ }
 

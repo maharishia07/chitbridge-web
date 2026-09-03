@@ -32,19 +32,15 @@ const money = (n) => '₹' + n;
  * broke this shape would show up here rather than in a customer's invoice.
  */
 function mint(items, offers) {
-  const ev = O.evaluate({
-    lines: items.map((it, i) => ({ key: String(i), item_id: it.item_id, sku: it.sku,
-      categories: it.categories || [], qty: it.qty, unitPrice: it.price })),
-    offers, now: NOW, money,
-  });
-  const off = {};
-  ev.adjustments.forEach((a) => {
-    if (a.scope !== 'line' || a.target == null) return;
-    off[a.target] = Math.round(((off[a.target] || 0) + Math.abs(a.amount)) * 100) / 100;
-  });
+  const evLines = items.map((it, i) => ({ key: String(i), item_id: it.item_id, sku: it.sku,
+    categories: it.categories || [], qty: it.qty, unitPrice: it.price }));
+  const ev = O.evaluate({ lines: evLines, offers, now: NOW, money });
+  /* ⚠️ CBOffers.perLine, not a loop written here. This file held the fourth hand-written copy of "accumulate
+     the line-scope adjustments and cap them at the line", and the copy in app.html's SEND path had no cap. */
+  const off = O.perLine(ev, evLines);
   const lines = items.map((it, i) => {
     const gross = it.qty * it.price;
-    const d = Math.min(off[String(i)] || 0, gross);
+    const d = (off[String(i)] || {}).off || 0;
     const row = { particulars: it.name, quantity: it.qty, price: it.price,
       total: Math.round((gross - d) * 100) / 100 };
     if (d > 0) { row.discount = d; row.freebie = (row.total === 0); }
