@@ -455,13 +455,21 @@ function cbDefRuleFields(kind, sub){
   }
   if (kind === 'offer') {
     var g = [];
-    if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true });
-    if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true });
-    if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true });
-                               g.push({ k: 'min_qty', label: '…or this many items', num: true }); }
-    if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true });
-                                 g.push({ k: 'get', label: 'Get', ph: '1', num: true });
-                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true });
+    if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true, half: true });
+    if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true, half: true });
+    if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true, half: true });
+                               g.push({ k: 'min_qty', label: '…or this many items', num: true, half: true }); }
+    /**
+     * ⚠️⚠️ tier_price HAD NO FIELDS AT ALL. The registry advertises it — "Quantity tier — a RE-PRICE, not a
+     * discount" — the kind picker offers it, and choosing it produced an offer with no `tiers`: the engine read
+     * an empty list and returned nothing, forever. The one kind a B2B seller reaches for first was authorable
+     * only in the sense that it could be saved.
+     */
+    if (sub === 'tier_price') g.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true,
+      ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each. The engine never RAISES a price from this table.' });
+    if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true, half: true });
+                                 g.push({ k: 'get', label: 'Get', ph: '1', num: true, half: true });
+                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true, half: true });
                                  /**
                                   * ⭐⭐ THE REWARD MAY BE A DIFFERENT PRODUCT — Athi, 2026-09-03: *"include
                                   * another item from the catalogue as an offer"*. Blank keeps the original
@@ -469,16 +477,42 @@ function cbDefRuleFields(kind, sub){
                                   * it "buy rice, get oil free", which this kind could not say at all.
                                   */
                                  g.push({ k: 'get_item_id', label: 'Reward — a different product (blank = one of these)', pick: 'product' }); }
-    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true });
-                                 g.push({ k: 'max', label: 'Band maximum', num: true }); }
-    if (sub === 'shipping') g.push({ k: 'percent', label: '% off shipping (blank = free)', num: true });
+    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true, half: true });
+                                 g.push({ k: 'max', label: 'Band maximum', num: true, half: true }); }
+    /**
+     * ⚠️ "blank = free" WAS A PROMISE THE ENGINE DID NOT KEEP. The only shipping field was the percentage, and
+     * blank produced an offer with no term at all — offers.js requires `free`, so it moved nothing and said
+     * nothing. Free shipping is now a thing you tick, which is also the only way to author the commonest
+     * shipping offer there is.
+     */
+    if (sub === 'shipping') { g.push({ k: 'free', label: 'Free shipping', check: true, half: true });
+                              g.push({ k: 'flat', label: 'or a flat rate', num: true, half: true });
+                              g.push({ k: 'percent', label: 'or % off shipping', num: true, half: true }); }
+    /**
+     * ⭐ WHAT IT COMES OFF — the two kinds offers.js declares as `scope:'either'`. Nothing ever set `scope`, so
+     * every percentage anyone authored was a PER-LINE discount and "10% off the whole order" could not be said.
+     */
+    if (typeof CBOffers !== 'undefined' && CBOffers.KINDS && CBOffers.KINDS[sub]
+        && CBOffers.KINDS[sub].scope === 'either') {
+      g.push({ k: 'scope', label: 'Comes off', half: true,
+        sel: [{ v: '', label: 'Each line it applies to' }, { v: 'cart', label: 'The order total' }] });
+    }
     /* ⭐ TARGETING — "10% off Paints" (backlog 20). The engine has read `applies_to.category` all along; nothing
        ever SET it, and no cart line carried a category to match against, so the field was dead on both sides. */
-    g.push({ k: 'applies_to.category', label: 'Applies to', pick: 'category' });
+    g.push({ k: 'applies_to.category', label: 'Applies to', pick: 'category', half: true });
     /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
-    g.push({ k: 'valid_from', label: 'Valid from', ph: 'YYYY-MM-DD' });
-    g.push({ k: 'valid_to',   label: 'Valid to',   ph: 'YYYY-MM-DD' });
-    g.push({ k: 'region',     label: 'Region', ph: 'blank = everywhere' });
+    g.push({ k: 'valid_from', label: 'Valid from', date: true, half: true });
+    g.push({ k: 'valid_to',   label: 'Valid to',   date: true, half: true });
+    g.push({ k: 'region',     label: 'Region', ph: 'blank = everywhere', half: true });
+    /**
+     * ⭐ STACKING, WHICH THE ENGINE HAS ALWAYS READ AND THE FORM NEVER WROTE. evaluate() sorts by `priority` and
+     * an `exclusive` offer that fires stops the ones after it — so two offers on one product were stacking in an
+     * order nobody had chosen, and "this one instead of the others" was not expressible at all.
+     */
+    g.push({ k: 'priority', label: 'Runs at', ph: '1', num: true, half: true,
+             hint: 'Lower runs first.' });
+    g.push({ k: 'exclusive', label: 'Exclusive', check: true, half: true,
+             hint: 'Once this applies, later offers do not.' });
     return g;
   }
   return [];
@@ -658,31 +692,117 @@ function cbDefSetReward(id){
   cbDefSetRule('get_item_name', p ? p.name : '');
 }
 
+/**
+ * The human name of a sub-kind, READ FROM THE SAME PLACE THE REGISTRY READS IT — cbDefOfferLabel for offers,
+ * CBCart.models for order models.
+ *
+ * ⚠️ THE PICKER USED TO SHOW THE RAW KEY. "percent_off", "buy_x_get_y", "tier_price" in a dropdown, on a form
+ * headed "KIND", above a field headed "PERCENT OFF" — the screen was reading its own source code out loud. The
+ * labels already existed one function away and were already published on the Registries screen.
+ */
+function cbDefSubLabel(kind, sub){
+  if (kind === 'offer') return cbDefOfferLabel(sub);
+  if (kind === 'ordermodel' && typeof CBCart !== 'undefined' && CBCart.models && CBCart.models[sub])
+    return CBCart.models[sub].label || sub;
+  return sub;
+}
+/* A label like "Quantity tier — a RE-PRICE, not a discount" is two things: the NAME, and the warning that goes
+   under it. The picker gets the name; the line beneath gets the rest, where it can be read rather than truncated. */
+function cbDefSubHead(kind, sub){ return String(cbDefSubLabel(kind, sub)).split(' — ')[0]; }
+function cbDefSubTail(kind, sub){
+  var p = String(cbDefSubLabel(kind, sub)).split(' — ');
+  return p.length > 1 ? p.slice(1).join(' — ') : '';
+}
+
+/**
+ * ⭐⭐ PRICE BREAKS AS TEXT — "10 = 170" per line, because a tier table is a LIST and a list of paired numbers
+ * has no honest single-input form. Written back through the same two functions so the box always shows what was
+ * stored, never a re-typing of it.
+ *
+ * ⚠️ A LINE THAT IS NOT A PAIR IS DROPPED, not guessed at. A half-typed "10 =" must not become a price of zero:
+ * the tier table sets the price of record, and a zero in it is a free product nobody agreed to.
+ */
+function cbDefTiersText(v){
+  return (Array.isArray(v) ? v : []).map(function (t) {
+    return (t && t.qty != null ? t.qty : '') + ' = ' + (t && t.price != null ? t.price : ''); }).join('\n');
+}
+function cbDefSetTiers(text){
+  var rows = String(text || '').split('\n').map(function (ln) {
+    var m = /^\s*([0-9.]+)\s*[=:x×]\s*([0-9.]+)\s*$/.exec(ln);
+    return m ? { qty: Number(m[1]), price: Number(m[2]) } : null;
+  }).filter(Boolean).sort(function (a, b) { return a.qty - b.qty; });
+  cbDefSetRule('tiers', rows.length ? rows : '');
+  cbDefPaintPreview();
+}
+/* ⚠️ FALSE IS ABSENT, not `exclusive:false`. offers.js treats a missing condition as "no restriction", and a
+   stored false is one more key every reader has to know means the same thing as nothing. */
+function cbDefSetCheck(k, on){ cbDefSetRule(k, on ? true : ''); cbDefPaintPreview(); }
+
+/** ONE field, whatever its shape. Every branch keeps the `cbdef-rule-<key>` test id a spec drives. */
+function cbDefFieldHTML(x, v){
+  var id = 'cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-'));
+  var set = function (expr) { return ' oninput="cbDefSetRule(\'' + x.k + '\',' + expr + ');cbDefPaintPreview()"'; };
+  if (x.check) {
+    return '<label class="cbdef-check"><input type="checkbox" data-testid="' + id + '"' + (v ? ' checked' : '')
+      + ' onchange="cbDefSetCheck(\'' + x.k + '\',this.checked)"><span>' + cbDefEsc(x.label) + '</span></label>';
+  }
+  if (x.sel) {
+    return '<select class="inp" data-testid="' + id + '" onchange="cbDefSetRule(\'' + x.k + '\',this.value);cbDefPaintPreview()">'
+      + x.sel.map(function (o) {
+          return '<option value="' + cbDefEsc(o.v) + '"' + (String(v) === String(o.v) ? ' selected' : '') + '>'
+            + cbDefEsc(tx(o.label)) + '</option>'; }).join('') + '</select>';
+  }
+  if (x.tiers) {
+    return '<textarea class="inp" rows="3" data-testid="' + id + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
+      + ' oninput="cbDefSetTiers(this.value)">' + cbDefEsc(cbDefTiersText(v)) + '</textarea>';
+  }
+  if (x.area) {
+    return '<textarea class="inp" rows="4" data-testid="' + id + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
+      + set('this.value.split(\'\\n\').filter(Boolean)') + '>'
+      + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>';
+  }
+  /* ⚠️ A REAL DATE CONTROL. valid_from/valid_to were text boxes captioned "YYYY-MM-DD" — a format instruction is
+     what you write when the field cannot check itself, and offers.js compares these as dates. */
+  var type = x.date ? ' type="date"' : (x.num ? ' inputmode="decimal"' : '');
+  var val = x.date ? String(v || '').slice(0, 10) : v;
+  return '<input class="inp"' + type + ' data-testid="' + id + '" value="' + cbDefEsc(val) + '"'
+    + ' placeholder="' + cbDefEsc(x.ph || '') + '"' + set('this.value,' + (x.num ? 'true' : 'false')) + '>';
+}
+
 function cbDefFormHTML(){
   var f = CBDEF_FORM; if (!f) return '';
   var A = CBDEF_AUTHORABLE[f.kind] || {};
   var subs = cbDefSubKinds(f.kind);
   var fields = cbDefRuleFields(f.kind, f.sub);
   var editing = !!f.id;
+  var tail = subs.length ? cbDefSubTail(f.kind, f.sub) : '';
 
-  return '<h3 style="margin:0 0 4px">' + (editing ? 'Edit' : 'New') + ' ' + cbDefEsc(A.one || f.kind) + '</h3>'
+  return '<div class="cbdef-formhd">' + cbDefEsc((editing ? tx('Edit') : tx('New')) + ' ' + (A.one || f.kind))
     /**
      * ⭐ THE FREEZE RULE IS SAID ON THE EDIT FORM, WHERE IT MATTERS. Someone changing "Carton of 6" to 12 needs
      * to know, at that moment, that chits already stamped keep the 6 — otherwise the safe behaviour reads as a
      * bug ("I changed it and the old order still says 6") and someone 'fixes' it.
+     *
+     * ⚠️ ONE LINE, NOT A PARAGRAPH. It was three sentences at the top of the form, which is where a reader
+     * stops reading; the rule is the same and it now sits beside the version it is talking about.
      */
-    + (editing
-        ? '<div class="cbdef-freeze">Editing the rules saves a <b>new version</b>. Chits already stamped keep the '
-          + 'version they froze — they do not move. Currently at v' + cbDefEsc(f.version || 1) + '.</div>'
-        : '')
+    + (editing ? '<span class="cbdef-vpill" title="' + cbDefEsc(tx('Saving the rules makes a new version. Chits already stamped keep the one they froze.'))
+        + '">v' + cbDefEsc(f.version || 1) + ' · ' + tx('saving makes v') + (Number(f.version || 1) + 1) + '</span>' : '')
+    + '</div>'
+    + '<div class="cbdef-body" data-mv-fit>'
+    + '<div class="cbdef-grid">'
     + (subs.length
-        ? '<label class="fl">' + tx('Kind') + '</label><select class="inp" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">'
+        ? '<label class="fl cbdef-w2">' + tx('Kind') + '</label>'
+          + '<select class="inp cbdef-w2" data-testid="cbdef-sub" onchange="cbDefSetSub(this.value)">'
           + subs.map(function (s) {
               return '<option value="' + cbDefEsc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
-                + cbDefEsc(s) + '</option>'; }).join('') + '</select>'
+                + cbDefEsc(cbDefSubHead(f.kind, s)) + '</option>'; }).join('') + '</select>'
+          /* ⚠️ THE KEY IS STILL SHOWN, small. It is what the rules are stored under and what a spec drives; a
+             screen that hides its own identifiers costs the next person an hour finding them. */
+          + '<div class="cbdef-hint cbdef-w2"><code>' + cbDefEsc(f.sub) + '</code>' + (tail ? ' · ' + cbDefEsc(tail) : '') + '</div>'
         : '')
-    + '<label class="fl">' + tx('Name') + '</label>'
-    + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
+    + '<label class="fl cbdef-w2">' + tx('Name') + '</label>'
+    + '<input class="inp cbdef-w2" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
     /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
        teaches the wrong thing. */
@@ -691,26 +811,32 @@ function cbDefFormHTML(){
                         : f.kind === 'requirement'? 'Minimum for food suppliers'
                         :                           'Spices') + '"'
     + ' oninput="cbDefSetField(\'name\',this.value)">'
-    + (fields.length ? '<div class="cbdef-rules">' + fields.map(function (x) {
+    /**
+     * ⚠️ TWO COLUMNS, AND THE PAIRING IS THE POINT. Percent beside Applies to, Valid from beside Valid to,
+     * Region beside Runs at — each pair is one question. Full-width stacking made eight short fields read as
+     * eight unrelated demands and pushed everything below the fold, which is where the outcome strip lives.
+     */
+    + fields.map(function (x) {
         var v = cbDefGetRule(x.k); v = (v == null ? '' : v);
-        if (x.pick) return '<label class="fl">' + cbDefEsc(x.label) + '</label>' + cbDefPickHTML(x, v);
-        return '<label class="fl">' + cbDefEsc(x.label) + '</label>'
-          + (x.area
-              /* testid per rule key so a spec can drive the form; dots become dashes (applies_to.category → applies_to-category). */
-              ? '<textarea class="inp" rows="4" data-testid="cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-')) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
-                + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value.split(\'\\n\').filter(Boolean))">'
-                + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>'
-              : '<input class="inp" data-testid="cbdef-rule-' + cbDefEsc(String(x.k).replace(/\./g, '-')) + '" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
-                + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value,' + (x.num ? 'true' : 'false') + ')">');
-      }).join('') + cbDefStdChipsHTML() + '</div>' : '')
-    + '<label class="fl">' + tx('Note') + '</label>'
-    + '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="optional"'
+        var w = x.half ? '' : ' cbdef-w2';
+        return (x.check ? '' : '<label class="fl' + w + '">' + cbDefEsc(x.label) + '</label>')
+          + '<div class="cbdef-f' + w + '">'
+          + (x.pick ? cbDefPickHTML(x, v) : cbDefFieldHTML(x, v))
+          + (x.hint ? '<div class="cbdef-hint">' + cbDefEsc(tx(x.hint)) + '</div>' : '')
+          + '</div>';
+      }).join('')
+    + (f.kind === 'requirement' ? '<div class="cbdef-w2">' + cbDefStdChipsHTML() + '</div>' : '')
+    + '<label class="fl cbdef-w2">' + tx('Note') + '</label>'
+    + '<input class="inp cbdef-w2" value="' + cbDefEsc(f.note) + '" placeholder="' + tx('optional') + '"'
     + ' oninput="cbDefSetField(\'note\',this.value)">'
+    + '</div>'
+    + '<div id="cbdef_prev">' + cbDefPreviewHTML() + '</div>'
     + '<div class="err" id="cbdef_err"></div>'
-    + '<div style="display:flex;gap:8px;margin-top:14px">'
+    + '</div>'
+    + '<div class="cbdef-foot">'
     +   '<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     +   '<button class="composebtn pri" style="flex:1" data-testid="cbdef-save" onclick="cbDefSave()">'
-    +   (editing ? 'Save' : 'Create') + '</button>'
+    +   (editing ? tx('Save') : tx('Create')) + '</button>'
     + '</div>';
 }
 /**
@@ -764,8 +890,96 @@ function cbDefToggleStd(key){
   f.rules.standards = cur;
   cbDefPaintForm();
 }
+/**
+ * ── ⭐⭐ WHAT A BUYER SEES, WHILE THE OFFER IS BEING WRITTEN ────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-03: *"each screen should showcase the outcome"*.
+ *
+ * ⚠️⚠️ NOTHING ON THIS FORM EVER SAID WHAT IT WOULD DO. An author filled in "percent 10", saved, made it live,
+ * attached it to a product, opened a cart — and only then found out whether the rules they wrote produce the
+ * offer they meant. Every mismatch in the commit before this one (a threshold advertising nothing, a shipping
+ * offer moving no money, a tier with no tiers) survived precisely because the authoring screen was silent.
+ *
+ * ⭐ IT IS THE SAME ENGINE, NOT A DESCRIPTION OF IT. CBOffers.promise() for the badge and CBOffers.evaluate()
+ * for the money — the two functions the row and the basket call. A preview computed any other way is a fourth
+ * opinion about the price, and the one that is wrong is always the one nobody runs.
+ */
+var CBDEF_SAMPLE = 1000;
+function cbDefPreviewHTML(){
+  var f = CBDEF_FORM;
+  if (!f || f.kind !== 'offer' || typeof CBOffers === 'undefined') return '';
+  var sym = (typeof curSym === 'function') ? curSym() : '';
+  var money = function (n) { return sym + n; };
+  var o = Object.assign({ id: 'preview', kind: f.sub, label: f.name || tx('This offer') }, f.rules);
+  var cat = (f.rules.applies_to || {}).category || null;
+  var qty2 = CBOffers.sampleQty([o], CBDEF_SAMPLE);
+  var promise = null;
+  try { promise = CBOffers.promise(o, { now: new Date(), money: money }); } catch (e) {}
+  var one = cbDefPreviewRow(o, 1, cat, money), many = cbDefPreviewRow(o, qty2, cat, money);
+  /* ⚠️ The window is the FIRST thing said when it is closed, because every row under it would otherwise show a
+     discount the basket will refuse. within() is what returns this, through evaluate's `skipped`. */
+  var gate = (one.skipped && /^(not started|expired|other )/.test(one.skipped)) ? one.skipped : '';
+
+  return '<div class="cbdef-prev" data-testid="cbdef-preview">'
+    + '<div class="cbdef-prevhd">' + tx('What a buyer sees') + '</div>'
+    + (gate
+        ? '<div class="cbdef-prevgate" data-testid="cbdef-preview-gate">' + cbDefEsc(gate) + '</div>'
+        : '<div class="cbdef-prevbadge" data-testid="cbdef-preview-badge">'
+          + (promise ? cbDefEsc(promise)
+             /* ⚠️ "INCOMPLETE" WOULD BE A LIE FOR TWO KINDS. Shipping and price_range return null from promise()
+                BY DESIGN — one line cannot promise an order-level delivery term, and a band is the price rather
+                than a discount off one. Telling their author to finish a finished offer is worse than silence. */
+             : '<span class="off">' + ((one.moved || many.moved)
+                 ? tx('no badge on a product row — this applies in the basket')
+                 : tx('no badge yet — the terms are incomplete')) + '</span>')
+          + '</div>')
+    + [one, many].map(function (r) {
+        return '<div class="cbdef-prevrow"><span class="q">' + r.qty + ' × ' + cbDefEsc(money(CBDEF_SAMPLE)) + '</span>'
+          + '<span class="m">' + cbDefEsc(money(r.was)) + ' → <b>' + cbDefEsc(money(r.now)) + '</b></span>'
+          + '<span class="w">' + cbDefEsc(r.why) + '</span></div>';
+      }).join('')
+    + '<div class="cbdef-hint">' + tx('A sample product at ') + cbDefEsc(money(CBDEF_SAMPLE))
+    + (cat ? tx(', in the category this offer targets') : '')
+    + (f.sub === 'shipping' ? tx(', with ') + cbDefEsc(money(200)) + tx(' delivery') : '') + '.</div>'
+    + '</div>';
+}
+/** One worked line, run through evaluate() exactly as the cart runs it. */
+function cbDefPreviewRow(o, qty, cat, money){
+  var ship = o.kind === 'shipping' ? 200 : 0;
+  var out = { qty: qty, was: CBDEF_SAMPLE * qty + ship, now: CBDEF_SAMPLE * qty + ship,
+              why: tx('nothing changes'), skipped: '', moved: false };
+  try {
+    var ev = CBOffers.evaluate({
+      lines: [{ key: '0', item_id: 'sample', categories: cat ? [String(cat)] : [], qty: qty, unitPrice: CBDEF_SAMPLE }],
+      offers: [o], money: money, shipping: ship
+    });
+    out.was = ev.subtotal + ship;
+    out.now = ev.total;
+    var a = ev.adjustments[0], n = ev.notes[0], s = ev.skipped[0];
+    out.skipped = s ? (s.why || '') : '';
+    out.moved = !!(a || n);
+    out.why = a ? a.why : (n ? n.why : (s ? s.why : out.why));
+  } catch (e) { /* an engine failure must not take the form down — the fields still save */ }
+  return out;
+}
+/**
+ * ⚠️⚠️ THE STRIP REPAINTS, THE FORM DOES NOT. Calling cbDefPaintForm() on every keystroke rebuilds the modal,
+ * which destroys the input being typed into and puts the caret back at the start — the reason cbDefSetRule has
+ * never repainted anything. Only the outcome block is replaced.
+ */
+function cbDefPaintPreview(){
+  var h = document.getElementById('cbdef_prev');
+  if (h) h.innerHTML = cbDefPreviewHTML();
+}
 function cbDefPaintForm(){
-  modal(cbDefFormHTML());
+  /**
+   * ⚠️⚠️ ITS OWN REMEMBERED GEOMETRY. mvModal derives the key from `.mhd .t`, which this form has never had, so
+   * every untitled standard modal in the app shared one entry — `cb_mv_std`. Resize any of them once and this
+   * form opens at that height forever after, with a band of empty card under the buttons, which is exactly what
+   * the screenshot showed. `fit` names the scrolling body so dragging the corner grows the FIELDS.
+   */
+  modal(cbDefFormHTML(), true, { key: 'cb_mv_def_' + (CBDEF_FORM ? CBDEF_FORM.kind : 'x'),
+                                 minW: 460, minH: 320, fit: '.cbdef-body' });
   /* Load once, then repaint — the chips cannot render before the list exists, and the form must not wait for it. */
   if (CBDEF_FORM && CBDEF_FORM.kind === 'requirement' && _CBDEF_STDS === null) {
     cbDefStdsLoad().then(function(){ if (CBDEF_FORM && CBDEF_FORM.kind === 'requirement') cbDefPaintForm(); });
@@ -1197,8 +1411,38 @@ function cbDefCss(){
     '.cbdef-none{font-size:var(--fs-2);color:var(--grey);padding:4px 0}',
     '.cbdef-loading{padding:14px 0;font-size:var(--fs-2);color:var(--grey)}',
     '.cbdef-err{font-size:var(--fs-2);color:var(--disp);background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
-    '.cbdef-freeze{font-size:var(--fs-2);line-height:1.5;color:var(--warn-3);background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
-    '.cbdef-rules{border-inline-start:2px solid var(--gold-line,var(--gold-line));padding-inline-start:11px;margin:10px 0}',
+    /* ⚠️ .cbdef-freeze and .cbdef-rules went with the paragraph and the gold rail they styled — the freeze rule
+       is a pill beside the version it names now, and the rule fields sit in the two-column grid. Dead CSS is a
+       rule the next person restores markup to match. */
+    /* ── the authoring form ────────────────────────────────────────────────────────────────────────────────
+       ⚠️ THE BODY SCROLLS AND THE FOOTER DOES NOT. The buttons were at the end of the flow, so a long form put
+       Save below the fold while leaving empty card under it once a remembered height was restored. */
+    '.cbdef-formhd{display:flex;align-items:baseline;gap:9px;font-size:var(--fs-3);font-weight:800;padding:2px 0 9px}',
+    '.cbdef-vpill{margin-inline-start:auto;font-size:var(--fs-1);font-weight:700;color:var(--warn-3);'
+      + 'background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:20px;padding:1px 9px;white-space:nowrap}',
+    '.cbdef-body{max-height:56vh;overflow-y:auto;padding-inline-end:2px}',
+    '.cbdef-foot{display:flex;gap:8px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}',
+    /* ⚠️ TWO COLUMNS, EACH PAIR ONE QUESTION. `cbdef-w2` is the escape hatch for anything that needs the row. */
+    '.cbdef-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;align-items:end}',
+    '.cbdef-grid>.cbdef-w2{grid-column:1/-1}',
+    '.cbdef-grid>.fl{margin:7px 0 1px}',
+    '.cbdef-grid>.cbdef-f{min-width:0}',
+    '.cbdef-grid .inp{margin:0}',
+    '.cbdef-check{display:flex;align-items:center;gap:7px;font-size:var(--fs-2);margin:9px 0 1px;cursor:pointer}',
+    '.cbdef-check input{width:16px;height:16px;margin:0;flex:none}',
+    '@media (max-width:680px){ .cbdef-grid{grid-template-columns:1fr} .cbdef-grid>.cbdef-w2{grid-column:1} }',
+    /* ── the outcome strip ─────────────────────────────────────────────────────────────────────────────── */
+    '.cbdef-prev{margin-top:13px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--neutral-tint,var(--card))}',
+    '.cbdef-prevhd{font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:6px}',
+    '.cbdef-prevbadge{display:inline-block;font-size:var(--fs-2);font-weight:800;color:var(--ok-2);'
+      + 'background:var(--ok-tint);border-radius:20px;padding:2px 11px;margin-bottom:6px}',
+    '.cbdef-prevbadge .off{font-weight:600;color:var(--grey)}',
+    '.cbdef-prevbadge:has(.off){background:transparent;padding:2px 0}',
+    '.cbdef-prevgate{font-size:var(--fs-2);font-weight:700;color:var(--warn-2);margin-bottom:6px}',
+    '.cbdef-prevrow{display:flex;gap:9px;align-items:baseline;font-size:var(--fs-2);padding:2px 0;border-top:1px dashed var(--line)}',
+    '.cbdef-prevrow .q{flex:none;color:var(--grey);min-width:96px}',
+    '.cbdef-prevrow .m{flex:none;font-variant-numeric:tabular-nums;min-width:132px}',
+    '.cbdef-prevrow .w{flex:1;min-width:0;font-size:var(--fs-1);color:var(--grey)}',
     /* The standards menu. Scrolls rather than wraps to twelve rows — the textarea above it is the record; this is
        a way of filling it without knowing the keys by heart. */
     '.cbdef-stdhint{font-size:var(--fs-1);color:var(--grey);margin:8px 0 5px}',

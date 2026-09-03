@@ -658,6 +658,31 @@
     return out;
   }
 
+  /**
+   * ── ⭐ sampleQty(offers, unitPrice) → the quantity at which these offers become interesting ──────────────────
+   *
+   * Athi, 2026-09-03: *"each screen should showcase the outcome"*. A worked example at qty 1 shows nothing for
+   * a tier, a buy-x-get-y or a threshold — the three kinds a B2B seller reaches for first — so a preview that
+   * only ever shows one unit demonstrates that the offer does nothing.
+   *
+   * ⚠️ DERIVED FROM THE RULES, NEVER GUESSED. The trigger is in the offer: `min_qty`, the smallest tier, the
+   * buy+get set, or the spend divided by the unit price. A hard-coded 3 would show a 10+ tier not firing and
+   * invite the author to conclude their tier table is broken.
+   */
+  function sampleQty(offers, unitPrice) {
+    var q = 0, up = Number(unitPrice) || 0;
+    [].concat(offers || []).forEach(function (o) {
+      if (!o) return;
+      var st = thresholdState(o, null);
+      if (st.minQ) q = Math.max(q, st.minQ);
+      if (st.minA && up > 0) q = Math.max(q, Math.ceil(st.minA / up));
+      if (o.buy) q = Math.max(q, (Number(o.buy) || 0) + (o.get_item_id ? 0 : (Number(o.get) || 0)));
+      (o.tiers || []).forEach(function (t) { if (t && t.qty) q = Math.max(q, Number(t.qty) || 0); });
+    });
+    /* ⚠️ Capped. A tier that starts at 5,000 must not produce a "5,000 ×" example nobody can read. */
+    return q > 1 ? Math.min(q, 999) : 3;
+  }
+
   root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer, claims: claims,
-    perLine: perLine, KINDS: KINDS, kinds: Object.keys(KINDS) };
+    perLine: perLine, sampleQty: sampleQty, KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);
