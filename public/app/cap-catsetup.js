@@ -1069,7 +1069,13 @@ var CATSET_SYS = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
 async function catsetFaceSave(patch){
   var face = Object.assign({}, CATSET_FACE || {}, patch || {});
   catsetFaceSet(face);
-  try { await api('catFacePut', { body: { face: face } }); }
+  try {
+    await api('catFacePut', { body: { face: face } });
+    /* ⚠️ THE PRODUCT PAGE KEEPS ITS OWN COPY OF THE FACE (UI._face, read once per session for the Pricing & tax
+       pane). [TAX-01] INHERIT found it: set the catalogue-default slab here, open a product, and it still said
+       "Not set" until a reload. The write is the one place that knows the face changed. */
+    if (typeof UI !== 'undefined') UI._face = undefined;
+  }
   catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save that.', true); }
 }
 

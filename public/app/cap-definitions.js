@@ -1161,6 +1161,9 @@ async function cbDefAfterChange(kind, id){
   if (typeof UI !== 'undefined') UI._ctOffers = undefined;
   await cbDefLoad(true);
   if (!kind && id) { var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0]; kind = d && d.kind; }
+  /* core.js's per-kind live-definition cache (cbDefsLive → _DEFS) feeds the slab pickers and the tax resolver;
+     a slab made live here must be offered on the next paint, not after a reload. */
+  if (kind && typeof _DEFS !== 'undefined') delete _DEFS[kind];
   /**
    * ⚠️⚠️ AND core.js's LIVE SHELF, which is a THIRD reader — the exact bug UI._ctOffers had, one cache along.
    * `cbDefsLive` caches per kind for the session, so a product's Pricing & tax pane that painted before the first
