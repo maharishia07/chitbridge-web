@@ -269,6 +269,9 @@ test('[OFF-02] two live offers on one product — the product page shows the com
   /* ⭐ THE HALF THAT WAS MISSING (2026-09-04): a typed line naming MY product IS that product (ccMatchMine), so the
      product-targeted offers fire in compose exactly as on the storefront — the same evaluate, the same lines. */
   await test.step('COMPOSE — typing the product name makes the targeted offers fire on the line', async () => {
+    /* dismissModal above may have closed the compose panel itself (Escape) — open it again, as the fixture does */
+    await clickNav(page, 'compose'); await settle(page);
+    await expect(page.getByTestId('chit-item-name')).toBeVisible({ timeout: 20000 });
     await page.getByTestId('chit-item-name').fill(prod);
     await page.getByTestId('chit-item-qty').fill('3');
     await page.getByTestId('chit-item-price').fill('1000');

@@ -1824,6 +1824,10 @@ const EP = {
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
   taxInvoice:      {m:"GET",   p:"/api/tax/invoice/:id",         ok:"✓"},
   taxGstr:         {m:"GET",   p:"/api/tax/gstr",                ok:"✓"},
+  /* PUBLISH ON A DATE — a parked change with an effective time (lib/schedule.js; dark until b203 runs) */
+  prodSchedule:    {m:"POST",  p:"/api/products/:id/schedule",   ok:"✓"},
+  prodScheduled:   {m:"GET",   p:"/api/products/:id/schedule",   ok:"✓"},
+  prodUnschedule:  {m:"DELETE",p:"/api/products/:id/schedule/:sid", ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
@@ -9427,7 +9431,21 @@ function ctNewCategory(){
 /* The product's OWN facts. Categories and offers are separate records that point at it, so they render on their own
    tabs (prodDetailHTML); the New form, which has nothing to point at yet, lays everything out on one page. */
 function prodEditForm(d){ return prodEditFormCore(d)+ctCategoryField(d)+ctOfferField(d); }
-function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d); }
+function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d)+prodEffectiveField(); }
+/**
+ * ⭐ PUBLISH ON A DATE. Empty = now (the ordinary save). A future moment = the changed keys are PARKED and land at that
+ * moment, on the first read after it (owner list · storefront · send). What is shown: the exact moment, and — on the
+ * View side — the parked change beside the live value, so "is Monday's price in?" is answered by looking.
+ */
+function prodEffectiveField(){
+  return `<label class="fl" style="margin-top:10px">${tx('Effective from')} <span style="color:var(--grey);font-weight:400">${tx('(leave empty for now)')}</span></label>`
+    + `<input class="inp" id="ct_effective" data-testid="cat-field-effective" type="datetime-local" style="width:100%">`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A future moment parks only what you changed; the product stays as it is until then.')}</div>`;
+}
+function fmtDateTime(x){ try{ return (typeof CBLocale!=='undefined'&&typeof CBLocale.dateTime==='function')?CBLocale.dateTime(x):new Date(x).toLocaleString(); }catch(_){ return String(x); } }
+function prodEffectiveAt(){ const v=val('ct_effective'); if(!v) return null; const t=new Date(v); return (t.getTime()>Date.now()+30000)?t.toISOString():null; }
+function prodDiff(cur, next){ const out={}; Object.keys(next||{}).forEach(k=>{ if(JSON.stringify((cur||{})[k])!==JSON.stringify(next[k])) out[k]=next[k]; }); return out; }
+
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -10081,7 +10099,7 @@ function prodDetailHTML(){
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
+    body = ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}${prodScheduledHTML(id)}`
         + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
         + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`)
       + ptabWrap('categories', prodCatgViewHTML(d))
@@ -10153,7 +10171,26 @@ function ctReadForm(orig){
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
+  const at=prodEffectiveAt();
+  if(at){
+    const patch=prodDiff(pData(p), data); delete patch.name;   /* a name is not scheduled — it is the product's identity */
+    if(!Object.keys(patch).length){ if(err)err.textContent=tx('Nothing changed to schedule.'); return; }
+    try{ await api("prodSchedule",{params:{id},body:{effective_at:at,item_data:patch}}); toast(txf('Scheduled for {d} ✓', { d: fmtDateTime(at) })); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+    catch(e){ if(err)err.textContent=(e&&e.message)||tx('Could not schedule the change.'); }
+    return;
+  }
   try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
+/* the View side: what is parked for this product — it RIDES ON THE LIST ROW (`scheduled`, GET /products), no read of its own */
+function prodScheduledHTML(id){
+  const p=(UI.prods||[]).find(x=>prodId(x)===id); const rows=(p&&Array.isArray(p.scheduled))?p.scheduled:[];
+  if(!rows.length) return '';
+  const kv=(o)=>Object.keys(o||{}).map(k=>`<b>${esc(k)}</b> → <bdi>${esc(k==='price'?inr(o[k]):(typeof o[k]==='object'?JSON.stringify(o[k]):String(o[k])))}</bdi>`).join(' · ');
+  return `<div data-testid="prod-scheduled" style="margin:6px 12px;padding:8px 10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-2)">`
+    + `<div style="font-weight:700;margin-bottom:4px">📅 ${tx('Scheduled')}</div>`
+    + rows.map(r=>`<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(r.effective_at))}</span><span>${kv(r.patch)}</span><button class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(r.schedule_id)}')">${tx('Cancel')}</button></div>`).join('')
+    + `</div>`;
+}
+async function prodUnschedule(id,sid){ try{ await api("prodUnschedule",{params:{id,sid}}); toast(tx('Scheduled change cancelled')); await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ toast((e&&e.message)||tx('Could not cancel')); } }
 function delProduct(id){ confirmAsk('Delete this product?','This <b>cannot be undone</b>. Chits that already cite it keep their frozen copy of the line.','Delete',function(){ _delProduct(id); },true); }
 async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
