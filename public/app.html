@@ -7878,7 +7878,14 @@ async function prodOfferApply(offerId, add){
     await loadCatalogue();
     toast(add ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
               : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length));
-  } catch (e) { hideBusy(); toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e)); }
+  } catch (e) { toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e)); }
+  /**
+   * ⚠️ hideBusy IN A finally, NOT ONLY IN THE CATCH. My first version hid the overlay when the save FAILED and
+   * left it up when it SUCCEEDED — the exact inversion, and the kind that reads as "the app froze after it
+   * worked". Every other bulk action here (prodAvailApply) already pairs them in a finally; this one now does
+   * too, which is also why it is a finally rather than a third call at the end of the try.
+   */
+  finally { hideBusy(); }
 }
 
 
@@ -8674,6 +8681,129 @@ async function _cfImportRun(btn, decisions, out){
  * than that it is unused. The load is fired here and repaints once, because a form cannot wait for a fetch.
  */
 /**
+ * ── ⭐⭐ OFFERS AND HIGHLIGHTS ON THE PRODUCT FORM ────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-03, pointing at the Edit product form: *"here we need it, as an option to add those information,
+ * either pull it from declaration or add a simple text or include another item from the catalogue as an offer."*
+ *
+ * Three requests, and they are three DIFFERENT things. Treating them as one field is how a screen ends up lying:
+ *
+ *   1 · PULL IT FROM THE DECLARATION → an authored offer. Built below. Ticking one here writes this product into
+ *       that OFFER's reach — the same single fact the bulk action on the list writes, reached from one product
+ *       instead of forty. The offer stays the single source of its own terms.
+ *
+ *   2 · A SIMPLE TEXT → built below, and deliberately NOT called an offer. See the note on ctHighlightField.
+ *
+ *   3 · ANOTHER ITEM FROM THE CATALOGUE AS THE REWARD → ⚠️ NOT BUILT, because it cannot be expressed yet and a
+ *       control that pretends otherwise is worse than its absence. `buy_x_get_y` takes its free units from the
+ *       ELIGIBLE POOL, cheapest first (see offers.js) — so "buy 3, get 1 of these free" works and "buy rice, get
+ *       oil free" does not: the reward has to already be in the basket and already be eligible. Making it work
+ *       means the offer learning a `get_item_id` and the engine adding a line that the customer never chose,
+ *       which is a real design decision about what a cart may do on its own. Flagged, not faked.
+ */
+function ctOfferField(d){
+  d = d || {};
+  const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';
+  if (!pid) return '';   /* a new product has no id yet, so nothing can point at it — offered after the first save */
+
+  if (UI._ctOffers === undefined) {
+    UI._ctOffers = null;
+    api('defList', { query: { kind: 'offer', status: 'live' } })
+      .then(function(r){
+        UI._ctOffers = ((r && r.definitions) || []).map(function(x){
+          return { id: x.definition_id, name: x.name, rules: x.rules || {} };
+        });
+        if (UI.nav === 'catalogue' && UI.prodMode !== 'view') paintProdDetail();
+      })
+      .catch(function(){ UI._ctOffers = []; });
+    return '<label class="fl">' + tx('Offers') + '</label>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">' + tx('reading…') + '</div>';
+  }
+  const list = UI._ctOffers || [];
+
+  /**
+   * ⚠️ NO LIVE OFFER IS NOT AN ERROR, and the next step is named. An empty "Offers" label with nothing under it
+   * reads as a broken field; the truth is that an offer is authored once elsewhere, and this is where it is
+   * attached. Same shape as the Categories field one block up.
+   */
+  if (!list.length) {
+    return '<label class="fl">' + tx('Offers') + '</label>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">'
+      + tx('None live. ') + '<span onclick="navTo(\'catsetup\');setTimeout(function(){ if(typeof catsetSetSec===\'function\') catsetSetSec(\'offers\'); },600)"'
+      + ' style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Author one') + '</span>'
+      + tx(' in Catalogue setup, then attach it here.') + '</div>';
+  }
+
+  return '<label class="fl">' + tx('Offers') + '</label>'
+    + '<div class="ctcatgs" data-testid="cat-field-offer">'
+    + list.map(function(o){
+        const at = (o.rules && o.rules.applies_to) || {};
+        const on = Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0;
+        /* ⚠️ The TERMS and the WINDOW come from the same promise() the badge prints, so this form can never
+           describe an offer differently from the row it will appear on. */
+        const terms = (typeof prodOfferTerms === 'function') ? prodOfferTerms(o.rules) : '';
+        const win = (typeof prodOfferWindow === 'function') ? prodOfferWindow(o.rules) : '';
+        return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '"'
+          + ' data-testid="cat-offer-' + esc(o.id) + '"'
+          + ' title="' + esc(terms + (win ? ' · ' + win : '')) + '"'
+          + ' onclick="ctToggleOffer(\'' + esc(o.id) + '\', this)">'
+          + (on ? '✓ ' : '') + esc(o.name)
+          + '<span style="font-weight:400;opacity:.75"> · ' + esc(terms) + '</span></button>';
+      }).join('')
+    + '</div>'
+    /**
+     * ⚠️⚠️ IT SAVES IMMEDIATELY, AND THE FORM SAYS SO. Every other control here is staged until Save, because it
+     * edits the PRODUCT. This one edits the OFFER — a different record, with its own version history — so
+     * pretending it is part of this form's Save would mean either writing to two records from one button or
+     * losing the tick on Cancel. A control that behaves differently from its neighbours has to admit it.
+     */
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 4px">'
+    + tx('An offer is a term of trade, so ticking one saves to the OFFER straight away — not with this form.')
+    + '</div>';
+}
+
+/**
+ * ⚠️⚠️ A "SIMPLE TEXT" IS A HIGHLIGHT, NOT AN OFFER — and the word matters more than the field.
+ *
+ * Athi asked for free text here. The honest version is a marketing NOTE: "New crop", "Festival special",
+ * "Limited stock". The dishonest version is typing "10% off" into it — because nothing computes that, the cart
+ * will not honour it, and the row would carry a discount the basket then refuses. That is exactly the broken
+ * promise CBOffers.promise() exists to prevent, reintroduced by hand through a text box.
+ *
+ * ⭐ So it is called a HIGHLIGHT, it is stored as a product fact (item_data.highlight — unlike an offer, which
+ * belongs to the offer), and it is rendered in its own quiet style, never in the offer badge's. Two different
+ * things must not look alike, or the distinction is only in this comment.
+ */
+function ctHighlightField(d){
+  d = d || {};
+  return '<label class="fl">' + tx('Highlight') + '</label>'
+    + '<input class="inp" id="ct_highlight" data-testid="cat-field-highlight"'
+    + ' maxlength="48" placeholder="' + esc(tx('New crop · Festival special · Limited stock')) + '"'
+    + ' value="' + esc(String(d.highlight || '')) + '">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">'
+    + tx('A short note shown beside the product. ⚠️ Not a discount — a price claim typed here is not computed and '
+      + 'the basket will not honour it. For money off, attach an offer above.') + '</div>';
+}
+
+/** Tick or untick this product on an offer. Writes to the OFFER, and re-reads before it merges. */
+async function ctToggleOffer(offerId, btn){
+  const pid = UI.prodSel;
+  if (!pid) return;
+  const was = UI.prodPicked;
+  UI.prodPicked = new Set([pid]);
+  const on = btn && btn.className.indexOf('on') >= 0;
+  try {
+    /* ⭐ ONE implementation of the merge, shared with the bulk action — including its re-read and its
+       terms-are-present guard. A second copy here would be the one that drops a rule. */
+    await prodOfferApply(offerId, !on);
+  } finally {
+    UI.prodPicked = was || new Set();
+    UI._ctOffers = undefined;         /* re-read, so the ticks reflect what was actually stored */
+    if (UI.nav === 'catalogue' && UI.prodMode !== 'view') paintProdDetail();
+  }
+}
+
+/**
  * ⭐⭐ CATEGORIES ON A PRODUCT — SEVERAL, NOT ONE (Athi, 2026-08-16: *"same product must be able to attach under
  * multiple category"*).
  *
@@ -8754,7 +8884,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+ctOfferField(d)+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -9099,7 +9229,11 @@ function prodDetailHTML(){
  * already sitting in someone else's catalogue.
  */
 function ctReadForm(orig){
-  const base = Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() });
+  const base = Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim(),
+    /* ⚠️ A HIGHLIGHT IS A PRODUCT FACT, so it saves with the product — unlike an offer, which belongs to the
+       offer and writes itself the moment it is ticked. Empty clears it rather than storing a blank string,
+       because an empty highlight is nothing to show, not a highlight that says nothing. */
+    highlight:(val("ct_highlight")||'').trim() || undefined });
   const host = document.getElementById('ct_categories');
   /* No chips on screen (the shelf could not be read) → leave whatever the product already had. Absent is not
      "cleared": a form that cannot show a field must never be the thing that erases it. */
