@@ -188,3 +188,46 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
     expect(await num(page.getByTestId('prod-tax-preview-inter'), 'data-igst')).toBeCloseTo(PRICE * 5 / 100, 2);
   });
 });
+
+/**
+ * [TAX-02] THE JURISDICTION'S SLABS ARRIVE WITHOUT ANYONE AUTHORING THEM.
+ * Athi, 2026-09-04: "we have already a governance layer where we have to create those and inherit here, why each
+ * entity should create one for them." A fresh entity (INR → IN) opens Setup › Tax and finds India's GST slabs listed
+ * as governance, picks one on a product, and the invoice split follows — no slab of its own anywhere.
+ * ⚠️ Needs migration b201 on the database. Until it has run the list has no governed rows and this test SKIPS,
+ * saying so, rather than failing on a migration nobody has been asked to run.
+ */
+test('[TAX-02] a governed slab is inherited, picked on a product, and the split follows', async ({ page }) => {
+  test.setTimeout(180000);
+  await mintEntity(page);
+  const prod = 'Governed Rice ' + Date.now();
+  await addProduct(page, { name: prod, price: 100 });
+
+  await clickNav(page, 'catsetup');
+  await page.getByTestId('catset-sec-tax').click();
+  await settle(page);
+  const governed = page.locator('.catset-drow.gov');
+  const n = await governed.count().catch(() => 0);
+  test.skip(n === 0, 'no governed slabs listed — migration b201 (India GST on region_layer) has not been applied');
+  await expect(governed.first()).toContainText(/governance/i);
+  await expect(page.locator('.catset-drow.gov', { hasText: 'GST 18%' })).toHaveCount(1);
+  /* no Edit / Retire / Make live on a governed row */
+  await expect(governed.first().getByText('Edit', { exact: true })).toHaveCount(0);
+
+  await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
+  await page.locator('[data-testid^="cat-product-"]', { hasText: prod }).first().click();
+  await page.getByTestId('cat-edit').click();
+  await page.getByTestId('prod-tab-pricing').click();
+  const sel = page.getByTestId('prod-tax-slab');
+  await expect(sel).toBeVisible({ timeout: 25000 });
+  await sel.selectOption('IN-GST-18');
+  await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '18', { timeout: 15000 });
+  const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 45000 });
+  await page.getByTestId('cat-save').click();
+  await saved; await settle(page);
+  await page.getByTestId('prod-tab-pricing').click();
+  const resolved = page.getByTestId('prod-tax-resolved');
+  await expect(resolved).toBeVisible({ timeout: 25000 });
+  await expect(resolved).toContainText('18%');
+  await expect(resolved).toContainText(/on this product/i);
+});

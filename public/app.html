@@ -9732,28 +9732,18 @@ function prodPricingTab(d){
    * product's OWN tax answer are different subjects, and `prodPricingLoad` rebuilds its host wholesale — so the
    * tax block gets its own node rather than being redrawn by a function that knows nothing about it.
    */
-  return `<div class="sec">${tx('Pricing & tax')}</div>`
-    + `<div id="prod_tax" data-testid="prod-tax" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`
-    + `<div class="sec">${tx('Catalogue-wide')}</div>`
-    + `<div id="prod_pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
+  /* ⚠️ THE "CATALOGUE-WIDE" BLOCK IS GONE. Athi, 2026-09-04: *"i didn't understand what order method, units, pricing
+     rules in this context."* They were the storefront's settings read out on a product — true, and beside the
+     point. This tab is THIS product's price and THIS product's tax, nothing else; the storefront has its own panel. */
+  return `<div class="sec">${tx('Price')}</div>`
+    + `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;font-size:var(--fs-2)"><b><bdi>${inr(pPrice(d))}</bdi></b><span style="color:var(--grey)">/ <bdi>${esc(pUnit(d))}</bdi> · ${tx('list price')}</span></div>`
+    + `<div class="sec">${tx('Tax')}</div>`
+    + `<div id="prod_tax" data-testid="prod-tax" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
 }
-/* Two reads, each once per session: the FACE (order method · units · tax treatment) and the PRICING definitions
-   (the hub's Pricing section is a registry of definitions, not a face key). */
+/* One read, once per session: the FACE — the tax resolver needs its default slab. Then the tax pane fills itself. */
 async function prodPricingLoad(){
-  if(!document.getElementById('prod_pricing')) return;
+  if(!document.getElementById('prod_tax')) return;
   if(UI._face===undefined){ UI._face=null; try{ const r=await api('catFaceGet'); UI._face=(r&&r.face)||null; }catch(_){ UI._face=null; } }
-  if(UI._pricingDefs===undefined){ UI._pricingDefs=null; try{ const r=await api('defList',{query:{kind:'pricing',status:'live'}}); UI._pricingDefs=((r&&r.definitions)||[]).map(function(x){ return x.name; }); }catch(_){ UI._pricingDefs=[]; } }
-  const f=UI._face||{}, h=document.getElementById('prod_pricing'); if(!h) return;
-  const row=(l,v,sec)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 0;border-bottom:1px dashed var(--line)"><b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="flex:1">${v}</span><span style="color:var(--blue);cursor:pointer;font-weight:600;font-size:var(--fs-1)" onclick="goCatsetSec('${sec}')">${tx('change')}</span></div>`;
-  const units=Array.isArray(f.units)&&f.units.length?f.units.map(esc).join(' · '):'—';
-  const pricing=(UI._pricingDefs&&UI._pricingDefs.length)?UI._pricingDefs.map(esc).join(' · '):tx('list price — no pricing rule declared');
-  /* ⚠️ THE FREE-TEXT "Tax treatment" ROW IS GONE. It showed whatever somebody had typed into a box, which no
-     order path, chit line or counterparty could read — a declaration nothing consumes, sitting on screen looking
-     authoritative. The slab above it is the readable answer; see the note in cap-catsetup.catsetTaxHTML. */
-  h.innerHTML = row(tx('Order method'), esc(f.method||'—'), 'storefront')
-    + row(tx('Units'), units, 'storefront')
-    + row(tx('Pricing rules'), pricing, 'pricing')
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">${tx('These are catalogue-wide rules that apply to this product. A product does not carry its own copy of them.')}</div>`;
   prodTaxLoad();
 }
 /**
@@ -9793,6 +9783,21 @@ function prodSellerState(){
  * What the pane shows. Split out from the loader so the Edit select can repaint it on `change` WITHOUT re-reading
  * anything — the whole point of "verified then and there" is that the outcome moves as you choose.
  */
+/**
+ * ⭐ SLAB <option>s — THE JURISDICTION'S FIRST, THE ENTITY'S OWN AFTER. One builder for the three pickers (product ·
+ * category · catalogue default). Athi, 2026-09-04: *"it has to come from governance layer and across the country"* —
+ * a governed slab (`governance` set, id like IN-GST-18, served by the API from region_layer) is offered exactly like
+ * an authored one; the group label says which is which. Accepts either row shape (definition_id or id).
+ */
+function cbSlabOptionsHTML(slabs, selected){
+  const id=s=>String(s.definition_id||s.id||''), rate=s=>(s.rules&&s.rules.rate!=null)?' · '+esc(s.rules.rate)+'%':'';
+  const opt=s=>`<option value="${esc(id(s))}"${String(selected||'')===id(s)?' selected':''}>${esc(s.name)}${rate(s)}</option>`;
+  const gov=(slabs||[]).filter(s=>s.governance), own=(slabs||[]).filter(s=>!s.governance);
+  let h='';
+  if(gov.length){ const g=gov[0].governance||{}; h+=`<optgroup label="${esc(((g.jurisdiction||'')+' '+(g.scheme||'')).trim()+' · '+tx('governance'))}">${gov.map(opt).join('')}</optgroup>`; }
+  if(own.length) h+=`<optgroup label="${esc(tx('Your slabs'))}">${own.map(opt).join('')}</optgroup>`;
+  return h;
+}
 function prodTaxHTML(d){
   const slabs=cbDefsCached('tax')||[], cats=cbDefsCached('category')||[];
   const editing=UI.prodMode==='edit';
@@ -9815,7 +9820,7 @@ function prodTaxHTML(d){
              marking the saved value as selected would snap the dropdown back to the old slab the instant you
              chose a new one — while the preview beside it showed the new rate. Two controls, one question,
              visibly disagreeing. `row` is the hypothetical Save has not happened to yet. */
-          + slabs.map(s=>{ const rr=(s.rules&&s.rules.rate); return `<option value="${esc(s.definition_id)}"${String(row[CBTaxSlab.SLAB_KEY]||'')===String(s.definition_id)?' selected':''}>${esc(s.name)}${rr!=null?' · '+esc(rr)+'%':''}</option>`; }).join('')
+          + cbSlabOptionsHTML(slabs, row[CBTaxSlab.SLAB_KEY])
           + `</select>`
           /* ⚠️ "inherit" is spelled out, because a blank select reads as "no tax" and that is the one thing it
              does not mean. defaults.js: a blank cell means INHERIT, not CLEAR. */
@@ -9842,7 +9847,25 @@ function prodTaxRepaint(){ const h=document.getElementById('prod_tax'); if(!h) r
 function prodTaxPreviewHTML(d,r){
   const st=prodSellerState(), S=st||'29', OTHER=(S==='27'?'29':'27');
   const price=Number(pPrice(d))||0;
-  const line={ name:pName(d), qty:1, unit_price:price, rate:(r.rate==null?0:r.rate),
+  /**
+   * ⭐ THE OFFERS COME FIRST, THEN THE TAX — the order tax.js insists on ("discount first, then tax on what remains").
+   * Athi, 2026-09-04: *"while showcasing the tax, offer details should be considered so what is the effect on tax?"*
+   * The product's attached offers are evaluated on one unit through the SAME line builder and engine the cart uses
+   * (cbOfferLine → CBOffers.evaluate → perLine), and the capped line discount goes onto the invoice line as
+   * `discount`. Same slab, same price: with a 10% offer the assessable amount drops and every head with it.
+   */
+  let off=0, offWhy='';
+  try{
+    const on=(typeof prodOffersOn==='function')?prodOffersOn(d):[];
+    if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
+      const pid=UI.prodSel||d.item_id||d.id||'';
+      const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
+      const ev=CBOffers.evaluate({ lines: lines, offers: on.map(o=>o.rules), money: (n)=>fmtMoney(n, myCur?myCur():'INR') });
+      off=Math.round((((CBOffers.perLine(ev, lines)||{})['0']||{}).off||0)*100)/100;
+      offWhy=(ev.adjustments||[]).map(a=>a.label).join(' · ');
+    }
+  }catch(_){ off=0; }
+  const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate),
                cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'' };
   const one=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
   const intra=one(S), inter=one(OTHER);
@@ -9868,12 +9891,13 @@ function prodTaxPreviewHTML(d,r){
   return `<div data-testid="prod-tax-preview">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
     + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })
+    + (off>0 ? ` · <span data-testid="prod-tax-preview-offer" data-discount="${esc(off)}">${txf('after offers −{off} ({why}) → tax on {net}', { off: inr(off), why: esc(offWhy), net: inr(Math.max(0, price-off)) })}</span>` : '')
     + `</div>`
     + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
     +   cell(tx('Same state'), intra, 'prod-tax-preview-intra',
-          [['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]].concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
+          (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]]).concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
     +   cell(tx('Other state'), inter, 'prod-tax-preview-inter',
-          [['AssAmt',inter.AssAmt],['GstRt',inter.GstRt+'%'],['IgstAmt',inter.IgstAmt]].concat(cess(inter)).concat([['TotItemVal',inter.TotItemVal]]))
+          (off>0?[['Discount','-'+inter.Discount]]:[]).concat([['AssAmt',inter.AssAmt],['GstRt',inter.GstRt+'%'],['IgstAmt',inter.IgstAmt]]).concat(cess(inter)).concat([['TotItemVal',inter.TotItemVal]]))
     + `</div>`
     + (st
         ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('Your state code is {s}, from your GSTIN.', { s: esc(st) })}</div>`

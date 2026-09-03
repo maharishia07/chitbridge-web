@@ -75,7 +75,8 @@ function catsetDefsLoad(kind, force){
     .then(function(r){
       CATSET_DEFS[kind] = ((r && r.definitions) || []).map(function(d){
         return { id: d.definition_id, name: d.name, sub: d.sub_kind || '', status: d.status || 'draft',
-                 note: d.note || '', rules: d.rules || {} };
+                 note: d.note || '', rules: d.rules || {},
+                 governance: d.governance || null };   // the jurisdiction's, not this entity's — shown, never edited
       });
       _catsetDefReq[kind] = null; return CATSET_DEFS[kind];
     })
@@ -98,9 +99,21 @@ function catsetDefListHTML(kind, one){
   var rows = CATSET_DEFS[kind];
   if (rows === undefined) { catsetDefsLoad(kind).then(catsetPaintDetail); return '<div class="catset-load">reading…</div>'; }
   if (!rows.length) return '<div class="catset-none">None yet.</div>';
-  var live = rows.filter(function(d){ return d.status !== 'retired'; });
-  var ret  = rows.filter(function(d){ return d.status === 'retired'; });
+  /* ⭐ THE JURISDICTION'S ROWS ARE LISTED FIRST AND NEVER EDITED. Athi, 2026-09-04: "why each entity should create one
+     for them … it has to come from governance layer." A governed slab shows where it comes from and offers no
+     Edit / Retire / Make live — to differ from it, a person declares a slab of their own below. */
+  var gov  = rows.filter(function(d){ return d.governance; });
+  var live = rows.filter(function(d){ return !d.governance && d.status !== 'retired'; });
+  var ret  = rows.filter(function(d){ return !d.governance && d.status === 'retired'; });
   var row = function(d){
+    if (d.governance) {
+      var g = d.governance;
+      return '<div class="catset-drow gov" data-testid="catset-' + kind + '-' + esc(d.id) + '" style="opacity:.85">'
+        + '<span class="dn">' + esc(d.name) + '</span>'
+        + '<span class="dst live" title="' + esc(tx('Declared by the jurisdiction — inherited, not editable here')) + '">'
+        + esc(((g.jurisdiction || '') + ' ' + (g.scheme || '')).trim()) + ' · ' + esc(tx('governance')) + '</span>'
+        + '</div>';
+    }
     return '<div class="catset-drow' + (d.status === 'retired' ? ' ret' : '') + '" data-testid="catset-' + kind + '-' + esc(d.id) + '">'
       + '<span class="dn">' + esc(d.name) + '</span>'
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
@@ -146,7 +159,7 @@ function catsetDefListHTML(kind, one){
         + 'Either change the selling method back, or move those products onto a supported model.</div>';
     }
   }
-  return orphanNote + '<div class="catset-dlist">' + live.map(row).join('') + ret.map(row).join('') + '</div>';
+  return orphanNote + '<div class="catset-dlist">' + gov.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
 function catsetSec(){ return CATSET.sec || 'blueprint'; }
@@ -1155,10 +1168,7 @@ function catsetTaxHTML(){
     ? '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No live slab yet — author one above and make it live.') + '</div>'
     : '<select class="inp" data-testid="catset-tax-default" onchange="catsetTaxDefault(this.value)">'
       + '<option value="">— ' + esc(tx('none')) + ' —</option>'
-      + live.map(function(d){
-          return '<option value="' + esc(d.id) + '"' + (String(cur) === String(d.id) ? ' selected' : '') + '>'
-            + esc(d.name) + (d.rules && d.rules.rate != null ? ' · ' + esc(d.rules.rate) + '%' : '') + '</option>';
-        }).join('')
+      + cbSlabOptionsHTML(live, cur)   /* governed first, own after — the same builder the product and category use */
       + '</select>';
 
   return '<label class="fl">' + tx('Catalogue default') + '</label>' + body

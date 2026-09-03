@@ -149,11 +149,7 @@ function cbcatSlabPickHTML(f){
   var cur = f.default_slab || '';
   return '<select class="inp" data-testid="catg-slab" onchange="cbcatField(\'default_slab\',this.value)">'
     + '<option value="">— ' + esc(tx('inherit the catalogue default')) + ' —</option>'
-    + slabs.map(function(d){
-        var r = d.rules || {};
-        return '<option value="' + esc(d.definition_id) + '"' + (String(cur) === String(d.definition_id) ? ' selected' : '') + '>'
-          + esc(d.name) + (r.rate != null ? ' · ' + esc(r.rate) + '%' : '') + '</option>';
-      }).join('')
+    + cbSlabOptionsHTML(slabs, cur)   /* the jurisdiction's slabs first, then this entity's own — one builder, three pickers */
     + '</select>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 8px">'
     + tx('Products here that name no slab of their own use this.') + '</div>';
