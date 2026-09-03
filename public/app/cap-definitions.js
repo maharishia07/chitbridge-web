@@ -804,6 +804,10 @@ async function cbDefSave(){
  * first, so the row a person was looking at kept its old name and status until they left and came back.
  */
 async function cbDefAfterChange(kind, id){
+  /* ⚠️⚠️ THE PRODUCT PAGE CACHES THE LIVE OFFERS ONCE PER SESSION (UI._ctOffers, see ctOffersEnsure). Filled while
+     an offer was still a draft, it kept saying "None live" after the offer went live — [OFF-01] ATTACH found it:
+     author → make live → open the product → nothing to tick, until a reload. Any change to a definition drops it. */
+  if (typeof UI !== 'undefined') UI._ctOffers = undefined;
   await cbDefLoad(true);
   if (!kind && id) { var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0]; kind = d && d.kind; }
   if (kind && typeof UI !== 'undefined' && UI.nav === 'catsetup' && typeof catsetDefsLoad === 'function') {
