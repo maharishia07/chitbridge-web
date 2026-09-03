@@ -9857,8 +9857,14 @@ function prodTaxPreviewHTML(d,r){
     + rows.map(x=>`<div style="display:flex;justify-content:space-between;gap:8px"><span style="color:var(--grey)">${esc(x[0])}</span>${n(x[1])}</div>`).join('')
     + `</div>`;
   const cess=(it)=>it.CesAmt?[['CesAmt',it.CesAmt]]:[];
+  /* ⚠️ SAY WHICH. A slab that resolved but carries no rate is a different problem from no slab at all — the first
+     is fixed in Setup › Tax on THAT slab, the second on the product. One sentence for both hid the first
+     (Athi, 2026-09-04: "GST 18%" chosen, pane said "No rate to show"). */
   if(r.rate==null) return `<div data-testid="prod-tax-preview" style="font-size:var(--fs-1);color:var(--grey)">`
-    + `${tx('No rate to show — attach a slab, or set one on the category or the catalogue.')}</div>`;
+    + (r.slab_id
+        ? esc(txf('“{name}” has no rate — open it in Setup › Tax and enter one.', { name: r.name || tx('this slab') }))
+          + ` <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Open Setup › Tax')}</span>`
+        : `${tx('No rate to show — attach a slab, or set one on the category or the catalogue.')}`) + `</div>`;
   return `<div data-testid="prod-tax-preview">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
     + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })

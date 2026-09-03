@@ -689,11 +689,16 @@ function cbDefSetField(k, v){ CBDEF_FORM[k] = v; }
  * Clearing the last key of a branch removes the empty parent too: `applies_to:{}` is not the same as no
  * `applies_to`, and offers.js treats a present-but-empty scope as a filter that matches nothing.
  */
+/* ⚠️ "18%" IS A NUMBER TO A TRADER AND NaN TO Number(). A slab typed as "18%" (or "1,000") saved rules.rate as null
+   — silently: the definition existed, the select offered it, and the product pane said "No rate to show" (Athi,
+   2026-09-04). Read the digits a person meant; if there are none, store nothing rather than NaN. */
+function cbDefNum(v){ var s = String(v == null ? '' : v).replace(/[%,\s₹$]/g, ''); if (s === '') return null; var n = Number(s); return Number.isFinite(n) ? n : null; }
 function cbDefSetRule(k, v, num){
   var R = CBDEF_FORM.rules, parts = String(k).split('.');
+  if (num) { var nv = cbDefNum(v); v = (nv === null) ? '' : nv; }
   if (parts.length === 1) {
     if (v === '' || v == null) delete R[k];
-    else R[k] = num ? Number(v) : v;
+    else R[k] = v;
     return;
   }
   var head = parts[0], tail = parts.slice(1).join('.');
@@ -702,7 +707,7 @@ function cbDefSetRule(k, v, num){
     return;
   }
   if (!R[head] || typeof R[head] !== 'object') R[head] = {};
-  R[head][tail] = num ? Number(v) : v;
+  R[head][tail] = v;
 }
 function cbDefGetRule(k){
   var R = CBDEF_FORM.rules, parts = String(k).split('.');
