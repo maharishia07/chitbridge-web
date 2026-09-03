@@ -544,8 +544,12 @@ function catsetBody(k){
   if (k === 'offers') {
     return catsetCard('Discounts, tiers and deals',
       'A percentage, a flat amount, a quantity break, buy-one-get-one, free shipping, or a spend threshold. '
-      + 'Publish one and it applies to orders in compose — the breakdown shows what came off and, when it does '
-      + 'not fire, how far short the order is.'
+      + 'Publish one and it becomes VISIBLE — on the product row, on your storefront, to a B2B buyer browsing '
+      + 'you, and in the basket, where the breakdown shows what came off and, when it does not fire, how far '
+      + 'short the order is.'
+      + '<div class="catset-std">⚠️ A row states the CONDITION, never a bare discount — <b>"₹170 each from 10"</b>, '
+      + 'not "₹170 each" beside a product priced ₹180. A badge is a promise, and one the basket then declines is '
+      + 'worse than no badge at all, so an offer that cannot fire today shows nothing anywhere.</div>'
       + '<div class="catset-std">⚠️ An offer is a <b>term of trade</b>, not a product fact — it has an author, a '
       + 'validity window and a jurisdiction, and it has to survive into a dispute intact. That is why it is '
       + 'authored once here rather than edited on a product. <b>' + tx('Live') + '</b> offers apply; a draft is one you are '

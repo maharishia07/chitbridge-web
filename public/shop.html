@@ -33,11 +33,13 @@
   .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
   .enq{ margin-top:12px; font-size:12px; color:var(--blue); }
+.offbadge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:#fff5e0;border:1px solid #e8cf9a;color:#8a5a12;white-space:nowrap}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
 <script src="cb-offline.js"></script>
+<script src="app/offers.js"></script>
 <script src="app/catalogue-lines.js"></script>
 <script src="app/cart-ui.js"></script>
 <script src="app/step-flow.js"></script>
@@ -338,10 +340,37 @@ function finishCard(it, cur, idx, vizEnabled){
     +((idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+esc(_submitLabel())+'</button>':'')
     +'</div></div>';
 }
-function productRow(p, cur, variantLabel){ var d=(p.item_data||p)||{};
+/**
+ * ── ⭐⭐ WHAT THIS ROW PROMISES, ON THE PUBLIC STOREFRONT ──────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THIS PAGE DOES NOT USE THE SHARED RENDERER, and that nearly made the whole feature miss its target.
+ * `app/catalogue-ui.js` draws the rows in the signed-in app; this page draws its own, deliberately —
+ * catalogue-lines.js shares the WALK and each surface keeps its own CSS. So putting the badge in catalogue-ui lit
+ * it up in compose and the supplier view and left the STOREFRONT — the one public surface, and the entire point
+ * of expressing an offer — showing nothing at all.
+ *
+ * ⭐ What is shared is the JUDGEMENT, not the markup: CBOffers.forLine decides which offers this row may
+ * advertise and what each one promises, exactly as the app does. Two surfaces, one answer. The styling below is
+ * this page's own, which is the correct half to duplicate.
+ */
+function offerBadges(d, itemId, cur, offers){
+  try {
+    if (!(offers || []).length || typeof CBOffers === 'undefined' || !CBOffers.forLine) return '';
+    var cats = Array.isArray(d.categories) ? d.categories.map(String) : (d.category ? [String(d.category)] : []);
+    var got = CBOffers.forLine(
+      { item_id: itemId, sku: d.sku, categories: cats, unitPrice: cbHasPrice(d.price) ? cbAmount(d.price) : 0 },
+      offers, { now: new Date(), money: function (n) { return (cur || '') + n; } });
+    return got.slice(0, 2).map(function (x) {
+      return '<span class="offbadge" title="'+esc(x.label)+'">'+esc(x.promise)+'</span>';
+    }).join('');
+  } catch (e) { return ''; }   /* a badge must never take the storefront down */
+}
+
+function productRow(p, cur, variantLabel, offers){ var d=(p.item_data||p)||{};
   // A variant row leads with what DISTINGUISHES it ("4L"), not with the product name repeated three times.
   var lead = variantLabel ? '<b>'+esc(variantLabel)+'</b>' : '<b>'+esc(d.name||d.product||'item')+'</b>';
-  return '<div class="prow"'+(variantLabel?' style="padding-inline-start:18px"':'')+'><div style="flex:1">'+lead+' <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
+  var badges = offerBadges(d, p.item_id || (p.item && p.item.item_id), cur, offers);
+  return '<div class="prow"'+(variantLabel?' style="padding-inline-start:18px"':'')+'><div style="flex:1">'+lead+' <span class="meta">'+esc(d.unit||'')+'</span>'+badges+'</div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
 
 /**
  * productListHtml — the shop's product list, grouped when the owner declared variants.
@@ -370,7 +399,7 @@ function productListHtml(data, cur){
           + '<span class="meta">'+r.count+' options</span></div>'
           + (r.options ? '<div class="meta">'+esc(r.options)+'</div>' : '') + '</div>';
     }
-      return productRow(r.item, cur, r.variant);
+      return productRow(r.item, cur, r.variant, (data && data.offers) || []);
     }).join('');
   }
   /**

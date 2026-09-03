@@ -7694,9 +7694,189 @@ function prodPickBarHTML(){
     <span style="font-size:var(--fs-2);font-weight:600">${n} selected</span>
     <button data-testid="cat-availability" ${n?'':'disabled'} onclick="prodAvailAsk()" style="margin-inline-start:auto">📦 Availability</button>
     <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()">🏷️ Categorise</button>
+    <button data-testid="cat-offer" ${n?'':'disabled'} onclick="prodOfferAsk()">🏷️ Offer</button>
     <button onclick="prodPickMode(false)">${tx('Done')}</button>
   </div>`;
 }
+/**
+ * ── ⭐⭐ APPLYING AN OFFER TO PRODUCTS, FROM THE SCREEN WHERE THE PRODUCTS ARE ─────────────────────────────────
+ *
+ * Athi, 2026-09-03: *"in the screen we need wizard like add offer, discount and other facilities, also for bulk
+ * update without which offer cannot be added to the product at run time"*, and then precisely: *"not in the
+ * setup, catalogue management screen should have those — how will you add the offers and discount you created."*
+ *
+ * ⭐ HE IS DRAWING THE RIGHT LINE. Catalogue setup is where an offer is AUTHORED — it is a term of trade, with an
+ * author, a window and a jurisdiction, and it survives into a dispute. The Catalogue screen is where it is
+ * APPLIED, because that is where the products are and where you can already select forty of them. Authoring on
+ * the product screen would have made an offer a product fact; applying from the setup screen would have made you
+ * name forty products in a form.
+ *
+ * ⚠️⚠️ THE OFFER HOLDS THE TARGETING, NOT THE PRODUCT — and this is the decision to argue with, if any.
+ *   · ONE write instead of N. Forty products attach in a single call.
+ *   · `applies_to` already exists and `CBOffers.eligibleFor` already reads it, so nothing new has to learn a
+ *     second way of asking "does this offer touch this line?"
+ *   · An offer is a term of trade with its own version history (definition_version). Its reach is PART of the
+ *     term — "10% off, on these forty" is one statement — and storing that on the products would scatter a
+ *     single commercial fact across forty rows that version independently.
+ *   · And `offers` is on the never-a-column list (lib/defaults.js), for the same reason.
+ *
+ * ⚠️ ADD, NEVER REPLACE — the same rule prodCategoriseAsk states one function above, and for the same reason:
+ * you tick forty rows to add them to an offer, and a REPLACE would silently drop every product already on it
+ * that was not on screen. Removal is its own explicit action on the same dialog.
+ */
+async function prodOfferAsk(){
+  const ids = Array.from(UI.prodPicked || []);
+  if (!ids.length) return;
+  modal('<div class="mhd"><div class="t">🏷️ ' + tx('Offer') + '</div>'
+    + '<div class="s">' + esc(txn('{count} product selected', '{count} products selected', ids.length)) + '</div></div>'
+    + '<div class="mbody" data-testid="prod-offer"><div id="po_body">'
+    + '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading your offers…') + '</div></div></div>'
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button></div>', true);
+  try {
+    const r = await api('defList', { query: { kind: 'offer', status: 'live' } });
+    UI._prodOffers = ((r && r.definitions) || []).map(function(d){
+      return { id: d.definition_id, name: d.name, rules: d.rules || {} };
+    });
+  } catch (e) { UI._prodOffers = null; }
+  prodOfferPaint();
+}
+
+function prodOfferPaint(){
+  const el = document.getElementById('po_body');
+  if (!el) return;
+  const list = UI._prodOffers;
+  if (list === null) { el.innerHTML = '<div class="warnbox">' + tx('Could not read your offers.') + '</div>'; return; }
+  const ids = Array.from(UI.prodPicked || []);
+
+  /**
+   * ⚠️ NOTHING TO APPLY IS NOT AN ERROR, AND IT MUST SAY WHERE TO GO. An empty dialog headed "Offer" teaches that
+   * the feature is broken; the honest reading is that no offer is live yet, and the next step is one link away.
+   * ⚠️ A DRAFT IS NOT OFFERED HERE — attaching products to an offer you are still writing would publish it by the
+   * back door, on the storefront, the moment it went live.
+   */
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:var(--fs-2)">' + tx('You have no LIVE offers yet.') + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">'
+      + tx('An offer is authored once in Catalogue setup — it has a name, a window and terms — and applied to '
+        + 'products here. A draft is not offered, because attaching products to one would publish it the moment '
+        + 'it went live.') + '</div>'
+      + '<div style="margin-top:12px"><button class="composebtn pri" data-testid="po-author"'
+      + ' onclick="closeModal();navTo(\'catsetup\');setTimeout(function(){ if(typeof catsetSetSec===\'function\') catsetSetSec(\'offers\'); },600)">'
+      + tx('Author an offer →') + '</button></div>';
+    return;
+  }
+
+  el.innerHTML = '<div class="bulklist">' + list.map(function(o){
+    const at = (o.rules && o.rules.applies_to) || {};
+    const on = Array.isArray(at.item_ids) ? at.item_ids : [];
+    const already = ids.filter(function(i){ return on.indexOf(i) >= 0; }).length;
+    /**
+     * ⭐⭐ THE WINDOW IS SHOWN BEFORE YOU ATTACH, NOT AFTER. Athi: *"if offer, discounts added it should be time
+     * bound?"* — an offer with no end date is a PERMANENT price commitment, and attaching forty products to one
+     * without noticing is exactly how that happens. So the row says which it is, in words.
+     */
+    const win = prodOfferWindow(o.rules);
+    return '<div class="bulkrow" data-testid="po-offer-' + esc(o.id) + '">'
+      + '<span class="bn">' + esc(o.name)
+      + '<span style="font-weight:400;color:var(--grey)"> · ' + esc(prodOfferTerms(o.rules)) + '</span></span>'
+      + '<span class="bh">' + esc(win) + '</span>'
+      + (already ? '<span class="bh">' + esc(already + ' of ' + ids.length + ' already on') + '</span>' : '')
+      + '<button type="button" class="badd" data-testid="po-add-' + esc(o.id) + '"'
+      + ' onclick="prodOfferApply(\'' + esc(o.id) + '\', true)">+</button>'
+      + (already ? '<button type="button" class="badd" title="' + esc(tx('Take these off this offer')) + '"'
+        + ' data-testid="po-del-' + esc(o.id) + '" onclick="prodOfferApply(\'' + esc(o.id) + '\', false)">−</button>' : '')
+      + '</div>';
+  }).join('') + '</div>'
+  + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px">'
+  + tx('Adding is additive — products already on an offer stay on it. Use − to take the selected ones off.')
+  + '</div>';
+}
+
+/** ⚠️ A window in words, because "2026-10-31" tells a reader nothing about whether it is running NOW. */
+function prodOfferWindow(rules){
+  const r = rules || {};
+  if (!r.valid_from && !r.valid_to) return tx('no end date');
+  const f = r.valid_from ? String(r.valid_from).slice(0, 10) : '';
+  const t = r.valid_to ? String(r.valid_to).slice(0, 10) : '';
+  if (f && t) return f + ' → ' + t;
+  return f ? tx('from ') + f : tx('until ') + t;
+}
+
+/** The terms, read from the SAME registry the badge uses — never a second description of one offer. */
+function prodOfferTerms(rules){
+  try {
+    const p = (typeof CBOffers !== 'undefined' && CBOffers.promise)
+      ? CBOffers.promise(rules, { now: new Date(), money: function(n){ return curSym() + n; } })
+      : null;
+    return p || String((rules && rules.kind) || 'offer');
+  } catch (e) { return String((rules && rules.kind) || 'offer'); }
+}
+
+/**
+ * ⚠️ ONE WRITE, AND IT MERGES. The offer's reach is read, unioned (or differenced) with the selection, and saved
+ * back as a new definition_version — so the change is versioned like any other change to a term of trade, and a
+ * concurrent edit elsewhere cannot be silently flattened by a stale list held on this screen.
+ */
+async function prodOfferApply(offerId, add){
+  const ids = Array.from(UI.prodPicked || []);
+  if (!ids.length) return;
+  showBusy(add ? txn('Adding {count} product…', 'Adding {count} products…', ids.length)
+                : txn('Removing {count} product…', 'Removing {count} products…', ids.length));
+  try {
+    /**
+     * ⚠️⚠️ THE RULES ARE ON THE VERSION, NOT ON THE DEFINITION — and reading the wrong one DESTROYS THE OFFER.
+     *
+     * `defList` JOINs definition_version and returns `rules`; `defGet` returns `{definition, versions}` and
+     * leaves `definition.rules` NULL. My first version read `d.rules || {}` from defGet, merged the product ids
+     * into an empty object, and saved that — so applying products to an offer silently erased its TERMS. The
+     * kind, the tiers, the percentage: gone. The offer still existed, still looked live on every screen, and did
+     * nothing at all. It happened to the test offer before this comment was written.
+     *
+     * ⭐ So the current version's rules are what we merge into, and the guard below makes the loss impossible
+     * rather than merely unlikely.
+     */
+    const one = await api('defGet', { params: { id: offerId } });
+    const d = (one && one.definition) || {};
+    const vers = (one && one.versions) || [];
+    const curV = vers.filter(function(v){ return v.version === d.current_version; })[0] || vers[0] || {};
+    const rules = Object.assign({}, curV.rules || d.rules || {});
+
+    /**
+     * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
+     * join, anything — saving would replace a working offer with an empty one, and nothing downstream would
+     * complain: CBOffers skips a kind it does not know, so the discount would simply stop applying, silently, on
+     * every surface at once. Refusing costs one toast; the alternative costs a live commercial term.
+     */
+    if (!rules.kind) {
+      hideBusy();
+      toast(tx('Could not read that offer\'s terms, so nothing was changed. Open it in Catalogue setup first.'), true);
+      return;
+    }
+    const at = Object.assign({}, rules.applies_to || {});
+    const cur = Array.isArray(at.item_ids) ? at.item_ids.slice() : [];
+    let next;
+    if (add) { next = cur.slice(); ids.forEach(function(i){ if (next.indexOf(i) < 0) next.push(i); }); }
+    else next = cur.filter(function(i){ return ids.indexOf(i) < 0; });
+
+    /**
+     * ⚠️⚠️ AN EMPTY item_ids LIST MEANS "EVERY PRODUCT", NOT "NONE" — see CBOffers.eligibleFor, where a missing
+     * selector matches every line. So removing the last product must DELETE the key, not leave it empty: an empty
+     * array would silently turn a targeted discount into a shop-wide one, which is the most expensive possible
+     * direction for that mistake.
+     */
+    if (next.length) at.item_ids = next; else delete at.item_ids;
+    if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
+
+    await api('defSave', { params: { id: offerId }, body: { rules: rules } });
+    closeModal();
+    UI.prodPicked.clear(); UI.prodPick = false;
+    await loadCatalogue();
+    toast(add ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
+              : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length));
+  } catch (e) { hideBusy(); toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e)); }
+}
+
+
 /**
  * ⭐⭐ BULK ATTACH — ADD, NEVER REPLACE.
  *
