@@ -5347,9 +5347,7 @@ async function ccLoadOffers(){
   try {
     var r = await api('defListLive');
     CC.offers = ((r && r.definitions) || []).map(function(d){
-      /* The engine takes { id, kind, ...rules }; a definition stores { definition_id, sub_kind, rules }. The
-         definition_id is carried as `id` so an applied offer can be cited — and therefore FROZEN — by id. */
-      return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {});
+      return defToOffer(d);
     });
   } catch (e) { CC.offers = []; }
   /* The category shelf, on the same trip and with the same tolerance for failure — it labels the chips above the
@@ -8101,7 +8099,8 @@ async function prodOfferApply(offerId, add){
     const d = (one && one.definition) || {};
     const vers = (one && one.versions) || [];
     const curV = vers.filter(function(v){ return v.version === d.current_version; })[0] || vers[0] || {};
-    const rules = Object.assign({}, curV.rules || d.rules || {});
+    /* The kind is on the DEFINITION; joining it here is what lets the guard below pass for a form-authored offer. */
+    const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
 
     /**
      * ⚠️⚠️ AN OFFER WITHOUT A KIND IS NOT AN OFFER. If the read came back without terms — a shape change, a failed
@@ -9048,12 +9047,21 @@ async function _cfImportRun(btn, decisions, out){
  * otherwise starts the one read, returns null, and calls `then` on arrival so the caller can repaint. Two readers
  * (the product's Offers tab, the category's "offers apply here" line) — one loader, one cache.
  */
+/**
+ * ⭐⭐ A DEFINITION → THE SHAPE THE ENGINE AND THE BADGE READ: { id, kind, label, ...rules }.
+ * The KIND lives on the definition (`sub_kind`); the TERMS live on its current version (`rules`). Every reader has
+ * to join the two — and three readers did it three ways. The product page read `rules` alone, so an offer authored
+ * on the form had no kind there: the badge said "· offer" instead of "10% off", and the attach guard ("an offer
+ * without a kind is not an offer") refused to write. [OFF-01] ATTACH caught both. The definition_id is carried as
+ * `id` so an applied offer can be cited — and therefore FROZEN — by id.
+ */
+function defToOffer(d){ return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {}); }
 function ctOffersEnsure(then){
   if (UI._ctOffers !== undefined) return UI._ctOffers;
   UI._ctOffers = null;
   api('defList', { query: { kind: 'offer', status: 'live' } })
     .then(function(r){
-      UI._ctOffers = ((r && r.definitions) || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: x.rules || {} }; });
+      UI._ctOffers = ((r && r.definitions) || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
       if (then) then(UI._ctOffers);
     })
     .catch(function(){ UI._ctOffers = []; if (then) then(UI._ctOffers); });
