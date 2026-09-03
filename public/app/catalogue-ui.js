@@ -244,12 +244,37 @@
     var lineTotal = (q > 1 && isFinite(u.amount))
       ? '<div class="cbcat-linetotal">' + esc(money(cart.ns, u.amount * q)) + '</div>' : '';
 
+    /**
+     * ⭐⭐ WHAT THIS ROW PROMISES, BEFORE ANYTHING IS IN A BASKET.
+     *
+     * Athi, 2026-09-02: *"discount and offers need to be expressed, otherwise people may not know"* — and in
+     * B2B, pushing product IS the discount. Until now `offersHTML` showed adjustments inside the CART, so a
+     * buyer could not learn an offer existed until they had already chosen.
+     *
+     * ⚠️ THE CONDITION IS ALWAYS IN THE SENTENCE — "₹170 each from 10", never a bare "₹170 each" beside a row
+     * priced ₹180. A badge is a commitment; one the basket then declines is worse than no badge at all.
+     * CBOffers.promise returns null for anything expired, unstarted or out of region, so a row that cannot
+     * honour a promise simply stays quiet. See offers.js.
+     */
+    var offBadge = '';
+    try {
+      var _offs = (opts && opts.offers) || (cart.__cbcatOpts && cart.__cbcatOpts.offers) || [];
+      if (_offs.length && root.CBOffers && root.CBOffers.forLine) {
+        var _p = root.CBOffers.forLine(
+          { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0 },
+          _offs, { now: new Date(), money: function (n) { return money(cart.ns, n); } });
+        offBadge = _p.slice(0, 2).map(function (x) {
+          return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
+        }).join('');
+      }
+    } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
+
     return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
       + ' data-testid="cbcat-row-' + esc(id) + '">'
       + media
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
-      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span></span>'
+      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + '</span>'
       + '<span class="cbcat-pr">' + price + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
       + '</div>';
@@ -518,6 +543,34 @@
    * until you typed: `search()` → `paintList()` → an element id nobody rendered → the search box quietly stopped
    * filtering. The cap-network harness went 5 FAILED and named it. An id is a contract, not a detail.
    */
+  /**
+   * The categories a product cites. ⚠️ READ LOCALLY, NOT FROM core.js — `catgIdsOf` lives there and core.js is
+   * NOT loaded by shop.html, so reaching for it would work in the signed-in app and throw on the public
+   * storefront: exactly the split-surface break this renderer exists to prevent. Two lines, kept honest by the
+   * same rule core.js uses — an array of ids, with the retired single-key form still read and never written.
+   */
+  function catgIds(d) {
+    var x = d || {};
+    if (Array.isArray(x.categories)) return x.categories.map(String).filter(Boolean);
+    return x.category ? [String(x.category)] : [];
+  }
+
+  /**
+   * ⭐ THE PREDICATE cart-ui ASKS FOR. It knows quantities and totals, not validity windows and targeting — so it
+   * holds the FLAG and this supplies the JUDGEMENT, from the same CBOffers.forLine the badge is printed from. One
+   * test, so a row can never be hidden by a filter that disagrees with its own badge.
+   */
+  function isOnOffer(row, opts) {
+    try {
+      var offs = (opts && opts.offers) || [];
+      if (!offs.length || !root.CBOffers || !root.CBOffers.onOffer) return true;
+      var d = dataOf(row) || {};
+      return root.CBOffers.onOffer(
+        { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: Number(d.price && d.price.amount != null ? d.price.amount : d.price) || 0 },
+        offs, { now: new Date() });
+    } catch (e) { return true; }   /* a failing filter must never empty a catalogue */
+  }
+
   function idsOf(cart, opts) {
     return {
       bar:  opts.barEl  || 'cbcartbar_' + cart.ns,
@@ -613,6 +666,21 @@
        * The markup and the counting live in CBCart (catgsHTML/catgTally), so there is ONE definition of what a
        * category chip is; this file only decides where it sits.
        */
+      /**
+       * ⭐⭐ "ON OFFER" SITS WITH THE CATEGORY CHIPS, because it answers the same kind of question — narrow this
+       * list to what I care about. Athi, 2026-09-02: *"do we have options to filter based on offers, discount?"*
+       *
+       * ⚠️ IT ONLY APPEARS WHEN THERE IS SOMETHING TO FILTER. A dead "On offer" chip on a catalogue with no
+       * offers teaches that the feature is broken rather than that the shop is not running one — the same rule
+       * the category strip already follows by rendering nothing until a category exists.
+       *
+       * ⚠️ AND IT NARROWS BY THE SAME TEST THE BADGE USES (CBOffers.forLine), so a row can never be hidden by a
+       * filter that disagrees with the badge printed on it.
+       */
+      +   (((opts.offers || []).length && root.CBOffers) ?
+            '<button type="button" class="cbcat-chip cbcat-offchip' + ((cart.state() || {}).onlyOffers ? ' on' : '') + '"'
+          + ' data-testid="pick-onoffer" onclick="CBCart.onlyOffers(\'' + esc(cart.ns) + '\')">'
+          + '🏷️ ' + esc('On offer') + '</button>' : '')
       +   '<div id="' + esc(listId) + '_catg" class="cbpick-catgs">'
       +     (typeof CBCart.categoriesHTML === 'function' ? CBCart.categoriesHTML(cart.ns) : '')
       +   '</div>'
@@ -795,6 +863,11 @@
       '.cbcat-nm{display:block;font-weight:700;font-size:var(--fs-3)}',
       '.cbcat-sub{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:1px}',
       '.cbcat-hint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
+      /* ⚠️ TOKENS, NOT LITERALS — the badge has to read on both themes, and theme-literals.cjs enforces it.
+         --gold-soft/--gold-line already carry "worth noticing, not an error" everywhere else in the app. */
+      '.cbcat-offs{display:inline-flex;flex-wrap:wrap;gap:4px;margin-inline-start:7px;vertical-align:middle}',
+      '.cbcat-off{display:inline-block;padding:1px 7px;border-radius:999px;font-size:var(--fs-1);font-weight:700;',
+      'background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--warn-3);white-space:nowrap}',
       /* ⚠️ FIXED COLUMNS, or the price column zig-zags. Measured: ₹340 at x=740 and ₹149 at x=628 before this. */
       '.cbcat-pr{flex:none;min-width:78px;text-align:end;font-weight:700;font-size:var(--fs-3);',
       'font-variant-numeric:tabular-nums;white-space:nowrap}',
@@ -892,6 +965,7 @@
     /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
     listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
+    isOnOffer: isOnOffer,
     commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
     paint: paint, observe: observe, ensureCss: ensureCss,
     mediaOf: mediaOf, tileFor: tileFor, hintOf: hintOf,

@@ -407,11 +407,29 @@
   function rows(ns) {
     var s = C[ns]; if (!s) return [];
     var all = rowsOf(s.cat), q = (s.q || '').trim().toLowerCase(), g = s.catg || '';
-    if (!q && !g) return all;                 // the list is ALWAYS the full list — the cart is a popup, not a filter
+    /**
+     * ⭐⭐ "ON OFFER" IS A FILTER THIS FILE DELIBERATELY DOES NOT UNDERSTAND.
+     *
+     * Athi, 2026-09-02: *"do we have options to filter based on offers, discount?"* — yes, and the cart engine
+     * is the wrong place to teach what an offer IS. It knows quantities and totals; validity windows, regions
+     * and targeting live in offers.js, and the renderer already holds them.
+     *
+     * ⚠️ So the flag is here and the JUDGEMENT is injected: `opts.isOnOffer(row)`. Without a predicate the flag
+     * cannot narrow anything, which is the safe direction — a filter that silently hides rows because nobody
+     * supplied the test would empty a catalogue and look like an outage.
+     */
+    /* ⭐ THE RENDERER IS THE SEAM WE ALREADY HAVE. opts.renderer is held here for painting; asking IT the
+       question keeps the dependency pointing the right way — cart-ui never learns what an offer is. */
+    var _rn = s.o && s.o.renderer;
+    var onlyOff = !!s.onlyOffers;
+    var isOff = (_rn && typeof _rn.isOnOffer === 'function') ? function (r) { return _rn.isOnOffer(r, s.o); } : null;
+    if (onlyOff && !isOff) onlyOff = false;
+    if (!q && !g && !onlyOff) return all;                 // the list is ALWAYS the full list — the cart is a popup, not a filter
     var out = [], pend = null, took = false;
     for (var i = 0; i < all.length; i++) {
       var r = all[i];
       if (r.type === 'product') { pend = r; took = false; continue; }
+      if (onlyOff && !isOff(r)) continue;
       if (g) {
         var cs = catgsOf(r);
         /* ANY membership matches. Uncategorised is "carries none at all". */
@@ -510,6 +528,13 @@
     return id;
   }
   function clear(ns) { var s = C[ns]; if (!s) return; s.sel = {}; close(ns); paint(ns); }
+  /** Toggle the "on offer" narrowing. The TEST comes from the renderer — see rows(). */
+  function onlyOffers(ns, on) {
+    var s = C[ns]; if (!s) return;
+    s.onlyOffers = (on === undefined) ? !s.onlyOffers : !!on;
+    paint(ns);
+  }
+
   function search(ns, v) { var s = C[ns]; if (!s) return; s.q = v || ''; paintList(ns); }
   function open(ns) { if (!lines(ns)) return; C[ns].open = true; paintPopup(ns); }
   function close(ns) {
@@ -1098,6 +1123,7 @@
       group: function (i) { group(ns, i); return h; },
       clear: function () { clear(ns); return h; },
       search: function (q) { search(ns, q); return h; },
+      onlyOffers: function (on) { onlyOffers(ns, on); return h; },
       /* ⚠️ A SETTER WITHOUT A GETTER IS WHY AN EMPTY CATALOGUE SAID "nothing matches that". The picker could
          set a search term but never ask whether one existed, so it printed the no-match sentence over a screen
          with an empty search box — telling the reader their query was too narrow when they had not typed one. */
@@ -1206,7 +1232,7 @@
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
     add: add, dec: dec, setQty: setQty, setOffer: setOffer, offerState: offerState,
-    group: group, clear: clear, search: search, addAdhoc: addAdhoc, models: MODELS,
+    group: group, clear: clear, search: search, onlyOffers: onlyOffers, addAdhoc: addAdhoc, models: MODELS,
     /* `category` is the chips' inline onclick, the same front-door route as add/search. */
     category: catgSet, categories: catgTally,
     /* ⚠️ EXPORTED so catalogue-ui can render the SAME strip rather than growing a second one. It has its own

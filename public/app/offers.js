@@ -32,7 +32,7 @@
  * taxonomy). Using their words means a person who has run promotions elsewhere already knows what these mean, and
  * a future integration maps rather than translates.
  *
- * ── ⚠️ NOT WIRED. Nothing calls this yet — the same posture as catalogue-ui.js. `CBOffers.evaluate()` is ready;
+ * ── ⭐ WIRED. evaluate() is called by the cart (catalogue-ui.offersHTML) and by compose; promise()/forLine()
  * which screen calls it, and whether an offer is frozen at seal, is Athi's decision. See SPEC-offers-tax.md.
  */
 (function (root) {
@@ -269,6 +269,113 @@
   }
 
   /**
+   * ── ⭐⭐ WHAT A ROW MAY ADVERTISE, BEFORE ANYTHING IS IN A CART ─────────────────────────────────────────────
+   *
+   * Athi, 2026-09-02: *"discount and offers need to be expressed i guess, otherwise people may not know"*, and
+   * *"in b2b, that is the way, the products are being pushed."*
+   *
+   * ⚠️⚠️ UNTIL NOW A DISCOUNT WAS INVISIBLE UNTIL IT WAS TOO LATE TO INFLUENCE ANYTHING. `evaluate()` runs on a
+   * CART, so the only place an offer appeared was inside the basket, after a buyer had already chosen. The
+   * storefront was never even sent the offers. A buyer could not learn a discount existed until they had
+   * committed — which, for a B2B seller whose whole method of pushing product IS the discount, means the
+   * mechanism was switched off.
+   *
+   * ⭐ `promise()` is the OTHER question from `evaluate()`, and keeping them apart is the point:
+   *
+   *     evaluate(cart)  → what you ARE getting, in money, on these exact lines
+   *     promise(offer)  → what you COULD get, in words, on this one row
+   *
+   * ⚠️⚠️ AND IT ALWAYS STATES THE CONDITION. Never a bare "10% off" — "10% off 5+". A badge is a promise, and a
+   * row that promises 10% while the cart declines to give it (minimum not met, wrong region, expired) is worse
+   * than a row that said nothing: the first is a broken commitment, the second is merely quiet. So a kind whose
+   * benefit depends on a threshold puts the threshold IN the sentence, and an offer that cannot fire right now
+   * returns null rather than a caveat nobody reads.
+   */
+  function promise(o, ctx) {
+    if (!o) return null;
+    var c = Object.assign({ now: new Date() }, ctx || {});
+    /* ⚠️ The SAME gate evaluate() uses. A second copy of "is this live?" is how a badge and a basket come to
+       disagree about the same offer on the same screen. */
+    if (within(o, c) !== null) return null;
+
+    var money = (typeof c.money === 'function') ? c.money : function (n) { return String(n); };
+    var pct = Number(o.percent) || 0;
+    var amt = Number(o.amount) || 0;
+
+    switch (o.kind) {
+      case 'percent_off':
+        return pct > 0 ? pct + '% off' : null;
+
+      case 'amount_off':
+        return amt > 0 ? money(amt) + ' off' : null;
+
+      /**
+       * ⭐ THE QUANTITY BREAK IS THE ONE THAT MOST NEEDS ITS CONDITION. "₹170 each" is a lie without "from 10";
+       * the buyer is looking at a row priced ₹180 and would read the badge as the price they pay for one.
+       */
+      case 'tier_price': {
+        var tiers = (o.tiers || []).slice().sort(function (a, b) { return (a.qty || 0) - (b.qty || 0); });
+        var first = tiers[0];
+        if (!first || !first.qty) return null;
+        return money(first.price) + ' each from ' + first.qty
+             + (tiers.length > 1 ? ' (' + tiers.length + ' price breaks)' : '');
+      }
+
+      case 'threshold': {
+        var need = Number(o.min_subtotal) || 0;
+        if (!need) return null;
+        var give = pct > 0 ? pct + '% off' : (amt > 0 ? money(amt) + ' off' : null);
+        return give ? give + ' orders over ' + money(need) : null;
+      }
+
+      case 'buy_x_get_y': {
+        var x = Number(o.buy) || 0, y = Number(o.get) || 0;
+        return (x && y) ? 'Buy ' + x + ' get ' + y + ' free' : null;
+      }
+
+      /* ⚠️ Shipping is an ORDER-level benefit and belongs on the basket, not on a product row: a single item
+         cannot promise free delivery on its own, and saying so per row would be a promise the line cannot keep. */
+      case 'shipping':
+        return null;
+
+      case 'price_range':
+        return null;   /* a band is the price, not a discount off one — the row already shows it */
+
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * forLine(line, offers, ctx) → [{ offer_id, label, promise }] — what THIS row may honestly advertise.
+   *
+   * ⚠️ TARGETING IS `eligibleFor`, NOT A SECOND FILTER. That function already fails CLOSED on an unclassified
+   * product (an offer aimed at Grains must not fall back to "everything"), and re-implementing the test here for
+   * one line is how a badge comes to appear on a product the basket will refuse.
+   *
+   * ⚠️ QUANTITY IS UNKNOWN HERE, deliberately. A row is not a basket; anything whose eligibility depends on how
+   * many are ordered states that as its condition rather than pretending to have met it.
+   */
+  function forLine(line, offers, ctx) {
+    var l = line || {};
+    var out = [];
+    for (var i = 0; i < (offers || []).length; i++) {
+      var o = offers[i];
+      /* Cart-scope offers describe the ORDER, not this product — they belong on the basket. */
+      if (o && o.scope === 'cart' && o.kind !== 'threshold') continue;
+      if (!eligibleFor(o, [Object.assign({ qty: 1 }, l)]).length) continue;
+      var p = promise(o, ctx);
+      if (!p) continue;
+      out.push({ offer_id: o.id, label: o.label || p, promise: p, kind: o.kind });
+    }
+    return out;
+  }
+
+  /** Does any live offer touch this row? The "On offer" filter, computed the same way the badge is. */
+  function onOffer(line, offers, ctx) { return forLine(line, offers, ctx).length > 0; }
+
+
+  /**
    * ⭐ evaluate — the only entry point.
    *
    *   lines   [{ key, item_id, sku, category, qty, unitPrice }]
@@ -376,5 +483,6 @@
     };
   }
 
-  root.CBOffers = { evaluate: evaluate, KINDS: KINDS, kinds: Object.keys(KINDS) };
+  root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer,
+    KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);
