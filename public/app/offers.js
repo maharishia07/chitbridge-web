@@ -152,6 +152,55 @@
         var x = Number(o.buy) || 0, y = Number(o.get) || 0;
         if (x <= 0 || y <= 0) return [];
         var pct = o.get_percent == null ? 100 : Number(o.get_percent);   // 100 = free
+
+        /**
+         * ── ⭐⭐ A DIFFERENT PRODUCT AS THE REWARD ────────────────────────────────────────────────────────
+         *
+         * Athi, 2026-09-03: *"include another item from the catalogue as an offer"* — "buy rice, get oil free".
+         *
+         * ⚠️ WITHOUT get_item_id THIS KIND CANNOT SAY THAT. The branch below takes free units from the
+         * ELIGIBLE pool, so the reward has to be something that already qualified — "buy 3 of these, get 1 of
+         * these free". A reward that is a DIFFERENT product is a different sentence, and it was not
+         * expressible at all.
+         *
+         * ⚠️⚠️ AND HERE IS THE DECISION, WHICH IS NOT A TECHNICAL ONE: **the engine never adds a line by
+         * itself.** The obvious implementation puts the oil in the basket at zero, and it is wrong for this
+         * product: a cart on this rail becomes a chit, and a chit is what two parties AGREED. Something the
+         * customer never chose must not arrive inside that. So:
+         *
+         *   · the reward IS in the basket    → it is discounted, up to what was earned
+         *   · the reward is NOT in the basket → a NOTE says it has been earned, and names it
+         *   · earned 2, holding 1             → the one is discounted AND the note reports the remaining one
+         *
+         * ⭐ A note is not a lesser outcome here. evaluate() already returns notes for "you are ₹300 away" and
+         * every caller shows them beside the adjustments — so an unclaimed freebie is as visible as a claimed
+         * one, and claiming it stays the buyer's act.
+         */
+        if (o.get_item_id) {
+          var sets0 = Math.floor(ctx.eligibleQty / x);
+          if (o.max_sets) sets0 = Math.min(sets0, Number(o.max_sets));
+          if (sets0 <= 0) return [];
+          var want = sets0 * y;
+          var rname = o.get_item_name || 'the free item';
+          var held = (ctx.all || []).filter(function (l) { return String(l.item_id) === String(o.get_item_id); });
+          var got = [], left = want;
+          for (var ri = 0; ri < held.length && left > 0; ri++) {
+            var tk = Math.min(left, held[ri].qty);
+            got.push(adj(o, 'line', held[ri].key, -R2(held[ri].unitPrice * tk * pct / 100),
+              tk + ' × ' + (pct === 100 ? 'free' : pct + '% off') + ' ' + rname
+              + ' — buy ' + x + ' get ' + y + ' (' + sets0 + ' set' + (sets0 === 1 ? '' : 's') + ')'));
+            left -= tk;
+          }
+          /* ⚠️ NAMED, AND CARRYING THE ITEM ID, so a screen can offer to add it in one press rather than
+             telling somebody to go and find it. A promise the buyer cannot act on is only half kept. */
+          if (left > 0) {
+            got.push(note(o, 'earned ' + left + ' × ' + rname + ' '
+              + (pct === 100 ? 'free' : 'at ' + pct + '% off')
+              + ' — add it to your order to claim it', 0, o.get_item_id));
+          }
+          return got;
+        }
+
         var pool = ctx.eligible.slice().sort(function (a, b) { return a.unitPrice - b.unitPrice; });
         var totalQty = pool.reduce(function (t, l) { return t + l.qty; }, 0);
         var sets = Math.floor(totalQty / (x + y));
@@ -330,7 +379,11 @@
 
       case 'buy_x_get_y': {
         var x = Number(o.buy) || 0, y = Number(o.get) || 0;
-        return (x && y) ? 'Buy ' + x + ' get ' + y + ' free' : null;
+        if (!x || !y) return null;
+        /* ⭐ NAME THE REWARD when it is a different product — "Buy 3 get 1 free" beside a bag of rice reads as
+           a fourth bag, which is not what is on offer. */
+        if (o.get_item_id) return 'Buy ' + x + ' get ' + y + ' ' + (o.get_item_name || 'free item') + ' free';
+        return 'Buy ' + x + ' get ' + y + ' free';
       }
 
       /* ⚠️ Shipping is an ORDER-level benefit and belongs on the basket, not on a product row: a single item
@@ -450,6 +503,13 @@
         eligible: elig,
         eligibleSubtotal: R2(elig.reduce(function (t, l) { return t + l.gross; }, 0)),
         eligibleQty: elig.reduce(function (t, l) { return t + l.qty; }, 0),
+        /**
+         * ⚠️ EVERY line, not only the qualifying ones — a cross-item reward ("buy rice, get oil free") has to
+         * look for the OIL, which by definition is not in the set that qualified. This is the second half of
+         * the two-place change the normaliser above warns about: a rule that reads something the ctx does not
+         * carry fails silently, with no missing property anywhere to find.
+         */
+        all: lines,
         shipping: ctx.shipping, money: ctx.money, now: ctx.now
       }) || [];
 

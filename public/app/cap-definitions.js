@@ -461,7 +461,14 @@ function cbDefRuleFields(kind, sub){
                                g.push({ k: 'min_qty', label: '…or this many items', num: true }); }
     if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true });
                                  g.push({ k: 'get', label: 'Get', ph: '1', num: true });
-                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true }); }
+                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true });
+                                 /**
+                                  * ⭐⭐ THE REWARD MAY BE A DIFFERENT PRODUCT — Athi, 2026-09-03: *"include
+                                  * another item from the catalogue as an offer"*. Blank keeps the original
+                                  * behaviour (the cheapest QUALIFYING unit goes free); naming a product makes
+                                  * it "buy rice, get oil free", which this kind could not say at all.
+                                  */
+                                 g.push({ k: 'get_item_id', label: 'Reward — a different product (blank = one of these)', pick: 'product' }); }
     if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true });
                                  g.push({ k: 'max', label: 'Band maximum', num: true }); }
     if (sub === 'shipping') g.push({ k: 'percent', label: '% off shipping (blank = free)', num: true });
@@ -568,6 +575,12 @@ function cbDefGetRule(k){
  * option reads as "this offer cannot be targeted", when the truth is "you have no categories yet".
  */
 function cbDefPickHTML(x, v){
+  /**
+   * ⚠️ THIS USED TO BE CATEGORIES AND NOTHING ELSE. A second kind of pick arrived (the reward product), and the
+   * honest fix is a branch here rather than a second picker beside it — two selectors that both mean "choose
+   * from your catalogue" would drift the day one learns to search and the other does not.
+   */
+  if (x.pick === 'product') return cbDefPickProductHTML(x, v);
   var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
   if (list === null) {
     if (typeof cbCatgLive === 'function') cbCatgLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
@@ -585,6 +598,61 @@ function cbDefPickHTML(x, v){
           + cbDefEsc(c.name) + '</option>'; }).join('')
     + '</select>';
 }
+/**
+ * The reward picker. ⚠️ It stores the product's NAME beside its id.
+ *
+ * ⭐⭐ THE TRAVELLING COPY IS DELIBERATE, and it is the same pattern a product already uses for its categories
+ * (`category_names` beside `categories`). The badge on a storefront row has to say "Buy 3 get 1 Sunflower Oil
+ * free" to a reader who cannot resolve our product ids — an anonymous shopper, a B2B buyer on another entity,
+ * a network peer. Without the name the promise reads "Buy 3 get 1 free", which beside a bag of rice means a
+ * fourth bag of rice: a different offer from the one that was authored.
+ *
+ * ⚠️ The id stays authoritative. A rename in the catalogue leaves the copy stale, which is the accepted cost of
+ * the pattern — the same trade the category names already make — and re-picking refreshes it.
+ */
+var _CBDEF_PRODS;
+function cbDefProdsLive(){
+  if (_CBDEF_PRODS !== undefined) return Promise.resolve(_CBDEF_PRODS);
+  _CBDEF_PRODS = null;
+  return api('prodList')
+    .then(function (r) {
+      var arr = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
+      _CBDEF_PRODS = arr.map(function (p) {
+        var d = p.item_data || p;
+        return { id: p.item_id || p.id, name: d.name || d.particulars || 'item' };
+      }).filter(function (p) { return p.id; });
+      return _CBDEF_PRODS;
+    })
+    .catch(function () { _CBDEF_PRODS = []; return _CBDEF_PRODS; });
+}
+
+function cbDefPickProductHTML(x, v){
+  if (_CBDEF_PRODS === undefined || _CBDEF_PRODS === null) {
+    cbDefProdsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
+    return '<div class="cbdef-hint">reading your catalogue…</div>';
+  }
+  if (!_CBDEF_PRODS.length) {
+    return '<div class="cbdef-hint">Your catalogue is empty, so there is nothing to give away yet.</div>';
+  }
+  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+    + ' onchange="cbDefSetReward(this.value)">'
+    + '<option value="">— one of the qualifying items —</option>'
+    + _CBDEF_PRODS.map(function (p) {
+        return '<option value="' + cbDefEsc(p.id) + '"' + (String(v) === String(p.id) ? ' selected' : '') + '>'
+          + cbDefEsc(p.name) + '</option>'; }).join('')
+    + '</select>'
+    + '<div class="cbdef-hint">⚠️ If the buyer has not added this to their order, the basket does NOT add it '
+    + 'for them — it says the reward has been earned and offers to add it. A line nobody chose must not arrive '
+    + 'inside a chit.</div>';
+}
+
+/** Sets the id AND the name in one act, so the two can never be written apart. */
+function cbDefSetReward(id){
+  var p = (_CBDEF_PRODS || []).filter(function (q) { return String(q.id) === String(id); })[0];
+  cbDefSetRule('get_item_id', id || '');
+  cbDefSetRule('get_item_name', p ? p.name : '');
+}
+
 function cbDefFormHTML(){
   var f = CBDEF_FORM; if (!f) return '';
   var A = CBDEF_AUTHORABLE[f.kind] || {};

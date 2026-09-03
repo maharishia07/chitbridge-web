@@ -113,5 +113,57 @@ t('an expired offer puts no badge on any row', () => {
   assert.deepStrictEqual(O.forLine({ item_id: 'a', unitPrice: 100 }, dead, CTX), []);
 });
 
+console.log('\noffers · a different product as the reward');
+
+const RICE = { id: 'r1', kind: 'buy_x_get_y', label: 'Rice to oil', buy: 3, get: 1,
+  applies_to: { item_ids: ['rice'] }, get_item_id: 'oil', get_item_name: 'Sunflower Oil 1L' };
+const run = (lines) => O.evaluate({ lines, offers: [RICE], now: NOW, money: CTX.money });
+
+t('⭐ the promise NAMES the reward — "Buy 3 get 1 free" beside rice reads as a fourth bag', () => {
+  assert.strictEqual(O.promise(RICE, CTX), 'Buy 3 get 1 Sunflower Oil 1L free');
+});
+
+/**
+ * ⚠️⚠️ THE DECISION THIS TEST PINS IS NOT TECHNICAL. The obvious implementation puts the oil in the basket at
+ * zero. On this rail a cart becomes a CHIT, and a chit is what two parties AGREED — so a line the customer never
+ * chose must not arrive inside one. Earned-but-unclaimed is reported, never inserted.
+ */
+t('⭐⭐ EARNED BUT NOT IN THE BASKET IS A NOTE, and the engine adds NO line', () => {
+  const r = run([{ key: '0', item_id: 'rice', qty: 3, unitPrice: 620 }]);
+  assert.strictEqual(r.adjustments.length, 0, 'nothing is discounted, because nothing was chosen');
+  assert.strictEqual(r.notes.length, 1);
+  assert.ok(/earned 1 . Sunflower Oil/.test(r.notes[0].why), r.notes[0].why);
+  assert.strictEqual(r.notes[0].target, 'oil', 'the id travels, so a screen can offer to add it in one press');
+});
+
+t('the reward IS in the basket, so it is discounted', () => {
+  const r = run([{ key: '0', item_id: 'rice', qty: 3, unitPrice: 620 },
+                 { key: '1', item_id: 'oil', qty: 1, unitPrice: 132 }]);
+  assert.strictEqual(r.adjustments.length, 1);
+  assert.strictEqual(r.adjustments[0].amount, -132, 'free means the whole line');
+  assert.strictEqual(r.notes.length, 0);
+});
+
+t('⭐ EARNED 2, HOLDING 1 — one discounted AND the other still reported', () => {
+  const r = run([{ key: '0', item_id: 'rice', qty: 6, unitPrice: 620 },
+                 { key: '1', item_id: 'oil', qty: 1, unitPrice: 132 }]);
+  assert.strictEqual(r.adjustments.length, 1, 'the one they hold');
+  assert.strictEqual(r.notes.length, 1, 'and the one they have not claimed');
+});
+
+t('below the threshold earns nothing and says nothing', () => {
+  const r = run([{ key: '0', item_id: 'rice', qty: 2, unitPrice: 620 }]);
+  assert.strictEqual(r.adjustments.length, 0);
+  assert.strictEqual(r.notes.length, 0);
+});
+
+t('⚠️ the same-item form is UNCHANGED — no get_item_id, cheapest eligible unit still goes free', () => {
+  const same = { id: 's1', kind: 'buy_x_get_y', buy: 2, get: 1 };
+  const r = O.evaluate({ lines: [{ key: '0', item_id: 'a', qty: 3, unitPrice: 100 }],
+    offers: [same], now: NOW, money: CTX.money });
+  assert.strictEqual(r.adjustments.length, 1);
+  assert.strictEqual(r.adjustments[0].amount, -100);
+});
+
 console.log('\n' + (fail ? '✗ ' + fail + ' failed, ' : '✓ ') + pass + ' passed\n');
 process.exit(fail ? 1 : 0);
