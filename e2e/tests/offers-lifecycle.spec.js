@@ -97,7 +97,8 @@ test('[OFF-01] author → edit → live → attach → seen → retire', async (
     await row().getByText('Retire', { exact: true }).click();
     const ok = page.getByTestId('confirm-ok');
     if (await ok.isVisible().catch(() => false)) {
-      const saved = page.waitForResponse((r) => isDefWrite(r, 'PUT'), { timeout: 45000 });
+      /* Retire is a DELETE that never deletes — the row survives as "retired" so chits that cite it stay explicable. */
+      const saved = page.waitForResponse((r) => isDefWrite(r, 'DELETE'), { timeout: 45000 });
       await ok.click();
       await saved;
     }
