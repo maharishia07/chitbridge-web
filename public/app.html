@@ -9179,12 +9179,14 @@ function prodOffersOn(d){
  * ⚠️ NO READ. UI._ctOffers is already in hand (ctOffersEnsure) and the product is the record being displayed, so
  * this paints from what the screen already holds — see e2e/screen-reads.cjs.
  */
+/* ⚠️ A PRICE IS A MONEY SHAPE — `{amount, currency}` after money.stampItem — so `+d.price` is NaN and the preview priced
+   every basket at ₹0.00 (morning-shots 4, 2026-09-04). cbAmount() is the one reader every other surface uses. */
 function prodOfferPreviewHTML(d){
   const on = prodOffersOn(d);
   if (!on.length || typeof CBOffers === 'undefined' || typeof CBCatUI === 'undefined' || !CBCatUI.offersHTML) return '';
   if (CBCatUI.ensureCss) CBCatUI.ensureCss();
   const offers = on.map(function(o){ return o.rules; });
-  const price = +d.price || 0;
+  const price = (cbAmount(d.price) || 0);
   /* ⭐ THE SECOND QUANTITY IS DERIVED FROM THE RULES — a tier at 10 or a "spend ₹5,000" shows nothing at 1 or 3,
      and an example where the offer does not fire teaches the author their offer is broken. */
   const bulk = CBOffers.sampleQty(offers, price);
@@ -9206,10 +9208,10 @@ function prodOfferCartHTML(d, offers, qty, totalTestid){
   try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money }); }
   catch(e){ return ''; }   /* the offers are a view of the product; a failing engine must not take the tab down */
   const per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
-  const gross = Math.round(qty * (+d.price || 0) * 100) / 100;
+  const gross = Math.round(qty * ((cbAmount(d.price) || 0)) * 100) / 100;
   return '<div class="prodprev-c">'
     + '<div class="prodprev-l"><span class="n">' + esc(d.name || tx('This product')) + '</span>'
-    + '<span class="q">' + qty + ' × ' + esc(money(+d.price || 0)) + '</span>'
+    + '<span class="q">' + qty + ' × ' + esc(money((cbAmount(d.price) || 0))) + '</span>'
     + '<span class="p">' + esc(money(gross)) + (per.off ? ' → <b>' + esc(money(Math.round((gross - per.off) * 100) / 100)) + '</b>' : '') + '</span></div>'
     /**
      * ⭐ THE FREEBIE LINES THE CART WOULD ADD, shown as what they are: a CONSEQUENCE, not something chosen.
