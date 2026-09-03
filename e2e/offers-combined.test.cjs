@@ -156,5 +156,87 @@ t('⚠️⚠️ AN UNCLASSIFIED PRODUCT IS NOT SWEPT INTO A TARGETED OFFER, even
   assert.strictEqual(r.lines[1].discount, undefined, 'and the unfiled one did not');
 });
 
+console.log('\noffers · the freebie is DERIVED, never owned');
+
+/**
+ * ccSyncOffers in miniature — strip what a previous pass added, evaluate, re-add.
+ *
+ * ⭐⭐ Athi, 2026-09-03: *"if he removes the original one, the freebie should be removed as well."* That one
+ * sentence settles the whole design. A freebie is a CONSEQUENCE, not a choice — so it is re-derived from the
+ * basket every time rather than added once and then owned by it. Remove-the-rice-and-the-oil-goes then falls
+ * out for free instead of needing its own rule, and nothing can go stale because nothing is remembered.
+ */
+function sync(items, offers) {
+  const kept = items.filter((i) => !i._auto_offer);
+  const ev = O.evaluate({
+    lines: kept.map((it, n) => ({ key: String(n), item_id: it.item_id,
+      categories: it.categories || [], qty: it.qty, unitPrice: it.price })),
+    offers, now: NOW, money,
+  });
+  /**
+   * ⚠️⚠️ THE REWARD IS ADDED AT ITS REAL PRICE AND THEN DISCOUNTED TO ZERO — not added at zero.
+   *
+   * Adding it at 0 looks simpler and is wrong three ways at once: there is nothing for the engine to discount,
+   * so the SAVING silently excludes the free item (₹72 shown while ₹204 was given); the line cannot show what it
+   * would have cost, so "free" means nothing; and the auto-added line behaves differently from the same item
+   * added by hand, which is two rules for one thing.
+   *
+   * ⭐ So: add at the catalogue price, evaluate AGAIN, and let the ordinary discount path make it free. One rule,
+   * and every number agrees with every other.
+   */
+  const PRICES = { oil: 132, rice: 620, tea: 180 };
+  const out = kept.slice();
+  O.claims(ev).forEach((c) => out.push({ item_id: c.item_id, name: c.name, qty: c.qty,
+    price: PRICES[c.item_id] || 0, _auto_offer: c.offer_id, _auto_label: c.label }));
+  const ev2 = O.evaluate({
+    lines: out.map((it, n) => ({ key: String(n), item_id: it.item_id,
+      categories: it.categories || [], qty: it.qty, unitPrice: it.price })),
+    offers, now: NOW, money,
+  });
+  return { items: out, saved: Math.round(Math.abs(ev2.goods_adjustment || 0) * 100) / 100 };
+}
+
+t('⭐⭐ THE FREEBIE IS ADDED ON ITS OWN, and the line knows it was not chosen', () => {
+  const r = sync([RICE], [FREEBIE]);
+  assert.strictEqual(r.items.length, 2, 'the oil arrived without being asked for');
+  const oil = r.items[1];
+  assert.strictEqual(oil.item_id, 'oil');
+  /* ⭐ ADDED AT ITS REAL PRICE, then discounted to zero by the ordinary path — so the line can show what it
+     would have cost, the saving counts it, and it behaves exactly like the same item added by hand. */
+  assert.strictEqual(oil.price, 132);
+  assert.ok(oil._auto_offer, 'marked — which is exactly what makes it removable again');
+});
+
+t('⭐⭐ REMOVE THE RICE AND THE OIL GOES WITH IT', () => {
+  const one = sync([RICE], [FREEBIE]);
+  const two = sync(one.items.filter((i) => i.item_id !== 'rice'), [FREEBIE]);
+  assert.strictEqual(two.items.length, 0, 'nothing earned it, so nothing is given');
+});
+
+t('⚠️ CALLING IT TWICE IS THE SAME AS ONCE — no second free oil', () => {
+  /* It is wired into every quantity keystroke, so idempotence is not a nicety. */
+  const a = sync([RICE], [FREEBIE]);
+  const b = sync(a.items, [FREEBIE]);
+  assert.strictEqual(b.items.length, 2);
+  assert.strictEqual(b.items.filter((i) => i.item_id === 'oil').length, 1);
+});
+
+t('⚠️⚠️ A LINE THE BUYER ADDED IS NEVER STRIPPED, even when it is the reward', () => {
+  const r = sync([RICE, OIL], [FREEBIE]);
+  const oils = r.items.filter((i) => i.item_id === 'oil');
+  assert.strictEqual(oils.length, 1, 'their own line stands; no ghost line beside it');
+  assert.ok(!oils[0]._auto_offer, 'and it is still THEIRS');
+});
+
+t('⭐ the saving is the number they get told', () => {
+  const r = sync([RICE, TEA], [FREEBIE, TEA10]);
+  assert.strictEqual(r.saved, 204, '132 oil + 72 tea');
+});
+
+t('more rice, more oil — the reward tracks what was earned', () => {
+  const r = sync([Object.assign({}, RICE, { qty: 6 })], [FREEBIE]);
+  assert.strictEqual(r.items[1].qty, 2, 'two sets, two free');
+});
+
 console.log('\n' + (fail ? '✗ ' + fail + ' failed, ' : '✓ ') + pass + ' passed\n');
 process.exit(fail ? 1 : 0);

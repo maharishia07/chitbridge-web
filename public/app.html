@@ -5667,9 +5667,137 @@ function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
   const lt=document.getElementById("cc_lt_"+i); if(lt&&CC.items[i]) lt.textContent=inr(ccLineTotal(CC.items[i]));
   ccRenderTotal(); }
+/**
+ * ── ⭐⭐ THE OFFERS, RE-DERIVED FROM THE BASKET — ONE PLACE, EVERY CHANGE ──────────────────────────────────────
+ *
+ * Athi, 2026-09-03: *"yes, it has to be added on its own when there are freebies… but you can state that
+ * explicitly"*, *"if he removes the original one, the freebie should be removed as well"*, and *"so you can show
+ * what is the savings as well."*
+ *
+ * ⭐ HIS SECOND SENTENCE SETTLES THE WHOLE DESIGN. A freebie is a CONSEQUENCE, not a choice — so it is not
+ * "added once and then owned by the basket", it is DERIVED, every time, from what is in the basket now. That
+ * makes remove-the-rice-and-the-oil-goes fall out for free rather than needing its own rule, and it is the only
+ * version that cannot drift: there is no state to get stale, because nothing is remembered.
+ *
+ * So this function is idempotent by construction:
+ *   1 · strip every line this function added before (they are marked, so a line the BUYER added is never touched)
+ *   2 · evaluate what remains
+ *   3 · apply the line discounts, add the earned rewards, record the saving
+ *
+ * ⚠️ STEP 1 IS WHAT MAKES IT SAFE TO CALL ANYWHERE. Without it, two calls in a row would add the oil twice; with
+ * it, calling it ten times is the same as calling it once — which is exactly what you need from something wired
+ * into every quantity keystroke.
+ *
+ * ⚠️ AND A LINE THE BUYER ADDED IS NEVER STRIPPED, even if it is the same product as a reward. If they put oil in
+ * the basket themselves, that line is theirs; the offer discounts it where it stands (see offers.js) and no
+ * second line appears.
+ */
+function ccSyncOffers(){
+  if (!CC || !Array.isArray(CC.items)) return;
+  /* 1 · drop what a previous pass added, and clear last pass's marks from every surviving line */
+  CC.items = CC.items.filter(function(it){ return !it._auto_offer; });
+  CC.items.forEach(function(it){ delete it._offer_off; delete it._offer_why; delete it._offer_id; delete it._offer_label; });
+  CC.savings = 0; CC.offerNotes = [];
+
+  var offers = CC.offers || [];
+  if (!offers.length || typeof CBOffers === 'undefined') return;
+
+  try {
+    var ev = CBOffers.evaluate({
+      lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
+        sku:it.sku||it.code||null, categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
+        qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+      offers: offers,
+      money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
+    });
+
+    /* 2 · the discounts, onto the lines they name */
+    ev.adjustments.forEach(function(a){
+      if (a.scope !== 'line' || a.target == null) return;
+      var it = CC.items[Number(a.target)]; if (!it) return;
+      var off = Math.abs(Number(a.amount) || 0); if (!off) return;
+      it._offer_off = Math.round(((it._offer_off||0) + off) * 100) / 100;
+      it._offer_why = a.why || ''; it._offer_id = a.offer_id || null; it._offer_label = a.label || '';
+    });
+
+    /**
+     * 3 · the rewards, added on the buyer's behalf — and STATED as such.
+     *
+     * ⚠️ `_auto_offer` is what makes step 1 possible and what keeps this honest: the line knows it was not
+     * chosen. It carries the offer's name so the row can say "free with Rice → free oil" rather than appearing
+     * as an item the buyer must wonder about, and `price: 0` because it is genuinely free — there is no list
+     * price to preserve here, the buyer was never going to be charged.
+     */
+    /**
+     * 3 · the rewards, added on the buyer's behalf — and STATED as such.
+     *
+     * ⚠️⚠️ ADDED AT THE CATALOGUE PRICE, THEN DISCOUNTED TO ZERO — never added at zero. Adding at 0 looks
+     * simpler and is wrong three ways at once: there is nothing for the engine to discount, so the SAVING
+     * silently excludes the free item (₹72 shown while ₹204 was given); the line cannot show what it would
+     * have cost, so "free" means nothing beside it; and an auto-added line then behaves differently from the
+     * same product added by hand, which is two rules for one thing. Caught by the combination tests, not by
+     * reading the code.
+     *
+     * ⚠️ `_auto_offer` is what makes step 1 possible and what keeps this honest: the line knows it was not
+     * chosen, so a later pass may withdraw it — and a line the BUYER added is never touched.
+     */
+    var claims = CBOffers.claims ? CBOffers.claims(ev) : [];
+    claims.forEach(function(c){
+      if (!c || !c.item_id) return;
+      var cat = (STORE.catalogue || []).filter(function(p){
+        return String(p.item_id || p.id) === String(c.item_id); })[0] || {};
+      var listed = Number(cbAmount ? cbAmount(cat.price) : cat.price) || 0;
+      CC.items.push({
+        particulars: c.name || cat.particulars || 'Free item',
+        unit: cat.unit || 'unit',
+        qty: Number(c.qty) || 1,
+        price: listed,
+        item_id: c.item_id,
+        _auto_offer: c.offer_id || true,
+        _auto_label: c.label || '',
+        comment: ''
+      });
+    });
+
+    /**
+     * 4 · EVALUATE AGAIN, so the rewards just added are discounted by the ordinary path.
+     *
+     * ⚠️ TWICE, NEVER A LOOP. A second pass is needed because the basket changed; a third would only matter if
+     * a reward itself earned another reward, and a rule that can chain is a rule that can cycle. Two passes is
+     * a decision — an offer that rewards a reward is refused by silence rather than by a hang.
+     */
+    if (claims.length) {
+      ev = CBOffers.evaluate({
+        lines: CC.items.map(function(it,i){ return { key:String(i), item_id:it.item_id||it.ref||null,
+          sku:it.sku||it.code||null, categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])||[],
+          qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+        offers: offers,
+        money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }
+      });
+      CC.items.forEach(function(it){ delete it._offer_off; delete it._offer_why; delete it._offer_id; delete it._offer_label; });
+      ev.adjustments.forEach(function(a){
+        if (a.scope !== 'line' || a.target == null) return;
+        var it = CC.items[Number(a.target)]; if (!it) return;
+        var off = Math.abs(Number(a.amount) || 0); if (!off) return;
+        it._offer_off = Math.round(((it._offer_off||0) + off) * 100) / 100;
+        it._offer_why = a.why || ''; it._offer_id = a.offer_id || null; it._offer_label = a.label || '';
+      });
+    }
+
+    /* 5 · what they saved — the whole point of showing it. Athi: "so you can show what is the savings as well." */
+    CC.savings = Math.round(Math.abs(Number(ev.goods_adjustment) || 0) * 100) / 100;
+    CC.offerNotes = (ev.notes || []).map(function(n){ return n.why; });
+  } catch (e) {
+    /* ⚠️ An offer engine failure must never cost the buyer their basket. The lines and their prices stand on
+       their own; the discounts simply do not appear. */
+    CC.savings = 0;
+  }
+}
+
+
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
 function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
-  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
+  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}${it._auto_offer?' <span data-testid="cc-freebie" style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3)">'+esc(tx('free'))+(it._auto_label?' · '+esc(it._auto_label):'')+'</span>':''}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:var(--fs-2);width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
     : `<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
@@ -5687,12 +5815,35 @@ function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.spli
    like any other declared field, which is what that paragraph said should eventually happen.
    ccSplitStart/Move/End and the .cc-cols gutter went with them — there are no two columns left to drag. */
 function ccRenderTotal(){
+  /**
+   * ⭐ THE ONE HOOK. Every path that changes the basket already ends here — add, delete, quantity, the cart's
+   * check-out, an AI fill. Re-deriving in ONE place beats remembering to call it in six, and forgetting the
+   * sixth is how a freebie survives the removal of the thing that earned it.
+   */
+  ccSyncOffers();
   // ⚠️ THE FOOTER FIRST, and unconditionally. Adding the first line is what unblocks "Next: To →", and the total
   // element only exists on the Items step — an early return on `!t` would have left the guard stale every time a
   // line was added from anywhere else (the cart, AI fill, an intake conversion).
   if(UI._ccFlow) UI._ccFlow.paintFoot();
   const t=document.getElementById("cc_total"); if(!t)return;
-  const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+fmtMoney(sum,'INR')):""; }
+  /**
+   * ⚠️ THE TOTAL IS WHAT IS OWED, NOT WHAT WAS LISTED. Summing ccLineTotal ignores every discount the offers
+   * just applied, so the footer said ₹2,640 while the chit was minted at ₹2,508 — the two numbers a buyer
+   * compares, disagreeing, on one screen.
+   *
+   * ⭐ AND THE SAVING IS SHOWN, because it is the reason they bought. Athi: *"so you can show what is the
+   * savings as well."* A discount nobody sees is a discount nobody values.
+   */
+  const gross=CC.items.reduce((s,it)=>s+ccLineTotal(it),0);
+  const saved=Math.round((CC.savings||0)*100)/100;
+  const owed=Math.max(0, Math.round((gross-saved)*100)/100);
+  t.innerHTML = CC.items.length
+    ? esc('Total ' + fmtMoney(owed, myCur ? myCur() : 'INR'))
+      + (saved > 0 ? ' <span data-testid="cc-saved" style="color:var(--ok-3);font-weight:700">'
+          + esc('you save ' + fmtMoney(saved, myCur ? myCur() : 'INR')) + '</span>'
+          + ' <s style="color:var(--grey);font-weight:400">' + esc(fmtMoney(gross, myCur ? myCur() : 'INR')) + '</s>'
+        : '')
+    : ''; }
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
   // ⚠️ EVERY VALUE COMES FROM `CC`, NOT THE PAGE. With the step flow, Details and To are not rendered while you

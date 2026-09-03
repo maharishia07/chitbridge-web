@@ -194,9 +194,22 @@
           /* ⚠️ NAMED, AND CARRYING THE ITEM ID, so a screen can offer to add it in one press rather than
              telling somebody to go and find it. A promise the buyer cannot act on is only half kept. */
           if (left > 0) {
-            got.push(note(o, 'earned ' + left + ' × ' + rname + ' '
+            /**
+             * ⭐⭐ A STRUCTURED CLAIM, NOT A SENTENCE TO PARSE. Athi, 2026-09-03: *"yes, it has to be added on
+             * its own when there are freebies… but you can state that explicitly."* So a caller ADDS this line,
+             * and a caller that has to regex "earned 1 ×" out of prose would break the first time the wording
+             * was translated — which it will be, since every string here goes through tx().
+             *
+             * ⚠️ THE ENGINE STILL DOES NOT MUTATE THE BASKET. evaluate() is a pure function over lines; it says
+             * what is owed and what is earned. Putting a line INTO the cart from in here would make a pure
+             * calculation the owner of the order — see CBOffers.claims and the cart's use of it.
+             */
+            var n = note(o, 'earned ' + left + ' × ' + rname + ' '
               + (pct === 100 ? 'free' : 'at ' + pct + '% off')
-              + ' — add it to your order to claim it', 0, o.get_item_id));
+              + ' — added to your order', 0, o.get_item_id);
+            n.claim = { item_id: o.get_item_id, name: rname, qty: left,
+                        percent: pct, unitPrice: 0, offer_id: o.id || null, label: o.label || '' };
+            got.push(n);
           }
           return got;
         }
@@ -543,6 +556,17 @@
     };
   }
 
-  root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer,
+  /**
+   * claims(result) → the lines a cart should ADD on the buyer's behalf, [{item_id, name, qty, unitPrice, …}].
+   *
+   * ⭐ SEPARATE FROM evaluate() ON PURPOSE. evaluate answers "what is this basket worth"; this answers "what
+   * should now be in it". Keeping them apart is what lets a caller take the discounts and decline the
+   * additions — the storefront may want both, a back-office repricing screen may want only the first.
+   */
+  function claims(res) {
+    return ((res && res.notes) || []).map(function (n) { return n.claim; }).filter(Boolean);
+  }
+
+  root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer, claims: claims,
     KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);
