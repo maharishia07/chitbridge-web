@@ -8569,7 +8569,7 @@ async function loadCatalogue(){
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     /* ⚠️⚠️ A RELOAD MUST NOT REPAINT OVER AN OPEN FORM — and it protected NEW but not EDIT. loadCatalogue() runs
-       on every renderApp() pass (the catalogue hook below the render), so any background re-render that landed
+       on every full render pass (the catalogue hook below the render), so any background re-render that landed
        between typing into the Edit form and pressing Save re-rendered the form from UI.prods and threw the typing
        away. [CAT-01] caught it as "PATCH sent price 250 after the test had typed 999 and ASSERTED the input held
        999" — the write was correct for what the form held at the click; the form had been silently reset. Same
