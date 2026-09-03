@@ -814,32 +814,110 @@ function catsetBlueprint(){
  * tells someone what to do next; discovering it only by pressing Remove and being refused teaches the same fact
  * at a worse moment.
  */
+/**
+ * ── ⭐ THE COLUMNS PANEL IS THREE TABS, ONE QUESTION EACH ────────────────────────────────────────────────────
+ * Athi, 2026-09-03 (observation 4): *"Under columns panel … you have 3 different information, like column name for
+ * the catalogue and then unit of measure and field datatype, can you bring it in 3 different tabs, each one for
+ * one purpose, so it is easier to distinguish and need to establish relationship."*
+ *
+ *   Columns — what does a product record, in what order        (name · order · lock)
+ *   Types   — what kind of value, in what unit                  (datatype · unit · required)
+ *   Usage   — who depends on it                                 (products · template · ERP map · remove)
+ *
+ * ⚠️ THE UNIT USED TO LIVE INSIDE THE LABEL — "Coverage (sq ft/L)" — because schema_fields had nowhere else to
+ * put it, so a counterparty importing that sheet got a number with a unit only a person could read. `unit` is now
+ * its own attribute, a UN/ECE Recommendation 20 code (the list GS1, Peppol and INV-01 use), behind migration b200.
+ * Until b200 has run the Types tab says so rather than pretending.
+ *
+ * ⚠️ TIGHTENS PER COLUMN, LIKE REMOVAL. Label and unit are always free (they change no stored value); the TYPE is
+ * fixed the moment a product records a value, and the control says why. Same rule, same source (column-rules).
+ */
+var CATSET_REC20 = [['H87','piece'],['KGM','kilogram'],['GRM','gram'],['TNE','tonne'],['LTR','litre'],['MLT','millilitre'],
+  ['MTR','metre'],['CMT','centimetre'],['MMT','millimetre'],['MTK','square metre'],['MTQ','cubic metre'],['BG','bag'],
+  ['BX','box'],['PK','pack'],['CT','carton'],['DZN','dozen'],['SET','set'],['PR','pair'],['RO','roll'],['BO','bottle'],
+  ['HUR','hour'],['DAY','day'],['MON','month']];
+function catsetColTab(){ return (CATSET && CATSET.colTab) || 'columns'; }
+function catsetSetColTab(k){ CATSET.colTab = k; catsetPaintDetail(); }
+function catsetColTabsHTML(){
+  var tabs = [['columns', tx('Columns')], ['types', tx('Types')], ['usage', tx('Usage')]];
+  return '<div class="dtabs" data-testid="catset-col-tabs" style="padding:0;margin-bottom:8px">' + tabs.map(function(t){
+    return '<button type="button" data-testid="catset-coltab-' + t[0] + '" class="' + (catsetColTab() === t[0] ? 'on' : '') + '"'
+      + ' onclick="catsetSetColTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>';
+}
+/* One write for every attribute a tab can change; the server answers with the count a person needs next. */
+async function catsetFieldPatch(key, patch){
+  try {
+    var r = await api('schemaFieldPatch', { params: { key: key }, body: patch });
+    UI._catFields = null;
+    var msg = (r && r.message) || tx('Saved');
+    if (r && r.missing_required) msg += ' — ' + txn('{count} product has no value in it yet', '{count} products have no value in it yet', r.missing_required);
+    if (typeof toast === 'function') toast(msg);
+  } catch (e) {
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not update the column.'), true);
+  }
+  await catsetFieldsLoad(true);
+}
+function catsetColRow(c, i, n){
+  var key = esc(c.field_key), used = Number(c.used_by || 0), can = !!c.removable, t = catsetColTab();
+  var name = esc(c.field_name || c.field_key);
+  if (t === 'types') {
+    var types = ['text', 'number', 'choice', 'date'];
+    var lockedType = !c.retypable;
+    var lockedReq = (c.field_key === 'name' || c.field_key === 'price');
+    var ready = !!CATSET.attrsReady;
+    return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
+      + '<span class="bn">' + name + '</span>'
+      + '<select data-testid="catset-type-' + key + '"' + (lockedType ? ' disabled' : '')
+      + ' title="' + esc(lockedType ? (c.retype_because || '') : tx('What kind of value this column holds')) + '"'
+      + ' onchange="catsetFieldPatch(\'' + key + '\',{field_type:this.value})" style="font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card)">'
+      + types.map(function(x){ return '<option value="' + x + '"' + ((c.field_type || 'text') === x ? ' selected' : '') + '>' + x + '</option>'; }).join('')
+      + (types.indexOf(c.field_type) < 0 && c.field_type ? '<option value="' + esc(c.field_type) + '" selected>' + esc(c.field_type) + '</option>' : '')
+      + '</select>'
+      + '<input list="cb-rec20" data-testid="catset-unit-' + key + '" value="' + esc(c.unit || '') + '" placeholder="' + esc(tx('unit · KGM')) + '"'
+      + (ready ? '' : ' disabled title="' + esc(tx('Needs migration b200 — run it in the SQL editor')) + '"')
+      + ' onchange="catsetFieldPatch(\'' + key + '\',{unit:this.value})" style="width:96px;font-size:var(--fs-1);padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--on-card);text-transform:uppercase">'
+      + '<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:4px;white-space:nowrap" title="' + esc(lockedReq ? tx('Every catalogue requires this') : tx('Refuse a product that leaves this empty')) + '">'
+      + '<input type="checkbox" data-testid="catset-req-' + key + '"' + (c.required ? ' checked' : '') + (lockedReq ? ' disabled' : '')
+      + ' onchange="catsetFieldPatch(\'' + key + '\',{required:this.checked})">' + tx('required') + '</label>'
+      + '</div>';
+  }
+  if (t === 'usage') {
+    var erp = (typeof CATSET_FACE !== 'undefined' && CATSET_FACE && CATSET_FACE.erp && CATSET_FACE.erp[c.field_key]) || '';
+    return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
+      + '<span class="bn">' + name + '</span>'
+      + '<span class="bh">' + (used ? txn('used by {count} product', 'used by {count} products', used) : tx('unused'))
+      + ' · ' + tx('in the upload template') + (erp ? ' · ERP: <span class="mono">' + esc(erp) + '</span>' : '') + '</span>'
+      + '<button type="button" class="badd" data-testid="catset-rm-' + key + '"' + (can ? '' : ' disabled')
+      + ' title="' + esc(can ? tx('Remove this column') : (c.locked_because || tx('This column cannot be removed.'))) + '"'
+      + ' onclick="catsetDrop(\'' + key + '\')">' + (can ? '✕' : '🔒') + '</button>'
+      + '</div>';
+  }
+  /* columns — the label is editable in place; order is always live (presentation, never a fact about a product). */
+  return '<div class="bulkrow" data-testid="catset-col-' + key + '">'
+    + '<input class="bn" data-testid="catset-name-' + key + '" value="' + name + '" title="' + esc(tx('Rename — every screen and sheet follows; the key stays')) + '"'
+    + ' onchange="catsetFieldPatch(\'' + key + '\',{field_name:this.value})" style="border:0;border-bottom:1px dashed var(--line);background:transparent;color:inherit;font:inherit;font-weight:600;min-width:0;flex:1">'
+    + '<span class="bh">' + (c.required ? tx('required') : '') + '</span>'
+    + '<button type="button" title="' + esc(tx('Move up')) + '" data-testid="catset-up-' + key + '"'
+    + (i === 0 ? ' disabled' : '') + ' onclick="catsetMove(\'' + key + '\',-1)">↑</button>'
+    + '<button type="button" title="' + esc(tx('Move down')) + '" data-testid="catset-dn-' + key + '"'
+    + (i === n - 1 ? ' disabled' : '') + ' onclick="catsetMove(\'' + key + '\',1)">↓</button>'
+    + (can ? '' : '<button type="button" class="badd" disabled title="' + esc(c.locked_because || '') + '">🔒</button>')
+    + '</div>';
+}
 function catsetColsHTML(){
   var f = (CATSET && CATSET.fields) || null;
   if (f === null) { catsetFieldsLoad(); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
   if (!f.length) return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('No columns declared yet.') + '</div>';
 
-  var rows = f.map(function(c, i){
-    var used = Number(c.used_by || 0);
-    var can = !!c.removable;
-    return '<div class="bulkrow" data-testid="catset-col-' + esc(c.field_key) + '">'
-      + '<span class="bn">' + esc(c.field_name || c.field_key)
-      + (c.required ? ' <span style="color:var(--disp);font-weight:400">· ' + tx('required') + '</span>' : '')
-      + '</span>'
-      + '<span class="bh">' + esc(c.field_type || 'text')
-      + (used ? ' · ' + txn('used by {count} product', 'used by {count} products', used) : ' · ' + tx('unused'))
-      + '</span>'
-      /* ⭐ Up and down are always live: order is presentation, so the tighten-once-loaded rule does not touch it. */
-      + '<button type="button" title="' + esc(tx('Move up')) + '" data-testid="catset-up-' + esc(c.field_key) + '"'
-      + (i === 0 ? ' disabled' : '') + ' onclick="catsetMove(\'' + esc(c.field_key) + '\',-1)">↑</button>'
-      + '<button type="button" title="' + esc(tx('Move down')) + '" data-testid="catset-dn-' + esc(c.field_key) + '"'
-      + (i === f.length - 1 ? ' disabled' : '') + ' onclick="catsetMove(\'' + esc(c.field_key) + '\',1)">↓</button>'
-      + '<button type="button" class="badd" data-testid="catset-rm-' + esc(c.field_key) + '"'
-      + (can ? '' : ' disabled')
-      + ' title="' + esc(can ? tx('Remove this column') : (c.locked_because || tx('This column cannot be removed.'))) + '"'
-      + ' onclick="catsetDrop(\'' + esc(c.field_key) + '\')">' + (can ? '✕' : '🔒') + '</button>'
-      + '</div>';
-  }).join('');
+  var t = catsetColTab();
+  var rows = f.map(function(c, i){ return catsetColRow(c, i, f.length); }).join('');
+  var tabNote = t === 'types'
+    ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('Type is fixed once a product records a value. Unit is a UN/ECE Rec 20 code (KGM · LTR · MTK · H87 = piece) so a sheet stays machine-readable.'))
+      + (CATSET.attrsReady ? '' : ' <b style="color:var(--warn-3)">' + esc(tx('Unit needs migration b200.')) + '</b>') + '</div>'
+      + '<datalist id="cb-rec20">' + CATSET_REC20.map(function(u){ return '<option value="' + u[0] + '">' + esc(u[1]) + '</option>'; }).join('') + '</datalist>'
+    : t === 'usage'
+    ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('A column can be removed only while no product records a value in it. Nothing stored is deleted either way.')) + '</div>'
+    : '<div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 6px">' + esc(tx('The order here is the order on the product form, the template and the export.')) + '</div>';
 
   /* ⭐ AND THE ONES THE SYSTEM KEEPS, beside them — a product records these too, so a list headed "what every
      product records" that omits them is short by three. Locked, and each says where it IS set. */
@@ -870,7 +948,7 @@ function catsetColsHTML(){
       + '</div>';
   }).join('');
 
-  return '<div class="bulklist">' + rows + '</div>'
+  return catsetColTabsHTML() + tabNote + '<div class="bulklist">' + rows + '</div>'
     + (sys ? '<div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;'
       + 'letter-spacing:.04em;margin:12px 0 5px">' + tx('Kept by the system') + '</div>'
       + '<div class="bulklist">' + sys + '</div>' : '')
@@ -889,6 +967,7 @@ async function catsetFieldsLoad(force){
     var r = await api('schemaFields');
     CATSET.fields = (r && r.fields) || [];
     CATSET.system = (r && r.system) || [];
+    CATSET.attrsReady = !!(r && r.attrs_ready);   // unit · source exist only once migration b200 has run
     /* Empty on any catalogue written since the declare-first writer; non-empty means b198 has not been run. */
     CATSET.undeclared = (r && r.undeclared) || [];
   } catch (e) { CATSET.fields = []; CATSET.system = []; CATSET.undeclared = []; }
