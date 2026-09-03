@@ -8558,6 +8558,8 @@ function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(d
 async function loadCatalogue(){
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ const items=(await api("prodList"))||[]; UI.prods=items;
+    /* The declaration, once per session — the form and the view render declared columns from it. */
+    try{ await catDeclared(); }catch(_){}
     try{ const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
@@ -8567,9 +8569,59 @@ async function loadCatalogue(){
 function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintProdList(); paintProdDetail(); }
-function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
-function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
+/* If the declaration has not arrived yet (a deep link straight into Edit), paint now and once more when it has. */
+function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(function(){ if(UI.prodMode==='edit'||UI.prodMode==='new') paintProdDetail(); }).catch(function(){}); } }
+function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsureDeclaredThenPaint(); }
+function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
+/**
+ * ── ⭐⭐ THE DECLARED COLUMNS, ON THE PRODUCT ──────────────────────────────────────────────────────────────────
+ * Athi, 2026-09-03 (observation 4): *"I have added multiple columns from template, it reflects in catalogue
+ * fields in the column panel here. But when I check the columns in catalogue, none of these are reflecting
+ * here, what is the relation between actual column and the column defined."*
+ *
+ * There was none. FIX-1 bound every declaration to the STORE (nothing in item_data is undeclared, proven live
+ * on 4,987 items), and nothing bound the declaration to the FORM: prodEditForm was eight hard-coded inputs, so
+ * a column declared in Catalogue setup › Columns reached the template, the export and the import — every door
+ * except the one a person actually uses. The Columns panel governed what a FILE may carry; the form governed
+ * what a PERSON may type; and the two never met. This is the other half of FIX-1.
+ *
+ * ⚠️ RENDERED FROM THE DECLARATION, NOT FROM THE ITEM. The keys come from `catDeclared()` (schema_fields, in
+ * display_order); the item only supplies values. So a freshly declared column appears on every product at once,
+ * empty, which is what "declared" means — and a key that exists in one item's data but in no declaration cannot
+ * appear here, because after FIX-1 there is no such key.
+ *
+ * ⚠️ THE FIXED EIGHT STAY FIXED. name · unit · price · code · description · highlight have their own controls
+ * (a currency prefix, a textarea, the "not a discount" warning) and are excluded here by KEY, so a declaration
+ * that also carries them does not render a second, dumber input for the same value.
+ *
+ * ⚠️ A VALUE THAT IS NOT A SCALAR IS SHOWN, NOT EDITED. An imported object under a declared key (rare, but
+ * jsonb allows it) renders as read-only text; an <input> would turn it into the string "[object Object]" on the
+ * next Save. The form must never be the thing that flattens a record it could not display.
+ */
+const CT_FIXED_KEYS = ['name','unit','price','code','hsn','sku','desc','description','note','highlight'];
+function ctDeclaredList(){
+  return (UI._catFields||[]).filter(function(f){ return f && f.field_key && CT_FIXED_KEYS.indexOf(f.field_key) < 0; });
+}
+function ctDeclaredFields(d){
+  const list = ctDeclaredList(); if(!list.length) return '';
+  const rows = list.map(function(f){
+    const k = f.field_key, v = d ? d[k] : undefined, isNum = f.field_type === 'number';
+    const label = esc(f.field_name || k) + (f.required ? ' <span style="color:var(--disp)">*</span>' : '');
+    if (v != null && typeof v === 'object') {
+      return `<label class="fl">${label}</label><div class="inp" style="color:var(--grey)" data-testid="cat-field-${esc(k)}" title="${esc(tx('imported as structured data — edit it through the spreadsheet'))}">${esc(JSON.stringify(v))}</div>`;
+    }
+    return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(f.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
+  }).join('');
+  return `<div class="sec" style="margin-top:14px">${tx('More about this product')}</div>`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">${tx('The columns your catalogue declares — shaped in Catalogue setup › Columns.')}</div>`
+    + `<div id="ct_declared" data-testid="cat-declared">${rows}</div>`;
+}
+/** The declared columns that carry a value, as view rows. Only scalars: an object is a record, not a value. */
+function ctDeclaredViewRows(d, kv){
+  return ctDeclaredList().filter(function(f){ const v = d[f.field_key]; return v != null && v !== '' && typeof v !== 'object'; })
+    .map(function(f){ return kv(esc(f.field_name || f.field_key), d[f.field_key]); }).join('');
+}
 /**
  * Download the catalogue as CSV.
  *
@@ -8774,6 +8826,7 @@ async function _cfAdoptSet(btn){
   const was = btn.textContent; btn.disabled = true; btn.textContent = 'Adding…';
   try{
     const r = await api('prodStarterAdopt', { body:{ vertical: v } });
+    UI._catFields = null;   // the declaration changed; the product form reads it fresh
     out.innerHTML = '<div style="font-size:var(--fs-2)">'+esc(r.message||'')+'</div>'
       + ((r.added||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:6px">Added: '+r.added.map(esc).join(', ')+'</div>' : '')
       + ((r.unchanged||[]).length ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:4px">Already there: '+r.unchanged.map(esc).join(', ')+'</div>' : '');
@@ -9130,7 +9183,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+ctOfferField(d)+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+ctOfferField(d)+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d); }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -9374,7 +9427,7 @@ async function _prodStatus(id, status, extra){
 }
 
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
-  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600"><bdi>${inr(pPrice(d))}</bdi> <span style="color:var(--grey);font-weight:400">/ <bdi>${esc(pUnit(d))}</bdi></span>${priceSrcHTML(d)}</span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
+  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600"><bdi>${inr(pPrice(d))}</bdi> <span style="color:var(--grey);font-weight:400">/ <bdi>${esc(pUnit(d))}</bdi></span>${priceSrcHTML(d)}</span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}${ctDeclaredViewRows(d, kv)}</div>`; }
 /**
  * ── WHAT THIS STORE HAS, AND WHEN THAT WAS LAST TRUE ─────────────────────────────────────────────────────────
  * The other half of "where is it?" — the locator can only report what a store has said, so a store needs a place
@@ -9480,6 +9533,16 @@ function ctReadForm(orig){
        offer and writes itself the moment it is ticked. Empty clears it rather than storing a blank string,
        because an empty highlight is nothing to show, not a highlight that says nothing. */
     highlight:(val("ct_highlight")||'').trim() || undefined });
+  /* ⭐ The declared columns, read from the inputs the declaration rendered. Only keys that are ON SCREEN are
+     touched — a column the form did not render (not loaded, or a structured value shown read-only) keeps
+     whatever the product had. Blank clears: the person saw the field and emptied it. A number is sent as a
+     number when it parses and as typed when it does not, so the server's own rule says why it was refused. */
+  const decl = document.getElementById('ct_declared');
+  if(decl){ Array.prototype.forEach.call(decl.querySelectorAll('input[data-key]'), function(el){
+    const k = el.getAttribute('data-key'), raw = (el.value||'').trim();
+    if(raw === ''){ delete base[k]; return; }
+    base[k] = (el.getAttribute('data-type') === 'number' && isFinite(+raw)) ? +raw : raw;
+  }); }
   const host = document.getElementById('ct_categories');
   /* No chips on screen (the shelf could not be read) → leave whatever the product already had. Absent is not
      "cleared": a form that cannot show a field must never be the thing that erases it. */

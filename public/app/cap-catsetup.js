@@ -741,6 +741,7 @@ async function catcolGo(){
   if (btn) { btn.disabled = true; btn.textContent = tx('Adding…'); }
   try {
     var r = await api('prodStarterAdopt', { body: { vertical: CATCOL.v, fields: fields, custom: own } });
+    UI._catFields = null;   // the product form renders declared columns from this; it must not keep the old list
     closeModal();
     if (typeof toast === 'function') {
       toast((r && r.message) || 'Columns added'
@@ -908,7 +909,7 @@ async function catsetMove(key, dir){
   var t = f[i]; f[i] = f[j]; f[j] = t;
   CATSET.fields = f;
   catsetPaintDetail();                                    // move first, so the screen answers the press at once
-  try { await api('schemaFieldOrder', { body: { order: f.map(function(x){ return x.field_key; }) } }); }
+  try { await api('schemaFieldOrder', { body: { order: f.map(function(x){ return x.field_key; }) } }); UI._catFields = null; }
   catch (e) {
     if (typeof toast === 'function') toast((e && e.message) || 'Could not save the order.', true);
     await catsetFieldsLoad(true);                         // and put it back if the server disagreed
@@ -925,6 +926,7 @@ function catsetDrop(key){
 async function _catsetDrop(key){
   try {
     var r = await api('schemaFieldDrop', { params: { key: key } });
+    UI._catFields = null;
     if (typeof toast === 'function') toast((r && r.message) || 'Column removed');
     await catsetFieldsLoad(true);
   } catch (e) {

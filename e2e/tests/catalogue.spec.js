@@ -66,3 +66,69 @@ test.describe('Module · Catalogue (full CRUD)', () => {
     });
   });
 });
+
+/**
+ * [CAT-03] A DECLARED COLUMN REACHES THE PRODUCT FORM — and round-trips.
+ *
+ * Athi, 2026-09-03 (observation 4): columns added from a trade template showed in Catalogue setup › Columns,
+ * the template and the export, and NOT on the product. prodEditForm was eight hard-coded inputs; nothing bound
+ * the declaration to the form. This drives the path that used to fail: declare through the same API the
+ * Columns panel uses, open New product, and the declared column must be there — then hold its value through
+ * Add, View and Edit.
+ *
+ * ⚠️ A FRESH ENTITY, on purpose. The shared `authed` account accumulates columns across runs, so "the gold
+ * columns appear" would pass there for the wrong reason. Declaring BEFORE the first visit to Catalogue also
+ * means the once-per-session declaration cache is filled after the declare, not before it.
+ */
+test('[CAT-03] a column declared in Setup appears on the product form and round-trips', async ({ page }) => {
+  await mintEntity(page);
+  const name = 'E2E Bar ' + Date.now();
+
+  await test.step('DECLARE — the gold starter set, through the API the Columns panel calls', async () => {
+    const r = await page.evaluate(async () => {
+      try { return await api('prodStarterAdopt', { body: { vertical: 'gold' } }); } catch (e) { return { error: String(e && e.message) }; }
+    });
+    expect(r && r.error, 'starter adopt failed: ' + JSON.stringify(r)).toBeFalsy();
+  });
+
+  await test.step('NEW PRODUCT — the declared column is on the form', async () => {
+    await page.getByTestId('nav-catalogue').click();
+    await settle(page);
+    const setup = page.getByTestId('cat-setup');
+    if (await setup.isVisible().catch(() => false)) await setup.click();
+    const add = page.getByTestId('cat-new-product');
+    await add.waitFor({ state: 'visible', timeout: 20000 });
+    await add.click();
+    await expect(page.getByTestId('cat-declared')).toBeVisible();
+    await expect(page.getByTestId('cat-field-fineness')).toBeVisible();   // gold: Fineness, number
+    await expect(page.getByTestId('cat-field-fineness')).toHaveAttribute('data-type', 'number');
+    await page.getByTestId('cat-field-name').fill(name);
+    await page.getByTestId('cat-field-price').fill('7200');
+    await page.getByTestId('cat-field-fineness').fill('999.9');
+    const saved = page.waitForResponse((r) => /\/api\/products/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 45000 });
+    await page.getByTestId('cat-add').click();
+    await saved;
+    await settle(page);
+  });
+
+  await test.step('VIEW — the value shows as a labelled row, not only inside "All fields"', async () => {
+    const view = page.locator('.itab');
+    await expect(view.getByText('Fineness', { exact: true })).toBeVisible();
+    await expect(view.getByText('999.9', { exact: true })).toBeVisible();
+  });
+
+  await test.step('EDIT — the input carries the value, and a change round-trips as a number', async () => {
+    await page.getByTestId('cat-edit').click();
+    const f = page.getByTestId('cat-field-fineness');
+    await expect(f).toHaveValue('999.9');
+    await f.fill('995');
+    const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 45000 });
+    await page.getByTestId('cat-save').click();
+    const resp = await saved;
+    const body = await resp.json().catch(() => ({}));
+    const stored = body && body.item && body.item.item_data && body.item.item_data.fineness;
+    expect(stored, 'fineness must be stored as a NUMBER, not the string typed').toBe(995);
+    await settle(page);
+    await expect(page.locator('.itab').getByText('995', { exact: true })).toBeVisible();
+  });
+});
