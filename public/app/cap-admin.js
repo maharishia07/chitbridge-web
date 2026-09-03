@@ -4568,6 +4568,9 @@ var POLICY_FLAGS = [
      everything, but that is not going to be the case."* Which side of the trade an entity is on does not change
      message to message — which is why this is a setting here and not the per-raise toggle I first built. */
   { key:'trade_side',        label:'This entity',           type:'enum',   options:['sell','receive'],              def:'sell', level:'entity',        gov:'entity',   help:'SELL — inbound messages are priced from your catalogue where the item matches. RECEIVE — they are not: a catalogue price is what you SELL at, and pricing goods coming IN off it puts a figure on the record nobody agreed.' },
+  /* ⭐ Tally's "registration type", as a policy flag — what an invoice may CHARGE before any rate applies. Read by
+     lib/tax.js on every determination (STUDY-gst-structure-2026-09-04 §6 G2). */
+  { key:'gst_registration',  label:'GST registration',       type:'enum',   options:['regular','composition','unregistered','sez'], def:'regular', level:'entity', gov:'entity', help:'REGULAR — charges GST and claims credit. COMPOSITION — flat % on turnover, no GST on invoices, no credit. UNREGISTERED — no GSTIN; buys as a consumer. SEZ — supplies to you are zero-rated.' },
   /**
    * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
    * `received`, lib/policy.js said `both`, and so did this. Three statements of one rule, two of them wrong.

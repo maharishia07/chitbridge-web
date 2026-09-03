@@ -9251,7 +9251,7 @@ function prodOfferTaxFooterHTML(d, qty, off){
   if (r.rate == null) return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('No tax slab resolves for this product — see Pricing & tax.')}</div>`;
   const price = cbAmount(d.price) || 0;
   const S = prodSellerState() || '29';
-  const one = (disc) => CBTax.determine({ seller: { State: S }, buyer: { Pos: S },
+  const one = (disc) => CBTax.determine({ seller: { State: S, RegType: prodRegType() }, buyer: { Pos: S },
     lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
   const it = one(off);
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
@@ -9821,6 +9821,8 @@ async function prodTaxLoad(){
   h.innerHTML=prodTaxHTML(pData(p));
 }
 /** The seller's two-digit state code, from the GSTIN. Null when there is no GSTIN to read it from. */
+/* The entity's GST registration type (policy flag) — what the invoice may CHARGE; read by tax.js on every determination. */
+function prodRegType(){ return String(((typeof SESSION!=='undefined'&&SESSION.policy_flags)||{}).gst_registration||'regular'); }
 function prodSellerState(){
   const g=String(UI._meGstn||'').trim();
   return /^\d{2}/.test(g) ? g.slice(0,2) : null;
@@ -9913,8 +9915,8 @@ function prodTaxPreviewHTML(d,r){
   }catch(_){ off=0; }
   const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate),
                cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'' };
-  const one=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
-  const one0=(pos)=>CBTax.determine({ seller:{ State:S }, buyer:{ Pos:pos }, lines:[Object.assign({}, line, { discount:0 })] }).ItemList[0];   /* at list, for "you save" */
+  const one=(pos)=>CBTax.determine({ seller:{ State:S, RegType: prodRegType() }, buyer:{ Pos:pos }, lines:[line] }).ItemList[0];
+  const one0=(pos)=>CBTax.determine({ seller:{ State:S, RegType: prodRegType() }, buyer:{ Pos:pos }, lines:[Object.assign({}, line, { discount:0 })] }).ItemList[0];   /* at list, for "you save" */
   const intra=one(S), inter=one(OTHER);
   const n=(v)=>`<bdi>${esc(String(v))}</bdi>`;
   /* INV-01's own field names, because they are what a buyer's system already speaks — and what makes "e-invoice
