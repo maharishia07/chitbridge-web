@@ -343,11 +343,18 @@ async function addProduct(page, { name, price, desc } = {}) {
    * reason ("no material matching AC gas kit" — three steps and a minute after the shelf failed to gain it).
    * A helper that does not confirm its own effect turns one broken thing into a mysterious other thing.
    */
+  /* ⚠️ ANY status, then judge it — a predicate that only accepts < 400 turns a refusal into a 45-second silence
+     with no reason ([OFF-02], 2026-09-04: the form was filled and nothing came back). The refusal's own message is
+     the finding; hide it and the next reader chases the click. */
   const saved = page.waitForResponse(
-    (r) => /\/api\/products/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400,
+    (r) => /\/api\/products(\?|$)/.test(r.url()) && r.request().method() === 'POST',
     { timeout: 45000 });
   await page.getByTestId('cat-add').click();
-  await saved;
+  const resp = await saved;
+  if (resp.status() >= 400) {
+    const body = await resp.text().catch(() => '');
+    throw new Error('POST /api/products refused ' + resp.status() + ': ' + body.slice(0, 400));
+  }
   await settle(page);
   await dismissModal(page);
   return { name, price };
