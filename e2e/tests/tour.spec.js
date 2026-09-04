@@ -12,8 +12,19 @@ const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
 test.use(HEADED ? { viewport: { width: 1600, height: 900 }, launchOptions: { slowMo: 350, args: ['--window-size=1620,1000', '--window-position=0,0'] } } : { launchOptions: { slowMo: 0 } });
 
 let caseNo = 0;
+/** ⚠️ THE WATCHDOG. A caption that never moves is a page whose main thread is BLOCKED (an infinite loop in app JS) —
+ * Playwright waits forever on evaluate, the headed window freezes, and the flood of events starved the node worker
+ * (OOM at 9 min, 2026-09-04). Before every caption: is the page alive? If not, pause the debugger and print WHERE. */
+async function alive(page, label) {
+  const ok = await Promise.race([page.evaluate(() => 1).then(() => true), new Promise((r) => setTimeout(() => r(false), 8000))]);
+  if (ok) return;
+  let stack = null;
+  try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); cdp.on("Debugger.paused", (e) => { stack = e.callFrames.slice(0, 14).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1)); }); await cdp.send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2000)); await cdp.send("Debugger.resume").catch(() => {}); } catch (e) { stack = ["(cdp failed: " + e.message + ")"]; }
+  throw new Error("MAIN THREAD BLOCKED before " + label + " — STACK " + JSON.stringify(stack));
+}
 async function tc(page, title, testing, steps, expected) {
   caseNo++;
+  await alive(page, "case " + caseNo + " (" + title + ")");
   await page.evaluate(([n, title, testing, steps, expected]) => {
     let el = document.getElementById('cb_tour');
     if (!el) { el = document.createElement('div'); el.id = 'cb_tour'; document.body.appendChild(el); }
