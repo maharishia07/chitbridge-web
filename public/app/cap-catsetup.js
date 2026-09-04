@@ -118,7 +118,9 @@ function catsetDefListHTML(kind, one){
       + '<span class="dn">' + esc(d.name) + '</span>'
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
       + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
-      + (d.status === 'retired' ? ''
+      /* ⭐ REINSTATE. Athi, 2026-09-05: "only option to retire is there, but there is no way to reinstate" — a retired
+         row goes back to live from here; products that still cite it resolve again on the next paint. */
+      + (d.status === 'retired' ? '<span class="da" data-testid="catset-' + kind + '-reinstate-' + esc(d.id) + '" onclick="catsetDefStatus(\'' + esc(d.id) + '\',\'live\')">' + tx('Reinstate') + '</span>'
           /* ⭐ THE STATUS SWITCH, HERE TOO. Athi, 2026-09-03: *"how will you attach to a product?"* — a product's
              Offers tab lists LIVE offers only, and this list had Edit and Retire but no way to go live, so a
              draft authored here could never reach a product without a detour through Definitions. */

@@ -1207,17 +1207,43 @@ function cbDefGoHome(nav, sec){
   navTo(nav);
   if (sec && nav === 'catsetup') ensureCap('catsetup').then(function(){ CATSET.sec = sec; if (typeof catsetPaint === 'function') catsetPaint(); });
 }
+/** The takeover ask: every LIVE slab but the one retiring (governance first), then retry the retire with it. */
+async function cbDefTakeoverAsk(id, why){
+  var slabs = [];
+  try { slabs = (await cbDefsLive('tax', true)).filter(function (x) { return String(x.definition_id || x.id) !== String(id) && (!x.status || x.status === 'live'); }); } catch (_) {}
+  var opts = (typeof cbSlabOptionsHTML === 'function') ? cbSlabOptionsHTML(slabs, '') : slabs.map(function (x) { return '<option value="' + cbDefEsc(x.definition_id || x.id) + '">' + cbDefEsc(x.name) + '</option>'; }).join('');
+  /* the app's own modal frame — .mhd / .mbody / .mfoot, as the definition form uses it */
+  modal('<div class="mhd"><div class="t">' + tx('Pick the slab that takes over') + '</div></div>'
+    + '<div class="mbody"><div style="margin-bottom:8px">' + cbDefEsc(why) + '</div>'
+    + '<select class="inp" id="cbdef_takeover" data-testid="cbdef-takeover" style="width:100%">' + opts + '</select>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('Every product and category that cites the retiring slab is re-pointed first, with the new rate travelling onto each product.') + '</div></div>'
+    + '<div class="mfoot"><button class="pri" data-testid="cbdef-takeover-go" onclick="cbDefTakeoverGo(\'' + cbDefEsc(id) + '\')">' + tx('Retire and hand over') + '</button>'
+    + '<button onclick="closeModal()">' + tx('Cancel') + '</button></div>', false);
+}
+function cbDefTakeoverGo(id){
+  var el = document.getElementById('cbdef_takeover'); var v = el ? el.value : '';
+  if (!v) { toast(tx('Pick a slab first.')); return; }
+  closeModal(); _cbDefRetire(id, v);
+}
 function cbDefRetire(id, name){
   confirmAsk('Retire “' + cbDefEsc(name) + '”?',
     'It leaves the shelf and <b>cannot be used again</b>.'
     + '<div style="margin-top:7px">' + txf('It is {notdeleted} — chits that already cite it stay explainable.', { notdeleted: '<b>' + tx('not deleted') + '</b>' }) + '</div>',
     'Retire', function(){ _cbDefRetire(id); }, true);
 }
-async function _cbDefRetire(id){
+async function _cbDefRetire(id, takeover){
   /* Same after-change path as save and status: refresh both lists AND drop the product page's live-offers cache —
      [OFF-01] RETIRE found the retired offer still listed on the product until a reload. */
-  try { await api('defRetire', { params: { id: id } }); toast('Retired.'); await cbDefAfterChange(null, id); }
-  catch (e) { toast((e && e.message) || 'Could not retire that.'); }
+  try { var r = await api('defRetire', { params: { id: id }, query: takeover ? { takeover: takeover } : undefined });
+        toast(r && r.moved && (r.moved.products || r.moved.categories) ? txf('Retired — {p} product(s) and {c} category(ies) now cite the takeover slab.', { p: String(r.moved.products), c: String(r.moved.categories) }) : 'Retired.');
+        await cbDefAfterChange(null, id); }
+  catch (e) {
+    /* ⭐ A SLAB DOES NOT GO DARK UNDER ITS PRODUCTS. The API refuses (409 "cited") until a takeover slab is named —
+       Athi, 2026-09-05: "the system should reject and ask another slab to take over". Ask, then retry with it. */
+    var msg = (e && e.message) || '';
+    if (/cite this slab/i.test(msg) || (e && e.status === 409)) return cbDefTakeoverAsk(id, msg);
+    toast(msg || 'Could not retire that.');
+  }
 }
 
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */

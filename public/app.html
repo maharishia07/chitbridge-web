@@ -9960,9 +9960,32 @@ function prodTaxHTML(d){
              does not mean. defaults.js: a blank cell means INHERIT, not CLEAR. */
           + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Blank inherits — first this product’s category, then the catalogue default.')}</div>`
         : `<div style="color:var(--grey)">${tx('No live slab yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`)
-    : `<div data-testid="prod-tax-resolved"><b>${esc(CBTaxSlab.describe(r))}</b></div>`;
+    : `<div data-testid="prod-tax-resolved"><b>${esc(CBTaxSlab.describe(r))}</b></div>` + prodTaxAttachHTML(d, r, slabs);
 
   return `<div style="padding-bottom:8px">${pick}</div>` + prodTaxPreviewHTML(d,r);
+}
+/**
+ * ⭐ A DEAD CITATION OFFERS THE ATTACH RIGHT HERE. Athi, 2026-09-05: "the engine should be able to detect that and allow
+ * another one to attach." In View mode, under the sentence that names the dead slab: the live slabs (governance first)
+ * and one button. The save is the ordinary product PATCH with the travelling copy (tax_slab_name · gst_rate), exactly
+ * what the Edit form would write — one writer, reached from two places.
+ */
+function prodTaxAttachHTML(d, r, slabs){
+  if(!r || !r.unresolved || !r.cited) return '';
+  const live=(slabs||[]).filter(s=>!s.status || s.status==='live');
+  if(!live.length) return `<div data-testid="prod-tax-attach" style="margin-top:6px;color:var(--grey)">${tx('No live slab to attach.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`;
+  return `<div data-testid="prod-tax-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">`
+    + `<select class="inp" id="prod_tax_fix" data-testid="prod-tax-fix" style="flex:1 1 220px">${cbSlabOptionsHTML(live, '')}</select>`
+    + `<button class="composebtn" data-testid="prod-tax-fix-go" onclick="prodTaxAttach('${esc(UI.prodSel||'')}')">${tx('Attach this slab')}</button></div>`;
+}
+async function prodTaxAttach(id){
+  const sel=document.getElementById('prod_tax_fix'); const sid=sel?sel.value:''; if(!sid){ toast(tx('Pick a slab first.')); return; }
+  const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p) return;
+  const slab=(cbDefsCached('tax')||[]).find(x=>String(x.definition_id||x.id)===sid); const rate=slab&&slab.rules?Number(slab.rules.rate):null;
+  const data=Object.assign({}, pData(p), { tax_slab: sid, tax_slab_name: slab?slab.name:null });
+  if(rate!==null && !isNaN(rate)) data.gst_rate=rate; else delete data.gst_rate;
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast(tx('Slab attached ✓')); await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+  catch(e){ toast((e&&e.message)||tx('Could not attach the slab.')); }
 }
 /** Re-render the pane in place on a select change. ⚠️ No read — everything it needs is already cached. */
 function prodTaxRepaint(){ const h=document.getElementById('prod_tax'); if(!h) return;
