@@ -30,6 +30,7 @@
   .price{ font-size:17px; font-weight:800; margin-top:10px; }
   .price small{ font-size:12px; color:var(--grey); font-weight:400; }
   .pmedia{ padding:4px 0 10px; }
+  .pbadges{ padding:2px 0 4px; }
   .prow{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
   .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
@@ -434,7 +435,7 @@ function productListHtml(data, cur){
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
-    rowExtra:function(it){ return productMedia(it); } });   /* pictures + video under the line — same gallery as the product page */
+    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
