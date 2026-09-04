@@ -315,14 +315,24 @@ async function addProduct(page, { name, price, desc, unit, code } = {}) {
    * ⭐ Asked through the app's OWN read, with the app's own session, because that is the same list the pickers
    * will offer. Matching on name is the identity a person uses when looking for a part.
    */
+  /* ⚠️ A REUSED PRODUCT IS SELECTED TOO. Specs read UI.prodSel after this fixture ("const pid = await page.evaluate(() =>
+     UI.prodSel)"); a reuse that returned without selecting left them with undefined (LIF-01, OM-01 red, 2026-09-04).
+     Selected through the app's own selectProduct, the same path a click takes. */
   const already = await page.evaluate(async (n) => {
     try {
       const r = await api('prodList', { query: { limit: 200 } });
       const list = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
-      return list.some((x) => String(((x.item_data || x).name) || '').toLowerCase() === String(n).toLowerCase());
+      const hit = list.find((x) => String(((x.item_data || x).name) || '').toLowerCase() === String(n).toLowerCase());
+      if (!hit) return null;
+      const id = hit.item_id || hit.id || null;
+      if (id && typeof selectProduct === 'function') { if (!UI.prods) { try { await loadCatalogue('fresh'); } catch (_) {} } selectProduct(id); }
+      return id || true;
     } catch (e) { return false; }
   }, name).catch(() => false);
-  if (already) return { name, price, reused: true };
+  if (already) {
+    await page.waitForFunction(() => !!UI.prodSel, null, { timeout: 15000 }).catch(() => {});
+    return { name, price, reused: true, id: (typeof already === 'string' ? already : null) };
+  }
 
   await clickNav(page, 'catalogue');
   const add = page.getByTestId('cat-new-product');
