@@ -9994,7 +9994,7 @@ function prodOutcomeHTML(k, d){
       }
       case 'pricing': {
         const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
-        if(slabs===null||cats===null||UI._face===undefined) return (grey(tx('reading…'));
+        if(slabs===null||cats===null||UI._face===undefined) return grey(tx('reading…'));
         const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] });
         if(r.rate==null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
         const price=Number(pPrice(d))||0, st=prodSellerState()||'29';
