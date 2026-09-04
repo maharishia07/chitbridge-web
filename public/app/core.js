@@ -242,7 +242,7 @@ function catgWithAncestors(ids){
   if (cats === null) {
     /* not read yet — start the one read and re-sync the basket when it lands, so a parent-category offer is not
        missed on the first paint (the tour caught this: the line had its category but not its ancestors) */
-    if (typeof cbDefsLive === 'function') cbDefsLive('category').then(function(){ try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {} try { if (typeof paintProdDetail === 'function' && UI.nav === 'catalogue') paintProdDetail(); } catch (_) {} }).catch(function(){});
+    if (typeof cbDefsLive === 'function') cbDefsLive('category').then(function(){ try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {} try { if (typeof prodRepaintSection === 'function') { prodRepaintSection('offers'); prodRepaintSection('pricing'); } } catch (_) {} }).catch(function(){});
     return out;
   }
   if (!cats.length) return out;

@@ -1840,6 +1840,9 @@ const EP = {
   prodSchedule:    {m:"POST",  p:"/api/products/:id/schedule",   ok:"✓"},
   prodScheduled:   {m:"GET",   p:"/api/products/:id/schedule",   ok:"✓"},
   prodUnschedule:  {m:"DELETE",p:"/api/products/:id/schedule/:sid", ok:"✓"},
+  /* MEDIA — pictures and videos on the private object store; the API streams the public read */
+  prodMediaAdd:    {m:"POST",  p:"/api/products/:id/media",         ok:"✓"},
+  prodMediaDel:    {m:"DELETE",p:"/api/products/:id/media/:mid",    ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   /* ⭐ MANY IN ONE. The wizard posted one request per item, sequentially — 40 items was ~20s. */
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
@@ -9227,7 +9230,7 @@ function ctOfferField(d){
 
   if (!Array.isArray(UI._ctOffers) /* undefined = not asked, null = in flight: both mean WAIT (2026-09-05) */) {
     /* The Offers tab reads this in VIEW mode too now, so the arrival repaints either way. */
-    ctOffersEnsure(function(){ if (UI.nav === 'catalogue') paintProdDetail(); });
+    ctOffersEnsure(function(){ prodRepaintSection('offers'); });
     return '<label class="fl">' + tx('Offers') + '</label>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">' + tx('reading…') + '</div>';
   }
@@ -9387,7 +9390,7 @@ function prodOfferTaxFooterHTML(d, qty, off){
   if (typeof CBTaxSlab === 'undefined' || typeof CBTax === 'undefined') return '';
   const slabs = cbDefsCached('tax'), cats = cbDefsCached('category');
   if (slabs === null || cats === null) {
-    Promise.all([cbDefsLive('tax'), cbDefsLive('category')]).then(function(){ if (UI.nav === 'catalogue') paintProdDetail(); }).catch(function(){});
+    Promise.all([cbDefsLive('tax'), cbDefsLive('category')]).then(function(){ prodRepaintSection('offers'); }).catch(function(){});
     return `<div class="prodprev-tax" style="font-size:var(--fs-1);color:var(--grey);padding:6px 0 0">${tx('tax: reading…')}</div>`;
   }
   const r = CBTaxSlab.resolve({ item_data: d, face: UI._face || {}, slabs: slabs || [], categories: cats || [] });
@@ -9463,7 +9466,7 @@ async function ctToggleOffer(offerId, btn){
   } finally {
     UI.prodPicked = was || new Set();
     UI._ctOffers = undefined;         /* re-read, so the ticks reflect what was actually stored */
-    if (UI.nav === 'catalogue' && UI.prodMode !== 'view') paintProdDetail();
+    if (UI.nav === 'catalogue' && UI.prodMode !== 'view') prodRepaintSection('offers');
   }
 }
 
@@ -9481,7 +9484,7 @@ async function ctToggleOffer(offerId, btn){
 function ctCategoryField(d){
   d = d || {};
   if(typeof _CATG==='undefined' || _CATG===null){
-    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && UI.prodMode!=='view') paintProdDetail(); });
+    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && UI.prodMode!=='view') prodRepaintSection('categories'); });
     return '';
   }
   const cur = catgIdsOf(d), names = catgNamesOf(d);
@@ -9892,7 +9895,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Product'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['stock','Stock'],['bom','Consists of'],['barcode','Barcode']];
+const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Barcode'],['storefront','Storefront']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -9926,7 +9929,7 @@ function prodOutcomeHTML(k, d){
   const none=(t)=>`<span style="color:var(--grey)">${esc(t)}</span>`;
   try{
     switch(k){
-      case 'product': return grey(esc(pDesc(d)||'')) || none(tx('no description'));
+      case 'product': { const n=Object.keys(d).length; const ds=String(pDesc(d)||'').trim(); return `<b>${esc(txf('{n} fields', { n: String(n) }))}</b>${ds?' '+grey('· '+esc(ds.length>90?ds.slice(0,90)+'…':ds)):' '+grey(esc(tx('· no description')))}`; }
       case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('Not categorised — set in Categories')); }
       case 'offers': {
         const on=offersForProduct(d, id);
@@ -9953,6 +9956,8 @@ function prodOutcomeHTML(k, d){
       case 'ordermodel': { const c=prodOrderDecl(d); if(c.unresolved) return `<span style="color:var(--warn-3)">● ${esc(tx('model not readable — pick in Edit'))}</span>`; return `<b>${esc(c.decl&&c.decl.name?c.decl.name:prodOrderDescribe(c.decl))}</b>${c.decl&&c.decl.name?' '+grey(esc(prodOrderDescribe(c.decl))):''}${c.source==='adopted'?' '+grey('↳ '+esc(tx('from Setup'))):c.source==='catalogue'?' '+grey('↳ '+esc(tx('catalogue default'))):''}`; }
       case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
       case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
+      case 'media': { const m=(Array.isArray(d.media)?d.media:[]); const im=m.filter(x=>x.kind==='image').length, vi=m.filter(x=>x.kind==='video').length; if(!m.length) return none(d.image?tx('one picture (by link)'):tx('No pictures — add in Edit')); return `<b>${esc([im?txf('{n} picture(s)',{n:String(im)}):'',vi?txf('{n} video(s)',{n:String(vi)}):''].filter(Boolean).join(' · '))}</b>${d.image?' '+grey(esc(tx('cover set'))):''}`; }
+      case 'storefront': { const st=d.status||'available'; const uid=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||''; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
       case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
     }
   }catch(_){}
@@ -9967,6 +9972,45 @@ function prodSheetToggle(el,k){
     Array.prototype.forEach.call((dp||document).querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
     if(k==='pricing'&&typeof prodPricingLoad==='function') prodPricingLoad();
   } else if(UI._prodOpen[pid]===k){ UI._prodOpen[pid]=null; }
+}
+/**
+ * ⭐ ONE REGISTRY OF SECTIONS. Every builder is named here once, for the first paint AND for a section's own repaint —
+ * so a loader that lands late (offers, categories, order models, the tree) repaints ITS section, never the whole pane.
+ * With every section on the page at once, whole-pane repaints wiped a name being typed into a new product (the specs
+ * caught it: mode "new", name "", no error — 2026-09-05).
+ */
+function prodSectionHTML(k, d, id, editing){
+  switch(k){
+    case 'product': return editing ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
+      : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}${prodScheduledHTML(id)}`
+        + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>`
+        + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
+    case 'categories': return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
+    case 'offers': return editing ? ctOfferField(d) : prodOffersViewHTML(d);
+    case 'stock': return prodAvailBlock(d, id);
+    case 'variants': return prodVariantsTab(d);
+    case 'pricing': return prodPricingTab(d);
+    case 'ordermodel': return prodOrderModelTab(d, editing);
+    case 'synonyms': return prodSynonymsTab(d, editing);
+    case 'media': return prodMediaTab(d, editing);
+    case 'bom': return prodBomTab(d);
+    case 'barcode': return prodBarcodeTab(d);
+    case 'storefront': return prodStorefrontTab(d);
+  }
+  return '';
+}
+/** Repaint ONE section in place (its body and, in view, its outcome line) — typing elsewhere on the form survives. */
+function prodRepaintSection(k){
+  if(typeof UI==='undefined' || UI.nav!=='catalogue') return;
+  const editing = UI.prodMode==='edit' || UI.prodMode==='new';
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); const d=(UI.prodMode==='new')?{}:(p?pData(p):null); if(!d) return;
+  const id=UI.prodSel||'';
+  const dp=document.getElementById('detailpane'); if(!dp) return;
+  const sec=dp.querySelector('#prodsec-'+k); const body=sec?sec.querySelector('.ptab-b'):dp.querySelector('.ptab[data-tab="'+k+'"]');
+  if(!body) return;
+  body.innerHTML = prodSectionHTML(k, d, id, editing);
+  const oc=sec?sec.querySelector('[data-testid="prod-outcome-'+k+'"]'):null; if(oc && !editing){ UI._prodSheetD=d; oc.innerHTML=prodOutcomeHTML(k, d)||''; }
+  if(k==='pricing' && typeof prodPricingLoad==='function') prodPricingLoad();
 }
 function ptabWrap(k,html){
   if(prodLayout()==='page'){
@@ -10063,7 +10107,7 @@ function prodOrderDescribe(decl){ return decl?(prodOrderKindWord(decl.model)+(de
 function prodOrderModelTab(d, edit){
   const cur=prodOrderDecl(d);
   const defs=(typeof cbDefsCached==='function')?cbDefsCached('ordermodel'):null;
-  if(defs===null&&typeof cbDefsLive==='function'){ cbDefsLive('ordermodel').then(function(){ if(UI.nav==='catalogue') paintProdDetail(); }).catch(function(){}); }
+  if(defs===null&&typeof cbDefsLive==='function'){ cbDefsLive('ordermodel').then(function(){ prodRepaintSection('ordermodel'); }).catch(function(){}); }
   const live=(defs||[]).filter(x=>!x.status||x.status==='live');
   const nameOf=(ref)=>{ const x=live.find(y=>String(y.definition_id||y.id)===String(ref)); return x?x.name:ref; };
   const kindWord=prodOrderKindWord, describe=prodOrderDescribe;
@@ -10106,6 +10150,56 @@ function paintProdOrderPreview(ref){
   const own=prodOwnOrderFromForm(); if(own && !val('ct_order_ref')){ host.innerHTML=prodOrderPreviewHTML(own); return; }
   const live=(cbDefsCached('ordermodel')||[]); const x=live.find(y=>String(y.definition_id||y.id)===String(ref||val('ct_order_ref')));
   host.innerHTML=prodOrderPreviewHTML(x?Object.assign({ model:(x.sub_kind||x.sub) }, x.rules||{}):((UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }));
+}
+/**
+ * ⭐ MEDIA — the pictures and videos this product carries. Athi, 2026-09-05. Files go to the private object store through
+ * the API (POST /products/:id/media, base64, 8 MB); the API streams the public read, so the storefront shows them without
+ * a bucket URL ever leaving the server. The first picture is the cover (`image`), the field the storefront already reads.
+ * Media loads only when this row is opened ("media only on click").
+ */
+function prodMediaUrl(id, mid){ return (CFG.API_BASE||'')+'/api/products/media/'+encodeURIComponent(id)+'/'+encodeURIComponent(mid); }
+function prodMediaTab(d, edit){
+  const id=UI.prodSel||d.item_id||d.id||''; const m=(Array.isArray(d.media)?d.media:[]);
+  const tile=(x)=>`<div data-testid="prod-media-${esc(x.id)}" style="position:relative;width:140px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--paper)">`
+    + (x.kind==='video' ? `<video src="${esc(prodMediaUrl(id,x.id))}" controls preload="metadata" style="width:100%;height:100px;object-fit:cover;display:block"></video>` : x.kind==='image' ? `<img src="${esc(prodMediaUrl(id,x.id))}" alt="${esc(x.name||'')}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`)
+    + `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name||'')}">${esc(x.name||'')}</div>`
+    + (edit ? `<button class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>` : '')
+    + `</div>`;
+  return `<div class="sec">${tx('Media')}</div>`
+    + (m.length ? `<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px">${m.map(tile).join('')}</div>`
+                : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(d.image?tx('One picture, by link — upload here to keep it with the product.'):tx('No pictures or videos yet.'))}</div>`)
+    + (edit ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">`
+              + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures or videos, up to 8 MB each. The first picture is the cover the storefront shows. Saved at once — not with this form.')}</div></div>` : '');
+}
+async function prodMediaUpload(id, files){
+  if(!files||!files.length) return;
+  showBusy(txn('Uploading {count} file…','Uploading {count} files…', files.length));
+  try{
+    for(const f of Array.from(files)){
+      if(f.size>8*1024*1024){ toast(txf('{name} is over 8 MB — skipped.', { name: f.name }), true); continue; }
+      const b64=await new Promise((ok,no)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result)); r.onerror=()=>no(r.error); r.readAsDataURL(f); });
+      await api('prodMediaAdd', { params:{ id }, body:{ name:f.name, mime:f.type, data_base64:b64 } });
+    }
+    toast(tx('Media added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail();
+  }catch(e){ toast((e&&e.message)||tx('Could not upload'), true); }
+  finally{ hideBusy(); }
+}
+async function prodMediaRemove(id, mid){
+  try{ await api('prodMediaDel', { params:{ id, mid } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+  catch(e){ toast((e&&e.message)||tx('Could not remove'), true); }
+}
+/**
+ * ⭐ STOREFRONT — how this product is showcased to a customer: the storefront itself, framed here, so what you see is what
+ * they see (the same shop.html the link opens). Athi, 2026-09-05: "finally we need a page how this is showcased to the
+ * customer". Loaded only when the row is opened.
+ */
+function prodStorefrontTab(d){
+  const uid=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||''; const url='/shop.html?s='+encodeURIComponent(uid);
+  const st=d.status||'available';
+  return `<div class="sec">${tx('Storefront')}</div>`
+    + `<div style="padding:6px 12px;font-size:var(--fs-2)">${st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
+    + `<iframe data-testid="prod-storefront-frame" src="${esc(url)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:100%;height:420px;border:1px solid var(--line);border-radius:9px;background:#fff"></iframe>`
+    + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('The same page a customer opens — the cover picture, the price, the offers in effect, and the order model, from the same rules.')}</div>`;
 }
 function prodBomTab(d){
   const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item);
@@ -10415,16 +10509,7 @@ function prodDetailHTML(){
   UI._prodSheetD = d;   /* the fact sheet's wrappers read the product from here */
   let body, bar;
   if(UI.prodMode==='edit'){
-    body=ptabWrap('product',`<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`)
-      +ptabWrap('categories',ctCategoryField(d))
-      +ptabWrap('offers',ctOfferField(d))
-      +ptabWrap('stock',prodAvailBlock(d,id))
-      +ptabWrap('variants',prodVariantsTab(d))
-      +ptabWrap('pricing',prodPricingTab(d))
-      +ptabWrap('ordermodel',prodOrderModelTab(d, true))
-      +ptabWrap('synonyms',prodSynonymsTab(d, true))
-      +ptabWrap('bom',prodBomTab(d))
-      +ptabWrap('barcode',prodBarcodeTab(d))
+    body=PROD_TABS.map(t=>ptabWrap(t[0], prodSectionHTML(t[0], d, id, true))).join('')
       +`<div class="err" id="ct_err" style="margin-top:8px"></div>`;
     bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
@@ -10432,18 +10517,7 @@ function prodDetailHTML(){
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = ptabWrap('product', `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}${prodScheduledHTML(id)}`
-        + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
-        + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`)
-      + ptabWrap('categories', prodCatgViewHTML(d))
-      + ptabWrap('offers', prodOffersViewHTML(d))
-      + ptabWrap('stock', prodAvailBlock(d,id))
-      + ptabWrap('variants', prodVariantsTab(d))
-      + ptabWrap('pricing', prodPricingTab(d))
-      + ptabWrap('ordermodel', prodOrderModelTab(d, false))
-      + ptabWrap('synonyms', prodSynonymsTab(d, false))
-      + ptabWrap('bom', prodBomTab(d))
-      + ptabWrap('barcode', prodBarcodeTab(d));
+    body = PROD_TABS.map(t => ptabWrap(t[0], prodSectionHTML(t[0], d, id, false))).join('');
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
