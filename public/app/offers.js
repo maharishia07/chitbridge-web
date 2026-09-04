@@ -713,6 +713,19 @@
     if (/^expired/.test(why)) return 'expired';
     return 'active';   /* region / currency / group gates are not TIME */
   }
-  root.CBOffers = { evaluate: evaluate, promise: promise, terms: terms, timeStatus: timeStatus, forLine: forLine, onOffer: onOffer, claims: claims,
+  /**
+   * scopeLabel(o) → 'off the order total' | 'off each line' | 'on shipping' | 'per set' — WHAT the amount comes off.
+   * Athi, 2026-09-05: "if ₹100 off is on the total bill that should be explicit". One phrase, from the engine's own
+   * notion of scope, so the category row, the product tab and the Setup list cannot disagree.
+   */
+  function scopeLabel(o) {
+    var x = o || {};
+    if (x.kind === 'shipping') return 'on shipping';
+    if (x.kind === 'buy_x_get_y') return 'per set';
+    if (x.kind === 'tier_price') return 'per unit from the tier';
+    if (x.scope === 'cart' || x.kind === 'threshold') return 'off the order total';
+    return 'off each line';
+  }
+  root.CBOffers = { evaluate: evaluate, promise: promise, terms: terms, timeStatus: timeStatus, scopeLabel: scopeLabel, forLine: forLine, onOffer: onOffer, claims: claims,
     perLine: perLine, sampleQty: sampleQty, KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);

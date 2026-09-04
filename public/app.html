@@ -9899,7 +9899,7 @@ function prodOffersViewHTML(d){
   const on = prodOffersOn(d);
   const line = function(o){
     const terms=(typeof prodOfferTerms==='function')?prodOfferTerms(o.rules):'', win=(typeof prodOfferWindow==='function')?prodOfferWindow(o.rules):'';
-    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b>${o._via?`<span class="pill" style="font-size:var(--fs-1)">${esc(tx('via category')+' '+o._via)}</span>`:''}<span style="color:var(--grey)">${esc(terms)}${win?' · '+esc(win):''}</span></div>`; };
+    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b>${o._via?`<span class="pill" style="font-size:var(--fs-1)">${esc(tx('via category')+' '+o._via)}</span>`:''}<span style="color:var(--grey)">${esc(terms)}${terms&&typeof CBOffers!=='undefined'&&CBOffers.scopeLabel?' '+esc(tx(CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})))):''}${win?' · '+esc(win):''}</span></div>`; };
   return `<div class="sec">${tx('Offers')}</div>`
     + (on.length ? `<div class="itab">${on.map(line).join('')}</div>` : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No offer is attached to this product.')}</div>`)
     /* ⭐ The same calculation as Edit › Offers, from the same function — a read-only screen that showed a

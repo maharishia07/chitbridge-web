@@ -1213,7 +1213,7 @@ function catsetDefRowDetail(kind, d){
   var o = catsetOfferShape(d);
   var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? CBOffers.terms(o, { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) : null;
   return '<div class="dn-detail" data-testid="catset-offer-detail-' + esc(d.id) + '" style="flex-basis:100%;font-size:var(--fs-1);display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:2px 0 0">'
-    + '<span data-testid="catset-offer-terms">' + (terms ? esc(terms) : '<span style="color:var(--warn-3)">' + tx('no terms yet') + '</span>') + '</span>'
+    + '<span data-testid="catset-offer-terms">' + (terms ? esc(terms) + ' <span style="color:var(--grey)">' + esc(tx(CBOffers.scopeLabel(o))) + '</span>' : '<span style="color:var(--warn-3)">' + tx('no terms yet') + '</span>') + '</span>'
     + '<span>' + catsetOfferWindowHTML(d.rules, d.status) + '</span>'
     + '<span data-testid="catset-offer-applies"><span style="color:var(--grey)">' + tx('on') + '</span> ' + catsetOfferAppliesHTML(d.rules) + '</span>'
     + '</div>';

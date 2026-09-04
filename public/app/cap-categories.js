@@ -536,9 +536,10 @@ function cbcatRowsHTML(){
       +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
       +   '</div>'
       +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
+      +   cbcatOfferLinesHTML(c.id)
       + '</div>'
       /* The count is the reason to look at this list at all — which shelves are actually carrying anything. */
-      + cbcatTaxChipHTML(c.id) + cbcatOfferChipsHTML(c.id)
+      + cbcatTaxChipHTML(c.id)
       + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
       + '</div>';
   }).join('');
@@ -722,17 +723,23 @@ function cbcatOffersReaching(cid){
     var r = o.rules || {};
     var t = (typeof CBOffers !== 'undefined' && CBOffers.timeStatus) ? CBOffers.timeStatus(r) : 'active';
     var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? (CBOffers.terms(Object.assign({ kind: r.kind }, r), { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) || '') : '';
-    return { id: o.id, name: o.name, terms: terms, time: t, from: r.valid_from || null, to: r.valid_to || null, via: viaId ? ((cbcatById(viaId) || {}).name || null) : null };
+    var scope = (typeof CBOffers !== 'undefined' && CBOffers.scopeLabel) ? CBOffers.scopeLabel(Object.assign({ kind: r.kind }, r)) : '';
+    return { id: o.id, name: o.name, terms: terms, scope: scope, time: t, from: r.valid_from || null, to: r.valid_to || null, via: viaId ? ((cbcatById(viaId) || {}).name || null) : null };
   }).filter(Boolean).filter(function (x) { return x.time !== 'expired'; });
 }
-function cbcatOfferChipsHTML(cid){
+/* ⭐ ONE EXPLICIT LINE PER OFFER, under the category name — Athi, 2026-09-05: "if ₹100 off is on the total bill that
+   should be explicit … bring the offer detail below the category name, so if more than one applies it can be shown". */
+function cbcatOfferLinesHTML(cid){
   var here = cbcatOffersReaching(cid);
   if (!here || !here.length) return '';
-  return here.slice(0, 3).map(function (x) {
-    var when = x.time === 'scheduled' ? '📅 ' + esc(tx('from') + ' ' + (x.from || '')) : '🏷️';
-    return '<span class="cbcat-badge" data-testid="catg-offer-chip-' + esc(cid) + '" data-time="' + esc(x.time) + '" title="' + esc(x.name + (x.via ? ' · ' + tx('via') + ' ' + x.via : '') + (x.to ? ' · ' + tx('to') + ' ' + x.to : '')) + '" style="' + (x.time === 'scheduled' ? 'color:var(--blue)' : '') + '">'
-      + when + ' ' + esc(x.terms || x.name) + (x.via ? ' <span style="opacity:.7">↑</span>' : '') + '</span>';
-  }).join('') + (here.length > 3 ? '<span class="cbcat-badge">+' + (here.length - 3) + '</span>' : '');
+  return '<div data-testid="catg-offer-lines-' + esc(cid) + '" style="margin-top:3px;display:flex;flex-direction:column;gap:2px;font-size:var(--fs-1)">'
+    + here.map(function (x) {
+        var when = x.time === 'scheduled' ? '<span style="color:var(--blue)">📅 ' + esc(tx('from') + ' ' + (x.from || '')) + '</span>' : '<span>🏷️</span>';
+        return '<div data-testid="catg-offer-line" data-time="' + esc(x.time) + '" style="display:flex;gap:6px;flex-wrap:wrap;align-items:baseline">' + when
+          + '<b>' + esc(x.terms || x.name) + '</b><span style="color:var(--grey)">' + esc(tx(x.scope)) + '</span>'
+          + '<span style="color:var(--grey)">· ' + esc(x.name) + (x.to ? ' · ' + esc(tx('to') + ' ' + x.to) : '') + (x.via ? ' · ' + esc(tx('via') + ' ' + x.via) + ' ↑' : '') + '</span></div>';
+      }).join('')
+    + '</div>';
 }
 function cbcatOffersHereHTML(cid){
   var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
@@ -743,7 +750,7 @@ function cbcatOffersHereHTML(cid){
   if (!here.length) return '';
   var timeWord = function (o) { var x = reach.filter(function (y) { return y.id === o.id; })[0] || {}; return x.time === 'scheduled' ? ' <span style="color:var(--blue)">' + esc(tx('Scheduled from') + ' ' + (x.from || '')) + '</span>' : ' <span style="color:var(--ok, #2e7d32)">' + esc(tx('Active')) + (x.to ? ' ' + esc(tx('to') + ' ' + x.to) : '') + '</span>'; };
   return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
-    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; return esc(o.name) + timeWord(o) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
+    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; var sc = (reach.filter(function (y) { return y.id === o.id; })[0] || {}); return esc(o.name) + (sc.terms ? ' <b>' + esc(sc.terms) + '</b> <span style="color:var(--grey)">' + esc(tx(sc.scope || '')) + '</span>' : '') + timeWord(o) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;
