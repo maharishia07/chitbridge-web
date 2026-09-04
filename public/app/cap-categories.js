@@ -579,7 +579,7 @@ function cbcatDetailHTML(){
       + cbcatSlabPickHTML(f)
       /* ⭐ THE OFFERS SIT BESIDE THE SLAB ON THE EDIT FORM TOO — Athi, 2026-09-05: "the right side shows the tax but not
          the offer attached?" A tick saves to the OFFER straight away (its targets), not with this form's Save. */
-      + (editing ? cbcatOfferTicksHTML(f.id) : '')
+      + (editing ? cbcatOfferTicksHTML(f.id) + cbcatProductTicksHTML(f.id) : '')
       + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
@@ -672,6 +672,44 @@ function cbcatTaxChipHTML(cid){
  * The engine (offers.js) honours both; a child category inherits through catgWithAncestors.
  */
 function cbcatOfferCats(rules){ var at = (rules && rules.applies_to) || {}; return [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []); }
+/**
+ * ⭐ THE REVERSE ATTACH. Athi, 2026-09-04: "we are attaching category from catalogue, this is the other way around —
+ * the same multi-select and attach for category, from here". On EDIT (View shows what applies, Edit modifies — his
+ * rule of 2026-09-05), every product is a tick: ticked = carries this category. A tick writes the PRODUCT (its
+ * `categories` list, whole record through the same PATCH the product page uses) — so the product page, the
+ * catalogue row and the storefront read the change the same instant; nothing is stored on the category.
+ */
+function cbcatProductTicksHTML(cid){
+  var prods = UI.prods;
+  if (!prods) { if (typeof loadCatalogue === 'function') loadCatalogue().then(function(){ if (UI.nav === 'categories' && CBCAT_UI.mode === 'edit') cbcatPaintDetail(); }); return '<div class="cbcat-none">' + tx('reading the catalogue…') + '</div>'; }
+  var q = String(CBCAT_UI.pq || '').trim().toLowerCase();
+  var rows = prods.filter(function(p){ var d = (p && (p.item_data || p)) || {}; return !q || String(d.name || '').toLowerCase().indexOf(q) >= 0 || String(d.code || d.sku || '').toLowerCase().indexOf(q) >= 0; });
+  var inCat = function(p){ return catgIdsOf((p && (p.item_data || p)) || {}).indexOf(String(cid)) >= 0; };
+  var on = prods.filter(inCat).length;
+  return '<div class="sec">' + tx('Products') + ' <span style="color:var(--grey);font-weight:400">· ' + on + ' ' + tx('of') + ' ' + prods.length + '</span></div>'
+    + '<input class="inp" data-testid="catg-prod-search" placeholder="' + esc(tx('Find a product')) + '" value="' + esc(CBCAT_UI.pq || '') + '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' + esc(cid) + '\')" style="margin:4px 0 6px">'
+    + '<div id="cbcat_prodticks" data-testid="catg-prod-ticks" style="display:flex;flex-wrap:wrap;gap:6px;max-height:260px;overflow:auto">'
+    + (rows.length ? rows.slice(0, 200).map(function(p){ var d = (p.item_data || p) || {}; var pid = prodId(p); var isOn = inCat(p);
+        return '<button type="button" class="ctcatg' + (isOn ? ' on' : '') + '" data-testid="catg-prod-' + esc(pid) + '" data-pid="' + esc(pid) + '" onclick="cbcatProductToggle(\'' + esc(cid) + '\',\'' + esc(pid) + '\',this)">' + (isOn ? '✓ ' : '') + esc(d.name || d.product || 'item') + (d.code ? ' <small style="opacity:.7">' + esc(d.code) + '</small>' : '') + '</button>'; }).join('')
+        : '<div class="cbcat-none">' + tx('No product matches.') + '</div>')
+    + (rows.length > 200 ? '<div class="cbcat-none">+' + (rows.length - 200) + ' ' + tx('more — narrow the search') + '</div>' : '')
+    + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + tx('A tick attaches this category to the product at once — the product page, the catalogue row and the storefront follow.') + '</div>';
+}
+function cbcatProdTicksRepaint(cid){ var h = document.getElementById('cbcat_prodticks'); if (!h) return; var tmp = document.createElement('div'); tmp.innerHTML = cbcatProductTicksHTML(cid); var n = tmp.querySelector('#cbcat_prodticks'); if (n) h.innerHTML = n.innerHTML; }
+async function cbcatProductToggle(cid, pid, btn){
+  var p = (UI.prods || []).filter(function(x){ return prodId(x) === pid; })[0]; if (!p) return;
+  var d = Object.assign({}, pData(p)); var ids = catgIdsOf(d).map(String); var on = ids.indexOf(String(cid)) >= 0;
+  ids = on ? ids.filter(function(x){ return x !== String(cid); }) : ids.concat([String(cid)]);
+  d.categories = ids; delete d.category;
+  if (btn) btn.disabled = true;
+  try {
+    await api('prodEdit', { params: { id: pid }, body: { item_data: d } });   /* the whole record — the PATCH validates it as one */
+    toast(on ? tx('Detached') : tx('Attached ✓'));
+    if (typeof loadCatalogue === 'function') await loadCatalogue('fresh');
+    cbcatPaint();
+  } catch (e) { toast((e && e.message) || tx('Could not change the product'), true); if (btn) btn.disabled = false; }
+}
 function cbcatOfferTicksHTML(cid){
   var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
   if (!list) return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div>';
