@@ -9988,10 +9988,14 @@ function prodOutcomeHTML(k, d){
 }
 /* accordion: one row open at a time; the open row is remembered per product for the session (memory, not storage) */
 function prodSheetToggle(el,k){
+  /* ⚠️ A DETACHED ROW STILL FIRES. <details open> queues its toggle asynchronously; when the pane is painted twice in
+     a row (a save: loadCatalogue paints, then the caller paints), the FIRST paint's row fires after it has been
+     replaced — and closed every row of the NEW pane, nulling the memory (probe, 2026-09-05). Not on the page = not ours. */
+  if(!el || !el.isConnected) return;
   const pid=UI.prodSel||''; UI._prodOpen=UI._prodOpen||{};
   if(el.open){
     UI.prodTab=k; UI._prodOpen[pid]=k;
-    const dp=document.getElementById('detailpane'); if(dp) Array.prototype.forEach.call(dp.querySelectorAll('details.ptab-sec'), function(o){ if(o!==el && o.open) o.open=false; });
+    const dp=document.getElementById('detailpane'); if(dp) Array.prototype.forEach.call(dp.querySelectorAll('details.ptab-sec'), function(o){ if(o.getAttribute('data-tab')!==k && o.open) o.open=false; });
     Array.prototype.forEach.call((dp||document).querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
     if(k==='pricing'&&typeof prodPricingLoad==='function') prodPricingLoad();
   } else if(UI._prodOpen[pid]===k){ UI._prodOpen[pid]=null; }
