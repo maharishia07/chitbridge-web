@@ -9980,7 +9980,9 @@ function prodOutcomeHTML(k, d){
       case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
       case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
       case 'media': { const m=(Array.isArray(d.media)?d.media:[]); const im=m.filter(x=>x.kind==='image').length, vi=m.filter(x=>x.kind==='video').length; if(!m.length) return none(d.image?tx('one picture (by link)'):tx('No pictures — add in Edit')); return `<b>${esc([im?txf('{n} picture(s)',{n:String(im)}):'',vi?txf('{n} video(s)',{n:String(vi)}):''].filter(Boolean).join(' · '))}</b>${d.image?' '+grey(esc(tx('cover set'))):''}`; }
-      case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…'))); if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
+      case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…')));
+        const vis=prodShopVisibility(); if(vis!=='public') return `<span style="color:var(--warn-3)">● </span><b>${esc(tx('Not public'))}</b> ${grey(esc(txf('· catalogue visibility is {v} — set it in Profile', { v: tx(vis||'private') })))}`;
+        if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
       case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
     }
   }catch(_){}
@@ -10248,13 +10250,15 @@ function prodShopHandle(){
   if(!UI._meReq && typeof meTake==='function'){ UI._meReq = Promise.resolve().then(meTake).then(function(e){ if(e) UI._me=e; }).catch(function(){}).finally(function(){ UI._meReq=null; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); } }); }
   return null;
 }
+/** The catalogue's own gate (b114 catalogue_visibility) — a private catalogue has no storefront, whatever the product says. */
+function prodShopVisibility(){ const me=UI._me; return (me && me.catalogue_visibility) || 'private'; }
 function prodStorefrontTab(d){
   const uid=prodShopHandle(); if(uid===null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
   const id=UI.prodSel||d.item_id||d.id||'';
   const url='/shop.html?s='+encodeURIComponent(uid); const one=url+'&item='+encodeURIComponent(id);
   const st=d.status||'available';
   return `<div class="sec">${tx('Storefront')}</div>`
-    + `<div style="padding:6px 12px;font-size:var(--fs-2)">${st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
+    + `<div style="padding:6px 12px;font-size:var(--fs-2)">${prodShopVisibility()!=='public'?'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not on the storefront — the catalogue visibility is {v}. Profile › Visibility › Public puts it there.', { v: tx(prodShopVisibility()) })):st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
     + `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" src="${esc(one)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff"></iframe></div>`
     + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`;
 }

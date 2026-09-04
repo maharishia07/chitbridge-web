@@ -260,7 +260,15 @@ test('the tour', async ({ page }) => {
   await ok(page, 'the player is in the row');
   await page.evaluate(() => setProdMode('view'));
   await openTab(page, 'storefront');
-  await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here with the link — what you see is what they see; a hidden product says why',
+  await tc(page, 'Storefront gate: a private catalogue has no storefront', 'b114 catalogue_visibility comes before any product — the row says why instead of framing "Shop not found"',
+    'View › Storefront on a fresh (private) catalogue', '"● Not public · catalogue visibility is private — set it in Profile"');
+  await expect(page.getByTestId('prod-outcome-storefront')).toContainText('Not public', { timeout: 25000 });
+  await ok(page, 'the row says why');
+  await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public' } }); UI._me = null; });
+  await page.evaluate(() => prodShopHandle());
+  await page.waitForFunction(() => UI._me && UI._me.catalogue_visibility === 'public', null, { timeout: 25000 });
+  await page.evaluate(() => prodRepaintSection('storefront'));
+  await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here, opened on this one product — what you see is what they see',
     'View › Storefront', '"Shown · as the customer sees it"; the product itself framed at phone width — the same shop page, opened on this one product');
   await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });
   await expect(page.getByTestId('prod-storefront-frame')).toBeVisible();
