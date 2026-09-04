@@ -8722,7 +8722,19 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintProdList(); paintProdDetail(); }
 /* If the declaration has not arrived yet (a deep link straight into Edit), paint now and once more when it has. */
-function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(function(){ if(UI.prodMode==='edit'||UI.prodMode==='new') paintProdDetail(); }).catch(function(){}); } }
+/**
+ * ⚠️⚠️ THE DECLARED COLUMNS ARRIVE AFTER THE FORM OPENS — AND MUST NOT REPAINT WHAT WAS TYPED. This used to call
+ * paintProdDetail() when the declaration landed, which re-rendered the WHOLE form from the saved product: a name typed
+ * in the second before that was wiped, Save said "Name is required", and nothing was posted. On a slow API the
+ * window is a second wide and a person typing fast lands in it; the specs landed in it half the time (2026-09-05).
+ * Now only the declared-columns block is filled in; the fields around it keep their typing.
+ */
+function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(function(){
+  if(UI.prodMode!=='edit'&&UI.prodMode!=='new') return;
+  const host=document.getElementById('ct_declared');
+  if(host){ const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); host.innerHTML=ctDeclaredFields((UI.prodMode==='edit'&&p)?pData(p):{}); }
+  else paintProdDetail();
+}).catch(function(){}); } }
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsureDeclaredThenPaint(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
@@ -9494,7 +9506,7 @@ function ctNewCategory(){
 /* The product's OWN facts. Categories and offers are separate records that point at it, so they render on their own
    tabs (prodDetailHTML); the New form, which has nothing to point at yet, lays everything out on one page. */
 function prodEditForm(d){ return prodEditFormCore(d)+ctCategoryField(d)+ctOfferField(d); }
-function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+ctDeclaredFields(d)+prodEffectiveField(); }
+function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+'<div id="ct_declared">'+ctDeclaredFields(d)+'</div>'+prodEffectiveField(); }
 /**
  * ⭐ PUBLISH ON A DATE. Empty = now (the ordinary save). A future moment = the changed keys are PARKED and land at that
  * moment, on the first read after it (owner list · storefront · send). What is shown: the exact moment, and — on the

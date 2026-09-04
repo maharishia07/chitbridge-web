@@ -238,7 +238,13 @@ function catgIdsOf(d){
 function catgWithAncestors(ids){
   var out = (ids || []).map(String).filter(Boolean), seen = {};
   out.forEach(function (id) { seen[id] = true; });
-  var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || [];
+  var cats = (typeof cbDefsCached === 'function') ? cbDefsCached('category') : null;
+  if (cats === null) {
+    /* not read yet — start the one read and re-sync the basket when it lands, so a parent-category offer is not
+       missed on the first paint (the tour caught this: the line had its category but not its ancestors) */
+    if (typeof cbDefsLive === 'function') cbDefsLive('category').then(function(){ try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {} try { if (typeof paintProdDetail === 'function' && UI.nav === 'catalogue') paintProdDetail(); } catch (_) {} }).catch(function(){});
+    return out;
+  }
   if (!cats.length) return out;
   var by = {}; cats.forEach(function (x) { by[String(x.definition_id || x.id)] = x; });
   out.slice().forEach(function (id) {
