@@ -9829,7 +9829,7 @@ function prodStatusPick(id){
     + opt('redundant', 'Redundant', 'replaced by another item — needs to say which')
     + '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' + tx('Cancel') + '</button>');
 }
-function prodSetStatus(id, status){
+function prodSetStatus(id, status){ if(UI._prodHist && id) delete UI._prodHist[id];   /* a status change cuts a version — History re-reads */
   /* ⚠️ ASKED FOR, NOT REQUIRED — "Not available" with no end is indistinguishable from retired to everyone
      except the person who set it, and that person forgets. So the date is offered and a blank one is accepted,
      which promptAsk does not do (it refuses empty). Hence the extra button rather than an empty submit. */
