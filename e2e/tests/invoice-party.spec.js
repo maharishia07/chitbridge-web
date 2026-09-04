@@ -20,7 +20,7 @@ test('[INV-03] supplier details on the invoice, missing fields named, tied to Tr
   });
 
   await test.step('FILL — GSTIN on the profile, the rest in the Business identity vault', async () => {
-    await page.evaluate(async () => {
+    await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin');
       await api('saveProfile', { body: { gstn: '29ABCDE1234F1Z5', address: '12 Market Road' } });
       await api('vaultSave', { body: { vault: { sections: [{ type: 'identity', label: 'Business identity', rows: [
         { name: 'Legal name', tag: 'legal_name', value: 'Basmati Traders Pvt Ltd' },
