@@ -8532,8 +8532,8 @@ function catgChipsHTML(d){
 function prodDeals(d, id){
   const out={ offers:[], tax:null };
   try{
-    const on=(UI._ctOffers||[]).filter(function(o){ const at=(o.rules&&o.rules.applies_to)||{}; return Array.isArray(at.item_ids)&&at.item_ids.indexOf(id)>=0; });
     if(!UI._ctOffers && typeof ctOffersEnsure==='function') ctOffersEnsure(function(){ paintProdList(); });
+    const on=offersForProduct(d, id);
     on.forEach(function(o){ const p=(typeof CBOffers!=='undefined')?CBOffers.promise(o.rules, { money:(n)=>inr(n) }):null; if(p) out.offers.push({ name:o.name, promise:p }); });
   }catch(_){}
   try{
@@ -9260,13 +9260,29 @@ function ctOfferField(d){
  * One filter, because three places ask (the ticks, the read-only list, and the cart preview under both) and a
  * fourth answer to "is this offer on this product" is a fourth chance for them to disagree on the same screen.
  */
+/**
+ * ⭐ THE OFFERS THAT REACH A PRODUCT — its own (applies_to.item_ids) AND the ones on its categories or their parents
+ * (applies_to.category / category_ids, through catgWithAncestors). Athi, 2026-09-05: "I added an offer for a category
+ * and linked a product to it, but the offer is not auto populating" — the page only knew the first kind. ONE helper for
+ * the Offers tab, the cart preview, the list row and the search; each offer carries `_via` = the category it came by.
+ */
+function offersForProduct(d, id){
+  const pid = String(id || (d && (d.item_id || d.id)) || '');
+  const cats = (typeof catgWithAncestors === 'function') ? catgWithAncestors(catgIdsOf(d || {})) : catgIdsOf(d || {});
+  const catName = function (cid) { const c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).find(function (x) { return String(x.definition_id || x.id) === String(cid); }); return c ? c.name : cid; };
+  return (UI._ctOffers || []).reduce(function (out, o) {
+    const at = (o.rules && o.rules.applies_to) || {};
+    if (pid && Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0) { out.push(o); return out; }
+    const want = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
+    const hit = want.find(function (c) { return cats.indexOf(c) >= 0; });
+    if (hit) out.push(Object.assign({}, o, { _via: catName(hit) }));
+    return out;
+  }, []);
+}
 function prodOffersOn(d){
   const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';
   if (!pid) return [];
-  return (UI._ctOffers || []).filter(function(o){
-    const at = (o.rules && o.rules.applies_to) || {};
-    return Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0;
-  });
+  return offersForProduct(d, pid);
 }
 /**
  * ── ⭐⭐ WHAT THE SHOPPING CART WILL DO, ON THE PRODUCT PAGE ────────────────────────────────────────────────────
@@ -9871,7 +9887,7 @@ function prodOffersViewHTML(d){
   const on = prodOffersOn(d);
   const line = function(o){
     const terms=(typeof prodOfferTerms==='function')?prodOfferTerms(o.rules):'', win=(typeof prodOfferWindow==='function')?prodOfferWindow(o.rules):'';
-    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b><span style="color:var(--grey)">${esc(terms)}${win?' · '+esc(win):''}</span></div>`; };
+    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b>${o._via?`<span class="pill" style="font-size:var(--fs-1)">${esc(tx('via category')+' '+o._via)}</span>`:''}<span style="color:var(--grey)">${esc(terms)}${win?' · '+esc(win):''}</span></div>`; };
   return `<div class="sec">${tx('Offers')}</div>`
     + (on.length ? `<div class="itab">${on.map(line).join('')}</div>` : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No offer is attached to this product.')}</div>`)
     /* ⭐ The same calculation as Edit › Offers, from the same function — a read-only screen that showed a
