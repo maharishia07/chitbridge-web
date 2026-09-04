@@ -10500,7 +10500,7 @@ function prodTaxOverrideNote(d, r, slabs, cats){
  * since when. Athi, 2026-09-04: the facets audit — "Lifecycle: status, the parked change, retention and
  * discontinuation in one row instead of a button and a strip inside Details". The strip moved here from Details.
  */
-function prodLifecycleTab(d, id){
+function prodLifecycleTab(d, id){ const grey=function(x){ return '<span style="color:var(--grey)">'+x+'</span>'; };
   const st=d.status||'available';
   const rows=[
     ['available', tx('Available'), tx('matches orders and prices')],
@@ -10528,7 +10528,7 @@ async function prodHistoryEnsure(id){
   catch(_){ UI._prodHist[id]=[]; }
   if(UI.nav==='catalogue' && UI.prodSel===id && typeof prodRepaintSection==='function'){ prodRepaintSection('history'); prodRepaintSection('lifecycle'); }
 }
-function prodHistoryTab(d, id){
+function prodHistoryTab(d, id){ const grey=function(x){ return '<span style="color:var(--grey)">'+x+'</span>'; };
   const hist=UI._prodHist&&UI._prodHist[id];
   if(hist===undefined||hist===null){ prodHistoryEnsure(id); return `<div class="sec">${tx('History')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the versions…')}</div>`; }
   if(!hist.length) return `<div class="sec">${tx('History')}</div><div data-testid="prod-history" style="padding:6px 12px;color:var(--grey)">${tx('No versions yet.')}</div>`;
