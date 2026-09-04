@@ -44,3 +44,8 @@ other countries' VAT split (an entity with country DE), the WhatsApp/offline pat
 17 **Lifecycle** — status with its meaning + Change, Since, Last change, the parked strip (moved here from Details).
 18 **History** — every cut version newest first, what changed (name · variant · unit · price · SKU · status), who.
 Later cases renumbered: 19 Barcode/Identifiers · 20 Consists of · 21 Media · 22 Video link · 23 Storefront gate · 24 Storefront · 25 Compose · 26 MIS › Tax · 27 Columns. `TOUR_FROM=17` starts the narration at Lifecycle.
+
+## ⚠️ Run the tour like this (2026-09-04)
+    NODE_OPTIONS=--max-old-space-size=4096 TOUR=1 TOUR_HEADED=1 TOUR_PAUSE=8000 TOUR_FROM=17 npx playwright test tests/tour.spec.js --headed --project=authed
+The config turns trace and video OFF when TOUR is set: with them on, the worker ran out of heap at ~9 minutes and the
+headed window froze on a caption. Never start a second Playwright run while the tour is on screen (shared auth state).

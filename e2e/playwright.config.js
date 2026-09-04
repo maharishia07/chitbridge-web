@@ -41,9 +41,12 @@ module.exports = defineConfig({
   use: {
     baseURL: process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app',
     viewport: COUNTER,         // the counter's real screen size
-    trace: 'on',               // full trace = the filmstrip + a showcase artifact
+    /* ⚠️ NOT for the tour. 27 narrated cases × a 16-row product page × framed storefronts = DOM snapshots the worker
+       holds in memory until the test ends: the tour's node worker died with 'JavaScript heap out of memory' at 8.8 min
+       (2026-09-04) and the headed run froze on a caption. The tour runs with trace and video off, 4 GB heap. */
+    trace: process.env.TOUR ? 'off' : 'on',               // full trace = the filmstrip + a showcase artifact
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.TOUR ? 'off' : 'retain-on-failure',
     actionTimeout: 15_000,
   },
   projects: [
