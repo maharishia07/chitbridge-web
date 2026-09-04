@@ -417,6 +417,39 @@ function cbOrderDecl(order){
 }
 
 /**
+ * ⭐ THE MAILBOX BELL, CLIENT SIDE (Server-Sent Events). Athi, 2026-09-04: "why can't we notify like a mailbox?"
+ * One open stream per signed-in tab (POST /api/events/ticket with the token → GET /api/events/stream?t=ticket; the
+ * token never rides the URL). On an arrival the API sends { kind, id, who }: the bell badge and the list on screen
+ * refresh AT ONCE, silently, and nothing else repaints. While the stream is up the 20-second timer stretches to
+ * two minutes as a fallback; when the stream drops it comes back to 20 s and the client re-tickets with backoff.
+ */
+var _push = { es: null, up: false, backoff: 5000, timer: null };
+function cbPushUp(){ return !!_push.up; }
+function cbPushStart(){
+  if(_push.es || !window.EventSource || !SESSION.token || (typeof CFG!=='undefined' && CFG.MODE==='demo')) return;
+  api('eventsTicket').then(function(t){
+    if(!t || !t.ticket || !SESSION.token || _push.es) return;
+    var base=(typeof CFG!=='undefined'&&CFG.API_BASE)||'';
+    var es=new EventSource(base+'/api/events/stream?t='+encodeURIComponent(t.ticket));
+    _push.es=es;
+    es.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,120*1000); } });
+    es.addEventListener('cb', function(ev){ var d={}; try{ d=JSON.parse(ev.data||'{}'); }catch(_){} cbPushArrived(d); });
+    es.onerror=function(){ try{ es.close(); }catch(_){} _push.es=null; _push.up=false;
+      if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,20*1000); }
+      if(!SESSION.token) return; clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); };
+  }).catch(function(){ clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); });
+}
+function cbPushStop(){ clearTimeout(_push.timer); if(_push.es){ try{ _push.es.close(); }catch(_){} } _push.es=null; _push.up=false; }
+/** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
+function cbPushArrived(d){
+  try{ if(typeof loadNotifs==='function') loadNotifs(); }catch(_){}
+  try{
+    var listNav=['task','order','drafts','trash','archive','intake','messages'];
+    if(typeof UI!=='undefined' && listNav.indexOf(UI.nav)>=0 && !(UI.detail||UI.mdetail) && typeof loadList==='function') loadList(true);
+  }catch(_){}
+  try{ if(typeof toast==='function'){ var who=d&&d.who?(' · '+d.who):''; toast((d&&d.kind==='capture')?(tx('New message')+who):(tx('New chit')+who)); } }catch(_){}
+}
+/**
  * ⭐ A REPAINT MUST NOT MOVE THE PAGE. Athi, 2026-09-04: "when I select or unselect, the screen jumps to the top —
  * that is the behaviour I am seeing in many places". A pane painter rebuilds its HTML and the browser hands back a
  * fresh scroll box at 0; the write underneath was fine, the repaint was too broad. scrollKeep() notes every scrolled

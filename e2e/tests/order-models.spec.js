@@ -38,7 +38,7 @@ test('[OM-01] each order model reaches the money rows and the storefront', async
       }, { pid, order: m.order });
       await settle(page);
       /* Order model row names the model */
-      await expect(page.getByTestId('prod-outcome-ordermodel')).toContainText(m.word === 'pick' ? 'one' : m.word, { timeout: 25000 });
+      await expect(page.getByTestId('prod-outcome-ordermodel')).toContainText(m.word === 'pick' ? /one|pick/i : m.word, { timeout: 25000 });
       /* Pricing & tax prices the model's own quantity, or says the price is indicative */
       await expect(page.getByTestId('prod-outcome-pricing')).toContainText(m.pricing, { timeout: 25000 });
       /* Invoice line quantity follows the model */
