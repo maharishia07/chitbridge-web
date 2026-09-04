@@ -140,6 +140,6 @@ test('[CAT-03] a column declared in Setup appears on the product form and round-
     const stored = body && body.item && body.item.item_data && body.item.item_data.fineness;
     expect(stored, 'fineness must be stored as a NUMBER, not the string typed').toBe(995);
     await settle(page);
-    await expect(page.locator('.itab').getByText('995', { exact: true })).toBeVisible();
+    await expect(page.locator('.itab').getByText('995', { exact: true }).first()).toBeVisible({ timeout: 15000 });   /* on the Details outcome line AND in the row */
   });
 });
