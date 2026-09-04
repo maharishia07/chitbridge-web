@@ -14,6 +14,7 @@ test('[TAX-05] two categories with different slabs → first applies, conflict s
     const rice = await mk('Rice ' + Date.now(), 'IN-GST-0');
     const rows = await api('prodList'); const p = rows.find((x) => ((x.item_data || x).name || '') === name);
     await api('prodEdit', { params: { id: p.item_id || p.id }, body: { item_data: Object.assign({}, p.item_data, { categories: [grains, rice] }) } });
+    if (typeof _DEFS !== 'undefined') { delete _DEFS['category']; delete _DEFS['tax']; } UI._face = undefined;   /* created after the page cached them */
     return { grains, rice, pid: p.item_id || p.id };
   }, prod);
 

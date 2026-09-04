@@ -350,7 +350,12 @@ async function addProduct(page, { name, price, desc } = {}) {
     (r) => /\/api\/products(\?|$)/.test(r.url()) && r.request().method() === 'POST',
     { timeout: 45000 });
   await page.getByTestId('cat-add').click();
-  const resp = await saved;
+  /* when the write never comes, say what the FORM saw — its error line, the name it held, its mode — the reason is on
+     the page, not in a 45-second silence (2026-09-05: Save refused in ~half the runs) */
+  const resp = await saved.catch(async (e) => {
+    const why = await page.evaluate(() => ({ err: (document.getElementById('ct_err') || {}).textContent, name: (document.getElementById('ct_name') || document.querySelector('[data-testid="cat-field-name"]') || {}).value, mode: (typeof UI !== 'undefined') ? UI.prodMode : '?', addBtn: !!document.querySelector('[data-testid="cat-add"]'), toast: (document.querySelector('.toast') || {}).textContent })).catch(() => null);
+    throw new Error(e.message + ' FORM ' + JSON.stringify(why));
+  });
   if (resp.status() >= 400) {
     const body = await resp.text().catch(() => '');
     throw new Error('POST /api/products refused ' + resp.status() + ': ' + body.slice(0, 400));
