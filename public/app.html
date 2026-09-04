@@ -9974,7 +9974,7 @@ function prodOutcomeHTML(k, d){
       case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
       case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
       case 'media': { const m=(Array.isArray(d.media)?d.media:[]); const im=m.filter(x=>x.kind==='image').length, vi=m.filter(x=>x.kind==='video').length; if(!m.length) return none(d.image?tx('one picture (by link)'):tx('No pictures — add in Edit')); return `<b>${esc([im?txf('{n} picture(s)',{n:String(im)}):'',vi?txf('{n} video(s)',{n:String(vi)}):''].filter(Boolean).join(' · '))}</b>${d.image?' '+grey(esc(tx('cover set'))):''}`; }
-      case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…'))); return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
+      case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…'))); if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
       case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
     }
   }catch(_){}
@@ -10226,12 +10226,13 @@ function prodShopHandle(){
 }
 function prodStorefrontTab(d){
   const uid=prodShopHandle(); if(uid===null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
-  const url='/shop.html?s='+encodeURIComponent(uid);
+  const id=UI.prodSel||d.item_id||d.id||'';
+  const url='/shop.html?s='+encodeURIComponent(uid); const one=url+'&item='+encodeURIComponent(id);
   const st=d.status||'available';
   return `<div class="sec">${tx('Storefront')}</div>`
     + `<div style="padding:6px 12px;font-size:var(--fs-2)">${st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
-    + `<iframe data-testid="prod-storefront-frame" src="${esc(url)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:100%;height:420px;border:1px solid var(--line);border-radius:9px;background:#fff"></iframe>`
-    + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('The same page a customer opens — the cover picture, the price, the offers in effect, and the order model, from the same rules.')}</div>`;
+    + `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" src="${esc(one)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff"></iframe></div>`
+    + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`;
 }
 function prodBomTab(d){
   const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item);

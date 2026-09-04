@@ -253,7 +253,7 @@ test('the tour', async ({ page }) => {
   await page.evaluate(() => setProdMode('view'));
   await openTab(page, 'storefront');
   await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here with the link — what you see is what they see; a hidden product says why',
-    'View › Storefront', '"Visible · <host>/shop.html?s=<your id>", the storefront framed below with Basmati in it');
+    'View › Storefront', '"Shown · as the customer sees it"; the product itself framed at phone width — the same shop page, opened on this one product');
   await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });
   await expect(page.getByTestId('prod-storefront-frame')).toBeVisible();
   await ok(page, 'the customer view, framed');

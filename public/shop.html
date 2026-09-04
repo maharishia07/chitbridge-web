@@ -56,6 +56,10 @@ var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbrid
  * The server resolves either form (resolveEntity in routes/catalogue.js), so this variable stays the one
  * "who is this shop" value and nothing downstream changes.
  */
+/* ?item=<item_id>: ONE product, as the customer sees it — the product page's Storefront row frames this. Same
+   renderer, same offers, same cart; only the shop header and the rest of the list are left out. Athi, 2026-09-05:
+   "not the entire link — how this product will look in front of the user". */
+var _ONLY = (new URLSearchParams(location.search).get('item') || '').trim();
 var BRIDGE = (new URLSearchParams(location.search).get('s')
            || new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
@@ -453,6 +457,7 @@ function shopPickPaint(listOnly){
 }
 function shopPickSearch(q){ if(_CART) _CART.search(q); shopPickPaint(true); }
 function render(data){
+  if(_ONLY){ data = Object.assign({}, data, { finishes: [], items: (data.items||[]).filter(function(p){ return String(p.item_id||(p.item&&p.item.item_id)||'')===_ONLY; }) }); }
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
   _METHOD=_OI.preset||'cart';
@@ -468,6 +473,7 @@ function render(data){
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
+  if(_ONLY){ el('app').innerHTML = (prods.length ? prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
