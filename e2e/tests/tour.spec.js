@@ -48,7 +48,7 @@ test('the tour', async ({ page }) => {
     return { a: A.id, b: B.id };
   }, [basmati, ponni]);
   const openProduct = async (name) => { await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page); await page.locator('[data-testid^="cat-product-"]', { hasText: name }).first().click(); await settle(page); };
-  const setup = async (sec) => { await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page); await page.evaluate((s) => goCatsetSec(s), sec); await settle(page); };
+  const setup = async (sec) => { await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page); await page.evaluate((s) => goCatsetSec(s), sec); await settle(page); /* the hub may reset to its first section while loading — pick the section in its own list once it is up */ const rowSec = page.getByTestId('catset-sec-' + sec); await expect(rowSec).toBeVisible({ timeout: 25000 }); await rowSec.click(); await settle(page); await page.waitForTimeout(600); };
 
   /* ── 1 · the product page ── */
   await openProduct(basmati);
