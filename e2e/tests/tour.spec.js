@@ -48,7 +48,12 @@ async function step(page, label, fn) {
   await netWatch(page); const t0 = Date.now();
   const r = await Promise.race([fn().then(() => "ok"), new Promise((ok) => setTimeout(() => ok("HUNG"), 60000))]);
   console.log("[tour] step " + label + " → " + r + " " + (Date.now() - t0) + "ms");
-  if (r === "HUNG") throw new Error("STALL at " + label + " · in flight: " + JSON.stringify([..._net.values()]));
+  if (r === "HUNG") {
+    /* the page may be BLOCKED (an infinite loop): pause the debugger over CDP — that works while JS is stuck — and print WHERE, before anything closes */
+    let stack = null;
+    try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); const got = new Promise((ok) => cdp.on("Debugger.paused", (e) => ok(e.callFrames.slice(0, 20).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1))))); await cdp.send("Debugger.pause"); stack = await Promise.race([got, new Promise((ok) => setTimeout(() => ok(["(no pause event in 10 s)"]), 10000))]); console.log("[tour] STACK " + JSON.stringify(stack)); await cdp.send("Debugger.resume").catch(() => {}); } catch (e) { console.log("[tour] STACK unavailable: " + e.message); }
+    throw new Error("STALL at " + label + " · in flight: " + JSON.stringify([..._net.values()]) + " · stack: " + JSON.stringify(stack));
+  }
 }
 async function tc(page, title, testing, steps, expected) {
   caseNo++;
@@ -301,7 +306,7 @@ test('the tour', async ({ page }) => {
     "Edit › Media › choose a picture", "a tile appears at once (saved without the form Save button); View › Media reads \"1 picture · cover set\" — or, where the store is not configured, the API says so and nothing else changes");
   const mediaResp = page.waitForResponse((r) => /\/media$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
   await page.getByTestId('cat-field-media').setInputFiles(MEDIA_PNG);   /* the ONE shared test picture */
-  const mr = await mediaResp;
+  const mr = await step(page, 'media upload response', () => mediaResp);
   if (mr && mr.status() < 400) {
     await expect(page.locator('[data-testid^="prod-media-"]').first()).toBeVisible({ timeout: 25000 });
     await ok(page, 'the picture is on the page; the cover is set');
