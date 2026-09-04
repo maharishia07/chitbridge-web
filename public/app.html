@@ -10451,26 +10451,35 @@ function prodInvoiceModel(d, pos){
     if(slabs===null||cats===null||UI._face===undefined||typeof CBTax==='undefined'||typeof CBTaxSlab==='undefined'){ if(UI._face===undefined && typeof prodFaceEnsure==='function') prodFaceEnsure(); return null; }
     const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] })||{};
     const st=prodSellerState(), S=st||'29', OTHER=(S==='27'?'29':'27');
-    const price=Number(pPrice(d))||0; let off=0, offLabel='';
+    const price=Number(pPrice(d))||0; let off=0, offLabel='', orderAdj=[], notes=[];
+    const om0=prodOrderSample(d); const qty=(UI._invQty&&UI._invQty>0)?UI._invQty:om0.qty;
     try{
+      /* ⭐ THE WHOLE ORDER, NOT ONLY THE LINE. Athi, 2026-09-04: "if the overall invoice > 5000, then additional 2% —
+         how do we set it up and check the invoice in the catalogue?" A threshold offer is ORDER-level: it fires on the
+         order total, so the sample invoice evaluates the line at the sample QUANTITY (the person can change it) and
+         shows the order-level adjustments that fire — and the engine's own shortfall note when they do not
+         ("not yet — ₹4,000 away"). Same engine, same offers, as the cart and the shop. */
       const on=(typeof prodOffersOn==='function')?prodOffersOn(d):[];
       if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
-        const pid=UI.prodSel||d.item_id||d.id||''; const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
-        const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules) }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
+        const pid=UI.prodSel||d.item_id||d.id||''; const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
+        const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules), money:(n)=>fmtMoney(n, (typeof myCur==='function')?myCur():'INR') }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
         off=Math.round((per.off||0)*100)/100; offLabel=per.label||'';
+        (ev.adjustments||[]).forEach(function(a){ if(a.scope==='note'){ notes.push({ label:a.label, why:a.why||'' }); } else if(a.scope!=='line'&&Number(a.amount)){ orderAdj.push({ label:a.label, scope:a.scope, amount:Math.abs(Number(a.amount)), why:a.why||'' }); } });
       }
     }catch(_){ off=0; }
+    const orderOff=orderAdj.reduce(function(s,a){ return s+a.amount; }, 0);
     const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
     const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
-    const om=prodOrderSample(d);
-    const line={ name:pName(d), qty:om.qty, unit_price:price, discount:off*om.qty, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
+    const om=Object.assign({}, om0, { qty });
+    /* a line-scope discount is per unit (× qty); an order-level one is a lump on this single-line sample — both come off before tax */
+    const line={ name:pName(d), qty:om.qty, unit_price:price, discount:off+orderOff, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
     const seller={ State:S, RegType: prodRegType() }; if(!isGST){ delete seller.State; seller.Country=myC; }
     const buyerPos = pos==='other' ? (isGST?OTHER:OTHERC) : (isGST?S:myC);
     const item=CBTax.determine({ seller, buyer:(isGST?{ Pos:buyerPos }:{ Country:buyerPos }), lines:[line] }).ItemList[0]||{};
     const me=UI._me||{}; const cur=(typeof myCur==='function')?myCur():'INR';
     const party=prodPartyEnsure();
     const their=(Array.isArray(d.xref)?d.xref:[]).find(x=>x&&x.role==='buyer'&&x.id);
-    return { item, line, r, off: off*om.qty, offLabel, cur, isGST, scheme, pos, om,
+    return { item, line, r, off, offLabel, orderAdj, orderOff, notes, cur, isGST, scheme, pos, om,
       title: isGST ? tx('Tax invoice') : txf('{s} invoice', { s: scheme }),
       posWord: pos==='other' ? (isGST?tx('other state · IGST'):tx('cross-border')) : (isGST?tx('same state · CGST + SGST'):tx('domestic')),
       seller:{ name: (party&&party.name)||me.display_name||'', trade: (party&&party.trade_name&&party.trade_name!==((party&&party.name)||''))?party.trade_name:'', gstn: (party&&party.gstin)||me.gstn||'', pan: (party&&party.pan)||'',
@@ -10492,9 +10501,11 @@ function prodInvoiceTab(d){
   const cess = Number(it.CesAmt||0);
   const sw=(k,label)=>`<button class="composebtn${pos===k?' on':''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos===k?'font-weight:700;border-color:var(--blue)':''}">${esc(label)}</button>`;
   const today=fmtDateTime(new Date().toISOString()).split(' ')[0];
-  const rows=[[tx('Taxable value'), it.AssAmt]].concat(heads).concat(cess?[[txf('Cess {r}%',{r:String(m.line.cess_rate||0)}), cess]]:[]).concat([[tx('Invoice total'), it.TotItemVal]]);
+  const gross=Number(m.line.unit_price||0)*Number(m.om.qty||1);
+  const rows=[[tx('Gross'), gross]].concat(m.off?[[txf('Line offer{l}', { l: m.offLabel?' · '+m.offLabel:'' }), -m.off]]:[]).concat((m.orderAdj||[]).map(a=>[txf('Order-level · {l}', { l:a.label })+(a.why?' — '+a.why:''), -a.amount])).concat([[tx('Taxable value'), it.AssAmt]]).concat(heads).concat(cess?[[txf('Cess {r}%',{r:String(m.line.cess_rate||0)}), cess]]:[]).concat([[tx('Invoice total'), it.TotItemVal]]);
+  const noteRows=(m.notes||[]).map(n=>`<div data-testid="prod-invoice-note" style="margin-top:6px;color:#7a5a00;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;padding:6px 10px">💡 <b>${esc(n.label)}</b> — ${esc(n.why)}</div>`).join('');
   return `<div class="sec">${tx('Invoice')}</div>`
-    + `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST?tx('Same state'):tx('Domestic'))}${sw('other', m.isGST?tx('Other state'):tx('Cross-border'))}</div>`
+    + `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST?tx('Same state'):tx('Domestic'))}${sw('other', m.isGST?tx('Other state'):tx('Cross-border'))}<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:12px">${tx('Sample quantity')}</span><input type="number" min="1" step="any" class="inp" data-testid="prod-invoice-sample-qty" value="${esc(String(m.om.qty))}" style="width:7ch" onchange="UI._invQty=Math.max(0,parseFloat(this.value)||0)||null; prodRepaintSection('invoice')"></div>`
     + `<div data-testid="prod-invoice" style="margin:6px 12px;background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;max-width:720px;box-shadow:0 1px 3px rgba(0,0,0,.06)">`
     +   `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div data-testid="prod-invoice-supplier"><div style="font-size:16px;font-weight:800">${esc(m.seller.name||tx('Your business'))}</div>${m.seller.trade?'<div style="color:#666">'+esc(tx('trading as')+' '+m.seller.trade)+'</div>':''}${m.seller.gstn?'<div>GSTIN '+esc(m.seller.gstn)+(m.seller.pan?' · PAN '+esc(m.seller.pan):'')+'</div>':''}${m.seller.address?'<div style="color:#666">'+esc(m.seller.address)+'</div>':''}${m.seller.state?'<div style="color:#666">'+esc(m.seller.state)+(m.seller.country?', '+esc(m.seller.country):'')+'</div>':''}${(m.seller.phone||m.seller.email)?'<div style="color:#666">'+esc([m.seller.phone,m.seller.email].filter(Boolean).join(' · '))+'</div>':''}</div>`
     +   `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos==='other'?(m.isGST?tx('other state'):tx('abroad')):(m.isGST?tx('state ')+m.seller.state:tx('domestic')))}</div></div></div>`
@@ -10502,8 +10513,8 @@ function prodInvoiceTab(d){
     +   `<div style="margin:10px 0 8px;padding:8px 10px;background:#fafafa;border-radius:8px"><b>${tx('Bill to')}:</b> ${esc(tx('Your customer'))} <span style="color:#666">· ${esc(m.posWord)}</span>${m.their?' <span style="color:#666">· '+esc(tx('their item code'))+' <b>'+esc(m.their.id)+'</b></span>':''}</div>`
     +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>HSN</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
     +   (m.om.negotiable?`<div data-testid="prod-invoice-negotiable" style="margin:0 0 8px;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">⚖️ ${esc(m.om.note)}</div>`:(m.om.note?`<div data-testid="prod-invoice-model" style="margin:0 0 8px;color:#666">${esc(m.om.note)}</div>`:''))
-    +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td data-testid="prod-invoice-qty">${esc(String(m.om.qty))} ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}${m.om.negotiable?' <small style="color:#7a5a00">'+esc(tx('indicative'))+'</small>':''}</td><td>${m.off?'− '+M(m.off):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
-    +   `<div style="display:flex;justify-content:flex-end;margin-top:10px"><table style="min-width:260px;border-collapse:collapse">${rows.map((x,i)=>'<tr'+(i===rows.length-1?' style="font-weight:800;border-top:1px solid #ddd"':'')+'><td style="padding:3px 8px;color:#444">'+esc(x[0])+'</td><td style="padding:3px 8px;text-align:end" data-testid="'+(i===rows.length-1?'prod-invoice-total':'')+'">'+M(x[1])+'</td></tr>').join('')}</table></div>`
+    +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td data-testid="prod-invoice-qty">${esc(String(m.om.qty))} ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}${m.om.negotiable?' <small style="color:#7a5a00">'+esc(tx('indicative'))+'</small>':''}</td><td data-testid="prod-invoice-discount">${(m.off||m.orderOff)?'− '+M(m.off+m.orderOff):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
+    +   `<div style="display:flex;justify-content:flex-end;margin-top:10px"><table style="min-width:300px;border-collapse:collapse">${rows.map((x,i)=>'<tr'+(i===rows.length-1?' style="font-weight:800;border-top:1px solid #ddd"':'')+'><td style="padding:3px 8px;color:#444">'+esc(x[0])+'</td><td style="padding:3px 8px;text-align:end" data-testid="'+(i===rows.length-1?'prod-invoice-total':'')+'">'+(x[1]<0?'− '+M(-x[1]):M(x[1]))+'</td></tr>').join('')}</table></div>`+noteRows
     +   `<div style="margin-top:10px;color:#666;font-size:11px">${esc(m.r&&m.r.name?txf('Slab: {n}', { n: CBTaxSlab.describe(m.r) }):tx('No slab resolved — 0% shown. Attach one on Pricing & tax.'))} · ${esc(tx('Fields as GST Rule 46 / e-invoice INV-01 name them; a real invoice is numbered when the chit is stamped.'))}</div>`
     + `</div>`;
 }
