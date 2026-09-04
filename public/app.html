@@ -10038,6 +10038,9 @@ function ptabWrap(k,html){
 function setProdTab(k){
   UI.prodTab=k; const dp=document.getElementById('detailpane'); if(!dp) return;
   if(prodLayout()==='page'){
+    /* the pinned index REMEMBERS the row like a click on it does — so Edit › Offers › Cancel comes back to Offers open,
+       not to a sheet with every row shut (OFF-02 caught it, 2026-09-05) */
+    UI._prodOpen=UI._prodOpen||{}; UI._prodOpen[UI.prodSel||'']=k;
     const sec=dp.querySelector('#prodsec-'+k); if(sec){ sec.open=true; sec.scrollIntoView({ behavior:'smooth', block:'start' }); }
   } else {
     Array.prototype.forEach.call(dp.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
