@@ -191,7 +191,7 @@ function _rdExpand(it){
   var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
     return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
-  var ev=_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')
+  var ev=(it.guidance?'<div data-testid="rd-guidance" style="margin:0 0 8px;padding:8px 10px;background:var(--warn-tint);border:1px solid var(--gold-line);border-radius:9px;font-size:var(--fs-2)">● '+esc(it.guidance)+'</div>':'')+_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;

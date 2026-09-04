@@ -187,6 +187,7 @@ async function saveVaultUI(){
      save reads one object rather than scraping ids. That is what makes repeatable sections possible at all: there
      is no stable id to scrape when the same section can exist twice. The server drops empty rows; we send as-is. */
   var vault={sections:_vaultSecs()};
+  UI._party = undefined;   /* the Invoice row's supplier block re-reads after a vault save */
   try{ await api('vaultSave',{body:{vault:vault}}); if(window.CBOffline)CBOffline.clearDraft('app.vault'); if(typeof toast==='function')toast('Vault saved ✓'); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Could not save the vault'; }
 }

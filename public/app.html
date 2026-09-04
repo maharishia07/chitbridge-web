@@ -10039,8 +10039,9 @@ function prodOutcomeHTML(k, d){
       }
       case 'invoice': {
         const m=prodInvoiceModel(d, 'same'); if(!m) return grey(tx('reading…'));
-        if(m.om.negotiable) return `<b>${esc(m.title)}</b> ${grey('· '+esc(tx('at the agreed price'))+' · '+esc(tx('indicative')+' '+fmtMoney(m.item.TotItemVal, m.cur))+' · '+esc(m.posWord))}`;
-        return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for')+' '+(m.om.qty===1?tx('one')+' ':'')+esc(m.om.qty===1?m.om.word:(String(m.om.qty)+' '+(pUnit(d)||tx('units'))))+' · '+esc(m.posWord))}`;
+        const miss=(m.seller.missing&&m.seller.missing.length)?' <span data-testid="prod-invoice-outcome-missing" style="color:var(--warn-3)">● '+esc(txf('{n} supplier field(s) missing', { n:String(m.seller.missing.length) }))+'</span>':'';
+        if(m.om.negotiable) return `<b>${esc(m.title)}</b> ${grey('· '+esc(tx('at the agreed price'))+' · '+esc(tx('indicative')+' '+fmtMoney(m.item.TotItemVal, m.cur))+' · '+esc(m.posWord))}`+miss;
+        return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for')+' '+(m.om.qty===1?tx('one')+' ':'')+esc(m.om.qty===1?m.om.word:(String(m.om.qty)+' '+(pUnit(d)||tx('units'))))+' · '+esc(m.posWord))}`+miss;
       }
       case 'barcode': {
         const ids=prodIdentifiers(d); if(!ids.length) return none(tx('No identifiers — set a code in Edit'));
@@ -10428,6 +10429,15 @@ function prodOrderSample(d){
         : m==='measure' ? (o.step?txf('measured, in steps of {s}', { s:String(o.step) }):tx('measured amount'))
         : m==='pick' ? tx('one or none') : '' };
 }
+/** The supplier block, from /api/governance/profile (invoice_party) — loaded once, repaints the Invoice row on landing. */
+function prodPartyEnsure(){
+  if(UI._party!==undefined) return UI._party;
+  UI._party=null;
+  api('vaultGet').then(function(p){ UI._party=(p&&p.invoice_party)||{ missing:['name'], complete:false }; if(p&&p.vault) UI._vault={ sections:(p.vault.sections)||[] }; })
+    .catch(function(){ UI._party={ missing:[], complete:false, unreadable:true }; })
+    .finally(function(){ if(typeof prodRepaintSection==='function'){ prodRepaintSection('invoice'); } });
+  return null;
+}
 function prodInvoiceModel(d, pos){
   try{
     const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
@@ -10451,11 +10461,15 @@ function prodInvoiceModel(d, pos){
     const buyerPos = pos==='other' ? (isGST?OTHER:OTHERC) : (isGST?S:myC);
     const item=CBTax.determine({ seller, buyer:(isGST?{ Pos:buyerPos }:{ Country:buyerPos }), lines:[line] }).ItemList[0]||{};
     const me=UI._me||{}; const cur=(typeof myCur==='function')?myCur():'INR';
+    const party=prodPartyEnsure();
     const their=(Array.isArray(d.xref)?d.xref:[]).find(x=>x&&x.role==='buyer'&&x.id);
     return { item, line, r, off: off*om.qty, offLabel, cur, isGST, scheme, pos, om,
       title: isGST ? tx('Tax invoice') : txf('{s} invoice', { s: scheme }),
       posWord: pos==='other' ? (isGST?tx('other state · IGST'):tx('cross-border')) : (isGST?tx('same state · CGST + SGST'):tx('domestic')),
-      seller:{ name: me.display_name||'', gstn: me.gstn||'', address: me.address||'', state:S },
+      seller:{ name: (party&&party.name)||me.display_name||'', trade: (party&&party.trade_name&&party.trade_name!==((party&&party.name)||''))?party.trade_name:'', gstn: (party&&party.gstin)||me.gstn||'', pan: (party&&party.pan)||'',
+               address: [ (party&&party.address)||me.address||'', (party&&party.city)||'', (party&&party.pincode)||'' ].filter(Boolean).join(', '), state: (party&&party.state)?party.state+' ('+((party&&party.state_code)||S)+')':S,
+               phone: (party&&party.phone)||me.phone||'', email: (party&&party.email)||me.email||'', country: (party&&party.country)||'',
+               missing: party?(party.missing||[]):null, loading: party===null },
       their };
   }catch(e){ return null; }
 }
@@ -10475,8 +10489,9 @@ function prodInvoiceTab(d){
   return `<div class="sec">${tx('Invoice')}</div>`
     + `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST?tx('Same state'):tx('Domestic'))}${sw('other', m.isGST?tx('Other state'):tx('Cross-border'))}</div>`
     + `<div data-testid="prod-invoice" style="margin:6px 12px;background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;max-width:720px;box-shadow:0 1px 3px rgba(0,0,0,.06)">`
-    +   `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:16px;font-weight:800">${esc(m.seller.name||tx('Your business'))}</div>${m.seller.gstn?'<div>GSTIN '+esc(m.seller.gstn)+'</div>':''}${m.seller.address?'<div style="color:#666">'+esc(m.seller.address)+'</div>':''}</div>`
+    +   `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div data-testid="prod-invoice-supplier"><div style="font-size:16px;font-weight:800">${esc(m.seller.name||tx('Your business'))}</div>${m.seller.trade?'<div style="color:#666">'+esc(tx('trading as')+' '+m.seller.trade)+'</div>':''}${m.seller.gstn?'<div>GSTIN '+esc(m.seller.gstn)+(m.seller.pan?' · PAN '+esc(m.seller.pan):'')+'</div>':''}${m.seller.address?'<div style="color:#666">'+esc(m.seller.address)+'</div>':''}${m.seller.state?'<div style="color:#666">'+esc(m.seller.state)+(m.seller.country?', '+esc(m.seller.country):'')+'</div>':''}${(m.seller.phone||m.seller.email)?'<div style="color:#666">'+esc([m.seller.phone,m.seller.email].filter(Boolean).join(' · '))+'</div>':''}</div>`
     +   `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos==='other'?(m.isGST?tx('other state'):tx('abroad')):(m.isGST?tx('state ')+m.seller.state:tx('domestic')))}</div></div></div>`
+    +   (m.seller.loading?`<div style="margin:8px 0;color:#666">${esc(tx('reading the supplier details…'))}</div>`:(m.seller.missing&&m.seller.missing.length?`<div data-testid="prod-invoice-missing" style="margin:8px 0;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">● ${esc(txf('Missing on the invoice: {m}', { m: m.seller.missing.join(', ') }))} — <a href="#" onclick="UI.profSec='vault'; navTo('profile'); return false;" style="color:#7a5a00;font-weight:700">${esc(tx('Settings › Documents › Business identity'))}</a> · ${esc(tx('also on Trade ready'))}</div>`:''))
     +   `<div style="margin:10px 0 8px;padding:8px 10px;background:#fafafa;border-radius:8px"><b>${tx('Bill to')}:</b> ${esc(tx('Your customer'))} <span style="color:#666">· ${esc(m.posWord)}</span>${m.their?' <span style="color:#666">· '+esc(tx('their item code'))+' <b>'+esc(m.their.id)+'</b></span>':''}</div>`
     +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>HSN</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
     +   (m.om.negotiable?`<div data-testid="prod-invoice-negotiable" style="margin:0 0 8px;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">⚖️ ${esc(m.om.note)}</div>`:(m.om.note?`<div data-testid="prod-invoice-model" style="margin:0 0 8px;color:#666">${esc(m.om.note)}</div>`:''))
