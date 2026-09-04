@@ -9878,7 +9878,7 @@ async function saveAvail(id){
  * product is how a rule stops being one. BOM ("consists of") is not a tab yet — see BACKLOG, the chit-shape
  * decision is open. Publish-on-a-date is the next cut (catalogue_item_version.valid_from).
  */
-const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax'],['bom','Consists of'],['barcode','Barcode']];
+const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax'],['ordermodel','Order model'],['synonyms','Synonyms'],['bom','Consists of'],['barcode','Barcode']];
 function prodTab(){ return UI.prodTab||'product'; }
 function prodTabBar(){
   return `<div class="dtabs" data-testid="prod-tabs">`+PROD_TABS.map(function(t){
@@ -9924,6 +9924,67 @@ function prodVariantsTab(d){
  * components attached, totals untouched — which is the BACKLOG decision "one line with structure attached".
  * The outcome shown: what ONE unit draws down, and what the whole order would, at the quantity typed.
  */
+/**
+ * ⭐ SYNONYMS — the other names this product answers to (buyers' words, regional names, spellings). Athi, 2026-09-05:
+ * "show synonyms this product can carry". View = chips; Edit = one per line. The search box already matches them.
+ */
+function prodSynonymsTab(d, edit){
+  const list=(Array.isArray(d.synonyms)?d.synonyms:[]).map(String).filter(Boolean);
+  if(edit) return `<div class="sec">${tx('Synonyms')}</div>`
+    + `<div style="padding:0 12px"><label class="fl">${tx('Other names this product answers to')}</label>`
+    + `<textarea class="inp" id="ct_synonyms" data-testid="cat-field-synonyms" style="width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);background:var(--paper);color:var(--on-bg)" placeholder="${esc(tx('one per line — e.g. ponni, boiled rice, புழுங்கல் அரிசி'))}">${esc(list.join('\n'))}</textarea>`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A buyer typing any of these in your storefront or in Compose finds this product.')}</div></div>`;
+  return `<div class="sec">${tx('Synonyms')}</div>`
+    + (list.length
+        ? `<div data-testid="prod-synonyms" style="padding:6px 12px;display:flex;gap:6px;flex-wrap:wrap">${list.map(x=>`<span class="pill">${esc(x)}</span>`).join('')}</div>`
+        : `<div data-testid="prod-synonyms" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('None yet — add the words buyers use for this product in Edit › Synonyms.')}</div>`);
+}
+/**
+ * ⭐ ORDER MODEL — how a quantity of this product is counted: whole units, a carton of 6, by the metre, a range, or
+ * "name your price". Athi, 2026-09-05: "next page is for changing order model". The product either adopts a model
+ * authored in Setup › Order models (`order: {ref}`, frozen onto the chit at the mint) or falls to the catalogue's own.
+ * The outcome is shown: what a buyer's typed quantity becomes under the model (the cart's own coerce/next).
+ */
+function prodOrderDecl(d){
+  const o=(d&&d.order&&typeof d.order==='object')?d.order:null;
+  if(!o) return { source:'catalogue', decl:(UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }, ref:null };
+  if(o.ref){ const r=(typeof cbOrderDecl==='function')?cbOrderDecl(o):null; return { source:'adopted', decl:(r&&!r.unresolved)?r:null, ref:o.ref, unresolved:!(r&&!r.unresolved) }; }
+  return { source:'own', decl:o, ref:null };
+}
+function prodOrderPreviewHTML(decl){
+  const M=(typeof CBCart!=='undefined'&&CBCart.models)||{}; const m=M[(decl&&decl.model)||'count']||M.count; if(!m) return '';
+  const tries=[1,5,7,12]; const hint=(m.hint&&m.hint(decl||{}))||'';
+  return `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('If a buyer types'))} ${tries.map(q=>`<b>${q}</b> → <bdi>${esc(String(m.coerce?m.coerce(q,decl||{}):q))}</bdi>`).join(' · ')}${hint?' · '+esc(hint):''}</div>`;
+}
+function prodOrderModelTab(d, edit){
+  const cur=prodOrderDecl(d);
+  const defs=(typeof cbDefsCached==='function')?cbDefsCached('ordermodel'):null;
+  if(defs===null&&typeof cbDefsLive==='function'){ cbDefsLive('ordermodel').then(function(){ if(UI.nav==='catalogue') paintProdDetail(); }).catch(function(){}); }
+  const live=(defs||[]).filter(x=>!x.status||x.status==='live');
+  const nameOf=(ref)=>{ const x=live.find(y=>String(y.definition_id||y.id)===String(ref)); return x?x.name:ref; };
+  const kindWord=(k)=>({ count:tx('whole units'), unit:tx('one at a time'), pack:tx('a pack multiple'), measure:tx('a measured amount'), range:tx('a range'), offer:tx('buyer names the price') }[k]||k);
+  const describe=(decl)=>decl?(kindWord(decl.model)+(decl.step?' · '+tx('step')+' '+decl.step:'')+(decl.min!=null?' · '+tx('min')+' '+decl.min:'')+(decl.max!=null?' · '+tx('max')+' '+decl.max:'')):tx('unknown');
+  if(edit) return `<div class="sec">${tx('Order model')}</div>`
+    + `<div style="padding:0 12px"><label class="fl">${tx('How a quantity is counted')}</label>`
+    + (defs===null ? `<div style="color:var(--grey)">${tx('reading…')}</div>`
+      : `<select class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face&&UI._face.shop&&UI._face.shop.order)||{model:'count'}))} —</option>`
+        + live.map(x=>{ const id=String(x.definition_id||x.id); return `<option value="${esc(id)}"${cur.ref===id?' selected':''}>${esc(x.name)} · ${esc(describe(Object.assign({ model:x.sub_kind }, x.rules||{})))}</option>`; }).join('')
+        + `</select>`)
+    + `<div id="prod_order_preview">${prodOrderPreviewHTML(cur.decl)}</div>`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Authored once in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('ordermodels')">${tx('Catalogue setup › Order models')}</span>; ${tx('a chit freezes the model at the mint.')}</div></div>`;
+  return `<div class="sec">${tx('Order model')}</div>`
+    + `<div class="kv" data-testid="prod-ordermodel" data-source="${esc(cur.source)}" style="padding:8px 12px;font-size:var(--fs-2)">`
+    + (cur.source==='adopted'
+        ? (cur.unresolved ? `⚠️ ${esc(txf('Adopts “{n}”, which cannot be read here — pick another in Edit.', { n: nameOf(cur.ref) }))}` : `<b>${esc(nameOf(cur.ref))}</b> <span style="color:var(--grey)">· ${esc(describe(cur.decl))} · ${tx('adopted from Setup')}</span>`)
+        : cur.source==='own' ? `<b>${esc(describe(cur.decl))}</b> <span style="color:var(--grey)">· ${tx('set on this product')}</span>`
+        : `<b>${esc(describe(cur.decl))}</b> <span style="color:var(--grey)">· ${tx('the catalogue default')}</span>`)
+    + `</div>` + prodOrderPreviewHTML(cur.decl);
+}
+function paintProdOrderPreview(ref){
+  const host=document.getElementById('prod_order_preview'); if(!host) return;
+  const live=(cbDefsCached('ordermodel')||[]); const x=live.find(y=>String(y.definition_id||y.id)===String(ref));
+  host.innerHTML=prodOrderPreviewHTML(x?Object.assign({ model:x.sub_kind }, x.rules||{}):((UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }));
+}
 function prodBomTab(d){
   const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item);
   const nameOf=(ref)=>{ const p=(UI.prods||[]).find(x=>String(x.item_id||x.id)===String(ref)||String(pName(x.item_data||x)||'').toLowerCase()===String(ref).toLowerCase()); return p?pName(p.item_data||p):String(ref); };
@@ -10237,6 +10298,8 @@ function prodDetailHTML(){
       +ptabWrap('stock',prodAvailBlock(d,id))
       +ptabWrap('variants',prodVariantsTab(d))
       +ptabWrap('pricing',prodPricingTab(d))
+      +ptabWrap('ordermodel',prodOrderModelTab(d, true))
+      +ptabWrap('synonyms',prodSynonymsTab(d, true))
       +ptabWrap('bom',prodBomTab(d))
       +ptabWrap('barcode',prodBarcodeTab(d))
       +`<div class="err" id="ct_err" style="margin-top:8px"></div>`;
@@ -10254,6 +10317,8 @@ function prodDetailHTML(){
       + ptabWrap('stock', prodAvailBlock(d,id))
       + ptabWrap('variants', prodVariantsTab(d))
       + ptabWrap('pricing', prodPricingTab(d))
+      + ptabWrap('ordermodel', prodOrderModelTab(d, false))
+      + ptabWrap('synonyms', prodSynonymsTab(d, false))
       + ptabWrap('bom', prodBomTab(d))
       + ptabWrap('barcode', prodBarcodeTab(d));
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
@@ -10285,6 +10350,11 @@ function ctReadForm(orig){
      touched — a column the form did not render (not loaded, or a structured value shown read-only) keeps
      whatever the product had. Blank clears: the person saw the field and emptied it. A number is sent as a
      number when it parses and as typed when it does not, so the server's own rule says why it was refused. */
+  /* the two facet tabs, when their inputs are on screen: synonyms one per line; the order model as {ref} or cleared */
+  const synEl = document.getElementById('ct_synonyms');
+  if (synEl) { const syn = synEl.value.split(/[\n,]/).map(x => x.trim()).filter(Boolean); if (syn.length) base.synonyms = syn; else delete base.synonyms; }
+  const ordEl = document.getElementById('ct_order_ref');
+  if (ordEl) { if (ordEl.value) base.order = { ref: ordEl.value }; else if (base.order && base.order.ref) delete base.order; }
   const decl = document.getElementById('ct_declared');
   if(decl){ Array.prototype.forEach.call(decl.querySelectorAll('input[data-key]'), function(el){
     const k = el.getAttribute('data-key'), raw = (el.value||'').trim();
