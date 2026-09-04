@@ -409,7 +409,7 @@ module.exports = { addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqu
 async function openTab(page, key) {
   const pane = page.getByTestId('prod-pane-' + key);
   for (let i = 0; i < 30; i++) {
-    await page.getByTestId('prod-tab-' + key).click().catch(() => {});
+    await page.getByTestId('prod-tab-' + key).click({ timeout: 1500 }).catch(() => {});
     await page.waitForTimeout(400);
     if (await pane.isVisible().catch(() => false)) return;
   }

@@ -473,38 +473,38 @@
        nothing" IS the outcome being verified, and an empty space there reads as a screen that failed to load. */
     if (!ev.adjustments.length && !ev.notes.length && !(opt.skipped && ev.skipped.length) && !opt.subtotal) return '';
 
+    /* ⭐ A SHEET, NOT PROSE — Athi, 2026-09-05: "difficult to read … show like an excel sheet: listed price, then the
+       discount name, percentage in the next cell, the amount in the next cell, one by one". Three columns everywhere:
+       the step · the detail · the amount. The tax footer under it uses the same cells, so the two read as one sheet. */
+    var td = function (h, extra) { return '<td style="padding:4px 8px;border-top:1px solid var(--line);vertical-align:top;' + (extra || '') + '">' + h + '</td>'; };
+    var amtTd = function (h, bold) { return td('<bdi>' + h + '</bdi>', 'text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;' + (bold ? 'font-weight:700' : '')); };
+    var tr = function (cls, a, b, c, bold) { return '<tr class="' + cls + '">' + td(bold ? '<b>' + a + '</b>' : a) + td(b, 'color:var(--grey)') + amtTd(c, bold) + '</tr>'; };
     var rows = ev.adjustments.map(function (a) {
-      return '<div class="cbcat-offrow"><span class="cbcat-offn">' + esc(a.label) + '</span>'
-        + '<span class="cbcat-offw">' + esc(a.why) + '</span>'
-        + '<span class="cbcat-offa">' + esc(money(ns, a.amount)) + '</span></div>';
+      return tr('cbcat-offrow', esc(a.label), esc(a.why), esc(money(ns, a.amount)));
     }).join('');
     /* ⭐ "You are ₹300 away" is the single most useful thing a cart can say, and the engine already knows it. */
     var notes = ev.notes.map(function (nte) {
-      return '<div class="cbcat-offrow note"><span class="cbcat-offn">' + esc(nte.label) + '</span>'
-        + '<span class="cbcat-offw">' + esc(nte.why) + '</span></div>';
+      return tr('cbcat-offrow note', esc(nte.label), esc(nte.why), '');
     }).join('');
 
     /* ⭐ WHY AN OFFER DID NOT APPLY, in the offer's own words — "an exclusive offer already applied", "expired
        (2026-08-01)", "no line qualifies". This is the half of the breakdown that answers a dispute. */
     var skipped = (opt.skipped ? ev.skipped : []).map(function (s) {
-      return '<div class="cbcat-offrow skip"><span class="cbcat-offn">' + esc(s.label || s.offer_id) + '</span>'
-        + '<span class="cbcat-offw">' + esc(tx('not applied — ') + (s.why || '')) + '</span></div>';
+      return tr('cbcat-offrow skip', esc(s.label || s.offer_id), esc(tx('not applied — ') + (s.why || '')), '—');
     }).join('');
 
     /* ⚠️ THE TEST ID IS OVERRIDABLE because this block now renders on TWO screens at once — a page carrying two
        copies of `cbcat-offers` would make every spec that addresses it ambiguous. */
     return '<div class="cbcat-offers" data-testid="' + esc(opt.testid || 'cbcat-offers') + '">'
       + '<div class="cbcat-offhd">' + esc(opt.head || tx('Offers applied')) + '</div>'
-      + (opt.subtotal
-          ? '<div class="cbcat-offrow"><span class="cbcat-offn">' + tx('Subtotal') + '</span>'
-            + '<span class="cbcat-offw"></span><span class="cbcat-offa plain">' + esc(money(ns, ev.subtotal)) + '</span></div>'
-          : '')
+      + '<table class="cbcat-sheet" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+      + '<thead><tr style="color:var(--grey);font-size:var(--fs-1)"><th style="text-align:start;padding:2px 8px;font-weight:600">' + tx('Step') + '</th><th style="text-align:start;padding:2px 8px;font-weight:600">' + tx('Detail') + '</th><th style="text-align:end;padding:2px 8px;font-weight:600">' + tx('Amount') + '</th></tr></thead><tbody>'
+      + (opt.subtotal ? tr('cbcat-offrow', tx('Listed price'), '', esc(money(ns, ev.subtotal))) : '')
       + rows + notes + skipped
       + (ev.adjustments.length || opt.subtotal
-          ? '<div class="cbcat-offtot"><span>' + tx('After offers') + '</span>'
-            + '<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span></div>'
+          ? '<tr class="cbcat-offtot">' + td('<b>' + tx('After offers') + '</b>') + td('') + amtTd('<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span>', true) + '</tr>'
           : '')
-      + '</div>';
+      + '</tbody></table></div>';
   }
 
   function committedHTML(ns, lines, noteFn, attachFn, chips, offers) {
@@ -579,8 +579,12 @@
    */
   function catgIds(d) {
     var x = d || {};
-    if (Array.isArray(x.categories)) return x.categories.map(String).filter(Boolean);
-    return x.category ? [String(x.category)] : [];
+    var ids = Array.isArray(x.categories) ? x.categories.map(String).filter(Boolean) : (x.category ? [String(x.category)] : []);
+    /* ⭐ WITH THEIR ANCESTORS when the signed-in app is around (core.js catgWithAncestors) — an offer on the parent
+       category reaches the child, as tax does. The public storefront has no core.js and keeps the exact ids until the
+       tree ships in its payload (backlog). Athi, 2026-09-05: the product page said "via category" while its own
+       basket said "no line qualifies" — two readers of one product disagreeing. */
+    return (typeof root.catgWithAncestors === 'function') ? root.catgWithAncestors(ids) : ids;
   }
 
   /**

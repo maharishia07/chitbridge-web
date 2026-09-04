@@ -9378,13 +9378,15 @@ function prodOfferTaxFooterHTML(d, qty, off){
     lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
   const it = one(off);
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
-  const row = (l, v, strong, tid) => `<div${tid ? ' data-testid="' + tid + '"' : ''} style="display:flex;justify-content:space-between;gap:8px${strong ? ';font-weight:700' : ''}"><span style="color:var(--grey)">${l}</span><bdi>${esc(money(v))}</bdi></div>`;
+  /* the same three cells as the offers sheet above: step · detail · amount */
+  const row = (l, v, strong, tid) => `<tr${tid ? ' data-testid="' + tid + '"' : ''}${strong ? ' style="font-weight:700"' : ''}><td style="padding:4px 8px;border-top:1px solid var(--line)">${l}</td><td style="padding:4px 8px;border-top:1px solid var(--line)"></td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums"><bdi>${esc(money(v))}</bdi></td></tr>`;
   return `<div class="prodprev-tax" data-testid="prod-offer-preview-tax-${qty}" data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}" style="border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:var(--fs-2);font-variant-numeric:tabular-nums">`
+    + '<table class="cbcat-sheet" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)"><tbody>'
     + row(tx('Before tax'), it.AssAmt)
     + row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100)
     + row(tx('After tax'), it.TotItemVal, true)
     + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row)
-    + `</div>`;
+    + '</tbody></table></div>';
 }
 /**
  * ⭐ "YOU SAVE" — Athi, 2026-09-04: *"need to show total savings?"* Two honest numbers, not one: what came off the
@@ -9397,6 +9399,8 @@ function prodSavingsRowHTML(off, totalAtList, totalNet, gross, row){
   const allIn = Math.round((totalAtList - totalNet) * 100) / 100;
   const pct = gross > 0 ? Math.round(off / gross * 1000) / 10 : 0;
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
+  /* inside the sheet (row given): one row — You save (pct) · before tax X · all-in Y */
+  if (typeof row === 'function') return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700"><td style="padding:4px 8px;border-top:1px solid var(--line)">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></td><td style="padding:4px 8px;border-top:1px solid var(--line);font-weight:400;color:var(--grey)"><bdi>${esc(money(off))}</bdi> ${tx('before tax')}</td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap"><bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></td></tr>`;
   return `<div data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="display:flex;justify-content:space-between;gap:8px;color:var(--ok-2);font-weight:700;margin-top:4px">`
     + `<span>${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></span>`
     + `<span><bdi>${esc(money(off))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('before tax')}</span> · <bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></span></div>`;
