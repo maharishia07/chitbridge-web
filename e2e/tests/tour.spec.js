@@ -223,6 +223,19 @@ test('the tour', async ({ page }) => {
   await page.getByTestId('prod-tab-lifecycle').click();   /* the parked strip sits in the Lifecycle row */
   await expect(page.getByTestId('prod-scheduled')).toBeVisible({ timeout: 25000 });
   await ok(page, 'parked, live price unchanged');
+  /* ── lifecycle + history ── */
+  await tc(page, 'Lifecycle: the state of this product over time', 'one row for the status (the same four-state flag — never deleted), since when, the last change, and the changes PARKED for a date',
+    'View › Lifecycle', '"Available · since today · 📅 1 change parked"; the row: Status with its meaning and a Change button, Since, Last change, the parked strip with Cancel');
+  await page.getByTestId('prod-tab-lifecycle').click();
+  await expect(page.getByTestId('prod-lifecycle-status')).toContainText('Available', { timeout: 25000 });
+  await expect(page.getByTestId('prod-scheduled')).toBeVisible();
+  await ok(page, 'status · since · last change · the parked change');
+  await tc(page, 'History: every version, and what changed', 'b146 cuts a version whenever name · variant · unit · price · SKU · status changes; the row shows each one, newest first, with the change named and who made it',
+    'View › History', 'v1 "created", later versions with "Price ₹… → ₹…"; a chit cites the version it was made from');
+  await page.getByTestId('prod-tab-history').click();
+  await expect(page.getByTestId('prod-history')).toBeVisible({ timeout: 25000 });
+  await expect(page.locator('[data-testid="prod-history-row"]').first()).toBeVisible();
+  await ok(page, 'the versions, newest first');
 
   /* ── 12 · barcode + BOM ── */
   await page.getByTestId('prod-tab-barcode').click();

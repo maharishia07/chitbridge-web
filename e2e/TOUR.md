@@ -39,3 +39,8 @@ other countries' VAT split (an entity with country DE), the WhatsApp/offline pat
 22 **Storefront: how a customer sees it** — after Profile › Public: THIS product framed at phone width, picture and player under the line.
 23–25 Compose · MIS › Tax · Columns (unchanged).
 `TOUR_FROM=19` replays 1–18 without pauses, then narrates from Media.
+
+## Added 2026-09-04 (night 5)
+17 **Lifecycle** — status with its meaning + Change, Since, Last change, the parked strip (moved here from Details).
+18 **History** — every cut version newest first, what changed (name · variant · unit · price · SKU · status), who.
+Later cases renumbered: 19 Barcode/Identifiers · 20 Consists of · 21 Media · 22 Video link · 23 Storefront gate · 24 Storefront · 25 Compose · 26 MIS › Tax · 27 Columns. `TOUR_FROM=17` starts the narration at Lifecycle.
