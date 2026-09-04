@@ -19,7 +19,7 @@ test('[GOV-01] the override is named on tax; a product can exclude a category of
     await api('prodEdit', { params: { id: pid }, body: { item_data: Object.assign({}, p.item_data, { categories: [cat], tax_slab: slab18 }) } });
     return { slab5, slab18, cat, offer };
   }, { pid });
-  await page.evaluate(async () => { UI._ctOffers = null; await loadCatalogue('fresh'); paintProdList(); paintProdDetail(); });
+  await page.evaluate(async () => { await cbDefsLive('tax', true); await cbDefsLive('category', true); UI._ctOffers = undefined; await new Promise((ok) => ctOffersEnsure(ok)); await loadCatalogue('fresh'); paintProdList(); paintProdDetail(); });   /* definitions were made outside the screen (null = in flight for offers; undefined = reload) */
   await settle(page);
 
   await test.step('TAX — the product\'s 18% names the category\'s 5% as the override', async () => {

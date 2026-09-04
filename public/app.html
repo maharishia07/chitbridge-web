@@ -9996,14 +9996,14 @@ function prodOutcomeHTML(k, d){
         const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
         if(slabs===null||cats===null||UI._face===undefined) return grey(tx('reading…'));
         const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] });
+        /* UNKNOWN ≠ NOT ACTIVE (same rule as the category chip): a slab cited but absent from this cache is re-read ONCE before the verdict */
+        if(r.unresolved && r.cited && !(UI._slabAsked||{})[r.cited] && typeof cbDefsLive==='function'){ UI._slabAsked=UI._slabAsked||{}; UI._slabAsked[r.cited]=1; cbDefsLive('tax', true).then(function(){ if(UI.nav==='catalogue'){ paintProdList(); prodRepaintSection('pricing'); prodRepaintSection('invoice'); const oc=document.querySelector('[data-testid="prod-outcome-pricing"]'); if(oc&&UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('pricing', UI._prodSheetD)||''; } }); return grey(tx('checking the slab…')); }
         if(r.rate==null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
         const price=Number(pPrice(d))||0, st=prodSellerState()||'29';
         const it=CBTax.determine({ seller:{ State:st, RegType: prodRegType() }, buyer:{ Pos:st }, lines:[{ name:pName(d), qty:1, unit_price:price, rate:r.rate, cess_rate:r.cess||0 }] }).ItemList[0];
         const dead=!!(r.unresolved&&r.cited), clash=Array.isArray(r.conflict)&&r.conflict.length>1;
         const dot=(dead||clash)?'<span style="color:var(--warn-3)">● </span>':'';
         const prov=r.source==='product'?'':(r.source==='category'?' '+grey('↳ '+esc(tx('from category')+' '+(r.via_category_name||''))+(r.inherited_from?esc(' ↳ '+r.inherited_from):'')):' '+grey('↳ '+esc(tx('catalogue default'))));
-        /* UNKNOWN ≠ NOT ACTIVE (same rule as the category chip): a slab cited but absent from this cache is re-read ONCE before the verdict */
-        if(dead && r.cited && !(UI._slabAsked||{})[r.cited] && typeof cbDefsLive==='function'){ UI._slabAsked=UI._slabAsked||{}; UI._slabAsked[r.cited]=1; cbDefsLive('tax', true).then(function(){ if(UI.nav==='catalogue'){ paintProdList(); prodRepaintSection('pricing'); prodRepaintSection('invoice'); const oc=document.querySelector('[data-testid="prod-outcome-pricing"]'); if(oc&&UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('pricing', UI._prodSheetD)||''; } }); return grey(tx('checking the slab…')); }
         const warnTxt=dead?' · '+esc(tx('slab not active')):clash?' · '+esc(tx('categories disagree — resolve in Categories'))+' ('+esc(r.conflict.map(h=>(h.rate==null?'?':h.rate+'%')).join('/'))+')':'';
         return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'') + prodTaxOverrideNote(d, r, slabs, cats);
       }
