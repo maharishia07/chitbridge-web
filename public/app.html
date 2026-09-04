@@ -5377,6 +5377,10 @@ async function ccLoadOffers(){
       return defToOffer(d);
     });
   } catch (e) { CC.offers = []; }
+  /* ⚠️ THE OFFERS LAND AFTER THE SCREEN OPENS — a line typed before they arrive was never re-evaluated, so its offer
+     stayed unmarked until the next edit (the tour's fast run caught it, 2026-09-05; a fast typist hits the same).
+     Re-run the basket once the list is here. */
+  try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {}
   /* The category shelf, on the same trip and with the same tolerance for failure — it labels the chips above the
      product list. Its own cache means the item form does not fetch it a second time. */
   try { await cbCatgLive(); if(UI._ccCart) UI._ccCart.paintCategories(); } catch (e) {}
