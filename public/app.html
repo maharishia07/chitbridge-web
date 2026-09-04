@@ -9301,14 +9301,16 @@ function ctOfferField(d){
         /* an offer that reaches this product THROUGH A CATEGORY is shown as inherited — like tax — not as a tick to flip */
         const via = (offersForProduct(d, pid).find(function (x) { return x.id === o.id && x._via; }) || {})._via;
         const excluded = prodOfferExcluded(d).indexOf(String(o.id)) >= 0;
-        if (via && !on) return '<span class="ctcatg' + (excluded ? '' : ' on') + '" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" data-excluded="' + (excluded ? '1' : '0') + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">' + (excluded ? '✕ ' : '✓ ') + esc(o.name)
+        /* an offer that names NO target applies everywhere; here the tick means 'limit it to this product' — a real act, so it stays a button */
+        const everywhere = via === tx('whole catalogue');
+        if (via && !on && !everywhere) return '<span class="ctcatg' + (excluded ? '' : ' on') + '" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" data-excluded="' + (excluded ? '1' : '0') + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">' + (excluded ? '✕ ' : '✓ ') + esc(o.name)
           + ' <button type="button" data-testid="cat-offer-exclude-' + esc(o.id) + '" onclick="prodOfferExcludeToggle(\'' + esc(pid) + '\',\'' + esc(o.id) + '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;padding:0 6px">' + (excluded ? esc(tx('include')) : esc(tx('exclude'))) + '</button>'
           + ' <span style="font-weight:400;color:var(--grey)">' + esc(tx('via category') + ' ' + via) + '</span></span>';
         return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '"'
           + ' data-testid="cat-offer-' + esc(o.id) + '"'
           + ' title="' + esc(terms + (win ? ' · ' + win : '')) + '"'
           + ' onclick="ctToggleOffer(\'' + esc(o.id) + '\', this)">'
-          + (on ? '✓ ' : '') + esc(o.name)
+          + (on ? '✓ ' : '') + esc(o.name) + (everywhere && !on ? ' <span style="font-size:var(--fs-1);color:var(--grey)">· ' + esc(tx('everywhere — tick to limit it to this product')) + '</span>' : '')
           + '<span style="font-weight:400;opacity:.75"> · ' + esc(terms) + '</span></button>';
       }).join('')
     + '</div>'
