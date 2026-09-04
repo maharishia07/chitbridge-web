@@ -493,8 +493,8 @@ function shopOffersSync(){
   _offersSyncing = true; try { shopOffersSyncNow(); } finally { _offersSyncing = false; }
 }
 function shopOffersSyncNow(){
-  var offers=_shopOffers(); if(!offers.length) return;
-  var ctx=_shopCtx();
+  var offers=_shopOffers(); var ctx=_shopCtx();
+  if(!offers.length){ shopBasketSummary(); return; }
   /* 1 · each row as a basket of one → the offered unit price on the row */
   (_SHOPDATA.items||[]).forEach(function(p){
     var line=_lineOf(p,1); if(!isFinite(line.unitPrice)||line.unitPrice<=0) return;
@@ -505,15 +505,37 @@ function shopOffersSyncNow(){
     }catch(e){}
   });
   /* 2 · the whole basket → adjustments, notes, total */
-  var picked=_CART.selected(); var host=el('p_offers'); if(!host) return;
+  shopBasketSummary();
+}
+/**
+ * ⭐ THE BASKET, ALL-IN: offers (line and order level), the notes, then the TAX each line resolves to (the payload's
+ * `tax` per item — same resolver as the invoice), on the after-offers figure, grouped by rate, then the total the
+ * customer pays. Athi, 2026-09-04: "it is not showing the tax to be applied". Shown with or without offers.
+ */
+function shopBasketSummary(){
+  var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
+  var offers=_shopOffers(); var ctx=_shopCtx();
   var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); l.unitPrice=cbAmount(p.price); return l; });
   try{
-    var ev2=CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx });
+    var gross=lines.reduce(function(s,l){ return s+l.unitPrice*l.qty; },0);
+    var ev2=(offers.length&&typeof CBOffers!=='undefined')?CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx }):{ adjustments:[], notes:[], subtotal:gross, total:gross };
+    /* per-line net after ALL offers: line-scope off per line, order-level off spread by gross share; then tax by each line's own rate */
+    var per=(offers.length&&typeof CBOffers!=='undefined'&&CBOffers.perLine)?(CBOffers.perLine(ev2, lines)||{}):{};
+    var orderOff=(ev2.adjustments||[]).filter(function(a){ return a.scope!=='line'&&a.scope!=='note'; }).reduce(function(s,a){ return s+Math.abs(Number(a.amount)||0); },0);
+    var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
+    var byRate={}, taxTotal=0, untaxed=0;
+    lines.forEach(function(l,i){ var g=l.unitPrice*l.qty; var off=((per[String(i)]||per[l.key]||{}).off)||0; var net=Math.max(0, g-off-(gross>0?orderOff*g/gross:0)); var t=(byId[String(l.item_id)]||{}).tax; if(t&&t.rate!=null){ var tax=Math.round(net*(Number(t.rate)+Number(t.cess||0)))/100; var key=(t.scheme||'GST')+' '+t.rate+'%'+(t.cess?' + '+t.cess+'% cess':''); byRate[key]=(byRate[key]||0)+tax; taxTotal+=tax; } else { untaxed+=net; } });
     var rows=(ev2.adjustments||[]).map(function(a){ return '<div style="display:flex;justify-content:space-between;gap:8px"><span>🏷️ '+esc(a.label||a.kind)+(a.scope&&a.scope!=='line'?' <small style="opacity:.7">'+esc(a.scope)+'</small>':'')+'</span><b style="color:#c0392b">− '+esc(ctx.money(Math.abs(a.amount||0)))+'</b></div>'; }).join('');
-    var notes=(ev2.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.text||n.label||'')+'</div>'; }).join('');
-    host.innerHTML = (rows||notes) ? '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'+rows+notes
-      + (rows ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total after offers</span><b>'+esc(ctx.money(ev2.total))+'</b></div>' : '')+'</div>' : '';
+    var notes=(ev2.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.why||n.text||n.label||'')+'</div>'; }).join('');
+    var taxRows=Object.keys(byRate).map(function(k){ return '<div data-testid="shop-tax" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>'+esc(k)+'</span><span>'+esc(ctx.money(byRate[k]))+'</span></div>'; }).join('')
+      + (untaxed>0&&Object.keys(byRate).length?'<div style="opacity:.6;font-size:12px">'+esc('no tax slab resolves for '+ctx.money(untaxed)+' of this basket')+'</div>':'');
+    host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'
+      + ((rows||notes) ? rows+notes+'<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>'+esc(ctx.money(ev2.total))+'</b></div>' : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>'+esc(ctx.money(ev2.total))+'</b></div>')
+      + taxRows
+      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="shop-total">'+esc(ctx.money(Math.round((ev2.total+taxTotal)*100)/100))+'</b></div>'
+      + '</div>';
+    return;
   }catch(e){ host.innerHTML=''; }
 }
 function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }

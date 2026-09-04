@@ -10342,7 +10342,8 @@ async function prodMediaRemove(id, mid){
  */
 function prodShopHandle(){
   const me = UI._me; if(me && (me.user_id||me.bridge_id)) return me.user_id||me.bridge_id;
-  if(!UI._meReq && typeof meTake==='function'){ UI._meReq = Promise.resolve().then(meTake).then(function(e){ if(e) UI._me=e; }).catch(function(){}).finally(function(){ UI._meReq=null; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); } }); }
+  /* the LIGHT read: /entities/me without includes (readiness alone costs 6 s across the continent — Athi, 2026-09-04: "very slow, always reading") */
+  if(!UI._meReq){ UI._meReq = api('me').then(function(r){ const e=(r&&r.entity)||r; if(e) UI._me=Object.assign({}, UI._me||{}, e); }).catch(function(){}).finally(function(){ UI._meReq=null; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); prodRepaintSection('invoice'); } }); }
   return null;
 }
 /** The catalogue's own gate (b114 catalogue_visibility) — a private catalogue has no storefront, whatever the product says. */
