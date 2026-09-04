@@ -9986,10 +9986,11 @@ function prodOutcomeHTML(k, d){
       }
       case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('Not categorised — set in Categories')); }
       case 'offers': {
-        const on=offersForProduct(d, id);
+        /* View shows what APPLIES: an offer this product has excluded is counted, not listed */
+        const all=offersForProduct(d, id), on=all.filter(function(o){ return !o._excluded; }), nEx=all.length-on.length;
         if(!Array.isArray(UI._ctOffers)) return grey(tx('reading…'));
-        if(!on.length) return none(tx('No offers — create in Offers'));
-        return on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
+        if(!on.length) return nEx?grey(txf('{n} category offer(s) excluded here', { n:String(nEx) })):none(tx('No offers — create in Offers'));
+        return (nEx?'<span data-testid="prod-offers-excluded" style="color:var(--grey)">'+esc(txf('{n} excluded', { n:String(nEx) }))+' · </span>':'')+on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
           return `<div><b>${esc(o.name)}</b> ${grey(esc(t)+(sc?' · '+esc(tx(sc)):''))}${ts==='scheduled'?' <span style="color:var(--blue)">📅 '+esc(tx('from')+' '+((o.rules||{}).valid_from||''))+'</span>':''}${o._via?' '+grey('↳ '+esc(tx('from category')+' '+o._via)):''}</div>`; }).join('');
       }
       case 'pricing': {
