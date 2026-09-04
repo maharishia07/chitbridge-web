@@ -706,6 +706,12 @@
     return ' <span style="color:#8a949c;font-size:var(--fs-1)">· ' + esc(h) + '</span>';
   }
 
+  /* rowExtra — HTML the owning page adds UNDER a line (the storefront puts the product's pictures and video there).
+     Optional, never throws: a gallery that fails must not take the price with it. */
+  function rowExtra(ns, r) {
+    var f = opt(ns, 'rowExtra', null); if (typeof f !== 'function') return '';
+    try { return f(r.item, r) || ''; } catch (_) { return ''; }
+  }
   function listHTML(ns) {
     var s = C[ns]; if (!s) return '';
     var rs = rows(ns), a = accent(ns);
@@ -750,7 +756,7 @@
         // The line's own total, only once there is a quantity to multiply by — a price × 1 restated is noise.
         + (q && isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')
         + hintHTML(ns, r) + availHTML(ns, r)
-        + '</div></span>' + stepperHTML(ns, r.item_id, q) + '</div>';
+        + '</div></span>' + stepperHTML(ns, r.item_id, q) + '</div>' + rowExtra(ns, r);
     }).join('');
   }
 

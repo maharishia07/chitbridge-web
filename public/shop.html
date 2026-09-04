@@ -428,13 +428,14 @@ function productListHtml(data, cur){
   _CART = CBCart.create(data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
-    listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); } });
+    listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
+    rowExtra:function(it){ return productMedia(it); } });   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
     + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
     + '<div id="p_cart">' + shopCartBarHtml() + '</div>'
-    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>'+productMedia(p);
+    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
 }
 /* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
    keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette

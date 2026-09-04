@@ -273,7 +273,7 @@ test('the tour', async ({ page }) => {
   await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });
   await expect(page.getByTestId('prod-storefront-frame')).toBeVisible();
   const frame = page.frameLocator('[data-testid="prod-storefront-frame"]');
-  await expect(frame.locator('.prow').first()).toBeVisible({ timeout: 30000 });
+  await expect(frame.locator('#p_list').getByText('Basmati 25kg').first()).toBeVisible({ timeout: 30000 });
   await expect(frame.locator('[data-testid="prod-media"]').first()).toBeVisible({ timeout: 30000 });
   await ok(page, 'the customer view: the product, its picture and its video, framed at phone width');
 
