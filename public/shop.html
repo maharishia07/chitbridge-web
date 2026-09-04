@@ -62,6 +62,10 @@ var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbrid
    renderer, same offers, same cart; only the shop header and the rest of the list are left out. Athi, 2026-09-05:
    "not the entire link — how this product will look in front of the user". */
 var _ONLY = (new URLSearchParams(location.search).get('item') || '').trim();
+/* ?preview=1: the OWNER looking at their own shop from the product page. The frame is same-origin with the app, so the
+   session is in localStorage; it goes as a bearer and the API lets the owner through a private gate (preview:true). */
+var _PREVIEW = (new URLSearchParams(location.search).get('preview') || '') === '1';
+function _ownerToken(){ try { var s = JSON.parse(localStorage.getItem('cb_sess') || 'null'); return (s && s.token) || null; } catch (e) { return null; } }
 var BRIDGE = (new URLSearchParams(location.search).get('s')
            || new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
@@ -478,7 +482,8 @@ function render(data){
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
-  if(_ONLY){ el('app').innerHTML = (prods.length ? prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
+  var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
+  if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
@@ -842,7 +847,7 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
   // load the region layers first (for the spin-the-globe switcher), then the shop
   fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
-    fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+    fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), _PREVIEW && _ownerToken() ? { headers: { Authorization: 'Bearer ' + _ownerToken() } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
       .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
       .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
   });
