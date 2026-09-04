@@ -9968,7 +9968,7 @@ function prodOrderModelTab(d, edit){
     + `<div style="padding:0 12px"><label class="fl">${tx('How a quantity is counted')}</label>`
     + (defs===null ? `<div style="color:var(--grey)">${tx('reading…')}</div>`
       : `<select class="inp" id="ct_order_ref" data-testid="cat-field-ordermodel" onchange="paintProdOrderPreview(this.value)" style="width:100%"><option value="">— ${esc(tx('catalogue default'))} · ${esc(describe((UI._face&&UI._face.shop&&UI._face.shop.order)||{model:'count'}))} —</option>`
-        + live.map(x=>{ const id=String(x.definition_id||x.id); return `<option value="${esc(id)}"${cur.ref===id?' selected':''}>${esc(x.name)} · ${esc(describe(Object.assign({ model:x.sub_kind }, x.rules||{})))}</option>`; }).join('')
+        + live.map(x=>{ const id=String(x.definition_id||x.id); return `<option value="${esc(id)}"${cur.ref===id?' selected':''}>${esc(x.name)} · ${esc(describe(Object.assign({ model:(x.sub_kind||x.sub) }, x.rules||{})))}</option>`; }).join('')
         + `</select>`)
     + `<div id="prod_order_preview">${prodOrderPreviewHTML(cur.decl)}</div>`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Authored once in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('ordermodels')">${tx('Catalogue setup › Order models')}</span>; ${tx('a chit freezes the model at the mint.')}</div></div>`;
@@ -9983,7 +9983,7 @@ function prodOrderModelTab(d, edit){
 function paintProdOrderPreview(ref){
   const host=document.getElementById('prod_order_preview'); if(!host) return;
   const live=(cbDefsCached('ordermodel')||[]); const x=live.find(y=>String(y.definition_id||y.id)===String(ref));
-  host.innerHTML=prodOrderPreviewHTML(x?Object.assign({ model:x.sub_kind }, x.rules||{}):((UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }));
+  host.innerHTML=prodOrderPreviewHTML(x?Object.assign({ model:(x.sub_kind||x.sub) }, x.rules||{}):((UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }));
 }
 function prodBomTab(d){
   const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item);
