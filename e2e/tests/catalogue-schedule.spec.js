@@ -38,7 +38,7 @@ test('[CAT-04] a future price is parked, shown beside the live one, cancellable;
   await test.step('a change whose moment has PASSED lands on the next catalogue read', async () => {
     const r = await page.evaluate(async (id) => api('prodSchedule', { params: { id }, body: { effective_at: new Date(Date.now() - 60000).toISOString(), item_data: { price: 1300 } } }), id);
     expect(r && r.scheduled, JSON.stringify(r).slice(0, 200)).toBeTruthy();
-    await clickNav(page, 'home'); await settle(page);
+    await clickNav(page, 'mis'); await settle(page);   /* leave the catalogue so the next open is a fresh list read */
     await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
     await page.locator('[data-testid^="cat-product-"]', { hasText: prod }).first().click();
     await expect(page.getByTestId('cat-view-price')).toContainText('1,300', { timeout: 25000 });
