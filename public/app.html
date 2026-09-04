@@ -9900,11 +9900,57 @@ function prodTabBar(){
     + `<button type="button" data-testid="prod-layout-toggle" title="${esc(page?tx('Show one section at a time'):tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page?'tabs':'page'}')">${page?'▤ '+tx('Tabs'):'☰ '+tx('Page')}</button>`
     + `</div>`;
 }
+/**
+ * ⭐⭐ THE FACT SHEET — Athi, 2026-09-05: "only the result is required: category → the names attached, offer → the offer
+ * names, tax → the slab; each one and its outcome only, not the entire page". One line per section: the label and its
+ * OUTCOME; the detailed pane (the tax sheet, the cart breakdown …) opens only when the line is opened. In Edit every
+ * section is open so the inputs are on screen. Testids unchanged: the line is `prod-pane-<k>`, the index `prod-tab-<k>`.
+ */
+function prodOutcomeHTML(k, d){
+  const id=UI.prodSel||d.item_id||d.id||'';
+  const grey=(t)=>`<span style="color:var(--grey)">${t}</span>`;
+  const none=(t)=>`<span style="color:var(--grey)">${esc(t)}</span>`;
+  try{
+    switch(k){
+      case 'product': return grey(esc(pDesc(d)||'')) || none(tx('no description'));
+      case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('none — attach in Edit › Categories')); }
+      case 'offers': {
+        const on=offersForProduct(d, id);
+        if(!Array.isArray(UI._ctOffers)) return grey(tx('reading…'));
+        if(!on.length) return none(tx('none'));
+        return on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
+          return `<div><b>${esc(o.name)}</b> ${grey(esc(t)+(sc?' · '+esc(tx(sc)):''))}${ts==='scheduled'?' <span style="color:var(--blue)">📅 '+esc(tx('from')+' '+((o.rules||{}).valid_from||''))+'</span>':''}${o._via?' '+grey(esc(tx('via category')+' '+o._via)):''}</div>`; }).join('');
+      }
+      case 'pricing': {
+        const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
+        if(slabs===null||cats===null||UI._face===undefined) return grey(tx('reading…'));
+        const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] });
+        if(r.rate==null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
+        const price=Number(pPrice(d))||0, st=prodSellerState()||'29';
+        const it=CBTax.determine({ seller:{ State:st, RegType: prodRegType() }, buyer:{ Pos:st }, lines:[{ name:pName(d), qty:1, unit_price:price, rate:r.rate, cess_rate:r.cess||0 }] }).ItemList[0];
+        const warn=(r.unresolved&&r.cited)||(Array.isArray(r.conflict)&&r.conflict.length>1);
+        return `<b>${esc(r.name||('GST '+r.rate+'%'))} · ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b> ${grey(esc(r.source==='product'?tx('on this product'):r.source==='category'?tx('from category')+' '+(r.via_category_name||'')+(r.inherited_from?' ('+tx('inherits')+' '+r.inherited_from+')':''):tx('catalogue default')))}`
+          + ` · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>` + (warn?` <span style="color:var(--warn-3)">⚠️ ${esc(CBTaxSlab.describe(r))}</span>`:'');
+      }
+      case 'stock': { const st=d.status||'available'; const q=(d.qty!=null&&d.qty!=='')?d.qty:(d.stock!=null?d.stock:null); return `<b>${esc(tx(st==='available'?'available':st))}</b>${q!=null?' · '+grey(esc(tx('qty')+' '+q)):''}`; }
+      case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none('—');
+      case 'ordermodel': { const c=prodOrderDecl(d); if(c.unresolved) return `<span style="color:var(--warn-3)">⚠️ ${esc(tx('adopts a model that cannot be read here'))}</span>`; return `<b>${esc(c.decl&&c.decl.name?c.decl.name:prodOrderDescribe(c.decl))}</b> ${grey(esc((c.decl&&c.decl.name?prodOrderDescribe(c.decl)+' · ':'')+(c.source==='adopted'?tx('adopted from Setup'):c.source==='own'?tx('set on this product'):tx('the catalogue default'))))}`; }
+      case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('none')); }
+      case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('none')); }
+      case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<code>${esc(code)}</code> ${grey(tx('Code 128'))}`:none(tx('no code yet')); }
+    }
+  }catch(_){}
+  return '';
+}
 function ptabWrap(k,html){
   if(prodLayout()==='page'){
     const t=(PROD_TABS.find(x=>x[0]===k)||[k,k])[1];
-    return `<div class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}" style="border-top:1px solid var(--line);margin-top:10px;padding-top:6px;scroll-margin-top:8px">`
-      + `<div class="ptab-h" style="font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey);padding:0 12px 2px">${tx(t)}</div>${html}</div>`;
+    const d=UI._prodSheetD||{}; const edit=UI.prodMode==='edit'||UI.prodMode==='new';
+    const open=edit||prodTab()===k;
+    return `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open?' open':''} style="border-top:1px solid var(--line);scroll-margin-top:8px"${edit?'':` ontoggle="if(this.open){UI.prodTab='${k}';if('${k}'==='pricing'&&typeof prodPricingLoad==='function')prodPricingLoad();}"`}>`
+      + `<summary style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:baseline;padding:8px 12px;cursor:pointer;list-style:none"><span style="font-size:var(--fs-1);letter-spacing:.04em;text-transform:uppercase;color:var(--grey)">${tx(t)}</span><span data-testid="prod-outcome-${k}" style="font-size:var(--fs-2)">${edit?grey(tx('editing below')):(prodOutcomeHTML(k,d)||'')}</span></summary>`
+      + `<div style="padding-bottom:6px">${html}</div></details>`;
+    function grey(x){ return '<span style="color:var(--grey)">'+x+'</span>'; }
   }
   return `<div class="ptab" data-tab="${k}" data-testid="prod-pane-${k}"${prodTab()===k?'':' style="display:none"'}>${html}</div>`;
 }
@@ -9913,7 +9959,7 @@ function ptabWrap(k,html){
 function setProdTab(k){
   UI.prodTab=k; const dp=document.getElementById('detailpane'); if(!dp) return;
   if(prodLayout()==='page'){
-    const sec=dp.querySelector('#prodsec-'+k); if(sec) sec.scrollIntoView({ behavior:'smooth', block:'start' });
+    const sec=dp.querySelector('#prodsec-'+k); if(sec){ sec.open=true; sec.scrollIntoView({ behavior:'smooth', block:'start' }); }
   } else {
     Array.prototype.forEach.call(dp.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
   }
@@ -9984,14 +10030,15 @@ function prodOrderPreviewHTML(decl){
   const tries=[1,5,7,12]; const hint=(m.hint&&m.hint(decl||{}))||'';
   return `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('If a buyer types'))} ${tries.map(q=>`<b>${q}</b> → <bdi>${esc(String(m.coerce?m.coerce(q,decl||{}):q))}</bdi>`).join(' · ')}${hint?' · '+esc(hint):''}</div>`;
 }
+function prodOrderKindWord(k){ return ({ count:tx('whole units'), unit:tx('one at a time'), pack:tx('a pack multiple'), measure:tx('a measured amount'), range:tx('a range'), offer:tx('buyer names the price') })[k]||k; }
+function prodOrderDescribe(decl){ return decl?(prodOrderKindWord(decl.model)+(decl.step?' · '+tx('step')+' '+decl.step:'')+(decl.min!=null?' · '+tx('min')+' '+decl.min:'')+(decl.max!=null?' · '+tx('max')+' '+decl.max:'')):tx('unknown'); }
 function prodOrderModelTab(d, edit){
   const cur=prodOrderDecl(d);
   const defs=(typeof cbDefsCached==='function')?cbDefsCached('ordermodel'):null;
   if(defs===null&&typeof cbDefsLive==='function'){ cbDefsLive('ordermodel').then(function(){ if(UI.nav==='catalogue') paintProdDetail(); }).catch(function(){}); }
   const live=(defs||[]).filter(x=>!x.status||x.status==='live');
   const nameOf=(ref)=>{ const x=live.find(y=>String(y.definition_id||y.id)===String(ref)); return x?x.name:ref; };
-  const kindWord=(k)=>({ count:tx('whole units'), unit:tx('one at a time'), pack:tx('a pack multiple'), measure:tx('a measured amount'), range:tx('a range'), offer:tx('buyer names the price') }[k]||k);
-  const describe=(decl)=>decl?(kindWord(decl.model)+(decl.step?' · '+tx('step')+' '+decl.step:'')+(decl.min!=null?' · '+tx('min')+' '+decl.min:'')+(decl.max!=null?' · '+tx('max')+' '+decl.max:'')):tx('unknown');
+  const kindWord=prodOrderKindWord, describe=prodOrderDescribe;
   if(edit) return `<div class="sec">${tx('Order model')}</div>`
     + `<div style="padding:0 12px"><label class="fl">${tx('How a quantity is counted')}</label>`
     + (defs===null ? `<div style="color:var(--grey)">${tx('reading…')}</div>`
@@ -10337,6 +10384,7 @@ function prodDetailHTML(){
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price"><bdi>${inr(pPrice(d))}</bdi> / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
+  UI._prodSheetD = d;   /* the fact sheet's wrappers read the product from here */
   let body, bar;
   if(UI.prodMode==='edit'){
     body=ptabWrap('product',`<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`)
