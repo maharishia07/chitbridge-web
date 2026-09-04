@@ -399,7 +399,22 @@ async function addCoassist(page, { name, key } = {}) {
   return { name, key };
 }
 
-module.exports = { addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+/** ⭐ THE ONE TEST PICTURE AND THE ONE TEST VIDEO — every spec and the tour reuse these; never generate another. */
+const MEDIA_PNG = require('path').join(__dirname, 'assets', 'test-picture.png');
+const MEDIA_VIDEO = 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';   /* Big Buck Bunny — Blender Foundation, CC-BY */
+/** addMedia(page, itemId, { picture:true, video:true }) — through the API, as the Media row does. */
+async function addMedia(page, itemId, o) {
+  o = o || { picture: true, video: true };
+  const b64 = o.picture ? require('fs').readFileSync(MEDIA_PNG).toString('base64') : null;
+  return page.evaluate(async ({ id, b64, video }) => {
+    const out = {};
+    if (b64) { try { out.picture = await api('prodMediaAdd', { params: { id }, body: { name: 'test-picture.png', mime: 'image/png', data_base64: b64 } }); } catch (e) { out.pictureError = String(e && e.message); } }
+    if (video) { out.video = await api('prodMediaAdd', { params: { id }, body: { url: video } }); }
+    return out;
+  }, { id: itemId, b64, video: o.video ? MEDIA_VIDEO : null });
+}
+module.exports = {
+  MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
 
 /**
  * openTab(page, key) — click a product-page tab and WAIT for its pane. The Edit view repaints twice (once at once, once

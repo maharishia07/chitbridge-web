@@ -5,7 +5,8 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
-const FROM = Number(process.env.TOUR_FROM || 1);   /* TOUR_FROM=11: earlier cases still run (their data is needed) but without pauses */
+const FROM = Number(process.env.TOUR_FROM || 1);
+const { MEDIA_PNG, MEDIA_VIDEO } = require('../fixtures');   /* TOUR_FROM=11: earlier cases still run (their data is needed) but without pauses */
 const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
 /* headed: a maximised real window (viewport null lets the window size rule), slowed so the eye can follow */
 test.use(HEADED ? { viewport: { width: 1600, height: 900 }, launchOptions: { slowMo: 350, args: ['--window-size=1620,1000', '--window-position=0,0'] } } : { launchOptions: { slowMo: 0 } });
@@ -219,6 +220,7 @@ test('the tour', async ({ page }) => {
     'Edit › price 1,200 › Effective from = three hours ahead › Save', 'the header still says ₹1,000; 📅 Scheduled shows price → ₹1,200 with the moment, and Cancel');
   const parked = page.waitForResponse((r) => /\/schedule$/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 30000 });
   await page.getByTestId('cat-save').click(); await parked;
+  await page.getByTestId('prod-tab-product').click();   /* the parked strip sits in the Details row */
   await expect(page.getByTestId('prod-scheduled')).toBeVisible({ timeout: 25000 });
   await ok(page, 'parked, live price unchanged');
 
@@ -240,23 +242,32 @@ test('the tour', async ({ page }) => {
   await openTab(page, 'media');
   await tc(page, 'Media: the pictures and videos this product carries', 'files go through the API to the PRIVATE object store (key entity/yyyy/mm/id); the API streams the public read; the first picture is the storefront cover',
     "Edit › Media › choose a picture", "a tile appears at once (saved without the form Save button); View › Media reads \"1 picture · cover set\" — or, where the store is not configured, the API says so and nothing else changes");
-  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAF0lEQVR42mP8z8BQz0AEYBxVSF+FAAB6cAn9x0nvAAAAAElFTkSuQmCC', 'base64');
-  const mediaResp = page.waitForResponse((r) => /[/]media$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
-  await page.getByTestId('cat-field-media').setInputFiles({ name: 'basmati.png', mimeType: 'image/png', buffer: png });
+  const mediaResp = page.waitForResponse((r) => /\/media$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
+  await page.getByTestId('cat-field-media').setInputFiles(MEDIA_PNG);   /* the ONE shared test picture */
   const mr = await mediaResp;
   if (mr && mr.status() < 400) {
     await expect(page.locator('[data-testid^="prod-media-"]').first()).toBeVisible({ timeout: 25000 });
-    await ok(page, 'the tile is on the page; the cover is set');
+    await ok(page, 'the picture is on the page; the cover is set');
   } else {
-    await ok(page, 'the media store is not configured on this environment (Railway S3_* env) — the API said so, the product is unchanged');
+    await ok(page, 'the media store is not configured on this environment (no S3 env and b204 not run) — the API said so, the product is unchanged');
   }
+  await tc(page, 'A video is a link', 'YouTube/Vimeo links, parsed by the API to an embed — no bytes stored; the storefront plays it from where it is hosted',
+    'Edit › Media › paste a YouTube link › Add video', 'an embedded player appears among the tiles');
+  const linked = page.waitForResponse((r) => /\/media$/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 30000 });
+  await page.getByTestId('cat-field-media-link').fill(MEDIA_VIDEO);
+  await page.getByTestId('cat-media-link-add').click(); await linked;
+  await expect(page.locator('[data-testid^="prod-media-"] iframe').first()).toBeVisible({ timeout: 25000 });
+  await ok(page, 'the player is in the row');
   await page.evaluate(() => setProdMode('view'));
   await openTab(page, 'storefront');
   await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here with the link — what you see is what they see; a hidden product says why',
     'View › Storefront', '"Shown · as the customer sees it"; the product itself framed at phone width — the same shop page, opened on this one product');
   await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });
   await expect(page.getByTestId('prod-storefront-frame')).toBeVisible();
-  await ok(page, 'the customer view, framed');
+  const frame = page.frameLocator('[data-testid="prod-storefront-frame"]');
+  await expect(frame.locator('.prow').first()).toBeVisible({ timeout: 30000 });
+  await expect(frame.locator('[data-testid="prod-media"]').first()).toBeVisible({ timeout: 30000 });
+  await ok(page, 'the customer view: the product, its picture and its video, framed at phone width');
 
   /* ── 13 · compose ── */
   await clickNav(page, 'compose'); await settle(page);
