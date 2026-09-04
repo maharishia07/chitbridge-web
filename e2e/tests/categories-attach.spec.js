@@ -1,0 +1,36 @@
+// [CAT-05] Categories › Edit › product ticks: attach a product to a category FROM the category side.
+const { test, expect } = require('@playwright/test');
+const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
+
+test('[CAT-05] a tick on the category attaches the product; the product page and the row follow', async ({ page }) => {
+  test.setTimeout(240000);
+  await mintEntity(page);
+  await clickNav(page, 'catalogue');
+  await addProduct(page, { name: 'Basmati 25kg', unit: 'bag', price: 1000, code: 'BAS-25' });
+  const pid = await page.evaluate(() => UI.prodSel);
+  expect(pid).toBeTruthy();
+  const cid = await page.evaluate(async () => (await api('defAdd', { body: { kind: 'category', name: 'Rice ' + Date.now(), rules: {}, status: 'live' } })).definition.definition_id);
+
+  await clickNav(page, 'categories');
+  await page.evaluate((cid) => cbcatSelect(cid), cid);
+  await page.getByTestId('catg-edit').click();
+  await expect(page.getByTestId('catg-prod-ticks')).toBeVisible({ timeout: 25000 });
+  const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 30000 });
+  await page.getByTestId('catg-prod-' + pid).click();
+  await saved;
+  await settle(page);
+  const stored = await page.evaluate(async ({ pid }) => { const r = await api('prodList', { query: { limit: 200 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid); return p && catgIdsOf(p.item_data || p); }, { pid });
+  expect(stored, 'the product carries the category').toContain(cid);
+
+  await test.step('VIEW — the category lists the product', async () => {
+    await page.getByText('Cancel', { exact: true }).first().click().catch(() => {});
+    await page.evaluate((cid) => cbcatSelect(cid), cid);
+    await expect(page.locator('.cbcat-plist')).toContainText('Basmati 25kg', { timeout: 20000 });
+  });
+
+  await test.step('PRODUCT — its Categories row shows the category', async () => {
+    await clickNav(page, 'catalogue');
+    await page.evaluate((pid) => selectProduct(pid, true), pid);
+    await expect(page.getByTestId('prod-outcome-categories')).toContainText('Rice', { timeout: 20000 });
+  });
+});
