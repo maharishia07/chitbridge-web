@@ -416,6 +416,31 @@ function cbOrderDecl(order){
   return out;
 }
 
+/**
+ * ⭐ A REPAINT MUST NOT MOVE THE PAGE. Athi, 2026-09-04: "when I select or unselect, the screen jumps to the top —
+ * that is the behaviour I am seeing in many places". A pane painter rebuilds its HTML and the browser hands back a
+ * fresh scroll box at 0; the write underneath was fine, the repaint was too broad. scrollKeep() notes every scrolled
+ * box (and the window) BEFORE the paint and puts them back AFTER, matched by id, then testid, then tag.class + ordinal.
+ *   var k = scrollKeep(); el.innerHTML = html; k();
+ * The restore runs at once and again on the next frame, for painters that finish asynchronously.
+ */
+function scrollKeep(root){
+  var saved=[]; try{ (root||document).querySelectorAll('*').forEach(function(el){ if(el.scrollTop>0||el.scrollLeft>0) saved.push({ key:_scrollKeyOf(el), top:el.scrollTop, left:el.scrollLeft }); }); }catch(_){}
+  var wy=window.scrollY||0, wx=window.scrollX||0;
+  return function(){
+    var run=function(){ saved.forEach(function(s){ var el=_scrollFind(s.key); if(el){ el.scrollTop=s.top; el.scrollLeft=s.left; } }); if(wy||wx) window.scrollTo(wx, wy); };
+    run(); if(typeof requestAnimationFrame==='function') requestAnimationFrame(run);
+  };
+}
+function _scrollKeyOf(el){
+  if(el.id) return '#'+el.id;
+  var t=el.getAttribute&&el.getAttribute('data-testid'); if(t) return '[data-testid="'+t+'"]';
+  var cls=(typeof el.className==='string')?el.className.trim().split(/\s+/).filter(Boolean).join('.'):'';
+  var sel=el.tagName.toLowerCase()+(cls?'.'+cls:''); var idx=0;
+  try{ idx=Array.prototype.indexOf.call(document.querySelectorAll(sel), el); }catch(_){ sel=el.tagName.toLowerCase(); idx=Array.prototype.indexOf.call(document.querySelectorAll(sel), el); }
+  return sel+'@'+idx;
+}
+function _scrollFind(key){ try{ var at=key.lastIndexOf('@'); if(key[0]==='#'||key[0]==='['||at<0) return document.querySelector(key); return document.querySelectorAll(key.slice(0,at))[Number(key.slice(at+1))]||null; }catch(_){ return null; } }
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', ep.m + ' ' + key);

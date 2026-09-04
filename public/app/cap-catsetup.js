@@ -445,7 +445,9 @@ async function catsetUnitToggle(u, on){
      would disagree and only one of them is real. */
   if (!next.length) { if (typeof toast === 'function') toast('Keep at least one unit — the product form needs something to offer.'); catsetPaintDetail(); return; }
   _UNITSEL = next;
-  catsetPaintDetail();
+  /* ⭐ OPERATE LOCALLY UNTIL A REPAINT IS ABSOLUTELY REQUIRED (Athi, 2026-09-04). The box the person clicked has
+     already flipped; the set is written; the pane is NOT rebuilt — a rebuild is what threw the page to the top.
+     Only a refusal (above) or a failed write (below) repaints, to put the screen back to what is real. */
   try { await api('policySet', { body: { units: next } }); }
   catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
 }
@@ -1444,8 +1446,8 @@ function catsetDetailHTML(){
 }
 /* ⚠️ ONLY WHILE THIS SCREEN IS UP. The section's loaders (slabs, products, the face) call this when they land — and they
    land after a person has moved on: the Catalogue's pane was overwritten with Setup › Tax ([TAX-02], the tour, 2026-09-05). */
-function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = catsetDetailHTML(); } }
-function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var b = document.getElementById('catset_rows'); if (b) b.innerHTML = catsetRowsHTML(); }
+function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var d = document.getElementById('detailpane'); if (d) { var k = scrollKeep(); d.className = 'detail'; d.innerHTML = catsetDetailHTML(); k(); } }
+function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var b = document.getElementById('catset_rows'); if (b) { var k = scrollKeep(); b.innerHTML = catsetRowsHTML(); k(); } }
 function catsetPaint(){ catsetPaintList(); catsetPaintDetail(); }
 function catsetRowsHTML(){
   var cur = catsetSec();

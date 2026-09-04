@@ -4191,6 +4191,7 @@ function _renderApp(){
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) bgRenderApp(); })
                             .catch(function(e){ var b=document.getElementById('mainbody'); if(b)b.innerHTML=scrErr(e); }); }
+  var _keepScroll = (typeof scrollKeep==='function') ? scrollKeep() : function(){};   /* a background render must not move the page */
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="appwrap ${UI.vp==='mob'?'m':''}"><div class="shell">
     <div class="topbar">
@@ -4269,6 +4270,7 @@ function _renderApp(){
                   <span style="font-size:var(--fs-1);color:var(--grey)">${esc(value)}</span>
                   <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block"><span class=arw>▸</span></span>
                 </span></button>`;
+  _keepScroll();
             };
             /**
              * ⚠️⚠️ THIS LIST WAS HARDCODED AND WENT STALE THE DAY ARABIC SHIPPED. It read
