@@ -42,6 +42,7 @@ async function alive(page, label) {
 async function tc(page, title, testing, steps, expected) {
   caseNo++;
   lastLabel = "case " + caseNo + " (" + title + ")";
+  console.log("[tour] " + new Date().toISOString().slice(11,19) + " case " + caseNo + ": " + title);
   await page.evaluate(([n, title, testing, steps, expected]) => {
     let el = document.getElementById('cb_tour');
     if (!el) { el = document.createElement('div'); el.id = 'cb_tour'; document.body.appendChild(el); }
@@ -56,6 +57,7 @@ async function tc(page, title, testing, steps, expected) {
   if (caseNo >= FROM) await page.waitForTimeout(Math.round(PAUSE * 0.6));
 }
 async function ok(page, observed) {
+  console.log("[tour] " + new Date().toISOString().slice(11,19) + " ok: " + observed);
   await page.evaluate((t) => { const el = document.getElementById('cb_tour_ok'); if (el) el.textContent = '✓ Observed: ' + t; }, observed);
   if (caseNo >= FROM) await page.waitForTimeout(PAUSE);
 }
