@@ -15,9 +15,10 @@ test('[CAT-05] a tick on the category attaches the product; the product page and
   await clickNav(page, 'categories');
   await page.getByText(cname, { exact: true }).first().click();   /* the capability script loads lazily — drive the row, not the function */
   await page.getByTestId('catg-edit').click();
+  await page.getByTestId('catg-etab-products').click();   /* the Products tab = the catalogue pane */
   await expect(page.getByTestId('catg-prod-ticks')).toBeVisible({ timeout: 25000 });
   const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 30000 });
-  await page.getByTestId('catg-prod-' + pid).click();
+  await page.getByTestId('cat-product-' + pid).click();   /* the same row as the Catalogue screen; a click ticks */
   await saved;
   await settle(page);
   const stored = await page.evaluate(async ({ pid }) => { const r = await api('prodList', { query: { limit: 200 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid); return p && catgIdsOf(p.item_data || p); }, { pid });

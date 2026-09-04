@@ -555,7 +555,7 @@ function cbcatDetailHTML(){
          travels, so the parent field says how many. */
       + '<div class="dt">' + (editing ? tx('Edit category') : tx('New category')) + '</div>'
       + '<div class="ds">' + (editing ? tx('name · parent · note — products follow') : tx('goes on the shelf live')) + '</div></div>'
-      + '<div class="db">'
+      + '<div class="db">' + (editing ? cbcatEditTabsHTML(f.id) : '') + ((editing && (CBCAT_UI.etab || 'category') === 'products') ? cbcatProductTicksHTML(f.id) : '') + '<div data-testid="catg-eform"' + ((editing && (CBCAT_UI.etab || 'category') === 'products') ? ' hidden' : '') + '>'
       + (editing
           ? '<div class="cbcat-note">'
             + txf('Renaming is safe — every product follows. ⚠️ A copy of the old name travels with items already in a {other} catalogue, and that copy deliberately does not change.', {
@@ -579,7 +579,7 @@ function cbcatDetailHTML(){
       + cbcatSlabPickHTML(f)
       /* ⭐ THE OFFERS SIT BESIDE THE SLAB ON THE EDIT FORM TOO — Athi, 2026-09-05: "the right side shows the tax but not
          the offer attached?" A tick saves to the OFFER straight away (its targets), not with this form's Save. */
-      + (editing ? cbcatOfferTicksHTML(f.id) + cbcatProductTicksHTML(f.id) : '')
+      + (editing ? cbcatOfferTicksHTML(f.id) : '') + '</div>' + (false ? '' : '')
       + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
@@ -679,24 +679,39 @@ function cbcatOfferCats(rules){ var at = (rules && rules.applies_to) || {}; retu
  * `categories` list, whole record through the same PATCH the product page uses) — so the product page, the
  * catalogue row and the storefront read the change the same instant; nothing is stored on the category.
  */
-function cbcatProductTicksHTML(cid){
-  var prods = UI.prods;
-  if (!prods) { if (typeof loadCatalogue === 'function') loadCatalogue().then(function(){ if (UI.nav === 'categories' && CBCAT_UI.mode === 'edit') cbcatPaintDetail(); }); return '<div class="cbcat-none">' + tx('reading the catalogue…') + '</div>'; }
-  var q = String(CBCAT_UI.pq || '').trim().toLowerCase();
-  var rows = prods.filter(function(p){ var d = (p && (p.item_data || p)) || {}; return !q || String(d.name || '').toLowerCase().indexOf(q) >= 0 || String(d.code || d.sku || '').toLowerCase().indexOf(q) >= 0; });
-  var inCat = function(p){ return catgIdsOf((p && (p.item_data || p)) || {}).indexOf(String(cid)) >= 0; };
-  var on = prods.filter(inCat).length;
-  return '<div class="sec">' + tx('Products') + ' <span style="color:var(--grey);font-weight:400">· ' + on + ' ' + tx('of') + ' ' + prods.length + '</span></div>'
-    + '<input class="inp" data-testid="catg-prod-search" placeholder="' + esc(tx('Find a product')) + '" value="' + esc(CBCAT_UI.pq || '') + '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' + esc(cid) + '\')" style="margin:4px 0 6px">'
-    + '<div id="cbcat_prodticks" data-testid="catg-prod-ticks" style="display:flex;flex-wrap:wrap;gap:6px;max-height:260px;overflow:auto">'
-    + (rows.length ? rows.slice(0, 200).map(function(p){ var d = (p.item_data || p) || {}; var pid = prodId(p); var isOn = inCat(p);
-        return '<button type="button" class="ctcatg' + (isOn ? ' on' : '') + '" data-testid="catg-prod-' + esc(pid) + '" data-pid="' + esc(pid) + '" onclick="cbcatProductToggle(\'' + esc(cid) + '\',\'' + esc(pid) + '\',this)">' + (isOn ? '✓ ' : '') + esc(d.name || d.product || 'item') + (d.code ? ' <small style="opacity:.7">' + esc(d.code) + '</small>' : '') + '</button>'; }).join('')
-        : '<div class="cbcat-none">' + tx('No product matches.') + '</div>')
-    + (rows.length > 200 ? '<div class="cbcat-none">+' + (rows.length - 200) + ' ' + tx('more — narrow the search') + '</div>' : '')
-    + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + tx('A tick attaches this category to the product at once — the product page, the catalogue row and the storefront follow.') + '</div>';
+/** The editor's two tabs: Category (name · parent · slab · offers · note) and Products (the catalogue pane, ticks attach). */
+function cbcatEditTab(k){ CBCAT_UI.etab = k; cbcatPaintDetail(); }
+function cbcatEditTabsHTML(cid){
+  var k = CBCAT_UI.etab || 'category';
+  var prods = UI.prods || []; var inCat = prods.filter(function(p){ return catgIdsOf((p && (p.item_data || p)) || {}).indexOf(String(cid)) >= 0; }).length;
+  var tab = function(key, label){ return '<button type="button" class="' + (k === key ? 'on' : '') + '" data-testid="catg-etab-' + key + '" onclick="cbcatEditTab(\'' + key + '\')">' + label + '</button>'; };
+  return '<div class="dtabs" data-testid="catg-etabs" style="margin:0 0 10px">' + tab('category', tx('Category')) + tab('products', tx('Products') + (cid ? ' · ' + inCat + ' ' + tx('of') + ' ' + prods.length : '')) + '</div>';
 }
-function cbcatProdTicksRepaint(cid){ var h = document.getElementById('cbcat_prodticks'); if (!h) return; var tmp = document.createElement('div'); tmp.innerHTML = cbcatProductTicksHTML(cid); var n = tmp.querySelector('#cbcat_prodticks'); if (n) h.innerHTML = n.innerHTML; }
+/** The context the catalogue renderer takes: this category's search · chip · tick · click (see prodRowsHTML(ctx) in app.html). */
+function cbcatProdCtx(cid){
+  return { q: CBCAT_UI.pq || '', catg: CBCAT_UI.pcatg || '', picking: true, noRef: true,
+    isTicked: function(id){ var p = (UI.prods || []).filter(function(x){ return prodId(x) === id; })[0]; return !!p && catgIdsOf(pData(p)).indexOf(String(cid)) >= 0; },
+    onToggle: function(id){ return "cbcatProductToggle('" + cid + "','" + id + "', this)"; },
+    onPick: function(v){ return "cbcatProdCatg('" + v + "')"; } };
+}
+function cbcatProdCatg(v){ CBCAT_UI.pcatg = (CBCAT_UI.pcatg === v) ? '' : v; cbcatProdTicksRepaint(CBCAT_UI.form && CBCAT_UI.form.id); }
+/**
+ * ⭐ THE REVERSE ATTACH = THE CATALOGUE PANE, HERE. Athi, 2026-09-04: "the entire catalogue left pane should be there so
+ * we can search and attach … in a separate tab". Same search box, same category chips, same rows as the Catalogue
+ * screen — rendered by the same functions with a context — and a click on a row ticks it: the product's categories
+ * are written at once (whole record, same PATCH), so the product page, the catalogue row and the storefront follow.
+ */
+function cbcatProductTicksHTML(cid){
+  if (!UI.prods) { if (typeof loadCatalogue === 'function') loadCatalogue().then(function(){ if (UI.nav === 'categories' && CBCAT_UI.mode === 'edit') cbcatPaintDetail(); }); return '<div class="cbcat-none">' + tx('reading the catalogue…') + '</div>'; }
+  var ctx = cbcatProdCtx(cid);
+  return '<div class="catlist" data-testid="catg-prod-pane" style="border:1px solid var(--line);border-radius:10px;overflow:hidden">'
+    + '<div style="padding:8px 10px;border-bottom:1px solid var(--line)"><input class="inp" data-testid="catg-prod-search" placeholder="' + esc(tx('Search name, code, offer, tax')) + '" value="' + esc(CBCAT_UI.pq || '') + '" oninput="CBCAT_UI.pq=this.value; cbcatProdTicksRepaint(\'' + esc(cid) + '\')"></div>'
+    + '<div id="cbcat_prodstrip" style="padding:6px 10px 0">' + (typeof prodCatgStripHTML === 'function' ? prodCatgStripHTML(ctx) : '') + '</div>'
+    + '<div id="cbcat_prodticks" data-testid="catg-prod-ticks" style="max-height:60vh;overflow:auto">' + (typeof prodRowsHTML === 'function' ? prodRowsHTML(ctx) : '') + '</div>'
+    + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('The same catalogue pane. A click on a row attaches this category to the product at once — the product page, the catalogue row and the storefront follow.') + '</div>';
+}
+function cbcatProdTicksRepaint(cid){ var h = document.getElementById('cbcat_prodticks'); if (h && typeof prodRowsHTML === 'function') h.innerHTML = prodRowsHTML(cbcatProdCtx(cid)); var st = document.getElementById('cbcat_prodstrip'); if (st && typeof prodCatgStripHTML === 'function') st.innerHTML = prodCatgStripHTML(cbcatProdCtx(cid)); }
 async function cbcatProductToggle(cid, pid, btn){
   var p = (UI.prods || []).filter(function(x){ return prodId(x) === pid; })[0]; if (!p) return;
   var d = Object.assign({}, pData(p)); var ids = catgIdsOf(d).map(String); var on = ids.indexOf(String(cid)) >= 0;
@@ -707,7 +722,7 @@ async function cbcatProductToggle(cid, pid, btn){
     await api('prodEdit', { params: { id: pid }, body: { item_data: d } });   /* the whole record — the PATCH validates it as one */
     toast(on ? tx('Detached') : tx('Attached ✓'));
     if (typeof loadCatalogue === 'function') await loadCatalogue('fresh');
-    cbcatPaint();
+    cbcatPaintList(); cbcatProdTicksRepaint(cid); var tb = document.querySelector('[data-testid="catg-etabs"]'); if (tb) tb.outerHTML = cbcatEditTabsHTML(cid);
   } catch (e) { toast((e && e.message) || tx('Could not change the product'), true); if (btn) btn.disabled = false; }
 }
 function cbcatOfferTicksHTML(cid){

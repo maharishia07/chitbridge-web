@@ -7970,9 +7970,15 @@ function prodId(p){ return p.item_id||p.id; }
  * Categories screen handing over its "uncategorised" count — so the number you press on one screen lands you on
  * the products it was counting, rather than reporting a figure you then have to go and find by hand.
  */
-function prodVisible(){
-  const q=(UI.prodQ||'').trim().toLowerCase();
-  const g=UI._prodCatg||'';
+/**
+ * ⭐ ONE LIST, TWO HOSTS. `ctx` (optional) = { q, catg, picking, isTicked(id), onToggle(id)→js, onPick(v)→js, noRef }.
+ * Without it the Catalogue screen renders from UI state as before; with it, another screen (Categories › Edit ›
+ * Products — Athi, 2026-09-04: "the entire catalogue left pane should be there so we can search and attach") renders
+ * the SAME rows, the SAME chip strip, the SAME search, with a tick instead of a select.
+ */
+function prodVisible(ctx){
+  const q=String((ctx?ctx.q:UI.prodQ)||'').trim().toLowerCase();
+  const g=(ctx?ctx.catg:UI._prodCatg)||'';
   return (UI.prods||[]).filter(p=>{
     const d=pData(p);
     if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
@@ -8516,7 +8522,7 @@ function prodCatgFilter(v){ UI._prodCatg=(UI._prodCatg===v)?'':v; renderApp(); }
  * categories is counted in both, so these add up to more than the catalogue. That is the honest arithmetic and
  * the reason the totals must never be presented as a breakdown of the whole.
  */
-function prodCatgStripHTML(){
+function prodCatgStripHTML(ctx){
   if(typeof _CATG==='undefined' || _CATG===null){
     if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList(); });   /* the strip is on the LIST; never a full render for it */
     return '';
@@ -8527,7 +8533,7 @@ function prodCatgStripHTML(){
   all.forEach(p=>{ const ids=catgIdsOf(pData(p)); if(!ids.length){ none++; return; } ids.forEach(c=>{ n[c]=(n[c]||0)+1; }); });
   const live=_CATG.filter(c=>n[c.id]);            // a category with nothing in it is noise on this row
   if(!live.length && !none) return '';
-  const g=UI._prodCatg||'';
+  const g=(ctx?ctx.catg:UI._prodCatg)||'';
   /* ⚠️ THE STYLESHEET IS NOT GUARANTEED HERE. `.cbpick-chip` is cart-ui's class, and cart-ui injected its CSS as a
      side effect of building the cart popup — which this screen never builds. Without this call the chips render as
      raw <button>s: square, with the browser's near-black default label, invisible on a dark ground. */
@@ -8536,7 +8542,7 @@ function prodCatgStripHTML(){
      setting a second, different selected style here is how the two drift apart — this one said blue-on-tint while
      the class said white-on-accent, so the same chip looked like two different controls on two screens. */
   const chip=(v,label,count,on)=>`<button type="button" class="cbpick-chip${on?' on':''}" data-testid="cat-catgfilter"
-      onclick="prodCatgFilter('${esc(v)}')">${esc(label)}${count==null?'':` <span class="cbpick-chipn">${count}</span>`}</button>`;
+      onclick="${ctx&&ctx.onPick?ctx.onPick(v):`prodCatgFilter('${esc(v)}')`}">${esc(label)}${count==null?'':` <span class="cbpick-chipn">${count}</span>`}</button>`;
   return `<div class="cbpick-catgs" style="margin-top:8px">`
     + chip('','All',null,!g)
     + live.map(c=>chip(c.id,c.name,n[c.id],g===c.id)).join('')
@@ -8597,7 +8603,7 @@ function prodDealsText(d, id){
   const x=prodDeals(d, id);
   return (x.offers.map(function(o){ return o.name+' '+o.promise; }).join(' ')+' '+(x.tax? ('gst '+x.tax.rate+'% '+x.tax.name+' '+x.tax.source) : '')).toLowerCase();
 }
-function prodRowHTML(p){ const d=pData(p), id=prodId(p);
+function prodRowHTML(p, ctx){ const d=pData(p), id=prodId(p);
   /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
      list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
      prevent. An absent status means available, so a normal row shows no chip at all. */
@@ -8617,8 +8623,8 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   const catChips=catgChipsHTML(d);
   /* ⭐ SELECT MODE. The tick replaces the row's normal click so a half-pressed selection can never also navigate
      away — the same rule the chit list follows. */
-  const picking=!!UI.prodPick;
-  const ticked=picking&&UI.prodPicked&&UI.prodPicked.has(id);
+  const picking=ctx?!!ctx.picking:!!UI.prodPick;
+  const ticked=ctx?!!(ctx.isTicked&&ctx.isTicked(id)):(picking&&UI.prodPicked&&UI.prodPicked.has(id));
   /**
    * ⭐ THE ROW SAYS WHAT EACH NUMBER IS. Athi, 2026-09-03 (observation 4): *"the data is displayed, but no one
    * knows what it means, so need to have the field name or its short form here. say Avl Qty : 100 as of Date …
@@ -8638,7 +8644,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   const thumb=`<div class="pthumb" aria-hidden="true">${img?`<img src="${esc(img)}" alt="">`:esc(String(pName(d)||'?').trim().charAt(0).toUpperCase())}</div>`;
   const lbl=(k,v)=>`<span><b>${k}</b>${v}</span>`;
   const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('Synonyms'),String((d.synonyms||[]).length)):''].filter(Boolean);
-  return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
+  return `<div class="row ${(!ctx&&id===UI.prodSel)?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}" style="${st!=='available'?'opacity:.7':''}">
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}<span class="amt" style="margin-inline-start:auto"><bdi>${inr(pPrice(d))}</bdi> <span class="per">/ <bdi>${esc(pUnit(d))}</bdi></span></span></div>
     <div class="l2 lbl">${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
@@ -8694,9 +8700,10 @@ function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
     return '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[s].map(function(i){ return refFinishRow(rc[i],i); }).join('');
   }).join('');
   return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="navTo(\'catsetup\')">manage your prices for this source</span></div>'; }
-function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
+function prodRowsHTML(ctx){ const ref=(ctx&&ctx.noRef)?'':refCatRowsHTML(); const r=prodVisible(ctx);
+  if(ctx && !r.length) return '<div class="cbcat-none" style="padding:12px">'+esc(tx('No product matches.'))+'</div>';
   if(!ref && !r.length) return emptyState('🗂️','No products yet','Add your first, or adopt a whole catalogue via 🤖 AI.',{label:'+ New product',onclick:'newProduct()'});
-  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(prodRowHTML).join('')) : '';
+  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(function(p){ return prodRowHTML(p, ctx); }).join('')) : '';
   return ref + prods; }
 function selectRefFinish(i){ UI.refSel=i; UI.prodSel=null; UI.prodMode='view'; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function backToRefList(){ UI.refSel=null; UI.mdetail=false; var p=document.getElementById('panel'); if(p)p.classList.remove('showdetail'); paintProdList(); paintProdDetail(); }
