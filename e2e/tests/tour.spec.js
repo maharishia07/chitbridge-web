@@ -15,6 +15,23 @@ let caseNo = 0;
 /** ⚠️ THE WATCHDOG. A caption that never moves is a page whose main thread is BLOCKED (an infinite loop in app JS) —
  * Playwright waits forever on evaluate, the headed window freezes, and the flood of events starved the node worker
  * (OOM at 9 min, 2026-09-04). Before every caption: is the page alive? If not, pause the debugger and print WHERE. */
+let lastLabel = "start";
+/** The watchdog runs on ITS OWN timer, because a blocked page also blocks the step that is awaiting it. Every 10 s it
+ * races a trivial evaluate; when the page stops answering it pauses the debugger over CDP (which works while JS is
+ * stuck), prints the stack and the last caption, and closes the context so the stuck step fails instead of hanging. */
+function startWatchdog(page) {
+  const errs = []; page.on("pageerror", (e) => { if (errs.length < 5) errs.push(String(e).slice(0, 160)); });
+  let consoleErrs = 0; page.on("console", (m) => { if (m.type() === "error") consoleErrs++; });
+  const t = setInterval(async () => {
+    const ok = await Promise.race([page.evaluate(() => 1).then(() => true).catch(() => true), new Promise((r) => setTimeout(() => r(false), 8000))]);
+    if (ok) return;
+    clearInterval(t); let stack = null;
+    try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); cdp.on("Debugger.paused", (e) => { stack = e.callFrames.slice(0, 16).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1)); }); await cdp.send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2500)); } catch (e) { stack = ["(cdp failed: " + e.message + ")"]; }
+    console.log("WATCHDOG: MAIN THREAD BLOCKED after " + lastLabel + " · console errors so far " + consoleErrs + " · page errors " + JSON.stringify(errs) + " · STACK " + JSON.stringify(stack));
+    try { await page.context().close(); } catch (_) {}
+  }, 10000);
+  return () => clearInterval(t);
+}
 async function alive(page, label) {
   const ok = await Promise.race([page.evaluate(() => 1).then(() => true), new Promise((r) => setTimeout(() => r(false), 8000))]);
   if (ok) return;
@@ -24,7 +41,7 @@ async function alive(page, label) {
 }
 async function tc(page, title, testing, steps, expected) {
   caseNo++;
-  await alive(page, "case " + caseNo + " (" + title + ")");
+  lastLabel = "case " + caseNo + " (" + title + ")";
   await page.evaluate(([n, title, testing, steps, expected]) => {
     let el = document.getElementById('cb_tour');
     if (!el) { el = document.createElement('div'); el.id = 'cb_tour'; document.body.appendChild(el); }
@@ -47,6 +64,7 @@ const rmCaption = (page) => page.evaluate(() => { const el = document.getElement
 test('the tour', async ({ page }) => {
   test.skip(!process.env.TOUR, 'set TOUR=1 to run the tour');
   test.setTimeout(1800000);
+  const stopWatchdog = startWatchdog(page);
   await mintEntity(page);
   await page.evaluate(async () => api('saveProfile', { body: { gstn: '29ABCDE1234F1Z5' } }).catch(() => null));
   const basmati = 'Basmati 25kg', ponni = 'Ponni Boiled 10kg';
