@@ -577,6 +577,9 @@ function cbcatDetailHTML(){
           : '')
       + '<label class="fl">' + tx('Default tax slab') + '</label>'
       + cbcatSlabPickHTML(f)
+      /* ⭐ THE OFFERS SIT BESIDE THE SLAB ON THE EDIT FORM TOO — Athi, 2026-09-05: "the right side shows the tax but not
+         the offer attached?" A tick saves to the OFFER straight away (its targets), not with this form's Save. */
+      + (editing ? cbcatOfferTicksHTML(f.id) : '')
       + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
