@@ -318,6 +318,9 @@ test('the tour', async ({ page }) => {
   }
   await tc(page, 'A video is a link', 'YouTube/Vimeo links, parsed by the API to an embed — no bytes stored; the storefront plays it from where it is hosted',
     'Edit › Media › paste a YouTube link › Add video', 'an embedded player appears among the tiles');
+  /* every media request and answer is printed — the 2026-09-04 red run said only 'no response', which names nothing */
+  page.on('request', (r) => { if (/\/media$/.test(r.url())) console.log('[tour] media request', r.method()); });
+  page.on('response', (r) => { if (/\/media$/.test(r.url())) r.text().then((t) => console.log('[tour] media response', r.status(), String(t).slice(0, 160))).catch(() => console.log('[tour] media response', r.status())); });
   const linked = page.waitForResponse((r) => /\/media$/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 30000 });
   await page.getByTestId('cat-field-media-link').fill(MEDIA_VIDEO);
   await page.getByTestId('cat-media-link-add').click(); await linked;
