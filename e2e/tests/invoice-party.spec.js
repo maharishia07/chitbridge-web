@@ -14,7 +14,7 @@ test('[INV-03] supplier details on the invoice, missing fields named, tied to Tr
     await expect(page.getByTestId('prod-invoice-missing')).toBeVisible({ timeout: 30000 });
     await expect(page.getByTestId('prod-invoice-missing')).toContainText('gstin');
     await expect(page.getByTestId('prod-outcome-invoice')).toContainText('missing');
-    const rd = await page.evaluate(async () => (await api('readinessOwn')));
+    const rd = await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('readiness'); return await api('readinessOwn'); });
     const inv = ((rd && rd.clearances) || []).find((c) => c.doc === 'invoice_header');
     expect(inv && inv.status, 'Trade ready carries the invoice header as a pending clearance').toBe('pending');
   });
@@ -41,7 +41,7 @@ test('[INV-03] supplier details on the invoice, missing fields named, tied to Tr
     await expect(sup).toContainText('Karnataka');           /* state, from the GSTIN's first two digits */
     await expect(sup).toContainText('560001');
     await expect(sup).toContainText('98450');
-    const rd = await page.evaluate(async () => (await api('readinessOwn')));
+    const rd = await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('readiness'); return await api('readinessOwn'); });
     const inv = ((rd && rd.clearances) || []).find((c) => c.doc === 'invoice_header');
     expect(inv && inv.status, 'Trade ready now holds the invoice header as gathered').toBe('gathered');
   });
