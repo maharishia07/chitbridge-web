@@ -9199,7 +9199,10 @@ function ctOffersEnsure(then){
   return null;
 }
 /** Open Catalogue setup ON a section. One helper, because the product page points at four of them. */
-function goCatsetSec(k){ navTo('catsetup'); setTimeout(function(){ if(typeof catsetSetSec==='function') catsetSetSec(k); },600); }
+/* ⚠️ THE SECTION IS ASKED FOR BEFORE THE HUB PAINTS. A 600 ms timer alone lost the race whenever the capability was still
+   loading — the hub opened on Blueprint and stayed there ([TAX-04], the tour, Athi's own clicks). The wish is parked on UI
+   (read by catsetSec() on the hub's first paint) AND applied at once when the hub is already loaded. */
+function goCatsetSec(k){ UI.catsetWant = k; if (typeof CATSET !== 'undefined' && CATSET) CATSET.sec = k; navTo('catsetup'); setTimeout(function(){ if(typeof catsetSetSec==='function') catsetSetSec(k); },600); }
 function ctOfferField(d){
   d = d || {};
   const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';

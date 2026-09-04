@@ -69,7 +69,8 @@ test('[TAX-04] retire is refused while cited → takeover re-points → dead cit
 
   await test.step('Setup › Tax: the retired own slab can be reinstated', async () => {
     await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
-    await page.evaluate(() => goCatsetSec('tax'));
+    await page.evaluate(() => goCatsetSec('tax')); await settle(page);
+    const secRow = page.getByTestId('catset-sec-tax'); await expect(secRow).toBeVisible({ timeout: 25000 }); await secRow.click(); await settle(page);
     const btn = page.getByTestId('catset-tax-reinstate-' + ownId);
     await expect(btn).toBeVisible({ timeout: 25000 });
     const live = page.waitForResponse((r) => /\/api\/definitions\//.test(r.url()) && r.request().method() === 'PUT' && r.status() < 400, { timeout: 30000 });

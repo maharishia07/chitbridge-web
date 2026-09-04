@@ -164,7 +164,7 @@ function catsetDefListHTML(kind, one){
   return orphanNote + '<div class="catset-dlist">' + gov.map(row).join('') + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
-function catsetSec(){ return CATSET.sec || 'blueprint'; }
+function catsetSec(){ if (!CATSET.sec && typeof UI !== 'undefined' && UI.catsetWant) { CATSET.sec = UI.catsetWant; } if (typeof UI !== 'undefined') UI.catsetWant = null; return CATSET.sec || 'blueprint'; }
 function catsetSetSec(k){
   CATSET.sec = k;
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
