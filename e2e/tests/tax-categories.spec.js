@@ -36,7 +36,7 @@ test('[TAX-05] two categories with different slabs → first applies, conflict s
     await page.getByTestId('catset-tax-catg-all').click();
   });
 
-  await test.step('a CHILD category with no slab inherits its parent's; Categories shows it on the row and in the view', async () => {
+  await test.step("a CHILD category with no slab inherits its parent's; Categories shows it on the row and in the view", async () => {
     const kid = await page.evaluate(async (ids) => {
       const child = (await api('defAdd', { body: { kind: 'category', name: 'Dried ' + Date.now(), rules: { parent: ids.grains }, status: 'live' } })).definition.definition_id;
       const rows = await api('prodList'); const p = rows.find((x) => (x.item_id || x.id) === ids.pid);

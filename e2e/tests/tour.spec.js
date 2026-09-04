@@ -155,6 +155,41 @@ test('the tour', async ({ page }) => {
   await expect(page.getByTestId('catset-tax-reinstate-' + slabId)).toBeVisible({ timeout: 25000 });
   await ok(page, 'RETIRED · Reinstate available; the register shows Ponni at 18%');
 
+  /* ── the category tree carries tax and offers downward ── */
+  const tree = await page.evaluate(async (ids) => {
+    const mk = async (name, rules) => (await api('defAdd', { body: { kind: 'category', name, rules, status: 'live' } })).definition.definition_id;
+    const top = await mk('Fruits & Vegetables', { default_slab: 'IN-GST-5' });
+    const kid = await mk('Dried Fruits', { parent: top });
+    const rows = await api('prodList'); const p = rows.find((x) => (x.item_id || x.id) === ids.b);
+    const d = Object.assign({}, p.item_data, { categories: [kid] }); delete d.tax_slab; delete d.tax_slab_name; delete d.gst_rate;
+    await api('prodEdit', { params: { id: ids.b }, body: { item_data: d } });
+    const off = (await api('defAdd', { body: { kind: 'offer', sub_kind: 'percent_off', name: 'Fruits & Veg 8% off', rules: { percent: 8, scope: 'line', priority: 3, applies_to: { category: top } }, status: 'live' } })).definition.definition_id;
+    if (typeof _DEFS !== 'undefined') delete _DEFS['category']; UI._ctOffers = undefined; UI._ctOffersThen = [];
+    return { top, kid, off };
+  }, ids);
+  await clickNav(page, 'categories'); await settle(page);
+  await tc(page, "A parent category's slab flows down the tree", 'Athi: "I applied 5% for the top category — it should reflect the categories underneath; the left panel should show what tax applies"',
+    'Fruits & Vegetables = GST 5%; Dried Fruits under it with no slab of its own; Ponni moved into Dried Fruits', 'the Dried Fruits row shows "GST 5% ↑"; opening it reads "Applied here: 5% · inherited from Fruits & Vegetables", then the products');
+  await expect(page.getByTestId('catg-tax-' + tree.kid)).toContainText('5%', { timeout: 25000 });
+  await page.getByTestId('catg-row-' + tree.kid).click();
+  await expect(page.getByTestId('catg-tax-applied')).toContainText(/inherited from/i, { timeout: 15000 });
+  await ok(page, 'row chip GST 5% ↑ · view: inherited from Fruits & Vegetables · Ponni listed');
+  await openProduct(ponni);
+  await openTab(page, 'pricing');
+  await tc(page, 'The product says where its rate came from', 'the same resolver on the product page — nothing is computed twice',
+    'Ponni › Pricing & tax', '"GST 5% · from category Dried Fruits (inherits Fruits & Vegetables)" and the 5% split');
+  await expect(page.getByTestId('prod-tax-resolved')).toContainText(/inherits/i, { timeout: 25000 });
+  await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '5');
+  await ok(page, 'inherits Fruits & Vegetables · 5%');
+  await clickNav(page, 'compose'); await settle(page);
+  await tc(page, 'An offer on the parent category reaches the child', 'Athi: "same way offer as well?" — a line carries its categories AND their ancestors before the engine sees it',
+    'offer "Fruits & Veg 8% off" scoped to Fruits & Vegetables; type Ponni ×4 in Compose', "the Ponni line shows the 8% coming off, with the offer's name as the reason");
+  await page.getByTestId('chit-item-name').fill(ponni); await page.getByTestId('chit-item-qty').fill('4'); await page.getByTestId('chit-item-price').fill('600');
+  await page.getByTestId('chit-item-add').click();
+  await expect.poll(async () => page.evaluate(() => ((typeof CC !== 'undefined' && CC.items) || []).map((it) => String(it._offer_why || '') + ' ' + String(it._offer_label || '')).join(' | ')), { timeout: 20000 }).toMatch(/Fruits/);
+  await ok(page, '8% off Ponni via Fruits & Vegetables');
+  await page.evaluate(() => { try { closeModal(); } catch (_) {} }); await dismissModal(page);
+
   /* ── 10 · Setup › Offers register + plan several ── */
   await setup('offers');
   await tc(page, 'Setup › Offers: terms, window, where applied', 'the row states the engine\'s own sentence, Scheduled / Active / Expired, and the product it targets',
