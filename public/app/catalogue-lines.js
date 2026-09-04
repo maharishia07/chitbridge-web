@@ -83,6 +83,46 @@
      call site had to change, but there is ONE implementation. This file is back to what it should be: the
      WALK, and nothing else. */
 
-  root.cbLineRows = cbLineRows;
+  /**
+ * ⭐ cbMediaGallery — ONE renderer for a product's pictures and videos, used by the product page's Media row and by
+ * the storefront (shop.html): what the owner sees in the row IS what the customer gets. Pictures come through the
+ * API (never a bucket URL); a video is an EMBED of the link the owner pasted (YouTube/Vimeo — the API parsed it).
+ *   cbMediaGallery(d, { apiBase, itemId, size:'tile'|'phone', onRemove })
+ */
+root.cbMediaEmbed = function (m) {
+  if (!m || m.kind !== 'video') return '';
+  if (m.embed) return m.embed;
+  if (m.provider === 'youtube' && m.vid) return 'https://www.youtube-nocookie.com/embed/' + m.vid;
+  if (m.provider === 'vimeo' && m.vid) return 'https://player.vimeo.com/video/' + m.vid;
+  return '';
+};
+root.cbMediaGallery = function (d, o) {
+  o = o || {}; var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var m = Array.isArray(d && d.media) ? d.media : [];
+  var pic = function (x) { return x.key ? ((o.apiBase || '') + '/api/products/media/' + encodeURIComponent(o.itemId || '') + '/' + encodeURIComponent(x.id)) : (x.url || ''); };
+  var phone = o.size === 'phone';
+  var w = phone ? '100%' : '140px', h = phone ? '190px' : '100px';
+  var tiles = m.map(function (x) {
+    var inner;
+    if (x.kind === 'video') {
+      var src = root.cbMediaEmbed(x);
+      inner = src ? '<iframe src="' + esc(src) + '" title="' + esc(x.name || 'video') + '" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen style="width:100%;height:' + h + ';border:0;display:block;background:#000"></iframe>'
+                  : '<video src="' + esc(pic(x)) + '" controls preload="metadata" style="width:100%;height:' + h + ';object-fit:cover;display:block"></video>';
+    } else if (x.kind === 'image') {
+      inner = '<img src="' + esc(pic(x)) + '" alt="' + esc(x.name || '') + '" loading="lazy" style="width:100%;height:' + h + ';object-fit:cover;display:block">';
+    } else {
+      inner = '<div style="height:' + h + ';display:flex;align-items:center;justify-content:center;color:#888">📄</div>';
+    }
+    var cap = phone ? '' : '<div style="padding:4px 6px;font-size:11px;color:#777;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(x.name || '') + '">' + esc(x.name || '') + '</div>';
+    var del = o.onRemove ? '<button type="button" data-testid="prod-media-del-' + esc(x.id) + '" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer" onclick="' + esc(o.onRemove.replace('{id}', String(x.id))) + '">✕</button>' : '';
+    return '<div data-testid="prod-media-' + esc(x.id) + '" style="position:relative;width:' + w + ';border:1px solid #e3e3e3;border-radius:9px;overflow:hidden;background:#fff">' + inner + cap + del + '</div>';
+  });
+  if (!tiles.length && d && d.image) {
+    tiles.push('<div data-testid="prod-media-cover" style="width:' + w + ';border:1px solid #e3e3e3;border-radius:9px;overflow:hidden;background:#fff"><img src="' + esc(d.image) + '" alt="" loading="lazy" style="width:100%;height:' + h + ';object-fit:cover;display:block"></div>');
+  }
+  if (!tiles.length) return '';
+  return '<div data-testid="prod-media" style="display:' + (phone ? 'grid' : 'flex') + ';gap:8px;flex-wrap:wrap;' + (phone ? 'grid-template-columns:1fr;' : '') + 'padding:6px 0">' + tiles.join('') + '</div>';
+};
+root.cbLineRows = cbLineRows;
   if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows };
 })(typeof window !== 'undefined' ? window : globalThis);

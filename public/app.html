@@ -8535,10 +8535,16 @@ function prodCatgStripHTML(){
     one still shows, struck, because the citation survives. Used by the row and by the product's Categories tab. */
 function catgChipsHTML(d){
   const cids=catgIdsOf(d), cnames=catgNamesOf(d);
+  /* ⚠️ NEVER THE ID. Before the tree lands the chip is simply the stored name (or nothing) — "not loaded yet" is not
+     "retired". Once loaded, a missing category is struck, by its stored name, or as "retired category" — a uuid on a
+     list row is a fact for nobody (Athi's screenshot, 2026-09-05: "cryptic values are coming in the left panel"). */
+  const loaded=(typeof _CATG!=='undefined'&&Array.isArray(_CATG));
+  if(!loaded && typeof cbCatgLive==='function'){ cbCatgLive().then(function(){ if(UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList(); }); }
   return cids.map(function(cid,i){
-    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(function(x){return x.id===cid;})[0];
-    const nm=live?live.name:(cnames[i]||cid);
-    return `<span class="catgchip${live?'':' gone'}" title="${live?'':'no longer live'}">${esc(nm)}</span>`;
+    const live=loaded?_CATG.filter(function(x){return x.id===cid;})[0]:null;
+    if(!loaded){ return cnames[i]?`<span class="catgchip">${esc(cnames[i])}</span>`:''; }
+    const nm=live?live.name:(cnames[i]||tx('retired category'));
+    return `<span class="catgchip${live?'':' gone'}" title="${live?'':tx('no longer live')}">${esc(nm)}</span>`;
   }).join('');
 }
 /**
@@ -10180,6 +10186,15 @@ function paintProdOrderPreview(ref){
 function prodMediaUrl(id, mid){ return (CFG.API_BASE||'')+'/api/products/media/'+encodeURIComponent(id)+'/'+encodeURIComponent(mid); }
 function prodMediaTab(d, edit){
   const id=UI.prodSel||d.item_id||d.id||''; const m=(Array.isArray(d.media)?d.media:[]);
+  if(typeof cbMediaGallery==='function'){
+    const gal=cbMediaGallery(d, { apiBase: CFG.API_BASE||'', itemId: id, onRemove: edit ? "prodMediaRemove('"+esc(id)+"','{id}')" : null });
+    return `<div class="sec">${tx('Media')}</div>`
+      + (gal ? `<div style="padding:0 12px">${gal}</div>` : `<div data-testid="prod-media" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No pictures or videos yet.'))}</div>`)
+      + (edit ? `<div style="padding:6px 12px"><input type="file" id="ct_media_files" data-testid="cat-field-media" accept="image/*,video/*" multiple onchange="prodMediaUpload('${esc(id)}', this.files)">`
+                + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Pictures up to 8 MB each; the first is the cover the storefront shows. Saved at once — not with this form.')}</div>`
+                + `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>`
+                + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>` : '');
+  }
   const tile=(x)=>`<div data-testid="prod-media-${esc(x.id)}" style="position:relative;width:140px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--paper)">`
     + (x.kind==='video' ? `<video src="${esc(prodMediaUrl(id,x.id))}" controls preload="metadata" style="width:100%;height:100px;object-fit:cover;display:block"></video>` : x.kind==='image' ? `<img src="${esc(prodMediaUrl(id,x.id))}" alt="${esc(x.name||'')}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`)
     + `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name||'')}">${esc(x.name||'')}</div>`
@@ -10200,12 +10215,17 @@ async function prodMediaUpload(id, files){
       const b64=await new Promise((ok,no)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result)); r.onerror=()=>no(r.error); r.readAsDataURL(f); });
       await api('prodMediaAdd', { params:{ id }, body:{ name:f.name, mime:f.type, data_base64:b64 } });
     }
-    toast(tx('Media added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail();
+    toast(tx('Media added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('media');
   }catch(e){ toast((e&&e.message)||tx('Could not upload'), true); }
   finally{ hideBusy(); }
 }
+async function prodMediaLink(id){
+  const inp=document.getElementById('ct_media_link'); const url=(inp&&inp.value||'').trim(); if(!url) return;
+  try{ await api('prodMediaAdd', { params:{ id }, body:{ url } }); toast(tx('Video linked ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('media'); }
+  catch(e){ toast((e&&e.message)||tx('Could not link the video'), true); }
+}
 async function prodMediaRemove(id, mid){
-  try{ await api('prodMediaDel', { params:{ id, mid } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+  try{ await api('prodMediaDel', { params:{ id, mid } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('media'); }
   catch(e){ toast((e&&e.message)||tx('Could not remove'), true); }
 }
 /**

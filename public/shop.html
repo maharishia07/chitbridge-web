@@ -29,6 +29,7 @@
   .apply{ font-size:11.5px; color:var(--grey); margin-top:8px; }
   .price{ font-size:17px; font-weight:800; margin-top:10px; }
   .price small{ font-size:12px; color:var(--grey); font-weight:400; }
+  .pmedia{ padding:4px 0 10px; }
   .prow{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
   .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
   .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
@@ -370,6 +371,7 @@ function offerBadges(d, itemId, cur, offers){
   } catch (e) { return ''; }   /* a badge must never take the storefront down */
 }
 
+function productMedia(p){ var d=(p.item_data||p)||{}; if(typeof cbMediaGallery!=='function') return ''; var g=cbMediaGallery(d, { apiBase: API, itemId: p.item_id||(p.item&&p.item.item_id)||'', size: 'phone' }); return g ? '<div class="pmedia">'+g+'</div>' : ''; }
 function productRow(p, cur, variantLabel, offers){ var d=(p.item_data||p)||{};
   // A variant row leads with what DISTINGUISHES it ("4L"), not with the product name repeated three times.
   var lead = variantLabel ? '<b>'+esc(variantLabel)+'</b>' : '<b>'+esc(d.name||d.product||'item')+'</b>';
@@ -431,7 +433,7 @@ function productListHtml(data, cur){
     + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
     + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
     + '<div id="p_cart">' + shopCartBarHtml() + '</div>'
-    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
+    + '<div id="p_list">' + shopPickListHtml(cur) + '</div>'+productMedia(p);
 }
 /* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
    keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette
