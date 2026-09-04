@@ -9344,6 +9344,11 @@ function offersForProduct(d, id){
   return (UI._ctOffers || []).reduce(function (out, o) {
     const at = (o.rules && o.rules.applies_to) || {};
     if (pid && Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0) { out.push(o); return out; }
+    /* ⭐ NO TARGET = THE WHOLE CATALOGUE. A threshold like '2% above ₹5,000' is order-level and names no product; it reaches
+       every line, so it belongs on every product's Offers and Invoice rows (Athi, 2026-09-04: 'it has to be visible even
+       at product level'). Listed with its provenance, like a category offer. */
+    const targeted = (Array.isArray(at.item_ids) && at.item_ids.length) || (Array.isArray(at.skus) && at.skus.length) || at.category || (Array.isArray(at.category_ids) && at.category_ids.length);
+    if (!targeted) { out.push(Object.assign({}, o, { _via: tx('whole catalogue'), _excluded: prodOfferExcluded(d).indexOf(String(o.id)) >= 0 })); return out; }
     const want = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
     const hit = want.find(function (c) { return cats.indexOf(c) >= 0; });
     if (hit) out.push(Object.assign({}, o, { _via: catName(hit), _excluded: prodOfferExcluded(d).indexOf(String(o.id)) >= 0 }));
