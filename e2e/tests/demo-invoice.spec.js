@@ -18,7 +18,7 @@ test('[DEMO-INVOICE] the invoice row', async ({ page }) => {
     const d = Object.assign({}, p.item_data, { tax_slab: slab, xref: [{ role: 'buyer', system: 'Acme Ltd', id: 'A-778', direction: 'in' }] });
     await api('prodEdit', { params: { id: pid }, body: { item_data: d } });
   }, { pid });
-  await page.evaluate(async () => { UI._prodOpen = {}; await loadCatalogue('fresh'); paintProdList(); paintProdDetail(); });
+  await page.evaluate(async () => { UI._prodOpen = {}; UI._me = await meTake(); await cbDefsLive('tax', true); await cbDefsLive('category', true); UI._ctOffers = null; await new Promise((ok) => ctOffersEnsure(ok)); await loadCatalogue('fresh'); paintProdList(); paintProdDetail(); });   /* the definitions were made outside the screen: refresh every cache first */
   await settle(page);
   await page.getByTestId('prod-tab-invoice').click();
   await expect(page.getByTestId('prod-invoice')).toBeVisible({ timeout: 30000 });

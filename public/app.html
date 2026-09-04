@@ -5804,7 +5804,7 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  * is a line shape that will differ in one of them, and the difference shows up as a price, not as an error.
  */
 function cbOfferLine(key, it, qty){
-  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null, their_ref:it.their_ref||null,
+  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null, their_ref:it.their_ref||null, excluded:Array.isArray(it.offers_excluded)?it.offers_excluded.map(String):[],
            /* the line's categories AND their ancestors — an offer on the parent category reaches the child (catgWithAncestors) */
            categories:(typeof catgWithAncestors==='function'?catgWithAncestors(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])):[])||[],
            /* cbAmount, not `+it.price`: a compose item carries a number, a catalogue product carries the money
@@ -9292,7 +9292,10 @@ function ctOfferField(d){
         const win = (typeof prodOfferWindow === 'function') ? prodOfferWindow(o.rules) : '';
         /* an offer that reaches this product THROUGH A CATEGORY is shown as inherited — like tax — not as a tick to flip */
         const via = (offersForProduct(d, pid).find(function (x) { return x.id === o.id && x._via; }) || {})._via;
-        if (via && !on) return '<span class="ctcatg on" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">✓ ' + esc(o.name) + ' <span style="font-weight:400;color:var(--grey)">' + esc(tx('via category') + ' ' + via) + '</span></span>';
+        const excluded = prodOfferExcluded(d).indexOf(String(o.id)) >= 0;
+        if (via && !on) return '<span class="ctcatg' + (excluded ? '' : ' on') + '" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" data-excluded="' + (excluded ? '1' : '0') + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">' + (excluded ? '✕ ' : '✓ ') + esc(o.name)
+          + ' <button type="button" data-testid="cat-offer-exclude-' + esc(o.id) + '" onclick="prodOfferExcludeToggle(\'' + esc(pid) + '\',\'' + esc(o.id) + '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;padding:0 6px">' + (excluded ? esc(tx('include')) : esc(tx('exclude'))) + '</button>'
+          + ' <span style="font-weight:400;color:var(--grey)">' + esc(tx('via category') + ' ' + via) + '</span></span>';
         return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '"'
           + ' data-testid="cat-offer-' + esc(o.id) + '"'
           + ' title="' + esc(terms + (win ? ' · ' + win : '')) + '"'
@@ -9335,14 +9338,25 @@ function offersForProduct(d, id){
     if (pid && Array.isArray(at.item_ids) && at.item_ids.indexOf(pid) >= 0) { out.push(o); return out; }
     const want = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
     const hit = want.find(function (c) { return cats.indexOf(c) >= 0; });
-    if (hit) out.push(Object.assign({}, o, { _via: catName(hit) }));
+    if (hit) out.push(Object.assign({}, o, { _via: catName(hit), _excluded: prodOfferExcluded(d).indexOf(String(o.id)) >= 0 }));
     return out;
   }, []);
+}
+/** The product's opt-outs of category offers — [offer ids]. */
+function prodOfferExcluded(d){ return Array.isArray(d && d.offers_excluded) ? d.offers_excluded.map(String) : []; }
+async function prodOfferExcludeToggle(pid, offerId, btn){
+  const p=(UI.prods||[]).find(function(q){ return prodId(q)===pid; }); if(!p) return;
+  const d=Object.assign({}, pData(p)); let ex=prodOfferExcluded(d); const was=ex.indexOf(String(offerId))>=0;
+  ex = was ? ex.filter(function(x){ return x!==String(offerId); }) : ex.concat([String(offerId)]);
+  if(ex.length) d.offers_excluded=ex; else delete d.offers_excluded;
+  if(btn) btn.disabled=true;
+  try{ await api('prodEdit', { params:{ id: pid }, body:{ item_data: d } }); toast(was?tx('Included again'):tx('Excluded from this offer')); await loadCatalogue('fresh'); UI.prodSel=pid; paintProdList(); prodRepaintSection('offers'); prodRepaintSection('pricing'); prodRepaintSection('invoice'); }
+  catch(e){ toast((e&&e.message)||tx('Could not change it'), true); if(btn) btn.disabled=false; }
 }
 function prodOffersOn(d){
   const pid = UI.prodSel || (d && (d.item_id || d.id)) || '';
   if (!pid) return [];
-  return offersForProduct(d, pid);
+  return offersForProduct(d, pid).filter(function(o){ return !o._excluded; });
 }
 /**
  * ── ⭐⭐ WHAT THE SHOPPING CART WILL DO, ON THE PRODUCT PAGE ────────────────────────────────────────────────────
@@ -9980,7 +9994,7 @@ function prodOutcomeHTML(k, d){
       }
       case 'pricing': {
         const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
-        if(slabs===null||cats===null||UI._face===undefined) return grey(tx('reading…'));
+        if(slabs===null||cats===null||UI._face===undefined) return (grey(tx('reading…'));
         const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] });
         if(r.rate==null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
         const price=Number(pPrice(d))||0, st=prodSellerState()||'29';
@@ -9989,7 +10003,7 @@ function prodOutcomeHTML(k, d){
         const dot=(dead||clash)?'<span style="color:var(--warn-3)">● </span>':'';
         const prov=r.source==='product'?'':(r.source==='category'?' '+grey('↳ '+esc(tx('from category')+' '+(r.via_category_name||''))+(r.inherited_from?esc(' ↳ '+r.inherited_from):'')):' '+grey('↳ '+esc(tx('catalogue default'))));
         const warnTxt=dead?' · '+esc(tx('slab not active')):clash?' · '+esc(tx('categories disagree — resolve in Categories'))+' ('+esc(r.conflict.map(h=>(h.rate==null?'?':h.rate+'%')).join('/'))+')':'';
-        return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'');
+        return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'')) + prodTaxOverrideNote(d, r, slabs, cats);
       }
       case 'stock': { const st=d.status||'available'; const q=(d.qty!=null&&d.qty!=='')?d.qty:(d.stock!=null?d.stock:null); return `<b>${esc(tx(st==='available'?'available':st))}</b>${q!=null?' · '+grey(esc(tx('qty')+' '+q)):''}`; }
       case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none(tx('No variants'));
@@ -10440,6 +10454,23 @@ async function prodRowsSave(){
   try{ await api('saveProfile', { body:{ ui_prefs: ui } }); UI._me=Object.assign({}, me, { ui_prefs: ui }); closeModal(); toast(tx('Saved ✓')); paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
+/**
+ * ⭐ AN OVERRIDE SAYS SO. Athi, 2026-09-04: "governance or override — no two directions". When the product cites its
+ * own slab (or a bare rate) and something below it would have answered — a category's slab, the catalogue default —
+ * the outcome names both: the product's answer, then "override · category says GST 5%". Silence was the designer's
+ * marker for "set here"; it hid what was displaced. Computed by resolving the same product WITHOUT its own citation.
+ */
+function prodTaxOverrideNote(d, r, slabs, cats){
+  try{
+    if(!r || r.source!=='product' || typeof CBTaxSlab==='undefined') return '';
+    const bare=Object.assign({}, d); delete bare[CBTaxSlab.SLAB_KEY]; delete bare[CBTaxSlab.RATE_KEY]; if(CBTaxSlab.SLAB_NAME_KEY) delete bare[CBTaxSlab.SLAB_NAME_KEY];
+    const under=CBTaxSlab.resolve({ item_data:bare, face:UI._face||{}, slabs:slabs||[], categories:cats||[] });
+    if(!under || under.source==='none' || under.rate===null || under.rate===undefined) return '';
+    if(under.rate===r.rate && (under.slab_id||under.id)===(r.slab_id||r.id)) return '';
+    const who = under.source==='category' ? txf('category {c} says', { c: under.via_category_name||tx('it belongs to') }) : tx('catalogue default says');
+    return ' · <span data-testid="prod-tax-override" style="color:var(--warn-3)">'+esc(tx('override'))+'</span> '+esc(who)+' <b>'+esc((under.name?under.name+' — ':'')+(under.rate+'%'))+'</b>';
+  }catch(_){ return ''; }
+}
 function prodBarcodeTab(d){
   const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim();
   if(!code) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No product code yet — set a SKU on the Product tab and the barcode is drawn from it.')}</div>`;
@@ -10566,7 +10597,7 @@ function prodTaxHTML(d){
              does not mean. defaults.js: a blank cell means INHERIT, not CLEAR. */
           + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Blank inherits — first this product’s category, then the catalogue default.')}</div>`
         : `<div style="color:var(--grey)">${tx('No live slab yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Catalogue setup › Tax')}</span></div>`)
-    : `<div data-testid="prod-tax-resolved"><b>${esc(CBTaxSlab.describe(r))}</b></div>` + prodTaxAttachHTML(d, r, slabs);
+    : `<div data-testid="prod-tax-resolved"><b>${esc(CBTaxSlab.describe(r))}</b>${prodTaxOverrideNote(d, r, slabs, cats)}</div>` + prodTaxAttachHTML(d, r, slabs);
 
   return `<div style="padding-bottom:8px">${pick}</div>` + prodTaxPreviewHTML(d,r);
 }

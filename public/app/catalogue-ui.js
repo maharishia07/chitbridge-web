@@ -461,7 +461,7 @@
     try {
       if (!ev) ev = root.CBOffers.evaluate({
         lines: lines.map(function (l, i) {
-          return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category,
+          return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category, excluded: l.excluded || l.offers_excluded || [],
                    qty: Number(l.qty || l.quantity || 0), unitPrice: Number(l.price || 0) };
         }),
         offers: offers,

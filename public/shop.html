@@ -481,7 +481,7 @@ function shopPickListHtml(){ return _CART?_CART.listHTML():''; }
  */
 function _shopOffers(){ return (_SHOPDATA && Array.isArray(_SHOPDATA.offers)) ? _SHOPDATA.offers : []; }
 function _shopCtx(){ return { now: new Date(), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
-function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, categories:(typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[])), qty:qty||1, unitPrice:cbAmount(d.price) }; }
+function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, excluded:Array.isArray(d.offers_excluded)?d.offers_excluded.map(String):[], categories:(typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[])), qty:qty||1, unitPrice:cbAmount(d.price) }; }
 function shopOffersSync(){
   if(!_CART || typeof CBOffers==='undefined' || !CBOffers.evaluate || !CBOffers.perLine) return;
   var offers=_shopOffers(); if(!offers.length) return;
