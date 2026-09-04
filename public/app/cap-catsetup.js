@@ -641,18 +641,27 @@ function catsetBody(k){
      * products are doing"*. Tally, Zoho and Odoo all reached the same shape independently — a named rate is its
      * own record, the product points at it, and an unset product inherits — so that is what this is.
      */
-    return catsetCard('Name a rate, then a product cites it',
+    /* ⭐⭐ REDESIGNED 2026-09-05 — Athi: "this should be bringing all the details like tax applied currently, offers
+       attached and any other information related to the product … helps to see the individual breakdown". The
+       screen used to explain the rules and list the slabs; it never showed the OUTCOME. Now: what every product
+       carries (tax as RESOLVED, from where; offers; HSN; categories) comes first, each row opening the product; the
+       slabs carry their counts; the two explanations fold away. */
+    return catsetCard('What your products carry', catsetTaxRegisterHTML(),
+      '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
+    + catsetCard('Your slabs', catsetTaxCountsHTML() + catsetDefListHTML('tax', 'tax slab'), '')
+    + catsetCard('Falls back to', catsetTaxHTML(), '')
+    + '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' + tx('How slabs work') + '</summary>'
+    + catsetCard('Name a rate, then a product cites it',
       'A slab is “GST 18%” with a name. Attach it on a product’s Pricing &amp; tax pane; a product that names '
-      + 'none inherits — first from its category, then from the catalogue default below.'
+      + 'none inherits — first from its category, then from the catalogue default.'
       + '<div class="catset-std">⚠️ <b>Blank means INHERIT, never nil-rated.</b> 0% is a real answer (exempt and '
       + 'nil-rated goods) and “nobody has said” is a different one. Nothing here guesses between them.</div>'
       + '<div class="catset-std">⚠️ <b>A rate is not a decision, and we ship none.</b> Which slab a product '
       + 'attracts is per-HSN, changes at every Council meeting, and is yours to state. CB carries what you '
-      + 'declared, who declared it and when — and freezes it onto a chit at the mint.</div>',
-      '<button class="composebtn pri" data-testid="catset-tax-new" onclick="catsetDefNew(\'tax\')">+ New slab</button>')
-    + catsetCard('Your slabs', catsetDefListHTML('tax', 'tax slab'), '')
-    + catsetCard('Falls back to', catsetTaxHTML(), '')
-    + catsetRegistry(['tax']);
+      + 'declared, who declared it and when — and freezes it onto a chit at the mint.</div>', '')
+    + '</details>'
+    + '<details class="catset-fold"><summary style="cursor:pointer;font-weight:700;padding:8px 0">' + tx('GST slab rates (reference)') + '</summary>'
+    + catsetRegistry(['tax']) + '</details>';
   }
   /* ⭐ The storefront controls are REAL here now — see catsetSfHTML. This used to be a paragraph and a button
      that opened the six-step wizard, so the hub owned nine of its ten sections and handed the tenth back. */
@@ -1155,6 +1164,76 @@ function catsetErpSet(key, prop, val){
  * ⚠️ ONLY LIVE SLABS ARE OFFERED. A draft is one you are still writing, and a catalogue-wide default that is
  * still being written would apply to every product that inherits — which is most of them.
  */
+/**
+ * ── ⭐⭐ THE TAX REGISTER — what every product carries, as the engine resolves it ────────────────────────────────
+ * One row per product: tax RESOLVED (rate · slab · from where: product / category / catalogue / none, and a dead
+ * citation named), the offers attached, HSN, categories, price. The same resolver and the same offer filter the
+ * product page uses — a register that computed its own answer would be a second opinion. Rows open the product.
+ * Reads: the product list once (cached on UI.prods, as the catalogue keeps it); slabs/categories/face are already here.
+ */
+function catsetTaxRows(){
+  var prods = UI.prods;
+  if (!Array.isArray(prods)) {
+    if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (r) { UI.prods = r || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
+    return null;
+  }
+  var slabs = (CATSET_DEFS['tax'] || []).filter(function (d) { return d.status === 'live'; })
+    .map(function (d) { return { definition_id: d.id, name: d.name, status: d.status, rules: d.rules || {} }; });
+  var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || null;
+  if (cats === null && typeof cbDefsLive === 'function') { cbDefsLive('category').then(catsetPaintDetail).catch(function(){}); cats = []; }
+  var offers = (typeof UI._ctOffers !== 'undefined' && UI._ctOffers) || null;
+  if (offers === null && typeof ctOffersEnsure === 'function') { ctOffersEnsure(function(){ catsetPaintDetail(); }); offers = []; }
+  var face = CATSET_FACE || {};
+  return prods.map(function (p) {
+    var d = p.item_data || p, id = p.item_id || p.id;
+    var r = (typeof CBTaxSlab !== 'undefined') ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
+    var on = (offers || []).filter(function (o) { var at = (o.rules && o.rules.applies_to) || {}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0; });
+    return { id: id, name: (typeof pName === 'function') ? pName(d) : (d.name || ''), code: d.hsn || d.code || d.sku || '',
+             cats: (typeof catgNamesOf === 'function') ? catgNamesOf(d) : [], price: d.price, r: r, offers: on.map(function (o) { return o.name; }) };
+  });
+}
+function catsetTaxRegisterHTML(){
+  var rows = catsetTaxRows();
+  if (rows === null) return '<div class="catset-load">' + tx('reading…') + '</div>';
+  if (!rows.length) return '<div class="catset-none">' + tx('No products yet.') + '</div>';
+  var src = { product: tx('on the product'), category: tx('from category'), catalogue: tx('catalogue default'), none: tx('not set') };
+  var cell = function (h, extra) { return '<td style="padding:6px 8px;border-top:1px solid var(--line);vertical-align:top' + (extra || '') + '">' + h + '</td>'; };
+  var dead = 0;
+  var body = rows.map(function (x) {
+    var r = x.r || {}; var isDead = r.unresolved && r.cited; if (isDead) dead++;
+    var tax = r.rate === null || r.rate === undefined
+      ? '<span style="color:var(--warn-3)">' + tx('no rate') + '</span>'
+      : '<b><bdi>' + esc(String(r.rate)) + '%</bdi></b> <span style="color:var(--grey)">' + esc(r.name || '') + '</span>';
+    var from = '<span class="pill" style="font-size:var(--fs-1)">' + esc(src[r.source] || r.source || '') + (r.source === 'category' && r.via_category_name ? ' · ' + esc(r.via_category_name) : '') + '</span>';
+    var warn = isDead ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(txf('cites “{s}”, not active', { s: r.cited })) + '</div>' : '';
+    return '<tr data-testid="catset-tax-row-' + esc(id(x)) + '" style="cursor:pointer" onclick="catsetOpenProduct(\'' + esc(id(x)) + '\')">'
+      + cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : ''))
+      + cell(tax + ' ' + from + warn)
+      + cell(x.offers.length ? x.offers.map(function (n) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(n) + '</span>'; }).join(' ') : '<span style="color:var(--grey)">—</span>')
+      + cell(x.cats.length ? esc(x.cats.join(' · ')) : '<span style="color:var(--grey)">—</span>')
+      + cell('<bdi>' + (typeof inr === 'function' ? inr(x.price) : esc(String(x.price || ''))) + '</bdi>', ';text-align:end;white-space:nowrap')
+      + '</tr>';
+  }).join('');
+  function id(x){ return String(x.id || ''); }
+  return (dead ? '<div data-testid="catset-tax-dead" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) cite a slab that is not active — open the row and attach another.', { n: String(dead) })) + '</div>' : '')
+    + '<div style="overflow-x:auto"><table data-testid="catset-tax-register" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 8px">' + tx('Product') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Tax applied') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Offers') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Categories') + '</th><th style="text-align:end;padding:4px 8px">' + tx('Price') + '</th></tr></thead>'
+    + '<tbody>' + body + '</tbody></table></div>';
+}
+/** Under "Your slabs": how many products each slab reaches, by the resolver's answer — so a retire knows its cost. */
+function catsetTaxCountsHTML(){
+  var rows = catsetTaxRows(); if (!rows || !rows.length) return '';
+  var by = {}; rows.forEach(function (x) { var k = (x.r && x.r.slab_id) || ''; if (k) by[k] = (by[k] || 0) + 1; });
+  var keys = Object.keys(by); if (!keys.length) return '';
+  var name = function (k) { var d = (CATSET_DEFS['tax'] || []).filter(function (s) { return s.id === k; })[0]; return d ? d.name : k; };
+  return '<div data-testid="catset-tax-counts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
+    + keys.map(function (k) { return '<span class="pill">' + esc(name(k)) + ' · ' + esc(txf('{n} product(s)', { n: String(by[k]) })) + '</span>'; }).join('') + '</div>';
+}
+/** A register row opens its product on the Pricing & tax tab — the place the row's answer is changed. */
+function catsetOpenProduct(id){
+  UI.prodSel = id; UI.prodMode = 'view'; UI.mdetail = true; UI.prodTab = 'pricing';
+  UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp();
+}
 function catsetTaxHTML(){
   if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading…') + '</div>'; }
   var rows = CATSET_DEFS['tax'];

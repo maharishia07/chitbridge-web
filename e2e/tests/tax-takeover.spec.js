@@ -34,7 +34,8 @@ test('[TAX-04] retire is refused while cited → takeover re-points → dead cit
   await test.step('retire from the API without a takeover → 409 with the count', async () => {
     const cited = await page.evaluate(async (pid) => { const rows = await api('prodList'); const p = rows.find((x) => (x.item_id || x.id) === pid); return p && p.item_data && { tax_slab: p.item_data.tax_slab, gst_rate: p.item_data.gst_rate }; }, id);
     const r = await page.evaluate(async (i) => { try { return await api('defRetire', { params: { id: i } }); } catch (e) { return { error: String(e && e.message), status: e && e.status }; } }, ownId);
-    expect(r.error, 'product cites ' + JSON.stringify(cited) + ' · retire answered ' + JSON.stringify(r)).toMatch(/cite this slab/i);
+    console.log('CITED ' + JSON.stringify(cited) + ' RETIRE ' + JSON.stringify(r));
+    expect(String((r && r.error) || JSON.stringify(r))).toMatch(/cite this slab/i);
   });
 
   await test.step('retire with takeover IN-GST-18 → the product now cites the governed slab at 18%', async () => {
