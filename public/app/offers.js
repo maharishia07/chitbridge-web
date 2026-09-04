@@ -360,31 +360,16 @@
     var s = o.applies_to;
     if (!s) return lines.slice();
     return lines.filter(function (l) {
-      if (s.item_ids && s.item_ids.indexOf(l.item_id) < 0) return false;
-      if (s.skus && s.skus.indexOf(l.sku) < 0) return false;
-      /**
-       * ⭐ A LINE HAS MANY CATEGORIES; THE OFFER NAMES ONE. It matches if the line carries that one.
-       *
-       * ⚠️ This read `l.category` — singular — and no caller has ever emitted that field, so `applies_to.category`
-       * matched nothing and every offer using it silently applied to no lines at all. It failed CLOSED, which is
-       * why nobody noticed: an offer that never fires looks like an offer nobody triggered.
-       *
-       * ⚠️ STILL FAILS CLOSED when the line carries no categories. An offer targeted at Grains must not fall
-       * back to "applies to everything" on an unclassified product — that is a discount nobody agreed to.
-       */
-      /* ⭐ SEVERAL CATEGORIES PER OFFER. `applies_to.category` (one) stays as the form writes it; `category_ids` (many)
-         is what the Categories screen writes when an offer is ticked there (Athi, 2026-09-05: "how can I attach an
-         offer for the entire category?"). Either form: the line must sit in at least one of them. */
+      /* ⭐ TARGETS ARE A UNION. An offer ticked on a product AND scoped to a category reaches the product even when it
+         sits elsewhere (Athi, 2026-09-05: "adi offer 2 — not applied — no line qualifies" on a rice product he had
+         ticked it on; the offer was also scoped to Fruits & Vegetables). item_ids · skus · category / category_ids:
+         if ANY of the lists is present, the line must be in AT LEAST ONE of them. The price bounds below stay AND. */
       var wantCats = [].concat(s.category ? [String(s.category)] : [], Array.isArray(s.category_ids) ? s.category_ids.map(String) : []);
-      if (wantCats.length) {
-        var lc2 = (l.categories || (l.category ? [l.category] : [])).map(String);
-        if (!wantCats.some(function (c) { return lc2.indexOf(c) >= 0; })) return false;
-      }
-      if (false && s.category) {
-        var lc = l.categories || (l.category ? [l.category] : []);
-        if (!lc.length) return false;
-        if (lc.map(String).indexOf(String(s.category)) < 0) return false;
-      }
+      var lists = 0, hit = false;
+      if (Array.isArray(s.item_ids) && s.item_ids.length) { lists++; if (s.item_ids.map(String).indexOf(String(l.item_id)) >= 0) hit = true; }
+      if (Array.isArray(s.skus) && s.skus.length) { lists++; if (s.skus.map(String).indexOf(String(l.sku)) >= 0) hit = true; }
+      if (wantCats.length) { lists++; var lc2 = (l.categories || (l.category ? [l.category] : [])).map(String); if (wantCats.some(function (c) { return lc2.indexOf(c) >= 0; })) hit = true; }
+      if (lists && !hit) return false;
       if (s.min_unit_price != null && l.unitPrice < Number(s.min_unit_price)) return false;
       if (s.max_unit_price != null && l.unitPrice > Number(s.max_unit_price)) return false;
       return true;

@@ -58,6 +58,9 @@
    */
   function money(ns, n) {
     if (n == null || !isFinite(n)) return '';
+    /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
+       sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
+    if (typeof root.fmtMoney === 'function') { try { return root.fmtMoney(n, (typeof root.myCur === 'function') ? root.myCur() : 'INR'); } catch (_) {} }
     return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
   }
 
