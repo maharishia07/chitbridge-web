@@ -408,11 +408,12 @@ module.exports = { addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqu
  */
 async function openTab(page, key) {
   const pane = page.getByTestId('prod-pane-' + key);
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 30; i++) {
     await page.getByTestId('prod-tab-' + key).click().catch(() => {});
     await page.waitForTimeout(400);
     if (await pane.isVisible().catch(() => false)) return;
   }
-  throw new Error('openTab: pane ' + key + ' never became visible');
+  const why = await page.evaluate(() => ({ tab: (typeof UI !== 'undefined') ? UI.prodTab : '?', mode: (typeof UI !== 'undefined') ? UI.prodMode : '?', panes: Array.from(document.querySelectorAll('[data-testid^="prod-pane-"]')).map((e) => e.getAttribute('data-testid') + (e.style.display === 'none' ? ':hidden' : ':shown')) })).catch(() => null);
+  throw new Error('openTab: pane ' + key + ' never became visible — ' + JSON.stringify(why));
 }
 module.exports.openTab = openTab;

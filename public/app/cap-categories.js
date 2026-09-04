@@ -120,7 +120,10 @@ function cbcatWouldCycle(id, parentId){
 /** Every category except the one being edited and its own descendants — the legal parents. */
 function cbcatParentOptions(id){
   return (CBCAT_UI.list || []).filter(function(c){
-    return c.status !== 'retired' && c.id !== id && !cbcatWouldCycle(c.id, id) && !(id && cbcatWouldCycle(id, c.id));
+    /* ⚠️ ONE direction only. A candidate parent must not be a DESCENDANT of this category (that would loop). The old
+       second test also threw out every ANCESTOR — including the category's own current parent — so the dropdown
+       could never show the right parent (Athi, 2026-09-05: "it is not showing the right parent"). */
+    return c.status !== 'retired' && c.id !== id && !(id && cbcatWouldCycle(id, c.id));
   });
 }
 
@@ -609,6 +612,7 @@ function cbcatDetailHTML(){
        Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
        under offer."* Same live-offers read the product page uses — one loader, one cache. */
     + cbcatOffersHereHTML(c.id)
+    + (ret ? '' : cbcatOfferTicksHTML(c.id))
     + '<div class="sec">' + tx('Products') + '</div>'
     + (mine.length
         ? '<div class="cbcat-plist">' + mine.slice(0, 60).map(function(p){
@@ -657,14 +661,56 @@ function cbcatTaxChipHTML(cid){
   return '<span class="cbcat-badge" data-testid="catg-tax-' + esc(cid) + '" title="' + esc(t.name || '') + (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') + '">'
     + esc((t.rate === null || t.rate === undefined) ? (t.name || '?') : ('GST ' + t.rate + '%')) + (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') + '</span>';
 }
+/**
+ * ⭐ ATTACH AN OFFER TO A WHOLE CATEGORY, FROM HERE — Athi, 2026-09-05: "how can I attach an offer for that category?
+ * the screen is not allowing or bringing the offer details here". The same tick the product page has, writing
+ * `applies_to.category_ids` on the offer (many categories per offer; the form's single `category` still counts).
+ * The engine (offers.js) honours both; a child category inherits through catgWithAncestors.
+ */
+function cbcatOfferCats(rules){ var at = (rules && rules.applies_to) || {}; return [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []); }
+function cbcatOfferTicksHTML(cid){
+  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
+  if (!list) return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div>';
+  if (!list.length) return '<div class="sec">' + tx('Offers') + '</div><div style="padding:6px 12px;color:var(--grey);font-size:var(--fs-2)">' + tx('None live. ') + '<span onclick="goCatsetSec(\'offers\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Author one') + '</span> ' + tx('in Catalogue setup, then attach it here.') + '</div>';
+  return '<div class="sec">' + tx('Offers') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + tx('tick to apply to every product in this category and under it') + '</span></div>'
+    + '<div class="ctcatgs" data-testid="catg-offer-ticks" style="padding:4px 12px">'
+    + list.map(function (o) {
+        var on = cbcatOfferCats(o.rules).indexOf(String(cid)) >= 0;
+        var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? (CBOffers.terms(Object.assign({ kind: o.rules && o.rules.kind }, o.rules || {}), { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) || '') : '';
+        return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '" data-testid="catg-offer-' + esc(o.id) + '" onclick="cbcatOfferToggle(\'' + esc(cid) + '\',\'' + esc(o.id) + '\',this)">' + (on ? '✓ ' : '') + esc(o.name) + (terms ? ' <span style="color:var(--grey)">· ' + esc(terms) + '</span>' : '') + '</button>';
+      }).join('')
+    + '</div>';
+}
+async function cbcatOfferToggle(cid, offerId, btn){
+  var on = btn && btn.className.indexOf('on') >= 0;
+  if (btn) btn.disabled = true;
+  try {
+    const one = await api('defGet', { params: { id: offerId } });
+    const d = (one && one.definition) || {};
+    const vers = (one && one.versions) || [];
+    const curV = vers.filter(function (v) { return v.version === d.current_version; })[0] || vers[0] || {};
+    const rules = Object.assign({ kind: d.sub_kind }, curV.rules || d.rules || {});
+    if (!rules.kind) { toast(tx('Could not read that offer\'s terms, so nothing was changed. Open it in Catalogue setup first.'), true); return; }
+    const at = Object.assign({}, rules.applies_to || {});
+    /* the form's single `category` joins the array on first touch, so nothing is lost and one shape remains */
+    var ids = cbcatOfferCats(rules).filter(function (x, i, arr) { return arr.indexOf(x) === i; });
+    delete at.category;
+    ids = on ? ids.filter(function (x) { return x !== String(cid); }) : ids.concat(ids.indexOf(String(cid)) >= 0 ? [] : [String(cid)]);
+    if (ids.length) at.category_ids = ids; else delete at.category_ids;
+    if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
+    await api('defSave', { params: { id: offerId }, body: { rules: rules } });
+    toast(on ? tx('Offer removed from this category') : tx('Offer applies to this category ✓'));
+  } catch (e) { toast((e && e.message) || tx('Could not change that offer'), true); }
+  finally { UI._ctOffers = undefined; if (btn) btn.disabled = false; cbcatPaintDetail(); }
+}
 function cbcatOffersHereHTML(cid){
   var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
   if (!list) return '';
   var anc = cbcatAncestorIds(cid);
-  var here = list.filter(function(o){ var at = (o.rules && o.rules.applies_to) || {}; return at.category === cid || (at.category && anc.indexOf(at.category) >= 0); });
+  var here = list.filter(function(o){ var cs = cbcatOfferCats(o.rules); return cs.indexOf(String(cid)) >= 0 || cs.some(function (c) { return anc.indexOf(c) >= 0; }); });
   if (!here.length) return '';
   return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
-    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var at = (o.rules && o.rules.applies_to) || {}; var viaP = at.category !== cid ? (cbcatById(at.category) || {}).name : null; return esc(o.name) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
+    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; return esc(o.name) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;

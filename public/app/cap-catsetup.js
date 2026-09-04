@@ -1185,15 +1185,17 @@ function catsetOfferAppliesHTML(rules){
   var at = (rules && rules.applies_to) || {};
   var bits = [];
   if (Array.isArray(at.item_ids) && at.item_ids.length) { catsetProdsEnsure(); bits.push(at.item_ids.map(function (id) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(catsetProdName(id)) + '</span>'; }).join(' ')); }
-  if (at.category) {
-    var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === String(at.category); })[0];
+  var catIds = [].concat(at.category ? [String(at.category)] : [], Array.isArray(at.category_ids) ? at.category_ids.map(String) : []);
+  catIds.forEach(function (catId) {
+    var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === catId; })[0];
+    at = Object.assign({}, at, { category: catId });
     /* the products this category offer reaches — one list, so its applicability is confirmed by looking (Athi, 2026-09-05) */
     var prods = catsetProdsEnsure() || [];
     var inCat = prods.filter(function (p) { var d = p.item_data || p; return ((typeof catgIdsOf === 'function') ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0; });
     bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + ' · ' + esc(txf('{n} product(s)', { n: String(inCat.length) })) + '</span>'
       + (inCat.length ? '<details style="display:inline-block;margin-inline-start:6px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('which') + '</summary><div data-testid="catset-offer-reach" style="font-size:var(--fs-1);padding:4px 0 0 8px">'
         + inCat.map(function (p) { var d = p.item_data || p; return '<div>' + esc((d.name || '')) + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>'; }).join('') + '</div></details>' : ''));
-  }
+  });
   return bits.length ? bits.join(' ') : '<span style="color:var(--grey)">' + tx('every product') + '</span>';
 }
 function catsetOfferWindowHTML(rules, status){

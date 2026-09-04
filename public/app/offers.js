@@ -372,7 +372,15 @@
        * ⚠️ STILL FAILS CLOSED when the line carries no categories. An offer targeted at Grains must not fall
        * back to "applies to everything" on an unclassified product — that is a discount nobody agreed to.
        */
-      if (s.category) {
+      /* ⭐ SEVERAL CATEGORIES PER OFFER. `applies_to.category` (one) stays as the form writes it; `category_ids` (many)
+         is what the Categories screen writes when an offer is ticked there (Athi, 2026-09-05: "how can I attach an
+         offer for the entire category?"). Either form: the line must sit in at least one of them. */
+      var wantCats = [].concat(s.category ? [String(s.category)] : [], Array.isArray(s.category_ids) ? s.category_ids.map(String) : []);
+      if (wantCats.length) {
+        var lc2 = (l.categories || (l.category ? [l.category] : [])).map(String);
+        if (!wantCats.some(function (c) { return lc2.indexOf(c) >= 0; })) return false;
+      }
+      if (false && s.category) {
         var lc = l.categories || (l.category ? [l.category] : []);
         if (!lc.length) return false;
         if (lc.map(String).indexOf(String(s.category)) < 0) return false;
