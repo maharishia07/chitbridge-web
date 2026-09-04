@@ -10336,13 +10336,13 @@ async function prodXrefAdd(id){
   if(!x.id){ toast(tx('The id is required'), true); return; }
   const p=(UI.prods||[]).find(function(q){ return prodId(q)===id; }); const cur=(p&&pData(p)&&Array.isArray(pData(p).xref))?pData(p).xref.slice():[];
   cur.push(x);
-  try{ await api('prodEdit', { params:{ id }, body:{ item_data:{ xref: cur } } }); toast(tx('Id added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
+  try{ await api('prodEdit', { params:{ id }, body:{ item_data: Object.assign({}, (p&&pData(p))||{}, { xref: cur }) } }); toast(tx('Id added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
   catch(e){ toast((e&&e.message)||tx('Could not add the id'), true); }
 }
 async function prodXrefRemove(id, i){
   const p=(UI.prods||[]).find(function(q){ return prodId(q)===id; }); const cur=(p&&pData(p)&&Array.isArray(pData(p).xref))?pData(p).xref.slice():[];
   cur.splice(i,1);
-  try{ await api('prodEdit', { params:{ id }, body:{ item_data:{ xref: cur } } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
+  try{ await api('prodEdit', { params:{ id }, body:{ item_data: Object.assign({}, (p&&pData(p))||{}, { xref: cur }) } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
   catch(e){ toast((e&&e.message)||tx('Could not remove'), true); }
 }
 function prodBarcodeTab(d){
