@@ -409,10 +409,19 @@
   function promise(o, ctx) {
     if (!o) return null;
     var c = Object.assign({ now: new Date() }, ctx || {});
+    if (within(o, c) !== null) return null;
+    return terms(o, c);
+  }
+  /**
+   * terms(o, ctx) → the same sentence as promise(), WITHOUT the window gate — for a register that lists what an
+   * offer says even when it is scheduled or expired (Setup › Offers, 2026-09-05). A badge must stay gated
+   * (promise); a management list must not, or a future offer reads as an empty row.
+   */
+  function terms(o, ctx) {
+    if (!o) return null;
+    var c = Object.assign({ now: new Date() }, ctx || {});
     /* ⚠️ The SAME gate evaluate() uses. A second copy of "is this live?" is how a badge and a basket come to
        disagree about the same offer on the same screen. */
-    if (within(o, c) !== null) return null;
-
     var money = (typeof c.money === 'function') ? c.money : function (n) { return String(n); };
     var pct = Number(o.percent) || 0;
     var amt = Number(o.amount) || 0;
@@ -683,6 +692,19 @@
     return q > 1 ? Math.min(q, 999) : 3;
   }
 
-  root.CBOffers = { evaluate: evaluate, promise: promise, forLine: forLine, onOffer: onOffer, claims: claims,
+  /**
+   * timeStatus(o, now) → 'scheduled' | 'active' | 'expired' — the TIME axis, separate from the lifecycle (draft ·
+   * live · retired). The words are the ones Shopify, WooCommerce and Google Merchant promotions use, adopted as-is
+   * (Athi, 2026-09-05: "futuristic, current, expired — is there a standard term?"). Derived from within(), so the
+   * chip and the basket can never disagree about a date.
+   */
+  function timeStatus(o, now) {
+    var why = within(o || {}, { now: now || new Date() });
+    if (why === null) return 'active';
+    if (/^not started/.test(why)) return 'scheduled';
+    if (/^expired/.test(why)) return 'expired';
+    return 'active';   /* region / currency / group gates are not TIME */
+  }
+  root.CBOffers = { evaluate: evaluate, promise: promise, terms: terms, timeStatus: timeStatus, forLine: forLine, onOffer: onOffer, claims: claims,
     perLine: perLine, sampleQty: sampleQty, KINDS: KINDS, kinds: Object.keys(KINDS) };
 })(typeof window !== 'undefined' ? window : this);

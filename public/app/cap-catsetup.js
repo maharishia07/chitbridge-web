@@ -115,7 +115,7 @@ function catsetDefListHTML(kind, one){
         + '</div>';
     }
     return '<div class="catset-drow' + (d.status === 'retired' ? ' ret' : '') + '" data-testid="catset-' + kind + '-' + esc(d.id) + '">'
-      + '<span class="dn">' + esc(d.name) + '</span>'
+      + '<span class="dn">' + esc(d.name) + '</span>' + catsetDefRowDetail(kind, d)
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
       + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
       /* ⭐ REINSTATE. Athi, 2026-09-05: "only option to retire is there, but there is no way to reinstate" — a retired
@@ -581,6 +581,8 @@ function catsetBody(k){
       + 'authored once here rather than edited on a product. <b>' + tx('Live') + '</b> offers apply; a draft is one you are '
       + 'still writing.</div>',
       '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
+    + catsetCard('The next six months', catsetOfferPlanHTML(),
+      '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>')
     + catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '')
     + catsetRegistry(['offer']);
   }
@@ -1171,12 +1173,132 @@ function catsetErpSet(key, prop, val){
  * product page uses — a register that computed its own answer would be a second opinion. Rows open the product.
  * Reads: the product list once (cached on UI.prods, as the catalogue keeps it); slabs/categories/face are already here.
  */
-function catsetTaxRows(){
-  var prods = UI.prods;
-  if (!Array.isArray(prods)) {
-    if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (r) { UI.prods = r || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
-    return null;
+/**
+ * ── ⭐ THE OFFER ROW SAYS WHAT IT IS — Athi, 2026-09-05: "view screen behind the popup should show the details of
+ * the offer, it just shows the name alone … status: futuristic, current, expired … where is it applied?"
+ * Terms = the engine's own sentence (CBOffers.terms — promise() without the window gate); the window with its TIME
+ * status (Scheduled · Active · Expired, the words Shopify/WooCommerce/Google Merchant use — a second axis beside
+ * draft · live · retired); where it applies = the products or category it targets, else every product.
+ */
+function catsetOfferShape(d){ return Object.assign({ id: d.id, kind: d.sub, label: d.name }, d.rules || {}); }
+function catsetOfferAppliesHTML(rules){
+  var at = (rules && rules.applies_to) || {};
+  var bits = [];
+  if (Array.isArray(at.item_ids) && at.item_ids.length) { catsetProdsEnsure(); bits.push(at.item_ids.map(function (id) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(catsetProdName(id)) + '</span>'; }).join(' ')); }
+  if (at.category) { var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === String(at.category); })[0]; bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + '</span>'); }
+  return bits.length ? bits.join(' ') : '<span style="color:var(--grey)">' + tx('every product') + '</span>';
+}
+function catsetOfferWindowHTML(rules, status){
+  var r = rules || {}; if (typeof CBOffers === 'undefined') return '';
+  var t = CBOffers.timeStatus(r);
+  var word = { scheduled: tx('Scheduled'), active: tx('Active'), expired: tx('Expired') }[t] || t;
+  var col = { scheduled: 'var(--blue)', active: 'var(--ok, #2e7d32)', expired: 'var(--grey)' }[t] || 'var(--grey)';
+  var win = (r.valid_from || r.valid_to) ? esc((r.valid_from || '…') + ' → ' + (r.valid_to || '…')) : esc(tx('no dates — always'));
+  /* a draft or retired offer has a window but does not APPLY; say the time word only for live ones */
+  return '<span data-testid="catset-offer-time" data-time="' + esc(t) + '" style="color:' + col + ';font-weight:700">' + (status === 'live' ? esc(word) : esc(win)) + '</span>'
+    + (status === 'live' ? ' <span style="color:var(--grey)">' + win + '</span>' : '');
+}
+function catsetDefRowDetail(kind, d){
+  if (kind !== 'offer') return '';
+  var o = catsetOfferShape(d);
+  var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? CBOffers.terms(o, { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) : null;
+  return '<div class="dn-detail" data-testid="catset-offer-detail-' + esc(d.id) + '" style="flex-basis:100%;font-size:var(--fs-1);display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:2px 0 0">'
+    + '<span data-testid="catset-offer-terms">' + (terms ? esc(terms) : '<span style="color:var(--warn-3)">' + tx('no terms yet') + '</span>') + '</span>'
+    + '<span>' + catsetOfferWindowHTML(d.rules, d.status) + '</span>'
+    + '<span data-testid="catset-offer-applies"><span style="color:var(--grey)">' + tx('on') + '</span> ' + catsetOfferAppliesHTML(d.rules) + '</span>'
+    + '</div>';
+}
+
+/**
+ * ── ⭐⭐ THE OFFER PLAN — Athi, 2026-09-05: "a proposal screen, kind of designing an offer … create multiple offers
+ * at once, this month this offer, next month another … set the dates and it should be applied as per time period".
+ * The engine already applies each offer in its own window (valid_from · valid_to); what was missing was seeing the
+ * months side by side and authoring several at once. The strip: six months, each with the live offers that touch
+ * it. "Plan several": rows of name · kind · value · product · from · to, created LIVE in one pass.
+ */
+function catsetOfferPlanHTML(){
+  var rows = CATSET_DEFS['offer'];
+  if (rows === undefined) return '<div class="catset-load">' + tx('reading…') + '</div>';
+  var live = rows.filter(function (d) { return d.status === 'live'; });
+  var now = new Date(), months = [];
+  for (var i = 0; i < 6; i++) { var m0 = new Date(now.getFullYear(), now.getMonth() + i, 1), m1 = new Date(now.getFullYear(), now.getMonth() + i + 1, 0, 23, 59, 59); months.push({ from: m0, to: m1, label: m0.toLocaleString(undefined, { month: 'short', year: 'numeric' }) }); }
+  var touches = function (d, m) { var r = d.rules || {}; var f = r.valid_from ? new Date(r.valid_from) : null, t = r.valid_to ? new Date(r.valid_to + 'T23:59:59') : null; if (f && f > m.to) return false; if (t && t < m.from) return false; return true; };
+  var cells = months.map(function (m, i) {
+    var on = live.filter(function (d) { return touches(d, m); });
+    return '<div data-testid="catset-plan-month-' + i + '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' + (i === 0 ? ';background:var(--paper)' : '') + '">'
+      + '<div style="font-weight:700;margin-bottom:4px">' + esc(m.label) + (i === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') + '</div>'
+      + (on.length ? on.map(function (d) { return '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' + esc(d.id) + '\')">' + esc(d.name) + '</div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">—</div>')
+      + '</div>';
+  }).join('');
+  return '<div data-testid="catset-offer-plan" style="display:flex;gap:8px;flex-wrap:wrap">' + cells + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + tx('An offer applies only inside its own dates; two offers on the same product in the same month stack by their order.') + '</div>';
+}
+var CATSET_PLAN = null;
+function catsetPlanOpen(){
+  CATSET_PLAN = [catsetPlanRow(0), catsetPlanRow(1)];
+  catsetProdsEnsure();
+  catsetPlanPaint();
+}
+function catsetPlanRow(i){ var d = new Date(); var f = new Date(d.getFullYear(), d.getMonth() + i, 1), t = new Date(d.getFullYear(), d.getMonth() + i + 1, 0); var iso = function (x) { return x.toISOString().slice(0, 10); }; return { name: '', kind: 'percent_off', value: '', product: '', from: iso(f), to: iso(t) }; }
+function catsetPlanPaint(){
+  var kinds = [['percent_off', tx('Percent off')], ['amount_off', tx('Amount off')]];
+  var prods = UI.prods || [];
+  var rowsHtml = CATSET_PLAN.map(function (r, i) {
+    return '<div data-testid="catset-plan-row" style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;align-items:center;margin-bottom:6px">'
+      + '<input class="inp" data-testid="plan-name-' + i + '" placeholder="' + esc(tx('Name buyers see')) + '" value="' + esc(r.name) + '" oninput="CATSET_PLAN[' + i + '].name=this.value">'
+      + '<select class="inp" data-testid="plan-kind-' + i + '" onchange="CATSET_PLAN[' + i + '].kind=this.value">' + kinds.map(function (k) { return '<option value="' + k[0] + '"' + (r.kind === k[0] ? ' selected' : '') + '>' + esc(k[1]) + '</option>'; }).join('') + '</select>'
+      + '<input class="inp" data-testid="plan-value-' + i + '" inputmode="decimal" placeholder="10" value="' + esc(r.value) + '" oninput="CATSET_PLAN[' + i + '].value=this.value">'
+      + '<select class="inp" data-testid="plan-product-' + i + '" onchange="CATSET_PLAN[' + i + '].product=this.value"><option value="">' + esc(tx('every product')) + '</option>' + prods.map(function (p) { var id = p.item_id || p.id; return '<option value="' + esc(id) + '"' + (r.product === id ? ' selected' : '') + '>' + esc((p.item_data || p).name || '') + '</option>'; }).join('') + '</select>'
+      + '<input class="inp" type="date" data-testid="plan-from-' + i + '" value="' + esc(r.from) + '" onchange="CATSET_PLAN[' + i + '].from=this.value">'
+      + '<input class="inp" type="date" data-testid="plan-to-' + i + '" value="' + esc(r.to) + '" onchange="CATSET_PLAN[' + i + '].to=this.value">'
+      + '<button class="composebtn" title="' + esc(tx('Remove')) + '" onclick="CATSET_PLAN.splice(' + i + ',1);catsetPlanPaint()">✕</button>'
+      + '</div>';
+  }).join('');
+  modal('<div class="mhd"><div class="t">' + tx('Plan several offers') + '</div><div class="s">' + tx('Each applies only inside its dates — this month one, next month another.') + '</div></div>'
+    + '<div class="mbody">'
+    + '<div style="display:grid;grid-template-columns:2fr 1.2fr .8fr 1.6fr 1.1fr 1.1fr auto;gap:6px;font-size:var(--fs-1);color:var(--grey);margin-bottom:4px"><span>' + tx('Name') + '</span><span>' + tx('Kind') + '</span><span>' + tx('Value') + '</span><span>' + tx('Applies to') + '</span><span>' + tx('From') + '</span><span>' + tx('To') + '</span><span></span></div>'
+    + rowsHtml
+    + '<button class="composebtn" data-testid="plan-add" onclick="CATSET_PLAN.push(catsetPlanRow(CATSET_PLAN.length));catsetPlanPaint()">+ ' + tx('Another month') + '</button>'
+    + '<div id="plan_err" class="err" style="margin-top:6px"></div></div>'
+    + '<div class="mfoot"><button class="pri" data-testid="plan-go" onclick="catsetPlanGo()">' + tx('Create all as live') + '</button><button onclick="closeModal()">' + tx('Cancel') + '</button></div>', true);
+}
+async function catsetPlanGo(){
+  var err = document.getElementById('plan_err'); if (err) err.textContent = '';
+  var rows = (CATSET_PLAN || []).filter(function (r) { return r.name.trim() || r.value; });
+  if (!rows.length) { if (err) err.textContent = tx('Nothing to create.'); return; }
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r.name.trim()) { if (err) err.textContent = tx('Row {n}: a name buyers will see.').replace('{n}', String(i + 1)); return; }
+    if (!(Number(r.value) > 0)) { if (err) err.textContent = tx('Row {n}: a value above 0.').replace('{n}', String(i + 1)); return; }
+    if (r.from && r.to && r.to < r.from) { if (err) err.textContent = tx('Row {n}: “to” is before “from”.').replace('{n}', String(i + 1)); return; }
   }
+  var made = 0;
+  try {
+    for (var j = 0; j < rows.length; j++) {
+      var x = rows[j];
+      var rules = { scope: 'line', priority: j + 1 };
+      if (x.kind === 'percent_off') rules.percent = Number(x.value); else rules.amount = Number(x.value);
+      if (x.from) rules.valid_from = x.from; if (x.to) rules.valid_to = x.to;
+      if (x.product) rules.applies_to = { item_ids: [x.product] };
+      await api('defAdd', { body: { kind: 'offer', sub_kind: x.kind, name: x.name.trim(), rules: rules, status: 'live' } });
+      made++;
+    }
+    closeModal(); toast(txf('{n} offer(s) created, live in their own dates.', { n: String(made) }));
+    if (typeof cbDefAfterChange === 'function') { try { await cbDefAfterChange('offer'); } catch (_) {} }
+    await catsetDefsLoad('offer', true); catsetPaintDetail();
+  } catch (e) { if (err) err.textContent = (made ? txf('{n} created, then: ', { n: String(made) }) : '') + ((e && e.message) || tx('Could not create.')); }
+}
+
+/** The product list this screen's registers read — once, cached where the catalogue keeps it (UI.prods); null while reading. */
+function catsetProdsEnsure(){
+  if (Array.isArray(UI.prods)) return UI.prods;
+  if (!UI._catsetProdReq) { UI._catsetProdReq = api('prodList').then(function (r) { UI.prods = r || []; UI._catsetProdReq = null; catsetPaintDetail(); }).catch(function () { UI.prods = []; UI._catsetProdReq = null; catsetPaintDetail(); }); }
+  return null;
+}
+function catsetProdName(id){ var p = (UI.prods || []).filter(function (x) { return String(x.item_id || x.id) === String(id); })[0]; return p ? ((p.item_data || p).name || id) : id; }
+function catsetTaxRows(){
+  var prods = catsetProdsEnsure();
+  if (prods === null) return null;
   var slabs = (CATSET_DEFS['tax'] || []).filter(function (d) { return d.status === 'live'; })
     .map(function (d) { return { definition_id: d.id, name: d.name, status: d.status, rules: d.rules || {} }; });
   var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || null;
