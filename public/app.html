@@ -9927,7 +9927,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Identifiers'],['storefront','Storefront']];
+const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Identifiers'],['storefront','Storefront']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -9946,6 +9946,7 @@ function prodTabBar(){
   const page=prodLayout()==='page';
   return `<div class="dtabs" data-testid="prod-tabs" data-layout="${page?'page':'tabs'}">`+PROD_TABS.map(function(t){
     return `<button type="button" data-testid="prod-tab-${t[0]}" class="${prodTab()===t[0]?'on':''}" onclick="setProdTab('${t[0]}')">${tx(t[1])}</button>`; }).join('')
+    + (prodLayout()==='page' ? `<button type="button" data-testid="prod-rows-pick" title="${esc(tx('Which rows this business shows'))}" style="margin-inline-start:auto;opacity:.7" onclick="prodRowsPick()">⚙ ${tx('Rows')}</button>` : '')
     + `<button type="button" data-testid="prod-layout-toggle" title="${esc(page?tx('Show one section at a time'):tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page?'tabs':'page'}')">${page?'▤ '+tx('Tabs'):'☰ '+tx('Page')}</button>`
     + `</div>`;
 }
@@ -9999,6 +10000,10 @@ function prodOutcomeHTML(k, d){
       case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…')));
         const vis=prodShopVisibility(); if(vis!=='public') return `<span style="color:var(--warn-3)">● </span><b>${esc(tx('Not public'))}</b> ${grey(esc(txf('· catalogue visibility is {v} — set it in Profile', { v: tx(vis||'private') })))}`;
         if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
+      case 'invoice': {
+        const m=prodInvoiceModel(d, 'same'); if(!m) return grey(tx('reading…'));
+        return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for one')+' '+esc(pUnit(d)||tx('unit'))+' · '+esc(m.posWord))}`;
+      }
       case 'barcode': {
         const ids=prodIdentifiers(d); if(!ids.length) return none(tx('No identifiers — set a code in Edit'));
         const arrow={ in:'←', out:'→', both:'↔' };
@@ -10045,6 +10050,7 @@ function prodSectionHTML(k, d, id, editing){
     case 'media': return prodMediaTab(d, editing);
     case 'bom': return prodBomTab(d);
     case 'barcode': return prodIdentifiersTab(d, editing);
+    case 'invoice': return prodInvoiceTab(d);
     case 'storefront': return prodStorefrontTab(d);
   }
   return '';
@@ -10350,6 +10356,90 @@ async function prodXrefRemove(id, i){
   try{ await api('prodEdit', { params:{ id }, body:{ item_data: Object.assign({}, (p&&pData(p))||{}, { xref: cur }) } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
   catch(e){ toast((e&&e.message)||tx('Could not remove'), true); }
 }
+/**
+ * ⭐ THE INVOICE THIS LINE PRODUCES — as a document, not a table of heads. Athi, 2026-09-04: "design an invoice for this
+ * product line, how does it look, and showcase there as another panel". Same numbers as Pricing & tax (CBTaxSlab.resolve
+ * → offers first → CBTax.determine, INV-01 field names), laid out the way the buyer's accountant expects: supplier and
+ * recipient, HSN, qty · rate · discount · taxable · the heads · total — the fields GST Rule 46 lists. The recipient is a
+ * sample ("your customer"); same-state / other-state is a switch. The buyer's own item code from Identifiers prints on
+ * the line, because that is what their three-way match reads.
+ */
+function prodInvoiceModel(d, pos){
+  try{
+    const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
+    if(slabs===null||cats===null||UI._face===undefined||typeof CBTax==='undefined'||typeof CBTaxSlab==='undefined'){ if(UI._face===undefined && typeof prodFaceEnsure==='function') prodFaceEnsure(); return null; }
+    const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs:slabs||[], categories:cats||[] })||{};
+    const st=prodSellerState(), S=st||'29', OTHER=(S==='27'?'29':'27');
+    const price=Number(pPrice(d))||0; let off=0, offLabel='';
+    try{
+      const on=(typeof prodOffersOn==='function')?prodOffersOn(d):[];
+      if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
+        const pid=UI.prodSel||d.item_id||d.id||''; const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
+        const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules) }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
+        off=Math.round((per.off||0)*100)/100; offLabel=per.label||'';
+      }
+    }catch(_){ off=0; }
+    const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
+    const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
+    const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
+    const seller={ State:S, RegType: prodRegType() }; if(!isGST){ delete seller.State; seller.Country=myC; }
+    const buyerPos = pos==='other' ? (isGST?OTHER:OTHERC) : (isGST?S:myC);
+    const item=CBTax.determine({ seller, buyer:(isGST?{ Pos:buyerPos }:{ Country:buyerPos }), lines:[line] }).ItemList[0]||{};
+    const me=UI._me||{}; const cur=(typeof myCur==='function')?myCur():'INR';
+    const their=(Array.isArray(d.xref)?d.xref:[]).find(x=>x&&x.role==='buyer'&&x.id);
+    return { item, line, r, off, offLabel, cur, isGST, scheme, pos,
+      title: isGST ? tx('Tax invoice') : txf('{s} invoice', { s: scheme }),
+      posWord: pos==='other' ? (isGST?tx('other state · IGST'):tx('cross-border')) : (isGST?tx('same state · CGST + SGST'):tx('domestic')),
+      seller:{ name: me.display_name||'', gstn: me.gstn||'', address: me.address||'', state:S },
+      their };
+  }catch(e){ return null; }
+}
+function prodFaceEnsure(){ if(UI._face!==undefined) return; UI._face=null; api('catFaceGet').then(function(r){ UI._face=(r&&r.face)||null; }).catch(function(){ UI._face=null; }).finally(function(){ if(typeof prodRepaintSection==='function'){ prodRepaintSection('invoice'); prodRepaintSection('pricing'); } }); }
+function prodInvoicePos(pos){ UI._invPos=pos; prodRepaintSection('invoice'); }
+function prodInvoiceTab(d){
+  const pos=UI._invPos||'same'; const m=prodInvoiceModel(d, pos);
+  if(!m) return `<div class="sec">${tx('Invoice')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the slabs…')}</div>`;
+  const it=m.item, cur=m.cur, M=(n)=>fmtMoney(Number(n)||0, cur);
+  const heads = m.isGST
+    ? (pos==='other' ? [[txf('IGST {r}%',{r:String(it.GstRt||0)}), it.IgstAmt]] : [[txf('CGST {r}%',{r:String((it.GstRt||0)/2)}), it.CgstAmt],[txf('SGST {r}%',{r:String((it.GstRt||0)/2)}), it.SgstAmt]])
+    : [[txf('{s} {r}%',{ s:m.scheme, r:String(it.GstRt||0) }), (it.IgstAmt||it.CgstAmt||0)]];
+  const cess = Number(it.CesAmt||0);
+  const sw=(k,label)=>`<button class="composebtn${pos===k?' on':''}" data-testid="prod-invoice-pos-${k}" onclick="prodInvoicePos('${k}')" style="${pos===k?'font-weight:700;border-color:var(--blue)':''}">${esc(label)}</button>`;
+  const today=fmtDateTime(new Date().toISOString()).split(' ')[0];
+  const rows=[[tx('Taxable value'), it.AssAmt]].concat(heads).concat(cess?[[txf('Cess {r}%',{r:String(m.line.cess_rate||0)}), cess]]:[]).concat([[tx('Invoice total'), it.TotItemVal]]);
+  return `<div class="sec">${tx('Invoice')}</div>`
+    + `<div style="padding:4px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><span style="color:var(--grey);font-size:var(--fs-1)">${tx('Recipient')}</span>${sw('same', m.isGST?tx('Same state'):tx('Domestic'))}${sw('other', m.isGST?tx('Other state'):tx('Cross-border'))}</div>`
+    + `<div data-testid="prod-invoice" style="margin:6px 12px;background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:12.5px;max-width:720px;box-shadow:0 1px 3px rgba(0,0,0,.06)">`
+    +   `<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:16px;font-weight:800">${esc(m.seller.name||tx('Your business'))}</div>${m.seller.gstn?'<div>GSTIN '+esc(m.seller.gstn)+'</div>':''}${m.seller.address?'<div style="color:#666">'+esc(m.seller.address)+'</div>':''}</div>`
+    +   `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos==='other'?(m.isGST?tx('other state'):tx('abroad')):(m.isGST?tx('state ')+m.seller.state:tx('domestic')))}</div></div></div>`
+    +   `<div style="margin:10px 0 8px;padding:8px 10px;background:#fafafa;border-radius:8px"><b>${tx('Bill to')}:</b> ${esc(tx('Your customer'))} <span style="color:#666">· ${esc(m.posWord)}</span>${m.their?' <span style="color:#666">· '+esc(tx('their item code'))+' <b>'+esc(m.their.id)+'</b></span>':''}</div>`
+    +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>HSN</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
+    +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td>1 ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}</td><td>${m.off?'− '+M(m.off):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
+    +   `<div style="display:flex;justify-content:flex-end;margin-top:10px"><table style="min-width:260px;border-collapse:collapse">${rows.map((x,i)=>'<tr'+(i===rows.length-1?' style="font-weight:800;border-top:1px solid #ddd"':'')+'><td style="padding:3px 8px;color:#444">'+esc(x[0])+'</td><td style="padding:3px 8px;text-align:end" data-testid="'+(i===rows.length-1?'prod-invoice-total':'')+'">'+M(x[1])+'</td></tr>').join('')}</table></div>`
+    +   `<div style="margin-top:10px;color:#666;font-size:11px">${esc(m.r&&m.r.name?txf('Slab: {n}', { n: CBTaxSlab.describe(m.r) }):tx('No slab resolved — 0% shown. Attach one on Pricing & tax.'))} · ${esc(tx('Fields as GST Rule 46 / e-invoice INV-01 name them; a real invoice is numbered when the chit is stamped.'))}</div>`
+    + `</div>`;
+}
+/**
+ * ⭐ WHICH ROWS THIS BUSINESS SHOWS. Athi, 2026-09-04: "keep it as a selection box — how many want to be showcased here,
+ * because every business does not need all". The choice is the ENTITY's (ui_prefs.product_rows on /me, beside the
+ * appearance prefs), so every person in the business sees the same sheet. Pricing & tax and Details always stay.
+ */
+const PROD_ROWS_FIXED=['pricing','product'];
+function prodRowsPref(){ const me=UI._me||{}; const p=me.ui_prefs&&Array.isArray(me.ui_prefs.product_rows)?me.ui_prefs.product_rows:null; return p; }
+function prodRowsVisible(){ const pref=prodRowsPref(); return PROD_TABS.filter(t=>!pref||PROD_ROWS_FIXED.indexOf(t[0])>=0||pref.indexOf(t[0])>=0); }
+function prodRowsPick(){
+  const pref=prodRowsPref(); const on=(k)=>!pref||PROD_ROWS_FIXED.indexOf(k)>=0||pref.indexOf(k)>=0;
+  modal(`<div class="sec">${tx('Rows on the product page')}</div><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">${tx('For everyone in this business. Pricing & tax and Details always stay.')}</div>`
+    + `<div data-testid="prod-rows-pick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">`+PROD_TABS.map(t=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${t[0]}" data-testid="prod-row-tick-${t[0]}" ${on(t[0])?'checked':''} ${PROD_ROWS_FIXED.indexOf(t[0])>=0?'disabled':''}> ${tx(t[1])}</label>`).join('')+`</div>`
+    + `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`);
+}
+async function prodRowsSave(){
+  const ticks=Array.prototype.slice.call(document.querySelectorAll('[data-testid="prod-rows-pick"] input[data-row]'));
+  const rows=ticks.filter(i=>i.checked||i.disabled).map(i=>i.getAttribute('data-row'));
+  const me=UI._me||{}; const ui=Object.assign({}, me.ui_prefs||{}, { product_rows: rows });
+  try{ await api('saveProfile', { body:{ ui_prefs: ui } }); UI._me=Object.assign({}, me, { ui_prefs: ui }); closeModal(); toast(tx('Saved ✓')); paintProdDetail(); }
+  catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
+}
 function prodBarcodeTab(d){
   const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim();
   if(!code) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No product code yet — set a SKU on the Product tab and the barcode is drawn from it.')}</div>`;
@@ -10641,7 +10731,7 @@ function prodDetailHTML(){
   UI._prodSheetD = d;   /* the fact sheet's wrappers read the product from here */
   let body, bar;
   if(UI.prodMode==='edit'){
-    body=PROD_TABS.map(t=>ptabWrap(t[0], prodSectionHTML(t[0], d, id, true))).join('')
+    body=prodRowsVisible().map(t=>ptabWrap(t[0], prodSectionHTML(t[0], d, id, true))).join('')
       +`<div class="err" id="ct_err" style="margin-top:8px"></div>`;
     bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
@@ -10649,7 +10739,7 @@ function prodDetailHTML(){
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = PROD_TABS.map(t => ptabWrap(t[0], prodSectionHTML(t[0], d, id, false))).join('');
+    body = prodRowsVisible().map(t => ptabWrap(t[0], prodSectionHTML(t[0], d, id, false))).join('');
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   /* ⭐ HEADER + TABS ARE ONE PINNED BLOCK. Athi, 2026-09-03: *"when i scroll the product details, the header should
