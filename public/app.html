@@ -5738,7 +5738,11 @@ async function ccMatchMine(it){
   try{
     if(!UI.prods){ UI.prods=(await api("prodList"))||[]; }
     var nm=String(it.particulars||'').trim().toLowerCase(); if(!nm) return;
-    var p=(UI.prods||[]).find(function(x){ return String((x.item_data&&x.item_data.name)||x.name||'').trim().toLowerCase()===nm; });
+    /* the name, our code, or any identifier another party or system uses for it (Identifiers row) */
+    var p=(UI.prods||[]).find(function(x){ var dd=x.item_data||x; if(String(dd.name||'').trim().toLowerCase()===nm) return true;
+      return (typeof prodIdentifiers==='function'?prodIdentifiers(dd):[]).some(function(z){ return String(z.id||'').trim().toLowerCase()===nm; }); });
+    if(p){ var dd0=p.item_data||p; var their=(Array.isArray(dd0.xref)?dd0.xref:[]).find(function(z){ return z&&z.role==='buyer'&&z.id; }); it.their_ref=their?{ system:their.system||'', id:String(their.id) }:null;
+      if(String((dd0.name||'')).trim().toLowerCase()!==nm) it.particulars=dd0.name||it.particulars; }
     if(!p || CC.items.indexOf(it)<0) return;
     it.item_id=p.item_id||p.id||null; it.sku=(p.item_data&&p.item_data.sku)||p.sku||it.sku||null;
     /* the categories are a nicety; the RE-SYNC is the point — never let the first stop the second */
@@ -5793,7 +5797,7 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  * is a line shape that will differ in one of them, and the difference shows up as a price, not as an error.
  */
 function cbOfferLine(key, it, qty){
-  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
+  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null, their_ref:it.their_ref||null,
            /* the line's categories AND their ancestors — an offer on the parent category reaches the child (catgWithAncestors) */
            categories:(typeof catgWithAncestors==='function'?catgWithAncestors(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])):[])||[],
            /* cbAmount, not `+it.price`: a compose item carries a number, a catalogue product carries the money
@@ -9911,7 +9915,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Barcode'],['storefront','Storefront']];
+const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Identifiers'],['storefront','Storefront']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -9983,7 +9987,12 @@ function prodOutcomeHTML(k, d){
       case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…')));
         const vis=prodShopVisibility(); if(vis!=='public') return `<span style="color:var(--warn-3)">● </span><b>${esc(tx('Not public'))}</b> ${grey(esc(txf('· catalogue visibility is {v} — set it in Profile', { v: tx(vis||'private') })))}`;
         if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
-      case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
+      case 'barcode': {
+        const ids=prodIdentifiers(d); if(!ids.length) return none(tx('No identifiers — set a code in Edit'));
+        const arrow={ in:'←', out:'→', both:'↔' };
+        return ids.slice(0,4).map(function(x,i){ return (i===0?'<b>':'')+esc((x.role==='seller'?'':x.system+' ')+x.id)+(i===0?'</b>':'')+(x.role==='seller'||x.role==='standard'?'':' '+grey(arrow[x.direction]||'↔')); }).join(grey(' · '))
+          + (ids.length>4?' '+grey('+'+String(ids.length-4)):'');
+      }
     }
   }catch(_){}
   return '';
@@ -10023,7 +10032,7 @@ function prodSectionHTML(k, d, id, editing){
     case 'synonyms': return prodSynonymsTab(d, editing);
     case 'media': return prodMediaTab(d, editing);
     case 'bom': return prodBomTab(d);
-    case 'barcode': return prodBarcodeTab(d);
+    case 'barcode': return prodIdentifiersTab(d, editing);
     case 'storefront': return prodStorefrontTab(d);
   }
   return '';
@@ -10279,6 +10288,56 @@ function prodBomTab(d){
  * Internal today — a GS1 GTIN is an ASSIGNED number (the prefix is bought from GS1) and a different symbology; that
  * is a catalogue-standards step, not a rendering one. The outcome shown: the label a scanner at the counter reads.
  */
+/**
+ * ⭐ IDENTIFIERS — every id this product answers to, in one place. Athi, 2026-09-04: "if the data comes from another
+ * system or we send it to other systems, where are we showcasing the xref part?" — nowhere, as one place, until now.
+ * Roles follow UBL item identification (SellersItemIdentification · BuyersItemIdentification ·
+ * StandardItemIdentification · ManufacturersItemIdentification) plus 'external' for a named system (Tally, SAP, a
+ * marketplace). Ours (SKU/code) and the standards (HSN, GTIN) are read from the product's own fields; everything
+ * else lives in `item_data.xref = [{system, id, role, direction, source, at}]` — no migration, saved at once.
+ *   inbound: a buyer's order that quotes THEIR code resolves to this product (ccMatchMine)
+ *   outbound: the composed line carries their code (`their_ref`) so their side can three-way match it
+ */
+function prodIdentifiers(d){
+  const out=[]; const code=String(d.sku||d.code||pCode(d)||'').trim(); if(code) out.push({ role:'seller', system:tx('SKU'), id:code, direction:'both' });
+  if(d.hsn) out.push({ role:'standard', system:'HSN', id:String(d.hsn), direction:'out' });
+  if(d.gtin||d.barcode) out.push({ role:'standard', system:'GTIN', id:String(d.gtin||d.barcode), direction:'both' });
+  (Array.isArray(d.xref)?d.xref:[]).forEach(function(x){ if(x&&x.id) out.push({ role:x.role||'external', system:x.system||'', id:String(x.id), direction:x.direction||'both', source:x.source||'', at:x.at||'' }); });
+  return out;
+}
+function prodIdentifiersTab(d, edit){
+  const id=UI.prodSel||d.item_id||d.id||''; const ids=prodIdentifiers(d);
+  const roleWord={ seller:tx("Ours"), buyer:tx("Buyer's"), manufacturer:tx("Manufacturer's"), standard:tx('Standard'), external:tx('External system') };
+  const dirWord={ in:tx('comes in as'), out:tx('goes out as'), both:tx('both ways') };
+  const rows=ids.map(function(x,i){ const xi=(Array.isArray(d.xref)?d.xref:[]).indexOf((d.xref||[]).find(function(y){ return y&&String(y.id)===x.id&&(y.system||'')===x.system; }));
+    return `<tr data-testid="prod-xref-row"><td>${esc(roleWord[x.role]||x.role)}</td><td>${esc(x.system)}</td><td><b>${esc(x.id)}</b></td><td>${esc(dirWord[x.direction]||x.direction)}</td><td style="color:var(--grey)">${esc(x.source||'')}${x.at?' · '+esc(fmtDateTime(x.at)):''}</td>`
+      + (edit&&xi>=0?`<td><button class="composebtn" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})">✕</button></td>`:(edit?'<td></td>':''))+'</tr>'; }).join('');
+  const table=ids.length?`<table class="cbcat-sheet" data-testid="prod-xref" style="margin:0 12px"><thead><tr><th>${tx('Whose')}</th><th>${tx('System')}</th><th>${tx('Id')}</th><th>${tx('Direction')}</th><th>${tx('Source')}</th>${edit?'<th></th>':''}</tr></thead><tbody>${rows}</tbody></table>`
+    : `<div data-testid="prod-xref" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No identifiers yet — set a code on Details, or add another system\'s id below.'))}</div>`;
+  const add=edit?`<div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
+      <input class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
+      <input class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
+      <select class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('both ways')}</option><option value="in">${tx('comes in as')}</option><option value="out">${tx('goes out as')}</option></select>
+      <button class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
+      <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting one of these ids resolves to this product; a line sent to that party carries their id.')}</div>`:'';
+  return `<div class="sec">${tx('Identifiers')}</div>`+table+add+prodBarcodeTab(d);
+}
+async function prodXrefAdd(id){
+  const g=function(k){ const e=document.getElementById(k); return e?String(e.value||'').trim():''; };
+  const x={ role:g('ct_xref_role')||'external', system:g('ct_xref_system'), id:g('ct_xref_id'), direction:g('ct_xref_dir')||'both', source:tx('typed here'), at:new Date().toISOString() };
+  if(!x.id){ toast(tx('The id is required'), true); return; }
+  const p=(UI.prods||[]).find(function(q){ return prodId(q)===id; }); const cur=(p&&pData(p)&&Array.isArray(pData(p).xref))?pData(p).xref.slice():[];
+  cur.push(x);
+  try{ await api('prodEdit', { params:{ id }, body:{ item_data:{ xref: cur } } }); toast(tx('Id added ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
+  catch(e){ toast((e&&e.message)||tx('Could not add the id'), true); }
+}
+async function prodXrefRemove(id, i){
+  const p=(UI.prods||[]).find(function(q){ return prodId(q)===id; }); const cur=(p&&pData(p)&&Array.isArray(pData(p).xref))?pData(p).xref.slice():[];
+  cur.splice(i,1);
+  try{ await api('prodEdit', { params:{ id }, body:{ item_data:{ xref: cur } } }); toast(tx('Removed')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('barcode'); }
+  catch(e){ toast((e&&e.message)||tx('Could not remove'), true); }
+}
 function prodBarcodeTab(d){
   const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim();
   if(!code) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No product code yet — set a SKU on the Product tab and the barcode is drawn from it.')}</div>`;
