@@ -16,7 +16,7 @@ async function tc(page, title, testing, steps, expected) {
   await page.evaluate(([n, title, testing, steps, expected]) => {
     let el = document.getElementById('cb_tour');
     if (!el) { el = document.createElement('div'); el.id = 'cb_tour'; document.body.appendChild(el); }
-    el.setAttribute('style', 'position:fixed;left:16px;bottom:16px;z-index:99999;max-width:560px;background:#111;color:#fff;padding:14px 18px;border-radius:12px;font:14px/1.5 system-ui;box-shadow:0 8px 30px rgba(0,0,0,.4)');
+    el.setAttribute('style', 'position:fixed;right:16px;bottom:72px;z-index:99999;max-width:560px;pointer-events:none;background:#111;color:#fff;padding:14px 18px;border-radius:12px;font:14px/1.5 system-ui;box-shadow:0 8px 30px rgba(0,0,0,.4)');
     el.innerHTML = '<div style="font-size:11px;letter-spacing:.08em;opacity:.7">TEST CASE ' + n + '</div>'
       + '<div style="font-weight:700;font-size:17px;margin:2px 0 6px">' + title + '</div>'
       + '<div><b style="opacity:.75">Testing</b> ' + testing + '</div>'
