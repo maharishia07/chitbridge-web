@@ -16,7 +16,7 @@ data is never touched. The same script with `TOUR=1` and no `--headed` is a regr
 
 | # | what was built | where you see it |
 |---|---|---|
-| 1 | Product page = tabs (Product · Categories · Offers · Stock · Variants · Pricing & tax · Order model · Synonyms · Consists of · Barcode), header + tabs pinned | Catalogue › a product |
+| 1 | Product page = a FACT SHEET (Pricing & tax · Offers · Order model · Details · Categories · Variants · Synonyms · Media · Stock · Consists of · Barcode · Storefront), one line each with its outcome, pinned index, Tabs/Page switch | Catalogue › a product |
 | 2 | Tax slabs from the governance layer (b201): pick GST 18% → same-state / other-state split, Before · GST · After tax | Pricing & tax tab |
 | 3 | Offers on a product — the cart breakdown at qty 1 and the sample qty, tax after offers, You save | Offers tab |
 | 4 | Catalogue rows show what is in effect (🏷️ the active offer, GST %), search by offer or tax | the left list |
