@@ -1366,7 +1366,7 @@ function catsetTaxRegisterHTML(){
       + cell(tax + ' ' + from + warn)
       + cell(x.offers.length ? x.offers.map(function (n) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(n) + '</span>'; }).join(' ') : '<span style="color:var(--grey)">—</span>')
       + cell(x.cats.length ? esc(x.cats.join(' · ')) : '<span style="color:var(--grey)">—</span>')
-      + cell('<bdi>' + (typeof inr === 'function' ? inr(x.price) : esc(String(x.price || ''))) + '</bdi>', ';text-align:end;white-space:nowrap')
+      + cell('<bdi>' + (typeof inr === 'function' ? inr(typeof cbAmount === 'function' ? cbAmount(x.price) : x.price) : esc(String(x.price || ''))) + '</bdi>', ';text-align:end;white-space:nowrap')
       + '</tr>';
   }).join('');
   function id(x){ return String(x.id || ''); }
@@ -1442,8 +1442,10 @@ function catsetDetailHTML(){
     + '<div class="dt">' + s.icon + ' ' + esc(s.name) + '</div><div class="ds">' + esc(s.q) + '</div></div>'
     + '<div class="db" id="catsetbody">' + catsetBody(k) + '</div>';
 }
-function catsetPaintDetail(){ var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = catsetDetailHTML(); } }
-function catsetPaintList(){ var b = document.getElementById('catset_rows'); if (b) b.innerHTML = catsetRowsHTML(); }
+/* ⚠️ ONLY WHILE THIS SCREEN IS UP. The section's loaders (slabs, products, the face) call this when they land — and they
+   land after a person has moved on: the Catalogue's pane was overwritten with Setup › Tax ([TAX-02], the tour, 2026-09-05). */
+function catsetPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = catsetDetailHTML(); } }
+function catsetPaintList(){ if (typeof UI !== 'undefined' && UI.nav !== 'catsetup') return; var b = document.getElementById('catset_rows'); if (b) b.innerHTML = catsetRowsHTML(); }
 function catsetPaint(){ catsetPaintList(); catsetPaintDetail(); }
 function catsetRowsHTML(){
   var cur = catsetSec();

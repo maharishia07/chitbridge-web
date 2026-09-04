@@ -842,7 +842,7 @@ function cbcatPaintList(){
   var b = document.getElementById('cbcat_rows'); if (b) b.innerHTML = cbcatRowsHTML();
   var s = document.getElementById('cbcat_stats'); if (s) s.innerHTML = cbcatStatsHTML();
 }
-function cbcatPaintDetail(){ var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = cbcatDetailHTML(); } }
+function cbcatPaintDetail(){ if (typeof UI !== 'undefined' && UI.nav !== 'categories') return; var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = cbcatDetailHTML(); } }
 function cbcatPaint(){ cbcatPaintList(); cbcatPaintDetail(); }
 
 function categoriesScreen(){
