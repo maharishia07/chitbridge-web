@@ -220,7 +220,7 @@ test('the tour', async ({ page }) => {
     'Edit › price 1,200 › Effective from = three hours ahead › Save', 'the header still says ₹1,000; 📅 Scheduled shows price → ₹1,200 with the moment, and Cancel');
   const parked = page.waitForResponse((r) => /\/schedule$/.test(r.url()) && r.request().method() === 'POST' && r.status() < 400, { timeout: 30000 });
   await page.getByTestId('cat-save').click(); await parked;
-  await page.getByTestId('prod-tab-product').click();   /* the parked strip sits in the Details row */
+  await page.getByTestId('prod-tab-lifecycle').click();   /* the parked strip sits in the Lifecycle row */
   await expect(page.getByTestId('prod-scheduled')).toBeVisible({ timeout: 25000 });
   await ok(page, 'parked, live price unchanged');
 

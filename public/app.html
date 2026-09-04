@@ -1840,6 +1840,7 @@ const EP = {
   prodSchedule:    {m:"POST",  p:"/api/products/:id/schedule",   ok:"✓"},
   prodScheduled:   {m:"GET",   p:"/api/products/:id/schedule",   ok:"✓"},
   prodUnschedule:  {m:"DELETE",p:"/api/products/:id/schedule/:sid", ok:"✓"},
+  prodVersions:    {m:"GET",   p:"/api/products/:id/versions",       ok:"✓"},   /* b146 — every cut version, newest first */
   /* MEDIA — pictures and videos on the private object store; the API streams the public read */
   prodMediaAdd:    {m:"POST",  p:"/api/products/:id/media",         ok:"✓"},
   prodMediaDel:    {m:"DELETE",p:"/api/products/:id/media/:mid",    ok:"✓"},
@@ -9941,7 +9942,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['bom','Consists of'],['barcode','Identifiers'],['storefront','Storefront']];
+const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['lifecycle','Lifecycle'],['bom','Consists of'],['barcode','Identifiers'],['history','History'],['storefront','Storefront']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -10017,6 +10018,23 @@ function prodOutcomeHTML(k, d){
       case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…')));
         const vis=prodShopVisibility(); if(vis!=='public') return `<span style="color:var(--warn-3)">● </span><b>${esc(tx('Not public'))}</b> ${grey(esc(txf('· catalogue visibility is {v} — set it in Profile', { v: tx(vis||'private') })))}`;
         if(st==='available') return `<b>${esc(tx('Shown'))}</b> ${grey(esc(tx('· as the customer sees it')))}`; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
+      case 'lifecycle': {
+        const st=d.status||'available'; const p=(UI.prods||[]).find(x=>prodId(x)===(UI.prodSel||'')); const sch=(p&&Array.isArray(p.scheduled))?p.scheduled:[];
+        const word={ available:tx('Available'), unavailable:tx('Not available for now'), retired:tx('Retired'), redundant:tx('Redundant') }[st]||st;
+        const hist=UI._prodHist&&UI._prodHist[UI.prodSel||'']; const since=(Array.isArray(hist)&&hist.length)?hist[hist.length-1].valid_from:null;
+        return (st==='available'?'':'<span style="color:var(--warn-3)">● </span>')+`<b>${esc(word)}</b>`
+          + (since?' '+grey('· '+esc(tx('since')+' '+fmtDateTime(since).split(' ')[0])):'')
+          + (sch.length?' '+grey('· ')+`<span style="color:var(--blue)">📅 ${esc(txf('{n} change(s) parked', { n:String(sch.length) }))}</span>`:'')
+          + (d.redundant_by?' '+grey('· '+esc(tx('replaced by')+' '+String(d.redundant_by))):'');
+      }
+      case 'history': {
+        const id0=UI.prodSel||''; const hist=UI._prodHist&&UI._prodHist[id0];
+        if(hist===undefined){ prodHistoryEnsure(id0); return grey(tx('reading…')); }
+        if(!Array.isArray(hist)||!hist.length) return none(tx('No versions yet'));
+        const last=hist[0]; const by=last.changed_by?' · '+esc(tx('by')+' '+String(last.changed_by).split('@')[0]):'';
+        const src=(d._source&&d._source.channel)?' · '+esc(tx('via')+' '+d._source.channel):(d.adopted_from||d.source_key?' · '+esc(tx('adopted')):'');
+        return `<b>v${esc(String(last.version_no))}</b> ${grey('· '+esc(tx('changed')+' '+fmtDateTime(last.valid_from))+by+src)}`;
+      }
       case 'invoice': {
         const m=prodInvoiceModel(d, 'same'); if(!m) return grey(tx('reading…'));
         return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for one')+' '+esc(pUnit(d)||tx('unit'))+' · '+esc(m.posWord))}`;
@@ -10054,7 +10072,7 @@ function prodSheetToggle(el,k){
 function prodSectionHTML(k, d, id, editing){
   switch(k){
     case 'product': return editing ? `<div class="sec">${tx('Edit product')}</div>${prodEditFormCore(d)}`
-      : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}${prodScheduledHTML(id)}`
+      : `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
         + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ ${txf('All {n} fields', { n: String(Object.keys(d).length) })}</button>`
         + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">${tx('synonyms, status, and anything imported')}</span></div>`;
     case 'categories': return editing ? ctCategoryField(d) : prodCatgViewHTML(d);
@@ -10068,6 +10086,8 @@ function prodSectionHTML(k, d, id, editing){
     case 'bom': return prodBomTab(d);
     case 'barcode': return prodIdentifiersTab(d, editing);
     case 'invoice': return prodInvoiceTab(d);
+    case 'lifecycle': return prodLifecycleTab(d, id);
+    case 'history': return prodHistoryTab(d, id);
     case 'storefront': return prodStorefrontTab(d);
   }
   return '';
@@ -10474,6 +10494,53 @@ function prodTaxOverrideNote(d, r, slabs, cats){
     return ' · <span data-testid="prod-tax-override" style="color:var(--warn-3)">'+esc(tx('override'))+'</span> '+esc(who)+' <b>'+esc((under.name?under.name+' — ':'')+(under.rate+'%'))+'</b>';
   }catch(_){ return ''; }
 }
+/**
+ * ⭐ LIFECYCLE — one row for the product's STATE over time: the status (the same four-state flag the Status button sets:
+ * available · not available for now · retired · redundant — never deleted), the changes PARKED for a date (b203), and
+ * since when. Athi, 2026-09-04: the facets audit — "Lifecycle: status, the parked change, retention and
+ * discontinuation in one row instead of a button and a strip inside Details". The strip moved here from Details.
+ */
+function prodLifecycleTab(d, id){
+  const st=d.status||'available';
+  const rows=[
+    ['available', tx('Available'), tx('matches orders and prices')],
+    ['unavailable', tx('Not available for now'), tx('still matches, so the order records what they asked for — flagged as unable to ship')],
+    ['retired', tx('Retired'), tx('no longer sold; new orders stop resolving to it, old chits are untouched')],
+    ['redundant', tx('Redundant'), tx('replaced by another item')],
+  ];
+  const hist=UI._prodHist&&UI._prodHist[id]; const first=(Array.isArray(hist)&&hist.length)?hist[hist.length-1]:null; const last=(Array.isArray(hist)&&hist.length)?hist[0]:null;
+  return `<div class="sec">${tx('Lifecycle')}</div>`
+    + `<table class="cbcat-sheet" data-testid="prod-lifecycle" style="margin:0 12px"><tbody>`
+    + `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find(r=>r[0]===st)||[st,st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find(r=>r[0]===st)||[])[2]||'')}</span>${d.redundant_by?' · '+esc(tx('replaced by')+' '+String(d.redundant_by)):''}</td><td><button class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick('${esc(id)}')">${tx('Change')}</button></td></tr>`
+    + `<tr><td>${tx('Since')}</td><td>${first?esc(fmtDateTime(first.valid_from)):grey(tx('reading…'))}</td><td></td></tr>`
+    + `<tr><td>${tx('Last change')}</td><td>${last?esc(fmtDateTime(last.valid_from))+(last.changed_by?' · '+esc(String(last.changed_by).split('@')[0]):''):grey(tx('reading…'))}</td><td></td></tr>`
+    + `</tbody></table>`
+    + prodScheduledHTML(id)
+    + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('A product is never deleted — the flag changes and every chit that cites it keeps its citation. Park a change with a date on Edit › Effective from.')}</div>`;
+}
+/**
+ * ⭐ HISTORY — every cut version (b146: a new version whenever name · variant · unit · price · sku · status changes),
+ * newest first, with WHAT changed between neighbours and WHO. Loaded only when the row asks ("media only on click").
+ */
+async function prodHistoryEnsure(id){
+  if(!id) return; UI._prodHist=UI._prodHist||{}; if(UI._prodHist[id]!==undefined) return; UI._prodHist[id]=null;
+  try{ const r=await api('prodVersions', { params:{ id } }); UI._prodHist[id]=(r&&(r.versions||r.rows))||[]; }
+  catch(_){ UI._prodHist[id]=[]; }
+  if(UI.nav==='catalogue' && UI.prodSel===id && typeof prodRepaintSection==='function'){ prodRepaintSection('history'); prodRepaintSection('lifecycle'); }
+}
+function prodHistoryTab(d, id){
+  const hist=UI._prodHist&&UI._prodHist[id];
+  if(hist===undefined||hist===null){ prodHistoryEnsure(id); return `<div class="sec">${tx('History')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the versions…')}</div>`; }
+  if(!hist.length) return `<div class="sec">${tx('History')}</div><div data-testid="prod-history" style="padding:6px 12px;color:var(--grey)">${tx('No versions yet.')}</div>`;
+  const F=[['name',tx('Name')],['variant',tx('Variant')],['unit',tx('Unit')],['price',tx('Price')],['sku',tx('SKU')],['status',tx('Status')]];
+  const show=(k,v)=>k==='price'?(v==null?'—':fmtMoney(cbAmount(v), (typeof myCur==='function')?myCur():'INR')):(v==null||v===''?'—':String(v));
+  const rows=hist.map((v,i)=>{ const prev=hist[i+1]; const diff=prev?F.filter(f=>String(show(f[0],v[f[0]]))!==String(show(f[0],prev[f[0]]))).map(f=>`<div><span style="color:var(--grey)">${esc(f[1])}</span> ${esc(show(f[0],prev[f[0]]))} → <b>${esc(show(f[0],v[f[0]]))}</b></div>`).join(''):`<div>${esc(tx('created'))}</div>`;
+    return `<tr data-testid="prod-history-row"><td><b>v${esc(String(v.version_no))}</b></td><td>${esc(fmtDateTime(v.valid_from))}${v.valid_to?'<div style="color:var(--grey);font-size:var(--fs-1)">'+esc(tx('until')+' '+fmtDateTime(v.valid_to))+'</div>':' <span style="color:var(--blue);font-size:var(--fs-1)">'+esc(tx('current'))+'</span>'}</td><td>${diff||grey(tx('no change in the six fields'))}</td><td style="color:var(--grey)">${v.changed_by?esc(String(v.changed_by).split('@')[0]):'—'}</td></tr>`; }).join('');
+  const src=(d._source&&(d._source.channel||d._source.kind))?`<div style="padding:6px 12px;font-size:var(--fs-2)">${esc(tx('Came in via'))} <b>${esc(d._source.channel||d._source.kind)}</b>${d._source.at?' · '+esc(fmtDateTime(d._source.at)):''}</div>`:'';
+  return `<div class="sec">${tx('History')}</div>`+src
+    + `<table class="cbcat-sheet" data-testid="prod-history" style="margin:0 12px"><thead><tr><th>${tx('Version')}</th><th>${tx('From')}</th><th>${tx('What changed')}</th><th>${tx('Who')}</th></tr></thead><tbody>${rows}</tbody></table>`
+    + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('A version is cut when the name, variant, unit, price, SKU or status changes; a chit cites the version it was made from.')}</div>`;
+}
 function prodBarcodeTab(d){
   const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim();
   if(!code) return `<div class="sec">${tx('Barcode')}</div><div data-testid="prod-barcode-empty" style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No product code yet — set a SKU on the Product tab and the barcode is drawn from it.')}</div>`;
@@ -10851,7 +10918,7 @@ async function saveProduct(id){ const err=document.getElementById("ct_err"); if(
     catch(e){ if(err)err.textContent=(e&&e.message)||tx('Could not schedule the change.'); }
     return;
   }
-  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; if(UI._prodHist) delete UI._prodHist[id]; await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 /* the View side: what is parked for this product — it RIDES ON THE LIST ROW (`scheduled`, GET /products), no read of its own */
 function prodScheduledHTML(id){
   const p=(UI.prods||[]).find(x=>prodId(x)===id); const rows=(p&&Array.isArray(p.scheduled))?p.scheduled:[];
