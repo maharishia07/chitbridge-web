@@ -186,7 +186,9 @@ test('the tour', async ({ page }) => {
     'offer "Fruits & Veg 8% off" scoped to Fruits & Vegetables; type Ponni ×4 in Compose', "the Ponni line shows the 8% coming off, with the offer's name as the reason");
   await page.getByTestId('chit-item-name').fill(ponni); await page.getByTestId('chit-item-qty').fill('4'); await page.getByTestId('chit-item-price').fill('600');
   await page.getByTestId('chit-item-add').click();
-  await expect.poll(async () => page.evaluate(() => ((typeof CC !== 'undefined' && CC.items) || []).map((it) => String(it._offer_why || '') + ' ' + String(it._offer_label || '')).join(' | ')), { timeout: 20000 }).toMatch(/Fruits/);
+  const probeCat = () => page.evaluate(() => ({ items: ((typeof CC !== 'undefined' && CC.items) || []).map((it) => ({ n: it.particulars, id: it.item_id, cats: it.categories, why: it._offer_why })), offers: ((typeof CC !== 'undefined' && CC.offers) || []).map((o) => ({ l: o.label, at: o.applies_to })), tree: ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).map((c) => [c.definition_id, c.name, c.rules && c.rules.parent]) }));
+  await expect.poll(async () => page.evaluate(() => ((typeof CC !== 'undefined' && CC.items) || []).map((it) => String(it._offer_why || '') + ' ' + String(it._offer_label || '')).join(' | ')), { timeout: 20000 }).toMatch(/Fruits/)
+    .catch(async (e) => { throw new Error(e.message + ' PROBE ' + JSON.stringify(await probeCat()).slice(0, 1500)); });
   await ok(page, '8% off Ponni via Fruits & Vegetables');
   await page.evaluate(() => { try { closeModal(); } catch (_) {} }); await dismissModal(page);
 
