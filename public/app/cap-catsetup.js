@@ -1185,7 +1185,15 @@ function catsetOfferAppliesHTML(rules){
   var at = (rules && rules.applies_to) || {};
   var bits = [];
   if (Array.isArray(at.item_ids) && at.item_ids.length) { catsetProdsEnsure(); bits.push(at.item_ids.map(function (id) { return '<span class="pill" style="font-size:var(--fs-1)">' + esc(catsetProdName(id)) + '</span>'; }).join(' ')); }
-  if (at.category) { var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === String(at.category); })[0]; bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + '</span>'); }
+  if (at.category) {
+    var c = ((typeof cbDefsCached === 'function' && cbDefsCached('category')) || []).filter(function (x) { return String(x.definition_id || x.id) === String(at.category); })[0];
+    /* the products this category offer reaches — one list, so its applicability is confirmed by looking (Athi, 2026-09-05) */
+    var prods = catsetProdsEnsure() || [];
+    var inCat = prods.filter(function (p) { var d = p.item_data || p; return ((typeof catgIdsOf === 'function') ? catgIdsOf(d) : []).indexOf(String(at.category)) >= 0; });
+    bits.push('<span class="pill" style="font-size:var(--fs-1)">' + esc(tx('category') + ': ' + (c ? c.name : at.category)) + ' · ' + esc(txf('{n} product(s)', { n: String(inCat.length) })) + '</span>'
+      + (inCat.length ? '<details style="display:inline-block;margin-inline-start:6px"><summary style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">' + tx('which') + '</summary><div data-testid="catset-offer-reach" style="font-size:var(--fs-1);padding:4px 0 0 8px">'
+        + inCat.map(function (p) { var d = p.item_data || p; return '<div>' + esc((d.name || '')) + ' <span style="color:var(--grey)">' + esc(typeof inr === 'function' ? inr(d.price) : '') + '</span></div>'; }).join('') + '</div></details>' : ''));
+  }
   return bits.length ? bits.join(' ') : '<span style="color:var(--grey)">' + tx('every product') + '</span>';
 }
 function catsetOfferWindowHTML(rules, status){
@@ -1311,16 +1319,38 @@ function catsetTaxRows(){
     var r = (typeof CBTaxSlab !== 'undefined') ? CBTaxSlab.resolve({ item_data: d, face: face, slabs: slabs, categories: cats || [] }) : { rate: null, source: 'none' };
     var on = (offers || []).filter(function (o) { var at = (o.rules && o.rules.applies_to) || {}; return Array.isArray(at.item_ids) && at.item_ids.indexOf(id) >= 0; });
     return { id: id, name: (typeof pName === 'function') ? pName(d) : (d.name || ''), code: d.hsn || d.code || d.sku || '',
-             cats: (typeof catgNamesOf === 'function') ? catgNamesOf(d) : [], price: d.price, r: r, offers: on.map(function (o) { return o.name; }) };
+             cats: (typeof catgNamesOf === 'function') ? catgNamesOf(d) : [], catIds: (typeof catgIdsOf === 'function') ? catgIdsOf(d) : [], price: d.price, r: r, offers: on.map(function (o) { return o.name; }) };
   });
 }
+var CATSET_TAX_CATG = '';   /* the category chip picked on the Tax register ('' = all) */
+function catsetTaxCatg(id){ CATSET_TAX_CATG = (CATSET_TAX_CATG === id) ? '' : id; catsetPaintDetail(); }
+/**
+ * ⭐ ONE LIST PER CATEGORY — Athi, 2026-09-05: "is there any way we can look at the entire product under the category
+ * in one single list in the offer and tax panel so things can be seen in one go and confirm its applicability".
+ * The chips above the register filter it to a category; every row still shows the tax AS RESOLVED and its source,
+ * so "does this category's slab actually reach its products?" is answered by looking. A product whose categories
+ * disagree (two slabs) is flagged on its row and counted at the top.
+ */
+function catsetTaxCatgChipsHTML(rows){
+  var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || [];
+  if (!cats.length) return '';
+  var count = {}; rows.forEach(function (x) { (x.catIds || []).forEach(function (id) { count[id] = (count[id] || 0) + 1; }); });
+  var chip = function (id, name, n) { var on = CATSET_TAX_CATG === id; return '<span class="pill" data-testid="catset-tax-catg-' + esc(id || 'all') + '" onclick="catsetTaxCatg(\'' + esc(id) + '\')" style="cursor:pointer;' + (on ? 'background:var(--accent);color:#fff;' : 'color:var(--on-bg);') + '">' + esc(name) + (n != null ? ' · ' + n : '') + '</span>'; };
+  return '<div data-testid="catset-tax-catgs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:var(--fs-1)">'
+    + chip('', tx('All products'), rows.length)
+    + cats.filter(function (c) { return c.status !== 'retired'; }).map(function (c) { var id = String(c.definition_id || c.id); var slab = c.rules && c.rules.default_slab; return chip(id, c.name + (slab ? ' · ' + tx('slab set') : ''), count[id] || 0); }).join('')
+    + '</div>';
+}
 function catsetTaxRegisterHTML(){
-  var rows = catsetTaxRows();
-  if (rows === null) return '<div class="catset-load">' + tx('reading…') + '</div>';
-  if (!rows.length) return '<div class="catset-none">' + tx('No products yet.') + '</div>';
+  var all = catsetTaxRows();
+  if (all === null) return '<div class="catset-load">' + tx('reading…') + '</div>';
+  if (!all.length) return '<div class="catset-none">' + tx('No products yet.') + '</div>';
+  var rows = CATSET_TAX_CATG ? all.filter(function (x) { return (x.catIds || []).indexOf(CATSET_TAX_CATG) >= 0; }) : all;
+  var chips = catsetTaxCatgChipsHTML(all);
+  if (!rows.length) return chips + '<div class="catset-none">' + tx('No product in this category.') + '</div>';
   var src = { product: tx('on the product'), category: tx('from category'), catalogue: tx('catalogue default'), none: tx('not set') };
   var cell = function (h, extra) { return '<td style="padding:6px 8px;border-top:1px solid var(--line);vertical-align:top' + (extra || '') + '">' + h + '</td>'; };
-  var dead = 0;
+  var dead = 0, clash = 0;
   var body = rows.map(function (x) {
     var r = x.r || {}; var isDead = r.unresolved && r.cited; if (isDead) dead++;
     var tax = r.rate === null || r.rate === undefined
@@ -1328,6 +1358,7 @@ function catsetTaxRegisterHTML(){
       : '<b><bdi>' + esc(String(r.rate)) + '%</bdi></b> <span style="color:var(--grey)">' + esc(r.name || '') + '</span>';
     var from = '<span class="pill" style="font-size:var(--fs-1)">' + esc(src[r.source] || r.source || '') + (r.source === 'category' && r.via_category_name ? ' · ' + esc(r.via_category_name) : '') + '</span>';
     var warn = isDead ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(txf('cites “{s}”, not active', { s: r.cited })) + '</div>' : '';
+    if (Array.isArray(r.conflict) && r.conflict.length > 1) { clash++; warn += '<div data-testid="catset-tax-conflict" style="color:var(--warn-3);font-size:var(--fs-1)">⚠️ ' + esc(tx('categories disagree: ') + r.conflict.map(function (h) { return (h.category_name || h.category_id) + ' ' + (h.rate == null ? '?' : h.rate + '%'); }).join(' vs ')) + '</div>'; }
     return '<tr data-testid="catset-tax-row-' + esc(id(x)) + '" style="cursor:pointer" onclick="catsetOpenProduct(\'' + esc(id(x)) + '\')">'
       + cell('<b>' + esc(x.name) + '</b>' + (x.code ? '<div style="color:var(--grey);font-size:var(--fs-1)"><code>' + esc(x.code) + '</code></div>' : ''))
       + cell(tax + ' ' + from + warn)
@@ -1337,7 +1368,9 @@ function catsetTaxRegisterHTML(){
       + '</tr>';
   }).join('');
   function id(x){ return String(x.id || ''); }
-  return (dead ? '<div data-testid="catset-tax-dead" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) cite a slab that is not active — open the row and attach another.', { n: String(dead) })) + '</div>' : '')
+  return chips
+    + (dead ? '<div data-testid="catset-tax-dead" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) cite a slab that is not active — open the row and attach another.', { n: String(dead) })) + '</div>' : '')
+    + (clash ? '<div data-testid="catset-tax-clash" style="color:var(--warn-3);margin-bottom:6px">⚠️ ' + esc(txf('{n} product(s) sit in categories that name different slabs — the first applies; cite a slab on the product to settle it.', { n: String(clash) })) + '</div>' : '')
     + '<div style="overflow-x:auto"><table data-testid="catset-tax-register" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<thead><tr style="color:var(--grey);text-align:start"><th style="text-align:start;padding:4px 8px">' + tx('Product') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Tax applied') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Offers') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Categories') + '</th><th style="text-align:end;padding:4px 8px">' + tx('Price') + '</th></tr></thead>'
     + '<tbody>' + body + '</tbody></table></div>';
