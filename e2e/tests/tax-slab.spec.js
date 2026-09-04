@@ -222,7 +222,11 @@ test('[TAX-02] a governed slab is inherited, picked on a product, and the split 
   await page.getByTestId('cat-edit').click();
   await page.getByTestId('prod-tab-pricing').click();
   const sel = page.getByTestId('prod-tax-slab');
-  await expect(sel).toBeVisible({ timeout: 25000 });
+  /* when the picker is missing, say what the page holds and what the API answers — the two must agree */
+  await expect(sel).toBeVisible({ timeout: 25000 }).catch(async (e) => {
+    const why = await page.evaluate(async () => { const c = (typeof cbDefsCached === 'function') ? cbDefsCached('tax') : 'n/a'; const r = await api('defList', { query: { kind: 'tax', status: 'live' } }).catch((x) => ({ err: String(x.message) })); const pane = (document.querySelector('[data-testid="prod-pane-pricing"]') || {}).innerText; return { cached: Array.isArray(c) ? c.map((d) => d.definition_id || d.id) : c, api: r.err || (r.definitions || []).map((d) => d.definition_id), pane: String(pane || '').slice(0, 200) }; });
+    throw new Error(e.message + ' PROBE ' + JSON.stringify(why));
+  });
   await sel.selectOption('IN-GST-18');
   await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '18', { timeout: 15000 });
   const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 45000 });
