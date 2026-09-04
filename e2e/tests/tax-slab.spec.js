@@ -22,7 +22,7 @@
 // ⚠️ CANNOT BE RUN FROM THE AUTHORING MACHINE: there is no database reachable there (the API's DATABASE_URL is a
 // placeholder). Written against the deployed app — `CB_WEB_BASE`, per playwright.config.js — and run on prod.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');
 
 const isDefWrite = (r, method) => /\/api\/definitions/.test(r.url()) && r.request().method() === method && r.status() < 400;
 const isFaceWrite = (r) => /\/api\/catalogue-face/.test(r.url()) && r.request().method() === 'PUT' && r.status() < 400;
@@ -101,7 +101,7 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
     await settle(page);
     await dismissModal(page);
     await page.locator('[data-testid^="cat-product-"]', { hasText: prod }).first().click();
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     await expect(page.getByTestId('prod-tax')).toBeVisible({ timeout: 20000 });
   };
 
@@ -117,7 +117,7 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
 
   await test.step('ATTACH — pick the 18% slab on Pricing & tax, and the outcome moves BEFORE saving', async () => {
     await page.getByTestId('cat-edit').click();
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     const sel = page.getByTestId('prod-tax-slab');
     await expect(sel).toBeVisible({ timeout: 25000 });
     await selectByText(sel, slabName.slice(0, 14));
@@ -171,7 +171,7 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
        behind, or writing a 0, would both look like a blank field and mean something very different on an
        invoice. defaults.js: a blank cell means INHERIT, not CLEAR. */
     await page.getByTestId('cat-edit').click();
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     const sel = page.getByTestId('prod-tax-slab');
     await expect(sel).toBeVisible({ timeout: 25000 });
     await sel.selectOption('');
@@ -220,7 +220,7 @@ test('[TAX-02] a governed slab is inherited, picked on a product, and the split 
   await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
   await page.locator('[data-testid^="cat-product-"]', { hasText: prod }).first().click();
   await page.getByTestId('cat-edit').click();
-  await page.getByTestId('prod-tab-pricing').click();
+  await openTab(page, 'pricing');
   const sel = page.getByTestId('prod-tax-slab');
   /* when the picker is missing, say what the page holds and what the API answers — the two must agree */
   await expect(sel).toBeVisible({ timeout: 25000 }).catch(async (e) => {
@@ -232,7 +232,7 @@ test('[TAX-02] a governed slab is inherited, picked on a product, and the split 
   const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 45000 });
   await page.getByTestId('cat-save').click();
   await saved; await settle(page);
-  await page.getByTestId('prod-tab-pricing').click();
+  await openTab(page, 'pricing');
   const resolved = page.getByTestId('prod-tax-resolved');
   await expect(resolved).toBeVisible({ timeout: 25000 });
   await expect(resolved).toContainText('18%');

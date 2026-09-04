@@ -229,6 +229,24 @@ function catgIdsOf(d){
   if (d.category) return [String(d.category)];          // legacy single — read, never written again
   return [];
 }
+/**
+ * ⭐ A CATEGORY'S ANCESTORS COUNT TOO. Athi, 2026-09-05: "I applied 5% for the top category — it should reflect the
+ * categories underneath … same way offer as well?" — yes. An offer scoped to "Fruits & Vegetables" must fire on a
+ * product in "Dried Fruits". The engine matches ids exactly and stays pure, so the LINE carries its categories AND
+ * their ancestors (rules.parent, up the tree). One helper for compose, the product preview and the storefront cart.
+ */
+function catgWithAncestors(ids){
+  var out = (ids || []).map(String).filter(Boolean), seen = {};
+  out.forEach(function (id) { seen[id] = true; });
+  var cats = (typeof cbDefsCached === 'function' && cbDefsCached('category')) || [];
+  if (!cats.length) return out;
+  var by = {}; cats.forEach(function (x) { by[String(x.definition_id || x.id)] = x; });
+  out.slice().forEach(function (id) {
+    var p = by[id] && by[id].rules && by[id].rules.parent, hops = 0;
+    while (p && !seen[String(p)] && hops++ < 16) { seen[String(p)] = true; out.push(String(p)); var n = by[String(p)]; p = n && n.rules && n.rules.parent; }
+  });
+  return out;
+}
 /** The travelling names, positionally aligned with catgIdsOf. Used only where an id cannot be resolved. */
 function catgNamesOf(d){
   d = d || {};

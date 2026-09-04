@@ -3,7 +3,7 @@
 // Athi, 2026-09-05: "if the offer is for the entire chit or based on slab, how will this be displayed … create a
 // couple of products, add each type of offer and show it here, for different combinations".
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');
 const path = require('path');
 const OUT = process.env.DEMO_OUT || path.join(__dirname, '..', 'demo-out');
 
@@ -62,7 +62,7 @@ test('demo: every offer kind, two products, the screens', async ({ page }) => {
       await expect.poll(async () => { await page.getByTestId('prod-tab-offers').click().catch(() => {}); return page.getByTestId('prod-offer-preview').count(); }, { timeout: 30000, intervals: [1000] }).toBeGreaterThan(0);
       await page.waitForTimeout(1200);
       await shot(label, '#detailpane');
-      await page.getByTestId('prod-tab-pricing').click();
+      await openTab(page, 'pricing');
       await expect(page.getByTestId('prod-tax-preview')).toBeVisible({ timeout: 25000 });
       await page.waitForTimeout(600);
       await shot(label.replace('offers-tab', 'pricing-tax-tab'), '#detailpane');

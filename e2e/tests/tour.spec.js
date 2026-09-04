@@ -2,7 +2,7 @@
 // Watch it:  TOUR=1 TOUR_PAUSE=8000 npx playwright test tests/tour.spec.js --headed --project=authed   (e2e/TOUR.md)
 // Each case shows: what we test · the steps · the expected result; then a green "observed" line once the assertion holds.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
 const FROM = Number(process.env.TOUR_FROM || 1);   /* TOUR_FROM=11: earlier cases still run (their data is needed) but without pauses */
@@ -60,14 +60,14 @@ test('the tour', async ({ page }) => {
 
   /* ── 2 · tax slab from the governance layer ── */
   await page.getByTestId('cat-edit').click();
-  await page.getByTestId('prod-tab-pricing').click();
+  await openTab(page, 'pricing');
   await tc(page, 'Attach a tax slab from the governance layer', 'b201 — India\'s GST slabs come from the jurisdiction, not typed per entity; the split is shown the moment you pick',
     'Edit › Pricing & tax › pick "GST 18%" (IN GST · governance) › Save', 'Same state → CGST 9% + SGST 9%; other state → IGST 18%; Before tax · GST · After tax on one line');
   const sel = page.getByTestId('prod-tax-slab'); await expect(sel).toBeVisible({ timeout: 25000 });
   await sel.selectOption('IN-GST-18');
   const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 45000 });
   await page.getByTestId('cat-save').click(); await saved; await settle(page);
-  await page.getByTestId('prod-tab-pricing').click();
+  await openTab(page, 'pricing');
   await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '18', { timeout: 25000 });
   await ok(page, 'the split reads CGST 90 + SGST 90 on ₹1,000; IGST 180 for another state');
 
@@ -96,7 +96,7 @@ test('the tour', async ({ page }) => {
   /* ── 5 · attach it on the product ── */
   await openProduct(basmati);
   await page.getByTestId('cat-edit').click();
-  await page.getByTestId('prod-tab-offers').click();
+  await openTab(page, 'offers');
   await tc(page, 'Attach the offer to the product', 'attaching writes applies_to.item_ids on the offer — one author (Setup), many products',
     'Edit › Offers › tick "Basmati 10% off" › Save', 'the tick holds after Save; the View › Offers tab lists it');
   const chip = page.getByTestId('prod-pane-offers').locator('[data-testid^="cat-offer-"]', { hasText: 'Basmati 10%' }).first();
@@ -104,7 +104,7 @@ test('the tour', async ({ page }) => {
   await chip.click();
   const saved2 = page.waitForResponse((r) => /\/api\/definitions\//.test(r.url()) && r.request().method() === 'PUT' && r.status() < 400, { timeout: 45000 }).catch(() => null);
   await page.getByTestId('cat-save').click(); await saved2; await settle(page);
-  await page.getByTestId('prod-tab-offers').click();
+  await openTab(page, 'offers');
   await expect.poll(async () => { await page.getByTestId('prod-tab-offers').click().catch(() => {}); return page.getByTestId('prod-offer-preview').count(); }, { timeout: 30000, intervals: [1000] }).toBeGreaterThan(0);
   await ok(page, 'the offer is listed on the product');
 

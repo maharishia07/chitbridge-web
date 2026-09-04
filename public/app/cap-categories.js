@@ -535,6 +535,7 @@ function cbcatRowsHTML(){
       +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
       + '</div>'
       /* The count is the reason to look at this list at all — which shelves are actually carrying anything. */
+      + cbcatTaxChipHTML(c.id)
       + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
       + '</div>';
   }).join('');
@@ -600,6 +601,9 @@ function cbcatDetailHTML(){
     + '<div class="db">'
     + (ret ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. '
            + 'Products that already cite it keep the citation.</div>' : '')
+    + (function(){ var t = cbcatTaxOf(c.id); return '<div class="sec">' + tx('Applied here') + '</div>'
+        + '<div class="cbcat-stat" data-testid="catg-tax-applied"><span class="v">' + (t === null ? '…' : t ? (t.dead ? '⚠️' : (t.rate === null || t.rate === undefined ? '?' : t.rate + '%')) : '—') + '</span>'
+        + '<span class="k">' + (t === null ? tx('reading the slabs…') : t ? (t.dead ? tx('cites a slab that is not active') : esc(t.name || '') + (t.inherited_from ? ' · ' + esc(tx('inherited from') + ' ' + t.inherited_from) : ' · ' + tx('set on this category'))) : tx('no slab here or above — products fall to the catalogue default')) + '</span></div>'; })()
     + '<div class="cbcat-stat"><span class="v">' + n + '</span><span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
     /* ⭐ THE REVERSE VIEW. An offer can target a category ("10% off Paints") and until now only the offer knew.
        Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
@@ -617,7 +621,7 @@ function cbcatDetailHTML(){
           + (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '')
           + '</div>'
         : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span> — tick them and press <b>' + tx('Categorise') + '</b>.</div>')
-    + cbcatSchemesHTML()
+    + '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' + tx('About standard sets and codes') + '</summary>' + cbcatSchemesHTML() + '</details>'
     + '</div>'
     + '<div class="actbar">'
     +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
@@ -625,13 +629,42 @@ function cbcatDetailHTML(){
               + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">' + tx('Retire') + '</button>')
     + '</div>';
 }
+/**
+ * ⭐ WHAT APPLIES TO A CATEGORY — Athi, 2026-09-05: "I applied 5% for the top category — it should reflect the categories
+ * underneath; the left panel should show what tax is applied for this category; the view panel should show what is
+ * currently applied and the products". The tax: the category's own slab, else the nearest ancestor's (rules.parent),
+ * resolved against the same live slab list the product page uses. The offers: scoped to this category or to an ancestor.
+ */
+function cbcatById(id){ return (CBCAT_UI.list || []).filter(function (x) { return x.id === id; })[0] || null; }
+function cbcatTaxOf(cid){
+  var slabs = (typeof cbDefsCached === 'function' && cbDefsCached('tax')) || null;
+  if (slabs === null && typeof cbDefsLive === 'function') { cbDefsLive('tax').then(cbcatPaint).catch(function(){}); return null; }
+  var by = {}; (slabs || []).forEach(function (d) { by[String(d.definition_id || d.id)] = d; });
+  var c = cbcatById(cid), hops = 0, from = null;
+  while (c && hops++ < 16) {
+    var sid = c.default_slab || c.slab || (c.rules && c.rules.default_slab);
+    if (sid && by[String(sid)]) { var d = by[String(sid)]; return { slab_id: String(sid), name: d.name, rate: (d.rules && d.rules.rate), inherited_from: from }; }
+    if (sid && !by[String(sid)]) return { slab_id: String(sid), name: null, rate: null, dead: true, inherited_from: from };
+    from = c.name; c = c.parent ? cbcatById(c.parent) : null;
+  }
+  return null;
+}
+function cbcatAncestorIds(cid){ var out = [], c = cbcatById(cid), hops = 0; while (c && c.parent && hops++ < 16) { out.push(c.parent); c = cbcatById(c.parent); } return out; }
+function cbcatTaxChipHTML(cid){
+  var t = cbcatTaxOf(cid);
+  if (t === null) return '';
+  if (t.dead) return '<span class="cbcat-badge" data-testid="catg-tax-' + esc(cid) + '" style="color:var(--warn-3)">⚠️ ' + tx('slab not active') + '</span>';
+  return '<span class="cbcat-badge" data-testid="catg-tax-' + esc(cid) + '" title="' + esc(t.name || '') + (t.inherited_from ? ' · ' + tx('inherits') + ' ' + esc(t.inherited_from) : '') + '">'
+    + esc((t.rate === null || t.rate === undefined) ? (t.name || '?') : ('GST ' + t.rate + '%')) + (t.inherited_from ? ' <span style="opacity:.7">↑</span>' : '') + '</span>';
+}
 function cbcatOffersHereHTML(cid){
   var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
   if (!list) return '';
-  var here = list.filter(function(o){ var at = (o.rules && o.rules.applies_to) || {}; return at.category === cid; });
+  var anc = cbcatAncestorIds(cid);
+  var here = list.filter(function(o){ var at = (o.rules && o.rules.applies_to) || {}; return at.category === cid || (at.category && anc.indexOf(at.category) >= 0); });
   if (!here.length) return '';
-  return '<div class="cbcat-stat"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
-    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' to this category — ' + here.map(function(o){ return esc(o.name); }).join(' · ') + '</span></div>';
+  return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
+    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var at = (o.rules && o.rules.applies_to) || {}; var viaP = at.category !== cid ? (cbcatById(at.category) || {}).name : null; return esc(o.name) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;

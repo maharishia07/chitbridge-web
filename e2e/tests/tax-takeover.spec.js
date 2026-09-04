@@ -4,7 +4,7 @@
 // LOCATORS: catset-sec-tax · catset-tax-new · cbdef-* · catset-tax-retire · cbdef-takeover(-go) · catset-tax-reinstate-* ·
 //           prod-tax-resolved · prod-tax-attach · prod-tax-fix(-go) · prod-tax-preview-intra
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');
 
 async function openProduct(page, prod) {
   await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
@@ -43,7 +43,7 @@ test('[TAX-04] retire is refused while cited → takeover re-points → dead cit
     expect(r.retired).toBe(true); expect(r.moved.products).toBe(1);
     await clickNav(page, 'mis'); await settle(page);
     await openProduct(page, prod);
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     await expect(page.getByTestId('prod-tax-resolved')).toContainText('18%', { timeout: 25000 });
     await expect(page.getByTestId('prod-tax-preview-intra')).toHaveAttribute('data-rate', '18');
   });
@@ -55,7 +55,7 @@ test('[TAX-04] retire is refused while cited → takeover re-points → dead cit
     await page.evaluate(async ([pid, data]) => api('prodEdit', { params: { id: pid }, body: { item_data: data } }), [id, cur]);
     await clickNav(page, 'mis'); await settle(page);
     await openProduct(page, prod);
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     const said = page.getByTestId('prod-tax-resolved');
     await expect(said).toContainText('ghost-slab-id', { timeout: 25000 });
     await expect(said).toContainText('not active');

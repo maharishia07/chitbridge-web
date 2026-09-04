@@ -3,7 +3,7 @@
 // tax; the buyer's shows input credit for the same figures; completing the copy freezes the invoice.
 // LOCATORS: nav-mis · mis-band-tax · mis-tax-* ; the API is asserted through page.evaluate(api(...)) — the same client call.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext, addProduct, clickNav, settle, composeChit, dismissModal } = require('../fixtures');
+const { mintEntity, mintInContext, addProduct, clickNav, settle, composeChit, dismissModal, openTab } = require('../fixtures');
 
 const month = () => new Date().toISOString().slice(0, 7);
 
@@ -23,7 +23,7 @@ test('[TAX-03] a rated chit line → seller output · buyer ITC · frozen at com
     await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
     await page.locator('[data-testid^="cat-product-"]', { hasText: prod }).first().click();
     await page.getByTestId('cat-edit').click();
-    await page.getByTestId('prod-tab-pricing').click();
+    await openTab(page, 'pricing');
     const sel = page.getByTestId('prod-tax-slab');
     await expect(sel).toBeVisible({ timeout: 25000 });
     await sel.selectOption('IN-GST-18');

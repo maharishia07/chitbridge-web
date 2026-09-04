@@ -395,3 +395,19 @@ async function addCoassist(page, { name, key } = {}) {
 }
 
 module.exports = { addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+
+/**
+ * openTab(page, key) — click a product-page tab and WAIT for its pane. The Edit view repaints twice (once at once, once
+ * when the declared columns arrive); a click that lands between the two hits a replaced element and the pane stays
+ * hidden ([TAX-02] flaked on exactly this, 2026-09-05). Re-click until the pane is visible.
+ */
+async function openTab(page, key) {
+  const pane = page.getByTestId('prod-pane-' + key);
+  for (let i = 0; i < 20; i++) {
+    await page.getByTestId('prod-tab-' + key).click().catch(() => {});
+    await page.waitForTimeout(400);
+    if (await pane.isVisible().catch(() => false)) return;
+  }
+  throw new Error('openTab: pane ' + key + ' never became visible');
+}
+module.exports.openTab = openTab;

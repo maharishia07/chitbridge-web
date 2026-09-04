@@ -5775,7 +5775,8 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  */
 function cbOfferLine(key, it, qty){
   return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null,
-           categories:(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[]))||[],
+           /* the line's categories AND their ancestors — an offer on the parent category reaches the child (catgWithAncestors) */
+           categories:(typeof catgWithAncestors==='function'?catgWithAncestors(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])):[])||[],
            /* cbAmount, not `+it.price`: a compose item carries a number, a catalogue product carries the money
               shape {amount, currency} — the product page's preview fed the engine NaN and priced every basket at
               ₹0 ([OFF-02], 2026-09-04) while the header beside it said ₹1,000. */
