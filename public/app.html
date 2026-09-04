@@ -4086,6 +4086,13 @@ function ensureCap(name){
  * ⚠️ Deliberately NOT applied to renderApp itself: navigation, sends and screen changes must always paint.
  */
 function bgRenderApp(){
+  /* ⚠️⚠️ AN OPEN PRODUCT FORM IS A DRAFT TOO. This guard covered modals and the lightbox; the New/Edit product form
+     sits in #detailpane, and a background render (the category strip or the folders loader landing 0.5 s after
+     "+ New product") rebuilt the whole app and blanked the name being typed — no paintProdDetail call, so every
+     guard on the pane painter was bypassed (innerHTML probe, 2026-09-04). Same rule: the list may refresh, the
+     person's work-in-progress may not. */
+  if(typeof UI!=='undefined' && UI.nav==='catalogue' && (UI.prodMode==='new' || UI.prodMode==='edit')) return;
+  var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest && ae.closest('#detailpane')) return;
   var mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
   var lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
   renderApp();
@@ -8510,7 +8517,7 @@ function prodCatgFilter(v){ UI._prodCatg=(UI._prodCatg===v)?'':v; renderApp(); }
  */
 function prodCatgStripHTML(){
   if(typeof _CATG==='undefined' || _CATG===null){
-    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue') bgRenderApp(); });
+    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList(); });   /* the strip is on the LIST; never a full render for it */
     return '';
   }
   const all=(UI.prods||[]);

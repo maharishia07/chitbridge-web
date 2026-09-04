@@ -305,7 +305,7 @@ const { seedDemo } = require('./seed');
  * copy is how two specs end up disagreeing about what "add a product" means. A driver that needs materials
  * (design 2 takes parts from the catalogue) needs exactly this walk and nothing more.
  */
-async function addProduct(page, { name, price, desc } = {}) {
+async function addProduct(page, { name, price, desc, unit, code } = {}) {
   /**
    * ⚠️⚠️ REUSE WHAT IS ALREADY ON THE SHELF — the `authed` project shares ONE entity across every spec and
    * every re-run, so a fixture that always creates is a fixture that grows the catalogue without bound. Nine
@@ -334,6 +334,9 @@ async function addProduct(page, { name, price, desc } = {}) {
   await add.waitFor({ state: 'visible', timeout: 20000 });
   await add.click();
   await page.getByTestId('cat-field-name').fill(name);
+  /* unit and code were accepted and IGNORED until 2026-09-04 — every spec that passed them got '' */
+  if (unit) { const u = page.getByTestId('cat-field-unit'); if (await u.count()) await u.fill(String(unit)); }
+  if (code) { const c = page.getByTestId('cat-field-code'); if (await c.count()) await c.fill(String(code)); }
   if (price !== undefined) await page.getByTestId('cat-field-price').fill(String(price));
   const d = page.getByTestId('cat-field-desc');
   if (desc && await d.count()) await d.fill(desc);
