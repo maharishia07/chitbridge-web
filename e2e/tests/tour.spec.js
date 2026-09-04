@@ -5,6 +5,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
+const FROM = Number(process.env.TOUR_FROM || 1);   /* TOUR_FROM=11: earlier cases still run (their data is needed) but without pauses */
 const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
 /* headed: a maximised real window (viewport null lets the window size rule), slowed so the eye can follow */
 test.use(HEADED ? { viewport: { width: 1600, height: 900 }, launchOptions: { slowMo: 350, args: ['--window-size=1620,1000', '--window-position=0,0'] } } : { launchOptions: { slowMo: 0 } });
@@ -23,11 +24,11 @@ async function tc(page, title, testing, steps, expected) {
       + '<div><b style="opacity:.75">Expected</b> ' + expected + '</div>'
       + '<div id="cb_tour_ok" style="margin-top:6px;color:#7CFC9A;font-weight:700"></div>';
   }, [caseNo, title, testing, steps, expected]);
-  await page.waitForTimeout(Math.round(PAUSE * 0.6));
+  if (caseNo >= FROM) await page.waitForTimeout(Math.round(PAUSE * 0.6));
 }
 async function ok(page, observed) {
   await page.evaluate((t) => { const el = document.getElementById('cb_tour_ok'); if (el) el.textContent = '✓ Observed: ' + t; }, observed);
-  await page.waitForTimeout(PAUSE);
+  if (caseNo >= FROM) await page.waitForTimeout(PAUSE);
 }
 const rmCaption = (page) => page.evaluate(() => { const el = document.getElementById('cb_tour'); if (el) el.remove(); }).catch(() => {});
 
@@ -173,6 +174,7 @@ test('the tour', async ({ page }) => {
   /* ── 11 · publish on a date ── */
   await openProduct(basmati);
   await page.getByTestId('cat-edit').click();
+  await page.getByTestId('prod-tab-product').click();   /* the page remembers the last tab; the price lives on Product */
   await page.getByTestId('cat-field-price').fill('1200');
   const at = new Date(Date.now() + 3 * 3600 * 1000); const local = new Date(at.getTime() - at.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   await page.getByTestId('cat-field-effective').fill(local);
