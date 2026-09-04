@@ -39,6 +39,17 @@ async function alive(page, label) {
   try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); cdp.on("Debugger.paused", (e) => { stack = e.callFrames.slice(0, 14).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1)); }); await cdp.send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2000)); await cdp.send("Debugger.resume").catch(() => {}); } catch (e) { stack = ["(cdp failed: " + e.message + ")"]; }
   throw new Error("MAIN THREAD BLOCKED before " + label + " — STACK " + JSON.stringify(stack));
 }
+/** step(): a bounded await. On 60 s it prints the requests still in flight and throws — a stall names itself. */
+let _net = null;
+async function netWatch(page) { if (_net) return; _net = new Map(); const cdp = await page.context().newCDPSession(page); await cdp.send("Network.enable");
+  cdp.on("Network.requestWillBeSent", (e) => _net.set(e.requestId, e.request.method + " " + e.request.url.slice(0, 120)));
+  cdp.on("Network.loadingFinished", (e) => _net.delete(e.requestId)); cdp.on("Network.loadingFailed", (e) => _net.delete(e.requestId)); }
+async function step(page, label, fn) {
+  await netWatch(page); const t0 = Date.now();
+  const r = await Promise.race([fn().then(() => "ok"), new Promise((ok) => setTimeout(() => ok("HUNG"), 60000))]);
+  console.log("[tour] step " + label + " → " + r + " " + (Date.now() - t0) + "ms");
+  if (r === "HUNG") throw new Error("STALL at " + label + " · in flight: " + JSON.stringify([..._net.values()]));
+}
 async function tc(page, title, testing, steps, expected) {
   caseNo++;
   lastLabel = "case " + caseNo + " (" + title + ")";
@@ -308,10 +319,10 @@ test('the tour', async ({ page }) => {
     'View › Storefront on a fresh (private) catalogue', '"● Not public · catalogue visibility is private — set it in Profile"');
   await expect(page.getByTestId('prod-outcome-storefront')).toContainText('Not public', { timeout: 25000 });
   await ok(page, 'the row says why');
-  await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public' } }); UI._me = null; });
-  await page.evaluate(() => prodShopHandle());
-  await page.waitForFunction(() => UI._me && UI._me.catalogue_visibility === 'public', null, { timeout: 25000 });
-  await page.evaluate(() => prodRepaintSection('storefront'));
+  await step(page, 'saveProfile public', () => page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public' } }); UI._me = null; }));
+  await step(page, 'prodShopHandle', () => page.evaluate(() => prodShopHandle()));
+  await step(page, 'me is public', () => page.waitForFunction(() => UI._me && UI._me.catalogue_visibility === 'public', null, { timeout: 25000 }));
+  await step(page, 'repaint storefront', () => page.evaluate(() => prodRepaintSection('storefront')));
   await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here, opened on this one product — what you see is what they see',
     'View › Storefront', '"Shown · as the customer sees it"; the product itself framed at phone width — the same shop page, opened on this one product');
   await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });

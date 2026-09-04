@@ -459,8 +459,13 @@ async function api(key, {params, query, body}={}){
     }
     let res;
     try{
-      res = await fetch(url, {method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", "X-Request-Id": _rid, ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+      /* ⚠️ A REQUEST THAT NEVER ANSWERS MUST FAIL, NOT FREEZE. Without a deadline a hung PATCH left the busy overlay and the
+         tour caption up forever (2026-09-04). 90 s is longer than any honest round trip (Railway sfo ↔ Mumbai ≈ 2 s). */
+      const _ac = (typeof AbortController !== "undefined") ? new AbortController() : null; const _to = _ac ? setTimeout(function(){ try { _ac.abort(); } catch (_) {} }, 90000) : null;
+      try { res = await fetch(url, {signal: _ac ? _ac.signal : undefined, method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", "X-Request-Id": _rid, ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined}); } finally { if (_to) clearTimeout(_to); }
     }catch(netErr){
+      /* a DEADLINE is not "offline": never queue it, say what happened */
+      if(netErr && netErr.name==="AbortError"){ cblog("error", ep.m+" "+key+" → no answer in 90 s ["+_rid+"]"); throw new Error("No answer from the server in 90 s — try again."); }
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
       if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued, net fail ['+_rid+']'); return {queued:true, offline:true}; }
       cblog('error', ep.m+' '+key+' → network unreachable ['+_rid+']');
