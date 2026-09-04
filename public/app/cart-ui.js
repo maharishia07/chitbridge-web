@@ -475,7 +475,9 @@
   function dec(ns, id) { step(ns, id, -1); }
   function setQty(ns, id, v) { put(ns, id, v); }
   /** The buyer's offer on an `offer` line. Kept apart from quantity — it is a different fact about the same line. */
-  function setOffer(ns, id, v) {
+  function setOffer(ns, id, v, label) {
+    /* the word beside an offered price: a negotiation says "your offer"; a discount says the offer's own name */
+    var s0 = C[ns]; if (s0) { s0.offerLabels = s0.offerLabels || {}; if (label) s0.offerLabels[id] = String(label); else delete s0.offerLabels[id]; }
     var s = C[ns]; if (!s) return;
     var n = parseFloat(v);
     s.offers = s.offers || {};
@@ -761,7 +763,9 @@
         // price still shown, struck through, because hiding what they asked for is its own dishonesty.
         + (u.offered
             ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, u.asking)) + '</span> '
-              + '<b style="color:var(--ink-2)">' + esc(fmt(ns, p)) + '</b> <span style="font-size:var(--fs-1)">your offer</span>'
+              + '<b style="color:' + accent(ns) + ';font-size:var(--fs-3)">' + esc(fmt(ns, p)) + '</b> '
+              + '<span data-testid="cart-offer-pill" style="display:inline-block;font-size:var(--fs-1);font-weight:700;color:#fff;background:' + accent(ns) + ';border-radius:9px;padding:1px 7px;margin-inline-start:2px">'
+              + esc(((s.offerLabels || {})[r.item_id]) || 'your offer') + (isFinite(u.asking) && u.asking > p ? ' · save ' + esc(fmt(ns, u.asking - p)) : '') + '</span>'
             : (isFinite(p) ? esc(fmt(ns, p)) : 'no price'))
         // The line's own total, only once there is a quantity to multiply by — a price × 1 restated is noise.
         + (q && isFinite(p) ? ' <span style="color:var(--ink-2);font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')

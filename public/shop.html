@@ -378,6 +378,15 @@ function offerBadges(d, itemId, cur, offers){
   } catch (e) { return ''; }   /* a badge must never take the storefront down */
 }
 
+/** The category path above a product — "Fruits & Vegetables › Dried Fruits" — from the live categories the shop sends. */
+function productCrumb(p, data){
+  var d=(p.item_data||p)||{}; var ids=(typeof catgIdsOf==='function')?catgIdsOf(d):(Array.isArray(d.categories)?d.categories:[]);
+  var cats=(data&&Array.isArray(data.categories))?data.categories:[]; if(!ids.length||!cats.length) return '';
+  var byId={}; cats.forEach(function(c){ byId[String(c.id)]=c; });
+  var path=function(id){ var out=[], seen={}, cur=byId[String(id)]; while(cur && !seen[cur.id]){ seen[cur.id]=1; out.unshift(cur.name); cur=cur.parent?byId[String(cur.parent)]:null; } return out; };
+  var crumbs=ids.map(path).filter(function(a){ return a.length; }).map(function(a){ return a.map(esc).join(' › '); });
+  return crumbs.length ? '<div data-testid="shop-crumb" style="font-size:12px;color:#777;margin:2px 0 8px">'+crumbs.join(' · ')+'</div>' : '';
+}
 function productMedia(p){ var d=(p.item_data||p)||{}; if(typeof cbMediaGallery!=='function') return ''; var g=cbMediaGallery(d, { apiBase: API, itemId: p.item_id||(p.item&&p.item.item_id)||'', size: 'phone' }); return g ? '<div class="pmedia">'+g+'</div>' : ''; }
 function productRow(p, cur, variantLabel, offers){ var d=(p.item_data||p)||{};
   // A variant row leads with what DISTINGUISHES it ("4L"), not with the product name repeated three times.
@@ -435,12 +444,14 @@ function productListHtml(data, cur){
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
-    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
+    onChange:function(){ shopOffersSync(); },
+    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
+  setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
     + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
-    + '<div id="p_cart">' + shopCartBarHtml() + '</div>'
+    + '<div id="p_cart">' + shopCartBarHtml() + '</div><div id="p_offers"></div>'
     + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
 }
 /* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
@@ -460,6 +471,42 @@ function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_c
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
 function shopPickListHtml(){ return _CART?_CART.listHTML():''; }
+/**
+ * ⭐ THE OFFER PRICE, ON THE ROW. Athi, 2026-09-04: "original price strike out, and offer price showed — something
+ * clever, attractive". Every catalogue line is evaluated as a basket of one through CBOffers (the same engine the
+ * app uses); a line-scope discount becomes the row's offered price (struck asking · offered · pill with the offer's
+ * name and the saving). The real basket is then evaluated as a whole — cart-scope offers, freebies, "₹300 away" —
+ * and summarised under the cart bar. The server prices the order again with the same engine; this is the promise,
+ * that is the invoice.
+ */
+function _shopOffers(){ return (_SHOPDATA && Array.isArray(_SHOPDATA.offers)) ? _SHOPDATA.offers : []; }
+function _shopCtx(){ return { now: new Date(), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
+function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, categories:(typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[])), qty:qty||1, unitPrice:cbAmount(d.price) }; }
+function shopOffersSync(){
+  if(!_CART || typeof CBOffers==='undefined' || !CBOffers.evaluate || !CBOffers.perLine) return;
+  var offers=_shopOffers(); if(!offers.length) return;
+  var ctx=_shopCtx();
+  /* 1 · each row as a basket of one → the offered unit price on the row */
+  (_SHOPDATA.items||[]).forEach(function(p){
+    var line=_lineOf(p,1); if(!isFinite(line.unitPrice)||line.unitPrice<=0) return;
+    try{
+      var ev=CBOffers.evaluate({ lines:[line], offers:offers, ctx:ctx });
+      var per=CBOffers.perLine(ev,[line]); var k=Object.keys(per)[0];
+      if(k!=null && per[k] && per[k].off>0){ _CART.setOffer(String(line.item_id), Math.max(0, line.unitPrice-per[k].off), per[k].label||'offer'); }
+    }catch(e){}
+  });
+  /* 2 · the whole basket → adjustments, notes, total */
+  var picked=_CART.selected(); var host=el('p_offers'); if(!host) return;
+  if(!picked.length){ host.innerHTML=''; return; }
+  var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); l.unitPrice=cbAmount(p.price); return l; });
+  try{
+    var ev2=CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx });
+    var rows=(ev2.adjustments||[]).map(function(a){ return '<div style="display:flex;justify-content:space-between;gap:8px"><span>🏷️ '+esc(a.label||a.kind)+(a.scope&&a.scope!=='line'?' <small style="opacity:.7">'+esc(a.scope)+'</small>':'')+'</span><b style="color:#c0392b">− '+esc(ctx.money(Math.abs(a.amount||0)))+'</b></div>'; }).join('');
+    var notes=(ev2.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.text||n.label||'')+'</div>'; }).join('');
+    host.innerHTML = (rows||notes) ? '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'+rows+notes
+      + (rows ? '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>Total after offers</span><b>'+esc(ctx.money(ev2.total))+'</b></div>' : '')+'</div>' : '';
+  }catch(e){ host.innerHTML=''; }
+}
 function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }
 function shopPickPaint(listOnly){
   var l=el('p_list'); if(l) l.innerHTML=shopPickListHtml();
@@ -484,7 +531,7 @@ function render(data){
   var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
   var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
-  if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
+  if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
