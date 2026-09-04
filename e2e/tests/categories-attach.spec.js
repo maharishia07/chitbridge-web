@@ -9,10 +9,11 @@ test('[CAT-05] a tick on the category attaches the product; the product page and
   await addProduct(page, { name: 'Basmati 25kg', unit: 'bag', price: 1000, code: 'BAS-25' });
   const pid = await page.evaluate(() => UI.prodSel);
   expect(pid).toBeTruthy();
-  const cid = await page.evaluate(async () => (await api('defAdd', { body: { kind: 'category', name: 'Rice ' + Date.now(), rules: {}, status: 'live' } })).definition.definition_id);
+  const cname = 'Rice ' + Date.now();
+  const cid = await page.evaluate(async (cname) => (await api('defAdd', { body: { kind: 'category', name: cname, rules: {}, status: 'live' } })).definition.definition_id, cname);
 
   await clickNav(page, 'categories');
-  await page.evaluate((cid) => cbcatSelect(cid), cid);
+  await page.getByText(cname, { exact: true }).first().click();   /* the capability script loads lazily — drive the row, not the function */
   await page.getByTestId('catg-edit').click();
   await expect(page.getByTestId('catg-prod-ticks')).toBeVisible({ timeout: 25000 });
   const saved = page.waitForResponse((r) => /\/api\/products\//.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 30000 });
@@ -24,8 +25,8 @@ test('[CAT-05] a tick on the category attaches the product; the product page and
 
   await test.step('VIEW — the category lists the product', async () => {
     await page.getByText('Cancel', { exact: true }).first().click().catch(() => {});
-    await page.evaluate((cid) => cbcatSelect(cid), cid);
-    await expect(page.locator('.cbcat-plist')).toContainText('Basmati 25kg', { timeout: 20000 });
+    await page.getByText(cname, { exact: true }).first().click();   /* the capability script loads lazily — drive the row, not the function */
+    await expect(page.locator('#detailpane .cbcat-plist').first()).toContainText('Basmati 25kg', { timeout: 20000 });
   });
 
   await test.step('PRODUCT — its Categories row shows the category', async () => {

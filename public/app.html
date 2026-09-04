@@ -8550,10 +8550,15 @@ function catgChipsHTML(d){
      "retired". Once loaded, a missing category is struck, by its stored name, or as "retired category" — a uuid on a
      list row is a fact for nobody (Athi's screenshot, 2026-09-05: "cryptic values are coming in the left panel"). */
   const loaded=(typeof _CATG!=='undefined'&&Array.isArray(_CATG));
+  /* UNKNOWN ≠ RETIRED. A category made a moment ago (Categories screen, the API, a co-assist) is not in this cache yet;
+     calling it 'retired' was wrong (CAT-05 caught it). One forced re-read per unknown id, then the verdict. */
+  if(loaded && typeof cbCatgLive==='function'){ UI._catgAsked=UI._catgAsked||{}; const unknown=cids.filter(function(c){ return !_CATG.some(function(x){ return x.id===c; }) && !UI._catgAsked[c]; });
+    if(unknown.length){ unknown.forEach(function(c){ UI._catgAsked[c]=1; }); cbCatgLive(true).then(function(){ if(UI.nav==='catalogue'){ if(typeof paintProdList==='function') paintProdList(); if(typeof prodRepaintSection==='function'){ prodRepaintSection('categories'); } const oc=document.querySelector('[data-testid="prod-outcome-categories"]'); if(oc && typeof prodOutcomeHTML==='function' && UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('categories', UI._prodSheetD)||''; } }); } }
   if(!loaded && typeof cbCatgLive==='function'){ cbCatgLive().then(function(){ if(UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList(); }); }
   return cids.map(function(cid,i){
     const live=loaded?_CATG.filter(function(x){return x.id===cid;})[0]:null;
     if(!loaded){ return cnames[i]?`<span class="catgchip">${esc(cnames[i])}</span>`:''; }
+    const asked=UI._catgAsked&&UI._catgAsked[cid]; if(!live && !asked){ return cnames[i]?'<span class="catgchip">'+esc(cnames[i])+'</span>':''; }   /* not verified yet — say nothing wrong */
     const nm=live?live.name:(cnames[i]||tx('retired category'));
     return `<span class="catgchip${live?'':' gone'}" title="${live?'':tx('no longer live')}">${esc(nm)}</span>`;
   }).join('');
