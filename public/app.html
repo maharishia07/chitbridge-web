@@ -8186,7 +8186,7 @@ async function prodOfferApply(offerId, add){
     if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
     closeModal();
     UI.prodPicked.clear(); UI.prodPick = false;
-    await loadCatalogue();
+    await loadCatalogue('fresh');
     toast(add ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
               : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length));
   } catch (e) { toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e)); }
@@ -8294,7 +8294,7 @@ async function prodAvailApply(status){
   try {
     const out = await api('prodStatusBulk', { body: { ids: ids, status: status } });
     UI.prodPicked.clear(); UI.prodPick = false;
-    await loadCatalogue();
+    await loadCatalogue('fresh');
     const missed = (out && out.missed && out.missed.length) || 0;
     /* ⚠️ Report what did not move. A bulk action that says "done" while three rows stayed put is the reason
        nobody trusts bulk actions. */
@@ -8352,7 +8352,7 @@ async function prodCategoriseApply(){
   }finally{ hideBusy(); }
 
   UI.prodPicked.clear(); UI.prodPick=false; UI._catgBulk=null;
-  await loadCatalogue();
+  await loadCatalogue('fresh');
   if(typeof cbcatLoad==='function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
   /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
      nobody trusts bulk actions. */
@@ -8646,6 +8646,13 @@ function refFinishDetail(it){
 function paintProdList(){ prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
 function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
 async function loadCatalogue(force){
+  /* ⚠️ ONE READ IN FLIGHT. Opening the catalogue fired this twice within 200ms (the render hook and the screen's own
+     call — measured 2026-09-05: two /api/products back to back, ~1.9s each). A second caller joins the first. */
+  if (UI._prodReq && !force) return UI._prodReq;   /* 'fresh' (after a write) and true (Setup saves) both bypass */
+  UI._prodReq = _loadCatalogue(force).finally(function(){ UI._prodReq = null; });
+  return UI._prodReq;
+}
+async function _loadCatalogue(force){
   /* ⭐ THE SPINNER ONLY WHEN THERE IS NOTHING TO SHOW. loadCatalogue runs on every render pass and every 20s refresh;
      wiping a painted list to "loading…" each time is what made one product feel like a long load (Athi, 2026-09-05:
      "product loading in catalogue taking very long — just only one product"). With a list on screen the refresh is
@@ -8659,11 +8666,11 @@ async function loadCatalogue(force){
     try{ await catDeclared(); }catch(_){}
     /* The reference catalogues (adopted, for the picker) — once a minute, not once a render: a second read the list
        does not need on every tick. Setup saves call loadCatalogue(true). */
-    const _refFresh = !force && UI._refCatAt && (Date.now() - UI._refCatAt) < 60000;
+    const _refFresh = force !== true && UI._refCatAt && (Date.now() - UI._refCatAt) < 60000;   /* only true re-reads the reference catalogues */
     if(_refFresh){ /* keep UI.refCat */ }
     else try{ UI._refCatAt=Date.now(); const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
     UI._prodLoading=false;
-    if(_same && !force){ return; }   /* nothing changed since the last pass — no repaint, no flash */
+    if(_same && force !== true){ return; }   /* nothing changed since the last pass — no repaint, no flash */
     paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     /* ⚠️⚠️ A RELOAD MUST NOT REPAINT OVER AN OPEN FORM — and it protected NEW but not EDIT. loadCatalogue() runs
@@ -9697,7 +9704,7 @@ function prodSetStatus(id, status){
 async function _prodStatus(id, status, extra){
   let body = Object.assign({ status: status }, extra || {});
   try { const out = await api('prodStatus', { params: { id }, body: body });
-    closeModal(); await loadCatalogue(); paintProdList(); paintProdDetail();
+    closeModal(); await loadCatalogue('fresh'); paintProdList(); paintProdDetail();
     toast((out && out.reads_as) ? out.reads_as : ('Status: ' + status));
   } catch (e) { toast(MSG.fail('set the status', e)); }
 }
@@ -9754,7 +9761,7 @@ async function saveAvail(id){
   try {
     await api('prodAvail', { params: { id }, body: { qty: qty, source: src } });
     toast('Availability reported');
-    await loadCatalogue();
+    await loadCatalogue('fresh');
   } catch (err) {
     // The server refuses a negative on purpose — a wrong feed must not be rounded into an empty shelf.
     if (e) e.textContent = (err && err.message) || 'Could not save that';
@@ -9997,7 +10004,7 @@ async function prodTaxAttach(id){
   const slab=(cbDefsCached('tax')||[]).find(x=>String(x.definition_id||x.id)===sid); const rate=slab&&slab.rules?Number(slab.rules.rate):null;
   const data=Object.assign({}, pData(p), { tax_slab: sid, tax_slab_name: slab?slab.name:null });
   if(rate!==null && !isNaN(rate)) data.gst_rate=rate; else delete data.gst_rate;
-  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast(tx('Slab attached ✓')); await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast(tx('Slab attached ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not attach the slab.')); }
 }
 /** Re-render the pane in place on a select change. ⚠️ No read — everything it needs is already cached. */
@@ -10206,17 +10213,17 @@ function ctReadForm(orig){
   return catgSetOn(base, ids);
 }
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
-  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
+  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue('fresh'); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   const at=prodEffectiveAt();
   if(at){
     const patch=prodDiff(pData(p), data); delete patch.name;   /* a name is not scheduled — it is the product's identity */
     if(!Object.keys(patch).length){ if(err)err.textContent=tx('Nothing changed to schedule.'); return; }
-    try{ await api("prodSchedule",{params:{id},body:{effective_at:at,item_data:patch}}); toast(txf('Scheduled for {d} ✓', { d: fmtDateTime(at) })); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }
+    try{ await api("prodSchedule",{params:{id},body:{effective_at:at,item_data:patch}}); toast(txf('Scheduled for {d} ✓', { d: fmtDateTime(at) })); UI.prodMode='view'; await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }
     catch(e){ if(err)err.textContent=(e&&e.message)||tx('Could not schedule the change.'); }
     return;
   }
-  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 /* the View side: what is parked for this product — it RIDES ON THE LIST ROW (`scheduled`, GET /products), no read of its own */
 function prodScheduledHTML(id){
   const p=(UI.prods||[]).find(x=>prodId(x)===id); const rows=(p&&Array.isArray(p.scheduled))?p.scheduled:[];
@@ -10227,9 +10234,9 @@ function prodScheduledHTML(id){
     + rows.map(r=>`<div data-testid="prod-scheduled-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:3px 0"><span style="color:var(--grey)">${esc(fmtDateTime(r.effective_at))}</span><span>${kv(r.patch)}</span><button class="composebtn" data-testid="prod-unschedule" style="margin-inline-start:auto" onclick="prodUnschedule('${esc(id)}','${esc(r.schedule_id)}')">${tx('Cancel')}</button></div>`).join('')
     + `</div>`;
 }
-async function prodUnschedule(id,sid){ try{ await api("prodUnschedule",{params:{id,sid}}); toast(tx('Scheduled change cancelled')); await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ toast((e&&e.message)||tx('Could not cancel')); } }
+async function prodUnschedule(id,sid){ try{ await api("prodUnschedule",{params:{id,sid}}); toast(tx('Scheduled change cancelled')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ toast((e&&e.message)||tx('Could not cancel')); } }
 function delProduct(id){ confirmAsk('Delete this product?','This <b>cannot be undone</b>. Chits that already cite it keep their frozen copy of the line.','Delete',function(){ _delProduct(id); },true); }
-async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
+async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue('fresh'); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 /* misScreen + loadMIS → app/cap-admin.js (admin capability, lazy-loaded via ensureCap) */
 /* ============================================================================================
