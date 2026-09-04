@@ -39,6 +39,8 @@ test('demo: every offer kind, two products, the screens', async ({ page }) => {
     return out;
   }, offers);
   console.log('MADE ' + JSON.stringify(made));
+  /* seeded through the API, not Setup — so drop the page's offers cache the way Setup's after-change hook does */
+  await page.evaluate(() => { UI._ctOffers = undefined; UI._ctOffersThen = []; });
   expect(made.every((m) => m.status === 'live'), JSON.stringify(made)).toBe(true);
 
   const shot = async (name, sel) => { const el = sel ? page.locator(sel).first() : page; await el.screenshot({ path: path.join(OUT, name + '.png') }); console.log('SHOT ' + name); };
