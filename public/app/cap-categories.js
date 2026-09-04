@@ -616,7 +616,7 @@ function cbcatDetailHTML(){
        Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
        under offer."* Same live-offers read the product page uses — one loader, one cache. */
     + cbcatOffersHereHTML(c.id)
-    + (ret ? '' : cbcatOfferTicksHTML(c.id))
+    /* View shows what APPLIES (the line above); the ticks to change it live on Edit — Athi, 2026-09-05 */
     + '<div class="sec">' + tx('Products') + '</div>'
     + (mine.length
         ? '<div class="cbcat-plist">' + mine.slice(0, 60).map(function(p){
