@@ -10031,7 +10031,7 @@ function prodOutcomeHTML(k, d){
         const id0=UI.prodSel||''; const hist=UI._prodHist&&UI._prodHist[id0];
         if(hist===undefined){ prodHistoryEnsure(id0); return grey(tx('reading…')); }
         if(!Array.isArray(hist)||!hist.length) return none(tx('No versions yet'));
-        const last=hist[0]; const by=last.changed_by?' · '+esc(tx('by')+' '+String(last.changed_by).split('@')[0]):'';
+        const last=hist[0]; const by=' · '+esc(tx('by')+' '+prodWhoName(last));
         const src=(d._source&&d._source.channel)?' · '+esc(tx('via')+' '+d._source.channel):(d.adopted_from||d.source_key?' · '+esc(tx('adopted')):'');
         return `<b>v${esc(String(last.version_no))}</b> ${grey('· '+esc(tx('changed')+' '+fmtDateTime(last.valid_from))+by+src)}`;
       }
@@ -10513,7 +10513,7 @@ function prodLifecycleTab(d, id){ const grey=function(x){ return '<span style="c
     + `<table class="cbcat-sheet" data-testid="prod-lifecycle" style="margin:0 12px"><tbody>`
     + `<tr><td>${tx('Status')}</td><td><b data-testid="prod-lifecycle-status">${esc((rows.find(r=>r[0]===st)||[st,st])[1])}</b> <span style="color:var(--grey)">${esc((rows.find(r=>r[0]===st)||[])[2]||'')}</span>${d.redundant_by?' · '+esc(tx('replaced by')+' '+String(d.redundant_by)):''}</td><td><button class="composebtn" data-testid="prod-lifecycle-status-pick" onclick="prodStatusPick('${esc(id)}')">${tx('Change')}</button></td></tr>`
     + `<tr><td>${tx('Since')}</td><td>${first?esc(fmtDateTime(first.valid_from)):grey(tx('reading…'))}</td><td></td></tr>`
-    + `<tr><td>${tx('Last change')}</td><td>${last?esc(fmtDateTime(last.valid_from))+(last.changed_by?' · '+esc(String(last.changed_by).split('@')[0]):''):grey(tx('reading…'))}</td><td></td></tr>`
+    + `<tr><td>${tx('Last change')}</td><td>${last?esc(fmtDateTime(last.valid_from))+' · '+esc(prodWhoName(last)):grey(tx('reading…'))}</td><td></td></tr>`
     + `</tbody></table>`
     + prodScheduledHTML(id)
     + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('A product is never deleted — the flag changes and every chit that cites it keeps its citation. Park a change with a date on Edit › Effective from.')}</div>`;
@@ -10528,6 +10528,8 @@ async function prodHistoryEnsure(id){
   catch(_){ UI._prodHist[id]=[]; }
   if(UI.nav==='catalogue' && UI.prodSel===id && typeof prodRepaintSection==='function'){ prodRepaintSection('history'); prodRepaintSection('lifecycle'); }
 }
+/** who made a version: the name the API joined, else 'you' when it is this login, else a short id — never a bare uuid */
+function prodWhoName(v){ if(!v) return '—'; if(v.changed_by_name) return String(v.changed_by_name); const me=(UI._me&&UI._me.identity_id)||''; if(v.changed_by && me && String(v.changed_by)===String(me)) return tx('you'); return v.changed_by?String(v.changed_by).slice(0,8)+'…':'—'; }
 function prodHistoryTab(d, id){ const grey=function(x){ return '<span style="color:var(--grey)">'+x+'</span>'; };
   const hist=UI._prodHist&&UI._prodHist[id];
   if(hist===undefined||hist===null){ prodHistoryEnsure(id); return `<div class="sec">${tx('History')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('reading the versions…')}</div>`; }
@@ -10535,7 +10537,7 @@ function prodHistoryTab(d, id){ const grey=function(x){ return '<span style="col
   const F=[['name',tx('Name')],['variant',tx('Variant')],['unit',tx('Unit')],['price',tx('Price')],['sku',tx('SKU')],['status',tx('Status')]];
   const show=(k,v)=>k==='price'?(v==null?'—':fmtMoney(cbAmount(v), (typeof myCur==='function')?myCur():'INR')):(v==null||v===''?'—':String(v));
   const rows=hist.map((v,i)=>{ const prev=hist[i+1]; const diff=prev?F.filter(f=>String(show(f[0],v[f[0]]))!==String(show(f[0],prev[f[0]]))).map(f=>`<div><span style="color:var(--grey)">${esc(f[1])}</span> ${esc(show(f[0],prev[f[0]]))} → <b>${esc(show(f[0],v[f[0]]))}</b></div>`).join(''):`<div>${esc(tx('created'))}</div>`;
-    return `<tr data-testid="prod-history-row"><td><b>v${esc(String(v.version_no))}</b></td><td>${esc(fmtDateTime(v.valid_from))}${v.valid_to?'<div style="color:var(--grey);font-size:var(--fs-1)">'+esc(tx('until')+' '+fmtDateTime(v.valid_to))+'</div>':' <span style="color:var(--blue);font-size:var(--fs-1)">'+esc(tx('current'))+'</span>'}</td><td>${diff||grey(tx('no change in the six fields'))}</td><td style="color:var(--grey)">${v.changed_by?esc(String(v.changed_by).split('@')[0]):'—'}</td></tr>`; }).join('');
+    return `<tr data-testid="prod-history-row"><td><b>v${esc(String(v.version_no))}</b></td><td>${esc(fmtDateTime(v.valid_from))}${v.valid_to?'<div style="color:var(--grey);font-size:var(--fs-1)">'+esc(tx('until')+' '+fmtDateTime(v.valid_to))+'</div>':' <span style="color:var(--blue);font-size:var(--fs-1)">'+esc(tx('current'))+'</span>'}</td><td>${diff||grey(tx('no change in the six fields'))}</td><td style="color:var(--grey)">${esc(prodWhoName(v))}</td></tr>`; }).join('');
   const src=(d._source&&(d._source.channel||d._source.kind))?`<div style="padding:6px 12px;font-size:var(--fs-2)">${esc(tx('Came in via'))} <b>${esc(d._source.channel||d._source.kind)}</b>${d._source.at?' · '+esc(fmtDateTime(d._source.at)):''}</div>`:'';
   return `<div class="sec">${tx('History')}</div>`+src
     + `<table class="cbcat-sheet" data-testid="prod-history" style="margin:0 12px"><thead><tr><th>${tx('Version')}</th><th>${tx('From')}</th><th>${tx('What changed')}</th><th>${tx('Who')}</th></tr></thead><tbody>${rows}</tbody></table>`
