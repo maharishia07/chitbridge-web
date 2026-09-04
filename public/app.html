@@ -7908,7 +7908,7 @@ function catalogueScreen(){
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
-      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
+      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div id="ct_strips">${prodCatgStripHTML()}${prodAvailChipsHTML()}</div>
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
@@ -7952,7 +7952,8 @@ function prodVisible(){
        anyone expects of a search box sitting above a list that shows category chips. */
     const names=catgNamesOf(d).join(' ');
     const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(c=>catgIdsOf(d).indexOf(c.id)>=0).map(c=>c.name).join(' ');
-    return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)+' '+names+' '+live).toLowerCase().includes(q);
+    /* and the deals in effect — an offer's name or promise ('10% off'), the tax ('gst 18%') — so the search box finds what the row shows */
+    return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)+' '+names+' '+live+' '+prodDealsText(d, prodId(p))).toLowerCase().includes(q);
   });
 }
 /* ── select mode + bulk categorise ───────────────────────────────────────────────────────────────────────────── */
@@ -8520,6 +8521,39 @@ function catgChipsHTML(d){
     return `<span class="catgchip${live?'':' gone'}" title="${live?'':'no longer live'}">${esc(nm)}</span>`;
   }).join('');
 }
+/**
+ * ⭐ WHAT IS IN EFFECT, ON THE ROW — Athi, 2026-09-05: "if the offer is effective, the list view should show offer and
+ * tax details, also search based on offer". The ACTIVE offers on this product (CBOffers.promise — gated by the window,
+ * so a scheduled or expired one shows nothing, exactly as the storefront badge) and the tax as resolved (rate + from
+ * where). Both come from lists already in memory; a list that is not loaded yet paints without them and once more
+ * when it lands — no read of its own. prodDealsText() is the same facts as words, for the search box.
+ */
+function prodDeals(d, id){
+  const out={ offers:[], tax:null };
+  try{
+    const on=(UI._ctOffers||[]).filter(function(o){ const at=(o.rules&&o.rules.applies_to)||{}; return Array.isArray(at.item_ids)&&at.item_ids.indexOf(id)>=0; });
+    if(!UI._ctOffers && typeof ctOffersEnsure==='function') ctOffersEnsure(function(){ paintProdList(); });
+    on.forEach(function(o){ const p=(typeof CBOffers!=='undefined')?CBOffers.promise(o.rules, { money:(n)=>inr(n) }):null; if(p) out.offers.push({ name:o.name, promise:p }); });
+  }catch(_){}
+  try{
+    const slabs=(typeof cbDefsCached==='function')?cbDefsCached('tax'):null, cats=(typeof cbDefsCached==='function')?cbDefsCached('category'):null;
+    if(slabs===null||cats===null){ if(typeof cbDefsLive==='function') Promise.all([cbDefsLive('tax'),cbDefsLive('category')]).then(function(){ paintProdList(); }).catch(function(){}); }
+    else if(typeof CBTaxSlab!=='undefined'){ const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs, categories:cats }); if(r&&r.rate!==null&&r.rate!==undefined) out.tax={ rate:r.rate, name:r.name||'', source:r.source, dead:!!(r.unresolved&&r.cited) }; else if(r&&r.unresolved&&r.cited) out.tax={ rate:null, name:'', source:'none', dead:true }; }
+  }catch(_){}
+  return out;
+}
+function prodDealsHTML(d, id){
+  const x=prodDeals(d, id); const bits=[];
+  x.offers.forEach(function(o){ bits.push('<span class="optchip" data-testid="cat-row-offer" style="background:var(--accent-tint, var(--paper));border-color:var(--accent)" title="'+esc(o.name)+'">🏷️ '+esc(o.promise)+'</span>'); });
+  if(x.tax){ bits.push(x.tax.rate===null
+    ? '<span class="optchip" data-testid="cat-row-tax" style="color:var(--warn-3)">⚠️ '+esc(tx('slab not active'))+'</span>'
+    : '<span class="optchip" data-testid="cat-row-tax" title="'+esc(x.tax.name+' · '+x.tax.source)+'">'+esc(tx('GST'))+' '+esc(String(x.tax.rate))+'%'+(x.tax.dead?' ⚠️':'')+'</span>'); }
+  return bits.join(' ');
+}
+function prodDealsText(d, id){
+  const x=prodDeals(d, id);
+  return (x.offers.map(function(o){ return o.name+' '+o.promise; }).join(' ')+' '+(x.tax? ('gst '+x.tax.rate+'% '+x.tax.name+' '+x.tax.source) : '')).toLowerCase();
+}
 function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
      list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
@@ -8565,7 +8599,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}<span class="amt" style="margin-inline-start:auto"><bdi>${inr(pPrice(d))}</bdi> <span class="per">/ <bdi>${esc(pUnit(d))}</bdi></span></span></div>
     <div class="l2 lbl">${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
-    ${catChips?`<div class="l3cat">${catChips}</div>`:''}
+    ${catChips?`<div class="l3cat">${catChips}</div>`:''}${(()=>{ const dl=prodDealsHTML(d,id); return dl?`<div class="l3cat" data-testid="cat-row-deals">${dl}</div>`:''; })()}
     ${more.length?`<div class="l2 lbl pmore">${more.join('')}</div>`:''}</div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
