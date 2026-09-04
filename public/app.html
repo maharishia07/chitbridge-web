@@ -935,6 +935,18 @@
   .dtabs{flex-wrap:wrap}
   /* ⭐ THE FACT SHEET (designer, 2026-09-05): one bordered list, rows divided by a line — never a card per section */
   .ptab-list{border:1px solid var(--line);border-radius:10px;margin:8px 12px;overflow:hidden}
+  /* the money table (designer spec 2026-09-04): Detail auto · Amount 11ch right, tabular; notes as a grey sub-line inside Detail */
+  .cb-money{width:100%;border-collapse:collapse;font-size:var(--fs-2);table-layout:auto}
+  .cb-money td{padding:5px 8px;vertical-align:top}
+  .cb-money .cbm-l{text-align:start;white-space:normal}
+  .cb-money .cbm-a{text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;width:11ch}
+  .cb-money .cbm-sub{display:block;font-size:var(--fs-1);color:var(--grey);margin-top:1px}
+  .cb-money .cbm-list td,.cb-money .cbm-tot td{font-weight:600}
+  .cb-money .cbm-note td{color:var(--grey)}
+  .cb-money .cbm-tax td{color:var(--grey)}
+  .cb-money .cbm-tot td{border-top:1px solid var(--line)}
+  .cb-money .cbm-grand td{border-top:2px solid var(--ink);font-weight:700;font-size:var(--fs-3)}
+  .cb-money .cbm-save td{color:var(--ok-2);font-weight:700}
   details.ptab-sec{border-top:1px solid var(--line)} details.ptab-sec:first-child{border-top:0}
   details.ptab-sec>summary.ptab-row{display:grid;grid-template-columns:12ch 1fr 20px;gap:10px;align-items:baseline;min-height:40px;padding:8px 12px;cursor:pointer;list-style:none}
   details.ptab-sec>summary.ptab-row::-webkit-details-marker{display:none}
@@ -9436,8 +9448,12 @@ function prodOfferCartHTML(d, offers, qty, totalTestid){
           + '<span class="p">' + tx('free') + '</span></div>'; }).join('')
     + CBCatUI.offersHTML('prodprev', lines, offers, null,
         { ev: ev, skipped: true, subtotal: true, testid: 'prod-offer-break-' + qty,
-          totalTestid: totalTestid, head: tx('How it applies') })
-    + prodOfferTaxFooterHTML(d, qty, per.off || 0)
+          totalTestid: totalTestid, head: tx('How this price was calculated'),
+          /* ⚠️ TAX ON THE AFTER-OFFERS FIGURE. It was computed on the listed price (Athi, 2026-09-04: "the tax applied in the whole
+             value not after the discount") because only the line-scope discount was passed; the gap between gross and the
+             engine's total is EVERYTHING that came off, whatever its scope. */
+          tailRows: prodOfferTaxFooterHTML(d, qty, Math.max(0, Math.round((gross - (ev.total != null ? ev.total : gross)) * 100) / 100)) })
+    + ''
     + '</div>';
 }
 /**
@@ -9462,15 +9478,11 @@ function prodOfferTaxFooterHTML(d, qty, off){
     lines: [{ name: pName(d), qty: qty, unit_price: price, discount: disc, rate: r.rate, cess_rate: r.cess || 0 }] }).ItemList[0];
   const it = one(off);
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
-  /* the same three cells as the offers sheet above: step · detail · amount */
-  const row = (l, v, strong, tid) => `<tr${tid ? ' data-testid="' + tid + '"' : ''}${strong ? ' style="font-weight:700"' : ''}><td style="padding:4px 8px;border-top:1px solid var(--line)">${l}</td><td style="padding:4px 8px;border-top:1px solid var(--line)"></td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums"><bdi>${esc(money(v))}</bdi></td></tr>`;
-  return `<div class="prodprev-tax" data-testid="prod-offer-preview-tax-${qty}" data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}" style="border-top:1px dashed var(--line);margin-top:6px;padding-top:6px;font-size:var(--fs-2);font-variant-numeric:tabular-nums">`
-    + '<table class="cbcat-sheet" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)"><tbody>'
-    + row(tx('Before tax'), it.AssAmt)
-    + row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100)
-    + row(tx('After tax'), it.TotItemVal, true)
-    + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row)
-    + '</tbody></table></div>';
+  /* rows for the SAME money table as the offers above (catalogue-ui offersHTML, opt.tailRows): GST grey between the two totals; After tax the only heavy row */
+  const row = (l, v, cls, tid, attrs) => `<tr class="cbm-row ${cls || ''}"${tid ? ' data-testid="' + tid + '"' : ''}${attrs || ''}><td class="cbm-l">${l}</td><td class="cbm-a"><bdi>${esc(money(v))}</bdi></td></tr>`;
+  return row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100, 'cbm-tax')
+    + row(tx('After tax'), it.TotItemVal, 'cbm-grand', 'prod-offer-preview-tax-' + qty, ` data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}"`)
+    + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row);
 }
 /**
  * ⭐ "YOU SAVE" — Athi, 2026-09-04: *"need to show total savings?"* Two honest numbers, not one: what came off the
@@ -9484,7 +9496,8 @@ function prodSavingsRowHTML(off, totalAtList, totalNet, gross, row){
   const pct = gross > 0 ? Math.round(off / gross * 1000) / 10 : 0;
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   /* inside the sheet (row given): one row — You save (pct) · before tax X · all-in Y */
-  if (typeof row === 'function') return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700"><td style="padding:4px 8px;border-top:1px solid var(--line)">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></td><td style="padding:4px 8px;border-top:1px solid var(--line);font-weight:400;color:var(--grey)"><bdi>${esc(money(off))}</bdi> ${tx('before tax')}</td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap"><bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></td></tr>`;
+  if (typeof row === 'function') return `<tr class="cbm-row cbm-save" data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}"><td class="cbm-l">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span><span class="cbm-sub">${esc(tx('off the price'))} ${esc(money(off))} · ${esc(tx('all-in with the tax on it'))} ${esc(money(allIn))}</span></td><td class="cbm-a"><bdi>${esc(money(allIn))}</bdi></td></tr>`;
+  if (false) return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700"><td style="padding:4px 8px;border-top:1px solid var(--line)">${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></td><td style="padding:4px 8px;border-top:1px solid var(--line);font-weight:400;color:var(--grey)"><bdi>${esc(money(off))}</bdi> ${tx('before tax')}</td><td style="padding:4px 8px;border-top:1px solid var(--line);text-align:end;white-space:nowrap"><bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></td></tr>`;
   return `<div data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="display:flex;justify-content:space-between;gap:8px;color:var(--ok-2);font-weight:700;margin-top:4px">`
     + `<span>${tx('You save')} <span style="font-weight:400">(${esc(String(pct))}%)</span></span>`
     + `<span><bdi>${esc(money(off))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('before tax')}</span> · <bdi>${esc(money(allIn))}</bdi> <span style="font-weight:400;color:var(--grey)">${tx('all-in')}</span></span></div>`;

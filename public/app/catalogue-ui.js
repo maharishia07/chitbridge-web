@@ -479,34 +479,37 @@
     /* ⭐ A SHEET, NOT PROSE — Athi, 2026-09-05: "difficult to read … show like an excel sheet: listed price, then the
        discount name, percentage in the next cell, the amount in the next cell, one by one". Three columns everywhere:
        the step · the detail · the amount. The tax footer under it uses the same cells, so the two read as one sheet. */
-    var td = function (h, extra) { return '<td style="padding:4px 8px;border-top:1px solid var(--line);vertical-align:top;' + (extra || '') + '">' + h + '</td>'; };
-    var amtTd = function (h, bold) { return td('<bdi>' + h + '</bdi>', 'text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;' + (bold ? 'font-weight:700' : '')); };
-    var tr = function (cls, a, b, c, bold) { return '<tr class="' + cls + '">' + td(bold ? '<b>' + a + '</b>' : a) + td(b, 'color:var(--grey)') + amtTd(c, bold) + '</tr>'; };
+    /* ⭐ THE MONEY TABLE — the designer's spec, 2026-09-04, after Athi: "the alignment has to be very precise … I was
+       spending quite some time to understand". TWO columns: Detail (auto) and Amount (fixed 11ch, right-aligned,
+       tabular numerals) so every amount's last character sits on one x. A note ("not yet — ₹4,000 more needed") is a
+       small grey second line INSIDE Detail, never in the Amount column. No header row — a header implies three
+       independently aligned columns, which was the bug. One rule above After offers, a heavier one above After tax.
+       The tax rows ride in the SAME table (opt.tailRows) so the whole computation reads top to bottom. */
+    var neg = function (n) { return '\u2212\u2009' + money(ns, Math.abs(n)); };
+    var tr = function (cls, label, sub, amt, opts) {
+      opts = opts || {};
+      return '<tr class="cbm-row ' + cls + '"' + (opts.testid ? ' data-testid="' + esc(opts.testid) + '"' : '') + (opts.attrs || '') + '>'
+        + '<td class="cbm-l">' + label + (sub ? '<span class="cbm-sub">' + sub + '</span>' : '') + '</td>'
+        + '<td class="cbm-a"><bdi>' + (amt == null ? '' : amt) + '</bdi></td></tr>';
+    };
     var rows = ev.adjustments.map(function (a) {
-      return tr('cbcat-offrow', esc(a.label), esc(a.why), esc(money(ns, a.amount)));
+      return tr('cbm-offer', esc(a.label), esc(a.why || ''), Number(a.amount) < 0 ? esc(neg(a.amount)) : esc(money(ns, a.amount)));
     }).join('');
-    /* ⭐ "You are ₹300 away" is the single most useful thing a cart can say, and the engine already knows it. */
     var notes = ev.notes.map(function (nte) {
-      return tr('cbcat-offrow note', esc(nte.label), esc(nte.why), '');
+      return tr('cbm-note', esc(nte.label), esc(nte.why || ''), '');
     }).join('');
-
-    /* ⭐ WHY AN OFFER DID NOT APPLY, in the offer's own words — "an exclusive offer already applied", "expired
-       (2026-08-01)", "no line qualifies". This is the half of the breakdown that answers a dispute. */
     var skipped = (opt.skipped ? ev.skipped : []).map(function (s) {
-      return tr('cbcat-offrow skip', esc(s.label || s.offer_id), esc(tx('not applied — ') + (s.why || '')), '—');
+      return tr('cbm-note', esc(s.label || s.offer_id), esc(tx('not applied — ') + (s.why || '')), '');
     }).join('');
-
-    /* ⚠️ THE TEST ID IS OVERRIDABLE because this block now renders on TWO screens at once — a page carrying two
-       copies of `cbcat-offers` would make every spec that addresses it ambiguous. */
     return '<div class="cbcat-offers" data-testid="' + esc(opt.testid || 'cbcat-offers') + '">'
-      + '<div class="cbcat-offhd">' + esc(opt.head || tx('Offers applied')) + '</div>'
-      + '<table class="cbcat-sheet" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
-      + '<thead><tr style="color:var(--grey);font-size:var(--fs-1)"><th style="text-align:start;padding:2px 8px;font-weight:600">' + tx('Step') + '</th><th style="text-align:start;padding:2px 8px;font-weight:600">' + tx('Detail') + '</th><th style="text-align:end;padding:2px 8px;font-weight:600">' + tx('Amount') + '</th></tr></thead><tbody>'
-      + (opt.subtotal ? tr('cbcat-offrow', tx('Listed price'), '', esc(money(ns, ev.subtotal))) : '')
+      + '<div class="cbcat-offhd">' + esc(opt.head || tx('How this price was calculated')) + '</div>'
+      + '<table class="cb-money"><colgroup><col><col style="width:11ch"></colgroup><tbody>'
+      + (opt.subtotal ? tr('cbm-list', esc(tx('Listed price')), '', esc(money(ns, ev.subtotal))) : '')
       + rows + notes + skipped
       + (ev.adjustments.length || opt.subtotal
-          ? '<tr class="cbcat-offtot">' + td('<b>' + tx('After offers') + '</b>') + td('') + amtTd('<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span>', true) + '</tr>'
+          ? tr('cbm-tot', esc(tx('After offers')), '', '<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span>')
           : '')
+      + (opt.tailRows || '')
       + '</tbody></table></div>';
   }
 
