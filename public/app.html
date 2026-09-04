@@ -9989,6 +9989,7 @@ function prodOutcomeHTML(k, d){
       case 'offers': {
         /* View shows what APPLIES: an offer this product has excluded is counted, not listed */
         const all=offersForProduct(d, id), on=all.filter(function(o){ return !o._excluded; }), nEx=all.length-on.length;
+        if(on.length && prodOrderSample(d).negotiable) return '<span data-testid="prod-offers-negotiable" style="color:var(--warn-3)">● </span>'+esc(txf('{n} offer(s) attached — indicative only: the buyer names the price', { n:String(on.length) }));
         if(!Array.isArray(UI._ctOffers)) return grey(tx('reading…'));
         if(!on.length) return nEx?grey(txf('{n} category offer(s) excluded here', { n:String(nEx) })):none(tx('No offers — create in Offers'));
         return (nEx?'<span data-testid="prod-offers-excluded" style="color:var(--grey)">'+esc(txf('{n} excluded', { n:String(nEx) }))+' · </span>':'')+on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
@@ -10007,7 +10008,8 @@ function prodOutcomeHTML(k, d){
         const dot=(dead||clash)?'<span style="color:var(--warn-3)">● </span>':'';
         const prov=r.source==='product'?'':(r.source==='category'?' '+grey('↳ '+esc(tx('from category')+' '+(r.via_category_name||''))+(r.inherited_from?esc(' ↳ '+r.inherited_from):'')):' '+grey('↳ '+esc(tx('catalogue default'))));
         const warnTxt=dead?' · '+esc(tx('slab not active')):clash?' · '+esc(tx('categories disagree — resolve in Categories'))+' ('+esc(r.conflict.map(h=>(h.rate==null?'?':h.rate+'%')).join('/'))+')':'';
-        return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'') + prodTaxOverrideNote(d, r, slabs, cats);
+        const om0=prodOrderSample(d);
+        return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(om0.negotiable?tx('indicative — buyer names the price'):(om0.qty===1?tx('one unit after tax'):txf('{q} {u} after tax', { q:String(om0.qty), u:pUnit(d)||tx('units') })))} <b><bdi>${esc(inr(it.TotItemVal*om0.qty))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'') + prodTaxOverrideNote(d, r, slabs, cats);
       }
       case 'stock': { const st=d.status||'available'; const q=(d.qty!=null&&d.qty!=='')?d.qty:(d.stock!=null?d.stock:null); return `<b>${esc(tx(st==='available'?'available':st))}</b>${q!=null?' · '+grey(esc(tx('qty')+' '+q)):''}`; }
       case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none(tx('No variants'));
@@ -10037,7 +10039,8 @@ function prodOutcomeHTML(k, d){
       }
       case 'invoice': {
         const m=prodInvoiceModel(d, 'same'); if(!m) return grey(tx('reading…'));
-        return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for one')+' '+esc(pUnit(d)||tx('unit'))+' · '+esc(m.posWord))}`;
+        if(m.om.negotiable) return `<b>${esc(m.title)}</b> ${grey('· '+esc(tx('at the agreed price'))+' · '+esc(tx('indicative')+' '+fmtMoney(m.item.TotItemVal, m.cur))+' · '+esc(m.posWord))}`;
+        return `<b>${esc(m.title)}</b> ${grey('· '+esc(fmtMoney(m.item.TotItemVal, m.cur))+' '+tx('for')+' '+(m.om.qty===1?tx('one')+' ':'')+esc(m.om.qty===1?m.om.word:(String(m.om.qty)+' '+(pUnit(d)||tx('units'))))+' · '+esc(m.posWord))}`;
       }
       case 'barcode': {
         const ids=prodIdentifiers(d); if(!ids.length) return none(tx('No identifiers — set a code in Edit'));
@@ -10319,9 +10322,13 @@ function prodShopVisibility(){ const me=UI._me; return (me && me.catalogue_visib
 function prodStorefrontTab(d){
   const uid=prodShopHandle(); if(uid===null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
   const id=UI.prodSel||d.item_id||d.id||'';
-  const url='/shop.html?s='+encodeURIComponent(uid); const one=url+'&item='+encodeURIComponent(id)+'&preview=1';   /* the owner's preview: private or not, this is what a customer would get */
+  const url='/shop.html?s='+encodeURIComponent(uid); const one=url+'&item='+encodeURIComponent(id)+'&preview=1';
+  /* coherence: a "name your price" product on a fixed-price (cart) face cannot be negotiated in the shop — say so here */
+  const om=prodOrderSample(d); const face=(UI._face&&UI._face.shop&&UI._face.shop.order_input)||(UI._face&&UI._face.order_input)||{}; const preset=String(face.preset||(UI._face&&UI._face.method)||'cart');
+  const negotiablePreset=['range','choice','qtyprice'].indexOf(preset)>=0;
+  const coherence = om.negotiable && !negotiablePreset ? `<div data-testid="prod-storefront-coherence" style="padding:6px 12px;font-size:var(--fs-2);color:var(--warn-3)">● ${esc(txf('This product lets the buyer name the price, but the catalogue\'s order input is "{p}" (a fixed price). Set Catalogue setup › Storefront to a negotiable input (range · choice · qty+price) or the shop will sell it at list price.', { p: preset }))}</div>` : '';   /* the owner's preview: private or not, this is what a customer would get */
   const st=d.status||'available';
-  return `<div class="sec">${tx('Storefront')}</div>`
+  return `<div class="sec">${tx('Storefront')}</div>`+coherence
     + `<div style="padding:6px 12px;font-size:var(--fs-2)">${prodShopVisibility()!=='public'?'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not public yet — the catalogue visibility is {v}; below is a preview of what a customer would see. Profile › Visibility › Public puts it live.', { v: tx(prodShopVisibility()) })):st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
     + `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" src="${esc(one)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff"></iframe></div>`
     + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`;
@@ -10401,6 +10408,26 @@ async function prodXrefRemove(id, i){
  * sample ("your customer"); same-state / other-state is a switch. The buyer's own item code from Identifiers prints on
  * the line, because that is what their three-way match reads.
  */
+/**
+ * ⭐ THE ORDER MODEL REACHES THE MONEY ROWS. Athi, 2026-09-04: "change the model and see how the other tabs behave —
+ * invoice, if it is negotiation or price range?". One reading, used by Pricing & tax, Invoice and Offers:
+ *   count → 1 unit · pack → one pack (step units) · measure → the step or min · range → the minimum · pick → 1 ·
+ *   offer → 1, and the price is NOT fixed: the list price is indicative, the invoice is issued at the agreed price.
+ */
+function prodOrderSample(d){
+  const c=(typeof prodOrderDecl==='function')?prodOrderDecl(d):{ decl:{ model:'count' } }; const o=(c&&c.decl)||{ model:'count' }; const m=o.model||'count';
+  const num=(v)=>{ const n=Number(v); return isFinite(n)&&n>0?n:null; };
+  let qty=1, word=pUnit(d)||tx('unit');
+  if(m==='pack'){ qty=num(o.step)||1; word=txf('pack of {n}', { n:String(qty) })+(pUnit(d)?' '+pUnit(d):''); }
+  else if(m==='measure'){ qty=num(o.min)||num(o.step)||1; }
+  else if(m==='range'){ qty=num(o.min)||1; }
+  return { model:m, decl:o, qty, word, negotiable: m==='offer', unresolved: !!(c&&c.unresolved),
+    note: m==='offer' ? tx('buyer names the price — the list price is indicative; the invoice is issued at the price agreed on the chit')
+        : m==='range' ? txf('ordered as a range: min {a}{b}', { a:String(o.min!=null?o.min:1), b:(o.max!=null?' · max '+o.max:'') })
+        : m==='pack' ? txf('sold in packs of {n}', { n:String(qty) })
+        : m==='measure' ? (o.step?txf('measured, in steps of {s}', { s:String(o.step) }):tx('measured amount'))
+        : m==='pick' ? tx('one or none') : '' };
+}
 function prodInvoiceModel(d, pos){
   try{
     const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
@@ -10418,13 +10445,14 @@ function prodInvoiceModel(d, pos){
     }catch(_){ off=0; }
     const scheme=String(r.scheme||'GST').toUpperCase(), isGST=scheme==='GST';
     const myC=String((typeof SESSION!=='undefined'&&SESSION&&SESSION.country)||'').toUpperCase()||'XX', OTHERC=(myC==='ZZ'?'XX':'ZZ');
-    const line={ name:pName(d), qty:1, unit_price:price, discount:off, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
+    const om=prodOrderSample(d);
+    const line={ name:pName(d), qty:om.qty, unit_price:price, discount:off*om.qty, rate:(r.rate==null?0:r.rate), cess_rate:r.cess||0, unit:pUnit(d), hsn:(r.hsn&&r.hsn[0])||d.hsn||'', tax_scheme:scheme };
     const seller={ State:S, RegType: prodRegType() }; if(!isGST){ delete seller.State; seller.Country=myC; }
     const buyerPos = pos==='other' ? (isGST?OTHER:OTHERC) : (isGST?S:myC);
     const item=CBTax.determine({ seller, buyer:(isGST?{ Pos:buyerPos }:{ Country:buyerPos }), lines:[line] }).ItemList[0]||{};
     const me=UI._me||{}; const cur=(typeof myCur==='function')?myCur():'INR';
     const their=(Array.isArray(d.xref)?d.xref:[]).find(x=>x&&x.role==='buyer'&&x.id);
-    return { item, line, r, off, offLabel, cur, isGST, scheme, pos,
+    return { item, line, r, off: off*om.qty, offLabel, cur, isGST, scheme, pos, om,
       title: isGST ? tx('Tax invoice') : txf('{s} invoice', { s: scheme }),
       posWord: pos==='other' ? (isGST?tx('other state · IGST'):tx('cross-border')) : (isGST?tx('same state · CGST + SGST'):tx('domestic')),
       seller:{ name: me.display_name||'', gstn: me.gstn||'', address: me.address||'', state:S },
@@ -10451,7 +10479,8 @@ function prodInvoiceTab(d){
     +   `<div style="text-align:end"><div style="font-size:15px;font-weight:800;letter-spacing:.04em">${esc(m.title.toUpperCase())}</div><div style="color:#666">No. <b>SAMPLE-0001</b> · ${esc(today)}</div><div style="color:#666">${esc(tx('Place of supply'))}: ${esc(pos==='other'?(m.isGST?tx('other state'):tx('abroad')):(m.isGST?tx('state ')+m.seller.state:tx('domestic')))}</div></div></div>`
     +   `<div style="margin:10px 0 8px;padding:8px 10px;background:#fafafa;border-radius:8px"><b>${tx('Bill to')}:</b> ${esc(tx('Your customer'))} <span style="color:#666">· ${esc(m.posWord)}</span>${m.their?' <span style="color:#666">· '+esc(tx('their item code'))+' <b>'+esc(m.their.id)+'</b></span>':''}</div>`
     +   `<table class="cbcat-sheet" style="width:100%;margin:0"><thead><tr><th>#</th><th>${tx('Description')}</th><th>HSN</th><th>${tx('Qty')}</th><th>${tx('Rate')}</th><th>${tx('Discount')}</th><th>${tx('Taxable')}</th>${heads.map(h=>'<th>'+esc(h[0])+'</th>').join('')}${cess?'<th>'+esc(tx('Cess'))+'</th>':''}<th>${tx('Total')}</th></tr></thead>`
-    +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td>1 ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}</td><td>${m.off?'− '+M(m.off):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
+    +   (m.om.negotiable?`<div data-testid="prod-invoice-negotiable" style="margin:0 0 8px;padding:6px 10px;background:#fff7e6;border:1px solid #f1d28a;border-radius:8px;color:#7a5a00">⚖️ ${esc(m.om.note)}</div>`:(m.om.note?`<div data-testid="prod-invoice-model" style="margin:0 0 8px;color:#666">${esc(m.om.note)}</div>`:''))
+    +   `<tbody><tr data-testid="prod-invoice-line"><td>1</td><td><b>${esc(m.line.name)}</b>${m.their?'<div style="color:#666;font-size:11px">'+esc(tx('your code'))+' '+esc(m.their.id)+'</div>':''}${m.offLabel?'<div style="color:#c0392b;font-size:11px">🏷️ '+esc(m.offLabel)+'</div>':''}</td><td>${esc(m.line.hsn||'—')}</td><td data-testid="prod-invoice-qty">${esc(String(m.om.qty))} ${esc(m.line.unit||'')}</td><td>${M(m.line.unit_price)}${m.om.negotiable?' <small style="color:#7a5a00">'+esc(tx('indicative'))+'</small>':''}</td><td>${m.off?'− '+M(m.off):'—'}</td><td>${M(it.AssAmt)}</td>${heads.map(h=>'<td>'+M(h[1])+'</td>').join('')}${cess?'<td>'+M(cess)+'</td>':''}<td><b>${M(it.TotItemVal)}</b></td></tr></tbody></table>`
     +   `<div style="display:flex;justify-content:flex-end;margin-top:10px"><table style="min-width:260px;border-collapse:collapse">${rows.map((x,i)=>'<tr'+(i===rows.length-1?' style="font-weight:800;border-top:1px solid #ddd"':'')+'><td style="padding:3px 8px;color:#444">'+esc(x[0])+'</td><td style="padding:3px 8px;text-align:end" data-testid="'+(i===rows.length-1?'prod-invoice-total':'')+'">'+M(x[1])+'</td></tr>').join('')}</table></div>`
     +   `<div style="margin-top:10px;color:#666;font-size:11px">${esc(m.r&&m.r.name?txf('Slab: {n}', { n: CBTaxSlab.describe(m.r) }):tx('No slab resolved — 0% shown. Attach one on Pricing & tax.'))} · ${esc(tx('Fields as GST Rule 46 / e-invoice INV-01 name them; a real invoice is numbered when the chit is stamped.'))}</div>`
     + `</div>`;
