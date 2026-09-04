@@ -8645,13 +8645,26 @@ function refFinishDetail(it){
 }
 function paintProdList(){ prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
 function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
-async function loadCatalogue(){
-  UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{ const items=(await api("prodList"))||[]; UI.prods=items;
+async function loadCatalogue(force){
+  /* ⭐ THE SPINNER ONLY WHEN THERE IS NOTHING TO SHOW. loadCatalogue runs on every render pass and every 20s refresh;
+     wiping a painted list to "loading…" each time is what made one product feel like a long load (Athi, 2026-09-05:
+     "product loading in catalogue taking very long — just only one product"). With a list on screen the refresh is
+     SILENT: fetch, compare, repaint only what changed. */
+  const _had = Array.isArray(UI.prods) && UI.prods.length > 0;
+  UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb && !_had) rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{ const items=(await api("prodList"))||[];
+    const _same = _had && JSON.stringify(items) === JSON.stringify(UI.prods);
+    UI.prods=items;
     /* The declaration, once per session — the form and the view render declared columns from it. */
     try{ await catDeclared(); }catch(_){}
-    try{ const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
-    UI._prodLoading=false; paintProdList();
+    /* The reference catalogues (adopted, for the picker) — once a minute, not once a render: a second read the list
+       does not need on every tick. Setup saves call loadCatalogue(true). */
+    const _refFresh = !force && UI._refCatAt && (Date.now() - UI._refCatAt) < 60000;
+    if(_refFresh){ /* keep UI.refCat */ }
+    else try{ UI._refCatAt=Date.now(); const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
+    UI._prodLoading=false;
+    if(_same && !force){ return; }   /* nothing changed since the last pass — no repaint, no flash */
+    paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     /* ⚠️⚠️ A RELOAD MUST NOT REPAINT OVER AN OPEN FORM — and it protected NEW but not EDIT. loadCatalogue() runs
        on every full render pass (the catalogue hook below the render), so any background re-render that landed
