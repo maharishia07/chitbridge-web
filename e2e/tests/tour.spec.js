@@ -6,7 +6,8 @@ const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../f
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
 const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
-test.use({ launchOptions: { slowMo: HEADED ? 350 : 0 } });
+/* headed: a maximised real window (viewport null lets the window size rule), slowed so the eye can follow */
+test.use(HEADED ? { viewport: { width: 1600, height: 900 }, launchOptions: { slowMo: 350, args: ['--window-size=1620,1000', '--window-position=0,0'] } } : { launchOptions: { slowMo: 0 } });
 
 let caseNo = 0;
 async function tc(page, title, testing, steps, expected) {
@@ -42,8 +43,8 @@ test('the tour', async ({ page }) => {
     const rows = await api('prodList');
     const f = (n) => { const p = rows.find((x) => ((x.item_data || x).name || '') === n); return p ? { id: p.item_id || p.id, d: p.item_data || p } : null; };
     const A = f(a), B = f(b);
-    await api('prodEdit', { params: { id: A.id }, body: { item_data: Object.assign({}, A.d, { sku: 'BAS-25', hsn: '1006', bom: [{ item: 'Basmati paddy 40kg', qty: 1 }, { item: 'PP bag', qty: 1 }] }) } });
-    await api('prodEdit', { params: { id: B.id }, body: { item_data: Object.assign({}, B.d, { sku: 'PON-10' }) } });
+    await api('prodEdit', { params: { id: A.id }, body: { item_data: Object.assign({}, A.d, { code: 'BAS-25', hsn: '1006', bom: [{ item: 'Basmati paddy 40kg', qty: 1 }, { item: 'PP bag', qty: 1 }] }) } });
+    await api('prodEdit', { params: { id: B.id }, body: { item_data: Object.assign({}, B.d, { code: 'PON-10' }) } });
     return { a: A.id, b: B.id };
   }, [basmati, ponni]);
   const openProduct = async (name) => { await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page); await page.locator('[data-testid^="cat-product-"]', { hasText: name }).first().click(); await settle(page); };
@@ -79,7 +80,7 @@ test('the tour', async ({ page }) => {
   await page.getByTestId('cbdef-name').fill(offerName);
   await page.getByTestId('cbdef-rule-percent').fill('10');
   await page.getByTestId('cbdef-save').click(); await settle(page);
-  const row = page.locator('[data-testid^="catset-offer-"]', { hasText: offerName }).first();
+  const row = page.locator('.catset-drow[data-testid^="catset-offer-"]', { hasText: offerName }).first();
   await expect(row).toBeVisible({ timeout: 25000 });
   await ok(page, 'the row shows the name, "10% off", and its status');
 
@@ -133,7 +134,7 @@ test('the tour', async ({ page }) => {
   await page.getByTestId('cbdef-name').fill('My own 12%');
   const rate = page.getByTestId('cbdef-rule-rate'); if (await rate.count()) await rate.fill('12');
   await page.getByTestId('cbdef-save').click(); await settle(page);
-  const srow = page.locator('[data-testid^="catset-tax-"]', { hasText: 'My own 12%' }).first();
+  const srow = page.locator('.catset-drow[data-testid^="catset-tax-"]', { hasText: 'My own 12%' }).first();
   await expect(srow).toBeVisible({ timeout: 25000 });
   const slabId = (await srow.getAttribute('data-testid')).replace('catset-tax-', '');
   await page.getByTestId('catset-tax-live-' + slabId).click(); await settle(page);
@@ -166,7 +167,7 @@ test('the tour', async ({ page }) => {
   await page.getByTestId('plan-name-0').fill('September: 5% off Ponni'); await page.getByTestId('plan-value-0').fill('5'); await page.getByTestId('plan-product-0').selectOption(ids.b);
   await page.getByTestId('plan-name-1').fill('October: ₹40 off Ponni'); await page.getByTestId('plan-kind-1').selectOption('amount_off'); await page.getByTestId('plan-value-1').fill('40'); await page.getByTestId('plan-product-1').selectOption(ids.b);
   await page.getByTestId('plan-go').click(); await settle(page);
-  await expect(page.locator('[data-testid^="catset-offer-"]', { hasText: 'October' }).first()).toBeVisible({ timeout: 25000 });
+  await expect(page.locator('.catset-drow[data-testid^="catset-offer-"]', { hasText: 'October' }).first()).toBeVisible({ timeout: 25000 });
   await ok(page, 'September row Active, October row Scheduled');
 
   /* ── 11 · publish on a date ── */
