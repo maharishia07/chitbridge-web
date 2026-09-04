@@ -121,7 +121,18 @@ root.cbMediaGallery = function (d, o) {
     tiles.push('<div data-testid="prod-media-cover" style="width:' + w + ';border:1px solid #e3e3e3;border-radius:9px;overflow:hidden;background:#fff"><img src="' + esc(d.image) + '" alt="" loading="lazy" style="width:100%;height:' + h + ';object-fit:cover;display:block"></div>');
   }
   if (!tiles.length) return '';
-  return '<div data-testid="prod-media" style="display:' + (phone ? 'grid' : 'flex') + ';gap:8px;flex-wrap:wrap;' + (phone ? 'grid-template-columns:1fr;' : '') + 'padding:6px 0">' + tiles.join('') + '</div>';
+  /* the count first — '3 pictures · 1 video' — then, on a phone, ONE ROW that swipes sideways (scroll-snap, like every
+     product gallery a customer already knows); on the product page the tiles wrap. Athi, 2026-09-04: 'scrollable, not
+     vertically, horizontally, and it has to show how many images, videos'. */
+  var nImg = m.filter(function (x) { return x.kind === 'image'; }).length + (tiles.length && !m.length ? 1 : 0);
+  var nVid = m.filter(function (x) { return x.kind === 'video'; }).length;
+  var count = [nImg ? nImg + (nImg === 1 ? ' picture' : ' pictures') : '', nVid ? nVid + (nVid === 1 ? ' video' : ' videos') : ''].filter(Boolean).join(' · ');
+  var head = '<div data-testid="prod-media-count" style="font-size:11.5px;color:#777;padding:2px 0 4px">' + esc(count) + (phone && tiles.length > 1 ? ' · swipe ›' : '') + '</div>';
+  if (phone) {
+    var strip = tiles.map(function (t) { return t.replace('style="position:relative;width:' + w, 'style="position:relative;flex:0 0 88%;scroll-snap-align:start;width:' + w).replace('style="width:' + w, 'style="flex:0 0 88%;scroll-snap-align:start;width:' + w); }).join('');
+    return head + '<div data-testid="prod-media" style="display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 0 8px;scrollbar-width:thin">' + strip + '</div>';
+  }
+  return head + '<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">' + tiles.join('') + '</div>';
 };
 root.cbLineRows = cbLineRows;
   if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows };
