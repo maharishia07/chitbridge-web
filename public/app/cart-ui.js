@@ -558,7 +558,17 @@
    * It broke e2e/tests/variants.spec.js, which asserts the price as written — and the test was right to fail.
    * So the default reproduces the old output exactly, and grouping is a flag a screen can choose on purpose.
    */
+  /**
+   * ⭐ ONE MONEY FORMAT. Athi, 2026-09-04: "fix the shop money format to match the app" — the shop printed ₹1000 where
+   * the app prints ₹1,000.00. Every cart now prints through CBLocale.money (the app's fmtMoney), with the currency the
+   * page declares (`currency`), else the session's, else INR. The old `symbol`/`groupDigits` path stays only for a
+   * page that loads no locale.js.
+   */
+  function currencyOf(ns) { return opt(ns, 'currency', (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'); }
   function fmt(ns, n) {
+    if (typeof CBLocale !== 'undefined' && CBLocale && typeof CBLocale.money === 'function') {
+      try { return CBLocale.money(Number(n || 0), currencyOf(ns)); } catch (_) {}
+    }
     return sym(ns) + (opt(ns, 'groupDigits', false)
       ? Number(n).toLocaleString(opt(ns, 'locale', CBLocale.locale()))
       : String(n));

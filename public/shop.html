@@ -294,7 +294,8 @@ function priceVal(price){ return price; }
 // 'indicative' is gone with the conversion: this IS the seller's price, not an approximation of it.
 //  is the price's own currency, passed down from itemPrice() — see the note there.
 function finishPrice(price, unit, cur){ if(price==null) return '<small>'+t('por')+'</small>';
-  return symOf(cur||curOf(null))+esc(String(priceVal(price)))+' <small>/ '+esc(unit||priceUnit())+'</small>'; }
+  var code=cur||curOf(null); var shown=(typeof CBLocale!=='undefined'&&code)?CBLocale.money(priceVal(price), code):(symOf(code)+String(priceVal(price)));   /* the app's format, the price's currency */
+  return esc(shown)+' <small>/ '+esc(unit||priceUnit())+'</small>'; }
 // commercials are GENERIC {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing
 // adoptions keep pricing. The unit is the ITEM's own (kg / count / litre), never assumed.
 function itemPrice(it){ var c=(it&&it.commercials)||{};
@@ -425,7 +426,7 @@ function productListHtml(data, cur){
   /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
      without a destroy() is the leak the namespaced API could not express. */
   if (_CART) _CART.destroy();
-  _CART = CBCart.create(data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
+  _CART = CBCart.create(data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), currency:(data.shop&&data.shop.currency_code)||'INR', from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
