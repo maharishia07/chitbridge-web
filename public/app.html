@@ -8705,8 +8705,10 @@ async function _loadCatalogue(force){
     if(_refFresh){ /* keep UI.refCat */ }
     else try{ UI._refCatAt=Date.now(); const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
     UI._prodLoading=false;
-    if(_same && force !== true){ return; }   /* nothing changed since the last pass — no repaint, no flash */
-    paintProdList();
+    /* ⚠️ THE LIST may skip its repaint when nothing changed — THE DETAIL PANE MAY NOT. The first cut returned here
+       and left whatever the pane last held (Setup, after "Catalogue" was clicked) — [TAX-02] and the tour stalled
+       on a pane that never became the product. The list is quiet; the pane is painted as before. */
+    if(!_same || force === true) paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     /* ⚠️⚠️ A RELOAD MUST NOT REPAINT OVER AN OPEN FORM — and it protected NEW but not EDIT. loadCatalogue() runs
        on every full render pass (the catalogue hook below the render), so any background re-render that landed
@@ -9233,6 +9235,9 @@ function ctOfferField(d){
            describe an offer differently from the row it will appear on. */
         const terms = (typeof prodOfferTerms === 'function') ? prodOfferTerms(o.rules) : '';
         const win = (typeof prodOfferWindow === 'function') ? prodOfferWindow(o.rules) : '';
+        /* an offer that reaches this product THROUGH A CATEGORY is shown as inherited — like tax — not as a tick to flip */
+        const via = (offersForProduct(d, pid).find(function (x) { return x.id === o.id && x._via; }) || {})._via;
+        if (via && !on) return '<span class="ctcatg on" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">✓ ' + esc(o.name) + ' <span style="font-weight:400;color:var(--grey)">' + esc(tx('via category') + ' ' + via) + '</span></span>';
         return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '"'
           + ' data-testid="cat-offer-' + esc(o.id) + '"'
           + ' title="' + esc(terms + (win ? ' · ' + win : '')) + '"'
