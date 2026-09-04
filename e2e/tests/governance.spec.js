@@ -11,8 +11,8 @@ test('[GOV-01] the override is named on tax; a product can exclude a category of
   const pid = await page.evaluate(() => UI.prodSel);
   expect(pid).toBeTruthy();
   const ids = await page.evaluate(async ({ pid }) => {
-    const slab5 = (await api('defAdd', { body: { kind: 'tax', name: 'GST 5', rules: { gst_rate: 5 }, status: 'live' } })).definition.definition_id;
-    const slab18 = (await api('defAdd', { body: { kind: 'tax', name: 'GST 18', rules: { gst_rate: 18 }, status: 'live' } })).definition.definition_id;
+    const slab5 = (await api('defAdd', { body: { kind: 'tax', name: 'GST 5', rules: { rate: 5 }, status: 'live' } })).definition.definition_id;
+    const slab18 = (await api('defAdd', { body: { kind: 'tax', name: 'GST 18', rules: { rate: 18 }, status: 'live' } })).definition.definition_id;
     const cat = (await api('defAdd', { body: { kind: 'category', name: 'Rice ' + Date.now(), rules: { default_slab: slab5 }, status: 'live' } })).definition.definition_id;
     const offer = (await api('defAdd', { body: { kind: 'offer', name: 'Rice 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { category_ids: [cat] } }, status: 'live' } })).definition.definition_id;
     const r = await api('prodList', { query: { limit: 50 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid);
