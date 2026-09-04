@@ -10118,7 +10118,7 @@ function prodTaxPreviewHTML(d,r){
    * (cbOfferLine → CBOffers.evaluate → perLine), and the capped line discount goes onto the invoice line as
    * `discount`. Same slab, same price: with a 10% offer the assessable amount drops and every head with it.
    */
-  let off=0, offWhy='';
+  let off=0, offWhy='', offRows=[];
   try{
     const on=(typeof prodOffersOn==='function')?prodOffersOn(d):[];
     if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
@@ -10127,6 +10127,7 @@ function prodTaxPreviewHTML(d,r){
       const ev=CBOffers.evaluate({ lines: lines, offers: on.map(o=>o.rules), money: (n)=>fmtMoney(n, myCur?myCur():'INR') });
       off=Math.round((((CBOffers.perLine(ev, lines)||{})['0']||{}).off||0)*100)/100;
       offWhy=(ev.adjustments||[]).map(a=>a.label).join(' · ');
+      offRows=(ev.adjustments||[]).map(a=>({ label:a.label, why:a.why||'', amount:(a.scope==='line'&&a.target!=null)?Math.abs(Number(a.amount)||0):null, scope:(typeof CBOffers.scopeLabel==='function')?CBOffers.scopeLabel({ kind:a.kind, scope:a.scope }):'' }));
     }
   }catch(_){ off=0; }
   /* ⭐ THE SCHEME IS THE SLAB'S (b202). Under GST the two cells are same-state / other-state; under a VAT-type scheme
@@ -10160,38 +10161,53 @@ function prodTaxPreviewHTML(d,r){
         ? esc(txf('“{name}” has no rate — open it in Setup › Tax and enter one.', { name: r.name || tx('this slab') }))
           + ` <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('tax')">${tx('Open Setup › Tax')}</span>`
         : `${tx('No rate to show — attach a slab, or set one on the category or the catalogue.')}`) + `</div>`;
+  /* ⭐⭐ THE TAX PANE IS A SHEET — Athi, 2026-09-05: "we have to clearly state: offer not applied here, or bring the offer
+     details here too; and if we have cess, how is that shown?" Tax is charged on what the buyer pays, so the offers come
+     FIRST, one row each with their amount; then the taxable value; then every head with its rate — CGST · SGST for the
+     same state, IGST for another — then CESS as its own row (from the slab; "none on this slab" when zero); then After
+     tax and You save. Two amount columns, one per case; the INV-01 field name rides beside each row for the buyer's system. */
+  const money=(v)=>`<bdi>${esc(inr(v))}</bdi>`;
+  const th=(t,it,tid)=>`<th data-testid="${tid}" data-rate="${esc(it.GstRt)}" data-ass="${esc(it.AssAmt)}" data-cgst="${esc(it.CgstAmt)}" data-sgst="${esc(it.SgstAmt)}" data-igst="${esc(it.IgstAmt)}" data-cess="${esc(it.CesAmt)}" data-total="${esc(it.TotItemVal)}" style="text-align:end;padding:4px 8px;font-weight:700;white-space:nowrap">${esc(t)}</th>`;
+  const td=(h,extra)=>`<td style="padding:4px 8px;border-top:1px solid var(--line);vertical-align:top;${extra||''}">${h}</td>`;
+  const amt=(h,bold)=>td(h,'text-align:end;white-space:nowrap;font-variant-numeric:tabular-nums;'+(bold?'font-weight:700':''));
+  const row=(step,detail,a,b,bold,tid)=>`<tr${tid?' data-testid="'+tid+'"':''}>${td(bold?'<b>'+step+'</b>':step)}${td(detail,'color:var(--grey)')}${amt(a,bold)}${amt(b,bold)}</tr>`;
+  const code=(c)=>`<code style="font-size:var(--fs-1);color:var(--grey)">${c}</code>`;
+  const cessRate=Number(r.cess||0);
+  const offerRowsHTML = offRows.length
+    ? offRows.map(o=>row(esc(o.label), esc(o.why)+(o.scope?' · '+esc(tx(o.scope)):''), o.amount!=null?'−'+esc(inr(o.amount)):esc(tx('in the cart')), o.amount!=null?'−'+esc(inr(o.amount)):esc(tx('in the cart')))).join('')
+    : row(tx('Offers'), tx('no offer applies to this product — tax is on the listed price'), '—', '—');
+  const gstRows = isGST
+    ? row(txf('CGST {r}%', { r: String(intra.GstRt/2) })+' '+code('CgstAmt'), tx('same state: half the rate'), money(intra.CgstAmt), '—')
+      + row(txf('SGST {r}%', { r: String(intra.GstRt/2) })+' '+code('SgstAmt'), tx('same state: the other half'), money(intra.SgstAmt), '—')
+      + row(txf('IGST {r}%', { r: String(inter.GstRt) })+' '+code('IgstAmt'), tx('other state: the whole rate'), '—', money(inter.IgstAmt))
+    : row(esc(scheme)+' '+esc(String(intra.GstRt))+'%', tx('charged at home; not charged across the border'), money(intra.TaxAmt), money(inter.TaxAmt));
+  const cessRow = cessRate>0
+    ? row(txf('Cess {r}%', { r: String(cessRate) })+' '+code('CesAmt'), tx('on the taxable value, on top of the slab'), money(intra.CesAmt), money(inter.CesAmt), false, 'prod-tax-cess')
+    : row(tx('Cess'), tx('none on this slab'), '—', '—', false, 'prod-tax-cess');
+  const saveRow = off>0 ? (()=>{ const atList=one0(HOME).TotItemVal; const allIn=Math.round((atList-intra.TotItemVal)*100)/100; const pct=price>0?Math.round(off/price*1000)/10:0;
+      return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700">${td(tx('You save')+' <span style="font-weight:400">('+esc(String(pct))+'%)</span>')}${td(money(off)+' '+tx('before tax'),'color:var(--grey);font-weight:400')}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}</tr>`; })() : '';
   return `<div data-testid="prod-tax-preview">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
     + txf('One unit at {price} — {rate}% ({name})', { price: inr(price), rate: String(r.rate), name: esc(r.name||tx('unnamed slab')) })
     + (off>0 ? ` · <span data-testid="prod-tax-preview-offer" data-discount="${esc(off)}">${txf('after offers −{off} ({why}) → tax on {net}', { off: inr(off), why: esc(offWhy), net: inr(Math.max(0, price-off)) })}</span>` : '')
     + `</div>`
-    /* ⭐ THE FINAL NUMBER, BOTH WAYS. Athi, 2026-09-04: *"final amount should show, either before tax, after tax?"* —
-       both, named. Before tax = after every offer (the assessable amount); after tax = what the buyer pays. The
-       total is the same in both states; only the heads differ, which the cells below show. */
-    + `<div data-testid="prod-tax-preview-final" data-before="${esc(intra.AssAmt)}" data-after="${esc(intra.TotItemVal)}" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-variant-numeric:tabular-nums">`
-    + `<span><span style="color:var(--grey)">${tx('Before tax')}</span> <b><bdi>${inr(intra.AssAmt)}</bdi></b></span>`
-    + `<span><span style="color:var(--grey)">${txf('{scheme} {rate}%', { scheme: esc(scheme), rate: String(r.rate) })}</span> <b><bdi>${inr(Math.round((intra.TotItemVal-intra.AssAmt)*100)/100)}</bdi></b></span>`
-    + `<span><span style="color:var(--grey)">${tx('After tax')}</span> <b><bdi>${inr(intra.TotItemVal)}</bdi></b></span>`
-    + `</div>`
-    + (off>0 ? prodSavingsRowHTML(off, one0(HOME).TotItemVal, intra.TotItemVal, price, null) : '')
-    + `<div style="display:flex;gap:8px;flex-wrap:wrap">`
-    + (isGST
-      ? cell(tx('Same state'), intra, 'prod-tax-preview-intra',
-          (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['GstRt',intra.GstRt+'%'],['CgstAmt',intra.CgstAmt],['SgstAmt',intra.SgstAmt]]).concat(cess(intra)).concat([['TotItemVal',intra.TotItemVal]]))
-      + cell(tx('Other state'), inter, 'prod-tax-preview-inter',
-          (off>0?[['Discount','-'+inter.Discount]]:[]).concat([['AssAmt',inter.AssAmt],['GstRt',inter.GstRt+'%'],['IgstAmt',inter.IgstAmt]]).concat(cess(inter)).concat([['TotItemVal',inter.TotItemVal]]))
-      /* VAT-type: full rate at home, nothing across the border (the buyer accounts for it) — the rate stays on the line. */
-      : cell(tx('Domestic'), intra, 'prod-tax-preview-intra',
-          (off>0?[['Discount','-'+intra.Discount]]:[]).concat([['AssAmt',intra.AssAmt],['Rate',intra.GstRt+'%'],[scheme,intra.TaxAmt]]).concat([['TotItemVal',intra.TotItemVal]]))
-      + cell(tx('Cross-border'), inter, 'prod-tax-preview-inter',
-          (off>0?[['Discount','-'+inter.Discount]]:[]).concat([['AssAmt',inter.AssAmt],['Rate',inter.GstRt+'%'],[scheme,inter.TaxAmt]]).concat([['TotItemVal',inter.TotItemVal]])))
-    + `</div>`
+    + `<div data-testid="prod-tax-preview-final" data-before="${esc(intra.AssAmt)}" data-after="${esc(intra.TotItemVal)}" style="overflow-x:auto">`
+    + `<table class="cbcat-sheet" style="width:100%;border-collapse:collapse;font-size:var(--fs-2)"><thead><tr style="font-size:var(--fs-1)">`
+    + `<th style="text-align:start;padding:4px 8px;color:var(--grey);font-weight:600">${tx('Step')}</th><th style="text-align:start;padding:4px 8px;color:var(--grey);font-weight:600">${tx('Detail')}</th>`
+    + th(isGST?tx('Same state'):tx('Domestic'), intra, 'prod-tax-preview-intra') + th(isGST?tx('Other state'):tx('Cross-border'), inter, 'prod-tax-preview-inter')
+    + `</tr></thead><tbody>`
+    + row(tx('Listed price'), '1 × '+esc(inr(price)), money(price), money(price))
+    + offerRowsHTML
+    + row(tx('Taxable value')+' '+code('AssAmt'), off>0?tx('the listed price after every offer'):tx('the listed price'), money(intra.AssAmt), money(inter.AssAmt), true)
+    + gstRows
+    + cessRow
+    + row(tx('After tax')+' '+code('TotItemVal'), tx('what the buyer pays'), money(intra.TotItemVal), money(inter.TotItemVal), true)
+    + saveRow
+    + `</tbody></table></div>`
     + (!isGST
         ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('{scheme} turns on the border: charged in full at home, not charged to a business abroad — they account for it.', { scheme: esc(scheme) })}${myC==='XX'?' ⚠️ '+tx('Your country is not set in Profile.'):''}</div>`
         : st
         ? `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${txf('Your state code is {s}, from your GSTIN.', { s: esc(st) })}</div>`
-        /* ⚠️ SAID, NOT GUESSED. The split is exact regardless — it turns only on same vs other — but a state
-           code shown as if it were ours would be read as one. */
         : `<div style="font-size:var(--fs-1);color:var(--warn-3);margin-top:6px">⚠️ ${tx('Seller state not set — add your GSTIN in Profile. The split above is still exact; only the state is unknown.')}</div>`)
     + (r.pending ? `<div style="font-size:var(--fs-1);color:var(--warn-3);margin-top:4px">⚠️ ${txf('Not in force until {d}.', { d: esc(r.effective_from) })}</div>` : '')
     + `</div>`;
