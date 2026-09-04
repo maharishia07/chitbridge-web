@@ -9166,14 +9166,21 @@ async function _cfImportRun(btn, decisions, out){
  */
 function defToOffer(d){ return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {}); }
 function ctOffersEnsure(then){
-  if (UI._ctOffers !== undefined) return UI._ctOffers;
+  if (Array.isArray(UI._ctOffers)) return UI._ctOffers;
+  /* ⚠️ EVERY CALLER IS CALLED BACK, not only the first. While the read was in flight, a second caller (the Offers
+     tab, after the list rows had started the read — 2026-09-05) got null and its callback was dropped, so the tab
+     never repainted: [OFF-01] "live → it is offered here" found the chip missing. One queue, drained once. */
+  UI._ctOffersThen = UI._ctOffersThen || [];
+  if (then) UI._ctOffersThen.push(then);
+  if (UI._ctOffers === null) return null;   /* in flight — the callback above is queued */
   UI._ctOffers = null;
+  var drain = function(list){ var q = UI._ctOffersThen || []; UI._ctOffersThen = []; q.forEach(function(fn){ try { fn(list); } catch (_) {} }); };
   api('defList', { query: { kind: 'offer', status: 'live' } })
     .then(function(r){
       UI._ctOffers = ((r && r.definitions) || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
-      if (then) then(UI._ctOffers);
+      drain(UI._ctOffers);
     })
-    .catch(function(){ UI._ctOffers = []; if (then) then(UI._ctOffers); });
+    .catch(function(){ UI._ctOffers = []; drain(UI._ctOffers); });
   return null;
 }
 /** Open Catalogue setup ON a section. One helper, because the product page points at four of them. */
