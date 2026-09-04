@@ -31,3 +31,11 @@ data is never touched. The same script with `TOUR=1` and no `--headed` is a regr
 
 Not in the tour (needs a second entity or your own data): the buyer's input-credit side of the ledger ([TAX-03] proves it),
 other countries' VAT split (an entity with country DE), the WhatsApp/offline paths.
+
+## Added 2026-09-04 (cases 19–23)
+19 **Media** — Edit › Media › the shared test picture (`e2e/assets/test-picture.png`) → a tile at once; with no store the caption says so.
+20 **A video is a link** — paste a YouTube link › Add video → an embedded player tile (no bytes stored).
+21 **Storefront gate** — a fresh catalogue is private: the row says "● Not public · set it in Profile" instead of framing "Shop not found".
+22 **Storefront: how a customer sees it** — after Profile › Public: THIS product framed at phone width, picture and player under the line.
+23–25 Compose · MIS › Tax · Columns (unchanged).
+`TOUR_FROM=19` replays 1–18 without pauses, then narrates from Media.
