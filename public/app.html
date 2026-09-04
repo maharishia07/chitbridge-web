@@ -8682,8 +8682,9 @@ function refFinishDetail(it){
   +'</div>';
   return head+body;
 }
-function paintProdList(){ prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
-function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
+function paintProdList(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
+/* ⚠️ ONLY WHILE THE CATALOGUE IS UP — its late loaders (the list, the defs) painted the product over Setup after a person had moved on (the tour, 2026-09-05); the mirror of the Setup guard. */
+function paintProdDetail(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
 async function loadCatalogue(force){
   /* ⚠️ ONE READ IN FLIGHT. Opening the catalogue fired this twice within 200ms (the render hook and the screen's own
      call — measured 2026-09-05: two /api/products back to back, ~1.9s each). A second caller joins the first. */
