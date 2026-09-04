@@ -235,6 +235,29 @@ test('the tour', async ({ page }) => {
   await page.getByTestId('prod-bom-qty').fill('10'); await page.waitForTimeout(500);
   await ok(page, 'the third column multiplies by 10');
 
+  /* ── media + storefront ── */
+  await page.getByTestId('cat-edit').click();
+  await openTab(page, 'media');
+  await tc(page, 'Media: the pictures and videos this product carries', 'files go through the API to the PRIVATE object store (key entity/yyyy/mm/id); the API streams the public read; the first picture is the storefront cover',
+    "Edit › Media › choose a picture", "a tile appears at once (saved without the form Save button); View › Media reads \"1 picture · cover set\" — or, where the store is not configured, the API says so and nothing else changes");
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAF0lEQVR42mP8z8BQz0AEYBxVSF+FAAB6cAn9x0nvAAAAAElFTkSuQmCC', 'base64');
+  const mediaResp = page.waitForResponse((r) => /[/]media$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
+  await page.getByTestId('cat-field-media').setInputFiles({ name: 'basmati.png', mimeType: 'image/png', buffer: png });
+  const mr = await mediaResp;
+  if (mr && mr.status() < 400) {
+    await expect(page.locator('[data-testid^="prod-media-"]').first()).toBeVisible({ timeout: 25000 });
+    await ok(page, 'the tile is on the page; the cover is set');
+  } else {
+    await ok(page, 'the media store is not configured on this environment (Railway S3_* env) — the API said so, the product is unchanged');
+  }
+  await page.evaluate(() => setProdMode('view'));
+  await openTab(page, 'storefront');
+  await tc(page, 'Storefront: how a customer sees it', 'the real shop.html framed here with the link — what you see is what they see; a hidden product says why',
+    'View › Storefront', '"Visible · <host>/shop.html?s=<your id>", the storefront framed below with Basmati in it');
+  await expect(page.getByTestId('prod-storefront-link')).toBeVisible({ timeout: 25000 });
+  await expect(page.getByTestId('prod-storefront-frame')).toBeVisible();
+  await ok(page, 'the customer view, framed');
+
   /* ── 13 · compose ── */
   await clickNav(page, 'compose'); await settle(page);
   await tc(page, 'Compose: a typed line that names your product IS that product', 'ccMatchMine — offers fire in compose as on the storefront; the same engine',

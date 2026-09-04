@@ -9929,7 +9929,14 @@ function prodOutcomeHTML(k, d){
   const none=(t)=>`<span style="color:var(--grey)">${esc(t)}</span>`;
   try{
     switch(k){
-      case 'product': { const n=Object.keys(d).length; const ds=String(pDesc(d)||'').trim(); return `<b>${esc(txf('{n} fields', { n: String(n) }))}</b>${ds?' '+grey('· '+esc(ds.length>90?ds.slice(0,90)+'…':ds)):' '+grey(esc(tx('· no description')))}`; }
+      case 'product': {
+        const n=Object.keys(d).length; const ds=String(pDesc(d)||'').trim();
+        /* declared columns first — "Fineness 999.9 · Assay yes" IS the fact sheet; the count and the description follow */
+        const decl=(typeof ctDeclaredList==='function'?ctDeclaredList():[]).filter(f=>d[f.field_key]!==undefined && d[f.field_key]!=='' && d[f.field_key]!==null);
+        const facts=decl.slice(0,3).map(f=>`<span data-testid="prod-fact-${esc(f.field_key)}">${esc(f.field_name||f.field_key)} <b>${esc(String(d[f.field_key]))}</b></span>`).join(' · ')+(decl.length>3?' '+grey('+'+String(decl.length-3)):'');
+        const head=facts||`<b>${esc(txf('{n} fields', { n: String(n) }))}</b>`;
+        return head+(ds?' '+grey('· '+esc(ds.length>70?ds.slice(0,70)+'…':ds)):(facts?'':' '+grey(esc(tx('· no description')))));
+      }
       case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('Not categorised — set in Categories')); }
       case 'offers': {
         const on=offersForProduct(d, id);
@@ -9957,7 +9964,7 @@ function prodOutcomeHTML(k, d){
       case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
       case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
       case 'media': { const m=(Array.isArray(d.media)?d.media:[]); const im=m.filter(x=>x.kind==='image').length, vi=m.filter(x=>x.kind==='video').length; if(!m.length) return none(d.image?tx('one picture (by link)'):tx('No pictures — add in Edit')); return `<b>${esc([im?txf('{n} picture(s)',{n:String(im)}):'',vi?txf('{n} video(s)',{n:String(vi)}):''].filter(Boolean).join(' · '))}</b>${d.image?' '+grey(esc(tx('cover set'))):''}`; }
-      case 'storefront': { const st=d.status||'available'; const uid=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||''; return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
+      case 'storefront': { const st=d.status||'available'; const uid=prodShopHandle(); if(uid===null) return grey(esc(tx('Loading…'))); return (st==='available'?`<b>${esc(tx('Visible'))}</b>`:`<span style="color:var(--warn-3)">● </span><b>${esc(tx('Hidden'))}</b> ${grey(esc(tx(st)))}`)+' '+grey('· '+esc(location.host+'/shop.html?s='+uid)); }
       case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
     }
   }catch(_){}
@@ -10193,8 +10200,20 @@ async function prodMediaRemove(id, mid){
  * they see (the same shop.html the link opens). Athi, 2026-09-05: "finally we need a page how this is showcased to the
  * customer". Loaded only when the row is opened.
  */
+/**
+ * ⚠️ THE PUBLIC HANDLE IS `user_id` FROM /me — NOT anything on SESSION. SESSION carries the LOGIN id (bridgeId) and the
+ * entity string; it has no user_id, so the first cut built "/shop.html?s=" with an empty id and the frame said
+ * "Shop not found" (Athi, 2026-09-05: "in the storefront section, no data is coming?"). meTake() is the cached /me
+ * read every profile screen uses; when it has not landed yet, the row repaints itself once it does.
+ */
+function prodShopHandle(){
+  const me = UI._me; if(me && (me.user_id||me.bridge_id)) return me.user_id||me.bridge_id;
+  if(!UI._meReq && typeof meTake==='function'){ UI._meReq = Promise.resolve().then(meTake).then(function(e){ if(e) UI._me=e; }).catch(function(){}).finally(function(){ UI._meReq=null; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); } }); }
+  return null;
+}
 function prodStorefrontTab(d){
-  const uid=(SESSION&&(SESSION.user_id||SESSION.bridge_id))||''; const url='/shop.html?s='+encodeURIComponent(uid);
+  const uid=prodShopHandle(); if(uid===null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
+  const url='/shop.html?s='+encodeURIComponent(uid);
   const st=d.status||'available';
   return `<div class="sec">${tx('Storefront')}</div>`
     + `<div style="padding:6px 12px;font-size:var(--fs-2)">${st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`

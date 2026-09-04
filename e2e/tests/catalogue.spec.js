@@ -120,9 +120,12 @@ test('[CAT-03] a column declared in Setup appears on the product form and round-
   });
 
   await test.step('VIEW — the value shows as a labelled row, not only inside "All fields"', async () => {
+    /* fact sheet (2026-09-05): the declared value is a FACT on the Details outcome line, closed or open */
+    await expect(page.getByTestId('prod-fact-fineness')).toContainText('999.9');
+    await page.getByTestId('prod-tab-product').click();
     const view = page.locator('.itab');
-    await expect(view.getByText('Fineness', { exact: true })).toBeVisible();
-    await expect(view.getByText('999.9', { exact: true })).toBeVisible();
+    await expect(view.getByText('Fineness', { exact: true }).first()).toBeVisible();
+    await expect(view.getByText('999.9', { exact: true }).first()).toBeVisible();
   });
 
   await test.step('EDIT — the input carries the value, and a change round-trips as a number', async () => {
