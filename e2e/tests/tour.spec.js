@@ -19,14 +19,17 @@ let lastLabel = "start";
 /** The watchdog runs on ITS OWN timer, because a blocked page also blocks the step that is awaiting it. Every 10 s it
  * races a trivial evaluate; when the page stops answering it pauses the debugger over CDP (which works while JS is
  * stuck), prints the stack and the last caption, and closes the context so the stuck step fails instead of hanging. */
+let _dbg = null, _dbgStack = null;
+/** attach the debugger BEFORE anything can block: attaching needs the page's main thread, a pause request does not */
+async function attachDebugger(page) { try { _dbg = await page.context().newCDPSession(page); await _dbg.send("Debugger.enable"); _dbg.on("Debugger.paused", (e) => { _dbgStack = e.callFrames.slice(0, 20).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1)); }); await _dbg.send("Debugger.resume").catch(() => {}); } catch (e) { console.log("[tour] debugger attach failed: " + e.message); } }
+async function stackNow() { if (!_dbg) return ["(no debugger)"]; _dbgStack = null; try { await _dbg.send("Debugger.pause"); } catch (e) { return ["(pause failed: " + e.message + ")"]; } for (let i = 0; i < 40 && !_dbgStack; i++) await new Promise((r) => setTimeout(r, 250)); const st = _dbgStack || ["(no pause event in 10 s)"]; try { await _dbg.send("Debugger.resume"); } catch (_) {} return st; }
 function startWatchdog(page) {
   const errs = []; page.on("pageerror", (e) => { if (errs.length < 5) errs.push(String(e).slice(0, 160)); });
   let consoleErrs = 0; page.on("console", (m) => { if (m.type() === "error") consoleErrs++; });
   const t = setInterval(async () => {
     const ok = await Promise.race([page.evaluate(() => 1).then(() => true).catch(() => true), new Promise((r) => setTimeout(() => r(false), 8000))]);
     if (ok) return;
-    clearInterval(t); let stack = null;
-    try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); cdp.on("Debugger.paused", (e) => { stack = e.callFrames.slice(0, 16).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1)); }); await cdp.send("Debugger.pause"); await new Promise((r) => setTimeout(r, 2500)); } catch (e) { stack = ["(cdp failed: " + e.message + ")"]; }
+    clearInterval(t); const stack = await stackNow();
     console.log("WATCHDOG: MAIN THREAD BLOCKED after " + lastLabel + " · console errors so far " + consoleErrs + " · page errors " + JSON.stringify(errs) + " · STACK " + JSON.stringify(stack));
     try { await page.context().close(); } catch (_) {}
   }, 10000);
@@ -50,8 +53,7 @@ async function step(page, label, fn) {
   console.log("[tour] step " + label + " → " + r + " " + (Date.now() - t0) + "ms");
   if (r === "HUNG") {
     /* the page may be BLOCKED (an infinite loop): pause the debugger over CDP — that works while JS is stuck — and print WHERE, before anything closes */
-    let stack = null;
-    try { const cdp = await page.context().newCDPSession(page); await cdp.send("Debugger.enable"); const got = new Promise((ok) => cdp.on("Debugger.paused", (e) => ok(e.callFrames.slice(0, 20).map((f) => (f.functionName || "(anon)") + " @" + (f.url || "").split("/").pop() + ":" + (f.location.lineNumber + 1))))); await cdp.send("Debugger.pause"); stack = await Promise.race([got, new Promise((ok) => setTimeout(() => ok(["(no pause event in 10 s)"]), 10000))]); console.log("[tour] STACK " + JSON.stringify(stack)); await cdp.send("Debugger.resume").catch(() => {}); } catch (e) { console.log("[tour] STACK unavailable: " + e.message); }
+    const stack = await stackNow(); console.log("[tour] STACK " + JSON.stringify(stack));
     throw new Error("STALL at " + label + " · in flight: " + JSON.stringify([..._net.values()]) + " · stack: " + JSON.stringify(stack));
   }
 }
@@ -84,6 +86,7 @@ const rmCaption = (page) => page.evaluate(() => { const el = document.getElement
 test('the tour', async ({ page }) => {
   test.skip(!process.env.TOUR, 'set TOUR=1 to run the tour');
   test.setTimeout(1800000);
+  await attachDebugger(page);
   const stopWatchdog = startWatchdog(page);
   await mintEntity(page);
   await page.evaluate(async () => api('saveProfile', { body: { gstn: '29ABCDE1234F1Z5' } }).catch(() => null));
