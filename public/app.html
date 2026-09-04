@@ -10430,11 +10430,11 @@ function prodRowsVisible(){ const pref=prodRowsPref(); return PROD_TABS.filter(t
 function prodRowsPick(){
   const pref=prodRowsPref(); const on=(k)=>!pref||PROD_ROWS_FIXED.indexOf(k)>=0||pref.indexOf(k)>=0;
   modal(`<div class="sec">${tx('Rows on the product page')}</div><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">${tx('For everyone in this business. Pricing & tax and Details always stay.')}</div>`
-    + `<div data-testid="prod-rows-pick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">`+PROD_TABS.map(t=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${t[0]}" data-testid="prod-row-tick-${t[0]}" ${on(t[0])?'checked':''} ${PROD_ROWS_FIXED.indexOf(t[0])>=0?'disabled':''}> ${tx(t[1])}</label>`).join('')+`</div>`
+    + `<div data-testid="prod-rows-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">`+PROD_TABS.map(t=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-row="${t[0]}" data-testid="prod-row-tick-${t[0]}" ${on(t[0])?'checked':''} ${PROD_ROWS_FIXED.indexOf(t[0])>=0?'disabled':''}> ${tx(t[1])}</label>`).join('')+`</div>`
     + `<div class="mfoot" style="display:flex;gap:8px;margin-top:12px"><button class="composebtn" onclick="closeModal()">${tx('Cancel')}</button><button class="pri" data-testid="prod-rows-save" onclick="prodRowsSave()">${tx('Save')}</button></div>`);
 }
 async function prodRowsSave(){
-  const ticks=Array.prototype.slice.call(document.querySelectorAll('[data-testid="prod-rows-pick"] input[data-row]'));
+  const ticks=Array.prototype.slice.call(document.querySelectorAll('[data-testid="prod-rows-grid"] input[data-row]'));
   const rows=ticks.filter(i=>i.checked||i.disabled).map(i=>i.getAttribute('data-row'));
   const me=UI._me||{}; const ui=Object.assign({}, me.ui_prefs||{}, { product_rows: rows });
   try{ await api('saveProfile', { body:{ ui_prefs: ui } }); UI._me=Object.assign({}, me, { ui_prefs: ui }); closeModal(); toast(tx('Saved ✓')); paintProdDetail(); }

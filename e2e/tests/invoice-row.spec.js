@@ -23,7 +23,7 @@ test('[INV-02] the Invoice row shows the line on a tax invoice; the row picker h
   await test.step('ROWS — hide Media for this business, then restore', async () => {
     await expect(page.getByTestId('prod-pane-media')).toHaveCount(1);
     await page.getByTestId('prod-rows-pick').click();
-    await expect(page.getByTestId('prod-rows-pick')).toBeVisible();
+    await expect(page.getByTestId('prod-rows-grid')).toBeVisible();
     await page.getByTestId('prod-row-tick-media').uncheck();
     const saved = page.waitForResponse((r) => /\/api\/entities\/profile/.test(r.url()) && r.request().method() === 'PATCH' && r.status() < 400, { timeout: 30000 });
     await page.getByTestId('prod-rows-save').click(); await saved;
