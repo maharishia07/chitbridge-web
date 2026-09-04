@@ -11,7 +11,7 @@ set TOUR=1
 npx playwright test tests/tour.spec.js --headed --project=authed
 ```
 
-`set TOUR_PAUSE=8000` for a longer pause per step (default 5 s). It uses a fresh entity minted for the run, so your own
+`set TOUR_PAUSE=8000` for a longer pause per step (default 5 s). Eighteen captions (a few cases show two outcomes); `set TOUR_FROM=11` replays the earlier cases silently and narrates from there. It uses a fresh entity minted for the run, so your own
 data is never touched. The same script with `TOUR=1` and no `--headed` is a regression of every step.
 
 | # | what was built | where you see it |

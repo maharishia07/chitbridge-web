@@ -210,6 +210,7 @@ test('the tour', async ({ page }) => {
   await ok(page, 'savings in the footer');
 
   /* ── 14 · MIS › Tax ── */
+  await page.evaluate(() => { try { closeModal(); } catch (_) {} }); await dismissModal(page);   /* compose covers the sidebar */
   await clickNav(page, 'mis'); await settle(page);
   await page.getByTestId('mis-band-tax').click();
   await tc(page, 'MIS › Tax — what do I owe this month?', 'every sent line is rated at send, frozen at completed; output / input credit by head, net; GSTR-1/3B JSON',
