@@ -9880,15 +9880,43 @@ async function saveAvail(id){
  */
 const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax'],['ordermodel','Order model'],['synonyms','Synonyms'],['bom','Consists of'],['barcode','Barcode']];
 function prodTab(){ return UI.prodTab||'product'; }
-function prodTabBar(){
-  return `<div class="dtabs" data-testid="prod-tabs">`+PROD_TABS.map(function(t){
-    return `<button type="button" data-testid="prod-tab-${t[0]}" class="${prodTab()===t[0]?'on':''}" onclick="setProdTab('${t[0]}')">${tx(t[1])}</button>`; }).join('')+`</div>`;
+/**
+ * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
+ * showcase all in one page". PAGE (the default on a laptop): every section is on the page in the tab order, each with
+ * its anchor and a small label; the tab bar becomes a pinned INDEX whose click scrolls to the section. TABS (the default
+ * on a phone, and a switch for anyone): one section at a time, as before. Same builders, same testids — a pane is
+ * `prod-pane-<k>` and an index button `prod-tab-<k>` in both layouts, so nothing that reads the page changes.
+ */
+function prodLayout(){
+  if(UI.prodLayout) return UI.prodLayout;
+  try { const saved=localStorage.getItem('cb.prodLayout'); if(saved==='tabs'||saved==='page') return (UI.prodLayout=saved); } catch(_){}
+  return (UI.prodLayout = (UI.vp==='mob') ? 'tabs' : 'page');
 }
-function ptabWrap(k,html){ return `<div class="ptab" data-tab="${k}" data-testid="prod-pane-${k}"${prodTab()===k?'':' style="display:none"'}>${html}</div>`; }
-/* Switching a tab moves nothing through the DOM — it shows one pane and hides the others, so typed values survive. */
+function setProdLayout(v){ UI.prodLayout=v; try{ localStorage.setItem('cb.prodLayout', v); }catch(_){} paintProdDetail(); }
+function prodTabBar(){
+  const page=prodLayout()==='page';
+  return `<div class="dtabs" data-testid="prod-tabs" data-layout="${page?'page':'tabs'}">`+PROD_TABS.map(function(t){
+    return `<button type="button" data-testid="prod-tab-${t[0]}" class="${prodTab()===t[0]?'on':''}" onclick="setProdTab('${t[0]}')">${tx(t[1])}</button>`; }).join('')
+    + `<button type="button" data-testid="prod-layout-toggle" title="${esc(page?tx('Show one section at a time'):tx('Show every section on one page'))}" style="margin-inline-start:auto;opacity:.7" onclick="setProdLayout('${page?'tabs':'page'}')">${page?'▤ '+tx('Tabs'):'☰ '+tx('Page')}</button>`
+    + `</div>`;
+}
+function ptabWrap(k,html){
+  if(prodLayout()==='page'){
+    const t=(PROD_TABS.find(x=>x[0]===k)||[k,k])[1];
+    return `<div class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}" style="border-top:1px solid var(--line);margin-top:10px;padding-top:6px;scroll-margin-top:8px">`
+      + `<div class="ptab-h" style="font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey);padding:0 12px 2px">${tx(t)}</div>${html}</div>`;
+  }
+  return `<div class="ptab" data-tab="${k}" data-testid="prod-pane-${k}"${prodTab()===k?'':' style="display:none"'}>${html}</div>`;
+}
+/* Switching a tab moves nothing through the DOM — it shows one pane and hides the others, so typed values survive.
+   On the one-page layout the same click scrolls to the section and marks it in the index. */
 function setProdTab(k){
   UI.prodTab=k; const dp=document.getElementById('detailpane'); if(!dp) return;
-  Array.prototype.forEach.call(dp.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
+  if(prodLayout()==='page'){
+    const sec=dp.querySelector('#prodsec-'+k); if(sec) sec.scrollIntoView({ behavior:'smooth', block:'start' });
+  } else {
+    Array.prototype.forEach.call(dp.querySelectorAll('.ptab'), function(el){ el.style.display = el.getAttribute('data-tab')===k ? '' : 'none'; });
+  }
   Array.prototype.forEach.call(dp.querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
   if(k==='pricing') prodPricingLoad();
 }
@@ -9971,6 +9999,18 @@ function prodOrderModelTab(d, edit){
         + live.map(x=>{ const id=String(x.definition_id||x.id); return `<option value="${esc(id)}"${cur.ref===id?' selected':''}>${esc(x.name)} · ${esc(describe(Object.assign({ model:(x.sub_kind||x.sub) }, x.rules||{})))}</option>`; }).join('')
         + `</select>`)
     + `<div id="prod_order_preview">${prodOrderPreviewHTML(cur.decl)}</div>`
+    /* ⭐ OR SET ON THIS PRODUCT — Athi, 2026-09-05: "how do we select a different type?" A fresh catalogue has no
+       authored model to pick, so the kind can be chosen here: an OWN declaration in the cart's own shape
+       (order: {model, step, min, max}); a Setup model, when picked above, takes precedence. */
+    + (function(){ const M=(typeof CBCart!=='undefined'&&CBCart.models)||{}; const own=cur.source==='own'?cur.decl:{};
+        const kinds=Object.keys(M).map(k=>[k, kindWord(k)]);
+        return `<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)"><label class="fl">${tx('Or set on this product')}</label>`
+          + `<div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:6px">`
+          + `<select class="inp" id="ct_order_kind" data-testid="cat-field-order-kind" onchange="paintProdOrderPreview('')"><option value="">— ${esc(tx('none — use the choice above'))} —</option>${kinds.map(k=>`<option value="${esc(k[0])}"${own.model===k[0]?' selected':''}>${esc(k[1])}</option>`).join('')}</select>`
+          + `<input class="inp" id="ct_order_step" data-testid="cat-field-order-step" inputmode="decimal" placeholder="${esc(tx('step'))}" value="${own.step!=null?esc(String(own.step)):''}" oninput="paintProdOrderPreview('')">`
+          + `<input class="inp" id="ct_order_min" data-testid="cat-field-order-min" inputmode="decimal" placeholder="${esc(tx('min'))}" value="${own.min!=null?esc(String(own.min)):''}" oninput="paintProdOrderPreview('')">`
+          + `<input class="inp" id="ct_order_max" data-testid="cat-field-order-max" inputmode="decimal" placeholder="${esc(tx('max'))}" value="${own.max!=null?esc(String(own.max)):''}" oninput="paintProdOrderPreview('')">`
+          + `</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A pack multiple: step 6 sells 6, 12, 18. A range: min and max. Leave blank for the choice above.')}</div></div>`; })()
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('Authored once in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('ordermodels')">${tx('Catalogue setup › Order models')}</span>; ${tx('a chit freezes the model at the mint.')}</div></div>`;
   return `<div class="sec">${tx('Order model')}</div>`
     + `<div class="kv" data-testid="prod-ordermodel" data-source="${esc(cur.source)}" style="padding:8px 12px;font-size:var(--fs-2)">`
@@ -9980,9 +10020,16 @@ function prodOrderModelTab(d, edit){
         : `<b>${esc(describe(cur.decl))}</b> <span style="color:var(--grey)">· ${tx('the catalogue default')}</span>`)
     + `</div>` + prodOrderPreviewHTML(cur.decl);
 }
+function prodOwnOrderFromForm(){
+  const k=val('ct_order_kind'); if(!k) return null;
+  const o={ model:k }; const st=val('ct_order_step'), mn=val('ct_order_min'), mx=val('ct_order_max');
+  if(st!==''&&isFinite(+st)) o.step=+st; if(mn!==''&&isFinite(+mn)) o.min=+mn; if(mx!==''&&isFinite(+mx)) o.max=+mx;
+  return o;
+}
 function paintProdOrderPreview(ref){
   const host=document.getElementById('prod_order_preview'); if(!host) return;
-  const live=(cbDefsCached('ordermodel')||[]); const x=live.find(y=>String(y.definition_id||y.id)===String(ref));
+  const own=prodOwnOrderFromForm(); if(own && !val('ct_order_ref')){ host.innerHTML=prodOrderPreviewHTML(own); return; }
+  const live=(cbDefsCached('ordermodel')||[]); const x=live.find(y=>String(y.definition_id||y.id)===String(ref||val('ct_order_ref')));
   host.innerHTML=prodOrderPreviewHTML(x?Object.assign({ model:(x.sub_kind||x.sub) }, x.rules||{}):((UI._face&&UI._face.shop&&UI._face.shop.order)||{ model:'count' }));
 }
 function prodBomTab(d){
@@ -10328,6 +10375,7 @@ function prodDetailHTML(){
      like product name, unit and price alone enough in each tab."* The header already carries exactly those three,
      so pinning it answers both: whichever tab is open and however far it is scrolled, name · price / unit · code
      stay in view. On laptop only .db scrolls, so this is a no-op there; on mobile the pane itself scrolls. */
+  if(prodLayout()==='page' && typeof prodPricingLoad==='function') setTimeout(prodPricingLoad, 0);   /* the tax section is on the page — its reads start now, not on a click */
   return `<div class="dstick">${head}${prodTabBar()}</div><div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 /**
@@ -10354,7 +10402,7 @@ function ctReadForm(orig){
   const synEl = document.getElementById('ct_synonyms');
   if (synEl) { const syn = synEl.value.split(/[\n,]/).map(x => x.trim()).filter(Boolean); if (syn.length) base.synonyms = syn; else delete base.synonyms; }
   const ordEl = document.getElementById('ct_order_ref');
-  if (ordEl) { if (ordEl.value) base.order = { ref: ordEl.value }; else if (base.order && base.order.ref) delete base.order; }
+  if (ordEl) { const own = (typeof prodOwnOrderFromForm === 'function') ? prodOwnOrderFromForm() : null; if (ordEl.value) base.order = { ref: ordEl.value }; else if (own) base.order = own; else delete base.order; }
   const decl = document.getElementById('ct_declared');
   if(decl){ Array.prototype.forEach.call(decl.querySelectorAll('input[data-key]'), function(el){
     const k = el.getAttribute('data-key'), raw = (el.value||'').trim();
