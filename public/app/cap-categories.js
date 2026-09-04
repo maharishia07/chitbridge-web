@@ -538,7 +538,7 @@ function cbcatRowsHTML(){
       +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
       + '</div>'
       /* The count is the reason to look at this list at all — which shelves are actually carrying anything. */
-      + cbcatTaxChipHTML(c.id)
+      + cbcatTaxChipHTML(c.id) + cbcatOfferChipsHTML(c.id)
       + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
       + '</div>';
   }).join('');
@@ -703,14 +703,47 @@ async function cbcatOfferToggle(cid, offerId, btn){
   } catch (e) { toast((e && e.message) || tx('Could not change that offer'), true); }
   finally { UI._ctOffers = undefined; if (btn) btn.disabled = false; cbcatPaintDetail(); }
 }
+/**
+ * ⭐ THE OFFERS THAT REACH A CATEGORY, WITH THEIR TIME — Athi, 2026-09-05: "like how tax is shown in the left side
+ * panel, the offer also should be showcased — the effective offer and the date it will get applied, only the
+ * futuristic, so in one glance it will be visible". Own or an ancestor's (↑); Active → 🏷️ terms; Scheduled → 📅 from
+ * <date>; Expired → not shown. The words are the engine's (CBOffers.terms / timeStatus), so the chip cannot disagree
+ * with the basket.
+ */
+function cbcatOffersReaching(cid){
+  var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaint(); }) : null;
+  if (!list) return null;
+  var anc = cbcatAncestorIds(cid);
+  return list.map(function (o) {
+    var cs = cbcatOfferCats(o.rules);
+    var own = cs.indexOf(String(cid)) >= 0;
+    var viaId = own ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0];
+    if (!own && !viaId) return null;
+    var r = o.rules || {};
+    var t = (typeof CBOffers !== 'undefined' && CBOffers.timeStatus) ? CBOffers.timeStatus(r) : 'active';
+    var terms = (typeof CBOffers !== 'undefined' && CBOffers.terms) ? (CBOffers.terms(Object.assign({ kind: r.kind }, r), { money: function (n) { return (typeof inr === 'function') ? inr(n) : String(n); } }) || '') : '';
+    return { id: o.id, name: o.name, terms: terms, time: t, from: r.valid_from || null, to: r.valid_to || null, via: viaId ? ((cbcatById(viaId) || {}).name || null) : null };
+  }).filter(Boolean).filter(function (x) { return x.time !== 'expired'; });
+}
+function cbcatOfferChipsHTML(cid){
+  var here = cbcatOffersReaching(cid);
+  if (!here || !here.length) return '';
+  return here.slice(0, 3).map(function (x) {
+    var when = x.time === 'scheduled' ? '📅 ' + esc(tx('from') + ' ' + (x.from || '')) : '🏷️';
+    return '<span class="cbcat-badge" data-testid="catg-offer-chip-' + esc(cid) + '" data-time="' + esc(x.time) + '" title="' + esc(x.name + (x.via ? ' · ' + tx('via') + ' ' + x.via : '') + (x.to ? ' · ' + tx('to') + ' ' + x.to : '')) + '" style="' + (x.time === 'scheduled' ? 'color:var(--blue)' : '') + '">'
+      + when + ' ' + esc(x.terms || x.name) + (x.via ? ' <span style="opacity:.7">↑</span>' : '') + '</span>';
+  }).join('') + (here.length > 3 ? '<span class="cbcat-badge">+' + (here.length - 3) + '</span>' : '');
+}
 function cbcatOffersHereHTML(cid){
   var list = (typeof ctOffersEnsure === 'function') ? ctOffersEnsure(function(){ cbcatPaintDetail(); }) : null;
   if (!list) return '';
   var anc = cbcatAncestorIds(cid);
-  var here = list.filter(function(o){ var cs = cbcatOfferCats(o.rules); return cs.indexOf(String(cid)) >= 0 || cs.some(function (c) { return anc.indexOf(c) >= 0; }); });
+  var reach = cbcatOffersReaching(cid) || [];
+  var here = list.filter(function(o){ return reach.some(function (x) { return x.id === o.id; }); });
   if (!here.length) return '';
+  var timeWord = function (o) { var x = reach.filter(function (y) { return y.id === o.id; })[0] || {}; return x.time === 'scheduled' ? ' <span style="color:var(--blue)">' + esc(tx('Scheduled from') + ' ' + (x.from || '')) + '</span>' : ' <span style="color:var(--ok, #2e7d32)">' + esc(tx('Active')) + (x.to ? ' ' + esc(tx('to') + ' ' + x.to) : '') + '</span>'; };
   return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
-    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; return esc(o.name) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
+    + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; return esc(o.name) + timeWord(o) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;
