@@ -933,6 +933,18 @@
   .optchip{}
   .optchip.on{color:var(--ok-2);background:var(--ok-tint)}.optchip.brk{color:var(--warn-2);background:var(--warn-tint)}.optchip.off{color:var(--grey);background:var(--neutral-tint)}
   .dtabs{flex-wrap:wrap}
+  /* ⭐ THE FACT SHEET (designer, 2026-09-05): one bordered list, rows divided by a line — never a card per section */
+  .ptab-list{border:1px solid var(--line);border-radius:10px;margin:8px 12px;overflow:hidden}
+  details.ptab-sec{border-top:1px solid var(--line)} details.ptab-sec:first-child{border-top:0}
+  details.ptab-sec>summary.ptab-row{display:grid;grid-template-columns:12ch 1fr 20px;gap:10px;align-items:baseline;min-height:40px;padding:8px 12px;cursor:pointer;list-style:none}
+  details.ptab-sec>summary.ptab-row::-webkit-details-marker{display:none}
+  details.ptab-sec>summary.ptab-row:hover{background:var(--paper)}
+  .ptab-l{font-size:var(--fs-1);color:var(--grey);letter-spacing:.02em}
+  .ptab-o{font-size:var(--fs-2);color:var(--on-bg);min-width:0}
+  .ptab-c{color:var(--grey);transition:transform .15s;justify-self:end}
+  details.ptab-sec[open]>summary .ptab-c{transform:rotate(90deg)}
+  .ptab-b{border-top:1px dashed var(--line);padding:4px 0 6px;margin-inline-start:calc(12ch + 10px)}
+  @media (max-width:640px){ details.ptab-sec>summary.ptab-row{grid-template-columns:9ch 1fr 20px;min-height:44px} .ptab-o{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden} .ptab-b{margin-inline-start:0} }
   /* the cart preview on the product's Offers tab — one card per sample quantity */
   .prodprev{margin:10px 12px 4px}
   .prodprev-hd{font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:5px}
@@ -9878,7 +9890,9 @@ async function saveAvail(id){
  * product is how a rule stops being one. BOM ("consists of") is not a tab yet — see BACKLOG, the chit-shape
  * decision is open. Publish-on-a-date is the next cut (catalogue_item_version.valid_from).
  */
-const PROD_TABS=[['product','Product'],['categories','Categories'],['offers','Offers'],['stock','Stock'],['variants','Variants'],['pricing','Pricing & tax'],['ordermodel','Order model'],['synonyms','Synonyms'],['bom','Consists of'],['barcode','Barcode']];
+/* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
+   this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
+const PROD_TABS=[['pricing','Pricing & tax'],['offers','Offers'],['ordermodel','Order model'],['product','Product'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['stock','Stock'],['bom','Consists of'],['barcode','Barcode']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -9913,13 +9927,13 @@ function prodOutcomeHTML(k, d){
   try{
     switch(k){
       case 'product': return grey(esc(pDesc(d)||'')) || none(tx('no description'));
-      case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('none — attach in Edit › Categories')); }
+      case 'categories': { const ch=catgChipsHTML(d); return ch || none(tx('Not categorised — set in Categories')); }
       case 'offers': {
         const on=offersForProduct(d, id);
         if(!Array.isArray(UI._ctOffers)) return grey(tx('reading…'));
-        if(!on.length) return none(tx('none'));
+        if(!on.length) return none(tx('No offers — create in Offers'));
         return on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
-          return `<div><b>${esc(o.name)}</b> ${grey(esc(t)+(sc?' · '+esc(tx(sc)):''))}${ts==='scheduled'?' <span style="color:var(--blue)">📅 '+esc(tx('from')+' '+((o.rules||{}).valid_from||''))+'</span>':''}${o._via?' '+grey(esc(tx('via category')+' '+o._via)):''}</div>`; }).join('');
+          return `<div><b>${esc(o.name)}</b> ${grey(esc(t)+(sc?' · '+esc(tx(sc)):''))}${ts==='scheduled'?' <span style="color:var(--blue)">📅 '+esc(tx('from')+' '+((o.rules||{}).valid_from||''))+'</span>':''}${o._via?' '+grey('↳ '+esc(tx('from category')+' '+o._via)):''}</div>`; }).join('');
       }
       case 'pricing': {
         const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
@@ -9928,28 +9942,42 @@ function prodOutcomeHTML(k, d){
         if(r.rate==null) return `<span style="color:var(--warn-3)">${esc(CBTaxSlab.describe(r))}</span>`;
         const price=Number(pPrice(d))||0, st=prodSellerState()||'29';
         const it=CBTax.determine({ seller:{ State:st, RegType: prodRegType() }, buyer:{ Pos:st }, lines:[{ name:pName(d), qty:1, unit_price:price, rate:r.rate, cess_rate:r.cess||0 }] }).ItemList[0];
-        const warn=(r.unresolved&&r.cited)||(Array.isArray(r.conflict)&&r.conflict.length>1);
-        return `<b>${esc(r.name||('GST '+r.rate+'%'))} · ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b> ${grey(esc(r.source==='product'?tx('on this product'):r.source==='category'?tx('from category')+' '+(r.via_category_name||'')+(r.inherited_from?' ('+tx('inherits')+' '+r.inherited_from+')':''):tx('catalogue default')))}`
-          + ` · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>` + (warn?` <span style="color:var(--warn-3)">⚠️ ${esc(CBTaxSlab.describe(r))}</span>`:'');
+        const dead=!!(r.unresolved&&r.cited), clash=Array.isArray(r.conflict)&&r.conflict.length>1;
+        const dot=(dead||clash)?'<span style="color:var(--warn-3)">● </span>':'';
+        const prov=r.source==='product'?'':(r.source==='category'?' '+grey('↳ '+esc(tx('from category')+' '+(r.via_category_name||''))+(r.inherited_from?esc(' ↳ '+r.inherited_from):'')):' '+grey('↳ '+esc(tx('catalogue default'))));
+        const warnTxt=dead?' · '+esc(tx('slab not active')):clash?' · '+esc(tx('categories disagree — resolve in Categories'))+' ('+esc(r.conflict.map(h=>(h.rate==null?'?':h.rate+'%')).join('/'))+')':'';
+        return dot+`<b>GST ${esc(String(r.rate))}%${r.cess?' + '+esc(String(r.cess))+'% '+tx('cess'):''}</b>${prov} · ${grey(tx('one unit after tax'))} <b><bdi>${esc(inr(it.TotItemVal))}</bdi></b>`+(warnTxt?`<span style="color:var(--warn-3)">${warnTxt}</span>`:'');
       }
       case 'stock': { const st=d.status||'available'; const q=(d.qty!=null&&d.qty!=='')?d.qty:(d.stock!=null?d.stock:null); return `<b>${esc(tx(st==='available'?'available':st))}</b>${q!=null?' · '+grey(esc(tx('qty')+' '+q)):''}`; }
-      case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none('—');
-      case 'ordermodel': { const c=prodOrderDecl(d); if(c.unresolved) return `<span style="color:var(--warn-3)">⚠️ ${esc(tx('adopts a model that cannot be read here'))}</span>`; return `<b>${esc(c.decl&&c.decl.name?c.decl.name:prodOrderDescribe(c.decl))}</b> ${grey(esc((c.decl&&c.decl.name?prodOrderDescribe(c.decl)+' · ':'')+(c.source==='adopted'?tx('adopted from Setup'):c.source==='own'?tx('set on this product'):tx('the catalogue default'))))}`; }
-      case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('none')); }
-      case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('none')); }
-      case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<code>${esc(code)}</code> ${grey(tx('Code 128'))}`:none(tx('no code yet')); }
+      case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none(tx('No variants'));
+      case 'ordermodel': { const c=prodOrderDecl(d); if(c.unresolved) return `<span style="color:var(--warn-3)">● ${esc(tx('model not readable — pick in Edit'))}</span>`; return `<b>${esc(c.decl&&c.decl.name?c.decl.name:prodOrderDescribe(c.decl))}</b>${c.decl&&c.decl.name?' '+grey(esc(prodOrderDescribe(c.decl))):''}${c.source==='adopted'?' '+grey('↳ '+esc(tx('from Setup'))):c.source==='catalogue'?' '+grey('↳ '+esc(tx('catalogue default'))):''}`; }
+      case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
+      case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
+      case 'barcode': { const code=String(d.sku||d.code||d.barcode||pCode(d)||'').trim(); return code?`<b>${esc(code)}</b> ${grey(tx('Code 128'))}`:none(tx('No code — set in Edit')); }
     }
   }catch(_){}
   return '';
+}
+/* accordion: one row open at a time; the open row is remembered per product for the session (memory, not storage) */
+function prodSheetToggle(el,k){
+  const pid=UI.prodSel||''; UI._prodOpen=UI._prodOpen||{};
+  if(el.open){
+    UI.prodTab=k; UI._prodOpen[pid]=k;
+    const dp=document.getElementById('detailpane'); if(dp) Array.prototype.forEach.call(dp.querySelectorAll('details.ptab-sec'), function(o){ if(o!==el && o.open) o.open=false; });
+    Array.prototype.forEach.call((dp||document).querySelectorAll('[data-testid^="prod-tab-"]'), function(b){ b.classList.toggle('on', b.getAttribute('data-testid')==='prod-tab-'+k); });
+    if(k==='pricing'&&typeof prodPricingLoad==='function') prodPricingLoad();
+  } else if(UI._prodOpen[pid]===k){ UI._prodOpen[pid]=null; }
 }
 function ptabWrap(k,html){
   if(prodLayout()==='page'){
     const t=(PROD_TABS.find(x=>x[0]===k)||[k,k])[1];
     const d=UI._prodSheetD||{}; const edit=UI.prodMode==='edit'||UI.prodMode==='new';
-    const open=edit||prodTab()===k;
-    return `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open?' open':''} style="border-top:1px solid var(--line);scroll-margin-top:8px"${edit?'':` ontoggle="if(this.open){UI.prodTab='${k}';if('${k}'==='pricing'&&typeof prodPricingLoad==='function')prodPricingLoad();}"`}>`
-      + `<summary style="display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:baseline;padding:8px 12px;cursor:pointer;list-style:none"><span style="font-size:var(--fs-1);letter-spacing:.04em;text-transform:uppercase;color:var(--grey)">${tx(t)}</span><span data-testid="prod-outcome-${k}" style="font-size:var(--fs-2)">${edit?grey(tx('editing below')):(prodOutcomeHTML(k,d)||'')}</span></summary>`
-      + `<div style="padding-bottom:6px">${html}</div></details>`;
+    const pid=UI.prodSel||d.item_id||d.id||'';
+    UI._prodOpen=UI._prodOpen||{};
+    const open=edit||((UI._prodOpen[pid]||prodTab())===k && !!UI._prodOpen[pid]);
+    return `<details class="ptab ptab-sec" id="prodsec-${k}" data-tab="${k}" data-testid="prod-pane-${k}"${open?' open':''}${edit?'':` ontoggle="prodSheetToggle(this,'${k}')"`}>`
+      + `<summary class="ptab-row"><span class="ptab-l">${tx(t)}</span><span class="ptab-o" data-testid="prod-outcome-${k}">${edit?grey(tx('editing below')):(prodOutcomeHTML(k,d)||'')}</span><span class="ptab-c" aria-hidden="true">›</span></summary>`
+      + `<div class="ptab-b">${html}</div></details>`;
     function grey(x){ return '<span style="color:var(--grey)">'+x+'</span>'; }
   }
   return `<div class="ptab" data-tab="${k}" data-testid="prod-pane-${k}"${prodTab()===k?'':' style="display:none"'}>${html}</div>`;
@@ -10424,6 +10452,7 @@ function prodDetailHTML(){
      so pinning it answers both: whichever tab is open and however far it is scrolled, name · price / unit · code
      stay in view. On laptop only .db scrolls, so this is a no-op there; on mobile the pane itself scrolls. */
   if(prodLayout()==='page' && typeof prodPricingLoad==='function') setTimeout(prodPricingLoad, 0);   /* the tax section is on the page — its reads start now, not on a click */
+  if(prodLayout()==='page') body = `<div class="ptab-list" data-testid="prod-sheet">${body}</div>`;
   return `<div class="dstick">${head}${prodTabBar()}</div><div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 /**
