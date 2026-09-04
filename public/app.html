@@ -8754,8 +8754,8 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
 function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(function(){
   if(UI.prodMode!=='edit'&&UI.prodMode!=='new') return;
   const host=document.getElementById('ct_declared');
-  if(host){ const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); host.innerHTML=ctDeclaredFields((UI.prodMode==='edit'&&p)?pData(p):{}); }
-  else paintProdDetail();
+  if(host){ const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); host.innerHTML=ctDeclaredRows((UI.prodMode==='edit'&&p)?pData(p):{}); const w=document.getElementById('ct_declared_wrap'); if(w) w.hidden=!host.innerHTML; }
+  /* no host = no form on screen; never repaint the pane from here */
 }).catch(function(){}); } }
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsureDeclaredThenPaint(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
@@ -8789,7 +8789,19 @@ const CT_FIXED_KEYS = ['name','unit','price','code','hsn','sku','desc','descript
 function ctDeclaredList(){
   return (UI._catFields||[]).filter(function(f){ return f && f.field_key && CT_FIXED_KEYS.indexOf(f.field_key) < 0; });
 }
+/**
+ * ⚠️⚠️ THE HOST ALWAYS EXISTS. With no columns declared this returned '' — no #ct_declared in the form — and the
+ * "fill the block when the declaration lands" path fell back to repainting the WHOLE form, wiping the name being
+ * typed (the tour's fresh entity has no columns; the specs declare one first, so they never saw it — 2026-09-05).
+ * Now the block is always in the form (hidden when empty) and the late fill only ever touches it.
+ */
 function ctDeclaredFields(d){
+  const rows = ctDeclaredRows(d);
+  return `<div id="ct_declared_wrap"${rows?'':' hidden'}><div class="sec" style="margin-top:14px">${tx('More about this product')}</div>`
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">${tx('The columns your catalogue declares — shaped in Catalogue setup › Columns.')}</div>`
+    + `<div id="ct_declared" data-testid="cat-declared">${rows}</div></div>`;
+}
+function ctDeclaredRows(d){
   const list = ctDeclaredList(); if(!list.length) return '';
   const rows = list.map(function(f){
     const k = f.field_key, v = d ? d[k] : undefined, isNum = f.field_type === 'number';
@@ -8799,9 +8811,7 @@ function ctDeclaredFields(d){
     }
     return `<label class="fl">${label}</label><input class="inp" id="ct_f_${esc(k)}" data-testid="cat-field-${esc(k)}" data-key="${esc(k)}" data-type="${esc(f.field_type||'text')}"${isNum ? ' inputmode="decimal"' : ''} value="${esc(v==null?'':v)}">`;
   }).join('');
-  return `<div class="sec" style="margin-top:14px">${tx('More about this product')}</div>`
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">${tx('The columns your catalogue declares — shaped in Catalogue setup › Columns.')}</div>`
-    + `<div id="ct_declared" data-testid="cat-declared">${rows}</div>`;
+  return rows;
 }
 /** The declared columns that carry a value, as view rows. Only scalars: an object is a record, not a value. */
 function ctDeclaredViewRows(d, kv){
