@@ -439,7 +439,8 @@ function cbDefOfferLabel(k){
     amount_off:  'Flat amount off',
     tier_price:  'Quantity tier — a RE-PRICE, not a discount',
     threshold:   'Spend or quantity threshold — reports the shortfall when it does not fire',
-    buy_x_get_y: 'Buy X get Y — cheapest qualifying units are the free ones',
+    buy_x_get_y: 'Buy X get Y — cheapest qualifying units are the free ones (1+1 is buy 1 get 1)',
+    bundle_price: 'Bundle — named items together for one price; complete sets only',
     shipping:    'Shipping — free, flat or a percentage',
     price_range: '⚠️ A declared band — reports a violation, never clamps a negotiated price'
   })[k] || k;
@@ -559,6 +560,13 @@ function cbDefRuleFields(kind, sub){
      * an empty list and returned nothing, forever. The one kind a B2B seller reaches for first was authorable
      * only in the sense that it could be saved.
      */
+    if (sub === 'threshold') { g.push({ k: 'get_item_id', label: 'Reward item (product id — blank = a discount instead)', half: true });
+                               g.push({ k: 'get_item_name', label: 'Reward item, as shown', ph: '1 kg sugar', half: true });
+                               g.push({ k: 'get_qty', label: 'Reward quantity', ph: '1', num: true, half: true });
+                               g.push({ k: 'get_percent', label: 'Reward discount (100 = free)', ph: '100', num: true, half: true }); }
+    if (sub === 'bundle_price') { g.push({ k: 'bundle_items', label: 'Items in the bundle (product ids, one per line)', area: true, ph: 'one product id per line' });
+                                  g.push({ k: 'bundle_price', label: 'Bundle price', ph: '1999', num: true, half: true });
+                                  g.push({ k: 'max_sets', label: 'Max sets per order (blank = no cap)', num: true, half: true }); }
     if (sub === 'tier_price') g.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true,
       ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each.' });
     if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true, half: true });

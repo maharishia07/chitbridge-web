@@ -544,7 +544,7 @@ function shopMoneyRowsHTML(m, opt){
 function shopBasketSummary(){
   var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
-  var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); var _lp=cbAmount(p.price); l.unitPrice=(typeof CBPricing!=='undefined'&&(p.item_data||p).pricing_kind)?CBPricing.unitPrice(p.item_data||p, Number(p.qty)||1, _lp).amount:_lp; return l; });
+  var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); var _lp=cbAmount(p.price); var _d=(p.item&&(p.item.item_data||p.item))||p.item_data||p; l.unitPrice=(typeof CBPricing!=='undefined'&&_d.pricing_kind)?CBPricing.unitPrice(_d, Number(p.qty)||1, _lp).amount:_lp; return l; });
   try{
     host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">' + shopMoneyRowsHTML(shopBasketMath(lines)) + '</div>';
   }catch(e){ host.innerHTML=''; }
