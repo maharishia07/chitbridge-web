@@ -446,7 +446,7 @@ function productListHtml(data, cur){
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
     onChange:function(){ shopOffersSync(); },
-    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
+    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); b=(b||'')+shopStockBadge(d); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
   setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
@@ -549,13 +549,37 @@ function shopBasketSummary(){
     host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">' + shopMoneyRowsHTML(shopBasketMath(lines)) + '</div>';
   }catch(e){ host.innerHTML=''; }
 }
-function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }
+/**
+ * ⭐ STOCK WITH ITS STAMP (Athi, 2026-09-05). A figure is shown only with its age — "in stock 42 · as of 3 min ago" — never as
+ * a bare number; unknown shows nothing (absent is not zero). On open the storefront ASKS the store's connector once; if one
+ * is listening it reads the source and writes fresh figures, and the list re-reads them a few seconds later.
+ */
+function shopStockBadge(d){
+  var a=d&&d.avail; if(!a||a.qty==null||!a.as_of) return '';
+  var mins=Math.max(0, Math.round((Date.now()-Date.parse(a.as_of))/60000)); var age=mins<1?'just now':(mins<60?mins+' min ago':(mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago'));
+  var stale=mins>240;
+  return '<span class="pbadge" data-testid="shop-stock" style="'+(Number(a.qty)>0?'background:#e8f5ec;color:#1d6b3a':'background:#fdecec;color:#a33')+(stale?';opacity:.7':'')+'">'+(Number(a.qty)>0?('in stock '+esc(String(a.qty))):'out of stock')+' · as of '+esc(age)+'</span>';
+}
+var _stockAsked=false;
+function shopAskStock(){
+  if(_stockAsked||!BRIDGE) return; _stockAsked=true;
+  var any=((_SHOPDATA&&_SHOPDATA.items)||[]).some(function(p){ var d=p.item_data||p; return d.avail&&d.avail.source==='erp'; });
+  fetch(API+'/api/integrations/ask/'+encodeURIComponent(BRIDGE)+'/stock',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).then(function(r){ return r.json(); }).then(function(j){
+    if(!j||!j.asked) return;
+    setTimeout(function(){ fetch(API+'/api/integrations/stock/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json(); }).then(function(s){
+      var by={}; ((s&&s.stock)||[]).forEach(function(x){ by[String(x.item_id)]=x.avail; });
+      var changed=false; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ var a=by[String(p.item_id)]; if(a){ (p.item_data||p).avail=a; changed=true; } });
+      if(changed&&typeof shopPickPaint==='function') shopPickPaint(true);
+    }).catch(function(){}); }, 4000);
+  }).catch(function(){});
+}
 function shopPickPaint(listOnly){
   var l=el('p_list'); if(l) l.innerHTML=shopPickListHtml();
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
 }
 function shopPickSearch(q){ if(_CART) _CART.search(q); shopPickPaint(true); }
 function render(data){
+  setTimeout(shopAskStock, 1500);   /* ask the store's connector for fresh stock once per open */
   if(_ONLY){ data = Object.assign({}, data, { finishes: [], items: (data.items||[]).filter(function(p){ return String(p.item_id||(p.item&&p.item.item_id)||'')===_ONLY; }) }); }
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
