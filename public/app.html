@@ -5168,16 +5168,11 @@ async function selfBillCart(){
 function selfBillFoot(){
   var c = UI._sbCart;
   var n = c ? c.lines() : 0;
-  var t = c ? c.total() : { amount: 0 };
   var el = document.getElementById('sb_foot');
   if (el) {
     el.innerHTML =
-      '<div style="display:flex;align-items:baseline;gap:9px;padding:9px 12px;border:1px solid var(--line);'
-      + 'border-radius:9px;background:var(--paper)">'
-      + '<b style="font-size:var(--fs-3)">' + tx('Total') + '</b>'
-      + '<span data-testid="sb-total" style="font-size:var(--fs-4);font-weight:800;font-variant-numeric:tabular-nums;'
-      + 'margin-inline-start:auto">' + esc(c ? c.money(t.amount) : '—') + (t.partial ? '+' : '') + '</span>'
-      + '</div>'
+      /* ONE LINE, ONE SOURCE: the cart prints its own money block (a self-bill sees its own offers and rates) — CBCart.reviewHTML */
+      '<div style="border:1px solid var(--line);border-radius:9px;background:var(--paper)">' + (c ? c.reviewHTML({ totalTestid: 'sb-total', taxTestid: 'sb-tax' }) : '') + '</div>'
       + '<div style="margin-top:9px"><input class="inp" data-testid="sb-subject" value="' + esc(UI._sbSubject || '') + '"'
       + ' oninput="UI._sbSubject=this.value" placeholder="' + esc(tx('What is this?')) + '"></div>'
       /* ⭐ "on a picker" — closed, because a date that defaults to today and a note most sales do not need are
@@ -7389,7 +7384,7 @@ function supStepDetails(x){
 + '</div>';
 }
 function supStepReview(x){
-  var o=supOrderState(), c=UI._supCart, T=c?c.total():{amount:0}, sel=c?c.selected():[];
+  var o=supOrderState(), c=UI._supCart, sel=c?c.selected():[];   /* the money block is the cart's (reviewHTML) — no total read here */
   /**
    * ⚠️⚠️ MONEY IS FORMATTED BY THE CART, NOT BY String(). Athi: *"the cycle completes, the amount does not carry
    * a currency symbol."* It did not, because this screen — the LAST one before an order goes out — printed
@@ -7414,9 +7409,8 @@ function supStepReview(x){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
           + (l.offered?'<span style="color:var(--grey);font-size:var(--fs-1)"> · your offer</span>':'')
           + '<b style="float:inline-end">'+esc(money(l.line_total))+'</b>'); }).join('')
-        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-        + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
-        + '<span data-testid="sup-total">'+(T.amount?esc(money(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
+        /* ONE LINE, ONE SOURCE: the cart prints its own money block (rows or bare total) — see CBCart.reviewHTML */
+        + (c ? c.reviewHTML({ totalTestid:'sup-total', taxTestid:'sup-tax' }) : ''), 0)
     + card('Details', row('Subject', esc(o.subject)||'<span style="color:var(--disp)">required</span>')
         + row('Needed by', o.by?esc(o.by):'—') + row('Deliver to', o.addr?esc(o.addr):'—')
         + row('Note', o.note?esc(o.note):'—'), 1)

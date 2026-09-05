@@ -1398,7 +1398,7 @@ function _netStepDetails(){
     + 'This goes as an ordinary chit: it lands in their Task list and can be disputed like any other.</div>';
 }
 function _netStepReview(){
-  var o = _netOrderState(), c = UI._netCart, T = c ? c.total() : { amount:0 }, sel = c ? c.selected() : [];
+  var o = _netOrderState(), c = UI._netCart, sel = c ? c.selected() : [];   /* the money block is the cart's (reviewHTML) */
   /* ⭐ THE CART FORMATS ITS OWN MONEY — see cart-ui's money(). This screen printed String(line_total), copied
      verbatim from the supplier review, so both said an amount with no currency on the last page before an order
      goes out. Athi reported the supplier one; this is the same defect on a screen he had not reached yet. */
@@ -1415,9 +1415,8 @@ function _netStepReview(){
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
           + '<b style="float:inline-end">' + esc(_netMoney(l.line_total)) + '</b>'); }).join('')
-        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-        + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
-        + '<span data-testid="net-total">' + (T.amount ? esc(_netMoney(T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>', 0)
+        /* ONE LINE, ONE SOURCE: the cart prints its own money block — see CBCart.reviewHTML */
+        + (c ? c.reviewHTML({ totalTestid:'net-total', taxTestid:'net-tax' }) : ''), 0)
     + card('Details', row('Subject', esc(o.subject)) + row('Needed by', o.by ? esc(o.by) : '—')
         + row('Deliver to', o.addr ? esc(o.addr) : '—') + row('Note', o.note ? esc(o.note) : '—'), 1)
     /* Money is stamped per entity and NEVER converted. A store trading in another currency shows its own. */

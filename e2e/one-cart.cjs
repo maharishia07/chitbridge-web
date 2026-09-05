@@ -28,6 +28,9 @@ for (const rel of files) {
     if (/>\s*Total incl\. tax\s*</.test(s)) { console.log('  ✗ ' + rel + ' renders its own "Total incl. tax" — the cart owns that row (CBCart.moneyRowsHTML)'); bad++; }
     if (/\bbyRate\s*\[/.test(s) && !/CBCart\.money\(/.test(s)) { console.log('  ✗ ' + rel + ' builds a per-rate tax table of its own — call CBCart.money'); bad++; }
   }
+  /* a screen that reads the cart's bare total must also ask it for the money rows — a bare Total beside offers and tax is the
+     Suppliers-review defect of 2026-09-05 ("₹400" while the storefront basket said "₹378 incl. tax") */
+  if (rel !== OWNER && rel !== 'app/catalogue-ui.js' && /\b(?:c|cart|_CART|UI\._\w+Cart)\.total\(\)/.test(s)) { console.log('  ✗ ' + rel + ' reads the cart total itself — the cart prints its own money block: c.reviewHTML({ totalTestid })'); bad++; }
   if (!ALLOW_EVALUATE.has(rel)) {
     const calls = s.match(/CBOffers\.evaluate\(\s*\{[^}]*/g) || [];
     for (const c of calls) if (!/lines\s*:\s*\[\s*[A-Za-z_$][\w$]*\s*\]/.test(c) && !/lines\s*:\s*lines\b/.test(c) && !/lines\s*:\s*\[cbOfferLine/.test(c)) { console.log('  ✗ ' + rel + ' evaluates offers for a basket — go through CBCart.money: ' + c.slice(0, 60)); bad++; }

@@ -1144,6 +1144,39 @@
       ns: ns,
       /* reading */
       state: function () { return st(ns); },
+      /**
+       * ⭐⭐ THE MONEY ROWS FOR A REVIEW — offers → After offers → GST per rate → Total incl. tax — for what is in THIS cart,
+       * or null when the catalogue carries neither offers nor a tax rate (then a bare Total is honest). Athi, 2026-09-05,
+       * two screenshots: the storefront basket said −₹40 · GST ₹18 · ₹378, the Suppliers review said ₹400. Same cart, same
+       * seller, a second total. Every review step asks the cart; none of them adds up lines of its own any more.
+       */
+      moneyRows: function (o) {
+        o = o || {};
+        try {
+          var s = C[ns], EL = engineLines(ns); if (!s) return null;
+          var hasOffers = !!(s.cat && Array.isArray(s.cat.offers) && s.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
+          if (!hasOffers && !hasTax) return null;
+          var M = money(EL, { offers: (s.cat.offers || []), ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+          return { html: moneyRowsHTML(M, { taxTestid: o.taxTestid || 'cart-tax', totalTestid: o.totalTestid || 'cart-total' }), grand: M.grand, model: M };
+        } catch (e) { return null; }
+      },
+      /**
+       * ⭐⭐ THE ONE MONEY BLOCK EVERY SCREEN PRINTS (Athi, 2026-09-05: "it has to be a single source of truth — write a helper, one
+       * source"). The full block: the rows (offers → after offers → GST per rate → total incl. tax) when the catalogue carries
+       * offers or a rate, else the bare Total — with the partial / your-offer wording. A screen writes ONE line:
+       *   c.reviewHTML({ totalTestid: 'sup-total', taxTestid: 'sup-tax' })
+       * and never reads total() itself; e2e/one-cart.cjs fails the run if one does.
+       */
+      reviewHTML: function (o) {
+        o = o || {};
+        var T = total(ns), tid = o.totalTestid || 'cart-total';
+        var MR = (!T.offered && !T.partial) ? h.moneyRows({ totalTestid: tid, taxTestid: o.taxTestid || 'cart-tax' }) : null;
+        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="padding:8px 12px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + MR.html + '</div>';
+        return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
+          + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
+          + '<span data-testid="' + esc(tid) + '">' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
+          + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1);padding:0 12px 8px">Some lines have no price — the total covers only the priced ones.</div>' : '');
+      },
       rows: function () { return rows(ns); },
       selected: function () { return selected(ns); },
       lines: function () { return lines(ns); },
