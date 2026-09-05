@@ -5,7 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop — Chit &amp; Bridge</title>
 <style>
-  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3; }
+  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3;
+    /* ⚠️ THE SHARED CART (app/cart-ui.js) SPEAKS THE APP'S TOKENS. This page defined seven of them; the other twenty-one
+       resolved to nothing, so the basket panel had NO background — the product list showed through it (Athi's tallytest
+       screenshot, 2026-09-05: "look and feel is not good"). The app's light values, verbatim; the theme unit will own them later. */
+    --accent:var(--blue); --on-accent:#ffffff; --card:#fff; --on-card:var(--ink); --ink-2:#3a4048; --grey-2:#545A61; --grey-3:#5D636A; --grey-4:#646A72;
+    --blue-2:#2c5aa0; --blue-tint-bg:#E9F0FA; --neutral-tint:#EEF1F5; --ok-2:#2c7a43; --warn-2:#8a5a1e; --disp:#b4453f; --disp-2:#a5382e;
+    --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --cbpick-gap:8px; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:var(--ink); background:var(--paper); }
   .wrap{ max-width:860px; margin:0 auto; padding:20px 16px 60px; }
