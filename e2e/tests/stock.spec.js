@@ -18,7 +18,8 @@ test('[STK-01] stamped stock from the connector; the storefront shows it with it
   fs.copyFileSync(path.join(KIT, 'samples', 'products.csv'), path.join(work, 'products.csv'));
   await mintEntity(page, { fresh: true });
   const key = await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); return (await api('keysMint', { body: { name: 'stock spec', scopes: ['connector', 'services'], days: 1 } })).key; });
-  const log = (m) => console.log('[stock] ' + m);
+  let streamUp = false;
+  const log = (m) => { if (/stream up/.test(m)) streamUp = true; console.log('[stock] ' + m); };
   const cb = new core.CB({ api: API, key, log }); cb.name = 'stock spec';
   const adapter = csvAdapter({ csv: { products: path.join(work, 'products.csv'), orders: path.join(work, 'orders') }, log });
   const receipts = new core.Receipts(path.join(work, 'receipts.jsonl'));
@@ -40,7 +41,8 @@ test('[STK-01] stamped stock from the connector; the storefront shows it with it
     try {
       await shop.goto('/shop.html?s=' + encodeURIComponent(handle), { waitUntil: 'load' });
       await shop.locator('text=Basmati Rice 25kg').first().waitFor({ timeout: 40000 });
-      const badge = shop.getByTestId('shop-stock').first(); await expect(badge).toBeVisible({ timeout: 20000 });
+      /* the badge on THIS product's row — the list holds thirty, in the shop's own order */
+      const badge = shop.getByTestId('shop-stock').filter({ hasText: 'in stock 120' }).first(); await expect(badge).toBeVisible({ timeout: 20000 });
       const t = await badge.textContent(); expect(t).toMatch(/in stock 120/); expect(t).toMatch(/as of (just now|\d+ min ago)/);
     } finally { await ctx.close(); }
   });
@@ -48,13 +50,16 @@ test('[STK-01] stamped stock from the connector; the storefront shows it with it
   await test.step('ON DEMAND — a connector holding the bell answers the storefront\'s ask; the stamp moves', async () => {
     const ac = new AbortController();
     const watching = core.watchOrders({ cb, adapter, receipts, log, signal: ac.signal, onEvent: (d) => log('bell ' + JSON.stringify(d)) }).catch(() => {});
-    await page.waitForTimeout(4000);   /* the stream is up */
+    /* the seller's own app page holds a stream too — wait for the CONNECTOR's, not just any listener */
+    for (let i = 0; i < 30 && !streamUp; i++) await page.waitForTimeout(1000);
+    expect(streamUp, 'the connector holds the bell').toBe(true);
     const ask = await request.post(API + '/api/integrations/ask/' + encodeURIComponent(handle) + '/stock', { data: {} });
     expect(ask.status()).toBe(200); const aj = await ask.json(); expect(aj.asked, JSON.stringify(aj)).toBe(true);
-    await page.waitForTimeout(6000);
-    const s2 = await (await request.get(API + '/api/integrations/stock/' + encodeURIComponent(handle))).json();
-    const one2 = s2.stock.find((x) => x.avail && Number(x.avail.qty) === 120);
-    expect(new Date(one2.avail.as_of).getTime()).toBeGreaterThan(new Date(firstAsOf).getTime());
+    /* the answer takes a few Pacific round trips: bell → connector reads → one bulk write; poll up to 30 s */
+    let moved = null;
+    for (let i = 0; i < 15 && !moved; i++) { await page.waitForTimeout(2000); const s2 = await (await request.get(API + '/api/integrations/stock/' + encodeURIComponent(handle))).json(); const one2 = s2.stock.find((x) => x.avail && Number(x.avail.qty) === 120); if (one2 && new Date(one2.avail.as_of).getTime() > new Date(firstAsOf).getTime()) moved = one2.avail.as_of; }
+    log('first ' + firstAsOf + ' → after the ask ' + moved);
+    expect(moved, 'the stamp moved after the ask').toBeTruthy();
     ac.abort(); await watching;
   });
   fs.rmSync(work, { recursive: true, force: true });
