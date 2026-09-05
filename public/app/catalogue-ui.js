@@ -270,7 +270,8 @@
       var _offs = (opts && opts.offers) || (cart.__cbcatOpts && cart.__cbcatOpts.offers) || (_st && _st.cat && _st.cat.offers) || [];
       if (_offs.length && root.CBOffers && root.CBOffers.forLine) {
         var _p = root.CBOffers.forLine(
-          { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0 },
+          /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
+          { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
           _offs, { now: new Date(), money: function (n) { return money(cart.ns, n); } });
         offBadge = _p.slice(0, 2).map(function (x) {
           return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
