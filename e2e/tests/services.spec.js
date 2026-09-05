@@ -16,14 +16,15 @@ test('[SVC-01] pricing, tax and invoice as services, one key, one contract', asy
   await page.evaluate(async ({ pid }) => {
     const slab = (await api('defAdd', { body: { kind: 'tax', name: 'GST 5', rules: { rate: 5 }, status: 'live' } })).definition.definition_id;
     await api('defAdd', { body: { kind: 'offer', name: 'Basmati 10% off', sub_kind: 'percent_off', rules: { kind: 'percent_off', percent: 10, applies_to: { item_ids: [pid] } }, status: 'live' } });
-    const pd = (await api('defAdd', { body: { kind: 'pricing', name: 'Bulk bags', sub_kind: 'tiered', rules: { tiers: [{ qty: 10, price: 950 }, { qty: 50, price: 900 }] }, status: 'live' } })).definition;
+    const tiers = [{ qty: 10, price: 950 }, { qty: 50, price: 900 }];
+    const pd = (await api('defAdd', { body: { kind: 'pricing', name: 'Bulk bags', sub_kind: 'tiered', rules: { tiers }, status: 'live' } })).definition;
     const r = await api('prodList', { query: { limit: 50 } }); const p = (r.items || r || []).find((x) => (x.item_id || x.id) === pid);
-    const copy = { pricing_def: String(pd.definition_id), pricing_def_name: pd.name, pricing_kind: 'tiered', pricing_tiers: pd.rules.tiers, pricing_amount: null, pricing_min: null, pricing_max: null };
+    const copy = { pricing_def: String(pd.definition_id), pricing_def_name: pd.name || 'Bulk bags', pricing_kind: 'tiered', pricing_tiers: tiers, pricing_amount: null, pricing_min: null, pricing_max: null };
     await api('prodEdit', { params: { id: pid }, body: { item_data: Object.assign({}, p.item_data, { tax_slab: slab }, copy) } });
     await api('saveProfile', { body: { gstn: '29ABCDE1234F1Z5', address: '12 Market Road, Bengaluru' } });
   }, { pid });
 
-  const k = await page.evaluate(async () => api('keysMint', { body: { name: 'services spec', scopes: ['services'], days: 1 } }));
+  const k = await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); return api('keysMint', { body: { name: 'services spec', scopes: ['services'], days: 1 } }); });
   expect(k.key).toBeTruthy();
   const H = { 'X-Api-Key': k.key };
 
@@ -54,13 +55,15 @@ test('[SVC-01] pricing, tax and invoice as services, one key, one contract', asy
     /* ten bags: the tier re-prices first, then the offer, then the tax */
     const r2 = await request.post(API + '/api/invoice/build', { headers: H, data: { buyer: { name: 'Priya' }, lines: [{ key: 'a', code: 'BAS-25', qty: 10 }] } });
     const j2 = await r2.json();
-    expect(j2.pricing[0].unit_price).toBe(950); expect(j2.offers.total).toBe(8550); expect(j2.invoice.ValDtls.TotInvVal).toBe(8977.5);
+    expect(j2.pricing[0].unit_price).toBe(950); expect(j2.offers.total).toBe(8550);
+    /* 8,550 + 5% = 8,977.50 — the invoice rounds off to the rupee (RndOffAmt), as an Indian tax invoice does */
+    expect(j2.invoice.ValDtls.CgstVal + j2.invoice.ValDtls.SgstVal).toBe(427.5); expect(j2.invoice.ValDtls.TotInvVal).toBe(8978); expect(Math.abs(j2.invoice.ValDtls.RndOffAmt)).toBe(0.5);
   });
 
   await test.step('THE CONTRACT — one document lists every service; a wrong scope is refused', async () => {
     const o = await request.get(API + '/api/openapi.json'); expect(o.status()).toBe(200); const d = await o.json();
     for (const p of ['/api/offers/explain', '/api/pricing/price', '/api/tax/compute', '/api/invoice/build', '/api/keys']) expect(d.paths[p], p).toBeTruthy();
-    const k2 = await page.evaluate(async () => api('keysMint', { body: { name: 'pricing only', scopes: ['pricing'], days: 1 } }));
+    const k2 = await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); return api('keysMint', { body: { name: 'pricing only', scopes: ['pricing'], days: 1 } }); });
     const no = await request.post(API + '/api/invoice/build', { headers: { 'X-Api-Key': k2.key }, data: { lines: [{ qty: 1, listPrice: 1 }] } });
     expect(no.status()).toBe(403);
   });
