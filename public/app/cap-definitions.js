@@ -1004,6 +1004,7 @@ function cbDefFormHTML(){
     + '</div>'
     + '</div>'
     + '<div id="cbdef_prev">' + cbDefPreviewHTML() + '</div>'
+    + (f.kind === 'offer' ? cbDefTestHTML(f) : '')
     + '<div class="err" id="cbdef_err"></div>'
     + '</div>'
     + '<div class="mfoot">'
@@ -1701,4 +1702,59 @@ function cbDefCss(){
     '.cbdef-stdchip.on{background:var(--blue-tint-bg);border-color:var(--blue,var(--blue));color:var(--blue,var(--blue));font-weight:700}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
+}
+
+/* ══ TEST THIS OFFER (Athi, 2026-09-05: "shall we create a test here itself using one of the products to find issues with the
+   engine?") — pick one of YOUR products and a quantity; the SAME engine that prices the cart (prodOfferCartHTML → CBOffers)
+   shows listed → after offers → GST → after tax for the rule AS IT STANDS ON THE FORM, saved or not, and says why it did
+   not apply when it did not. An offer that says nothing shows nothing off — here, before it is saved. ═══════════════ */
+var CBDEF_TEST = { prods: null, pid: '', qty: 2 };
+function cbDefTestHTML(f){
+  return '<div class="cbdef-test" data-testid="cbdef-test" style="margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px">'
+    + '<div style="font-weight:800;font-size:var(--fs-1);letter-spacing:.04em;text-transform:uppercase;color:var(--grey-2);margin-bottom:6px">' + tx('Test this offer') + '</div>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +   '<select class="inp" data-testid="cbdef-test-product" style="flex:1 1 180px;margin:0" onfocus="cbDefTestLoad()" onchange="CBDEF_TEST.pid=this.value;cbDefTestRun()">' + cbDefTestOptions() + '</select>'
+    +   '<input class="inp" data-testid="cbdef-test-qty" type="number" min="1" step="1" value="' + CBDEF_TEST.qty + '" style="width:76px;margin:0" oninput="CBDEF_TEST.qty=Math.max(1,parseInt(this.value)||1);cbDefTestRun()">'
+    +   '<button type="button" data-testid="cbdef-test-run" onclick="cbDefTestRun()" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:6px 12px;cursor:pointer">' + tx('Test') + '</button>'
+    + '</div>'
+    + '<div id="cbdef_test_out" data-testid="cbdef-test-out" style="margin-top:8px"></div></div>';
+}
+function cbDefTestOptions(){
+  var P = CBDEF_TEST.prods;
+  if (!P) return '<option value="">' + cbDefEsc(tx('Pick a product…')) + '</option>';
+  return '<option value="">' + cbDefEsc(tx('Pick a product…')) + '</option>' + P.map(function(p){ var d = p.item_data || {}; var id = p.item_id || p.id; return '<option value="' + cbDefEsc(id) + '"' + (id === CBDEF_TEST.pid ? ' selected' : '') + '>' + cbDefEsc(d.name || id) + '</option>'; }).join('');
+}
+async function cbDefTestLoad(){
+  if (CBDEF_TEST.prods) return;
+  try { var r = await api('prodList', { query: { limit: 200 } }); CBDEF_TEST.prods = (r && (r.items || r.products || r.rows)) || (Array.isArray(r) ? r : []); }
+  catch (_) { CBDEF_TEST.prods = []; }
+  var sel = document.querySelector('[data-testid="cbdef-test-product"]'); if (sel) sel.innerHTML = cbDefTestOptions();
+}
+function cbDefTestRun(){
+  var f = CBDEF_FORM, out = document.getElementById('cbdef_test_out'); if (!f || !out) return;
+  var p = (CBDEF_TEST.prods || []).find(function(x){ return (x.item_id || x.id) === CBDEF_TEST.pid; });
+  if (!p) { out.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + cbDefEsc(tx('Pick a product to test against.')) + '</div>'; return; }
+  var d = Object.assign({}, p.item_data || {}, { item_id: p.item_id || p.id });
+  /* the rule as it stands on the form — the engine reads the rules object with kind and id on it */
+  var offer = Object.assign({ id: f.id || 'test', label: f.name || 'this offer', kind: f.sub }, f.rules || {});
+  var missing = cbDefMissingValue(f.kind, f.sub, f.rules || {});
+  var keep = (typeof UI !== 'undefined') ? UI.prodSel : undefined; try { if (typeof UI !== 'undefined') UI.prodSel = d.item_id; } catch (_) {}
+  var html = '';
+  try { html = (typeof prodOfferCartHTML === 'function') ? prodOfferCartHTML(d, [offer], CBDEF_TEST.qty, 'cbdef-test-total') : ''; } catch (e) { html = ''; }
+  finally { try { if (typeof UI !== 'undefined') UI.prodSel = keep; } catch (_) {} }
+  var why = '';
+  try {
+    var lines = [cbOfferLine(0, d, CBDEF_TEST.qty)];
+    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); } });
+    var per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
+    var skipped = (ev && ev.skipped) || [];
+    if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {
+      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;padding:8px 10px;border-radius:8px;background:var(--warn-tint);color:var(--warn-2);font-size:var(--fs-2)">'
+          + cbDefEsc(missing || (skipped.length ? skipped.map(function(s){ return s.why || s.reason || ''; }).filter(Boolean).join(' · ') : tx('Nothing comes off this product at this quantity — the rule does not reach it (scope, dates, minimum, or an empty value).')))
+          + '</div>';
+    } else {
+      why = '<div data-testid="cbdef-test-why" style="margin-top:6px;font-size:var(--fs-2);color:var(--ok-2);font-weight:700">' + cbDefEsc((per.off > 0 ? fmtMoney(per.off, myCur ? myCur() : 'INR') + ' ' + tx('off') : '') + (ev.claims && ev.claims.length ? ' · ' + ev.claims.length + ' ' + tx('free item(s)') : '')) + '</div>';
+    }
+  } catch (e) { why = '<div style="font-size:var(--fs-1);color:var(--grey)">' + cbDefEsc(String(e && e.message || e)) + '</div>'; }
+  out.innerHTML = html + why;
 }
