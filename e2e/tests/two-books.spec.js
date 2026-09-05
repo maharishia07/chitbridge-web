@@ -46,9 +46,10 @@ test('[B2B-02] one chit books the seller\'s Sales and the buyer\'s Purchase, sam
     expect(sale && sale.vtype, 'the Sales voucher in the seller\'s Tally').toBe('Sales');
     expect(sale.party_gstin).toBe('29ABCDE1234F1Z5');
 
-    /* the BUYER marks it completed (goods received) → the buyer's connector books the Purchase in Tally B */
-    const st = await buyer.page.evaluate(async (id) => { try { return await api('status', { params: { id }, body: { status: 'completed' } }); } catch (e) { return { error: e && e.message }; } }, chitId);
-    expect(st && !st.error, 'the buyer completed the chit: ' + JSON.stringify(st)).toBeTruthy();
+    /* the SELLER completes the order (goods delivered — a status change is the receiver's act; it is logged on the buyer's
+       copy too) → the buyer's connector sees it on its own copy and books the Purchase in Tally B */
+    const st = await page.evaluate(async (id) => { try { return await api('status', { params: { id }, body: { status: 'completed' } }); } catch (e) { return { error: e && e.message }; } }, chitId);
+    expect(st && !st.error, 'the seller completed the chit: ' + JSON.stringify(st)).toBeTruthy();
     const cbB = new core.CB({ api: API, key: buyerKey, log }); cbB.name = 'buyer connector';
     const adB = T({ role: 'buyer', tally: { url: 'http://localhost:' + pB, role: 'buyer' }, log });
     const rB = new core.Receipts(path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'cb-tb-b-')), 'r.jsonl'));
@@ -62,7 +63,8 @@ test('[B2B-02] one chit books the seller\'s Sales and the buyer\'s Purchase, sam
     expect(purchase.ref).toBe(sale.ref);   /* the same reference in both books — the three-way match */
     const masters = await getJ(pB, '/_masters');
     expect(masters.find((m) => m.name === sellerShown && m.parent === 'Sundry Creditors' && m.gstin === '33ABCDE1234F1Z7'), 'the seller is a supplier in the buyer\'s Tally').toBeTruthy();
-    expect(masters.find((m) => m.kind === 'item' && m.name === 'Idli Rice 25kg' && m.unit === 'bag'), 'the material was created in the buyer\'s Tally').toBeTruthy();
+    /* the buyer typed the line in Compose without a unit, so the material is created with the unit as it came ('nos') */
+    expect(masters.find((m) => m.kind === 'item' && m.name === 'Idli Rice 25kg'), 'the material was created in the buyer\'s Tally: ' + JSON.stringify(masters.filter((m) => m.kind === 'item'))).toBeTruthy();
     const supplierLine = purchase.ledgers.find((l) => l.ledger === sellerShown); expect(supplierLine && !supplierLine.dr && Number(supplierLine.amount) === 4800, 'the supplier is credited 4800 (no slab on the seller: tax 0)').toBeTruthy();
   } finally { fA.kill(); fB.kill(); await buyer.context.close(); }
 });

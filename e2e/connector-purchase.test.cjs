@@ -34,12 +34,15 @@ const get = (p) => fetch('http://localhost:' + port + p).then((r) => r.json());
       ValDtls: { AssVal: 6600, IgstVal: 330, CgstVal: 0, SgstVal: 0, TotInvVal: 6930 }, _cb: { supply: 'inter', place_of_supply: '29' }, frozen_at: '2026-09-05T12:00:00Z' },
     heads: { taxable: 6600, cgst: 0, sgst: 0, igst: 330, cess: 0, total: 6930, tax: 330 } };
   const pending = { chit_id: 'pur2bbbb-0000-0000-0000-000000000002', purpose: 'order', current_status: 'pending' };
-  const cb = { sent: async () => ({ chits: [{ chit_id: chitId, purpose: 'order', current_status: 'completed' }, pending] }), chit: async (id) => ({ header: { chit_id: id, receiver_display_name: 'Chennai Stores' } }), invoice: async () => invoice };
+  /* the buyer's SENT copies stay "pending"; the seller's completion shows on my copy's state_log — that is the trigger */
+  const cb = { sent: async () => ({ chits: [{ chit_id: chitId, purpose: 'order', current_status: 'pending' }, pending] }),
+               chit: async (id) => ({ header: { chit_id: id, current_status: 'pending', receiver_display_name: 'Chennai Stores' }, state_log: id === chitId ? [{ action: 'status', previous_status: 'pending', new_status: 'completed', action_by_display_name: 'Chennai Stores' }] : [] }),
+               invoice: async () => invoice };
 
   const out = await core.syncPurchases({ cb, adapter, receipts, log });
   const mine = out.find((x) => x.chit_id === chitId);
   ok(mine && mine.outcome === 'ok' && mine.itc === 330, 'the completed order booked as a purchase with ITC 330: ' + JSON.stringify(mine));
-  ok(out.length === 1, 'the pending order was left alone (only completed ones are purchases)');
+  ok(out.length === 2 && out.find((x) => x.chit_id === pending.chit_id).outcome === 'waiting', 'the order the seller has not completed is left waiting (no receipt written)');
   const m1 = await get('/_masters');
   const sup = m1.find((m) => m.name === 'Chennai Stores');
   ok(sup && sup.parent === 'Sundry Creditors' && sup.gstin === '33ABCDE1234F1Z7' && sup.state === 'Tamil Nadu', 'the seller became a supplier ledger with GSTIN + state: ' + JSON.stringify(sup));
