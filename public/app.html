@@ -5120,13 +5120,26 @@ function selfBillSubject(){
   return tx('Counter sale') + ' · ' + d;
 }
 
-async function selfBillCart(){
+/**
+ * ⭐ THE SELLER'S OWN CATALOGUE, AS A BUYER SEES IT (Athi, 2026-09-05: "Record a sale is also a billing application — does it
+ * follow the same?"). It did not: it fed the cart the raw product list, so no offer and no rate could show, and the chit it
+ * recorded carried listed prices only. Now the same catalogue VIEW every buying surface reads — items with their tax and
+ * stock stamp, the live offers, the shop — read as the owner (private catalogues included). One read, one shape.
+ */
+async function ownCatalogueView(fallbackName){
+  try {
+    if (SESSION && SESSION.entityId && typeof supCatalogueFull === 'function') {
+      var v = await supCatalogueFull(SESSION.entityId);
+      if (v && Array.isArray(v.items) && v.items.length) return Object.assign({}, v, { shop: Object.assign({ bridge_id: 'self', display_name: fallbackName }, v.shop || {}) });
+    }
+  } catch (_) {}
+  /* the raw list, only when the view is not there yet (no schema, nothing published) — prices without offers or rates */
   if (typeof ensureCatalogue === 'function') await ensureCatalogue();
   var arr = (STORE.catalogue || []);
-  var cat = { shop: { bridge_id: 'self', display_name: tx('Your catalogue') },
-    /* Same rule as compose — a real id where the product has one, so an offer can find it. */
-    items: arr.map(function(p, i){ return { item_id: (p.item_id || ('sb' + i)),
-      item_data: Object.assign({}, p, { name: p.particulars, unit: p.unit || 'unit', price: p.price }) }; }) };
+  return { shop: { bridge_id: 'self', display_name: fallbackName }, items: arr.map(function(p, i){ return { item_id: (p.item_id || ('own' + i)), item_data: Object.assign({}, p, { name: p.particulars, unit: p.unit || 'unit', price: p.price }) }; }) };
+}
+async function selfBillCart(){
+  var cat = await ownCatalogueView(tx('Your catalogue'));
   if (UI._sbCart) { try { UI._sbCart.destroy(); } catch(_) {} }
   /**
    * ⚠️⚠️ listEl NAMES THE INNER LIST, NOT THE HOST — and getting it wrong looks like a screen that works.
@@ -5174,6 +5187,14 @@ function selfBillFoot(){
       '<div style="border:1px solid var(--line);border-radius:9px;background:var(--paper)">' + (c ? c.reviewHTML({ totalTestid: 'sb-total', taxTestid: 'sb-tax' }) : '') + '</div>'
       + '<div style="margin-top:9px"><input class="inp" data-testid="sb-subject" value="' + esc(UI._sbSubject || '') + '"'
       + ' oninput="UI._sbSubject=this.value" placeholder="' + esc(tx('What is this?')) + '"></div>'
+      /* ⭐ THE CUSTOMER (Athi, 2026-09-05: "the only thing missing here is the customer information") — a name, and a phone or
+         email; a GSTIN when it is a business. It rides the chit as business_json.customer: the invoice names them as the
+         buyer, the connector books the voucher to them. Optional: a counter sale with no name stays a walk-in. */
+      + '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">'
+      + '<input class="inp" data-testid="sb-customer" value="' + esc((UI._sbCustomer && UI._sbCustomer.name) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {name:this.value})" placeholder="' + esc(tx('Customer name (optional)')) + '" style="flex:2 1 160px;margin:0">'
+      + '<input class="inp" data-testid="sb-customer-contact" value="' + esc((UI._sbCustomer && UI._sbCustomer.contact) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {contact:this.value})" placeholder="' + esc(tx('phone or email')) + '" style="flex:1 1 130px;margin:0">'
+      + '<input class="inp" data-testid="sb-customer-gstin" value="' + esc((UI._sbCustomer && UI._sbCustomer.gstin) || '') + '" oninput="UI._sbCustomer=Object.assign({}, UI._sbCustomer||{}, {gstin:this.value.toUpperCase()})" placeholder="' + esc(tx('GSTIN, if a business')) + '" style="flex:1 1 150px;margin:0;font-family:ui-monospace,monospace">'
+      + '</div>'
       /* ⭐ "on a picker" — closed, because a date that defaults to today and a note most sales do not need are
          exactly the things that should cost nothing when unused. */
       + '<details style="margin-top:7px"><summary style="cursor:pointer;font-size:var(--fs-1);color:var(--grey)">'
@@ -5202,15 +5223,28 @@ async function selfBillSend(btn){
     var subj = (UI._sbSubject || '').trim() || selfBillSubject();
     /* ⚠️ THE SAME SEND EVERY OTHER CHIT USES. A billing screen with its own create call would be a second
        definition of what a chit is. */
+    var cust = null; try { var C0 = UI._sbCustomer || {}; var nm = String(C0.name || '').trim(), ct = String(C0.contact || '').trim(), gs = String(C0.gstin || '').trim().toUpperCase();
+      if (nm || ct || gs) cust = { name: nm || 'Customer', phone: /@/.test(ct) ? null : (ct || null), email: /@/.test(ct) ? ct : null, gstin: gs || null }; } catch (_) { cust = null; }
     await api('createChit', { body: {
       recipients: [{ name: 'Self', role: 'to', self: true }],
       manual_subject: subj, subject: subj, purpose: 'order',
-      line_items: lines.map(function(l){
-        var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
-        return { particulars: l.name || 'item', unit: l.unit || 'unit',
-                 quantity: Number(l.qty || 1) || 1, price: Number(raw) || 0,
-                 comment: UI._sbNote || undefined };
-      }) } });
+      ...(cust ? { business_json: { customer: cust } } : {}),
+      /* ⭐ THE OFFER REACHES THE LINE, AND THE RATE (2026-09-05): the cart's money model — the same one its money block printed —
+         says what came off each line; the chit records list price + discount + the offer's name + the rate, so the invoice,
+         the ledger and the Tally voucher all see the sale the way the counter saw it. */
+      line_items: (function(){
+        var MR = (c && c.moneyRows) ? c.moneyRows() : null, per = {};
+        try { if (MR && MR.model && typeof CBOffers !== 'undefined' && CBOffers.perLine) { var EL = (c.state().cat.items || []).filter(function(p){ return c.qtyOf(p.item_id) > 0; }).map(function(p){ var d = p.item_data || {}; return { key: String(p.item_id), item_id: p.item_id, qty: c.qtyOf(p.item_id) }; }); per = CBOffers.perLine(MR.model.ev, EL) || {}; } } catch (_) { per = {}; }
+        var byId = {}; try { (c.state().cat.items || []).forEach(function(p){ byId[String(p.item_id)] = p; }); } catch (_) {}
+        return lines.map(function(l){
+          var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
+          var p = byId[String(l.item_id)] || {}, off = (per[String(l.item_id)] || {}).off || 0, adj = (MR && MR.model && MR.model.ev && MR.model.ev.adjustments || []).find(function(a){ return String(a.target) === String(l.item_id) && a.scope === 'line'; });
+          var line = { particulars: l.name || 'item', unit: l.unit || 'unit', quantity: Number(l.qty || 1) || 1, price: Number(raw) || 0, comment: UI._sbNote || undefined, ref: { item_id: l.item_id, how: 'picked' } };
+          if (off > 0) { line.discount = Math.round(off * 100) / 100; line.total = Math.round(((Number(raw) || 0) * line.quantity - off) * 100) / 100; line.offer = { label: (adj && adj.label) || 'offer', off: line.discount }; }
+          if (p.tax && p.tax.rate != null) { line.gst_rate = Number(p.tax.rate); if (Number(p.tax.cess)) line.cess_rate = Number(p.tax.cess); }
+          return line;
+        });
+      })() } });
     closeModal();
     if (typeof toast === 'function') toast(txn('Recorded {count} item', 'Recorded {count} items', lines.length));
     if (UI._sbCart) { try { UI._sbCart.destroy(); } catch(_) {} UI._sbCart = null; }
@@ -7520,13 +7554,9 @@ async function selectSupplier(id, silent){
     const own={ supplier_list_id:'own', supplier_entity_id:'own', display_name:tx('Our own stock'),
                 nickname:null, bridge_id:null, has_catalogue:true, _own:true };
     UI.supDet={supplier:own, items:null, loading:true}; paintSupDetail();
-    if(typeof ensureCatalogue==='function') await ensureCatalogue();
-    const arr=(STORE.catalogue||[]);
-    /* The picker's shape, built once — the same mapping compose and the worklist use. */
-    const cat={ shop:{ bridge_id:'self', display_name:tx('Our own stock') },
-      items:arr.map((p,i)=>({ item_id:'own'+i, item_data:Object.assign({}, p,
-        { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
-    UI.supDet={ supplier:own, cat:cat, items:arr.slice() };
+    /* the same catalogue VIEW a buyer would see of us — offers, rates, stock stamps (ownCatalogueView) */
+    const cat=await ownCatalogueView(tx('Our own stock'));
+    UI.supDet={ supplier:own, cat:cat, items:(cat.items||[]).map(p=>{ const d=p.item_data||p; return { particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price) }; }) };
     supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(own)); UI._supCartFor='own';
     UI._supFlow=supStepsFor(own);
     paintSupDetail();
