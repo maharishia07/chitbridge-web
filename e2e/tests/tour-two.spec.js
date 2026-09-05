@@ -136,14 +136,14 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
 
   await caption(seller, 'SELLER', 'The order chit: the same numbers', 'the chit the buyer\'s order became: 6 × Basmati 25kg, the offer applied, GST 5% — priced by the server, not by the browser',
     'open the chit', 'lines, offer, tax, total match the basket');
-  await seller.getByText(PRODUCT).first().click();
+  await seller.evaluate((id) => openChit(id, true), cj.chit_id);
   await settle(seller);
+  await expect(seller.getByTestId('chit-status-btn')).toBeVisible({ timeout: 30000 });   /* the Task folder: the receiver sets the status */
   const detailText = await seller.evaluate(() => (document.getElementById('detailpane') || document.body).innerText.slice(0, 2000));
   expect(detailText).toContain(PRODUCT);
   const money = (detailText.match(/₹\s?[\d,]+(?:\.\d+)?/g) || []).slice(0, 6).join(' · ');
   await ok(seller, 'chit open: ' + PRODUCT + ' × ' + QTY + (money ? ' · ' + money : ''));
-  const chitId = await seller.evaluate(() => UI.sel || (UI.detail && (UI.detail.id || UI.detail.chit_id)) || null);
-  expect(chitId).toBeTruthy();
+  const chitId = cj.chit_id;
 
   /* ── SELLER: the rest of the cycle ── */
   await caption(seller, 'SELLER', 'The invoice, before anything is frozen', 'GET /tax/invoice/:id — the order line resolves its rate from the seller\'s catalogue (item id → slab); provisional until completed',
@@ -159,13 +159,16 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   await caption(seller, 'SELLER', 'Status: Act, then Close — through the control', 'the status picker on the chit; Close completes the copy and FREEZES the invoice on it (rate at send → freeze at completed)',
     'Change status › Act › OK · Change status › Close › OK', 'the chit reads completed; the invoice is frozen');
   for (const v of ['act', 'close']) {
+    /* re-open by id each time — a background refresh (the bell, the timer) can repaint the pane between the two changes */
+    await seller.evaluate((id) => openChit(id, true), chitId); await settle(seller);
+    await expect(seller.getByTestId('chit-status-btn')).toBeVisible({ timeout: 30000 });
     await seller.getByTestId('chit-status-btn').click();
     await seller.locator('.optrow[data-v="' + v + '"]').first().click();
     const put = seller.waitForResponse((r) => /\/status$/.test(r.url()) && r.request().method() === 'PUT', { timeout: 30000 }).catch(() => null);
     await seller.locator('#mok').click();
     await put; await settle(seller);
   }
-  const after = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const inv = await api('taxInvoice', { params: { id } }); return { status: (c.chit || c).status, frozen: !!inv.frozen, tax: Math.round((((inv.invoice || {}).ValDtls || {}).IgstVal + ((inv.invoice || {}).ValDtls || {}).CgstVal + ((inv.invoice || {}).ValDtls || {}).SgstVal) * 100) / 100 }; }, chitId);
+  const after = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const inv = await api('taxInvoice', { params: { id } }); return { status: ((c.header || c.chit || c).current_status || (c.header || c.chit || c).status), frozen: !!inv.frozen, tax: Math.round((((inv.invoice || {}).ValDtls || {}).IgstVal + ((inv.invoice || {}).ValDtls || {}).CgstVal + ((inv.invoice || {}).ValDtls || {}).SgstVal) * 100) / 100 }; }, chitId);
   expect(after.frozen).toBe(true);
   expect(after.tax).toBe(270);
   await ok(seller, 'status ' + after.status + ' · invoice frozen · tax ' + after.tax);
