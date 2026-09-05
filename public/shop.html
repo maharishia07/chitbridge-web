@@ -53,6 +53,7 @@
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="app/cart-ui.js"></script>
+<script src="app/catalogue-ui.js"></script>   <!-- ONE CART, step 2 (2026-09-05): the rows are the app's rows — same picker, same tax line, same offer badge -->
 <script src="app/step-flow.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
@@ -453,7 +454,11 @@ function productListHtml(data, cur){
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); },
     onChange:function(){ shopOffersSync(); },
-    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=offerBadges(d, it.item_id||(it.item&&it.item.item_id), cur, (data&&data.offers)||[]); b=(b||'')+shopStockBadge(d); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
+    /* ⭐ ONE CART, STEP 2 (Athi, 2026-09-05: "converge the storefront onto the same picker code"): the rows are drawn by
+       app/catalogue-ui.js — the SAME renderer as Suppliers, Compose and Network — so the tax line and the offer badge are
+       the same markup everywhere. This page keeps only what the row does not know: the stock stamp and the gallery. */
+    renderer:(typeof CBCatUI!=='undefined')?CBCatUI:undefined,
+    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=shopStockBadge(d); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
   setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'

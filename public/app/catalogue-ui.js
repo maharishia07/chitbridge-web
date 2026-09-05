@@ -239,7 +239,9 @@
         + ' onchange="CBCart.setOffer(\'' + esc(cart.ns) + '\',\'' + esc(id) + '\',this.value)">'
       : '';
     var price = u.offered
-      ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + offerInput
+      /* an offered price on a row that is NOT a name-your-price model (a line-scope discount the storefront sets) shows the
+         struck asking price AND the offered amount — without this the amount vanished behind the strike (2026-09-05) */
+      ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + (offerInput || (isFinite(u.amount) ? ' <b class="cbcat-offered">' + esc(money(cart.ns, u.amount)) + '</b>' : ''))
       : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
     /* The line total, ONLY once there is a quantity to MULTIPLY by — `q > 1`, not `q`. At quantity 1 it prints
        the same number twice under itself, which is exactly the noise the rule was written to avoid; I had the
@@ -293,7 +295,12 @@
       + media
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
-      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + '</span>'
+      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '')
+      /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
+         gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
+         change the price. */
+      + (function () { try { var x = (opts && opts.rowExtra) || (cart.__cbcatOpts && cart.__cbcatOpts.rowExtra); return (typeof x === 'function') ? (x(r.item, r) || '') : ''; } catch (e) { return ''; } })()
+      + '</span>'
       + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
       + '</div>';
