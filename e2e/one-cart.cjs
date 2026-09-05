@@ -24,7 +24,8 @@ let bad = 0;
 for (const rel of files) {
   const s = stripComments(fs.readFileSync(path.join(PUB, rel), 'utf8'));
   if (rel !== OWNER) {
-    if (/Total incl\. tax/.test(s)) { console.log('  ✗ ' + rel + ' renders its own "Total incl. tax" — the cart owns that row (CBCart.moneyRowsHTML)'); bad++; }
+    /* the MARKUP of the row (">Total incl. tax<"), not the words — the Legend and the docs may name it */
+    if (/>\s*Total incl\. tax\s*</.test(s)) { console.log('  ✗ ' + rel + ' renders its own "Total incl. tax" — the cart owns that row (CBCart.moneyRowsHTML)'); bad++; }
     if (/\bbyRate\s*\[/.test(s) && !/CBCart\.money\(/.test(s)) { console.log('  ✗ ' + rel + ' builds a per-rate tax table of its own — call CBCart.money'); bad++; }
   }
   if (!ALLOW_EVALUATE.has(rel)) {
