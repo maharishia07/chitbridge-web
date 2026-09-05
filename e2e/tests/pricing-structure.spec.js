@@ -77,7 +77,7 @@ test('[PRC-01] a tiered structure cited by the product prices the unit at the qu
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
       const cj = await (await confirmed).json().catch(() => ({}));
       expect(cj.chit_id, JSON.stringify(cj).slice(0, 200)).toBeTruthy();
-      const line = await page.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ls = c.line_items || (c.chit && c.chit.line_items) || []; return ls[0] || null; }, cj.chit_id);
+      const line = await page.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ls = (c.detail && c.detail.line_items) || c.lines || c.line_items || [];   /* GET chit: { header, detail:{ line_items }, lines? } */ return ls[0] || null; }, cj.chit_id);
       expect(line, 'the order line').toBeTruthy();
       expect(Number(line.price)).toBe(950);
       expect(Number(line.list_price)).toBe(1000);

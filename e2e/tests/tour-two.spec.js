@@ -151,7 +151,7 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   const inv0 = await seller.evaluate(async (id) => api('taxInvoice', { params: { id } }), chitId);
   const v0 = (inv0 && inv0.invoice && inv0.invoice.ValDtls) || {};
   const tax0 = Math.round(((v0.IgstVal || 0) + (v0.CgstVal || 0) + (v0.SgstVal || 0)) * 100) / 100;
-  const diag = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ch = c.chit || c; const ls = c.line_items || ch.line_items || ch.lines || []; return { n: ls.length, first: ls[0] ? Object.keys(ls[0]).filter((k) => /item_id|name|particulars|gst|tax|rate|hsn|unit_price|quantity|qty/.test(k)).reduce((o, k) => (o[k] = ls[0][k], o), {}) : null }; }, chitId);
+  const diag = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ch = c.header || c.chit || c; const ls = (c.detail && c.detail.line_items) || c.lines || c.line_items || []; return { n: ls.length, first: ls[0] ? Object.keys(ls[0]).filter((k) => /item_id|name|particulars|gst|tax|rate|hsn|unit_price|quantity|qty/.test(k)).reduce((o, k) => (o[k] = ls[0][k], o), {}) : null }; }, chitId);
   expect(inv0.frozen).toBeFalsy();
   expect(tax0, 'rated ' + inv0.rated + ' · unrated ' + inv0.unrated + ' · item ' + JSON.stringify(((inv0.invoice || {}).ItemList || [])[0] || null) + ' · val ' + JSON.stringify(v0) + ' · cb ' + JSON.stringify((inv0.invoice || {})._cb || null) + ' · seller ' + JSON.stringify((inv0.invoice || {}).SellerDtls || null) + ' · buyer ' + JSON.stringify((inv0.invoice || {}).BuyerDtls || null)).toBe(270);
   await ok(seller, 'provisional · taxable ' + v0.AssVal + ' · tax ' + tax0 + ' · total ' + v0.TotInvVal);
