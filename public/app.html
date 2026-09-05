@@ -4332,8 +4332,7 @@ function _renderApp(){
                       color:${on ? 'var(--blue)' : 'var(--on-card)'};border-radius:9px;padding:4px 10px;
                       font-size:var(--fs-1);font-weight:${on ? 700 : 500};cursor:pointer;margin:0 5px 5px 0">${LANGS[code]}</button>`;
                   }).join("")
-                + `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:2px">The rail is
-                   translated so far — the rest of the app is still English.</div></div>`;
+                + `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:2px">${esc(tx('Labels are translated; longer sentences may still read in English.'))}</div></div>`;
             }
             return out;
           })()}
