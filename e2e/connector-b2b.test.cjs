@@ -48,6 +48,18 @@ const get = (p) => fetch('http://localhost:' + port + p).then((r) => r.json());
   await adapter.pushOrder(walk); const v3 = (await get('/_vouchers')).find((x) => x.ref === 'CB-walk3ccc');
   ok(v3 && !v3.party_gstin && v3.ledgers.some((l) => l.ledger === 'Walk-in customers' && Number(l.amount) === -2000) && !v3.ledgers.some((l) => /GST/.test(l.ledger)), 'a walk-in order books as before: party Walk-in customers, no tax lines, no GSTIN');
 
+  /* offers: Tally has none — the voucher carries the listed rate, the discount %, the chit's amount; the narration names the offer */
+  const offer = { chit_id: 'offr4ddd-0000', at: '2026-09-05T10:00:00Z', buyer: 'Priya', total: 550, lines: [
+    { name: 'Basmati Rice 25kg', code: 'RIC', qty: 2, unit: 'bag', price: 200, total: 300, offer: { label: 'Buy 2 save 100', off: 100 } },
+    { name: 'Toor Dal 1kg', code: 'DAL', qty: 1, unit: 'kg', price: 250, list_price: 250, total: 250 },
+    { name: 'Groundnut Oil 1L', code: 'OIL', qty: 1, unit: 'count', price: 0, total: 0, offer: { label: 'Free oil over 500', off: 240 } } ] };
+  await adapter.pushOrder(offer); const v4 = (await get('/_vouchers')).find((x) => x.ref === 'CB-offr4ddd');
+  const rice = v4 && v4.items.find((i) => /Basmati/.test(i.item)), oil = v4 && v4.items.find((i) => /Oil/.test(i.item));
+  ok(rice && rice.rate === '200/bag' && rice.discount === '25' && rice.amount === '300', 'an offer line: listed 200, discount 25%, amount 300 (the chit): ' + JSON.stringify(rice));
+  ok(oil && oil.rate === '0/count' && oil.amount === '0' && oil.qty === '1 count', 'a free item: zero-rate line, still leaves stock: ' + JSON.stringify(oil));
+  ok(v4 && v4.ledgers.some((l) => l.ledger === 'Walk-in customers' && Number(l.amount) === -550), 'the party owes the chit total 550, not rate × qty 650');
+  ok(v4 && /offers: Buy 2 save 100 −100, Free oil over 500 −240/.test(v4.narration), 'the narration names the offers: ' + (v4 && v4.narration));
+
   console.log((fail ? 'RED ' : 'GREEN ') + pass + ' passed · ' + fail + ' failed');
   fake.kill(); setTimeout(() => process.exit(fail ? 1 : 0), 200);
 })().catch((e) => { console.log('FAIL exception: ' + e.message); fake.kill(); setTimeout(() => process.exit(1), 200); });
