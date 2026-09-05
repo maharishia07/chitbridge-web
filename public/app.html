@@ -7772,6 +7772,8 @@ async function viewSupplierPassport(bridge, name){
       + '<div style="font-size:var(--fs-1);color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
       + (rows ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
               : '<div style="font-size:var(--fs-2);color:var(--grey)">They have no clearances recorded yet.</div>')
+      /* what they gave · what their books say · what we checked — the profile-map facts, beside the clearances */
+      + (d.facts ? '<div class="sec" style="margin-top:12px">' + tx('From their records') + '</div>' + supFactsHTML(d.facts, { testid: 'pp-facts', margin: '2px 0 0' }) : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
       + 'Status and validity only — the documents themselves stay with '+label+'. Nothing here is your own readiness; '
       + 'for that, open <b>' + tx('Trade readiness') + '</b> from the menu.</div>';
@@ -7873,7 +7875,7 @@ function supDetailHTML(){
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
-    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
+    const chip=supFactsHTML(x.facts)+`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
       + `<span style="font-size:var(--fs-1);color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -12736,6 +12738,27 @@ function backToList(){UI.mdetail=false;const p=document.getElementById("panel");
 function renderDetail(){
   if (UI.chit2 && typeof chit2Screen === 'function') return chit2Screen();
   return detailInner();
+}
+/**
+ * ⭐ THE FACTS A COUNTERPARTY MAY SEE, WITH THEIR RUNG (Athi, 2026-09-05, from Chola's Suppliers screen: "trade-ready verified
+ * information should display on the left-hand side — or given information?"). Both, labelled: GSTIN · state · registration
+ * type, each at declared (they typed it) · copied (their own books via the connector) · checked (our arithmetic) · verified
+ * (a registry), with the source and the date. From lib/public-facts.js — never the vault.
+ */
+function supFactsHTML(f, opts){
+  if(!f || !(f.gstin || f.country)) return '';
+  opts=opts||{};
+  var M={ verified:['✅','var(--ok-2)','var(--ok-tint)'], checked:['🔢','var(--blue-2)','var(--blue-tint-bg)'], copied:['📒','var(--grey-2)','var(--neutral-tint)'], declared:['✍️','var(--grey-2)','var(--neutral-tint)'] };
+  var m=M[f.gstin_rung]||M.declared;
+  var why={ verified:tx('verified with the registry'), checked:tx('checked — the check digit and the state code agree'), copied:tx('copied from their own books'), declared:tx('as they gave it') }[f.gstin_rung||'declared'];
+  var src=f.source&&f.source!=='profile'?(' · '+tx('from')+' '+esc(f.source)+(f.as_of?' · '+esc(String(f.as_of).slice(0,10)):'')):'';
+  return '<div data-testid="'+esc(opts.testid||'sup-facts')+'" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:'+(opts.margin||'4px 0 6px')+';font-size:var(--fs-1)">'
+    + (f.gstin?'<span style="font-family:ui-monospace,monospace;font-weight:700;color:var(--on-card)">'+esc(f.gstin)+'</span>'
+        + '<span title="'+esc(why)+'" style="font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+esc(String(f.gstin_rung||'declared').toUpperCase())+'</span>':'')
+    + (f.state?'<span style="color:var(--grey-2)">'+esc(f.state)+'</span>':'')
+    + (f.reg_type?'<span style="color:var(--grey-2)">· '+esc(f.reg_type)+'</span>':'')
+    + (src?'<span style="color:var(--grey-2)">'+src+'</span>':'')
+    + '</div>';
 }
 function _rungChipCB(r){
   var M={verified:['✅','var(--ok-2)','var(--ok-tint)'],attested:['🔗','var(--blue-2)','var(--blue-tint-bg)'],documented:['📄','var(--warn-2)','var(--warn-tint)'],declared:['✍️','var(--grey-2)','var(--neutral-tint)']};
