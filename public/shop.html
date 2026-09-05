@@ -554,6 +554,7 @@ function shopBasketSummary(){
  * a bare number; unknown shows nothing (absent is not zero). On open the storefront ASKS the store's connector once; if one
  * is listening it reads the source and writes fresh figures, and the list re-reads them a few seconds later.
  */
+function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 function shopStockBadge(d){
   var a=d&&d.avail; if(!a||a.qty==null||!a.as_of) return '';
   var mins=Math.max(0, Math.round((Date.now()-Date.parse(a.as_of))/60000)); var age=mins<1?'just now':(mins<60?mins+' min ago':(mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago'));
