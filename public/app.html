@@ -1593,6 +1593,7 @@ img.attImg{object-fit:cover;display:block}
 <!-- Offers as a subject of their own — a PURE engine, not wired to a screen yet. Loaded so Definitions can
      read its registry of kinds; see SPEC-offers-tax.md. -->
 <script src="/app/offers.js"></script>
+<script src="/app/pricing.js"></script>
 <!-- WHICH PRICE APPLIES — Part D declared tiered/regional/time-boxed pricing for months and nothing evaluated
      it. Pure resolver, same posture as offers.js; not wired to a screen yet. -->
 <script src="/app/price-resolve.js"></script>
@@ -5821,13 +5822,15 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
  * is a line shape that will differ in one of them, and the difference shows up as a price, not as an error.
  */
 function cbOfferLine(key, it, qty){
-  return { key:String(key), item_id:it.item_id||it.ref||null, sku:it.sku||it.code||null, their_ref:it.their_ref||null, excluded:Array.isArray(it.offers_excluded)?it.offers_excluded.map(String):[],
+  /* the unit price at THIS quantity — the pricing structure first (pricing.js), then offers, then tax */
+  const _list=cbAmount(it.price); const _unit=(typeof CBPricing!=='undefined'&&it.pricing_kind)?CBPricing.unitPrice(it, qty, _list).amount:_list;
+  return { key:String(key), item_id:it.item_id||it.ref||null, listPrice:_list, sku:it.sku||it.code||null, their_ref:it.their_ref||null, excluded:Array.isArray(it.offers_excluded)?it.offers_excluded.map(String):[],
            /* the line's categories AND their ancestors — an offer on the parent category reaches the child (catgWithAncestors) */
            categories:(typeof catgWithAncestors==='function'?catgWithAncestors(Array.isArray(it.categories)?it.categories:(typeof catgIdsOf==='function'?catgIdsOf(it):[])):[])||[],
            /* cbAmount, not `+it.price`: a compose item carries a number, a catalogue product carries the money
               shape {amount, currency} — the product page's preview fed the engine NaN and priced every basket at
               ₹0 ([OFF-02], 2026-09-04) while the header beside it said ₹1,000. */
-           qty:+qty||0, unitPrice:(cbAmount(it.price)||0) };
+           qty:+qty||0, unitPrice:_unit};
 }
 function ccOfferLines(){
   return (CC.items || []).map(function(it,i){ return cbOfferLine(i, it, it.qty); });
@@ -10665,12 +10668,72 @@ function prodPricingTab(d){
      point. This tab is THIS product's price and THIS product's tax, nothing else; the storefront has its own panel. */
   return `<div class="sec">${tx('Price')}</div>`
     + `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;font-size:var(--fs-2)"><b><bdi>${inr(pPrice(d))}</bdi></b><span style="color:var(--grey)">/ <bdi>${esc(pUnit(d))}</bdi> · ${tx('list price')}</span></div>`
+    + `<div class="sec">${tx('Pricing structure')}</div>`
+    + `<div id="prod_pricing" data-testid="prod-pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`
     + `<div class="sec">${tx('Tax')}</div>`
     + `<div id="prod_tax" data-testid="prod-tax" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`;
+}
+/**
+ * ⭐ THE PRICING STRUCTURE, CITED HERE (Athi, 2026-09-05: "how do I invoke the same in the catalogue while setting up
+ * the price?"). Same shape as the tax slab: a picker in Edit, an attach control in View when nothing is cited, and the
+ * OUTCOME at once — the bands a tiered structure yields at this product's list price, and the unit price at the
+ * Invoice row's sample quantity. The save writes the travelling copy (CBPricing.setOn) with the ordinary product PATCH.
+ */
+async function prodPricingLoadDefs(){
+  if(typeof CBPricing==='undefined') return;
+  await cbDefsLive('pricing');
+  const h=document.getElementById('prod_pricing'); if(!h) return;
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); if(!p){ h.textContent=''; return; }
+  h.innerHTML=prodPricingHTML(pData(p));
+}
+function prodPricingRepaint(){ const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); const h=document.getElementById('prod_pricing'); if(p&&h) h.innerHTML=prodPricingHTML(pData(p)); }
+function cbPricingOptionsHTML(defs, selected){
+  const id=s=>String(s.definition_id||s.id||'');
+  return (defs||[]).map(s=>`<option value="${esc(id(s))}"${String(selected||'')===id(s)?' selected':''}>${esc(s.name)} · ${esc(typeof cbDefSubHead==='function'?cbDefSubHead('pricing', s.sub_kind):(s.sub_kind||''))}</option>`).join('');
+}
+function prodPricingHTML(d){
+  const grey=t=>'<span style="color:var(--grey)">'+t+'</span>';
+  if(typeof CBPricing==='undefined') return grey(tx('Pricing module not loaded.'));
+  const defs=(cbDefsCached('pricing')||[]).filter(s=>!s.status||s.status==='live');
+  const editing=UI.prodMode==='edit';
+  let row=Object.assign({}, d);
+  const sel=document.getElementById('ct_pricing_def');
+  if(editing&&sel){ const chosen=defs.find(x=>String(x.definition_id||x.id)===String(sel.value))||null; CBPricing.setOn(row, chosen); }
+  const money=n=>fmtMoney(n, (typeof myCur==='function')?myCur():'INR');
+  const list=cbAmount(pPrice(d));
+  const qty=(UI._invQty&&UI._invQty>0)?UI._invQty:1;
+  const u=CBPricing.unitPrice(row, qty, list);
+  const pick=editing
+    ? (defs.length
+        ? `<select class="inp" id="ct_pricing_def" data-testid="prod-pricing-def" onchange="prodPricingRepaint()"><option value="">— ${esc(tx('list price only'))} —</option>${cbPricingOptionsHTML(defs, row.pricing_def)}</select>`
+        : `<div style="color:var(--grey)">${tx('No pricing structure yet.')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('pricing')">${tx('Catalogue setup › Pricing')}</span></div>`)
+    : (row.pricing_kind
+        ? `<div data-testid="prod-pricing-resolved"><b>${esc(CBPricing.describe(row))}</b></div>`
+        : `<div data-testid="prod-pricing-resolved"><b>${esc(tx('List price'))}</b> ${grey(esc(tx('— no structure cited')))}</div>`
+          + (defs.length ? `<div data-testid="prod-pricing-attach" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px"><select class="inp" id="prod_pricing_fix" data-testid="prod-pricing-fix" style="flex:1 1 220px">${cbPricingOptionsHTML(defs,'')}</select><button class="composebtn" data-testid="prod-pricing-fix-go" onclick="prodPricingAttach('${esc(UI.prodSel||'')}')">${tx('Attach this structure')}</button></div>` : ''));
+  /* the outcome: the bands at this product's list price, and the unit price at the sample quantity */
+  const bands=CBPricing.bands(row, list);
+  const table=bands.length
+    ? `<table class="cb-money" data-testid="prod-pricing-table" style="margin-top:6px"><colgroup><col><col style="width:11ch"></colgroup><tbody>`
+      + bands.map(b=>`<tr class="cbm-row${u.tier&&u.tier.qty===b.from?' cbm-tot':''}"><td class="cbm-l">${esc(b.to==null?txf('{n} and above',{n:String(b.from)}):(b.from===b.to?String(b.from):b.from+'–'+b.to))} ${grey(esc(pUnit(d)))}</td><td class="cbm-a"><bdi>${esc(money(b.price))}</bdi></td></tr>`).join('')
+      + `</tbody></table>` : '';
+  const at=row.pricing_kind
+    ? `<div data-testid="prod-pricing-at" data-qty="${esc(String(qty))}" data-unit="${esc(String(u.amount))}" style="margin-top:6px">${txf('At {n} {u}: {p} each', { n:String(qty), u:esc(pUnit(d)), p:'<b>'+esc(money(u.amount))+'</b>' })} ${grey(esc(u.why))}${u.violation?`<div style="color:var(--warn-3)">⚠️ ${esc(u.violation)}</div>`:''}</div>`
+    : '';
+  return `<div style="padding-bottom:4px">${pick}</div>${table}${at}`;
+}
+async function prodPricingAttach(id){
+  const sel=document.getElementById('prod_pricing_fix'); const did=sel?sel.value:''; if(!did){ toast(tx('Pick a structure first.')); return; }
+  const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p) return;
+  const def=(cbDefsCached('pricing')||[]).find(x=>String(x.definition_id||x.id)===did); if(!def) return;
+  const data=CBPricing.setOn(Object.assign({}, pData(p)), def);
+  try{ await api('prodEdit', { params:{ id }, body:{ item_data: data } }); toast(tx('Pricing structure attached ✓')); await loadCatalogue('fresh'); UI.prodSel=id; paintProdList(); prodRepaintSection('pricing'); prodRepaintSection('invoice'); }
+  catch(e){ toast((e&&e.message)||tx('Could not attach'), true); }
 }
 /* One read, once per session: the FACE — the tax resolver needs its default slab. Then the tax pane fills itself. */
 async function prodPricingLoad(){
   if(!document.getElementById('prod_tax')) return;
+  prodPricingLoadDefs();
   if(UI._face===undefined){ UI._face=null; try{ const r=await api('catFaceGet'); UI._face=(r&&r.face)||null; }catch(_){ UI._face=null; } }
   prodTaxLoad();
 }
@@ -10987,6 +11050,11 @@ function ctReadForm(orig){
   if(slabSel && typeof CBTaxSlab !== 'undefined'){
     const chosen = (cbDefsCached('tax')||[]).find(x=>String(x.definition_id)===String(slabSel.value)) || null;
     CBTaxSlab.setOn(base, chosen);
+  }
+  const prSel = document.getElementById('ct_pricing_def');
+  if(prSel && typeof CBPricing !== 'undefined'){
+    const chosenP = (cbDefsCached('pricing')||[]).find(x=>String(x.definition_id||x.id)===String(prSel.value)) || null;
+    CBPricing.setOn(base, chosenP);   /* the travelling copy: kind · tiers · amount · band · name */
   }
   const host = document.getElementById('ct_categories');
   /* No chips on screen (the shelf could not be read) → leave whatever the product already had. Absent is not

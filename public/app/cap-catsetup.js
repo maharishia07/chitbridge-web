@@ -558,7 +558,8 @@ function catsetBody(k){
       + '<div class="catset-std">⚠️ A price with no source is not wrong, it is just unattributable — and a '
       + 'market-referenced price without a reading date is a rumour. That is the same rule the availability '
       + 'engine applies to a stock figure: a number without a timestamp is not an answer.</div>', '')
-    + catsetRegistry(['pricing', 'priceorigin']);
+    + catsetRegistry(['pricing', 'priceorigin'])
+    + catsetCard('Your pricing structures', catsetDefListHTML('pricing', 'pricing structure'), '');
   }
   if (k === 'variants') {
     return catsetCard('One product, several sizes',

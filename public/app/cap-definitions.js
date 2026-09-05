@@ -110,6 +110,12 @@ var CBDEF_AUTHORABLE = {
                 blurb: 'A named rate — “GST 18%” — that a product cites instead of repeating the number. ⚠️ A '
                      + 'product with no slab inherits: first from its category, then from the catalogue default. '
                      + 'Blank means INHERIT, never nil-rated. Authored under <b>' + tx('Catalogue setup') + '</b>.' },
+  pricing:    { icon: '💱', title: 'Pricing structures', one: 'pricing structure',
+                home: { nav: 'catsetup', sec: 'pricing', label: 'Open Catalogue setup →' },
+                blurb: 'How a price is arrived at, with a NAME a product cites: fixed, tiered by quantity, or a band. '
+                     + 'A tier RE-PRICES the line (an offer discounts it, afterwards); a band constrains and never clamps. '
+                     + 'The product carries a copy of what the structure means, so a line stays explainable after the '
+                     + 'structure changes. Authored under <b>' + tx('Catalogue setup') + '</b>.' },
   requirement:{ icon: '📋', title: 'Required certificates', one: 'requirement',
                 blurb: 'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a GST '
                      + 'registration. Declare it once and every supplier is measured against your list instead of '
@@ -521,6 +527,15 @@ function cbDefRuleFields(kind, sub){
       { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD' },
     ];
   }
+  if (kind === 'pricing') {
+    /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
+    var pf = [];
+    if (sub === 'fixed')  pf.push({ k: 'amount', label: 'Amount (blank = the product\'s list price)', ph: '1000', num: true });
+    if (sub === 'tiered') pf.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true, ph: '10 = 950\n50 = 900',
+                                    hint: 'One per line: from this quantity = price each. Below the first break the list price applies.' });
+    if (sub === 'range')  { pf.push({ k: 'min', label: 'Lowest', ph: '900', num: true, half: true }); pf.push({ k: 'max', label: 'Highest', ph: '1100', num: true, half: true }); }
+    return pf;
+  }
   if (kind === 'ordermodel') {
     /* The shape each model actually uses. ⚠️ cart-ui's MODELS decide behaviour; these are the inputs those
        models read (`o.step`, `o.min`, `o.max`), so the names must match what coerce/next look for. */
@@ -645,6 +660,8 @@ function cbDefSubKinds(kind){
      VAT or a state-cess slab would be a sibling — a definition whose sub_kind is null cannot be told apart from
      one authored before the scheme existed, which is the ambiguity every other kind here avoids. */
   if (kind === 'tax')        return ['gst_slab'];
+  /* ⭐ the three a product can cite today; market-ref and negotiated wait on a source / a counterparty (price-resolve.js) */
+  if (kind === 'pricing')    return (typeof CBPricing !== 'undefined' && CBPricing.kinds) ? CBPricing.kinds : ['fixed', 'tiered', 'range'];
   return [];
 }
 
@@ -816,6 +833,7 @@ function cbDefSetReward(id){
  */
 function cbDefSubLabel(kind, sub){
   if (kind === 'offer') return cbDefOfferLabel(sub);
+  if (kind === 'pricing') return cbDefPricingLabel(sub);
   if (kind === 'ordermodel' && typeof CBCart !== 'undefined' && CBCart.models && CBCart.models[sub])
     return CBCart.models[sub].label || sub;
   return sub;

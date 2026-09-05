@@ -236,7 +236,13 @@
       var v = (s.offers || {})[r.item_id];
       if (v != null && isFinite(v)) return { amount: Number(v), offered: true, asking: priceOf(r) };
     }
-    return { amount: priceOf(r), offered: false, asking: priceOf(r) };
+    /* the pricing structure the product cites re-prices the unit at this quantity (pricing.js) — before offers, before tax */
+    var list = priceOf(r);
+    if (typeof CBPricing !== 'undefined' && dataOf(r).pricing_kind) {
+      var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || 1, list);
+      return { amount: tp.amount, offered: false, asking: list, tier: tp.tier || null, why: tp.why };
+    }
+    return { amount: list, offered: false, asking: list };
   }
   function total(ns) {
     var s = C[ns]; if (!s) return { amount: 0, partial: false, offered: false };

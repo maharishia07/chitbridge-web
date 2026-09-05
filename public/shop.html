@@ -42,6 +42,7 @@
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
 <script src="cb-offline.js"></script>
 <script src="app/offers.js"></script>
+<script src="app/pricing.js"></script>
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="app/cart-ui.js"></script>
@@ -543,7 +544,7 @@ function shopMoneyRowsHTML(m, opt){
 function shopBasketSummary(){
   var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
-  var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); l.unitPrice=cbAmount(p.price); return l; });
+  var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); var _lp=cbAmount(p.price); l.unitPrice=(typeof CBPricing!=='undefined'&&(p.item_data||p).pricing_kind)?CBPricing.unitPrice(p.item_data||p, Number(p.qty)||1, _lp).amount:_lp; return l; });
   try{
     host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">' + shopMoneyRowsHTML(shopBasketMath(lines)) + '</div>';
   }catch(e){ host.innerHTML=''; }
@@ -743,7 +744,7 @@ function _cartStepReview(){
     + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:inline-end">'+_cartLineTotal(i)+'</b>'); }).join('')
     + (function(){ /* the same money the basket showed — offers, GST per rate, total incl. tax — never the listed price alone */
         try{ var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
-          var lines=(_ord.lines||[]).map(function(L){ var it=byId[String(L.item_id)]||{ item_id:L.item_id, item_data:{ name:L.name } }; var l=_lineOf(it, Number(L.qty)||1); l.unitPrice=Number(L.price)||0; return l; });
+          var lines=(_ord.lines||[]).map(function(L){ var it=byId[String(L.item_id)]||{ item_id:L.item_id, item_data:{ name:L.name } }; var l=_lineOf(it, Number(L.qty)||1); var _lp=Number(L.price)||0; l.unitPrice=(typeof CBPricing!=='undefined'&&(it.item_data||it).pricing_kind)?CBPricing.unitPrice(it.item_data||it, Number(L.qty)||1, _lp).amount:_lp; return l; });
           return '<div style="margin-top:6px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'+shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid:'shop-review-total' })+'</div>';
         }catch(e){ return '<div style="display:flex;padding:9px 0;border-top:2px solid #e7e3d8;font-size:14px;font-weight:800"><span style="flex:1">Total</span><span data-testid="shop-review-total">'+_cartGrand()+'</span></div>'; } })()
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
