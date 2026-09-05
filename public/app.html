@@ -4190,7 +4190,8 @@ function _renderApp(){
       // b165 — THE READER'S OWN LOCALISATION, arriving from their identity row rather than from this browser.
       // hydrate() returns true only when the server actually differs from the local cache, so the common case
       // (same device, same person) costs nothing; the new-device case repaints once, in their language.
-      try{ if(_e.locale_prefs && CBLocale.hydrate(_e.locale_prefs)) bgRenderApp(); }catch(_){}
+      /* always — an entity with NO saved choice gets its own country's region, never the browser's leftovers (2026-09-05) */
+      try{ if(CBLocale.hydrate(_e.locale_prefs||{}, { country: _e.country||null })) bgRenderApp(); }catch(_){}
       // b166 — and the LOOK, off the same response. Both hydrates are cheap no-ops when nothing differs.
       try{ if(_e.ui_prefs && appearanceHydrate(_e.ui_prefs)) bgRenderApp(); }catch(_){}
       if(SESSION.role!=='customer')ensureCap('dispute').then(bgRenderApp).catch(function(){}); bgRenderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }

@@ -361,13 +361,32 @@
      * ⚠️ EXCEPT WHEN THE SERVER HAS NOTHING. An empty object is "never chosen", not "chose the default", so a
      * reader who set their language before b165 ran keeps it instead of having it wiped by an empty row.
      */
-    hydrate: function (prefs) {
-      if (!prefs || typeof prefs !== 'object') return false;
+    hydrate: function (prefs, ctx) {
+      prefs = (prefs && typeof prefs === 'object') ? prefs : {};
       var incoming = 0;
       L.KEYS.forEach(function (k) { if (prefs[k]) incoming++; });
-      if (!incoming) return false;
-
       var changed = false;
+      if (!incoming) {
+        /* ⚠️ THE ENTITY WITH NO CHOICE YET IS NOT "WHATEVER THIS BROWSER LAST HELD" (Athi, 2026-09-05: Arabic and Urdu
+           offered on every shop he signed into on one laptop — a region set for a test lived on in localStorage and
+           hydrate() returned early, leaving it standing). An entity that has chosen nothing gets its own COUNTRY's
+           region and the languages that region admits; the previous entity's leftovers are cleared. Quietly: a
+           default is not a choice, so nothing is written back to the identity. "It has to be our application
+           dependent, not browser dependent." */
+        var country = ctx && ctx.country ? String(ctx.country).toUpperCase() : '';
+        var target = REGIONS[country] ? country : '';
+        var snapBefore = L.snapshot();
+        L.quietly(function () {
+          L.KEYS.forEach(function (k) { set('cb_' + k, ''); });
+          if (target) L.setRegion(target);
+        });
+        var snapAfter = L.snapshot();
+        L.KEYS.forEach(function (k) { if (snapBefore[k] !== snapAfter[k]) changed = true; });
+        if (changed) L.apply();
+        return changed;
+      }
+      /* the entity HAS chosen: every key follows it — a key it never set is cleared here too, so one entity's
+         choice cannot leak into the next one opened on the same browser */
       L.KEYS.forEach(function (k) {
         var was = get('cb_' + k, ''), now = String(prefs[k] || '');
         if (was !== now) { set('cb_' + k, now); changed = true; }
