@@ -49,6 +49,14 @@ const get = (p) => fetch('http://localhost:' + port + p, { headers: H }).then((r
   const p2 = await core.pushReceipt({ cb: fakeCb, adapter: a, receipts, log: () => {}, chit_id: 'zb2b1aaa-0000' });
   ok(p2.outcome === 'duplicate' && (await get('/_payments')).length === 1, 'second push: duplicate, no second payment');
 
+  /* the buyer's side: the seller as a vendor, the purchase as a Bill with the tax group per line (my ITC) */
+  const purchase = { chit_id: 'zpur5eee-0000', at: '2026-09-05T12:00:00Z', ref: 'CB-zpur5eee', seller: { name: 'Chennai Stores', gstin: '33ABCDE1234F1Z7', state_code: '33', addr: '5 Mount Road', loc: 'Chennai', pin: '600002' },
+    items: [{ name: 'Idli Rice 25kg', hsn: '1006', qty: 4, unit: 'bag', rate: 1200, ass: 4800, gst_rate: 5, igst: 240, cgst: 0, sgst: 0 }], taxes: { cgst: 0, sgst: 0, igst: 240, cess: 0 }, taxable: 4800, total: 5040, itc_claim: 240, buyer_state: '29' };
+  const pr1 = await a.pushPurchase(purchase); const vend = (await get('/_contacts')).find((c) => c.contact_name === 'Chennai Stores'); const bill = (await get('/_bills'))[0];
+  ok(vend && vend.contact_type === 'vendor' && vend.gst_no === '33ABCDE1234F1Z7' && vend.place_of_contact === 'TN', 'the seller became a vendor contact with GSTIN + TN: ' + JSON.stringify(vend && { t: vend.contact_type, g: vend.gst_no }));
+  ok(bill && bill.vendor_id === vend.contact_id && bill.bill_number === 'CB-zpur5eee' && bill.source_of_supply === 'TN' && bill.destination_of_supply === 'KA' && bill.line_items[0].tax_id === 'gst5' && pr1.input_tax === 240, 'the Bill: vendor · seller ref as bill number · TN → KA · GST5 on the line · ITC 240: ' + JSON.stringify(bill && { v: bill.vendor_id, n: bill.bill_number, s: bill.source_of_supply, d: bill.destination_of_supply }));
+  await a.pushPurchase(purchase); ok((await get('/_contacts')).filter((c) => c.contact_name === 'Chennai Stores').length === 1, 'the vendor is created once');
+
   console.log((fail ? 'RED ' : 'GREEN ') + pass + ' passed · ' + fail + ' failed');
   fake.kill(); setTimeout(() => process.exit(fail ? 1 : 0), 200);
 })().catch((e) => { console.log('FAIL exception: ' + e.message); fake.kill(); setTimeout(() => process.exit(1), 200); });
