@@ -4567,12 +4567,14 @@ function integrationsSettingsHTML(){
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back what comes off and why — the same engine the storefront and compose use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>GET ' + esc(base) + '/api/offers/kinds</code> · <code>POST ' + esc(base) + '/api/offers/evaluate</code> · <code>POST …/explain</code> · <a href="' + esc(base) + '/api/offers/openapi.json" target="_blank" rel="noopener">openapi.json</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
-    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key for offers') + '</button></div>'
+    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px"><option value="offers">' + esc(tx('offers — evaluate only')) + '</option><option value="connector">' + esc(tx('connector — products, orders, the bell')) + '</option></select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
     + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
 }
 async function intKeyMint(){
   var nm = (document.getElementById('int_key_name') || {}).value || '';
-  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: ['offers'] } });
+  var sc = (document.getElementById('int_key_scope') || {}).value || 'offers';
+  /* a connector key also evaluates offers — the scope names the larger surface (routes/keys.js · middleware/auth.js KEY_ROUTES) */
+  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: sc === 'connector' ? ['connector', 'offers'] : ['offers'] } });
     _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
     loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
