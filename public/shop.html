@@ -637,7 +637,9 @@ function shopCartOrder(){
    * catalogue". The id is exact and is what the picker already knows.
    */
   _ord = { cart:true, step:'contact', lines:picked.map(function(p){
-    return { item_id:p.item_id, name:p.name, unit:p.unit, code:p.code, price:cbAmount(p.price), qty:1 }; }) };
+    /* ⚠️ THE BASKET'S QUANTITY, NOT 1. Six bags picked became an order for one (the two-party tour, 2026-09-05): the checkout
+     rebuilt every line at qty 1 and the customer had to retype it on the Items step. */
+    return { item_id:p.item_id, name:p.name, unit:p.unit, code:p.code, price:cbAmount(p.price), qty:(Number(p.qty)>0?Number(p.qty):1) }; }) };
   _docs=[]; _read={}; _OIC=null;
   // ⚠️ A NEW CHECKOUT STARTS AT STEP ONE. Reusing a flow from a previous basket would open this one halfway
   // through, on a Review of items that are no longer in it.

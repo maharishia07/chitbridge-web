@@ -65,7 +65,7 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   await caption(seller, 'SELLER', 'The storefront goes public', 'catalogue visibility public → a handle any customer can open; the storefront row shows the product as the customer sees it',
     'Storefront row › Shown', 'a link localhost/shop.html?s=<handle> and the phone-width preview');
   const handle = await seller.evaluate(async () => {
-    await api('saveProfile', { body: { catalogue_visibility: 'public' } });
+    await api('saveProfile', { body: { catalogue_visibility: 'public', gstn: '29ABCDE1234F1Z5', address: '12 Market Road, Bengaluru' } });
     const me = await api('me'); const e = (me && me.entity) || me || {};
     return e.user_id || e.bridge_id || null;   /* the storefront handle, as prodShopHandle reads it */
   });
@@ -142,6 +142,40 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   expect(detailText).toContain(PRODUCT);
   const money = (detailText.match(/₹\s?[\d,]+(?:\.\d+)?/g) || []).slice(0, 6).join(' · ');
   await ok(seller, 'chit open: ' + PRODUCT + ' × ' + QTY + (money ? ' · ' + money : ''));
+  const chitId = await seller.evaluate(() => UI.sel || (UI.detail && (UI.detail.id || UI.detail.chit_id)) || null);
+  expect(chitId).toBeTruthy();
+
+  /* ── SELLER: the rest of the cycle ── */
+  await caption(seller, 'SELLER', 'The invoice, before anything is frozen', 'GET /tax/invoice/:id — the order line resolves its rate from the seller\'s catalogue (item id → slab); provisional until completed',
+    'API: taxInvoice', 'AssAmt 5,400 · GST 5% → 270 · TotItemVal 5,670 — the buyer\'s basket, to the rupee');
+  const inv0 = await seller.evaluate(async (id) => api('taxInvoice', { params: { id } }), chitId);
+  const v0 = (inv0 && inv0.invoice && inv0.invoice.ValDtls) || {};
+  const tax0 = Math.round(((v0.IgstVal || 0) + (v0.CgstVal || 0) + (v0.SgstVal || 0)) * 100) / 100;
+  const diag = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const ch = c.chit || c; const ls = c.line_items || ch.line_items || ch.lines || []; return { n: ls.length, first: ls[0] ? Object.keys(ls[0]).filter((k) => /item_id|name|particulars|gst|tax|rate|hsn|unit_price|quantity|qty/.test(k)).reduce((o, k) => (o[k] = ls[0][k], o), {}) : null }; }, chitId);
+  expect(inv0.frozen).toBeFalsy();
+  expect(tax0, 'rated ' + inv0.rated + ' · unrated ' + inv0.unrated + ' · item ' + JSON.stringify(((inv0.invoice || {}).ItemList || [])[0] || null) + ' · val ' + JSON.stringify(v0) + ' · cb ' + JSON.stringify((inv0.invoice || {})._cb || null) + ' · seller ' + JSON.stringify((inv0.invoice || {}).SellerDtls || null) + ' · buyer ' + JSON.stringify((inv0.invoice || {}).BuyerDtls || null)).toBe(270);
+  await ok(seller, 'provisional · taxable ' + v0.AssVal + ' · tax ' + tax0 + ' · total ' + v0.TotInvVal);
+
+  await caption(seller, 'SELLER', 'Status: Act, then Close — through the control', 'the status picker on the chit; Close completes the copy and FREEZES the invoice on it (rate at send → freeze at completed)',
+    'Change status › Act › OK · Change status › Close › OK', 'the chit reads completed; the invoice is frozen');
+  for (const v of ['act', 'close']) {
+    await seller.getByTestId('chit-status-btn').click();
+    await seller.locator('.optrow[data-v="' + v + '"]').first().click();
+    const put = seller.waitForResponse((r) => /\/status$/.test(r.url()) && r.request().method() === 'PUT', { timeout: 30000 }).catch(() => null);
+    await seller.locator('#mok').click();
+    await put; await settle(seller);
+  }
+  const after = await seller.evaluate(async (id) => { const c = await api('chit', { params: { id } }); const inv = await api('taxInvoice', { params: { id } }); return { status: (c.chit || c).status, frozen: !!inv.frozen, tax: Math.round((((inv.invoice || {}).ValDtls || {}).IgstVal + ((inv.invoice || {}).ValDtls || {}).CgstVal + ((inv.invoice || {}).ValDtls || {}).SgstVal) * 100) / 100 }; }, chitId);
+  expect(after.frozen).toBe(true);
+  expect(after.tax).toBe(270);
+  await ok(seller, 'status ' + after.status + ' · invoice frozen · tax ' + after.tax);
+
+  await caption(seller, 'SELLER', 'MIS › Tax: what I owe this month', 'the ledger: every sent line rated at send, frozen at completed; output by head; this order is the month\'s output tax',
+    'MIS › Tax', 'output tax includes 270');
+  await clickNav(seller, 'mis'); await settle(seller);
+  await seller.getByTestId('mis-band-tax').click();
+  await expect(seller.getByTestId('mis-tax-output')).toContainText('270', { timeout: 30000 });
+  await ok(seller, 'output tax for the month shows 270 — the trade is on the books');
 
   await buyerCtx.close();
 });
