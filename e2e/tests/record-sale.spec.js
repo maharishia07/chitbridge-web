@@ -9,6 +9,8 @@ const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.rai
 test('[SB-01] Record a sale shows the same rows and money block and records the offer and the rate on the chit', async ({ page }) => {
   test.setTimeout(300000);
   await mintEntity(page, { fresh: true });
+  /* a REGISTERED seller: GST is charged only by a seller with a GSTIN — the view, the send and the invoice all read that one fact */
+  await page.evaluate(async () => { await api('saveProfile', { body: { gstn: '33AABCK1234F1Z6' } }); });
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Grapes', unit: 'kg', price: 200, code: 'GRP-1' });
   const itemId = await page.evaluate(async () => {

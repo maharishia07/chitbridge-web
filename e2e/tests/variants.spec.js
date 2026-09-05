@@ -139,7 +139,7 @@ test.describe('variants', () => {
     // …and each size is on the page with its own price.
     for (const l of LINES) {
       await expect(page.locator('.wrap')).toContainText(l.size);
-      await expect(page.locator('.wrap')).toContainText(String(l.price));
+      await expect(page.locator('.wrap')).toContainText(l.price.toLocaleString('en-IN'));   /* money, not numbers: ₹3,400.00 */
     }
     await expect(page.locator('.wrap')).toContainText('3 options');
   });
@@ -251,7 +251,7 @@ test.describe('variants', () => {
     await expect(cat).toContainText('3 options');
     for (const l of LINES) {
       await expect(cat).toContainText(l.size);
-      await expect(cat).toContainText(String(l.price));
+      await expect(cat).toContainText(l.price.toLocaleString('en-IN'));   /* money, not numbers: ₹3,400.00 */
     }
     const txt = await cat.innerText();
     expect(txt.split(NAME).length - 1, 'the product name repeats — still rendering as separate products').toBe(1);

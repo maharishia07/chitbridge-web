@@ -8,6 +8,8 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity, mintInContext, addProduct, clickNav, settle } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
+/** the block's ROOT (the cart's own element, its own type) at one width — the frame around it is the surface's and is not compared */
+async function shotOf(block) { const root = block.locator('[data-testid="cbcart-money"]'); await root.evaluate((el) => { el.style.width = '380px'; el.style.boxSizing = 'border-box'; }); await root.page().waitForTimeout(150); return root.screenshot(); }
 /** the money block as text: one line per row, "label amount", whitespace folded */
 async function rowsOf(loc) {
   const t = await loc.evaluate((el) => Array.from(el.querySelectorAll('div')).filter((d) => d.children.length === 2 && d.style.display === 'flex').map((d) => Array.from(d.children).map((c) => c.textContent.trim().replace(/\s+/g, ' ')).join(' | ')));
@@ -41,7 +43,7 @@ test('[PAR-02] one money block on every surface — same text, same pixels', asy
       await row.locator('[data-testid="cart-add"]').first().click(); await shop.waitForTimeout(500);
       const block = shop.getByTestId('shop-offers'); await block.waitFor({ timeout: 20000 });
       blocks.storefront = await rowsOf(block);
-      shots.storefront = await block.screenshot();
+      shots.storefront = await shotOf(block);
     } finally { await ctx.close(); }
   });
 
@@ -70,7 +72,7 @@ test('[PAR-02] one money block on every surface — same text, same pixels', asy
       const next2 = buyer.page.getByRole('button', { name: /Next|Review|Check it/ }).last(); if (await next2.isVisible().catch(() => false)) { await next2.click(); await settle(buyer.page); }
       const block = buyer.page.getByTestId('sup-money'); await block.waitFor({ timeout: 30000 });
       blocks.suppliers = await rowsOf(block);
-      shots.suppliers = await block.screenshot();
+      shots.suppliers = await shotOf(block);
     } finally { await buyer.context.close(); }
   });
 

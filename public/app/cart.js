@@ -1379,8 +1379,12 @@
     var after = (rows || notes)
       ? rows + notes + '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>' + esc(ctx.money(ev.total)) + '</b></div>'
       : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>' + esc(ctx.money(m.gross)) + '</b></div>';
-    return after + taxRows
-      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>';
+    /* ⭐ ONE ROOT, ITS OWN TYPE. The block carries its font and size itself (the app's --font-ui token, which shop.html now
+       declares too), so the storefront, Suppliers, Record a sale and Compose print the same pixels — [PAR-02] shoots this root
+       at one width on two surfaces and diffs them. The frame around it (a dashed accent on the storefront) stays the surface's. */
+    return '<div class="cbcart-money" data-testid="cbcart-money" style="font-family:var(--font-ui,Inter,system-ui,sans-serif);font-size:13px;line-height:1.35;color:var(--ink,#20303b)">' + after + taxRows
+
+      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
   }
 
   root.CBCart = {

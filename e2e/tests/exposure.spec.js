@@ -9,7 +9,7 @@ const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.rai
 test('[EXP-01] per-item exposure is enforced in the projection and obeyed by the storefront', async ({ page, browser, request }) => {
   test.setTimeout(300000);
   await mintEntity(page, { fresh: true });
-  await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public' } }); });
+  await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public', gstn: '33AABCK1234F1Z6' } });   /* a REGISTERED seller: only a seller with a GSTIN carries tax (tax-shelf) */ });
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Grapes', unit: 'kg', price: 200, code: 'GRP-1' });
   await addProduct(page, { name: 'Oil', unit: 'litre', price: 250, code: 'OIL-1' });

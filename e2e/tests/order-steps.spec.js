@@ -22,10 +22,27 @@ const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.
 const OTP = process.env.DEV_OTP || '123456';
 // The same published shop variants.spec.js uses — a supplier that really has a catalogue to order from.
 const SHOP = { email: 'beta@test-cb.com', name: 'Beta Fresh' };
+/** ⚠️ BETA FRESH IS A SHARED SHOP AND OTHER SPECS TIDY UP AFTER THEMSELVES (variants.spec.js retires the lines it imported), so
+ *  Beta can be EMPTY when this spec arrives — 2026-09-05: 'Beta Fresh has not published anything you can order yet', 15 s waiting
+ *  for a + that could not exist. The precondition of this spec is one orderable line on Beta's shelf; the spec now makes it so,
+ *  the way variants does: the dev OTP sign-in, then one product if the shelf is bare. */
+async function ensureShopStocked() {
+  const post = async (p, body) => { const r = await fetch(API + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return r.json().catch(() => ({})); };
+  await post('/api/entities/register', { email: SHOP.email, display_name: SHOP.name });
+  const v = await post('/api/entities/verify', { email: SHOP.email, otp: OTP }); const tok = v.token || (v.entity && v.entity.token);
+  if (!tok) return;
+  const H = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok };
+  await fetch(API + '/api/entities/profile', { method: 'PATCH', headers: H, body: JSON.stringify({ catalogue_visibility: 'public' }) }).catch(() => {});
+  const list = await (await fetch(API + '/api/products?limit=5', { headers: H })).json().catch(() => ({}));
+  const items = list.items || list.products || list.rows || (Array.isArray(list) ? list : []);
+  if (items.some((p) => p && p.item_data && p.item_data.status !== 'hidden')) return;
+  await fetch(API + '/api/products', { method: 'POST', headers: H, body: JSON.stringify({ item_data: { name: 'Beta line ' + Date.now().toString().slice(-5), unit: 'piece', price: 120, status: 'available' } }) });
+}
 
 test.describe('Order step flow', () => {
   test('★★ SUPPLIERS — the catalogue IS the screen, and the flow walks Items → Details → Review', async ({ page }) => {
     await mintEntity(page);
+    await ensureShopStocked();
     // addSupplier() confirms before it posts — via the app's own confirmAsk() modal since 2026-08-16, not a
     // native dialog, so it needs a real click rather than a page.on('dialog') handler.
     await page.getByTestId('nav-suppliers').click();

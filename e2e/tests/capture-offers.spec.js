@@ -9,6 +9,8 @@ const { mintEntity, addProduct, clickNav } = require('../fixtures');
 test('[CAP-02] a WhatsApp-captured order carries the seller\'s offer and rate, and invoices like the storefront', async ({ page }) => {
   test.setTimeout(240000);
   await mintEntity(page, { fresh: true });
+  /* a REGISTERED seller: GST is charged only by a seller with a GSTIN — the view, the send and the invoice all read that one fact */
+  await page.evaluate(async () => { await api('saveProfile', { body: { gstn: '33AABCK1234F1Z6' } }); });
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Grapes', unit: 'kg', price: 200, code: 'GRP-1' });
   const out = await page.evaluate(async () => {
