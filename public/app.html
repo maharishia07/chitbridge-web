@@ -10400,8 +10400,9 @@ async function prodExposureSet(k, on){
 }
 async function prodExposureReset(){
   const p = (UI.prods||[]).find(x => prodId(x)===UI.prodSel); if(!p) return;
-  const d = Object.assign({}, p.item_data||{}); delete d.exposure;
-  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); p.item_data = d; toast(tx('Back to the defaults')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
+  /* the product write is a MERGE (RFC 7386): a key comes off only when sent as null — deleting it here would leave the old switches standing */
+  const d = Object.assign({}, p.item_data||{}, { exposure: null });
+  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); delete d.exposure; p.item_data = d; toast(tx('Back to the defaults')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
 function prodShopHandle(){

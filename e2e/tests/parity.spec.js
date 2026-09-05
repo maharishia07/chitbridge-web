@@ -49,8 +49,9 @@ test('[PAR-01] the storefront and the Suppliers screen show the same price, tax 
     await clickNav(buyer.page, 'suppliers'); await settle(buyer.page);
     /* the add box takes a name, a User ID or an email — the handle is the one we surely have */
     await buyer.page.getByTestId('sup-add-input').fill(String(handle));
-    await buyer.page.getByTestId('sup-add').click(); await settle(buyer.page);
-    await dismissModal(buyer.page).catch(() => {}); await settle(buyer.page);
+    await buyer.page.getByTestId('sup-add').click();
+    /* the add asks for a confirmation — the suppliers spec's own step: confirm-ok, never a dismiss (that cancels the add) */
+    await buyer.page.getByTestId('confirm-ok').click({ timeout: 15000 }).catch(() => {}); await settle(buyer.page);
     /* a fresh entity is shown by its handle, not the name asked for */
     const supRow = buyer.page.locator('[data-testid^="sup-row-"]').filter({ hasText: String(handle) }).first();
     await supRow.waitFor({ timeout: 30000 }); await supRow.click(); await settle(buyer.page);
