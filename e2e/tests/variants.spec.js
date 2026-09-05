@@ -58,6 +58,9 @@ test.beforeAll(async () => {
   // Keep the shop's own face so the teardown can put it back exactly. The face is saved WHOLE — replacing it with
   // only `identity` would wipe order_input and the shop would stop taking orders the way it declared.
   FACE0 = (await api('/api/catalogue-face', { token: TOKEN })).json?.face || {};
+  /* the shop must be PUBLIC for /api/catalogue/<bridge> to answer — a fresh shop is private by default (found 2026-09-05: every
+     storefront assertion here read "Shop not found" because nothing ever flipped it) */
+  await api('/api/entities/profile', { method: 'PATCH', token: TOKEN, body: { catalogue_visibility: 'public' } });
 
   // Arrange by API: import the three lines, creating the `product` and `size` columns.
   const csv = 'sku,name,product,size,price\n'
