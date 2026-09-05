@@ -12663,6 +12663,10 @@ async function openChit(id, silent){
              contentItems never has to ask which world it is in. */
           const _live=Array.isArray(r.live_set) ? r.live_set
             : ((det.line_items||[]).map((l,i)=>({index:i, live:l, original:l, history:[], removed:false})));
+          /* the live set comes from the line TABLE; an at-order-time fact that lives only in the order JSON (the stamped-stock
+             shortfall, routes/catalogue.js reprice) is merged by position — only while the two still line up one-to-one */
+          const _dli=(det.line_items||[]);
+          if(_dli.length===_live.length) _live.forEach((e,i)=>{ const s=_dli[i]&&_dli[i].stock; if(s&&e&&e.live&&!e.live.stock) e.live.stock=s; });
           const _items=_live.map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
