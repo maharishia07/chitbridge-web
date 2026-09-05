@@ -8,8 +8,9 @@ const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.rai
 test('[KEY-01] mint a key in Settings › Integrations, use it on the offer service, revoke it', async ({ page, request }) => {
   test.setTimeout(240000);
   await mintEntity(page);
-  await clickNav(page, 'settings');
-  await page.evaluate(() => { if (typeof ensureCap === 'function') return ensureCap('admin'); });
+  /* Settings lives under the avatar menu, not the rail — reached the app's own way */
+  await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); navTo('settings'); });
+  await page.waitForTimeout(800);
   await page.getByTestId('set-sec-integrations').click({ timeout: 30000 });
 
   let key = '';

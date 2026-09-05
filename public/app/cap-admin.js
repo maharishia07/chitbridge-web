@@ -4556,7 +4556,7 @@ function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v])
  * revocable in one press. The services it opens: /api/offers kinds · evaluate · explain; the contract at
  * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
  */
-var _KEYS;
+var _KEYS, _KEY_SHOWN = '';   /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
 function integrationsSettingsHTML(){
   if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var keys = (_KEYS && _KEYS.keys) || [];
@@ -4568,18 +4568,18 @@ function integrationsSettingsHTML(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>GET ' + esc(base) + '/api/offers/kinds</code> · <code>POST ' + esc(base) + '/api/offers/evaluate</code> · <code>POST …/explain</code> · <a href="' + esc(base) + '/api/offers/openapi.json" target="_blank" rel="noopener">openapi.json</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
     + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key for offers') + '</button></div>'
-    + '<div id="int_key_out"></div></div>';
+    + '<div id="int_key_out">' + (_KEY_SHOWN || '') + '</div></div>';
 }
 async function intKeyMint(){
   var nm = (document.getElementById('int_key_name') || {}).value || '';
   try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: ['offers'] } });
-    var out = document.getElementById('int_key_out'); if (out) out.innerHTML = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
+    _KEY_SHOWN = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
     _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
-    var host = document.getElementById('setbody'); var keep = out ? out.innerHTML : ''; loadSettings(); setTimeout(function(){ var o = document.getElementById('int_key_out'); if (o && keep) o.innerHTML = keep; }, 900);
+    loadSettings();   /* the list repaints; the shown key rides _KEY_SHOWN into the repaint */
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true); }
 }
 async function intKeyRevoke(jti){
-  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key revoked')); loadSettings(); }
+  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; _KEY_SHOWN = ''; if (typeof toast === 'function') toast(tx('Key revoked')); loadSettings(); }
   catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not revoke'), true); }
 }
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
