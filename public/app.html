@@ -11408,7 +11408,8 @@ async function chitUnpay(id){
 }
 /** the QR for a walk-in customer: the seller's own UPI id (the profile map / Business identity row upi_id) */
 async function chitShowQr(id, amount){
-  let upi=null; try{ if(UI._party===undefined||UI._party===null){ const p=await api('profileGet'); UI._party=(p&&p.invoice_party)||{}; } upi=UI._party&&UI._party.upi_id; }catch(_){}
+  /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
+  let upi=UI._party&&UI._party.upi_id; if(!upi){ try{ const p=await api('profileGet'); UI._party=(p&&p.invoice_party)||{}; upi=UI._party.upi_id; }catch(_){} }
   if(!upi){ modal(`<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`); return; }
   const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(SESSION.name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(Math.round(amount*100)/100)):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(id).slice(0,8));
   let img=''; try{ if(typeof qrcode==='function'){ const qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(5,8).replace('<img ','<img data-testid="chit-upi-qr" alt="UPI QR" '); } }catch(_){}

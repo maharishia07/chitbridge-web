@@ -8,3 +8,4 @@ e2e/playwright-report/
 
 # local design previews — served by the dev server, NEVER deployed (would publish internal notes publicly)
 public/_design/
+test-results/
