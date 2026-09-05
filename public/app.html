@@ -11384,6 +11384,10 @@ function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
  * the quoted amount, the chit reference). Level 2 (a gateway webhook) writes the same field without a hand.
  */
 function chitPaymentCell(c, cell, quoted){
+  /* ⚠️ THE SELLER'S CELL ONLY (Athi, 2026-09-05, from Chola Auto Care's Order tab: "they cannot make the payment settings").
+     The party who SENT the order is the buyer: no Mark paid, no QR of their own — the seller records the payment on the
+     seller's copy. A buyer's view of paying (the seller's QR) is a separate thing, not this cell. */
+  const h=(c&&c.header)||c||{}; if(h.sender_entity_id && typeof SESSION!=='undefined' && SESSION && SESSION.entity && h.sender_entity_id===SESSION.entity) return '';
   const bj=(c&&(c.business_json||(c.header&&c.header.business_json)))||{}; const pay=bj.payment||null;
   const val = pay ? `<span data-testid="chit-paid" style="color:var(--ok-2)">${esc(tx('Paid'))} · ${esc(String(pay.method||'').toUpperCase())}${pay.ref?' · '+esc(pay.ref):''}</span> <button type="button" data-testid="chit-unpay" onclick="chitUnpay('${c.id}')" title="${esc(tx('Clear this payment — a mistake undone; the log keeps both'))}" style="border:0;background:none;color:var(--grey);cursor:pointer;font-size:var(--fs-1)">✕</button>`
     : `<span data-testid="chit-unpaid" style="color:var(--grey)">${esc(tx('Unpaid'))}</span> <button type="button" data-testid="chit-mark-paid" onclick="chitMarkPaid('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Mark paid'))}</button> <button type="button" data-testid="chit-show-qr" onclick="chitShowQr('${c.id}', ${Number(quoted)||0})" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer">${esc(tx('Show QR'))}</button>`;
