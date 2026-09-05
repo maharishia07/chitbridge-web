@@ -311,7 +311,10 @@ function c2PaneOrd(d){
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
-      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:var(--fs-3)">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '') + '</span>'
+      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:var(--fs-3)">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '')
+      /* the stamped stock fell short of this line when the order came in (routes/catalogue.js reprice): the seller sees it here */
+      + (l.stock && l.stock.short ? ' <span data-testid="c2-stock-short" title="' + esc((l.stock.source ? 'stock from ' + l.stock.source + ' · ' : '') + 'as of ' + String(l.stock.as_of || '').slice(0, 16).replace('T', ' ')) + '" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);padding:1px 6px;border-radius:9px;white-space:nowrap">⚠ ' + esc(tx('short by') + ' ' + l.stock.short + ' · ' + tx('stock') + ' ' + l.stock.qty) + '</span>' : '')
+      + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
          he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
          misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */

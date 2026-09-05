@@ -134,6 +134,11 @@ function vaultRowHTML(r,i,j,type){
        a stray control belonging to nothing. Let them shrink together and the row stays one row. */
     +'<input class="inp" list="vsug_'+esc(type)+'" style="flex:1 1 130px;min-width:110px;margin:0" placeholder="detail name — e.g. IFSC code" value="'+esc(r.name||'')+'" oninput="vaultSetRow('+i+','+j+',\'name\',this.value)">'
     +val
+    /* the trust rung the profile map gave this row (declared → copied → checked → verified) and where it came from —
+       a row a connector copied says so; a row you typed says nothing (declared is the floor, not a badge) */
+    +((r.rung&&r.rung!=='declared')||(r.source&&r.source!=='profile')
+        ? '<span data-testid="vault-rung" title="'+esc((r.source?'from '+r.source:'')+(r.as_of?' · as of '+String(r.as_of).slice(0,10):''))+'" style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+(r.rung==='verified'?'var(--ok-2)':r.rung==='checked'?'var(--blue-2)':'var(--grey-2)')+';background:'+(r.rung==='verified'?'var(--ok-tint)':r.rung==='checked'?'var(--blue-tint-bg)':'var(--neutral-tint)')+'">'+esc(String(r.rung||'copied').toUpperCase())+(r.source&&r.source!=='profile'?' · '+esc(r.source):'')+'</span>'
+        : '')
     +'<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button></div>';
 }
 /* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
