@@ -1582,10 +1582,9 @@ img.attImg{object-fit:cover;display:block}
      load would mean the "Start from a standard set" button appears before the sets it offers exist. -->
 <script src="/app/catalogue-starter-categories.js"></script>
 <script src="/app/catalogue-lines.js"></script>
-<script src="/app/cart-ui.js"></script>
+<script src="/app/cart.js"></script>   <!-- CAPABILITY: CART — one file: state · money · rows · picker (2026-09-05) -->
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
      CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
-<script src="/app/catalogue-ui.js"></script>
 <!-- ⭐ CBPick — open the catalogue OVER any screen and get the selection back. The four screens that
      assembled the picker by hand each had to get modal + loading + renderer + commit right; the worklist got
      two of them wrong and shipped a list with no search box and no styling. One entry now. -->

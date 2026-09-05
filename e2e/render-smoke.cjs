@@ -95,8 +95,7 @@ try {
 try {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-lines.js'), 'utf8'), ctx, { filename: 'catalogue-lines.js' });
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cart-ui.js'), 'utf8'), ctx, { filename: 'cart-ui.js' });
-  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'catalogue-ui.js'), 'utf8'), ctx, { filename: 'catalogue-ui.js' });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'app', 'cart.js'), 'utf8'), ctx, { filename: 'cart.js' });
 } catch (e) {
   console.error('✗ a shared module failed to LOAD: ' + e.message);
   process.exit(1);

@@ -1,4 +1,29 @@
 /**
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ * CAPABILITY: CART — one basket, everywhere (app/cart.js). Athi, 2026-09-05: "the cart is a single view we should be able to
+ * embed anywhere so we get the same style and response everywhere — single source of truth; convert as a capability and
+ * remove duplicate code, so we can work on one piece of code."
+ *
+ * CONTRACT
+ *   in   a catalogue payload as the catalogue view (lib/catalogue-view.js) emits it — items with item_data · tax · avail,
+ *        offers, categories, shop — the SAME payload the storefront, Suppliers, Compose/Network and the API read.
+ *   out  CBCart.create(cat, opts) → a handle: state · rows · lines · selected · qtyOf · add/dec/setQty · open/close ·
+ *        moneyRows() · reviewHTML() — and CBCatUI: pickerHTML · listHTML · barHTML · rowHTML (the rows every surface draws).
+ *   money  CBCart.money(lines, {offers, ctx, taxOf}) + CBCart.moneyRowsHTML(m) are the ONLY place a buyer's money is computed
+ *        (offers → after offers → GST per rate → total incl. tax). The server re-prices every order with the same engines.
+ *
+ * GUARDS   e2e/one-cart.cjs (a second total or basket evaluation fails the run) · e2e/dup-functions.cjs · e2e/render-smoke.cjs
+ * SPECS    [PAR-01] parity across surfaces · [EXP-01] exposure · [OFF-01/02] offers · [SF-01] storefront · [PAY-01] · tour-two
+ * LEGEND   cap-legend.js › cart (maturity 2 → 3)
+ *
+ * HISTORY  2026-08 cart-ui.js (state, money, panel) and catalogue-ui.js (rows, chip, picker) were two files; every surface
+ *          loaded both, the storefront loaded one and drew its own rows, and the reviews summed their own lines. Merged
+ *          2026-09-05 into this one file; the two globals CBCart and CBCatUI are kept so no caller changes.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ */
+/* ═══ PART 1 · THE STATE, THE MONEY, THE BASKET PANEL (was app/cart-ui.js) ═══════════════════════════════ */
+
+/**
  * cart-ui.js — THE cart. One implementation, used by every screen that puts items on a chit.
  *
  * Athi, 2026-08-08: *"it has to be one helper and should be used everywhere."*
@@ -1406,3 +1431,1065 @@
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBCart;
 })(typeof window !== 'undefined' ? window : globalThis);
+
+
+/* ═══ PART 2 · THE ROWS, THE CHIP, THE PICKER (was app/catalogue-ui.js) ═══════════════════════════════════ */
+
+/* app/catalogue-ui.js — THE CATALOGUE ROW, redesigned. A RENDERER ONLY.  (classic script, shared global scope)
+ *
+ * Athi, 2026-08-15: *"work on this design pattern as much as we can and then make it possible"* … and, decisively:
+ * *"implement as a separate js and then we can replace once we are fully ready"*.
+ *
+ * That instruction is the whole architecture of this file, and it is the right call: `cart-ui.js` is live behind
+ * FOUR surfaces — Compose, Suppliers, Network store catalogues, and the PUBLIC storefront, which has already had
+ * two outages this week. Rewriting its rows in place would put a design experiment on a public page with no way
+ * back except a revert. So the new design lands beside the old one, both work, and the swap is one line per
+ * screen — which means the rollback is also one line per screen.
+ *
+ * ── ⚠️⚠️ WHAT THIS FILE MUST NEVER DO ────────────────────────────────────────────────────────────────────────────
+ * IT DOES NOT OWN QUANTITY. Not the models, not `coerce`, not the stepper's arithmetic, not the 6MB cap, not the
+ * cart state. Every one of those lives in cart-ui.js and every mutation here routes through `CBCart.add/dec/
+ * setQty/setOffer` exactly as the old rows do. A pack of 12 cannot be broken by typing 13 into THIS renderer,
+ * because this renderer has no opinion about 13.
+ *
+ * That is not politeness — it is the entire lesson of the divergence cart-ui.js was written to end: *the walk was
+ * shared and the render was copied*. A second renderer is safe ONLY while it stays a second renderer. The moment
+ * it grows its own coerce(), there are two carts again and they will disagree.
+ *
+ * ── WHAT IT DOES OWN ─────────────────────────────────────────────────────────────────────────────────────────────
+ *   CBCatUI.pickerHTML(cart, opts)   the sticky header, the rows, the commit strip, the on-the-chit block
+ *   CBCatUI.paint(cart, opts)        repaint in place
+ *   CBCatUI.observe()                wire lazy media after any paint
+ *
+ * `cart` is a handle from `CBCart.create()`. Nothing else is needed.
+ *
+ * ── THE FOUR THINGS THIS DESIGN FIXES, ALL MEASURED 2026-08-15 ───────────────────────────────────────────────────
+ *  1. The cart said "3 lines · ₹375" while the footer said "Add at least one line item" and Next stayed dead.
+ *     Both true — the cart stages, `+ Add to the chit` commits — and nothing said so. → THE COMMIT STRIP.
+ *  2. Committed lines rendered 3,198px below the fold, under 3,008px of catalogue. → THE ON-THE-CHIT BLOCK.
+ *  3. Prices did not line up: ₹340 at x=740, ₹149 at x=628, because the model hint sat inside the control group
+ *     and made every row's controls a different width. → FIXED COLUMNS, hint moved to the sub-line.
+ *  4. Rows were text only. Fine for `Jute Bag 50kg`; useless for a grade of rice or a finish. → MEDIA.
+ */
+(function (root) {
+  'use strict';
+
+  /* ⚠️ Every name this file introduces is CBCat/cbcat-prefixed and was greped across app.html and public/app/*.js
+     before being written. A colliding top-level declaration throws at load, the <script> still fires onload, the
+     loader believes the capability arrived, and the screen renders a stub with nothing anywhere naming the cause.
+     That bug cost hours on 2026-08-15 (`MSG` in cap-messages) and it is invisible to `node --check`. */
+  var CBCAT = { io: null, moreIo: null, seq: 0, win: {} };
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function dataOf(r) { return (r && r.item && (r.item.item_data || r.item)) || {}; }
+  /**
+   * ⚠️ MONEY IS FORMATTED BY CBCart.fmt, NOT HERE. This file had its own `money()` for about an hour and that was
+   * a mistake of exactly the kind it is written to avoid: `fmt` honours the screen's `groupDigits`/`locale`
+   * (grouping is OFF by default on purpose — turning ₹3400 into ₹3,400 broke a spec and would restyle a public
+   * page as a side effect of a refactor). A second formatter means this renderer and the cart popup beside it can
+   * one day print different numbers for the same line, and nobody would know which was right.
+   */
+  function money(ns, n) {
+    if (n == null || !isFinite(n)) return '';
+    /* ⚠️ ONE FORMAT EVERYWHERE. Beside the app, its own formatter (locale · currency · sign · two decimals) rules — the
+       sheet read "₹610" and "₹-61" above "549.00 ₹" (Athi, 2026-09-05). The storefront keeps CBCart.fmt. */
+    if (typeof root.fmtMoney === 'function') { try { return root.fmtMoney(n, (typeof root.myCur === 'function') ? root.myCur() : 'INR'); } catch (_) {} }
+    return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
+  }
+
+  /**
+   * mediaOf — where a product's picture lives.
+   *
+   * ⚠️ NOTHING IN THE CATALOGUE DECLARES ONE YET. The schema for product media is unbuilt (see
+   * SPEC-object-storage.md), so today this returns null for every row in the product and the media column does
+   * not render at all. Several key names are accepted because the field has not been named yet and guessing one
+   * here would quietly decide it; when the schema lands, this function is the single place that learns about it.
+   */
+  function mediaOf(r) {
+    var d = dataOf(r);
+    var m = d.media || d.image || d.photo || d.thumbnail || null;
+    if (!m) return null;
+    if (typeof m === 'string') return { src: m, kind: /\.(mp4|webm|mov)$/i.test(m) ? 'video' : 'image' };
+    return { src: m.src || m.url || m.thumb || '', kind: m.kind || (m.video ? 'video' : 'image') };
+  }
+
+  /**
+   * ⭐⭐ THE LETTER TILE — Athi, 2026-08-15: *"can we create a box with different colors rendering with the first
+   * letter of the product"*.
+   *
+   * This retires the compromise that came before it. The column used to be hidden until a catalogue had a real
+   * photograph, because the alternative was 52px of empty grey on every row for nothing. A coloured initial is
+   * not nothing: it gives a text-only list the visual rhythm that makes it scannable, it distinguishes
+   * "Tamarind" from "Toor Dal" at a glance, and it does it TODAY — the product has zero images and the schema
+   * for them is not built (see SPEC-object-storage.md).
+   *
+   * So the column is now always present, and a real photograph simply replaces the tile when one exists.
+   *
+   * ⚠️ THE COLOUR IS DERIVED, NOT RANDOM. Hue comes from a hash of the name, so a product is the same colour on
+   * every screen, every session, for every party — which is what makes it a recognition aid rather than
+   * decoration. Random-per-render would be actively worse than grey: it would teach the eye a pattern that is
+   * not true.
+   *
+   * ⚠️ SATURATION AND LIGHTNESS ARE FIXED so white text stays legible on every hue, and the yellow-green band
+   * (where a given lightness reads much brighter) is darkened. A tile whose letter cannot be read is a worse
+   * empty box than the empty box.
+   */
+  function tileFor(name) {
+    var s = String(name == null ? '' : name).trim();
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    var hue = h % 360;
+    /* 40°–190° is the yellow→green stretch that reads bright at a given lightness; drop it so contrast holds. */
+    var light = (hue > 40 && hue < 190) ? 34 : 44;
+    return {
+      bg: 'hsl(' + hue + ',38%,' + light + '%)',
+      letter: (s.charAt(0) || '?').toUpperCase()
+    };
+  }
+
+  /**
+   * The model's rule, said ON THE SUB-LINE.
+   *
+   * ⚠️ It used to sit beside the control, and that is what broke the price column: "sold in 12s" is wider than
+   * "" so every row's control group was a different width and the prices zig-zagged. It is a fact about the ITEM
+   * — true whether or not anything is in the cart — so it belongs with the unit.
+   */
+  function hintOf(r) {
+    var d = dataOf(r), o = d.order || {};
+    var m = o.model || 'count';
+    if (m === 'pack')    return o.step ? 'sold in ' + o.step + 's' : '';
+    if (m === 'range')   return (o.min != null ? 'min ' + o.min : '') + (o.min != null && o.max != null ? ' · ' : '') + (o.max != null ? 'max ' + o.max : '');
+    if (m === 'measure') return o.step ? 'steps of ' + o.step : '';
+    if (m === 'pick')    return 'one or none';
+    if (m === 'offer')   return 'name your price';
+    return '';
+  }
+  function modelOf(r) { return (dataOf(r).order || {}).model || 'count'; }
+
+  /* ── the control. Six models, six shapes; the ARITHMETIC is CBCart's. ─────────────────────────────────────── */
+  function ctlHTML(cart, r) {
+    var id = r.item_id, q = cart.qtyOf(id), ns = cart.ns, m = modelOf(r);
+    var call = function (fn, arg) {
+      return 'CBCart.' + fn + '(\'' + esc(ns) + '\',\'' + esc(id) + '\'' + (arg === undefined ? '' : ',' + arg) + ')';
+    };
+    /**
+     * ⚠️⚠️ `data-testid="cart-add"` IS A PUBLISHED HOOK AND GOES ON EVERY ADD CONTROL — the pick toggle, the bare
+     * `+`, and the `+` inside the stepper. That is exactly where cart-ui's stepperHTML puts it (lines 452, 457,
+     * 472), and order-steps.spec.js clicks `getByTestId('cart-add').first()`.
+     *
+     * I first used my own `cbcat-add-<id>` instead and the spec timed out after 15s waiting for a button that
+     * was on screen the whole time under a different name. Renaming a published hook does not fail loudly; it
+     * fails as a test that cannot find a thing a human can see.
+     *
+     * The per-row id survives as `data-cbcat` so the harness can still target one specific row — an extra
+     * attribute, not a second data-testid, because an element gets exactly one of those.
+     */
+    if (m === 'pick') {
+      /* ⚠️ NO STEPPER AT ALL. `pick` is one or none — a second press must not make it two, so there must be no
+         control that invites one. The model already refuses it; offering a + that does nothing would be worse. */
+      return '<button type="button" class="cbcat-pick' + (q ? ' on' : '') + '"'
+        + ' data-testid="cart-add" data-cbcat="pick-' + esc(id) + '"'
+        + ' onclick="' + (q ? call('setQty', '0') : call('add')) + '">' + (q ? '✓ Added' : 'Add') + '</button>';
+    }
+    var out = q
+      ? '<span class="cbcat-stp"><button type="button" aria-label="less" onclick="' + call('dec') + '">−</button>'
+        + '<input value="' + esc(q) + '" inputmode="decimal" aria-label="quantity"'
+        + ' onchange="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"></span>'
+        + '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' + esc(id) + '"'
+        + ' aria-label="more" onclick="' + call('add') + '">+</button>'
+      : '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' + esc(id) + '"'
+        + ' aria-label="add" onclick="' + call('add') + '">+</button>';
+    return out;
+  }
+
+  /* ── one row ─────────────────────────────────────────────────────────────────────────────────────────────── */
+  function rowHTML(cart, r, opts) {
+    var d = dataOf(r), id = r.item_id, q = cart.qtyOf(id);
+    /**
+     * ⚠️⚠️ THE PRICE COMES FROM CBCart.unitPrice — ns-first, off the ROOT export. It is NOT on the handle.
+     *
+     * This line read `cart.unitPrice ? cart.unitPrice(r) : { amount: d.price, … }` and shipped a catalogue where
+     * EVERY ROW SAID "no price". `unitPrice` is not one of the handle's methods, so the fallback always won —
+     * and the fallback guessed `item_data.price`, which is not where cart-ui finds a price (it walks offers,
+     * asking price and the row's own shape). A supplier's whole catalogue rendered as unpriced.
+     *
+     * That is the same mistake as the money formatter, one hour later: reimplementing something cart-ui owns
+     * instead of calling it. There is now NO fallback — if the shared reader cannot be reached, that is a load
+     * order bug and it should be loud, not quietly priced at nothing.
+     */
+    var u = root.CBCart.unitPrice(cart.ns, r);
+    /* ⚠️ WAS '₹' AS THE DEFAULT. A symbol is not decoration — it states which currency a figure is in, and a
+       rupee sign in front of a dirham amount is a wrong number, not a cosmetic slip. The business's own currency
+       is stamped on its prices; this asks the layer for its symbol instead of assuming India. */
+    var sym = opts.sym || CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR');
+    var name = r.variant || d.name || d.product || 'item';
+    var hint = hintOf(r);
+
+    var media = (function () {
+      var m = mediaOf(r);
+      if (!m) {
+        /* No photograph — the derived letter tile, which is a real visual rather than a placeholder for one. */
+        var t = tileFor(name);
+        return '<span class="cbcat-thumb cbcat-tile" style="background:' + t.bg + '" aria-hidden="true">'
+          + esc(t.letter) + '</span>';
+      }
+      /**
+       * ⭐ data-src, NOT src. The observer fills it when the row nears the viewport. `loading="lazy"` is set too
+       * as a belt-and-braces for the case where the observer never runs.
+       *
+       * ⚠️ AND AN onerror FALLBACK TO THE TILE. A product declaring a photograph that 404s rendered a BLANK
+       * WHITE BOX — seen on screen the moment a test record carried a placeholder path that does not exist yet.
+       * That is the worst of the three outcomes: worse than the letter tile, and worse than an honest empty
+       * state, because it reads as a rendering fault. Media URLs rot — a bucket is emptied, a key is renamed, a
+       * catalogue is copied between entities — so the row must degrade to something deliberate rather than to
+       * nothing.
+       */
+      var t = tileFor(name);
+      return '<span class="cbcat-thumb cbcat-skel">'
+        + '<img data-src="' + esc(m.src) + '" alt="" loading="lazy" decoding="async"'
+        + ' onerror="CBCatUI.fellBack(this,\'' + esc(t.bg) + '\',\'' + esc(t.letter) + '\')">'
+        + (m.kind === 'video' ? '<span class="cbcat-play">▶</span>' : '') + '</span>';
+    })();
+
+    /**
+     * The price column. An offer REPLACES the asking price in the maths, so it replaces it here too — with the
+     * asking price still shown, struck through, because hiding what they asked for is its own dishonesty.
+     *
+     * ⭐ AND THE OFFER INPUT LIVES HERE, IN THE PRICE COLUMN — not beside the stepper.
+     *
+     * It was in the control group first, and the harness caught the consequence immediately: the offer row's
+     * controls were wider than every other row's, so its price sat at x=515 while the other seven sat at x=546.
+     * That is the exact zig-zag this design exists to remove, reappearing one model later.
+     *
+     * Putting it here is not just a fix for the width — it is where the thing belongs. "Name your price" is a
+     * statement about PRICE. The control column is for quantity; the price column is for money; and a layout
+     * whose columns mean something is the reason a price column can be scanned at all.
+     */
+    var offerInput = (modelOf(r) === 'offer')
+      ? '<input class="cbcat-offer" placeholder="your ' + esc(sym) + '" value="'
+        + esc(u.offered ? u.amount : '') + '" aria-label="your price"'
+        + ' data-testid="cbcat-offer-' + esc(id) + '"'
+        + ' onchange="CBCart.setOffer(\'' + esc(cart.ns) + '\',\'' + esc(id) + '\',this.value)">'
+      : '';
+    var price = u.offered
+      /* an offered price on a row that is NOT a name-your-price model (a line-scope discount the storefront sets) shows the
+         struck asking price AND the offered amount — without this the amount vanished behind the strike (2026-09-05) */
+      ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + (offerInput || (isFinite(u.amount) ? ' <b class="cbcat-offered">' + esc(money(cart.ns, u.amount)) + '</b>' : ''))
+      : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
+    /* The line total, ONLY once there is a quantity to MULTIPLY by — `q > 1`, not `q`. At quantity 1 it prints
+       the same number twice under itself, which is exactly the noise the rule was written to avoid; I had the
+       comment right and the condition wrong, and it showed as ₹65 over ₹65 on screen. */
+    var lineTotal = (q > 1 && isFinite(u.amount))
+      ? '<div class="cbcat-linetotal">' + esc(money(cart.ns, u.amount * q)) + '</div>' : '';
+
+    /**
+     * ⭐⭐ WHAT THIS ROW PROMISES, BEFORE ANYTHING IS IN A BASKET.
+     *
+     * Athi, 2026-09-02: *"discount and offers need to be expressed, otherwise people may not know"* — and in
+     * B2B, pushing product IS the discount. Until now `offersHTML` showed adjustments inside the CART, so a
+     * buyer could not learn an offer existed until they had already chosen.
+     *
+     * ⚠️ THE CONDITION IS ALWAYS IN THE SENTENCE — "₹170 each from 10", never a bare "₹170 each" beside a row
+     * priced ₹180. A badge is a commitment; one the basket then declines is worse than no badge at all.
+     * CBOffers.promise returns null for anything expired, unstarted or out of region, so a row that cannot
+     * honour a promise simply stays quiet. See offers.js.
+     */
+    var offBadge = '';
+    try {
+      /* ⚠️ NO CALLER EVER PASSED `offers` (Athi, 2026-09-05, from Chola's Suppliers screen: "tallytest not showing the
+         offer") — the badge could only ever be blank on Suppliers, Compose and Network. The catalogue the cart holds
+         carries the seller's live offers (the same payload the storefront reads); they are the default. */
+      var _st = null; try { _st = cart.state ? cart.state() : null; } catch (e) { _st = null; }
+      var _offs = (opts && opts.offers) || (cart.__cbcatOpts && cart.__cbcatOpts.offers) || (_st && _st.cat && _st.cat.offers) || [];
+      if (_offs.length && root.CBOffers && root.CBOffers.forLine) {
+        var _p = root.CBOffers.forLine(
+          /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
+          { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
+          _offs, { now: new Date(), money: function (n) { return money(cart.ns, n); } });
+        offBadge = _p.slice(0, 2).map(function (x) {
+          return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
+        }).join('');
+      }
+    } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
+
+    /* ⭐ THE TAX A BUYER WILL PAY, on the row (Athi, 2026-09-05: "not showing the GST values here"). The item carries the
+       rate the seller's shelf resolves for it (catalogue-view attaches it — the same resolver as the order and the
+       invoice), so the row says "+5% GST · ₹210 incl." beside the listed price. No rate → nothing extra, as before. */
+    var taxChip = '';
+    try {
+      var _tx = (r.item && r.item.tax) || (d && d.tax) || null;
+      if (_tx && _tx.rate != null && isFinite(u.amount)) {
+        var _rate = Number(_tx.rate) + (Number(_tx.cess) || 0), _incl = Math.round(u.amount * (1 + _rate / 100) * 100) / 100;
+        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(id) + '" title="' + esc(_tx.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(_tx.rate))) + '% ' + esc(_tx.name && !/^\d/.test(_tx.name) ? 'GST' : 'GST') + (Number(_tx.cess) ? ' +' + esc(String(Number(_tx.cess))) + '% cess' : '') + ' · ' + esc(money(cart.ns, _incl)) + ' incl.</span>';
+      }
+    } catch (e) { taxChip = ''; }
+    /* ⭐ THE STOCK STAMP, on every surface (Athi, 2026-09-05: "offer, availability not appearing" on the Suppliers screen — the
+       storefront alone drew it). The connector stamps item_data.avail { qty, as_of, source }; the row says the figure WITH its
+       age, never bare; older than four hours reads faded. `shop-stock` stays the published hook the specs assert on. */
+    var stockChip = '';
+    try {
+      var _av = d && d.avail;
+      if (_av && _av.qty != null && _av.as_of) {
+        var _mins = Math.max(0, Math.round((Date.now() - Date.parse(_av.as_of)) / 60000));
+        var _age = _mins < 1 ? 'just now' : (_mins < 60 ? _mins + ' min ago' : (_mins < 1440 ? Math.round(_mins / 60) + ' h ago' : Math.round(_mins / 1440) + ' d ago'));
+        var _in = Number(_av.qty) > 0;
+        stockChip = '<span class="cbcat-stock" data-testid="shop-stock" style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;white-space:nowrap;' + (_in ? 'background:#e8f5ec;color:#1d6b3a' : 'background:#fdecec;color:#a33') + (_mins > 240 ? ';opacity:.7' : '') + '">' + (_in ? 'in stock ' + esc(String(_av.qty)) : 'out of stock') + ' · as of ' + esc(_age) + '</span>';
+      }
+    } catch (e) { stockChip = ''; }
+
+    return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
+      + ' data-testid="cbcat-row-' + esc(id) + '">'
+      + media
+      + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
+      + '<span class="cbcat-sub">' + esc(d.unit || '')
+      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '')
+      /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
+         gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
+         change the price. */
+      + (function () { try { var x = (opts && opts.rowExtra) || (cart.__cbcatOpts && cart.__cbcatOpts.rowExtra); return (typeof x === 'function') ? (x(r.item, r) || '') : ''; } catch (e) { return ''; } })()
+      + '</span>'
+      + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
+      + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
+      + '</div>';
+  }
+
+  function groupHTML(cart, r, i) {
+    return '<div class="cbcat-grp"><b>' + esc(r.label) + '</b>'
+      + '<span class="cbcat-cnt">' + r.count + ' options</span>'
+      + '<span class="cbcat-all" onclick="CBCart.group(\'' + esc(cart.ns) + '\',' + i + ')">add all</span></div>';
+  }
+
+  /**
+   * ⭐⭐ THE LIST IS WINDOWED — Athi, 2026-08-15: *"you can load max of 25 to 50 line item at once and you keep
+   * loading the rest according to the swipe"*.
+   *
+   * A catalogue of 56 rows is 3,008px of DOM built on every single repaint — and a repaint happens on every `+`,
+   * every `−`, every keystroke in the search box. A real wholesale catalogue is not 56 rows, it is thousands,
+   * and at that size the stepper would visibly lag behind the finger pressing it.
+   *
+   * So: `pageSize` rows (40), then a sentinel at the bottom. When the sentinel comes into view the window grows
+   * and the list repaints. This is the standing on-demand rule applied to the list itself — never pre-load, and
+   * build only what someone is actually looking at.
+   *
+   * ⚠️ THE WINDOW RESETS WHEN THE QUERY CHANGES. Without that, searching after scrolling deep would render the
+   * first 200 rows of a 3-row result — mostly nothing — and the reset has to happen HERE, because search goes
+   * straight through CBCart.search to paintList and never passes through the picker.
+   *
+   * ⚠️ `content-visibility:auto` on the row is NOT a substitute. That skips PAINT for off-screen rows; this
+   * skips BUILDING them. The first costs layout, the second costs string concatenation and innerHTML on every
+   * keystroke — and only the second is what makes a large catalogue feel slow.
+   */
+  function windowOf(cart, opts, total) {
+    var st = CBCAT.win[cart.ns] || (CBCAT.win[cart.ns] = { shown: 0, q: null });
+    var q = (cart.state() || {}).q || '';
+    var page = Number(opts.pageSize) || 40;
+    if (st.q !== q) { st.q = q; st.shown = page; }        // a new query starts at the top, always
+    if (!st.shown) st.shown = page;
+    return { shown: Math.min(st.shown, total), page: page, more: st.shown < total, total: total };
+  }
+  function growWindow(ns) {
+    var st = CBCAT.win[ns]; if (!st) return;
+    st.shown += (st.page || 40);
+    if (root.CBCart && root.CBCart.paintList) root.CBCart.paintList(ns);
+  }
+
+  function listHTML(cart, opts) {
+    /* ⚠️⚠️ THE LIST IS ALSO AN ENTRY POINT, AND ONLY IT WAS MISSING THIS. skeletonHTML and pickerHTML both
+       inject the stylesheet; listHTML did not, because every screen that existed when it was written reached
+       the rows THROUGH pickerHTML. The first screen to paint a bare list — Record a sale — rendered perfect
+       markup with no CSS at all: .cbcat-meat fell back to display:inline and the name, unit and price ran
+       together as "Sugar, 1kgpiece₹52". Every render entry injects its own styles, or the one that forgets
+       stays invisible until some screen takes the unusual door. */
+    ensureCss();
+    var rows = cart.rows() || [];
+    if (!rows.length) {
+      /**
+       * ⭐⭐ TWO DIFFERENT NOTHINGS, AND THEY NEEDED DIFFERENT SENTENCES. Athi, 2026-08-22, looking at a
+       * supplier whose catalogue would not appear: the screen said *"Nothing in their catalogue matches that"*
+       * **with an empty search box**. He was told his search was too narrow when he had not searched, so the
+       * real state — this supplier has nothing you can order — never reached him, and he went looking for a
+       * broken connection instead.
+       *
+       * ⚠️ The distinction is not cosmetic: one sentence says CHANGE YOUR QUERY, the other says ASK THEM TO
+       * PUBLISH. Sending someone to the wrong one costs them the afternoon.
+       *
+       * ⚠️ And a catalogue can be non-empty and still show nothing here: the server DROPS every item with no
+       * price (`unpriced_hidden` in the payload) — so when it says items were hidden, say that instead of
+       * implying the supplier has listed nothing at all.
+       */
+      var q = (typeof cart.queryText === 'function' ? cart.queryText() : '') || '';
+      var msg;
+      if (q) msg = opts.empty || 'Nothing matches that.';
+      else if (opts.hiddenCount > 0) {
+        msg = opts.emptyHidden
+          ? opts.emptyHidden.replace('{n}', opts.hiddenCount)
+          : opts.hiddenCount + ' item(s) here have no price yet, so none can be ordered.';
+      } else msg = opts.emptyAll || opts.empty || 'Nothing to order here yet.';
+      return '<div class="cbcat-empty">' + esc(msg) + '</div>';
+    }
+    var w = windowOf(cart, opts, rows.length);
+    var out = '';
+    for (var i = 0; i < w.shown; i++) {
+      out += rows[i].type === 'product' ? groupHTML(cart, rows[i], i) : rowHTML(cart, rows[i], opts);
+    }
+    if (w.more) {
+      /* The sentinel says how many are left, so a long catalogue is honest about its size rather than just
+         ending. observe() wires it to grow the window when it is scrolled to. */
+      out += '<div class="cbcat-more" data-cbcat-more="' + esc(cart.ns) + '" data-testid="cbcat-more">'
+        + '<span class="cbcat-spin"></span>' + (w.total - w.shown) + ' more</div>';
+    }
+    return out;
+  }
+
+  /**
+   * ⭐ THE SKELETON — what the catalogue looks like while it is still arriving.
+   *
+   * Athi: *"instead of another different page, show loading catalogue page and then load the item"*. Before this
+   * the cold path replaced the whole step with the words "Loading your catalogue…" for 2.2 SECONDS (measured),
+   * and then swapped in a completely different screen. Two different layouts for one action.
+   *
+   * Now the same layout appears immediately — search box in its place, rows in theirs — and the rows fill in.
+   * Nothing moves when the data lands, which is the entire point: a person can start reading, and aim at the
+   * search box, before the first row exists.
+   */
+  function skeletonHTML(opts) {
+    opts = opts || {};
+    ensureCss();
+    var n = Number(opts.rows) || 8, out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="cbcat-row cbcat-skelrow">'
+        + '<span class="cbcat-thumb cbcat-skel"></span>'
+        + '<span class="cbcat-meat"><span class="cbcat-skelbar" style="width:' + (44 + (i * 7) % 38) + '%"></span>'
+        + '<span class="cbcat-skelbar cbcat-skelbar-sm" style="width:18%"></span></span>'
+        + '<span class="cbcat-pr"><span class="cbcat-skelbar" style="width:70%"></span></span>'
+        + '<span class="cbcat-ctl"><span class="cbcat-skeldot"></span></span>'
+        + '</div>';
+    }
+    return '<div class="cbcat-wrap">'
+      + '<div class="cbcat-hdr">'
+      +   '<input class="cbcat-q" disabled placeholder="' + esc(opts.placeholder || 'Search this catalogue…') + '">'
+      + '</div>'
+      + '<div class="cbcat-list" aria-busy="true">' + out + '</div>'
+      + '</div>';
+  }
+
+  /**
+   * ⭐ THE COMMIT STRIP — the fix for the trap.
+   *
+   * It exists ONLY while something is staged, and it says the thing nothing on screen said before: these lines
+   * are not on the chit yet. The two-stage model is right and stays — amending a chit is not the same as ticking
+   * a box, and collapsing them would make the consequential act invisible. What was wrong was the silence.
+   */
+  function commitHTML(cart, opts) {
+    var n = cart.lines(), T = cart.total();
+    if (!n) return '';
+    var amt = T && T.amount ? money(cart.ns, T.amount) + (T.partial ? '+' : '') : '';
+    return '<div class="cbcat-commit" data-testid="cbcat-commit-' + esc(cart.ns) + '">'
+      + '<span><b>' + n + ' line' + (n === 1 ? '' : 's') + '</b> ready'
+      + (amt ? ' · ' + esc(amt) : '') + ' — <b>not on the chit yet</b></span>'
+      + '<button type="button" data-testid="cbcat-checkout-' + esc(cart.ns) + '"'
+      + ' onclick="CBCart.checkout(\'' + esc(cart.ns) + '\')">'
+      + esc(opts.checkoutLabel || 'Add to the chit') + '</button></div>';
+  }
+
+  /**
+   * ⭐ THE ON-THE-CHIT BLOCK — the fix for "3,198px below the fold".
+   *
+   * The host passes what is already committed; this renders it ABOVE the list, where the eye already is. It is
+   * ADDITIVE and never reorders the list beneath the hand that is adding to it — the existing code deliberately
+   * fixes lines-first vs picker-first once per entry to the step, and that restraint is correct.
+   */
+  /**
+   * ⭐⭐ OFFERS, EVALUATED AT ORDER TIME — the last unwired piece of the arc.
+   *
+   * `offers.js` has been pure and proven (27/0) and called by nothing. This is where it gets called: over the
+   * lines that are actually ON the chit, not over the staging cart.
+   *
+   * ⚠️ THE CART STAGES; THE ORDER IS WHAT AN OFFER APPLIES TO. Evaluating the cart would show a discount against
+   * a basket nobody has committed, and it would move every time a quantity is nudged — a number that flickers is
+   * a number nobody trusts. The offer is a statement about the obligation being created.
+   *
+   * ⚠️ EVERY ADJUSTMENT AND EVERY *SKIPPED* OFFER IS RENDERED. `evaluate()` returns `notes` (the shortfalls —
+   * "₹300 more needed") and `skipped` (expired, wrong region, no line qualifies). Showing only what applied
+   * would hide the two most useful things a person can be told: what they nearly had, and why an offer they
+   * expected did not fire.
+   */
+  /**
+   * ⚠️ THE COMMENT ABOVE SAID SKIPPED OFFERS WERE RENDERED AND THEY WERE NOT — only adjustments and notes were.
+   * They are now, behind `opt.skipped`, and the flag is the honest part: a cart holds every LIVE offer the entity
+   * has, so most of them are skipped as "no line qualifies" on any given basket and listing all of them would
+   * bury the two that fired. The PRODUCT page turns it on, because there the offers are the ones attached to
+   * that one product and "why did this one not apply" is the entire question being asked.
+   *
+   * ⚠️ `ev` MAY BE SUPPLIED (opt.ev). The product preview has already evaluated — running it a second time here
+   * would be a second answer to the same question, computed from a line built twice.
+   */
+  function offersHTML(ns, lines, offers, sym, opt) {
+    if (!offers || !offers.length || !root.CBOffers) return '';
+    opt = opt || {};
+    var ev = opt.ev || null;
+    try {
+      if (!ev) ev = root.CBOffers.evaluate({
+        lines: lines.map(function (l, i) {
+          return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category, excluded: l.excluded || l.offers_excluded || [],
+                   qty: Number(l.qty || l.quantity || 0), unitPrice: Number(l.price || 0) };
+        }),
+        offers: offers,
+        money: function (n) { return money(ns, n); }
+      });
+    } catch (e) {
+      /* ⚠️ A PRICING ENGINE THAT THROWS MUST NOT TAKE THE ORDER DOWN. The lines and their prices are already
+         correct without it; an offer failing to evaluate costs a discount, not the ability to order. */
+      return '<div class="cbcat-offnote">Offers could not be applied just now — the prices above stand.</div>';
+    }
+    /* ⚠️ `opt.subtotal` KEEPS THE BLOCK EVEN WHEN NOTHING FIRED. On the product page "at qty 1 this offer changes
+       nothing" IS the outcome being verified, and an empty space there reads as a screen that failed to load. */
+    if (!ev.adjustments.length && !ev.notes.length && !(opt.skipped && ev.skipped.length) && !opt.subtotal) return '';
+
+    /* ⭐ A SHEET, NOT PROSE — Athi, 2026-09-05: "difficult to read … show like an excel sheet: listed price, then the
+       discount name, percentage in the next cell, the amount in the next cell, one by one". Three columns everywhere:
+       the step · the detail · the amount. The tax footer under it uses the same cells, so the two read as one sheet. */
+    /* ⭐ THE MONEY TABLE — the designer's spec, 2026-09-04, after Athi: "the alignment has to be very precise … I was
+       spending quite some time to understand". TWO columns: Detail (auto) and Amount (fixed 11ch, right-aligned,
+       tabular numerals) so every amount's last character sits on one x. A note ("not yet — ₹4,000 more needed") is a
+       small grey second line INSIDE Detail, never in the Amount column. No header row — a header implies three
+       independently aligned columns, which was the bug. One rule above After offers, a heavier one above After tax.
+       The tax rows ride in the SAME table (opt.tailRows) so the whole computation reads top to bottom. */
+    var neg = function (n) { return '\u2212\u2009' + money(ns, Math.abs(n)); };
+    var tr = function (cls, label, sub, amt, opts) {
+      opts = opts || {};
+      return '<tr class="cbm-row ' + cls + '"' + (opts.testid ? ' data-testid="' + esc(opts.testid) + '"' : '') + (opts.attrs || '') + '>'
+        + '<td class="cbm-l">' + label + (sub ? '<span class="cbm-sub">' + sub + '</span>' : '') + '</td>'
+        + '<td class="cbm-a"><bdi>' + (amt == null ? '' : amt) + '</bdi></td></tr>';
+    };
+    var rows = ev.adjustments.map(function (a) {
+      return tr('cbm-offer', esc(a.label), esc(a.why || ''), Number(a.amount) < 0 ? esc(neg(a.amount)) : esc(money(ns, a.amount)));
+    }).join('');
+    var notes = ev.notes.map(function (nte) {
+      return tr('cbm-note', esc(nte.label), esc(nte.why || ''), '');
+    }).join('');
+    var skipped = (opt.skipped ? ev.skipped : []).map(function (s) {
+      return tr('cbm-note', esc(s.label || s.offer_id), esc(tx('not applied — ') + (s.why || '')), '');
+    }).join('');
+    return '<div class="cbcat-offers" data-testid="' + esc(opt.testid || 'cbcat-offers') + '">'
+      + '<div class="cbcat-offhd">' + esc(opt.head || tx('How this price was calculated')) + '</div>'
+      + '<table class="cb-money"><colgroup><col><col style="width:11ch"></colgroup><tbody>'
+      + (opt.subtotal ? tr('cbm-list', esc(tx('Listed price')), '', esc(money(ns, ev.subtotal))) : '')
+      + rows + notes + skipped
+      + (ev.adjustments.length || opt.subtotal
+          ? tr('cbm-tot', esc(tx('After offers')), '', '<span data-testid="' + esc(opt.totalTestid || 'cbcat-offtot') + '">' + esc(money(ns, ev.total)) + '</span>')
+          : '')
+      + (opt.tailRows || '')
+      + '</tbody></table></div>';
+  }
+
+  function committedHTML(ns, lines, noteFn, attachFn, chips, offers) {
+    if (!lines || !lines.length) return '';
+    return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
+      + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
+      + lines.map(function (l, i) {
+          var q = Number(l.qty || l.quantity || 0), p = Number(l.price || 0);
+          /**
+           * ⭐⭐ THE CUSTOM MESSAGE — Athi: *"we should add provision to pass custom message like what we get in
+           * whatsapp"*.
+           *
+           * This is not a new field. `comment` has ridden on a line since intake: lib/capture.js maps it from a
+           * WhatsApp order, the amend card edits it, and it is what carries "last time not fresh — please send
+           * new stock". What was missing was any way to WRITE one when you author a chit yourself, and any way
+           * to send it if you had — the send path enumerated four fields and comment was not among them.
+           *
+           * It belongs HERE, on the committed line, and not in the cart: the cart stages quantities, and a note
+           * is a statement about an obligation that now exists. Placed under the line it is about, so there is
+           * never a question which line it refers to.
+           */
+          var note = noteFn
+            ? '<input class="cbcat-note" value="' + esc(l.comment || '') + '"'
+              + ' data-testid="cbcat-note-' + i + '"'
+              + ' placeholder="add a message for this line — e.g. fresh stock please"'
+              + ' oninput="' + esc(noteFn) + '(' + i + ',this.value)">'
+            : (l.comment ? '<div class="cbcat-noteread">' + esc(l.comment) + '</div>' : '');
+          /**
+           * ⭐ A PICTURE ON THE LINE — Athi: *"on the cart data we can add message, picture, attachment etc"*.
+           *
+           * ⚠️ THIS SURFACES MACHINERY THAT ALREADY EXISTED RATHER THAN ADDING A SECOND ONE. compose has staged
+           * per-line files since before this redesign — `CC.items[i].files`, ccAddItemFiles, ccItemChips, and the
+           * upload loop that runs once the chit is created. The control was in `cc_items`, the block that renders
+           * BELOW the whole catalogue — the same 3,198px problem the on-the-chit block exists to fix. So the
+           * feature was not missing, it was unreachable.
+           *
+           * ⚠️ The files are held, not uploaded: a cart line has no chit to attach to yet, and asking the server
+           * to pin bytes to something that does not exist is how a row ends up referencing nothing.
+           */
+          var att = (attachFn ? '<label class="cbcat-clip" title="Attach a picture or file to this line">📎'
+              + '<input type="file" multiple style="display:none"'
+              + ' onchange="' + esc(attachFn) + '(' + i + ',this.files);this.value=\'\'"></label>' : '')
+            + (typeof chips === 'function' ? '<span class="cbcat-chips">' + (chips(i) || '') + '</span>' : '');
+          return '<div class="cbcat-liwrap">'
+            + '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
+            + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(l.unit || '') + '</span>'
+            + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>'
+            + note + (att ? '<div class="cbcat-attrow">' + att + '</div>' : '') + '</div>';
+        }).join('')
+      /* ⭐ The offer breakdown, under the lines it applies to. ⚠️ My first wiring of this matched an identical
+         `+ '</div>';` earlier in the file and landed in the wrong function — the engine ran, returned two
+         adjustments, and nothing rendered. An anchored replace on a repeated string is not an anchor. */
+      + offersHTML(ns, lines, offers)
+      + '</div>';
+  }
+
+  /* ── the whole picker ────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * ⚠️⚠️ THE ELEMENT IDS ARE THE CART'S, NOT OURS. `barEl` and `listEl` come from the screen's CBCart.create()
+   * options — `cbpick_cc`, `cbpick_sup`, `cbpick_net`, `cbcartbar_*` — because those are exactly what
+   * CBCart.paintList/paintBar address when anything changes, and what the harness asserts.
+   *
+   * My first version invented `cbcatlist_<ns>` instead. Everything rendered correctly and the bug was invisible
+   * until you typed: `search()` → `paintList()` → an element id nobody rendered → the search box quietly stopped
+   * filtering. The cap-network harness went 5 FAILED and named it. An id is a contract, not a detail.
+   */
+  /**
+   * The categories a product cites. ⚠️ READ LOCALLY, NOT FROM core.js — `catgIdsOf` lives there and core.js is
+   * NOT loaded by shop.html, so reaching for it would work in the signed-in app and throw on the public
+   * storefront: exactly the split-surface break this renderer exists to prevent. Two lines, kept honest by the
+   * same rule core.js uses — an array of ids, with the retired single-key form still read and never written.
+   */
+  function catgIds(d) {
+    var x = d || {};
+    var ids = Array.isArray(x.categories) ? x.categories.map(String).filter(Boolean) : (x.category ? [String(x.category)] : []);
+    /* ⭐ WITH THEIR ANCESTORS when the signed-in app is around (core.js catgWithAncestors) — an offer on the parent
+       category reaches the child, as tax does. The public storefront has no core.js and keeps the exact ids until the
+       tree ships in its payload (backlog). Athi, 2026-09-05: the product page said "via category" while its own
+       basket said "no line qualifies" — two readers of one product disagreeing. */
+    return (typeof root.catgWithAncestors === 'function') ? root.catgWithAncestors(ids) : ids;
+  }
+
+  /**
+   * ⭐ THE PREDICATE cart-ui ASKS FOR. It knows quantities and totals, not validity windows and targeting — so it
+   * holds the FLAG and this supplies the JUDGEMENT, from the same CBOffers.forLine the badge is printed from. One
+   * test, so a row can never be hidden by a filter that disagrees with its own badge.
+   */
+  function isOnOffer(row, opts) {
+    try {
+      var offs = (opts && opts.offers) || [];
+      if (!offs.length || !root.CBOffers || !root.CBOffers.onOffer) return true;
+      var d = dataOf(row) || {};
+      return root.CBOffers.onOffer(
+        { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: Number(d.price && d.price.amount != null ? d.price.amount : d.price) || 0 },
+        offs, { now: new Date() });
+    } catch (e) { return true; }   /* a failing filter must never empty a catalogue */
+  }
+
+  function idsOf(cart, opts) {
+    return {
+      bar:  opts.barEl  || 'cbcartbar_' + cart.ns,
+      list: opts.listEl || 'cbpick_' + cart.ns
+    };
+  }
+
+  /* The two entry points CBCart's renderer hook calls. They paint INTO the element it already owns, so there is
+     one repaint path rather than two competing ones. */
+  /**
+   * ⚠️⚠️ CREATE-TIME OPTIONS FIRST, RENDER-TIME OPTIONS ON TOP — and this order is a bug fix, not a preference.
+   *
+   * Stashing the renderer's options on the handle in pickerHTML leaves a WINDOW: anything that repaints before
+   * the picker has rendered once gets `{}`. On 2026-08-15 that put an inert grey cart permanently in compose's
+   * modal title bar — `hideEmptyChip` had not been stashed yet when the first paintBar ran, and nothing ever
+   * repainted it while the cart was still empty. A control that never does anything, parked where the eye checks
+   * first.
+   *
+   * The screen's CBCart.create() options are available from the moment the cart exists, so they are the floor.
+   * That makes rendering independent of WHEN it happens, which is the only way to be sure with three hosts that
+   * each paint differently.
+   */
+  function optsFor(cart) {
+    var made = (cart.state() || {}).opts || {};
+    var o = {}, k;
+    for (k in made) o[k] = made[k];
+    var late = cart.__cbcatOpts || {};
+    for (k in late) o[k] = late[k];
+    return o;
+  }
+  function listInto(el, cart) {
+    el.innerHTML = listHTML(cart, optsFor(cart));
+    observe(el);
+  }
+  function barInto(el, cart) {
+    el.innerHTML = chipHTML(cart, optsFor(cart));
+  }
+
+  function pickerHTML(cart, opts) {
+    opts = opts || {};
+    /* ⚠️ Stashed on the handle so the renderer hook (which is called with only the handle) paints with the SAME
+       options the screen chose — otherwise a repaint after pressing + would silently drop the checkout label,
+       the empty text and the placeholder, and the row would change under the hand that touched it. */
+    cart.__cbcatOpts = opts;
+    var ids = idsOf(cart, opts), barId = ids.bar, listId = ids.list;
+    ensureCss();
+    /**
+     * ⚠️ A SIDE EFFECT IN A RENDER FUNCTION, AND WHY THIS ONE IS SAFE.
+     *
+     * The images come back with `data-src` and no `src`; something must observe them AFTER the HTML lands in the
+     * DOM. Three hosts paint this string in three different ways (a modal body, a re-rendered panel, a step
+     * body), so requiring each to remember `CBCatUI.observe()` afterwards guarantees one of them forgets and
+     * that catalogue silently shows grey boxes forever.
+     *
+     * cart-ui learned the hard way that side effects belong nowhere near a renderer — a `setCatalogue()` here
+     * would repaint → sync → repaint forever. The difference is that `observe()` only sets `img.src`: it touches
+     * no cart state, fires no onChange, and is idempotent, so it cannot loop. Scheduled on a timeout so it runs
+     * after the caller has inserted the string, whenever and however it does that.
+     */
+    if (typeof setTimeout === 'function') setTimeout(function () { observe(); }, 0);
+    return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
+      + committedHTML(cart.ns, opts.committed, opts.noteFn, opts.attachFn, opts.chips, opts.offers)
+      + '<div class="cbcat-hdr">'
+      /**
+       * ⚠️⚠️ `cart:false` MEANS THE HOST ALREADY OWNS AN ELEMENT WITH THIS ID — DO NOT RENDER A SECOND ONE.
+       *
+       * Compose puts the chip slot in the modal title bar beside the ✕, and that slot carries `cbcartbar_cc`.
+       * When this branch was dropped during the id refactor, the row rendered its own slot with the SAME id:
+       * two elements, one id, and `getElementById` returns whichever comes first — so `paintBar` updated one
+       * chip and left the other frozen at whatever it said when the modal opened. Two carts on screen
+       * disagreeing about what is in the cart, which is precisely the thing this whole helper exists to prevent.
+       */
+      +   (opts.cart === false ? ''
+          : '<span id="' + esc(barId) + '" class="cbcat-chipslot">' + chipHTML(cart, opts) + '</span>')
+      +   '<input class="cbcat-q" placeholder="' + esc(opts.placeholder || 'Search this catalogue…') + '"'
+      +   ' value="' + esc((cart.state() || {}).q || '') + '"'
+      +   (opts.searchTestid ? ' data-testid="' + esc(opts.searchTestid) + '"' : '')
+      +   ' oninput="CBCart.search(\'' + esc(cart.ns) + '\', this.value)">'
+      /**
+       * ⭐⭐ THE CATEGORY STRIP — DELEGATED, NOT COPIED (Athi, 2026-08-16: *"can we add a category to the
+       * product?"*, and the strip was missing from the one surface he uses).
+       *
+       * ⚠️ I BUILT THIS INTO cart-ui's pickerHTML AND STOPPED, on the reasoning that a renderer swaps the LIST
+       * and the BAR but never the search chrome above them. That is false, and this function is the proof: the
+       * redesigned renderer has its own pickerHTML and replaces the chrome wholesale. Compose uses this one, so
+       * the strip was invisible on the busiest order surface in the product.
+       *
+       * ⚠️ guard-static check 5 CAUGHT THIS AND I OVERRODE IT. It failed on `pick-catg` missing from this file;
+       * I added it to OK_TO_OMIT with the wrong justification. The guard was right. The entry is now removed so
+       * it can never be waved through again — if you are about to add a hook to one picker and not the other,
+       * that failure is the whole point.
+       *
+       * The markup and the counting live in CBCart (catgsHTML/catgTally), so there is ONE definition of what a
+       * category chip is; this file only decides where it sits.
+       */
+      /**
+       * ⭐⭐ "ON OFFER" SITS WITH THE CATEGORY CHIPS, because it answers the same kind of question — narrow this
+       * list to what I care about. Athi, 2026-09-02: *"do we have options to filter based on offers, discount?"*
+       *
+       * ⚠️ IT ONLY APPEARS WHEN THERE IS SOMETHING TO FILTER. A dead "On offer" chip on a catalogue with no
+       * offers teaches that the feature is broken rather than that the shop is not running one — the same rule
+       * the category strip already follows by rendering nothing until a category exists.
+       *
+       * ⚠️ AND IT NARROWS BY THE SAME TEST THE BADGE USES (CBOffers.forLine), so a row can never be hidden by a
+       * filter that disagrees with the badge printed on it.
+       */
+      +   (((opts.offers || []).length && root.CBOffers) ?
+            '<button type="button" class="cbcat-chip cbcat-offchip' + ((cart.state() || {}).onlyOffers ? ' on' : '') + '"'
+          + ' data-testid="pick-onoffer" onclick="CBCart.onlyOffers(\'' + esc(cart.ns) + '\')">'
+          + '🏷️ ' + esc('On offer') + '</button>' : '')
+      +   '<div id="' + esc(listId) + '_catg" class="cbpick-catgs">'
+      +     (typeof CBCart.categoriesHTML === 'function' ? CBCart.categoriesHTML(cart.ns) : '')
+      +   '</div>'
+      + '</div>'
+      + '<div id="' + esc(listId) + '" class="cbcat-list"'
+      +   (opts.listTestid ? ' data-testid="' + esc(opts.listTestid) + '"' : '') + '>'
+      +   listHTML(cart, opts)
+      + '</div>'
+      + commitHTML(cart, opts)
+      + '</div>';
+  }
+
+  function chipHTML(cart, opts) {
+    var n = cart.lines(), T = cart.total();
+    /**
+     * ⚠️ THE CART IS ALWAYS ON SCREEN NOW — Athi: *"couldnt find cart symbol in the screen on top, it has to
+     * open as a overlay"*.
+     *
+     * I had hidden it while empty, reasoning that an inert grey cart in the title bar is a control that never
+     * does anything. That was wrong for the reason that matters more: a cart you cannot SEE is a cart you cannot
+     * learn the position of, and someone hunting for it mid-order does not care that it would have appeared
+     * eventually. A permanent, quiet target beats a helpful absence.
+     *
+     * `hideEmptyChip`/`barHideEmpty` still work for a host that genuinely wants it gone; compose no longer sets
+     * either. Empty, it is dimmed and inert — the overlay has nothing to show and opening it would be a dead end.
+     */
+    if (!n && (opts.hideEmptyChip || opts.barHideEmpty)) return '';
+    /**
+     * ⚠️ `cbcart-bar` AND `cart-count-<ns>` ARE CARRIED OVER DELIBERATELY. They are published hooks —
+     * render-smoke.spec.js clicks the class, order-steps.spec.js asserts the badge — and this chip IS the cart
+     * bar, restyled. Dropping the names because the markup is new is how a spec goes quietly green against
+     * nothing; the cap-network harness caught exactly that here and said so.
+     */
+    return '<button type="button" class="cbcart-bar cbcat-chip' + (n ? ' on' : '') + '"'
+      + ' data-testid="cart-' + esc(cart.ns) + '"'
+      + (n ? ' onclick="CBCart.open(\'' + esc(cart.ns) + '\')"' : ' disabled')
+      + ' title="' + esc(n ? 'Open the cart' : (opts.emptyHint || 'Press + on what you need')) + '">'
+      + '<span class="cbcat-bag">🛒' + (n ? '<span class="cbcat-n" data-testid="cart-count-' + esc(cart.ns) + '">' + n + '</span>' : '') + '</span>'
+      + (n && T.amount ? '<span class="cbcat-sum">' + esc(money(cart.ns, T.amount)) + '</span>' : '')
+      + '</button>';
+  }
+
+  /* ── lazy media ──────────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * ⭐ ADOPTED, NOT INVENTED: IntersectionObserver + native loading="lazy". A browser primitive beats a library
+   * here on every axis that matters — zero bytes, zero dependencies, and the artifact/storefront CSP blocks
+   * external hosts anyway. The standing rule is on-demand always: never pre-load, and media only on click.
+   *
+   * 120px rootMargin so a thumbnail is decoded just before it is looked at rather than as it appears.
+   */
+  function observe(rootEl) {
+    if (typeof IntersectionObserver === 'undefined') {
+      /* No observer (old browser): fall back to eager, because a catalogue with invisible pictures is worse than
+         a catalogue that loaded them. `loading="lazy"` still applies where supported. */
+      (rootEl || document).querySelectorAll('img[data-src]').forEach(function (im) {
+        im.src = im.getAttribute('data-src'); im.removeAttribute('data-src');
+        if (im.parentElement) im.parentElement.classList.remove('cbcat-skel');
+      });
+      return;
+    }
+    if (!CBCAT.io) {
+      CBCAT.io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var im = e.target, src = im.getAttribute('data-src');
+          if (src) { im.src = src; im.removeAttribute('data-src'); }
+          if (im.parentElement) im.parentElement.classList.remove('cbcat-skel');
+          CBCAT.io.unobserve(im);
+        });
+      }, { rootMargin: '120px' });
+    }
+    (rootEl || document).querySelectorAll('img[data-src]').forEach(function (im) { CBCAT.io.observe(im); });
+    observeMore(rootEl);
+  }
+
+  /**
+   * The "N more" sentinel. Scrolling to it grows the window — the swipe IS the trigger, no button to press.
+   *
+   * ⚠️ NO OBSERVER, NO PAGING — so the sentinel is also a CLICK target. If IntersectionObserver is missing, or
+   * the list is in a container the observer cannot see into, a person must still be able to reach row 41. A
+   * lazy list with no manual escape is a list with rows nobody can get to.
+   */
+  /**
+   * The image failed. Turn its box back into the letter tile rather than leaving a blank.
+   *
+   * ⚠️ The <img> is REMOVED, not hidden — a broken img left in the DOM keeps its alt box and its own failed
+   * layout, and some browsers draw a placeholder glyph over the tile behind it.
+   */
+  function fellBack(img, bg, letter) {
+    var box = img && img.parentElement; if (!box) return;
+    img.remove();
+    box.className = 'cbcat-thumb cbcat-tile';
+    box.style.background = bg;
+    box.textContent = letter;
+  }
+
+  function observeMore(rootEl) {
+    var sentinels = (rootEl || document).querySelectorAll('[data-cbcat-more]');
+    if (!sentinels.length) return;
+    if (typeof IntersectionObserver === 'undefined') return;   // the onclick below still works
+    if (!CBCAT.moreIo) {
+      CBCAT.moreIo = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var ns = e.target.getAttribute('data-cbcat-more');
+          CBCAT.moreIo.unobserve(e.target);
+          if (ns) growWindow(ns);
+        });
+      }, { rootMargin: '300px' });   // grow BEFORE the bottom is reached, so the list never visibly stops
+    }
+    sentinels.forEach(function (s) {
+      s.onclick = function () { growWindow(s.getAttribute('data-cbcat-more')); };
+      CBCAT.moreIo.observe(s);
+    });
+  }
+
+  function paint(cart, opts, hostId) {
+    var host = document.getElementById(hostId);
+    if (!host) return;
+    host.innerHTML = pickerHTML(cart, opts);
+    observe(host);
+  }
+
+  /* ── styles, injected once ───────────────────────────────────────────────────────────────────────────────── */
+  function ensureCss() {
+    if (typeof document === 'undefined' || document.getElementById('cbcat_css')) return;
+    var s = document.createElement('style');
+    s.id = 'cbcat_css';
+    s.textContent = [
+      /* ⚠️ top:-11px, not 0 — a sticky offset is measured from the scroll container's PADDING edge, and every
+         host here pads its scroller (.mbody is 11px 12px). At top:0 the list scrolls through the gap ABOVE the
+         header and the rows draw over the cart. --cbcat-gap so a host with different padding can set it. */
+      ':root{--cbcat-gap:11px}',
+      '.cbcat-hdr{position:sticky;top:calc(-1 * var(--cbcat-gap));z-index:6;background:var(--card);',
+      'padding:var(--cbcat-gap) 0 7px;display:flex;align-items:center;gap:8px}',
+      '.cbcat-q{flex:1 1 auto;min-width:0;height:40px;border:1px solid var(--line,var(--line));border-radius:9px;',
+      'padding:0 12px;font-size:var(--fs-3);font-family:inherit;background:var(--card);color:var(--ink,var(--ink))}',
+      '.cbcat-chipslot{flex:0 0 auto}',
+      '.cbcat-chip{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 11px;border-radius:9px;',
+      'border:1px solid var(--line,var(--line));background:var(--neutral-tint);white-space:nowrap;font-size:var(--fs-2);font-weight:800;',
+      'color:var(--ink,var(--ink));cursor:pointer;font-family:inherit}',
+      '.cbcat-chip:disabled{cursor:default;opacity:.75}',
+      '.cbcat-chip.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
+      /* margin-right clears the badge, which is absolutely positioned 9px past the bag's right edge — without it
+         the count sits on top of the total and both become unreadable at a glance. */
+      '.cbcat-bag{position:relative;font-size:17px;line-height:1;margin-inline-end:6px}',
+      '.cbcat-sum{font-variant-numeric:tabular-nums}',
+      /* 11px, the legibility floor. The count is the one fact the chip must carry on a phone. */
+      '.cbcat-n{position:absolute;top:-7px;inset-inline-end:-9px;background:var(--card);color:var(--blue,var(--blue));border-radius:9px;',
+      'min-width:18px;height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}',
+      /* ⚠️ Below 520px the MONEY yields, never the badge and never the search box. How many are in the cart is
+         the fact you cannot lose; the total is one tap away inside the cart itself. */
+      '@media(max-width:520px){.cbcat-sum{display:none}.cbcat-chip{padding:0 9px;gap:5px}}',
+
+      /* ⭐ content-visibility: the list is 3,008px tall today and most of it is never looked at. This skips
+         layout and paint for off-screen rows; contain-intrinsic-size keeps the scrollbar honest. */
+      '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
+      'content-visibility:auto;contain-intrinsic-size:auto 58px}',
+      '.cbcat-row.on{background:var(--soft,#eef4ff)}',
+      '.cbcat-var .cbcat-nm{padding-inline-start:16px}',
+      '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:var(--warn-tint);',
+      'border:1px solid var(--line,var(--line));overflow:hidden;position:relative;display:grid;place-items:center}',
+      '.cbcat-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
+      /* The letter tile. White on a derived mid-tone hue — see tileFor for why the colour is a hash and not a
+         random pick, and why the yellow-green band is darkened. */
+      /* ⚠️ NORMAL WEIGHT, not 800 — Athi: "keep the letter normal, bold letter not looking ok". He is right: the
+         tile is a quiet recognition aid sitting beside the product NAME, and a heavy letter competes with the
+         name for the same glance. The colour already does the identifying work; the letter only has to confirm
+         it. */
+      '.cbcat-tile{color:#fff;font-weight:400;font-size:var(--fs-5);line-height:1;letter-spacing:.02em;',
+      'font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;user-select:none}',
+      '.cbcat-nomedia{font-size:var(--fs-4);opacity:.4}',
+      '.cbcat-play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,46,61,.34);',
+      'color:#fff;font-size:var(--fs-3)}',
+      '.cbcat-skel{background:linear-gradient(100deg,#ECE7DE 30%,#f6f2ea 50%,#ECE7DE 70%);background-size:220% 100%;',
+      'animation:cbcatsk 1.1s linear infinite}',
+      '@keyframes cbcatsk{to{background-position:-120% 0}}',
+      '@media(prefers-reduced-motion:reduce){.cbcat-skel{animation:none}}',
+      '.cbcat-meat{flex:1;min-width:0;display:block}',
+      '.cbcat-nm{display:block;font-weight:700;font-size:var(--fs-3)}',
+      '.cbcat-sub{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:1px}',
+      '.cbcat-hint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
+      /* ⚠️ TOKENS, NOT LITERALS — the badge has to read on both themes, and theme-literals.cjs enforces it.
+         --gold-soft/--gold-line already carry "worth noticing, not an error" everywhere else in the app. */
+      '.cbcat-offs{display:inline-flex;flex-wrap:wrap;gap:4px;margin-inline-start:7px;vertical-align:middle}',
+      '.cbcat-off{display:inline-block;padding:1px 7px;border-radius:999px;font-size:var(--fs-1);font-weight:700;',
+      'background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--warn-3);white-space:nowrap}',
+      /* ⚠️ FIXED COLUMNS, or the price column zig-zags. Measured: ₹340 at x=740 and ₹149 at x=628 before this. */
+      '.cbcat-pr{flex:none;min-width:78px;text-align:end;font-weight:700;font-size:var(--fs-3);',
+      'font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.cbcat-was{opacity:.55;font-weight:400;font-size:var(--fs-1)}',
+      '.cbcat-noprice{color:var(--grey-2);font-weight:400;font-size:var(--fs-2)}',
+      '.cbcat-linetotal{font-size:var(--fs-1);color:var(--grey-2);font-weight:800}',
+      '.cbcat-ctl{flex:none;min-width:104px;display:flex;align-items:center;justify-content:flex-end;gap:6px}',
+      '.cbcat-stp{display:inline-flex;align-items:center;gap:5px}',
+      '.cbcat-stp button,.cbcat-add{width:30px;height:30px;border-radius:50%;border:1px solid var(--blue,var(--blue));',
+      'background:var(--card);color:var(--blue,var(--blue));font-size:15px;font-weight:800;line-height:1;display:grid;',
+      'place-items:center;cursor:pointer;font-family:inherit;flex:none}',
+      '.cbcat-add{background:var(--blue,var(--blue));color:#fff}',
+      '.cbcat-stp input{width:52px;height:30px;border:1px solid var(--line,var(--line));border-radius:9px;',
+      'text-align:center;font-size:var(--fs-2);font-variant-numeric:tabular-nums;font-family:inherit}',
+      /* Sits INSIDE the price column, so it must not widen it — hence the same 78px the column is. */
+      '.cbcat-offer{display:block;width:100%;height:28px;border:1px solid var(--blue,var(--blue));border-radius:6px;',
+      'padding:0 7px;font-size:var(--fs-2);text-align:end;font-family:inherit;margin-top:2px;',
+      'font-variant-numeric:tabular-nums}',
+      '.cbcat-pick{border:1px solid var(--line,var(--line));background:var(--card);border-radius:9px;padding:7px 13px;',
+      'font-size:var(--fs-2);font-weight:700;color:var(--ink,var(--ink));cursor:pointer;font-family:inherit;',
+      'white-space:nowrap}',
+      '.cbcat-pick.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
+      '.cbcat-grp{padding:11px 2px 3px;display:flex;align-items:center;gap:9px;font-size:var(--fs-2)}',
+      '.cbcat-cnt{font-size:var(--fs-1);color:var(--grey-2)}',
+      '.cbcat-all{font-size:var(--fs-1);color:var(--blue,var(--blue));font-weight:700;cursor:pointer;margin-inline-start:auto}',
+      '.cbcat-empty{padding:30px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center}',
+      /* the window sentinel */
+      '.cbcat-more{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 8px;',
+      'color:var(--grey-2);font-size:var(--fs-2);cursor:pointer}',
+      '.cbcat-spin{width:12px;height:12px;border:2px solid #d7d2c8;border-top-color:var(--grey-4);border-radius:50%;',
+      'display:inline-block;animation:cbcatspin .7s linear infinite}',
+      '@keyframes cbcatspin{to{transform:rotate(360deg)}}',
+      '@media(prefers-reduced-motion:reduce){.cbcat-spin{animation:none}}',
+      /* the skeleton — the same row shape, so nothing moves when the real data lands */
+      '.cbcat-skelrow{pointer-events:none}',
+      '.cbcat-skelbar{display:block;height:11px;border-radius:5px;margin:3px 0;',
+      'background:linear-gradient(100deg,#ECE7DE 30%,#f6f2ea 50%,#ECE7DE 70%);background-size:220% 100%;',
+      'animation:cbcatsk 1.1s linear infinite}',
+      '.cbcat-skelbar-sm{height:8px;opacity:.7}',
+      '.cbcat-skeldot{display:inline-block;width:30px;height:30px;border-radius:50%;background:var(--warn-tint)}',
+      '@media(prefers-reduced-motion:reduce){.cbcat-skelbar{animation:none}}',
+
+      /**
+       * ⚠️⚠️ STICKY AT THE BOTTOM — because the first version reproduced the very bug it exists to fix.
+       *
+       * The strip renders after the list, and the list is 3,000px tall. So the one control that says "these
+       * lines are not on the chit yet" sat three thousand pixels below the thing you were reading — the exact
+       * below-the-fold failure the on-the-chit block was added to solve, recreated one element later. Visible on
+       * screen within a minute of wiring it: two items added, chip counting, and no commit strip anywhere.
+       *
+       * Pinned to the bottom of the scroll area it is always in view while you pick, which is when it matters.
+       */
+      '.cbcat-commit{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:10px;',
+      'padding:10px 12px;margin-top:8px;',
+      'background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:9px;',
+      'font-size:var(--fs-2);color:var(--warn-3);box-shadow:0 -6px 12px -10px rgba(15,46,61,.45)}',
+      '.cbcat-commit b{color:var(--ink,var(--ink))}',
+      '.cbcat-commit button{margin-inline-start:auto;background:var(--blue,var(--blue));color:#fff;',
+      'border:1px solid var(--blue,var(--blue));border-radius:9px;padding:9px 15px;font-weight:700;font-size:var(--fs-2);',
+      'white-space:nowrap;cursor:pointer;font-family:inherit}',
+
+      '.cbcat-onchit{padding:10px 12px;margin-bottom:9px;background:var(--blue-tint-bg);border:1px solid #d8e4f3;',
+      'border-radius:9px}',
+      '.cbcat-onchit-t{font-weight:800;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;',
+      'color:var(--blue-d,var(--blue-d));margin-bottom:5px}',
+      '.cbcat-li{display:flex;gap:8px;padding:3px 0;font-size:var(--fs-2)}',
+      '.cbcat-li-n{flex:1;min-width:0}',
+      '.cbcat-li-q,.cbcat-li-p{font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.cbcat-offers{margin-top:8px;padding-top:8px;border-top:1px dashed #d8e4f3}',
+      '.cbcat-offhd{font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--ok-2);margin-bottom:4px}',
+      '.cbcat-offrow{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:var(--fs-2)}',
+      '.cbcat-offrow.note{color:var(--warn-2)}',
+      '.cbcat-offrow.skip{color:var(--grey,#7C8085)}',
+      '.cbcat-offrow.skip .cbcat-offn{font-weight:600;text-decoration:line-through}',
+      '.cbcat-offa.plain{color:var(--ink);font-weight:600}',
+      '.cbcat-offn{font-weight:700;flex:none}',
+      '.cbcat-offw{flex:1;min-width:0;color:var(--grey,#7C8085);font-size:var(--fs-1)}',
+      '.cbcat-offa{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ok-2);white-space:nowrap}',
+      '.cbcat-offtot{display:flex;justify-content:space-between;font-size:var(--fs-2);font-weight:800;padding-top:5px;margin-top:4px;border-top:1px solid #d8e4f3;font-variant-numeric:tabular-nums}',
+      '.cbcat-offnote{font-size:var(--fs-1);color:var(--warn-2);padding:6px 0 2px}',
+      '.cbcat-li-p{font-weight:700}',
+      '.cbcat-liwrap{padding:2px 0}',
+      '.cbcat-note{display:block;width:100%;box-sizing:border-box;margin:3px 0 5px;padding:6px 9px;',
+      'border:1px dashed #c3d3e8;border-radius:9px;font-size:var(--fs-2);font-family:inherit;background:var(--card);',
+      'color:var(--ink,var(--ink))}',
+      '.cbcat-note:focus{border-style:solid;border-color:var(--blue,var(--blue));outline:none}',
+      '.cbcat-noteread{font-size:var(--fs-2);color:#4a6b8a;padding:1px 0 4px}',
+      '.cbcat-attrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 0 4px}',
+      '.cbcat-clip{cursor:pointer;border:1px solid var(--line,var(--line));border-radius:9px;padding:3px 8px;',
+      'font-size:var(--fs-2);background:var(--card);flex:none;line-height:1.4}',
+      '.cbcat-clip:hover{border-color:var(--blue,var(--blue))}',
+      '.cbcat-chips{display:inline-flex;flex-wrap:wrap;gap:2px;align-items:center}'
+    ].join('');
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  root.CBCatUI = {
+    /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
+    listInto: listInto, barInto: barInto,
+    pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
+    /* the cart bar (the chip) for a host that paints its own shell — the storefront's first paint (2026-09-05) */
+    barHTML: function (cart, opts) { return chipHTML(cart, opts || optsFor(cart)); },
+    isOnOffer: isOnOffer,
+    /* ⭐ THE BREAKDOWN RENDERER, EXPORTED. The product page shows what the cart will do with the offers attached
+       to a product, and a lookalike built there would be a second opinion about the same price — which is the one
+       thing "verify it then and there" cannot survive. */
+    offersHTML: offersHTML,
+    commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
+    paint: paint, observe: observe, ensureCss: ensureCss,
+    mediaOf: mediaOf, tileFor: tileFor, hintOf: hintOf,
+    skeletonHTML: skeletonHTML, growWindow: growWindow, fellBack: fellBack
+  };
+})(typeof window !== 'undefined' ? window : this);

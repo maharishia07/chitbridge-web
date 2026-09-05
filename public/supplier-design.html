@@ -11,7 +11,7 @@
     · *"when they click the cart, it should open in popup to show the products selected."*
     · *"it has to be one helper and should be used everywhere."*
 
-  ⚠️ THIS FILE OWNS NO CART CODE. The bar, the rows, the stepper and the popup all come from app/cart-ui.js — the
+  ⚠️ THIS FILE OWNS NO CART CODE. The bar, the rows, the stepper and the popup all come from app/cart.js — the
   same helper Compose, Network and the storefront will call. What is below is only THIS SCREEN: the supplier list,
   the chip, the three steps, and what "check out" means here. That split is the point: the last divergence in this
   codebase happened because the WALK was shared and the RENDER was copied.
@@ -30,7 +30,7 @@
   for the fact that there is something to know.
 -->
 <script src="app/catalogue-lines.js"></script>
-<script src="app/cart-ui.js"></script>
+<script src="app/cart.js"></script>
 <style>
   :root{ --ink:#1d2530; --grey:#6a707a; --line:#e3e6ea; --paper:#f7f8fa; --blue:#3F66A6; --blue-soft:#eef4ff;
          --gold-soft:#FBF6E9; --gold-line:#efe3c4; --good:#2c7a43; --warn:#8a5a1e; }

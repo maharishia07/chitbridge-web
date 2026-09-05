@@ -52,8 +52,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
-<script src="app/cart-ui.js"></script>
-<script src="app/catalogue-ui.js"></script>   <!-- ONE CART, step 2 (2026-09-05): the rows are the app's rows — same picker, same tax line, same offer badge -->
+<script src="app/cart.js"></script>
 <script src="app/step-flow.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
@@ -374,19 +373,6 @@ function finishCard(it, cur, idx, vizEnabled){
  * advertise and what each one promises, exactly as the app does. Two surfaces, one answer. The styling below is
  * this page's own, which is the correct half to duplicate.
  */
-function offerBadges(d, itemId, cur, offers){
-  try {
-    if (!(offers || []).length || typeof CBOffers === 'undefined' || !CBOffers.forLine) return '';
-    var cats = Array.isArray(d.categories) ? d.categories.map(String) : (d.category ? [String(d.category)] : []);
-    var got = CBOffers.forLine(
-      { item_id: itemId, sku: d.sku, categories: cats, unitPrice: cbHasPrice(d.price) ? cbAmount(d.price) : 0 },
-      offers, { now: new Date(), money: function (n) { return (cur || '') + n; } });
-    return got.slice(0, 2).map(function (x) {
-      return '<span class="offbadge" title="'+esc(x.label)+'">'+esc(x.promise)+'</span>';
-    }).join('');
-  } catch (e) { return ''; }   /* a badge must never take the storefront down */
-}
-
 /** The category path above a product — "Fruits & Vegetables › Dried Fruits" — from the live categories the shop sends. */
 function productCrumb(p, data){
   var d=(p.item_data||p)||{}; var ids=(typeof catgIdsOf==='function')?catgIdsOf(d):(Array.isArray(d.categories)?d.categories:[]);
@@ -397,12 +383,6 @@ function productCrumb(p, data){
   return crumbs.length ? '<div data-testid="shop-crumb" style="font-size:12px;color:#777;margin:2px 0 8px">'+crumbs.join(' · ')+'</div>' : '';
 }
 function productMedia(p){ var d=(p.item_data||p)||{}; if(typeof cbMediaGallery!=='function') return ''; var g=cbMediaGallery(d, { apiBase: API, itemId: p.item_id||(p.item&&p.item.item_id)||'', size: 'phone' }); return g ? '<div class="pmedia">'+g+'</div>' : ''; }
-function productRow(p, cur, variantLabel, offers){ var d=(p.item_data||p)||{};
-  // A variant row leads with what DISTINGUISHES it ("4L"), not with the product name repeated three times.
-  var lead = variantLabel ? '<b>'+esc(variantLabel)+'</b>' : '<b>'+esc(d.name||d.product||'item')+'</b>';
-  var badges = offerBadges(d, p.item_id || (p.item && p.item.item_id), cur, offers);
-  return '<div class="prow"'+(variantLabel?' style="padding-inline-start:18px"':'')+'><div style="flex:1">'+lead+' <span class="meta">'+esc(d.unit||'')+'</span>'+badges+'</div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
-
 /**
  * productListHtml — the shop's product list, grouped when the owner declared variants.
  *
@@ -418,21 +398,8 @@ function productListHtml(data, cur){
      calling when it moved to create(). Deleting the adapters, which is the next step, would have sent the
      storefront permanently down the display-only branch: prices visible, no cart, no way to order, and nothing
      thrown. That is the same silence that made the popup outage invisible. */
-  if (typeof CBCart === 'undefined' || typeof CBCart.create !== 'function' || !((data.items||[]).length)) {
-    var rows0 = (typeof cbLineRows === 'function')
-      ? cbLineRows(data)
-      : (data.items||[]).map(function(p){ return { type:'line', item:p, variant:'' }; });
-    if (!rows0.length) return '';
-    return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>' + rows0.map(function(r){
-      if (r.type === 'product') {
-        return '<div style="margin:8px 0 2px"><div style="display:flex;align-items:baseline;gap:8px">'
-          + '<b style="font-size:14px">'+esc(r.label)+'</b>'
-          + '<span class="meta">'+r.count+' options</span></div>'
-          + (r.options ? '<div class="meta">'+esc(r.options)+'</div>' : '') + '</div>';
-    }
-      return productRow(r.item, cur, r.variant, (data && data.offers) || []);
-    }).join('');
-  }
+  /* CAPABILITY: CART is always loaded (app/cart.js); the display-only branch that lived here (productRow/offerBadges) is gone — 2026-09-05 */
+  if (!((data.items||[]).length)) return '';
   /**
    * ── THE CART, ON THE PUBLIC STOREFRONT ────────────────────────────────────────────────────────────────────────
    * Athi, 2026-08-08: *"the same functionality should be used in storefront and in self compose as well, these are
@@ -579,12 +546,6 @@ function shopUpiBlock(res, isCart){
 }
 function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,'INR'):('₹'+Number(n).toFixed(2)); }catch(e){ return '₹'+n; } }
 function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
-function shopStockBadge(d){
-  var a=d&&d.avail; if(!a||a.qty==null||!a.as_of) return '';
-  var mins=Math.max(0, Math.round((Date.now()-Date.parse(a.as_of))/60000)); var age=mins<1?'just now':(mins<60?mins+' min ago':(mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago'));
-  var stale=mins>240;
-  return '<span class="pbadge" data-testid="shop-stock" style="'+(Number(a.qty)>0?'background:#e8f5ec;color:#1d6b3a':'background:#fdecec;color:#a33')+(stale?';opacity:.7':'')+'">'+(Number(a.qty)>0?('in stock '+esc(String(a.qty))):'out of stock')+' · as of '+esc(age)+'</span>';
-}
 var _stockAsked=false;
 function shopAskStock(){
   if(_stockAsked||!BRIDGE) return; _stockAsked=true;

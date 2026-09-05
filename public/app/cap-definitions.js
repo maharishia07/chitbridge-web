@@ -188,7 +188,7 @@ function cbDefRegistries(){
   out.push({
     key: 'ordermodel', icon: '🔢', title: 'Order model kinds',
     blurb: 'How a line is quantified. The catalogue declares it per item; every screen obeys.',
-    source: 'app/cart-ui.js · MODELS',
+    source: 'app/cart.js · MODELS',
     rows: (typeof CBCart !== 'undefined' && CBCart.models)
       ? Object.keys(CBCart.models).map(function (k) {
           var m = CBCart.models[k];
