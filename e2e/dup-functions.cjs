@@ -41,26 +41,34 @@ const FILES = ['app.html'].concat(
  */
 const DECL = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;
 
-const seen = new Map();          // name → [{file, line}]
-for (const rel of FILES) {
-  const lines = fs.readFileSync(path.join(WEB, rel), 'utf8').split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const m = DECL.exec(lines[i]);
-    if (!m) continue;
-    const at = seen.get(m[1]) || [];
-    at.push({ file: rel, line: i + 1 });
-    seen.set(m[1], at);
+/** one PAGE = one window: the files a page loads share a namespace; two pages do not (shop.html has its own esc/render) */
+function scan(label, files) {
+  const seen = new Map();          // name → [{file, line}]
+  for (const rel of files) {
+    const lines = fs.readFileSync(path.join(WEB, rel), 'utf8').split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const m = DECL.exec(lines[i]);
+      if (!m) continue;
+      const at = seen.get(m[1]) || [];
+      at.push({ file: rel, line: i + 1 });
+      seen.set(m[1], at);
+    }
   }
+  const dupes = [...seen.entries()].filter(([, at]) => at.length > 1);
+  console.log('\n══ DUPLICATE FUNCTIONS · ' + label + ' ══');
+  console.log('  ' + seen.size + ' top-level function(s) across ' + files.length + ' file(s)\n');
+  for (const [name, at] of dupes) {
+    console.log('  ✗ ' + name + '  declared ' + at.length + ' times');
+    at.forEach((a) => console.log('      ' + a.file + ':' + a.line));
+    console.log('      the LAST one wins — every earlier definition is silently discarded\n');
+  }
+  if (!dupes.length) console.log('  ✓ every top-level function is declared once\n');
+  return dupes.length;
 }
 
-const dupes = [...seen.entries()].filter(([, at]) => at.length > 1);
+/* the storefront page: shop.html plus exactly the app/*.js files it includes (2026-09-05 — it was never scanned) */
+const shopSrc = fs.readFileSync(path.join(WEB, 'shop.html'), 'utf8');
+const SHOP = ['shop.html'].concat([...shopSrc.matchAll(/<script[^>]*src="app\/([^"]+)"/g)].map((m) => 'app/' + m[1]).filter((f) => fs.existsSync(path.join(WEB, f))));
 
-console.log('\n══ DUPLICATE FUNCTIONS ══');
-console.log('  ' + seen.size + ' top-level function(s) across ' + FILES.length + ' file(s)\n');
-for (const [name, at] of dupes) {
-  console.log('  ✗ ' + name + '  declared ' + at.length + ' times');
-  at.forEach((a) => console.log('      ' + a.file + ':' + a.line));
-  console.log('      the LAST one wins — every earlier definition is silently discarded\n');
-}
-if (!dupes.length) console.log('  ✓ every top-level function is declared once\n');
-process.exit(dupes.length ? 1 : 0);
+const bad = scan('app', FILES) + scan('storefront', SHOP);
+process.exit(bad ? 1 : 0);
