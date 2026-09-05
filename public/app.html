@@ -11160,6 +11160,18 @@ function acLogin(x){ return esc(x.key)+'@'+esc(entHandle()); }
 function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">'+esc(a.key||'')+'</span>'):'—'; }
 // CO-ASSISTS screen/render/actions + loadCoassists -> app/cap-workforce.js (lazy via ensureCap('workforce')); helpers (acLbl/acType/hat*) stay above in Core.
 
+/**
+ * ⭐ REPAINT THE SCREEN, NOT THE SHELL (the repaint pass, REPAINT-MAP-2026-09-04). A list toggle — select mode, the
+ * state filter, the legend, the list help — changes what the SCREEN shows; the rail, the top bar and the avatar menu
+ * are untouched, so rebuilding them (renderApp) was waste and threw the page to the top. paintMain() repaints #mainbody
+ * only, keeping every scroll box. Falls back to renderApp() while a capability is still loading (the shell shows that).
+ */
+function paintMain(){
+  const h=document.getElementById('mainbody');
+  if(!h || (typeof _capLoading!=='undefined' && _capLoading)) return renderApp();
+  const k=(typeof scrollKeep==='function')?scrollKeep():function(){};
+  h.innerHTML=mainBody(); k();
+}
 function mainBody(){
   /**
    * ⚠⚠ THIS MUST SIT ABOVE THE taskPanel BRANCH, and my first version of it did not. Redirecting the nav
@@ -11362,10 +11374,10 @@ function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
 function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded===t? (''+t) : (loaded+'/'+t); }
 /* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
-function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
+function toggleListHelp(){ UI.listHelp=!UI.listHelp; paintMain(); }
 function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); const first=UI.rows.find(c=>c.state===s); if(first)openChit(first.id,true);}
-function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
-function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
+function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);paintMain();}
+function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();paintMain();}
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
@@ -11970,7 +11982,7 @@ function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaint
 /* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
    control would have vanished in exactly the views where you most want the space back. */
-function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
+function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} paintMain(); }
 function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><div class="keyhead"><h4>' + tx('Legend / key') + '</h4>'
  + '<button class="keyx" onclick="toggleLegend()" title="' + tx('Close') + '" aria-label="' + tx('Close') + '">✕</button></div><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> ' + tx('Unread') + '</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
