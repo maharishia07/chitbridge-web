@@ -37,6 +37,29 @@ for (const rel of files) {
   }
 }
 for (const [rel, re, why] of DEBT) { try { if (re.test(stripComments(fs.readFileSync(path.join(PUB, rel), 'utf8')))) console.log('  ⚠ debt · ' + rel + ': ' + why); } catch (_) {} }
+/**
+ * THE OUTLET REGISTRY. Athi, 2026-09-05: "the cart is the fundamental unit of data movement … it should be capable of
+ * transferring any data, but the same way across different channels … we may create a few more outlets but still should
+ * be able to follow the rules." An OUTLET is any screen that holds a CBCart.create() handle. Every one is listed here with
+ * the spec that proves it prints the same money as the storefront; a new CBCart.create() that is not registered fails the
+ * run — the rule is written at C:/dev/catalogue/CART-OUTLET-RULES-2026-09-05.md and the registry is how it is kept.
+ */
+const OUTLETS = {
+  'shop.html':          [['Storefront (public)',              '[SF-01] [PAR-01] [PAR-02]']],
+  'app.html':           [['Record a sale / Bill (the counter)', '[SB-01] [PAR-02]'],
+                         ['Compose (self, any recipient)',    'order-steps › Compose · [CAP-02] the same send path'],
+                         ['Suppliers › our own stock',        'order-steps › OUR OWN STOCK'],
+                         ['Suppliers › a supplier',           '[PAR-01] [PAR-02]']],
+  'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
+  'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
+};
+for (const rel of files) {
+  const src = stripComments(fs.readFileSync(path.join(PUB, rel), 'utf8'));
+  const n = (src.match(/CBCart\.create\(/g) || []).length; if (!n) continue;
+  const reg = OUTLETS[rel] || [];
+  if (n !== reg.length) { console.log('  ✗ ' + rel + ' holds ' + n + ' cart outlet(s), the registry lists ' + reg.length + ' — register it in e2e/one-cart.cjs OUTLETS with the spec that proves its money'); bad++; }
+}
+console.log('  outlets: ' + Object.values(OUTLETS).reduce((a, b) => a + b.length, 0) + ' registered, each with a parity proof');
 console.log('\n══ ONE CART ══');
 console.log(bad ? '  ' + bad + ' second implementation(s) found\n' : '  ✓ money is computed in one place (app/cart.js — the CART capability); every screen delegates\n');
 process.exit(bad ? 1 : 0);

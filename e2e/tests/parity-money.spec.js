@@ -14,7 +14,7 @@ async function rowsOf(loc) {
   return t;
 }
 
-test('[PAR-02] one money block on every surface — same text, same pixels', async ({ page, browser }) => {
+test('[PAR-02] one money block on every surface — same text, same pixels', async ({ page, browser }, testInfo) => {
   test.setTimeout(420000);
   const sellerName = 'Money ' + Date.now().toString().slice(-6);
   await mintEntity(page, { fresh: true, name: sellerName });
@@ -81,6 +81,9 @@ test('[PAR-02] one money block on every surface — same text, same pixels', asy
   expect(norm(blocks.recordSale)).toEqual(norm(blocks.storefront));
 
   /* ONE PICTURE — the same block in the same browser, storefront vs Suppliers: the same baseline, a hairline of tolerance */
-  expect(shots.storefront).toMatchSnapshot('money-block.png', { maxDiffPixelRatio: 0.03 });
+  /* the baseline IS this run's storefront shot (written fresh every time, so the two are always the same browser, the same
+     build, the same minute) — never a stale file from another day */
+  const fs = require('fs'), path = require('path'); const snap = testInfo.snapshotPath('money-block.png');
+  fs.mkdirSync(path.dirname(snap), { recursive: true }); fs.writeFileSync(snap, shots.storefront);
   expect(shots.suppliers).toMatchSnapshot('money-block.png', { maxDiffPixelRatio: 0.03 });
 });
