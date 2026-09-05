@@ -51,6 +51,24 @@ var SHIP_MODES=[['', [['Sea','Sea'],['Air','Air'],['Road','Road'],['Rail','Rail'
    universal by construction.
    ⚠️ SECTIONS REPEAT because one business has two banks — export receipts and domestic — each with its own
    name/IFSC/account set, which a single fixed "Banking" group could not hold at all. */
+/**
+ * ⭐ SHOWN TO CUSTOMERS — THE BUSINESS'S DEFAULTS (Athi, 2026-09-05: "tax may be default"). One switch per detail, applied to
+ * every item unless the item's own pane says otherwise (product page › Shown to customers). Saved through
+ * PATCH /entities/me/exposure; enforced in the catalogue view (lib/exposure.js), so every surface obeys.
+ */
+var PF_EXPOSURE = [['tax','Tax line'],['offers','Offers'],['stock','Availability'],['synonyms','Synonyms'],['hsn','HSN code'],['description','Description'],['media','Pictures']];
+var PF_EXPOSURE_DEFAULTS = { tax:true, offers:true, stock:true, synonyms:false, hsn:false, description:true, media:true };
+function pfExposureDefaultsHTML(e){
+  var cur = Object.assign({}, PF_EXPOSURE_DEFAULTS, ((e && e.policy_flags && e.policy_flags.storefront_exposure) || {}));
+  return '<label class="fl" style="margin-top:12px">' + tx('Shown to customers by default') + '</label>'
+    + '<div data-testid="pf-exposure" style="display:flex;flex-wrap:wrap;gap:6px 14px;max-width:520px">'
+    + PF_EXPOSURE.map(function(x){ return '<label style="display:flex;gap:6px;align-items:center;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" data-testid="pf-expose-' + x[0] + '"' + (cur[x[0]] ? ' checked' : '') + ' onchange="pfExposureSet(\'' + x[0] + '\', this.checked)">' + esc(tx(x[1])) + '</label>'; }).join('')
+    + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Any item can differ: product page › Shown to customers. Price and unit always show.')) + '</div>';
+}
+async function pfExposureSet(k, on){
+  try { var r = await api('exposureDefaults', { body: (function(){ var b = {}; b[k] = !!on; return b; })() }); if (UI._me) { UI._me.policy_flags = Object.assign({}, UI._me.policy_flags || {}, { storefront_exposure: r.exposure }); } toast(tx('Saved ✓')); }
+  catch (e) { toast((e && e.message) || tx('Could not save'), true); }
+}
 var VAULT_SECTION_TYPES = { identity:'🏢 Business identity', signatory:'✍️ Authorised signatory', bank:'🏦 Bank',
   licence:'🪪 Licence & registration', logistics:'🚢 Logistics defaults', other:'📋 Other details' };
 /* SUGGESTED names per section — [label, tag]. ⚠️ SUGGESTIONS, NEVER RESTRICTIONS: typing anything else is
@@ -1585,6 +1603,7 @@ function iamMeHTML(e){
                 return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
               }).join('')
           + '</select>'
+          + pfExposureDefaultsHTML(e)
         : '')
 
     /**
