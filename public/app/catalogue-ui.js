@@ -289,13 +289,26 @@
         taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(id) + '" title="' + esc(_tx.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(_tx.rate))) + '% ' + esc(_tx.name && !/^\d/.test(_tx.name) ? 'GST' : 'GST') + (Number(_tx.cess) ? ' +' + esc(String(Number(_tx.cess))) + '% cess' : '') + ' · ' + esc(money(cart.ns, _incl)) + ' incl.</span>';
       }
     } catch (e) { taxChip = ''; }
+    /* ⭐ THE STOCK STAMP, on every surface (Athi, 2026-09-05: "offer, availability not appearing" on the Suppliers screen — the
+       storefront alone drew it). The connector stamps item_data.avail { qty, as_of, source }; the row says the figure WITH its
+       age, never bare; older than four hours reads faded. `shop-stock` stays the published hook the specs assert on. */
+    var stockChip = '';
+    try {
+      var _av = d && d.avail;
+      if (_av && _av.qty != null && _av.as_of) {
+        var _mins = Math.max(0, Math.round((Date.now() - Date.parse(_av.as_of)) / 60000));
+        var _age = _mins < 1 ? 'just now' : (_mins < 60 ? _mins + ' min ago' : (_mins < 1440 ? Math.round(_mins / 60) + ' h ago' : Math.round(_mins / 1440) + ' d ago'));
+        var _in = Number(_av.qty) > 0;
+        stockChip = '<span class="cbcat-stock" data-testid="shop-stock" style="display:inline-block;margin-top:2px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;white-space:nowrap;' + (_in ? 'background:#e8f5ec;color:#1d6b3a' : 'background:#fdecec;color:#a33') + (_mins > 240 ? ';opacity:.7' : '') + '">' + (_in ? 'in stock ' + esc(String(_av.qty)) : 'out of stock') + ' · as of ' + esc(_age) + '</span>';
+      }
+    } catch (e) { stockChip = ''; }
 
     return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
       + ' data-testid="cbcat-row-' + esc(id) + '">'
       + media
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
-      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '')
+      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '')
       /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
          gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
          change the price. */

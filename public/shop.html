@@ -458,7 +458,7 @@ function productListHtml(data, cur){
        app/catalogue-ui.js — the SAME renderer as Suppliers, Compose and Network — so the tax line and the offer badge are
        the same markup everywhere. This page keeps only what the row does not know: the stock stamp and the gallery. */
     renderer:(typeof CBCatUI!=='undefined')?CBCatUI:undefined,
-    rowExtra:function(it){ var d=(it&&(it.item_data||it))||{}; var b=shopStockBadge(d); return (b?'<div class="pbadges">'+b+'</div>':'')+productMedia(it); } });
+    rowExtra:function(it){ /* the stock stamp is the shared row's now (catalogue-ui); this page adds only the gallery */ return productMedia(it); } });
   setTimeout(shopOffersSync, 0);   /* after the list is in the DOM: the offered prices on the rows, the basket summary */   /* the offer promise under the line, then the gallery — same judgement as the app (CBOffers.forLine) */   /* pictures + video under the line — same gallery as the product page */
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
