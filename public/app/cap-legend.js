@@ -11,6 +11,23 @@
 //   gov RIDES ON the capability — governedUnder (the cascade layer) · governedBy (mechanisms in force) · govGap (= the L4 lever).
 //   RULE: gov usually LAGS maturity, and that lag IS the distance to L4. gov:null → N/A (nothing to govern; static/read-only).
 const CAP_CATALOGUE = [
+  /* ⭐ THE CART AS A CAPABILITY (Athi, 2026-09-05: "the cart is a single view we should be able to embed anywhere so we get the
+     same style and response everywhere — single source of truth; what if we convert cart as a capability?"). The difference
+     from a library is what is ENFORCED: a contract (catalogue payload in · engine lines + money out), one implementation,
+     a guard that fails on a second copy (e2e/one-cart.cjs), and this grade. */
+  { id:'cart', name:'Cart — one basket, everywhere', icon:'🛒', load:'eager', maturity:2, target:3,
+    gov:2, govTarget:3, governedUnder:'the catalogue contract (the same payload the storefront, Suppliers, Compose and the API read)',
+    governedBy:['one implementation: app/cart-ui.js (state, money) + app/catalogue-ui.js (rows)','CBCart.money / moneyRowsHTML — the only place offers → after offers → GST per rate → total incl. tax is computed for a buyer','guard e2e/one-cart.cjs: a second "Total incl. tax" or basket evaluation fails the run','the server re-prices every order with the same engines at send (CJ-07)'],
+    govGap:['the storefront rows still render on their own (step 2: CBCatUI.pickerHTML with a stock-badge hook)','the Compose cart evaluates its own offers (CC.offers — step 3)','no parity spec yet: one product seen from the storefront and from a buyer\'s Suppliers screen must show the same price, tax and offer'],
+    blurb:'One basket embedded in every buying surface — storefront, Suppliers, Compose, Network — with one money math, so an attached offer or slab shows the same outcome wherever the buyer stands.',
+    features:[
+      {n:'Rows — listed price · the tax a buyer will pay (+5% GST · ₹210 incl.) · the offer badge from the catalogue\'s own offers', s:'done'},
+      {n:'Basket — offers → After offers → GST per rate → Total incl. tax, the same rows on the storefront and in the app', s:'done'},
+      {n:'Order models — unit · pack · bulk · offer (name your price) · payload · service, one stepper each', s:'done'},
+      {n:'Storefront rows through the shared picker (stock badge as a hook)', s:'backlog'},
+      {n:'Compose cart onto CBCart.money', s:'backlog'},
+      {n:'Parity spec across surfaces [PAR-01]', s:'backlog'},
+    ] },
   { id:'core', name:'Core — Governance rail', icon:'🛤️', load:'eager', maturity:2, target:3,
     gov:3, govTarget:4, governedUnder:'the constitution + the RLS isolation floor',
     governedBy:['RLS entity isolation (FORCE, per-copy)','append-only state_log','governed delivery fns (SECURITY DEFINER)'],
