@@ -512,30 +512,40 @@ function shopOffersSyncNow(){
  * `tax` per item — same resolver as the invoice), on the after-offers figure, grouped by rate, then the total the
  * customer pays. Athi, 2026-09-04: "it is not showing the tax to be applied". Shown with or without offers.
  */
+/**
+ * ⭐ ONE MATH FOR EVERY MONEY FIGURE THE CUSTOMER SEES. shopBasketMath(lines) → { gross, ev, byRate, taxTotal, untaxed, grand }.
+ * The basket panel AND the checkout Review both call it — Athi's rule "attach shows the outcome, same engine":
+ * the Review used to print the listed price alone (₹1,000) while the basket two inches above said
+ * After offers ₹900 · GST 5% ₹45 · Total incl. tax ₹945, and the server prices the order with the live offers.
+ */
+function shopBasketMath(lines){
+  var offers=_shopOffers(); var ctx=_shopCtx();
+  var gross=lines.reduce(function(s,l){ return s+l.unitPrice*l.qty; },0);
+  var ev=(offers.length&&typeof CBOffers!=='undefined')?CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx }):{ adjustments:[], notes:[], subtotal:gross, total:gross };
+  var per=(offers.length&&typeof CBOffers!=='undefined'&&CBOffers.perLine)?(CBOffers.perLine(ev, lines)||{}):{};
+  var orderOff=(ev.adjustments||[]).filter(function(a){ return a.scope!=='line'&&a.scope!=='note'; }).reduce(function(s,a){ return s+Math.abs(Number(a.amount)||0); },0);
+  var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
+  var byRate={}, taxTotal=0, untaxed=0;
+  lines.forEach(function(l,i){ var g=l.unitPrice*l.qty; var off=((per[String(i)]||per[l.key]||{}).off)||0; var net=Math.max(0, g-off-(gross>0?orderOff*g/gross:0)); var t=(byId[String(l.item_id)]||{}).tax; if(t&&t.rate!=null){ var tax=Math.round(net*(Number(t.rate)+Number(t.cess||0)))/100; var key=(t.scheme||'GST')+' '+t.rate+'%'+(t.cess?' + '+t.cess+'% cess':''); byRate[key]=(byRate[key]||0)+tax; taxTotal+=tax; } else { untaxed+=net; } });
+  return { gross:gross, ev:ev, byRate:byRate, taxTotal:taxTotal, untaxed:untaxed, grand:Math.round((ev.total+taxTotal)*100)/100, ctx:ctx };
+}
+/** the money rows, one look everywhere: offers → After offers (or Goods) → GST per rate → Total incl. tax */
+function shopMoneyRowsHTML(m, opt){
+  opt=opt||{}; var ctx=m.ctx; var ev=m.ev;
+  var rows=(ev.adjustments||[]).map(function(a){ return '<div style="display:flex;justify-content:space-between;gap:8px"><span>🏷️ '+esc(a.label||a.kind)+(a.scope&&a.scope!=='line'?' <small style="opacity:.7">'+esc(a.scope)+'</small>':'')+'</span><b style="color:#c0392b">− '+esc(ctx.money(Math.abs(a.amount||0)))+'</b></div>'; }).join('');
+  var notes=(ev.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.why||n.text||n.label||'')+'</div>'; }).join('');
+  var taxRows=Object.keys(m.byRate).map(function(k){ return '<div data-testid="shop-tax" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>'+esc(k)+'</span><span>'+esc(ctx.money(m.byRate[k]))+'</span></div>'; }).join('')
+    + (m.untaxed>0&&Object.keys(m.byRate).length?'<div style="opacity:.6;font-size:12px">'+esc('no tax slab resolves for '+ctx.money(m.untaxed)+' of this basket')+'</div>':'');
+  return ((rows||notes) ? rows+notes+'<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>'+esc(ctx.money(ev.total))+'</b></div>' : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>'+esc(ctx.money(ev.total))+'</b></div>')
+    + taxRows
+    + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="'+esc(opt.totalTestid||'shop-total')+'">'+esc(ctx.money(m.grand))+'</b></div>';
+}
 function shopBasketSummary(){
   var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
-  var offers=_shopOffers(); var ctx=_shopCtx();
   var lines=picked.map(function(p){ var l=_lineOf(p, Number(p.qty)||1); l.unitPrice=cbAmount(p.price); return l; });
   try{
-    var gross=lines.reduce(function(s,l){ return s+l.unitPrice*l.qty; },0);
-    var ev2=(offers.length&&typeof CBOffers!=='undefined')?CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx }):{ adjustments:[], notes:[], subtotal:gross, total:gross };
-    /* per-line net after ALL offers: line-scope off per line, order-level off spread by gross share; then tax by each line's own rate */
-    var per=(offers.length&&typeof CBOffers!=='undefined'&&CBOffers.perLine)?(CBOffers.perLine(ev2, lines)||{}):{};
-    var orderOff=(ev2.adjustments||[]).filter(function(a){ return a.scope!=='line'&&a.scope!=='note'; }).reduce(function(s,a){ return s+Math.abs(Number(a.amount)||0); },0);
-    var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
-    var byRate={}, taxTotal=0, untaxed=0;
-    lines.forEach(function(l,i){ var g=l.unitPrice*l.qty; var off=((per[String(i)]||per[l.key]||{}).off)||0; var net=Math.max(0, g-off-(gross>0?orderOff*g/gross:0)); var t=(byId[String(l.item_id)]||{}).tax; if(t&&t.rate!=null){ var tax=Math.round(net*(Number(t.rate)+Number(t.cess||0)))/100; var key=(t.scheme||'GST')+' '+t.rate+'%'+(t.cess?' + '+t.cess+'% cess':''); byRate[key]=(byRate[key]||0)+tax; taxTotal+=tax; } else { untaxed+=net; } });
-    var rows=(ev2.adjustments||[]).map(function(a){ return '<div style="display:flex;justify-content:space-between;gap:8px"><span>🏷️ '+esc(a.label||a.kind)+(a.scope&&a.scope!=='line'?' <small style="opacity:.7">'+esc(a.scope)+'</small>':'')+'</span><b style="color:#c0392b">− '+esc(ctx.money(Math.abs(a.amount||0)))+'</b></div>'; }).join('');
-    var notes=(ev2.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.why||n.text||n.label||'')+'</div>'; }).join('');
-    var taxRows=Object.keys(byRate).map(function(k){ return '<div data-testid="shop-tax" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>'+esc(k)+'</span><span>'+esc(ctx.money(byRate[k]))+'</span></div>'; }).join('')
-      + (untaxed>0&&Object.keys(byRate).length?'<div style="opacity:.6;font-size:12px">'+esc('no tax slab resolves for '+ctx.money(untaxed)+' of this basket')+'</div>':'');
-    host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'
-      + ((rows||notes) ? rows+notes+'<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>'+esc(ctx.money(ev2.total))+'</b></div>' : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>'+esc(ctx.money(ev2.total))+'</b></div>')
-      + taxRows
-      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="shop-total">'+esc(ctx.money(Math.round((ev2.total+taxTotal)*100)/100))+'</b></div>'
-      + '</div>';
-    return;
+    host.innerHTML = '<div data-testid="shop-offers" style="margin:6px 0 8px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">' + shopMoneyRowsHTML(shopBasketMath(lines)) + '</div>';
   }catch(e){ host.innerHTML=''; }
 }
 function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }
@@ -729,7 +739,11 @@ function _cartStepReview(){
     + '<span style="margin-inline-start:auto;color:#c0392b;cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span></div>'; };
   return hd('Your basket · '+_ord.lines.length, 0)
     + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:inline-end">'+_cartLineTotal(i)+'</b>'); }).join('')
-    + '<div style="display:flex;padding:9px 0;border-top:2px solid #e7e3d8;font-size:14px;font-weight:800"><span style="flex:1">Total</span><span data-testid="shop-review-total">'+_cartGrand()+'</span></div>'
+    + (function(){ /* the same money the basket showed — offers, GST per rate, total incl. tax — never the listed price alone */
+        try{ var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
+          var lines=(_ord.lines||[]).map(function(L){ var it=byId[String(L.item_id)]||{ item_id:L.item_id, item_data:{ name:L.name } }; var l=_lineOf(it, Number(L.qty)||1); l.unitPrice=Number(L.price)||0; return l; });
+          return '<div style="margin-top:6px;padding:8px 10px;border:1px dashed #c0392b;border-radius:9px;font-size:13px">'+shopMoneyRowsHTML(shopBasketMath(lines), { totalTestid:'shop-review-total' })+'</div>';
+        }catch(e){ return '<div style="display:flex;padding:9px 0;border-top:2px solid #e7e3d8;font-size:14px;font-weight:800"><span style="flex:1">Total</span><span data-testid="shop-review-total">'+_cartGrand()+'</span></div>'; } })()
     /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
        must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
     + '<div style="background:#FBF6E9;border:1px solid #efe3c4;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
