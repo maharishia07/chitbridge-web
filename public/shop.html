@@ -567,7 +567,8 @@ function shopUpiLink(upi, name, amount, ref){
 }
 function shopUpiBlock(res, isCart){
   var s=(_SHOPDATA&&_SHOPDATA.shop)||{}; var upi=s.upi_id; if(!upi) return '';
-  var j=(res&&res.j)||{}; var amount=Number(j.total||j.amount||0)||0; var ref=j.chit_id||'';
+  var j=(res&&res.j)||{}; var sm=j.summary||{};   /* the server's total (the chit's Quoted figure) — never the basket's own arithmetic */
+  var amount=Number(sm.total_value||sm.indicative_total||j.total||0)||0; var ref=j.chit_id||'';
   if(!amount) return '';
   var link=shopUpiLink(upi, s.display_name||s.name||'', amount, ref); var img='';
   try{ if(typeof qrcode==='function'){ var qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(4,8); img=img.replace('<img ','<img data-testid="shop-upi-qr" alt="Pay by UPI" '); } }catch(e){}
