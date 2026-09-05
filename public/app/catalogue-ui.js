@@ -261,7 +261,11 @@
      */
     var offBadge = '';
     try {
-      var _offs = (opts && opts.offers) || (cart.__cbcatOpts && cart.__cbcatOpts.offers) || [];
+      /* ⚠️ NO CALLER EVER PASSED `offers` (Athi, 2026-09-05, from Chola's Suppliers screen: "tallytest not showing the
+         offer") — the badge could only ever be blank on Suppliers, Compose and Network. The catalogue the cart holds
+         carries the seller's live offers (the same payload the storefront reads); they are the default. */
+      var _st = null; try { _st = cart.state ? cart.state() : null; } catch (e) { _st = null; }
+      var _offs = (opts && opts.offers) || (cart.__cbcatOpts && cart.__cbcatOpts.offers) || (_st && _st.cat && _st.cat.offers) || [];
       if (_offs.length && root.CBOffers && root.CBOffers.forLine) {
         var _p = root.CBOffers.forLine(
           { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0 },
@@ -272,13 +276,25 @@
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
 
+    /* ⭐ THE TAX A BUYER WILL PAY, on the row (Athi, 2026-09-05: "not showing the GST values here"). The item carries the
+       rate the seller's shelf resolves for it (catalogue-view attaches it — the same resolver as the order and the
+       invoice), so the row says "+5% GST · ₹210 incl." beside the listed price. No rate → nothing extra, as before. */
+    var taxChip = '';
+    try {
+      var _tx = (r.item && r.item.tax) || (d && d.tax) || null;
+      if (_tx && _tx.rate != null && isFinite(u.amount)) {
+        var _rate = Number(_tx.rate) + (Number(_tx.cess) || 0), _incl = Math.round(u.amount * (1 + _rate / 100) * 100) / 100;
+        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(id) + '" title="' + esc(_tx.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(_tx.rate))) + '% ' + esc(_tx.name && !/^\d/.test(_tx.name) ? 'GST' : 'GST') + (Number(_tx.cess) ? ' +' + esc(String(Number(_tx.cess))) + '% cess' : '') + ' · ' + esc(money(cart.ns, _incl)) + ' incl.</span>';
+      }
+    } catch (e) { taxChip = ''; }
+
     return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
       + ' data-testid="cbcat-row-' + esc(id) + '">'
       + media
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
       + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + '</span>'
-      + '<span class="cbcat-pr">' + price + lineTotal + '</span>'
+      + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
       + '</div>';
   }
