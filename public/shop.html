@@ -483,7 +483,10 @@ function productListHtml(data, cur){
 function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
 /* The one cart this page holds. Created in productListHtml, released before it is created again. */
 var _CART=null;
-function shopPickListHtml(){ return _CART?_CART.listHTML():''; }
+/* ⚠️ THE FIRST PAINT MUST USE THE SAME RENDERER AS EVERY REPAINT (Athi, 2026-09-05: "when I refresh the offer details were
+   there; when I tab to another tab and come back the details are gone") — this asked cart-ui for its plain rows and only
+   the follow-up repaint drew the shared rows; any full re-render showed plain rows again. */
+function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.listHTML){ var o=Object.assign({}, (_CART.state()&&_CART.state().opts)||{}, { rowExtra:(_CART.state()&&_CART.state().opts&&_CART.state().opts.rowExtra)||undefined }); return CBCatUI.listHTML(_CART, o); } }catch(e){} return _CART.listHTML(); }
 /**
  * ⭐ THE OFFER PRICE, ON THE ROW. Athi, 2026-09-04: "original price strike out, and offer price showed — something
  * clever, attractive". Every catalogue line is evaluated as a basket of one through CBOffers (the same engine the
