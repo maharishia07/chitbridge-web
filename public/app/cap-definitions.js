@@ -525,7 +525,7 @@ function cbDefRuleFields(kind, sub){
       { k: 'rate', label: 'Rate %', ph: '18', num: true },
       { k: 'cess', label: 'Cess % on top (blank = none)', ph: '0', num: true },
       { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
-      { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD' },
+      { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD', date: true },   /* a real date control (Athi, 2026-09-05: "date picker is not there") */
     ];
   }
   if (kind === 'pricing') {
@@ -1000,7 +1000,7 @@ function cbDefFormHTML(){
     + '<div class="cbdef-f cbdef-w2">'
     +   '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="' + tx('optional') + '"'
     +   ' oninput="cbDefSetField(\'note\',this.value)">'
-    +   '<div class="cbdef-hint">' + tx('On your offers list. Buyers never see it.') + '</div>'
+    +   '<div class="cbdef-hint">' + tx(f.kind === 'tax' ? 'On your tax slabs list. Buyers never see it.' : f.kind === 'pricing' ? 'On your pricing list. Buyers never see it.' : 'On your offers list. Buyers never see it.') + '</div>'
     + '</div>'
     + '</div>'
     + '<div id="cbdef_prev">' + cbDefPreviewHTML() + '</div>'
