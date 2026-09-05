@@ -526,28 +526,14 @@ function shopOffersSyncNow(){
  * the Review used to print the listed price alone (₹1,000) while the basket two inches above said
  * After offers ₹900 · GST 5% ₹45 · Total incl. tax ₹945, and the server prices the order with the live offers.
  */
+/* ⭐⭐ THE MATH LIVES IN THE CART (app/cart-ui.js CBCart.money / moneyRowsHTML) — moved there 2026-09-05 (Athi: "converge the
+   storefront onto the same picker code … keep it as a single source of truth"). These two are thin adapters: the storefront
+   supplies its offers, its locale context and the per-item tax the catalogue view attached. */
 function shopBasketMath(lines){
-  var offers=_shopOffers(); var ctx=_shopCtx();
-  var gross=lines.reduce(function(s,l){ return s+l.unitPrice*l.qty; },0);
-  var ev=(offers.length&&typeof CBOffers!=='undefined')?CBOffers.evaluate({ lines:lines, offers:offers, ctx:ctx }):{ adjustments:[], notes:[], subtotal:gross, total:gross };
-  var per=(offers.length&&typeof CBOffers!=='undefined'&&CBOffers.perLine)?(CBOffers.perLine(ev, lines)||{}):{};
-  var orderOff=(ev.adjustments||[]).filter(function(a){ return a.scope!=='line'&&a.scope!=='note'; }).reduce(function(s,a){ return s+Math.abs(Number(a.amount)||0); },0);
   var byId={}; ((_SHOPDATA&&_SHOPDATA.items)||[]).forEach(function(p){ byId[String(p.item_id)]=p; });
-  var byRate={}, taxTotal=0, untaxed=0;
-  lines.forEach(function(l,i){ var g=l.unitPrice*l.qty; var off=((per[String(i)]||per[l.key]||{}).off)||0; var net=Math.max(0, g-off-(gross>0?orderOff*g/gross:0)); var t=(byId[String(l.item_id)]||{}).tax; if(t&&t.rate!=null){ var tax=Math.round(net*(Number(t.rate)+Number(t.cess||0)))/100; var key=(t.scheme||'GST')+' '+t.rate+'%'+(t.cess?' + '+t.cess+'% cess':''); byRate[key]=(byRate[key]||0)+tax; taxTotal+=tax; } else { untaxed+=net; } });
-  return { gross:gross, ev:ev, byRate:byRate, taxTotal:taxTotal, untaxed:untaxed, grand:Math.round((ev.total+taxTotal)*100)/100, ctx:ctx };
+  return CBCart.money(lines, { offers:_shopOffers(), ctx:_shopCtx(), taxOf:function(id){ var p=byId[String(id)]; return (p&&p.tax)||null; } });
 }
-/** the money rows, one look everywhere: offers → After offers (or Goods) → GST per rate → Total incl. tax */
-function shopMoneyRowsHTML(m, opt){
-  opt=opt||{}; var ctx=m.ctx; var ev=m.ev;
-  var rows=(ev.adjustments||[]).map(function(a){ return '<div style="display:flex;justify-content:space-between;gap:8px"><span>🏷️ '+esc(a.label||a.kind)+(a.scope&&a.scope!=='line'?' <small style="opacity:.7">'+esc(a.scope)+'</small>':'')+'</span><b style="color:#c0392b">− '+esc(ctx.money(Math.abs(a.amount||0)))+'</b></div>'; }).join('');
-  var notes=(ev.notes||[]).map(function(n){ return '<div style="opacity:.75">💡 '+esc(n.why||n.text||n.label||'')+'</div>'; }).join('');
-  var taxRows=Object.keys(m.byRate).map(function(k){ return '<div data-testid="shop-tax" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>'+esc(k)+'</span><span>'+esc(ctx.money(m.byRate[k]))+'</span></div>'; }).join('')
-    + (m.untaxed>0&&Object.keys(m.byRate).length?'<div style="opacity:.6;font-size:12px">'+esc('no tax slab resolves for '+ctx.money(m.untaxed)+' of this basket')+'</div>':'');
-  return ((rows||notes) ? rows+notes+'<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>'+esc(ctx.money(ev.total))+'</b></div>' : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>'+esc(ctx.money(ev.total))+'</b></div>')
-    + taxRows
-    + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="'+esc(opt.totalTestid||'shop-total')+'">'+esc(ctx.money(m.grand))+'</b></div>';
-}
+function shopMoneyRowsHTML(m, opt){ opt=opt||{}; return CBCart.moneyRowsHTML(m, { taxTestid:'shop-tax', totalTestid:opt.totalTestid||'shop-total' }); }
 function shopBasketSummary(){
   var picked=_CART?_CART.selected():[]; var host=el('p_offers'); if(!host) return;
   if(!picked.length){ host.innerHTML=''; return; }
