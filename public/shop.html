@@ -43,6 +43,7 @@
 <script src="cb-offline.js"></script>
 <script src="app/offers.js"></script>
 <script src="app/pricing.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="app/catalogue-lines.js"></script>
 <script src="app/locale.js"></script>   <!-- cart-ui reads CBLocale (money/symbol) — the app loads it, the shop must too (found by the tour, 2026-09-05) -->
 <script src="app/cart-ui.js"></script>
@@ -554,6 +555,28 @@ function shopBasketSummary(){
  * a bare number; unknown shows nothing (absent is not zero). On open the storefront ASKS the store's connector once; if one
  * is listening it reads the source and writes fresh figures, and the list re-reads them a few seconds later.
  */
+/**
+ * ⭐ PAY BY UPI, LEVEL 1 (Athi, 2026-09-05). When the shop has a UPI id on record, "Order placed" shows a QR any UPI app
+ * scans — the shop's id, the amount, the chit reference — and, on a phone, a button that opens the UPI app directly
+ * (upi://pay, NPCI's deep-link contract). No money passes through us; the shop marks the chit paid on its side.
+ * The amount is the server's total for the order; nothing here is charged or promised.
+ */
+function shopUpiLink(upi, name, amount, ref){
+  var q='pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(Math.round(Number(amount)*100)/100)):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(ref||'').slice(0,8));
+  return 'upi://pay?'+q;
+}
+function shopUpiBlock(res, isCart){
+  var s=(_SHOPDATA&&_SHOPDATA.shop)||{}; var upi=s.upi_id; if(!upi) return '';
+  var j=(res&&res.j)||{}; var amount=Number(j.total||j.amount||0)||0; var ref=j.chit_id||'';
+  if(!amount) return '';
+  var link=shopUpiLink(upi, s.display_name||s.name||'', amount, ref); var img='';
+  try{ if(typeof qrcode==='function'){ var qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(4,8); img=img.replace('<img ','<img data-testid="shop-upi-qr" alt="Pay by UPI" '); } }catch(e){}
+  return '<div data-testid="shop-upi" style="margin-top:14px;padding:12px;border:1px dashed #c0392b;border-radius:12px;text-align:center"><div style="font-weight:800;font-size:14px">'+esc('Pay '+cbFmt(amount)+' by UPI')+'</div>'
+    +'<div style="font-size:12px;color:#6a707a;margin:4px 0 8px">'+esc('to '+upi+' · ref CB-'+String(ref).slice(0,8))+'</div>'+(img?'<div>'+img+'</div>':'')
+    +'<a data-testid="shop-upi-link" href="'+esc(link)+'" style="display:inline-block;margin-top:8px;border:1px solid #3F66A6;border-radius:9px;padding:8px 14px;color:#3F66A6;font-weight:700;text-decoration:none">Open my UPI app</a>'
+    +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
+}
+function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,'INR'):('₹'+Number(n).toFixed(2)); }catch(e){ return '₹'+n; } }
 function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 function shopStockBadge(d){
   var a=d&&d.avail; if(!a||a.qty==null||!a.as_of) return '';
@@ -936,7 +959,7 @@ function _orderPost(body){
       var qtyTxt=(!isCart&&!_isPayload()&&_ord.qty)?(' ('+esc(String(_ord.qty))+(unit?(' '+esc(unit)):'')+')'):'';
       var title=isCart?'Order placed':(_isPayload()?'Submitted':(_isNegotiable()?'Offer sent':'Order placed'));
       var tail=(!isCart&&_isNegotiable())?'The shop will accept or counter.':'They\'ll be in touch.';
-      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">'+esc(title)+'</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">'+what+'<b>'+subject+'</b>'+qtyTxt+' reached the shop. '+tail+'</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
+      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">'+esc(title)+'</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">'+what+'<b>'+subject+'</b>'+qtyTxt+' reached the shop. '+tail+'</div>'+shopUpiBlock(res, isCart)+'<button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
     .catch(function(e2){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e2.message||'Network error')); });
 }
 // ── VISUALIZE-APPLY ("scan your home") — CHEAP first slice: upload a room photo, tint it in each recommended
