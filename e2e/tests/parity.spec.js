@@ -44,7 +44,8 @@ test('[PAR-01] the storefront and the Suppliers screen show the same price, tax 
   let supTax = '', supOffer = '', supPrice = '';
   try {
     await clickNav(buyer.page, 'suppliers'); await settle(buyer.page);
-    await buyer.page.getByTestId('sup-add-input').fill(sellerEmail || email);
+    /* the add box takes a name, a User ID or an email — the handle is the one we surely have */
+    await buyer.page.getByTestId('sup-add-input').fill(String(handle));
     await buyer.page.getByTestId('sup-add').click(); await settle(buyer.page);
     const supRow = buyer.page.locator('[data-testid^="sup-row-"]').filter({ hasText: sellerName.split(' ')[0] }).first();
     if (await supRow.count()) await supRow.click(); else await buyer.page.locator('[data-testid^="sup-row-"]').first().click();
