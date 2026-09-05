@@ -11983,7 +11983,9 @@ function fmtLine(e){
      [0] stays the combined plain-text string because the export paths (line_items → {description, qty}) read
      it, so splitting it there would change what a printed chit says. Appended, for the same reason [3] was. */
   return [name, qty+money, [], e, { name: li.particulars || 'Item', desc: li.comment || '',
-                                    asked: li.asked_unit ? ('asked in ' + li.asked_unit) : '' }];
+                                    asked: li.asked_unit ? ('asked in ' + li.asked_unit) : '',
+                                    /* the stamped stock fell short when the order came in (routes/catalogue.js reprice) */
+                                    stock: (li.stock && li.stock.short) ? { short: li.stock.short, qty: li.stock.qty, as_of: li.stock.as_of || '', source: li.stock.source || '' } : null }];
 }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, line_id:m.line_id||null, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
@@ -13989,7 +13991,7 @@ function contentItems(c){
      */
     const p4=it[4];
     const nameHTML=p4
-      ? `${esc(p4.name)}${p4.desc?`<span class="lndesc">${esc(p4.desc)}</span>`:''}${p4.asked?`<span class="lndesc">(${esc(p4.asked)})</span>`:''}`
+      ? `${esc(p4.name)}${p4.desc?`<span class="lndesc">${esc(p4.desc)}</span>`:''}${p4.asked?`<span class="lndesc">(${esc(p4.asked)})</span>`:''}${p4.stock?` <span data-testid="c2-stock-short" title="${esc((p4.stock.source?'stock from '+p4.stock.source+' · ':'')+'as of '+String(p4.stock.as_of).slice(0,16).replace('T',' '))}" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);padding:1px 6px;border-radius:9px;white-space:nowrap">⚠ ${esc(tx('short by')+' '+p4.stock.short+' · '+tx('stock')+' '+p4.stock.qty)}</span>`:''}`
       : esc(it[0]);
     return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${nameHTML}</div></span>`:`<span class="nm">${nameHTML}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
