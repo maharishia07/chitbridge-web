@@ -258,6 +258,18 @@
     // saying so reads as agreed when nothing has been agreed.
     return { amount: amount, partial: partial, offered: offered };
   }
+  /** the selected lines in the OFFER ENGINE's shape (key · item_id · sku · categories · qty · unitPrice · tax) — for money() */
+  function engineLines(ns) {
+    var s = C[ns]; if (!s) return [];
+    var out = [];
+    rowsOf(s.cat).forEach(function (r) {
+      if (r.type !== 'line' || !s.sel[r.item_id]) return;
+      var u = unitPrice(ns, r), d = (r.item && (r.item.item_data || r.item)) || {};
+      out.push({ key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [], excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded : [],
+                 qty: Number(s.sel[r.item_id]) || 0, unitPrice: isFinite(u.amount) ? u.amount : 0, tax: (r.item && r.item.tax) || d.tax || null });
+    });
+    return out;
+  }
   /** What is in the cart, in the shape a chit line needs. Reads the WHOLE catalogue, never the filtered view. */
   function selected(ns) {
     var s = C[ns]; if (!s) return [];
@@ -814,9 +826,21 @@
               + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(l.item_id) + '\',0)" title="remove"'
               + ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>';
           }).join('')
-          + '<div style="display:flex;padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-          + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
-          + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
+          /* ⭐ the same money rows the storefront shows — offers → After offers → GST per rate → Total incl. tax — whenever the
+             catalogue carries offers or a line carries a tax rate; the bare Total stays for a catalogue with neither */
+          + (function () {
+              try {
+                var st = C[ns], EL = engineLines(ns);
+                var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
+                if (!T.offered && !T.partial && (hasOffers || hasTax)) {
+                  var M = money(EL, { offers: (st.cat.offers || []), ctx: { now: new Date(), currency: (st.cat.shop && st.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+                  return '<div data-testid="cart-money" style="padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + moneyRowsHTML(M, { taxTestid: 'cart-tax', totalTestid: 'cart-total' }) + '</div>';
+                }
+              } catch (e) { /* fall through to the bare total */ }
+              return '<div style="display:flex;padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
+                + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
+                + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>';
+            })()
           + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">Some lines have no price — the total covers only the priced ones.</div>' : '')
         // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
         : '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Nothing in the cart yet.</div>')
@@ -1253,7 +1277,56 @@
     return h;
   }
 
+  /**
+   * ⭐⭐ ONE MATH FOR EVERY MONEY FIGURE A BUYER SEES — moved here from the storefront (Athi, 2026-09-05: "the cart is a
+   * single view we should be able to embed anywhere so we get the same style and response everywhere; keep it as a
+   * single source of truth"). The storefront basket, the storefront review, the app's basket panel and the Suppliers
+   * review all call these two; nothing else computes an offer, a tax row or a total.
+   *   money(lines, { offers, ctx, taxOf })  → { gross, ev, byRate, taxTotal, untaxed, grand, ctx }
+   *     lines: the engine's line shape ({ key, item_id, sku, categories, qty, unitPrice, … }); offers: the seller's live
+   *     rules; ctx: { now, currency, money(n) }; taxOf(item_id) → { rate, cess, name } or null (the catalogue view attaches
+   *     it per item — the same resolver as the order and the invoice).
+   *   moneyRowsHTML(m, { taxTestid, totalTestid }) → offers → After offers (or Goods) → GST per rate → Total incl. tax
+   */
+  function money(lines, o) {
+    o = o || {}; var offers = o.offers || [], ctx = o.ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
+    var taxOf = typeof o.taxOf === 'function' ? o.taxOf : function () { return null; };
+    var gross = lines.reduce(function (s, l) { return s + (Number(l.unitPrice) || 0) * (Number(l.qty) || 0); }, 0);
+    var ev = (offers.length && root.CBOffers) ? root.CBOffers.evaluate({ lines: lines, offers: offers, ctx: ctx, money: ctx.money }) : { adjustments: [], notes: [], subtotal: gross, total: gross };
+    var per = (offers.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(ev, lines) || {}) : {};
+    var orderOff = (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (s, a) { return s + Math.abs(Number(a.amount) || 0); }, 0);
+    var byRate = {}, taxTotal = 0, untaxed = 0;
+    lines.forEach(function (l, i) {
+      var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0);
+      var off = ((per[String(i)] || per[l.key] || {}).off) || 0;
+      var net = Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
+      var t = taxOf(l.item_id, l);
+      if (t && t.rate != null) {
+        var rate = Number(t.rate) + (Number(t.cess) || 0), tax = Math.round(net * rate / 100 * 100) / 100;
+        var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : 'GST') + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');
+        byRate[k] = Math.round(((byRate[k] || 0) + tax) * 100) / 100; taxTotal += tax;
+      } else untaxed += net;
+    });
+    taxTotal = Math.round(taxTotal * 100) / 100;
+    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: Math.round(untaxed * 100) / 100, grand: Math.round(((ev.total != null ? ev.total : gross) + taxTotal) * 100) / 100, ctx: ctx };
+  }
+  function moneyRowsHTML(m, opt) {
+    opt = opt || {}; var ctx = m.ctx, ev = m.ev || { adjustments: [], notes: [], total: m.gross };
+    var row = function (l, r, extra) { return '<div style="display:flex;justify-content:space-between;gap:8px;' + (extra || '') + '"><span>' + l + '</span><span>' + r + '</span></div>'; };
+    var rows = (ev.adjustments || []).map(function (a) { return row('🏷️ ' + esc(a.label || a.kind) + (a.scope && a.scope !== 'line' ? ' <small style="opacity:.7">' + esc(a.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.abs(Number(a.amount) || 0))) + '</b>'); }).join('');
+    var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
+    var keys = Object.keys(m.byRate || {});
+    var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
+      + (m.untaxed > 0 && keys.length ? '<div style="opacity:.6;font-size:12px">' + esc('no tax slab resolves for ' + ctx.money(m.untaxed) + ' of this basket') + '</div>' : '');
+    var after = (rows || notes)
+      ? rows + notes + '<div style="display:flex;justify-content:space-between;border-top:1px solid #eee;margin-top:6px;padding-top:6px"><span>After offers</span><b>' + esc(ctx.money(ev.total)) + '</b></div>'
+      : '<div style="display:flex;justify-content:space-between"><span>Goods</span><b>' + esc(ctx.money(m.gross)) + '</b></div>';
+    return after + taxRows
+      + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>';
+  }
+
   root.CBCart = {
+    money: money, moneyRowsHTML: moneyRowsHTML,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
