@@ -12,6 +12,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
   intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
   intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},   // the connectors that have checked in
+  intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
@@ -4559,7 +4560,26 @@ function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v])
  * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
  */
 var _KEYS, _KEY_SHOWN = '';   /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
-var _INT_CAT, _INT_RUN;         /* the connector catalogue and the connectors that have checked in — lazy, like the keys */
+var _INT_CAT, _INT_RUN, _INT_MAP;   /* the connector catalogue, the connectors that have checked in, the profile map — lazy, like the keys */
+/**
+ * ⭐ THE PROFILE MAP (Athi, 2026-09-05: "do we have a map of what we look for, how do we fill it, what is the authenticity?").
+ * One row per field we look for: the value we hold, where it came from (typed · Tally · Zoho · a file · derived from the
+ * GSTIN), when, and its rung — declared · copied · checked · verified — plus any check that failed (a GSTIN whose check
+ * digit is wrong, a PIN in another state). The connector's sync-profile fills it; a higher rung is never overwritten.
+ */
+function intProfileMapHTML(){
+  if (_INT_MAP === undefined) { _INT_MAP = null; api('intProfileMap').then(function(r){ _INT_MAP = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_MAP = {}; if (setSec() === 'integrations') loadSettings(); }); }
+  var m = _INT_MAP; if (!m || !m.fields) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + '</div><div style="color:var(--grey)">' + tx(m === null ? 'reading…' : 'no map') + '</div></div>';
+  var rungStyle = { declared: 'background:var(--warn-tint);color:var(--warn-2)', copied: 'background:#eef3ff;color:#2f4f9a', checked: 'background:var(--ok-tint);color:var(--ok-2)', verified: 'background:var(--ok-2);color:#fff' };
+  var rows = (m.order || []).map(function(k){ var f = m.fields[k] || {}; var src = f.source ? String(f.source) : ''; var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
+    return '<tr data-testid="int-map-' + esc(k) + '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(f.label || k) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(f.why || '') + '</div></td>'
+      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-family:monospace">' + (f.value != null ? esc(String(f.value)) : '<span style="color:var(--warn-3)">' + esc(tx('missing')) + '</span>') + (f.issues && f.issues.length ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠ ' + esc(f.issues.join('; ')) + '</div>' : '') + '</td>'
+      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(src) + (when ? ' · ' + esc(when) : '') + '<div>' + esc((f.sources && (f.sources.tally || '')) ? 'Tally: ' + f.sources.tally : '') + '</div></td>'
+      + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + (f.rung ? '<span data-testid="int-map-rung-' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' + (rungStyle[f.rung] || '') + '">' + esc(f.rung) + '</span>' : '') + '</td></tr>'; }).join('');
+  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.filled || 0) + ' ' + tx('of') + ' ' + String(m.total || 0) + ' ' + tx('filled')) + (m.state_name ? ' · ' + esc(m.state_name) : '') + '</span></div>'
+    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
+    + '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' + tx('Field') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Value') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Source · when') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Rung') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
 /**
  * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
  * all should reside as part of Integrations; if we build more, it should stay there"). The catalogue comes from the API
@@ -4592,6 +4612,7 @@ function integrationsSettingsHTML(){
   var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
   return _misHead('Integrations', tx('Connectors, services and the keys they use'))
     + intConnectorsHTML()
+    + intProfileMapHTML()
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
