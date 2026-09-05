@@ -10,6 +10,8 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
   keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
   keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
+  intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
+  intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},   // the connectors that have checked in
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
@@ -4557,14 +4559,41 @@ function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v])
  * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
  */
 var _KEYS, _KEY_SHOWN = '';   /* the minted key, shown once — survives the list repaint, cleared on the next mint/revoke/leave */
+var _INT_CAT, _INT_RUN;         /* the connector catalogue and the connectors that have checked in — lazy, like the keys */
+/**
+ * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
+ * all should reside as part of Integrations; if we build more, it should stay there"). The catalogue comes from the API
+ * (routes/integrations.js CATALOGUE) so a new connector appears here the day it is built; the download is a zip of the kit
+ * with connector.json pre-filled for THIS API and adapter — the key stays empty, a secret never rides a link.
+ */
+function intConnectorsHTML(){
+  if (_INT_CAT === undefined) { _INT_CAT = null; api('intCatalogue').then(function(r){ _INT_CAT = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_CAT = []; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_INT_RUN === undefined) { _INT_RUN = null; api('intStatus').then(function(r){ _INT_RUN = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_RUN = []; if (setSec() === 'integrations') loadSettings(); }); }
+  var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
+  var cat = _INT_CAT || [], run = _INT_RUN || [];
+  var cards = cat.length ? cat.map(function(c){
+    var adapters = (c.adapters || []).map(function(a){ return '<a class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" href="' + esc(base + c.download + '?adapter=' + a) + '" download style="text-decoration:none">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</a>'; }).join(' ');
+    var steps = (c.steps || []).map(function(s, i){ return '<div style="font-size:var(--fs-1)">' + (i + 1) + '. ' + esc(s) + '</div>'; }).join('');
+    var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
+    return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + doc + ' ' + adapters + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div><div style="margin-top:6px">' + steps + '</div></div>';
+  }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
+  var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
+    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span></div>'; }).join('')
+    : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
+  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
+    + '<div style="font-size:var(--fs-2)">' + tx('A small program that runs beside another system — Tally, a file folder, soon others — and carries products up, offers back and orders down. Download it here; it needs a key with the connector scope.') + '</div>' + cards + '</div>'
+    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>' + rows + '</div>';
+}
 function integrationsSettingsHTML(){
   if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var keys = (_KEYS && _KEYS.keys) || [];
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
-  return _misHead('Integrations', tx('Keys other systems call with'))
-    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The offer engine as a service') + '</div>'
-    + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back what comes off and why — the same engine the storefront and compose use.') + '</div>'
+  return _misHead('Integrations', tx('Connectors, services and the keys they use'))
+    + intConnectorsHTML()
+    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
+    + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
     + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><select class="inp" id="int_key_scope" data-testid="int-key-scope" style="flex:0 0 220px"><option value="services">' + esc(tx('services — offers, pricing, tax, invoice')) + '</option><option value="offers">' + esc(tx('offers only')) + '</option><option value="pricing">' + esc(tx('pricing only')) + '</option><option value="tax">' + esc(tx('tax only')) + '</option><option value="invoice">' + esc(tx('invoice only')) + '</option><option value="connector">' + esc(tx('connector — products, orders, the bell, and the services')) + '</option></select><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key') + '</button></div>'
