@@ -49,3 +49,10 @@ Later cases renumbered: 19 Barcode/Identifiers · 20 Consists of · 21 Media · 
     NODE_OPTIONS=--max-old-space-size=4096 TOUR=1 TOUR_HEADED=1 TOUR_PAUSE=8000 TOUR_FROM=17 npx playwright test tests/tour.spec.js --headed --project=authed
 The config turns trace and video OFF when TOUR is set: with them on, the worker ran out of heap at ~9 minutes and the
 headed window froze on a caption. Never start a second Playwright run while the tour is on screen (shared auth state).
+
+## The two-party tour — `tests/tour-two.spec.js` (2026-09-05)
+One trade across two windows: LEFT the seller's app (fresh entity: product · GST 5% · 10% offer · public storefront), RIGHT the buyer's storefront (shop.html, OTP customer). Eight cases: shelf → tax+offer → public → the shop → six bags in the basket (offer off, GST on the after-offers figure) → order (contact, code, place) → the seller's BELL rings (asserted at cbPushArrived, no timer) → the order chit opens.
+
+    NODE_OPTIONS=--max-old-space-size=4096 TOUR=1 TOUR_HEADED=1 TOUR_PAUSE=8000 npx playwright test tests/tour-two.spec.js --headed --project=authed
+
+Headless proof: drop `TOUR_HEADED`/`--headed`. Green 2026-09-05 00:57 (2 passed, 2.2 m).
