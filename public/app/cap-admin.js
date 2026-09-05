@@ -7,6 +7,9 @@
 
 if (typeof EP !== 'undefined') { Object.assign(EP, {
   vaultGet:  {m:'GET', p:'/api/governance/profile',       ok:'y'},   // returns the trade profile incl. .vault
+  keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
+  keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
+  keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
@@ -3520,6 +3523,7 @@ var SET_SECS = [
   { key:'work',       name:'Work',        q:'How tasks reach people' },
   { key:'policy',     name:'Policy',      q:'Rules on your records' },
   { key:'channels',   name:'Channels',    q:'Where work arrives from' },
+  { key:'integrations', name:'Integrations', q:'Keys other systems call with' },
   { key:'governance', name:'Governance layers', q:'Where your rights come from' },
   /* ⚠️ NAMED FOR WHAT IT RENDERS. I called this "Blueprints · Shared catalogue designs" when splitting Settings
      into sections, taking the name from the function (blueprintSettingsHTML) without reading its output — it
@@ -4546,11 +4550,44 @@ function localeSetCa(v){ _locStage(tx('Calendar'), 'setExt', ['ca', v]); }
 function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v]); }
 
 
+/**
+ * ⭐ INTEGRATIONS — API KEYS FOR OTHER SYSTEMS. Athi, 2026-09-05: "create the entire offer as a capability and attach it to
+ * any other systems". A key is minted here, shown ONCE, scoped (offers today), listed with its last four characters,
+ * revocable in one press. The services it opens: /api/offers kinds · evaluate · explain; the contract at
+ * /api/offers/openapi.json. Only a signed-in person mints or revokes — a key cannot breed.
+ */
+var _KEYS;
+function integrationsSettingsHTML(){
+  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  var keys = (_KEYS && _KEYS.keys) || [];
+  var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
+  var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
+  return _misHead('Integrations', tx('Keys other systems call with'))
+    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The offer engine as a service') + '</div>'
+    + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back what comes off and why — the same engine the storefront and compose use.') + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>GET ' + esc(base) + '/api/offers/kinds</code> · <code>POST ' + esc(base) + '/api/offers/evaluate</code> · <code>POST …/explain</code> · <a href="' + esc(base) + '/api/offers/openapi.json" target="_blank" rel="noopener">openapi.json</a></div></div>'
+    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Your keys') + '</div>' + rows
+    + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><input class="inp" id="int_key_name" data-testid="int-key-name" placeholder="' + esc(tx('Name — which system')) + '" style="flex:1 1 200px"><button class="pri" data-testid="int-key-mint" onclick="intKeyMint()">' + tx('Mint a key for offers') + '</button></div>'
+    + '<div id="int_key_out"></div></div>';
+}
+async function intKeyMint(){
+  var nm = (document.getElementById('int_key_name') || {}).value || '';
+  try { var r = await api('keysMint', { body: { name: nm || 'key', scopes: ['offers'] } });
+    var out = document.getElementById('int_key_out'); if (out) out.innerHTML = '<div data-testid="int-key-shown" style="margin-top:10px;padding:10px;border:1px dashed var(--warn-3);border-radius:9px;font-size:var(--fs-1)"><b>' + tx('Copy it now — it is shown once.') + '</b><div style="word-break:break-all;font-family:monospace;margin-top:6px" data-testid="int-key-value">' + esc(r.key) + '</div><div style="color:var(--grey);margin-top:6px">' + tx('Send it as') + ' <code>X-Api-Key: …</code> ' + tx('or') + ' <code>Authorization: Bearer …</code></div></div>';
+    _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key minted ✓'));
+    var host = document.getElementById('setbody'); var keep = out ? out.innerHTML : ''; loadSettings(); setTimeout(function(){ var o = document.getElementById('int_key_out'); if (o && keep) o.innerHTML = keep; }, 900);
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not mint'), true); }
+}
+async function intKeyRevoke(jti){
+  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; if (typeof toast === 'function') toast(tx('Key revoked')); loadSettings(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not revoke'), true); }
+}
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "locale") out = localeSettingsHTML();
+    else if (k === "integrations") out = integrationsSettingsHTML();
     else if (k === "appearance") out = appearanceSettingsHTML();
     else if (k === "standards") {
       /**
