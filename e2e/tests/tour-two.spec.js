@@ -126,8 +126,9 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   /* ── SELLER: the bell ── */
   await caption(seller, 'SELLER', 'The bell rings — no timer', 'the mailbox bell: the seller\'s tab held one push stream since sign-in; the order\'s commit rang it; only the badge and the list refresh',
     'nothing — watch', 'a toast "New chit · <buyer>", the Task list shows the order');
-  await seller.waitForFunction(() => Array.isArray(window.__cbArrived) && window.__cbArrived.length > 0, null, { timeout: 30000 });
-  const bell = await seller.evaluate(() => window.__cbArrived[0]);
+  /* the storefront's stock ask rings the same bell on open — wait for the CHIT, not the first sound */
+  await seller.waitForFunction(() => Array.isArray(window.__cbArrived) && window.__cbArrived.some((d) => d && d.kind === 'chit'), null, { timeout: 30000 });
+  const bell = await seller.evaluate(() => window.__cbArrived.find((d) => d && d.kind === 'chit'));
   expect(bell.kind).toBe('chit');
   await clickNav(seller, 'task');
   await expect(seller.getByText(PRODUCT).first()).toBeVisible({ timeout: 40000 });

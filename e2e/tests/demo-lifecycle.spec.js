@@ -40,7 +40,7 @@ test('DEMO lifecycle: CSV products up → storefront order from another system �
     expect(r.read).toBe(30); expect(r.failed).toBe(0); expect(r.added + r.updated).toBe(30);
     await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public', gstn: '33ABCDE1234F1Z5', address: '16A-105 Perumbakkam Main Road, Chennai 600126' } }); await loadCatalogue('fresh'); });
     await clickNav(page, 'catalogue'); await settle(page); await page.waitForTimeout(800);
-    await page.screenshot({ path: path.join(OUT, 'lifecycle-1-catalogue-from-csv.png'), fullPage: false }); await hold(page);
+    await page.screenshot({ path: path.join(OUT, 'lifecycle-1-catalogue-from-csv.png'), fullPage: false, timeout: 60000, animations: "disabled" }); await hold(page);
   });
 
   const handle = await page.evaluate(async () => { const me = await api('me'); const e = (me && me.entity) || me || {}; return e.user_id || e.bridge_id; });
@@ -50,16 +50,16 @@ test('DEMO lifecycle: CSV products up → storefront order from another system �
     await test.step('3 · the storefront from another system (a phone, no login)', async () => {
       await shop.goto('/shop.html?s=' + encodeURIComponent(handle), { waitUntil: 'load' });
       await shop.locator('text=Basmati Rice 25kg').first().waitFor({ timeout: 40000 });
-      await shop.screenshot({ path: path.join(OUT, 'lifecycle-2-storefront-phone.png') }); await hold(shop);
+      await shop.screenshot({ path: path.join(OUT, 'lifecycle-2-storefront-phone.png'), timeout: 60000, animations: "disabled" }); await hold(shop);
     });
     await test.step('4 · the customer orders three lines', async () => {
       await shopAdd(shop, 'Basmati Rice 25kg', 2); await shopAdd(shop, 'Groundnut Oil 1L', 3); await shopAdd(shop, 'Toor Dal 1kg', 5);
       await expect(shop.getByTestId('shop-total')).toBeVisible({ timeout: 20000 });
-      await shop.screenshot({ path: path.join(OUT, 'lifecycle-3-basket.png') }); await hold(shop);
+      await shop.screenshot({ path: path.join(OUT, 'lifecycle-3-basket.png'), timeout: 60000, animations: "disabled" }); await hold(shop);
       await shop.locator('[data-testid^="cart-cbcart"]').first().click(); await shop.getByTestId('cart-checkout').click({ timeout: 20000 });
       for (let i = 0; i < 5 && !(await shop.getByTestId('shop-contact').isVisible().catch(() => false)); i++) {
         if (await shop.getByTestId('shop-area').isVisible().catch(() => false)) { await shop.getByTestId('shop-area').fill('42 Anna Nagar, Chennai 600040'); await shop.getByTestId('shop-date').fill(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)); await shop.getByTestId('shop-time').fill('10:00'); }
-        const next = shop.getByRole('button', { name: /Next|Continue/i }).first(); if (await next.isVisible().catch(() => false)) { if (/Continue/i.test(await next.textContent())) await shop.screenshot({ path: path.join(OUT, 'lifecycle-4-review.png') }); await next.click({ timeout: 10000 }); await shop.waitForTimeout(300); } else break;
+        const next = shop.getByRole('button', { name: /Next|Continue/i }).first(); if (await next.isVisible().catch(() => false)) { if (/Continue/i.test(await next.textContent())) await shop.screenshot({ path: path.join(OUT, 'lifecycle-4-review.png'), timeout: 60000, animations: "disabled" }); await next.click({ timeout: 10000 }); await shop.waitForTimeout(300); } else break;
       }
       const nm = shop.getByTestId('shop-name'); if (await nm.isVisible().catch(() => false)) await nm.fill('Kumar Stores');
       await shop.getByTestId('shop-contact').fill('kumar' + Date.now().toString().slice(-6) + '@example.com');
@@ -69,16 +69,16 @@ test('DEMO lifecycle: CSV products up → storefront order from another system �
       const confirmed = shop.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
       await shop.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 });
       const cj = await (await confirmed).json().catch(() => ({})); chitId = cj.chit_id; expect(chitId, JSON.stringify(cj).slice(0, 200)).toBeTruthy();
-      await shop.waitForTimeout(800); await shop.screenshot({ path: path.join(OUT, 'lifecycle-5-order-placed.png') }); await hold(shop);
+      await shop.waitForTimeout(800); await shop.screenshot({ path: path.join(OUT, 'lifecycle-5-order-placed.png'), timeout: 60000, animations: "disabled" }); await hold(shop);
     });
   } finally { await ctx.close(); }
 
   await test.step('5 · the seller: the order on the Task list', async () => {
     await clickNav(page, 'task'); await settle(page);
     await expect(page.getByText('Basmati Rice 25kg').first()).toBeVisible({ timeout: 40000 });
-    await page.screenshot({ path: path.join(OUT, 'lifecycle-6-seller-task-list.png') }); await hold(page);
+    await page.screenshot({ path: path.join(OUT, 'lifecycle-6-seller-task-list.png'), timeout: 60000, animations: "disabled" }); await hold(page);
     await page.evaluate((id) => openChit(id, true), chitId); await settle(page); await page.waitForTimeout(600);
-    await page.screenshot({ path: path.join(OUT, 'lifecycle-7-seller-order-chit.png') }); await hold(page, PAUSE * 2);
+    await page.screenshot({ path: path.join(OUT, 'lifecycle-7-seller-order-chit.png'), timeout: 60000, animations: "disabled" }); await hold(page, PAUSE * 2);
   });
 
   await test.step('6 · the connector receives it as a file, once', async () => {
@@ -96,7 +96,7 @@ test('DEMO lifecycle: CSV products up → storefront order from another system �
     await page.evaluate(() => navTo('settings')); await page.waitForTimeout(600);
     await page.getByTestId('set-sec-integrations').click({ timeout: 30000 });
     await expect(page.locator('[data-testid^="int-running-"]').first()).toContainText('My system', { timeout: 30000 });
-    await page.screenshot({ path: path.join(OUT, 'lifecycle-9-integrations-running.png'), fullPage: true }); await hold(page);
+    await page.screenshot({ path: path.join(OUT, 'lifecycle-9-integrations-running.png'), fullPage: true, timeout: 60000, animations: "disabled" }); await hold(page);
     /* the directory: the product list, last, and held — Athi: 'show the product list' */
     await clickNav(page, 'catalogue'); await settle(page); await hold(page, PAUSE * 3);
   });
