@@ -578,7 +578,7 @@ function shopUpiBlock(res, isCart){
     +'<div style="font-size:11px;color:#6a707a;margin-top:6px">'+esc('The shop confirms the payment on its side.')+'</div></div>';
 }
 function cbFmt(n){ try{ return (typeof CBLocale!=='undefined')?CBLocale.money(n,'INR'):('₹'+Number(n).toFixed(2)); }catch(e){ return '₹'+n; } }
-function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
+function shopCartBarHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='undefined'&&CBCatUI.barHTML) return CBCatUI.barHTML(_CART); }catch(e){} return _CART.barHTML(); }   /* the same chip as the app; first paint = every repaint */   /* ⚠️ dropped by the stock patch for ~25 min on 2026-09-05 — every storefront said 'Could not reach the shop' */
 function shopStockBadge(d){
   var a=d&&d.avail; if(!a||a.qty==null||!a.as_of) return '';
   var mins=Math.max(0, Math.round((Date.now()-Date.parse(a.as_of))/60000)); var age=mins<1?'just now':(mins<60?mins+' min ago':(mins<1440?Math.round(mins/60)+' h ago':Math.round(mins/1440)+' d ago'));

@@ -1042,6 +1042,8 @@
     /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
     listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
+    /* the cart bar (the chip) for a host that paints its own shell — the storefront's first paint (2026-09-05) */
+    barHTML: function (cart, opts) { return chipHTML(cart, opts || optsFor(cart)); },
     isOnOffer: isOnOffer,
     /* ⭐ THE BREAKDOWN RENDERER, EXPORTED. The product page shows what the cart will do with the offers attached
        to a product, and a lookalike built there would be a second opinion about the same price — which is the one

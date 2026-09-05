@@ -5697,8 +5697,23 @@ function ccStepReview(){
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
           '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:inline-end">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
-        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-        + '<span style="flex:1">' + tx('Total') + '</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
+        /* ONE SOURCE (Athi, 2026-09-05: "look at where else we are invoking cart — same treatment, same UI, same result"): the
+           Compose review prints the cart's money rows over the SAME lines the send evaluates (ccOfferLines) — offers, then GST
+           where a line carries a rate, then the total incl. tax; a bare Total only when neither applies. */
+        + (function(){
+            try {
+              var L = (typeof ccOfferLines === 'function') ? ccOfferLines() : [];
+              var hasOffers = !!((CC.offers||[]).length), hasTax = (CC.items||[]).some(function(it){ return (it.tax && it.tax.rate != null) || it.gst_rate != null; });
+              if (L.length && (hasOffers || hasTax) && typeof CBCart !== 'undefined' && CBCart.money) {
+                var byKey = {}; (CC.items||[]).forEach(function(it, i){ byKey[String(i)] = it; });
+                var M = CBCart.money(L, { offers: CC.offers || [], ctx: { now: new Date(), currency: 'INR', money: function(n){ return fmtMoney(n, 'INR'); } },
+                  taxOf: function(id, l){ var it = byKey[String(l && l.key)] || {}; return it.tax && it.tax.rate != null ? it.tax : (it.gst_rate != null ? { rate: Number(it.gst_rate), cess: Number(it.cess_rate) || 0 } : null); } });
+                return '<div data-testid="cc-review-money" style="padding:8px 12px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + CBCart.moneyRowsHTML(M, { totalTestid: 'cc-review-total', taxTestid: 'cc-review-tax' }) + '</div>';
+              }
+            } catch (e) { /* fall through to the bare total */ }
+            return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
+              + '<span style="flex:1">' + tx('Total') + '</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>';
+          })(), 0)
     + card('To', row('Recipients', (CC.rcpts||[]).length
         ? (CC.rcpts||[]).map(function(r){ return esc(r.role.toUpperCase())+' '+esc(r.name); }).join(' · ')
         : '<span style="color:var(--disp)">nobody yet</span>'), 1)
