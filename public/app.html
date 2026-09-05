@@ -1868,6 +1868,7 @@ const EP = {
   prodAddMany:     {m:"POST",  p:"/api/products/bulk",           ok:"y"},  // {items:[item_data,…]} — one transaction
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
   prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
+  exposureDefaults:{m:"PATCH", p:"/api/entities/me/exposure",     ok:"✓"},  // the business's default "Shown to customers" switches
   /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
      list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
   prodStatus:      {m:"PUT",   p:"/api/products/:id/status",     ok:"✓"},  // {status, until?, replaced_by?, note?}
@@ -9982,7 +9983,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['lifecycle','Lifecycle'],['bom','Consists of'],['barcode','Identifiers'],['history','History'],['storefront','Storefront']];
+const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['lifecycle','Lifecycle'],['bom','Consists of'],['barcode','Identifiers'],['history','History'],['storefront','Storefront'],['exposure','Shown to customers']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -10035,6 +10036,7 @@ function prodOutcomeHTML(k, d){
         return (nEx?'<span data-testid="prod-offers-excluded" style="color:var(--grey)">'+esc(txf('{n} excluded', { n:String(nEx) }))+' · </span>':'')+on.map(o=>{ const t=prodOfferTerms(o.rules), sc=(typeof CBOffers!=='undefined'&&CBOffers.scopeLabel)?CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})):''; const ts=(typeof CBOffers!=='undefined'&&CBOffers.timeStatus)?CBOffers.timeStatus(o.rules||{}):'active';
           return `<div><b>${esc(o.name)}</b> ${grey(esc(t)+(sc?' · '+esc(tx(sc)):''))}${ts==='scheduled'?' <span style="color:var(--blue)">📅 '+esc(tx('from')+' '+((o.rules||{}).valid_from||''))+'</span>':''}${o._via?' '+grey('↳ '+esc(tx('from category')+' '+o._via)):''}</div>`; }).join('');
       }
+      case 'exposure': return prodExposureHTML(d);
       case 'pricing': {
         const slabs=cbDefsCached('tax'), cats=cbDefsCached('category');
         if(slabs===null||cats===null||UI._face===undefined) return grey(tx('reading…'));
@@ -10353,6 +10355,47 @@ async function prodMediaRemove(id, mid){
  * "Shop not found" (Athi, 2026-09-05: "in the storefront section, no data is coming?"). meTake() is the cached /me
  * read every profile screen uses; when it has not landed yet, the row repaints itself once it does.
  */
+/**
+ * ⭐ SHOWN TO CUSTOMERS — per item, definitive (Athi, 2026-09-05: "another panel in the catalogue per item: what is to be exposed
+ * to the customer — offer, tax (may be default), availability, synonyms, or anything the business wants to show or not").
+ * The switches live on the golden record (item_data.exposure); the business's defaults under Settings; the server's
+ * projection (lib/exposure.js) strips the public copy, so every surface obeys. Price and unit are never switchable.
+ */
+const PROD_EXPOSURE = [
+  ['tax',         'Tax line',       'the rate and the price including tax, beside the listed price'],
+  ['offers',      'Offers',         'the offer badge and the discount on this item'],
+  ['stock',       'Availability',   'the stock stamp with its age, when the connector has one'],
+  ['synonyms',    'Synonyms',       'the other names this item answers to'],
+  ['hsn',         'HSN code',       'the tariff code'],
+  ['description', 'Description',    'the description text'],
+  ['media',       'Pictures',       'the gallery'],
+];
+const PROD_EXPOSURE_DEFAULTS = { tax:true, offers:true, stock:true, synonyms:false, hsn:false, description:true, media:true };
+function prodExposureOf(d){
+  const base = Object.assign({}, PROD_EXPOSURE_DEFAULTS, ((UI._me && UI._me.policy_flags && UI._me.policy_flags.storefront_exposure) || {}));
+  return Object.assign(base, (d && d.exposure && typeof d.exposure==='object') ? d.exposure : {});
+}
+function prodExposureHTML(d){
+  const ex = prodExposureOf(d); const own = (d && d.exposure) || {};
+  const rows = PROD_EXPOSURE.map(([k,label,why]) => `<label data-testid="prod-expose-${k}" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);cursor:pointer">
+      <input type="checkbox" data-testid="prod-expose-tick-${k}" ${ex[k]?'checked':''} onchange="prodExposureSet('${k}', this.checked)">
+      <span style="flex:1"><b style="font-size:var(--fs-2)">${esc(tx(label))}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(tx(why))}</span></span>
+      <span style="font-size:var(--fs-1);color:var(--grey)">${(k in own)?esc(tx('this item')):esc(tx('default'))}</span></label>`).join('');
+  return `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:4px">${esc(tx('What a customer sees of this item on the storefront, in a buyer\'s Suppliers screen and through the API. Price and unit always show.'))}</div>${rows}
+    <div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey)">${esc(tx('Defaults for every item: Settings › Storefront.'))} <span data-testid="prod-expose-reset" onclick="prodExposureReset()" style="color:var(--blue);cursor:pointer;font-weight:700">${esc(tx('Use the defaults for this item'))}</span></div>`;
+}
+async function prodExposureSet(k, on){
+  const p = (UI.prods||[]).find(x => prodId(x)===UI.prodSel); if(!p) return;
+  const d = Object.assign({}, p.item_data||{}); d.exposure = Object.assign({}, d.exposure||{}, { [k]: !!on });
+  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); p.item_data = d; toast(tx('Saved ✓')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
+  catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
+}
+async function prodExposureReset(){
+  const p = (UI.prods||[]).find(x => prodId(x)===UI.prodSel); if(!p) return;
+  const d = Object.assign({}, p.item_data||{}); delete d.exposure;
+  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); p.item_data = d; toast(tx('Back to the defaults')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
+  catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
+}
 function prodShopHandle(){
   const me = UI._me; if(me && (me.user_id||me.bridge_id)) return me.user_id||me.bridge_id;
   /* the LIGHT read: /entities/me without includes (readiness alone costs 6 s across the continent — Athi, 2026-09-04: "very slow, always reading") */
