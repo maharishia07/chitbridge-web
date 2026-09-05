@@ -15,7 +15,7 @@ const MODELS = [
 
 test('[OM-01] each order model reaches the money rows and the storefront', async ({ page }) => {
   test.setTimeout(420000);
-  await mintEntity(page);
+  await mintEntity(page, { fresh: true });   /* authors definitions by name — its own entity */
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Basmati 25kg', unit: 'bag', price: 1000, code: 'BAS-25' });
   const pid = await page.evaluate(() => UI.prodSel);

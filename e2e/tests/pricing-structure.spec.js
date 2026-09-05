@@ -3,11 +3,11 @@
 // order line all price the unit at the quantity — 10 bags at ₹950, not ₹1,000. Athi, 2026-09-05: "in catalogue setup
 // I have fixed and tier pricing. how do I invoke the same in the catalogue while setting up the price?"
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, shopAdd } = require('../fixtures');
 
 test('[PRC-01] a tiered structure cited by the product prices the unit at the quantity — page, storefront, order', async ({ page, browser }) => {
   test.setTimeout(300000);
-  await mintEntity(page);
+  await mintEntity(page, { fresh: true });   /* this spec authors a shelf — its own entity */
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Basmati 25kg', unit: 'bag', price: 1000, code: 'BAS-25' });
   const pid = await page.evaluate(() => UI.prodSel); expect(pid).toBeTruthy();
@@ -56,8 +56,7 @@ test('[PRC-01] a tiered structure cited by the product prices the unit at the qu
     const ctx = await browser.newContext({ viewport: { width: 480, height: 900 } }); const shop = await ctx.newPage();
     try {
       await shop.goto('/shop.html?s=' + encodeURIComponent(handle), { waitUntil: 'load' });
-      const plus = shop.locator('button:has-text("+")').first(); await plus.waitFor({ timeout: 40000 });
-      for (let i = 0; i < 10; i++) { await plus.click(); await shop.waitForTimeout(120); }
+      await shopAdd(shop, 'Basmati 25kg', 10);   /* THIS product's "+", not the first one on the page */
       await expect(shop.getByTestId('shop-total')).toBeVisible({ timeout: 20000 });
       const total = await shop.getByTestId('shop-total').textContent();
       expect(total.replace(/[^\d.]/g, '')).toBe('9500.00');   /* 10 × 950, no slab, no offer */

@@ -54,7 +54,20 @@ async function useApiBase(page) {
 
 // Reusable: walk the onboarding→register→verify (mint) flow and land in the app. Returns { email, name }.
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
-async function mintEntity(page, { role = 'business', email, name } = {}) {
+async function mintEntity(page, { role = 'business', email, name, fresh = false } = {}) {
+  /**
+   * ⭐ fresh:true — A CLEAN ENTITY, WHATEVER THE BATCH RESTORED. In the `authed` project every test boots into the ONE
+   * shared session, so mintEntity's "already logged in → reuse" made a spec that builds a specific shelf collide with
+   * every earlier spec's leftovers (2026-09-05 regression: a reused "Basmati 25kg" carrying another spec's 18% slab —
+   * invoice 1,180 not 1,000; "GST 5" already defined; the storefront's first "+" belonging to someone else's product).
+   * The shared session stays the default for specs that only read; a spec that AUTHORS asks for its own entity.
+   */
+  if (fresh) {
+    await useApiBase(page);
+    await page.goto('/app.html');
+    await page.evaluate(() => { try { localStorage.removeItem('cb_sess'); sessionStorage.clear(); } catch (_) {} });
+    await page.context().clearCookies();
+  }
   // A FIXED email makes this create-or-reuse: register() re-issues the OTP for an existing entity instead of erroring,
   // so the same email always lands in the SAME entity. Omit for a throwaway unique one.
   email = email || uniqueEmail();
@@ -74,7 +87,7 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
   await page.goto('/app.html');
   // SAVED SESSION: in the `authed` project a restored token boots straight into the app shell (a nav item is present) →
   // skip onboarding entirely. In `noauth` and fresh multi-party contexts there's no session → full mint below.
-  const loggedIn = await page.getByTestId('nav-compose')
+  const loggedIn = fresh ? false : await page.getByTestId('nav-compose')
     .waitFor({ state: 'visible', timeout: 4000 }).then(() => true).catch(() => false);
   if (loggedIn) return { existing: true, email: null, name: null };
   // LOGGED OUT: /app.html now defaults to the Sign-in screen → reach onboarding via "New here? Create an entity"
@@ -426,7 +439,22 @@ async function addMedia(page, itemId, o) {
     return out;
   }, { id: itemId, b64, video: o.video ? MEDIA_VIDEO : null });
 }
+/** storefront: press "+" on the product with this name `times` times (the list can hold other products) */
+async function shopAdd(page, name, times) {
+  await page.locator('text=' + name).first().waitFor({ timeout: 40000 });
+  for (let i = 0; i < (times || 1); i++) {
+    const ok = await page.evaluate((nm) => {
+      const items = (window._SHOPDATA && _SHOPDATA.items) || [];
+      const idx = items.findIndex((x) => String(((x.item_data || x).name) || '').toLowerCase() === String(nm).toLowerCase());
+      const btns = document.querySelectorAll('[data-testid="cart-add"]');
+      const b = (idx >= 0 && btns[idx]) ? btns[idx] : null; if (!b) return false; b.click(); return true;
+    }, name);
+    if (!ok) throw new Error('shopAdd: no "+" for ' + name);
+    await page.waitForTimeout(150);
+  }
+}
 module.exports = {
+  shopAdd,
   MEDIA_PNG, MEDIA_VIDEO, addMedia, addProduct, addCoassist, seedDemo, DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
 
 /**

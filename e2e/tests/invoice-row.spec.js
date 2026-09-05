@@ -4,7 +4,7 @@ const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
 
 test('[INV-02] the Invoice row shows the line on a tax invoice; the row picker hides and restores rows', async ({ page }) => {
   test.setTimeout(240000);
-  await mintEntity(page);
+  await mintEntity(page, { fresh: true });   /* asserts the untaxed total — its own entity */
   await clickNav(page, 'catalogue');
   await addProduct(page, { name: 'Basmati 25kg', unit: 'bag', price: 1000, code: 'BAS-25' });
   const pid = await page.evaluate(() => UI.prodSel);

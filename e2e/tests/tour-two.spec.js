@@ -7,7 +7,7 @@
 // Run (on screen):  NODE_OPTIONS=--max-old-space-size=4096 TOUR=1 TOUR_HEADED=1 TOUR_PAUSE=8000 npx playwright test tests/tour-two.spec.js --headed --project=authed
 // Headless proof:   TOUR=1 npx playwright test tests/tour-two.spec.js --project=authed
 const { test, expect } = require('@playwright/test');
-const { mintEntity, addProduct, clickNav, settle, openTab } = require('../fixtures');
+const { mintEntity, addProduct, clickNav, settle, openTab, shopAdd } = require('../fixtures');
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
 const HEADED = !!process.env.TOUR_HEADED || process.argv.includes('--headed');
@@ -41,7 +41,7 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
   const PRODUCT = 'Basmati 25kg', PRICE = 1000, QTY = 6;
 
   /* ── SELLER: the shelf ── */
-  await mintEntity(seller);
+  await mintEntity(seller, { fresh: true });   /* the seller is a fresh business — the tour says so */
   await caption(seller, 'SELLER', 'A fresh business, one product', 'the product page: price, unit, code — the contract the storefront and the invoice will both read',
     'Catalogue › + New product › Basmati 25kg · ₹1,000 / bag · BAS-25', 'the product is on the shelf with its price');
   await clickNav(seller, 'catalogue');
@@ -81,8 +81,7 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
 
   await caption(buyer, 'BUYER', 'Six bags in the basket', 'the basket: listed price → the offer comes off → GST 5% on the after-offers figure → total incl. tax — the same numbers the seller\'s invoice will show',
     '+ six times', 'Goods/After offers · GST 5% · Total incl. tax');
-  const plus = buyer.locator('button:has-text("+")').first(); await plus.waitFor({ timeout: 30000 });
-  for (let i = 0; i < QTY; i++) { await plus.click(); await buyer.waitForTimeout(150); }
+  await shopAdd(buyer, PRODUCT, QTY);
   await expect(buyer.getByTestId('shop-total')).toBeVisible({ timeout: 20000 });
   const basket = await buyer.evaluate(() => ({ tax: [...document.querySelectorAll('[data-testid=shop-tax]')].map((x) => x.textContent.trim()), total: (document.querySelector('[data-testid=shop-total]') || {}).textContent }));
   await ok(buyer, 'basket: ' + basket.tax.join(' · ') + ' · total ' + basket.total);
