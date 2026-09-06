@@ -106,8 +106,8 @@
     </div>
 
     <div class="sec">Offers — one line each</div>
-    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Only for</th><th>Excl.</th><th>Order</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
-    <div class="hint" style="margin-top:6px">Exclusive = instead of every other offer. Order: lower runs first; at the same order a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
+    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Min qty</th><th>Only for</th><th>Excl.</th><th>Order</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
+    <div class="hint" style="margin-top:6px">Min qty = the offer applies only from that many units (the badge says "5+"). Exclusive = instead of every other offer. Order: lower runs first; at the same order a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
 
     <div class="sec">Showcase a discount (mark-up)</div>
     <div class="line" id="card-markup">
@@ -119,7 +119,7 @@
   </section>
 
   <section class="pane" data-testid="lab-outcome">
-    <div class="sec">What the customer sees — tick what the offer applies to · type the order size · read the result</div>
+    <div class="sec">What the customer sees — tick what the offer applies to · type what the customer orders · read the result</div>
     <div class="line" style="margin-bottom:8px">
       <label><input type="checkbox" id="apply-all" data-testid="lab-apply-all" checked onchange="labApplyAll(this.checked)"> select all</label>
       <input type="text" id="p_search" data-testid="lab-search" placeholder="search products" oninput="CART.search(this.value); injectApplies()" style="width:200px">
@@ -195,6 +195,7 @@ function paintCards() {
       + '<td class="c"><input type="checkbox" id="on-' + id + '" data-testid="lab-on-' + id + '" onclick="labToggle(\'' + id + '\',this.checked)"></td>'
       + '<td class="name">' + esc(k.title) + '<small>' + esc(k.what) + '</small></td>'
       + '<td class="val">' + valueCell(k) + '</td>'
+      + '<td class="num"><input type="number" id="' + id + '-minq" min="0" placeholder="any" title="applies only from this many units" oninput="labRepaint()"></td>'
       + '<td>' + selOnly(id) + '</td>'
       + '<td class="c"><input type="checkbox" id="' + id + '-excl" onchange="labRepaint()"></td>'
       + '<td class="num"><input type="number" id="' + id + '-pri" value="0" oninput="labRepaint()"></td>'
@@ -211,7 +212,7 @@ function withCommon(id, o) {
   var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
   if (document.getElementById(id + '-excl').checked) o.exclusive = true;
   o.priority = n(id + '-pri'); var al = v(id + '-alias').trim(); if (al) o.label = al;   /* the alias IS the label a customer sees — catalogue-view does the same */
-  var to = applyTo(); if (to) o.applies_to = to; return o;
+  var to = applyTo() || {}; var mq = n(id + '-minq'); if (mq > 0) to.min_qty = mq; if (Object.keys(to).length) o.applies_to = to; return o;
 }
 function itemName(id) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; return p ? p.item_data.name : ''; }
 function labOffers() {

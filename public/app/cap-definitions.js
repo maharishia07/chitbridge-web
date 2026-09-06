@@ -604,6 +604,8 @@ function cbDefRuleFields(kind, sub){
     /* ⭐ TARGETING — "10% off Paints" (backlog 20). The engine has read `applies_to.category` all along; nothing
        ever SET it, and no cart line carried a category to match against, so the field was dead on both sides. */
     g.push({ k: 'applies_to.category', label: 'Only this category', pick: 'category', half: true });
+    /* ⭐ A MINIMUM ORDER SIZE (Athi, 2026-09-06): "10% off when you take 5 or more" — the badge says "10% off 5+" */
+    g.push({ k: 'applies_to.min_qty', label: 'From this many units', ph: '5', num: true, half: true, hint: 'Blank = any quantity. The badge says the condition.' });
     /* ⭐ CUSTOMER-ONLY (Athi, 2026-09-06: "each customer gets a personalised discount… through the Suppliers menu"): a group from the
        Customers list (new · regular · high value · inactive) or one customer by name. Never on the public storefront; a signed-in buyer
        the seller's list names sees it on Suppliers, in the cart, on the order — the engine's customer_group condition, fail-closed. */
