@@ -12,6 +12,22 @@
  *   money  CBCart.money(lines, {offers, ctx, taxOf}) + CBCart.moneyRowsHTML(m) are the ONLY place a buyer's money is computed
  *        (offers → after offers → GST per rate → total incl. tax). The server re-prices every order with the same engines.
  *
+ * CORE (never changes, whichever outlet it sits in — Athi, 2026-09-06: "define the bare minimum which will not change wherever
+ *       you fit in, then add the wrapper around for the other requirements")
+ *   the ROW      name · unit · list price → offered price · tax chip · stock chip · offer badge · the quantity control (six models)
+ *   the BAR      count · sum · open — `cbcart-bar`, `cart-count-<ns>`
+ *   the PANEL    lines · remove · Check out — CBCart.open/close
+ *   the MONEY    offers → after offers → GST per rate → total incl. tax — ONE root `cbcart-money`, its own type, its own tokens
+ *   the SEARCH   box · categories · on-offer filter · grouping (variants under one product) · windowed list
+ *   the TOKENS   the app's light values as DEFAULTS (`:where(:root)`, specificity 0) so a page that declares none still paints
+ * WRAP (the ONLY knobs an outlet turns — `CBCart.WRAP`; an unknown key is a console warning so a fork cannot hide)
+ *   where   listEl · barEl · popupEl · popupBodyEl · popupClass
+ *   words   cartTitle · checkoutLabel · emptyHint · noCatalogue · from
+ *   look    accent · soft            money   symbol · currency · locale · groupDigits
+ *   stock   hideAvail · staleDays    hooks   onCheckout · onChange · rowExtra · renderer · categories · barHideEmpty
+ *   Everything else an outlet needs — a customer block (Bill), a recipient (Compose), a supplier chip, a gallery, a UPI
+ *   block — is drawn OUTSIDE the core by the outlet, never inside a row or the money block.
+ *
  * GUARDS   e2e/one-cart.cjs (a second total or basket evaluation fails the run) · e2e/dup-functions.cjs · e2e/render-smoke.cjs
  * SPECS    [PAR-01] parity across surfaces · [EXP-01] exposure · [OFF-01/02] offers · [SF-01] storefront · [PAY-01] · tour-two
  * LEGEND   cap-legend.js › cart (maturity 2 → 3)
@@ -1119,6 +1135,11 @@
   }
   /** The popup host every cart shares, unless a caller deliberately names its own. */
   var HOST = { popupEl: 'cbcart_ov', popupBodyEl: 'cbcart_ovc', popupClass: 'cbcart-ov' };
+  /* THE WRAP — every option create() honours. An outlet that passes anything else is forking the cart by accident (a knob that
+     nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
+  var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
+    'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
+    'categories', 'barHideEmpty'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1162,7 +1183,8 @@
     // made to know that an overlay exists, and to name two element ids for it, is the kind of detail that gets
     // forgotten exactly once and then ships.
     ensureHost();
-    var o = {}; for (var k in (opts || {})) o[k] = opts[k];
+    var o = {}; for (var k in (opts || {})) { o[k] = opts[k];
+      if (WRAP.indexOf(k) < 0 && typeof console !== 'undefined') console.warn('cart: unknown option "' + k + '" — not part of the WRAP (app/cart.js header); nothing reads it'); }
     for (var h in HOST) if (o[h] === undefined) o[h] = HOST[h];
     init(ns, cat, o);
     var h = {
@@ -1388,7 +1410,7 @@
   }
 
   root.CBCart = {
-    money: money, moneyRowsHTML: moneyRowsHTML,
+    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
@@ -2330,6 +2352,12 @@
          host here pads its scroller (.mbody is 11px 12px). At top:0 the list scrolls through the gap ABOVE the
          header and the rows draw over the cart. --cbcat-gap so a host with different padding can set it. */
       ':root{--cbcat-gap:11px}',
+      /* ⭐ THE CORE CARRIES ITS OWN TOKENS. `:where(:root)` has specificity 0, so a page that declares a token wins and a page that
+         declares none (the storefront had 7 of 28 on 2026-09-05 — a basket with no background) still paints the app's light values. */
+      ':where(:root){--font-ui:Inter,system-ui,sans-serif;--ink:#20303b;--grey:#8a949c;--line:#e7e3d8;--blue:#3F66A6;--gold-soft:#f7f2e3;--gold-line:#e6d9a8;--paper:#faf8f3;'
+      + '--accent:var(--blue);--on-accent:#fff;--card:#fff;--on-card:var(--ink);--ink-2:#3a4048;--grey-2:#545A61;--grey-3:#5D636A;--grey-4:#646A72;'
+      + '--blue-2:#2c5aa0;--blue-tint-bg:#E9F0FA;--neutral-tint:#EEF1F5;--ok-2:#2c7a43;--warn-2:#8a5a1e;--disp:#b4453f;--disp-2:#a5382e;'
+      + '--fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--cbpick-gap:8px}',
       '.cbcat-hdr{position:sticky;top:calc(-1 * var(--cbcat-gap));z-index:6;background:var(--card);',
       'padding:var(--cbcat-gap) 0 7px;display:flex;align-items:center;gap:8px}',
       '.cbcat-q{flex:1 1 auto;min-width:0;height:40px;border:1px solid var(--line,var(--line));border-radius:9px;',

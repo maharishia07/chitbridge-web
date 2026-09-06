@@ -588,6 +588,8 @@ async function api(key, {params, query, body}={}){
         CBCALLS.length = Math.min(CBCALLS.length, 40);
       }
     } catch(_) {}
+    /* a product write drops the memoised own-catalogue VIEW (ownCatalogueView) — the next outlet to open reads fresh */
+    try { if (ep.m !== 'GET' && /^prod/.test(key) && typeof ownViewInvalidate === 'function') ownViewInvalidate(); } catch (_) {}
     return _out;
   } finally {
     if(lockKey) _lockKeys.delete(lockKey);

@@ -5126,11 +5126,15 @@ function selfBillSubject(){
  * recorded carried listed prices only. Now the same catalogue VIEW every buying surface reads — items with their tax and
  * stock stamp, the live offers, the shop — read as the owner (private catalogues included). One read, one shape.
  */
+/** the memo behind ownCatalogueView — Record a sale, Suppliers-own, Compose and the worklist picker all open the same view; reading it
+ *  four times is four trips across the Pacific (1.4–2.4 s each). 90 s, and any product write drops it (ownViewInvalidate). */
+function ownViewInvalidate(){ UI._ownView = null; }
 async function ownCatalogueView(fallbackName){
   try {
+    var m = UI._ownView; if (m && m.v && (Date.now() - m.at) < 90000 && m.for === SESSION.entityId) return m.v;
     if (SESSION && SESSION.entityId && typeof supCatalogueFull === 'function') {
       var v = await supCatalogueFull(SESSION.entityId);
-      if (v && Array.isArray(v.items) && v.items.length) return Object.assign({}, v, { shop: Object.assign({ bridge_id: 'self', display_name: fallbackName }, v.shop || {}) });
+      if (v && Array.isArray(v.items) && v.items.length) { var out = Object.assign({}, v, { shop: Object.assign({ bridge_id: 'self', display_name: fallbackName }, v.shop || {}) }); UI._ownView = { at: Date.now(), for: SESSION.entityId, v: out }; return out; }
     }
   } catch (_) {}
   /* the raw list, only when the view is not there yet (no schema, nothing published) — prices without offers or rates */
@@ -5348,7 +5352,7 @@ function ccCatPickHTML(){
     attachFn:'ccAddItemFiles', chips:ccItemChips,
     /* ⭐ THE OFFERS THAT APPLY TO THIS ORDER — evaluated over the committed lines, not the staging cart. See
        ccLoadOffers: only LIVE definitions, because a draft offer is one you are still writing. */
-    offers: CC.offers || [],
+    /* offers: the cart's own view carries them (ownCatalogueView) — the same badge, the same money as every other outlet */
     checkoutLabel:'+ Add to the chit',
     emptyHint:'Press + on what this chit is for',
     empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
@@ -5368,11 +5372,17 @@ function ccCartSync(){
   /* ⚠️ THE SECOND PLACE THE RECORD WAS FLATTENED. Same rule as above: spread, never enumerate. `name` is the
      alias cart-ui reads; everything else rides along, which is what lets the cart honour `order` (the six
      quantity models) and what will let a row show an HSN code or a GI certificate without touching this line. */
-  const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
+  let cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
     /* ⭐ THE REAL ID WHERE THERE IS ONE. 'sc'+i is POSITIONAL, so it changed meaning the moment the catalogue
        reordered, and it made every targeted offer unmatchable — applies_to names real product ids, and this line
        handed the engine 'sc0'. The synthetic id survives only as a fallback for a row that has none. */
     item_id:(p.item_id||('sc'+i)), item_data:Object.assign({}, p, { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
+  /* ⭐ ONE PAYLOAD (CART-OUTLET-RULES rule 3, 2026-09-06): Compose fed the cart the RAW list — no offers, no rates — while Record a sale,
+     Suppliers-own and the storefront read the VIEW; so a Compose chit showed no tax chip and no badge until send. The memoised view
+     (ownCatalogueView) swaps in the moment it is there; a supplier's prefilled catalogue stays as prefilled. */
+  var ownV = (!UI._supplier && UI._ownView && UI._ownView.v && UI._ownView.for === SESSION.entityId) ? UI._ownView.v : null;
+  if (ownV) cat = ownV;
+  else if (!UI._supplier && typeof ownCatalogueView === 'function') ownCatalogueView(tx('Your catalogue')).then(function(v){ if (v && v.items && v.items.length && UI._ccCart && !UI._supplier) { UI._ccCart.setCatalogue(v); ccRenderCatPick(); } }).catch(function(){});
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
   else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer: CBCatUI,
          /* ⚠️ NO `barHideEmpty` — the chip is ALWAYS in the title bar. It used to appear only once the cart held
@@ -10424,15 +10434,17 @@ function prodExposureHTML(d){
 }
 async function prodExposureSet(k, on){
   const p = (UI.prods||[]).find(x => prodId(x)===UI.prodSel); if(!p) return;
+  /* ⭐ WRITE ONLY THE SWITCH (merge:true = RFC 7386 against the stored record). Sending the whole item_data this pane had loaded wrote a
+     stale copy back over the record — a rate set meanwhile by the API or the connector vanished ([EXP-01], 2026-09-06). */
   const d = Object.assign({}, p.item_data||{}); d.exposure = Object.assign({}, d.exposure||{}, { [k]: !!on });
-  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); p.item_data = d; toast(tx('Saved ✓')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
+  try { const r = await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: { exposure: { [k]: !!on } }, merge: true } }); p.item_data = (r && r.item && r.item.item_data) || d; toast(tx('Saved ✓')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
 async function prodExposureReset(){
   const p = (UI.prods||[]).find(x => prodId(x)===UI.prodSel); if(!p) return;
-  /* the product write is a MERGE (RFC 7386): a key comes off only when sent as null — deleting it here would leave the old switches standing */
+  /* merge:true — an RFC 7386 patch: `exposure: null` removes the key and nothing else on the record moves (the stored copy is re-read server-side) */
   const d = Object.assign({}, p.item_data||{}, { exposure: null });
-  try { await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: d } }); delete d.exposure; p.item_data = d; toast(tx('Back to the defaults')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
+  try { const r = await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data: { exposure: null }, merge: true } }); delete d.exposure; p.item_data = (r && r.item && r.item.item_data) || d; toast(tx('Back to the defaults')); if (typeof scrollKeep==='function') scrollKeep(paintProdDetail); else paintProdDetail(); }
   catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
 function prodShopHandle(){

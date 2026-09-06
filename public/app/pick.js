@@ -175,7 +175,9 @@ var CBPick = (function () {
         var src = o.catalogue;
         Promise.resolve(typeof src === 'function' ? src() : src).then(function (list) {
           if (state.done) return;                            // cancelled while the read was in flight
-          var cat = { shop: { bridge_id: 'self' }, items: toItems(list) };
+          /* ⭐ THE VIEW WHEN THE CALLER HAS ONE (rule 3, CART-OUTLET-RULES): a payload with `items` is the catalogue view itself — offers,
+             rates, stock stamps ride in and the rows print exactly as on every other outlet. A bare array is the raw list (the fallback). */
+          var cat = (list && !Array.isArray(list) && Array.isArray(list.items)) ? list : { shop: { bridge_id: 'self' }, items: toItems(list) };
           state.cart = CBCart.create(cat, { listEl: HOST_LIST, barEl: HOST_BAR, renderer: CBCatUI });
           paintPicker(o, state.cart);
         }).catch(function (e) {

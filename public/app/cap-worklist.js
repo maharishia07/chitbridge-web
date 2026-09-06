@@ -1463,6 +1463,8 @@ function wlMatOpen(){
     /* ⭐ ensureCatalogue() is the ONE loader, shared with compose. The picker shows its reading state until
        this resolves, so the empty-catalogue sentence is only ever said about an actually empty catalogue. */
     catalogue: function(){
+      /* ⭐ THE SAME VIEW OF OUR OWN SHELF every outlet reads (ownCatalogueView: offers · rates · stock); the raw list only while it is not there */
+      if (typeof ownCatalogueView === 'function') return ownCatalogueView(typeof tx === 'function' ? tx('Your catalogue') : 'Your catalogue').catch(function(){ return (typeof STORE !== 'undefined' && STORE.catalogue) || []; });
       return (typeof ensureCatalogue === 'function' ? ensureCatalogue() : Promise.resolve())
         .then(function(){ return (typeof STORE !== 'undefined' && STORE.catalogue) || []; });
     },
