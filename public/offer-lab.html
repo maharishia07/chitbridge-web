@@ -284,9 +284,13 @@ function withCommon(id, o) {
 function itemName(id) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; return p ? p.item_data.name : ''; }
 function labOffers() {
   var out = [];
-  if (on('pct')) out.push(withCommon('pct', { id: 'pct', label: n('pct-v') + '% off', kind: 'percent_off', percent: n('pct-v'), scope: v('pct-scope') }));
-  if (on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
-  if (on('tier')) PRODUCTS.forEach(function (p) {
+  /* ⭐ NOTHING TICKED MEANS NOTHING (Athi, 2026-09-07 00:3x, from a basket where every box was clear and every row still said "Buy 2 get 1 free"):
+     the tick decides which products an offer touches, so with none ticked no product offer is issued at all. The cart rules — the spend
+     threshold and delivery — judge the order itself, so they stay. */
+  var noneTicked = !!(APPLY && APPLY.size === 0);
+  if (!noneTicked && on('pct')) out.push(withCommon('pct', { id: 'pct', label: n('pct-v') + '% off', kind: 'percent_off', percent: n('pct-v'), scope: v('pct-scope') }));
+  if (!noneTicked && on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
+  if (!noneTicked && on('tier')) PRODUCTS.forEach(function (p) {
     if (!labApplies(p.item_id)) return;
     var tiers = tiersOf(p.item_id).filter(function (t) { return t.on !== false && Number(t.qty) > 0 && Number(t.percent) > 0; });
     if (!tiers.length) return;
@@ -294,7 +298,7 @@ function labOffers() {
     o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
   });
   if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + CART_RULES.thrMin, kind: 'threshold', min_amount: CART_RULES.thrMin }; if (CART_RULES.thrItem) { t.get_item_id = CART_RULES.thrItem; t.get_item_name = itemName(CART_RULES.thrItem); t.get_qty = CART_RULES.thrQty || 1; } else t.percent = CART_RULES.thrPct; out.push(withCommon('thr', t)); }
-  if (on('bxgy')) PRODUCTS.forEach(function (p) {
+  if (!noneTicked && on('bxgy')) PRODUCTS.forEach(function (p) {
     if (!labApplies(p.item_id)) return;
     var r = bxgyOf(p.item_id); if (r.on === false || !(r.x > 0) || !(r.y > 0)) return;
     var b = withCommon('bxgy', { id: 'bxgy-' + p.item_id, label: 'Buy ' + r.x + ' get ' + r.y, kind: 'buy_x_get_y', buy: r.x, get: r.y, get_percent: r.pct });
@@ -302,9 +306,9 @@ function labOffers() {
     b.applies_to = Object.assign({}, b.applies_to || {}, { item_ids: [p.item_id] });
     out.push(b);
   });
-  if (on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
+  if (!noneTicked && on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
   if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = CART_RULES.shipMode; if (m === 'free') s.free = true; else if (m === 'flat') s.flat = CART_RULES.shipV; else s.percent = CART_RULES.shipV; if (CART_RULES.shipMin > 0) s.min_amount = CART_RULES.shipMin; out.push(withCommon('ship', s)); }
-  if (on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
+  if (!noneTicked && on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
   return out;
 }
 function groupsFor(viewer) { if (!viewer) return []; return [viewer].concat(viewer === 'customer:one' ? ['new'] : []); }
