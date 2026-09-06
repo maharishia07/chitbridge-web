@@ -37,7 +37,7 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   const list = page.locator('[data-testid^="cat-product-"]').first();
   if (await list.isVisible().catch(() => false)) await list.locator('..').screenshot({ path: path.join(OUT, 'catalogue-list.png') }).catch(() => {});
   /* the product page: its header prints the same price column as the lists */
-  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png') }); const idTab = page.getByTestId('prod-tab-identifiers'); if (await idTab.count()) { await idTab.first().click(); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, 'identifiers.png') }); } }
+  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png') }); const idTab = page.getByTestId('prod-tab-barcode'); if (await idTab.count()) { await idTab.first().click(); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, 'identifiers.png') }); } }
   await page.getByTestId('nav-suppliers').click().catch(() => {});
   await page.waitForTimeout(2500);
   const own = page.getByTestId('sup-row-own');
