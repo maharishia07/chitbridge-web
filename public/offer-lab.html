@@ -297,7 +297,8 @@ function labOffers() {
     var o = withCommon('tier', { id: 'tier-' + p.item_id, label: 'Quantity break', kind: 'tier_price', tiers: tiers });
     o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
   });
-  if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + CART_RULES.thrMin, kind: 'threshold', min_amount: CART_RULES.thrMin }; if (CART_RULES.thrItem) { t.get_item_id = CART_RULES.thrItem; t.get_item_name = itemName(CART_RULES.thrItem); t.get_qty = CART_RULES.thrQty || 1; } else t.percent = CART_RULES.thrPct; out.push(withCommon('thr', t)); }
+  /* ⭐ A CART RULE JUDGES THE ORDER, NOT THE TICKED PRODUCTS (Athi, 2026-09-07 00:37: "free delivery is at cart level, it cannot consider the check box") — no applies_to, whoever is ticked */
+  if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + CART_RULES.thrMin, kind: 'threshold', min_amount: CART_RULES.thrMin }; if (CART_RULES.thrItem) { t.get_item_id = CART_RULES.thrItem; t.get_item_name = itemName(CART_RULES.thrItem); t.get_qty = CART_RULES.thrQty || 1; } else t.percent = CART_RULES.thrPct; var to0 = withCommon('thr', t); delete to0.applies_to; out.push(to0); }
   if (!noneTicked && on('bxgy')) PRODUCTS.forEach(function (p) {
     if (!labApplies(p.item_id)) return;
     var r = bxgyOf(p.item_id); if (r.on === false || !(r.x > 0) || !(r.y > 0)) return;
@@ -307,7 +308,7 @@ function labOffers() {
     out.push(b);
   });
   if (!noneTicked && on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
-  if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = CART_RULES.shipMode; if (m === 'free') s.free = true; else if (m === 'flat') s.flat = CART_RULES.shipV; else s.percent = CART_RULES.shipV; if (CART_RULES.shipMin > 0) s.min_amount = CART_RULES.shipMin; out.push(withCommon('ship', s)); }
+  if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = CART_RULES.shipMode; if (m === 'free') s.free = true; else if (m === 'flat') s.flat = CART_RULES.shipV; else s.percent = CART_RULES.shipV; if (CART_RULES.shipMin > 0) s.min_amount = CART_RULES.shipMin; var so = withCommon('ship', s); delete so.applies_to; out.push(so); }
   if (!noneTicked && on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
   return out;
 }
@@ -354,7 +355,11 @@ function paintWhy() {
 function ruleNum(k, w) { return '<input type="number" min="0" step="1" value="' + CART_RULES[k] + '" data-testid="lab-rule-' + k + '" style="width:' + (w || 62) + 'px" onchange="labRule(\'' + k + '\',this.value)">'; }
 function paintCartLevel(ev, sel) {
   var el = document.getElementById('p_cart_level'); if (!el) return;
-  var rows = [], subtotal = 0; (sel || []).forEach(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0]; if (p) subtotal += (Number(p.item_data.price) || 0) * (Number(l.quantity || l.qty) || 0); });
+  /* the order as the engine measures it: what the goods come to AFTER the line offers (ev.line_net), so the panel and the rule never disagree */
+  var rows = [], subtotal = 0;
+  if (ev && ev.line_net) Object.keys(ev.line_net).forEach(function (k) { subtotal += Number(ev.line_net[k]) || 0; });
+  else (sel || []).forEach(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0]; if (p) subtotal += (Number(p.item_data.price) || 0) * (Number(l.quantity || l.qty) || 0); });
+  subtotal = Math.round(subtotal * 100) / 100;
   if (on('thr')) {
     var min = CART_RULES.thrMin, pct = CART_RULES.thrPct, item = CART_RULES.thrItem;
     rows.push('<div class="lab-rule"><b>Spend threshold</b> ₹' + ruleNum('thrMin') + ' → ' + ruleNum('thrPct', 46) + '% off the order'
