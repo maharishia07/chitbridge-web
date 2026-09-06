@@ -1218,7 +1218,7 @@
         o = o || {};
         var T = total(ns), tid = o.totalTestid || 'cart-total';
         var MR = (!T.offered && !T.partial) ? h.moneyRows({ totalTestid: tid, taxTestid: o.taxTestid || 'cart-tax' }) : null;
-        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="padding:8px 12px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + MR.html + '</div>';
+        if (MR) return '<div data-testid="' + esc(tid.replace(/-total$/, '')) + '-money" style="margin:6px 12px 8px">' + MR.html + '</div>'   /* the frame is the block's own (cbcart-money); the outlet places it */;
         return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
           + '<span data-testid="' + esc(tid) + '">' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
@@ -1404,7 +1404,7 @@
     /* ⭐ ONE ROOT, ITS OWN TYPE. The block carries its font and size itself (the app's --font-ui token, which shop.html now
        declares too), so the storefront, Suppliers, Record a sale and Compose print the same pixels — [PAR-02] shoots this root
        at one width on two surfaces and diffs them. The frame around it (a dashed accent on the storefront) stays the surface's. */
-    return '<div class="cbcart-money" data-testid="cbcart-money" style="font-family:var(--font-ui,Inter,system-ui,sans-serif);font-size:13px;line-height:1.35;color:var(--ink,#20303b)">' + after + taxRows
+    return '<div class="cbcart-money" data-testid="cbcart-money" style="font-family:var(--font-ui,Inter,system-ui,sans-serif);font-size:13px;line-height:1.35;color:var(--ink,#20303b);padding:8px 10px;border:1px solid var(--line,#e7e3d8);border-radius:9px;background:var(--card,#fff)">' + after + taxRows
 
       + '<div style="display:flex;justify-content:space-between;border-top:2px solid #333;margin-top:6px;padding-top:6px;font-size:14px"><span>Total incl. tax</span><b data-testid="' + esc(opt.totalTestid || 'cart-total') + '">' + esc(ctx.money(m.grand)) + '</b></div>' + '</div>';
   }

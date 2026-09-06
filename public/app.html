@@ -5751,7 +5751,7 @@ function ccStepReview(){
                 var byKey = {}; (CC.items||[]).forEach(function(it, i){ byKey[String(i)] = it; });
                 var M = CBCart.money(L, { offers: CC.offers || [], ctx: { now: new Date(), currency: 'INR', money: function(n){ return fmtMoney(n, 'INR'); } },
                   taxOf: function(id, l){ var it = byKey[String(l && l.key)] || {}; return it.tax && it.tax.rate != null ? it.tax : (it.gst_rate != null ? { rate: Number(it.gst_rate), cess: Number(it.cess_rate) || 0 } : null); } });
-                return '<div data-testid="cc-review-money" style="padding:8px 12px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + CBCart.moneyRowsHTML(M, { totalTestid: 'cc-review-total', taxTestid: 'cc-review-tax' }) + '</div>';
+                return '<div data-testid="cc-review-money" style="margin:6px 12px 8px">' + CBCart.moneyRowsHTML(M, { totalTestid: 'cc-review-total', taxTestid: 'cc-review-tax' }) + '</div>';
               }
             } catch (e) { /* fall through to the bare total */ }
             return '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
