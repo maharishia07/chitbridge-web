@@ -8739,7 +8739,7 @@ function prodRowHTML(p, ctx){ const d=pData(p), id=prodId(p);
   const img=d.image_url||d.photo_url||'';
   const thumb=`<div class="pthumb" aria-hidden="true">${img?`<img src="${esc(img)}" alt="">`:esc(String(pName(d)||'?').trim().charAt(0).toUpperCase())}</div>`;
   const lbl=(k,v)=>`<span><b>${k}</b>${v}</span>`;
-  const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('Synonyms'),String((d.synonyms||[]).length)):''].filter(Boolean);
+  const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('also'),esc((d.synonyms||[]).slice(0,4).map(x=>typeof x==='string'?x:(x&&(x.name||x.text))||'').filter(Boolean).join(', '))):''].filter(Boolean);
   return `<div class="row prow ${(!ctx&&id===UI.prodSel)?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}" style="${st!=='available'?'opacity:.7':''}">
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}</div>
@@ -11104,7 +11104,7 @@ function prodDetailHTML(){
      photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
      Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
-  const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price"><bdi>${inr(pPrice(d))}</bdi> / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
+  const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds" data-testid="cat-view-price">${(()=>{ /* the same price column as the lists (Athi, 2026-09-06: the header said ₹101 while the list said ₹90.90) */ try { const x=prodDeals(d,prodId(p)); const offs=offersForProduct(d,prodId(p)).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) })); if(typeof CBCatUI!=='undefined'&&CBCatUI.priceHTML) return '<span class="pamt" style="display:inline-block;text-align:start">'+CBCatUI.priceHTML(Object.assign({}, d, { price:pPrice(d) }), { id:prodId(p), offers:offs, tax:x.tax, money:inr })+'</span>'; } catch(_){} return `<bdi>${inr(pPrice(d))}</bdi>`; })()} / <bdi>${esc(pUnit(d))}</bdi>${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   UI._prodSheetD = d;   /* the fact sheet's wrappers read the product from here */
   let body, bar;
   if(UI.prodMode==='edit'){
