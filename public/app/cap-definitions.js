@@ -604,6 +604,10 @@ function cbDefRuleFields(kind, sub){
     /* ⭐ TARGETING — "10% off Paints" (backlog 20). The engine has read `applies_to.category` all along; nothing
        ever SET it, and no cart line carried a category to match against, so the field was dead on both sides. */
     g.push({ k: 'applies_to.category', label: 'Only this category', pick: 'category', half: true });
+    /* ⭐ CUSTOMER-ONLY (Athi, 2026-09-06: "each customer gets a personalised discount… through the Suppliers menu"): a group from the
+       Customers list (new · regular · high value · inactive) or one customer by name. Never on the public storefront; a signed-in buyer
+       the seller's list names sees it on Suppliers, in the cart, on the order — the engine's customer_group condition, fail-closed. */
+    g.push({ k: 'customer_group', label: 'Only for', pick: 'customer', half: true });
     /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
     g.push({ k: 'valid_from', label: 'Valid from', date: true, half: true });
     g.push({ k: 'valid_to',   label: 'Valid to',   date: true, half: true,
@@ -758,6 +762,7 @@ function cbDefPickHTML(x, v){
    * from your catalogue" would drift the day one learns to search and the other does not.
    */
   if (x.pick === 'product') return cbDefPickProductHTML(x, v);
+  if (x.pick === 'customer') return cbDefPickCustomerHTML(x, v);
   var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
   if (list === null) {
     if (typeof cbCatgLive === 'function') cbCatgLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
@@ -822,6 +827,42 @@ function cbDefPickProductHTML(x, v){
        thing ("earned 1 × Sunflower Oil free — added to your order"), so the paragraph was explaining a
        demonstration. The rule it protects lives in offers.js, where it belongs. */
     + '<div class="cbdef-hint">' + tx('If it is not in their order, the basket offers to add it.') + '</div>';
+}
+
+/* ── "Only for": the Customers list's own groups, then each customer by name (value 'customer:<identity_id>') ── */
+var _CBDEF_CUSTS;
+var CBDEF_GROUPS = [['new', 'New customers'], ['regular', 'Regular (3+ orders)'], ['high_value', 'High value'], ['inactive', 'Inactive (90 days)']];
+function cbDefCustsLive(){
+  if (_CBDEF_CUSTS !== undefined) return Promise.resolve(_CBDEF_CUSTS);
+  _CBDEF_CUSTS = null;
+  return api('custList')
+    .then(function (r) { _CBDEF_CUSTS = ((r && r.customers) || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name || c.user_id || c.bridge_id || 'customer', segment: c.segment }; }); return _CBDEF_CUSTS; })
+    .catch(function () { _CBDEF_CUSTS = []; return _CBDEF_CUSTS; });
+}
+function cbDefPickCustomerHTML(x, v){
+  if (_CBDEF_CUSTS === undefined || _CBDEF_CUSTS === null) {
+    cbDefCustsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
+    return '<div class="cbdef-hint">' + tx('reading your customers…') + '</div>';
+  }
+  var cur = String(v || '');
+  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '" onchange="cbDefSetCustomer(this.value)">'
+    + '<option value="">' + tx('— everyone —') + '</option>'
+    + '<optgroup label="' + tx('A group of customers') + '">'
+    + CBDEF_GROUPS.map(function (g) { return '<option value="' + g[0] + '"' + (cur === g[0] ? ' selected' : '') + '>' + tx(g[1]) + '</option>'; }).join('')
+    + '</optgroup>'
+    + (_CBDEF_CUSTS.length ? '<optgroup label="' + tx('One customer') + '">'
+        + _CBDEF_CUSTS.map(function (c) { var val = 'customer:' + c.id; return '<option value="' + cbDefEsc(val) + '"' + (cur === val ? ' selected' : '') + '>' + cbDefEsc(c.name) + '</option>'; }).join('')
+        + '</optgroup>' : '')
+    + '</select>'
+    + '<div class="cbdef-hint">' + tx('Never on the public storefront. Reaches them on Suppliers, in the cart and on the order.') + '</div>';
+}
+/** the value AND its name travel together, like the reward's — the badge and the order must say "only for Chola Auto Care", not an id */
+function cbDefSetCustomer(val){
+  var name = '';
+  if (val) { var g = CBDEF_GROUPS.filter(function (x) { return x[0] === val; })[0]; if (g) name = g[1];
+    else { var c = (_CBDEF_CUSTS || []).filter(function (q) { return 'customer:' + q.id === val; })[0]; name = c ? c.name : ''; } }
+  cbDefSetRule('customer_group', val || '');
+  cbDefSetRule('customer_name', name);
 }
 
 /** Sets the id AND the name in one act, so the two can never be written apart. */

@@ -1,0 +1,93 @@
+// [OFF-03] A CUSTOMER-ONLY OFFER THROUGH THE SUPPLIERS MENU. Athi, 2026-09-06: "assume Chola Auto Care is the registered customer of
+// tallytest — can he pass additional off through the link? … so each customer gets a personalised discount"; "see how you can pass
+// customer based discount through supplier menu". The seller writes "Regulars 10%" Only for → New customers. A buyer who has never
+// traded sees the list price (₹200) and no badge; the anonymous storefront payload carries no such offer at all. After one order the
+// buyer is on the seller's Customers list as "new" — the same Suppliers screen now prints the badge and ₹180. The seller moves them to
+// the "High value" group on the Customers pane; the offer (for new customers) leaves again. Nothing here is self-asserted: what the
+// buyer sees follows the SELLER's list, read in the same catalogue round trip.
+const { test, expect } = require('@playwright/test');
+const { mintEntity, mintInContext, addProduct, clickNav, settle } = require('../fixtures');
+
+/** the row's price column and its tags (minus the stock stamp) — the same reading PAR-03 makes */
+async function rowFacts(row) {
+  const price = (await row.locator('.cbcat-pr').innerText()).replace(/\s+/g, ' ').trim();
+  const tags = (await row.locator('.cbcat-tags').innerText().catch(() => '')).split('\n').map((s) => s.trim()).filter((s) => s && !/in stock|as of/i.test(s)).join(' · ');
+  return { tags, price };
+}
+/** open (or re-open) the supplier on the Suppliers screen and return the product row */
+async function openSupplier(b, handle, itemId) {
+  await clickNav(b, 'order'); await settle(b);            /* leave and come back — a fresh catalogue read, never a cached view */
+  await clickNav(b, 'suppliers'); await settle(b);
+  const supRow = b.locator('[data-testid^="sup-row-"]').filter({ hasText: String(handle) }).first(); await supRow.waitFor({ timeout: 30000 }); await supRow.click(); await settle(b);
+  const row = b.getByTestId('cbcat-row-' + itemId); await row.waitFor({ timeout: 40000 }); await b.waitForTimeout(800);
+  return row;
+}
+
+test('[OFF-03] an offer "Only for" a customer group reaches the customer on Suppliers, nobody else', async ({ page, browser }) => {
+  test.setTimeout(480000);
+  const sellerName = 'OnlyFor ' + Date.now().toString().slice(-6);
+  await mintEntity(page, { fresh: true, name: sellerName });
+  await page.evaluate(async () => { await api('saveProfile', { body: { catalogue_visibility: 'public' } }); });
+  await clickNav(page, 'catalogue');
+  await addProduct(page, { name: 'Grapes', unit: 'kg', price: 200, code: 'GRP-1' });
+  const { handle, bridge, itemId } = await page.evaluate(async () => {
+    const list = await api('prodList', { query: { limit: 50 } }); const items = list.items || list.products || list.rows || (Array.isArray(list) ? list : []);
+    const g = items.find((x) => /^grapes$/i.test(((x.item_data || {}).name || '')));
+    const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+    /* the rule the editor's "Only for" picker writes: customer_group + its travelling name */
+    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Regulars 10%', status: 'live', rules: { kind: 'percent_off', label: 'Regulars 10%', percent: 10, scope: 'line', customer_group: 'new', customer_name: 'New customers', valid_from: today, valid_to: later } }) });
+    const me = await api('me'); const e = (me && me.entity) || me || {};
+    return { handle: e.user_id || e.bridge_id, bridge: e.bridge_id, itemId: g.item_id };
+  });
+
+  const buyer = await mintInContext(browser, { fresh: true, name: 'Stranger ' + Date.now().toString().slice(-5) });
+  try {
+    const b = buyer.page;
+    await clickNav(b, 'suppliers'); await settle(b);
+    await b.getByTestId('sup-add-input').fill(String(handle)); await b.getByTestId('sup-add').click();
+    await b.getByTestId('confirm-ok').click({ timeout: 15000 }).catch(() => {}); await settle(b);
+
+    /* 1 · A STRANGER: list price, no badge */
+    let row = await openSupplier(b, handle, itemId);
+    let f = await rowFacts(row);
+    expect(f.price, 'a stranger sees the list price').toMatch(/200\.00/);
+    expect(f.price, 'a stranger sees no offered price').not.toMatch(/180\.00/);
+    expect(f.tags, 'a stranger sees no badge').not.toMatch(/10% off|Regulars/);
+
+    /* 2 · THE PUBLIC STOREFRONT: the offer is not in the payload at all */
+    const pub = await b.evaluate(async (bid) => { const r = await fetch(CFG.API_BASE + '/api/catalogue/' + bid); const j = await r.json(); return { offers: (j.offers || []).map((o) => o.label), groups: j.shop && j.shop.viewer_groups }; }, bridge);
+    expect(pub.offers, 'the anonymous payload carries no customer-only offer').toEqual([]);
+
+    /* 3 · ONE ORDER makes them a customer ("new") */
+    await row.locator('[data-testid="cart-add"]').first().click(); await b.waitForTimeout(400);
+    await b.getByRole('button', { name: /Check out/ }).last().click(); await settle(b);
+    for (let i = 0; i < 4; i++) {
+      const next = b.getByRole('button', { name: /Next|Review|Check it|Continue/ }).last();
+      if (await next.isVisible().catch(() => false)) { await next.click(); await settle(b); } else break;
+    }
+    const sent = b.waitForResponse((r) => /\/api\/chits\/send$/.test(r.url()) && r.request().method() === 'POST', { timeout: 60000 });
+    const send = b.locator('[data-testid^="step-send-"], [data-testid="chit-send"]').first();
+    if (await send.isVisible().catch(() => false)) await send.click(); else await b.getByRole('button', { name: /Send/ }).last().click();
+    const sr = await sent; expect(sr.status(), 'the order went').toBeLessThan(300);
+    await settle(b); await b.waitForTimeout(1500);
+
+    /* 4 · THE CUSTOMER: the badge and the offered price, on the same screen */
+    row = await openSupplier(b, handle, itemId);
+    f = await rowFacts(row);
+    expect(f.tags, 'the customer sees the badge').toMatch(/10% off/);
+    expect(f.price, 'the customer sees the offered price').toMatch(/180\.00/);
+    const groups = await b.evaluate(() => { try { const st = UI._supCart && UI._supCart.state ? UI._supCart.state() : null; return st && st.cat && st.cat.shop && st.cat.shop.viewer_groups; } catch (_) { return null; } });
+    if (groups) expect(groups, 'the view names the customer and their group').toEqual(expect.arrayContaining(['new']));
+
+    /* 5 · THE SELLER MOVES THEM TO ANOTHER GROUP on the Customers pane — the offer for new customers leaves */
+    await clickNav(page, 'customers'); await settle(page);
+    const cRow = page.locator('[data-testid^="cust-row-"]').first(); await cRow.waitFor({ timeout: 30000 }); await cRow.click(); await settle(page);
+    const saved = page.waitForResponse((r) => /\/api\/relationships\/customers\//.test(r.url()) && r.request().method() === 'PATCH', { timeout: 30000 });
+    await page.getByTestId('cust-group').selectOption('high_value');
+    expect((await saved).status(), 'the group saved').toBeLessThan(300);
+    row = await openSupplier(b, handle, itemId);
+    f = await rowFacts(row);
+    expect(f.tags, 'a high-value customer is not a new one').not.toMatch(/10% off/);
+    expect(f.price, 'back to the list price').toMatch(/200\.00/);
+  } finally { await buyer.context.close(); }
+});

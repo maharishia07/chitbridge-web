@@ -296,10 +296,12 @@
     } catch (e) {}
     return null;
   }
+  /* the reader's standing with this seller, as the catalogue view reported it (shop.viewer_groups) — a customer-only offer's condition needs it; [] for a stranger */
+  function viewerGroups(cat) { return (cat && cat.shop && Array.isArray(cat.shop.viewer_groups)) ? cat.shop.viewer_groups : []; }
   function dealFor(d, offers, o) {
     o = o || {}; d = d || {};
     var base = (o.price != null) ? Number(o.price) : (function (v) { return (v && typeof v === 'object') ? Number(v.amount) : Number(v); })(d.price);
-    return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || 'INR', money: o.money || function (n) { return String(n); } });
+    return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || 'INR', customer_groups: o.customer_groups || [], money: o.money || function (n) { return String(n); } });
   }
   function dealOf(ns, r, base) {
     var s = C[ns]; if (!s || !r || r.type !== 'line') return null;
@@ -308,7 +310,7 @@
     if (!isFinite(base) || base <= 0) return null;
     var d = dataOf(r), q = Number(s.sel[r.item_id]) || 1, key = String(r.item_id) + '@' + q + '@' + base;
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
-    var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } });
+    var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
     s.deals[key] = out; return out;
   }
   function unitPrice(ns, r) {
@@ -529,7 +531,7 @@
        question keeps the dependency pointing the right way — cart-ui never learns what an offer is. */
     var _rn = s.o && s.o.renderer;
     var onlyOff = !!s.onlyOffers;
-    var isOff = (_rn && typeof _rn.isOnOffer === 'function') ? function (r) { return _rn.isOnOffer(r, s.o); } : null;
+    var isOff = (_rn && typeof _rn.isOnOffer === 'function') ? function (r) { return _rn.isOnOffer(r, Object.assign({ cat: s.cat }, s.o)); } : null;   /* the reader's groups ride in with the catalogue (customer-only offers) */
     if (onlyOff && !isOff) onlyOff = false;
     if (!q && !g && !onlyOff) return all;                 // the list is ALWAYS the full list — the cart is a popup, not a filter
     var out = [], pend = null, took = false;
@@ -922,7 +924,7 @@
                 var st = C[ns], EL = engineLines(ns);
                 var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
                 if (!T.offered && !T.partial && (hasOffers || hasTax)) {
-                  var M = money(EL, { offers: (st.cat.offers || []), ctx: { now: new Date(), currency: (st.cat.shop && st.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+                  var M = money(EL, { offers: (st.cat.offers || []), ctx: { now: new Date(), currency: (st.cat.shop && st.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(st.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
                   return '<div data-testid="cart-money" style="padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + moneyRowsHTML(M, { taxTestid: 'cart-tax', totalTestid: 'cart-total' }) + '</div>';
                 }
               } catch (e) { /* fall through to the bare total */ }
@@ -1292,7 +1294,7 @@
           var s = C[ns], EL = engineLines(ns); if (!s) return null;
           var hasOffers = !!(s.cat && Array.isArray(s.cat.offers) && s.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
           if (!hasOffers && !hasTax) return null;
-          var M = money(EL, { offers: (s.cat.offers || []), ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+          var M = money(EL, { offers: (s.cat.offers || []), ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
           return { html: moneyRowsHTML(M, { taxTestid: o.taxTestid || 'cart-tax', totalTestid: o.totalTestid || 'cart-total' }), grand: M.grand, model: M };
         } catch (e) { return null; }
       },
@@ -1901,7 +1903,7 @@
         var _p = root.CBOffers.forLine(
           /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
           { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
-          _offs, { now: new Date(), money: function (n) { return money(cart.ns, n); } });
+          _offs, { now: new Date(), customer_groups: viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } });
         offBadge = _p.slice(0, 2).map(function (x) {
           return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
         }).join('');
@@ -2297,7 +2299,7 @@
       var d = dataOf(row) || {};
       return root.CBOffers.onOffer(
         { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: Number(d.price && d.price.amount != null ? d.price.amount : d.price) || 0 },
-        offs, { now: new Date() });
+        offs, { now: new Date(), customer_groups: (opts && opts.customer_groups) || viewerGroups(opts && opts.cat) });
     } catch (e) { return true; }   /* a failing filter must never empty a catalogue */
   }
 
