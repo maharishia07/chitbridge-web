@@ -8876,7 +8876,9 @@ function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(fun
   if(host){ const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); host.innerHTML=ctDeclaredRows((UI.prodMode==='edit'&&p)?pData(p):{}); const w=document.getElementById('ct_declared_wrap'); if(w) w.hidden=!host.innerHTML; }
   /* no host = no form on screen; never repaint the pane from here */
 }).catch(function(){}); } }
-function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsureDeclaredThenPaint(); }
+function setProdMode(m){ UI.prodMode=m; paintProdDetail(); if(m==='edit') ctEnsureDeclaredThenPaint();
+  /* the marked section stays in view across View ↔ Edit (Athi, 2026-09-06 10:4x: "consists of marked, but the scroll didn't go there") — the repaint reset it */
+  if(UI.prodTab) setTimeout(function(){ try{ setProdTab(UI.prodTab); }catch(_){} }, 260); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; ctEnsureDeclaredThenPaint(); if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
 /**
@@ -13210,7 +13212,7 @@ function detailInner(){
    */
   if(UI.dtab==="input" && !inputHTML) UI.dtab="content";
   if(UI.dtab==="input") body=inputHTML;
-  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
+  if(UI.dtab==="content") body=`<div class="itab">${items}${(()=>{ try { const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean); const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); return `<div data-testid="chit-money" style="margin:8px 12px 10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-total', taxTestid:'chit-tax' })}</div>`; } catch(_) { return `<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div>`; } })()}</div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
@@ -14060,97 +14062,46 @@ function lineWas(h){
 }
 /* items table — each line shows a clip + expandable image strip scoped to that line */
 function contentItems(c){
-  return (c.items||[]).map((it,idx)=>{
-    const atts=attsVis(it[2]);
-    const e=it[3]||{};                      // live-set entry: {live, original, history, removed, reason_code}
-    const open=UI.openLines.has('line'+idx);
-    /**
-     * ⚠️ THE ROW WAS ONLY EXPANDABLE WHEN IT HAD AN ATTACHMENT. Everything else a line knows — what was
-     * fitted, who did it, what was said — had no way to open, so the chevron appeared on the few lines with a
-     * photo and nowhere else. Now anything with history opens, and the paperclip is just one kind of history.
-     */
-    /* ⚠️ The paperclip still toggles the PHOTOS in place — a thumbnail strip belongs on the row it belongs to.
-       Everything else about the line opens the real card. */
-    const clipAtt=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
-    /**
-     * ⚠️⚠️ DESIGN 1'S ROW IS UNCHANGED, AND THAT IS THE DECISION. Athi, 2026-08-24: *"the current design 1
-     * should see no change of this implementation, only should be visible in design 2 only."*
-     *
-     * ⭐ The two designs differ in the ATOM OF WORK, which this file has said from the start: design 1 is the
-     * chit as ONE unit, design 2 is the LINE as the unit. Per-line status, per-line money and a way into a
-     * line's card are all line-level facts — so they belong on the screen whose unit is the line, and putting
-     * them here made design 1 into a worse design 2 rather than leaving it the thing it is.
-     *
-     * The paperclip still toggles the photos in place, exactly as before any of this.
-     */
-    const clip=clipAtt;
-    const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
-    /**
-     * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
-     *
-     * Athi, 2026-08-14: *"once the receipt is made, then no more amendments."* The server refuses it (amend.record
-     * throws LINE_DELIVERED), and this is the courtesy half: offering an edit that will be refused is worse than
-     * not offering it, because the person types first and finds out after.
-     *
-     * ⚠️ PER LINE. Its neighbours stay editable — freezing a whole order because two lines shipped would block
-     * correcting the eleven that have not.
-     */
-    const _dlv=((c.line_delivery||{})[e.line_id]||{});
-    const _settled=!!(_dlv.events&&_dlv.events.length);
-    const pen=(c.canAmend===false)?''
-      :(_settled
-        ? `<span class="lineclip" title="Delivered — this line can no longer be changed" style="opacity:.55;cursor:default">🔒</span>`
-        : `<span class="lineclip" data-testid="amend-line" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`);
-    const was=e.history&&e.history.length?lineWas(e.history):'';
-    if(e.removed){
-      /* ⚠️ REMOVED, NOT DELETED. The reason shows because "we misread this" and "we cannot supply this" are
-         opposite facts — the second one leaves a customer still expecting a delivery. */
-      const why={misread_by_ai:'never asked',stock_unavailable:'not available',customer_clarified:'changed',rate_agreed:'rate agreed',other:'removed'}[e.reason_code]||'removed';
-      return `<div class="ir" style="opacity:.62"><span class="nm"><s>${esc(it[0])}</s></span><span class="qt"><s>${esc(it[1])}</s></span>
-        <span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${esc(why)}</span>${pen}</div>`;
-    }
-    /* ⚠️ A QUANTITY THAT APPEARS NOWHERE IN WHAT THEY WROTE is the number on this chit most likely to be wrong,
-       so it is marked on the row being confirmed — not buried in a summary nobody opens. The closed-class check
-       (lib/numerals.js) flags rather than rejects while it is message-level; it starts rejecting per-line once
-       the reader emits raw_phrase. */
-    const li0=(e.live||e.original||{});
-    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${tx('⚠️ check qty')}</span>`
-      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:var(--danger-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${tx('⚠️ qty rejected')}</span>`:'');
-    /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
-       right message is interpreted."* Everything else on the row came out of a machine — this is the only part
-       that did not, so it is the only part that can settle whether the machine read it right. */
-    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:var(--fs-1);color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:var(--disp)">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
-    /**
-     * ⭐ AN UNPRICED LINE MUST SAY SO ON THE ROW, and offer the fix there.
-     *
-     * ⚠️ WITHOUT THIS THE WHOLE PICKER IS UNREACHABLE IN PRACTICE. The refusal to price was recorded on the line
-     * and mentioned in a summary; the row itself looked like any other row, just quieter. Someone scrolling a
-     * twelve-line order has no reason to open the edit card on the one line that needs it — so the chit stays
-     * short by one item's money and nobody is told which one.
-     *
-     * A removed line never shows it: the question "which of these did they mean" is meaningless once the answer
-     * is "none, it is not being supplied", and it returns above this point anyway.
-     */
-    const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
-    const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which"
-      style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
-    /**
-     * ⭐ THE NAME LINE, WITH THE DESCRIPTION SET APART. Athi, 2026-09-01: *"in two lines, the first line should
-     * have the product Name, (description), next line should have qty and price and the total price."*
-     *
-     * The two-line shape itself is CSS (see `.itab .ir`) and it is not new — it has been the phone layout since
-     * 2026-08-24, from his *"keep the description on top and the status, value etc in the next"*. What changes
-     * here is only that the description stops being glued into the name with a `·` and becomes its own muted
-     * span, so the line someone scans is the product and not the product plus a sentence.
-     *
-     * ⚠️ Falls back to it[0] when [4] is absent — an older payload, or any caller still building rows by hand.
-     */
-    const p4=it[4];
-    const nameHTML=p4
-      ? `${esc(p4.name)}${p4.desc?`<span class="lndesc">${esc(p4.desc)}</span>`:''}${p4.asked?`<span class="lndesc">(${esc(p4.asked)})</span>`:''}${p4.stock?` <span data-testid="c2-stock-short" title="${esc((p4.stock.source?'stock from '+p4.stock.source+' · ':'')+'as of '+String(p4.stock.as_of).slice(0,16).replace('T',' '))}" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);padding:1px 6px;border-radius:9px;white-space:nowrap">⚠ ${esc(tx('short by')+' '+p4.stock.short+' · '+tx('stock')+' '+p4.stock.qty)}</span>`:''}`
-      : esc(it[0]);
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${nameHTML}</div></span>`:`<span class="nm">${nameHTML}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
-  }).join("");
+  /* ⭐⭐ DESIGN 1 IS THE CART (Athi, 2026-09-06 10:19–10:4x: "it has to be the exact cart… ditto, including the format"; "design 1 is cart, exactly
+     the same; the workflow at the recipient is where the format changes"). This tab drew its own rows ("2 kg × ₹200.00 = ₹400.00" beside a
+     ₹360 total, no GST). Now the chit's RECORDED lines (price · discount · offer · rate, as written at send) become a read-only cart and the
+     rows are the cart's own (CBCatUI.rowHTML, deal_recorded). What only a chit adds — attachments, the amend pencil, the pick chip, the
+     unverified/rejected flags, their own words, a removal reason, the history — rides in through the row's hooks. */
+  const ents=(c.items||[]).map((it,idx)=>({ it, idx, e:(it[3]||{}), li:((it[3]&&(it[3].live||it[3].original))||{}) }));
+  const items=ents.map(x=>{ const li=x.li, q=Number(li.quantity)||0, p=Number(li.price), off=Number(li.discount)||(li.offer&&Number(li.offer.off))||0;
+    const unit=(isFinite(p)&&q>0&&off>0)?Math.round((p-off/q)*100)/100:null;
+    return { item_id:'l'+x.idx, item_data:{ name:li.particulars||x.it[0]||'Item', unit:li.unit||'unit', price:isFinite(p)?p:null, code:li.sku||li.code||null, hsn:li.hsn||null,
+      description:(x.it[4]&&x.it[4].desc)||null, deal_recorded:(unit!=null?{ unit, off, label:(li.offer&&li.offer.label)||'offer' }:null) },
+      tax:(li.gst_rate!=null?{ rate:Number(li.gst_rate), name:li.tax_name||'GST' }:null) }; });
+  const cat={ shop:{ bridge_id:'chit', currency_code:c.currency||'INR' }, offers:[], items };
+  if(UI._chitCart){ try{ UI._chitCart.destroy(); }catch(_){} }
+  UI._chitCart=CBCart.create(cat, { renderer:CBCatUI, listEl:'chit_lines_none', barEl:'chit_bar_none', barHideEmpty:true, currency:c.currency||'INR' });
+  ents.forEach(x=>{ const q=Number(x.li.quantity)||0; if(q>0) UI._chitCart.setQty('l'+x.idx, q); });
+  try{ CBCatUI.ensureCss(); }catch(_){}
+  return '<div class="plist">'+ents.map(x=>{
+    const it=x.it, idx=x.idx, e=x.e, li=x.li;
+    const atts=attsVis(it[2]); const open=UI.openLines.has('line'+idx);
+    const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:'';
+    const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:'';
+    const _dlv=((c.line_delivery||{})[e.line_id]||{}); const _settled=!!(_dlv.events&&_dlv.events.length);
+    const pen=(c.canAmend===false)?'':(_settled
+      ? `<span class="lineclip" title="Delivered — this line can no longer be changed" style="opacity:.55;cursor:default">🔒</span>`
+      : `<span class="lineclip" data-testid="amend-line" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`);
+    const was=(e.history&&e.history.length)?lineWas(e.history):'';
+    const why=e.removed?({misread_by_ai:'never asked',stock_unavailable:'not available',customer_clarified:'changed',rate_agreed:'rate agreed',other:'removed'}[e.reason_code]||'removed'):'';
+    const unver=li.qty_unverified?`<span class="cbcat-fact" style="color:var(--warn-2)">⚠️ ${tx('this number is not in their message — check it')}</span>`
+      :(li.qty_rejected?`<span class="cbcat-fact" style="color:var(--disp)">⚠️ ${tx('qty rejected')} — ${esc(li.qty_rejected)}</span>`:'');
+    const nCand=(li.ambiguous||li.variant_candidates||[]).length;
+    const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which" style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ ${nCand} ${tx('matches — pick which')}</span>`;
+    const rawp=li.raw_phrase?`<span class="cbcat-fact" style="font-style:italic;color:var(--grey)">${tx('they wrote')} “${esc(li.raw_phrase)}”</span>`:'';
+    const below=[why?`<span class="cbcat-fact" style="color:var(--warn-2);font-weight:700">${esc(why)}</span>`:'', was?`<span class="cbcat-fact">${was}</span>`:'', unver, pick, rawp, clip].filter(Boolean).join(' · ')+strip;
+    return CBCatUI.rowHTML(UI._chitCart, { type:'line', item:items[idx], item_id:'l'+idx, variant:'' }, {
+      readonly:true, testid:()=>'chit-line-'+idx,
+      rowClass:()=>(e.removed?'cbcat-removed':'')+(atts.length?' hasatt':''),
+      rowAttrs:()=>(atts.length?`onclick="toggleLine(${idx})"`:''),
+      below:()=>(below?`<span class="cbcat-below">${below}</span>`:''),
+      control:()=>pen });
+  }).join('')+'</div>';
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
 

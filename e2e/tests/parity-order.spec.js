@@ -73,9 +73,9 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     /* THE ORDER PAGE, as printed */
     await b.evaluate((id) => openChit(id), chitId); await settle(b);
     const ordTab = b.getByTestId('c2-tab-ord'); if (await ordTab.isVisible().catch(() => false)) { await ordTab.click(); await settle(b); }
-    const oRow = b.getByTestId('c2-line-0'); await oRow.waitFor({ timeout: 30000 });
+    const oRow = b.locator('[data-testid="c2-line-0"], [data-testid="chit-line-0"]').first(); await oRow.waitFor({ timeout: 30000 });   /* Design 2's Order tab or Design 1's Content — both are the cart */
     const orderRow = await rowFacts(oRow);
-    const oMoney = norm(await rowsOf(b.getByTestId('c2-money')));
+    const oMoney = norm(await rowsOf(b.locator('[data-testid="c2-money"], [data-testid="chit-money"]').first()));
 
     /* DITTO */
     expect(orderRow.name).toBe(cartRow.name);
