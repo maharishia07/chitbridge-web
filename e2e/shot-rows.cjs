@@ -47,6 +47,8 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   await page.screenshot({ path: path.join(OUT, 'suppliers.png'), timeout: 20000 }).catch((e) => console.log('shot suppliers:', e.message.slice(0, 80)));
   await page.setViewportSize({ width: 400, height: 860 }); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(2500); const own2 = page.getByTestId('sup-row-own'); if (await own2.isVisible().catch(() => false)) { await own2.click(); await page.locator('#sup_body [data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1200); }
   await page.screenshot({ path: path.join(OUT, 'suppliers-mobile.png'), timeout: 20000 }).catch(() => {});
+  /* the public storefront of the seeded shop */
+  try { const me = await page.evaluate(async () => { const m = await api('me'); const e = (m && m.entity) || m || {}; return e.user_id || e.bridge_id; }); const sp = await ctx.newPage(); await sp.goto(BASE + '/shop.html?s=' + encodeURIComponent(me), { waitUntil: 'load' }); await sp.locator('[data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await sp.waitForTimeout(1200); await sp.screenshot({ path: path.join(OUT, 'storefront.png'), timeout: 20000 }).catch(() => {}); await sp.close(); } catch (e) { console.log('storefront shot:', e.message.slice(0, 80)); }
   await browser.close();
   console.log('shots in', OUT);
 })().catch((e) => { console.error(e); process.exit(1); });

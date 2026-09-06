@@ -320,6 +320,8 @@ function itemPrice(it){ var c=(it&&it.commercials)||{};
   return null; }
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
 function regionBar(){
+  /* ⭐ A DEMO DEVICE, NOT A SHOP FEATURE (Athi, 2026-09-06 09:53: "remove the spin the globe"). Kept behind ?globe=1 for a walkthrough. */
+  if(!/[?&]globe=1/.test(location.search)) return '';
   if(!_REGIONS.length) return '';
   var rc=regionCur();
   var btns=_REGIONS.map(function(r){ var on=r.region_code===_REGION; return '<button onclick="setRegion(\''+r.region_code+'\')" style="border:'+(on?'2px solid #3F66A6':'1px solid #e7e3d8')+';background:'+(on?'#eef4fc':'#fff')+';border-radius:9px;padding:5px 11px;margin:0 6px 6px 0;cursor:pointer;font-size:13px;font-weight:600">'+esc(r.region_code)+'</button>'; }).join('');
@@ -568,7 +570,18 @@ function render(data){
      immediate confirmation. The owner's Open stays Open; this is a fact about the machine, not about the shop. */
   var booksNote = (s.connector && s.connector.silent_minutes != null && s.connector.silent_minutes >= 20)
     ? '<div class="meta" data-testid="shop-books-offline" style="margin-top:4px;color:#8a5a1e">⏳ The shop\'s books are offline (' + (s.connector.silent_minutes < 120 ? s.connector.silent_minutes + ' min' : Math.round(s.connector.silent_minutes/60) + ' h') + ') — your order is kept and confirmed when they are back.</div>' : '';
-  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.user_id||s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div>'+booksNote+'</div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
+  /* ⭐ A SHOP'S OWN HEADER (Athi, 2026-09-06: "bring the shop-related information so it looks a real website"): the logo or the initial,
+     the name large, then the facts a customer looks for — where it is, its GSTIN, whether it is open — and nothing about the rail. */
+  var initial=esc(String(s.display_name||'S').trim().charAt(0).toUpperCase());
+  var logo=s.logo_url?'<img src="'+esc(s.logo_url)+'" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">':'<span style="font-size:22px;font-weight:600;color:#fff">'+initial+'</span>';
+  var facts=[];
+  if(s.address) facts.push('📍 '+esc(s.address));
+  if(s.gstn) facts.push('GSTIN <span class="mono" style="font-family:ui-monospace,Consolas,monospace">'+esc(s.gstn)+'</span>');
+  var head='<div class="hd" style="align-items:center;gap:14px"><div class="logo" style="width:56px;height:56px;border-radius:12px;background:var(--accent,#3F66A6);display:grid;place-items:center;overflow:hidden">'+logo+'</div>'
+    +'<div style="flex:1;min-width:0"><div class="shopname sg" style="font-size:24px;line-height:1.15">'+esc(s.display_name||'Shop')+'</div>'
+    +(facts.length?'<div class="meta" style="margin-top:3px">'+facts.join(' · ')+'</div>':'')
+    +booksNote+'</div>'
+    +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'+statusBadge+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+'</div></div>';
   var finishes=(data.finishes||[]);
   var finHtml=''; _FIN=[];
   finishes.forEach(function(f){
@@ -578,11 +591,11 @@ function render(data){
   });
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
-  var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
+  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
   var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
   if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
-    + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
+    + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop){
