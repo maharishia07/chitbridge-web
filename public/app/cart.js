@@ -1962,6 +1962,17 @@
         offBadge = _p.slice(0, 2).map(function (x) {
           return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
         }).join('');
+        /* ⭐ A BASKET-LEVEL OFFER THAT REACHES THIS ROW IS NAMED ON THE ROW (Athi, 2026-09-06 19:0x: "special discount for you — 10% tier1
+           customer tag, so the customer is aware"). The row's price already carries its share (M.rowOff / the preview), so a badge saying only
+           "10% off" beside a 20%-lower price would mislead. forLine keeps basket offers off the row by design; the row's own deal names them. */
+        if (u.deal && u.deal.label && !u.deal.recorded) {
+          var _have = _p.map(function (x) { return x.label; });
+          String(u.deal.label).split(' + ').forEach(function (lb) {
+            if (!lb || _have.indexOf(lb) >= 0) return;
+            var _src = _offs.filter(function (o) { return (o.label || '') === lb; })[0]; if (!_src || _src.scope !== 'cart') return;
+            offBadge += '<span class="cbcat-off" data-testid="cbcat-off-cart" title="' + esc(lb) + '">' + esc(lb) + (_src.customer_group ? ' · ' + esc('only for you') : '') + '</span>';
+          });
+        }
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
     if (!offBadge && u.deal && u.deal.recorded) offBadge = '<span class="cbcat-off" title="' + esc(u.deal.label) + '">' + esc(u.deal.promise || u.deal.label) + '</span>';   /* the promise the cart printed, else the name */
