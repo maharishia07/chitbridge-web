@@ -60,6 +60,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     expect(f.price, 'a stranger sees the list price').toMatch(/200\.00/);
     expect(f.price, 'a stranger sees no offered price').not.toMatch(/180\.00|170\.00/);
     expect(f.tags, 'a stranger sees no badge').not.toMatch(/10% off|Regulars/);
+    expect(await b.locator('[data-testid^="sup-foryou-"]').count(), 'a stranger\'s supplier row carries no tag').toBe(0);
 
     /* 2 · THE PUBLIC STOREFRONT: the offer is not in the payload at all */
     const pub = await b.evaluate(async (bid) => { const r = await fetch(CFG.API_BASE + '/api/catalogue/' + bid); const j = await r.json(); return { offers: (j.offers || []).map((o) => o.label), groups: j.shop && j.shop.viewer_groups }; }, bridge);
@@ -81,7 +82,10 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     /* 4 · THE CUSTOMER: the badge and the offered price, on the same screen */
     row = await openSupplier(b, handle, itemId);
     f = await rowFacts(row);
-    expect(f.tags, 'the customer sees the badge').toMatch(/10% off/);
+    expect(f.tags, 'the customer sees the badge, named by the seller').toMatch(/Regulars 10% · 10% off/);
+    expect(f.tags, 'the basket offer is named on the row too').toMatch(/Tier1 basket 5% · 5% off/);
+    await expect(b.locator('[data-testid^="sup-foryou-"]').first(), 'the supplier row says what is special for this customer, by the seller\'s names').toContainText('Regulars 10%');
+    expect(await b.locator('[data-testid="sup-standing"]').count(), 'no standing line in the header').toBe(0);
     expect(f.price, 'the customer sees the price after both offers (line 10% + basket 5%)').toMatch(/170\.00/);
     const groups = await b.evaluate(() => { try { const st = UI._supCart && UI._supCart.state ? UI._supCart.state() : null; return st && st.cat && st.cat.shop && st.cat.shop.viewer_groups; } catch (_) { return null; } });
     if (groups) expect(groups, 'the view names the customer and their group').toEqual(expect.arrayContaining(['new']));

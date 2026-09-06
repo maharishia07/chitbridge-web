@@ -6854,6 +6854,7 @@ function supRowHTML(x){
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
+    ${supForYouHTML(x)}
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.user_id||x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
     <div class="rowgo" aria-hidden="true">›</div></div>`;
@@ -7963,7 +7964,7 @@ function supDetailHTML(){
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
-    const chip=supFactsHTML(x.facts)+supStandingHTML(UI.supDet&&UI.supDet.cat)+`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
+    const chip=supFactsHTML(x.facts)+`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
       + `<span style="font-size:var(--fs-1);color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -12887,6 +12888,13 @@ function renderDetail(){
 /* ⭐ WHAT THIS CUSTOMER GETS BEYOND THE DECLARED OFFERS (Athi, 2026-09-06: "the supplier menu should showcase … more importantly what additional
    offer he gets more than declared"). The view names the reader's standing (shop.viewer_groups) and the offers scoped to them (customer_group);
    one line says both. A stranger sees nothing here. */
+/* ⭐ THE TAG ON THE SUPPLIER ROW (Athi, 2026-09-06 19:1x: "the customer knows without even clicking the cart; whatever name is given by the
+   supplier — special discount and so on — show here"). for_you rides the list (routes/relationships.js): the supplier's own offer names with
+   the engine's promise. A stranger sees nothing. */
+function supForYouHTML(x){
+  var f=Array.isArray(x.for_you)?x.for_you:[]; if(!f.length) return '';
+  return '<div class="l2" data-testid="sup-foryou-'+esc(x.supplier_list_id)+'" style="margin-top:3px"><span class="optchip" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2);font-weight:700">🏷️ '+tx('special for you')+'</span> '+f.map(function(o){ return '<b>'+esc(o.label||'offer')+'</b>'+(o.promise?' · '+esc(o.promise):''); }).join(' <span style="color:var(--grey)">·</span> ')+'</div>';
+}
 function supStandingHTML(cat){
   if(!cat || !cat.shop) return '';
   var groups=Array.isArray(cat.shop.viewer_groups)?cat.shop.viewer_groups:[]; var extra=(cat.offers||[]).filter(function(o){ return o && o.customer_group; });
