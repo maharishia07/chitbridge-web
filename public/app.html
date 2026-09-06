@@ -12830,7 +12830,10 @@ async function openChit(id, silent){
                lets the strip's "n of m done" count the way the lines do, rather than counting deliveries and
                contradicting them. */
             line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
-            line_assignment:(r.line_assignment||{})};
+            line_assignment:(r.line_assignment||{}),
+            /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
+               the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
+            business_json:(h.business_json||(base&&base.business_json)||null)};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
