@@ -1853,12 +1853,13 @@
        only a list needs: readonly (no stepper) · control(r) · lead(r) (the select tick) · head(r) (a status chip) · below(r) (category
        chips, 'more') · testid(r) · rowClass(r) · rowAttrs(r) (the click). Nothing else may build a row. */
     var H = opts || {};
-    return '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + (H.rowClass ? ' ' + esc(H.rowClass(r) || '') : '') + '"'
+    var html = '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + (H.rowClass ? ' ' + esc(H.rowClass(r) || '') : '') + '"'
       + ' data-testid="' + esc(H.testid ? H.testid(r) : ('cbcat-row-' + id)) + '"' + (H.rowAttrs ? ' ' + H.rowAttrs(r) : '') + '>'
       + (H.lead ? (H.lead(r) || '') : (media || '<span class="cbcat-thumb" aria-hidden="true"></span>'))   /* the grid needs every cell, image or not */
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>' + (H.head ? (H.head(r) || '') : '')
       + '<span class="cbcat-sub">' + esc(d.unit || '')
       + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>'
+      + '<span class="cbcat-fold" data-testid="cbcat-fold-' + esc(id) + '">'
       /* ⭐ WHAT THE SELLER CHOSE TO SHOW (Athi, 2026-09-06: "I added a synonym, it reflects in the catalogue but not in the cart"). The
          'Shown to customers' switches decide what is IN the payload (lib/exposure.js strips the rest); the row never printed synonyms,
          the HSN or the description even when they arrived. Now the identity cell's facts line does, whenever they are present. */
@@ -1870,6 +1871,7 @@
           return bits.length ? '<span class="cbcat-facts">' + bits.join(' · ') + '</span>' : '';
         } catch (e) { return ''; } })()
       + (H.below ? (H.below(r) || '') : '')
+      + '</span><!--fold-->'
       /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
          gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
          change the price. */
@@ -1881,6 +1883,15 @@
       + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + (H.readonly ? (H.control ? (H.control(r) || '') : '') : ctlHTML(cart, r)) + '</span>'
       + '</div>';
+    /* ⭐ MORE, ONLY WHEN THERE IS MORE (Athi, 2026-09-06: "if anything more than the basic details"). The basics — name, unit, code —
+       stay on the row; synonyms, HSN, description, categories fold behind "more ›". An empty fold leaves no trace. */
+    var fi = html.indexOf('<span class="cbcat-fold"');
+    if (fi >= 0) {
+      var fe = html.indexOf('</span><!--fold-->', fi), inner = html.slice(html.indexOf('>', fi) + 1, fe);
+      if (!inner.trim()) html = html.slice(0, fi) + html.slice(fe + '</span><!--fold-->'.length);
+      else html = html.slice(0, fi) + '<span class="cbcat-moret" data-testid="cbcat-moret-' + esc(id) + '" onclick="event.stopPropagation();this.closest(\'.cbcat-row\').classList.toggle(\'open\')">' + esc((typeof tx === 'function') ? tx('more') : 'more') + ' ›</span>' + html.slice(fi);
+    }
+    return html;
   }
 
   function groupHTML(cart, r, i) {
@@ -2483,7 +2494,7 @@
          layout and paint for off-screen rows; contain-intrinsic-size keeps the scrollbar honest. */
       /* ⭐ ONE GRID FOR EVERY ROW — thumb · identity · tags · price · control. Fixed columns are what let a price, a badge and a stock
          stamp sit in the same place on every line (Athi, 2026-09-06: "an excellent presentation… the values stay in the right places"). */
-      ':where(:root){--cbrow-cols:52px minmax(0,1fr) auto 150px 104px}',
+      ':where(:root){--cbrow-cols:52px minmax(0,1fr) auto 150px minmax(112px,auto)}',
       '.cbcat-row.cbgrid{display:grid;grid-template-columns:var(--cbrow-cols);column-gap:10px}',
       '.cbcat-tags{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;max-width:240px}',
       '.cbcat-tags .cbcat-offs{margin-inline-start:0}',
@@ -2527,6 +2538,7 @@
       '.cbcat-sub{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:1px}',
       '.cbcat-hint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
       '.cbcat-facts{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35}.cbcat-fact b{font-weight:700;color:var(--grey-3)}.cbcat-desc{opacity:.9}',
+      '.cbcat-fold{display:none}.cbcat-row.open .cbcat-fold{display:block}.cbcat-moret{display:inline-block;font-size:var(--fs-1);color:var(--blue);cursor:pointer;margin-top:2px}.cbcat-row.open .cbcat-moret{opacity:.6}',
       /* ⚠️ TOKENS, NOT LITERALS — the badge has to read on both themes, and theme-literals.cjs enforces it.
          --gold-soft/--gold-line already carry "worth noticing, not an error" everywhere else in the app. */
       '.cbcat-offs{display:inline-flex;flex-wrap:wrap;gap:4px;margin-inline-start:7px;vertical-align:middle}',
@@ -2633,7 +2645,7 @@
     (document.head || document.documentElement).appendChild(s);
   }
 
-  root.CBCatUI = {
+  root.CBCatUI = {
     priceHTML: priceHTML,
     /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
     listInto: listInto, barInto: barInto,
