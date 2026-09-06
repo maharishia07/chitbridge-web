@@ -2487,7 +2487,15 @@
       '.cbcat-row.cbclick{cursor:pointer}.cbcat-row.cbclick:hover{background:var(--hover,#f3efe6)}',
       '.cbcat-row.sel{background:var(--sel-2,#e9f0fa);color:var(--on-sel,var(--ink));box-shadow:inset 3px 0 0 var(--blue)}.cbcat-row.picked{background:var(--picked,#e9f0fa)}',
       '.plist .cbcat-row{padding:10px 13px}.cbcat-below{display:block;margin-top:4px}',
-      '@media(max-width:520px){:where(:root){--cbrow-cols:44px minmax(0,1fr) auto}.cbcat-row.cbgrid .cbcat-tags{grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid .cbcat-ctl{grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
+      /* ⭐ COMPACT BY CONTAINER, NOT VIEWPORT (shot-rows 2026-09-06 08:5x: the seller's list lives in a 340 px pane on a 1280 px screen —
+         five columns clipped the price and put the stamp over the unit). Under 560 px of the LIST's own width: thumb · identity · price
+         on row 1, tags and the control on row 2. The same rule serves a phone. */
+      '.cbcat-list,.plist,.cbpick-list{container-type:inline-size}',
+      '@container (max-width:560px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto;align-items:start}'
+      + '.cbcat-row.cbgrid>.cbcat-thumb,.cbcat-row.cbgrid>.cbx{grid-row:1;grid-column:1}.cbcat-row.cbgrid>.cbcat-meat{grid-row:1;grid-column:2}'
+      + '.cbcat-row.cbgrid>.cbcat-pr{grid-row:1;grid-column:3;min-width:0}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;justify-content:flex-start;max-width:none}'
+      + '.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3;min-width:0;align-self:center}.cbcat-row.cbgrid .cbcat-thumb{width:44px;height:44px}}',
+      '@media(max-width:520px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
