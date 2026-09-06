@@ -1765,7 +1765,8 @@ const EP = {
   svcPauseAnswer:  {m:"POST", p:"/api/service/:id/pause/:pid/answer",   ok:"✓"},  // ⭐ accept or REJECT the other side's pause — the disagreement, made into a fact
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
-  chitPay:         {m:"POST", p:"/api/chits/:id/payment",        ok:"✓"},   // the seller records a payment on their copy (level 1)
+  chitPay:         {m:"POST", p:"/api/chits/:id/payment",        ok:"✓"},
+  chitBooks:       {m:"POST", p:"/api/chits/:id/books-request",  ok:"✓"},   // "Send to books": the connector books this order now (Athi, 2026-09-06)   // the seller records a payment on their copy (level 1)
   chitUnpay:       {m:"DELETE",p:"/api/chits/:id/payment",       ok:"✓"},
   assign:          {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // body {action:'push', target_actor_id}
   unassign:        {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // SAME route — body {action:'return'}
@@ -13224,7 +13225,7 @@ function detailInner(){
   if(UI.dtab==="content") body=`<div class="itab">${items}${(()=>{ try { const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean); const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); return `<div data-testid="chit-money" style="margin:8px 12px 10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-total', taxTestid:'chit-tax' })}</div>`; } catch(_) { return `<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div>`; } })()}</div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
-  if(UI.dtab==="status") body=statusTabHtml(c);
+  if(UI.dtab==="status") body=booksBlockHTML(c)+statusTabHtml(c);
   if(UI.dtab==="summary"){
     /* ⭐ THE SUMMARY IS THE CART'S FINANCIAL SUMMARY AND THE DELIVERY — NOTHING MORE (Athi, 2026-09-06 11:30: "do not add anything without my
        knowledge… total cost, total savings, total tax, and where to deliver; commercial details only by setting — not useful for all trades").
@@ -13329,6 +13330,30 @@ function statusEv(e){ var cap=(e.action==='amended')?200:80; return '<div class=
 function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class="msgsi" placeholder="Search status history" value="'+esc(UI.statusSearch||'')+'" oninput="setStatusSearch(this.value)"><button class="msgord" onclick="setStatusOrder(UI.statusOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.statusOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
 function setStatusSearch(v){ clearTimeout(UI._stT); UI._stT=setTimeout(function(){ UI.statusSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('stsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
+/* ⭐ THE BOOKS ON THE TASK (Athi, 2026-09-06: "there must be a detail somewhere in the task that it has been written to Tally, after
+   approval"). Reads business_json.books (the connector's write-back per kind) and books_request; says written · refused · waiting, and
+   offers "Send to books" — the trigger when Orders go to the books = manual, "now" otherwise. Shown on Design 1 Status and Design 2 Summary. */
+function booksBlockHTML(c){
+  var bj=(c.business_json||(c.header&&c.header.business_json))||{}; var B=bj.books||{}; var st=String(c.state||(c.header&&c.header.current_status)||'');
+  var purpose=String(c.purpose||(c.header&&c.header.purpose)||''); if(!/^(order|offer)$/.test(purpose) && !Object.keys(B).length) return '';
+  var at=String(((typeof SESSION!=='undefined'&&SESSION.policy_flags)||{}).books_at||'accepted');
+  var whenTx=function(iso){ try{ return (typeof fmtDateTime==='function')?fmtDateTime(iso):new Date(iso).toLocaleString(); }catch(_){ return String(iso||''); } };
+  var word={order:tx('Sales voucher'),receipt:tx('Receipt voucher'),purchase:tx('Purchase voucher')};
+  var rows=Object.keys(B).map(function(k){ var r=B[k]||{}; var sys=esc(r.system||'books'); var w=word[k]||k;
+    if(r.outcome==='ok') return '<div class="ir" data-testid="books-'+k+'"><span class="nm" style="color:var(--ok-2);font-weight:700">✓ '+txf('Written to {sys}',{sys:sys})+'</span><span class="qt">'+w+(r.ref?' '+esc(r.ref):'')+' · '+esc(whenTx(r.at))+(r.why?' · '+esc(r.why):'')+'</span></div>';
+    if(r.outcome==='failed') return '<div class="ir" data-testid="books-'+k+'"><span class="nm" style="color:var(--warn-2);font-weight:700">✗ '+txf('{sys} refused',{sys:sys})+'</span><span class="qt">'+esc(r.why||'')+' · '+esc(whenTx(r.at))+' · '+tx('retried every 5 minutes')+'</span></div>';
+    if(r.outcome==='dry') return '<div class="ir" data-testid="books-'+k+'"><span class="nm">'+tx('Dry run')+'</span><span class="qt">'+esc(r.why||'')+' · '+esc(whenTx(r.at))+'</span></div>';
+    return '<div class="ir" data-testid="books-'+k+'"><span class="nm">'+tx('Skipped')+'</span><span class="qt">'+esc(r.why||'')+'</span></div>'; }).join('');
+  var waiting='';
+  if(!B.order && /^(order|offer)$/.test(purpose) && !/^(cancelled|rejected)$/.test(st)){
+    var why=bj.books_request?tx('sent to books — the connector books it within a minute'):({received:tx('goes to the books when a connector is watching'),accepted:tx('goes to the books once accepted'),completed:tx('goes to the books once completed'),manual:tx('goes to the books when you press Send to books')}[at]||'');
+    waiting='<div class="ir" data-testid="books-waiting"><span class="nm" style="color:var(--grey)">'+tx('Not yet in the books')+'</span><span class="qt">'+esc(why)+'</span></div>';
+  }
+  var btn=(!B.order && !bj.books_request && /^(order|offer)$/.test(purpose) && !/^(cancelled|rejected)$/.test(st) && UI.folder==='task')?'<div style="padding:8px 12px"><button class="btn2" data-testid="books-send" onclick="booksSend(\''+esc(c.id||(c.header&&c.header.chit_id))+'\')">📒 '+tx('Send to books')+(at==='manual'?'':' '+tx('now'))+'</button></div>':'';
+  if(!rows && !waiting) return '';
+  return '<div class="sec" style="margin:10px 0 6px">'+tx('Books')+'</div><div class="itab" data-testid="books-block">'+rows+waiting+btn+'</div>';
+}
+async function booksSend(id){ try{ await api('chitBooks',{ params:{ id:id } }); toast(tx('Sent to books — the connector books it within a minute.')); var c=(UI.cur&&UI.cur.id===id)?UI.cur:null; if(c){ c.business_json=c.business_json||{}; c.business_json.books_request={ at:new Date().toISOString() }; paintDetail(); } }catch(e){ toast(tx('Could not send')+': '+(e&&e.message||e)); } }
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
 function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
 function messagesTab(c){

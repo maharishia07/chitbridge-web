@@ -1273,7 +1273,7 @@ function c2PaneSummary(d){
         .replace('(y/ies)', items === 1 ? 'y' : 'ies').replace('(s)', lines.length === 1 ? '' : 's'))
     + '</div>';
 
-  return '<div class="c2sum" data-testid="c2-summary">'
+  return '<div class="c2sum" data-testid="c2-summary">' + ((typeof booksBlockHTML === 'function') ? booksBlockHTML(d) : '')
     + '<div class="c2shdr">' + esc(tx('Everything recorded on this job, service by service.')) + '</div>'
     + (lines.length ? body : '<div class="c2sempty">' + esc(tx('No services on this chit yet.')) + '</div>')
     + foot + '</div>';

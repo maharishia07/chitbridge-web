@@ -4787,6 +4787,8 @@ var POLICY_FLAGS = [
      lib/tax.js on every determination (STUDY-gst-structure-2026-09-04 §6 G2). */
   { key:'gst_registration',  label:'GST registration',       type:'enum',   options:['regular','composition','unregistered','sez'], def:'regular', level:'entity', gov:'entity', help:'REGULAR — charges GST and claims credit. COMPOSITION — flat % on turnover, no GST on invoices, no credit. UNREGISTERED — no GSTIN; buys as a consumer. SEZ — supplies to you are zero-rated.' },
   /* ⭐ Athi, 2026-09-06 11:30: the chit's Summary is the cart's money and the delivery — commercial cover only where the trade needs it */
+  /* ⭐ BOOKS AT (Athi, 2026-09-06: "there must be some trigger to be allowed to go to Tally, from the task") — when a connector books an order */
+  { key:'books_at',          label:'Orders go to the books',  type:'enum',   options:['received','accepted','completed','manual'], def:'accepted', level:'entity', gov:'entity',   help:'When a connector (Tally · Zoho · GoFrugal) books an order as a voucher. received — the moment it arrives. accepted — once you accept it (the usual case). completed — once it is done. manual — only when you press "Send to books" on the Task. The Task always says whether and when it was written.' },
   { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
   /**
    * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
