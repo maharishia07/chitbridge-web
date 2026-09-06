@@ -49,6 +49,9 @@
   .btn:focus-visible, input:focus-visible, select:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
   .why{ background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:var(--fs-2); min-height:60px; }
   .why .ok{ color:var(--ok-2); } .why .skip{ color:var(--warn-2); } .why .note{ color:var(--grey-2); }
+  .lab-rule{ display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; padding:5px 0; border-bottom:1px dashed var(--line); margin-bottom:5px; }
+  .lab-rule input, .lab-rule select{ height:24px; padding:1px 4px; font-size:var(--fs-1); }
+  .lab-rule input[type=number]{ text-align:right; }
   .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   table.lines{ width:100%; border-collapse:collapse; font-size:var(--fs-2); background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   table.lines th, table.lines td{ padding:5px 8px; border-bottom:1px solid var(--line-2); text-align:right; white-space:nowrap; }
@@ -196,10 +199,10 @@ function valueCell(k) {
     case 'pct': return '<label>' + num('pct-v', 10, 52) + ' % off</label><label>on ' + scope('pct') + '</label>';
     case 'amt': return '<label>₹ ' + num('amt-v', 10) + ' off</label><label>on ' + scope('amt') + '</label>';
     case 'tier': return '<span class="hint">set under each product on the right: the ranges and the percentage off per range</span>';
-    case 'thr': return '<label>on the order: spend ≥ ₹ ' + num('thr-min', 500) + '</label><label>then ' + num('thr-pct', 10, 48) + ' % off the order</label><label>or free <select id="thr-item" onchange="labRepaint()"><option value="">—</option>' + prodOptions() + '</select> × ' + num('thr-qty', 1, 40) + '</label>';
+    case 'thr': return '<span class="hint">set at cart level on the right — the limit, the reward, and how far the basket is from it</span>';
     case 'bxgy': return '<label>buy ' + num('bxgy-x', 2, 44) + ' get ' + num('bxgy-y', 1, 44) + '</label><label>at ' + num('bxgy-pct', 100, 52) + ' % off</label><label>free one: <select id="bxgy-item" onchange="labRepaint()"><option value="">the same (cheapest)</option>' + prodOptions() + '</select></label>';
     case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ ' + num('bundle-p', 400) + '</label><span class="hint">parked — how a real combination is picked is still open</span>';
-    case 'ship': return '<label>delivery costs ₹ ' + num('ship-charge', 60, 52) + '</label><label><select id="ship-mode" onchange="labRepaint()"><option value="free">free</option><option value="flat">flat ₹</option><option value="pct">% off</option></select> ' + num('ship-v', 20, 48) + '</label><label>from ₹ ' + num('ship-min', 500, 60) + ' on the order</label>';
+    case 'ship': return '<span class="hint">set at cart level on the right — what delivery costs and from which order value it is free</span>';
     case 'band': return '<label>₹ ' + num('band-min', 50) + ' – ₹ ' + num('band-max', 220) + '</label>';
   }
   return '';
@@ -222,7 +225,10 @@ function v(id) { var e = document.getElementById(id); return e ? e.value : ''; }
 /* the products ticked on the right are what every switched-on offer applies to; all ticked (or none) = everything */
 var APPLY = null;   /* null = everything; else a Set of item ids */
 var MINQ = {};      /* item id → the minimum order size for the offer on that product (the box on the row) */
-var TIERS = {};     /* item id → [{ qty, price }, { qty, price }] — the product's own quantity breaks (the second line under the row) */
+var TIERS = {};     /* item id → the product's own quantity slabs (the second line under the row) */
+/* the rules that judge the whole order — set beside the basket, in the At cart level panel */
+var CART_RULES = { thrMin: 500, thrPct: 10, thrItem: '', thrQty: 1, shipCharge: 60, shipMode: 'free', shipV: 20, shipMin: 500 };
+function labRule(k, val) { CART_RULES[k] = (k === 'thrItem' || k === 'shipMode') ? String(val) : Math.max(0, Number(val) || 0); labRepaint(); }
 function tiersOf(id) { if (!TIERS[id]) TIERS[id] = [{ qty: 5, percent: 5 }, { qty: 10, percent: 10 }, { qty: 25, percent: 15 }]; return TIERS[id]; }
 function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
@@ -262,10 +268,10 @@ function labOffers() {
     var o = withCommon('tier', { id: 'tier-' + p.item_id, label: 'Quantity break', kind: 'tier_price', tiers: tiers });
     o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
   });
-  if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + n('thr-min'), kind: 'threshold', min_amount: n('thr-min') }; if (v('thr-item')) { t.get_item_id = v('thr-item'); t.get_item_name = itemName(v('thr-item')); t.get_qty = n('thr-qty') || 1; } else t.percent = n('thr-pct'); out.push(withCommon('thr', t)); }
+  if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + CART_RULES.thrMin, kind: 'threshold', min_amount: CART_RULES.thrMin }; if (CART_RULES.thrItem) { t.get_item_id = CART_RULES.thrItem; t.get_item_name = itemName(CART_RULES.thrItem); t.get_qty = CART_RULES.thrQty || 1; } else t.percent = CART_RULES.thrPct; out.push(withCommon('thr', t)); }
   if (on('bxgy')) { var b = { id: 'bxgy', label: 'Buy ' + n('bxgy-x') + ' get ' + n('bxgy-y'), kind: 'buy_x_get_y', buy: n('bxgy-x'), get: n('bxgy-y'), get_percent: n('bxgy-pct') }; if (v('bxgy-item')) { b.get_item_id = v('bxgy-item'); b.get_item_name = itemName(v('bxgy-item')); } out.push(withCommon('bxgy', b)); }
   if (on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
-  if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = v('ship-mode'); if (m === 'free') s.free = true; else if (m === 'flat') s.flat = n('ship-v'); else s.percent = n('ship-v'); if (n('ship-min') > 0) s.min_amount = n('ship-min'); out.push(withCommon('ship', s)); }
+  if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = CART_RULES.shipMode; if (m === 'free') s.free = true; else if (m === 'flat') s.flat = CART_RULES.shipV; else s.percent = CART_RULES.shipV; if (CART_RULES.shipMin > 0) s.min_amount = CART_RULES.shipMin; out.push(withCommon('ship', s)); }
   if (on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
   return out;
 }
@@ -286,7 +292,7 @@ function labRepaint(rebuild) {
   injectApplies(); paintWhy(); paintMarkup();
 }
 function engineLines(sel) { return sel.map(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0] || { item_data: {} }; return { key: String(l.item_id), item_id: l.item_id, sku: p.item_data.code || null, categories: p.item_data.categories || [], excluded: [], qty: Number(l.quantity || l.qty) || 0, unitPrice: Number(p.item_data.price) || 0, tax: p.tax || null }; }); }
-function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('ship') ? n('ship-charge') : 0; var ev = CBOffers.evaluate({ lines: lines, offers: labOffers(), ctx: { now: new Date(), currency: 'INR', customer_groups: groupsFor(viewer), shipping: ship, money: function (x) { return fmtMoney(x); } } }); return { lines: lines, ev: ev, per: CBOffers.perLine(ev, lines) || {} }; }
+function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('ship') ? CART_RULES.shipCharge : 0; var ev = CBOffers.evaluate({ lines: lines, offers: labOffers(), ctx: { now: new Date(), currency: 'INR', customer_groups: groupsFor(viewer), shipping: ship, money: function (x) { return fmtMoney(x); } } }); return { lines: lines, ev: ev, per: CBOffers.perLine(ev, lines) || {} }; }
 function paintWhy() {
   var sel = []; try { sel = CART.selected(); } catch (_) {}
   var money = document.getElementById('p_money'), why = document.getElementById('p_why'), tbl = document.getElementById('p_lines'), cmp = document.getElementById('p_cmp');
@@ -305,11 +311,15 @@ function paintWhy() {
 /* ⭐ AT CART LEVEL (Athi, 2026-09-06 23:0x: "spend threshold at cart level … a message to pop: select any product and increase up to the
    threshold, the percentage will apply on the cart"; "free shipping like a price threshold — when the amount reaches, show free shipping").
    The rules that judge the whole order say where the basket stands: how far to go, or what it has earned. */
+function ruleNum(k, w) { return '<input type="number" min="0" step="1" value="' + CART_RULES[k] + '" data-testid="lab-rule-' + k + '" style="width:' + (w || 62) + 'px" onchange="labRule(\'' + k + '\',this.value)">'; }
 function paintCartLevel(ev, sel) {
   var el = document.getElementById('p_cart_level'); if (!el) return;
   var rows = [], subtotal = 0; (sel || []).forEach(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0]; if (p) subtotal += (Number(p.item_data.price) || 0) * (Number(l.quantity || l.qty) || 0); });
   if (on('thr')) {
-    var min = n('thr-min'), pct = n('thr-pct'), item = v('thr-item');
+    var min = CART_RULES.thrMin, pct = CART_RULES.thrPct, item = CART_RULES.thrItem;
+    rows.push('<div class="lab-rule"><b>Spend threshold</b> ₹' + ruleNum('thrMin') + ' → ' + ruleNum('thrPct', 46) + '% off the order'
+      + ' · or free <select data-testid="lab-rule-thrItem" onchange="labRule(\'thrItem\',this.value)"><option value="">—</option>'
+      + PRODUCTS.map(function (p) { return '<option value="' + esc(p.item_id) + '"' + (item === p.item_id ? ' selected' : '') + '>' + esc(p.item_data.name) + '</option>'; }).join('') + '</select> × ' + ruleNum('thrQty', 42) + '</div>');
     var got = ev && (ev.adjustments || []).filter(function (a) { return a.offer_id === 'thr'; })[0];
     var note = ev && (ev.notes || []).filter(function (x) { return x.offer_id === 'thr'; })[0];
     if (got) rows.push('<div class="ok">✓ <b>Spend ' + fmtMoney(min) + '</b> — reached: ' + esc(got.why) + '</div>');
@@ -317,14 +327,17 @@ function paintCartLevel(ev, sel) {
     else rows.push('<div class="note">🛒 <b>Spend ' + fmtMoney(min) + '</b> to get ' + (item ? esc(itemName(item)) + ' free' : pct + '% off the order') + ' — the basket is at <b>' + fmtMoney(subtotal) + '</b>' + (subtotal < min ? ', <b>' + fmtMoney(Math.round((min - subtotal) * 100) / 100) + '</b> to go. Add any product until it reaches the threshold; the discount then applies to the whole order.' : '.') + '</div>');
   }
   if (on('ship')) {
-    var smin = n('ship-min'), charge = n('ship-charge');
+    var smin = CART_RULES.shipMin, charge = CART_RULES.shipCharge;
+    rows.push('<div class="lab-rule"><b>Delivery</b> costs ₹' + ruleNum('shipCharge', 56)
+      + ' · <select data-testid="lab-rule-shipMode" onchange="labRule(\'shipMode\',this.value)"><option value="free"' + (CART_RULES.shipMode === 'free' ? ' selected' : '') + '>free</option><option value="flat"' + (CART_RULES.shipMode === 'flat' ? ' selected' : '') + '>flat ₹</option><option value="pct"' + (CART_RULES.shipMode === 'pct' ? ' selected' : '') + '>% off</option></select> ' + ruleNum('shipV', 46)
+      + ' · from ₹' + ruleNum('shipMin', 62) + ' on the order</div>');
     var free = ev && Number(ev.shipping) < charge;
     if (free) rows.push('<div class="ok">🚚 Delivery: <b>' + (Number(ev.shipping) === 0 ? 'free' : fmtMoney(ev.shipping)) + '</b> on this order' + (smin ? ' (from ' + fmtMoney(smin) + ')' : '') + '</div>');
     else rows.push('<div class="note">🚚 Delivery ' + fmtMoney(charge) + (smin ? ' — free from ' + fmtMoney(smin) + ', the basket is at <b>' + fmtMoney(subtotal) + '</b>' + (subtotal < smin ? ', <b>' + fmtMoney(Math.round((smin - subtotal) * 100) / 100) + '</b> to go' : '') : '') + '</div>');
   }
   var cartAdj = ev ? (ev.adjustments || []).filter(function (a) { return a.scope === 'cart' && a.offer_id !== 'thr'; }) : [];
   cartAdj.forEach(function (a) { rows.push('<div class="ok">✓ <b>' + esc(a.label) + '</b> on the order — ' + esc(a.why) + '</div>'); });
-  el.innerHTML = rows.length ? rows.join('') : '<span class="note">No rule judges the whole order yet — switch on a spend threshold, a basket-level % or a delivery offer.</span>';
+  el.innerHTML = rows.length ? rows.join('') : '<span class="note">No rule judges the whole order yet — switch on a spend threshold, a basket-level % or a delivery offer on the left.</span>';
 }
 function paintMarkup() {
   var o = document.getElementById('mk-out'); if (!on('markup')) { o.innerHTML = ''; return; }
@@ -429,8 +442,8 @@ function labTry(what, a, b) {
   if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); labApplyOnly(p.item_id); }
   if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
   if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); labApplyOnly(p.item_id); }
-  if (what === 'thr') { setOn('thr', true); setV('thr-min', a); if (b) { setV('thr-item', b); setV('thr-qty', 1); } else setV('thr-pct', 5); }
-  if (what === 'ship') { setOn('ship', true); setV('ship-mode', 'free'); }
+  if (what === 'thr') { setOn('thr', true); CART_RULES.thrMin = a; if (b) { CART_RULES.thrItem = b; CART_RULES.thrQty = 1; } else { CART_RULES.thrItem = ''; CART_RULES.thrPct = 5; } }
+  if (what === 'ship') { setOn('ship', true); CART_RULES.shipMode = 'free'; CART_RULES.shipMin = a || CART_RULES.shipMin; }
   if (what === 'loyal') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); setV('pct-only', 'high_value'); setV('pct-alias', 'Special discount'); setV('viewer', 'high_value'); document.getElementById('cmp').checked = true; }
   if (what === 'loyalx') { setOn('pct', true); setV('pct-v', 10); setOn('amt', false); setOn('tier', false); setV('pct-only', ''); setOn('amt', true); setV('amt-v', 5); var x = document.getElementById('pct-excl'); x.checked = false; setOn('pct', true);
     /* the exclusive one: a second % card is not available, so the "exclusive 25% for one customer" uses the % card alone with everyone-else offers switched on beside it */
