@@ -640,7 +640,7 @@ function cbDefRuleFields(kind, sub){
     g.push({ k: 'priority', label: 'Stacking order', ph: '1', num: true, half: true,
              hint: 'Lower runs first.' });
     g.push({ k: 'exclusive', label: 'Exclusive', check: true, half: true,
-             hint: 'Once this applies, later offers do not.' });
+             hint: 'Once this applies, no other offer does — it runs before every non-exclusive offer, whatever the stacking numbers say.' });
     return g;
   }
   return [];
