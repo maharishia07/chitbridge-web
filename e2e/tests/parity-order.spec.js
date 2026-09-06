@@ -70,10 +70,15 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     expect(sr.status(), JSON.stringify(sj).slice(0, 200)).toBeLessThan(300);
     const chitId = sj.chit_id || (sj.chit && sj.chit.chit_id); expect(chitId, 'the chit id').toBeTruthy();
 
-    /* THE ORDER PAGE, as printed */
-    await b.evaluate((id) => openChit(id), chitId); await settle(b);
+    /* THE ORDER PAGE, as printed — reached the way a person reaches it: the app's own post-send landing, then the row in Order.
+       (Calling openChit the instant the send returned raced the app's own navigation and left "Loading record…" on screen, run 17.) */
+    await settle(b); await b.waitForTimeout(1500);
+    await clickNav(b, 'order'); await settle(b);
+    const chitRow = b.locator('[data-testid^="chit-row-"], .row').filter({ hasText: /Order/ }).first();
+    if (await chitRow.isVisible().catch(() => false)) { await chitRow.click(); await settle(b); }
+    else { await b.evaluate((id) => openChit(id), chitId); await settle(b); }
     const ordTab = b.getByTestId('c2-tab-ord'); if (await ordTab.isVisible().catch(() => false)) { await ordTab.click(); await settle(b); }
-    const oRow = b.locator('[data-testid="c2-line-0"], [data-testid="chit-line-0"]').first(); await oRow.waitFor({ timeout: 30000 });   /* Design 2's Order tab or Design 1's Content — both are the cart */
+    const oRow = b.locator('[data-testid="c2-line-0"], [data-testid="chit-line-0"]').first(); await oRow.waitFor({ timeout: 60000 });   /* Design 2's Order tab or Design 1's Content — both are the cart */
     const orderRow = await rowFacts(oRow);
     const oMoney = norm(await rowsOf(b.locator('[data-testid="c2-money"], [data-testid="chit-money"]').first()));
 
