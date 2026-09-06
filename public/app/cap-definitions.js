@@ -522,8 +522,8 @@ function cbDefRuleFields(kind, sub){
    */
   if (kind === 'tax') {
     return [
-      { k: 'rate', label: 'Rate %', ph: '18', num: true },
-      { k: 'cess', label: 'Cess % on top (blank = none)', ph: '0', num: true },
+      { k: 'rate', label: 'Rate', ph: '18', num: true, pct: true },
+      { k: 'cess', label: 'Cess on top (blank = none)', ph: '0', num: true, pct: true },
       { k: 'hsn', label: 'HSN codes this covers (your note — nothing resolves from it)', ph: 'one code per line', area: true },
       { k: 'effective_from', label: 'In force from', ph: 'YYYY-MM-DD', date: true },   /* a real date control (Athi, 2026-09-05: "date picker is not there") */
     ];
@@ -531,10 +531,10 @@ function cbDefRuleFields(kind, sub){
   if (kind === 'pricing') {
     /* the names the engine reads (pricing.js copyOf): amount · tiers · min · max */
     var pf = [];
-    if (sub === 'fixed')  pf.push({ k: 'amount', label: 'Amount (blank = the product\'s list price)', ph: '1000', num: true });
+    if (sub === 'fixed')  pf.push({ k: 'amount', label: 'Amount (blank = the product\'s list price)', ph: '1000', num: true, money: true });
     if (sub === 'tiered') pf.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true, ph: '10 = 950\n50 = 900',
                                     hint: 'One per line: from this quantity = price each. Below the first break the list price applies.' });
-    if (sub === 'range')  { pf.push({ k: 'min', label: 'Lowest', ph: '900', num: true, half: true }); pf.push({ k: 'max', label: 'Highest', ph: '1100', num: true, half: true }); }
+    if (sub === 'range')  { pf.push({ k: 'min', label: 'Lowest', ph: '900', num: true, money: true, half: true }); pf.push({ k: 'max', label: 'Highest', ph: '1100', num: true, money: true, half: true }); }
     return pf;
   }
   if (kind === 'ordermodel') {
@@ -544,15 +544,15 @@ function cbDefRuleFields(kind, sub){
     if (sub === 'pack' || sub === 'measure' || sub === 'range') f.push({ k: 'step', label: 'Step', ph: '6', num: true });
     if (sub === 'range') { f.push({ k: 'min', label: 'Minimum', ph: '5', num: true });
                            f.push({ k: 'max', label: 'Maximum', ph: '500', num: true }); }
-    if (sub === 'offer') { f.push({ k: 'price_min', label: 'Lowest price you will accept', num: true });
-                           f.push({ k: 'price_max', label: 'Highest', num: true }); }
+    if (sub === 'offer') { f.push({ k: 'price_min', label: 'Lowest price you will accept', num: true, money: true });
+                           f.push({ k: 'price_max', label: 'Highest', num: true, money: true }); }
     return f;
   }
   if (kind === 'offer') {
     var g = [];
-    if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true, half: true });
-    if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true, half: true });
-    if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true, half: true });
+    if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true, pct: true, half: true });
+    if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true, money: true, half: true });
+    if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true, money: true, half: true });
                                g.push({ k: 'min_qty', label: '…or this many items', num: true, half: true }); }
     /**
      * ⚠️⚠️ tier_price HAD NO FIELDS AT ALL. The registry advertises it — "Quantity tier — a RE-PRICE, not a
@@ -565,7 +565,7 @@ function cbDefRuleFields(kind, sub){
                                g.push({ k: 'get_qty', label: 'Reward quantity', ph: '1', num: true, half: true });
                                g.push({ k: 'get_percent', label: 'Reward discount (100 = free)', ph: '100', num: true, half: true }); }
     if (sub === 'bundle_price') { g.push({ k: 'bundle_items', label: 'Items in the bundle (product ids, one per line)', area: true, ph: 'one product id per line' });
-                                  g.push({ k: 'bundle_price', label: 'Bundle price', ph: '1999', num: true, half: true });
+                                  g.push({ k: 'bundle_price', label: 'Bundle price', ph: '1999', num: true, money: true, half: true });
                                   g.push({ k: 'max_sets', label: 'Max sets per order (blank = no cap)', num: true, half: true }); }
     if (sub === 'tier_price') g.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true,
       ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each.' });
@@ -580,9 +580,9 @@ function cbDefRuleFields(kind, sub){
                                   * it "buy rice, get oil free", which this kind could not say at all.
                                   */
                                  g.push({ k: 'get_item_id', label: 'Reward — a different product (blank = one of these)', pick: 'product' }); }
-    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true, half: true,
+    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true, money: true, half: true,
                                           hint: 'Warns when a price falls outside. Never changes it.' });
-                                 g.push({ k: 'max', label: 'Band maximum', num: true, half: true }); }
+                                 g.push({ k: 'max', label: 'Band maximum', num: true, money: true, half: true }); }
     /**
      * ⚠️ "blank = free" WAS A PROMISE THE ENGINE DID NOT KEEP. The only shipping field was the percentage, and
      * blank produced an offer with no term at all — offers.js requires `free`, so it moved nothing and said
@@ -590,8 +590,8 @@ function cbDefRuleFields(kind, sub){
      * shipping offer there is.
      */
     if (sub === 'shipping') { g.push({ k: 'free', label: 'Free shipping', check: true, half: true });
-                              g.push({ k: 'flat', label: 'or a flat rate', num: true, half: true });
-                              g.push({ k: 'percent', label: 'or % off shipping', num: true, half: true }); }
+                              g.push({ k: 'flat', label: 'or a flat rate', num: true, money: true, half: true });
+                              g.push({ k: 'percent', label: 'or off shipping', num: true, pct: true, half: true }); }
     /**
      * ⭐ WHAT IT COMES OFF — the two kinds offers.js declares as `scope:'either'`. Nothing ever set `scope`, so
      * every percentage anyone authored was a PER-LINE discount and "10% off the whole order" could not be said.
@@ -905,8 +905,12 @@ function cbDefFieldHTML(x, v){
      what you write when the field cannot check itself, and offers.js compares these as dates. */
   var type = x.date ? ' type="date"' : (x.num ? ' inputmode="decimal"' : '');
   var val = x.date ? String(v || '').slice(0, 10) : v;
-  return '<input class="inp"' + type + ' data-testid="' + id + '" value="' + cbDefEsc(val) + '"'
+  var box = '<input class="inp"' + type + ' data-testid="' + id + '" value="' + cbDefEsc(val) + '"'
     + ' placeholder="' + cbDefEsc(x.ph || '') + '"' + set('this.value,' + (x.num ? 'true' : 'false')) + '>';
+  /* ⭐ MONEY SAYS ITS CURRENCY, A RATE SAYS % (Athi, 2026-09-06 10:35: "in front of amount put a currency symbol") — a bare box is a number, not money */
+  if (x.money) { var sym = (typeof CBLocale !== 'undefined' && CBLocale.symbol) ? CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR') : '₹'; return '<span class="cbdef-adorn"><b>' + cbDefEsc(sym) + '</b>' + box + '</span>'; }
+  if (x.pct) return '<span class="cbdef-adorn cbdef-adorn-after">' + box + '<b>%</b></span>';
+  return box;
 }
 
 function cbDefFormHTML(){
@@ -1679,6 +1683,7 @@ function cbDefCss(){
     '.cbdef-check{display:flex;align-items:center;gap:8px;font-size:var(--fs-2);font-weight:700;color:var(--ink);'
       + 'margin:12px 0 0;padding:10px 13px;border:1px solid var(--line);border-radius:9px;background:var(--paper);cursor:pointer}',
     '.cbdef-check input{width:16px;height:16px;margin:0;flex:none}',
+    '.cbdef-adorn{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden}.cbdef-adorn>b{padding:0 10px;font-weight:700;color:var(--grey-2);font-size:var(--fs-2);flex:none}.cbdef-adorn>input.inp{border:0;border-radius:0;margin:0;flex:1;min-width:0;background:transparent}.cbdef-adorn-after>b{border-inline-start:1px solid var(--line)}',
     '@media (max-width:680px){ .cbdef-grid{grid-template-columns:1fr} .cbdef-grid>.cbdef-w2{grid-column:1} }',
     /* ── the outcome strip ─────────────────────────────────────────────────────────────────────────────── */
     '.cbdef-prev{margin-top:13px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--neutral-tint,var(--card))}',
