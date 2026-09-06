@@ -1850,6 +1850,16 @@
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
       + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>'
+      /* ⭐ WHAT THE SELLER CHOSE TO SHOW (Athi, 2026-09-06: "I added a synonym, it reflects in the catalogue but not in the cart"). The
+         'Shown to customers' switches decide what is IN the payload (lib/exposure.js strips the rest); the row never printed synonyms,
+         the HSN or the description even when they arrived. Now the identity cell's facts line does, whenever they are present. */
+      + (function () { try {
+          var syn = Array.isArray(d.synonyms) ? d.synonyms : (Array.isArray(d.aliases) ? d.aliases : []), bits = [], T = function (k) { return (typeof tx === 'function') ? tx(k) : k; };
+          if (syn.length) bits.push('<span class="cbcat-fact" data-testid="cbcat-syn-' + esc(id) + '"><b>' + esc(T('also')) + '</b> ' + esc(syn.slice(0, 4).map(function (x) { return typeof x === 'string' ? x : (x && (x.name || x.text)) || ''; }).filter(Boolean).join(', ')) + '</span>');
+          if (d.hsn || d.hsn_code) bits.push('<span class="cbcat-fact" data-testid="cbcat-hsn-' + esc(id) + '"><b>HSN</b> ' + esc(d.hsn || d.hsn_code) + '</span>');
+          var ds = d.description || d.desc; if (ds) bits.push('<span class="cbcat-fact cbcat-desc" data-testid="cbcat-desc-' + esc(id) + '">' + esc(String(ds).slice(0, 140)) + (String(ds).length > 140 ? '…' : '') + '</span>');
+          return bits.length ? '<span class="cbcat-facts">' + bits.join(' · ') + '</span>' : '';
+        } catch (e) { return ''; } })()
       /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
          gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
          change the price. */
@@ -2494,6 +2504,7 @@
       '.cbcat-nm{display:block;font-weight:700;font-size:var(--fs-3)}',
       '.cbcat-sub{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:1px}',
       '.cbcat-hint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
+      '.cbcat-facts{display:block;font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35}.cbcat-fact b{font-weight:700;color:var(--grey-3)}.cbcat-desc{opacity:.9}',
       /* ⚠️ TOKENS, NOT LITERALS — the badge has to read on both themes, and theme-literals.cjs enforces it.
          --gold-soft/--gold-line already carry "worth noticing, not an error" everywhere else in the app. */
       '.cbcat-offs{display:inline-flex;flex-wrap:wrap;gap:4px;margin-inline-start:7px;vertical-align:middle}',
