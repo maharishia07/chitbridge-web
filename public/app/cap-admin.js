@@ -4758,6 +4758,8 @@ var POLICY_FLAGS = [
   /* ⭐ Tally's "registration type", as a policy flag — what an invoice may CHARGE before any rate applies. Read by
      lib/tax.js on every determination (STUDY-gst-structure-2026-09-04 §6 G2). */
   { key:'gst_registration',  label:'GST registration',       type:'enum',   options:['regular','composition','unregistered','sez'], def:'regular', level:'entity', gov:'entity', help:'REGULAR — charges GST and claims credit. COMPOSITION — flat % on turnover, no GST on invoices, no credit. UNREGISTERED — no GSTIN; buys as a consumer. SEZ — supplies to you are zero-rated.' },
+  /* ⭐ Athi, 2026-09-06 11:30: the chit's Summary is the cart's money and the delivery — commercial cover only where the trade needs it */
+  { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
   /**
    * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
    * `received`, lib/policy.js said `both`, and so did this. Three statements of one rule, two of them wrong.

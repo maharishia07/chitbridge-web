@@ -13216,10 +13216,24 @@ function detailInner(){
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
-  if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx('Value')}</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx('State')}</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
-     <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
+  if(UI.dtab==="summary"){
+    /* ⭐ THE SUMMARY IS THE CART'S FINANCIAL SUMMARY AND THE DELIVERY — NOTHING MORE (Athi, 2026-09-06 11:30: "do not add anything without my
+       knowledge… total cost, total savings, total tax, and where to deliver; commercial details only by setting — not useful for all trades").
+       The supplier clearances and the commercial-cover frame built earlier were on for every trade; they now sit behind the
+       `trade_cover` policy flag (Settings › Governance), off by default. */
+    const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean);
+    let M=null; try { M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); } catch(_) {}
+    const savings=M?Math.round((M.gross-(M.ev&&M.ev.total!=null?M.ev.total:M.gross))*100)/100:0;
+    const tile=(k,v,tid)=>`<div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx(k)}</div><div class="disp" data-testid="${tid}" style="font-size:var(--fs-4);font-weight:700">${v}</div></div>`;
+    const tiles=`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fmtMoney(M?M.grand:c.amt,c.currency), 'chit-summary-grand')}${tile('You save', fmtMoney(savings,c.currency), 'chit-summary-savings')}${tile('Tax', fmtMoney(M?M.taxTotal:0,c.currency), 'chit-summary-taxtotal')}</div>`;
+    const block=M?`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-summary-total', taxTestid:'chit-summary-tax' })}</div>`:'';
+    const bj=(c.business_json||(c.header&&c.header.business_json))||{}; const sv=bj.schema_values||bj;
+    const dl=[['Deliver to',sv.deliver_to],['By',sv.delivery_by],['Note',sv.note]].filter(x=>x[1]);
+    const delivery=dl.length?`<div class="itab" data-testid="chit-summary-delivery" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0 0 6px">${tx('Delivery')}</div>${dl.map(x=>`<div class="ir"><span class="nm">${tx(x[0])}</span><span class="qt">${esc(String(x[1]))}</span></div>`).join('')}</div>`:'';
+    const state=`<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0">${tx('State')}</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div>`;
+    const cover=(String(((typeof SESSION!=='undefined'&&SESSION.policy_flags)||{}).trade_cover||'off')==='on')?`<div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`:'';
+    body=tiles+block+delivery+state+cover;
+  }
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from this order — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`
