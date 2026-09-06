@@ -12869,12 +12869,15 @@ function supFactsHTML(f, opts){
   var M={ verified:['✅','var(--ok-2)','var(--ok-tint)'], checked:['🔢','var(--blue-2)','var(--blue-tint-bg)'], copied:['📒','var(--grey-2)','var(--neutral-tint)'], declared:['✍️','var(--grey-2)','var(--neutral-tint)'] };
   var m=M[f.gstin_rung]||M.declared;
   var why={ verified:tx('verified with the registry'), checked:tx('checked — the check digit and the state code agree'), copied:tx('copied from their own books'), declared:tx('as they gave it') }[f.gstin_rung||'declared'];
-  var src=f.source&&f.source!=='profile'?(' · '+tx('from')+' '+esc(f.source)+(f.as_of?' · '+esc(String(f.as_of).slice(0,10)):'')):'';
+  /* provenance in words (Athi, 2026-09-06: "what is that 'from csv' next to CHECKED?"): where the number came from, and when */
+  var srcWord={ csv:tx('declared via CSV import'), tally:tx('synced from Tally'), zoho:tx('synced from Zoho'), gofrugal:tx('synced from GoFrugal'), connector:tx('synced from their books'), manual:tx('typed in'), profile:'' }[String(f.source||'').toLowerCase()];
+  if(srcWord===undefined) srcWord=f.source?tx('from')+' '+esc(f.source):'';
+  var src=srcWord?(' · '+srcWord+(f.as_of?', '+esc(String(f.as_of).slice(0,10)):'')):'';
   return '<div data-testid="'+esc(opts.testid||'sup-facts')+'" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:'+(opts.margin||'4px 0 6px')+';font-size:var(--fs-1)">'
     + (f.gstin?'<span style="font-family:ui-monospace,monospace;font-weight:700;color:var(--on-card)">'+esc(f.gstin)+'</span>'
         + '<span title="'+esc(why)+'" style="font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+esc(String(f.gstin_rung||'declared').toUpperCase())+'</span>':'')
     + (f.state?'<span style="color:var(--grey-2)">'+esc(f.state)+'</span>':'')
-    + (f.reg_type?'<span style="color:var(--grey-2)">· '+esc(f.reg_type)+'</span>':'')
+    + (f.reg_type?'<span style="color:var(--grey-2)">· '+esc(({regular:tx('regular dealer'),composition:tx('composition dealer'),unregistered:tx('unregistered'),sez:tx('SEZ unit')})[String(f.reg_type).toLowerCase()]||f.reg_type)+'</span>':'')
     + (src?'<span style="color:var(--grey-2)">'+src+'</span>':'')
     + '</div>';
 }
