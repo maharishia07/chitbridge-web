@@ -309,11 +309,17 @@
     if (!offers.length || !root.CBOffers || !root.CBOffers.evaluate || !root.CBOffers.perLine) return null;
     if (!isFinite(base) || base <= 0) return null;
     var d = dataOf(r), q = Number(s.sel[r.item_id]) || 1, key = String(r.item_id) + '@' + q + '@' + base;
+    /* a row IN the basket reads the basket's own evaluation (compute) — the share this line got, line-scope only, as the cart row always showed */
+    if (s.sel[r.item_id] > 0) {
+      var M = compute(ns), p = M && M.per ? M.per[String(r.item_id)] : null;
+      if (!p || !(p.off > 0)) return null;
+      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', offers: p.offers || [] };
+    }
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
     var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
     s.deals[key] = out; return out;
   }
-  function unitPrice(ns, r) {
+  function unitPrice(ns, r, opt) {
     var s = C[ns] || {}, o = declOf(ns, r);
     if (o.model === 'offer') {
       var v = (s.offers || {})[r.item_id];
@@ -331,6 +337,7 @@
        never re-evaluated — the order page draws the chit, and a chit is evidence (Athi, 2026-09-06 10:19: "it has to be the exact cart"). */
     var rd = dataOf(r).deal_recorded;
     if (rd && isFinite(Number(rd.unit))) return { amount: Number(rd.unit), offered: false, asking: list, base: base, deal: { unit: Number(rd.unit), off: Number(rd.off) || 0, label: rd.label || 'offer', promise: rd.promise || null, recorded: true }, tier: tier, why: why };
+    if (opt && opt.noDeal) return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };   /* the engine's input (engineLines) */
     var deal = dealOf(ns, r, base);
     if (deal) return { amount: deal.unit, offered: false, asking: list, base: base, deal: deal, tier: tier, why: why };
     return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };
@@ -348,17 +355,8 @@
     /* ⭐ A BASKET-LEVEL OFFER IS PART OF THE TOTAL (Athi, 2026-09-06: "cart also didn't consider the offer" — the bar and the pill said
        ₹575.90 while the block said ₹510.80 after a cart-scope 10%). The rows carry line offers; the order-level ones are evaluated here
        once per selection (memoised on the selection + the offers) and taken off the headline, so bar, pill and block say one figure. */
-    try {
-      var offs = (s.cat && Array.isArray(s.cat.offers)) ? s.cat.offers : [];
-      if (amount > 0 && !partial && offs.length && root.CBOffers && root.CBOffers.evaluate) {
-        var key = JSON.stringify(s.sel) + '|' + offs.length + '|' + amount;
-        if (!s._orderOff || s._orderOff.key !== key) {
-          var ev = root.CBOffers.evaluate({ lines: engineLines(ns), offers: offs, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat) } });
-          s._orderOff = { key: key, val: (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0) };
-        }
-        if (s._orderOff.val > 0) amount = Math.max(0, Math.round((amount - s._orderOff.val) * 100) / 100);
-      }
-    } catch (e) {}
+    /* the figure itself comes from the ONE evaluation (compute); the loop above only learned whether a line is negotiated or unpriced */
+    if (!partial && !offered && amount > 0) { try { var M = compute(ns); if (M && M.ev && M.ev.total != null) amount = Math.round(Number(M.ev.total) * 100) / 100; } catch (e) {} }
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
     // saying so reads as agreed when nothing has been agreed.
     return { amount: amount, partial: partial, offered: offered };
@@ -369,11 +367,29 @@
     var out = [];
     rowsOf(s.cat).forEach(function (r) {
       if (r.type !== 'line' || !s.sel[r.item_id]) return;
-      var u = unitPrice(ns, r), d = (r.item && (r.item.item_data || r.item)) || {};
+      var u = unitPrice(ns, r, { noDeal: true }), d = (r.item && (r.item.item_data || r.item)) || {};
       out.push({ key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [], excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded : [],
-                 qty: Number(s.sel[r.item_id]) || 0, unitPrice: u.deal ? u.base : (isFinite(u.amount) ? u.amount : 0), tax: (r.item && r.item.tax) || d.tax || null });
+                 qty: Number(s.sel[r.item_id]) || 0, unitPrice: isFinite(u.amount) ? u.amount : 0, tax: (r.item && r.item.tax) || d.tax || null });
     });
     return out;
+  }
+  /**
+   * ⭐⭐ THE ONE FIGURE (Athi, 2026-09-06: "each figure comes from different places?"). The basket is evaluated ONCE per selection —
+   * money() on the engine lines (base prices · every live offer · the viewer's groups · the tax per line) — and memoised on what can
+   * change it. Every outlet reads this: the row's share (M.per), the bar and the pill (M.ev.total), the block and the review (M).
+   * A row judged alone cannot know a threshold or a basket offer; a bar summing row deals cannot either. Nothing else evaluates.
+   */
+  function compute(ns) {
+    var s = C[ns]; if (!s || !s.cat) return null;
+    var offs = Array.isArray(s.cat.offers) ? s.cat.offers : [];
+    var EL = engineLines(ns);
+    var key = EL.map(function (l) { return l.key + ':' + l.qty + ':' + l.unitPrice + ':' + (l.tax && l.tax.rate != null ? l.tax.rate : '-'); }).join(',')
+            + '|' + offs.map(function (o) { return o.id; }).join(',') + '|' + viewerGroups(s.cat).join(',');
+    if (s._M && s._M.key === key) return s._M.M;
+    var M = money(EL, { offers: offs, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+    M.per = (offs.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(M.ev, EL) || {}) : {};
+    M.lines = EL;
+    s._M = { key: key, M: M }; return M;
   }
   /** What is in the cart, in the shape a chit line needs. Reads the WHOLE catalogue, never the filtered view. */
   function selected(ns) {
@@ -569,7 +585,7 @@
   }
 
   /* ── changes. One route, so the list and the popup can never disagree. ───────────────────────────────────── */
-  function touched(ns) { var s = C[ns]; if (s) s.deals = null; if (s && s.open) paintPopup(ns); else paint(ns); }
+  function touched(ns) { var s = C[ns]; if (s) { s.deals = null; s._M = null; } if (s && s.open) paintPopup(ns); else paint(ns); }
   /**
    * ⚠️ ONE GATE. Every change — the +, the −, the typed box, the popup's controls, and anything added later —
    * lands here and is passed through the ROW'S OWN MODEL. That is what makes the registry a single source rather
@@ -938,7 +954,7 @@
                 var st = C[ns], EL = engineLines(ns);
                 var hasOffers = !!(st && st.cat && Array.isArray(st.cat.offers) && st.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
                 if (!T.offered && !T.partial && (hasOffers || hasTax)) {
-                  var M = money(EL, { offers: (st.cat.offers || []), ctx: { now: new Date(), currency: (st.cat.shop && st.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(st.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+                  var M = compute(ns);;
                   return '<div data-testid="cart-money" style="padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-2)">' + moneyRowsHTML(M, { taxTestid: 'cart-tax', totalTestid: 'cart-total' }) + '</div>';
                 }
               } catch (e) { /* fall through to the bare total */ }
@@ -1308,7 +1324,7 @@
           var s = C[ns], EL = engineLines(ns); if (!s) return null;
           var hasOffers = !!(s.cat && Array.isArray(s.cat.offers) && s.cat.offers.length), hasTax = EL.some(function (l) { return l.tax && l.tax.rate != null; });
           if (!hasOffers && !hasTax) return null;
-          var M = money(EL, { offers: (s.cat.offers || []), ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
+          var M = compute(ns); if (!M) return null;
           return { html: moneyRowsHTML(M, { taxTestid: o.taxTestid || 'cart-tax', totalTestid: o.totalTestid || 'cart-total' }), grand: M.grand, model: M };
         } catch (e) { return null; }
       },
