@@ -608,6 +608,8 @@ function cbDefRuleFields(kind, sub){
        Customers list (new · regular · high value · inactive) or one customer by name. Never on the public storefront; a signed-in buyer
        the seller's list names sees it on Suppliers, in the cart, on the order — the engine's customer_group condition, fail-closed. */
     g.push({ k: 'customer_group', label: 'Only for', pick: 'customer', half: true });
+    /* ⭐ THE ALIAS (Athi, 2026-09-06 19:2x): the name customers see. Inside, tier1 · tier2 · tier3; outside, everyone sees "Tier1 customer". Blank = the offer's name. */
+    g.push({ k: 'alias', label: 'Shown to customers as', ph: 'e.g. Tier1 customer · Special discount', half: true, hint: 'Leave blank to show the name above. Customers never see the name when this is set.' });
     /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
     g.push({ k: 'valid_from', label: 'Valid from', date: true, half: true });
     g.push({ k: 'valid_to',   label: 'Valid to',   date: true, half: true,
