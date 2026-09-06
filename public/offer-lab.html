@@ -228,17 +228,17 @@ function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
   /* ⭐ THE QUANTITY BREAK IS A PRODUCT'S OWN (Athi, 2026-09-06 23:0x: "quantity break at product level — under the product, the ranges and the
      percentage off per range"). Each range says its percentage; the money it comes to for THIS product is printed beside it. */
-  var t = tiersOf(id), list = (PRODUCTS.filter(function (x) { return x.item_id === id; })[0] || { item_data: {} }).item_data.price || 0, q = 0;
+  var t = tiersOf(id), q = 0;
   try { q = Number(CART.qtyOf(id)) || 0; } catch (_) {}
   var box = function (i, k, w) { return '<input type="number" min="0" step="1" value="' + (t[i][k] == null ? '' : t[i][k]) + '" data-testid="lab-tier-' + esc(id) + '-' + i + '-' + k + '" style="width:' + w + 'px" onclick="event.stopPropagation()" onchange="event.stopPropagation();labTierSet(\'' + esc(id) + '\',' + i + ',\'' + k + '\',this.value)">'; };
+  /* just the size and the percentage (Athi, 2026-09-06 23:3x: "we don't need to specify qty break again, just size, percentage — the result
+     shows when you add the product with +"). The range the basket is in is lit; the row above says what it costs. */
   var range = function (i) {
-    var to = t[i + 1] && t[i + 1].qty > 0 ? (Number(t[i + 1].qty) - 1) : null, pct = Number(t[i].percent) || 0;
-    var each = pct > 0 && list > 0 ? Math.round(list * (1 - pct / 100) * 100) / 100 : null;
+    var to = t[i + 1] && t[i + 1].qty > 0 ? (Number(t[i + 1].qty) - 1) : null;
     var hit = q > 0 && Number(t[i].qty) > 0 && q >= Number(t[i].qty) && (to == null || q <= to);
-    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 42) + '<span class="lab-to">' + (to != null ? '–' + to : '+') + '</span> ' + box(i, 'percent', 40) + '% off'
-      + (each != null ? ' <b>' + fmtMoney(each) + '</b> each' : '') + '</span>';
+    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 40) + '<span class="lab-to">' + (to != null ? '–' + to : '+') + '</span>' + box(i, 'percent', 38) + '%</span>';
   };
-  return '<b>Quantity break</b> ' + [0, 1, 2].map(range).join('') + ' <span class="hint">list ' + fmtMoney(list) + ' · a break never raises the price</span>';
+  return [0, 1, 2].map(range).join('');
 }
 function labTierSet(id, i, k, val) { var t = tiersOf(id); t[i][k] = Math.max(0, Number(val) || 0); labRepaint(); }
 /* the offers a product's own breaks make: one tier offer for that product, its ranges as percentages */
