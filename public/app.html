@@ -1105,10 +1105,10 @@
   .row.prow>.main2{grid-row:1;grid-column:2}
   .row.prow>.pamt{grid-row:1;grid-column:3}
   .row.prow>.ptags{grid-row:2;grid-column:2/-1;justify-content:flex-start;margin-top:3px}
-  .row.prow .rowgo{display:none}
+  .plist .row.prow>.rowgo{display:none}   /* beats .appwrap.m .row .rowgo, which is later in this sheet */
   @container (min-width:640px){.row.prow{grid-template-columns:44px minmax(0,1fr) auto 168px 22px;align-items:center}.row.prow>.pthumb,.row.prow>.cbx,.row.prow>.main2,.row.prow>.pamt,.row.prow>.ptags{grid-row:1}.row.prow>.ptags{grid-column:3;justify-content:flex-end;margin-top:0}.row.prow>.pamt{grid-column:4}.row.prow>.rowgo{display:flex;grid-row:1;grid-column:5}}
   .row.prow .main2{min-width:0}
-  .row.prow .ptags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:240px}
+  .row.prow .ptags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-start;max-width:240px}
   .row.prow .ptags:empty{display:none}
   .row.prow .pamt{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
   .row.prow .pamt .amt{margin-inline-start:0;font-size:var(--fs-3)}
