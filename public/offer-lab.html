@@ -198,7 +198,6 @@ var KINDS = [
   { id: 'ship', title: 'Shipping', what: 'free · flat · % off shipping', fields: 'ship' },
   { id: 'band', title: 'Price band', what: 'a constraint, not a discount', fields: 'band' }
 ];
-function selTo(id) { return '<select id="' + id + '-to" onchange="labRepaint()"><option value="">everything</option>' + prodOptions() + '</select>'; }
 function selOnly(id) { return '<select id="' + id + '-only" onchange="labRepaint()"><option value="">everyone</option><option value="new">new customers</option><option value="regular">regulars</option><option value="high_value">high value</option><option value="group:dealers">"dealers" group</option><option value="customer:one">one customer</option></select>'; }
 function scope(id) { return '<select id="' + id + '-scope" onchange="labRepaint()"><option value="line">each line</option><option value="cart">the order total</option></select>'; }
 function num(id, val, w) { return '<input type="number" id="' + id + '" value="' + val + '"' + (w ? ' style="width:' + w + 'px"' : '') + ' oninput="labRepaint()">'; }
