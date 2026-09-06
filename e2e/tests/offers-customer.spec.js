@@ -84,10 +84,10 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     f = await rowFacts(row);
     expect(f.tags, 'the customer sees the badge, by the ALIAS the seller chose').toMatch(/Tier1 customer · 10% off/);
     expect(f.tags, 'the internal name never leaves the shop').not.toMatch(/Regulars/);
-    expect(f.tags, 'the basket offer is named on the row too').toMatch(/Tier1 basket 5%/);
+    expect(f.tags, 'a basket offer is not on the row (decision 3)').not.toMatch(/Tier1 basket 5%/);
     await expect(b.locator('[data-testid^="sup-foryou-"]').first(), 'the supplier row says what is special for this customer, by the alias').toContainText('Tier1 customer');
     expect(await b.locator('[data-testid="sup-standing"]').count(), 'no standing line in the header').toBe(0);
-    expect(f.price, 'the customer sees the price after both offers (line 10% + basket 5%)').toMatch(/170\.00/);
+    expect(f.price, 'the customer sees the price after the line offer (a basket offer lives in the money block — decision 3)').toMatch(/180\.00/);
     const groups = await b.evaluate(() => { try { const st = UI._supCart && UI._supCart.state ? UI._supCart.state() : null; return st && st.cat && st.cat.shop && st.cat.shop.viewer_groups; } catch (_) { return null; } });
     if (groups) expect(groups, 'the view names the customer and their group').toEqual(expect.arrayContaining(['new']));
 

@@ -295,9 +295,9 @@
       /* ⭐ THE PREVIEW SAYS WHAT ONE UNIT WOULD COST IF ADDED — basket-level offers included, as they are once the row is in the basket
          (compute → M.rowOff); a row must not promise ₹180 and charge ₹170 (OFF-03, 2026-09-06). A threshold the line alone cannot reach
          simply does not fire here, which is honest. */
-      var orderOff = (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0);
-      var off = Math.min(base * q, Math.round((((p && p.off) || 0) + orderOff) * 100) / 100);
-      if (off > 0) { var labels = (ev.adjustments || []).filter(function (a) { return a.scope !== 'note' && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; }); var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
+      /* decision 3 (industry standard, 2026-09-06 20:0x): the preview, like the row, carries the line's own offers only */
+      var off = Math.min(base * q, Math.round(((p && p.off) || 0) * 100) / 100);
+      if (off > 0) { var labels = (ev.adjustments || []).filter(function (a) { return a.scope === 'line' && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; }); var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
         return { unit: Math.max(0, Math.round((base - off / q) * 100) / 100), off: off, label: uniq.join(' + ') || (p && p.label) || 'offer' }; }
     } catch (e) {}
     return null;
@@ -403,7 +403,8 @@
     M.rowOff = {};
     EL.forEach(function (l) {
       var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0), p = M.per[String(l.key)] || {}, lineOff = Number(p.off) || 0;
-      var cartShare = (gross > 0 && orderOff > 0) ? Math.round(orderOff * g / gross * 100) / 100 : 0;
+      /* DECISION 3 (Athi, 2026-09-06 20:0x, "industry standard"): the row shows its OWN line offers; a basket-level offer lives in the money block */
+      var cartShare = 0;
       var labels = adj.filter(function (a) { return a.scope === 'line' && String(a.target) === String(l.key) && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; })
         .concat(cartShare > 0 ? cartAdj.map(function (a) { return a.label || a.kind; }) : []);
       var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
@@ -1520,7 +1521,8 @@
     lines.forEach(function (l, i) {
       var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0);
       var off = ((per[String(i)] || per[l.key] || {}).off) || 0;
-      var net = Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
+      /* the engine's own running net per line (percent on percent; basket offers allocated by running net) — the old list-value split stays only for an engine without it */
+      var net = (ev.line_net && ev.line_net[String(l.key)] != null) ? Number(ev.line_net[String(l.key)]) : Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
       var t = taxOf(l.item_id, l);
       if (t && t.rate != null) {
         var rate = Number(t.rate) + (Number(t.cess) || 0), tax = Math.round(net * rate / 100 * 100) / 100;
