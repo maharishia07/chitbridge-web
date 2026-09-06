@@ -22,7 +22,7 @@ test('[INT-01] connectors: catalogue, download, instructions, heartbeat → the 
   await test.step('THE DOWNLOAD IS THE INSTALLER — signed in, the zip carries a minted key and start.cmd installs Node (Athi, 2026-09-06)', async () => {
     const z = await page.evaluate(async (api) => { const r = await fetch(api + '/api/integrations/download/tally?adapter=tally', { headers: { Authorization: 'Bearer ' + SESSION.token } }); const b = new Uint8Array(await r.arrayBuffer()); let t = ''; for (let i = 0; i < b.length; i++) t += String.fromCharCode(b[i]); return { status: r.status, text: t }; }, API);
     expect(z.status).toBe(200);
-    expect(z.text, 'the key is inside').not.toContain('PASTE THE KEY');
+    expect(z.text, 'the key is inside').not.toContain('"key": "PASTE THE KEY');   /* start.cmd's own check line carries the words */
     expect(z.text, 'the key is a token').toMatch(/"key": "eyJ[A-Za-z0-9._-]+"/);
     expect(z.text, 'setup runs first').toContain('"configured": false');
     expect(z.text, 'start.cmd installs Node').toContain('OpenJS.NodeJS.LTS');
@@ -45,5 +45,32 @@ test('[INT-01] connectors: catalogue, download, instructions, heartbeat → the 
     await expect(page.getByTestId('int-docs-tally')).toBeVisible();
     await expect(page.locator('[data-testid^="int-running-"]').first()).toContainText('STORE-PC', { timeout: 30000 });
     await expect(page.locator('[data-testid^="int-running-"]').first()).toContainText('orders 1');
+  });
+
+  await test.step('THE HANDSHAKE — a kit is approved for one PC; a stranger\'s PC waits, a wrong GSTIN stops, the owner approves (Athi, 2026-09-06)', async () => {
+    /* this entity has no GSTIN: the kit's PC is unknown → pending; the key may only heartbeat */
+    const hb1 = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'STORE-PC', version: '1.0.0', note: 'watch', tally: { company: 'Probe Traders', gstin: '33AAAAA0000A1Z5' } } });
+    expect(hb1.status()).toBe(200); const j1 = await hb1.json(); expect(j1.approved, 'unknown PC waits').toBe(false); expect(j1.reason).toMatch(/awaiting/);
+    const gated = await request.get(API + '/api/products?limit=1', { headers: { 'X-Api-Key': key } });
+    expect(gated.status(), 'a pending key may not read products').toBe(403); expect((await gated.json()).pending).toBe(true);
+    /* the row says so, with the PC and the company; the owner approves */
+    await page.evaluate(async () => { _INT_RUN = undefined; loadSettings(); }); await page.waitForTimeout(800);
+    const row = page.locator('[data-testid^="int-running-"]').first();
+    await expect(row).toContainText('waiting for approval', { timeout: 30000 }); await expect(row).toContainText('Probe Traders');
+    const approved = page.waitForResponse((r) => /\/approve$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 });
+    await page.locator('[data-testid^="int-approve-"]').first().click(); expect((await approved).status()).toBe(200);
+    const ok = await request.get(API + '/api/products?limit=1', { headers: { 'X-Api-Key': key } });
+    expect(ok.status(), 'an approved key reads').not.toBe(403);
+    const hb2 = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'STORE-PC', version: '1.0.0', note: 'watch', tally: { company: 'Probe Traders', gstin: '33AAAAA0000A1Z5' } } });
+    expect((await hb2.json()).approved, 'the same PC stays approved').toBe(true);
+    /* the same key on ANOTHER PC → pending again */
+    const hb3 = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'OTHER-SHOP-PC', version: '1.0.0', note: 'watch', tally: { company: 'Someone Else', gstin: '' } } });
+    const j3 = await hb3.json(); expect(j3.approved, 'another PC on the same key waits').toBe(false); expect(j3.reason).toMatch(/new PC/);
+    /* the account gains a GSTIN: a Tally company with the SAME GSTIN is approved by itself; a different one is stopped */
+    await page.evaluate(async () => { await api('saveProfile', { body: { gstn: '33AAAAA0000A1Z5' } }); });
+    const hb4 = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'THIRD-PC', version: '1.0.0', note: 'watch', tally: { company: 'Probe Traders', gstin: '33AAAAA0000A1Z5' } } });
+    expect((await hb4.json()).reason, 'same GSTIN = the right store, no click').toBe('gstin match');
+    const hb5 = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'THIRD-PC', version: '1.0.0', note: 'watch', tally: { company: 'Wrong Shop', gstin: '29BBBBB1111B1Z9' } } });
+    const j5 = await hb5.json(); expect(j5.approved).toBe(false); expect(j5.reason, 'a different GSTIN is the wrong store').toMatch(/mismatch/);
   });
 });

@@ -11,7 +11,8 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
   keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
   intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
-  intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},   // the connectors that have checked in
+  intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
+  intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
   intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
@@ -4604,6 +4605,19 @@ function intProfileMapHTML(){
     + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
     + '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' + tx('Field') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Value') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Source · when') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Rung') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
 }
+/* ⭐ THE HANDSHAKE ON THE ROW (Athi, 2026-09-06): a connector is approved for ONE PC. The row says which PC and which Tally company asked,
+   and why it waits; Approve is the owner's act, Reject revokes the key (the kit stops at its next call). */
+function intEnrolHTML(r){
+  var e = r.enrol; if (!e) return '';
+  var facts = [e.host, e.company, e.gstin].filter(Boolean).map(esc).join(' · ');
+  if (e.approved === false) return '<div style="font-weight:400;font-size:var(--fs-1);margin-top:3px"><span style="color:var(--warn-2);font-weight:700">⚠ ' + tx('waiting for approval') + '</span> — ' + facts + (e.reason ? ' <span style="color:var(--grey)">(' + esc(e.reason) + ')</span>' : '')
+    + '<div style="display:flex;gap:6px;margin-top:5px"><button class="composebtn" data-testid="int-approve-' + esc(r.actor_id) + '" onclick="intApprove(\'' + esc(r.actor_id) + '\')">✓ ' + tx('Approve this PC') + '</button>'
+    + (r.key_jti ? '<button class="btn2" onclick="intReject(\'' + esc(r.key_jti) + '\')">' + tx('Reject') + '</button>' : '') + '</div></div>';
+  return '<div style="font-weight:400;font-size:var(--fs-1);color:var(--ok-2);margin-top:3px">✓ ' + tx('approved') + (facts ? ' · ' + facts : '') + '</div>';
+}
+async function intApprove(id){ try { await api('intApprove', { params: { id: id } }); toast(tx('Approved — the connector starts within a minute.')); _INT_RUN = undefined; loadSettings(); } catch (e) { toast(tx('Could not approve') + ': ' + (e && e.message || e)); } }
+async function intReject(jti){ try { await api('keysRevoke', { params: { jti: jti } }); toast(tx('Key revoked — that kit can no longer connect.')); _INT_RUN = undefined; _KEYS = undefined; loadSettings(); } catch (e) { toast(tx('Could not revoke') + ': ' + (e && e.message || e)); } }
+
 /** the kit, fetched with the session so the key rides inside; saved through a blob like the tax export (misTaxDownload) */
 async function intDownloadKit(id, adapter){
   try {
@@ -4637,7 +4651,7 @@ function intConnectorsHTML(){
       + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div><div style="margin-top:6px">' + steps + '</div></div>';
   }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
   var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
-    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span></div>'; }).join('')
+    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span></div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('A small program that runs beside another system — Tally, a file folder, soon others — and carries products up, offers back and orders down. Download it here; it needs a key with the connector scope.') + '</div>' + cards + '</div>'
