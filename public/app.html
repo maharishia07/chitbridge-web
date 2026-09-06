@@ -7961,7 +7961,7 @@ function supDetailHTML(){
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
-    const chip=supFactsHTML(x.facts)+`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
+    const chip=supFactsHTML(x.facts)+supStandingHTML(UI.supDet&&UI.supDet.cat)+`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
       + `<span style="font-size:var(--fs-1);color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
@@ -12882,6 +12882,18 @@ function renderDetail(){
  * type, each at declared (they typed it) · copied (their own books via the connector) · checked (our arithmetic) · verified
  * (a registry), with the source and the date. From lib/public-facts.js — never the vault.
  */
+/* ⭐ WHAT THIS CUSTOMER GETS BEYOND THE DECLARED OFFERS (Athi, 2026-09-06: "the supplier menu should showcase … more importantly what additional
+   offer he gets more than declared"). The view names the reader's standing (shop.viewer_groups) and the offers scoped to them (customer_group);
+   one line says both. A stranger sees nothing here. */
+function supStandingHTML(cat){
+  if(!cat || !cat.shop) return '';
+  var groups=Array.isArray(cat.shop.viewer_groups)?cat.shop.viewer_groups:[]; var extra=(cat.offers||[]).filter(function(o){ return o && o.customer_group; });
+  if(!groups.length && !extra.length) return '';
+  var seg=groups.filter(function(g){ return !/^customer:/.test(String(g)); })[0]; var word={new:tx('new customer'),regular:tx('regular customer'),high_value:tx('high-value customer'),inactive:tx('customer')}[seg]||tx('customer');
+  var who=groups.length?('🤝 '+txf('You are their {word}',{word:word})):'';
+  var only=extra.length?('🏷️ '+tx('only for you')+': '+extra.map(function(o){ return esc(o.label||o.name||'offer'); }).join(', ')):'';
+  return '<div data-testid="sup-standing" style="font-size:var(--fs-1);color:var(--ok-2);font-weight:600;margin:4px 0 2px">'+[who,only].filter(Boolean).join(' · ')+'</div>';
+}
 function supFactsHTML(f, opts){
   if(!f || !(f.gstin || f.country)) return '';
   opts=opts||{};
