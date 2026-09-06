@@ -558,11 +558,28 @@ function acDetailHTML(){ const x=UI.acDet;
       : (x.otp
           ? '<div class="sec">' + tx('Login — pending invite') + '</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line);color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">' + tx('User ID') + '</div><div class="mono" style="font-weight:700;font-size:var(--fs-2);word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">' + tx('One-time code') + '</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
           : '<div class="sec">' + tx('Login — pending') + '</div><div style="'+_CARD+';background:var(--warn-tint);border-color:var(--warn-3);color:var(--on-card)"><div style="font-size:var(--fs-2);color:var(--warn-3)">' + txf('No active one-time code and no PIN yet — use {reinvite} below to issue a code.', { reinvite: '<b>' + tx('Re-invite') + '</b>' }) + '</div></div>');
+    /* ⭐ A CONNECTOR IS NOT A PERSON (Athi, 2026-09-06, the Tally kit's card: "type says human? hat says editor"). A kit or a device has
+       no login to re-invite, nobody covers its leave, and it takes no tasks — what matters is WHAT it is, WHERE it runs and WHEN it last
+       checked in. Same row, same rail, a different card. */
+    const isConn = (x.type==='connector'||x.type==='iot_device'||!!x.connector);
+    if (isConn) {
+      const c = x.cfg||{}; const ago = x.lastSeen ? acDate(x.lastSeen) : '—';
+      const stale = x.lastSeen && (Date.now()-new Date(x.lastSeen).getTime() > 20*60*1000);
+      const conn = '<div class="sec">'+tx('Connector')+'</div><div class="itab" style="padding:11px 12px">'
+        + kv(tx('System'), esc(c.adapter||x.connector||'—') + (c.version?' <span style="color:var(--grey)">v'+esc(c.version)+'</span>':''))
+        + kv(tx('Runs on'), esc(x.site||c.host||'—'))
+        + kv(tx('Last seen'), '<span class="optchip '+(stale?'':'ok')+'" style="'+(stale?'color:var(--warn-2);background:var(--warn-tint)':'')+'">'+esc(ago)+'</span>'+(stale?' <span style="font-size:var(--fs-1);color:var(--grey)">'+tx('not checking in — open the system and run start')+'</span>':''))
+        + kv(tx('Kit'), '<span class="mono">'+esc(c.kit_id||'—')+'</span>')
+        + (c.counters ? kv(tx('Counters'), esc(Object.entries(c.counters).map(function(e){ return e[0]+' '+e[1]; }).join(' · '))) : '')
+        + '</div>';
+      body=prof+conn+eng;
+    } else {
     body=prof+coverSection+loginState+work+eng;
+    }
     if(x.status==='active'){
       bar=(x.type==='human'?(x.pinSet
             ? `<button onclick="acResetPin('${x.id}')" title="PIN forgotten or locked — clear it and issue a fresh code">${tx('🔑 Reset PIN')}</button>`
-            : `<button onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`)
+            : (isConn?'':`<button onclick="acReinvite('${x.id}')" title="No PIN set yet — re-issue their one-time code">${tx('✉️ Re-invite')}</button>`))
           :'')+
           `<button class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — tasks return to the pool, reversible">${tx('🚫 Deactivate')}</button>`;
     } else {
