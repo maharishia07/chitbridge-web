@@ -13334,8 +13334,9 @@ function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
    approval"). Reads business_json.books (the connector's write-back per kind) and books_request; says written · refused · waiting, and
    offers "Send to books" — the trigger when Orders go to the books = manual, "now" otherwise. Shown on Design 1 Status and Design 2 Summary. */
 function booksBlockHTML(c){
-  var bj=(c.business_json||(c.header&&c.header.business_json))||{}; var B=bj.books||{}; var st=String(c.state||(c.header&&c.header.current_status)||'');
-  var purpose=String(c.purpose||(c.header&&c.header.purpose)||''); if(!/^(order|offer)$/.test(purpose) && !Object.keys(B).length) return '';
+  /* Design 1 names the purpose `kind` and keeps the raw status in `_status`; Design 2 hands the raw chit (header.*) */
+  var bj=(c.business_json||(c.header&&c.header.business_json)||(c.raw&&c.raw.business_json))||{}; var B=bj.books||{}; var st=String(c._status||(c.header&&c.header.current_status)||c.state||'');
+  var purpose=String(c.kind||c.purpose||(c.header&&c.header.purpose)||''); if(!/^(order|offer)$/.test(purpose) && !Object.keys(B).length) return '';
   var at=String(((typeof SESSION!=='undefined'&&SESSION.policy_flags)||{}).books_at||'accepted');
   var whenTx=function(iso){ try{ return (typeof fmtDateTime==='function')?fmtDateTime(iso):new Date(iso).toLocaleString(); }catch(_){ return String(iso||''); } };
   var word={order:tx('Sales voucher'),receipt:tx('Receipt voucher'),purchase:tx('Purchase voucher')};
