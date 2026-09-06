@@ -11,10 +11,12 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ storageState: path.join(__dirname, '.auth', 'user.json'), viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
+  /* web fonts stall the screenshot's font wait on this network — the layout is the point, the system face will do */
+  await ctx.route(/fonts.(googleapis|gstatic).com/, (r) => r.abort());
   await page.goto(BASE + '/app.html', { waitUntil: 'load' });
   await page.waitForTimeout(2500);
   /* SEED — the shared session is re-minted empty by every spec run; four priced products, a rate, a live 10% offer, a GSTIN */
-  const seeded = await page.evaluate(async () => { const out = []; const process_force = true;
+  const seeded = await page.evaluate(async () => { const out = []; const process_force = false;
     try { out.push(['profile', JSON.stringify(await api('saveProfile', { body: { gstn: '33AABCK1234F1Z6', catalogue_visibility: 'public' } })).slice(0, 80)]); } catch (e) { out.push(['profile', String(e && e.message)]); }
     const list = await api('prodList', { query: { limit: 50 } }); const items = list.items || list.products || list.rows || (Array.isArray(list) ? list : []);
     out.push(['list', Object.keys(list || {}).join(',') + ' n=' + items.length]);

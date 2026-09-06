@@ -8696,6 +8696,12 @@ function prodDealsText(d, id){
 /** the seller's list cart — a READ-ONLY cart over the seller's own products (every product, retired ones too, with the live offers and
  *  the rate each resolves to), so the list's rows are the cart's rows: same badge, same stamp, same price column, same facts line. */
 function prodListCart(){
+  /* ⚠️ ONCE PER PAINT, NOT ONCE PER ROW. prodRowHTML called this for every row, and this walks every product (prodDeals: slab resolve +
+     offers) — O(n²) per paint, and the main thread sat busy for seconds on a 22-product list (probe, 2026-09-06 09:4x). Memoised by a
+     signature of the products and the offers; the same list paints from the same cart. */
+  const sig=String((UI.prods||[]).length)+':'+(UI.prods||[]).map(p=>prodId(p)+'@'+(p.updated_at||'')).join(',')+':'+((UI._ctOffers||[]).length)+':'+(typeof cbDefsCached==='function'&&cbDefsCached('tax')?cbDefsCached('tax').length:'-');
+  if(UI._listCart && UI._listCartSig===sig) return UI._listCart;
+  UI._listCartSig=sig;
   const offs=(UI._ctOffers||[]).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) }));
   const items=(UI.prods||[]).map(p=>{ const d=pData(p), id=prodId(p); let tax=null; try { const x=prodDeals(d,id); if(x.tax&&x.tax.rate!=null) tax={ rate:x.tax.rate, name:x.tax.name||'GST' }; } catch(_){} return { item_id:id, item_data:d, tax }; });
   const cat={ shop:{ bridge_id:'self', currency_code:(UI._me&&UI._me.currency_code)||'INR' }, offers:offs, items };
