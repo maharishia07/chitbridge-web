@@ -88,5 +88,16 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     expect(orderRow.tags, 'offer badge and slab').toBe(cartRow.tags);
     expect(orderRow.price, 'the price column').toBe(cartRow.price);
     expect(oMoney, 'the money block').toEqual(cartMoney);
+
+    /* THE SELLER'S TASK — Design 1 on the other side (Athi, 2026-09-06 11:2x: "design 1, which is the task, should be the same as the cart,
+       no difference"): the same record, the same renderer, the same words and figures. */
+    await page.evaluate((id) => openChit(id), chitId); await settle(page);
+    const tRow = page.locator('[data-testid="c2-line-0"], [data-testid="chit-line-0"]').first(); await tRow.waitFor({ timeout: 60000 });
+    const taskRow = await rowFacts(tRow);
+    const tMoney = norm(await rowsOf(page.locator('[data-testid="c2-money"], [data-testid="chit-money"]').first()));
+    expect(taskRow.name).toBe(cartRow.name);
+    expect(taskRow.tags, 'task: offer badge and slab').toBe(cartRow.tags);
+    expect(taskRow.price, 'task: the price column').toBe(cartRow.price);
+    expect(tMoney, 'task: the money block').toEqual(cartMoney);
   } finally { await buyer.context.close(); }
 });
