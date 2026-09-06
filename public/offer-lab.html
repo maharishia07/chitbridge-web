@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Offer lab · Chit & Bridge</title>
+<!--
+  THE OFFER LAB — the offer engine as a page anyone can play with (Athi, 2026-09-06 20:2x: "a single page offer engine: select a product from
+  the catalogue, all the offer types on a single page, and based on choosing the checkbox how the value appears — product level and cart
+  level, including exclusive, buy X get Y with another product, mark-up — so people can understand how I can design my offer. This is our USP").
+
+  ⭐ IT IS THE REAL THING, NOT A MOCK. The offers here run through app/offers.js (the one engine, contract: C:\dev\catalogue\OFFER-ENGINE-CONTRACT.md)
+  and the basket is drawn by app/cart.js — the same rows, badges and money block the storefront, the Suppliers screen and the order page use.
+  Change a field and the outcome repaints: the row (product level), the money block (cart level), and the reasons (what applied, what was
+  skipped and why). Products: your own catalogue when you are signed in to the app on this browser; a sample set otherwise.
+-->
+<style>
+  :root{ --font-ui:Inter,system-ui,sans-serif; --ink:#20303b; --ink-2:#3a4048; --grey:#8a949c; --grey-2:#545A61; --line:#e7e3d8; --paper:#faf8f3; --card:#fff; --on-card:#20303b;
+    --blue:#3F66A6; --blue-2:#2c5aa0; --blue-tint-bg:#E9F0FA; --accent:#3F66A6; --on-accent:#fff; --ok-2:#2c7a43; --ok-tint:#e6f4ea; --warn-2:#8a5a1e; --warn-tint:#fbf3e3; --disp:#b4453f; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --neutral-tint:#EEF1F5;
+    --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --cbpick-gap:8px; }
+  body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); font-size:var(--fs-3); }
+  header{ display:flex; align-items:center; gap:14px; padding:14px 20px; border-bottom:1px solid var(--line); background:var(--card); }
+  header h1{ font-size:var(--fs-5); margin:0; } header .sub{ color:var(--grey); font-size:var(--fs-2); }
+  .lab{ display:grid; grid-template-columns:minmax(300px,380px) minmax(0,1fr); gap:0; min-height:calc(100vh - 60px); }
+  .design{ border-right:1px solid var(--line); background:var(--card); padding:14px 16px; overflow:auto; }
+  .outcome{ padding:14px 18px; overflow:auto; }
+  .sec{ font-weight:800; font-size:var(--fs-1); letter-spacing:.06em; text-transform:uppercase; color:var(--grey-2); margin:14px 0 6px; }
+  .card{ border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px; background:var(--card); }
+  .card.on{ border-color:var(--blue); box-shadow:0 0 0 2px var(--blue-tint-bg); }
+  .card .hd{ display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer; }
+  .card .hd .what{ color:var(--grey); font-weight:400; font-size:var(--fs-1); margin-left:auto; text-align:right; max-width:52%; }
+  .card .body{ display:none; margin-top:8px; }
+  .card.on .body{ display:block; }
+  .row{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin:4px 0; font-size:var(--fs-2); }
+  .row label{ display:inline-flex; align-items:center; gap:4px; }
+  input[type=number], input[type=text], select{ font:inherit; font-size:var(--fs-2); padding:4px 6px; border:1px solid var(--line); border-radius:6px; background:#fff; color:var(--ink); }
+  input[type=number]{ width:74px; } input[type=text]{ width:150px; }
+  .hint{ color:var(--grey); font-size:var(--fs-1); margin-top:3px; line-height:1.4; }
+  .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:var(--fs-1); background:var(--neutral-tint); }
+  .why{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:var(--fs-2); }
+  .why .ok{ color:var(--ok-2); } .why .skip{ color:var(--warn-2); } .why .note{ color:var(--grey-2); }
+  table.lines{ width:100%; border-collapse:collapse; font-size:var(--fs-2); background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  table.lines th, table.lines td{ padding:6px 8px; border-bottom:1px solid var(--line); text-align:right; }
+  table.lines th:first-child, table.lines td:first-child{ text-align:left; }
+  table.lines th{ font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.04em; color:var(--grey-2); }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .cmp{ background:var(--gold-soft); border:1px solid var(--gold-line); border-radius:10px; padding:10px 12px; font-size:var(--fs-2); }
+  .btn{ font:inherit; font-size:var(--fs-2); padding:5px 10px; border:1px solid var(--line); border-radius:8px; background:var(--card); cursor:pointer; }
+  .btn.pri{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+  @media (max-width:900px){ .lab{ grid-template-columns:1fr; } .design{ border-right:0; border-bottom:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<header>
+  <div><h1>🧪 Offer lab</h1><div class="sub">Design an offer and see exactly what a customer sees — the row, the basket, and why. The same engine and the same cart as the shop.</div></div>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)">
+    <span id="src" class="chip">sample products</span>
+    <button class="btn" data-testid="lab-load-mine" onclick="labLoadMine()">Use my catalogue</button>
+    <a class="btn" href="app.html" style="text-decoration:none">← back to the app</a>
+  </div>
+</header>
+
+<div class="lab">
+  <aside class="design" data-testid="lab-design">
+    <div class="sec">Who is looking</div>
+    <div class="card on"><div class="row">
+      <select id="viewer" data-testid="lab-viewer" onchange="labRepaint()">
+        <option value="">A stranger (public storefront)</option>
+        <option value="new">A new customer</option>
+        <option value="regular">A regular customer</option>
+        <option value="high_value">A high-value customer</option>
+        <option value="group:dealers">Someone in my "dealers" group</option>
+        <option value="customer:one">One particular customer</option>
+      </select>
+      <label><input type="checkbox" id="cmp" onchange="labRepaint()"> compare with a stranger</label>
+    </div><div class="hint">Customer-only offers fail closed: a stranger is never promised one. Pick who is looking and the outcome changes with them.</div></div>
+
+    <div class="sec">Design my offer — start from a goal</div>
+    <div class="card on" data-testid="lab-advisor">
+      <div class="row"><label>the product <select id="adv-item" onchange="labAdvise()"></select></label><label>my cost ₹ <input type="number" id="adv-cost" value="150" oninput="labAdvise()"></label></div>
+      <div class="row"><label>I want to <select id="adv-goal" data-testid="lab-goal" onchange="labAdvise()">
+        <option value="show">show a discount but keep my price</option>
+        <option value="move">move this product quickly</option>
+        <option value="free">give something free without losing money</option>
+        <option value="loyal">reward my best customers, quietly</option>
+        <option value="basket">grow the basket</option>
+      </select></label></div>
+      <div id="adv-out" class="hint" style="color:var(--ink);margin-top:6px"></div>
+    </div>
+
+    <div class="sec">Offers — switch on what you want to try</div>
+    <div id="cards"></div>
+
+    <div class="sec">Showcase a discount (mark-up)</div>
+    <div class="card" id="card-markup"><div class="hd" onclick="labToggle('markup')"><input type="checkbox" id="on-markup" data-testid="lab-on-markup" onclick="event.stopPropagation();labToggle('markup',this.checked)"> Show a discount without lowering my price<span class="what">list = book ÷ (1 − d)</span></div>
+      <div class="body"><div class="row"><label>my real (book) price <input type="number" id="mk-book" value="180" oninput="labRepaint()"></label><label>show <input type="number" id="mk-pct" value="10" oninput="labRepaint()"> % off</label></div>
+      <div class="hint" id="mk-out"></div></div></div>
+  </aside>
+
+  <main class="outcome" data-testid="lab-outcome">
+    <div class="sec">Product level — the rows a customer sees (press + to put one in the basket)</div>
+    <div id="p_list"></div>
+    <div id="p_cart"></div>
+    <div class="two" style="margin-top:14px">
+      <div><div class="sec">Cart level — the money block</div><div id="p_money" class="why" data-testid="lab-money"></div></div>
+      <div><div class="sec">Why — what applied, what was skipped</div><div id="p_why" class="why" data-testid="lab-why"></div></div>
+    </div>
+    <div class="sec">Per line — list · own offers · share of basket offers · net · tax</div>
+    <div id="p_lines"></div>
+    <div id="p_cmp" style="margin-top:12px"></div>
+  </main>
+</div>
+
+<script src="app/offers.js"></script>
+<script src="app/pricing.js"></script>
+<script src="app/locale.js"></script>
+<script src="app/catalogue-lines.js"></script>
+<script src="app/cart.js"></script>
+<script>
+/* the globals cart.js expects from the app; the lab stands alone */
+var SESSION = { currency: 'INR' }; function tx(s) { return s; } function txf(s, v) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v && v[k] != null ? v[k] : ''; }); }
+function fmtMoney(n, c) { try { return CBLocale.money(Math.round(Number(n) * 100) / 100, c || 'INR'); } catch (_) { return '₹' + Number(n).toFixed(2); } }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+
+/* ── the products ── */
+var SAMPLE = [
+  { item_id: 'grapes', item_data: { name: 'Grapes', unit: 'kg', price: 200, code: 'GRP', categories: ['fruit'] }, tax: { rate: 5, name: 'GST' } },
+  { item_id: 'oil', item_data: { name: 'Sunflower oil', unit: 'litre', price: 250, code: 'OIL' }, tax: { rate: 18, name: 'GST' } },
+  { item_id: 'rice', item_data: { name: 'Rice', unit: 'kg', price: 80, code: 'RCE', categories: ['staples'] }, tax: { rate: 0, name: 'GST' } },
+  { item_id: 'sugar', item_data: { name: 'Sugar', unit: 'kg', price: 45, code: 'SGR', categories: ['staples'] }, tax: { rate: 5, name: 'GST' } },
+  { item_id: 'veg', item_data: { name: 'Vegetables', unit: 'bag', price: 100, code: 'VEG', categories: ['fruit'] }, tax: { rate: 12, name: 'GST' } }
+];
+var PRODUCTS = SAMPLE.slice(), CART = null, LAST = null;
+function prodOptions(sel) { return PRODUCTS.map(function (p) { return '<option value="' + esc(p.item_id) + '"' + (sel === p.item_id ? ' selected' : '') + '>' + esc(p.item_data.name) + ' · ' + fmtMoney(p.item_data.price) + '</option>'; }).join(''); }
+
+/* ── the offer cards: one per kind, every field the editor has ── */
+var KINDS = [
+  { id: 'pct', title: '% off', what: 'the commonest offer', fields: 'pct' },
+  { id: 'amt', title: '₹ off', what: 'a flat amount, capped at the value', fields: 'amt' },
+  { id: 'tier', title: 'Quantity break', what: 'a lower price from N units', fields: 'tier' },
+  { id: 'thr', title: 'Spend threshold', what: '"spend ₹X, get …"', fields: 'thr' },
+  { id: 'bxgy', title: 'Buy X get Y', what: 'free units, or another product', fields: 'bxgy' },
+  { id: 'bundle', title: 'Bundle', what: 'two products for one price', fields: 'bundle' },
+  { id: 'ship', title: 'Shipping', what: 'free · flat · % off shipping', fields: 'ship' },
+  { id: 'band', title: 'Price band', what: 'a constraint, not a discount', fields: 'band' }
+];
+function common(id, o) {
+  return '<div class="row"><label>applies to <select id="' + id + '-to" onchange="labRepaint()"><option value="">everything</option>' + prodOptions() + '</select></label>'
+    + '<label>only for <select id="' + id + '-only" onchange="labRepaint()"><option value="">everyone</option><option value="new">new customers</option><option value="regular">regular customers</option><option value="high_value">high-value customers</option><option value="group:dealers">my "dealers" group</option><option value="customer:one">one customer</option></select></label></div>'
+    + '<div class="row"><label><input type="checkbox" id="' + id + '-excl" onchange="labRepaint()"> exclusive — instead of every other offer</label>'
+    + '<label>stacking order <input type="number" id="' + id + '-pri" value="0" style="width:56px" oninput="labRepaint()"></label>'
+    + '<label>shown as <input type="text" id="' + id + '-alias" placeholder="e.g. Special discount" oninput="labRepaint()" style="width:130px"></label></div>';
+}
+function fieldsFor(k) {
+  var id = k.id;
+  if (k.fields === 'pct') return '<div class="row"><label><input type="number" id="pct-v" value="10" oninput="labRepaint()"> % off</label><label>on <select id="pct-scope" onchange="labRepaint()"><option value="line">each line</option><option value="cart">the order total</option></select></label></div>' + common(id);
+  if (k.fields === 'amt') return '<div class="row"><label>₹ <input type="number" id="amt-v" value="10" oninput="labRepaint()"> off</label><label>on <select id="amt-scope" onchange="labRepaint()"><option value="line">each line</option><option value="cart">the order total</option></select></label></div>' + common(id);
+  if (k.fields === 'tier') return '<div class="row"><label>from <input type="number" id="tier-q1" value="5" style="width:56px" oninput="labRepaint()"> units, <input type="number" id="tier-p1" value="180" oninput="labRepaint()"> each</label></div><div class="row"><label>from <input type="number" id="tier-q2" value="10" style="width:56px" oninput="labRepaint()"> units, <input type="number" id="tier-p2" value="160" oninput="labRepaint()"> each</label></div><div class="hint">A tier is the price of record at that volume; it never raises a price.</div>' + common(id);
+  if (k.fields === 'thr') return '<div class="row"><label>spend at least ₹ <input type="number" id="thr-min" value="500" oninput="labRepaint()"></label><label>then <input type="number" id="thr-pct" value="10" style="width:56px" oninput="labRepaint()"> % off</label></div><div class="row"><label>or a reward product <select id="thr-item" onchange="labRepaint()"><option value="">none</option>' + prodOptions() + '</select></label><label>× <input type="number" id="thr-qty" value="1" style="width:50px" oninput="labRepaint()"></label></div><div class="hint">Below the threshold the basket says how far away it is. A reward not in the basket is offered, never added by the engine.</div>' + common(id);
+  if (k.fields === 'bxgy') return '<div class="row"><label>buy <input type="number" id="bxgy-x" value="2" style="width:50px" oninput="labRepaint()"></label><label>get <input type="number" id="bxgy-y" value="1" style="width:50px" oninput="labRepaint()"></label><label>at <input type="number" id="bxgy-pct" value="100" style="width:56px" oninput="labRepaint()"> % off (100 = free)</label></div><div class="row"><label>the free one is <select id="bxgy-item" onchange="labRepaint()"><option value="">the same product (cheapest units)</option>' + prodOptions() + '</select></label></div>' + common(id);
+  if (k.fields === 'bundle') return '<div class="row"><label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select></label> + <label><select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ <input type="number" id="bundle-p" value="400" oninput="labRepaint()"></label></div><div class="hint">Complete sets only; the saving lands on the set\'s lines pro rata.</div>' + common(id);
+  if (k.fields === 'ship') return '<div class="row"><label>shipping charged ₹ <input type="number" id="ship-charge" value="60" oninput="labRepaint()"></label><label><select id="ship-mode" onchange="labRepaint()"><option value="free">free shipping</option><option value="flat">flat ₹</option><option value="pct">% off shipping</option></select></label><label><input type="number" id="ship-v" value="20" style="width:56px" oninput="labRepaint()"></label></div>' + common(id);
+  if (k.fields === 'band') return '<div class="row"><label>min ₹ <input type="number" id="band-min" value="50" oninput="labRepaint()"></label><label>max ₹ <input type="number" id="band-max" value="220" oninput="labRepaint()"></label></div><div class="hint">Outside the band the engine says so; nothing is clamped — a negotiated price is what two parties agreed.</div>' + common(id);
+  return '';
+}
+function paintCards() {
+  document.getElementById('cards').innerHTML = KINDS.map(function (k) {
+    return '<div class="card" id="card-' + k.id + '"><div class="hd" onclick="labToggle(\'' + k.id + '\')"><input type="checkbox" id="on-' + k.id + '" data-testid="lab-on-' + k.id + '" onclick="event.stopPropagation();labToggle(\'' + k.id + '\',this.checked)"> ' + esc(k.title) + '<span class="what">' + esc(k.what) + '</span></div><div class="body">' + fieldsFor(k) + '</div></div>';
+  }).join('');
+}
+function labToggle(id, on) { var c = document.getElementById('card-' + id), b = document.getElementById('on-' + id); if (on == null) { b.checked = !b.checked; } c.classList.toggle('on', b.checked); labRepaint(); }
+function v(id) { var e = document.getElementById(id); return e ? e.value : ''; } function n(id) { return Number(v(id)) || 0; } function on(id) { var e = document.getElementById('on-' + id); return !!(e && e.checked); }
+function applyTo(id) { var p = v(id + '-to'); return p ? { item_ids: [p] } : undefined; }
+function withCommon(id, o) {
+  var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
+  if (document.getElementById(id + '-excl').checked) o.exclusive = true;
+  o.priority = n(id + '-pri'); var al = v(id + '-alias').trim(); if (al) o.label = al;   /* the alias IS the label a customer sees — catalogue-view does the same */
+  var to = applyTo(id); if (to) o.applies_to = to; return o;
+}
+function itemName(id) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; return p ? p.item_data.name : ''; }
+function labOffers() {
+  var out = [];
+  if (on('pct')) out.push(withCommon('pct', { id: 'pct', label: n('pct-v') + '% off', kind: 'percent_off', percent: n('pct-v'), scope: v('pct-scope') }));
+  if (on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
+  if (on('tier')) out.push(withCommon('tier', { id: 'tier', label: 'Quantity break', kind: 'tier_price', tiers: [{ qty: n('tier-q1'), price: n('tier-p1') }, { qty: n('tier-q2'), price: n('tier-p2') }].filter(function (t) { return t.qty > 0 && t.price > 0; }) }));
+  if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + n('thr-min'), kind: 'threshold', min_amount: n('thr-min') }; if (v('thr-item')) { t.get_item_id = v('thr-item'); t.get_item_name = itemName(v('thr-item')); t.get_qty = n('thr-qty') || 1; } else t.percent = n('thr-pct'); out.push(withCommon('thr', t)); }
+  if (on('bxgy')) { var b = { id: 'bxgy', label: 'Buy ' + n('bxgy-x') + ' get ' + n('bxgy-y'), kind: 'buy_x_get_y', buy: n('bxgy-x'), get: n('bxgy-y'), get_percent: n('bxgy-pct') }; if (v('bxgy-item')) { b.get_item_id = v('bxgy-item'); b.get_item_name = itemName(v('bxgy-item')); } out.push(withCommon('bxgy', b)); }
+  if (on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
+  if (on('ship')) { var s = { id: 'ship', label: 'Shipping', kind: 'shipping' }; var m = v('ship-mode'); if (m === 'free') s.free = true; else if (m === 'flat') s.flat = n('ship-v'); else s.percent = n('ship-v'); out.push(withCommon('ship', s)); }
+  if (on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
+  return out;
+}
+function groupsFor(viewer) { if (!viewer) return []; return [viewer].concat(viewer === 'customer:one' ? ['new'] : []); }
+
+/* ── the outcome: the real cart, then the reasons ── */
+function catFor(viewer) { return { shop: { bridge_id: 'lab', display_name: 'Offer lab', currency_code: 'INR', viewer_groups: groupsFor(viewer) }, offers: labOffers(), items: PRODUCTS }; }
+function labRepaint(rebuild) {
+  var cat = catFor(v('viewer'));
+  if (!CART || rebuild) {
+    CART = CBCart.create(cat, { renderer: (typeof CBCatUI !== 'undefined') ? CBCatUI : undefined, listEl: 'p_list', barEl: 'p_cart', currency: 'INR', cartTitle: 'The basket', checkoutLabel: 'This is where Check out would be', emptyHint: 'Press + on a product', onChange: function () { paintWhy(); } });
+  } else {
+    /* the same cart, new terms: the offers and the viewer change in place, the memoised figure is dropped, the cart repaints — exactly what the Suppliers screen does when offers arrive */
+    var st = CART.state(); st.cat.offers = cat.offers; st.cat.shop.viewer_groups = cat.shop.viewer_groups; st.deals = null; st._M = null; CART.paint();
+  }
+  try { CBCatUI.ensureCss(); } catch (_) {}
+  paintWhy(); paintMarkup();
+}
+function engineLines(sel) { return sel.map(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0] || { item_data: {} }; return { key: String(l.item_id), item_id: l.item_id, sku: p.item_data.code || null, categories: p.item_data.categories || [], excluded: [], qty: Number(l.quantity || l.qty) || 0, unitPrice: Number(p.item_data.price) || 0, tax: p.tax || null }; }); }
+function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('ship') ? n('ship-charge') : 0; var ev = CBOffers.evaluate({ lines: lines, offers: labOffers(), ctx: { now: new Date(), currency: 'INR', customer_groups: groupsFor(viewer), shipping: ship, money: function (x) { return fmtMoney(x); } } }); return { lines: lines, ev: ev, per: CBOffers.perLine(ev, lines) || {} }; }
+function paintWhy() {
+  var sel = []; try { sel = CART.selected(); } catch (_) {}
+  var money = document.getElementById('p_money'), why = document.getElementById('p_why'), tbl = document.getElementById('p_lines'), cmp = document.getElementById('p_cmp');
+  if (!sel.length) { money.innerHTML = '<span class="note">Put something in the basket to see the money block.</span>'; why.innerHTML = '<span class="note">Nothing in the basket yet — the rows above already show what each product promises to this viewer.</span>'; tbl.innerHTML = ''; cmp.innerHTML = ''; return; }
+  var R = evalFor(v('viewer'), sel), ev = R.ev;
+  try { var M = CART.moneyRows({ totalTestid: 'lab-total', taxTestid: 'lab-tax' }); money.innerHTML = (M && M.html) ? M.html : '<span class="note">' + fmtMoney(ev.total) + ' after offers (no tax on these lines)</span>'; } catch (_) { money.innerHTML = '<span class="note">' + fmtMoney(ev.total) + '</span>'; }
+  why.innerHTML = (ev.adjustments.map(function (a) { return '<div class="ok">✓ ' + esc(a.label) + ' — ' + esc(a.why) + (a.scope === 'cart' ? ' <span class="chip">order total</span>' : '') + '</div>'; }).join('')
+    + ev.notes.map(function (x) { return '<div class="note">💡 ' + esc(x.label) + ' — ' + esc(x.why) + '</div>'; }).join('')
+    + ev.skipped.map(function (x) { return '<div class="skip">✗ ' + esc(x.label || x.offer_id) + ' not applied — ' + esc(x.why) + '</div>'; }).join('')) || '<span class="note">No offer touches this basket.</span>';
+  var rows = R.lines.map(function (l) { var g = l.unitPrice * l.qty, own = (R.per[l.key] || {}).off || 0, share = ((ev.cart_shares || {})[l.key] || []).reduce(function (t, s) { return t + Math.abs(s.amount); }, 0), net = ev.line_net ? ev.line_net[l.key] : g - own - share, rate = l.tax && l.tax.rate != null ? Number(l.tax.rate) : null, tax = rate != null ? Math.round(net * rate) / 100 : 0;
+    return '<tr><td>' + esc(itemName(l.item_id)) + ' × ' + l.qty + '</td><td>' + fmtMoney(g) + '</td><td>' + (own ? '−' + fmtMoney(own) : '—') + '</td><td>' + (share ? '−' + fmtMoney(share) : '—') + '</td><td><b>' + fmtMoney(net) + '</b></td><td>' + (rate != null ? rate + '% · ' + fmtMoney(tax) : '—') + '</td><td>' + fmtMoney(net + tax) + '</td></tr>'; }).join('');
+  tbl.innerHTML = '<table class="lines"><thead><tr><th>line</th><th>list</th><th>own offers</th><th>basket share</th><th>net</th><th>tax</th><th>incl.</th></tr></thead><tbody>' + rows + '</tbody></table><div class="hint">The row shows the price after its OWN offers; a basket-level offer is a row of the money block and its share is inside the net for tax (decision 3, industry standard).</div>';
+  if (document.getElementById('cmp').checked && v('viewer')) { var S = evalFor('', sel).ev; cmp.innerHTML = '<div class="cmp"><b>Compare:</b> this viewer pays <b>' + fmtMoney(ev.total) + '</b> after offers; a stranger would pay <b>' + fmtMoney(S.total) + '</b>' + (S.skipped.length ? ' — a stranger is not offered: ' + S.skipped.filter(function (x) { return /only for/.test(x.why); }).map(function (x) { return esc(x.label); }).join(', ') : '') + '</div>'; } else cmp.innerHTML = '';
+}
+function paintMarkup() {
+  var o = document.getElementById('mk-out'); if (!on('markup')) { o.innerHTML = ''; return; }
+  var book = n('mk-book'), d = n('mk-pct') / 100; if (!(book > 0) || !(d > 0 && d < 1)) { o.innerHTML = 'Give a book price and a percentage below 100.'; return; }
+  var list = Math.floor(book / (1 - d) * 100) / 100, shown = Math.round(list * (1 - d) * 100) / 100;
+  o.innerHTML = '<b>Declare the list price as ' + fmtMoney(list) + '</b> and run a ' + n('mk-pct') + '% off: the customer sees ~~' + fmtMoney(list) + '~~ <b>' + fmtMoney(shown) + '</b>, and you still receive your book price of ' + fmtMoney(book) + ' (rounded down, so it never lands below). A connector sync must not overwrite a declared list price — that is the <i>markup</i> pricing kind (backlog).';
+}
+async function labLoadMine() {
+  var sess = null; try { sess = JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) {}
+  if (!sess || !sess.token) { alert('Sign in to the app on this browser first, then press again.'); return; }
+  try {
+    var r = await fetch(API + '/api/products?limit=200', { headers: { Authorization: 'Bearer ' + sess.token } }); var j = await r.json();
+    var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (p) { return p && p.item_data && Number(p.item_data.price) > 0; });
+    if (!items.length) { alert('Your catalogue has no priced products yet — the sample set stays.'); return; }
+    PRODUCTS = items.map(function (p) { var d = p.item_data; return { item_id: p.item_id, item_data: { name: d.name, unit: d.unit, price: Number(d.price), code: d.code || d.sku || null, categories: d.categories || d.category_ids || [] }, tax: (d.gst_rate != null) ? { rate: Number(d.gst_rate), name: 'GST' } : null }; });
+    document.getElementById('src').textContent = 'your catalogue · ' + PRODUCTS.length + ' products';
+    paintCards(); labRepaint(true);
+  } catch (e) { alert('Could not read your catalogue: ' + (e && e.message)); }
+}
+/* ── the advisor ── */
+function advProduct() { var id = v('adv-item'); return PRODUCTS.filter(function (p) { return p.item_id === id; })[0] || PRODUCTS[0]; }
+function advOther() { var p = advProduct(); return PRODUCTS.filter(function (x) { return x.item_id !== p.item_id; }).sort(function (a, b) { return a.item_data.price - b.item_data.price; })[0] || p; }
+function marginLine(price, cost, net, qty) { qty = qty || 1; var m = Math.round((net / qty - cost) * 100) / 100, was = Math.round((price - cost) * 100) / 100; return '<span class="chip">margin ' + fmtMoney(was) + ' → <b>' + fmtMoney(m) + '</b> per unit' + (m < 0 ? ' ⚠️ below cost' : '') + '</span>'; }
+function labAdvise() {
+  var sel = document.getElementById('adv-item'); if (sel && !sel.options.length) sel.innerHTML = prodOptions(PRODUCTS[0] && PRODUCTS[0].item_id);
+  var p = advProduct(), price = Number(p.item_data.price) || 0, cost = n('adv-cost'), goal = v('adv-goal'), other = advOther(), out = [];
+  var margin = price - cost, mpct = price > 0 ? Math.round(margin / price * 1000) / 10 : 0;
+  var head = '<div><b>' + esc(p.item_data.name) + '</b> sells at ' + fmtMoney(price) + ', costs ' + fmtMoney(cost) + ' → margin ' + fmtMoney(margin) + ' (' + mpct + '%).</div>';
+  if (goal === 'show') {
+    [10, 15, 20].forEach(function (d) { var list = Math.floor(price / (1 - d / 100) * 100) / 100; out.push('<div>Show <b>' + d + '% off</b>: declare the list price as <b>' + fmtMoney(list) + '</b>; the customer sees ~~' + fmtMoney(list) + '~~ ' + fmtMoney(price) + ' and you still receive ' + fmtMoney(price) + '. <button class="btn" onclick="labTry(\'markup\',' + d + ')">Try it</button></div>'); });
+    out.push('<div class="hint">The declared list price must not be overwritten by a connector sync — that is the <i>markup</i> pricing kind (backlog).</div>');
+  } else if (goal === 'move') {
+    var t1 = Math.round((price - margin * 0.4) * 100) / 100, t2 = Math.round((price - margin * 0.6) * 100) / 100;
+    out.push('<div><b>Quantity break</b>: from 5 at ' + fmtMoney(t1) + ', from 10 at ' + fmtMoney(t2) + ' — volume moves stock, and the margin per unit stays above cost. ' + marginLine(price, cost, t2, 1) + ' <button class="btn" onclick="labTry(\'tier\',' + t1 + ',' + t2 + ')">Try it</button></div>');
+    out.push('<div><b>Buy 2 get 1 free</b> of the same: three units go for the price of two — a third of the margin given away per set. ' + marginLine(price, cost, price * 2, 3) + ' <button class="btn" onclick="labTry(\'bxgy\')">Try it</button></div>');
+    out.push('<div><b>Bundle</b> it with ' + esc(other.item_data.name) + ' at ' + fmtMoney(Math.round((price + other.item_data.price) * 0.9)) + ' (10% under the pair) — the slow one rides with a fast one. <button class="btn" onclick="labTry(\'bundle\')">Try it</button></div>');
+    var pct = Math.min(50, Math.max(5, Math.floor(mpct / 2))); out.push('<div><b>' + pct + '% off</b> straight — half your margin, the simplest message. ' + marginLine(price, cost, price * (1 - pct / 100), 1) + ' <button class="btn" onclick="labTry(\'pct\',' + pct + ')">Try it</button></div>');
+  } else if (goal === 'free') {
+    var oc = Math.round(Number(other.item_data.price) * 0.7), setsFor = function (k) { return Math.max(1, Math.ceil(oc / Math.max(1, margin) * k)); };
+    var x = setsFor(1.5); out.push('<div><b>Buy ' + x + ' get 1 ' + esc(other.item_data.name) + ' free</b>: ' + x + ' units earn ' + fmtMoney(margin * x) + ' of margin; the free ' + esc(other.item_data.name) + ' costs you about ' + fmtMoney(oc) + ' → ' + fmtMoney(margin * x - oc) + ' left per set. <button class="btn" onclick="labTry(\'bxgy\',' + x + ',\'' + esc(other.item_id) + '\')">Try it</button></div>');
+    var thr = Math.ceil(oc / Math.max(0.01, margin / price) / 100) * 100; out.push('<div><b>Spend ' + fmtMoney(thr) + ', get ' + esc(other.item_data.name) + ' free</b>: at your margin rate a ' + fmtMoney(thr) + ' basket carries ~' + fmtMoney(thr * margin / price) + ' of margin, more than the gift. <button class="btn" onclick="labTry(\'thr\',' + thr + ',\'' + esc(other.item_id) + '\')">Try it</button></div>');
+    out.push('<div class="hint">The engine never adds the free item by itself: when it is not in the basket the customer is told it is earned and may add it. Cost of the gift assumed at 70% of its price — put its real cost above for the exact figure.</div>');
+  } else if (goal === 'loyal') {
+    out.push('<div><b>Only for high-value customers, shown as "Special discount"</b>: 10% off each line; nobody else sees it, and the internal name stays yours. <button class="btn" onclick="labTry(\'loyal\',10)">Try it</button></div>');
+    out.push('<div><b>Exclusive 25% for one customer</b>: instead of every other offer — the row names only that one. <button class="btn" onclick="labTry(\'loyalx\',25)">Try it</button></div>');
+    out.push('<div class="hint">Switch "Who is looking" to see the same basket as a stranger: the offer is skipped and says why.</div>');
+  } else if (goal === 'basket') {
+    var avg = Math.max(price, 300), thr2 = Math.ceil(avg * 1.3 / 100) * 100; out.push('<div><b>Spend ' + fmtMoney(thr2) + ', get 5% off the order</b> — about 30% above a typical basket: the shortfall message ("you are ₹x away") does the selling. <button class="btn" onclick="labTry(\'thr\',' + thr2 + ')">Try it</button></div>');
+    out.push('<div><b>Free shipping over ' + fmtMoney(thr2) + '</b> — the most understood basket-builder in retail. <button class="btn" onclick="labTry(\'ship\')">Try it</button></div>');
+  }
+  document.getElementById('adv-out').innerHTML = head + out.join('');
+}
+function setOn(id, on) { var b = document.getElementById('on-' + id); if (b) { b.checked = !!on; document.getElementById('card-' + id).classList.toggle('on', !!on); } }
+function setV(id, val) { var e = document.getElementById(id); if (e) e.value = val; }
+function labTry(what, a, b) {
+  KINDS.forEach(function (k) { setOn(k.id, false); }); setOn('markup', false);
+  var p = advProduct();
+  if (what === 'markup') { setOn('markup', true); setV('mk-book', p.item_data.price); setV('mk-pct', a); }
+  if (what === 'tier') { setOn('tier', true); setV('tier-q1', 5); setV('tier-p1', a); setV('tier-q2', 10); setV('tier-p2', b); setV('tier-to', p.item_id); }
+  if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); setV('bxgy-to', p.item_id); }
+  if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
+  if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); setV('pct-to', p.item_id); }
+  if (what === 'thr') { setOn('thr', true); setV('thr-min', a); if (b) { setV('thr-item', b); setV('thr-qty', 1); } else setV('thr-pct', 5); }
+  if (what === 'ship') { setOn('ship', true); setV('ship-mode', 'free'); }
+  if (what === 'loyal') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); setV('pct-only', 'high_value'); setV('pct-alias', 'Special discount'); setV('viewer', 'high_value'); document.getElementById('cmp').checked = true; }
+  if (what === 'loyalx') { setOn('pct', true); setV('pct-v', 10); setOn('amt', false); setOn('tier', false); setV('pct-only', ''); setOn('amt', true); setV('amt-v', 5); var x = document.getElementById('pct-excl'); x.checked = false; setOn('pct', true);
+    /* the exclusive one: a second % card is not available, so the "exclusive 25% for one customer" uses the % card alone with everyone-else offers switched on beside it */
+    setV('pct-v', a); setV('pct-only', 'customer:one'); setV('pct-alias', 'Your price'); x.checked = true; setV('viewer', 'customer:one'); document.getElementById('cmp').checked = true; }
+  labRepaint();
+  /* put one of the product in the basket so the outcome shows at once */
+  try { if (!CART.selected().length) CART.setQty(p.item_id, what === 'bxgy' ? Number(a || 2) + 1 : (what === 'tier' ? 10 : 1)); } catch (_) {}
+  paintWhy();
+}
+paintCards(); labAdvise(); labRepaint();
+</script>
+</body>
+</html>
