@@ -33,10 +33,11 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   await page.getByTestId('nav-catalogue').click().catch(() => {});
   await page.locator('[data-testid^="cat-product-"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(OUT, 'catalogue.png') });
+  try { console.log('list row:', JSON.stringify(await page.evaluate(() => { const row=document.querySelector('[data-testid^="cat-product-"]'); const host=document.getElementById('ct_rows'); if(!row||!host) return null; const cs=getComputedStyle(row), hs=getComputedStyle(host); return { cols: cs.gridTemplateColumns, hostW: host.clientWidth, containerType: hs.containerType, rowClass: row.className }; }))); } catch (e) { console.log('probe failed', e.message); }
   const list = page.locator('[data-testid^="cat-product-"]').first();
   if (await list.isVisible().catch(() => false)) await list.locator('..').screenshot({ path: path.join(OUT, 'catalogue-list.png') }).catch(() => {});
   /* the product page: its header prints the same price column as the lists */
-  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png') }); }
+  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png') }); const idTab = page.getByTestId('prod-tab-identifiers'); if (await idTab.count()) { await idTab.first().click(); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, 'identifiers.png') }); } }
   await page.getByTestId('nav-suppliers').click().catch(() => {});
   await page.waitForTimeout(2500);
   const own = page.getByTestId('sup-row-own');
