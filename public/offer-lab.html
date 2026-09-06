@@ -67,6 +67,7 @@
   #p_list .lab-range input[type=checkbox]{ width:13px; height:13px; margin:0 1px 0 0; }
   #p_list .lab-rule-inline{ display:inline-flex; align-items:center; gap:3px; border:1px solid var(--line); border-radius:6px; padding:1px 5px; background:var(--card); }
   #p_list .lab-rule-inline.off{ opacity:.5; }
+  #p_list .lab-step{ display:inline-flex; align-items:center; justify-content:center; width:15px; height:15px; border-radius:50%; background:var(--neutral-tint); color:var(--grey-2); font-size:9px; font-weight:800; margin-right:3px; }
   #p_list .lab-rule-inline input[type=checkbox]{ width:13px; height:13px; margin:0 1px 0 0; }
   #p_list .lab-rule-inline input[type=number]{ height:22px; padding:1px 4px; font-size:var(--fs-1); text-align:right; }
   #p_list .lab-rule-inline select{ height:22px; padding:0 2px; font-size:var(--fs-1); max-width:110px; }
@@ -251,7 +252,15 @@ function bxgyLineHTML(id) {
     + PRODUCTS.map(function (p) { return '<option value="' + esc(p.item_id) + '"' + (b.item === p.item_id ? ' selected' : '') + '>' + esc(p.item_data.name) + '</option>'; }).join('') + '</select>'
     + ' at ' + box('pct', 40) + '% off</span>';
 }
-function productRulesHTML(id) { var bits = [tierLineHTML(id), bxgyLineHTML(id)].filter(Boolean); return bits.join(''); }
+function productRulesHTML(id) {
+  /* ⭐ ONE RULE PER LINE, IN THE ORDER THEY RUN (Athi, 2026-09-07 00:4x: "can you bring one after another when we select another offer?").
+     Two rules on one product is the seller's choice — the engine runs the break first and values a free unit at the re-priced unit — so
+     the note says so rather than forbidding it. */
+  var bits = [tierLineHTML(id), bxgyLineHTML(id)].filter(Boolean);
+  if (bits.length < 2) return bits.join('');
+  return bits.map(function (b, i) { return '<span class="lab-step">' + (i + 1) + '</span>' + b; }).join('')
+    + '<span class="hint" style="flex:1 1 100%">both run on this product: the break re-prices the unit, then the free unit is taken at that price. Tick Exclusive on one offer to run it alone.</span>';
+}
 function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
   /* ⭐ THE QUANTITY BREAK IS A PRODUCT'S OWN (Athi, 2026-09-06 23:0x: "quantity break at product level — under the product, the ranges and the
