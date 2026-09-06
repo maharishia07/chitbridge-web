@@ -89,6 +89,18 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     expect(orderRow.price, 'the price column').toBe(cartRow.price);
     expect(oMoney, 'the money block').toEqual(cartMoney);
 
+    /* THE SUMMARY TAB — the cart's money again, nothing else (Athi, 2026-09-06 11:30: "nothing but the financial summary from the cart… and
+       delivery summary… do not add anything without my knowledge"). Its block equals the cart's; no clearances, no commercial cover by default. */
+    const sTab = b.getByTestId('dtab-summary'); if (await sTab.isVisible().catch(() => false)) {
+      await sTab.click(); await settle(b);
+      const sMoney = norm(await rowsOf(b.getByTestId('chit-summary-money')));
+      expect(sMoney, 'summary: the money block').toEqual(cartMoney);
+      await expect(b.getByTestId('chit-summary-grand')).toHaveText(/378/);
+      await expect(b.getByTestId('chit-summary-savings')).toHaveText(/40/);
+      const extra = await b.locator('.dbody, #detail, body').first().innerText();
+      expect(extra, 'summary: no cover without the flag').not.toMatch(/Commercial cover|Supplier clearances/);
+    }
+
     /* THE SELLER'S TASK — Design 1 on the other side (Athi, 2026-09-06 11:2x: "design 1, which is the task, should be the same as the cart,
        no difference"): the same record, the same renderer, the same words and figures. */
     await page.evaluate((id) => openChit(id), chitId); await settle(page);

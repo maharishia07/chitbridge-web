@@ -54,7 +54,7 @@ const OUTLETS = {
                          ['Suppliers › our own stock',        'order-steps › OUR OWN STOCK'],
                          ['Suppliers › a supplier',           '[PAR-01] [PAR-02]'],
                          ["Catalogue list (the seller's own products, read-only rows)", '[CAT-01] · e2e/shot-rows.cjs'],
-                         ['Design 1 chit › Content (read-only: the chit IS the cart)', '[PAR-03] the order page equals the cart']],
+                         ['Design 1 chit › Content + Summary (read-only: the chit IS the cart; Summary = its money block + delivery, cover by flag)', '[PAR-03] the order page and its Summary equal the cart']],
   'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
   'app/cap-chit2.js':   [["The chit's Order tab (read-only: the chit IS the cart)", '[PAR-03] the order page equals the cart']],
