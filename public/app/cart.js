@@ -1031,7 +1031,7 @@
        the app's movable-panel primitive is present. The same reviewHTML as the Review step; nothing is reserved on the page. */
     if (opt(ns, 'summary') === 'float') {
       var id = 'cbcart_sum_' + ns, box = doc(id);
-      if (!n || s.sumClosed) { if (box) box.hidden = true; return; }
+      if (!n) { if (box) box.hidden = true; return; }
       if (!box) {
         box = document.createElement('div'); box.id = id; box.className = 'cbcart-float'; box.setAttribute('data-testid', tid.replace(/-total$/, '') + '-float');
         document.body.appendChild(box);
@@ -1039,8 +1039,18 @@
       }
       box.hidden = false;
       try {
+        /* MINIMISE, NOT CLOSE (Athi, 2026-09-06 10:1x: "closer doesn't have an option" to come back): the card folds to a pill with the
+           count and the total in the same corner; the pill opens it again. */
+        if (s.sumMin) {
+          var T = total(ns);
+          box.className = 'cbcart-float cbcart-float-min';
+          box.innerHTML = '<button type="button" class="cbcart-float-pill" data-testid="' + esc(tid.replace(/-total$/, '')) + '-pill" onclick="CBCart.closeSummary(\'' + esc(ns) + '\', false)" title="' + esc('open the summary') + '">🧾 '
+            + esc(opt(ns, 'cartTitle', 'Your basket')) + ' · ' + esc(String(n)) + ' · <b>' + esc(fmt(ns, T.amount)) + '</b> ▾</button>';
+          return;
+        }
+        box.className = 'cbcart-float';
         box.innerHTML = '<div class="cbcart-float-hd"><span>' + esc(opt(ns, 'cartTitle', 'Your basket')) + ' · ' + esc(String(n)) + '</span>'
-          + '<button type="button" class="cbcart-float-x" aria-label="close" onclick="CBCart.closeSummary(\'' + esc(ns) + '\')">✕</button></div>'
+          + '<button type="button" class="cbcart-float-x" aria-label="minimise" title="' + esc('minimise') + '" onclick="CBCart.closeSummary(\'' + esc(ns) + '\', true)">—</button></div>'
           + h.reviewHTML({ totalTestid: tid });
       } catch (e) {}
       return;
@@ -1051,7 +1061,7 @@
         : '<div class="cbcart-side-empty">' + esc(opt(ns, 'emptyHint', 'Press + on what you want')) + '</div>';
     } catch (e) {}
   }
-  function closeSummary(ns) { var s = C[ns]; if (!s) return; s.sumClosed = true; paintSummary(ns); }
+  function closeSummary(ns, min) { var s = C[ns]; if (!s) return; s.sumMin = (min !== false); paintSummary(ns); }
   function paint(ns) {
     paintBar(ns); paintList(ns); paintSummary(ns);
     // A screen may show the cart somewhere else too — a footer button count, a disabled Next. It registers a
@@ -2542,7 +2552,8 @@
       '.cbcat-side{position:sticky;top:8px}.cbcat-side:empty{display:none}.cbcart-side-empty{font-size:var(--fs-2);color:var(--grey-2);padding:10px 12px;border:1px dashed var(--line);border-radius:9px}',
       '.cbcart-float{position:fixed;right:28px;top:100px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,46,61,.18);padding:6px 8px 8px}',
       '.cbcart-float-hd{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);padding:2px 4px 6px;cursor:move}',
-      '.cbcart-float-x{border:0;background:none;font-size:var(--fs-3);color:var(--grey-2);cursor:pointer;padding:0 4px;line-height:1}',
+      '.cbcart-float-x{border:0;background:none;font-size:var(--fs-3);color:var(--grey-2);cursor:pointer;padding:0 6px;line-height:1}',
+      '.cbcart-float-min{width:auto;padding:0;border:0;background:none;box-shadow:none}.cbcart-float-pill{border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:999px;padding:7px 12px;font-size:var(--fs-2);cursor:pointer;box-shadow:0 6px 18px rgba(15,46,61,.14)}',
       /* Athi, 2026-09-06 10:0x: "top-most right-hand side within the panel — lots of space, and it will not disturb the product selection even with hundreds of products"; a phone has no such corner, so there it stays above the footer */
       '@media(max-width:520px){.cbcart-float{right:8px;left:8px;width:auto;top:auto;bottom:88px}}',
       '@container (min-width:900px){.cbcat-split-in{grid-template-columns:minmax(0,1fr) 320px}}',
