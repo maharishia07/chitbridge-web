@@ -31,6 +31,9 @@ for (const rel of files) {
   /* a screen that reads the cart's bare total must also ask it for the money rows — a bare Total beside offers and tax is the
      Suppliers-review defect of 2026-09-05 ("₹400" while the storefront basket said "₹378 incl. tax") */
   if (rel !== OWNER && /\b(?:c|cart|_CART|UI\._\w+Cart)\.total\(\)/.test(s)) { console.log('  ✗ ' + rel + ' reads the cart total itself — the cart prints its own money block: c.reviewHTML({ totalTestid })'); bad++; }
+  /* ⭐ ONE ROW: only the cart draws an offer badge or a stock stamp. Found 2026-09-06: the Catalogue list had its own chip and its own
+     'QTY 91 AS OF 05/09/2026' beside the cart's 'in stock 91 · as of 1 min ago' — one fact, two formats. */
+  if (rel !== OWNER && /data-testid="cat-row-offer"|tx\('as of'\)|class="cbcat-off"/.test(s)) { console.log('  ✗ ' + rel + ' draws its own offer badge or stock stamp — the cart row (CBCatUI.rowHTML) draws those'); bad++; }
   if (!ALLOW_EVALUATE.has(rel)) {
     const calls = s.match(/CBOffers\.evaluate\(\s*\{[^}]*/g) || [];
     for (const c of calls) if (!/lines\s*:\s*\[\s*[A-Za-z_$][\w$]*\s*\]/.test(c) && !/lines\s*:\s*lines\b/.test(c) && !/lines\s*:\s*\[cbOfferLine/.test(c)) { console.log('  ✗ ' + rel + ' evaluates offers for a basket — go through CBCart.money: ' + c.slice(0, 60)); bad++; }
@@ -49,7 +52,8 @@ const OUTLETS = {
   'app.html':           [['Record a sale / Bill (the counter)', '[SB-01] [PAR-02]'],
                          ['Compose (self, any recipient)',    'order-steps › Compose · [CAP-02] the same send path'],
                          ['Suppliers › our own stock',        'order-steps › OUR OWN STOCK'],
-                         ['Suppliers › a supplier',           '[PAR-01] [PAR-02]']],
+                         ['Suppliers › a supplier',           '[PAR-01] [PAR-02]'],
+                         ['Catalogue list (the seller's own products, read-only rows)', '[CAT-01] · e2e/shot-rows.cjs']],
   'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
 };

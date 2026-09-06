@@ -1093,20 +1093,8 @@
    */
   .rows{flex:1;overflow-y:auto;overflow-x:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
-  /* ⭐ THE PRODUCT LIST ON ONE GRID (thumb · identity · tags · price · chevron) — the same discipline as the cart row (cart.js .cbgrid):
-     every price, badge and stock stamp in the same column on every line. Athi, 2026-09-06: "an excellent presentation". */
-  /* ⚠️ THE LIST PANE IS ~340 PX WIDE (three-pane laptop layout), so five columns crushed the name into three lines and put the badge
-     over the facts (shot-rows.cjs, 2026-09-06 08:2x). Compact plan by default: thumb · identity (name, facts, then TAGS beneath) ·
-     PRICE; the five-column plan only where the list has room (≥ 640 px of its own width). Prices still stack in one column. */
+  /* the product list's rows are the CART's rows (cart.js .cbcat-row.cbgrid) — the .plist container only names the list */
   .plist{container-type:inline-size}
-  .row.prow{display:grid;grid-template-columns:44px minmax(0,1fr) auto;column-gap:10px;align-items:start}
-  /* explicit slots — auto-placement put the tags first and pushed the price to a third row on the left (shot-rows, 08:4x) */
-  .row.prow>.pthumb,.row.prow>.cbx{grid-row:1;grid-column:1}
-  .row.prow>.main2{grid-row:1;grid-column:2}
-  .row.prow>.pamt{grid-row:1;grid-column:3}
-  .row.prow>.ptags{grid-row:2;grid-column:2/-1;justify-content:flex-start;margin-top:3px}
-  .plist .row.prow>.rowgo{display:none}   /* beats .appwrap.m .row .rowgo, which is later in this sheet */
-  @container (min-width:640px){.row.prow{grid-template-columns:44px minmax(0,1fr) auto 168px 22px;align-items:center}.row.prow>.pthumb,.row.prow>.cbx,.row.prow>.main2,.row.prow>.pamt,.row.prow>.ptags{grid-row:1}.row.prow>.ptags{grid-column:3;justify-content:flex-end;margin-top:0}.row.prow>.pamt{grid-column:4}.row.prow>.rowgo{display:flex;grid-row:1;grid-column:5}}
   .row.prow .main2{min-width:0}
   .row.prow .ptags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-start;max-width:240px}
   .row.prow .ptags:empty{display:none}
@@ -8687,68 +8675,46 @@ function prodDeals(d, id){
   }catch(_){}
   return out;
 }
-function prodDealsHTML(d, id){
-  const x=prodDeals(d, id); const bits=[];
-  x.offers.forEach(function(o){ bits.push('<span class="optchip" data-testid="cat-row-offer" style="background:var(--accent-tint, var(--paper));border-color:var(--accent)" title="'+esc(o.name)+'">🏷️ '+esc(o.promise)+'</span>'); });
-  if(x.tax){ bits.push(x.tax.rate===null
-    ? '<span class="optchip" data-testid="cat-row-tax" style="color:var(--warn-3)">⚠️ '+esc(tx('slab not active'))+'</span>'
-    : (x.tax.dead ? '<span class="optchip" data-testid="cat-row-tax" title="'+esc(x.tax.name+' · '+x.tax.source)+'">'+esc(tx('GST'))+' '+esc(String(x.tax.rate))+'% ⚠️</span>' : '')); }   /* the rate itself is on the price cell ("+5% GST · ₹189 incl.") */
-  return bits.join(' ');
-}
+/* prodDealsHTML retired 2026-09-06: the offer badge and the stock stamp are the cart row's; the slab warning is built in prodRowHTML */
 function prodDealsText(d, id){
   const x=prodDeals(d, id);
   return (x.offers.map(function(o){ return o.name+' '+o.promise; }).join(' ')+' '+(x.tax? ('gst '+x.tax.rate+'% '+x.tax.name+' '+x.tax.source) : '')).toLowerCase();
 }
+/** the seller's list cart — a READ-ONLY cart over the seller's own products (every product, retired ones too, with the live offers and
+ *  the rate each resolves to), so the list's rows are the cart's rows: same badge, same stamp, same price column, same facts line. */
+function prodListCart(){
+  const offs=(UI._ctOffers||[]).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) }));
+  const items=(UI.prods||[]).map(p=>{ const d=pData(p), id=prodId(p); let tax=null; try { const x=prodDeals(d,id); if(x.tax&&x.tax.rate!=null) tax={ rate:x.tax.rate, name:x.tax.name||'GST' }; } catch(_){} return { item_id:id, item_data:d, tax }; });
+  const cat={ shop:{ bridge_id:'self', currency_code:(UI._me&&UI._me.currency_code)||'INR' }, offers:offs, items };
+  if(UI._listCart) UI._listCart.setCatalogue(cat); else UI._listCart=CBCart.create(cat, { renderer:CBCatUI, listEl:'cb_list_none', barEl:'cb_bar_none', barHideEmpty:true });
+  return UI._listCart;
+}
 function prodRowHTML(p, ctx){ const d=pData(p), id=prodId(p);
-  /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
-     list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
-     prevent. An absent status means available, so a normal row shows no chip at all. */
+  /* ⭐⭐ THE CART'S ROW, not a second one (Athi, 2026-09-06: "are we not having a helper so in all places we use the same format?"). What the list
+     adds — the select tick, the status chip, the category chips, 'more', the chevron, the click — goes in through rowHTML's hooks. */
   const st=d.status||'available';
-  /* ⚠️ COLOURS STORED AS DATA — the sixth and last place they hide, and no scan of `background:` can see it. These
-     six values sat in an ARRAY, three [text, background, label] triples, interpolated into the style attribute
-     further down. They are not CSS until the moment they are rendered, so every static pass walked past them and
-     they stayed hardcoded light: a pale sand chip on a dark row, on a PRODUCT ROW, which is precisely where Athi
-     was pointing. A colour is a colour wherever it is written down — a lookup table is not an exemption. */
   const stC={unavailable:['var(--warn-2)','var(--warn-tint)','not available'],retired:['var(--disp)','var(--danger-tint)','retired'],redundant:['var(--ink-2)','var(--neutral-tint)','redundant']}[st];
-  const stChip=stC?`<span class="optchip" style="background:${stC[1]};color:${stC[0]};border-color:${stC[1]}">${stC[2]}</span>`:'';
-  /* Synonyms were the field Athi could not see anywhere — the count alone tells him which rows still need words. */
-  const syn=(Array.isArray(d.synonyms)&&d.synonyms.length)?`<span style="color:var(--grey)">· ${d.synonyms.length} synonyms</span>`:'';
-  /* ⭐ THE CATEGORIES THIS PRODUCT CARRIES, on the row. Athi asked to attach in bulk, and a bulk action you
-     cannot verify from the list is a bulk action nobody trusts the second time. Resolved through the live shelf
-     so a rename shows here immediately; a retired one still shows, struck, because the citation survives. */
+  const stChip=stC?`<span class="optchip" style="background:${stC[1]};color:${stC[0]};border-color:${stC[1]};margin-inline-start:7px">${stC[2]}</span>`:'';
   const catChips=catgChipsHTML(d);
-  /* ⭐ SELECT MODE. The tick replaces the row's normal click so a half-pressed selection can never also navigate
-     away — the same rule the chit list follows. */
   const picking=ctx?!!ctx.picking:!!UI.prodPick;
   const ticked=ctx?!!(ctx.isTicked&&ctx.isTicked(id)):(picking&&UI.prodPicked&&UI.prodPicked.has(id));
-  /**
-   * ⭐ THE ROW SAYS WHAT EACH NUMBER IS. Athi, 2026-09-03 (observation 4): *"the data is displayed, but no one
-   * knows what it means, so need to have the field name or its short form here. say Avl Qty : 100 as of Date …
-   * one or two fields per line, so it reads legibly."* Before: `100 · counted yesterday · RIC-P · Rice o Rice` —
-   * four facts, no labels. Now: labelled pairs, at most two per line, and the secondary facts (description,
-   * highlight, synonyms) folded behind "more" so the glance stays a glance.
-   *
-   * ⚠️ THE THUMBNAIL IS A SLOT, honestly empty. No product carries an image yet (photo-extract reads a photo to
-   * PROPOSE fields; it does not keep it). The box holds the initial until media lands, so the row does not have to
-   * change shape a second time when it does. Reads `image_url` when one exists.
-   */
-  const a=availOf(d);
-  /* Numeric on purpose: a row has no room for a month name, and under an Arabic-region format the name comes out
-     in Arabic script on an English screen. Digits read the same in every locale the format can produce. */
-  let asOf=''; if(a&&a.as_of){ try{ asOf=CBLocale.date(a.as_of,{day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ asOf=String(a.as_of).slice(0,10); } }
-  const img=d.image_url||d.photo_url||'';
-  const thumb=`<div class="pthumb" aria-hidden="true">${img?`<img src="${esc(img)}" alt="">`:esc(String(pName(d)||'?').trim().charAt(0).toUpperCase())}</div>`;
   const lbl=(k,v)=>`<span><b>${k}</b>${v}</span>`;
-  const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('also'),esc((d.synonyms||[]).slice(0,4).map(x=>typeof x==='string'?x:(x&&(x.name||x.text))||'').filter(Boolean).join(', '))):''].filter(Boolean);
-  return `<div class="row prow ${(!ctx&&id===UI.prodSel)?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}" style="${st!=='available'?'opacity:.7':''}">
-  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}</div>
-    <div class="l2 lbl">${pUnit(d)?lbl(tx('Unit'),esc(pUnit(d))):''}${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
-    ${catChips?`<div class="l3cat">${catChips}</div>`:''}
-    ${more.length?`<div class="l2 lbl pmore">${more.join('')}</div>`:''}</div>
-  <div class="ptags" data-testid="cat-row-deals">${prodDealsHTML(d,id)}</div>
-  <div class="pamt"><span class="amt">${(()=>{ /* ⭐ THE CART'S PRICE COLUMN, here too (CBCatUI.priceHTML → priceBits): struck list · offered · "+5% GST · ₹189.00 incl." — Athi, 2026-09-06: "exactly the same" */ try { const x=prodDeals(d,id); const offs=offersForProduct(d,id).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) })); if(typeof CBCatUI!=='undefined'&&CBCatUI.priceHTML) return CBCatUI.priceHTML(Object.assign({}, d, { price:pPrice(d) }), { id, offers:offs, tax:x.tax, money:inr }); } catch(_){} return `<bdi>${inr(pPrice(d))}</bdi>`; })()}</span></div>
-  ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
+  const a=availOf(d);
+  const more=[d.highlight?lbl(tx('Highlight'),esc(d.highlight)):''].filter(Boolean);
+  const cart=prodListCart(); const it=(cart.state().cat.items||[]).find(x=>x.item_id===id)||{ item_id:id, item_data:d };
+  const row={ type:'line', item:it, item_id:id, variant:'' };
+  const warn=(()=>{ try { const x=prodDeals(d,id); return (x.tax&&x.tax.rate===null) ? '<span class="optchip" data-testid="cat-row-tax" style="color:var(--warn-3)">⚠️ '+esc(tx('slab not active'))+'</span>' : ''; } catch(_){ return ''; } })();
+  const below=(catChips||warn||more.length)?`<span class="cbcat-below">${catChips?`<span class="l3cat">${catChips}</span>`:''}${warn}${more.length?`<span class="l2 lbl pmore">${more.join('')}</span>`:''}</span>`:'';
+  return CBCatUI.rowHTML(cart, row, {
+    readonly:true,
+    testid:()=>'cat-product-'+id,
+    rowClass:()=>'cbclick'+((!ctx&&id===UI.prodSel)?' sel':'')+(ticked?' picked':''),
+    rowAttrs:()=>`onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}"${st!=='available'?' style="opacity:.7"':''}`,
+    lead:picking?(()=>`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`):undefined,
+    head:()=>stChip,
+    below:()=>below,
+    control:()=>(picking?'':'<span class="rowgo" aria-hidden="true" style="color:var(--grey);font-size:22px;line-height:1">›</span>')
+  }); }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
    (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
    VERTICAL-AGNOSTIC: every block below is PRESENCE-DRIVEN — it renders only if the item carries that data. Paint
@@ -8798,7 +8764,7 @@ function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
     return '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--purple-2);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[s].map(function(i){ return refFinishRow(rc[i],i); }).join('');
   }).join('');
   return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="navTo(\'catsetup\')">manage your prices for this source</span></div>'; }
-function prodRowsHTML(ctx){ const ref=(ctx&&ctx.noRef)?'':refCatRowsHTML(); const r=prodVisible(ctx);
+function prodRowsHTML(ctx){ try { CBCatUI.ensureCss(); } catch(_){} const ref=(ctx&&ctx.noRef)?'':refCatRowsHTML(); const r=prodVisible(ctx);
   if(ctx && !r.length) return '<div class="cbcat-none" style="padding:12px">'+esc(tx('No product matches.'))+'</div>';
   if(!ref && !r.length) return emptyState('🗂️','No products yet','Add your first, or adopt a whole catalogue via 🤖 AI.',{label:'+ New product',onclick:'newProduct()'});
   const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(function(p){ return prodRowHTML(p, ctx); }).join('')) : '';

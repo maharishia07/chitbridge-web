@@ -71,7 +71,7 @@ test('demo: every offer kind, two products, the screens', async ({ page }) => {
 
   await test.step('the catalogue list rows', async () => {
     await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
-    await expect(page.getByTestId('cat-row-deals').first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('[data-testid^="cbcat-tags-"]').first()).toBeVisible({ timeout: 25000 });
     await shot('4-catalogue-rows', '#panel');
   });
 

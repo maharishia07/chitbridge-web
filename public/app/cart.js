@@ -1844,10 +1844,15 @@
       }
     } catch (e) { stockChip = ''; }
 
-    return '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
-      + ' data-testid="cbcat-row-' + esc(id) + '">'
-      + (media || '<span class="cbcat-thumb" aria-hidden="true"></span>')   /* the grid needs every cell, image or not */
-      + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
+    /* ⭐⭐ ONE ROW RENDERER (Athi, 2026-09-06: "are we still using different pieces of code?" — yes, the seller's Catalogue list drew its own
+       row, its own badge, its own stock stamp; a synonyms line was written twice in one hour). The list now calls THIS with hooks for what
+       only a list needs: readonly (no stepper) · control(r) · lead(r) (the select tick) · head(r) (a status chip) · below(r) (category
+       chips, 'more') · testid(r) · rowClass(r) · rowAttrs(r) (the click). Nothing else may build a row. */
+    var H = opts || {};
+    return '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + (H.rowClass ? ' ' + esc(H.rowClass(r) || '') : '') + '"'
+      + ' data-testid="' + esc(H.testid ? H.testid(r) : ('cbcat-row-' + id)) + '"' + (H.rowAttrs ? ' ' + H.rowAttrs(r) : '') + '>'
+      + (H.lead ? (H.lead(r) || '') : (media || '<span class="cbcat-thumb" aria-hidden="true"></span>'))   /* the grid needs every cell, image or not */
+      + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>' + (H.head ? (H.head(r) || '') : '')
       + '<span class="cbcat-sub">' + esc(d.unit || '')
       + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>'
       /* ⭐ WHAT THE SELLER CHOSE TO SHOW (Athi, 2026-09-06: "I added a synonym, it reflects in the catalogue but not in the cart"). The
@@ -1860,6 +1865,7 @@
           var ds = d.description || d.desc; if (ds) bits.push('<span class="cbcat-fact cbcat-desc" data-testid="cbcat-desc-' + esc(id) + '">' + esc(String(ds).slice(0, 140)) + (String(ds).length > 140 ? '…' : '') + '</span>');
           return bits.length ? '<span class="cbcat-facts">' + bits.join(' · ') + '</span>' : '';
         } catch (e) { return ''; } })()
+      + (H.below ? (H.below(r) || '') : '')
       /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
          gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
          change the price. */
@@ -1867,9 +1873,9 @@
       + '</span>'
       /* ⭐ THE TAGS COLUMN (Athi, 2026-09-06: "split into a few columns so the values stay in the right places across each item"): the offer
          badge and the stock stamp line up under each other in every row, never under one name and beside another */
-      + '<span class="cbcat-tags">' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '') + '</span>'
+      + '<span class="cbcat-tags" data-testid="cbcat-tags-' + esc(id) + '">' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '') + '</span>'
       + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
-      + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
+      + '<span class="cbcat-ctl">' + (H.readonly ? (H.control ? (H.control(r) || '') : '') : ctlHTML(cart, r)) + '</span>'
       + '</div>';
   }
 
@@ -2477,6 +2483,10 @@
       '.cbcat-row.cbgrid{display:grid;grid-template-columns:var(--cbrow-cols);column-gap:10px}',
       '.cbcat-tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-content:center;max-width:240px}',
       '.cbcat-tags .cbcat-offs{margin-inline-start:0}',
+      /* a LIST of rows (the seller's Catalogue): the row is clickable and can be selected or picked — the list's states, on the cart's row */
+      '.cbcat-row.cbclick{cursor:pointer}.cbcat-row.cbclick:hover{background:var(--hover,#f3efe6)}',
+      '.cbcat-row.sel{background:var(--sel-2,#e9f0fa);color:var(--on-sel,var(--ink));box-shadow:inset 3px 0 0 var(--blue)}.cbcat-row.picked{background:var(--picked,#e9f0fa)}',
+      '.plist .cbcat-row{padding:10px 13px}.cbcat-below{display:block;margin-top:4px}',
       '@media(max-width:520px){:where(:root){--cbrow-cols:44px minmax(0,1fr) auto}.cbcat-row.cbgrid .cbcat-tags{grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid .cbcat-ctl{grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',

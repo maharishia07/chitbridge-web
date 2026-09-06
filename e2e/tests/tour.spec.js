@@ -171,7 +171,7 @@ test('the tour', async ({ page }) => {
   await clickNav(page, 'catalogue'); await settle(page); await dismissModal(page);
   await tc(page, 'The list shows what is in effect', 'rows carry the ACTIVE offer\'s promise and the GST rate; the search box finds by them',
     'look at the Basmati row; type "10% off" in the search', '🏷️ 10% off and GST 18% on the row; the search narrows the list to Basmati');
-  await expect(page.getByTestId('cat-row-deals').first()).toBeVisible({ timeout: 25000 });
+  await expect(page.locator('[data-testid^="cbcat-tags-"]').first()).toBeVisible({ timeout: 25000 });
   await page.getByTestId('cat-search').fill('10% off'); await page.waitForTimeout(800);
   await expect(page.locator('[data-testid^="cat-product-"]')).toHaveCount(1, { timeout: 10000 });
   await ok(page, 'one row left: Basmati'); await page.getByTestId('cat-search').fill('');
