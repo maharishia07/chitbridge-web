@@ -8677,13 +8677,15 @@ function catgChipsHTML(d){
 function prodDeals(d, id){
   const out={ offers:[], tax:null };
   try{
-    if(!UI._ctOffers && typeof ctOffersEnsure==='function') ctOffersEnsure(function(){ paintProdList(); if(typeof paintProdDetail==='function') paintProdDetail(); });   /* the header prints the deal too — it painted ₹100 before the offers arrived (2026-09-06) */
+    /* ⚠️ ONE REPAINT PER ARRIVAL, not one per row. prodDeals runs once per row per paint; queuing a repaint each time meant N repaints
+       when the offers landed, each queuing N more while the slabs were still in flight — the main thread sat busy for good (probe, 09:4x). */
+    if(!UI._ctOffers && typeof ctOffersEnsure==='function' && !UI._ctOffersRepaint){ UI._ctOffersRepaint=true; ctOffersEnsure(function(){ UI._ctOffersRepaint=false; paintProdList(); if(typeof paintProdDetail==='function') paintProdDetail(); }); }
     const on=offersForProduct(d, id);
     on.forEach(function(o){ const p=(typeof CBOffers!=='undefined')?CBOffers.promise(o.rules, { money:(n)=>inr(n) }):null; if(p) out.offers.push({ name:o.name, promise:p }); });
   }catch(_){}
   try{
     const slabs=(typeof cbDefsCached==='function')?cbDefsCached('tax'):null, cats=(typeof cbDefsCached==='function')?cbDefsCached('category'):null;
-    if(slabs===null||cats===null){ if(typeof cbDefsLive==='function') Promise.all([cbDefsLive('tax'),cbDefsLive('category')]).then(function(){ paintProdList(); }).catch(function(){}); }
+    if((slabs===null||cats===null) && typeof cbDefsLive==='function' && !UI._defsRepaint){ UI._defsRepaint=Promise.all([cbDefsLive('tax'),cbDefsLive('category')]).then(function(){ UI._defsRepaint=null; paintProdList(); if(typeof paintProdDetail==='function') paintProdDetail(); }).catch(function(){ UI._defsRepaint=null; }); }
     else if(typeof CBTaxSlab!=='undefined'){ const r=CBTaxSlab.resolve({ item_data:d, face:UI._face||{}, slabs, categories:cats }); if(r&&r.rate!==null&&r.rate!==undefined) out.tax={ rate:r.rate, name:r.name||'', source:r.source, dead:!!(r.unresolved&&r.cited) }; else if(r&&r.unresolved&&r.cited) out.tax={ rate:null, name:'', source:'none', dead:true }; }
   }catch(_){}
   return out;
