@@ -292,7 +292,13 @@
                    excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
       var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: ctx || { now: new Date(), currency: 'INR' } });
       var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(item_id)];
-      if (p && p.off > 0) return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer' };
+      /* ⭐ THE PREVIEW SAYS WHAT ONE UNIT WOULD COST IF ADDED — basket-level offers included, as they are once the row is in the basket
+         (compute → M.rowOff); a row must not promise ₹180 and charge ₹170 (OFF-03, 2026-09-06). A threshold the line alone cannot reach
+         simply does not fire here, which is honest. */
+      var orderOff = (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0);
+      var off = Math.min(base * q, Math.round((((p && p.off) || 0) + orderOff) * 100) / 100);
+      if (off > 0) { var labels = (ev.adjustments || []).filter(function (a) { return a.scope !== 'note' && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; }); var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
+        return { unit: Math.max(0, Math.round((base - off / q) * 100) / 100), off: off, label: uniq.join(' + ') || (p && p.label) || 'offer' }; }
     } catch (e) {}
     return null;
   }
