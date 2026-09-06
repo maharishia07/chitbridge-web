@@ -59,6 +59,8 @@
   .hint{ color:var(--grey-2); font-size:var(--fs-1); line-height:1.4; }
   .scroll{ overflow-x:auto; }
   #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:86px; }
+  #p_list .lab-head{ position:relative; padding:6px 10px 6px 86px; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--grey-2); background:var(--neutral-tint); border-bottom:1px solid var(--line); align-items:center; }
+  #p_list .lab-head .lab-sel{ position:absolute; left:8px; top:50%; transform:translateY(-50%); white-space:nowrap; }
   #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; }
   #p_list .lab-apply input[type=number]{ width:46px; height:24px; padding:2px 4px; font-size:var(--fs-1); }
   @media (max-width:1000px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line); } }
@@ -106,8 +108,8 @@
     </div>
 
     <div class="sec">Offers — one line each</div>
-    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Min qty</th><th>Only for</th><th>Excl.</th><th>Order</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
-    <div class="hint" style="margin-top:6px">Min qty = the offer applies only from that many units (the badge says "5+"). Exclusive = instead of every other offer. Order: lower runs first; at the same order a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
+    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Min qty</th><th>Only for</th><th>Excl.</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
+    <div class="hint" style="margin-top:6px">Min qty = the offer applies only from that many units (the badge says "5+"). Exclusive = instead of every other offer; otherwise a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
 
     <div class="sec">Showcase a discount (mark-up)</div>
     <div class="line" id="card-markup">
@@ -198,7 +200,6 @@ function paintCards() {
       + '<td class="num"><input type="number" id="' + id + '-minq" min="0" placeholder="any" title="applies only from this many units" oninput="labRepaint()"></td>'
       + '<td>' + selOnly(id) + '</td>'
       + '<td class="c"><input type="checkbox" id="' + id + '-excl" onchange="labRepaint()"></td>'
-      + '<td class="num"><input type="number" id="' + id + '-pri" value="0" oninput="labRepaint()"></td>'
       + '<td><input type="text" id="' + id + '-alias" placeholder="as the customer sees it" oninput="labRepaint()"></td>'
       + '</tr>';
   }).join('');
@@ -280,7 +281,14 @@ async function labLoadMine() {
 /* ── the tick on every row: what the offers apply to ── */
 function labApplies(id) { return !APPLY || APPLY.has(id); }
 function injectApplies() {
-  document.querySelectorAll('#p_list .cbcat-row').forEach(function (row) {
+  /* the header (Athi, 2026-09-06 22:1x: "select · order size · product name · applied offer / tax · current price · +") — a row of the cart's own grid, re-placed after every paint */
+  var list = document.getElementById('p_list');
+  if (list && !list.querySelector('.lab-head')) {
+    var h = document.createElement('div'); h.className = 'cbcat-row cbgrid lab-head';
+    h.innerHTML = '<span class="lab-sel">Select · order size</span><span></span><span>Product</span><span>Applied offer / tax</span><span style="text-align:right">Current price</span><span style="text-align:right">+ cart</span>';
+    list.insertBefore(h, list.firstChild);
+  }
+  document.querySelectorAll('#p_list .cbcat-row:not(.lab-head)').forEach(function (row) {
     var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id) return;
     var q = 0; try { q = Number(CART.qtyOf(id)) || 0; } catch (_) { q = 0; }
     if (row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input[type=checkbox]'); if (old) old.checked = labApplies(id); var oq = row.querySelector('.lab-apply input[type=number]'); if (oq && document.activeElement !== oq) oq.value = q; return; }
