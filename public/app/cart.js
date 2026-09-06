@@ -2497,7 +2497,7 @@
       + '.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3;min-width:0;align-self:center}.cbcat-row.cbgrid .cbcat-thumb{width:44px;height:44px}}',
       '@media(max-width:520px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
-      'content-visibility:auto;contain-intrinsic-size:auto 58px}',
+      '}',   /* content-visibility:auto dropped 2026-09-06: an off-screen row read as HIDDEN (CAT-01 after the list joined this renderer); the list windows its rows anyway */
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
       '.cbcat-var .cbcat-nm{padding-inline-start:16px}',
       '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:var(--warn-tint);',
