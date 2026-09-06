@@ -58,6 +58,10 @@
   .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:var(--fs-1); background:var(--neutral-tint); }
   .hint{ color:var(--grey-2); font-size:var(--fs-1); line-height:1.4; }
   .scroll{ overflow-x:auto; }
+  /* the lab is about the numbers: no picture column — the name starts right after the tick and the order size, rows stay one line high (Athi, 2026-09-06 22:16: "the image is giving some alignment issues") */
+  #p_list{ --cbrow-cols: 0px minmax(0,1fr) auto 150px minmax(112px,auto); }
+  #p_list .cbcat-thumb{ display:none; }
+  #p_list .cbcat-row{ min-height:0; }
   #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:86px; }
   #p_list .lab-head{ position:relative; padding:6px 10px 6px 86px; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--grey-2); background:var(--neutral-tint); border-bottom:1px solid var(--line); align-items:center; }
   #p_list .lab-head .lab-sel{ position:absolute; left:8px; top:50%; transform:translateY(-50%); white-space:nowrap; }
