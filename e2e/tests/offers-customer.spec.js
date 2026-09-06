@@ -40,7 +40,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     const g = items.find((x) => /^grapes$/i.test(((x.item_data || {}).name || '')));
     const today = new Date().toISOString().slice(0, 10), later = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
     /* the rule the editor's "Only for" picker writes: customer_group + its travelling name */
-    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Regulars 10%', status: 'live', rules: { kind: 'percent_off', label: 'Regulars 10%', percent: 10, scope: 'line', customer_group: 'new', customer_name: 'New customers', valid_from: today, valid_to: later } }) });
+    await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Regulars 10%', status: 'live', rules: { kind: 'percent_off', label: 'Regulars 10%', alias: 'Tier1 customer', percent: 10, scope: 'line', customer_group: 'new', customer_name: 'New customers', valid_from: today, valid_to: later } }) });
     /* a CART-scope offer only for new customers — the case that reached the cart and not the order (Athi, 2026-09-06 18:2x) */
     await fetch(CFG.API_BASE + '/api/definitions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token }, body: JSON.stringify({ kind: 'offer', sub_kind: 'percent_off', name: 'Tier1 basket 5%', status: 'live', rules: { kind: 'percent_off', label: 'Tier1 basket 5%', percent: 5, scope: 'cart', customer_group: 'new', customer_name: 'New customers', valid_from: today, valid_to: later } }) });
     const me = await api('me'); const e = (me && me.entity) || me || {};
@@ -82,9 +82,10 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     /* 4 · THE CUSTOMER: the badge and the offered price, on the same screen */
     row = await openSupplier(b, handle, itemId);
     f = await rowFacts(row);
-    expect(f.tags, 'the customer sees the badge, named by the seller').toMatch(/Regulars 10% · 10% off/);
+    expect(f.tags, 'the customer sees the badge, by the ALIAS the seller chose').toMatch(/Tier1 customer · 10% off/);
+    expect(f.tags, 'the internal name never leaves the shop').not.toMatch(/Regulars/);
     expect(f.tags, 'the basket offer is named on the row too').toMatch(/Tier1 basket 5% · 5% off/);
-    await expect(b.locator('[data-testid^="sup-foryou-"]').first(), 'the supplier row says what is special for this customer, by the seller\'s names').toContainText('Regulars 10%');
+    await expect(b.locator('[data-testid^="sup-foryou-"]').first(), 'the supplier row says what is special for this customer, by the alias').toContainText('Tier1 customer');
     expect(await b.locator('[data-testid="sup-standing"]').count(), 'no standing line in the header').toBe(0);
     expect(f.price, 'the customer sees the price after both offers (line 10% + basket 5%)').toMatch(/170\.00/);
     const groups = await b.evaluate(() => { try { const st = UI._supCart && UI._supCart.state ? UI._supCart.state() : null; return st && st.cat && st.cat.shop && st.cat.shop.viewer_groups; } catch (_) { return null; } });
@@ -95,7 +96,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     await row.locator('[data-testid="cart-add"]').first().click(); await b.waitForTimeout(500);
     const float = b.getByTestId('sup-side-money'); await float.waitFor({ timeout: 20000 });
     const cartMoney = norm(await rowsOf(float));
-    expect(cartMoney, 'the cart shows both customer-only offers').toEqual(expect.arrayContaining([expect.stringMatching(/Regulars 10%/), expect.stringMatching(/Tier1 basket 5%/)]));
+    expect(cartMoney, 'the cart shows both customer-only offers, by alias and name').toEqual(expect.arrayContaining([expect.stringMatching(/Tier1 customer/), expect.stringMatching(/Tier1 basket 5%/)]));
     expect(await float.locator('[data-testid="cbcart-foryou"]').count(), 'customer-only rows say "only for you"').toBeGreaterThanOrEqual(2);
     /* the bar's headline is the after-offers figure, basket-level offer included (Athi, 2026-09-06: "cart also didn't consider the offer"): 3 kg × 200 − 10% − 5% of the rest */
     const after = cartMoney.find((r) => /After offers/.test(r)) || ''; const afterAmt = (after.match(/[0-9][0-9,]*.[0-9]{2}/) || [''])[0];
