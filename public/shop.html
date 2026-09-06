@@ -479,15 +479,7 @@ function shopOffersSync(){
 function shopOffersSyncNow(){
   var offers=_shopOffers(); var ctx=_shopCtx();
   if(!offers.length){ shopBasketSummary(); return; }
-  /* 1 · each row as a basket of one → the offered unit price on the row */
-  (_SHOPDATA.items||[]).forEach(function(p){
-    var line=_lineOf(p,1); if(!isFinite(line.unitPrice)||line.unitPrice<=0) return;
-    try{
-      var ev=CBOffers.evaluate({ lines:[line], offers:offers, ctx:ctx });
-      var per=CBOffers.perLine(ev,[line]); var k=Object.keys(per)[0];
-      if(k!=null && per[k] && per[k].off>0){ var want=Math.max(0, line.unitPrice-per[k].off); var cur=((_CART.state()||{}).offers||{})[String(line.item_id)]; if(cur!==want) _CART.setOffer(String(line.item_id), want, per[k].label||'offer'); }
-    }catch(e){}
-  });
+  /* 1 · the offered price on each row is the CART's own now (app/cart.js dealOf → unitPrice) — the same on every outlet */
   /* 2 · the whole basket → adjustments, notes, total */
   shopBasketSummary();
 }

@@ -271,6 +271,32 @@
    * The fix belongs here and not on the review screen, because the question "which price counts for this line" has
    * exactly one answer and four screens that need it. Anything that shows or sums money calls this.
    */
+  /**
+   * ⭐⭐ THE DEAL ON A ROW — IN THE CORE, FOR EVERY OUTLET. Athi, 2026-09-06: "when 10% off, strike out the original price close to
+   * the product name and show the discounted price in the price column… it is a well-known design in any cart." The storefront
+   * did this with its own sync (shopOffersSyncNow → setOffer per row); Suppliers, Bill, Compose and Network showed the list price
+   * and the discount appeared only in the summary — the bar said ₹400 while the money block said ₹378. Now the cart asks the
+   * offer engine for each row as a basket of one (its own quantity when it is in the cart), LINE scope only — cart-scope offers
+   * describe the order and stay on the money block. The answer is memoised per paint (touched() drops it).
+   *   dealOf(ns, r, base) → { unit, off, label } | null
+   */
+  function dealOf(ns, r, base) {
+    var s = C[ns]; if (!s || !r || r.type !== 'line') return null;
+    var offers = (s.cat && Array.isArray(s.cat.offers)) ? s.cat.offers : [];
+    if (!offers.length || !root.CBOffers || !root.CBOffers.evaluate || !root.CBOffers.perLine) return null;
+    if (!isFinite(base) || base <= 0) return null;
+    var d = dataOf(r), q = Number(s.sel[r.item_id]) || 1, key = String(r.item_id) + '@' + q + '@' + base;
+    s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
+    var out = null;
+    try {
+      var line = { key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [],
+                   excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
+      var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } } });
+      var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(r.item_id)];
+      if (p && p.off > 0) out = { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer' };
+    } catch (e) { out = null; }
+    s.deals[key] = out; return out;
+  }
   function unitPrice(ns, r) {
     var s = C[ns] || {}, o = declOf(ns, r);
     if (o.model === 'offer') {
@@ -278,12 +304,16 @@
       if (v != null && isFinite(v)) return { amount: Number(v), offered: true, asking: priceOf(r) };
     }
     /* the pricing structure the product cites re-prices the unit at this quantity (pricing.js) — before offers, before tax */
-    var list = priceOf(r);
+    var list = priceOf(r), base = list, tier = null, why;
     if (typeof CBPricing !== 'undefined' && dataOf(r).pricing_kind) {
       var tp = CBPricing.unitPrice(dataOf(r), Number(r.qty) || 1, list);
-      return { amount: tp.amount, offered: false, asking: list, tier: tp.tier || null, why: tp.why };
+      base = tp.amount; tier = tp.tier || null; why = tp.why;
     }
-    return { amount: list, offered: false, asking: list };
+    /* the deal REPLACES the price (Amazon: the offered price is the price; the list price is struck beside it) — `offered` stays
+       false: that word is a NEGOTIATION (name-your-price), and the review prints the money block only when nothing is negotiated */
+    var deal = dealOf(ns, r, base);
+    if (deal) return { amount: deal.unit, offered: false, asking: list, base: base, deal: deal, tier: tier, why: why };
+    return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };
   }
   function total(ns) {
     var s = C[ns]; if (!s) return { amount: 0, partial: false, offered: false };
@@ -307,7 +337,7 @@
       if (r.type !== 'line' || !s.sel[r.item_id]) return;
       var u = unitPrice(ns, r), d = (r.item && (r.item.item_data || r.item)) || {};
       out.push({ key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [], excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded : [],
-                 qty: Number(s.sel[r.item_id]) || 0, unitPrice: isFinite(u.amount) ? u.amount : 0, tax: (r.item && r.item.tax) || d.tax || null });
+                 qty: Number(s.sel[r.item_id]) || 0, unitPrice: u.deal ? u.base : (isFinite(u.amount) ? u.amount : 0), tax: (r.item && r.item.tax) || d.tax || null });
     });
     return out;
   }
@@ -505,7 +535,7 @@
   }
 
   /* ── changes. One route, so the list and the popup can never disagree. ───────────────────────────────────── */
-  function touched(ns) { var s = C[ns]; if (s && s.open) paintPopup(ns); else paint(ns); }
+  function touched(ns) { var s = C[ns]; if (s) s.deals = null; if (s && s.open) paintPopup(ns); else paint(ns); }
   /**
    * ⚠️ ONE GATE. Every change — the +, the −, the typed box, the popup's controls, and anything added later —
    * lands here and is passed through the ROW'S OWN MODEL. That is what makes the registry a single source rather
@@ -1705,6 +1735,7 @@
       /* an offered price on a row that is NOT a name-your-price model (a line-scope discount the storefront sets) shows the
          struck asking price AND the offered amount — without this the amount vanished behind the strike (2026-09-05) */
       ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + (offerInput || (isFinite(u.amount) ? ' <b class="cbcat-offered">' + esc(money(cart.ns, u.amount)) + '</b>' : ''))
+      : u.deal ? (offerInput || '<b class="cbcat-offered" data-testid="cbcat-deal-' + esc(id) + '">' + esc(money(cart.ns, u.amount)) + '</b>')
       : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
     /* The line total, ONLY once there is a quantity to MULTIPLY by — `q > 1`, not `q`. At quantity 1 it prints
        the same number twice under itself, which is exactly the noise the rule was written to avoid; I had the
@@ -1741,6 +1772,8 @@
         }).join('');
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
+    /* the list price, struck, beside the name — where the eye reads "was"; the price column holds only the price they pay */
+    if (u.deal && isFinite(u.asking)) offBadge = '<s class="cbcat-was" data-testid="cbcat-was-' + esc(id) + '" title="' + esc('list price') + '">' + esc(money(cart.ns, u.asking)) + '</s>' + offBadge;
 
     /* ⭐ THE TAX A BUYER WILL PAY, on the row (Athi, 2026-09-05: "not showing the GST values here"). The item carries the
        rate the seller's shelf resolves for it (catalogue-view attaches it — the same resolver as the order and the
