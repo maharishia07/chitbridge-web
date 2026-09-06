@@ -11930,8 +11930,8 @@ function mapNotif(n){
 function notifOpen(chit_id){
   if (!chit_id) return;
   closeNotif();
-  if (typeof openChit2 === 'function' && typeof ensureCap === 'function') ensureCap('chit2').then(function(){ openChit2(chit_id); });
-  else if (typeof openChit === 'function') openChit(chit_id);
+  /* Design 1 first — the cart view of the record; the Task page offers the workflow view (Design 2) itself (Athi, 2026-09-06) */
+  if (typeof openChit === 'function') openChit(chit_id);
 }
 /**
  * ⚠️ `repaint` EXISTS BECAUSE THIS FUNCTION IS A TOGGLE, and I nearly shipped four calls that would have CLOSED
@@ -13228,7 +13228,7 @@ function detailInner(){
            under ⋯. The visibility RULES are unchanged — they are in DACT's `on`, and a preference cannot
            override them. */
         var A = {
-          lines:   '<button data-testid="open-design2" onclick="ensureCap(\'chit2\').then(function(){openChit2(\'' + c.id + '\')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button>',
+          lines:   (UI.folder!=='task') ? '' : '<button data-testid="open-design2" onclick="ensureCap(\'chit2\').then(function(){openChit2(\'' + c.id + '\')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button>',
           forward: '<button onclick="forwardChit(\'' + c.id + '\')" title="Forward as a new chit">' + tx('➤ Forward') + '</button>',
           move:    '<button onclick="ensureCap(\'folders\').then(function(){moveChit(\'' + c.id + '\')})" title="File into a folder">' + tx('📁 Move') + '</button>',
           unread:  '<button data-testid="chit-unread" onclick="markUnread(\'' + c.id + '\')" title="Mark as unread">' + tx('✉ Unread') + '</button>',
