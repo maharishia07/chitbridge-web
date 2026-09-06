@@ -1694,17 +1694,21 @@
    *   priceBits({ id, list, amount, deal, tax, money }) → { price, taxChip }
    */
   function priceBits(o) {
-    var m = o.money, price, taxChip = '';
-    if (o.deal && isFinite(o.list)) price = '<s class="cbcat-was" data-testid="cbcat-was-' + esc(o.id) + '" title="' + esc('list price') + '">' + esc(m(o.list)) + '</s> <b class="cbcat-offered" data-testid="cbcat-deal-' + esc(o.id) + '">' + esc(m(o.amount)) + '</b>';
-    else price = isFinite(o.amount) ? esc(m(o.amount)) : '<span class="cbcat-noprice">no price</span>';
+    /* ⭐ THREE COLUMNS, READ LEFT TO RIGHT (Athi, 2026-09-06 09:07): what it is · what applies (availability · offer · slab, one below
+       another) · what it costs (the list price struck in the theme's red, the price you pay in green, the after-tax figure in blue,
+       one below another). Anything that does not apply is simply absent — no "no discount", no "no tax". */
+    var m = o.money, price, taxChip = '', slab = '';
+    if (o.deal && isFinite(o.list)) price = '<s class="cbcat-was" data-testid="cbcat-was-' + esc(o.id) + '" title="' + esc('list price') + '">' + esc(m(o.list)) + '</s><b class="cbcat-offered" data-testid="cbcat-deal-' + esc(o.id) + '">' + esc(m(o.amount)) + '</b>';
+    else price = isFinite(o.amount) ? '<b class="cbcat-now">' + esc(m(o.amount)) + '</b>' : '<span class="cbcat-noprice">no price</span>';
     try {
       var t = o.tax;
       if (t && t.rate != null && isFinite(o.amount)) {
         var rate = Number(t.rate) + (Number(t.cess) || 0), incl = Math.round(o.amount * (1 + rate / 100) * 100) / 100;
-        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
+        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
+        slab = '<span class="cbcat-slab" title="' + esc(t.name || 'GST') + '">' + esc('GST ' + String(Number(t.rate)) + '%') + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '%' : '') + '</span>';
       }
     } catch (e) { taxChip = ''; }
-    return { price: price, taxChip: taxChip };
+    return { price: price, taxChip: taxChip, slab: slab };
   }
   /** the same column for an item OUTSIDE a cart (the seller's Catalogue list): priceHTML(item_data, { id, offers, tax, money, currency }) */
   function priceHTML(d, o) {
@@ -1873,7 +1877,7 @@
       + '</span>'
       /* ⭐ THE TAGS COLUMN (Athi, 2026-09-06: "split into a few columns so the values stay in the right places across each item"): the offer
          badge and the stock stamp line up under each other in every row, never under one name and beside another */
-      + '<span class="cbcat-tags" data-testid="cbcat-tags-' + esc(id) + '">' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '') + '</span>'
+      + '<span class="cbcat-tags" data-testid="cbcat-tags-' + esc(id) + '">' + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '') + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (_pb.slab ? '<span class="cbcat-offs">' + _pb.slab + '</span>' : '') + '</span>'
       + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + (H.readonly ? (H.control ? (H.control(r) || '') : '') : ctlHTML(cart, r)) + '</span>'
       + '</div>';
@@ -2481,7 +2485,7 @@
          stamp sit in the same place on every line (Athi, 2026-09-06: "an excellent presentation… the values stay in the right places"). */
       ':where(:root){--cbrow-cols:52px minmax(0,1fr) auto 150px 104px}',
       '.cbcat-row.cbgrid{display:grid;grid-template-columns:var(--cbrow-cols);column-gap:10px}',
-      '.cbcat-tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-content:center;max-width:240px}',
+      '.cbcat-tags{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;max-width:240px}',
       '.cbcat-tags .cbcat-offs{margin-inline-start:0}',
       /* a LIST of rows (the seller's Catalogue): the row is clickable and can be selected or picked — the list's states, on the cart's row */
       '.cbcat-row.cbclick{cursor:pointer}.cbcat-row.cbclick:hover{background:var(--hover,#f3efe6)}',
@@ -2493,9 +2497,9 @@
       '.cbcat-list,.plist,.cbpick-list{container-type:inline-size}',
       '@container (max-width:560px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto;align-items:start}'
       + '.cbcat-row.cbgrid>.cbcat-thumb,.cbcat-row.cbgrid>.cbx{grid-row:1;grid-column:1}.cbcat-row.cbgrid>.cbcat-meat{grid-row:1;grid-column:2}'
-      + '.cbcat-row.cbgrid>.cbcat-pr{grid-row:1;grid-column:3;min-width:0}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;justify-content:flex-start;max-width:none}'
+      + '.cbcat-row.cbgrid>.cbcat-pr{grid-row:1;grid-column:3;min-width:0}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;max-width:none}'
       + '.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3;min-width:0;align-self:center}.cbcat-row.cbgrid .cbcat-thumb{width:44px;height:44px}}',
-      '@media(max-width:520px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
+      '@media(max-width:520px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;flex-direction:row;flex-wrap:wrap;justify-content:flex-start}.cbcat-row.cbgrid>.cbcat-ctl{grid-row:2;grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       '}',   /* content-visibility:auto dropped 2026-09-06: an off-screen row read as HIDDEN (CAT-01 after the list joined this renderer); the list windows its rows anyway */
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
@@ -2529,9 +2533,14 @@
       '.cbcat-off{display:inline-block;padding:1px 7px;border-radius:999px;font-size:var(--fs-1);font-weight:700;',
       'background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--warn-3);white-space:nowrap}',
       /* ⚠️ FIXED COLUMNS, or the price column zig-zags. Measured: ₹340 at x=740 and ₹149 at x=628 before this. */
-      '.cbcat-pr{flex:none;min-width:78px;text-align:end;font-weight:700;font-size:var(--fs-3);',
+      '.cbcat-pr{flex:none;min-width:78px;text-align:end;font-weight:700;font-size:var(--fs-3);display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1px;',
       'font-variant-numeric:tabular-nums;white-space:nowrap}',
-      '.cbcat-was{opacity:.55;font-weight:400;font-size:var(--fs-1)}',
+      /* the three figures, in the theme's own words for them: --disp is what a struck figure means (contested, no longer the price),
+         --ok-2 is the good news, --blue-2 is the official figure (tax); each theme declares all three, so a11y-contrast.cjs measures them */
+      '.cbcat-offered{color:var(--ok-2,#2c7a43)}.cbcat-now{color:var(--ink)}',
+      '.cbcat-tax{display:block;font-size:11px;font-weight:600;color:var(--blue-2,#2c5aa0);white-space:nowrap}',
+      '.cbcat-slab{display:inline-block;padding:1px 7px;border-radius:999px;font-size:var(--fs-1);font-weight:700;background:var(--blue-tint-bg,#E9F0FA);border:1px solid var(--blue-2,#2c5aa0);color:var(--blue-2,#2c5aa0);white-space:nowrap}',
+      '.cbcat-was{color:var(--disp,#b4453f);text-decoration:line-through;font-weight:400;font-size:var(--fs-1)}',
       '.cbcat-noprice{color:var(--grey-2);font-weight:400;font-size:var(--fs-2)}',
       '.cbcat-linetotal{font-size:var(--fs-1);color:var(--grey-2);font-weight:800}',
       '.cbcat-ctl{flex:none;min-width:104px;display:flex;align-items:center;justify-content:flex-end;gap:6px}',
