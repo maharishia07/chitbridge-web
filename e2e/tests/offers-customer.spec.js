@@ -96,7 +96,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     /* the bar's headline is the after-offers figure, basket-level offer included (Athi, 2026-09-06: "cart also didn't consider the offer"): 3 kg × 200 − 10% − 5% of the rest */
     const after = cartMoney.find((r) => /After offers/.test(r)) || ''; const afterAmt = (after.match(/[0-9][0-9,]*.[0-9]{2}/) || [''])[0];
     expect(afterAmt, 'the block says an after-offers figure').toBeTruthy();
-    await expect(b.getByText(/lines ready/).first(), 'the bar says the same figure as the block').toContainText(afterAmt);
+    await expect(b.locator('[data-testid^="cbcat-commit-"]').first().locator('..'), 'the bar says the same figure as the block').toContainText(afterAmt);
     await b.getByRole('button', { name: /Check out/ }).last().click(); await settle(b);
     for (let i = 0; i < 4; i++) { const next = b.getByRole('button', { name: /Next|Review|Check it|Continue/ }).last(); if (await next.isVisible().catch(() => false)) { await next.click(); await settle(b); } else break; }
     const sent2 = b.waitForResponse((r) => /\/api\/chits\/send$/.test(r.url()) && r.request().method() === 'POST', { timeout: 60000 });

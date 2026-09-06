@@ -7524,7 +7524,8 @@ function supSendOrder(x, isDraft){
   var sel=c.selected();
   if(!isDraft && !sel.length) return;
   sendChit({
-    recipients:[{name:supName(x), role:'to', self:false}],
+    /* the supplier BY IDENTITY, the name beside it for the header (Athi, 2026-09-06: a renamed shop made the name-only send fail) */
+    recipients:[{name:supName(x), entity_id:x.supplier_entity_id||undefined, bridge:x.bridge_id||undefined, role:'to', self:false}],
     isDraft:!!isDraft,
     send_as_label:(typeof SESSION!=='undefined'&&SESSION.entity)||'',
     subject:o.subject||supDefaultSubject(x),
