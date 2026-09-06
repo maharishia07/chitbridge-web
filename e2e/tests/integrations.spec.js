@@ -17,6 +17,17 @@ test('[INT-01] connectors: catalogue, download, instructions, heartbeat → the 
     expect(d.headers()['content-type']).toContain('application/zip'); const buf = await d.body(); expect(buf.length).toBeGreaterThan(5000); expect(buf.slice(0, 2).toString()).toBe('PK');
     const text = buf.toString('latin1'); expect(text).toContain('chitbridge-connector/core.js'); expect(text).toContain('chitbridge-connector/connector.json'); expect(text).toContain('PASTE THE KEY');
     const doc = await request.get(API + '/api/integrations/docs/zoho'); expect(doc.status()).toBe(200); expect(await doc.text()).toContain('Zoho Books connector');
+
+  await test.step('THE DOWNLOAD IS THE INSTALLER — signed in, the zip carries a minted key and start.cmd installs Node (Athi, 2026-09-06)', async () => {
+    const z = await page.evaluate(async (api) => { const r = await fetch(api + '/api/integrations/download/tally?adapter=tally', { headers: { Authorization: 'Bearer ' + SESSION.token } }); const b = new Uint8Array(await r.arrayBuffer()); let t = ''; for (let i = 0; i < b.length; i++) t += String.fromCharCode(b[i]); return { status: r.status, text: t }; }, API);
+    expect(z.status).toBe(200);
+    expect(z.text, 'the key is inside').not.toContain('PASTE THE KEY');
+    expect(z.text, 'the key is a token').toMatch(/"key": "eyJ[A-Za-z0-9._-]+"/);
+    expect(z.text, 'setup runs first').toContain('"configured": false');
+    expect(z.text, 'start.cmd installs Node').toContain('OpenJS.NodeJS.LTS');
+    expect(z.text, 'START.txt says so').toContain('Your key is already inside connector.json (');
+    const keys = await page.evaluate(async () => { const r = await api('keysList'); return (r.keys || []).map((k) => k.name); }).catch(() => null);
+    if (keys) expect(keys.some((n) => /^kit tally/.test(n)), 'the minted key is listed under Your keys').toBeTruthy();
   });
 
   let key = '';

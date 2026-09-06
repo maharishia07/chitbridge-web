@@ -4604,6 +4604,19 @@ function intProfileMapHTML(){
     + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
     + '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr><th style="text-align:start;padding:4px 8px">' + tx('Field') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Value') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Source · when') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Rung') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
 }
+/** the kit, fetched with the session so the key rides inside; saved through a blob like the tax export (misTaxDownload) */
+async function intDownloadKit(id, adapter){
+  try {
+    var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
+    var r = await fetch(base + '/api/integrations/download/' + encodeURIComponent(id) + '?adapter=' + encodeURIComponent(adapter), { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    if (!r.ok) throw new Error('download failed (' + r.status + ')');
+    var blob = await r.blob();
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chitbridge-connector-' + id + '.zip'; document.body.appendChild(a); a.click(); a.remove();
+    toast(tx('Downloaded — your key is inside. Unzip on the Tally PC and double-click start.cmd.'));
+    _INT_RUN = undefined;   /* the new key shows under Your keys on the next paint */
+  } catch (e) { toast(tx('Could not download') + ': ' + (e && e.message || e)); }
+}
+
 /**
  * ⭐ THE HOME OF CONNECTORS (Athi, 2026-09-05: "include the tally connector as a downloadable option in the system itself …
  * all should reside as part of Integrations; if we build more, it should stay there"). The catalogue comes from the API
@@ -4616,7 +4629,8 @@ function intConnectorsHTML(){
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   var cat = _INT_CAT || [], run = _INT_RUN || [];
   var cards = cat.length ? cat.map(function(c){
-    var adapters = (c.adapters || []).map(function(a){ return '<a class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" href="' + esc(base + c.download + '?adapter=' + a) + '" download style="text-decoration:none">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</a>'; }).join(' ');
+    /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
+    var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
     var steps = (c.steps || []).map(function(s, i){ return '<div style="font-size:var(--fs-1)">' + (i + 1) + '. ' + esc(s) + '</div>'; }).join('');
     var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
     return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + doc + ' ' + adapters + '</div>'
