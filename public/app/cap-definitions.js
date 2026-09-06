@@ -831,6 +831,14 @@ function cbDefPickProductHTML(x, v){
     + '<div class="cbdef-hint">' + tx('If it is not in their order, the basket offers to add it.') + '</div>';
 }
 
+/** the bench's "as a … customer" box — only when the offer is scoped to a group or a customer */
+function cbDefTestAsHTML(){
+  var f = CBDEF_FORM, r = (f && f.rules) || {}; if (!r.customer_group) return '';
+  var who = r.customer_name || String(r.customer_group).replace(/^customer:/, '');
+  return '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:var(--fs-2)"><input type="checkbox" data-testid="cbdef-test-as"' + (CBDEF_TEST.asCustomer !== false ? ' checked' : '') + ' onchange="CBDEF_TEST.asCustomer=this.checked;cbDefTestRun()"> '
+    + tx('test as') + ' <b>' + cbDefEsc(who) + '</b> <span style="color:var(--grey)">— ' + tx('untick to see what everyone else gets') + '</span></label>';
+}
+
 /* ── "Only for": the Customers list's own groups, then each customer by name (value 'customer:<identity_id>') ── */
 var _CBDEF_CUSTS, _CBDEF_CUSTS_P;
 var CBDEF_GROUPS = [['new', 'New customers'], ['regular', 'Regular (3+ orders)'], ['high_value', 'High value'], ['inactive', 'Inactive (90 days)']];
@@ -1760,7 +1768,7 @@ function cbDefCss(){
    engine?") — pick one of YOUR products and a quantity; the SAME engine that prices the cart (prodOfferCartHTML → CBOffers)
    shows listed → after offers → GST → after tax for the rule AS IT STANDS ON THE FORM, saved or not, and says why it did
    not apply when it did not. An offer that says nothing shows nothing off — here, before it is saved. ═══════════════ */
-var CBDEF_TEST = { prods: null, pid: '', qty: 2 };
+var CBDEF_TEST = { prods: null, pid: '', qty: 2, asCustomer: true };   /* asCustomer: the bench stands in the offer's customer's shoes; untick to see a stranger (Athi, 2026-09-06 19:54) */
 function cbDefTestHTML(f){
   return '<div class="cbdef-test" data-testid="cbdef-test" style="margin-top:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px">'
     + '<div style="font-weight:800;font-size:var(--fs-1);letter-spacing:.04em;text-transform:uppercase;color:var(--grey-2);margin-bottom:6px">' + tx('Test this offer') + '</div>'
@@ -1769,6 +1777,7 @@ function cbDefTestHTML(f){
     +   '<input class="inp" data-testid="cbdef-test-qty" type="number" min="1" step="1" value="' + CBDEF_TEST.qty + '" style="width:76px;margin:0" oninput="CBDEF_TEST.qty=Math.max(1,parseInt(this.value)||1);cbDefTestRun()">'
     +   '<button type="button" data-testid="cbdef-test-run" onclick="cbDefTestRun()" style="border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:8px;padding:6px 12px;cursor:pointer">' + tx('Test') + '</button>'
     + '</div>'
+    + cbDefTestAsHTML()
     + '<div id="cbdef_test_out" data-testid="cbdef-test-out" style="margin-top:8px"></div></div>';
 }
 function cbDefTestOptions(){
@@ -1784,6 +1793,10 @@ async function cbDefTestLoad(){
 }
 function cbDefTestRun(){
   var f = CBDEF_FORM, out = document.getElementById('cbdef_test_out'); if (!f || !out) return;
+  /* ⭐ TESTED AS THE CUSTOMER — OR NOT (Athi, 2026-09-06 19:54: "consider it as a high value customer; a checkbox to see the difference,
+     otherwise you are not testing the offer"). The bench evaluates with the offer's own group when the box is ticked, with none when not. */
+  var _grp = (f.rules && f.rules.customer_group) ? String(f.rules.customer_group) : '';
+  var _groups = (_grp && CBDEF_TEST.asCustomer !== false) ? [_grp] : [];
   var p = (CBDEF_TEST.prods || []).find(function(x){ return (x.item_id || x.id) === CBDEF_TEST.pid; });
   if (!p) { out.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + cbDefEsc(tx('Pick a product to test against.')) + '</div>'; return; }
   var d = Object.assign({}, p.item_data || {}, { item_id: p.item_id || p.id });
@@ -1792,12 +1805,12 @@ function cbDefTestRun(){
   var missing = cbDefMissingValue(f.kind, f.sub, f.rules || {});
   var keep = (typeof UI !== 'undefined') ? UI.prodSel : undefined; try { if (typeof UI !== 'undefined') UI.prodSel = d.item_id; } catch (_) {}
   var html = '';
-  try { html = (typeof prodOfferCartHTML === 'function') ? prodOfferCartHTML(d, [offer], CBDEF_TEST.qty, 'cbdef-test-total') : ''; } catch (e) { html = ''; }
+  try { html = (typeof prodOfferCartHTML === 'function') ? prodOfferCartHTML(d, [offer], CBDEF_TEST.qty, 'cbdef-test-total', { customer_groups: _groups }) : ''; } catch (e) { html = ''; }
   finally { try { if (typeof UI !== 'undefined') UI.prodSel = keep; } catch (_) {} }
   var why = '';
   try {
     var lines = [cbOfferLine(0, d, CBDEF_TEST.qty)];
-    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }, customer_groups: offer.customer_group ? [offer.customer_group] : [] });   /* the bench stands in that customer's shoes */
+    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }, customer_groups: _groups });
     var per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
     var skipped = (ev && ev.skipped) || [];
     if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {

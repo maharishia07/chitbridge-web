@@ -9514,14 +9514,14 @@ function prodOfferPreviewHTML(d){
     + '</div>';
 }
 /** One basket, at one quantity, exactly as the cart builds and prices it. */
-function prodOfferCartHTML(d, offers, qty, totalTestid){
+function prodOfferCartHTML(d, offers, qty, totalTestid, opts){   /* opts.customer_groups: evaluate as that customer (the offer editor's bench) */
   const pid = UI.prodSel || d.item_id || d.id || '';
   /* ⚠️ cbOfferLine, the SAME builder the cart and the send use. The send path carried a different line shape for
      months and every targeted offer silently evaluated against an anonymous row. */
   const lines = [cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   let ev;
-  try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money }); }
+  try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money, customer_groups: (opts && Array.isArray(opts.customer_groups)) ? opts.customer_groups : [] }); }
   catch(e){ return ''; }   /* the offers are a view of the product; a failing engine must not take the tab down */
   const per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
   const gross = Math.round(qty * ((cbAmount(d.price) || 0)) * 100) / 100;
