@@ -564,7 +564,11 @@ function render(data){
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
   _METHOD=_OI.preset||'cart';
   var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
-  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.user_id||s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
+  /* ⭐ MEASURED, beside the DECLARED: the shop's books (its connector) have not checked in for a while — say so, so nobody expects an
+     immediate confirmation. The owner's Open stays Open; this is a fact about the machine, not about the shop. */
+  var booksNote = (s.connector && s.connector.silent_minutes != null && s.connector.silent_minutes >= 20)
+    ? '<div class="meta" data-testid="shop-books-offline" style="margin-top:4px;color:#8a5a1e">⏳ The shop\'s books are offline (' + (s.connector.silent_minutes < 120 ? s.connector.silent_minutes + ' min' : Math.round(s.connector.silent_minutes/60) + ' h') + ') — your order is kept and confirmed when they are back.</div>' : '';
+  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.user_id||s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div>'+booksNote+'</div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
   var finishes=(data.finishes||[]);
   var finHtml=''; _FIN=[];
   finishes.forEach(function(f){
