@@ -1844,17 +1844,20 @@
       }
     } catch (e) { stockChip = ''; }
 
-    return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
+    return '<div class="cbcat-row cbgrid' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
       + ' data-testid="cbcat-row-' + esc(id) + '">'
-      + media
+      + (media || '<span class="cbcat-thumb" aria-hidden="true"></span>')   /* the grid needs every cell, image or not */
       + '<span class="cbcat-meat"><span class="cbcat-nm">' + esc(name) + '</span>'
       + '<span class="cbcat-sub">' + esc(d.unit || '')
-      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '')
+      + (hint ? (d.unit ? ' · ' : '') + '<span class="cbcat-hint">' + esc(hint) + '</span>' : '') + '</span>'
       /* ⭐ THE HOST'S OWN LINE UNDER THE ROW (2026-09-05, the storefront joining this renderer): the stock stamp, the media
          gallery — whatever a surface adds that the row itself does not know. Rendered from the item, never trusted to
          change the price. */
       + (function () { try { var x = (opts && opts.rowExtra) || (cart.__cbcatOpts && cart.__cbcatOpts.rowExtra); return (typeof x === 'function') ? (x(r.item, r) || '') : ''; } catch (e) { return ''; } })()
       + '</span>'
+      /* ⭐ THE TAGS COLUMN (Athi, 2026-09-06: "split into a few columns so the values stay in the right places across each item"): the offer
+         badge and the stock stamp line up under each other in every row, never under one name and beside another */
+      + '<span class="cbcat-tags">' + (offBadge ? '<span class="cbcat-offs">' + offBadge + '</span>' : '') + (stockChip ? '<span class="cbcat-offs">' + stockChip + '</span>' : '') + '</span>'
       + '<span class="cbcat-pr">' + price + taxChip + lineTotal + '</span>'
       + '<span class="cbcat-ctl">' + ctlHTML(cart, r) + '</span>'
       + '</div>';
@@ -2458,6 +2461,13 @@
 
       /* ⭐ content-visibility: the list is 3,008px tall today and most of it is never looked at. This skips
          layout and paint for off-screen rows; contain-intrinsic-size keeps the scrollbar honest. */
+      /* ⭐ ONE GRID FOR EVERY ROW — thumb · identity · tags · price · control. Fixed columns are what let a price, a badge and a stock
+         stamp sit in the same place on every line (Athi, 2026-09-06: "an excellent presentation… the values stay in the right places"). */
+      ':where(:root){--cbrow-cols:52px minmax(0,1fr) auto 150px 104px}',
+      '.cbcat-row.cbgrid{display:grid;grid-template-columns:var(--cbrow-cols);column-gap:10px}',
+      '.cbcat-tags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-content:center;max-width:240px}',
+      '.cbcat-tags .cbcat-offs{margin-inline-start:0}',
+      '@media(max-width:520px){:where(:root){--cbrow-cols:44px minmax(0,1fr) auto}.cbcat-row.cbgrid .cbcat-tags{grid-column:2/-1;justify-content:flex-start}.cbcat-row.cbgrid .cbcat-ctl{grid-column:3}.cbcat-thumb{width:44px;height:44px}}',
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',

@@ -1093,6 +1093,18 @@
    */
   .rows{flex:1;overflow-y:auto;overflow-x:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
+  /* ⭐ THE PRODUCT LIST ON ONE GRID (thumb · identity · tags · price · chevron) — the same discipline as the cart row (cart.js .cbgrid):
+     every price, badge and stock stamp in the same column on every line. Athi, 2026-09-06: "an excellent presentation". */
+  .row.prow{display:grid;grid-template-columns:44px minmax(0,1fr) auto 168px 22px;column-gap:10px;align-items:center}
+  .row.prow .main2{min-width:0}
+  .row.prow .ptags{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:240px}
+  .row.prow .ptags:empty{display:none}
+  .row.prow .pamt{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .row.prow .pamt .amt{margin-inline-start:0;font-size:var(--fs-3)}
+  .row.prow .pamt .cbcat-tax{display:block}
+  .row.prow .pthumb{width:44px;height:44px;flex:none}
+  .row.prow .rowgo{display:flex;align-items:center;color:var(--grey);font-size:22px;line-height:1}
+  @media(max-width:520px){.row.prow{grid-template-columns:44px minmax(0,1fr) auto}.row.prow .ptags{grid-column:2/-1;justify-content:flex-start}.row.prow .rowgo{display:none}}
   /**
    * ⚠️⚠️ A SURFACE THAT SETS NO TEXT COLOUR AT ALL — the seventh way the pairing rule gets broken, and the only
    * one with nothing wrong to find. These three rules changed the BACKGROUND under a row and said nothing about
@@ -8670,7 +8682,7 @@ function prodDealsHTML(d, id){
   x.offers.forEach(function(o){ bits.push('<span class="optchip" data-testid="cat-row-offer" style="background:var(--accent-tint, var(--paper));border-color:var(--accent)" title="'+esc(o.name)+'">🏷️ '+esc(o.promise)+'</span>'); });
   if(x.tax){ bits.push(x.tax.rate===null
     ? '<span class="optchip" data-testid="cat-row-tax" style="color:var(--warn-3)">⚠️ '+esc(tx('slab not active'))+'</span>'
-    : '<span class="optchip" data-testid="cat-row-tax" title="'+esc(x.tax.name+' · '+x.tax.source)+'">'+esc(tx('GST'))+' '+esc(String(x.tax.rate))+'%'+(x.tax.dead?' ⚠️':'')+'</span>'); }
+    : (x.tax.dead ? '<span class="optchip" data-testid="cat-row-tax" title="'+esc(x.tax.name+' · '+x.tax.source)+'">'+esc(tx('GST'))+' '+esc(String(x.tax.rate))+'% ⚠️</span>' : '')); }   /* the rate itself is on the price cell ("+5% GST · ₹189 incl.") */
   return bits.join(' ');
 }
 function prodDealsText(d, id){
@@ -8718,12 +8730,14 @@ function prodRowHTML(p, ctx){ const d=pData(p), id=prodId(p);
   const thumb=`<div class="pthumb" aria-hidden="true">${img?`<img src="${esc(img)}" alt="">`:esc(String(pName(d)||'?').trim().charAt(0).toUpperCase())}</div>`;
   const lbl=(k,v)=>`<span><b>${k}</b>${v}</span>`;
   const more=[pDesc(d)?lbl(tx('About'),esc(pDesc(d))):'', d.highlight?lbl(tx('Highlight'),esc(d.highlight)):'', syn?lbl(tx('Synonyms'),String((d.synonyms||[]).length)):''].filter(Boolean);
-  return `<div class="row ${(!ctx&&id===UI.prodSel)?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}" style="${st!=='available'?'opacity:.7':''}">
+  return `<div class="row prow ${(!ctx&&id===UI.prodSel)?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${ctx?(ctx.onToggle?ctx.onToggle(id):''):(picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`)}" style="${st!=='available'?'opacity:.7':''}">
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:thumb}
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}<span class="amt" style="margin-inline-start:auto">${(()=>{ /* ⭐ THE CART'S PRICE COLUMN, here too (CBCatUI.priceHTML → priceBits): struck list · offered · "+5% GST · ₹189.00 incl." — Athi, 2026-09-06: "exactly the same" */ try { const x=prodDeals(d,id); const offs=offersForProduct(d,id).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) })); if(typeof CBCatUI!=='undefined'&&CBCatUI.priceHTML) return CBCatUI.priceHTML(Object.assign({}, d, { price:pPrice(d) }), { id, offers:offs, tax:x.tax, money:inr }); } catch(_){} return `<bdi>${inr(pPrice(d))}</bdi>`; })()} <span class="per">/ <bdi>${esc(pUnit(d))}</bdi></span></span></div>
-    <div class="l2 lbl">${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
-    ${catChips?`<div class="l3cat">${catChips}</div>`:''}${(()=>{ const dl=prodDealsHTML(d,id); return dl?`<div class="l3cat" data-testid="cat-row-deals">${dl}</div>`:''; })()}
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span>${stChip}</div>
+    <div class="l2 lbl">${pUnit(d)?lbl(tx('Unit'),esc(pUnit(d))):''}${lbl(tx('Qty'),`<span style="color:${!a?'var(--grey)':(a.qty===0?'var(--warn-2)':'var(--ok-2)')};font-weight:700">${a?esc(String(a.qty)):'—'}</span>`)}${asOf?lbl(tx('as of'),esc(asOf)):''}${pCode(d)?lbl(tx('Code'),'<span class="mono">'+esc(pCode(d))+'</span>'):''}${more.length?`<span class="pmore-t" data-testid="cat-row-more" onclick="event.stopPropagation();this.closest('.row').classList.toggle('open')">${tx('more')}</span>`:''}</div>
+    ${catChips?`<div class="l3cat">${catChips}</div>`:''}
     ${more.length?`<div class="l2 lbl pmore">${more.join('')}</div>`:''}</div>
+  <div class="ptags" data-testid="cat-row-deals">${prodDealsHTML(d,id)}</div>
+  <div class="pamt"><span class="amt">${(()=>{ /* ⭐ THE CART'S PRICE COLUMN, here too (CBCatUI.priceHTML → priceBits): struck list · offered · "+5% GST · ₹189.00 incl." — Athi, 2026-09-06: "exactly the same" */ try { const x=prodDeals(d,id); const offs=offersForProduct(d,id).map(o=>Object.assign({}, o.rules||{}, { id:o.definition_id||o.id, label:o.name, kind:o.sub_kind||(o.rules&&o.rules.kind) })); if(typeof CBCatUI!=='undefined'&&CBCatUI.priceHTML) return CBCatUI.priceHTML(Object.assign({}, d, { price:pPrice(d) }), { id, offers:offs, tax:x.tax, money:inr }); } catch(_){} return `<bdi>${inr(pPrice(d))}</bdi>`; })()}</span></div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
    (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
