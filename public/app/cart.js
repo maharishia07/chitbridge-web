@@ -280,6 +280,27 @@
    * describe the order and stay on the money block. The answer is memoised per paint (touched() drops it).
    *   dealOf(ns, r, base) → { unit, off, label } | null
    */
+  /** dealCalc(d, item_id, base, q, offers, ctx) → { unit, off, label } | null — the engine's answer for ONE line; pure, no cart state.
+   *  CBCart.dealFor(item_data, offers, { qty, price, currency, money }) exposes it: the seller's OWN catalogue list prints the same
+   *  struck-list / offered pair as every cart row (Athi, 2026-09-06: "prominent in both catalogue and the cart"). */
+  function dealCalc(d, item_id, base, q, offers, ctx) {
+    if (!offers || !offers.length || !root.CBOffers || !root.CBOffers.evaluate || !root.CBOffers.perLine) return null;
+    if (!isFinite(base) || base <= 0) return null;
+    d = d || {}; q = Number(q) || 1;
+    try {
+      var line = { key: String(item_id), item_id: item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [],
+                   excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
+      var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: ctx || { now: new Date(), currency: 'INR' } });
+      var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(item_id)];
+      if (p && p.off > 0) return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer' };
+    } catch (e) {}
+    return null;
+  }
+  function dealFor(d, offers, o) {
+    o = o || {}; d = d || {};
+    var base = (o.price != null) ? Number(o.price) : (function (v) { return (v && typeof v === 'object') ? Number(v.amount) : Number(v); })(d.price);
+    return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || 'INR', money: o.money || function (n) { return String(n); } });
+  }
   function dealOf(ns, r, base) {
     var s = C[ns]; if (!s || !r || r.type !== 'line') return null;
     var offers = (s.cat && Array.isArray(s.cat.offers)) ? s.cat.offers : [];
@@ -287,14 +308,7 @@
     if (!isFinite(base) || base <= 0) return null;
     var d = dataOf(r), q = Number(s.sel[r.item_id]) || 1, key = String(r.item_id) + '@' + q + '@' + base;
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
-    var out = null;
-    try {
-      var line = { key: String(r.item_id), item_id: r.item_id, sku: d.sku || d.code || null, categories: d.category_ids || d.categories || [],
-                   excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [], qty: q, unitPrice: base };
-      var ev = root.CBOffers.evaluate({ lines: [line], offers: offers, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } } });
-      var per = root.CBOffers.perLine(ev, [line]) || {}, p = per[String(r.item_id)];
-      if (p && p.off > 0) out = { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer' };
-    } catch (e) { out = null; }
+    var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', money: function (n) { return fmt(ns, n); } });
     s.deals[key] = out; return out;
   }
   function unitPrice(ns, r) {
@@ -1450,7 +1464,7 @@
   }
 
   root.CBCart = {
-    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP,
+    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP, dealFor: dealFor,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
@@ -1673,6 +1687,33 @@
   }
 
   /* ── one row ─────────────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * ⭐⭐ THE PRICE COLUMN, ONE FUNCTION. Athi, 2026-09-06: "even in the catalogue the original price has to strike out, the discounted
+   * price where the price is, the original BEFORE the discounted, struck; below the price, inclusive of tax like the cart — it has
+   * to be exactly the same." The cart row and the seller's own Catalogue list both call this; nothing else prints a price.
+   *   priceBits({ id, list, amount, deal, tax, money }) → { price, taxChip }
+   */
+  function priceBits(o) {
+    var m = o.money, price, taxChip = '';
+    if (o.deal && isFinite(o.list)) price = '<s class="cbcat-was" data-testid="cbcat-was-' + esc(o.id) + '" title="' + esc('list price') + '">' + esc(m(o.list)) + '</s> <b class="cbcat-offered" data-testid="cbcat-deal-' + esc(o.id) + '">' + esc(m(o.amount)) + '</b>';
+    else price = isFinite(o.amount) ? esc(m(o.amount)) : '<span class="cbcat-noprice">no price</span>';
+    try {
+      var t = o.tax;
+      if (t && t.rate != null && isFinite(o.amount)) {
+        var rate = Number(t.rate) + (Number(t.cess) || 0), incl = Math.round(o.amount * (1 + rate / 100) * 100) / 100;
+        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
+      }
+    } catch (e) { taxChip = ''; }
+    return { price: price, taxChip: taxChip };
+  }
+  /** the same column for an item OUTSIDE a cart (the seller's Catalogue list): priceHTML(item_data, { id, offers, tax, money, currency }) */
+  function priceHTML(d, o) {
+    o = o || {}; d = d || {};
+    var list = (d.price && typeof d.price === 'object') ? Number(d.price.amount) : Number(d.price);
+    var deal = (root.CBCart && root.CBCart.dealFor) ? root.CBCart.dealFor(d, o.offers || [], { price: list, currency: o.currency, money: o.money, item_id: o.id }) : null;
+    var b = priceBits({ id: o.id || d.item_id || 'x', list: list, amount: deal ? deal.unit : list, deal: deal, tax: o.tax || d.tax || null, money: o.money || String });
+    return '<span class="cbcat-pr">' + b.price + b.taxChip + '</span>';
+  }
   function rowHTML(cart, r, opts) {
     var d = dataOf(r), id = r.item_id, q = cart.qtyOf(id);
     /**
@@ -1741,12 +1782,12 @@
         + ' data-testid="cbcat-offer-' + esc(id) + '"'
         + ' onchange="CBCart.setOffer(\'' + esc(cart.ns) + '\',\'' + esc(id) + '\',this.value)">'
       : '';
+    var _pb = priceBits({ id: id, list: u.asking, amount: u.amount, deal: u.deal, tax: (r.item && r.item.tax) || (d && d.tax) || null, money: function (n) { return money(cart.ns, n); } });
     var price = u.offered
       /* an offered price on a row that is NOT a name-your-price model (a line-scope discount the storefront sets) shows the
          struck asking price AND the offered amount — without this the amount vanished behind the strike (2026-09-05) */
       ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + (offerInput || (isFinite(u.amount) ? ' <b class="cbcat-offered">' + esc(money(cart.ns, u.amount)) + '</b>' : ''))
-      : u.deal ? (offerInput || '<b class="cbcat-offered" data-testid="cbcat-deal-' + esc(id) + '">' + esc(money(cart.ns, u.amount)) + '</b>')
-      : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
+      : (offerInput || _pb.price);
     /* The line total, ONLY once there is a quantity to MULTIPLY by — `q > 1`, not `q`. At quantity 1 it prints
        the same number twice under itself, which is exactly the noise the rule was written to avoid; I had the
        comment right and the condition wrong, and it showed as ₹65 over ₹65 on screen. */
@@ -1783,19 +1824,12 @@
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
     /* the list price, struck, beside the name — where the eye reads "was"; the price column holds only the price they pay */
-    if (u.deal && isFinite(u.asking)) offBadge = '<s class="cbcat-was" data-testid="cbcat-was-' + esc(id) + '" title="' + esc('list price') + '">' + esc(money(cart.ns, u.asking)) + '</s>' + offBadge;
+    /* (the struck list price sits in the PRICE column, before the offered price — Athi, 2026-09-06: "the original price has to be before the discounted price, struck out") */
 
     /* ⭐ THE TAX A BUYER WILL PAY, on the row (Athi, 2026-09-05: "not showing the GST values here"). The item carries the
        rate the seller's shelf resolves for it (catalogue-view attaches it — the same resolver as the order and the
        invoice), so the row says "+5% GST · ₹210 incl." beside the listed price. No rate → nothing extra, as before. */
-    var taxChip = '';
-    try {
-      var _tx = (r.item && r.item.tax) || (d && d.tax) || null;
-      if (_tx && _tx.rate != null && isFinite(u.amount)) {
-        var _rate = Number(_tx.rate) + (Number(_tx.cess) || 0), _incl = Math.round(u.amount * (1 + _rate / 100) * 100) / 100;
-        taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(id) + '" title="' + esc(_tx.name || 'GST') + '" style="display:block;font-size:11px;color:#5D636A;white-space:nowrap">+' + esc(String(Number(_tx.rate))) + '% ' + esc(_tx.name && !/^\d/.test(_tx.name) ? 'GST' : 'GST') + (Number(_tx.cess) ? ' +' + esc(String(Number(_tx.cess))) + '% cess' : '') + ' · ' + esc(money(cart.ns, _incl)) + ' incl.</span>';
-      }
-    } catch (e) { taxChip = ''; }
+    var taxChip = _pb.taxChip;   /* priceBits — the one price column */
     /* ⭐ THE STOCK STAMP, on every surface (Athi, 2026-09-05: "offer, availability not appearing" on the Suppliers screen — the
        storefront alone drew it). The connector stamps item_data.avail { qty, as_of, source }; the row says the figure WITH its
        age, never bare; older than four hours reads faded. `shop-stock` stays the published hook the specs assert on. */
@@ -2551,7 +2585,8 @@
     (document.head || document.documentElement).appendChild(s);
   }
 
-  root.CBCatUI = {
+  root.CBCatUI = {
+    priceHTML: priceHTML,
     /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
     listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,

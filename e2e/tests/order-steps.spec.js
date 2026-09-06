@@ -301,8 +301,15 @@ test.describe('Order step flow', () => {
     let p2 = -1;
     await expect.poll(async () => { const n = await page.locator('#sup_body *').count(); const same = n === p2; p2 = n; return same; },
       { timeout: 20000, intervals: [400, 400, 400] }).toBe(true);
-    await page.getByTestId('cart-add').first().click();
-    await expect(page.locator('[data-testid^="cart-count-"]').first()).toBeVisible();
+    /* the + INSIDE the supplier pane (not the first + on the page), and when the count does not follow, say which cart the row
+       spoke to and which one the screen holds — this step flaked in runs 1, 2 and 5 of 2026-09-05/06 with no such sentence */
+    await page.locator('#sup_body [data-testid="cart-add"]').first().click();
+    await expect.poll(async () => (await page.locator('[data-testid^="cart-count-"]').count()) > 0 ? '' : await page.evaluate(() => {
+      const b = document.querySelector('#sup_body [data-testid="cart-add"]'); const on = b ? (b.getAttribute('onclick') || '') : '(no +)';
+      const held = (window.UI && UI._supCart && UI._supCart.ns) || '(no handle)'; const rowNs = (on.match(/cbcart-d+/) || ['?'])[0];
+      const live = window.CBCart && CBCart.state ? !!CBCart.state(rowNs) : null;
+      return 'row → ' + rowNs + ' · screen holds ' + held + ' · row cart alive: ' + live + ' · bar: ' + ((document.getElementById('cbcartbar_sup') || {}).innerText || '').trim();
+    }), { timeout: 8000, message: 'the count never appeared' }).toBe('');
 
     const bar = (await page.locator('#cbcartbar_sup').innerText()).replace(/\s+/g, ' ');
     expect(bar, 'the cart bar showed a bare number').toMatch(/[^\d\s.,]\s?[\d]/);

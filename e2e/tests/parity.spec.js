@@ -69,8 +69,9 @@ test('[PAR-01] the storefront and the Suppliers screen show the same price, tax 
   } finally { await buyer.context.close(); }
 
   /* ONE ANSWER */
-  expect(shopTax, 'tax line on the storefront').toMatch(/5%.*210/);
-  expect(supTax, 'tax line on the Suppliers screen').toMatch(/5%.*210/);
+  /* the incl. figure rides the OFFERED price (the deal is the price — 2026-09-06): 200 − 10% = 180, + 5% = 189 */
+  expect(shopTax, 'tax line on the storefront').toMatch(/5%.*189/);
+  expect(supTax, 'tax line on the Suppliers screen').toMatch(/5%.*189/);
   expect(shopTax.replace(/\s+/g, ' ')).toBe(supTax.replace(/\s+/g, ' '));
   expect(shopOffer, 'offer promise on the storefront').toMatch(/10%/);
   expect(shopOffer).toBe(supOffer);
