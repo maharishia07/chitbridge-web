@@ -7,6 +7,7 @@
 // Run (on screen):  NODE_OPTIONS=--max-old-space-size=4096 TOUR=1 TOUR_HEADED=1 TOUR_PAUSE=8000 npx playwright test tests/tour-two.spec.js --headed --project=authed
 // Headless proof:   TOUR=1 npx playwright test tests/tour-two.spec.js --project=authed
 const { test, expect } = require('@playwright/test');
+const { shopCheckout } = require('../flows/storefront');
 const { mintEntity, addProduct, clickNav, settle, openTab, shopAdd } = require('../fixtures');
 
 const PAUSE = Number(process.env.TOUR_PAUSE || 8000);
@@ -90,35 +91,8 @@ test('the two-party tour: a buyer orders, the seller rings, the invoice carries 
     'Checkout › contact › Send code › 123456 › Place order', 'Order placed');
   /* the seller's window listens at the one seam the client owns — the arrival is asserted, not assumed */
   await seller.evaluate(() => { window.__cbArrived = []; const orig = window.cbPushArrived; window.cbPushArrived = function (d) { window.__cbArrived.push(d); return orig(d); }; });
-  /* the compact bar ("🛒 6 ✕") opens into the cart, where Checkout lives */
-  if (!(await buyer.getByTestId('cart-checkout').isVisible().catch(() => false))) { await buyer.locator('[data-testid^="cart-cbcart"]').first().click(); }
-  await buyer.getByTestId('cart-checkout').click({ timeout: 20000 });
-  /* the checkout is a four-step sheet — Items → Delivery → Review → Who you are; "Next" carries it to the contact step */
-  for (let i = 0; i < 5 && !(await buyer.getByTestId('shop-contact').isVisible().catch(() => false)); i++) {
-    /* Delivery asks where and when before it lets you on */
-    if (await buyer.getByTestId('shop-area').isVisible().catch(() => false)) {
-      await buyer.getByTestId('shop-area').fill('Perumbakkam, Chennai 600126');
-      const d = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10);
-      const dt = buyer.getByTestId('shop-date'); if (await dt.isVisible().catch(() => false)) { await dt.fill(d).catch(async () => { await dt.type(d); }); }
-      const tm = buyer.getByTestId('shop-time'); if (await tm.isVisible().catch(() => false)) {
-        const tag = await tm.evaluate((el) => el.tagName + ':' + (el.type || ''));
-        if (/SELECT/.test(tag)) await tm.selectOption({ index: 1 }).catch(() => {}); else await tm.fill(/time/.test(tag) ? '10:00' : 'morning').catch(() => {});
-      }
-    }
-    const next = buyer.getByRole('button', { name: /Next|Continue/i }).first();   /* Review says "Continue →" */
-    if (await next.isVisible().catch(() => false)) { await next.click({ timeout: 10000 }); await buyer.waitForTimeout(400); } else break;
-  }
-  /* Who you are: a name and a contact; ONE button carries both halves — "Send me a code", then "Place order" */
-  const nameBox = buyer.getByTestId('shop-name'); if (await nameBox.isVisible().catch(() => false)) await nameBox.fill('Priya (buyer)');
-  await buyer.getByTestId('shop-contact').fill('buyer' + Date.now().toString().slice(-6) + '@example.com');
-  const submit = buyer.locator('[data-testid="shop-cart-submit"], [data-testid="shop-send-code"]').first();
-  const started = buyer.waitForResponse((r) => /\/order\/start$/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 });
-  await submit.click({ timeout: 20000 }); const sr = await started;
-  const sj = await sr.json().catch(() => ({})); const otp = sj.dev_otp || DEV_OTP;
-  const otpBox = buyer.locator('[data-testid="shop-otp"], #o_otp, input[inputmode="numeric"]').first();
-  await otpBox.waitFor({ timeout: 20000 }); await otpBox.fill(otp);
-  const confirmed = buyer.waitForResponse((r) => /\/order\/confirm$/.test(r.url()) && r.request().method() === 'POST', { timeout: 45000 });
-  await buyer.locator('[data-testid="shop-cart-submit"], [data-testid="shop-place-order"]').first().click({ timeout: 20000 }); const cr = await confirmed;
+  /* the checkout is ONE driver (e2e/flows/storefront.js) — the same steps [SHOP-01] takes */
+  const cr = await shopCheckout(buyer, { name: 'Priya (buyer)', contact: 'buyer' + Date.now().toString().slice(-6) + '@example.com' });
   const cj = await cr.json().catch(() => ({}));
   expect(cr.status(), JSON.stringify(cj).slice(0, 200)).toBeLessThan(400);
   await ok(buyer, (cj.message || 'placed') + ' · chit ' + String(cj.chit_id || '').slice(0, 8));
