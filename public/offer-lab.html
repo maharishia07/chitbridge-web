@@ -199,6 +199,7 @@ function labRepaint(rebuild) {
   var cat = catFor(v('viewer'));
   if (!CART || rebuild) {
     CART = CBCart.create(cat, { renderer: (typeof CBCatUI !== 'undefined') ? CBCatUI : undefined, listEl: 'p_list', barEl: 'p_cart', currency: 'INR', cartTitle: 'The basket', checkoutLabel: 'This is where Check out would be', emptyHint: 'Press + on a product', onChange: function () { paintWhy(); } });
+    try { CART.paint(); } catch (_) {}   /* the list is painted on the first paint() — nothing else asks for it on this page */
   } else {
     /* the same cart, new terms: the offers and the viewer change in place, the memoised figure is dropped, the cart repaints — exactly what the Suppliers screen does when offers arrive */
     var st = CART.state(); st.cat.offers = cat.offers; st.cat.shop.viewer_groups = cat.shop.viewer_groups; st.deals = null; st._M = null; CART.paint();
