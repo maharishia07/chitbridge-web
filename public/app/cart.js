@@ -319,7 +319,7 @@
     if (s.sel[r.item_id] > 0) {
       var M = compute(ns), p = M && M.rowOff ? M.rowOff[String(r.item_id)] : null;
       if (!p || !(p.off > 0)) return null;
-      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', line_off: p.line_off, cart_off: p.cart_off };
+      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', ids: p.ids || [], line_off: p.line_off, cart_off: p.cart_off };
     }
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
     var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
@@ -405,10 +405,12 @@
       var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0), p = M.per[String(l.key)] || {}, lineOff = Number(p.off) || 0;
       /* DECISION 3 (Athi, 2026-09-06 20:0x, "industry standard"): the row shows its OWN line offers; a basket-level offer lives in the money block */
       var cartShare = 0;
-      var labels = adj.filter(function (a) { return a.scope === 'line' && String(a.target) === String(l.key) && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; })
-        .concat(cartShare > 0 ? cartAdj.map(function (a) { return a.label || a.kind; }) : []);
+      var mine = adj.filter(function (a) { return a.scope === 'line' && String(a.target) === String(l.key) && Math.abs(Number(a.amount) || 0) > 0; })
+        .concat(cartShare > 0 ? cartAdj : []);
+      var labels = mine.map(function (a) { return a.label || a.kind; });
       var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
-      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: Math.round((lineOff + cartShare) * 100) / 100, line_off: lineOff, cart_off: cartShare, label: uniq.join(' + ') };
+      var ids = mine.map(function (a) { return a.offer_id; }).filter(function (x, i, arr) { return x != null && arr.indexOf(x) === i; });
+      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: Math.round((lineOff + cartShare) * 100) / 100, line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
     });
     s._M = { key: key, M: M }; return M;
   }
@@ -1961,7 +1963,9 @@
           /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
           { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
           _offs, { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } });
-        var _ctx = { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } };
+        var _ctx = { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); },
+          /* the row itself: a quantity break prices per line, so its sentence differs product by product */
+          line: { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.base != null ? u.base : u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] } };
         var _srcOf = function (lb) { return _offs.filter(function (o) { return (o.label || '') === lb; })[0] || null; };
         var _text = function (src, lb) { var pr = null; try { pr = (src && root.CBOffers.promise) ? root.CBOffers.promise(src, _ctx) : null; } catch (e) { pr = null; }
           if (!src) return esc(lb); return (src.customer_group ? esc(lb) + (pr ? ' · ' + esc(pr) : '') : esc(pr || lb)); };
@@ -1969,7 +1973,10 @@
            A row with a deal (in the basket: compute → M.rowOff; not yet: the single-row preview) names the offers IN that deal — an exclusive
            that fired is the only name. forLine's "what could apply" is for a row no offer has priced (a threshold not yet met, say). */
         if (u.deal && u.deal.label && !u.deal.recorded) {
-          offBadge = String(u.deal.label).split(' + ').map(function (lb) { var src = _srcOf(lb); return '<span class="cbcat-off"' + (src && src.scope === 'cart' ? ' data-testid="cbcat-off-cart"' : '') + ' title="' + esc(lb) + '">' + _text(src, lb) + '</span>'; }).join('');
+          var _byId = (u.deal.ids && u.deal.ids.length) ? u.deal.ids.map(function (oid) { return _offs.filter(function (o) { return String(o.id) === String(oid); })[0] || null; }) : null;
+          var _list = _byId || String(u.deal.label).split(' + ').map(function (lb) { return _srcOf(lb); });
+          offBadge = _list.map(function (src, i) { var lb = (src && src.label) || String(u.deal.label).split(' + ')[i] || 'offer';
+            return '<span class="cbcat-off"' + (src && src.scope === 'cart' ? ' data-testid="cbcat-off-cart"' : '') + ' title="' + esc(lb) + '">' + _text(src, lb) + '</span>'; }).join('');
         } else {
           offBadge = _p.slice(0, 3).map(function (x) { var src = _offs.filter(function (o) { return String(o.id) === String(x.offer_id); })[0]; return '<span class="cbcat-off" title="' + esc(x.label) + '">' + (src && src.customer_group ? esc(x.label) + ' · ' + esc(x.promise) : esc(x.promise)) + '</span>'; }).join('');
         }
