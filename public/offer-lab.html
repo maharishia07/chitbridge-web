@@ -65,6 +65,11 @@
   #p_list .lab-range.on{ border-color:var(--ok-2); background:var(--ok-tint); color:var(--ok-2); font-weight:700; }
   #p_list .lab-range.off{ opacity:.5; }
   #p_list .lab-range input[type=checkbox]{ width:13px; height:13px; margin:0 1px 0 0; }
+  #p_list .lab-rule-inline{ display:inline-flex; align-items:center; gap:3px; border:1px solid var(--line); border-radius:6px; padding:1px 5px; background:var(--card); }
+  #p_list .lab-rule-inline.off{ opacity:.5; }
+  #p_list .lab-rule-inline input[type=checkbox]{ width:13px; height:13px; margin:0 1px 0 0; }
+  #p_list .lab-rule-inline input[type=number]{ height:22px; padding:1px 4px; font-size:var(--fs-1); text-align:right; }
+  #p_list .lab-rule-inline select{ height:22px; padding:0 2px; font-size:var(--fs-1); max-width:110px; }
   #p_list .lab-range .lab-to{ color:var(--grey-2); }
   #p_list .lab-tier{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; font-size:var(--fs-1); color:var(--grey-2); padding:5px 10px 7px 122px; border-bottom:1px dashed var(--line); background:var(--paper); }
   #p_list .lab-tier b{ color:var(--ink); }
@@ -202,7 +207,7 @@ function valueCell(k) {
     case 'amt': return '<label>₹ ' + num('amt-v', 10) + ' off</label><label>on ' + scope('amt') + '</label>';
     case 'tier': return '<span class="hint">set under each product on the right: the ranges and the percentage off per range</span>';
     case 'thr': return '<span class="hint">set at cart level on the right — the limit, the reward, and how far the basket is from it</span>';
-    case 'bxgy': return '<label>buy ' + num('bxgy-x', 2, 44) + ' get ' + num('bxgy-y', 1, 44) + '</label><label>at ' + num('bxgy-pct', 100, 52) + ' % off</label><label>free one: <select id="bxgy-item" onchange="labRepaint()"><option value="">the same (cheapest)</option>' + prodOptions() + '</select></label>';
+    case 'bxgy': return '<span class="hint">set under each product on the right: buy how many, what comes free, and at what discount</span>';
     case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ ' + num('bundle-p', 400) + '</label><span class="hint">parked — how a real combination is picked is still open</span>';
     case 'ship': return '<span class="hint">set at cart level on the right — what delivery costs and from which order value it is free</span>';
     case 'band': return '<label>₹ ' + num('band-min', 50) + ' – ₹ ' + num('band-max', 220) + '</label>';
@@ -229,9 +234,24 @@ var APPLY = null;   /* null = everything; else a Set of item ids */
 var MINQ = {};      /* item id → the minimum order size for the offer on that product (the box on the row) */
 var TIERS = {};     /* item id → the product's own quantity slabs (the second line under the row) */
 /* the rules that judge the whole order — set beside the basket, in the At cart level panel */
+var BXGY = {};      /* item id → { on, x, y, pct, item } — buy X of THIS product, get Y (of it, or of another) */
+function bxgyOf(id) { if (!BXGY[id]) BXGY[id] = { on: true, x: 2, y: 1, pct: 100, item: '' }; return BXGY[id]; }
+function labBxgySet(id, k, val) { var b = bxgyOf(id); b[k] = (k === 'item') ? String(val) : (k === 'on' ? !!val : Math.max(0, Number(val) || 0)); labRepaint(); }
 var CART_RULES = { thrMin: 500, thrPct: 10, thrItem: '', thrQty: 1, shipCharge: 60, shipMode: 'free', shipV: 20, shipMin: 500 };
 function labRule(k, val) { CART_RULES[k] = (k === 'thrItem' || k === 'shipMode') ? String(val) : Math.max(0, Number(val) || 0); labRepaint(); }
 function tiersOf(id) { if (!TIERS[id]) TIERS[id] = [{ on: true, qty: 5, percent: 5 }, { on: false, qty: 10, percent: 10 }, { on: false, qty: 25, percent: 15 }]; return TIERS[id]; }
+function bxgyLineHTML(id) {
+  if (!on('bxgy') || !labApplies(id)) return '';
+  var b = bxgyOf(id), nm = b.item ? itemName(b.item) : 'the same product';
+  var box = function (k, w) { return '<input type="number" min="0" step="1" value="' + b[k] + '" data-testid="lab-bxgy-' + esc(id) + '-' + k + '" style="width:' + w + 'px" onclick="event.stopPropagation()" onchange="event.stopPropagation();labBxgySet(\'' + esc(id) + '\',\'' + k + '\',this.value)">'; };
+  return '<span class="lab-rule-inline' + (b.on === false ? ' off' : '') + '">'
+    + '<input type="checkbox"' + (b.on === false ? '' : ' checked') + ' data-testid="lab-bxgy-' + esc(id) + '-on" title="use buy X get Y for this product" onclick="event.stopPropagation()" onchange="event.stopPropagation();labBxgySet(\'' + esc(id) + '\',\'on\',this.checked)">'
+    + 'buy ' + box('x', 40) + ' get ' + box('y', 38) + ' × '
+    + '<select data-testid="lab-bxgy-' + esc(id) + '-item" onclick="event.stopPropagation()" onchange="event.stopPropagation();labBxgySet(\'' + esc(id) + '\',\'item\',this.value)"><option value="">' + esc('the same') + '</option>'
+    + PRODUCTS.map(function (p) { return '<option value="' + esc(p.item_id) + '"' + (b.item === p.item_id ? ' selected' : '') + '>' + esc(p.item_data.name) + '</option>'; }).join('') + '</select>'
+    + ' at ' + box('pct', 40) + '% off</span>';
+}
+function productRulesHTML(id) { var bits = [tierLineHTML(id), bxgyLineHTML(id)].filter(Boolean); return bits.join(''); }
 function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
   /* ⭐ THE QUANTITY BREAK IS A PRODUCT'S OWN (Athi, 2026-09-06 23:0x: "quantity break at product level — under the product, the ranges and the
@@ -274,7 +294,14 @@ function labOffers() {
     o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
   });
   if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + CART_RULES.thrMin, kind: 'threshold', min_amount: CART_RULES.thrMin }; if (CART_RULES.thrItem) { t.get_item_id = CART_RULES.thrItem; t.get_item_name = itemName(CART_RULES.thrItem); t.get_qty = CART_RULES.thrQty || 1; } else t.percent = CART_RULES.thrPct; out.push(withCommon('thr', t)); }
-  if (on('bxgy')) { var b = { id: 'bxgy', label: 'Buy ' + n('bxgy-x') + ' get ' + n('bxgy-y'), kind: 'buy_x_get_y', buy: n('bxgy-x'), get: n('bxgy-y'), get_percent: n('bxgy-pct') }; if (v('bxgy-item')) { b.get_item_id = v('bxgy-item'); b.get_item_name = itemName(v('bxgy-item')); } out.push(withCommon('bxgy', b)); }
+  if (on('bxgy')) PRODUCTS.forEach(function (p) {
+    if (!labApplies(p.item_id)) return;
+    var r = bxgyOf(p.item_id); if (r.on === false || !(r.x > 0) || !(r.y > 0)) return;
+    var b = withCommon('bxgy', { id: 'bxgy-' + p.item_id, label: 'Buy ' + r.x + ' get ' + r.y, kind: 'buy_x_get_y', buy: r.x, get: r.y, get_percent: r.pct });
+    if (r.item) { b.get_item_id = r.item; b.get_item_name = itemName(r.item); }
+    b.applies_to = Object.assign({}, b.applies_to || {}, { item_ids: [p.item_id] });
+    out.push(b);
+  });
   if (on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
   if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = CART_RULES.shipMode; if (m === 'free') s.free = true; else if (m === 'flat') s.flat = CART_RULES.shipV; else s.percent = CART_RULES.shipV; if (CART_RULES.shipMin > 0) s.min_amount = CART_RULES.shipMin; out.push(withCommon('ship', s)); }
   if (on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
@@ -307,7 +334,11 @@ function paintWhy() {
   try { var M = CART.moneyRows({ totalTestid: 'lab-total', taxTestid: 'lab-tax' }); money.innerHTML = (M && M.html) ? M.html : '<span class="note">' + fmtMoney(ev.total) + ' after offers (no tax on these lines)</span>'; } catch (_) { money.innerHTML = '<span class="note">' + fmtMoney(ev.total) + '</span>'; }
   why.innerHTML = (ev.adjustments.map(function (a) { return '<div class="ok">✓ ' + esc(a.label) + ' — ' + esc(a.why) + (a.scope === 'cart' ? ' <span class="chip">order total</span>' : '') + '</div>'; }).join('')
     + ev.notes.map(function (x) { return '<div class="note">💡 ' + esc(x.label) + ' — ' + esc(x.why) + '</div>'; }).join('')
-    + ev.skipped.map(function (x) { return '<div class="skip">✗ ' + esc(x.label || x.offer_id) + ' not applied — ' + esc(x.why) + '</div>'; }).join('')) || '<span class="note">No offer touches this basket.</span>';
+    + ev.skipped.filter(function (x) {
+        /* a per-product rule that simply is not about the products in the basket is not news (each product carries its own tier/buy-x-get-y offer) */
+        var perProduct = /^(tier|bxgy)-/.test(String(x.offer_id || ''));
+        return !(perProduct && /no line qualifies/.test(String(x.why || '')));
+      }).map(function (x) { return '<div class="skip">✗ ' + esc(x.label || x.offer_id) + ' not applied — ' + esc(x.why) + '</div>'; }).join('')) || '<span class="note">No offer touches this basket.</span>';
   var rows = R.lines.map(function (l) { var g = l.unitPrice * l.qty, own = (R.per[l.key] || {}).off || 0, share = ((ev.cart_shares || {})[l.key] || []).reduce(function (t, s) { return t + Math.abs(s.amount); }, 0), net = ev.line_net ? ev.line_net[l.key] : g - own - share, rate = l.tax && l.tax.rate != null ? Number(l.tax.rate) : null, tax = rate != null ? Math.round(net * rate) / 100 : 0;
     return '<tr><td>' + esc(itemName(l.item_id)) + ' × ' + l.qty + '</td><td>' + fmtMoney(g) + '</td><td>' + (own ? '−' + fmtMoney(own) : '—') + '</td><td>' + (share ? '−' + fmtMoney(share) : '—') + '</td><td><b>' + fmtMoney(net) + '</b></td><td>' + (rate != null ? rate + '% · ' + fmtMoney(tax) : '—') + '</td><td>' + fmtMoney(net + tax) + '</td></tr>'; }).join('');
   tbl.innerHTML = '<table class="lines"><thead><tr><th>line</th><th>list</th><th>own offers</th><th>basket share</th><th>net</th><th>tax</th><th>incl.</th></tr></thead><tbody>' + rows + '</tbody></table><div class="hint">The row shows the price after its OWN offers; a basket-level offer is a row of the money block and its share is inside the net for tax (decision 3, industry standard).</div>';
@@ -388,7 +419,7 @@ function injectApplies() {
      each product — under the product, or maybe in the second line"). Its own row after the product's row, so it has the full width. */
   document.querySelectorAll('#p_list .cbcat-row:not(.lab-head)').forEach(function (row) {
     var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id) return;
-    var html = tierLineHTML(id), next = row.nextElementSibling;
+    var html = productRulesHTML(id), next = row.nextElementSibling;
     var have = (next && next.classList && next.classList.contains('lab-tier')) ? next : null;
     if (!html) { if (have) have.remove(); return; }
     if (have) { if (have.dataset.sig !== html) { have.dataset.sig = html; have.innerHTML = html; } return; }
@@ -444,7 +475,7 @@ function labTry(what, a, b) {
   APPLY = null;
   if (what === 'markup') { setOn('markup', true); setV('mk-book', p.item_data.price); setV('mk-pct', a); }
   if (what === 'tier') { setOn('tier', true); var lp = Number(p.item_data.price) || 0; var pc = function (x) { return lp > 0 ? Math.max(1, Math.round((1 - x / lp) * 100)) : 5; }; TIERS[p.item_id] = [{ on: true, qty: 5, percent: pc(a) }, { on: true, qty: 10, percent: pc(b) }, { on: false, qty: 25, percent: Math.min(90, pc(b) + 5) }]; labApplyOnly(p.item_id); }
-  if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); labApplyOnly(p.item_id); }
+  if (what === 'bxgy') { setOn('bxgy', true); BXGY[p.item_id] = { on: true, x: Number(a) || 2, y: 1, pct: 100, item: b || '' }; labApplyOnly(p.item_id); }
   if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
   if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); labApplyOnly(p.item_id); }
   if (what === 'thr') { setOn('thr', true); CART_RULES.thrMin = a; if (b) { CART_RULES.thrItem = b; CART_RULES.thrQty = 1; } else { CART_RULES.thrItem = ''; CART_RULES.thrPct = 5; } }
