@@ -234,9 +234,10 @@ function tierLineHTML(id) {
   /* just the size and the percentage (Athi, 2026-09-06 23:3x: "we don't need to specify qty break again, just size, percentage — the result
      shows when you add the product with +"). The range the basket is in is lit; the row above says what it costs. */
   var range = function (i) {
+    /* each slab says only where it starts (Athi, 2026-09-06 23:4x: "just say 5+, the next 10+, the next 25+") — the engine takes the highest slab the quantity reaches */
     var to = t[i + 1] && t[i + 1].qty > 0 ? (Number(t[i + 1].qty) - 1) : null;
     var hit = q > 0 && Number(t[i].qty) > 0 && q >= Number(t[i].qty) && (to == null || q <= to);
-    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 40) + '<span class="lab-to">' + (to != null ? '–' + to : '+') + '</span>' + box(i, 'percent', 38) + '%</span>';
+    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 40) + '<span class="lab-to">+</span>' + box(i, 'percent', 38) + '%</span>';
   };
   return [0, 1, 2].map(range).join('');
 }
