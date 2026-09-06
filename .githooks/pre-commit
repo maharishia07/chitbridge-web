@@ -35,3 +35,9 @@ fi
 grep -aE '^  drift|REGROUPED' /tmp/cb-inv.$$
 rm -f /tmp/cb-inv.$$
 exit 0
+
+# ⚠️⚠️ app.html MUST PARSE (2026-09-06: a quoted font name inside a quoted string shipped; blank page for everyone for ~40 min).
+# Every inline <script> block through node's own parser. Only when app.html is staged; a failure blocks the commit.
+if git diff --cached --name-only | grep -q '^public/app.html$'; then
+  node e2e/app-syntax.cjs || { echo "  commit blocked — public/app.html does not parse (see above)."; exit 1; }
+fi
