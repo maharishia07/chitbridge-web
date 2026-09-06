@@ -50,7 +50,8 @@ test.describe('Order step flow', () => {
     await page.getByTestId('sup-add-input').fill(SHOP.email);
     await page.getByTestId('sup-add').click();
     await page.getByTestId('confirm-ok').click();
-    const row = page.locator('[data-testid^="sup-row-"]').first();
+    /* BETA'S row, by name — `.first()` was 'Our own stock' on a warm account (one-step rail, run 6 2026-09-06), the same trap variants.spec.js documents */
+    const row = page.locator('[data-testid^="sup-row-"]').filter({ hasText: SHOP.name }).first();
     await expect(row).toBeVisible();
     await row.click();
 

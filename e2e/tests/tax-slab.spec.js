@@ -71,7 +71,7 @@ test('[TAX-01] define a slab → make it live → attach it → read the invoice
   };
   const makeLive = async (name) => {
     const saved = page.waitForResponse((r) => isDefWrite(r, 'PUT'), { timeout: 45000 });
-    await row(name).getByText('Make live', { exact: true }).click();
+    await row(name).getByText(/^(Make live|Publish)$/)   /* the row says Publish since the publish-on-a-date work (b203) */.click();
     await saved;
     await settle(page);
     await expect(row(name)).toContainText(/live/i);

@@ -63,7 +63,7 @@ test('[OFF-01] author → edit → live → attach → seen → retire', async (
 
   await test.step('LIVE — from the same list', async () => {
     const saved = page.waitForResponse((r) => isDefWrite(r, 'PUT'), { timeout: 45000 });
-    await row().getByText('Make live', { exact: true }).click();
+    await row().getByText(/^(Make live|Publish)$/)   /* the row says Publish since the publish-on-a-date work (b203) */.click();
     await saved;
     await settle(page);
     await expect(row()).toContainText(/live/i);
@@ -171,7 +171,7 @@ test('[OFF-02] two live offers on one product — the product page shows the com
     await created;
     await settle(page);
     const live = page.waitForResponse((r) => isDefWrite(r, 'PUT'), { timeout: 45000 });
-    await row(name).getByText('Make live', { exact: true }).click();
+    await row(name).getByText(/^(Make live|Publish)$/)   /* the row says Publish since the publish-on-a-date work (b203) */.click();
     await live;
     await settle(page);
     await expect(row(name)).toContainText(/live/i);
