@@ -792,11 +792,12 @@ function cbDefPickHTML(x, v){
  * ⚠️ The id stays authoritative. A rename in the catalogue leaves the copy stale, which is the accepted cost of
  * the pattern — the same trade the category names already make — and re-picking refreshes it.
  */
-var _CBDEF_PRODS;
+var _CBDEF_PRODS, _CBDEF_PRODS_P;
 function cbDefProdsLive(){
-  if (_CBDEF_PRODS !== undefined) return Promise.resolve(_CBDEF_PRODS);
+  if (_CBDEF_PRODS !== undefined && _CBDEF_PRODS !== null) return Promise.resolve(_CBDEF_PRODS);
+  if (_CBDEF_PRODS_P) return _CBDEF_PRODS_P;   /* the same one-read rule as the customers (see cbDefCustsLive) */
   _CBDEF_PRODS = null;
-  return api('prodList')
+  _CBDEF_PRODS_P = api('prodList')
     .then(function (r) {
       var arr = Array.isArray(r) ? r : ((r && (r.items || r.products)) || []);
       _CBDEF_PRODS = arr.map(function (p) {
@@ -806,13 +807,12 @@ function cbDefProdsLive(){
       return _CBDEF_PRODS;
     })
     .catch(function () { _CBDEF_PRODS = []; return _CBDEF_PRODS; });
+  return _CBDEF_PRODS_P;
 }
 
 function cbDefPickProductHTML(x, v){
-  if (_CBDEF_PRODS === undefined || _CBDEF_PRODS === null) {
-    cbDefProdsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
-    return '<div class="cbdef-hint">reading your catalogue…</div>';
-  }
+  if (_CBDEF_PRODS === undefined) cbDefProdsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
+  if (_CBDEF_PRODS === undefined || _CBDEF_PRODS === null) return '<div class="cbdef-hint">reading your catalogue…</div>';
   if (!_CBDEF_PRODS.length) {
     return '<div class="cbdef-hint">Your catalogue is empty, so there is nothing to give away yet.</div>';
   }
@@ -830,20 +830,23 @@ function cbDefPickProductHTML(x, v){
 }
 
 /* ── "Only for": the Customers list's own groups, then each customer by name (value 'customer:<identity_id>') ── */
-var _CBDEF_CUSTS;
+var _CBDEF_CUSTS, _CBDEF_CUSTS_P;
 var CBDEF_GROUPS = [['new', 'New customers'], ['regular', 'Regular (3+ orders)'], ['high_value', 'High value'], ['inactive', 'Inactive (90 days)']];
+/* ⚠️ ONE READ, ONE REPAINT. The first version resolved immediately with null while the read was in flight, the picker repainted on
+   that, the repaint asked again… an endless microtask loop that froze the offer form ([OFF-01]/[OFF-02] red, run 27). The in-flight
+   promise is kept and handed back; the picker schedules a repaint only on the very first ask. */
 function cbDefCustsLive(){
-  if (_CBDEF_CUSTS !== undefined) return Promise.resolve(_CBDEF_CUSTS);
+  if (_CBDEF_CUSTS !== undefined && _CBDEF_CUSTS !== null) return Promise.resolve(_CBDEF_CUSTS);
+  if (_CBDEF_CUSTS_P) return _CBDEF_CUSTS_P;
   _CBDEF_CUSTS = null;
-  return api('custList')
+  _CBDEF_CUSTS_P = api('custList')
     .then(function (r) { _CBDEF_CUSTS = ((r && r.customers) || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name || c.user_id || c.bridge_id || 'customer', segment: c.segment }; }); return _CBDEF_CUSTS; })
     .catch(function () { _CBDEF_CUSTS = []; return _CBDEF_CUSTS; });
+  return _CBDEF_CUSTS_P;
 }
 function cbDefPickCustomerHTML(x, v){
-  if (_CBDEF_CUSTS === undefined || _CBDEF_CUSTS === null) {
-    cbDefCustsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
-    return '<div class="cbdef-hint">' + tx('reading your customers…') + '</div>';
-  }
+  if (_CBDEF_CUSTS === undefined) cbDefCustsLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
+  if (_CBDEF_CUSTS === undefined || _CBDEF_CUSTS === null) return '<div class="cbdef-hint">' + tx('reading your customers…') + '</div>';
   var cur = String(v || '');
   return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '" onchange="cbDefSetCustomer(this.value)">'
     + '<option value="">' + tx('— everyone —') + '</option>'
