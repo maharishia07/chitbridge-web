@@ -325,6 +325,10 @@
     }
     /* the deal REPLACES the price (Amazon: the offered price is the price; the list price is struck beside it) — `offered` stays
        false: that word is a NEGOTIATION (name-your-price), and the review prints the money block only when nothing is negotiated */
+    /* ⭐ A RECORDED DEAL (a chit's line carries what was applied when it was sent: discount · offer label) is shown as it was written,
+       never re-evaluated — the order page draws the chit, and a chit is evidence (Athi, 2026-09-06 10:19: "it has to be the exact cart"). */
+    var rd = dataOf(r).deal_recorded;
+    if (rd && isFinite(Number(rd.unit))) return { amount: Number(rd.unit), offered: false, asking: list, base: base, deal: { unit: Number(rd.unit), off: Number(rd.off) || 0, label: rd.label || 'offer', recorded: true }, tier: tier, why: why };
     var deal = dealOf(ns, r, base);
     if (deal) return { amount: deal.unit, offered: false, asking: list, base: base, deal: deal, tier: tier, why: why };
     return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };
@@ -1475,6 +1479,41 @@
     taxTotal = Math.round(taxTotal * 100) / 100;
     return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: Math.round(untaxed * 100) / 100, grand: Math.round(((ev.total != null ? ev.total : gross) + taxTotal) * 100) / 100, ctx: ctx };
   }
+  /**
+   * ⭐ THE MONEY BLOCK FROM RECORDED LINES — a chit's lines as they were written (price · quantity · discount · offer · gst_rate), the
+   * same model money() builds from a basket, so the order page prints the block the cart printed. Nothing is re-evaluated.
+   *   moneyFromLines(lines, ctx) → the model moneyRowsHTML takes
+   */
+  function moneyFromLines(lines, ctx) {
+    ctx = ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
+    var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0;
+    (lines || []).forEach(function (l, i) {
+      if (!l || l.removed || l.kind === 'payload') return;
+      var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price) || 0, g = p * q;
+      var off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
+      var net = (l.total != null && isFinite(Number(l.total))) ? Number(l.total) : Math.max(0, g - off);
+      gross += g; after += net;
+      if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
+      var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
+      if (rate != null && isFinite(rate)) {
+        var cess = Number(l.cess_rate) || 0, tax = Math.round(net * (rate + cess) / 100 * 100) / 100;
+        var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : 'GST') + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');
+        byRate[k] = Math.round(((byRate[k] || 0) + tax) * 100) / 100; taxTotal += tax;
+      } else untaxed += net;
+    });
+    taxTotal = Math.round(taxTotal * 100) / 100;
+    return { gross: gross, ev: { adjustments: adjustments, notes: [], subtotal: gross, total: Math.round(after * 100) / 100 }, byRate: byRate, taxTotal: taxTotal,
+             untaxed: Math.round(untaxed * 100) / 100, grand: Math.round((after + taxTotal) * 100) / 100, ctx: ctx };
+  }
+  /** a screen changed: a floating summary whose list is no longer on screen hides (the Suppliers card followed Athi to the Order page, 2026-09-06) */
+  function floatsSync() {
+    for (var ns in C) {
+      var box = doc('cbcart_sum_' + ns); if (!box) continue;
+      var le = doc(opt(ns, 'listEl'));
+      var shown = !!(le && le.isConnected && le.offsetParent !== null);
+      if (!shown) box.hidden = true; else paintSummary(ns);
+    }
+  }
   function moneyRowsHTML(m, opt) {
     opt = opt || {}; var ctx = m.ctx, ev = m.ev || { adjustments: [], notes: [], total: m.gross };
     var row = function (l, r, extra) { return '<div style="display:flex;justify-content:space-between;gap:8px;' + (extra || '') + '"><span>' + l + '</span><span>' + r + '</span></div>'; };
@@ -1505,7 +1544,7 @@
   }
 
   root.CBCart = {
-    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP, dealFor: dealFor, closeSummary: closeSummary,
+    money: money, moneyRowsHTML: moneyRowsHTML, moneyFromLines: moneyFromLines, floatsSync: floatsSync, WRAP: WRAP, dealFor: dealFor, closeSummary: closeSummary,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
@@ -1868,6 +1907,7 @@
         }).join('');
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
+    if (!offBadge && u.deal && u.deal.recorded) offBadge = '<span class="cbcat-off" title="' + esc(u.deal.label) + '">' + esc(u.deal.label) + '</span>';
     /* the list price, struck, beside the name — where the eye reads "was"; the price column holds only the price they pay */
     /* (the struck list price sits in the PRICE column, before the offered price — Athi, 2026-09-06: "the original price has to be before the discounted price, struck out") */
 
@@ -2539,6 +2579,7 @@
       '.cbcat-row.cbgrid{display:grid;grid-template-columns:var(--cbrow-cols);column-gap:10px}',
       '.cbcat-tags{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:4px;max-width:240px}',
       '.cbcat-tags .cbcat-offs{margin-inline-start:0}',
+      '.cbcat-row.cbcat-removed{opacity:.55}.cbcat-row.cbcat-removed .cbcat-nm{text-decoration:line-through}',
       /* a LIST of rows (the seller's Catalogue): the row is clickable and can be selected or picked — the list's states, on the cart's row */
       '.cbcat-row.cbclick{cursor:pointer}.cbcat-row.cbclick:hover{background:var(--hover,#f3efe6)}',
       '.cbcat-row.sel{background:var(--sel-2,#e9f0fa);color:var(--on-sel,var(--ink));box-shadow:inset 3px 0 0 var(--blue)}.cbcat-row.picked{background:var(--picked,#e9f0fa)}',

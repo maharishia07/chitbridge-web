@@ -293,68 +293,51 @@ function c2PaneOrd(d){
     + '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>'
     + '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
 
-  out += lines.map(function(e, i){
-    var l = e.live || e.original || {};
-    var mine = c2Mine(e, asg);
-    /* ⚠️ A REMOVED LINE STAYS ON SCREEN — struck, greyed, labelled with the reason, counting in nothing. Deleting
-       it would make the chit disagree with the message it came from. */
-    if (e.removed) {
-      var why = { misread_by_ai: 'never asked for', stock_unavailable: 'not available',
-                  customer_clarified: 'customer changed it', rate_agreed: 'rate agreed' }[e.reason_code] || 'removed';
-      return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);opacity:.55">'
-        + '<s>' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</s>'
-        + '<span style="margin-inline-start:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
-    }
-    var was = (e.history || []).slice(0, 1).map(function(h){
-      return '<s style="color:var(--grey);margin-inline-end:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
-    }).join('');
-    /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
-    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
-      + '<div style="display:flex;justify-content:space-between;gap:10px">'
-      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:var(--fs-3)">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '')
-      /* the stamped stock fell short of this line when the order came in (routes/catalogue.js reprice): the seller sees it here */
-      + (l.stock && l.stock.short ? ' <span data-testid="c2-stock-short" title="' + esc((l.stock.source ? 'stock from ' + l.stock.source + ' · ' : '') + 'as of ' + String(l.stock.as_of || '').slice(0, 16).replace('T', ' ')) + '" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);padding:1px 6px;border-radius:9px;white-space:nowrap">⚠ ' + esc(tx('short by') + ' ' + l.stock.short + ' · ' + tx('stock') + ' ' + l.stock.qty) + '</span>' : '')
-      + '</span>'
-      /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
-         he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
-         misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */
-      + '<span style="display:flex;gap:6px;align-items:center;flex:none">'
-      + c2PickBadge(l, i)
-      + '<span style="font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span>'
-      /**
-       * ⭐ A PARTLY DELIVERED LINE STAYS EDITABLE — Athi, 2026-08-14: *"partial delivery can be amendable, that
-       * is what makes it interesting."*
-       *
-       * ⚠️ THIS ROW SHOWED A PADLOCK THE MOMENT ANY DELIVERY EXISTED, which was right under yesterday's rule and
-       * wrong under today's. It would have made the headline change untestable from every screen: the server
-       * accepts the amendment, and the only way to reach it is hidden.
-       *
-       * The server is the authority now, and it refuses exactly three things (below-delivered · unit change ·
-       * removal) with a message naming the remedy. So the pencil is always offered on a live line and the chip
-       * says why an edit might come back refused — a warning beats a locked door that cannot explain itself.
-       *
-       * ⚠️ THE WHOLE TERNARY IS PARENTHESISED, and it was not for one commit. `a + b ? c : d` parses as
-       * `(a + b) ? c : d`, so every piece of the row built so far became the CONDITION — always truthy — and was
-       * thrown away, leaving a row that was nothing but a padlock. It parsed cleanly and rendered nonsense.
-       */
-      + ((((d.line_delivery||{})[e.line_id]||{}).delivered)
-         ? '<span title="Part-delivered — correctable, but not below what has gone out" style="font-size:var(--fs-1);color:var(--warn-2);font-weight:700">◧ '
-           + (((d.line_delivery||{})[e.line_id]||{}).delivered) + ' out</span>'
-         : '')
-      + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
-        + ' style="cursor:pointer;font-size:var(--fs-3);color:var(--grey);padding:0 2px">✎</span>'
-      + '</span></div>'
-      + '<div style="margin-top:3px;font-size:var(--fs-3);color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
+  /* ⭐⭐ THE CHIT IS THE CART (Athi, 2026-09-06 10:19: "it has to be the exact cart and the values and the information — ditto, including the
+     format"). This pane drew its own rows ("2 bag × ₹101.00") and no money block; a buyer saw ₹676.80 on the Suppliers screen and ₹752 here.
+     Now a read-only cart is built from the chit's RECORDED lines (price · discount · offer · rate, as written at send) and the rows and
+     the money block are the cart's own — CBCatUI.rowHTML and CBCart.moneyFromLines. What only this page adds — the pencil, the
+     delivered chip, the remedy notes, their own words — comes in through the row's hooks. */
+  var recLines = [], items = [];
+  lines.forEach(function(e, i){
+    var l = e.live || e.original || {}; var id = String(e.line_id || l.line_id || l.item_id || ('ln' + i));
+    var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price), off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
+    var unit = (isFinite(p) && q > 0 && off > 0) ? Math.round((p - off / q) * 100) / 100 : null;
+    var d = { name: l.particulars || l.name || 'line', unit: l.unit || 'unit', price: isFinite(p) ? p : null, code: l.sku || l.code || null, hsn: l.hsn || null,
+              deal_recorded: unit != null ? { unit: unit, off: off, label: (l.offer && l.offer.label) || 'offer' } : null };
+    var tax = (l.gst_rate != null) ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
+    items.push({ item_id: id, item_data: d, tax: tax, _e: e, _i: i, _l: l });
+    if (!e.removed) recLines.push(l);
+  });
+  var cat = { shop: { bridge_id: 'chit', currency_code: (d.detail && d.detail.currency_code) || 'INR' }, offers: [], items: items };
+  if (C2.cart) { try { C2.cart.destroy(); } catch (_) {} }
+  C2.cart = CBCart.create(cat, { renderer: CBCatUI, listEl: 'c2_lines_none', barEl: 'c2_bar_none', barHideEmpty: true });
+  items.forEach(function(it){ var q = Number(it._l.quantity != null ? it._l.quantity : it._l.qty) || 0; if (q > 0) C2.cart.setQty(it.item_id, q); });
+  try { CBCatUI.ensureCss(); } catch (_) {}
+  out += '<div class="plist">' + items.map(function(it){
+    var e = it._e, i = it._i, l = it._l, mine = c2Mine(e, asg);
+    var deliv = ((d.line_delivery||{})[e.line_id]||{}).delivered;
+    var below = ''
+      + (e.removed ? '<span class="cbcat-fact" style="color:var(--disp)">' + esc(e.removed_reason || 'removed') + '</span>' : '')
+      + ((e.history || []).length ? '<span class="cbcat-fact" style="color:var(--grey)">amended ' + (e.history || []).length + '×</span>' : '')
       + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ this number does not appear in their message — check it</div>' : '')
-      /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
-         THIS line's own words and disagreed, so it was nulled rather than shown. */
       + (l.qty_rejected ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--disp)">⚠️ quantity rejected — ' + esc(l.qty_rejected) + '. Fix it on the line.</div>' : '')
-      /* ⭐ b141 — their own words for THIS line. The only thing on the row a machine did not produce. */
-      + (l.raw_phrase ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--grey);font-style:italic">they wrote “' + esc(l.raw_phrase) + '”</div>'
-          : (l.asked_as ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : ''))
-      + '</div>';
-  }).join('');
+      + (l.raw_phrase ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--grey);font-style:italic">they wrote “' + esc(l.raw_phrase) + '”</div>' : (l.asked_as ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : ''));
+    return CBCatUI.rowHTML(C2.cart, { type: 'line', item: it, item_id: it.item_id, variant: '' }, {
+      readonly: true,
+      testid: function(){ return 'c2-line-' + i; },
+      rowClass: function(){ return (e.removed ? 'cbcat-removed' : '') + (mine ? ' c2-mine' : ''); },
+      below: function(){ return below ? '<span class="cbcat-below">' + below + '</span>' : ''; },
+      control: function(){ return (deliv ? '<span title="Part-delivered — correctable, but not below what has gone out" style="font-size:var(--fs-1);color:var(--warn-2);font-weight:700">◧ ' + esc(String(deliv)) + ' out</span> ' : '')
+        + (e.removed ? '' : '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line" style="cursor:pointer;font-size:var(--fs-3);color:var(--grey);padding:0 6px">✎</span>'); }
+    });
+  }).join('') + '</div>';
+  /* the money block, from the lines as written — the same rows the cart printed */
+  try {
+    var M = CBCart.moneyFromLines(recLines, { now: new Date(), currency: cat.shop.currency_code, money: function(n){ return c2Money(n); } });
+    out += '<div data-testid="c2-money" style="margin:8px 16px 12px">' + CBCart.moneyRowsHTML(M, { totalTestid: 'c2-total', taxTestid: 'c2-tax' }) + '</div>';
+  } catch (_) {}
   return out;
 }
 

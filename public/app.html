@@ -5280,7 +5280,7 @@ async function selfBillSend(btn){
   }
 }
 
-function navTo(k){if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
+function navTo(k){try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTimeout(CBCart.floatsSync,0); }catch(_){}if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
@@ -7522,9 +7522,13 @@ function supSendOrder(x, isDraft){
     /* ⚠️ SAME OMISSION AS COMPOSE — no unit went out from here either, so a supplier order for 10 of something
        arrived with no statement of what 10 meant. `unit` comes off the cart's own selection, which has always
        had it; it simply was not being passed on. */
-    line_items:sel.map(function(p){ return { particulars:p.name, unit:p.unit||'unit', quantity:+p.qty||0,
-      price:+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0,
-      total:(+p.qty||0)*(+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0),
+    /* ⭐⭐ AN ORDER, WITH THE PRODUCT'S IDENTITY (Athi, 2026-09-06: "it has to be the exact cart"). purpose 'order' makes the RECIPIENT
+       the seller on the server, which then prices every line with the seller's shelf and live offers — the same engine, the same
+       offers the cart used, so the chit says what the cart said. item_id + code let a targeted offer find the line; the price sent
+       is the LIST price (a chit is evidence), the discount and rate are the server's to write. */
+    purpose:'order',
+    line_items:sel.map(function(p){ var list=+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0; return { particulars:p.name, unit:p.unit||'unit', quantity:+p.qty||0,
+      item_id:p.item_id||undefined, sku:p.code||undefined, price:list, total:(+p.qty||0)*list,
       comment:p.comment||'' }; }),
     priority:'normal',
     onSent:function(){ supCartRelease(); },

@@ -56,6 +56,7 @@ const OUTLETS = {
                          ["Catalogue list (the seller's own products, read-only rows)", '[CAT-01] · e2e/shot-rows.cjs']],
   'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
+  'app/cap-chit2.js':   [["The chit's Order tab (read-only: the chit IS the cart)", '[PAR-03] the order page equals the cart']],
 };
 for (const rel of files) {
   const src = stripComments(fs.readFileSync(path.join(PUB, rel), 'utf8'));
