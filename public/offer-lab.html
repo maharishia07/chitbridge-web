@@ -63,6 +63,8 @@
   .scroll{ overflow-x:auto; }
   #p_list .lab-range{ display:inline-flex; align-items:center; gap:3px; border:1px solid var(--line); border-radius:6px; padding:1px 5px; background:var(--card); }
   #p_list .lab-range.on{ border-color:var(--ok-2); background:var(--ok-tint); color:var(--ok-2); font-weight:700; }
+  #p_list .lab-range.off{ opacity:.5; }
+  #p_list .lab-range input[type=checkbox]{ width:13px; height:13px; margin:0 1px 0 0; }
   #p_list .lab-range .lab-to{ color:var(--grey-2); }
   #p_list .lab-tier{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; font-size:var(--fs-1); color:var(--grey-2); padding:5px 10px 7px 122px; border-bottom:1px dashed var(--line); background:var(--paper); }
   #p_list .lab-tier b{ color:var(--ink); }
@@ -229,7 +231,7 @@ var TIERS = {};     /* item id → the product's own quantity slabs (the second 
 /* the rules that judge the whole order — set beside the basket, in the At cart level panel */
 var CART_RULES = { thrMin: 500, thrPct: 10, thrItem: '', thrQty: 1, shipCharge: 60, shipMode: 'free', shipV: 20, shipMin: 500 };
 function labRule(k, val) { CART_RULES[k] = (k === 'thrItem' || k === 'shipMode') ? String(val) : Math.max(0, Number(val) || 0); labRepaint(); }
-function tiersOf(id) { if (!TIERS[id]) TIERS[id] = [{ qty: 5, percent: 5 }, { qty: 10, percent: 10 }, { qty: 25, percent: 15 }]; return TIERS[id]; }
+function tiersOf(id) { if (!TIERS[id]) TIERS[id] = [{ on: true, qty: 5, percent: 5 }, { on: false, qty: 10, percent: 10 }, { on: false, qty: 25, percent: 15 }]; return TIERS[id]; }
 function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
   /* ⭐ THE QUANTITY BREAK IS A PRODUCT'S OWN (Athi, 2026-09-06 23:0x: "quantity break at product level — under the product, the ranges and the
@@ -242,12 +244,15 @@ function tierLineHTML(id) {
   var range = function (i) {
     /* each slab says only where it starts (Athi, 2026-09-06 23:4x: "just say 5+, the next 10+, the next 25+") — the engine takes the highest slab the quantity reaches */
     var to = t[i + 1] && t[i + 1].qty > 0 ? (Number(t[i + 1].qty) - 1) : null;
-    var hit = q > 0 && Number(t[i].qty) > 0 && q >= Number(t[i].qty) && (to == null || q <= to);
-    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 40) + '<span class="lab-to">+</span>' + box(i, 'percent', 38) + '%</span>';
+    var live = t[i].on !== false;
+    var hit = live && q > 0 && Number(t[i].qty) > 0 && q >= Number(t[i].qty) && (to == null || q <= to);
+    return '<span class="lab-range' + (hit ? ' on' : '') + (live ? '' : ' off') + '">'
+      + '<input type="checkbox"' + (live ? ' checked' : '') + ' data-testid="lab-slab-' + esc(id) + '-' + i + '" title="use this slab for this product" onclick="event.stopPropagation()" onchange="event.stopPropagation();labTierSet(\'' + esc(id) + '\',' + i + ',\'on\',this.checked)">'
+      + box(i, 'qty', 40) + '<span class="lab-to">+</span>' + box(i, 'percent', 38) + '%</span>';
   };
   return [0, 1, 2].map(range).join('');
 }
-function labTierSet(id, i, k, val) { var t = tiersOf(id); t[i][k] = Math.max(0, Number(val) || 0); labRepaint(); }
+function labTierSet(id, i, k, val) { var t = tiersOf(id); t[i][k] = (k === 'on') ? !!val : Math.max(0, Number(val) || 0); labRepaint(); }
 /* the offers a product's own breaks make: one tier offer for that product, its ranges as percentages */
 function applyTo() { if (!APPLY) return undefined; var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); }); return (ids.length && ids.length < PRODUCTS.length) ? { item_ids: ids } : undefined; }
 function withCommon(id, o) {
@@ -263,7 +268,7 @@ function labOffers() {
   if (on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
   if (on('tier')) PRODUCTS.forEach(function (p) {
     if (!labApplies(p.item_id)) return;
-    var tiers = tiersOf(p.item_id).filter(function (t) { return Number(t.qty) > 0 && Number(t.percent) > 0; });
+    var tiers = tiersOf(p.item_id).filter(function (t) { return t.on !== false && Number(t.qty) > 0 && Number(t.percent) > 0; });
     if (!tiers.length) return;
     var o = withCommon('tier', { id: 'tier-' + p.item_id, label: 'Quantity break', kind: 'tier_price', tiers: tiers });
     o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
@@ -438,7 +443,7 @@ function labTry(what, a, b) {
   var p = advProduct();
   APPLY = null;
   if (what === 'markup') { setOn('markup', true); setV('mk-book', p.item_data.price); setV('mk-pct', a); }
-  if (what === 'tier') { setOn('tier', true); var lp = Number(p.item_data.price) || 0; var pc = function (x) { return lp > 0 ? Math.max(1, Math.round((1 - x / lp) * 100)) : 5; }; TIERS[p.item_id] = [{ qty: 5, percent: pc(a) }, { qty: 10, percent: pc(b) }, { qty: 25, percent: Math.min(90, pc(b) + 5) }]; labApplyOnly(p.item_id); }
+  if (what === 'tier') { setOn('tier', true); var lp = Number(p.item_data.price) || 0; var pc = function (x) { return lp > 0 ? Math.max(1, Math.round((1 - x / lp) * 100)) : 5; }; TIERS[p.item_id] = [{ on: true, qty: 5, percent: pc(a) }, { on: true, qty: 10, percent: pc(b) }, { on: false, qty: 25, percent: Math.min(90, pc(b) + 5) }]; labApplyOnly(p.item_id); }
   if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); labApplyOnly(p.item_id); }
   if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
   if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); labApplyOnly(p.item_id); }
