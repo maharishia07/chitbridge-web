@@ -32,7 +32,9 @@ test('[LAB-01] the offer lab: switch, see, compare, advise', async ({ page }) =>
   await expect(page.locator('[data-testid="cbcat-row-grapes"] .cbcat-tags')).not.toContainText('10% off');
 
   /* buy X get ANOTHER product free: the earned item is named, never added by the engine */
-  await page.check('#amt-excl', { force: true }); await page.uncheck('#amt-excl'); await page.getByTestId('lab-on-bxgy').click(); await page.selectOption('#bxgy-item', 'oil'); await page.waitForTimeout(400);
+  await page.check('#amt-excl', { force: true }); await page.uncheck('#amt-excl'); await page.getByTestId('lab-on-bxgy').click(); await page.waitForTimeout(300);
+  /* buy X get Y lives on the product line now (Athi, 2026-09-07): set it under Grapes */
+  await page.getByTestId('lab-bxgy-grapes-item').selectOption('oil'); await page.waitForTimeout(400);
   await expect(page.getByTestId('lab-why')).toContainText('Sunflower oil');
 
   /* who is looking: a customer-only offer fails closed for a stranger; compare says the two figures */
