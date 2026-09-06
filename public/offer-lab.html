@@ -58,7 +58,10 @@
   .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:var(--fs-1); background:var(--neutral-tint); }
   .hint{ color:var(--grey-2); font-size:var(--fs-1); line-height:1.4; }
   .scroll{ overflow-x:auto; }
-  #p_list .lab-tier{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; font-size:var(--fs-1); color:var(--grey-2); padding:5px 10px 7px 104px; border-bottom:1px dashed var(--line); background:var(--paper); }
+  #p_list .lab-range{ display:inline-flex; align-items:center; gap:3px; border:1px solid var(--line); border-radius:6px; padding:1px 5px; background:var(--card); }
+  #p_list .lab-range.on{ border-color:var(--ok-2); background:var(--ok-tint); color:var(--ok-2); font-weight:700; }
+  #p_list .lab-range .lab-to{ color:var(--grey-2); }
+  #p_list .lab-tier{ display:flex; flex-wrap:wrap; gap:4px 8px; align-items:center; font-size:var(--fs-1); color:var(--grey-2); padding:5px 10px 7px 122px; border-bottom:1px dashed var(--line); background:var(--paper); }
   #p_list .lab-tier b{ color:var(--ink); }
   #p_list .lab-tier input{ height:22px; padding:1px 4px; font-size:var(--fs-1); text-align:right; }
   /* the lab is about the numbers: no picture column — the name starts right after the tick and the order size, rows stay one line high (Athi, 2026-09-06 22:16: "the image is giving some alignment issues") */
@@ -67,8 +70,8 @@
   #p_list .cbcat-off{ white-space:normal; }
   #p_list .cbcat-thumb{ display:none; }
   #p_list .cbcat-row{ min-height:0; }
-  #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:104px; }
-  #p_list .lab-head{ position:relative; padding:6px 10px 6px 104px; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--grey-2); background:var(--neutral-tint); border-bottom:1px solid var(--line); align-items:center; }
+  #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:122px; }
+  #p_list .lab-head{ position:relative; padding:6px 10px 6px 122px; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(--grey-2); background:var(--neutral-tint); border-bottom:1px solid var(--line); align-items:center; }
   #p_list .lab-head .lab-sel{ position:absolute; left:8px; top:50%; transform:translateY(-50%); white-space:nowrap; }
   #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; }
   #p_list .lab-apply input[type=number]{ width:46px; height:24px; padding:2px 4px; font-size:var(--fs-1); }
@@ -138,6 +141,8 @@
     </div>
     <div id="p_list"></div>
     <div id="p_cart"></div>
+    <div class="sec">At cart level</div>
+    <div id="p_cart_level" class="why" data-testid="lab-cart-level"></div>
     <div class="two" style="margin-top:10px">
       <div><div class="sec">The money block</div><div id="p_money" class="why" data-testid="lab-money"></div></div>
       <div><div class="sec">Why</div><div id="p_why" class="why" data-testid="lab-why"></div></div>
@@ -190,13 +195,11 @@ function valueCell(k) {
   switch (k.id) {
     case 'pct': return '<label>' + num('pct-v', 10, 52) + ' % off</label><label>on ' + scope('pct') + '</label>';
     case 'amt': return '<label>₹ ' + num('amt-v', 10) + ' off</label><label>on ' + scope('amt') + '</label>';
-    case 'tier': return '<label>by <select id="tier-mode" onchange="labRepaint()"><option value="pct">a percentage (any product)</option><option value="price">a price each (per product)</option></select></label>'
-      + '<span id="tier-pct-boxes"><label>from ' + num('tier-q1', 5, 44) + ' units ' + num('tier-c1', 5, 44) + ' % off</label><label>from ' + num('tier-q2', 10, 44) + ' ' + num('tier-c2', 10, 44) + ' %</label><label>from ' + num('tier-q3', 25, 44) + ' ' + num('tier-c3', 15, 44) + ' %</label></span>'
-      + '<span class="hint">a price each is set per product, on the right</span>';
-    case 'thr': return '<label>spend ≥ ₹ ' + num('thr-min', 500) + '</label><label>then ' + num('thr-pct', 10, 48) + ' %</label><label>or free <select id="thr-item" onchange="labRepaint()"><option value="">—</option>' + prodOptions() + '</select> × ' + num('thr-qty', 1, 40) + '</label>';
+    case 'tier': return '<span class="hint">set under each product on the right: the ranges and the percentage off per range</span>';
+    case 'thr': return '<label>on the order: spend ≥ ₹ ' + num('thr-min', 500) + '</label><label>then ' + num('thr-pct', 10, 48) + ' % off the order</label><label>or free <select id="thr-item" onchange="labRepaint()"><option value="">—</option>' + prodOptions() + '</select> × ' + num('thr-qty', 1, 40) + '</label>';
     case 'bxgy': return '<label>buy ' + num('bxgy-x', 2, 44) + ' get ' + num('bxgy-y', 1, 44) + '</label><label>at ' + num('bxgy-pct', 100, 52) + ' % off</label><label>free one: <select id="bxgy-item" onchange="labRepaint()"><option value="">the same (cheapest)</option>' + prodOptions() + '</select></label>';
-    case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ ' + num('bundle-p', 400) + '</label>';
-    case 'ship': return '<label>charged ₹ ' + num('ship-charge', 60, 56) + '</label><label><select id="ship-mode" onchange="labRepaint()"><option value="free">free shipping</option><option value="flat">flat ₹</option><option value="pct">% off shipping</option></select> ' + num('ship-v', 20, 52) + '</label>';
+    case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ ' + num('bundle-p', 400) + '</label><span class="hint">parked — how a real combination is picked is still open</span>';
+    case 'ship': return '<label>delivery costs ₹ ' + num('ship-charge', 60, 52) + '</label><label><select id="ship-mode" onchange="labRepaint()"><option value="free">free</option><option value="flat">flat ₹</option><option value="pct">% off</option></select> ' + num('ship-v', 20, 48) + '</label><label>from ₹ ' + num('ship-min', 500, 60) + ' on the order</label>';
     case 'band': return '<label>₹ ' + num('band-min', 50) + ' – ₹ ' + num('band-max', 220) + '</label>';
   }
   return '';
@@ -220,22 +223,25 @@ function v(id) { var e = document.getElementById(id); return e ? e.value : ''; }
 var APPLY = null;   /* null = everything; else a Set of item ids */
 var MINQ = {};      /* item id → the minimum order size for the offer on that product (the box on the row) */
 var TIERS = {};     /* item id → [{ qty, price }, { qty, price }] — the product's own quantity breaks (the second line under the row) */
-function tiersOf(id) { if (!TIERS[id]) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; var list = p ? Number(p.item_data.price) || 0 : 0; var at = function (k) { return Math.round(list * k * 100) / 100; }; TIERS[id] = [{ qty: 5, price: at(0.95) }, { qty: 10, price: at(0.9) }, { qty: 25, price: at(0.85) }]; } return TIERS[id]; }
+function tiersOf(id) { if (!TIERS[id]) TIERS[id] = [{ qty: 5, percent: 5 }, { qty: 10, percent: 10 }, { qty: 25, percent: 15 }]; return TIERS[id]; }
 function tierLineHTML(id) {
   if (!on('tier') || !labApplies(id)) return '';
-  /* by percentage: one rule on the left — the second line shows what it comes to FOR THIS PRODUCT */
-  if (v('tier-mode') !== 'price') {
-    var lp0 = (PRODUCTS.filter(function (x) { return x.item_id === id; })[0] || { item_data: {} }).item_data.price || 0;
-    var parts = [[n('tier-q1'), n('tier-c1')], [n('tier-q2'), n('tier-c2')], [n('tier-q3'), n('tier-c3')]].filter(function (t) { return t[0] > 0 && t[1] > 0; })
-      .map(function (t) { return 'from <b>' + t[0] + '</b> → <b>' + fmtMoney(Math.round(lp0 * (1 - t[1] / 100) * 100) / 100) + '</b> each <span class="hint">(' + t[1] + '% off)</span>'; });
-    return parts.length ? '<b>Quantity break</b> ' + parts.join(' · ') + ' <span class="hint">list ' + fmtMoney(lp0) + '</span>' : '';
-  }
-  var t = tiersOf(id), list = (PRODUCTS.filter(function (x) { return x.item_id === id; })[0] || { item_data: {} }).item_data.price || 0;
-  var box = function (i, k, w) { return '<input type="number" min="0" step="1" value="' + t[i][k] + '" data-testid="lab-tier-' + esc(id) + '-' + i + '-' + k + '" style="width:' + w + 'px" onclick="event.stopPropagation()" onchange="event.stopPropagation();labTierSet(\'' + esc(id) + '\',' + i + ',\'' + k + '\',this.value)">'; };
-  return '<b>Quantity break</b> from ' + box(0, 'qty', 44) + ' at ₹' + box(0, 'price', 58) + ' each · from ' + box(1, 'qty', 44) + ' at ₹' + box(1, 'price', 58) + ' · from ' + box(2, 'qty', 44) + ' at ₹' + box(2, 'price', 58)
-    + ' <span class="hint">list ' + fmtMoney(list) + ' · a break never raises the price</span>';
+  /* ⭐ THE QUANTITY BREAK IS A PRODUCT'S OWN (Athi, 2026-09-06 23:0x: "quantity break at product level — under the product, the ranges and the
+     percentage off per range"). Each range says its percentage; the money it comes to for THIS product is printed beside it. */
+  var t = tiersOf(id), list = (PRODUCTS.filter(function (x) { return x.item_id === id; })[0] || { item_data: {} }).item_data.price || 0, q = 0;
+  try { q = Number(CART.qtyOf(id)) || 0; } catch (_) {}
+  var box = function (i, k, w) { return '<input type="number" min="0" step="1" value="' + (t[i][k] == null ? '' : t[i][k]) + '" data-testid="lab-tier-' + esc(id) + '-' + i + '-' + k + '" style="width:' + w + 'px" onclick="event.stopPropagation()" onchange="event.stopPropagation();labTierSet(\'' + esc(id) + '\',' + i + ',\'' + k + '\',this.value)">'; };
+  var range = function (i) {
+    var to = t[i + 1] && t[i + 1].qty > 0 ? (Number(t[i + 1].qty) - 1) : null, pct = Number(t[i].percent) || 0;
+    var each = pct > 0 && list > 0 ? Math.round(list * (1 - pct / 100) * 100) / 100 : null;
+    var hit = q > 0 && Number(t[i].qty) > 0 && q >= Number(t[i].qty) && (to == null || q <= to);
+    return '<span class="lab-range' + (hit ? ' on' : '') + '">' + box(i, 'qty', 42) + '<span class="lab-to">' + (to != null ? '–' + to : '+') + '</span> ' + box(i, 'percent', 40) + '% off'
+      + (each != null ? ' <b>' + fmtMoney(each) + '</b> each' : '') + '</span>';
+  };
+  return '<b>Quantity break</b> ' + [0, 1, 2].map(range).join('') + ' <span class="hint">list ' + fmtMoney(list) + ' · a break never raises the price</span>';
 }
 function labTierSet(id, i, k, val) { var t = tiersOf(id); t[i][k] = Math.max(0, Number(val) || 0); labRepaint(); }
+/* the offers a product's own breaks make: one tier offer for that product, its ranges as percentages */
 function applyTo() { if (!APPLY) return undefined; var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); }); return (ids.length && ids.length < PRODUCTS.length) ? { item_ids: ids } : undefined; }
 function withCommon(id, o) {
   var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
@@ -248,17 +254,17 @@ function labOffers() {
   var out = [];
   if (on('pct')) out.push(withCommon('pct', { id: 'pct', label: n('pct-v') + '% off', kind: 'percent_off', percent: n('pct-v'), scope: v('pct-scope') }));
   if (on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
-  if (on('tier')) {
-    if (v('tier-mode') !== 'price') {
-      /* ⭐ BY PERCENTAGE (Athi, 2026-09-06 22:5x): one rule for every ticked product — the engine works it out against each line's own price */
-      var pt = [{ qty: n('tier-q1'), percent: n('tier-c1') }, { qty: n('tier-q2'), percent: n('tier-c2') }, { qty: n('tier-q3'), percent: n('tier-c3') }].filter(function (t) { return t.qty > 0 && t.percent > 0; });
-      if (pt.length) out.push(withCommon('tier', { id: 'tier', label: 'Quantity break', kind: 'tier_price', tiers: pt }));
-    } else PRODUCTS.forEach(function (p) { if (!labApplies(p.item_id)) return; var o = withCommon('tier', { id: 'tier-' + p.item_id, label: 'Quantity break', kind: 'tier_price', tiers: tiersOf(p.item_id).filter(function (t) { return t.qty > 0 && t.price > 0; }) }); o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o); });
-  }
+  if (on('tier')) PRODUCTS.forEach(function (p) {
+    if (!labApplies(p.item_id)) return;
+    var tiers = tiersOf(p.item_id).filter(function (t) { return Number(t.qty) > 0 && Number(t.percent) > 0; });
+    if (!tiers.length) return;
+    var o = withCommon('tier', { id: 'tier-' + p.item_id, label: 'Quantity break', kind: 'tier_price', tiers: tiers });
+    o.applies_to = Object.assign({}, o.applies_to || {}, { item_ids: [p.item_id] }); out.push(o);
+  });
   if (on('thr')) { var t = { id: 'thr', label: 'Spend ' + n('thr-min'), kind: 'threshold', min_amount: n('thr-min') }; if (v('thr-item')) { t.get_item_id = v('thr-item'); t.get_item_name = itemName(v('thr-item')); t.get_qty = n('thr-qty') || 1; } else t.percent = n('thr-pct'); out.push(withCommon('thr', t)); }
   if (on('bxgy')) { var b = { id: 'bxgy', label: 'Buy ' + n('bxgy-x') + ' get ' + n('bxgy-y'), kind: 'buy_x_get_y', buy: n('bxgy-x'), get: n('bxgy-y'), get_percent: n('bxgy-pct') }; if (v('bxgy-item')) { b.get_item_id = v('bxgy-item'); b.get_item_name = itemName(v('bxgy-item')); } out.push(withCommon('bxgy', b)); }
   if (on('bundle')) out.push(withCommon('bundle', { id: 'bundle', label: 'Bundle', kind: 'bundle_price', bundle_items: [v('bundle-a'), v('bundle-b')], bundle_price: n('bundle-p') }));
-  if (on('ship')) { var s = { id: 'ship', label: 'Shipping', kind: 'shipping' }; var m = v('ship-mode'); if (m === 'free') s.free = true; else if (m === 'flat') s.flat = n('ship-v'); else s.percent = n('ship-v'); out.push(withCommon('ship', s)); }
+  if (on('ship')) { var s = { id: 'ship', label: 'Delivery', kind: 'shipping' }; var m = v('ship-mode'); if (m === 'free') s.free = true; else if (m === 'flat') s.flat = n('ship-v'); else s.percent = n('ship-v'); if (n('ship-min') > 0) s.min_amount = n('ship-min'); out.push(withCommon('ship', s)); }
   if (on('band')) out.push(withCommon('band', { id: 'band', label: 'Price band', kind: 'price_range', min: n('band-min'), max: n('band-max') }));
   return out;
 }
@@ -283,8 +289,9 @@ function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('shi
 function paintWhy() {
   var sel = []; try { sel = CART.selected(); } catch (_) {}
   var money = document.getElementById('p_money'), why = document.getElementById('p_why'), tbl = document.getElementById('p_lines'), cmp = document.getElementById('p_cmp');
-  if (!sel.length) { money.innerHTML = '<span class="note">Put something in the basket to see the money block.</span>'; why.innerHTML = '<span class="note">Nothing in the basket yet — the rows above already show what each product promises to this viewer.</span>'; tbl.innerHTML = ''; cmp.innerHTML = ''; return; }
+  if (!sel.length) { money.innerHTML = '<span class="note">Put something in the basket to see the money block.</span>'; why.innerHTML = '<span class="note">Nothing in the basket yet — the rows above already show what each product promises to this viewer.</span>'; tbl.innerHTML = ''; cmp.innerHTML = ''; paintCartLevel(null, sel); return; }
   var R = evalFor(v('viewer'), sel), ev = R.ev;
+  paintCartLevel(ev, sel);
   try { var M = CART.moneyRows({ totalTestid: 'lab-total', taxTestid: 'lab-tax' }); money.innerHTML = (M && M.html) ? M.html : '<span class="note">' + fmtMoney(ev.total) + ' after offers (no tax on these lines)</span>'; } catch (_) { money.innerHTML = '<span class="note">' + fmtMoney(ev.total) + '</span>'; }
   why.innerHTML = (ev.adjustments.map(function (a) { return '<div class="ok">✓ ' + esc(a.label) + ' — ' + esc(a.why) + (a.scope === 'cart' ? ' <span class="chip">order total</span>' : '') + '</div>'; }).join('')
     + ev.notes.map(function (x) { return '<div class="note">💡 ' + esc(x.label) + ' — ' + esc(x.why) + '</div>'; }).join('')
@@ -293,6 +300,30 @@ function paintWhy() {
     return '<tr><td>' + esc(itemName(l.item_id)) + ' × ' + l.qty + '</td><td>' + fmtMoney(g) + '</td><td>' + (own ? '−' + fmtMoney(own) : '—') + '</td><td>' + (share ? '−' + fmtMoney(share) : '—') + '</td><td><b>' + fmtMoney(net) + '</b></td><td>' + (rate != null ? rate + '% · ' + fmtMoney(tax) : '—') + '</td><td>' + fmtMoney(net + tax) + '</td></tr>'; }).join('');
   tbl.innerHTML = '<table class="lines"><thead><tr><th>line</th><th>list</th><th>own offers</th><th>basket share</th><th>net</th><th>tax</th><th>incl.</th></tr></thead><tbody>' + rows + '</tbody></table><div class="hint">The row shows the price after its OWN offers; a basket-level offer is a row of the money block and its share is inside the net for tax (decision 3, industry standard).</div>';
   if (document.getElementById('cmp').checked && v('viewer')) { var S = evalFor('', sel).ev; cmp.innerHTML = '<div class="cmp"><b>Compare:</b> this viewer pays <b>' + fmtMoney(ev.total) + '</b> after offers; a stranger would pay <b>' + fmtMoney(S.total) + '</b>' + (S.skipped.length ? ' — a stranger is not offered: ' + S.skipped.filter(function (x) { return /only for/.test(x.why); }).map(function (x) { return esc(x.label); }).join(', ') : '') + '</div>'; } else cmp.innerHTML = '';
+}
+/* ⭐ AT CART LEVEL (Athi, 2026-09-06 23:0x: "spend threshold at cart level … a message to pop: select any product and increase up to the
+   threshold, the percentage will apply on the cart"; "free shipping like a price threshold — when the amount reaches, show free shipping").
+   The rules that judge the whole order say where the basket stands: how far to go, or what it has earned. */
+function paintCartLevel(ev, sel) {
+  var el = document.getElementById('p_cart_level'); if (!el) return;
+  var rows = [], subtotal = 0; (sel || []).forEach(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0]; if (p) subtotal += (Number(p.item_data.price) || 0) * (Number(l.quantity || l.qty) || 0); });
+  if (on('thr')) {
+    var min = n('thr-min'), pct = n('thr-pct'), item = v('thr-item');
+    var got = ev && (ev.adjustments || []).filter(function (a) { return a.offer_id === 'thr'; })[0];
+    var note = ev && (ev.notes || []).filter(function (x) { return x.offer_id === 'thr'; })[0];
+    if (got) rows.push('<div class="ok">✓ <b>Spend ' + fmtMoney(min) + '</b> — reached: ' + esc(got.why) + '</div>');
+    else if (note && note.claim) rows.push('<div class="ok">🎁 ' + esc(note.why) + '</div>');
+    else rows.push('<div class="note">🛒 <b>Spend ' + fmtMoney(min) + '</b> to get ' + (item ? esc(itemName(item)) + ' free' : pct + '% off the order') + ' — the basket is at <b>' + fmtMoney(subtotal) + '</b>' + (subtotal < min ? ', <b>' + fmtMoney(Math.round((min - subtotal) * 100) / 100) + '</b> to go. Add any product until it reaches the threshold; the discount then applies to the whole order.' : '.') + '</div>');
+  }
+  if (on('ship')) {
+    var smin = n('ship-min'), charge = n('ship-charge');
+    var free = ev && Number(ev.shipping) < charge;
+    if (free) rows.push('<div class="ok">🚚 Delivery: <b>' + (Number(ev.shipping) === 0 ? 'free' : fmtMoney(ev.shipping)) + '</b> on this order' + (smin ? ' (from ' + fmtMoney(smin) + ')' : '') + '</div>');
+    else rows.push('<div class="note">🚚 Delivery ' + fmtMoney(charge) + (smin ? ' — free from ' + fmtMoney(smin) + ', the basket is at <b>' + fmtMoney(subtotal) + '</b>' + (subtotal < smin ? ', <b>' + fmtMoney(Math.round((smin - subtotal) * 100) / 100) + '</b> to go' : '') : '') + '</div>');
+  }
+  var cartAdj = ev ? (ev.adjustments || []).filter(function (a) { return a.scope === 'cart' && a.offer_id !== 'thr'; }) : [];
+  cartAdj.forEach(function (a) { rows.push('<div class="ok">✓ <b>' + esc(a.label) + '</b> on the order — ' + esc(a.why) + '</div>'); });
+  el.innerHTML = rows.length ? rows.join('') : '<span class="note">No rule judges the whole order yet — switch on a spend threshold, a basket-level % or a delivery offer.</span>';
 }
 function paintMarkup() {
   var o = document.getElementById('mk-out'); if (!on('markup')) { o.innerHTML = ''; return; }
@@ -393,7 +424,7 @@ function labTry(what, a, b) {
   var p = advProduct();
   APPLY = null;
   if (what === 'markup') { setOn('markup', true); setV('mk-book', p.item_data.price); setV('mk-pct', a); }
-  if (what === 'tier') { setOn('tier', true); setV('tier-mode', 'price'); TIERS[p.item_id] = [{ qty: 5, price: a }, { qty: 10, price: b }, { qty: 25, price: Math.round(b * 0.95 * 100) / 100 }]; labApplyOnly(p.item_id); }
+  if (what === 'tier') { setOn('tier', true); var lp = Number(p.item_data.price) || 0; var pc = function (x) { return lp > 0 ? Math.max(1, Math.round((1 - x / lp) * 100)) : 5; }; TIERS[p.item_id] = [{ qty: 5, percent: pc(a) }, { qty: 10, percent: pc(b) }, { qty: 25, percent: Math.min(90, pc(b) + 5) }]; labApplyOnly(p.item_id); }
   if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); labApplyOnly(p.item_id); }
   if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
   if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); labApplyOnly(p.item_id); }
