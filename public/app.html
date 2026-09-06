@@ -1093,6 +1093,16 @@
    */
   .rows{flex:1;overflow-y:auto;overflow-x:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
+  /* identifiers: chip · id · what it does — one grid, every row aligned */
+  .idtab{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .idrow{display:grid;grid-template-columns:76px minmax(0,auto) minmax(0,1fr) auto;column-gap:12px;align-items:center;padding:9px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)}
+  .idrow:last-child{border-bottom:0}
+  .idrow .idsys{justify-self:start;font-size:var(--fs-1);font-weight:700}
+  .idrow .idval{font-weight:700;font-size:var(--fs-3);cursor:copy;white-space:nowrap}
+  .idrow .idsay{color:var(--grey-2);min-width:0}
+  .idrow .idsrc{color:var(--grey);white-space:nowrap}
+  .idrow .idx{padding:2px 8px}
+  @media(max-width:520px){.idrow{grid-template-columns:76px minmax(0,1fr) auto}.idrow .idsay{grid-column:1/-1}}
   /* the product list's rows are the CART's rows (cart.js .cbcat-row.cbgrid) — the .plist container only names the list */
   .plist{container-type:inline-size}
   .row.prow .main2{min-width:0}
@@ -10496,19 +10506,30 @@ function prodIdentifiers(d){
 function prodIdentifiersTab(d, edit){
   const id=UI.prodSel||d.item_id||d.id||''; const ids=prodIdentifiers(d);
   const roleWord={ seller:tx("Ours"), buyer:tx("Buyer's"), manufacturer:tx("Manufacturer's"), standard:tx('Standard'), external:tx('External system') };
-  const dirWord={ in:tx('comes in as'), out:tx('goes out as'), both:tx('both ways') };
+  /* ⭐ SENTENCES, NOT COLUMN HEADS (Athi, 2026-09-06: "identifier design is not good, not able to make out what it says"). Five headers over
+     unstyled cells (the table's class had no stylesheet) and "both ways / goes out as" told nobody anything. One row per id: the system as
+     a chip, the id in type you can copy, and what it does — in words. */
+  const says=function(x){
+    const who=x.system||roleWord[x.role]||'';
+    if(x.role==='seller') return tx('our own code · on every order, in and out');
+    if(x.role==='standard'&&/HSN|SAC/i.test(x.system)) return tx('the tariff code · printed on the invoice, decides the GST slab');
+    if(x.role==='standard') return tx('the barcode · scanned at the counter and on goods in');
+    const party=x.role==='buyer'?tx("the buyer's name for it"):(x.role==='manufacturer'?tx("the maker's name for it"):tx('its id in {s}').replace('{s}',who));
+    const dir=x.direction==='in'?tx('their orders arrive with it'):(x.direction==='out'?tx('our lines to them carry it'):tx('their orders arrive with it and our lines to them carry it'));
+    return party+' · '+dir;
+  };
   const rows=ids.map(function(x,i){ const xi=(Array.isArray(d.xref)?d.xref:[]).indexOf((d.xref||[]).find(function(y){ return y&&String(y.id)===x.id&&(y.system||'')===x.system; }));
-    return `<tr data-testid="prod-xref-row"><td>${esc(roleWord[x.role]||x.role)}</td><td>${esc(x.system)}</td><td><b>${esc(x.id)}</b></td><td>${esc(dirWord[x.direction]||x.direction)}</td><td style="color:var(--grey)">${esc(x.source||'')}${x.at?' · '+esc(fmtDateTime(x.at)):''}</td>`
-      + (edit&&xi>=0?`<td><button class="composebtn" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})">✕</button></td>`:(edit?'<td></td>':''))+'</tr>'; }).join('');
-  const table=ids.length?`<table class="cbcat-sheet" data-testid="prod-xref" style="margin:0 12px"><thead><tr><th>${tx('Whose')}</th><th>${tx('System')}</th><th>${tx('Id')}</th><th>${tx('Direction')}</th><th>${tx('Source')}</th>${edit?'<th></th>':''}</tr></thead><tbody>${rows}</tbody></table>`
+    return `<div class="idrow" data-testid="prod-xref-row"><span class="optchip idsys" title="${esc(roleWord[x.role]||x.role)}">${esc(x.system||roleWord[x.role]||'')}</span><span class="idval mono" title="${esc(tx('copy'))}" onclick="event.stopPropagation();try{navigator.clipboard.writeText('${esc(x.id)}');toast(tx('Copied'));}catch(_){}">${esc(x.id)}</span><span class="idsay">${esc(says(x))}${x.source?' <span class="idsrc">· '+esc(tx('from'))+' '+esc(x.source)+(x.at?' · '+esc(fmtDateTime(x.at)):'')+'</span>':''}</span>`
+      + (edit&&xi>=0?`<button class="composebtn idx" data-testid="prod-xref-del-${xi}" onclick="prodXrefRemove('${esc(id)}',${xi})" title="${esc(tx('Remove'))}">✕</button>`:'')+'</div>'; }).join('');
+  const table=ids.length?`<div class="itab idtab" data-testid="prod-xref" style="margin:0 12px">${rows}</div>`
     : `<div data-testid="prod-xref" style="padding:6px 12px;font-size:var(--fs-2);color:var(--grey)">${esc(tx('No identifiers yet — set a code on Details, or add another system\'s id below.'))}</div>`;
   const add=edit?`<div style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select class="inp" id="ct_xref_role" data-testid="cat-field-xref-role" style="width:auto"><option value="buyer">${tx("Buyer's")}</option><option value="manufacturer">${tx("Manufacturer's")}</option><option value="external" selected>${tx('External system')}</option></select>
       <input class="inp" id="ct_xref_system" data-testid="cat-field-xref-system" placeholder="${esc(tx('System or party (Tally, SAP, Acme Ltd)'))}" style="flex:1;min-width:12ch">
       <input class="inp" id="ct_xref_id" data-testid="cat-field-xref-id" placeholder="${esc(tx('Their id'))}" style="flex:1;min-width:10ch">
-      <select class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('both ways')}</option><option value="in">${tx('comes in as')}</option><option value="out">${tx('goes out as')}</option></select>
+      <select class="inp" id="ct_xref_dir" data-testid="cat-field-xref-dir" style="width:auto"><option value="both">${tx('their orders in and our lines out')}</option><option value="in">${tx('their orders in')}</option><option value="out">${tx('our lines out')}</option></select>
       <button class="composebtn" data-testid="cat-xref-add" onclick="prodXrefAdd('${esc(id)}')">${tx('Add id')}</button></div>
-      <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting one of these ids resolves to this product; a line sent to that party carries their id.')}</div>`:'';
+      <div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Saved at once. An order quoting any of these ids lands on this product.')}</div>`:'';
   return `<div class="sec">${tx('Identifiers')}</div>`+table+add+prodBarcodeTab(d);
 }
 async function prodXrefAdd(id){
