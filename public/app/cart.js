@@ -345,6 +345,20 @@
       if (!isFinite(u.amount)) { partial = true; return; }
       amount += u.amount * (Number(s.sel[r.item_id]) || 0);
     });
+    /* ⭐ A BASKET-LEVEL OFFER IS PART OF THE TOTAL (Athi, 2026-09-06: "cart also didn't consider the offer" — the bar and the pill said
+       ₹575.90 while the block said ₹510.80 after a cart-scope 10%). The rows carry line offers; the order-level ones are evaluated here
+       once per selection (memoised on the selection + the offers) and taken off the headline, so bar, pill and block say one figure. */
+    try {
+      var offs = (s.cat && Array.isArray(s.cat.offers)) ? s.cat.offers : [];
+      if (amount > 0 && !partial && offs.length && root.CBOffers && root.CBOffers.evaluate) {
+        var key = JSON.stringify(s.sel) + '|' + offs.length + '|' + amount;
+        if (!s._orderOff || s._orderOff.key !== key) {
+          var ev = root.CBOffers.evaluate({ lines: engineLines(ns), offers: offs, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat) } });
+          s._orderOff = { key: key, val: (ev.adjustments || []).filter(function (a) { return a.scope !== 'line' && a.scope !== 'note'; }).reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0) };
+        }
+        if (s._orderOff.val > 0) amount = Math.max(0, Math.round((amount - s._orderOff.val) * 100) / 100);
+      }
+    } catch (e) {}
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
     // saying so reads as agreed when nothing has been agreed.
     return { amount: amount, partial: partial, offered: offered };

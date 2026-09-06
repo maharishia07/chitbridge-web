@@ -93,6 +93,10 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     const cartMoney = norm(await rowsOf(float));
     expect(cartMoney, 'the cart shows both customer-only offers').toEqual(expect.arrayContaining([expect.stringMatching(/Regulars 10%/), expect.stringMatching(/Tier1 basket 5%/)]));
     expect(await float.locator('[data-testid="cbcart-foryou"]').count(), 'customer-only rows say "only for you"').toBeGreaterThanOrEqual(2);
+    /* the bar's headline is the after-offers figure, basket-level offer included (Athi, 2026-09-06: "cart also didn't consider the offer"): 3 kg × 200 − 10% − 5% of the rest */
+    const after = cartMoney.find((r) => /After offers/.test(r)) || ''; const afterAmt = (after.match(/[0-9][0-9,]*.[0-9]{2}/) || [''])[0];
+    expect(afterAmt, 'the block says an after-offers figure').toBeTruthy();
+    await expect(b.getByText(/lines ready/).first(), 'the bar says the same figure as the block').toContainText(afterAmt);
     await b.getByRole('button', { name: /Check out/ }).last().click(); await settle(b);
     for (let i = 0; i < 4; i++) { const next = b.getByRole('button', { name: /Next|Review|Check it|Continue/ }).last(); if (await next.isVisible().catch(() => false)) { await next.click(); await settle(b); } else break; }
     const sent2 = b.waitForResponse((r) => /\/api\/chits\/send$/.test(r.url()) && r.request().method() === 'POST', { timeout: 60000 });
