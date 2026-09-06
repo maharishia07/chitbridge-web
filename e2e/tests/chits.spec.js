@@ -96,6 +96,7 @@ test.describe('Module · Chits', () => {
    * asking the actual question.
    */
   test('[CHIT-01b] the self-copy policy decides which copies exist', async ({ page }) => {
+    test.setTimeout(240000);   /* three sends at ~13 s each on the sfo↔Mumbai API (2026-09-06) — the 60 s default measured the region, not the code */
     await mintEntity(page);
 
     const send = (self_copy) => page.evaluate(async (sc) => {
