@@ -1546,6 +1546,7 @@
   }
 
   root.CBCart = {
+    viewerGroups: viewerGroups,   /* the renderer (its own closure below) reads the viewer's groups through here — one definition */
     money: money, moneyRowsHTML: moneyRowsHTML, moneyFromLines: moneyFromLines, floatsSync: floatsSync, WRAP: WRAP, dealFor: dealFor, closeSummary: closeSummary,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
@@ -1903,7 +1904,7 @@
         var _p = root.CBOffers.forLine(
           /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
           { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
-          _offs, { now: new Date(), customer_groups: viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } });
+          _offs, { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } });
         offBadge = _p.slice(0, 2).map(function (x) {
           return '<span class="cbcat-off" title="' + esc(x.label) + '">' + esc(x.promise) + '</span>';
         }).join('');
@@ -2299,7 +2300,7 @@
       var d = dataOf(row) || {};
       return root.CBOffers.onOffer(
         { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: Number(d.price && d.price.amount != null ? d.price.amount : d.price) || 0 },
-        offs, { now: new Date(), customer_groups: (opts && opts.customer_groups) || viewerGroups(opts && opts.cat) });
+        offs, { now: new Date(), customer_groups: (opts && opts.customer_groups) || root.CBCart.viewerGroups(opts && opts.cat) });
     } catch (e) { return true; }   /* a failing filter must never empty a catalogue */
   }
 
