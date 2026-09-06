@@ -60,6 +60,9 @@ var C2_TABS = {
  * rather than a change of screen.
  */
 async function openChit2(id){
+  /* ⭐ DESIGN 2 IS THE TASK'S WORKFLOW VIEW (Athi, 2026-09-06 11:3x: "why is the order showing design 2 at all? the task only should be in design 2").
+     A SENT copy — the Order — is the cart in Design 1, always. */
+  if ((UI.folder === 'order' || UI.folder === 'drafts' || UI.folder === 'archive') && typeof openChit === 'function') { UI.chit2 = null; return openChit(id); }
   C2.id = id; C2.side = 'them'; C2.tab = 'msg'; C2.data = null; C2.costs = null; C2.err = null;
   UI.chit2 = id;
   /* Keep the row selected in the list, so the left half still shows WHICH chit is open. */
