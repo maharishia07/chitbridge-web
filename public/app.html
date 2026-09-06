@@ -8674,7 +8674,7 @@ function catgChipsHTML(d){
 function prodDeals(d, id){
   const out={ offers:[], tax:null };
   try{
-    if(!UI._ctOffers && typeof ctOffersEnsure==='function') ctOffersEnsure(function(){ paintProdList(); });
+    if(!UI._ctOffers && typeof ctOffersEnsure==='function') ctOffersEnsure(function(){ paintProdList(); if(typeof paintProdDetail==='function') paintProdDetail(); });   /* the header prints the deal too — it painted ₹100 before the offers arrived (2026-09-06) */
     const on=offersForProduct(d, id);
     on.forEach(function(o){ const p=(typeof CBOffers!=='undefined')?CBOffers.promise(o.rules, { money:(n)=>inr(n) }):null; if(p) out.offers.push({ name:o.name, promise:p }); });
   }catch(_){}
