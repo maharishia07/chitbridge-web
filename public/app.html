@@ -6903,13 +6903,13 @@ function supInfoCardHTML(x){
   const shop=(UI.supDet && UI.supDet.supplier && UI.supDet.supplier.supplier_list_id===x.supplier_list_id
               && UI.supDet.cat && UI.supDet.cat.shop) || null;
   return '<div class="supinfo" data-testid="sup-info">'
-    + kv('Legal name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:var(--ok-2)">✓</span>':''))
-    + kv('Your name', esc(x.nickname||'—'))
+    + kv('Their name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:var(--ok-2)">✓</span>':'')+' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">· '+tx('as they registered it')+'</span>')
+    + kv('Your label', esc(x.nickname||'—')+' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">· '+tx('only you see this; chits never go by it')+'</span>')
     /* ⚠️⚠️ WAS LABELLED 'User ID' AND SHOWED A bridge_id — the label was right and the value was wrong,
        which is worse than an honest key: a person reads it and quotes it to a supplier as their handle.
        The API now returns user_id (routes/relationships.js). bridge_id remains the FALLBACK because many
        entities predate the handle and have none — showing a dash there would hide a real identifier. */
-    + kv('User ID', esc(x.user_id||x.bridge_id||'—'), true)
+    + kv('User ID', esc(x.user_id||x.bridge_id||'—')+' <span style="color:var(--grey);font-weight:400;font-family:var(--font-ui);font-size:var(--fs-1)">🔒 '+tx('set once at registration — nobody can change it; every chit goes by this')+'</span>', true)
     + (shop? kv('GSTN', shop.gstn?('<span class="mono">'+esc(shop.gstn)+'</span>'):'<span style="color:var(--grey)">not published</span>') : '')
     + (shop? kv('Address', esc(shop.address||'—')) : '')
     + kv('Category', esc(x.category||'—'))
@@ -7556,7 +7556,8 @@ function supEdit(id){
   const x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
   modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">' + tx('Your own details for this supplier — they never see them') + '</div></div>'
     + '<div class="mbody">'
-    + '<label class="fl">' + tx('Your name for them') + '</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
+    + '<label class="fl">' + tx('Your label for them') + ' <span style="color:var(--grey);font-weight:400">— ' + tx('private to you; it never changes their name or their user id') + '</span></label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 8px">🔒 ' + tx('User ID') + ': <span style="font-family:'Space Mono'">' + esc(x.user_id||x.bridge_id||'') + '</span> — ' + tx('set once at registration, not editable') + '</div>'
     + '<label class="fl">' + tx('Category / tag') + '</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
     + '<label class="fl">' + tx('Notes') + '</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
     + '<label class="fl" style="margin-top:12px">' + tx('Preferred') + '</label>'
