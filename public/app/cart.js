@@ -2540,10 +2540,11 @@
       /* the split: list on the left, the money block on the right when the screen has the room (≥ 900 px of its own width) */
       '.cbcat-split{container-type:inline-size}.cbcat-split-in{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}',
       '.cbcat-side{position:sticky;top:8px}.cbcat-side:empty{display:none}.cbcart-side-empty{font-size:var(--fs-2);color:var(--grey-2);padding:10px 12px;border:1px dashed var(--line);border-radius:9px}',
-      '.cbcart-float{position:fixed;right:24px;bottom:96px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,46,61,.18);padding:6px 8px 8px}',
+      '.cbcart-float{position:fixed;right:28px;top:100px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,46,61,.18);padding:6px 8px 8px}',
       '.cbcart-float-hd{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);padding:2px 4px 6px;cursor:move}',
       '.cbcart-float-x{border:0;background:none;font-size:var(--fs-3);color:var(--grey-2);cursor:pointer;padding:0 4px;line-height:1}',
-      '@media(max-width:520px){.cbcart-float{right:8px;left:8px;width:auto;bottom:88px}}',
+      /* Athi, 2026-09-06 10:0x: "top-most right-hand side within the panel — lots of space, and it will not disturb the product selection even with hundreds of products"; a phone has no such corner, so there it stays above the footer */
+      '@media(max-width:520px){.cbcart-float{right:8px;left:8px;width:auto;top:auto;bottom:88px}}',
       '@container (min-width:900px){.cbcat-split-in{grid-template-columns:minmax(0,1fr) 320px}}',
       '@container (max-width:560px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto;align-items:start}'
       + '.cbcat-row.cbgrid>.cbcat-thumb,.cbcat-row.cbgrid>.cbx{grid-row:1;grid-column:1}.cbcat-row.cbgrid>.cbcat-meat{grid-row:1;grid-column:2}'
