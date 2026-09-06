@@ -1423,7 +1423,17 @@
   function moneyRowsHTML(m, opt) {
     opt = opt || {}; var ctx = m.ctx, ev = m.ev || { adjustments: [], notes: [], total: m.gross };
     var row = function (l, r, extra) { return '<div style="display:flex;justify-content:space-between;gap:8px;' + (extra || '') + '"><span>' + l + '</span><span>' + r + '</span></div>'; };
-    var rows = (ev.adjustments || []).map(function (a) { return row('🏷️ ' + esc(a.label || a.kind) + (a.scope && a.scope !== 'line' ? ' <small style="opacity:.7">' + esc(a.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.abs(Number(a.amount) || 0))) + '</b>'); }).join('');
+    /* ⭐ ONE ROW PER OFFER, NOT PER LINE (Athi, 2026-09-06: "group the offer amount together, so we get one offer outcome"). Three
+       lines under Flat 10% printed three rows; Amazon prints one promotion line. Line-scope adjustments are summed by offer
+       (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
+    var grouped = [], byOffer = {};
+    (ev.adjustments || []).forEach(function (a) {
+      if (a.scope !== 'line') { grouped.push({ label: a.label || a.kind, scope: a.scope, amount: Math.abs(Number(a.amount) || 0), n: 0 }); return; }
+      var k = String(a.offer_id || a.label || a.kind);
+      if (!byOffer[k]) { byOffer[k] = { label: a.label || a.kind, scope: 'line', amount: 0, n: 0, keys: {} }; grouped.push(byOffer[k]); }
+      byOffer[k].amount += Math.abs(Number(a.amount) || 0); if (a.key != null && !byOffer[k].keys[a.key]) { byOffer[k].keys[a.key] = 1; byOffer[k].n++; }
+    });
+    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.round(g.amount * 100) / 100)) + '</b>'); }).join('');
     var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
     var keys = Object.keys(m.byRate || {});
     var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
