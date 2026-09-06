@@ -10,10 +10,13 @@ test('[LAB-01] the offer lab: switch, see, compare, advise', async ({ page }) =>
   await page.goto('/offer-lab.html'); await page.locator('[data-testid^="cbcat-row-"]').first().waitFor({ timeout: 30000 });
   expect(await page.locator('[data-testid^="cbcat-row-"]').count(), 'the sample products draw through the real cart').toBeGreaterThanOrEqual(5);
 
-  /* a 10% line offer, two grapes in the basket: the row, the block and the reason agree */
+  /* a 10% line offer, an order size of 2 typed on the row (Athi: "order size on the right side, so it can be tried here"): the row, the block and the reason agree */
   await page.getByTestId('lab-on-pct').click();
-  await page.locator('[data-testid="cbcat-row-grapes"] [data-testid="cart-add"]').first().click(); await page.waitForTimeout(200);
-  await page.locator('[data-testid="cbcat-row-grapes"] [data-testid="cart-add"]').first().click(); await page.waitForTimeout(400);
+  await page.getByTestId('lab-qty-grapes').fill('2'); await page.getByTestId('lab-qty-grapes').press('Tab'); await page.waitForTimeout(400);
+  /* the tick beside it: untick Sunflower oil and the offer leaves that row only */
+  await page.getByTestId('lab-apply-oil').uncheck(); await page.waitForTimeout(300);
+  await expect(page.locator('[data-testid="cbcat-row-oil"] .cbcat-pr')).not.toContainText('225.00');
+  await page.getByTestId('lab-apply-all').check(); await page.waitForTimeout(300);
   await expect(page.locator('[data-testid="cbcat-row-grapes"] .cbcat-pr')).toContainText('180.00');
   await expect(page.getByTestId('lab-money')).toContainText('360.00');
   await expect(page.getByTestId('lab-why')).toContainText('10% off');

@@ -58,8 +58,9 @@
   .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:var(--fs-1); background:var(--neutral-tint); }
   .hint{ color:var(--grey-2); font-size:var(--fs-1); line-height:1.4; }
   .scroll{ overflow-x:auto; }
-  #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:30px; }
-  #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; }
+  #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:86px; }
+  #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; }
+  #p_list .lab-apply input[type=number]{ width:46px; height:24px; padding:2px 4px; font-size:var(--fs-1); }
   @media (max-width:1000px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line); } }
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
@@ -118,7 +119,7 @@
   </section>
 
   <section class="pane" data-testid="lab-outcome">
-    <div class="sec">What the customer sees — tick what the offer applies to · press + to set the order size · read the result</div>
+    <div class="sec">What the customer sees — tick what the offer applies to · type the order size · read the result</div>
     <div class="line" style="margin-bottom:8px">
       <label><input type="checkbox" id="apply-all" data-testid="lab-apply-all" checked onchange="labApplyAll(this.checked)"> select all</label>
       <input type="text" id="p_search" data-testid="lab-search" placeholder="search products" oninput="CART.search(this.value); injectApplies()" style="width:200px">
@@ -279,10 +280,14 @@ async function labLoadMine() {
 function labApplies(id) { return !APPLY || APPLY.has(id); }
 function injectApplies() {
   document.querySelectorAll('#p_list .cbcat-row').forEach(function (row) {
-    var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id || row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input'); if (old) old.checked = labApplies(id); return; }
+    var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id) return;
+    var q = 0; try { q = Number(CART.qtyOf(id)) || 0; } catch (_) { q = 0; }
+    if (row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input[type=checkbox]'); if (old) old.checked = labApplies(id); var oq = row.querySelector('.lab-apply input[type=number]'); if (oq && document.activeElement !== oq) oq.value = q; return; }
     var lab = document.createElement('label'); lab.className = 'lab-apply'; lab.title = 'the offer applies to this product';
-    lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '>';
-    lab.querySelector('input').addEventListener('change', function (e) { e.stopPropagation(); labApplyOne(id, this.checked); });
+    /* the tick (the offer applies to it) and the ORDER SIZE (Athi, 2026-09-06 21:5x: "order size on the right side as well, so the order size can be tried here") — the box writes the basket's own quantity */
+    lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '><input type="number" min="0" step="1" value="' + q + '" data-testid="lab-qty-' + esc(id) + '" title="order size">';
+    lab.querySelector('input[type=checkbox]').addEventListener('change', function (e) { e.stopPropagation(); labApplyOne(id, this.checked); });
+    lab.querySelector('input[type=number]').addEventListener('change', function (e) { e.stopPropagation(); try { CART.setQty(id, Math.max(0, Math.floor(Number(this.value) || 0))); } catch (_) {} injectApplies(); paintWhy(); });
     lab.addEventListener('click', function (e) { e.stopPropagation(); });
     row.insertBefore(lab, row.firstChild); row.classList.add('lab-has-apply');
   });
