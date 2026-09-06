@@ -21,7 +21,8 @@ test('[BOOKS-01] the trigger rides the heartbeat; the gate waits or goes; the wr
 
   /* the policy on the heartbeat */
   const key = (await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); return api('keysMint', { body: { name: 'store pc', scopes: ['connector', 'services'], days: 1 } }); })).key;
-  await page.evaluate(async () => { await api('saveProfile', { body: { policy_flags: Object.assign({}, SESSION.policy_flags || {}, { books_at: 'manual' }) } }); });
+  /* the server's own registry (lib/policy.js) is the authority; PATCH /entities/policy is the one write — a profile PATCH drops undeclared keys */
+  await page.evaluate(async () => { await api('policySet', { body: { books_at: 'manual' } }); });
   const hb = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'STORE-PC', version: '1.0.0', note: 'watch' } });
   expect((await hb.json()).policy, 'the heartbeat carries the trigger').toEqual({ books_at: 'manual' });
   await page.evaluate(async (id) => { await api('intApprove', { params: { id } }); }, (await hb.json()).actor_id);
