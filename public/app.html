@@ -1729,7 +1729,8 @@ const EP = {
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},
-  custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},  // the seller places a customer in a group (segment_override) — offers "Only for" that group reach them  // the shop's CRM — end-customers locked under it
+  custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
+  custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},  // add a customer by hand (User ID · bridge id · email) — before their first order  // the seller places a customer in a group (segment_override) — offers "Only for" that group reach them  // the shop's CRM — end-customers locked under it
   netDesignGet:    {m:"GET",  p:"/api/network-design",                    ok:"✓"},  // b111 — load this entity's saved network design (cross-device)
   netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
   netBuild:        {m:"POST", p:"/api/network-design/build",              ok:"✓"},  // MINT: owned nodes become entities; send {dry_run:true} to preview (no migration — no new columns)
@@ -7248,7 +7249,8 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-    <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from your storefront. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from you (storefront, Suppliers, a bill), or added here. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
+    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID or email')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
     <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
   const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
@@ -7287,6 +7289,10 @@ function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.custom
         +kv('Added via',esc(c.added_via||'—')))
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">Signed in / ordered through your storefront. ' + txf('This customer exists {only} — the platform never shares them with anyone else.', { only: '<b>' + tx('only under your shop') + '</b>' }) + '</div></div>';
 }
+/* ⭐ ADD BY HAND (Athi, 2026-09-06: "can we add a + icon to include a customer?") — the list used to fill itself only from trades */
+async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(el&&el.value||'').trim(); if(!h){ toast(tx('Type a User ID or email')); return; }
+  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
+  catch(e){ toast((e&&e.message)||tx('Could not add')); } }
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
