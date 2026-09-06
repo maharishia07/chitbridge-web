@@ -840,7 +840,7 @@ function cbDefTestAsHTML(){
 }
 
 /* ── "Only for": the Customers list's own groups, then each customer by name (value 'customer:<identity_id>') ── */
-var _CBDEF_CUSTS, _CBDEF_CUSTS_P;
+var _CBDEF_CUSTS, _CBDEF_CUSTS_P, _CBDEF_GNAMES = [];   /* _CBDEF_GNAMES: the seller's NAMED groups (decision 2) */
 var CBDEF_GROUPS = [['new', 'New customers'], ['regular', 'Regular (3+ orders)'], ['high_value', 'High value'], ['inactive', 'Inactive (90 days)']];
 /* ⚠️ ONE READ, ONE REPAINT. The first version resolved immediately with null while the read was in flight, the picker repainted on
    that, the repaint asked again… an endless microtask loop that froze the offer form ([OFF-01]/[OFF-02] red, run 27). The in-flight
@@ -849,8 +849,8 @@ function cbDefCustsLive(){
   if (_CBDEF_CUSTS !== undefined && _CBDEF_CUSTS !== null) return Promise.resolve(_CBDEF_CUSTS);
   if (_CBDEF_CUSTS_P) return _CBDEF_CUSTS_P;
   _CBDEF_CUSTS = null;
-  _CBDEF_CUSTS_P = api('custList')
-    .then(function (r) { _CBDEF_CUSTS = ((r && r.customers) || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name || c.user_id || c.bridge_id || 'customer', segment: c.segment }; }); return _CBDEF_CUSTS; })
+  _CBDEF_CUSTS_P = Promise.all([api('custList'), api('custGroupNames').catch(function () { return { names: [] }; })])
+    .then(function (rr) { var r = rr[0]; _CBDEF_GNAMES = ((rr[1] && rr[1].names) || []); _CBDEF_CUSTS = ((r && r.customers) || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name || c.user_id || c.bridge_id || 'customer', segment: c.segment }; }); return _CBDEF_CUSTS; })
     .catch(function () { _CBDEF_CUSTS = []; return _CBDEF_CUSTS; });
   return _CBDEF_CUSTS_P;
 }
@@ -863,6 +863,7 @@ function cbDefPickCustomerHTML(x, v){
     + '<optgroup label="' + tx('A group of customers') + '">'
     + CBDEF_GROUPS.map(function (g) { return '<option value="' + g[0] + '"' + (cur === g[0] ? ' selected' : '') + '>' + tx(g[1]) + '</option>'; }).join('')
     + '</optgroup>'
+    + (_CBDEF_GNAMES.length ? '<optgroup label="' + tx('Your named groups') + '">' + _CBDEF_GNAMES.map(function (g) { var val = 'group:' + g; return '<option value="' + cbDefEsc(val) + '"' + (cur === val ? ' selected' : '') + '>' + cbDefEsc(g) + '</option>'; }).join('') + '</optgroup>' : '')
     + (_CBDEF_CUSTS.length ? '<optgroup label="' + tx('One customer') + '">'
         + _CBDEF_CUSTS.map(function (c) { var val = 'customer:' + c.id; return '<option value="' + cbDefEsc(val) + '"' + (cur === val ? ' selected' : '') + '>' + cbDefEsc(c.name) + '</option>'; }).join('')
         + '</optgroup>' : '')
@@ -873,6 +874,7 @@ function cbDefPickCustomerHTML(x, v){
 function cbDefSetCustomer(val){
   var name = '';
   if (val) { var g = CBDEF_GROUPS.filter(function (x) { return x[0] === val; })[0]; if (g) name = g[1];
+    else if (/^group:/.test(val)) name = val.slice(6);
     else { var c = (_CBDEF_CUSTS || []).filter(function (q) { return 'customer:' + q.id === val; })[0]; name = c ? c.name : ''; } }
   cbDefSetRule('customer_group', val || '');
   cbDefSetRule('customer_name', name);
