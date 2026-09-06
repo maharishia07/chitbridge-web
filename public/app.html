@@ -7557,7 +7557,7 @@ function supEdit(id){
   modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">' + tx('Your own details for this supplier — they never see them') + '</div></div>'
     + '<div class="mbody">'
     + '<label class="fl">' + tx('Your label for them') + ' <span style="color:var(--grey);font-weight:400">— ' + tx('private to you; it never changes their name or their user id') + '</span></label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 8px">🔒 ' + tx('User ID') + ': <span style="font-family:'Space Mono'">' + esc(x.user_id||x.bridge_id||'') + '</span> — ' + tx('set once at registration, not editable') + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 8px">🔒 ' + tx('User ID') + ': <span style="font-family:Space Mono,monospace">' + esc(x.user_id||x.bridge_id||'') + '</span> — ' + tx('set once at registration, not editable') + '</div>'
     + '<label class="fl">' + tx('Category / tag') + '</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
     + '<label class="fl">' + tx('Notes') + '</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
     + '<label class="fl" style="margin-top:12px">' + tx('Preferred') + '</label>'
