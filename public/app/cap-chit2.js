@@ -304,7 +304,7 @@ function c2PaneOrd(d){
     var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price), off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
     var unit = (isFinite(p) && q > 0 && off > 0) ? Math.round((p - off / q) * 100) / 100 : null;
     var d = { name: l.particulars || l.name || 'line', unit: l.unit || 'unit', price: isFinite(p) ? p : null, code: l.sku || l.code || null, hsn: l.hsn || null,
-              deal_recorded: unit != null ? { unit: unit, off: off, label: (l.offer && l.offer.label) || 'offer' } : null };
+              deal_recorded: unit != null ? { unit: unit, off: off, label: (l.offer && l.offer.label) || 'offer', promise: (l.offer && l.offer.promise) || null } : null };
     var tax = (l.gst_rate != null) ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
     items.push({ item_id: id, item_data: d, tax: tax, _e: e, _i: i, _l: l });
     if (!e.removed) recLines.push(l);

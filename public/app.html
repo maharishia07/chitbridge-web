@@ -14071,7 +14071,7 @@ function contentItems(c){
   const items=ents.map(x=>{ const li=x.li, q=Number(li.quantity)||0, p=Number(li.price), off=Number(li.discount)||(li.offer&&Number(li.offer.off))||0;
     const unit=(isFinite(p)&&q>0&&off>0)?Math.round((p-off/q)*100)/100:null;
     return { item_id:'l'+x.idx, item_data:{ name:li.particulars||x.it[0]||'Item', unit:li.unit||'unit', price:isFinite(p)?p:null, code:li.sku||li.code||null, hsn:li.hsn||null,
-      description:(x.it[4]&&x.it[4].desc)||null, deal_recorded:(unit!=null?{ unit, off, label:(li.offer&&li.offer.label)||'offer' }:null) },
+      description:(x.it[4]&&x.it[4].desc)||null, deal_recorded:(unit!=null?{ unit, off, label:(li.offer&&li.offer.label)||'offer', promise:(li.offer&&li.offer.promise)||null }:null) },
       tax:(li.gst_rate!=null?{ rate:Number(li.gst_rate), name:li.tax_name||'GST' }:null) }; });
   const cat={ shop:{ bridge_id:'chit', currency_code:c.currency||'INR' }, offers:[], items };
   if(UI._chitCart){ try{ UI._chitCart.destroy(); }catch(_){} }

@@ -328,7 +328,7 @@
     /* ⭐ A RECORDED DEAL (a chit's line carries what was applied when it was sent: discount · offer label) is shown as it was written,
        never re-evaluated — the order page draws the chit, and a chit is evidence (Athi, 2026-09-06 10:19: "it has to be the exact cart"). */
     var rd = dataOf(r).deal_recorded;
-    if (rd && isFinite(Number(rd.unit))) return { amount: Number(rd.unit), offered: false, asking: list, base: base, deal: { unit: Number(rd.unit), off: Number(rd.off) || 0, label: rd.label || 'offer', recorded: true }, tier: tier, why: why };
+    if (rd && isFinite(Number(rd.unit))) return { amount: Number(rd.unit), offered: false, asking: list, base: base, deal: { unit: Number(rd.unit), off: Number(rd.off) || 0, label: rd.label || 'offer', promise: rd.promise || null, recorded: true }, tier: tier, why: why };
     var deal = dealOf(ns, r, base);
     if (deal) return { amount: deal.unit, offered: false, asking: list, base: base, deal: deal, tier: tier, why: why };
     return { amount: base, offered: false, asking: list, base: base, tier: tier, why: why };
@@ -1907,7 +1907,7 @@
         }).join('');
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
-    if (!offBadge && u.deal && u.deal.recorded) offBadge = '<span class="cbcat-off" title="' + esc(u.deal.label) + '">' + esc(u.deal.label) + '</span>';
+    if (!offBadge && u.deal && u.deal.recorded) offBadge = '<span class="cbcat-off" title="' + esc(u.deal.label) + '">' + esc(u.deal.promise || u.deal.label) + '</span>';   /* the promise the cart printed, else the name */
     /* the list price, struck, beside the name — where the eye reads "was"; the price column holds only the price they pay */
     /* (the struck list price sits in the PRICE column, before the offered price — Athi, 2026-09-06: "the original price has to be before the discounted price, struck out") */
 
