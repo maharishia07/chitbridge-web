@@ -112,8 +112,8 @@
     </div>
 
     <div class="sec">Offers — one line each</div>
-    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Min qty</th><th>Only for</th><th>Excl.</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
-    <div class="hint" style="margin-top:6px">Min qty = the offer applies only from that many units (the badge says "5+"). Exclusive = instead of every other offer; otherwise a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
+    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Only for</th><th>Excl.</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
+    <div class="hint" style="margin-top:6px">Exclusive = instead of every other offer; otherwise a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
 
     <div class="sec">Showcase a discount (mark-up)</div>
     <div class="line" id="card-markup">
@@ -125,7 +125,7 @@
   </section>
 
   <section class="pane" data-testid="lab-outcome">
-    <div class="sec">What the customer sees — tick what the offer applies to · type what the customer orders · read the result</div>
+    <div class="sec">What the customer sees — tick what the offer applies to · set the minimum order size · press + as the customer · read the result</div>
     <div class="line" style="margin-bottom:8px">
       <label><input type="checkbox" id="apply-all" data-testid="lab-apply-all" checked onchange="labApplyAll(this.checked)"> select all</label>
       <input type="text" id="p_search" data-testid="lab-search" placeholder="search products" oninput="CART.search(this.value); injectApplies()" style="width:200px">
@@ -201,7 +201,6 @@ function paintCards() {
       + '<td class="c"><input type="checkbox" id="on-' + id + '" data-testid="lab-on-' + id + '" onclick="labToggle(\'' + id + '\',this.checked)"></td>'
       + '<td class="name">' + esc(k.title) + '<small>' + esc(k.what) + '</small></td>'
       + '<td class="val">' + valueCell(k) + '</td>'
-      + '<td class="num"><input type="number" id="' + id + '-minq" min="0" placeholder="any" title="applies only from this many units" oninput="labRepaint()"></td>'
       + '<td>' + selOnly(id) + '</td>'
       + '<td class="c"><input type="checkbox" id="' + id + '-excl" onchange="labRepaint()"></td>'
       + '<td><input type="text" id="' + id + '-alias" placeholder="as the customer sees it" oninput="labRepaint()"></td>'
@@ -212,12 +211,13 @@ function labToggle(id, on) { var c = document.getElementById('card-' + id), b = 
 function v(id) { var e = document.getElementById(id); return e ? e.value : ''; } function n(id) { return Number(v(id)) || 0; } function on(id) { var e = document.getElementById('on-' + id); return !!(e && e.checked); }
 /* the products ticked on the right are what every switched-on offer applies to; all ticked (or none) = everything */
 var APPLY = null;   /* null = everything; else a Set of item ids */
+var MINQ = {};      /* item id → the minimum order size for the offer on that product (the box on the row) */
 function applyTo() { if (!APPLY) return undefined; var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); }); return (ids.length && ids.length < PRODUCTS.length) ? { item_ids: ids } : undefined; }
 function withCommon(id, o) {
   var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
   if (document.getElementById(id + '-excl').checked) o.exclusive = true;
   o.priority = n(id + '-pri'); var al = v(id + '-alias').trim(); if (al) o.label = al;   /* the alias IS the label a customer sees — catalogue-view does the same */
-  var to = applyTo() || {}; var mq = n(id + '-minq'); if (mq > 0) to.min_qty = mq; if (Object.keys(to).length) o.applies_to = to; return o;
+  var to = applyTo() || {}; var by = {}; Object.keys(MINQ).forEach(function (k) { if (MINQ[k] > 0) by[k] = MINQ[k]; }); if (Object.keys(by).length) to.min_qty_by_item = by; if (Object.keys(to).length) o.applies_to = to; return o;
 }
 function itemName(id) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; return p ? p.item_data.name : ''; }
 function labOffers() {
@@ -289,18 +289,18 @@ function injectApplies() {
   var list = document.getElementById('p_list');
   if (list && !list.querySelector('.lab-head')) {
     var h = document.createElement('div'); h.className = 'cbcat-row cbgrid lab-head';
-    h.innerHTML = '<span class="lab-sel">Select · order size</span><span></span><span>Product</span><span>Applied offer / tax</span><span style="text-align:right">Current price</span><span style="text-align:right">+ cart</span>';
+    h.innerHTML = '<span class="lab-sel">Select · min order size</span><span></span><span>Product</span><span>Applied offer / tax</span><span style="text-align:right">Current price</span><span style="text-align:right">+ cart</span>';
     list.insertBefore(h, list.firstChild);
   }
   document.querySelectorAll('#p_list .cbcat-row:not(.lab-head)').forEach(function (row) {
     var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id) return;
-    var q = 0; try { q = Number(CART.qtyOf(id)) || 0; } catch (_) { q = 0; }
+    var q = MINQ[id] || '';
     if (row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input[type=checkbox]'); if (old) old.checked = labApplies(id); var oq = row.querySelector('.lab-apply input[type=number]'); if (oq && document.activeElement !== oq) oq.value = q; return; }
     var lab = document.createElement('label'); lab.className = 'lab-apply'; lab.title = 'the offer applies to this product';
-    /* the tick (the offer applies to it) and the ORDER SIZE (Athi, 2026-09-06 21:5x: "order size on the right side as well, so the order size can be tried here") — the box writes the basket's own quantity */
-    lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '><input type="number" min="0" step="1" value="' + q + '" data-testid="lab-qty-' + esc(id) + '" title="order size">';
+    /* the tick (the offer applies to it) and the MINIMUM ORDER SIZE (Athi, 2026-09-06 22:2x: "the order size is the number we set; when the + crosses the number, the offer applies") — the stepper on the right is what the customer takes */
+    lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '><input type="number" min="0" step="1" value="' + q + '" placeholder="any" data-testid="lab-qty-' + esc(id) + '" title="minimum order size for the offer on this product">';
     lab.querySelector('input[type=checkbox]').addEventListener('change', function (e) { e.stopPropagation(); labApplyOne(id, this.checked); });
-    lab.querySelector('input[type=number]').addEventListener('change', function (e) { e.stopPropagation(); try { CART.setQty(id, Math.max(0, Math.floor(Number(this.value) || 0))); } catch (_) {} injectApplies(); paintWhy(); });
+    lab.querySelector('input[type=number]').addEventListener('change', function (e) { e.stopPropagation(); MINQ[id] = Math.max(0, Math.floor(Number(this.value) || 0)); labRepaint(); });
     lab.addEventListener('click', function (e) { e.stopPropagation(); });
     row.insertBefore(lab, row.firstChild); row.classList.add('lab-has-apply');
   });
