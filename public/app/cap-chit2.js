@@ -304,10 +304,10 @@ function c2PaneOrd(d){
   var recLines = [], items = [];
   lines.forEach(function(e, i){
     var l = e.live || e.original || {}; var id = String(e.line_id || l.line_id || l.item_id || ('ln' + i));
-    var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price), off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
+    var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price), off = (l.offer && l.offer.line_off != null) ? Number(l.offer.line_off) : (Number(l.discount) || (l.offer && Number(l.offer.off)) || 0);   /* line-only share (offers-live parts) */
     var unit = (isFinite(p) && q > 0 && off > 0) ? Math.round((p - off / q) * 100) / 100 : null;
     var d = { name: l.particulars || l.name || 'line', unit: l.unit || 'unit', price: isFinite(p) ? p : null, code: l.sku || l.code || null, hsn: l.hsn || null,
-              deal_recorded: unit != null ? { unit: unit, off: off, label: (l.offer && l.offer.label) || 'offer', promise: (l.offer && l.offer.promise) || null } : null };
+              deal_recorded: unit != null ? { unit: unit, off: off, label: (l.offer && l.offer.label) || 'offer', promise: (l.offer && l.offer.promise) || null, parts: (l.offer && Array.isArray(l.offer.parts)) ? l.offer.parts : null } : null };
     var tax = (l.gst_rate != null) ? { rate: Number(l.gst_rate), name: l.tax_name || 'GST' } : null;
     items.push({ item_id: id, item_data: d, tax: tax, _e: e, _i: i, _l: l });
     if (!e.removed) recLines.push(l);

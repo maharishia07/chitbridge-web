@@ -1479,7 +1479,7 @@
       } else untaxed += net;
     });
     taxTotal = Math.round(taxTotal * 100) / 100;
-    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: Math.round(untaxed * 100) / 100, grand: Math.round(((ev.total != null ? ev.total : gross) + taxTotal) * 100) / 100, ctx: ctx };
+    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: Math.round(untaxed * 100) / 100, grand: Math.round(((ev.total != null ? ev.total : gross) + taxTotal) * 100) / 100, ctx: ctx, offers: offers };
   }
   /**
    * ⭐ THE MONEY BLOCK FROM RECORDED LINES — a chit's lines as they were written (price · quantity · discount · offer · gst_rate), the
@@ -1488,14 +1488,16 @@
    */
   function moneyFromLines(lines, ctx) {
     ctx = ctx || { now: new Date(), currency: 'INR', money: function (n) { return String(n); } };
-    var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0;
+    var gross = 0, adjustments = [], byRate = {}, taxTotal = 0, untaxed = 0, after = 0, cartParts = {};   /* a cart-scope offer prorated over N lines is ONE row again here */
     (lines || []).forEach(function (l, i) {
       if (!l || l.removed || l.kind === 'payload') return;
       var q = Number(l.quantity != null ? l.quantity : l.qty) || 0, p = Number(l.price) || 0, g = p * q;
       var off = Number(l.discount) || (l.offer && Number(l.offer.off)) || 0;
       var net = (l.total != null && isFinite(Number(l.total))) ? Number(l.total) : Math.max(0, g - off);
       gross += g; after += net;
-      if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
+      /* a line that carried two offers (offer.parts, lib/offers-live) makes two rows — the same rows the live cart printed */
+      if (off > 0 && l.offer && Array.isArray(l.offer.parts) && l.offer.parts.length > 1) l.offer.parts.forEach(function (pt) { if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = Math.round((cartParts[ck].amount - (Number(pt.off) || 0)) * 100) / 100; } else adjustments.push({ scope: 'line', key: String(i), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
+      else if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
       var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
       if (rate != null && isFinite(rate)) {
         var cess = Number(l.cess_rate) || 0, tax = Math.round(net * (rate + cess) / 100 * 100) / 100;
@@ -1524,12 +1526,14 @@
        (offer_id, else label) with the item count; cart-scope ones keep their own row and say their scope. */
     var grouped = [], byOffer = {};
     (ev.adjustments || []).forEach(function (a) {
-      if (a.scope !== 'line') { grouped.push({ label: a.label || a.kind, scope: a.scope, amount: Math.abs(Number(a.amount) || 0), n: 0 }); return; }
+      if (a.scope !== 'line') { grouped.push({ label: a.label || a.kind, scope: a.scope, amount: Math.abs(Number(a.amount) || 0), n: 0, offer_id: a.offer_id || null }); return; }
       var k = String(a.offer_id || a.label || a.kind);
-      if (!byOffer[k]) { byOffer[k] = { label: a.label || a.kind, scope: 'line', amount: 0, n: 0, keys: {} }; grouped.push(byOffer[k]); }
+      if (!byOffer[k]) { byOffer[k] = { label: a.label || a.kind, scope: 'line', amount: 0, n: 0, keys: {}, offer_id: a.offer_id || null }; grouped.push(byOffer[k]); }
       byOffer[k].amount += Math.abs(Number(a.amount) || 0); if (a.key != null && !byOffer[k].keys[a.key]) { byOffer[k].keys[a.key] = 1; byOffer[k].n++; }
     });
-    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.round(g.amount * 100) / 100)) + '</b>'); }).join('');
+    /* ⭐ WHAT THIS CUSTOMER GETS BEYOND THE DECLARED OFFERS (Athi, 2026-09-06: "more importantly what additional offer he gets more than declared") — a row from an offer the seller scoped to a group or to this customer says so */
+    var forYou = function (g) { var src = (m.offers || []).filter(function (o) { return g.offer_id && String(o.id) === String(g.offer_id); })[0]; return (src && src.customer_group) ? ' <small data-testid="cbcart-foryou" style="color:var(--ok-2,#1a7f4b);font-weight:700">' + esc('only for you') + '</small>' : ''; };
+    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + forYou(g) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.round(g.amount * 100) / 100)) + '</b>'); }).join('');
     var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
     var keys = Object.keys(m.byRate || {});
     var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
