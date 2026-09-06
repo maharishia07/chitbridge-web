@@ -30,15 +30,15 @@
   .line{ display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:var(--fs-2); padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
   .line label{ display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
   input[type=number], input[type=text], select{ font:inherit; font-size:var(--fs-2); padding:3px 5px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); height:26px; }
-  input[type=number]{ width:56px; text-align:right; } input[type=text]{ width:110px; } select{ max-width:128px; }
+  input[type=number]{ width:56px; text-align:right; } input[type=text]{ width:96px; } select{ max-width:128px; }
   input[type=checkbox]{ width:15px; height:15px; margin:0; accent-color:var(--blue); }
   table.grid{ width:100%; border-collapse:separate; border-spacing:0; font-size:var(--fs-2); background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   table.grid th{ position:sticky; top:0; background:var(--neutral-tint); color:var(--grey-2); font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; font-weight:700; text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
   table.grid td{ padding:5px 6px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
   table.grid tr:last-child td{ border-bottom:0; }
   table.grid tr.on td{ background:var(--blue-tint-bg); }
-  table.grid td.name{ font-weight:700; } table.grid td.name small{ display:block; font-weight:400; color:var(--grey-2); font-size:var(--fs-1); }
-  table.grid td.val{ white-space:normal; min-width:230px; } table.grid td.val label{ display:inline-flex; align-items:center; gap:4px; margin:1px 6px 1px 0; white-space:nowrap; }
+  table.grid td.name{ font-weight:700; min-width:118px; } table.grid td.name small{ white-space:normal; } table.grid td.name small{ display:block; font-weight:400; color:var(--grey-2); font-size:var(--fs-1); }
+  table.grid td.val{ white-space:normal; min-width:200px; } table.grid td.val label{ display:inline-flex; align-items:center; gap:4px; margin:1px 6px 1px 0; white-space:nowrap; }
   table.grid td.c{ text-align:center; } table.grid td.num input{ width:52px; }
   .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
   .prop{ border:1px solid var(--line); border-radius:8px; padding:6px 9px; background:var(--card); font-size:var(--fs-2); display:flex; gap:8px; align-items:center; flex:1 1 100%; }
@@ -58,6 +58,8 @@
   .chip{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:1px 8px; font-size:var(--fs-1); background:var(--neutral-tint); }
   .hint{ color:var(--grey-2); font-size:var(--fs-1); line-height:1.4; }
   .scroll{ overflow-x:auto; }
+  #p_list .cbcat-row.lab-has-apply{ position:relative; padding-left:30px; }
+  #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; }
   @media (max-width:1000px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line); } }
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
@@ -103,7 +105,7 @@
     </div>
 
     <div class="sec">Offers — one line each</div>
-    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>On what</th><th>Only for</th><th>Excl.</th><th>Order</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
+    <div class="scroll"><table class="grid" id="cards"><thead><tr><th>On</th><th>Offer</th><th>Value</th><th>Only for</th><th>Excl.</th><th>Order</th><th>Shown as</th></tr></thead><tbody id="cards-body"></tbody></table></div>
     <div class="hint" style="margin-top:6px">Exclusive = instead of every other offer. Order: lower runs first; at the same order a line offer runs before a basket offer and a percentage before an amount. Shown as = the only name a customer sees.</div>
 
     <div class="sec">Showcase a discount (mark-up)</div>
@@ -116,7 +118,12 @@
   </section>
 
   <section class="pane" data-testid="lab-outcome">
-    <div class="sec">What the customer sees — press + to put one in the basket</div>
+    <div class="sec">What the customer sees — tick what the offer applies to · press + to set the order size · read the result</div>
+    <div class="line" style="margin-bottom:8px">
+      <label><input type="checkbox" id="apply-all" data-testid="lab-apply-all" checked onchange="labApplyAll(this.checked)"> select all</label>
+      <input type="text" id="p_search" data-testid="lab-search" placeholder="search products" oninput="CART.search(this.value); injectApplies()" style="width:200px">
+      <span class="hint" id="apply-note">the offers apply to every product</span>
+    </div>
     <div id="p_list"></div>
     <div id="p_cart"></div>
     <div class="two" style="margin-top:10px">
@@ -182,12 +189,11 @@ function valueCell(k) {
 }
 function paintCards() {
   document.getElementById('cards-body').innerHTML = KINDS.map(function (k) {
-    var id = k.id, noScope = (id === 'tier' || id === 'thr' || id === 'bxgy' || id === 'bundle' || id === 'ship' || id === 'band');
+    var id = k.id;
     return '<tr id="card-' + id + '">'
       + '<td class="c"><input type="checkbox" id="on-' + id + '" data-testid="lab-on-' + id + '" onclick="labToggle(\'' + id + '\',this.checked)"></td>'
       + '<td class="name">' + esc(k.title) + '<small>' + esc(k.what) + '</small></td>'
       + '<td class="val">' + valueCell(k) + '</td>'
-      + '<td>' + (noScope ? selTo(id) : selTo(id)) + '</td>'
       + '<td>' + selOnly(id) + '</td>'
       + '<td class="c"><input type="checkbox" id="' + id + '-excl" onchange="labRepaint()"></td>'
       + '<td class="num"><input type="number" id="' + id + '-pri" value="0" oninput="labRepaint()"></td>'
@@ -197,12 +203,14 @@ function paintCards() {
 }
 function labToggle(id, on) { var c = document.getElementById('card-' + id), b = document.getElementById('on-' + id); if (on == null) { b.checked = !b.checked; } if (c) c.classList.toggle('on', b.checked); labRepaint(); }
 function v(id) { var e = document.getElementById(id); return e ? e.value : ''; } function n(id) { return Number(v(id)) || 0; } function on(id) { var e = document.getElementById('on-' + id); return !!(e && e.checked); }
-function applyTo(id) { var p = v(id + '-to'); return p ? { item_ids: [p] } : undefined; }
+/* the products ticked on the right are what every switched-on offer applies to; all ticked (or none) = everything */
+var APPLY = null;   /* null = everything; else a Set of item ids */
+function applyTo() { if (!APPLY) return undefined; var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); }); return (ids.length && ids.length < PRODUCTS.length) ? { item_ids: ids } : undefined; }
 function withCommon(id, o) {
   var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
   if (document.getElementById(id + '-excl').checked) o.exclusive = true;
   o.priority = n(id + '-pri'); var al = v(id + '-alias').trim(); if (al) o.label = al;   /* the alias IS the label a customer sees — catalogue-view does the same */
-  var to = applyTo(id); if (to) o.applies_to = to; return o;
+  var to = applyTo(); if (to) o.applies_to = to; return o;
 }
 function itemName(id) { var p = PRODUCTS.filter(function (x) { return x.item_id === id; })[0]; return p ? p.item_data.name : ''; }
 function labOffers() {
@@ -224,14 +232,14 @@ function catFor(viewer) { return { shop: { bridge_id: 'lab', display_name: 'Offe
 function labRepaint(rebuild) {
   var cat = catFor(v('viewer'));
   if (!CART || rebuild) {
-    CART = CBCart.create(cat, { renderer: (typeof CBCatUI !== 'undefined') ? CBCatUI : undefined, listEl: 'p_list', barEl: 'p_cart', currency: 'INR', cartTitle: 'The basket', checkoutLabel: 'This is where Check out would be', emptyHint: 'Press + on a product', onChange: function () { paintWhy(); } });
+    CART = CBCart.create(cat, { renderer: (typeof CBCatUI !== 'undefined') ? CBCatUI : undefined, listEl: 'p_list', barEl: 'p_cart', currency: 'INR', cartTitle: 'The basket', checkoutLabel: 'This is where Check out would be', emptyHint: 'Press + on a product', onChange: function () { injectApplies(); paintWhy(); } });
     try { CART.paint(); } catch (_) {}   /* the list is painted on the first paint() — nothing else asks for it on this page */
   } else {
     /* the same cart, new terms: the offers and the viewer change in place, the memoised figure is dropped, the cart repaints — exactly what the Suppliers screen does when offers arrive */
     var st = CART.state(); st.cat.offers = cat.offers; st.cat.shop.viewer_groups = cat.shop.viewer_groups; st.deals = null; st._M = null; CART.paint();
   }
   try { CBCatUI.ensureCss(); } catch (_) {}
-  paintWhy(); paintMarkup();
+  injectApplies(); paintWhy(); paintMarkup();
 }
 function engineLines(sel) { return sel.map(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0] || { item_data: {} }; return { key: String(l.item_id), item_id: l.item_id, sku: p.item_data.code || null, categories: p.item_data.categories || [], excluded: [], qty: Number(l.quantity || l.qty) || 0, unitPrice: Number(p.item_data.price) || 0, tax: p.tax || null }; }); }
 function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('ship') ? n('ship-charge') : 0; var ev = CBOffers.evaluate({ lines: lines, offers: labOffers(), ctx: { now: new Date(), currency: 'INR', customer_groups: groupsFor(viewer), shipping: ship, money: function (x) { return fmtMoney(x); } } }); return { lines: lines, ev: ev, per: CBOffers.perLine(ev, lines) || {} }; }
@@ -267,6 +275,25 @@ async function labLoadMine() {
     paintCards(); labRepaint(true);
   } catch (e) { alert('Could not read your catalogue: ' + (e && e.message)); }
 }
+/* ── the tick on every row: what the offers apply to ── */
+function labApplies(id) { return !APPLY || APPLY.has(id); }
+function injectApplies() {
+  document.querySelectorAll('#p_list .cbcat-row').forEach(function (row) {
+    var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id || row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input'); if (old) old.checked = labApplies(id); return; }
+    var lab = document.createElement('label'); lab.className = 'lab-apply'; lab.title = 'the offer applies to this product';
+    lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '>';
+    lab.querySelector('input').addEventListener('change', function (e) { e.stopPropagation(); labApplyOne(id, this.checked); });
+    lab.addEventListener('click', function (e) { e.stopPropagation(); });
+    row.insertBefore(lab, row.firstChild); row.classList.add('lab-has-apply');
+  });
+  var note = document.getElementById('apply-note'), all = document.getElementById('apply-all'); var n = APPLY ? APPLY.size : PRODUCTS.length;
+  if (note) note.textContent = (!APPLY || n === PRODUCTS.length) ? 'the offers apply to every product' : (n ? 'the offers apply to ' + n + ' product' + (n === 1 ? '' : 's') : 'the offers apply to nothing — tick a product');
+  if (all) all.checked = !APPLY || n === PRODUCTS.length;
+}
+function labApplyAll(on) { APPLY = on ? null : new Set(); labRepaint(); }
+function labApplyOne(id, on) { if (!APPLY) { APPLY = new Set(PRODUCTS.map(function (p) { return p.item_id; })); } if (on) APPLY.add(id); else APPLY.delete(id); if (APPLY.size === PRODUCTS.length) APPLY = null; labRepaint(); }
+function labApplyOnly(id) { APPLY = new Set([id]); }
+
 /* ── the advisor ── */
 function advProduct() { var id = v('adv-item'); return PRODUCTS.filter(function (p) { return p.item_id === id; })[0] || PRODUCTS[0]; }
 function advOther() { var p = advProduct(); return PRODUCTS.filter(function (x) { return x.item_id !== p.item_id; }).sort(function (a, b) { return a.item_data.price - b.item_data.price; })[0] || p; }
@@ -305,11 +332,12 @@ function setV(id, val) { var e = document.getElementById(id); if (e) e.value = v
 function labTry(what, a, b) {
   KINDS.forEach(function (k) { setOn(k.id, false); }); setOn('markup', false);
   var p = advProduct();
+  APPLY = null;
   if (what === 'markup') { setOn('markup', true); setV('mk-book', p.item_data.price); setV('mk-pct', a); }
-  if (what === 'tier') { setOn('tier', true); setV('tier-q1', 5); setV('tier-p1', a); setV('tier-q2', 10); setV('tier-p2', b); setV('tier-to', p.item_id); }
-  if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); setV('bxgy-to', p.item_id); }
+  if (what === 'tier') { setOn('tier', true); setV('tier-q1', 5); setV('tier-p1', a); setV('tier-q2', 10); setV('tier-p2', b); labApplyOnly(p.item_id); }
+  if (what === 'bxgy') { setOn('bxgy', true); setV('bxgy-x', a || 2); setV('bxgy-y', 1); setV('bxgy-pct', 100); setV('bxgy-item', b || ''); labApplyOnly(p.item_id); }
   if (what === 'bundle') { var o = advOther(); setOn('bundle', true); setV('bundle-a', p.item_id); setV('bundle-b', o.item_id); setV('bundle-p', Math.round((p.item_data.price + o.item_data.price) * 0.9)); }
-  if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); setV('pct-to', p.item_id); }
+  if (what === 'pct') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); labApplyOnly(p.item_id); }
   if (what === 'thr') { setOn('thr', true); setV('thr-min', a); if (b) { setV('thr-item', b); setV('thr-qty', 1); } else setV('thr-pct', 5); }
   if (what === 'ship') { setOn('ship', true); setV('ship-mode', 'free'); }
   if (what === 'loyal') { setOn('pct', true); setV('pct-v', a); setV('pct-scope', 'line'); setV('pct-only', 'high_value'); setV('pct-alias', 'Special discount'); setV('viewer', 'high_value'); document.getElementById('cmp').checked = true; }
