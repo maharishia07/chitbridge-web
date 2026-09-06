@@ -311,9 +311,9 @@
     var d = dataOf(r), q = Number(s.sel[r.item_id]) || 1, key = String(r.item_id) + '@' + q + '@' + base;
     /* a row IN the basket reads the basket's own evaluation (compute) — the share this line got, line-scope only, as the cart row always showed */
     if (s.sel[r.item_id] > 0) {
-      var M = compute(ns), p = M && M.per ? M.per[String(r.item_id)] : null;
+      var M = compute(ns), p = M && M.rowOff ? M.rowOff[String(r.item_id)] : null;
       if (!p || !(p.off > 0)) return null;
-      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', offers: p.offers || [] };
+      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', line_off: p.line_off, cart_off: p.cart_off };
     }
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
     var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
@@ -389,6 +389,20 @@
     var M = money(EL, { offers: offs, ctx: { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } }, taxOf: function (id, l) { return (l && l.tax) || null; } });
     M.per = (offs.length && root.CBOffers && root.CBOffers.perLine) ? (root.CBOffers.perLine(M.ev, EL) || {}) : {};
     M.lines = EL;
+    /* ⭐ THE ROW'S WHOLE SHARE (Athi, 2026-09-06 18:50: "it has to reduce both"): the line's own offers plus its share of every basket-level
+       offer, split by list value (the rule money() uses for tax and the send path uses to record the line) — and every label, in order */
+    var adj = (M.ev && M.ev.adjustments) || [], gross = Number(M.gross) || 0;
+    var cartAdj = adj.filter(function (a) { return a.scope !== 'line' && a.scope !== 'note' && Math.abs(Number(a.amount) || 0) > 0; });
+    var orderOff = cartAdj.reduce(function (t, a) { return t + Math.abs(Number(a.amount) || 0); }, 0);
+    M.rowOff = {};
+    EL.forEach(function (l) {
+      var g = (Number(l.unitPrice) || 0) * (Number(l.qty) || 0), p = M.per[String(l.key)] || {}, lineOff = Number(p.off) || 0;
+      var cartShare = (gross > 0 && orderOff > 0) ? Math.round(orderOff * g / gross * 100) / 100 : 0;
+      var labels = adj.filter(function (a) { return a.scope === 'line' && String(a.target) === String(l.key) && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; })
+        .concat(cartShare > 0 ? cartAdj.map(function (a) { return a.label || a.kind; }) : []);
+      var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
+      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: Math.round((lineOff + cartShare) * 100) / 100, line_off: lineOff, cart_off: cartShare, label: uniq.join(' + ') };
+    });
     s._M = { key: key, M: M }; return M;
   }
   /** What is in the cart, in the shape a chit line needs. Reads the WHOLE catalogue, never the filtered view. */

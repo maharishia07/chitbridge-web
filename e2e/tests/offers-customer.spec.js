@@ -58,7 +58,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     let row = await openSupplier(b, handle, itemId);
     let f = await rowFacts(row);
     expect(f.price, 'a stranger sees the list price').toMatch(/200\.00/);
-    expect(f.price, 'a stranger sees no offered price').not.toMatch(/180\.00/);
+    expect(f.price, 'a stranger sees no offered price').not.toMatch(/180\.00|170\.00/);
     expect(f.tags, 'a stranger sees no badge').not.toMatch(/10% off|Regulars/);
 
     /* 2 · THE PUBLIC STOREFRONT: the offer is not in the payload at all */
@@ -82,7 +82,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     row = await openSupplier(b, handle, itemId);
     f = await rowFacts(row);
     expect(f.tags, 'the customer sees the badge').toMatch(/10% off/);
-    expect(f.price, 'the customer sees the offered price').toMatch(/180\.00/);
+    expect(f.price, 'the customer sees the price after both offers (line 10% + basket 5%)').toMatch(/170\.00/);
     const groups = await b.evaluate(() => { try { const st = UI._supCart && UI._supCart.state ? UI._supCart.state() : null; return st && st.cat && st.cat.shop && st.cat.shop.viewer_groups; } catch (_) { return null; } });
     if (groups) expect(groups, 'the view names the customer and their group').toEqual(expect.arrayContaining(['new']));
 
