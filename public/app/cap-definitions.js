@@ -1138,7 +1138,8 @@ function cbDefPreviewHTML(){
   var cat = (f.rules.applies_to || {}).category || null;
   var qty2 = CBOffers.sampleQty([o], CBDEF_SAMPLE);
   var promise = null;
-  try { promise = CBOffers.promise(o, { now: new Date(), money: money }); } catch (e) {}
+  /* ⭐ PREVIEWED AS THE CUSTOMER IT IS FOR (Athi, 2026-09-06 19:27: "the offer computation not works properly during test?") — a customer-only offer fails closed for a stranger, so the seller's own preview must stand in that customer's shoes */
+  try { promise = CBOffers.promise(o, { now: new Date(), money: money, customer_groups: o.customer_group ? [o.customer_group] : [] }); } catch (e) {}
   var one = cbDefPreviewRow(o, 1, cat, money), many = cbDefPreviewRow(o, qty2, cat, money);
   /* ⚠️ The window is the FIRST thing said when it is closed, because every row under it would otherwise show a
      discount the basket will refuse. within() is what returns this, through evaluate's `skipped`. */
@@ -1175,7 +1176,7 @@ function cbDefPreviewRow(o, qty, cat, money){
   try {
     var ev = CBOffers.evaluate({
       lines: [{ key: '0', item_id: 'sample', categories: cat ? [String(cat)] : [], qty: qty, unitPrice: CBDEF_SAMPLE }],
-      offers: [o], money: money, shipping: ship
+      offers: [o], money: money, shipping: ship, customer_groups: o.customer_group ? [o.customer_group] : []   /* as the customer it is for */
     });
     out.was = ev.subtotal + ship;
     out.now = ev.total;
@@ -1796,7 +1797,7 @@ function cbDefTestRun(){
   var why = '';
   try {
     var lines = [cbOfferLine(0, d, CBDEF_TEST.qty)];
-    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); } });
+    var ev = CBOffers.evaluate({ lines: lines, offers: [offer], money: function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); }, customer_groups: offer.customer_group ? [offer.customer_group] : [] });   /* the bench stands in that customer's shoes */
     var per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
     var skipped = (ev && ev.skipped) || [];
     if (!(per.off > 0) && !(ev && ev.claims && ev.claims.length)) {
