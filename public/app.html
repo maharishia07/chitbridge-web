@@ -7434,7 +7434,7 @@ function supStepsFor(x){
 function supDefaultSubject(x){ return 'Order — '+supName(x); }
 function supStepItems(){
   /* the list on the left, the cart's money block on the right (summaryEl → the cart paints it on every change) */
-  return '<div class="cbcat-split"><div class="cbcat-split-in"><div>' + supCartHTML() + '</div><aside class="cbcat-side" id="cbsum_sup" data-testid="sup-side"></aside></div></div>'
+  return supCartHTML()
     + '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">'
     + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('Add everything to the cart') + '</span>'
     + ' — for a short catalogue where ticking each line is the long way round.</div>';
@@ -7556,7 +7556,7 @@ function supEdit(id){
    the panel, and the warning chip to the passport, which is what the warning is actually about. */
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
-  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', summaryEl:'cbsum_sup', summaryTestid:'sup-side-total', renderer: CBCatUI, checkoutLabel:'Check out →',
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', summary:'float', summaryTestid:'sup-side-total', renderer: CBCatUI, checkoutLabel:'Check out →',
            from:supName(x), cartTitle:'Your order',
            // The cart hands over; THIS screen decides what "next" means. Checking out of the popup is the same
            // action as pressing the footer's primary, so it lands on the same step rather than a second path.

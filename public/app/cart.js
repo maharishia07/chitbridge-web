@@ -1024,13 +1024,34 @@
   /** ⭐ THE SUMMARY BESIDE THE LIST (Athi, 2026-09-06 09:2x: "so much space on the right — can we bring the cart summary there?"):
    *  a screen names summaryEl and the cart paints its money block there on every change — the same reviewHTML the Review step prints. */
   function paintSummary(ns) {
+    var s = C[ns]; if (!s) return;
+    var tid = opt(ns, 'summaryTestid', 'cart-side-total'), n = lines(ns), h = handleOf(ns);
+    /* ⭐ FLOATING (Athi, 2026-09-06 09:47: "bring it as a floating overlay with a close button rather than static — it occupies space"):
+       a small card above the footer, near Check out, that appears once something is in the basket and closes with ✕. Draggable where
+       the app's movable-panel primitive is present. The same reviewHTML as the Review step; nothing is reserved on the page. */
+    if (opt(ns, 'summary') === 'float') {
+      var id = 'cbcart_sum_' + ns, box = doc(id);
+      if (!n || s.sumClosed) { if (box) box.hidden = true; return; }
+      if (!box) {
+        box = document.createElement('div'); box.id = id; box.className = 'cbcart-float'; box.setAttribute('data-testid', tid.replace(/-total$/, '') + '-float');
+        document.body.appendChild(box);
+        try { if (typeof root.makeMovable === 'function') root.makeMovable(box, { key: 'cb_cart_float', minW: 260, minH: 120 }); } catch (e) {}
+      }
+      box.hidden = false;
+      try {
+        box.innerHTML = '<div class="cbcart-float-hd"><span>' + esc(opt(ns, 'cartTitle', 'Your basket')) + ' · ' + esc(String(n)) + '</span>'
+          + '<button type="button" class="cbcart-float-x" aria-label="close" onclick="CBCart.closeSummary(\'' + esc(ns) + '\')">✕</button></div>'
+          + h.reviewHTML({ totalTestid: tid });
+      } catch (e) {}
+      return;
+    }
     var el = doc(opt(ns, 'summaryEl')); if (!el) return;
     try {
-      var h = handleOf(ns), n = lines(ns), tid = opt(ns, 'summaryTestid', 'cart-side-total');
       el.innerHTML = n ? h.reviewHTML({ totalTestid: tid })
         : '<div class="cbcart-side-empty">' + esc(opt(ns, 'emptyHint', 'Press + on what you want')) + '</div>';
     } catch (e) {}
   }
+  function closeSummary(ns) { var s = C[ns]; if (!s) return; s.sumClosed = true; paintSummary(ns); }
   function paint(ns) {
     paintBar(ns); paintList(ns); paintSummary(ns);
     // A screen may show the cart somewhere else too — a footer button count, a disabled Next. It registers a
@@ -1193,7 +1214,7 @@
      nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
   var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
     'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
-    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid'];
+    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid', 'summary'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -1402,7 +1423,7 @@
       },
 
       /** Let it go. A held cart that is never released is a leak the namespaced API could not even express. */
-      destroy: function () { close(ns); delete C[ns]; }
+      destroy: function () { close(ns); try { var b = doc('cbcart_sum_' + ns); if (b) b.remove(); } catch (e) {} delete C[ns]; }
     };
     /* ⚠️ The handle is kept on the state so paintList/paintBar can hand it to a `renderer` (see rendererOf).
        Everything else in this file works from `ns`; a renderer works from the handle, because a renderer is a
@@ -1474,7 +1495,7 @@
   }
 
   root.CBCart = {
-    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP, dealFor: dealFor,
+    money: money, moneyRowsHTML: moneyRowsHTML, WRAP: WRAP, dealFor: dealFor, closeSummary: closeSummary,
     create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
@@ -2519,6 +2540,10 @@
       /* the split: list on the left, the money block on the right when the screen has the room (≥ 900 px of its own width) */
       '.cbcat-split{container-type:inline-size}.cbcat-split-in{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}',
       '.cbcat-side{position:sticky;top:8px}.cbcat-side:empty{display:none}.cbcart-side-empty{font-size:var(--fs-2);color:var(--grey-2);padding:10px 12px;border:1px dashed var(--line);border-radius:9px}',
+      '.cbcart-float{position:fixed;right:24px;bottom:96px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,46,61,.18);padding:6px 8px 8px}',
+      '.cbcart-float-hd{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);padding:2px 4px 6px;cursor:move}',
+      '.cbcart-float-x{border:0;background:none;font-size:var(--fs-3);color:var(--grey-2);cursor:pointer;padding:0 4px;line-height:1}',
+      '@media(max-width:520px){.cbcart-float{right:8px;left:8px;width:auto;bottom:88px}}',
       '@container (min-width:900px){.cbcat-split-in{grid-template-columns:minmax(0,1fr) 320px}}',
       '@container (max-width:560px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto;align-items:start}'
       + '.cbcat-row.cbgrid>.cbcat-thumb,.cbcat-row.cbgrid>.cbx{grid-row:1;grid-column:1}.cbcat-row.cbgrid>.cbcat-meat{grid-row:1;grid-column:2}'
