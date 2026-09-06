@@ -40,7 +40,7 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   const own = page.getByTestId('sup-row-own');
   if (await own.isVisible().catch(() => false)) { await own.click(); await page.locator('#sup_body [data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1500); await page.locator('#sup_body [data-testid="cart-add"]').first().click().catch(() => {}); await page.waitForTimeout(800); }
   await page.screenshot({ path: path.join(OUT, 'suppliers.png') });
-  await page.setViewportSize({ width: 400, height: 860 }); await page.waitForTimeout(800);
+  await page.setViewportSize({ width: 400, height: 860 }); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(2500); const own2 = page.getByTestId('sup-row-own'); if (await own2.isVisible().catch(() => false)) { await own2.click(); await page.locator('#sup_body [data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1200); }
   await page.screenshot({ path: path.join(OUT, 'suppliers-mobile.png') });
   await browser.close();
   console.log('shots in', OUT);
