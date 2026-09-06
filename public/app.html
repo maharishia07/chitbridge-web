@@ -7433,7 +7433,8 @@ function supStepsFor(x){
 /* The subject the schema requires, proposed rather than demanded — it is still editable on the Details step. */
 function supDefaultSubject(x){ return 'Order — '+supName(x); }
 function supStepItems(){
-  return supCartHTML()
+  /* the list on the left, the cart's money block on the right (summaryEl → the cart paints it on every change) */
+  return '<div class="cbcat-split"><div class="cbcat-split-in"><div>' + supCartHTML() + '</div><aside class="cbcat-side" id="cbsum_sup" data-testid="sup-side"></aside></div></div>'
     + '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">'
     + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('Add everything to the cart') + '</span>'
     + ' — for a short catalogue where ticking each line is the long way round.</div>';
@@ -7555,7 +7556,7 @@ function supEdit(id){
    the panel, and the warning chip to the passport, which is what the warning is actually about. */
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
-  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', renderer: CBCatUI, checkoutLabel:'Check out →',
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', summaryEl:'cbsum_sup', summaryTestid:'sup-side-total', renderer: CBCatUI, checkoutLabel:'Check out →',
            from:supName(x), cartTitle:'Your order',
            // The cart hands over; THIS screen decides what "next" means. Checking out of the popup is the same
            // action as pressing the footer's primary, so it lands on the same step rather than a second path.
@@ -7586,6 +7587,7 @@ async function selectSupplier(id, silent){
     UI.supDet={supplier:own, items:null, loading:true}; paintSupDetail();
     /* the same catalogue VIEW a buyer would see of us — offers, rates, stock stamps (ownCatalogueView) */
     const cat=await ownCatalogueView(tx('Our own stock'));
+    if(UI.supSel!=='own') return;   /* the person moved on while this loaded — a stale answer must not replace the live cart (two carts on one screen, 2026-09-06) */
     UI.supDet={ supplier:own, cat:cat, items:(cat.items||[]).map(p=>{ const d=p.item_data||p; return { particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price) }; }) };
     supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(own)); UI._supCartFor='own';
     UI._supFlow=supStepsFor(own);
@@ -7609,6 +7611,7 @@ async function selectSupplier(id, silent){
   loadSupplierConfidence(x.bridge_id);
   if(x.has_catalogue){
     try{ const cat=await supCatalogueFull(x.supplier_entity_id); const arr=cat.items||[];
+      if(UI.supSel!==id) return;   /* stale: another supplier was chosen while this one loaded — leave the live cart alone */
       UI.supDet={supplier:x, cat:cat,
         items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
       // ⚠️ THE CART AND THE FLOW ARE CREATED HERE, where a catalogue actually ARRIVES — once per supplier, not once

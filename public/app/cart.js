@@ -1021,8 +1021,18 @@
     var r = rendererOf(ns);
     if (r) r.barInto(el, handleOf(ns)); else el.innerHTML = barHTML(ns);
   }
+  /** ⭐ THE SUMMARY BESIDE THE LIST (Athi, 2026-09-06 09:2x: "so much space on the right — can we bring the cart summary there?"):
+   *  a screen names summaryEl and the cart paints its money block there on every change — the same reviewHTML the Review step prints. */
+  function paintSummary(ns) {
+    var el = doc(opt(ns, 'summaryEl')); if (!el) return;
+    try {
+      var h = handleOf(ns), n = lines(ns), tid = opt(ns, 'summaryTestid', 'cart-side-total');
+      el.innerHTML = n ? h.reviewHTML({ totalTestid: tid })
+        : '<div class="cbcart-side-empty">' + esc(opt(ns, 'emptyHint', 'Press + on what you want')) + '</div>';
+    } catch (e) {}
+  }
   function paint(ns) {
-    paintBar(ns); paintList(ns);
+    paintBar(ns); paintList(ns); paintSummary(ns);
     // A screen may show the cart somewhere else too — a footer button count, a disabled Next. It registers a
     // refresh and is called here, so nothing on screen can disagree with the cart about what is in it.
     var s = C[ns];
@@ -1183,7 +1193,7 @@
      nothing reads is a feature that exists on one screen only); it is warned, not refused, so a typo never blanks a screen. */
   var WRAP = ['listEl', 'barEl', 'popupEl', 'popupBodyEl', 'popupClass', 'cartTitle', 'checkoutLabel', 'emptyHint', 'noCatalogue', 'from',
     'accent', 'soft', 'symbol', 'currency', 'locale', 'groupDigits', 'hideAvail', 'staleDays', 'onCheckout', 'onChange', 'rowExtra', 'renderer',
-    'categories', 'barHideEmpty'];
+    'categories', 'barHideEmpty', 'summaryEl', 'summaryTestid'];
 
   /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -2506,6 +2516,10 @@
          five columns clipped the price and put the stamp over the unit). Under 560 px of the LIST's own width: thumb · identity · price
          on row 1, tags and the control on row 2. The same rule serves a phone. */
       '.cbcat-list,.plist,.cbpick-list{container-type:inline-size}',
+      /* the split: list on the left, the money block on the right when the screen has the room (≥ 900 px of its own width) */
+      '.cbcat-split{container-type:inline-size}.cbcat-split-in{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}',
+      '.cbcat-side{position:sticky;top:8px}.cbcat-side:empty{display:none}.cbcart-side-empty{font-size:var(--fs-2);color:var(--grey-2);padding:10px 12px;border:1px dashed var(--line);border-radius:9px}',
+      '@container (min-width:900px){.cbcat-split-in{grid-template-columns:minmax(0,1fr) 320px}}',
       '@container (max-width:560px){.cbcat-row.cbgrid{grid-template-columns:44px minmax(0,1fr) auto;align-items:start}'
       + '.cbcat-row.cbgrid>.cbcat-thumb,.cbcat-row.cbgrid>.cbx{grid-row:1;grid-column:1}.cbcat-row.cbgrid>.cbcat-meat{grid-row:1;grid-column:2}'
       + '.cbcat-row.cbgrid>.cbcat-pr{grid-row:1;grid-column:3;min-width:0}.cbcat-row.cbgrid>.cbcat-tags{grid-row:2;grid-column:2/-1;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;max-width:none}'

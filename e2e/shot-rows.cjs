@@ -32,19 +32,19 @@ const BASE = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(2500);
   await page.getByTestId('nav-catalogue').click().catch(() => {});
   await page.locator('[data-testid^="cat-product-"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(OUT, 'catalogue.png') });
+  await page.screenshot({ path: path.join(OUT, 'catalogue.png'), timeout: 20000 }).catch((e) => console.log('shot catalogue:', e.message.slice(0, 80)));
   try { console.log('list row:', JSON.stringify(await page.evaluate(() => { const row=document.querySelector('[data-testid^="cat-product-"]'); const host=document.getElementById('ct_rows'); if(!row||!host) return null; const cs=getComputedStyle(row), hs=getComputedStyle(host); return { cols: cs.gridTemplateColumns, hostW: host.clientWidth, containerType: hs.containerType, rowClass: row.className }; }))); } catch (e) { console.log('probe failed', e.message); }
   const list = page.locator('[data-testid^="cat-product-"]').first();
   if (await list.isVisible().catch(() => false)) await list.locator('..').screenshot({ path: path.join(OUT, 'catalogue-list.png') }).catch(() => {});
   /* the product page: its header prints the same price column as the lists */
-  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png') }); const idTab = page.getByTestId('prod-tab-barcode'); if (await idTab.count()) { await idTab.first().click(); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, 'identifiers.png') }); } }
+  const first = page.locator('[data-testid^="cat-product-"]').first(); if (await first.isVisible().catch(() => false)) { await first.click(); await page.getByTestId('cat-view-price').waitFor({ timeout: 30000 }).catch(() => {}); await page.waitForTimeout(1500); await page.screenshot({ path: path.join(OUT, 'detail.png'), timeout: 20000 }).catch(() => {}); const idTab = page.getByTestId('prod-tab-barcode'); if (await idTab.count()) { await idTab.first().click(); await page.waitForTimeout(1200); await page.screenshot({ path: path.join(OUT, 'identifiers.png'), timeout: 20000 }).catch(() => {}); } }
   await page.getByTestId('nav-suppliers').click().catch(() => {});
   await page.waitForTimeout(2500);
   const own = page.getByTestId('sup-row-own');
   if (await own.isVisible().catch(() => false)) { await own.click(); await page.locator('#sup_body [data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1500); await page.locator('#sup_body [data-testid="cart-add"]').first().click().catch(() => {}); await page.waitForTimeout(800); }
-  await page.screenshot({ path: path.join(OUT, 'suppliers.png') });
+  await page.screenshot({ path: path.join(OUT, 'suppliers.png'), timeout: 20000 }).catch((e) => console.log('shot suppliers:', e.message.slice(0, 80)));
   await page.setViewportSize({ width: 400, height: 860 }); await page.reload({ waitUntil: 'load' }); await page.waitForTimeout(2500); const own2 = page.getByTestId('sup-row-own'); if (await own2.isVisible().catch(() => false)) { await own2.click(); await page.locator('#sup_body [data-testid="cart-add"]').first().waitFor({ timeout: 40000 }).catch(() => {}); await page.waitForTimeout(1200); }
-  await page.screenshot({ path: path.join(OUT, 'suppliers-mobile.png') });
+  await page.screenshot({ path: path.join(OUT, 'suppliers-mobile.png'), timeout: 20000 }).catch(() => {});
   await browser.close();
   console.log('shots in', OUT);
 })().catch((e) => { console.error(e); process.exit(1); });

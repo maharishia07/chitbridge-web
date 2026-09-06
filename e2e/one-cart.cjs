@@ -53,7 +53,7 @@ const OUTLETS = {
                          ['Compose (self, any recipient)',    'order-steps › Compose · [CAP-02] the same send path'],
                          ['Suppliers › our own stock',        'order-steps › OUR OWN STOCK'],
                          ['Suppliers › a supplier',           '[PAR-01] [PAR-02]'],
-                         ['Catalogue list (the seller's own products, read-only rows)', '[CAT-01] · e2e/shot-rows.cjs']],
+                         ["Catalogue list (the seller's own products, read-only rows)", '[CAT-01] · e2e/shot-rows.cjs']],
   'app/cap-network.js': [['Network › a store catalogue',      'network-cascade']],
   'app/pick.js':        [['CBPick overlay (worklist: take materials)', 'order-steps › the picker over any screen']],
 };
