@@ -1959,22 +1959,17 @@
           /* `excluded` rides the line — an item whose "Shown to customers" switch for offers is off (offers_excluded ['*']) promises nothing */
           { item_id: id, sku: d.sku, categories: catgIds(d), unitPrice: Number(u.amount) || 0, excluded: Array.isArray(d.offers_excluded) ? d.offers_excluded.map(String) : [] },
           _offs, { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } });
-        /* an offer the seller scoped to this customer (or their group) is named beside its promise — "special discount · 10% off" — by the seller's own name for it (Athi, 2026-09-06) */
-        var _named = function (x) { var src = _offs.filter(function (o) { return String(o.id) === String(x.offer_id); })[0]; return (src && src.customer_group) ? esc(x.label) + ' · ' + esc(x.promise) : esc(x.promise); };
-        offBadge = _p.slice(0, 3).map(function (x) {
-          return '<span class="cbcat-off" title="' + esc(x.label) + '">' + _named(x) + '</span>';
-        }).join('');
-        /* ⭐ A BASKET-LEVEL OFFER THAT REACHES THIS ROW IS NAMED ON THE ROW (Athi, 2026-09-06 19:0x: "special discount for you — 10% tier1
-           customer tag, so the customer is aware"). The row's price already carries its share (M.rowOff / the preview), so a badge saying only
-           "10% off" beside a 20%-lower price would mislead. forLine keeps basket offers off the row by design; the row's own deal names them. */
+        var _ctx = { now: new Date(), customer_groups: root.CBCart.viewerGroups(_st && _st.cat), money: function (n) { return money(cart.ns, n); } };
+        var _srcOf = function (lb) { return _offs.filter(function (o) { return (o.label || '') === lb; })[0] || null; };
+        var _text = function (src, lb) { var pr = null; try { pr = (src && root.CBOffers.promise) ? root.CBOffers.promise(src, _ctx) : null; } catch (e) { pr = null; }
+          if (!src) return esc(lb); return (src.customer_group ? esc(lb) + (pr ? ' · ' + esc(pr) : '') : esc(pr || lb)); };
+        /* ⭐ THE ROW SAYS ONLY WHAT APPLIES (Athi, 2026-09-06 19:4x: "when exclusive applied, other offers should not showcase, it will mislead").
+           A row with a deal (in the basket: compute → M.rowOff; not yet: the single-row preview) names the offers IN that deal — an exclusive
+           that fired is the only name. forLine's "what could apply" is for a row no offer has priced (a threshold not yet met, say). */
         if (u.deal && u.deal.label && !u.deal.recorded) {
-          var _have = _p.map(function (x) { return x.label; });
-          String(u.deal.label).split(' + ').forEach(function (lb) {
-            if (!lb || _have.indexOf(lb) >= 0) return;
-            var _src = _offs.filter(function (o) { return (o.label || '') === lb; })[0]; if (!_src || _src.scope !== 'cart') return;
-            var _pr = null; try { _pr = root.CBOffers.promise ? root.CBOffers.promise(_src, { now: new Date(), money: function (n) { return money(cart.ns, n); } }) : null; } catch (e) { _pr = null; }
-            offBadge += '<span class="cbcat-off" data-testid="cbcat-off-cart" title="' + esc(lb) + '">' + esc(lb) + (_pr ? ' · ' + esc(_pr) : '') + '</span>';
-          });
+          offBadge = String(u.deal.label).split(' + ').map(function (lb) { var src = _srcOf(lb); return '<span class="cbcat-off"' + (src && src.scope === 'cart' ? ' data-testid="cbcat-off-cart"' : '') + ' title="' + esc(lb) + '">' + _text(src, lb) + '</span>'; }).join('');
+        } else {
+          offBadge = _p.slice(0, 3).map(function (x) { var src = _offs.filter(function (o) { return String(o.id) === String(x.offer_id); })[0]; return '<span class="cbcat-off" title="' + esc(x.label) + '">' + (src && src.customer_group ? esc(x.label) + ' · ' + esc(x.promise) : esc(x.promise)) + '</span>'; }).join('');
         }
       }
     } catch (e) { offBadge = ''; }   /* a badge must never take the catalogue down */
