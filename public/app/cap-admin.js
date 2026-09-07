@@ -4656,6 +4656,8 @@ function intSourceHTML(r){
   if (sc.ok) return '<div style="width:100%;font-size:var(--fs-1);color:var(--ok-2)" data-testid="int-source-' + esc(r.id) + '">✓ ' + esc(txf('{sys} answered', { sys: sys })) + (when ? ' · ' + esc(when) : '') + '</div>';
   return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-3)" data-testid="int-source-' + esc(r.id) + '">⚠ ' + esc(txf('{sys} did not answer', { sys: sys })) + (when ? ' · ' + esc(when) : '') + (sc.why ? ' · ' + esc(sc.why) : '') + ' — ' + tx('the connector keeps trying and starts by itself when it comes back') + '</div>';
 }
+/** from a running row to that system's own card — the instructions live in one place (2026-09-07) */
+function intToSetup(id){ UI.intOpen = id; lsSet('cb_int_open', id); intSetTab('connectors'); }
 function intCarriesHTML(r){
   var d = _INT_STR; if (!d || !d.owner) return '';
   var mine = (d.streams || []).filter(function(st){ return d.owner[st.id] === r.id; });
@@ -4673,14 +4675,19 @@ function intConnectorsHTML(){
   var cards = cat.length ? chosen.map(function(c){
     /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
     var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
-    var steps = (c.steps || []).map(function(s, i){ return '<div style="font-size:var(--fs-1)">' + (i + 1) + '. ' + esc(s) + '</div>'; }).join('');
+    var open = intOpen() === c.id;
+    var more = '<span data-testid="int-card-' + esc(c.id) + '-toggle" onclick="intToggleCard(\'' + esc(c.id) + '\')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + txf('what to do for {name}', { name: c.name })) + '</span>';
+    var steps = open ? intCardDetailHTML(c) : '';
     var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
     var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(c.id) + '"' + (use.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(c.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
     return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div><div style="margin-top:6px">' + steps + '</div></div>';
+      + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div>'
+      + '<div style="margin-top:6px">' + more + '</div>'
+      + (open ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div>' : '')
+      + steps + '</div>';
   }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
   var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
-    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
+    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + ' · <span data-testid="int-row-help-' + esc(r.id) + '" onclick="intToSetup(\'' + esc(r.adapter || '') + '\')" style="cursor:pointer;color:var(--blue)">' + esc(txf('what to do for {name}', { name: r.adapter || 'this' })) + '</span></span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
   if (intTab() === 'running') return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>'
     + intFold('running', ['One row per connector that has checked in.', 'It reports every run, and every five minutes while it watches.', '"Answered" is the other system. "Live" is only the connector itself.', 'Approve a PC once — a kit is approved for one PC at a time.']) + rows + '</div>';
@@ -4703,6 +4710,22 @@ var INT_TABS = [
   { key: 'store',      n: 'The store',       q: 'what your own books say about you' },
   { key: 'keys',       n: 'Keys & services', q: 'what other systems sign in with' },
 ];
+function intOpen(){ return UI.intOpen !== undefined ? UI.intOpen : lsGet('cb_int_open', ''); }
+function intToggleCard(id){ var next = intOpen() === id ? '' : id; UI.intOpen = next; lsSet('cb_int_open', next); loadSettings(); }
+/** the four things a person needs about ONE system, in its own card (2026-09-07) */
+function intCardDetailHTML(c){
+  var group = function(title, lines){
+    if (!lines || !lines.length) return '';
+    return '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(tx(title)) + '</div>'
+      + '<ul style="margin:3px 0 0;padding-inline-start:18px;font-size:var(--fs-2)">' + lines.map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('') + '</ul></div>';
+  };
+  return '<div data-testid="int-detail-' + esc(c.id) + '" style="border-top:1px solid var(--line);margin-top:8px;padding-top:2px">'
+    + group('Before you start', c.needs)
+    + group('What to do', c.steps)
+    + group('If it does not work', c.watch_out)
+    + group('Once it runs, look here', ['Running — is it checked in, and did ' + (c.default_adapter || c.id) + ' answer it', 'Who owns what — which streams this connector carries', 'In the books — whether each order reached it, and what is late'])
+    + '</div>';
+}
 function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
 function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); loadSettings(); }
 /** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
