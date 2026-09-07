@@ -40,6 +40,9 @@ test('[TILL-01] a counter bills from its own copy of the shop, offline too, and 
   });
 
   const till = await context.newPage();
+  /* the counter runs in its own page; anything it throws belongs in this test's output, not in a screenshot nobody reads */
+  till.on('console', (m) => { if (m.type() === 'error') console.log('   till console: ' + m.text()); });
+  till.on('pageerror', (e) => console.log('   till threw: ' + e.message));
   await test.step('the counter opens and pairs with the key once', async () => {
     await till.goto('/till.html#key=' + encodeURIComponent(key));
     await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 30000 });   /* both engines, cached from the API */
