@@ -3611,6 +3611,13 @@ function settingsScreen(){
   var rail = SET_SECS.map(function(s){
     var row = '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
       + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
+    if (s.key === 'integrations' && setSec() === 'integrations'){
+      row += INT_TABS.map(function(t){
+        return '<div class="row misrow sub' + (intTab() === t.key ? ' sel' : '') + '" data-testid="int-tab-' + t.key + '" onclick="intSetTab(\'' + t.key + '\')">'
+          + '<div class="main2"><div class="l1"><span class="code">' + esc(tx(t.n)) + '</span></div>'
+          + '<div class="l2">' + esc(tx(t.q)) + '</div></div></div>';
+      }).join('');
+    }
     if (s.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
       row += GOV.map(function(g, i){
         var on = ((UI.govTab || 0) === i);
@@ -4660,21 +4667,64 @@ function intConnectorsHTML(){
   if (_INT_RUN === undefined) { _INT_RUN = null; api('intStatus').then(function(r){ _INT_RUN = (r && r.connectors) || []; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_RUN = []; if (setSec() === 'integrations') loadSettings(); }); }
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   var cat = _INT_CAT || [], run = _INT_RUN || [];
-  var cards = cat.length ? cat.map(function(c){
+  var use = intInUse();
+  var chosen = use.length ? cat.filter(function(c){ return use.indexOf(c.id) >= 0; }) : cat;
+  var rest = use.length ? cat.filter(function(c){ return use.indexOf(c.id) < 0; }) : [];
+  var cards = cat.length ? chosen.map(function(c){
     /* ⭐ through the session, not a bare link: the API mints a connector key INTO the zip's connector.json (Athi, 2026-09-06: "download option should autofill everything") */
     var adapters = (c.adapters || []).map(function(a){ return '<button class="composebtn" data-testid="int-download-' + esc(c.id) + '-' + esc(a) + '" onclick="intDownloadKit(\'' + esc(c.id) + '\',\'' + esc(a) + '\')">⬇ ' + esc(tx('Download')) + ' · ' + esc(a) + '</button>'; }).join(' ');
     var steps = (c.steps || []).map(function(s, i){ return '<div style="font-size:var(--fs-1)">' + (i + 1) + '. ' + esc(s) + '</div>'; }).join('');
     var doc = c.docs ? '<a href="' + esc(base + c.docs) + '" target="_blank" rel="noopener" data-testid="int-docs-' + esc(c.id) + '" style="font-size:var(--fs-1);color:var(--blue)">📄 ' + esc(tx('Instructions')) + '</a>' : '';
-    return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + doc + ' ' + adapters + '</div>'
+    var tick = '<label style="display:inline-flex;gap:5px;align-items:center;font-size:var(--fs-1);color:var(--grey);cursor:pointer"><input type="checkbox" data-testid="int-use-' + esc(c.id) + '"' + (use.indexOf(c.id) >= 0 ? ' checked' : '') + ' onchange="intUseToggle(\'' + esc(c.id) + '\', this.checked)">' + esc(tx('we use this')) + '</label>';
+    return '<div data-testid="int-connector-' + esc(c.id) + '" style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="flex:1">' + esc(c.name) + '</b>' + tick + ' ' + doc + ' ' + adapters + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div><div style="margin-top:6px">' + steps + '</div></div>';
   }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
   var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
     return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
+  if (intTab() === 'running') return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>'
+    + intFold('running', tx('One row per connector that has checked in. It reports every time it runs and every five minutes while it watches, and says whether the other system answered — which is not the same question as whether the connector is alive.')) + rows + '</div>';
+  var more = rest.length ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' + esc(txf('{n} you do not use: {names}', { n: String(rest.length), names: rest.map(function(c){ return c.name; }).join(', ') })) + ' — ' + tx('tick "we use this" on one to bring it back') + '</div>' : '';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
-    + '<div style="font-size:var(--fs-2)">' + tx('A small program that runs beside another system — Tally, a file folder, soon others — and carries products up, offers back and orders down. Download it here; it needs a key with the connector scope.') + '</div>' + cards + '</div>'
-    + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>' + rows + '</div>';
+    + intFold('connectors', tx('A small program that runs beside another system — Tally, Zoho, a file folder — and carries products up, offers back and orders down. Download it here; the key is already inside.'))
+    + cards + more + '</div>';
 }
+/**
+ * ⭐⭐ INTEGRATIONS, ONE QUESTION PER PANE (Athi, 2026-09-07: "the integration screen is overwhelming … it takes time to digest").
+ * The rail expands these under Integrations exactly as it expands Governance's layers — no new control to learn — and each pane answers
+ * one question: what can I attach · who is checked in · who carries what · did it land · what do the books say about me · what other
+ * systems sign in with.
+ */
+var INT_TABS = [
+  { key: 'connectors', n: 'Connectors',      q: 'what you can attach' },
+  { key: 'running',    n: 'Running',         q: 'who is checked in, and is the other system answering' },
+  { key: 'streams',    n: 'Who owns what',   q: 'one owner per stream' },
+  { key: 'books',      n: 'In the books',    q: 'did it land, and what is late' },
+  { key: 'store',      n: 'The store',       q: 'what your own books say about you' },
+  { key: 'keys',       n: 'Keys & services', q: 'what other systems sign in with' },
+];
+function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
+function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); loadSettings(); }
+/** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
+function intFold(key, html){
+  var open = lsGet('cb_fold_' + key, '1') === '1';
+  return '<div style="font-size:var(--fs-2);margin-bottom:6px">'
+    + '<span data-testid="int-fold-' + esc(key) + '" onclick="intFoldToggle(\'' + esc(key) + '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) + '</span>'
+    + (open ? '<div style="margin-top:4px">' + html + '</div>' : '') + '</div>';
+}
+function intFoldToggle(key){ lsSet('cb_fold_' + key, lsGet('cb_fold_' + key, '1') === '1' ? '0' : '1'); loadSettings(); }
+/** ⭐ which systems this account actually runs. A DISPLAY choice, not a connection: it puts them first and folds the rest away. */
+function intInUse(){ var v = ((typeof SESSION !== 'undefined' && SESSION.policy_flags) || {}).connectors_in_use; return Array.isArray(v) ? v.filter(function(x){ return x !== 'none'; }) : []; }
+async function intUseToggle(id, on){
+  var now = intInUse().filter(function(x){ return x !== id; });
+  if (on) now.push(id);
+  try {
+    var r = await api('policySet', { body: { connectors_in_use: now.length ? now : ['none'] } });
+    if (typeof SESSION !== 'undefined') SESSION.policy_flags = (r && r.flags) || Object.assign({}, SESSION.policy_flags || {}, { connectors_in_use: now });
+    loadSettings();
+  } catch (e) { toast(tx('Could not save') + ': ' + (e && e.message || e)); }
+}
+
 /**
  * ⭐⭐ WHO OWNS WHICH STREAM (Athi, 2026-09-07: "say quantity gets posted in ERP, sales record in Tally and possibly Zoho CRM — will it
  * not confuse the purpose?"). Many systems on one account is a real setup; many systems on one STREAM is not. The first connector to
@@ -4758,11 +4808,13 @@ function integrationsSettingsHTML(){
   var keys = (_KEYS && _KEYS.keys) || [];
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
   var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
-  return _misHead('Integrations', tx('Connectors, services and the keys they use'))
-    + intConnectorsHTML()
-    + intStreamsHTML()
-    + intReconcileHTML()
-    + intProfileMapHTML()
+  var tab = intTab();
+  var head = _misHead('Integrations', tx((INT_TABS.filter(function(t){ return t.key === tab; })[0] || {}).q || 'Connectors, services and the keys they use'));
+  if (tab === 'connectors' || tab === 'running') return head + intConnectorsHTML();
+  if (tab === 'streams') return head + intStreamsHTML();
+  if (tab === 'books')   return head + intReconcileHTML();
+  if (tab === 'store')   return head + intProfileMapHTML();
+  return head
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px"><code>/api/offers</code> · <code>/api/pricing</code> · <code>/api/tax</code> · <code>/api/invoice</code> — <a href="' + esc(base) + '/api/openapi.json" target="_blank" rel="noopener">' + tx('the contract (openapi.json)') + '</a></div></div>'
