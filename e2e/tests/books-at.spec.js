@@ -24,7 +24,8 @@ test('[BOOKS-01] the trigger rides the heartbeat; the gate waits or goes; the wr
   /* the server's own registry (lib/policy.js) is the authority; PATCH /entities/policy is the one write — a profile PATCH drops undeclared keys */
   await page.evaluate(async () => { await api('policySet', { body: { books_at: 'manual' } }); });
   const hb = await request.post(API + '/api/integrations/heartbeat', { headers: { 'X-Api-Key': key }, data: { name: 'Tally connector', adapter: 'tally', host: 'STORE-PC', version: '1.0.0', note: 'watch' } });
-  expect((await hb.json()).policy, 'the heartbeat carries the trigger').toEqual({ books_at: 'manual' });
+  /* the policy the kit is told grows over time (books_overdue_hours joined it on 2026-09-07) — assert the TRIGGER, not the payload */
+  expect((await hb.json()).policy.books_at, 'the heartbeat carries the trigger').toBe('manual');
   await page.evaluate(async (id) => { await api('intApprove', { params: { id } }); }, (await hb.json()).actor_id);
 
   /* a sale recorded, then the kit's write-back, then the Task */
