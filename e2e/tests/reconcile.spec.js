@@ -95,7 +95,10 @@ test('[REC-01] streams are claimed once, handed over on request, and reconciliat
   await test.step('AND IT IS ALL ON ONE SCREEN — Settings › Integrations', async () => {
     await page.evaluate(async () => { navTo('settings'); }); await page.waitForTimeout(600);
     await page.getByTestId('set-sec-integrations').click({ timeout: 30000 });
+    /* Integrations is six panes now, reached from the rail like Governance's layers (2026-09-07) */
+    await page.getByTestId('int-tab-streams').click({ timeout: 30000 });
     await page.waitForSelector('[data-testid="int-stream-order"]', { timeout: 30000 });
+    await page.getByTestId('int-tab-books').click({ timeout: 30000 });
     await expect(page.locator('[data-testid="int-rec-booked"]'), 'the counts are on the screen').toBeVisible();
     await expect(page.locator('[data-testid="int-rec-refused"]')).toBeVisible();
     await expect(page.locator('[data-testid="int-rec-row-' + chitId.slice(0, 8) + '"]'), 'and the refused order is listed with a way to ask again').toBeVisible();
