@@ -4610,7 +4610,7 @@ function intProfileMapHTML(){
   var rows = (m.order || []).map(function(k){ var f = m.fields[k] || {}; var src = f.source ? String(f.source) : ''; var when = f.as_of ? String(f.as_of).slice(0, 10) : '';
     return '<tr data-testid="int-map-' + esc(k) + '"><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(f.label || k) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(f.why || '') + '</div></td>'
       + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-family:monospace">' + (f.value != null ? esc(String(f.value)) : '<span style="color:var(--warn-3)">' + esc(tx('missing')) + '</span>') + (f.issues && f.issues.length ? '<div style="color:var(--warn-3);font-size:var(--fs-1)">⚠ ' + esc(f.issues.join('; ')) + '</div>' : '') + '</td>'
-      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(src) + (when ? ' · ' + esc(when) : '') + '<div>' + esc((f.sources && (f.sources.tally || '')) ? 'Tally: ' + f.sources.tally : '') + '</div></td>'
+      + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(src) + (when ? ' · ' + esc(when) : '') + '<div>' + esc((f.sources && (f.sources.tally || '')) ? intWhereFrom(f, src) : '') + '</div></td>'
       + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + (f.rung ? '<span data-testid="int-map-rung-' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;' + (rungStyle[f.rung] || '') + '">' + esc(f.rung) + '</span>' : '') + '</td></tr>'; }).join('');
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The store, as we know it') + ' <span style="font-weight:400;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.filled || 0) + ' ' + tx('of') + ' ' + String(m.total || 0) + ' ' + tx('filled')) + (m.state_name ? ' · ' + esc(m.state_name) : '') + '</span></div>'
     + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('What we look for, where it came from, and how far it is trusted: declared (typed) → copied (from your own system, with source and date) → checked (the GSTIN check digit, PAN and state agree) → verified (the registry). A connector fills it with sync-profile; a higher rung is never overwritten.') + '</div>'
@@ -4618,6 +4618,14 @@ function intProfileMapHTML(){
 }
 /* ⭐ THE HANDSHAKE ON THE ROW (Athi, 2026-09-06): a connector is approved for ONE PC. The row says which PC and which Tally company asked,
    and why it waits; Approve is the owner's act, Reject revokes the key (the kit stops at its next call). */
+/** ⭐ where this field lives in the system that filled it — Tally, Zoho, GoFrugal or a CSV column (2026-09-07) */
+function intWhereFrom(f, src){
+  var srcs = (f && f.sources) || {}; var key = String(src || '').toLowerCase();
+  var named = { tally: 'Tally', zoho: 'Zoho Books', csv: 'CSV', gofrugal: 'GoFrugal' };
+  var pick = srcs[key] ? key : (Object.keys(srcs)[0] || '');
+  if (!pick || !srcs[pick]) return '';
+  return (named[pick] || pick) + ': ' + srcs[pick];
+}
 function intEnrolHTML(r){
   var e = r.enrol; if (!e) return '';
   var facts = [e.host, e.company, e.gstin].filter(Boolean).map(esc).join(' · ');
