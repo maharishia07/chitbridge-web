@@ -4641,6 +4641,14 @@ async function intDownloadKit(id, adapter){
  * with connector.json pre-filled for THIS API and adapter — the key stays empty, a secret never rides a link.
  */
 /** what this connector carries — the streams it owns (2026-09-07). Silent until the ownership map has been read. */
+/** the OTHER system's health as of this connector's last run — "live" says the connector checked in, never that Tally answered. */
+function intSourceHTML(r){
+  var sc = r.source; if (!sc || sc.ok === null || sc.ok === undefined) return '';
+  var when = ''; try { when = sc.at ? ((typeof fmtDateTime === 'function') ? fmtDateTime(sc.at) : new Date(sc.at).toLocaleString()) : ''; } catch (_) {}
+  var sys = r.adapter || tx('the other system');
+  if (sc.ok) return '<div style="width:100%;font-size:var(--fs-1);color:var(--ok-2)" data-testid="int-source-' + esc(r.id) + '">✓ ' + esc(txf('{sys} answered', { sys: sys })) + (when ? ' · ' + esc(when) : '') + '</div>';
+  return '<div style="width:100%;font-size:var(--fs-1);color:var(--warn-3)" data-testid="int-source-' + esc(r.id) + '">⚠ ' + esc(txf('{sys} did not answer', { sys: sys })) + (when ? ' · ' + esc(when) : '') + (sc.why ? ' · ' + esc(sc.why) : '') + ' — ' + tx('the connector keeps trying and starts by itself when it comes back') + '</div>';
+}
 function intCarriesHTML(r){
   var d = _INT_STR; if (!d || !d.owner) return '';
   var mine = (d.streams || []).filter(function(st){ return d.owner[st.id] === r.id; });
@@ -4661,7 +4669,7 @@ function intConnectorsHTML(){
       + '<div style="font-size:var(--fs-2);margin-top:6px">' + esc(c.does) + '</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">' + esc(tx('Runs on')) + ': ' + esc(c.runs_on) + ' · ' + esc(c.status) + '</div><div style="margin-top:6px">' + steps + '</div></div>';
   }).join('') : '<div style="color:var(--grey)">' + tx(_INT_CAT === null ? 'reading…' : 'No connectors published yet.') + '</div>';
   var rows = run.length ? run.map(function(r){ var ago = r.last_seen ? Math.round((Date.now() - new Date(r.last_seen).getTime()) / 60000) : null; var c = r.counters || {};
-    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span>' + intCarriesHTML(r) + '</div>'; }).join('')
+    return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('A small program that runs beside another system — Tally, a file folder, soon others — and carries products up, offers back and orders down. Download it here; it needs a key with the connector scope.') + '</div>' + cards + '</div>'
