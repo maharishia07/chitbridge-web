@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bill — print test</title>
+<!--
+  bill-print.html — A STANDALONE SLIP, TO PROVE THE PRINTER (Athi, 2026-09-07: "you give me a standalone billing to be printed,
+  and I'll see how I can print it from the desktop first").
+
+  Nothing here talks to the server. Open the file, choose the paper width and the kind of bill, press Print, and send it to the
+  thermal printer. What survives this test becomes the till's slip template (TILL-SPEC-2026-09-07.md §5.4).
+
+  THERMAL PRINTING, THE FEW THINGS THAT MATTER:
+   · The paper is 80mm or 58mm wide; the PRINTABLE strip is narrower (72mm / 48mm). Everything is sized to the printable strip.
+   · The roll has no page length: `@page { size: <width> auto }` and zero margins, or the driver adds an A4 page around the slip.
+   · No colour, no background fills, no images — a thermal head prints black dots, and a grey background comes out as noise.
+   · One monospace family so columns line up; the printer's own font is not ours to choose.
+   · A few blank lines at the end, or the cutter takes the last line of the total.
+-->
+<style>
+  :root { --ink:#000; --paper:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#e9e6df; font-family:'Consolas','DejaVu Sans Mono','Courier New',monospace; color:var(--ink); }
+
+  /* the controls — never printed */
+  .controls { position:sticky; top:0; background:#fff; border-bottom:1px solid #ccc; padding:10px 14px; display:flex; gap:14px;
+              align-items:center; flex-wrap:wrap; font-family:system-ui,-apple-system,'Segoe UI',sans-serif; font-size:13px; }
+  .controls label { display:inline-flex; gap:6px; align-items:center; }
+  .controls select, .controls button { font:inherit; padding:4px 8px; }
+  .controls button { cursor:pointer; font-weight:600; }
+  .hint { color:#555; font-size:12px; }
+
+  /* the slip */
+  .slip { background:var(--paper); margin:18px auto; padding:4mm 3mm 10mm; }
+  body[data-w="80"] .slip { width:72mm; }
+  body[data-w="58"] .slip { width:48mm; font-size:11px; }
+  .slip { width:72mm; font-size:12px; line-height:1.35; }
+
+  .c { text-align:center; }
+  .r { text-align:right; }
+  .b { font-weight:700; }
+  .big { font-size:1.25em; font-weight:700; }
+  .rule { border-top:1px dashed #000; margin:4px 0; }
+  .solid { border-top:1px solid #000; margin:4px 0; }
+  .row { display:flex; justify-content:space-between; gap:6px; }
+  .row .l { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .row .v { flex:0 0 auto; white-space:nowrap; }
+  .item { margin:3px 0; }
+  .qty { color:#000; }
+  .small { font-size:.9em; }
+  table.hsn { width:100%; border-collapse:collapse; font-size:.85em; }
+  table.hsn th, table.hsn td { text-align:right; padding:1px 0; }
+  table.hsn th:first-child, table.hsn td:first-child { text-align:left; }
+
+  @media print {
+    body { background:#fff; }
+    .controls { display:none !important; }
+    .slip { margin:0; padding:2mm 2mm 12mm; width:auto; }
+    @page { margin:0; }
+  }
+  /* the page is the roll: width fixed, length whatever the bill needs */
+  @page { size:72mm auto; margin:0; }
+</style>
+</head>
+<body data-w="80">
+
+<div class="controls">
+  <label>Paper
+    <select id="w" onchange="setW(this.value)">
+      <option value="80">80&nbsp;mm (3")</option>
+      <option value="58">58&nbsp;mm (2")</option>
+    </select>
+  </label>
+  <label>Bill
+    <select id="kind" onchange="render()">
+      <option value="cash">Cash memo — unregistered shop</option>
+      <option value="supply">Bill of supply — composition</option>
+      <option value="tax">Tax invoice — registered</option>
+    </select>
+  </label>
+  <button onclick="window.print()">Print</button>
+  <span class="hint">Printer settings: paper = the roll (80mm/58mm), margins = none, scale = 100%, headers and footers = off.</span>
+</div>
+
+<div class="slip" id="slip"></div>
+
+<script>
+/* ── the bill, as data. The till will hand the same shape to this template. ─────────────────────────────────── */
+var SHOP = {
+  name: 'CHIT AND BRIDGE STORES',
+  line1: '14, Poonamallee High Road',
+  line2: 'Chennai 600 126 · Tamil Nadu',
+  phone: '044 2259 2632',
+  gstin: '33AABCK1234F1Z6'          /* used only on a tax invoice / bill of supply */
+};
+var BILL = {
+  no: 'C1/26-27/0041',
+  at: new Date(),
+  till: 'Counter 1',
+  by: 'Ravi',
+  customer: { name: 'Walk-in', phone: '' },
+  lines: [
+    { name: 'Grapes',            hsn: '0806', qty: 2,   unit: 'kg',    price: 200, rate: 0  },
+    { name: 'Cooking oil 1L',    hsn: '1512', qty: 1,   unit: 'litre', price: 250, rate: 5  },
+    { name: 'Vegetables (mixed)',hsn: '0709', qty: 1.5, unit: 'kg',    price: 100, rate: 0  },
+    { name: 'Dish wash bar',     hsn: '3401', qty: 3,   unit: 'piece', price: 30,  rate: 18, off: 10 }   /* off = % off this line */
+  ],
+  /* 881.00 due: half in cash, the rest on UPI — a split payment, which every counter takes and no slip should hide */
+  paid: [ { how: 'Cash', amount: 500 }, { how: 'UPI', amount: 381 } ]
+};
+
+/* ── money ─────────────────────────────────────────────────────────────────────────────────────────────────── */
+function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function money(n){ return (Number(n)||0).toFixed(2); }
+function calc(kind){
+  var taxed = kind === 'tax';
+  var lines = BILL.lines.map(function(l){
+    var gross = r2(l.price * l.qty);
+    var save  = r2(gross * (l.off || 0) / 100);
+    var net   = r2(gross - save);
+    /* on a tax invoice the shelf price INCLUDES GST, as it does in every Indian shop: the slip shows the split, not an addition */
+    var rate  = taxed ? (l.rate || 0) : 0;
+    var base  = taxed ? r2(net * 100 / (100 + rate)) : net;
+    var tax   = r2(net - base);
+    return Object.assign({}, l, { gross: gross, save: save, net: net, base: base, tax: tax, rate: rate });
+  });
+  var sum = function(k){ return r2(lines.reduce(function(a,l){ return a + l[k]; }, 0)); };
+  var byRate = {};
+  lines.forEach(function(l){ if(!l.rate) return; var k = String(l.rate); byRate[k] = byRate[k] || { base:0, tax:0 }; byRate[k].base = r2(byRate[k].base + l.base); byRate[k].tax = r2(byRate[k].tax + l.tax); });
+  return { lines: lines, gross: sum('gross'), save: sum('save'), net: sum('net'), base: sum('base'), tax: sum('tax'), byRate: byRate };
+}
+
+/* ── the slip ──────────────────────────────────────────────────────────────────────────────────────────────── */
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+function when(d){
+  var p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return p(d.getDate()) + '/' + p(d.getMonth()+1) + '/' + d.getFullYear() + '  ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function render(){
+  var kind = document.getElementById('kind').value;
+  var m = calc(kind);
+  var title = kind === 'tax' ? 'TAX INVOICE' : (kind === 'supply' ? 'BILL OF SUPPLY' : 'CASH MEMO');
+  var showGstin = kind !== 'cash';
+  var paid = BILL.paid.reduce(function(a,p){ return r2(a + p.amount); }, 0);
+  var change = r2(paid - m.net);
+
+  var head = ''
+    + '<div class="c b big">' + esc(SHOP.name) + '</div>'
+    + '<div class="c small">' + esc(SHOP.line1) + '</div>'
+    + '<div class="c small">' + esc(SHOP.line2) + '</div>'
+    + '<div class="c small">Ph ' + esc(SHOP.phone) + '</div>'
+    + (showGstin ? '<div class="c small">GSTIN ' + esc(SHOP.gstin) + '</div>' : '')
+    + '<div class="solid"></div>'
+    + '<div class="c b">' + title + '</div>'
+    + '<div class="rule"></div>'
+    + '<div class="row small"><span class="l">No ' + esc(BILL.no) + '</span><span class="v">' + esc(when(BILL.at)) + '</span></div>'
+    + '<div class="row small"><span class="l">' + esc(BILL.till) + ' · ' + esc(BILL.by) + '</span><span class="v">' + esc(BILL.customer.name) + '</span></div>'
+    + '<div class="rule"></div>';
+
+  var items = m.lines.map(function(l){
+    return '<div class="item">'
+      + '<div class="row"><span class="l">' + esc(l.name) + '</span><span class="v">' + money(l.net) + '</span></div>'
+      + '<div class="row small qty"><span class="l">' + l.qty + ' ' + esc(l.unit) + ' x ' + money(l.price)
+        + (l.off ? '   (-' + l.off + '%)' : '')
+        + (kind === 'tax' && l.rate ? '   GST ' + l.rate + '%' : '')
+        + '</span><span class="v"></span></div>'
+      + '</div>';
+  }).join('');
+
+  var totals = '<div class="rule"></div>'
+    + (m.save > 0 ? '<div class="row"><span class="l">Items</span><span class="v">' + money(m.gross) + '</span></div>'
+                  + '<div class="row"><span class="l">You saved</span><span class="v">-' + money(m.save) + '</span></div>' : '')
+    + (kind === 'tax'
+        ? '<div class="row"><span class="l">Taxable</span><span class="v">' + money(m.base) + '</span></div>'
+          + Object.keys(m.byRate).sort(function(a,b){ return a-b; }).map(function(k){
+              var h = m.byRate[k], half = r2(h.tax / 2);
+              return '<div class="row small"><span class="l">CGST ' + (k/2) + '% </span><span class="v">' + money(half) + '</span></div>'
+                   + '<div class="row small"><span class="l">SGST ' + (k/2) + '% </span><span class="v">' + money(half) + '</span></div>';
+            }).join('')
+          + '<div class="row"><span class="l">Total GST</span><span class="v">' + money(m.tax) + '</span></div>'
+        : '')
+    + '<div class="solid"></div>'
+    + '<div class="row big"><span class="l">TOTAL</span><span class="v">' + money(m.net) + '</span></div>'
+    + '<div class="solid"></div>'
+    + BILL.paid.map(function(p){ return '<div class="row small"><span class="l">' + esc(p.how) + '</span><span class="v">' + money(p.amount) + '</span></div>'; }).join('')
+    + (change > 0 ? '<div class="row small b"><span class="l">Change</span><span class="v">' + money(change) + '</span></div>' : '');
+
+  var hsn = (kind === 'tax')
+    ? '<div class="rule"></div><table class="hsn"><tr><th>HSN</th><th>Taxable</th><th>Rate</th><th>Tax</th></tr>'
+      + m.lines.filter(function(l){ return l.rate; }).map(function(l){
+          return '<tr><td>' + esc(l.hsn) + '</td><td>' + money(l.base) + '</td><td>' + l.rate + '%</td><td>' + money(l.tax) + '</td></tr>';
+        }).join('') + '</table>'
+    : '';
+
+  var foot = '<div class="rule"></div>'
+    + (kind === 'supply' ? '<div class="c small">Composition taxable person.<br>Not eligible to collect tax on supplies.</div><div class="rule"></div>' : '')
+    + '<div class="c small">Thank you · visit again</div>'
+    + '<div class="c small">Billed on ChitBridge</div>'
+    + '<div style="height:10mm"></div>';   /* the cutter takes the last line otherwise */
+
+  document.getElementById('slip').innerHTML = head + items + totals + hsn + foot;
+}
+function setW(w){
+  document.body.setAttribute('data-w', w);
+  var mm = (w === '58') ? '48mm' : '72mm';
+  var st = document.getElementById('pagesize') || (function(){ var e = document.createElement('style'); e.id = 'pagesize'; document.head.appendChild(e); return e; })();
+  st.textContent = '@page { size: ' + mm + ' auto; margin: 0; }';
+  render();
+}
+setW('80');
+</script>
+</body>
+</html>
