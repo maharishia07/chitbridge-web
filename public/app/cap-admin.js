@@ -14,6 +14,9 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
   intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
   intProfileMap:{m:'GET', p:'/api/integrations/profile-map',ok:'y'},   // what we look for about the store · where from · how trusted
+  intStreams:{m:'GET',    p:'/api/integrations/streams',    ok:'y'},   // who owns which stream (2026-09-07)
+  intStreamsSet:{m:'PUT', p:'/api/integrations/streams',    ok:'✓'},   // hand a stream to another connector
+  intReconcile:{m:'GET',  p:'/api/integrations/reconcile',  ok:'y'},   // did what left this account land in the books?
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
@@ -4657,6 +4660,84 @@ function intConnectorsHTML(){
     + '<div style="font-size:var(--fs-2)">' + tx('A small program that runs beside another system — Tally, a file folder, soon others — and carries products up, offers back and orders down. Download it here; it needs a key with the connector scope.') + '</div>' + cards + '</div>'
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>' + rows + '</div>';
 }
+/**
+ * ⭐⭐ WHO OWNS WHICH STREAM (Athi, 2026-09-07: "say quantity gets posted in ERP, sales record in Tally and possibly Zoho CRM — will it
+ * not confuse the purpose?"). Many systems on one account is a real setup; many systems on one STREAM is not. The first connector to
+ * carry a stream claims it, so an account with one system is never asked a question — this card is where a migration hands one over.
+ */
+var _INT_STR;
+function intStreamsHTML(){
+  if (_INT_STR === undefined) { _INT_STR = null; api('intStreams').then(function(r){ _INT_STR = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_STR = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  var d = _INT_STR || {}; var list = d.streams || [], own = d.owner || {}, con = d.connectors || [];
+  if (_INT_STR === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
+  var nameOf = function(id){ var c = con.find(function(x){ return x.id === id; }); return c ? (c.name + ' · ' + (c.adapter || '')) : id; };
+  var body;
+  if (!con.length) body = '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx('No connector has checked in yet. The first one to run claims the streams it can carry.') + '</div>';
+  else if (con.length === 1 && Object.keys(own).length) body = '<div style="font-size:var(--fs-2)" data-testid="int-streams-single">' + txf('{name} carries everything.', { name: con[0].name }) + ' ' + tx('A second connector claims only what is still free, and this is where you would hand a stream over.') + '</div>';
+  else body = '<div style="overflow:auto"><table style="border-collapse:collapse;width:100%;font-size:var(--fs-2)"><thead><tr>'
+      + '<th style="text-align:start;padding:4px 8px">' + tx('Stream') + '</th><th style="text-align:start;padding:4px 8px">' + tx('What travels') + '</th><th style="text-align:start;padding:4px 8px">' + tx('Carried by') + '</th></tr></thead><tbody>'
+      + list.map(function(st){
+          var sel = '<select class="inp" data-testid="int-stream-' + esc(st.id) + '" onchange="intStreamSet(\'' + esc(st.id) + '\', this.value)">'
+            + '<option value="">' + esc(tx('nobody')) + '</option>'
+            + con.map(function(c){ return '<option value="' + esc(c.id) + '"' + (own[st.id] === c.id ? ' selected' : '') + '>' + esc(nameOf(c.id)) + '</option>'; }).join('')
+            + (own[st.id] && !con.find(function(c){ return c.id === own[st.id]; }) ? '<option value="' + esc(own[st.id]) + '" selected>' + esc(own[st.id]) + ' (' + esc(tx('not running')) + ')</option>' : '')
+            + '</select>';
+          return '<tr><td style="padding:5px 8px;border-top:1px solid var(--line)"><b>' + esc(tx(st.label)) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.dir === 'in' ? tx('into ChitBridge') : tx('out to the other system')) + '</div></td>'
+            + '<td style="padding:5px 8px;border-top:1px solid var(--line);font-size:var(--fs-1);color:var(--grey)">' + esc(tx(st.what)) + '</td>'
+            + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + sel + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div>'
+    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('An account may run several connectors — a POS for stock, the books for vouchers, a CRM for parties — but each stream belongs to exactly one of them, or the same order becomes a voucher in two ledgers.') + '</div>' + body + '</div>';
+}
+async function intStreamSet(stream, kit){
+  try { var body = {}; body[stream] = kit || null; await api('intStreamsSet', { body: body });
+    toast(kit ? tx('Stream handed over — the connector picks it up within a minute.') : tx('Stream left unowned — nobody carries it now.'));
+    _INT_STR = undefined; loadSettings();
+  } catch (e) { toast(tx('Could not change it') + ': ' + (e && e.message || e)); }
+}
+
+/**
+ * ⭐⭐ RECONCILIATION — did what left this account actually land in the books? (Athi, 2026-09-07: "need to be sure of reconciliation").
+ * Booked orders are COUNTED, per system; the list is what needs attention — refused (with the reason the other system gave), due, and
+ * OVERDUE, which is the answer to "is it posted before the next day?": released by the trigger more than books_overdue_hours ago and
+ * still not in the books.
+ * ⚠️ THIS RECONCILES DISPATCH, NOT BALANCES — it proves each order reached the other system once, not that two ledgers agree.
+ */
+var _INT_REC;
+function intReconcileHTML(){
+  if (_INT_REC === undefined) { _INT_REC = null; api('intReconcile', { query: { days: 30 } }).then(function(r){ _INT_REC = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_REC = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  var d = _INT_REC || {};
+  if (_INT_REC === null) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div><div style="color:var(--grey);font-size:var(--fs-2)">' + tx('reading…') + '</div></div>';
+  var c = d.counts || {}, rows = d.rows || [];
+  var chip = function(n, label, colour, testid){ return '<span data-testid="' + testid + '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' + (colour ? 'color:' + colour + ';font-weight:700' : 'color:var(--grey)') + '"><b>' + esc(String(n || 0)) + '</b> ' + esc(label) + '</span>'; };
+  var bySys = Object.keys(d.by_system || {}).map(function(k){ return esc(k) + ' ' + esc(String(d.by_system[k])); }).join(' · ');
+  var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">'
+    + chip(c.booked, tx('in the books'), 'var(--ok-2)', 'int-rec-booked')
+    + chip(c.overdue, tx('overdue'), (c.overdue ? 'var(--warn-3)' : ''), 'int-rec-overdue')
+    + chip(c.refused, tx('refused'), (c.refused ? 'var(--warn-3)' : ''), 'int-rec-refused')
+    + chip(c.due, tx('on the way'), '', 'int-rec-due')
+    + chip(c.waiting, tx('waiting for the trigger'), '', 'int-rec-waiting')
+    + '</div>';
+  var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due'; });
+  var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way') };
+  var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)' };
+  var when = function(iso){ try { return (typeof fmtDateTime === 'function') ? fmtDateTime(iso) : new Date(iso).toLocaleString(); } catch (_) { return String(iso || ''); } };
+  var list = open.length ? open.slice(0, 40).map(function(r){
+    return '<div data-testid="int-rec-row-' + esc(String(r.chit_id).slice(0, 8)) + '" style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
+      + '<span style="font-weight:700;color:' + colour[r.state] + ';flex:0 0 92px">' + esc(word[r.state] || r.state) + '</span>'
+      + '<span style="flex:1">' + esc(r.subject || tx('Order')) + '<span style="color:var(--grey)"> · ' + esc(r.party || '') + ' · ' + esc(String(r.chit_id).slice(0, 8)) + '</span>'
+      + (r.why ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">' + esc(r.why) + '</div>' : '')
+      + '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.status || '') + (r.released_at ? ' · ' + esc(tx('released')) + ' ' + esc(when(r.released_at)) : '') + '</div></span>'
+      + '<button class="btn2" data-testid="int-rec-retry-' + esc(String(r.chit_id).slice(0, 8)) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button></div>';
+  }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Nothing is waiting to be booked.') + '</div>';
+  return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
+    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + txf('The last {days} days of orders, and where each one stands in the other system. Overdue means the trigger released it more than {hrs} hours ago and nothing has answered.', { days: String(d.days || 30), hrs: String(d.overdue_hours || 12) }) + '</div>'
+    + chips + (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') + list + '</div>';
+}
+async function intRecRetry(id){
+  try { await api('chitBooks', { params: { id: id } }); toast(tx('Asked again — the connector books it within a minute.')); _INT_REC = undefined; loadSettings(); }
+  catch (e) { toast(tx('Could not ask') + ': ' + (e && e.message || e)); }
+}
 function integrationsSettingsHTML(){
   if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var keys = (_KEYS && _KEYS.keys) || [];
@@ -4664,6 +4745,8 @@ function integrationsSettingsHTML(){
   var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
   return _misHead('Integrations', tx('Connectors, services and the keys they use'))
     + intConnectorsHTML()
+    + intStreamsHTML()
+    + intReconcileHTML()
     + intProfileMapHTML()
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
@@ -4789,6 +4872,9 @@ var POLICY_FLAGS = [
   /* ⭐ Athi, 2026-09-06 11:30: the chit's Summary is the cart's money and the delivery — commercial cover only where the trade needs it */
   /* ⭐ BOOKS AT (Athi, 2026-09-06: "there must be some trigger to be allowed to go to Tally, from the task") — when a connector books an order */
   { key:'books_at',          label:'Orders go to the books',  type:'enum',   options:['received','accepted','completed','manual'], def:'accepted', level:'entity', gov:'entity',   help:'When a connector (Tally · Zoho · GoFrugal) books an order as a voucher. received — the moment it arrives. accepted — once you accept it (the usual case). completed — once it is done. manual — only when you press "Send to books" on the Task. The Task always says whether and when it was written.' },
+  /* ⭐ Athi, 2026-09-07: "do we have a mechanism to check if not posted before the next day?" — the window after which an order the
+     trigger released, and nothing booked, is called overdue in Settings › Integrations › In the books. */
+  { key:'books_overdue_hours', label:'Overdue after (hours)', type:'number', def:12, level:'entity', gov:'entity', help:'How long an order released by the trigger may go unbooked before reconciliation calls it overdue. 12 = by the next morning.' },
   { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
   /**
    * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
