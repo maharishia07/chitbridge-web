@@ -17,6 +17,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   intStreams:{m:'GET',    p:'/api/integrations/streams',    ok:'y'},   // who owns which stream (2026-09-07)
   intStreamsSet:{m:'PUT', p:'/api/integrations/streams',    ok:'✓'},   // hand a stream to another connector
   intReconcile:{m:'GET',  p:'/api/integrations/reconcile',  ok:'y'},   // did what left this account land in the books?
+  intBooksSkip:{m:'POST', p:'/api/integrations/books/skip',  ok:'✓'},   // this one is not for the books (reversible)
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
   /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
@@ -4823,6 +4824,10 @@ function recPlain(r){
     return { line: tx('On its way.'), todo: tx('Nothing to do — it usually lands within a minute.') };
   if (r.state === 'waiting')
     return { line: tx('Not released yet.'), todo: tx('It goes to the books when the order reaches the state you chose in Settings — or when you press Send to books on the order itself.') };
+  if (r.state === 'before_connector')
+    return { line: tx('This order is older than your connector.'), todo: tx('Nothing was listening when it happened, so it is not late. Press Ask again if you want it in the books anyway, or set it aside.') };
+  if (r.state === 'set_aside')
+    return { line: tx('You set this one aside.'), todo: tx('It will not go to the books and nothing will ask again. Press Send after all to change your mind.') };
   return { line: '', todo: '' };
 }
 var _INT_REC;
@@ -4842,10 +4847,13 @@ function intReconcileHTML(){
     + chip(c.refused, tx('refused'), (c.refused ? 'var(--warn-3)' : ''), 'int-rec-refused')
     + chip(c.due, tx('on the way'), '', 'int-rec-due')
     + chip(c.waiting, tx('waiting for the trigger'), '', 'int-rec-waiting')
+    + (c.before_connector ? chip(c.before_connector, tx('older than the connector'), '', 'int-rec-older') : '')
+    + (c.set_aside ? chip(c.set_aside, tx('set aside'), '', 'int-rec-aside') : '')
     + '</div>';
-  var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due'; });
-  var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way') };
-  var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)' };
+  /* what a person is being asked about — an order older than the connector, or one set aside, is stated below but asks nothing */
+  var open = rows.filter(function(r){ return r.state === 'overdue' || r.state === 'refused' || r.state === 'due' || r.state === 'before_connector' || r.state === 'set_aside'; });
+  var word = { overdue: tx('overdue'), refused: tx('refused'), due: tx('on the way'), before_connector: tx('older'), set_aside: tx('set aside') };
+  var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)', before_connector: 'var(--grey)', set_aside: 'var(--grey)' };
   var when = function(iso){ try { return (typeof fmtDateTime === 'function') ? fmtDateTime(iso) : new Date(iso).toLocaleString(); } catch (_) { return String(iso || ''); } };
   var list = open.length ? open.slice(0, 40).map(function(r){
     var short = String(r.chit_id).slice(0, 8), p = recPlain(r), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
@@ -4860,12 +4868,22 @@ function intReconcileHTML(){
       + '</span>'
       + '<span style="display:flex;gap:6px;flex:0 0 auto">'
         + '<button class="btn2" data-testid="int-rec-open-' + esc(short) + '" onclick="intRecOpen(\'' + esc(r.chit_id) + '\',\'' + esc(r.side || '') + '\')">' + tx('Open') + '</button>'
-        + '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button>'
+        + (r.state === 'set_aside'
+            ? '<button class="btn2" data-testid="int-rec-unskip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', false)">' + tx('Send after all') + '</button>'
+            : '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button>'
+              + '<button class="btn2" data-testid="int-rec-skip-' + esc(short) + '" onclick="intRecSkip(\'' + esc(r.chit_id) + '\', true)" title="' + esc(tx('it will not go to the books, and nothing will ask again')) + '">' + tx('Not for the books') + '</button>')
       + '</span></div>';
   }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Everything has reached the books. Nothing for you to do.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
     + intFold('books', ['The last ' + String(d.days || 30) + ' days of orders, and where each stands in the other system.', 'Overdue: the trigger released it more than ' + String(d.overdue_hours || 12) + ' hours ago and nothing answered.', 'Ask again re-requests one — the connector never books the same order twice.'])
     + chips + (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') + list + '</div>';
+}
+/** set an order aside, or bring it back — reversible, and recorded with who and when (2026-09-07) */
+async function intRecSkip(id, on){
+  try { await api('intBooksSkip', { body: { chit_id: id, on: !!on } });
+    toast(on ? tx('Set aside — it will not go to the books.') : tx('Back in the queue — the connector books it within a minute.'));
+    _INT_REC = undefined; loadSettings();
+  } catch (e) { toast(tx('Could not change it') + ': ' + (e && e.message || e)); }
 }
 function intRecRaw(short){ lsSet('cb_rec_raw_' + short, lsGet('cb_rec_raw_' + short, '0') === '1' ? '0' : '1'); loadSettings(); }
 /** open the order itself — a sale sits in Task, an order you placed in Order (2026-09-07) */
