@@ -447,6 +447,9 @@ function cbPushArrived(d){
     var listNav=['task','order','drafts','trash','archive','intake','messages'];
     if(typeof UI!=='undefined' && listNav.indexOf(UI.nav)>=0 && !(UI.detail||UI.mdetail) && typeof loadList==='function') loadList(true);
   }catch(_){}
+  /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
+  try{ if(typeof booksOnBell==='function' && d && (d.kind==='books'||d.note==='books')){ booksOnBell(d); return; } }catch(_){}
+  try{ if(typeof booksOnBell==='function') booksOnBell(d); }catch(_){}
   try{ if(typeof toast==='function'){ var who=d&&d.who?(' · '+d.who):''; toast((d&&d.kind==='capture')?(tx('New message')+who):(tx('New chit')+who)); } }catch(_){}
 }
 /**

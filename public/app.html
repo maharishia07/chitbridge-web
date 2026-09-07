@@ -13393,11 +13393,61 @@ function booksBlockHTML(c){
     var why=bj.books_request?tx('sent to books — the connector books it within a minute'):({received:tx('goes to the books when a connector is watching'),accepted:tx('goes to the books once accepted'),completed:tx('goes to the books once completed'),manual:tx('goes to the books when you press Send to books')}[at]||'');
     waiting='<div class="ir" data-testid="books-waiting"><span class="nm" style="color:var(--grey)">'+tx('Not yet in the books')+'</span><span class="qt">'+esc(why)+'</span></div>';
   }
+  var id0=String(c.id||(c.header&&c.header.chit_id)||'');
+  var w=BOOKS_WAIT[id0];
+  if(w && !B.order){ waiting='<div class="ir" data-testid="books-sending"><span class="nm">⏳ '+tx('Sending to the books')+'…</span><span class="qt">'+esc(booksWaitWord(w))+'</span></div>'; }
   var btn=(!B.order && !bj.books_request && /^(order|offer)$/.test(purpose) && !/^(cancelled|rejected)$/.test(st) && UI.folder==='task')?'<div style="padding:8px 12px"><button class="btn2" data-testid="books-send" onclick="booksSend(\''+esc(c.id||(c.header&&c.header.chit_id))+'\')">📒 '+tx('Send to books')+(at==='manual'?'':' '+tx('now'))+'</button></div>':'';
+  BOOKS_CTX=c;   /* what this block was painted from — booksRepaint() swaps the block alone, never the pane ([[feedback-repaint-locally]]) */
   if(!rows && !waiting) return '';
-  return '<div class="sec" style="margin:10px 0 6px">'+tx('Books')+'</div><div class="itab" data-testid="books-block">'+rows+waiting+btn+'</div>';
+  return '<div id="books_wrap"><div class="sec" style="margin:10px 0 6px">'+tx('Books')+'</div><div class="itab" data-testid="books-block">'+rows+waiting+btn+'</div></div>';
 }
-async function booksSend(id){ try{ await api('chitBooks',{ params:{ id:id } }); toast(tx('Sent to books — the connector books it within a minute.')); var c=(UI.cur&&UI.cur.id===id)?UI.cur:null; if(c){ c.business_json=c.business_json||{}; c.business_json.books_request={ at:new Date().toISOString() }; paintDetail(); } }catch(e){ toast(tx('Could not send')+': '+(e&&e.message||e)); } }
+/* ⭐ WAITING FOR THE BOOKS (2026-09-07). BOOKS_WAIT holds the chits whose answer is owed — a press, or a bell that named this chit.
+   Nothing here repaints the pane: booksRepaint() replaces #books_wrap and puts the scroll back. */
+var BOOKS_WAIT={}, BOOKS_CTX=null, BOOKS_TICK=null;
+function booksWaitWord(w){ var s=Math.max(0,Math.round((Date.now()-w.since)/1000));
+  if(w.done) return String(w.done);
+  return s<60?txf('{s}s — the connector is answering',{s:s}):txf('{m} min — the connector may be offline; it retries every 5 minutes',{m:Math.floor(s/60)}); }
+function booksRepaint(){ try{ var el=document.getElementById('books_wrap'); if(!el||!BOOKS_CTX) return; var k=scrollKeep(); el.outerHTML=booksBlockHTML(BOOKS_CTX)||''; k(); }catch(_){} }
+/** read this one chit again and put its books answer into the block (and into the open chit, so a later paint agrees) */
+async function booksRefresh(id){
+  try{
+    var r=await api('chit',{ params:{ id:id } }); var h=(r&&(r.header||r.chit||r))||{}; var bj=h.business_json||r.business_json||{};
+    if(UI.cur && String(UI.cur.id||'')===String(id)) UI.cur.business_json=bj;
+    if(BOOKS_CTX){ BOOKS_CTX.business_json=bj; if(BOOKS_CTX.header) BOOKS_CTX.header.business_json=bj; }
+    var B=(bj.books)||{};
+    if(B.order){ var w=BOOKS_WAIT[id]; if(w){ delete BOOKS_WAIT[id]; }
+      booksRepaint();
+      if(w) toast(B.order.outcome==='ok'?txf('Written to {sys} · {ref}',{sys:B.order.system||'books',ref:B.order.ref||''}):txf('{sys} refused: {why}',{sys:B.order.system||'books',why:B.order.why||''}));
+      return true; }
+    booksRepaint(); return false;
+  }catch(_){ return false; }
+}
+/** one clock for all the chits waiting: the seconds tick every second, the chit is asked again every third */
+function booksClock(){
+  if(BOOKS_TICK) return;
+  BOOKS_TICK=setInterval(function(){
+    var ids=Object.keys(BOOKS_WAIT); if(!ids.length){ clearInterval(BOOKS_TICK); BOOKS_TICK=null; return; }
+    ids.forEach(function(id){ var w=BOOKS_WAIT[id]; w.ticks=(w.ticks||0)+1;
+      if(Date.now()-w.since>3*60*1000){ delete BOOKS_WAIT[id]; booksRepaint(); return; }
+      if(w.ticks%3===0) booksRefresh(id); else booksRepaint(); });
+  },1000);
+}
+/** the bell named a chit whose books answer we are waiting for, or the one on screen — ask once, repaint the block alone */
+function booksOnBell(d){
+  try{ var id=d&&d.id; if(!id) return;
+    var open=(UI.cur&&UI.cur.id)||UI.sel||'';
+    if(BOOKS_WAIT[id]||String(open)===String(id)) booksRefresh(id);
+  }catch(_){}
+}
+async function booksSend(id){
+  try{
+    await api('chitBooks',{ params:{ id:id } });
+    var c=(UI.cur&&UI.cur.id===id)?UI.cur:null; if(c){ c.business_json=c.business_json||{}; c.business_json.books_request={ at:new Date().toISOString() }; }
+    if(BOOKS_CTX){ BOOKS_CTX.business_json=BOOKS_CTX.business_json||{}; BOOKS_CTX.business_json.books_request={ at:new Date().toISOString() }; }
+    BOOKS_WAIT[id]={ since:Date.now() };   /* the block now counts, asks, and swaps itself when the answer lands */
+    booksRepaint(); booksClock();
+  }catch(e){ toast(tx('Could not send')+': '+(e&&e.message||e)); }
+}
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
 function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
 function messagesTab(c){
