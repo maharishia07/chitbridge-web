@@ -4736,7 +4736,10 @@ function intCardDetailHTML(c){
     + '</div>';
 }
 function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
-function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); loadSettings(); }
+/* ⚠️ THE RAIL IS PART OF THE PAINT (Athi, 2026-09-07: "when I click the submenu the details change on the right, but the menu marked
+   in a different colour does not change"). loadSettings() repaints the BODY only, so the highlight stayed on the old row — the same
+   reason govSetTab calls renderApp() first. Copying that, rather than inventing a second way to move a selection. */
+function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); if (typeof renderApp === 'function') renderApp(); loadSettings(); }
 /** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
 function intFold(key, lines){
   var open = lsGet('cb_fold_' + key, '1') === '1';
