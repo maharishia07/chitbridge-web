@@ -4683,10 +4683,10 @@ function intConnectorsHTML(){
     return '<div data-testid="int-running-' + esc(r.id) + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)"><b style="flex:1">' + esc(r.name) + intEnrolHTML(r) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.adapter || '') + ' · ' + esc(r.host || '') + ' · ' + (ago == null ? '' : (ago < 1 ? tx('just now') : txf('{n} min ago', { n: String(ago) }))) + ' · ' + esc(tx('products')) + ' ' + esc(String(c.products_ok || 0)) + ' · ' + esc(tx('orders')) + ' ' + esc(String(c.orders_ok || 0)) + (c.receipts_ok ? ' · ' + esc(tx('receipts')) + ' ' + esc(String(c.receipts_ok)) : '') + (c.failed ? ' · <span style="color:var(--warn-3)">' + esc(tx('failed')) + ' ' + esc(String(c.failed)) + '</span>' : '') + (r.note ? ' · ' + esc(r.note) : '') + '</span>' + intSourceHTML(r) + intCarriesHTML(r) + '</div>'; }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-2)">' + tx(_INT_RUN === null ? 'reading…' : 'None has checked in yet — a connector reports here each time it runs, and every five minutes while it watches.') + '</div>';
   if (intTab() === 'running') return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Running connectors') + '</div>'
-    + intFold('running', tx('One row per connector that has checked in. It reports every time it runs and every five minutes while it watches, and says whether the other system answered — which is not the same question as whether the connector is alive.')) + rows + '</div>';
+    + intFold('running', ['One row per connector that has checked in.', 'It reports every run, and every five minutes while it watches.', '"Answered" is the other system. "Live" is only the connector itself.', 'Approve a PC once — a kit is approved for one PC at a time.']) + rows + '</div>';
   var more = rest.length ? '<div style="margin-top:10px;font-size:var(--fs-1);color:var(--grey)" data-testid="int-rest">' + esc(txf('{n} you do not use: {names}', { n: String(rest.length), names: rest.map(function(c){ return c.name; }).join(', ') })) + ' — ' + tx('tick "we use this" on one to bring it back') + '</div>' : '';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Connectors') + '</div>'
-    + intFold('connectors', tx('A small program that runs beside another system — Tally, Zoho, a file folder — and carries products up, offers back and orders down. Download it here; the key is already inside.'))
+    + intFold('connectors', ['A small program that runs beside your own system — Tally, Zoho, a folder of files.', 'It carries products and stock up, offers back, and orders down as vouchers.', 'Download, unzip, double-click start.cmd. Your key is already inside.'])
     + cards + more + '</div>';
 }
 /**
@@ -4706,11 +4706,12 @@ var INT_TABS = [
 function intTab(){ var k = UI.intTab || lsGet('cb_int_tab', 'connectors'); return INT_TABS.some(function(t){ return t.key === k; }) ? k : 'connectors'; }
 function intSetTab(k){ UI.intTab = k; lsSet('cb_int_tab', k); loadSettings(); }
 /** ⭐ the prose folds, and stays folded — an explanation is worth reading once, not on every visit (2026-09-07) */
-function intFold(key, html){
+function intFold(key, lines){
   var open = lsGet('cb_fold_' + key, '1') === '1';
+  var list = (Array.isArray(lines) ? lines : [lines]).map(function(l){ return '<li style="margin:2px 0">' + esc(tx(l)) + '</li>'; }).join('');
   return '<div style="font-size:var(--fs-2);margin-bottom:6px">'
     + '<span data-testid="int-fold-' + esc(key) + '" onclick="intFoldToggle(\'' + esc(key) + '\')" style="cursor:pointer;color:var(--grey);font-size:var(--fs-1);user-select:none">' + (open ? '▾ ' + tx('less') : '▸ ' + tx('what this is')) + '</span>'
-    + (open ? '<div style="margin-top:4px">' + html + '</div>' : '') + '</div>';
+    + (open ? '<ul style="margin:4px 0 0;padding-inline-start:18px">' + list + '</ul>' : '') + '</div>';
 }
 function intFoldToggle(key){ lsSet('cb_fold_' + key, lsGet('cb_fold_' + key, '1') === '1' ? '0' : '1'); loadSettings(); }
 /** ⭐ which systems this account actually runs. A DISPLAY choice, not a connection: it puts them first and folds the rest away. */
@@ -4752,7 +4753,7 @@ function intStreamsHTML(){
             + '<td style="padding:5px 8px;border-top:1px solid var(--line)">' + sel + '</td></tr>';
         }).join('') + '</tbody></table></div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Who owns what') + '</div>'
-    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + tx('An account may run several connectors — a POS for stock, the books for vouchers, a CRM for parties — but each stream belongs to exactly one of them, or the same order becomes a voucher in two ledgers.') + '</div>' + body + '</div>';
+    + intFold('streams', ['Several connectors are fine — a POS for stock, the books for vouchers, a CRM for parties.', 'Each stream belongs to exactly one of them, or the same order becomes a voucher in two ledgers.', 'The first connector to carry a stream claims it. Change it here when a migration ends.']) + body + '</div>';
 }
 async function intStreamSet(stream, kit){
   try { var body = {}; body[stream] = kit || null; await api('intStreamsSet', { body: body });
@@ -4796,7 +4797,7 @@ function intReconcileHTML(){
       + '<button class="btn2" data-testid="int-rec-retry-' + esc(String(r.chit_id).slice(0, 8)) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button></div>';
   }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Nothing is waiting to be booked.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
-    + '<div style="font-size:var(--fs-2);margin-bottom:6px">' + txf('The last {days} days of orders, and where each one stands in the other system. Overdue means the trigger released it more than {hrs} hours ago and nothing has answered.', { days: String(d.days || 30), hrs: String(d.overdue_hours || 12) }) + '</div>'
+    + intFold('books', ['The last ' + String(d.days || 30) + ' days of orders, and where each stands in the other system.', 'Overdue: the trigger released it more than ' + String(d.overdue_hours || 12) + ' hours ago and nothing answered.', 'Ask again re-requests one — the connector never books the same order twice.'])
     + chips + (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') + list + '</div>';
 }
 async function intRecRetry(id){
