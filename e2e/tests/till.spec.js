@@ -69,19 +69,19 @@ test('[TILL-01] a counter bills from its own copy of the shop, offline too, and 
     await till.click('#slipdlg button:has-text("Close")');
   });
 
-  await test.step('and it is an ordinary chit in Task, with the bill number on it', async () => {
-    await till.waitForTimeout(3000);                                  /* the queue drains on its own */
-    await clickNav(page, 'task'); await settle(page);
-    await page.reload(); await settle(page);
-    const found = await page.evaluate(async (no) => {
-      const r = await api('chitsList', { query: { folder: 'task', limit: 20 } }).catch(() => null);
-      const rows = (r && (r.chits || r.rows || r.items)) || [];
-      return rows.some((c) => String(c.manual_subject || c.auto_subject || '').indexOf(no) >= 0);
-    }, firstNo).catch(() => false);
-    /* the list API differs by build; the reconciliation view is the honest cross-check either way */
-    const rec = await page.evaluate(async () => api('intReconcile', { query: { days: 1 } }).catch(() => null));
-    const seen = found || !!(rec && (rec.rows || []).some((r) => String(r.subject || '').indexOf(firstNo) >= 0));
-    expect(seen || (rec && rec.counts && rec.counts.total > 0), 'the counter sale reached ChitBridge').toBeTruthy();
+  await test.step('and it is an ordinary chit in the shop own Task, carrying the bill number', async () => {
+    /* the queue drains by itself; ask the API directly rather than guessing which screen shows it */
+    const seen = await page.evaluate(async (no) => {
+      for (let i = 0; i < 12; i++) {
+        const r = await fetch(CFG.API_BASE + '/api/chits/inbox?limit=25', { headers: { Authorization: 'Bearer ' + SESSION.token } });
+        const j = await r.json().catch(() => ({}));
+        const rows = j.chits || j.rows || j.items || [];
+        if (rows.some((c) => String(c.manual_subject || c.auto_subject || '').indexOf(no) >= 0)) return true;
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+      return false;
+    }, firstNo);
+    expect(seen, 'the counter sale reached ChitBridge as a chit').toBe(true);
   });
 
   await test.step('THE LINE GOES DOWN — and the counter does not care', async () => {
