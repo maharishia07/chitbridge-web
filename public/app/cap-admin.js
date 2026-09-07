@@ -4792,6 +4792,39 @@ async function intStreamSet(stream, kit){
  * still not in the books.
  * ⚠️ THIS RECONCILES DISPATCH, NOT BALANCES — it proves each order reached the other system once, not that two ledgers agree.
  */
+/**
+ * ⭐⭐ WHAT IT MEANS, AND WHAT TO DO (2026-09-07). The other system answers in its own words — Tally in XML, Zoho in error codes — and
+ * a shopkeeper should never have to read either. Each known answer becomes one sentence and one instruction; anything unrecognised
+ * keeps its own words rather than pretending to understand it, and the raw text is always one click away.
+ */
+function recPlain(r){
+  var sys = r.system || tx('the other system');
+  var w = String(r.why || '');
+  if (r.state === 'refused'){
+    if (/<RESPONSE>|CREATED>0|LASTVCHID/i.test(w))
+      return { line: txf('{sys} did not create the voucher.', { sys: sys }), todo: tx('Almost always a name on the order does not exist in that company yet — a stock item, a ledger, or the voucher type. Open that company, add the missing name, then press Ask again.') };
+    if (/gstin mismatch/i.test(w))
+      return { line: tx('The company in the books has a different GSTIN from this account.'), todo: tx('Correct the GSTIN in that company, or approve this PC under Running once — then press Ask again.') };
+    if (/organization_id/i.test(w))
+      return { line: tx('The books do not recognise the organisation this connector was set up with.'), todo: tx('Run start.cmd on that PC again and pick your organisation from the list it prints.') };
+    if (/IGST|interstate/i.test(w))
+      return { line: tx('The tax on the invoice did not match the customer’s state.'), todo: tx('This was fixed on 7 September. Press Ask again — it should go straight in.') };
+    if (/401|unauthor|token|oauth|invalid_client/i.test(w))
+      return { line: txf('{sys} signed us out.', { sys: sys }), todo: tx('Run start.cmd on that PC and answer yes when it offers to get a new code.') };
+    if (/ECONNREFUSED|ETIMEDOUT|connect|closed|not answer/i.test(w))
+      return { line: txf('{sys} was not open when we tried.', { sys: sys }), todo: tx('Open it on that PC. Nothing else — the connector tries again by itself every five minutes.') };
+    if (/date/i.test(w) && /voucher/i.test(w))
+      return { line: tx('The books refused the date on the voucher.'), todo: tx('The Educational edition of Tally accepts the 1st, 2nd and 31st only. The connector already uses the 2nd — if you see this, tell us.') };
+    return { line: txf('{sys} refused it.', { sys: sys }), todo: tx('The connector tries again every five minutes. If it keeps failing, open the technical detail below and send it to us.') };
+  }
+  if (r.state === 'overdue')
+    return { line: tx('Nothing has answered yet.'), todo: tx('Check under Running that the connector is checked in and the other system answered it. If it is, press Ask again; if the PC is off, switch it on — nothing is lost.') };
+  if (r.state === 'due')
+    return { line: tx('On its way.'), todo: tx('Nothing to do — it usually lands within a minute.') };
+  if (r.state === 'waiting')
+    return { line: tx('Not released yet.'), todo: tx('It goes to the books when the order reaches the state you chose in Settings — or when you press Send to books on the order itself.') };
+  return { line: '', todo: '' };
+}
 var _INT_REC;
 function intReconcileHTML(){
   if (_INT_REC === undefined) { _INT_REC = null; api('intReconcile', { query: { days: 30 } }).then(function(r){ _INT_REC = r || {}; if (setSec() === 'integrations') loadSettings(); }).catch(function(){ _INT_REC = { error: true }; if (setSec() === 'integrations') loadSettings(); }); }
@@ -4800,7 +4833,10 @@ function intReconcileHTML(){
   var c = d.counts || {}, rows = d.rows || [];
   var chip = function(n, label, colour, testid){ return '<span data-testid="' + testid + '" style="display:inline-flex;gap:5px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:var(--fs-1);' + (colour ? 'color:' + colour + ';font-weight:700' : 'color:var(--grey)') + '"><b>' + esc(String(n || 0)) + '</b> ' + esc(label) + '</span>'; };
   var bySys = Object.keys(d.by_system || {}).map(function(k){ return esc(k) + ' ' + esc(String(d.by_system[k])); }).join(' · ');
-  var chips = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">'
+  var head = (c.overdue || c.refused)
+    ? '<div style="font-size:var(--fs-2);color:var(--warn-3);font-weight:700;margin-bottom:4px" data-testid="int-rec-head">' + esc(txf('{n} order(s) need a look — each one below says what to do.', { n: String((c.overdue || 0) + (c.refused || 0)) })) + '</div>'
+    : '<div style="font-size:var(--fs-2);color:var(--ok-2);margin-bottom:4px" data-testid="int-rec-head">' + esc(tx('Nothing needs you. Anything on the way lands by itself.')) + '</div>';
+  var chips = head + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px">'
     + chip(c.booked, tx('in the books'), 'var(--ok-2)', 'int-rec-booked')
     + chip(c.overdue, tx('overdue'), (c.overdue ? 'var(--warn-3)' : ''), 'int-rec-overdue')
     + chip(c.refused, tx('refused'), (c.refused ? 'var(--warn-3)' : ''), 'int-rec-refused')
@@ -4812,16 +4848,31 @@ function intReconcileHTML(){
   var colour = { overdue: 'var(--warn-3)', refused: 'var(--warn-3)', due: 'var(--grey)' };
   var when = function(iso){ try { return (typeof fmtDateTime === 'function') ? fmtDateTime(iso) : new Date(iso).toLocaleString(); } catch (_) { return String(iso || ''); } };
   var list = open.length ? open.slice(0, 40).map(function(r){
-    return '<div data-testid="int-rec-row-' + esc(String(r.chit_id).slice(0, 8)) + '" style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
+    var short = String(r.chit_id).slice(0, 8), p = recPlain(r), raw = lsGet('cb_rec_raw_' + short, '0') === '1';
+    return '<div data-testid="int-rec-row-' + esc(short) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
       + '<span style="font-weight:700;color:' + colour[r.state] + ';flex:0 0 92px">' + esc(word[r.state] || r.state) + '</span>'
-      + '<span style="flex:1">' + esc(r.subject || tx('Order')) + '<span style="color:var(--grey)"> · ' + esc(r.party || '') + ' · ' + esc(String(r.chit_id).slice(0, 8)) + '</span>'
-      + (r.why ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">' + esc(r.why) + '</div>' : '')
-      + '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.status || '') + (r.released_at ? ' · ' + esc(tx('released')) + ' ' + esc(when(r.released_at)) : '') + '</div></span>'
-      + '<button class="btn2" data-testid="int-rec-retry-' + esc(String(r.chit_id).slice(0, 8)) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button></div>';
-  }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Nothing is waiting to be booked.') + '</div>';
+      + '<span style="flex:1">'
+        + '<b>' + esc(r.subject || tx('Order')) + '</b>' + (r.party ? '<span style="color:var(--grey)"> · ' + esc(r.party) + '</span>' : '')
+        + '<div style="margin-top:2px">' + esc(p.line) + '</div>'
+        + (p.todo ? '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:2px">' + esc(p.todo) + '</div>' : '')
+        + '<div style="color:var(--grey-4);font-size:var(--fs-1);margin-top:3px">' + esc(when(r.released_at || r.created_at)) + (r.why ? ' · <span data-testid="int-rec-raw-' + esc(short) + '" onclick="intRecRaw(\'' + esc(short) + '\')" style="cursor:pointer;color:var(--blue)">' + (raw ? esc(tx('hide the technical detail')) : esc(tx('technical detail'))) + '</span>' : '') + '</div>'
+        + (raw && r.why ? '<div style="margin-top:3px;font-family:monospace;font-size:var(--fs-1);color:var(--warn-2);word-break:break-word">' + esc(r.why) + '</div>' : '')
+      + '</span>'
+      + '<span style="display:flex;gap:6px;flex:0 0 auto">'
+        + '<button class="btn2" data-testid="int-rec-open-' + esc(short) + '" onclick="intRecOpen(\'' + esc(r.chit_id) + '\',\'' + esc(r.side || '') + '\')">' + tx('Open') + '</button>'
+        + '<button class="btn2" data-testid="int-rec-retry-' + esc(short) + '" onclick="intRecRetry(\'' + esc(r.chit_id) + '\')">' + tx('Ask again') + '</button>'
+      + '</span></div>';
+  }).join('') : '<div style="color:var(--ok-2);font-size:var(--fs-2)" data-testid="int-rec-clear">✓ ' + tx('Everything has reached the books. Nothing for you to do.') + '</div>';
   return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('In the books') + '</div>'
     + intFold('books', ['The last ' + String(d.days || 30) + ' days of orders, and where each stands in the other system.', 'Overdue: the trigger released it more than ' + String(d.overdue_hours || 12) + ' hours ago and nothing answered.', 'Ask again re-requests one — the connector never books the same order twice.'])
     + chips + (bySys ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + esc(tx('Booked by')) + ': ' + bySys + '</div>' : '') + list + '</div>';
+}
+function intRecRaw(short){ lsSet('cb_rec_raw_' + short, lsGet('cb_rec_raw_' + short, '0') === '1' ? '0' : '1'); loadSettings(); }
+/** open the order itself — a sale sits in Task, an order you placed in Order (2026-09-07) */
+function intRecOpen(id, side){
+  try { if (typeof navTo === 'function') navTo(side === 'purchase' ? 'order' : 'task');
+    setTimeout(function(){ if (typeof openChit === 'function') openChit(id); }, 300);
+  } catch (e) { toast(tx('Could not open it') + ': ' + (e && e.message || e)); }
 }
 async function intRecRetry(id){
   try { await api('chitBooks', { params: { id: id } }); toast(tx('Asked again — the connector books it within a minute.')); _INT_REC = undefined; loadSettings(); }

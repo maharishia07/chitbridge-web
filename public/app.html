@@ -12103,6 +12103,9 @@ function mapApiChit(c){
   return { clearances:sum.clearances||null, commercial:sum.commercial||null, via:sum.via||null,
            detail_design:sum.detail_design||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
+    /* ⭐ the five figures the header records at send (summary_json.money, 2026-09-07): gross · savings · net · tax · total.
+       Absent on every chit sent before that, and absent is NOT zero — the columns print "—" rather than invent a figure. */
+    money:sum.money||null,
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
     /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
@@ -12426,7 +12429,14 @@ const LISTCOLS = [
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag ok" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c)+cancelFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
-  { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
+  /* ⚠️ AMOUNT IS BEFORE TAX, AND NOW SAYS SO (Athi, 2026-09-07: "the header is showing amount without tax, but the whole amount is
+     different"). It is the net after any offer — the figure the chit has always carried — so the label names it rather than moving it. */
+  { key:'amount',   label:'Before tax', sort:'amount',   w:'112px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
+  /* the rest of the money, off until someone picks them in ⚙ columns. A missing figure is "—", never 0. */
+  { key:'total',    label:'Total',    sort:null, w:'112px', align:'right', cell:function(c){ var m=c.money||{}; return '<span style="font-family:\'Space Mono\'"'+(m.provisional?' title="'+esc(tx('provisional until the order is completed'))+'"':'')+'>'+(m.total!=null?fmtMoney(m.total,c.currency):'—')+'</span>'; } },
+  { key:'tax',      label:'Tax',      sort:null, w:'100px', align:'right', cell:function(c){ var m=c.money||{}; return '<span style="font-family:\'Space Mono\'">'+(m.tax!=null?fmtMoney(m.tax,c.currency):'—')+'</span>'; } },
+  { key:'savings',  label:'Savings',  sort:null, w:'100px', align:'right', cell:function(c){ var m=c.money||{}; return '<span style="font-family:\'Space Mono\';color:'+(m.savings>0?'var(--ok-2)':'inherit')+'">'+(m.savings!=null?fmtMoney(m.savings,c.currency):'—')+'</span>'; } },
+  { key:'gross',    label:'Before offers', sort:null, w:'118px', align:'right', cell:function(c){ var m=c.money||{}; return '<span style="font-family:\'Space Mono\'">'+(m.gross!=null?fmtMoney(m.gross,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
   { key:'items',    label:'Items',    sort:null,       w:'58px',  cell:function(c){ return (c.nitems||'')+''; } },
