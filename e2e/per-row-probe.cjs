@@ -53,24 +53,32 @@ const SESSION = process.env.CB_SESSION || path.join(__dirname, '.auth', 'user.js
 
   await p.evaluate(() => navTo('catalogue'));
   await p.waitForSelector('[data-testid^="cat-product-"]', { timeout: 45000 }).catch(() => {});
+  await p.waitForTimeout(3000);        /* the late loaders repaint the list once each; let them finish */
   const list = await p.evaluate(async () => {
+    /* ⚠️ our own rows, painted once — the shared account's catalogue changes under us between runs, and a probe that
+       measures a moving target measures nothing. */
+    const prods = [];
+    for (let i = 0; i < 40; i++) prods.push({ item_id: 'row' + i,
+      item_data: { name: 'Row test product ' + i, code: 'RT' + i, unit: 'piece', price: 10 + i, status: 'available' } });
+    UI.prods = prods; UI.prodQ = ''; UI._prodCatg = ''; UI._prodAvail = ''; UI.prodTruncated = false; UI.prodSel = null;
+    paintProdList();
+    await new Promise((r) => setTimeout(r, 100));
     const rows = Array.from(document.querySelectorAll('[data-testid^="cat-product-"]'));
     if (rows.length < 2) return { drawn: rows.length };
     rows.forEach((el, i) => { el.dataset.mark = 'm' + i; });
     const box = document.getElementById('ct_rows');
-    if (box) box.scrollTop = Math.min(80, box.scrollHeight);
-    const id = rows[1].dataset.testid.replace('cat-product-', '');
-    selectProduct(id);
-    await new Promise((r) => setTimeout(r, 150));
+    if (box) box.scrollTop = 60;
+    const id = rows[3].dataset.testid.replace('cat-product-', '');
+    selectProduct(id, true);
     const after = Array.from(document.querySelectorAll('[data-testid^="cat-product-"]'));
-    return { drawn: rows.length, survived: after.filter((el) => el.dataset.mark).length, of: after.length,
-             scroll: box ? box.scrollTop : null,
-             selected: /sel/.test((document.querySelector('[data-testid="cat-product-' + id + '"]') || {}).className || '') };
+    const el = document.querySelector('[data-testid="cat-product-' + id + '"]');
+    return { drawn: rows.length, survived: after.filter((x) => x.dataset.mark).length, of: after.length,
+             scroll: box ? box.scrollTop : null, selected: /(^| )sel( |$)/.test((el && el.className) || '') };
   });
   if (!list.drawn) console.log('  (no rows drawn — the screen needs a real catalogue; skipped)');
   else {
     console.log('  rows drawn                    : ' + list.drawn);
-    console.log('  rows that SURVIVED the click  : ' + list.survived + ' of ' + list.of + (list.survived >= list.of - 2 ? '   ✔ only the two that changed were replaced' : '   ✘ the list was rebuilt'));
+    console.log('  rows that SURVIVED the click  : ' + list.survived + ' of ' + list.of + (list.survived >= list.of - 1 ? '   ✔ only the two that changed were replaced' : '   ✘ the list was rebuilt'));
     console.log('  the scroll position           : ' + list.scroll + (list.scroll ? '   ✔ kept' : '   ✘ back to the top'));
     console.log('  the clicked row is marked     : ' + (list.selected ? '✔ yes' : '✘ no'));
   }
