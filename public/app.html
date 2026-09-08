@@ -9000,9 +9000,27 @@ async function _loadCatalogue(force){
     if(!_formOpen){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
   }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=scrErr(e, tx('the catalogue'), 'loadCatalogue()'); }
 }
-function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
+/**
+ * ⭐⭐ ONE ROW, REPAINTED WHERE IT STANDS (2026-09-08). Athi: *"the view never changes, it is only the data has to move."*
+ * ⚠️ AND IT KEEPS THE SCROLL. Rebuilding the container to move a highlight sends the list back to the top and drops every row the
+ * lazy list had revealed — so picking the fortieth product used to cost you the thirty-nine above it.
+ * It answers false when the row is not on screen (filtered out, or not yet revealed), and the caller falls back to the container.
+ */
+function prodRowRepaint(id){
+  if(!id) return false;
+  const el=document.querySelector('[data-testid="cat-product-'+String(id).replace(/"/g,'')+'"]');
+  if(!el) return false;
+  const p=(UI.prods||[]).find(x=>prodId(x)===id) || (UI.prodHits||[]).find(x=>prodId(x)===id);
+  if(!p) return false;
+  el.outerHTML=prodRowHTML(p);
+  return true;
+}
+function selectProduct(id, silent){ UI.refSel=null; const was=UI.prodSel; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
-  paintProdList(); paintProdDetail(); }
+  /* the selection moved between two rows: flip both, and leave the other forty-eight exactly where they are */
+  const moved = (was===id) || (prodRowRepaint(was)!==false && prodRowRepaint(id));
+  if(!moved) paintProdList();
+  paintProdDetail(); }
 /* If the declaration has not arrived yet (a deep link straight into Edit), paint now and once more when it has. */
 /**
  * ⚠️⚠️ THE DECLARED COLUMNS ARRIVE AFTER THE FORM OPENS — AND MUST NOT REPAINT WHAT WAS TYPED. This used to call
