@@ -3516,6 +3516,23 @@ var TEXT_SIZES = [
   ['xl', 'Extra large', 1.32]
 ];
 
+/**
+ * ⭐⭐ WHOSE SETTING IS THIS — THE PERSON'S, OR THE MACHINE'S? (2026-09-08). Athi: *"assume if the co-assist sign-in, and if
+ * another co-assist changes his login in the same place, how the data is isolated and kept independent?"*
+ *
+ * The audit that question prompted found NO business data kept on the device — the app holds no IndexedDB, no sessionStorage, and
+ * both service workers cache the shell only, never an API answer (cb-sw.js stays out of cross-origin calls on purpose). So nothing
+ * about anyone's chits, products or customers can survive a sign-out. What DID survive was every UI preference: sign out, let the
+ * next co-assist sign in, and they inherited the last person's columns, widths, sort, folds and product layout.
+ *
+ * ⚠️ That is not a leak, but it is not right either, and the line between the two kinds is worth drawing once:
+ *   · THE MACHINE'S — theme, font, language, viewport, panel geometry, API address. A shop PC should look the same to whoever
+ *     sits at it, so these stay under a plain name.
+ *   · THE PERSON'S — which columns, how wide, what sort, which sections are folded. These follow the human, so they are stored
+ *     under the signed-in identity: the ACTOR where there is one (a co-assist), otherwise the entity.
+ * A person who is not signed in gets the plain name, so nothing is lost on the login screen.
+ */
+function uk(k){ try { var who = (SESSION && (SESSION.actorId || SESSION.entityId)) || ''; return who ? (k + '@' + who) : k; } catch(_) { return k; } }
 function apGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(_){ return d; } }
 function apSet(k, v){ try{ localStorage.setItem(k, v); }catch(_){} }
 
@@ -3840,7 +3857,7 @@ function logout(){
     'Anything you have not saved on this screen is lost. You will need your one-time code to sign back in.',
     'Sign out', logoutNow, true);
 }
-function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}/* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
+function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}/* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */try{localStorage.removeItem('cb_sess');localStorage.removeItem(uk('cb_nav'));}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -4579,15 +4596,15 @@ function menuBody(M, role){
 }
 /** Which rail groups are collapsed. Persisted, because a rail you re-tidy on every reload is not tidy. */
 function navGroupShut(name){
-  try { return (JSON.parse(localStorage.getItem('cb_nav_shut') || '[]') || []).indexOf(name) >= 0; }
+  try { return (JSON.parse(localStorage.getItem(uk('cb_nav_shut')) || '[]') || []).indexOf(name) >= 0; }
   catch (e) { return false; }
 }
 function toggleNavGroup(name){
   try {
-    var l = JSON.parse(localStorage.getItem('cb_nav_shut') || '[]') || [];
+    var l = JSON.parse(localStorage.getItem(uk('cb_nav_shut')) || '[]') || [];
     var i = l.indexOf(name);
     if (i >= 0) l.splice(i, 1); else l.push(name);
-    localStorage.setItem('cb_nav_shut', JSON.stringify(l));
+    localStorage.setItem(uk('cb_nav_shut'), JSON.stringify(l));
   } catch (e) {}
   renderApp();
 }
@@ -5025,7 +5042,7 @@ function navToFolder(id){
   const f=(UI.folders||[]).find(x=>x.folder_id===id)||{};
   const track=(f.scope==='order')?'order':'task';
   UI.nav=track; UI.folder=track; UI.folderSel=id; UI.mdetail=false; UI.sel=null; UI.detail=null; UI.drawer=false;
-  try{localStorage.setItem("cb_nav",track);}catch(_){}
+  try{localStorage.setItem(uk("cb_nav"),track);}catch(_){}
   renderApp();
 }
 /* Leaving a folder = the same panel with the filter off. */
@@ -5059,7 +5076,7 @@ async function openFolderPane(tab, opts){
 function toggleTrack(t){
   UI.trackOpen=UI.trackOpen||{};
   UI.trackOpen[t]=!(UI.trackOpen[t]!==false);
-  try{localStorage.setItem('cb_trackopen',JSON.stringify(UI.trackOpen));}catch(_){}
+  try{localStorage.setItem(uk('cb_trackopen'),JSON.stringify(UI.trackOpen));}catch(_){}
   renderApp();
 }
 function trackIsOpen(t){ const o=UI.trackOpen||{}; return o[t]!==false; }   // default open — you can see them at first
@@ -5297,7 +5314,7 @@ async function selfBillSend(btn){
   }
 }
 
-function navTo(k){try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTimeout(CBCart.floatsSync,0); }catch(_){}if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
+function navTo(k){try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTimeout(CBCart.floatsSync,0); }catch(_){}if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem(uk("cb_nav"),k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
@@ -6311,7 +6328,7 @@ async function sendChit(v){
       try{ await api('captureConvert',{params:{id:_cap}, body:{chit_id:_newId}}); }catch(_){ }
     }
     if(typeof v.onSent==='function'){ try{ v.onSent(r); }catch(_){ } }
-    if(v.isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
+    if(v.isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem(uk("cb_nav"),"drafts");}catch(_){} }
     /**
      * ⚠️ LAND WHERE THE CHIT ACTUALLY IS. When the send suppressed a copy, the default landing sends you to the
      * list that copy was suppressed FROM — an empty-handed arrival that reads exactly like a failed send.
@@ -6321,8 +6338,8 @@ async function sendChit(v){
      * it. Deciding the destination from what was ASKED FOR, not from what came back, is the only version of this
      * that stays right when a new copy shape is added.
      */
-    else if(v.self_copy==='received'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="task"; UI.folder="task"; try{localStorage.setItem("cb_nav","task");}catch(_){} }
-    else if(v.self_copy==='sent'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; try{localStorage.setItem("cb_nav","order");}catch(_){} }
+    else if(v.self_copy==='received'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="task"; UI.folder="task"; try{localStorage.setItem(uk("cb_nav"),"task");}catch(_){} }
+    else if(v.self_copy==='sent'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; try{localStorage.setItem(uk("cb_nav"),"order");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); busyHide(); renderApp();
@@ -10231,10 +10248,10 @@ function prodTab(){ return UI.prodTab||'product'; }
  */
 function prodLayout(){
   if(UI.prodLayout) return UI.prodLayout;
-  try { const saved=localStorage.getItem('cb.prodLayout'); if(saved==='tabs'||saved==='page') return (UI.prodLayout=saved); } catch(_){}
+  try { const saved=localStorage.getItem(uk('cb.prodLayout')); if(saved==='tabs'||saved==='page') return (UI.prodLayout=saved); } catch(_){}
   return (UI.prodLayout = (UI.vp==='mob') ? 'tabs' : 'page');
 }
-function setProdLayout(v){ UI.prodLayout=v; try{ localStorage.setItem('cb.prodLayout', v); }catch(_){} paintProdDetail(); }
+function setProdLayout(v){ UI.prodLayout=v; try{ localStorage.setItem(uk('cb.prodLayout'), v); }catch(_){} paintProdDetail(); }
 function prodTabBar(){
   const page=prodLayout()==='page';
   return `<div class="dtabs" data-testid="prod-tabs" data-layout="${page?'page':'tabs'}">`+PROD_TABS.map(function(t){
@@ -11505,7 +11522,7 @@ function mainBody(){
    * and lands them where the content actually went rather than on the stub screen.
    * ⚠️ Catalogue setup, not Catalogue: seven of the nine things that lived here are catalogue STRUCTURE.
    */
-  if(UI.nav==="definitions"){ UI.nav="catsetup"; try{localStorage.setItem("cb_nav","catsetup");}catch(_){ } }
+  if(UI.nav==="definitions"){ UI.nav="catsetup"; try{localStorage.setItem(uk("cb_nav"),"catsetup");}catch(_){ } }
   if(UI.nav==="traceability") return capScreen("traceabilityScreen");
   if(UI.nav==="readiness") return capScreen("readinessScreen");
   if(UI.nav==="match") return capScreen("matchScreen");
@@ -12331,7 +12348,7 @@ function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaint
 /* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
    control would have vanished in exactly the views where you most want the space back. */
-function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} paintMain(); }
+function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem(uk('cb_lhfold'), UI.lhFold?'1':'0'); }catch(_){} paintMain(); }
 function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><div class="keyhead"><h4>' + tx('Legend / key') + '</h4>'
  + '<button class="keyx" onclick="toggleLegend()" title="' + tx('Close') + '" aria-label="' + tx('Close') + '">✕</button></div><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> ' + tx('Unread') + '</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
@@ -12589,7 +12606,7 @@ const LISTCOLS = [
   { key:'assignto', label:'Assigned to', sort:null, w:'minmax(96px,1.1fr)', cell:function(c){ return c.assignee?esc(c.assignee):'<span style="color:var(--grey)">—</span>'; } }
 ];
 const DEFCOLS = ['star','from','subject','date','amount','priext','priority','assignto','status'];
-function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
+function getCols(){ try{ const s=JSON.parse(localStorage.getItem(uk('cb_cols'))||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 /**
  * ⚠️ THE USER'S ORDER, NOT THE DECLARATION ORDER — and this line is the whole reason reordering did nothing.
  *
@@ -12757,10 +12774,10 @@ function moveCol(key, dir){
   const j = i + dir; if (j < 0 || j >= set.length) return;
   set.splice(j, 0, set.splice(i, 1)[0]);
   UI.cols = set;
-  try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ }
+  try{ localStorage.setItem(uk('cb_cols'), JSON.stringify(set)); }catch(_){ }
   paintRowsKeepScroll();
 }
-function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
+function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem(uk('cb_cols'), JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
 /* ── column resize + sort presets + persistence (Cluster L/M) ─────────────────────────── */
 /**
  * ⚠️ SETTING --coltpl ALONE IS NOT ENOUGH ANY MORE. The template used to be a fixed list, so a width change could
@@ -12777,8 +12794,8 @@ function applyColTpl(){ const r=document.getElementById("rows"); if(!r) return;
 let _rz=null;
 function colResizeStart(e,key){ e.preventDefault(); e.stopPropagation(); const cell=e.target.closest(".lhcell"); const w=cell?cell.offsetWidth:120; _rz={key:key, x:e.clientX, w:w}; document.addEventListener("mousemove",colResizeMove); document.addEventListener("mouseup",colResizeEnd); document.body.style.userSelect="none"; }
 function colResizeMove(e){ if(!_rz)return; const dx=e.clientX-_rz.x; const nw=Math.max(48,_rz.w+dx); UI.colW=UI.colW||{}; UI.colW[_rz.key]=nw+"px"; applyColTpl(); }
-function colResizeEnd(){ document.removeEventListener("mousemove",colResizeMove); document.removeEventListener("mouseup",colResizeEnd); document.body.style.userSelect=""; if(_rz){ try{ localStorage.setItem("cb_colw", JSON.stringify(UI.colW||{})); }catch(_){ } } _rz=null; }
-function persistSort(){ try{ localStorage.setItem("cb_sort", JSON.stringify({sort:UI.sort,dir:UI.dir})); }catch(_){ } }
+function colResizeEnd(){ document.removeEventListener("mousemove",colResizeMove); document.removeEventListener("mouseup",colResizeEnd); document.body.style.userSelect=""; if(_rz){ try{ localStorage.setItem(uk("cb_colw"), JSON.stringify(UI.colW||{})); }catch(_){ } } _rz=null; }
+function persistSort(){ try{ localStorage.setItem(uk("cb_sort"), JSON.stringify({sort:UI.sort,dir:UI.dir})); }catch(_){ } }
 function setSortPreset(v){ if(v==='latest'||v==='oldest'){ UI.sort='date'; UI.dir=(v==='oldest'?'asc':'desc'); persistSort(); UI.sel=null; UI.detail=null; loadList(); } }
 function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'oldest':'latest'):''; let o=''; if(cur===''){ o+='<option value="" selected>Sorted: '+esc(UI.sort||'')+' '+(UI.dir==='asc'?'↑':'↓')+'</option>'; } o+='<option value="latest"'+(cur==='latest'?' selected':'')+'>' + tx('Latest on top') + '</option>'; o+='<option value="oldest"'+(cur==='oldest'?' selected':'')+'>' + tx('Oldest on top') + '</option>'; return o; }
 function sortPresetSelect(){ return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">'+sortPresetOptions()+'</select>'; }
@@ -14272,7 +14289,7 @@ function applyPrefs(){
   try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;
   /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
      kind of pane and must not share a number; 320 is the menu default MIS and Profile already use. */
-  UI.misLw=parseInt(lsGet('cb_misLw',320),10)||320; UI.catsetLw=parseInt(lsGet('cb_catsetLw',320),10)||320;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem('cb_lhfold')==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
+  UI.misLw=parseInt(lsGet('cb_misLw',320),10)||320; UI.catsetLw=parseInt(lsGet('cb_catsetLw',320),10)||320;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem(uk('cb_lhfold'))==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 /**
  * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
  *
@@ -15133,8 +15150,8 @@ function paintLB(){
 /* boot */
 applyPrefs();
 restoreSession();
-try{ const _cw=JSON.parse(localStorage.getItem("cb_colw")||"null"); if(_cw) UI.colW=_cw; const _so=JSON.parse(localStorage.getItem("cb_sort")||"null"); if(_so&&_so.sort){ UI.sort=_so.sort; UI.dir=_so.dir||"desc"; } }catch(_){ }
-try{ if(SESSION.token){ const _nv=localStorage.getItem("cb_nav"); if(_nv){ UI.nav=_nv; if(_nv==="order")UI.folder="order"; else if(["drafts","trash","archive"].indexOf(_nv)>=0)UI.folder=_nv; else if(_nv==="task")UI.folder="task"; } } }catch(_){ }
+try{ const _cw=JSON.parse(localStorage.getItem(uk("cb_colw"))||"null"); if(_cw) UI.colW=_cw; const _so=JSON.parse(localStorage.getItem(uk("cb_sort"))||"null"); if(_so&&_so.sort){ UI.sort=_so.sort; UI.dir=_so.dir||"desc"; } }catch(_){ }
+try{ if(SESSION.token){ const _nv=localStorage.getItem(uk("cb_nav")); if(_nv){ UI.nav=_nv; if(_nv==="order")UI.folder="order"; else if(["drafts","trash","archive"].indexOf(_nv)>=0)UI.folder=_nv; else if(_nv==="task")UI.folder="task"; } } }catch(_){ }
 if(!location.hash) location.hash=SESSION.token?"#/":"#/login";
 route();
 </script>
