@@ -8911,7 +8911,12 @@ function prodCountLabel(){
   }
   return txf('{n} product(s)', { n:String(shown) });
 }
-function paintProdList(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodCountLabel(); }
+function paintProdList(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; prodStripsPaint();
+  const b=document.getElementById('ct_rows');
+  /* ⚠️ KEEP THE SCROLL. This runs on every late arrival — the categories, the tax slabs, the offers, the twenty-second refresh — and
+     each one used to send the list back to the top, taking every lazily revealed row with it. The chit list has done this since July. */
+  if(b){ const st=b.scrollTop; b.innerHTML=prodRowsHTML(); if(st) b.scrollTop=st; }
+  const c=document.getElementById('ct_count'); if(c)c.textContent=prodCountLabel(); }
 /* ⚠️ ONLY WHILE THE CATALOGUE IS UP — its late loaders (the list, the defs) painted the product over Setup after a person had moved on (the tour, 2026-09-05); the mirror of the Setup guard. */
 function paintProdDetail(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
 /**
