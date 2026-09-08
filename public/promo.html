@@ -292,6 +292,23 @@ function build(){
   /* ── and who you are ── */
   out.push({ kind:'shop', mood:MOOD.cool, eyebrow:'Come in' });
 
+  /**
+   * ⚠️⚠️ A SCREEN MUST NEVER BE ONE SLIDE. Every rule above needs something the shop may not have filled in yet — an offer nobody
+   * authored, an MRP nobody typed, a category nobody chose. A brand-new shop with twenty products and none of that scored exactly
+   * one slide (the shop card) and would have sat on a television showing the same rectangle all day. [PROMO-01] caught it, and
+   * the lesson is the one that matters for a first run: a shopkeeper who sees it do nothing never turns it on again.
+   *
+   * So the floor is the plainest true thing there is — this is what we sell, this is what it costs. It needs nothing but a name
+   * and a price, which every product has, and it is topped up only until there is enough to watch.
+   */
+  var FLOOR = 8;
+  if (out.length < FLOOR) {
+    var spare = seeded(items, 9);
+    for (var s = 0; s < spare.length && out.length < FLOOR; s++)
+      out.push({ kind:'plain', mood:[MOOD.cool, MOOD.gold, MOOD.fresh, MOOD.plum][s % 4],
+                 eyebrow:'On the shelf', item:spare[s] });
+  }
+
   return seeded(out, 8);
 }
 
@@ -400,6 +417,17 @@ function draw(g, W, H, slide){
   g.textBaseline = 'top'; g.fillText(eb, x, y);
   y += 52 * u;
 
+  if (slide.kind === 'plain') {
+    var pi = slide.item;
+    y += para(g, pi.name, x, y, { font:face(900, (wide ? 96 : 84) * u, true), color:'#FFF8EE',
+                                  maxW:col, size:(wide ? 96 : 84) * u, lines:3, lh:(wide ? 100 : 88) * u }) + 34 * u;
+    g.font = face(900, 118 * u, true); g.fillStyle = '#FFF8EE';
+    g.fillText(money(pi.price), x, y);
+    var pwp = measure(g, money(pi.price), 900, 118 * u, true);
+    g.font = face(500, 32 * u); g.fillStyle = 'rgba(255,248,238,.72)';
+    g.fillText('per ' + (pi.unit || 'piece'), x + pwp + 18 * u, y + 68 * u);
+  }
+
   if (slide.kind === 'offer' || slide.kind === 'drop') {
     var it = slide.item;
     y += para(g, it.name, x, y, { font:face(900, (wide ? 96 : 84) * u, true), color:'#FFF8EE',
@@ -503,7 +531,7 @@ function measure(g, str, weight, size, display){
 var CAMPAIGNS = [
   { id:'offers', name:'Today’s offers', hours:[0, 24],
     why:'Whatever the offer engine says is cheaper today — it changes when the offers change, by itself.',
-    kinds:['offer','drop'] },
+    kinds:['offer','drop','plain'] },
   { id:'morning', name:'Morning', hours:[5, 11],
     why:'Milk, curd, coffee, idli rice — what a shop sells before eleven, and nothing else.',
     kinds:['hour','fresh'] },
@@ -564,6 +592,7 @@ function caption(s){
   if (s.kind === 'hour')   return s.eyebrow + ': ' + s.items.map(function(i){ return i.name; }).join(', ') + '. On the shelf now.' + tail + tags;
   if (s.kind === 'combo')  return 'Goes together — ' + s.items.map(function(i){ return i.name; }).join(' + ') + '. All three ' + money(s.total) + '.' + tail + tags;
   if (s.kind === 'spotlight') return s.n + ' kinds of ' + String(s.cat).toLowerCase() + ' on the shelf.' + tail + tags;
+  if (s.kind === 'plain')  return s.item.name + ' — ' + money(s.item.price) + ' per ' + (s.item.unit || 'piece') + '. On the shelf now.' + tail + tags;
   return who + ' — ' + live().length + ' things on the shelf.' + tail + tags;
 }
 
@@ -624,7 +653,7 @@ function say(t){ var h = document.getElementById('hint'); h.textContent = t; h.c
 
 /* ═══ 4 · the bar ════════════════════════════════════════════════════════════════════════════════════════════ */
 var KINDLABEL = { all:'Everything', offer:'Offers', drop:'Price', fresh:'Fresh', combo:'Together',
-                  spotlight:'Choice', hour:'This hour', shop:'The shop' };
+                  spotlight:'Choice', hour:'This hour', shop:'The shop', plain:'On the shelf' };
 function paintBar(){
   /* WHICH CAMPAIGN — "Now" follows the clock, which is what a shop leaves it on */
   var cs = document.getElementById('camp');
