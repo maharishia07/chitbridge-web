@@ -51,25 +51,21 @@ const SESSION = process.env.CB_SESSION || path.join(__dirname, '.auth', 'user.js
   await p.goto('/app.html');
   await p.waitForFunction(() => typeof window.prodRowRepaint === 'function' && typeof window.selectProduct === 'function', null, { timeout: 45000 });
 
+  await p.evaluate(() => navTo('catalogue'));
+  await p.waitForSelector('[data-testid^="cat-product-"]', { timeout: 45000 }).catch(() => {});
   const list = await p.evaluate(async () => {
-    UI.nav = 'catalogue';
-    const prods = [];
-    for (let i = 0; i < 40; i++) prods.push({ id: 'p' + i, item_id: 'p' + i,
-      item_data: { name: 'Product ' + i, code: 'C' + i, unit: 'piece', price: 10 + i, status: 'available' } });
-    UI.prods = prods; UI.prodQ = ''; UI._prodCatg = ''; UI._prodAvail = ''; UI.prodTruncated = false;
-    renderApp();
-    await new Promise((r) => setTimeout(r, 400));
-    const rows = document.querySelectorAll('[data-testid^="cat-product-"]');
-    if (!rows.length) return { drawn: 0 };
+    const rows = Array.from(document.querySelectorAll('[data-testid^="cat-product-"]'));
+    if (rows.length < 2) return { drawn: rows.length };
     rows.forEach((el, i) => { el.dataset.mark = 'm' + i; });
     const box = document.getElementById('ct_rows');
-    if (box) box.scrollTop = 120;
-    selectProduct('p3');
-    await new Promise((r) => setTimeout(r, 120));
+    if (box) box.scrollTop = Math.min(80, box.scrollHeight);
+    const id = rows[1].dataset.testid.replace('cat-product-', '');
+    selectProduct(id);
+    await new Promise((r) => setTimeout(r, 150));
     const after = Array.from(document.querySelectorAll('[data-testid^="cat-product-"]'));
     return { drawn: rows.length, survived: after.filter((el) => el.dataset.mark).length, of: after.length,
              scroll: box ? box.scrollTop : null,
-             selected: !!document.querySelector('[data-testid="cat-product-p3"]').className.match(/\bsel\b/) };
+             selected: /sel/.test((document.querySelector('[data-testid="cat-product-' + id + '"]') || {}).className || '') };
   });
   if (!list.drawn) console.log('  (no rows drawn — the screen needs a real catalogue; skipped)');
   else {

@@ -9018,8 +9018,8 @@ function prodRowRepaint(id){
 function selectProduct(id, silent){ UI.refSel=null; const was=UI.prodSel; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   /* the selection moved between two rows: flip both, and leave the other forty-eight exactly where they are */
-  const moved = (was===id) || (prodRowRepaint(was)!==false && prodRowRepaint(id));
-  if(!moved) paintProdList();
+  if(was && was!==id) prodRowRepaint(was);            /* it may be off screen — that is fine, nothing to un-highlight */
+  if(!prodRowRepaint(id)) paintProdList();            /* the row that GAINED the highlight must be found, or repaint the list */
   paintProdDetail(); }
 /* If the declaration has not arrived yet (a deep link straight into Edit), paint now and once more when it has. */
 /**
