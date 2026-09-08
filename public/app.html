@@ -13558,6 +13558,9 @@ async function counterMint(){
 }
 function counterOpen(){
   const has = counterHasKey();
+  /* ⚠️ THE WARNING HE ASKED FOR — said before the counter opens, not discovered in the books afterwards. The device holds a key,
+     but it belongs to a different shop; that is worth a sentence, because on a shared PC it is the normal case. */
+  const strayKey = !has && (() => { try { return !!localStorage.getItem('cb_till_key'); } catch(_) { return false; } })();
   modal('<div class="mhd"><div class="t">🧾 Counter</div><div class="s">bill at a counter — here, or on the shop\'s own PC</div></div>'
     + '<div class="mbody" data-testid="counter-door" style="display:grid;gap:14px">'
     + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
@@ -13565,6 +13568,8 @@ function counterOpen(){
       + '<div style="color:var(--grey);margin:6px 0 12px">It opens in a new tab and works on a phone, a tablet or this screen. It keeps a copy of your shop, so it goes on billing when the internet does not.'
         + (has ? ' This device already has a counter key for <b>' + esc(SESSION.entity || 'this shop') + '</b>.'
                : ' It will be set up for <b>' + esc(SESSION.entity || 'this shop') + '</b>.') + '</div>'
+      + (strayKey ? '<div data-testid="counter-stray" style="border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">'
+          + 'This device was last a counter for a <b>different shop</b>. Opening it now makes it this shop's counter — the other shop's bills and stock stay with that shop and are not touched.</div>' : '')
       + '<button class="composebtn" data-testid="counter-open-here" onclick="counterGo()">' + (has ? 'Open the counter' : 'Set up the counter here') + '</button>'
     + '</div>'
     + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
@@ -13575,12 +13580,29 @@ function counterOpen(){
     + '<div style="color:var(--grey);font-size:var(--fs-1)">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell. It cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>'
     + '</div>');
 }
+/**
+ * ⭐⭐ THE ADDRESS IS THE AUTHORITY, NOT THE STORAGE (2026-09-08). Athi: *"is there any way we can protect opening a different shop
+ * in the same browser — before even opening the counter, can we check is there any other user id sits in the session layer, so we
+ * can open it correctly?"*
+ *
+ * That is the right question, and the answer is to stop asking storage anything. This used to pass a key ONLY when it had just
+ * minted one, so on every other click the counter opened with a bare address and fell back to whatever key the browser held. Now
+ * the shop you are signed in as is settled HERE, from the session, and travels with the link every single time:
+ *   #key=…   the key for THIS shop, minted now if the device does not already hold this shop's
+ *   &shop=…  the entity it belongs to, so the counter can check the answer it gets back is the shop it was opened for
+ *   &as=…    the name, so a mismatch can be explained in words rather than ids
+ * ⚠️ Storage is now only a cold start — a bookmark, a desktop shortcut, a shop PC that reboots. Anything opened FROM the app is
+ * told who it is, and told again by the server.
+ */
 async function counterGo(){
   try {
-    let key = null;
-    if (!counterHasKey()) { toast(tx('Making a key for this device…')); key = await counterMint(); }
+    let key = counterHasKey() ? (localStorage.getItem('cb_till_key') || null) : null;
+    if (!key) { toast(tx('Making a key for this device…')); key = await counterMint(); }
     closeModal();
-    window.open('/till.html' + (key ? '#key=' + encodeURIComponent(key) : ''), '_blank', 'noopener');
+    var addr = '/till.html#key=' + encodeURIComponent(key)
+             + '&shop=' + encodeURIComponent(SESSION.entityId || '')
+             + '&as=' + encodeURIComponent(SESSION.entity || '');
+    window.open(addr, '_blank', 'noopener');
   } catch (e) { toast(tx('Could not set up the counter') + ': ' + ((e && e.message) || e)); }
 }
 async function counterKit(){
