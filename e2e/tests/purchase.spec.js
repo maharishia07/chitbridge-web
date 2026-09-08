@@ -149,3 +149,116 @@ test('[PUR-01] receive against an order: what we counted stands, the difference 
     expect(m.money_gap).toBe(-2000);               // they billed 2,000 more than we counted
   });
 });
+
+// [DSP-01] GOODS OUT. Athi: "we receive a task, so left hand side is the task received, right hand side is the material collated,
+// so each scanning or item added reduces the count once filled." The rules that make a scan worth trusting are the point: you cannot
+// pick more than was ordered, you cannot pick something that is not on the order, and a short pick has to say why TODAY.
+test('[DSP-01] pick against an order: every unit scanned, over-picking refused, and the order updated in both copies', async ({ page, context }) => {
+  test.setTimeout(300000);
+  await mintEntity(page, { fresh: true, name: 'Goods out ' + Date.now().toString().slice(-6) });
+
+  await test.step('a shop with two things it sells', async () => {
+    await addProduct(page, { name: 'Brake pad set', unit: 'set', price: 1450, code: 'BRK' });
+    await addProduct(page, { name: 'Engine oil 5L', unit: 'can', price: 2100, code: 'OIL5' });
+  });
+
+  let orderId, items;
+  await test.step('a customer order lands on us', async () => {
+    /* ⚠️ an order we RECEIVE is a sale — and a SELF chit lands as 'received', so it needs no side to be read as one (sideOf) */
+    const r = await page.evaluate(async () => {
+      const res = await fetch(CFG.API_BASE + '/api/chits/send', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
+        body: JSON.stringify({ recipients: [{ self: true, name: 'self' }], purpose: 'order',
+          subject: 'Chola Auto Care', manual_subject: 'Chola Auto Care',
+          business_json: { party: { name: 'Chola Auto Care' } },
+          line_items: [
+            { particulars: 'Brake pad set', quantity: 12, unit: 'set', price: 1450, total: 17400 },
+            { particulars: 'Engine oil 5L', quantity: 6, unit: 'can', price: 2100, total: 12600 },
+          ] }) });
+      return { status: res.status, body: await res.json().catch(() => ({})) };
+    });
+    expect(r.status, JSON.stringify(r.body)).toBeLessThan(300);
+    orderId = r.body.chit_id || (r.body.chit && r.body.chit.chit_id);
+    expect(orderId).toBeTruthy();
+  });
+
+  let key;
+  await test.step('a counter key, and the order shows as work to send', async () => {
+    key = (await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin');
+      return api('keysMint', { body: { name: 'goods out', scopes: ['till'], days: 1 } }); })).key;
+    const r = await page.request.get(API + '/api/till/tasks?kind=despatch', { headers: { 'X-Api-Key': key } });
+    const j = await r.json();
+    const mine = j.tasks.find((t) => t.chit_id === orderId);
+    expect(mine, 'the customer order is not in the despatch list').toBeTruthy();
+    expect(mine.lines.find((l) => l.name.indexOf('Brake') >= 0).remaining).toBe(12);
+    /* ⚠️ and the same order must NOT be in the receiving list — that is what side means */
+    const other = await (await page.request.get(API + '/api/till/tasks?kind=receive', { headers: { 'X-Api-Key': key } })).json();
+    expect(other.tasks.some((t) => t.chit_id === orderId), 'a sale turned up on the goods-in screen').toBe(false);
+  });
+
+  const till = await context.newPage();
+  till.on('pageerror', (e) => console.log('   till threw: ' + e.message));
+  const snap = await page.evaluate(async () => (await (await fetch(CFG.API_BASE + '/api/till/snapshot', { headers: { Authorization: 'Bearer ' + SESSION.token } })).json()));
+  items = snap.items;
+
+  await test.step('the counter opens in DESPATCH, on that order', async () => {
+    await till.goto('/till.html#key=' + encodeURIComponent(key));
+    await till.waitForFunction(() => window.CBSearch && typeof window.setMode === 'function', null, { timeout: 30000 });
+    await till.evaluate(() => refresh());
+    await till.evaluate(() => setMode('despatch'));
+    await till.waitForFunction((id) => (TASKS.despatch || []).some((t) => t.chit_id === id), orderId, { timeout: 30000 });
+    await till.evaluate((id) => dspPickTask(id), orderId);
+    await till.waitForSelector('[data-testid="dsp-line-0"]', { timeout: 15000 });
+  });
+
+  await test.step('⚠️ a scan for something not on the order is refused, not added', async () => {
+    let said = '';
+    till.once('dialog', async (d) => { said = d.message(); await d.dismiss(); });
+    await till.evaluate(() => dspScan({ item_id: 'not-on-this-order', name: 'Windscreen wiper' }, 1));
+    await till.waitForTimeout(400);
+    expect(said).toContain('not on this order');
+    expect(await till.evaluate(() => DSP.lines.length), 'it grew a line nobody ordered').toBe(2);
+  });
+
+  await test.step('⚠️ and it will not pick more than was ordered', async () => {
+    const brake = items.find((i) => i.name.indexOf('Brake') >= 0);
+    let said = '';
+    till.once('dialog', async (d) => { said = d.message(); await d.dismiss(); });
+    await till.evaluate((it) => dspScan(it, 20), { item_id: brake.item_id, name: brake.name });
+    await till.waitForTimeout(400);
+    expect(said).toContain('dispute');
+    expect(await till.evaluate(() => DSP.lines.find((l) => l.name.indexOf('Brake') >= 0).picked)).toBe(12);
+  });
+
+  await test.step('the rest is short, and it says why before it goes', async () => {
+    const oil = items.find((i) => i.name.indexOf('Engine oil') >= 0);
+    await till.evaluate((it) => dspScan(it, 4), { item_id: oil.item_id, name: oil.name });
+    let said = '';
+    till.once('dialog', async (d) => { said = d.message(); await d.dismiss(); });
+    await till.evaluate(() => dspConfirm());
+    await till.waitForTimeout(500);
+    expect(said, 'it despatched a short line with no reason').toContain('why');
+    await till.evaluate(() => { const n = DSP.lines.findIndex((l) => l.name.indexOf('Engine oil') >= 0); dspSet(n, 'reason', 'no stock'); DSP.ref = 'TN01 AB 1234'; DSP.weight = 14.2; });
+    await till.waitForTimeout(200);
+    await till.evaluate(() => dspConfirm());
+    await expect(till.locator('#sliptitle')).toContainText('Despatch', { timeout: 20000 });
+    const paper = await till.locator('#slipbox').innerText();
+    expect(paper).toContain('PACKING SLIP');
+    expect(paper, 'the customer is told what is short, on the paper').toContain('no stock');
+    expect(paper).toContain('TN01 AB 1234');
+  });
+
+  await test.step('⭐ and the order knows what left: 2 cans still owed', async () => {
+    const owed = await page.evaluate(async ({ base, id }) => {
+      for (let i = 0; i < 15; i++) {
+        const j = await (await fetch(base + '/api/till/tasks?kind=despatch', { headers: { Authorization: 'Bearer ' + SESSION.token } })).json().catch(() => ({}));
+        const t = (j.tasks || []).find((x) => x.chit_id === id);
+        const oil = t && t.lines.find((l) => l.name.indexOf('Engine oil') >= 0);
+        if (oil && oil.moved > 0) return oil.remaining;
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+      return null;
+    }, { base: API, id: orderId });
+    expect(owed, 'the pick never reached the order').toBe(2);
+  });
+});
