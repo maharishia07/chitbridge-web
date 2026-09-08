@@ -13556,6 +13556,21 @@ async function counterMint(){
   try { localStorage.setItem('cb_till_key', r.key); localStorage.setItem('cb_till_entity', SESSION.entityId || ''); } catch(_) {}
   return r.key;
 }
+/**
+ * ⭐⭐ THE SHOP'S OWN SCREEN. Athi, 2026-09-08: *"how we can bring it to instagram, facebook, whatsapp status, in the tv in the
+ * shop… it is not a shopping cart, it is the advertisement of the product, dynamically based on the offer."*
+ * Opened exactly like the counter and with the SAME key — it reads the same snapshot, runs the same offer engine, and obeys the
+ * same "no GSTIN, no GST". A second way to look at one shop, not a second copy of it.
+ */
+async function screenGo(){
+  try {
+    let key = counterHasKey() ? (localStorage.getItem('cb_till_key') || null) : null;
+    if (!key) { toast(tx('Making a key for this device…')); key = await counterMint(); }
+    closeModal();
+    window.open('/promo.html#key=' + encodeURIComponent(key)
+      + '&shop=' + encodeURIComponent(SESSION.entityId || ''), '_blank', 'noopener');
+  } catch (e) { toast(tx('Could not open the shop screen') + ': ' + ((e && e.message) || e)); }
+}
 function counterOpen(){
   const has = counterHasKey();
   /* ⚠️ THE WARNING HE ASKED FOR — said before the counter opens, not discovered in the books afterwards. The device holds a key,
@@ -13569,13 +13584,18 @@ function counterOpen(){
         + (has ? ' This device already has a counter key for <b>' + esc(SESSION.entity || 'this shop') + '</b>.'
                : ' It will be set up for <b>' + esc(SESSION.entity || 'this shop') + '</b>.') + '</div>'
       + (strayKey ? '<div data-testid="counter-stray" style="border-inline-start:3px solid var(--blue);background:var(--blue-tint);padding:10px 12px;border-radius:8px;margin-bottom:12px;font-size:var(--fs-1)">'
-          + 'This device was last a counter for a <b>different shop</b>. Opening it now makes it this shop's counter — the other shop's bills and stock stay with that shop and are not touched.</div>' : '')
+          + 'This device was last a counter for a <b>different shop</b>. Opening it now makes it the counter for this shop. The other shop keeps its own bills and stock, and they are not touched.</div>' : '')
       + '<button class="composebtn" data-testid="counter-open-here" onclick="counterGo()">' + (has ? 'Open the counter' : 'Set up the counter here') + '</button>'
     + '</div>'
     + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
       + '<div style="font-weight:800;font-size:var(--fs-4)">Put it on the shop\'s PC</div>'
       + '<div style="color:var(--grey);margin:6px 0 12px">Downloads a folder with your key already inside. Double-click <b>start.cmd</b> once; after that the counter is at http://127.0.0.1:7071 on that machine, it prints to a till printer, and it keeps itself up to date.</div>'
       + '<button class="composebtn" data-testid="counter-download" onclick="counterKit()">⬇ Download the desktop counter</button>'
+    + '</div>'
+    + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
+      + '<div style="font-weight:800;font-size:var(--fs-4)">Put it on a screen in the shop</div>'
+      + '<div style="color:var(--grey);margin:6px 0 12px">Your offers, your fresh stock and your prices, drawn as a sign that changes itself all day. The same picture saves for WhatsApp status, Instagram and Facebook — the caption comes written. Nothing to design.</div>'
+      + '<button class="composebtn" data-testid="counter-screen" onclick="screenGo()">📺 Open the shop screen</button>'
     + '</div>'
     + '<div style="color:var(--grey);font-size:var(--fs-1)">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell. It cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>'
     + '</div>');
