@@ -197,6 +197,27 @@ var GLYPH = { 'Vegetables':'🥬','Fruit':'🍎','Rice & grains':'🌾','Pulses'
   'Dairy':'🧈','Milk & curd':'🥛','Spices':'🌶️','Beverages':'☕','Cold drinks':'🥤','Snacks':'🍿','Biscuits':'🍪',
   'Personal care':'🧴','Cleaning':'🧽','Home':'🕯️' };
 var FRESH_CATS = ['Vegetables','Fruit','Milk & curd'];
+/**
+ * ⭐ THE THING ITSELF, WHERE WE KNOW IT. The category emblem put an apple on "Banana yelakki", which on a shop television is the
+ * kind of small wrongness a customer notices and a shopkeeper cannot fix. Matched on the name first — including the words people
+ * actually use — and the category only when nothing is recognised.
+ * ⚠️ Deliberately short. This is a courtesy, not a taxonomy: every line here has to be worth someone maintaining.
+ */
+var ITEM_GLYPH = [
+  [/banana|vazhai/i,'🍌'], [/tomato|thakkali/i,'🍅'], [/onion|vengayam/i,'🧅'], [/potato|urulai/i,'🥔'],
+  [/carrot/i,'🥕'], [/chilli|milagai/i,'🌶️'], [/apple/i,'🍎'], [/orange/i,'🍊'], [/grape|thiratchai/i,'🍇'],
+  [/mango|mambazham/i,'🥭'], [/watermelon|tharbusani/i,'🍉'], [/lemon|elumichai/i,'🍋'], [/coconut|thengai/i,'🥥'],
+  [/garlic|poondu/i,'🧄'], [/rice|arisi/i,'🍚'], [/atta|wheat|godhumai/i,'🌾'], [/oil|ennai/i,'🫒'],
+  [/milk|paal/i,'🥛'], [/curd|thayir/i,'🥣'], [/ghee|nei|butter|vennai/i,'🧈'], [/tea|chai/i,'🍵'],
+  [/coffee|kaapi/i,'☕'], [/sugar|sarkkarai/i,'🍬'], [/salt|uppu/i,'🧂'], [/biscuit|cookie|rusk/i,'🍪'],
+  [/soap|sabun/i,'🧼'], [/paste|brush/i,'🪥'], [/candle|mezhugu/i,'🕯️'], [/match|theepetti/i,'🔥'],
+  [/egg|muttai/i,'🥚'], [/bread/i,'🍞'], [/dal|paruppu|gram|payaru/i,'🫘'],
+];
+function glyphFor(name, cat){
+  var n = String(name || '');
+  for (var i = 0; i < ITEM_GLYPH.length; i++) if (ITEM_GLYPH[i][0].test(n)) return ITEM_GLYPH[i][1];
+  return GLYPH[cat];
+}
 /* what a shop actually sells at each hour — the same dayparting the counter's quick keys use */
 var HOURS = [
   { from:5,  to:11, label:'This morning', cats:['Milk & curd','Beverages','Rice & grains','Dairy'] },
@@ -403,8 +424,9 @@ function ground(g, W, H, u, slide){
   g.fillStyle = gr; g.fillRect(bx, by, bw, bh);
 
   /* the category, on a medallion so a colour emoji has something of its own to sit on */
-  var cat = slide.cat || (slide.item && slide.item.category) || (slide.items && slide.items[0] && slide.items[0].category);
-  var em = GLYPH[cat];
+  var pick = slide.item || (slide.items && slide.items[0]) || null;
+  var cat = slide.cat || (pick && pick.category);
+  var em = slide.cat ? GLYPH[cat] : glyphFor(pick && pick.name, cat);
   if (em) {
     var cx = bx + bw / 2, cy = by + bh / 2, R = Math.min(bw, bh) * 0.34;
     g.save();
@@ -446,8 +468,14 @@ function footer(g, W, H, u, pad, field){
 function draw(g, W, H, slide){
   var u = Math.min(W, H) / 1000;                 /* one unit = a thousandth of the short side */
   var pad = 68 * u, wide = W / H > 1.4;
-  var field = wide ? W * 0.60 : W;               /* the dark side belongs to the words; the blade has the rest */
-  var col = field - pad * (wide ? 1.6 : 2);
+  /**
+   * ⚠️ THE WORDS HAVE THEIR OWN ZONE, AND THAT IS WHAT THEY CENTRE IN. Centring against the whole canvas looked right on a
+   * television and wrong on a Story: the blade takes the bottom third there, so "the middle of the frame" is not the middle of
+   * the space the type actually has, and the poster floated with an empty top and a footer sitting on the blade.
+   */
+  var zoneW = wide ? W * 0.60 : W;
+  var zoneH = wide ? H : H * 0.66;
+  var col = zoneW - pad * (wide ? 1.6 : 2);
   g.clearRect(0, 0, W, H);
   ground(g, W, H, u, slide);
 
@@ -455,11 +483,11 @@ function draw(g, W, H, slide){
   var tall = content(g, W, H, u, slide, pad, pad, col, wide) - pad;
   g.restore();
 
+  var room = zoneH - pad * 2 - 110 * u;                             /* the footer keeps the foot of the zone */
   /* a shade above true centre, which is where an eye expects a headline to sit */
-  var room = H - pad * 2 - 110 * u;                                 /* the footer keeps the bottom */
   content(g, W, H, u, slide, pad, pad + Math.max(0, (room - tall) / 2) * 0.82, col, wide);
 
-  footer(g, W, H, u, pad, field);
+  footer(g, W, zoneH, u, pad, zoneW);
 }
 
 function content(g, W, H, u, slide, x, y0, col, wide){
@@ -504,10 +532,11 @@ function content(g, W, H, u, slide, x, y0, col, wide){
       g.font = face(500, 40 * u); g.fillStyle = 'rgba(255,248,238,.62)';
       var mrpTxt = 'MRP ' + money(it.mrp);
       g.fillText(mrpTxt, x + pw + 26 * u, y + 60 * u);
-      var mm = g.measureText(mrpTxt), mw = mm.width;
+      var mw = g.measureText(mrpTxt).width;
       g.fillStyle = 'rgba(255,248,238,.62)';
-      /* ⚠️ through the MIDDLE of the digits, taken from the font's own ascent rather than guessed at */
-      g.fillRect(x + pw + 26 * u, y + 60 * u + (mm.actualBoundingBoxAscent || 28 * u) / 2, mw, 3 * u);
+      /* ⚠️ textBaseline is 'top', so y IS the top of the glyphs and actualBoundingBoxAscent measures the wrong way — it put the
+         line above the digits. The optical middle of a lining numeral sits about 36% down from the top of its em. */
+      g.fillRect(x + pw + 26 * u, y + 60 * u + 40 * u * 0.36, mw, 3 * u);
       y += 150 * u;
       pill(g, 'You save ' + money(slide.save), x, y, u, '#FFF8EE', slide.mood);
     }
