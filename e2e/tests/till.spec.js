@@ -104,3 +104,50 @@ test('[TILL-01] a counter bills from its own copy of the shop, offline too, and 
     await expect(till.locator('#daypill')).toContainText('540.00');
   });
 });
+
+// [TILL-02] TEN THOUSAND ITEMS TRAVEL ONCE. Athi, 2026-09-08: "the catalogue with 10,000 items, if it is browsed from the net it will
+// take time for every search — is it not better to bring it once and sync often?" The counter already searches its own copy; this proves
+// the second half: after the first read, only what changed comes down — including the removals, which a delta of present rows cannot say.
+test('[TILL-02] after the first read the counter asks only for what changed, removals included', async ({ page }) => {
+  test.setTimeout(240000);
+  await mintEntity(page, { fresh: true, name: 'Delta ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Beans', unit: 'kg', price: 60, code: 'BEAN' });
+
+  const key = (await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin');
+    return api('keysMint', { body: { name: 'delta till', scopes: ['till'], days: 1 } }); })).key;
+  const get = async (q) => (await page.request.get(API + '/api/till/snapshot' + (q || ''), { headers: { 'X-Api-Key': key } })).json();
+
+  const first = await get();
+  expect(first.delta, 'the first read is the whole shop').toBeFalsy();
+  expect(first.items.map((i) => i.name)).toContain('Beans');
+  const at = first.at;
+  expect(at).toBeTruthy();
+
+  await test.step('nothing changed → nothing comes down', async () => {
+    const quiet = await get('?since=' + encodeURIComponent(at));
+    expect(quiet.delta).toBe(true);
+    expect(quiet.items.length, 'an unchanged shop costs one small answer').toBe(0);
+    expect(quiet.removed.length).toBe(0);
+    expect(quiet.shop.name, 'the shop itself still travels — it is small and changes together').toBeTruthy();
+  });
+
+  await test.step('one new product → one item comes down', async () => {
+    await addProduct(page, { name: 'Carrot', unit: 'kg', price: 45, code: 'CAR' });
+    const d = await get('?since=' + encodeURIComponent(at));
+    expect(d.items.map((i) => i.name), 'only the new one').toEqual(['Carrot']);
+  });
+
+  await test.step('a product taken off the shelf comes down as a REMOVAL', async () => {
+    const beans = first.items.filter((i) => i.name === 'Beans')[0];
+    expect(beans, 'the item we are about to retire').toBeTruthy();
+    const gone = await page.evaluate(async (id) => {
+      /* a status change MERGES onto the row rather than amending it — the app's own rule for retiring a product */
+      try { return await api('prodStatus', { params: { id }, body: { status: 'retired', note: 'delta test' } }); }
+      catch (e) { return { error: String(e && e.message) }; }
+    }, beans.item_id);
+    expect(gone && gone.error, 'could not retire the item: ' + JSON.stringify(gone)).toBeFalsy();
+    const d = await get('?since=' + encodeURIComponent(at));
+    expect(d.removed, 'an absence cannot be expressed by a delta of present rows, so it is named').toContain(beans.item_id);
+    expect(d.items.map((i) => i.name), 'and it is not in the items').not.toContain('Beans');
+  });
+});
