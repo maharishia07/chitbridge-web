@@ -8084,11 +8084,11 @@ function catalogueScreen(){
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
-      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
+      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, offer, tax" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;if(UI.prodTruncated)prodSearchServer();paintProdList()"></div>
       <div id="ct_strips">${prodCatgStripHTML()}${prodAvailChipsHTML()}</div>
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
-        <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodCountLabel()}</span>
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer">☑ Select</button>
         <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
@@ -8152,6 +8152,16 @@ function prodVisible(ctx){
     return true;
   });
   if(!q) return list;
+  /* ⚠️ A TRUNCATED CATALOGUE CANNOT BE SEARCHED IN THE BROWSER — the rows are not here. The server's answer stands in, and
+     paintProdList says so; searching what happens to be loaded would answer "no such product" about products that exist. */
+  if(UI.prodTruncated && !ctx){
+    if(UI.prodHitsFor === q) return (UI.prodHits||[]).filter(p=>{
+      const d=pData(p);
+      if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
+      return true;
+    });
+    return list;                                   /* the answer is on its way; the shelf stands until it lands */
+  }
   /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (app/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
      finds its product. No limit — this list renders its rows lazily and the count under the box must be the true one. */
   if(typeof CBSearch!=='undefined') return CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity });
@@ -8855,7 +8865,15 @@ function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
 function prodRowsHTML(ctx){ try { CBCatUI.ensureCss(); } catch(_){} const ref=(ctx&&ctx.noRef)?'':refCatRowsHTML(); const r=prodVisible(ctx);
   if(ctx && !r.length) return '<div class="cbcat-none" style="padding:12px">'+esc(tx('No product matches.'))+'</div>';
   if(!ref && !r.length) return emptyState('🗂️','No products yet','Add your first, or adopt a whole catalogue via 🤖 AI.',{label:'+ New product',onclick:'newProduct()'});
-  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(function(p){ return prodRowHTML(p, ctx); }).join('')) : '';
+  /**
+   * ⚠️⚠️ A WINDOW, NOT THE WHOLE SHELF. Ten thousand products is 5.7 MB of HTML and 2.8 SECONDS to build before the browser lays out
+   * a single row (measured on the deployed page, e2e/scale-probe.cjs) — the freeze Athi hit opening a 10,000-item shop on another PC.
+   * lazyWrap has been in this file since August doing exactly this job for other lists; the catalogue never used it.
+   * ⚠️ THE COUNT STAYS TRUE. prodVisible still returns every match and the header still says how many — what changes is how many are
+   * DRAWN. A list that lied about its length to feel fast would be worse than a slow one.
+   */
+  const head = '<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>';
+  const prods = r.length ? (head + lazyWrap('prodlist' + (ctx ? '-pick' : ''), r, function(p){ return prodRowHTML(p, ctx); })) : '';
   return ref + prods; }
 function selectRefFinish(i){ UI.refSel=i; UI.prodSel=null; UI.prodMode='view'; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function backToRefList(){ UI.refSel=null; UI.mdetail=false; var p=document.getElementById('panel'); if(p)p.classList.remove('showdetail'); paintProdList(); paintProdDetail(); }
@@ -8879,9 +8897,55 @@ function refFinishDetail(it){
   +'</div>';
   return head+body;
 }
-function paintProdList(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
+/**
+ * ⭐ WHAT THE HEADER MUST SAY. With everything loaded: "412 product(s)". With more on the server than in the browser: "showing 500
+ * of 10,000 — search finds all of them", because a number that quietly means "as many as I happen to have" is worse than no number.
+ */
+function prodCountLabel(){
+  var shown = prodVisible().length;
+  if(UI._prodSrchBusy) return tx('searching…');
+  if(UI.prodTruncated){
+    var q = String(UI.prodQ||'').trim();
+    if(q && UI.prodHitsFor === q) return txf('{n} found in {t} product(s)', { n:String(shown), t:String(UI.prodTotal||shown) });
+    return txf('showing {n} of {t} — search finds all of them', { n:String(shown), t:String(UI.prodTotal||shown) });
+  }
+  return txf('{n} product(s)', { n:String(shown) });
+}
+function paintProdList(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; prodStripsPaint(); const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodCountLabel(); }
 /* ⚠️ ONLY WHILE THE CATALOGUE IS UP — its late loaders (the list, the defs) painted the product over Setup after a person had moved on (the tour, 2026-09-05); the mirror of the Setup guard. */
 function paintProdDetail(){ if(typeof UI!=='undefined' && UI.nav!=='catalogue') return; const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
+/**
+ * ⭐ HOW MANY ROWS COME DOWN AT ONCE. Athi, 2026-09-08: *"max 50 or 100 rows in one iteration."* Five hundred here and fifty DRAWN
+ * (lazyWrap) is the pair that matters: the draw is what froze the screen, the fetch is what filled the wire.
+ */
+var PROD_PAGE = 500;
+/** ⚠️ ids and stamps, never the whole rows — this runs on a timer (see _loadCatalogue) */
+function prodSig(list){
+  if(!Array.isArray(list)) return '';
+  var out = list.length + ':';
+  for(var i=0;i<list.length;i++){ var p=list[i]; out += (p.item_id||p.id||'') + '~' + (p.updated_at||p.created_at||'') + '|'; }
+  return out;
+}
+/**
+ * ⭐⭐ A SHOP BIGGER THAN ONE PAGE SEARCHES ON THE SERVER. The browser cannot filter what it has not got, and pretending otherwise
+ * is how a search box quietly answers "no such product" about a product that exists. When the catalogue is truncated the box asks
+ * the API (which searches every row) and the screen says which it is doing.
+ */
+var _prodSrchT = null;
+function prodSearchServer(){
+  clearTimeout(_prodSrchT);
+  _prodSrchT = setTimeout(async function(){
+    var qq = String(UI.prodQ||'').trim();
+    UI._prodSrchBusy = true; paintProdList();
+    try{
+      var page = await api("prodList", { query: qq ? { q: qq, limit: PROD_PAGE } : { limit: PROD_PAGE } });
+      UI.prodHits = (page && page.items) || [];
+      UI.prodHitsFor = qq;
+      UI.prodHitsTotal = (page && page.total != null) ? page.total : UI.prodHits.length;
+    }catch(_){ UI.prodHits = []; UI.prodHitsFor = qq; }
+    UI._prodSrchBusy = false; paintProdList();
+  }, 350);
+}
 async function loadCatalogue(force){
   /* ⚠️ ONE READ IN FLIGHT. Opening the catalogue fired this twice within 200ms (the render hook and the screen's own
      call — measured 2026-09-05: two /api/products back to back, ~1.9s each). A second caller joins the first. */
@@ -8896,8 +8960,22 @@ async function _loadCatalogue(force){
      SILENT: fetch, compare, repaint only what changed. */
   const _had = Array.isArray(UI.prods) && UI.prods.length > 0;
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb && !_had) rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{ const items=(await api("prodList"))||[];
-    const _same = _had && JSON.stringify(items) === JSON.stringify(UI.prods);
+  try{
+    /**
+     * ⭐⭐ A PAGE, AND THE TRUE TOTAL BESIDE IT (2026-09-08). Five hundred rows is more than almost every shop has, so nothing
+     * changes for them; a ten-thousand product shop stops shipping megabytes it will not draw. `truncated` says there is more,
+     * and the screen says so out loud rather than showing a fifth of a catalogue as if it were all of it.
+     */
+    const page = await api("prodList", { query: { limit: PROD_PAGE } });
+    const items = (page && page.items) || (Array.isArray(page) ? page : []) || [];
+    UI.prodTotal = (page && page.total != null) ? page.total : items.length;
+    UI.prodTruncated = !!(page && page.truncated);
+    /**
+     * ⚠️ NEVER JSON.stringify A CATALOGUE TO SEE IF IT CHANGED. This ran on every render pass and every twenty-second refresh —
+     * twice over ten thousand products, tens of megabytes of string building, on a timer. A signature of ids and stamps answers
+     * the same question for a thousandth of the cost.
+     */
+    const _same = _had && prodSig(items) === prodSig(UI.prods);
     UI.prods=items;
     /* The declaration, once per session — the form and the view render declared columns from it. */
     try{ await catDeclared(); }catch(_){}
