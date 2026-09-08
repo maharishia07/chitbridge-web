@@ -3965,7 +3965,9 @@ const MENUS = {
        send."* It is an ACT rather than a place a chit sits, which is why it is not in the Rail group — the same
        reasoning that keeps Messages under Work. */
     ["Catalogue",[["catalogue","🗂️","Catalogue"],["selfbill","🧾","Record a sale"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
-    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    /* ⭐ MATCH SITS WITH SUPPLIERS, because a difference is always WITH somebody. Athi, 2026-09-08: the three-way match across
+       parties is the thing an ERP cannot do, so it gets a row of its own rather than hiding inside an order. */
+    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
        key, which is where things that WATCH you live; a report is a place you GO. */
@@ -4043,7 +4045,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
+const CAP_OF = { match:'match', definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 /**
@@ -4079,7 +4081,7 @@ const CAP_LOADED = {};
  * data, so a loading state that only fills the list would leave the exact half that misled him empty and
  * unexplained.
  */
-var CAP_TITLES = { misScreen:'Insight', profileScreen:'Profile', settingsScreen:'Settings',
+var CAP_TITLES = { matchScreen:'Match', misScreen:'Insight', profileScreen:'Profile', settingsScreen:'Settings',
   coassistsScreen:'Co-assists', assistReviewScreen:'Assistant review', disputesScreen:'Disputes',
   foldersScreen:'Folders', readinessScreen:'Trade ready', traceabilityScreen:'Traceability',
   networkScreen:'Network' };
@@ -11405,6 +11407,7 @@ function mainBody(){
   if(UI.nav==="definitions"){ UI.nav="catsetup"; try{localStorage.setItem("cb_nav","catsetup");}catch(_){ } }
   if(UI.nav==="traceability") return capScreen("traceabilityScreen");
   if(UI.nav==="readiness") return capScreen("readinessScreen");
+  if(UI.nav==="match") return capScreen("matchScreen");
       if(UI.nav==="disputes") return capScreen("disputesScreen");
   if(UI.nav==="profile") return capScreen("profileScreen");
   if(UI.nav==="settings") return capScreen("settingsScreen");
