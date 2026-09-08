@@ -371,45 +371,99 @@ function pill(g, text, x, y, u, bg, fg){
   return w + padX * 2;
 }
 
-/** the ground every slide stands on: the mood colour, a soft light, and a huge category glyph as the field */
+/* mixing a colour toward black or white — a mood needs a deep end and a bright end, not one flat value */
+function mix(hex, toward, t){
+  var h = hex.replace('#',''), r = parseInt(h.slice(0,2),16), gg = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  var w = toward === 'w' ? 255 : 0;
+  return 'rgb(' + Math.round(r + (w - r) * t) + ',' + Math.round(gg + (gg * 0 + w - gg) * t) + ',' + Math.round(b + (w - b) * t) + ')';
+}
+
+/**
+ * ⭐⭐ THE GROUND. First attempt laid the mood colour as a radial over near-black and it came out MUD — a gold slide read as wet
+ * cardboard, which is the opposite of appetising for a shop selling food. The fix is not a better gradient: it is to stop blending
+ * the colour into the dark at all.
+ *
+ * So the frame is two territories with a hard edge — a near-black field the words live on, and a saturated BLADE of the mood
+ * colour carrying the category. The colour stays the colour it was chosen to be, the type keeps a constant dark background to sit
+ * on (so contrast never depends on where a gradient happened to land), and the shape gives the poster somewhere to end.
+ * ⚠️ The blade takes the right on a television and the bottom on a Story — the same composition turned through ninety degrees,
+ * because a 9:16 frame has no right-hand side to spare.
+ */
 function ground(g, W, H, u, slide){
-  g.fillStyle = '#0E1117'; g.fillRect(0, 0, W, H);
-  var mood = slide.mood || MOOD.hot;
-  var gr = g.createRadialGradient(W * 0.78, H * 0.14, 10, W * 0.78, H * 0.14, Math.max(W, H) * 0.92);
-  gr.addColorStop(0, mood); gr.addColorStop(0.42, mood + '55'); gr.addColorStop(1, '#0E1117');
-  g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  /* the glyph: enormous, barely there — identity without a photograph we do not have */
+  var mood = slide.mood || MOOD.hot, wide = W / H > 1.4;
+  g.fillStyle = '#0B0E13'; g.fillRect(0, 0, W, H);
+
+  var bx, by, bw, bh;
+  if (wide) { bw = W * 0.40; bx = W - bw; by = 0; bh = H; }
+  else      { bh = H * 0.34; by = H - bh; bx = 0; bw = W; }
+
+  var gr = wide ? g.createLinearGradient(bx, 0, bx + bw, H) : g.createLinearGradient(0, by, W, by + bh);
+  gr.addColorStop(0, mix(mood, 'w', 0.10));
+  gr.addColorStop(1, mix(mood, 'b', 0.38));
+  g.fillStyle = gr; g.fillRect(bx, by, bw, bh);
+
+  /* the category, on a medallion so a colour emoji has something of its own to sit on */
   var cat = slide.cat || (slide.item && slide.item.category) || (slide.items && slide.items[0] && slide.items[0].category);
   var em = GLYPH[cat];
   if (em) {
-    g.save(); g.globalAlpha = 0.12; g.font = face(400, Math.min(W, H) * 0.72);
-    g.textBaseline = 'middle'; var m = g.measureText(em).width;
-    g.fillText(em, W - m * 0.62, H * 0.72); g.restore(); g.textBaseline = 'top';
+    var cx = bx + bw / 2, cy = by + bh / 2, R = Math.min(bw, bh) * 0.34;
+    g.save();
+    g.globalAlpha = 0.13; g.fillStyle = '#FFFFFF';
+    g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    g.globalAlpha = 0.95;
+    g.font = face(400, R * 1.15);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(em, cx, cy + R * 0.06);
+    g.restore();
+    g.textAlign = 'left'; g.textBaseline = 'top';
   }
   /* a hairline of the mood along the top — the one bit of chrome, and it names the mood */
   g.fillStyle = mood; g.fillRect(0, 0, W, 9 * u);
 }
 
 /** the footer every slide carries: who is saying this, and how to reach them */
-function footer(g, W, H, u, pad){
+function x0(pad){ return pad; }
+function footer(g, W, H, u, pad, field){
   var sh = (S && S.shop) || {};
-  var y = H - pad - 54 * u;
-  g.fillStyle = 'rgba(255,248,238,.18)'; g.fillRect(pad, y - 24 * u, W - pad * 2, 2 * u);
+  var y = H - pad - 54 * u, right = (field || W) - pad;
+  g.fillStyle = 'rgba(255,248,238,.18)'; g.fillRect(pad, y - 24 * u, right - pad, 2 * u);
   g.font = face(800, 30 * u); g.fillStyle = '#FFF8EE'; g.textBaseline = 'top';
   g.fillText(sh.name || 'This shop', pad, y);
-  var right = [sh.phone, sh.address].filter(Boolean).join('  ·  ');
-  if (right) { g.font = face(400, 25 * u); g.fillStyle = 'rgba(255,248,238,.72)';
-    var w = g.measureText(right).width; g.fillText(right, Math.max(pad, W - pad - w), y + 4 * u); }
+  var line = [sh.phone, sh.address].filter(Boolean).join('  ·  ');
+  if (line) { g.font = face(400, 25 * u); g.fillStyle = 'rgba(255,248,238,.72)';
+    var w = g.measureText(line).width, nameW = measure(g, sh.name || '', 800, 30 * u);
+    /* under the name when there is no room beside it — a phone number overlapping a shop name is worse than a second line */
+    if (w + nameW + 40 * u > right - pad) g.fillText(line, x0(pad), y + 40 * u);
+    else g.fillText(line, Math.max(pad, right - w), y + 4 * u); }
 }
 
+/**
+ * ⭐⭐ THE BLOCK IS CENTRED, AND THAT NEEDS MEASURING FIRST. The first cut stacked everything from the top, and a television showed
+ * a poster in its top-left corner with the bottom half empty — it read as a page that had failed to finish loading. Canvas has no
+ * layout engine, so the content is drawn TWICE: once invisibly to learn how tall it is, then again offset onto the optical centre.
+ * ONE body of code both times, so the measurement can never disagree with the drawing.
+ */
 function draw(g, W, H, slide){
   var u = Math.min(W, H) / 1000;                 /* one unit = a thousandth of the short side */
   var pad = 68 * u, wide = W / H > 1.4;
-  var col = wide ? W * 0.56 : W - pad * 2;       /* on a television the words take the left half, the glyph the right */
+  var field = wide ? W * 0.60 : W;               /* the dark side belongs to the words; the blade has the rest */
+  var col = field - pad * (wide ? 1.6 : 2);
   g.clearRect(0, 0, W, H);
   ground(g, W, H, u, slide);
 
-  var x = pad, y = pad + 18 * u;
+  g.save(); g.globalAlpha = 0;                                      /* measure, invisibly */
+  var tall = content(g, W, H, u, slide, pad, pad, col, wide) - pad;
+  g.restore();
+
+  /* a shade above true centre, which is where an eye expects a headline to sit */
+  var room = H - pad * 2 - 110 * u;                                 /* the footer keeps the bottom */
+  content(g, W, H, u, slide, pad, pad + Math.max(0, (room - tall) / 2) * 0.82, col, wide);
+
+  footer(g, W, H, u, pad, field);
+}
+
+function content(g, W, H, u, slide, x, y0, col, wide){
+  var y = y0;
 
   /* the eyebrow — small, spaced, quiet */
   g.font = face(700, 26 * u); g.fillStyle = 'rgba(255,248,238,.78)';
@@ -450,9 +504,10 @@ function draw(g, W, H, slide){
       g.font = face(500, 40 * u); g.fillStyle = 'rgba(255,248,238,.62)';
       var mrpTxt = 'MRP ' + money(it.mrp);
       g.fillText(mrpTxt, x + pw + 26 * u, y + 60 * u);
-      var mw = g.measureText(mrpTxt).width;
+      var mm = g.measureText(mrpTxt), mw = mm.width;
       g.fillStyle = 'rgba(255,248,238,.62)';
-      g.fillRect(x + pw + 26 * u, y + 60 * u + 22 * u, mw, 3 * u);
+      /* ⚠️ through the MIDDLE of the digits, taken from the font's own ascent rather than guessed at */
+      g.fillRect(x + pw + 26 * u, y + 60 * u + (mm.actualBoundingBoxAscent || 28 * u) / 2, mw, 3 * u);
       y += 150 * u;
       pill(g, 'You save ' + money(slide.save), x, y, u, '#FFF8EE', slide.mood);
     }
@@ -505,7 +560,7 @@ function draw(g, W, H, slide){
     for (var L = 0; L < lines.length; L++) { g.fillText(lines[L], x, y); y += 50 * u; }
   }
 
-  footer(g, W, H, u, pad);
+  return y;
 }
 /* measuring with a font that is not the one currently set — used where the caller needs a width before it draws */
 function measure(g, str, weight, size, display){
