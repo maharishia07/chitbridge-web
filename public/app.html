@@ -3914,7 +3914,13 @@ const MENUS = {
    * Two removals, no capability lost: ASSISTANT already has a permanent floating button bottom-right, and
    * PROFILE/SETTINGS move to the avatar menu — the two least-visited screens were holding prime rail space.
    */
-  entity:{ lead:["compose","✉️","Compose"], groups:[
+  /**
+   * ⭐⭐ THE LEAD ROW IS THE COUNTER (Athi, 2026-09-08). The first thing a shop can do here is take money over a counter, and the
+   * second is put that counter on their own PC — everything else on this rail is downstream of a sale having happened.
+   * ⚠️ COMPOSE IS NOT GONE. It moved into Rail below, keeping its own testid and its own act: authoring a chit by hand is still how
+   * anything that is not a sale gets onto the rail, and four screens still open it.
+   */
+  entity:{ lead:["counter","🧾","Counter"], groups:[
     /* ⭐ "RAIL", NOT "MAILBOX" — Athi, 2026-08-15. His own positioning has been that CB is a governed RAIL and
        that mailbox is the older, smaller framing; the rail is what the product is pitched as. The heading over
        Task and Order is the first place a person reads either word, so it should be the right one. */
@@ -3930,7 +3936,7 @@ const MENUS = {
      */
     /* ⭐ REPLIES sits with Task and Order because it is the same kind of thing — a place where work arrives from
        outside. Athi: *"can we bring external new messages under rail?"* */
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    ["Rail", [["compose","✉️","Compose"],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     /* ⚠️ MESSAGES MOVED OUT OF THE RAIL (Athi, 2026-08-18: *"messages can come under work in the panel rather
        than rail"*). The RAIL is the chit lifecycle — task, order, drafts, archive, trash: places a CHIT is. A
        message is not a place a chit sits, it is work someone has to do about one, which is what this group is. */
@@ -3983,8 +3989,9 @@ const MENUS = {
    * ⚠️ SAME SHAPE, NOT SAME CONTENTS. An actor keeps Task, Order, Messages and their own work; Catalogue,
    * Customers, MIS, Co-assists and the rest stay out — that is the level-of-access half, and it is unchanged.
    */
-  actor:{ lead:["compose","✉️","Compose"], groups:[
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+  /* a co-assist stands AT the counter more often than they author a chit — same lead, same reasoning */
+  actor:{ lead:["counter","🧾","Counter"], groups:[
+    ["Rail", [["compose","✉️","Compose"],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work", [["messages","💬","Messages"],["worklist","🧰","My work"]]],
     ["Business", [["suppliers","🏭","Suppliers"]]],
   ], tag:"Commerce yes, structure no."},
@@ -4945,7 +4952,7 @@ function menuBtn(x){
   const on=(key==='task'||key==='order') ? (UI.nav===key && !UI.folderSel) : UI.nav===key;
   /* ⚠️ Two entries are ACTS, not destinations — they open something rather than navigating, so they cannot
      go through navTo. A third would want a registry; two do not. */
-  const click=key==="compose"?`compose()`:key==="selfbill"?`selfBillOpen()`:`navTo('${key}')`;
+  const click=key==="compose"?`compose()`:key==="selfbill"?`selfBillOpen()`:key==="counter"?`counterOpen()`:`navTo('${key}')`;
   /**
    * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
    *
@@ -13396,6 +13403,58 @@ function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SE
 function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
    // per-dispute thread select
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
+/**
+ * ⭐⭐⭐ TWO DOORS TO THE SAME COUNTER (2026-09-08). Athi: *"when someone logs in they can immediately create a desktop version and
+ * get a till — that is the single most advantage."*
+ *
+ *   HERE      this browser becomes the counter. One key, minted for this device, and the page opens.
+ *   ON THIS PC the kit downloads with that same kind of key inside it, and the counter runs on the shop's own machine.
+ *
+ * ⚠️ THE KEY IS PER DEVICE, AND WE DO NOT MINT A SECOND ONE. The counter page lives on this same origin, so a browser that already
+ * has one is knowable — asking the server for another key every time this screen opened would fill Settings with dead keys.
+ * ⚠️ A till key can do four things and address nobody but itself; Settings › Integrations revokes it in one click. That sentence is
+ * on the screen, because handing somebody a key without saying what it opens is not a kindness.
+ */
+function counterHasKey(){ try { return !!localStorage.getItem('cb_till_key'); } catch(_) { return false; } }
+async function counterMint(){
+  if (typeof ensureCap === 'function') await ensureCap('admin');   /* keysMint lives in cap-admin, which loads on demand */
+  const r = await api('keysMint', { body: { name: 'counter · ' + (navigator.platform || 'this device') + ' · ' + new Date().toISOString().slice(0,10), scopes: ['till'], days: 365 } });
+  if (!r || !r.key) throw new Error('no key came back');
+  try { localStorage.setItem('cb_till_key', r.key); } catch(_) {}
+  return r.key;
+}
+function counterOpen(){
+  const has = counterHasKey();
+  modal('<div class="mhd"><div class="t">🧾 Counter</div><div class="s">bill at a counter — here, or on the shop\'s own PC</div></div>'
+    + '<div class="mbody" data-testid="counter-door" style="display:grid;gap:14px">'
+    + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
+      + '<div style="font-weight:800;font-size:var(--fs-4)">Use this device as the counter</div>'
+      + '<div style="color:var(--grey);margin:6px 0 12px">It opens in a new tab and works on a phone, a tablet or this screen. It keeps a copy of your shop, so it goes on billing when the internet does not.'
+        + (has ? ' This device already has its counter key.' : '') + '</div>'
+      + '<button class="composebtn" data-testid="counter-open-here" onclick="counterGo()">' + (has ? 'Open the counter' : 'Set up the counter here') + '</button>'
+    + '</div>'
+    + '<div style="border:1px solid var(--line);border-radius:12px;padding:14px">'
+      + '<div style="font-weight:800;font-size:var(--fs-4)">Put it on the shop\'s PC</div>'
+      + '<div style="color:var(--grey);margin:6px 0 12px">Downloads a folder with your key already inside. Double-click <b>start.cmd</b> once; after that the counter is at http://127.0.0.1:7071 on that machine, it prints to a till printer, and it keeps itself up to date.</div>'
+      + '<button class="composebtn" data-testid="counter-download" onclick="counterKit()">⬇ Download the desktop counter</button>'
+    + '</div>'
+    + '<div style="color:var(--grey);font-size:var(--fs-1)">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell. It cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>'
+    + '</div>');
+}
+async function counterGo(){
+  try {
+    let key = null;
+    if (!counterHasKey()) { toast(tx('Making a key for this device…')); key = await counterMint(); }
+    closeModal();
+    window.open('/till.html' + (key ? '#key=' + encodeURIComponent(key) : ''), '_blank', 'noopener');
+  } catch (e) { toast(tx('Could not set up the counter') + ': ' + ((e && e.message) || e)); }
+}
+async function counterKit(){
+  try { if (typeof ensureCap === 'function') await ensureCap('admin');
+        if (typeof intDownloadKit === 'function') { await intDownloadKit('till', 'csv'); closeModal(); }
+        else toast(tx('Settings › Integrations has the download.')); }
+  catch (e) { toast(tx('Could not download') + ': ' + ((e && e.message) || e)); }
+}
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
 function toggleMsgType(k){ const s=new Set(UI.msgTypeSel||[]); s.has(k)?s.delete(k):s.add(k); UI.msgTypeSel=[...s]; paintDetail(); }
