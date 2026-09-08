@@ -8901,6 +8901,14 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
  * window is a second wide and a person typing fast lands in it; the specs landed in it half the time (2026-09-05).
  * Now only the declared-columns block is filled in; the fields around it keep their typing.
  */
+/**
+ * ⚠️⚠️ TWO DIVS, TWO IDS — AND THEY WERE THE SAME ID ([CAT-03], found 2026-09-08). prodEditFormCore wrapped this block in
+ * `<div id="ct_declared">` while ctDeclaredFields() ALSO returned a `<div id="ct_declared" data-testid="cat-declared">` inside it.
+ * getElementById returns the FIRST, so the late fill below wrote its rows into the OUTER div and destroyed the inner one — taking
+ * the "More about this product" heading and the testid with it. The inputs survived, so nothing looked broken: a form with
+ * unlabelled extra fields, and a spec failing on an element that had been deleted by the code meant to fill it.
+ * The outer container is `ct_declared_host` now. Do not merge them back.
+ */
 function ctEnsureDeclaredThenPaint(){ if(!UI._catFields){ catDeclared().then(function(){
   if(UI.prodMode!=='edit'&&UI.prodMode!=='new') return;
   const host=document.getElementById('ct_declared');
@@ -9738,7 +9746,7 @@ function ctNewCategory(){
 /* The product's OWN facts. Categories and offers are separate records that point at it, so they render on their own
    tabs (prodDetailHTML); the New form, which has nothing to point at yet, lays everything out on one page. */
 function prodEditForm(d){ return prodEditFormCore(d)+ctCategoryField(d)+ctOfferField(d); }
-function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+'<div id="ct_declared">'+ctDeclaredFields(d)+'</div>'+prodEffectiveField(); }
+function prodEditFormCore(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctHighlightField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`+'<div id="ct_declared_host">'+ctDeclaredFields(d)+'</div>'+prodEffectiveField(); }
 /**
  * ⭐ PUBLISH ON A DATE. Empty = now (the ordinary save). A future moment = the changed keys are PARKED and land at that
  * moment, on the first read after it (owner list · storefront · send). What is shown: the exact moment, and — on the
