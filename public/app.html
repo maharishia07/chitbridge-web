@@ -1612,6 +1612,9 @@ img.attImg{object-fit:cover;display:block}
 <!-- Offers as a subject of their own — a PURE engine, not wired to a screen yet. Loaded so Definitions can
      read its registry of kinds; see SPEC-offers-tax.md. -->
 <script src="/app/offers.js"></script>
+<!-- ⭐ ONE SEARCH FOR THE COUNTER AND THE CATALOGUE (2026-09-08). The master of the engine the till loads as /engine/search.js:
+     what "ac co" means is defined once, so the two screens cannot answer a shopkeeper's own words differently. -->
+<script src="/app/search.js"></script>
 <script src="/app/pricing.js"></script>
 <script src="/app/units.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
@@ -8108,23 +8111,43 @@ function prodId(p){ return p.item_id||p.id; }
  * Products — Athi, 2026-09-04: "the entire catalogue left pane should be there so we can search and attach") renders
  * the SAME rows, the SAME chip strip, the SAME search, with a tick instead of a select.
  */
+/**
+ * ⭐ WHAT A PRODUCT IS FINDABLE BY. Its own words, the NAMES of the categories it sits in (typing "grains" should find what is in
+ * Grains — what anyone expects of a search box above a list of category chips), and the deals in effect: an offer's name or its
+ * promise ("10% off"), the rate it resolves to ("gst 18%"). The row shows those, so the box must find them.
+ * ⚠️ Expensive — it resolves offers and tax per product — so it is built once per product and cached by CBSearch against the stamp
+ * below, never per keystroke.
+ */
+function prodSearchText(p){
+  const d=pData(p);
+  const names=catgNamesOf(d).join(' ');
+  const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(c=>catgIdsOf(d).indexOf(c.id)>=0).map(c=>c.name).join(' ');
+  return pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)+' '+names+' '+live+' '+prodDealsText(d, prodId(p));
+}
+/** what those words depend on: rename a category or end an offer and every cached text is rebuilt. Computed ONCE per paint. */
+function prodTextStamp(){
+  const cg=(typeof _CATG!=='undefined'&&_CATG||[]).map(c=>c.id+':'+c.name).join('|');
+  const of=((UI._ctOffers)||[]).map(o=>o.id+':'+(o.updated_at||o.name||'')).join('|');
+  return cg+'#'+of+'#'+((UI._face&&UI._face.updated_at)||'');
+}
 function prodVisible(ctx){
-  const q=String((ctx?ctx.q:UI.prodQ)||'').trim().toLowerCase();
+  const q=String((ctx?ctx.q:UI.prodQ)||'').trim();
   const g=(ctx?ctx.catg:UI._prodCatg)||'';
-  return (UI.prods||[]).filter(p=>{
+  /* the chips and the availability filter narrow the list BEFORE the search runs — same order as the counter */
+  const list=(UI.prods||[]).filter(p=>{
     const d=pData(p);
     if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
     /* ⭐ Availability, so the owner can filter to what is off and set it back — see prodAvailFilter. */
     const av=UI._prodAvail||'';
     if(av){ const st=d.status||'available'; if(av==='available' ? st!=='available' : st==='available') return false; }
-    if(!q) return true;
-    /* The category NAMES are searchable too — typing "grains" should find what is in Grains, which is what
-       anyone expects of a search box sitting above a list that shows category chips. */
-    const names=catgNamesOf(d).join(' ');
-    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(c=>catgIdsOf(d).indexOf(c.id)>=0).map(c=>c.name).join(' ');
-    /* and the deals in effect — an offer's name or promise ('10% off'), the tax ('gst 18%') — so the search box finds what the row shows */
-    return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)+' '+names+' '+live+' '+prodDealsText(d, prodId(p))).toLowerCase().includes(q);
+    return true;
   });
+  if(!q) return list;
+  /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (app/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
+     finds its product. No limit — this list renders its rows lazily and the count under the box must be the true one. */
+  if(typeof CBSearch!=='undefined') return CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity });
+  const lq=q.toLowerCase();
+  return list.filter(p=>prodSearchText(p).toLowerCase().includes(lq));
 }
 /* ── select mode + bulk categorise ───────────────────────────────────────────────────────────────────────────── */
 function prodPickMode(on){
