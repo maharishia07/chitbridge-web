@@ -19,7 +19,9 @@ async function openCounter(page, context) {
   const opened = context.waitForEvent('page', { timeout: 60000 });
   await page.getByTestId('counter-open-here').click();
   const till = await opened;
-  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 60000 });
+  /* ⚠️ the engines arrive as their own <script src>, the page's OWN functions in an inline block AFTER them — so waiting on
+     CBTax alone lets a half-loaded page through, and the next evaluate() says "refresh is not defined" (it did, on the 2nd open) */
+  await till.waitForFunction(() => window.CBOffers && window.CBTax && typeof window.refresh === 'function', null, { timeout: 60000 });
   await till.waitForFunction(() => document.getElementById('shopname').textContent !== 'Not paired yet', null, { timeout: 60000 });
   await till.evaluate(() => refresh());
   await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 60000 });
@@ -38,6 +40,15 @@ test('[TILL-04] a second shop in the same browser gets its OWN counter, not the 
     const shown = await till.evaluate(() => (S && S.shop && S.shop.name) || '');
     expect(shown, 'the counter opened for a shop that is not the one it was clicked from').toBe(shopA);
     expect(await till.evaluate(() => (S.items || []).some((i) => i.name === 'Alpha rice'))).toBe(true);
+    /* ⭐ and it takes some money, because a QUEUED bill is the part that would have been misfiled: refresh() calls drain(), so
+       shop A's unsent sale would have gone up under shop B's key */
+    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-pay-cash"]');
+    await till.fill('#tendered', '500');
+    await till.click('#save');
+    await till.waitForSelector('#sliptitle');
+    await till.click('#slipdlg button:has-text("Close")');
+    expect(await till.evaluate(() => (STATE.today && STATE.today.count) || 0), 'shop A rang up a sale').toBeGreaterThan(0);
     await till.close();
   });
 
@@ -57,6 +68,10 @@ test('[TILL-04] a second shop in the same browser gets its OWN counter, not the 
     expect(await till.evaluate(() => (S.items || []).some((i) => i.name === 'Alpha rice')), 'and NOT the other shop own stock').toBe(false);
     /* and the device now remembers whose key it holds, so this cannot drift back */
     expect(await page.evaluate(() => localStorage.getItem('cb_till_entity'))).toBe(await page.evaluate(() => SESSION.entityId));
+    /* ⚠️⚠️ AND THE MONEY DID NOT FOLLOW. The bills, the queue and the day's count lived in a database named after the DEVICE, so
+       shop A's takings showed up as shop B's — and A's unsent bills would have drained under B's key on the first refresh. */
+    expect(await till.evaluate(() => (STATE.today && STATE.today.count) || 0), 'the other shop takings are on this counter').toBe(0);
+    expect(await till.evaluate(async () => ((await HOST.bills()) || []).length), 'and so are its bills').toBe(0);
     await till.close();
   });
 });
