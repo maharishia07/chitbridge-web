@@ -154,16 +154,27 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     expect(out.ok, 'a catalogue for another shop was accepted').toBe(false);
     expect(out.rejected, 'it was not refused as a foreign shop').toBe(true);
 
-    /* ⚠️ REFUSED, NOT SWITCHED: what was on disk must be untouched */
-    const after = await till.evaluate(async () => {
-      const snap = await DB.get('snapshot');
-      return (snap.items || []).map((i) => i.name).sort();
-    });
+    /* ⭐ the guard also refuses to READ rows that disagree with the owner — better to show nothing than another shop's prices */
+    const guarded = await till.evaluate(() => DB.get('snapshot'));
+    expect(guarded, 'a copy that disagrees with the owner was handed back anyway').toBeFalsy();
+
+    /**
+     * ⚠️ REFUSED, NOT SWITCHED: the BYTES on disk must be untouched. Read straight out of IndexedDB, past our own guard —
+     * the guard is what is being tested, so it cannot also be the instrument.
+     */
+    const after = await till.evaluate(() => new Promise((res, rej) => {
+      const rq = indexedDB.open(tillStore());
+      rq.onsuccess = () => { const db = rq.result;
+        const g = db.transaction('kv', 'readonly').objectStore('kv').get('snapshot');
+        g.onsuccess = () => res(((g.result && g.result.items) || []).map((i) => i.name).sort());
+        g.onerror = () => rej(g.error); };
+      rq.onerror = () => rej(rq.error);
+    }));
     expect(after, 'the copy on disk was changed by a refusal').toEqual(before);
 
     /* and it must SAY so, on the bar and in the check, and survive a reload */
-    const bar = await till.evaluate(() => { paintStatus(); return document.getElementById('healthpill').parentNode.textContent; });
-    expect(bar).toContain('REFUSED');
+    const bar = await till.evaluate(() => { paintStatus(); return document.getElementById('queuenote').textContent; });
+    expect(bar, 'the bar does not say a catalogue was refused').toContain('REFUSED');
     const found = await till.evaluate(() => health().filter((h) => h.what.indexOf('another shop was refused') >= 0));
     expect(found.length, 'the health check does not report the refusal').toBe(1);
     expect(found[0].level).toBe('bad');
