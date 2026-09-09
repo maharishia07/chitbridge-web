@@ -183,17 +183,30 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     await till.waitForFunction(() => typeof REJECTED !== 'undefined', null, { timeout: 60000 });
     await till.waitForFunction(() => REJECTED != null, null, { timeout: 30000 });
 
-    /* put it back so the counter is its own again */
-    await till.evaluate(async (a) => { await DB.set('owner', a); await DB.del('kv', 'rejected'); }, shopA);
+    /* put it back so the counter is its own again — on disk AND in memory, or the next step tests a state no shop is ever in */
+    await till.evaluate(async (a) => { await DB.set('owner', a); OWNER = a; REJECTED = null; await DB.del('kv', 'rejected'); }, shopA);
   });
 
   await test.step('⭐ and a queued bill from another shop is never sent', async () => {
-    const sent = await till.evaluate(async (a) => {
-      await DB.put('queue', { no: 'FOREIGN/1', at: new Date().toISOString(), _shop: 'BBBBBBBB-0000-0000-0000-000000000000',
-                              lines: [], pays: [], total: 1 });
+    const sent = await till.evaluate(async () => {
+      /**
+       * ⚠️ PLANTED RAW, PAST DB.put — because put() re-stamps every row with this database's owner, so a foreign row cannot even
+       * be WRITTEN through the normal path. That is the write guard doing its job. What is tested here is the READ guard: a row
+       * that reached the store some other way (a store swapped underneath, data from before stamping, a hand edit) must never be
+       * handed back to the drain and posted under this shop's key.
+       */
+      await new Promise((res, rej) => {
+        const rq = indexedDB.open(tillStore());
+        rq.onsuccess = () => { const db = rq.result;
+          const t = db.transaction('queue', 'readwrite');
+          t.objectStore('queue').put({ no: 'FOREIGN/1', at: new Date().toISOString(),
+                                       _shop: 'BBBBBBBB-0000-0000-0000-000000000000', lines: [], pays: [], total: 1 });
+          t.oncomplete = res; t.onerror = () => rej(t.error); };
+        rq.onerror = () => rej(rq.error);
+      });
       const rows = await DB.all('queue');
       return { handedBack: rows.filter((r) => r.no === 'FOREIGN/1').length };
-    }, shopA);
+    });
     expect(sent.handedBack, 'a queued row belonging to another shop was handed back for sending').toBe(0);
   });
 
