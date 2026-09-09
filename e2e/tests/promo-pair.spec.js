@@ -40,7 +40,7 @@ function magentaPng() {
     chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
 }
 
-test('[PROMO-02] a screen pairs with a code, gets a READ-ONLY key, and draws the product picture', async ({ page, context }) => {
+test('[PROMO-02] a screen pairs with a code, gets a READ-ONLY key, and draws the product picture', async ({ page, context, browser }) => {
   test.setTimeout(300000);
   await mintEntity(page, { fresh: true, name: 'Pair ' + Date.now().toString().slice(-6) });
 
@@ -122,7 +122,13 @@ test('[PROMO-02] a screen pairs with a code, gets a READ-ONLY key, and draws the
   await test.step('⭐ ONE TO MANY: a second code pairs a second screen, independently', async () => {
     const r2 = await page.evaluate(async () => api('tillPair', { body: {} }));
     expect(r2.code).not.toBe(code);
-    const tv2 = await context.newPage();
+    /**
+     * ⚠️ A SECOND SCREEN IS A SECOND DEVICE, NOT A SECOND TAB. Opening promo.html in the same context found the key the first
+     * screen had just stored and paired itself silently — correct behaviour (one browser, one storage) but it tests nothing.
+     * A television across the shop has its own storage, so the test needs its own context.
+     */
+    const ctx2 = await browser.newContext();
+    const tv2 = await ctx2.newPage();
     await tv2.goto('/promo.html');
     await tv2.waitForSelector('[data-testid="promo-pair-code"]', { timeout: 60000 });
     await tv2.fill('[data-testid="promo-pair-code"]', r2.code);
@@ -132,7 +138,7 @@ test('[PROMO-02] a screen pairs with a code, gets a READ-ONLY key, and draws the
     const k1 = await tv.evaluate(() => localStorage.getItem('cb_till_key'));
     const k2 = await tv2.evaluate(() => localStorage.getItem('cb_till_key'));
     expect(k2, 'both screens share one key — revoking one would darken both').not.toBe(k1);
-    await tv2.close();
+    await tv2.close(); await ctx2.close();
   });
 
   await test.step('⭐⭐ THE PICTURE IS ON THE SCREEN — in pixels, not in a field', async () => {
