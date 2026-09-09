@@ -135,7 +135,9 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     const kinds = Object.keys(seen);
     expect(kinds, 'rows are not stamped with their shop: ' + JSON.stringify(seen)).not.toContain('UNSTAMPED');
     expect(kinds.length, 'more than one shop in one copy: ' + JSON.stringify(seen)).toBe(1);
-    expect(kinds[0], 'the stamp is not this shop').toBe(shopA.slice(0, 8));
+    /* ⚠️ the WHOLE entity id, not a prefix — it never crosses the wire, so there is nothing to save by shortening the one
+       value the audit is about, and a prefix can collide */
+    expect(kinds[0], 'the stamp is not this shop').toBe(shopA);
 
     const report = await till.evaluate(async () => { await verifyCounter(); return document.getElementById('slipbox').textContent; });
     expect(report, 'the check does not report the count Athi asked for').toContain('Every row is from one shop');
