@@ -1878,6 +1878,7 @@ const EP = {
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
+  tillPair:        {m:"POST",  p:"/api/till/pair",               ok:"✓"},   // a six-character code a TV can be told over the phone
   /* TAX — read before MIS is ever opened (a chit view, a spec): the core table, not cap-admin's lazy one. routes/tax.js, reads only. */
   taxLedger:       {m:"GET",   p:"/api/tax/ledger",              ok:"✓"},
   taxInvoice:      {m:"GET",   p:"/api/tax/invoice/:id",         ok:"✓"},
@@ -13582,6 +13583,29 @@ async function screenGo(){
       + '&shop=' + encodeURIComponent(SESSION.entityId || ''), '_blank', 'noopener');
   } catch (e) { toast(tx('Could not open the shop screen') + ': ' + ((e && e.message) || e)); }
 }
+/**
+ * ⭐⭐ A CODE, NOT A URL. Athi, 2026-09-09: *"please add pairing so we can test 1 to many devices."* A television is operated
+ * with a D-pad; nobody is typing a 64-character key on one. The shop presses this, the TV types six characters.
+ * ⚠️ ONE CODE PER SCREEN. Each claim mints its own key, so the TV at the door and the one over the counter can be revoked
+ * separately — and the code is spent the moment it is used, so the six characters left on screen are worth nothing afterwards.
+ */
+async function screenPair(){
+  try {
+    const r = await api('tillPair', { body: {} });
+    if (!r || !r.code) throw new Error('no code came back');
+    const where = location.origin + '/promo.html';
+    modal('<div class="mhd"><div class="t">📡 Pair a screen</div><div class="s">works on a TV, a tablet, or any second computer</div></div>'
+      + '<div class="mbody" data-testid="counter-pair-code" style="text-align:center">'
+      + '<div style="color:var(--grey);margin-bottom:6px">On the TV, open</div>'
+      + '<div style="font-weight:800;font-size:var(--fs-4);margin-bottom:18px;word-break:break-all">' + esc(where) + '</div>'
+      + '<div style="color:var(--grey);margin-bottom:6px">and type this code</div>'
+      + '<div style="font:900 46px/1.1 ui-monospace,Consolas,monospace;letter-spacing:.18em;padding:14px;border:2px dashed var(--line);border-radius:14px">'
+        + esc(r.code) + '</div>'
+      + '<div style="color:var(--grey);margin-top:14px;font-size:var(--fs-1)">Good for ' + (r.minutes || 10) + ' minutes, and it can be used once.'
+      + ' Pairing another screen? Press the button again for a fresh code — each screen gets its own key, so you can turn one off without the other.</div>'
+      + '</div>');
+  } catch (e) { toast(tx('Could not make a pairing code') + ': ' + ((e && e.message) || e)); }
+}
 function counterOpen(){
   const has = counterHasKey();
   /* ⚠️ THE WARNING HE ASKED FOR — said before the counter opens, not discovered in the books afterwards. The device holds a key,
@@ -13607,6 +13631,7 @@ function counterOpen(){
       + '<div style="font-weight:800;font-size:var(--fs-4)">Put it on a screen in the shop</div>'
       + '<div style="color:var(--grey);margin:6px 0 12px">Your offers, your fresh stock and your prices, drawn as a sign that changes itself all day. The same picture saves for WhatsApp status, Instagram and Facebook — the caption comes written. Nothing to design.</div>'
       + '<button class="composebtn" data-testid="counter-screen" onclick="screenGo()">📺 Open the shop screen</button>'
+      + '<button class="composebtn" data-testid="counter-pair" onclick="screenPair()" style="margin-top:8px;background:var(--paper);color:var(--ink);border:1px solid var(--line)">📡 Pair a TV or another device</button>'
     + '</div>'
     + '<div style="color:var(--grey);font-size:var(--fs-1)">A counter key can do four things — read your shop, record its own sales, check in, and hold the bell. It cannot read another chit or address anybody else, and Settings › Integrations revokes it in one click.</div>'
     + '</div>');
