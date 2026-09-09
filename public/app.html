@@ -13562,12 +13562,23 @@ async function counterMint(){
  * Opened exactly like the counter and with the SAME key — it reads the same snapshot, runs the same offer engine, and obeys the
  * same "no GSTIN, no GST". A second way to look at one shop, not a second copy of it.
  */
+/**
+ * ⚠️⚠️ A SCREEN GETS A SCREEN KEY, NEVER THE COUNTER'S. The first cut handed the television the till key, and a till key can
+ * record a sale. A sign on a wall in a public part of a shop should be able to read the price list and nothing more — so this
+ * mints its own key, scoped to the snapshot and the engines. Losing the television then costs a copy of the prices, which are
+ * printed on the shelf edge anyway.
+ * ⚠️ A NEW KEY EACH TIME, on purpose: one per screen, so a shop with a television at the door and another over the counter can
+ * revoke one without darkening the other. Settings › Integrations lists and revokes them.
+ */
 async function screenGo(){
   try {
-    let key = counterHasKey() ? (localStorage.getItem('cb_till_key') || null) : null;
-    if (!key) { toast(tx('Making a key for this device…')); key = await counterMint(); }
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    toast(tx('Making a key for this screen…'));
+    const r = await api('keysMint', { body: { name: 'shop screen · ' + new Date().toISOString().slice(0, 10),
+                                              scopes: ['screen'], days: 365 } });
+    if (!r || !r.key) throw new Error('no key came back');
     closeModal();
-    window.open('/promo.html#key=' + encodeURIComponent(key)
+    window.open('/promo.html#key=' + encodeURIComponent(r.key)
       + '&shop=' + encodeURIComponent(SESSION.entityId || ''), '_blank', 'noopener');
   } catch (e) { toast(tx('Could not open the shop screen') + ': ' + ((e && e.message) || e)); }
 }
