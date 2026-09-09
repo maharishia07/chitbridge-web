@@ -141,19 +141,47 @@ test('[TILL-06] the counter stamps every row with its shop, and refuses to merge
     expect(report, 'the check does not report the count Athi asked for').toContain('Every row is from one shop');
   });
 
-  await test.step('⚠️⚠️ a delta from a DIFFERENT shop is never merged in — the old copy is dropped whole', async () => {
-    /* the exact shape of the fault: a stored copy from shop A, and an answer that belongs to shop B */
-    const mixed = await till.evaluate(async (a) => {
-      const have = await DB.get('snapshot');
-      /* simulate the merge deciding, without a second live shop: same code path, different entity */
-      const incoming = { delta: true, entity_id: 'BBBBBBBB-0000-0000-0000-000000000000', at: new Date().toISOString(),
-                         items: [{ item_id: 'b-1', name: 'Other shop rice', price: 55, unit: 'kg' }], removed: [], total: 1 };
-      let snap = incoming, keep = have;
-      if (snap.delta && keep && keep.entity_id && snap.entity_id && keep.entity_id !== snap.entity_id) { keep = null; snap.delta = false; }
-      return { merged: snap.delta, keptA: !!keep, wouldHold: snap.delta ? 'both' : 'only the new shop' };
+  await test.step('⚠️⚠️ ANOTHER SHOP CATALOGUE IS REFUSED — through the real refresh, not a simulation', async () => {
+    /* the database records its owner on the first snapshot; forge a different one and the shop's own answer becomes foreign */
+    const before = await till.evaluate(async () => {
+      await DB.set('owner', 'BBBBBBBB-0000-0000-0000-000000000000');
+      return (S.items || []).map((i) => i.name).sort();
+    });
+
+    const out = await till.evaluate(() => HOST.refresh());
+    expect(out.ok, 'a catalogue for another shop was accepted').toBe(false);
+    expect(out.rejected, 'it was not refused as a foreign shop').toBe(true);
+
+    /* ⚠️ REFUSED, NOT SWITCHED: what was on disk must be untouched */
+    const after = await till.evaluate(async () => {
+      const snap = await DB.get('snapshot');
+      return (snap.items || []).map((i) => i.name).sort();
+    });
+    expect(after, 'the copy on disk was changed by a refusal').toEqual(before);
+
+    /* and it must SAY so, on the bar and in the check, and survive a reload */
+    const bar = await till.evaluate(() => { paintStatus(); return document.getElementById('healthpill').parentNode.textContent; });
+    expect(bar).toContain('REFUSED');
+    const found = await till.evaluate(() => health().filter((h) => h.what.indexOf('another shop was refused') >= 0));
+    expect(found.length, 'the health check does not report the refusal').toBe(1);
+    expect(found[0].level).toBe('bad');
+
+    await till.reload();
+    await till.waitForFunction(() => typeof REJECTED !== 'undefined', null, { timeout: 60000 });
+    await till.waitForFunction(() => REJECTED != null, null, { timeout: 30000 });
+
+    /* put it back so the counter is its own again */
+    await till.evaluate(async (a) => { await DB.set('owner', a); await DB.del('kv', 'rejected'); }, shopA);
+  });
+
+  await test.step('⭐ and a queued bill from another shop is never sent', async () => {
+    const sent = await till.evaluate(async (a) => {
+      await DB.put('queue', { no: 'FOREIGN/1', at: new Date().toISOString(), _shop: 'BBBBBBBB-0000-0000-0000-000000000000',
+                              lines: [], pays: [], total: 1 });
+      const rows = await DB.all('queue');
+      return { handedBack: rows.filter((r) => r.no === 'FOREIGN/1').length };
     }, shopA);
-    expect(mixed.merged, 'a delta from another shop was merged into this copy').toBe(false);
-    expect(mixed.keptA, 'the old shop copy survived into another shop answer').toBe(false);
+    expect(sent.handedBack, 'a queued row belonging to another shop was handed back for sending').toBe(0);
   });
 
   await till.close();
