@@ -8309,23 +8309,34 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=d
  */
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML='';
   const kind=supKind(), clear=function(){ const a=document.getElementById('sp_add'); if(a)a.value=''; };
-  if(!isUserId(bid)){
-    /* ⚠️ SAY WHAT THEY WILL AND WILL NOT BE ABLE TO DO, before it is created rather than after they go looking
-       for the missing button. "Not on ChitBridge" is a sentence about capability, not a status badge. */
+  /**
+   * ⭐⭐ ONE OFFER, REUSED BY BOTH ROUTES IN. It is the fallback when a lookup finds nobody, which is why it is a
+   * function rather than written twice: "we could not find them, shall I write them down instead?" is the same
+   * question whether the shop typed a name or typed a handle that turns out not to exist.
+   */
+  const offerLocal=function(note){
+    /* ⚠️ SAY WHAT THEY WILL AND WILL NOT BE ABLE TO DO, before the row exists rather than after somebody goes
+       looking for the missing button. "Not on ChitBridge" is a sentence about capability, not a status badge. */
     confirmAsk(txf('Add {name} as a local supplier?',{name:'<b>'+esc(bid)+'</b>'}),
-      tx('They are <b>not on ChitBridge</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.')
+      (note?('<div style="color:var(--warn-3);margin-bottom:8px">'+note+'</div>'):'')
+      + tx('They are <b>not on ChitBridge</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.')
       + '<br><br>' + tx('If they <i>are</i> on ChitBridge, cancel and type their User ID or email instead.'),
       tx('Add supplier'), async function(){
         try{ await api("supAdd",{body:{name:bid, supply_kind:kind}}); toast(tx('Supplier added')+' ✓'); clear(); await loadSuppliers(); }
         catch(e){ if(x)x.textContent=e.message; }
       });
-    return;
-  }
+  };
+  if(!isUserId(bid)){ offerLocal(null); return; }
   confirmAsk('Add '+bid+' as your supplier?',
     'They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
       try{ await api("supAdd",{body:{supplier_bridge_id:bid, supply_kind:kind}}); toast("Supplier added ✓"); clear(); await loadSuppliers(); }
-      catch(e){ if(x)x.textContent=e.message; }
+      catch(e){
+        /* ⭐ NOT FOUND IS A QUESTION, NOT A DEAD END. A one-word shop name of eight letters looks exactly like a
+           handle, and telling the shop "no business with that User ID" answers something they never asked. */
+        if(/not found|no business/i.test((e&&e.message)||'')) { offerLocal(tx('No ChitBridge business with that User ID or email.')); return; }
+        if(x)x.textContent=e.message;
+      }
     }); }
 async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier';
   confirmAsk('Remove '+_n+' from your supplier list?',
@@ -14422,7 +14433,18 @@ async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; tr
 
 /* ---------------- bits ---------------- */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
-function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || v.length>=8; }
+/**
+ * ⚠️⚠️ "8 OR MORE CHARACTERS" IS NOT A HANDLE TEST, and it stopped being harmless the day a plain NAME became a
+ * valid answer (b218). "Corner Hardware 485200" is 22 characters with no @ and no dot, so this said YES and the
+ * Add box looked the supplier up as a User ID instead of writing them down — 404, and the shop is told there is
+ * no business with that User ID when they never claimed there was. Caught by [SUP-02] on its first live run.
+ *
+ * ⭐ A HANDLE CANNOT CONTAIN WHITESPACE — the platform's own charset is [a-z0-9-] (lib/handle.js check()), and
+ * almost every shop name does contain a space. That one character separates the two intents nearly always, and
+ * where it does not (a one-word name of 8+ letters), addSupplier now falls through to the local offer on a 404
+ * rather than dead-ending. Neither test has to be perfect because the failure is caught downstream.
+ */
+function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || (v.length>=8 && !/\s/.test(v)); }
 function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="var(--gold)"/><circle cx="25" cy="19" r="1.6" fill="var(--gold)"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }

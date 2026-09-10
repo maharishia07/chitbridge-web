@@ -39,7 +39,7 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
     /* the confirmation must say what they will NOT be able to do, before the row exists rather than after
        somebody goes hunting for the missing button */
     await expect(page.locator('body')).toContainText(/not on ChitBridge/i, { timeout: 15000 });
-    await page.locator('button', { hasText: /^Add supplier$/ }).last().click();
+    await page.getByTestId('confirm-ok').click();          /* ⚠️ the testid, not the label — confirmAsk owns the button */
     await expect(page.locator('#sup_rows')).toContainText(LOCAL, { timeout: 25000 });
   });
 
