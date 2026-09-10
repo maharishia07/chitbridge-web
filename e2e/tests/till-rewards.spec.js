@@ -6,6 +6,10 @@
 // ⚠️ A FRESH ENTITY EVERY RUN, and for this subject that is not just hygiene. The reward ledger is append-only, so
 // a spec that billed the same shop twice would accumulate points for ever and its assertions would drift until
 // somebody "fixed" them by loosening them. A new shop starts at zero, so every number below can be exact.
+// ⚠️ ADDING IS A DELIBERATE ACT SINCE 2026-09-10. A click on a row CHOOSES it; the + button (or Enter) puts it
+// on the bill. Athi: "by just clicking the list it gets added to the cart, that is not my intention." These specs
+// clicked the row and expected a bill line — so they are what caught the change, correctly, and they drive the
+// new control rather than the old one.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
@@ -73,7 +77,7 @@ test('[TILL-07] a counter awards points, and the programme is the shop\'s to dec
   await test.step('⚠️ a walk-in with no name and no number earns nothing — and is TOLD why', async () => {
     await till.fill('#q', 'rice');
     await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 30000 });
-    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-add-0"]');
     /* silence here would look exactly like a broken feature; one line and a phone number fixes it */
     await expect(till.getByTestId('till-rw')).toContainText(/a name or a phone number to hold them/);
   });
@@ -87,7 +91,7 @@ test('[TILL-07] a counter awards points, and the programme is the shop\'s to dec
      * (walk_in_earns:false is proven at the unit level in chitbridge-api/tests/reward-cycle.test.js.)
      * ₹100 × 6 = ₹600 → 6 points at 1 per ₹100. The figure is exact because the shop is new.
      */
-    for (let i = 0; i < 5; i++) await till.click('[data-testid="till-hit-0"]');
+    for (let i = 0; i < 5; i++) await till.click('[data-testid="till-add-0"]');
     await till.fill('#cphone', '9840012345');
     await till.fill('#cname', 'Kumar');
     /* ⚠️ the lookup is debounced — a request per letter of somebody's name would be absurd */

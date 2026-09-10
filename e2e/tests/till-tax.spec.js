@@ -8,6 +8,10 @@
 // shop that actually charges GST got {} — no rate on any product, no tax on any bill, nothing thrown and nothing logged.
 //
 // So this spec exists to hold the one case the suite never had: a REGISTERED shop. It asserts the wire, not the code.
+// ⚠️ ADDING IS A DELIBERATE ACT SINCE 2026-09-10. A click on a row CHOOSES it; the + button (or Enter) puts it
+// on the bill. Athi: "by just clicking the list it gets added to the cart, that is not my intention." These specs
+// clicked the row and expected a bill line — so they are what caught the change, correctly, and they drive the
+// new control rather than the old one.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
@@ -86,7 +90,7 @@ test('[TILL-03] a registered shop own slabs survive the wire, and a rate lands o
      */
     const RATE_SHOWN = /(GST\s*\d|\d+\s*%\s*GST)/;
     await expect(till.locator('[data-testid="till-hit-0"]'), 'the shelf row shows the rate it will charge').toContainText(RATE_SHOWN);
-    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-add-0"]');
     await expect(till.locator('#cart'), 'and so does the line on the bill').toContainText(RATE_SHOWN);
   });
 

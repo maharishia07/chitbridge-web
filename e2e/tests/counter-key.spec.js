@@ -9,6 +9,10 @@
 //
 // ⭐ Driven through the app's OWN controls — the rail, then the door — because the bug was in what the BUTTON hands over, and a
 // test that called counterMint() directly would have passed on the broken build.
+// ⚠️ ADDING IS A DELIBERATE ACT SINCE 2026-09-10. A click on a row CHOOSES it; the + button (or Enter) puts it
+// on the bill. Athi: "by just clicking the list it gets added to the cart, that is not my intention." These specs
+// clicked the row and expected a bill line — so they are what caught the change, correctly, and they drive the
+// new control rather than the old one.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav } = require('../fixtures');
 
@@ -42,7 +46,7 @@ test('[TILL-04] a second shop in the same browser gets its OWN counter, not the 
     expect(await till.evaluate(() => (S.items || []).some((i) => i.name === 'Alpha rice'))).toBe(true);
     /* ⭐ and it takes some money, because a QUEUED bill is the part that would have been misfiled: refresh() calls drain(), so
        shop A's unsent sale would have gone up under shop B's key */
-    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-add-0"]');
     await till.click('[data-testid="till-pay-cash"]');
     await till.fill('#tendered', '500');
     await till.click('#save');

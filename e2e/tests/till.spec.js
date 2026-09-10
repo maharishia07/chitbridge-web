@@ -2,6 +2,10 @@
 // we develop a desktop application — the minimum sits on the desktop so the billing works faster" and "it works with IndexedDB and syncs
 // with the cloud regularly". This drives the REAL page (/till.html) against the REAL API: pair once with a till key, take the shop in one
 // call, bill, and find the sale in Task as an ordinary chit. Then pull the plug and bill again — the counter must not care.
+// ⚠️ ADDING IS A DELIBERATE ACT SINCE 2026-09-10. A click on a row CHOOSES it; the + button (or Enter) puts it
+// on the bill. Athi: "by just clicking the list it gets added to the cart, that is not my intention." These specs
+// clicked the row and expected a bill line — so they are what caught the change, correctly, and they drive the
+// new control rather than the old one.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
@@ -55,7 +59,7 @@ test('[TILL-01] a counter bills from its own copy of the shop, offline too, and 
   let firstNo;
   await test.step('a bill: search, add, take the money, save', async () => {
     await till.fill('#q', 'oil');
-    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-add-0"]');
     await expect(till.locator('[data-testid="till-total"]')).toHaveText('₹250.00');
     await till.fill('[data-testid="till-qty-0"]', '2');
     await till.locator('[data-testid="till-qty-0"]').dispatchEvent('change');
@@ -87,7 +91,7 @@ test('[TILL-01] a counter bills from its own copy of the shop, offline too, and 
   await test.step('THE LINE GOES DOWN — and the counter does not care', async () => {
     await context.setOffline(true);
     await till.fill('#q', 'tomato');
-    await till.click('[data-testid="till-hit-0"]');
+    await till.click('[data-testid="till-add-0"]');
     await till.click('#save');
     await expect(till.locator('#sliptitle')).toContainText('₹40.00');
     const no2 = (await till.locator('#sliptitle').textContent()).replace('Bill ', '').split(' ·')[0].trim();

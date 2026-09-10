@@ -10,6 +10,10 @@
 //
 // ⚠️ ONE CHROME, ONE ORIGIN, ONE localStorage — deliberately the hostile case. Two tabs of the same browser SHARE storage, which
 // is precisely the arrangement that produced the mixing in the first place.
+// ⚠️ ADDING IS A DELIBERATE ACT SINCE 2026-09-10. A click on a row CHOOSES it; the + button (or Enter) puts it
+// on the bill. Athi: "by just clicking the list it gets added to the cart, that is not my intention." These specs
+// clicked the row and expected a bill line — so they are what caught the change, correctly, and they drive the
+// new control rather than the old one.
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
@@ -32,7 +36,7 @@ async function counterFor(context, key, shopId) {
 async function sell(p, what) {
   await p.fill('#q', what);
   await p.waitForSelector('[data-testid="till-hit-0"]', { timeout: 30000 });
-  await p.click('[data-testid="till-hit-0"]');
+  await p.click('[data-testid="till-add-0"]');
   await p.click('[data-testid="till-pay-cash"]');
   await p.fill('#tendered', '500');
   await p.click('#save');
