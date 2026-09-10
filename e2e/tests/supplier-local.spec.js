@@ -115,19 +115,32 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
     /**
      * A chit addressed to someone who can never sign in would sit as sent for ever, with the sender waiting on an
      * answer that cannot come. The refusal is the ONE thing the ~ marker has to enforce.
+     *
+     * ⚠️ SENT AS `name`, WHICH IS THE SHAPE A PERSON ACTUALLY PRODUCES. My first version passed {user_id}, and it
+     * WAS refused — by the recipient validator, which wants entity_id/display_name/name/self. That is a pass for
+     * the wrong reason: it proved a different guard works and never exercised mine. A typed recipient arrives as
+     * `name`, and that branch resolves by user_id and bridge_id before it ever looks at display names.
      */
-    const uid = await page.evaluate(async () => {
-      const r = await api('supList'); return (Array.isArray(r)?r:(r.suppliers||[]))[0].user_id;
+    const sup = await page.evaluate(async () => {
+      const r = await api('supList');
+      return (Array.isArray(r) ? r : (r.suppliers || []))[0];
     });
-    const out = await page.evaluate(async (handle) => {
+    const trySend = (who) => page.evaluate(async (typed) => {
       try {
-        await api('createChit', { body: { recipients: [{ user_id: handle, role: 'to' }],
+        await api('createChit', { body: { recipients: [{ name: typed, role: 'to' }],
           manual_subject: 'should not send', subject: 'should not send', purpose: 'order', line_items: [] } });
         return 'SENT';
       } catch (e) { return (e && e.message) || 'refused'; }
-    }, uid);
-    expect(out, 'a chit was accepted for a supplier who can never open it').not.toBe('SENT');
-    expect(out).toMatch(/cannot receive chits|not found/i);
+    }, who);
+
+    const byHandle = await trySend(sup.user_id);
+    expect(byHandle, 'a chit was accepted for a supplier who can never open it').not.toBe('SENT');
+    expect(byHandle).toMatch(/cannot receive chits/i);
+
+    /* ⚠️⚠️ AND BY THEIR NAME, which is the dangerous one: minted names are ordinary shop names, so this is the
+       path by which ANOTHER business could reach a private supplier record just by typing what it is called. */
+    const byName = await trySend(sup.display_name);
+    expect(byName, 'a minted supplier was reachable by typing their display name').not.toBe('SENT');
   });
 
   await test.step('⚠️⚠️ and nobody else can find them — who supplies you is competitive', async () => {
