@@ -188,6 +188,32 @@ function supReadLines(){
   return Object.keys(lines).map(function(k){ return lines[k]; })
     .filter(function(l){ return (l.name || '').trim() && Number(l.qty) > 0; });
 }
+
+/**
+ * ⚠️⚠️ THIS FUNCTION WAS DELETED BY ACCIDENT AND SHIPPED THAT WAY. Removing the private delivery path, I spliced
+ * out a line range and took supBuy with it — "Record a purchase" became a button that called nothing. `node -c`
+ * passed, the file parsed, the guard suite was green: NOTHING catches a missing function, because a call to one
+ * only fails when a person presses the button. [SUP-01] pressed it.
+ * ⭐ The lesson is not "be careful with line ranges" — it is that a line-range splice has no anchor to verify, so
+ * it should never be the tool. An anchored replace fails loudly when the anchor moves.
+ */
+async function supBuy(){
+  var body = { from: ((document.getElementById('sup_from') || {}).value || '').trim() || null,
+               ref: ((document.getElementById('sup_ref') || {}).value || '').trim(),
+               lines: supReadLines()
+                 .map(function(l){ return { name: l.name.trim(), qty: Number(l.qty),
+                                            unit: (l.unit || '').trim() || null,
+                                            cost: l.cost === '' ? null : Number(l.cost) }; }) };
+  /* ⚠️ A REFERENCE IS REQUIRED. Without one a repeated entry cannot be told from a second purchase, and the same
+     cash bill typed twice would double the spend. The message says what to put, not that a field is missing. */
+  if (!body.ref) { toast(tx('Give it a reference — the bill number, or the date and the shop')); return; }
+  if (!body.lines.length) { toast(tx('Add at least one line with a quantity')); return; }
+  try {
+    var r = await api('supplyBuy', { body: body });
+    closeModal(); toast(r && r.says ? r.says : tx('Recorded')); supLoad();
+  } catch (e) { toast((e && e.message) || tx('Could not record it')); }
+}
+
 /**
  * ── ⭐⭐⭐ GOODS BOUGHT TO SELL, FROM A SUPPLIER WHO IS NOT ON CHITBRIDGE ───────────────────────────────────────
  *
