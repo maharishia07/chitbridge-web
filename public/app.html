@@ -1799,7 +1799,8 @@ const EP = {
   purgeChit:       {m:"DELETE", p:"/api/chits/:id/purge",        ok:"✓"},  // permanent hard-delete of a DRAFT only
   pulse:           {m:"GET",   p:"/api/chits/pulse",             ok:"y"},   // has anything changed? one cheap watermark
   eventsTicket:    {m:"POST",  p:"/api/events/ticket",           ok:"y"},   // the mailbox bell: a one-time ticket for the push stream
-  profileGet:      {m:"GET",   p:"/api/governance/profile",       ok:"y"},   // trade profile incl. .vault and .invoice_party (core: the product page reads it before Settings has loaded)
+  profileGet:      {m:"GET",   p:"/api/governance/profile",       ok:"y"},
+  profilePut:      {m:"PUT",   p:"/api/governance/profile",       ok:"y"},   // the trade profile itself — markets, SECTORS, adopted certs   // trade profile incl. .vault and .invoice_party (core: the product page reads it before Settings has loaded)
   unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
