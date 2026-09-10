@@ -4444,7 +4444,20 @@ function _renderApp(){
        existed for weeks with nothing calling it, which is what made per-line assignment unusable. */
     if(UI.nav==="worklist"){ ensureCap("worklist").then(function(){ if(typeof wlLoad==="function" && !WL.data && !WL.busy) wlLoad(); }); }
     if(UI.nav==="suppliers") loadSuppliers();
-    if(UI.nav==="supplies"){ ensureCap("supplies").then(function(){ if(typeof supLoad==="function" && SUP.rows===null && !SUP.busy) supLoad(); }); }
+    /**
+     * ⚠️⚠️ RE-RENDER ON THE FIRST ARRIVAL, or the screen never leaves its loading placeholder. capScreen() draws
+     * a spinner until window.suppliesScreen exists, and nothing redraws when the capability finishes — so the
+     * first run of [SUP-01] clicked the rail row and waited thirty seconds at a spinner.
+     * ⚠️ ONLY on the transition. ensureCap resolves INSTANTLY from cache afterwards, so an unconditional
+     * re-render here is render → hook → render, forever — the loop the categories hook below documents.
+     */
+    if(UI.nav==="supplies"){
+      const hadSup = CAP_LOADED["supplies"];
+      ensureCap("supplies").then(function(){
+        if(!hadSup) bgRenderApp();
+        if(typeof supLoad==="function" && SUP.rows===null && !SUP.busy) supLoad();
+      });
+    }
     if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
     /**
