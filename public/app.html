@@ -1810,7 +1810,6 @@ const EP = {
   /* ⭐ ADOPT — a supplier delivery becoming YOUR catalogue. Read offers; accept only what is named. */
   adoptRead:       {m:"GET",   p:"/api/adopt/:id",                ok:"y"},
   adoptAccept:     {m:"POST",  p:"/api/adopt/:id",                ok:"✓"},
-  profilePut:      {m:"PUT",   p:"/api/governance/profile",       ok:"y"},   // the trade profile itself — markets, SECTORS, adopted certs   // trade profile incl. .vault and .invoice_party (core: the product page reads it before Settings has loaded)
   unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
@@ -4001,7 +4000,11 @@ const MENUS = {
     ["Catalogue",[["catalogue","🗂️","Catalogue"],["selfbill","🧾","Record a sale"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
     /* ⭐ MATCH SITS WITH SUPPLIERS, because a difference is always WITH somebody. Athi, 2026-09-08: the three-way match across
        parties is the thing an ERP cannot do, so it gets a row of its own rather than hiding inside an order. */
-    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["supplies","🧴","Supplies"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    /* ⚠️ SUPPLIES IS NOT A RAIL ITEM ANY MORE (Athi, 2026-09-10: *"you have created something called supplies,
+       which may not be essential — we have already the supplier menu"*). It is the Other tab inside Suppliers.
+       The screen and its routes are unchanged; only the door moved, because a shop should not have to decide
+       which of two menus a purchase belongs to before it can record one. */
+    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
        key, which is where things that WATCH you live; a report is a place you GO. */
@@ -5607,6 +5610,20 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
    * genuinely is empty — the other half of why this looked broken.
    */
   CC.origin=(prefill&&prefill.origin)||null;
+  /**
+   * ⭐⭐ PURPOSE AND PROVENANCE RIDE THROUGH COMPOSE (2026-09-10). Athi: *"never ever go out of the product
+   * construct and create a different path — whatever we try to build should follow the core principles."*
+   *
+   * ⚠️ THAT IS A CORRECTION OF SOMETHING I HAD JUST DONE. Recording a delivery from a supplier who is not on
+   * ChitBridge, I wrote a private modal with its own line editor that called createChit directly — skipping
+   * cbFreezeTerms, the business_json merge, attachments, drafts and every rule sendChit owns. It would have
+   * worked, and it would have been a second way to mint a chit that drifts from the first one quietly.
+   *
+   * ⭐ A chit is authored in compose. So compose carries the two things a non-default chit needs — what KIND it
+   * is, and where it came from — and everything else stays exactly as it was for every existing caller.
+   */
+  CC.purpose=(prefill&&prefill.purpose)||null;
+  CC.business_json=(prefill&&prefill.business_json)||null;
   // SUPPLIER mode uses THEIR catalogue (passed in) → ready now; otherwise show any cached list immediately, else a brief
   // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
   if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); UI._catState='ready'; }
@@ -6256,6 +6273,9 @@ async function submitCompose(isDraft){
   });
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
+    /* ⚠️ Omitted unless the caller asked, so every existing compose sends a byte-identical payload. */
+    ...(CC.purpose?{purpose:CC.purpose}:{}),
+    ...(CC.business_json?{business_json:CC.business_json}:{}),
     /* ⭐ The terms this chit cites — frozen inside sendChit at the mint, not here. */
     definition_ids:_defIds,
     priority:CC.priority||val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
@@ -6881,7 +6901,7 @@ function suppliersScreen(){
           <button class="${UI.supReq?'on':''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
         <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-inline-start:auto">?</button></div>
-      ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
+      ${(UI.supFind||UI.supReq)?'':`${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind()==='own_use'?tx('Add — shop name, or their User ID'):tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
@@ -6902,8 +6922,48 @@ function suppliersScreen(){
 function supPrefFirst(){ return UI.supPrefFirst!==false; }   // default: preferred first
 function setSupSort(v){ UI.supPrefFirst=v; paintSupList(); }
 function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+/**
+ * ⭐⭐ TWO TABS, ONE LIST (Athi, 2026-09-10): *"we have already the supplier menu — add the business here and,
+ * while adding or maybe later through edit, set a flag: is he the supplier for my sales or is he the facilitator?
+ * So we can differentiate, show them in two different tabs. If you call them through 'other supplier', you know
+ * where to keep the product and what life cycle you have to follow."*
+ *
+ * ⭐⭐⭐ AND THAT LAST SENTENCE IS THE WHOLE REASON THE FLAG EARNS ITS PLACE. This is not a filter for tidiness —
+ * the tab a supplier sits in decides what a delivery from them DOES. Goods from a Trade supplier are offered to
+ * your catalogue; goods from an Other supplier go to supplies and are never offered, because floor cleaner must
+ * not be one forgotten WHERE clause away from a storefront. Declaring it once on the supplier answers it for
+ * every future delivery, instead of asking line by line for ever.
+ *
+ * ⚠️ I HAD BUILT A SEPARATE "SUPPLIES" MENU FOR THIS and he was right to collapse it. It was a second place to
+ * add a business, a second list to keep, and a second concept to teach — for a distinction that is one flag on a
+ * list that already exists.
+ */
+function supKind(){ return UI.supKind==='own_use'?'own_use':'resale'; }
+function supKindOf(x){ return (x&&x.supply_kind==='own_use')?'own_use':'resale'; }
+function supKindCount(k){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===k; }).length; }
+function supKindTabsHTML(){
+  const b=function(k,icon,label,tid){
+    const on=supKind()===k, n=supKindCount(k);
+    return `<button class="${on?'on':''}" data-testid="${tid}" onclick="setSupKind('${k}')">${icon} ${tx(label)}`
+      + (n?` <span style="opacity:.7">${n}</span>`:'') + `</button>`; };
+  return `<span class="suptabs" id="sp_kindtabs" style="display:flex;margin-bottom:8px">`
+    + b('resale','🏭','Trade','sup-tab-trade') + b('own_use','🧴','Other','sup-tab-other') + `</span>`;
+}
+function setSupKind(k){
+  UI.supKind=(k==='own_use'?'own_use':'resale');
+  /* ⚠️ the selected supplier is almost certainly in the OTHER tab now — keeping it would leave the right pane
+     showing a supplier the left pane no longer lists (feedback-repaint-locally: a pane must not contradict its list) */
+  UI.supSel=null; UI.supDet=null;
+  /* the Other tab's detail is the supplies list, which lives in a lazily-loaded capability */
+  if(UI.supKind==='own_use' && typeof ensureCap==='function'){
+    const had=(typeof CAP_LOADED!=='undefined')&&CAP_LOADED['supplies'];
+    ensureCap('supplies').then(function(){ if(!had) bgRenderApp();
+      if(typeof supLoad==='function' && SUP.rows===null && !SUP.busy) supLoad(); });
+  }
+  paintSupList(); paintSupDetail();
+}
 function supVisible(){
-  let s=(UI.sups||[]).slice();
+  let s=(UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); });
   const q=(UI.supQ||'').trim().toLowerCase();
   if(q) s=s.filter(x=>((x.nickname||'')+' '+(x.display_name||'')+' '+(x.category||'')+' '+(x.bridge_id||'')).toLowerCase().includes(q));
   if(supPrefFirst()) s.sort((a,b)=>(b.preferred?1:0)-(a.preferred?1:0));
@@ -6913,7 +6973,17 @@ function supVisible(){
 function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">' + tx('📕 catalogue') + '</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>';
+  /**
+   * ⭐⭐ THE CHIP SAYS WHAT THE ROW CAN DO, not what it is called. A supplier who is not on ChitBridge has no
+   * catalogue to call, cannot be sent an order and cannot send a delivery chit — so "no catalogue" would be a
+   * misleading way to put it: it reads as an empty shelf they might fill, when the truth is there is nobody to
+   * ask. ⚠️ Saying it plainly is kinder than hiding it and letting someone hunt for a button that cannot exist.
+   */
+  const offRail = x.on_rail===false;
+  const cat = offRail
+    ? '<span class="optchip" style="background:var(--card);color:var(--grey);border-color:var(--line)" title="'
+      + esc(tx('Your own record of them. Purchases are entered by hand.')) + '">' + tx('🧾 not on ChitBridge') + '</span>'
+    : (x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">' + tx('📕 catalogue') + '</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>');
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
@@ -7019,13 +7089,19 @@ function supOwnRowHTML(){
       <span class="optchip" style="background:var(--ok-tint,var(--card));color:var(--ok-3);border-color:var(--ok-3)">${esc(tx('ours'))}</span></div>
     <div class="l2">${esc(n ? txf('{n} items in your catalogue', { n: n }) : tx('your catalogue is empty'))}</div></div></div>`;
 }
-function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return supOwnRowHTML() + emptyState('🏭','No suppliers yet','Add one by their User ID or email.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"});
+function supRowsHTML(){ const rows=supVisible();
+  /* ⚠️ OUR OWN SHELF BELONGS ON THE TRADE TAB ONLY. It is the catalogue you SELL from; under "things we buy to
+     use" it would be an odd first row and, worse, an invitation to put stock where supplies go. */
+  const own = supKind()==='resale' ? supOwnRowHTML() : '';
+  if(!rows.length) return own + (supKind()==='own_use'
+    ? emptyState('🧴', tx('No other suppliers yet'), tx('The shops you buy from to RUN the business — packing, cleaning, stationery, repairs. What arrives from them is never offered to your storefront.'), {label:tx('+ Add one'),onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"})
+    : emptyState('🏭','No suppliers yet','Add one by their User ID or email — or just their name, if they are not on ChitBridge.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"}));
   /* ⭐ Own stock FIRST, always — not only when the supplier list is empty. Athi: *"if the own catalogue is on
      the top, that would be perfect."* And for a co-assist it is the ONLY door: the actor rail carries
      Rail · Work · Suppliers and has no Catalogue entry, so without this row an employee cannot open the
      catalogue at all — which is exactly what he hit. The API already allows it (entityOf resolves an actor to
      its parent business); only the screen was missing. */
-  return supOwnRowHTML() + rows.map(supRowHTML).join(''); }
+  return own + rows.map(supRowHTML).join(''); }
 function supSlideHTML(){
   const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===UI.supSel; });
   if(!x || !UI.supPanel) return '';
@@ -7304,7 +7380,10 @@ function supClosePanel(){ UI.supPanel=false; paintSupSlide(); }
 function paintSupSlide(){ const h=document.getElementById('supslide_host'); if(h) h.innerHTML=supSlideHTML(); paintSupList(); }
 /* "1 supplier(s)" — the parenthesised plural is a shrug where the code already knows the number. */
 function supCountText(){ const n=supCount(); return n+(n===1?' supplier':' suppliers'); }
-function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCountText(); }
+function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCountText();
+  /* ⚠️ the tab counts live in .lh, which this does not redraw — without this, adding a supplier leaves "Trade 4"
+     next to five rows until something else forces a full render (feedback-repaint-locally). */
+  const t=document.getElementById('sp_kindtabs'); if(t)t.outerHTML=supKindTabsHTML(); }
 function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=supDetailHTML(); } }
 /* ===================== CUSTOMERS (CRM) — end-customers locked UNDER this shop (parent_entity_id = shop).
    Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
@@ -7686,8 +7765,34 @@ function supEdit(id){
   const x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
   modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">' + tx('Your own details for this supplier — they never see them') + '</div></div>'
     + '<div class="mbody">'
+    /**
+     * ⭐⭐ THEIR NAME IS EDITABLE ONLY WHEN YOU MINTED THEM. Athi, 2026-09-10: *"user id we generate, but the shop
+     * name — they can keep it as per the shop name. So internal id never gets mixed up."* Exactly CB's three-names
+     * rule at a new kind of row: the id is generated and set once, the name is theirs and free to change.
+     * ⚠️ For a real ChitBridge business the name is THEIRS, not yours — which is what "your label" below is for.
+     */
+    + (x.on_rail===false
+      ? '<label class="fl">' + tx('Their name') + ' <span style="color:var(--grey);font-weight:400">— ' + tx('you wrote this one down, so it is yours to correct') + '</span></label>'
+        + '<input class="inp" id="sp_dname" data-testid="sup-dname" value="'+esc(x.display_name||'')+'">'
+      : '')
     + '<label class="fl">' + tx('Your label for them') + ' <span style="color:var(--grey);font-weight:400">— ' + tx('private to you; it never changes their name or their user id') + '</span></label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 8px">🔒 ' + tx('User ID') + ': <span style="font-family:Space Mono,monospace">' + esc(x.user_id||x.bridge_id||'') + '</span> — ' + tx('set once at registration, not editable') + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 8px">🔒 ' + tx('User ID') + ': <span style="font-family:Space Mono,monospace">' + esc(x.user_id||x.bridge_id||'') + '</span> — ' + (x.on_rail===false?tx('generated when you added them; never changes'):tx('set once at registration, not editable')) + '</div>'
+    /**
+     * ⭐⭐⭐ THE FLAG, WHERE HE ASKED FOR IT: *"while adding or may be later through edit, set a flag — is he the
+     * supplier for my sales or is he the facilitator?"*
+     * ⚠️ IT IS NOT A LABEL. It decides what a delivery from them DOES: goods from a Trade supplier are offered to
+     * your catalogue, goods from an Other supplier go to supplies and are never offered. So the wording says the
+     * consequence, not the category — "what you sell" / "what the shop uses" — because "facilitator" is a word
+     * about them, and this is a question about the goods.
+     */
+    + '<label class="fl" style="margin-top:10px">' + tx('What you buy from them') + '</label>'
+    + '<div style="display:flex;gap:7px" data-testid="sup-kind-pick">'
+    +   ['resale','own_use'].map(function(k){ const on=supKindOf(x)===k;
+          return '<button data-testid="sup-kind-'+k+'" onclick="setSupplierKind(\''+id+'\',\''+k+'\')" style="flex:1;border:1px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:9px;background:'+(on?'var(--blue-tint-bg)':'var(--card)')+';color:'+(on?'var(--blue)':'var(--grey)')+';font-size:var(--fs-1);font-weight:700;padding:7px 9px;text-align:start;line-height:1.4">'
+            + (k==='resale'?'🏭 '+tx('Things we sell'):'🧴 '+tx('Things we use'))
+            + '<div style="font-weight:400;font-size:var(--fs-0);margin-top:2px">'
+            + (k==='resale'?tx('offered to your catalogue'):tx('goes to supplies, never a storefront'))+'</div></button>'; }).join('')
+    + '</div>'
     + '<label class="fl">' + tx('Category / tag') + '</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
     + '<label class="fl">' + tx('Notes') + '</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
     + '<label class="fl" style="margin-top:12px">' + tx('Preferred') + '</label>'
@@ -7713,6 +7818,22 @@ function supCartOpts(x){
 }
 async function selectSupplier(id, silent){
   UI.supSel=id;
+  /**
+   * ⭐⭐ A SUPPLIER WHO IS NOT ON CHITBRIDGE HAS NO CATALOGUE TO OPEN, so this pane shows what CAN be done with
+   * them instead of an empty shelf. Athi, 2026-09-10: *"if you call them through 'other supplier', you know where
+   * to keep the product and what life cycle you have to follow."*
+   * ⚠️ It returns BEFORE the catalogue fetch — asking the API for a catalogue that cannot exist would spend a
+   * round trip to render "nothing here", which reads as an empty catalogue rather than as no catalogue at all.
+   */
+  const off=(UI.sups||[]).find(function(s){ return s.supplier_list_id===id && s.on_rail===false; });
+  if(off){
+    if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+    supCartRelease();
+    UI.supDet={ supplier:off, offRail:true };
+    if(typeof ensureCap==='function') ensureCap('supplies').then(function(){ paintSupDetail(); });
+    paintSupDetail();
+    return;
+  }
   /**
    * ⭐⭐ OUR OWN SHELF, OPENED THROUGH THE SAME DOOR. Athi, 2026-08-23: *"first allow the employee to have their
    * catalogue… then use the supplier menu and open the catalogue."*
@@ -8028,7 +8149,53 @@ function supDetailHTML(){
      state told the reader there was nothing to find at the exact moment we were finding it. */
   if(UI.supFind) return loader(tx('Searching every supplier'))
     + `<div>${txf('Results are on the left, grouped by who stocks it. Pick {open} on one to bring their catalogue back here.', { open: '<b>' + tx('Open') + ' <span class=arw>→</span></b>' })}</div></div>`;
+  /**
+   * ⭐⭐ THE OTHER TAB'S PANE IS THE SUPPLIES LIST — the whole of the retired Supplies screen, folded in where it
+   * belongs. Athi, 2026-09-10: *"you have created something called supplies, which may not be essential — we have
+   * already the supplier menu."* Right: what a shop buys to USE is not a second kind of thing needing its own
+   * menu, it is the answer to "what have I been getting from these suppliers?"
+   * ⚠️ The capability is lazily loaded, so this renders the container and lets supPaint() fill it on arrival —
+   * exactly what [SUP-01] caught the first time, when nothing re-rendered and the screen sat at a spinner.
+   */
+  if(!x && supKind()==='own_use'){
+    setTimeout(function(){ if(typeof supPaint==='function' && SUP && SUP.rows!==null) supPaint(); }, 0);
+    return `<div class="dh"><div class="dt">🧴 ${tx('Supplies')}</div>`
+      + `<div class="ds">${tx('what the shop buys and uses — never on your storefront')}</div></div>`
+      + `<div class="db" id="sup_body">${(typeof SUP!=='undefined'&&SUP&&SUP.rows!==null)?'':'<div class="loadwrap"><span class="spin"></span> '+tx('loading')+'…</div>'}</div>`;
+  }
   if(!x) return emptyState('🏭', tx('Select a supplier'), tx('Pick one to see their profile and catalogue, then compose an order.'));
+  /**
+   * ⭐⭐ THE OFF-RAIL PANE. Two actions, and which two depends on the tab they sit in — that is the whole payoff
+   * of the flag: a Trade supplier's goods can be offered to your catalogue, an Other supplier's go to supplies.
+   * ⚠️ NO "order from them" ANYWHERE HERE. There is nobody to send it to, and a disabled button that explains
+   * itself on hover is still a button someone will try.
+   */
+  if(d.offRail){
+    const kind=supKindOf(x), me=esc(supName(x));
+    /* ⚠️ SINGLE-QUOTED, NOT JSON. The onclick attribute is written with double quotes, so JSON.stringify's own
+       double quotes would close it — and "Ram's Traders" would then break the handler a different way. */
+    const q=function(s){ return "'"+String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')+"'"; };
+    const act=function(label,note,fn,tid){ return `<button class="composebtn" data-testid="${tid}" style="width:100%;justify-content:center;margin-top:8px" onclick="${fn}">${label}</button>`
+      + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">${note}</div>`; };
+    return `<div class="dh"><button class="dback" onclick="backToList()">‹ ${tx('Suppliers')}</button><div class="dt">${me}</div>`
+      + `<div class="ds">${tx('your own record — they are not on ChitBridge')}</div></div>`
+      + `<div class="db"><div class="supkvs" style="margin-bottom:10px">`
+      + `<div class="supkv"><b>${tx('ID')}</b><span class="mono">${esc(x.user_id||'—')}</span></div>`
+      + `<div class="supkv"><b>${tx('Buying for')}</b><span>${kind==='own_use'?tx('things we use'):tx('things we sell')}</span></div>`
+      + `</div>`
+      /* ⭐ the id is shown because it is real and it is theirs — purchases, spend and stock all attach to it,
+         and a shopkeeper reading "~mystore.sup-0003" can see at a glance that it is their own numbering */
+      + (kind==='own_use'
+        ? act('🧾 ' + tx('Record a purchase'),
+              tx('What you bought and what it cost. It goes to <b>supplies</b> — never to your storefront.'),
+              "supBuyModal(" + q(supName(x)) + ")", 'sup-record-buy')
+        : act('🧾 ' + tx('Record a delivery'),
+              tx('Goods you bought to sell on. You will be asked which of them to add to your catalogue.'),
+              "supRecordDelivery(" + q(supName(x)) + "," + q(x.supplier_entity_id||'') + ")", 'sup-record-delivery'))
+      + `<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey);line-height:1.6">`
+      + tx('⚠️ If they join ChitBridge later, add them again as a business — this record stays as it is, with its own history.')
+      + `</div></div>`;
+  }
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
   /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
      left card (supInfoCardHTML). The heading keeps only what names the catalogue you are looking at. */
@@ -8124,14 +8291,40 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=d
   confirmAsk('Add '+(e.display_name||e.bridge_id)+' as your supplier?',
     '<b>'+esc(e.user_id||e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
-      try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
+      try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id, supply_kind:supKind()}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
       catch(ex){ if(err)err.textContent=ex.message; }
     }); }
-async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; if(!isUserId(bid)){ if(x)x.textContent="Type a name and pick from the list, or enter a User ID (8+ chars) / email."; return; }
+/**
+ * ⭐⭐⭐ A NAME IS NOW A VALID ANSWER. Athi, 2026-09-10: *"still a non-CB person can be a supplier — we can set the
+ * flag again, he is not part of CB?"*
+ *
+ * ⚠️⚠️ AND UNTIL TODAY THE COMMONEST SUPPLIER A SMALL SHOP HAS COULD NOT BE WRITTEN DOWN AT ALL. The box has
+ * always said *"type a name, User ID or email"* — and then refused every plain name with "pick from the list",
+ * because a name only worked if it happened to belong to a business already on ChitBridge. The corner hardware
+ * shop with a paper bill never will be.
+ *
+ * ⭐ THE BRANCH IS THE SAME QUESTION THE BOX ALREADY ASKS: an 8+ character handle or an email is somebody to look
+ * up; anything else is a name to write down. A minted supplier gets a real id (~yourid.sup-nnnn), so purchases,
+ * spend and stock attach to them exactly as they do to anyone else — they simply cannot be sent anything.
+ */
+async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML='';
+  const kind=supKind(), clear=function(){ const a=document.getElementById('sp_add'); if(a)a.value=''; };
+  if(!isUserId(bid)){
+    /* ⚠️ SAY WHAT THEY WILL AND WILL NOT BE ABLE TO DO, before it is created rather than after they go looking
+       for the missing button. "Not on ChitBridge" is a sentence about capability, not a status badge. */
+    confirmAsk(txf('Add {name} as a local supplier?',{name:'<b>'+esc(bid)+'</b>'}),
+      tx('They are <b>not on ChitBridge</b>, so there is no catalogue to browse and no order to send — you record what you buy from them by hand.')
+      + '<br><br>' + tx('If they <i>are</i> on ChitBridge, cancel and type their User ID or email instead.'),
+      tx('Add supplier'), async function(){
+        try{ await api("supAdd",{body:{name:bid, supply_kind:kind}}); toast(tx('Supplier added')+' ✓'); clear(); await loadSuppliers(); }
+        catch(e){ if(x)x.textContent=e.message; }
+      });
+    return;
+  }
   confirmAsk('Add '+bid+' as your supplier?',
     'They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
-      try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }
+      try{ await api("supAdd",{body:{supplier_bridge_id:bid, supply_kind:kind}}); toast("Supplier added ✓"); clear(); await loadSuppliers(); }
       catch(e){ if(x)x.textContent=e.message; }
     }); }
 async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier';
@@ -8144,9 +8337,26 @@ async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v
 async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
   try{ await api("supPatch",{params:{id},body:{preferred:nv}}); x.preferred=nv; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id)UI.supDet.supplier.preferred=nv; paintSupList(); paintSupDetail(); toast(nv?"Marked preferred ★":"Removed preferred"); }
   catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
+/**
+ * ⭐ MOVE A SUPPLIER BETWEEN THE TWO TABS. Saved on the tap, not on Save, because it changes which tab they are
+ * in — pressing it and then Cancel would leave the button showing one answer and the list showing the other.
+ * ⚠️ It changes nothing already adopted. What arrives NEXT follows the new flag; the past stays as it was.
+ */
+async function setSupplierKind(id, k){
+  const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===id; }); if(!x || supKindOf(x)===k) return;
+  try{ await api("supPatch",{params:{id},body:{supply_kind:k}});
+    x.supply_kind=k;
+    if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id) UI.supDet.supplier.supply_kind=k;
+    closeModal();
+    /* ⭐ follow them to the tab they just moved to, rather than leaving the shop looking at a list they vanished from */
+    setSupKind(k); toast(k==='own_use'?tx('Moved to Other'):tx('Moved to Trade'));
+  }catch(e){ const err=document.getElementById("sp_ederr"); if(err)err.textContent=(e&&e.message)||'Failed'; }
+}
 async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); if(err)err.textContent="";
   const body={ nickname:val("sp_nick")||null, category:val("sp_cat")||null, notes:val("sp_notes")||null };
-  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body);
+  /* ⚠️ only sent when the field is on the form at all — a real business's name is theirs, and the route refuses it */
+  const dn=document.getElementById("sp_dname"); if(dn && dn.value.trim()) body.display_name=dn.value.trim();
+  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; if(body.display_name) x.display_name=body.display_name; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body);
     closeModal();   /* the form is a modal now, not a mode on the right pane */
     paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
   catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
