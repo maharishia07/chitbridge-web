@@ -1,7 +1,3 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
 // @stage tested
 // @stage-note Built 2026-09-10 and called by NOTHING — tests/rewards.test.js, 15 checks. The interpretation and the
 // ledger arithmetic are both here and asserted, including every refusal. What is missing is STORAGE — the table the
@@ -509,9 +505,6 @@
               billSays: billSays, holderOf: holderOf, holderKey: holderKey,
               expiresAt: expiresAt, expired: expired, claim: claim };
   root.CBRewards = API;
-  if (typeof module !== 'undefined' && module.exports) var EXPORTS = API;
+  if (typeof module !== 'undefined' && module.exports) module.exports = API;
 
 })(typeof window !== 'undefined' ? window : this);
-
-window.CBRewards = EXPORTS;
-})();
