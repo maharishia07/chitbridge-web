@@ -59,7 +59,9 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
      */
     const sup = await page.evaluate(async () => {
       const r = await api('supList');
-      return (r.suppliers || [])[0] || null;
+      /* ⚠️ unwrap() collapses {suppliers,count} to a BARE ARRAY — read it the way loadSuppliers does */
+      const rows = Array.isArray(r) ? r : ((r && r.suppliers) || []);
+      return rows[0] || null;
     });
     expect(sup, 'the supplier came back with no row at all').toBeTruthy();
     expect(sup.supplier_entity_id, 'a local supplier must still have an id').toBeTruthy();
@@ -73,15 +75,20 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
     await expect(page.getByTestId('sup-record-delivery')).toBeVisible({ timeout: 25000 });
     const pane = await page.locator('#detailpane').textContent();
     expect(pane, 'the pane must show the generated id — it is theirs and it is real').toMatch(/~.+\.sup-\d{4,}/);
-    /* ⚠️ a disabled "order" button that explains itself on hover is still a button someone will press */
-    expect(await page.getByTestId('sup-order').count()).toBe(0);
+    /**
+     * ⚠️ ASSERTED AGAINST WHAT THE ON-RAIL PANE ACTUALLY SAYS. My first version checked that a testid called
+     * 'sup-order' was absent — and no such testid has ever existed anywhere, so it passed whatever the pane did.
+     * An assertion with no subject is worse than none: it reports green and measures nothing.
+     */
+    expect(pane, 'the off-rail pane is offering a catalogue there is nobody to ask for')
+      .not.toMatch(/what you can order from them/i);
   });
 
   await test.step('⭐⭐⭐ moving them to OTHER moves what a delivery from them DOES', async () => {
     /* Athi: *"while adding or may be later through edit set a flag"* — and the flag is not a label: it decides
        whether goods from them are offered to the catalogue or go to supplies. */
     const listId = await page.evaluate(async () => {
-      const r = await api('supList'); return (r.suppliers || [])[0].supplier_list_id;
+      const r = await api('supList'); return (Array.isArray(r)?r:(r.suppliers||[]))[0].supplier_list_id;
     });
     await page.getByTestId('sup-details-' + listId).click();     /* ⓘ — their full record */
     await page.getByTestId('sup-edit').click();
@@ -94,7 +101,7 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
     await expect(page.locator('#sup_rows')).toContainText(LOCAL, { timeout: 20000 });
 
     const kind = await page.evaluate(async () => {
-      const r = await api('supList'); return (r.suppliers || [])[0].supply_kind;
+      const r = await api('supList'); return (Array.isArray(r)?r:(r.suppliers||[]))[0].supply_kind;
     });
     expect(kind, 'the flag did not persist — the tab is lying to the shop').toBe('own_use');
   });
@@ -110,7 +117,7 @@ test('[SUP-02] a shop can add a supplier who is not on ChitBridge, and it lands 
      * answer that cannot come. The refusal is the ONE thing the ~ marker has to enforce.
      */
     const uid = await page.evaluate(async () => {
-      const r = await api('supList'); return (r.suppliers || [])[0].user_id;
+      const r = await api('supList'); return (Array.isArray(r)?r:(r.suppliers||[]))[0].user_id;
     });
     const out = await page.evaluate(async (handle) => {
       try {

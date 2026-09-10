@@ -6951,16 +6951,25 @@ function supKindTabsHTML(){
 }
 function setSupKind(k){
   UI.supKind=(k==='own_use'?'own_use':'resale');
-  /* ⚠️ the selected supplier is almost certainly in the OTHER tab now — keeping it would leave the right pane
-     showing a supplier the left pane no longer lists (feedback-repaint-locally: a pane must not contradict its list) */
-  UI.supSel=null; UI.supDet=null;
+  /**
+   * ⚠️ THE SELECTED SUPPLIER IS ALMOST CERTAINLY IN THE OTHER TAB NOW, so clearing the selection stops the right
+   * pane showing a supplier the left pane no longer lists.
+   *
+   * ⚠️⚠️ AND THE ⓘ SLIDE PANEL HAS TO GO WITH IT — clearing UI.supSel is not enough, because that panel is a
+   * separate host that only redraws when paintSupSlide() is called. Without this it stayed on screen showing the
+   * record of a supplier that is no longer selected AND, being an overlay, swallowed every click on the tabs
+   * underneath: the screen was not merely wrong, it was frozen. [SUP-02] found it by trying to click Trade.
+   */
+  UI.supSel=null; UI.supDet=null; UI.supPanel=false;
   /* the Other tab's detail is the supplies list, which lives in a lazily-loaded capability */
   if(UI.supKind==='own_use' && typeof ensureCap==='function'){
     const had=(typeof CAP_LOADED!=='undefined')&&CAP_LOADED['supplies'];
     ensureCap('supplies').then(function(){ if(!had) bgRenderApp();
       if(typeof supLoad==='function' && SUP.rows===null && !SUP.busy) supLoad(); });
   }
-  paintSupList(); paintSupDetail();
+  /* ⚠️ paintSupSlide FIRST — it repaints the panel host AND the list, so the overlay is gone before anything
+     else redraws underneath it. It also calls paintSupList(), which is why that is not repeated here. */
+  paintSupSlide(); paintSupDetail();
 }
 function supVisible(){
   let s=(UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); });
