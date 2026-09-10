@@ -212,6 +212,34 @@ function cbDefRegistries(){
   });
 
   /**
+   * ⭐⭐ REWARD EARNING KINDS — read from CBRewards.EARN_KINDS, the same trick every section here uses.
+   *
+   * Athi, 2026-09-10: *"we don't need to specify the value conversion etc. We build the reward mechanism and allow
+   * the business to decide... we only build the mechanism of accumulating and distributing the points, and how the
+   * point has to be converted should depend on the parameter."*
+   *
+   * ⭐ THIS SCREEN IS WHERE THAT SENTENCE BECOMES VISIBLE. It publishes the SHAPES a shop may declare and the
+   * parameters each one needs — and says nothing whatever about which one a business ought to pick, or what a
+   * point should be worth. Add a kind to lib/rewards.js next month and it appears here with no edit; remove one
+   * and it stops being shown.
+   */
+  out.push({
+    key: 'reward', icon: '🎁', title: 'Reward earning kinds',
+    blurb: 'How points can be earned. A programme picks a kind and sets its parameters — the shop decides the rate, '
+         + 'what a point converts into, and whether points expire. ChitBridge only carries the mechanism.',
+    source: 'lib/rewards.js · EARN_KINDS',
+    rows: (typeof CBRewards !== 'undefined' && CBRewards.EARN_KINDS)
+      ? Object.keys(CBRewards.EARN_KINDS).map(function (k) {
+          var kind = CBRewards.EARN_KINDS[k];
+          return { code: k, label: cbDefRewardLabel(k),
+                   /* ⚠️ THE PARAMETERS IT CANNOT WORK WITHOUT — a rule missing one earns nothing rather than
+                      guessing, and a screen that hid that would make the refusal look like a fault. */
+                   note: 'needs: ' + (kind.needs || []).join(' · ') };
+        })
+      : null
+  });
+
+  /**
    * ⭐ THE GST SLAB RATES — read from the SAME module that resolves them (app/tax-slab.js, the generated mirror of
    * the API's lib/tax-slab.js). A second list here would be a second statement of what the scheme allows, and the
    * second one always goes stale.
@@ -477,6 +505,14 @@ async function cbDefLoad(force){
   cbDefRepaint();
 }
 
+/** ⚠️ WORDS A SHOPKEEPER USES, not the code. The registry key is the contract; this is only how it reads. */
+function cbDefRewardLabel(k){
+  return ({ per_amount:      'Points for every amount spent',
+            value_as_points: 'The bill value itself becomes points',
+            per_visit:       'Points for each visit, whatever it is worth',
+            per_item:        'Points for every item bought',
+            on_items:        'Points on chosen products — a reward instead of a discount' })[k] || k;
+}
 function cbDefMineOf(kind){
   return (CBDEF.mine || []).filter(function (d) { return d.kind === kind && d.status !== 'retired'; });
 }
