@@ -296,6 +296,20 @@ function c2PaneOrd(d){
     + '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>'
     + '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
 
+  /**
+   * ⭐⭐ GOODS THAT ARRIVED CAN BECOME YOUR OWN PRODUCTS — offered HERE, beside the lines, because that is
+   * where somebody is standing when the question arises. A menu item would make it a chore to go and do
+   * later, which is how forty products stay untyped for a month.
+   * ⚠️ ONLY ON A RECEIPT, and it never claims a number before asking: the panel itself decides what is new,
+   * what is already stocked and what is refused. Putting a count on this button would mean reading the
+   * whole delivery on every paint of a pane nobody may open.
+   */
+  if (c2IsReceipt(d)) {
+    out += '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">'
+      + '<button class="btn" data-testid="c2-adopt" onclick="c2Adopt()">🗂️ Add new products to my catalogue</button>'
+      + '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what is new before anything is added</span></div>';
+  }
+
   /* ⭐⭐ THE CHIT IS THE CART (Athi, 2026-09-06 10:19: "it has to be the exact cart and the values and the information — ditto, including the
      format"). This pane drew its own rows ("2 bag × ₹101.00") and no money block; a buyer saw ₹676.80 on the Suppliers screen and ₹752 here.
      Now a read-only cart is built from the chit's RECORDED lines (price · discount · offer · rate, as written at send) and the rows and
@@ -363,6 +377,20 @@ function c2PaneOrd(d){
 /* ⚠️ `live_set` — the name this screen already uses in three other places. My first version read `d.live`, which
    is undefined, so every ✎ would have reported "that line is no longer on the chit": a plausible sentence, a
    working-looking screen, and completely wrong. The row index and the array must come from one source. */
+/** ⚠️ a delivery, not any chit — purpose OR the counter's own goods-in stamp, since both shapes exist */
+function c2IsReceipt(d){
+  var h = (d && (d.header || d.chit)) || d || {};
+  var bj = h.business_json || (d && d.business_json) || {};
+  return String(h.purpose || d.purpose || '') === 'receipt' || bj.doc === 'receipt';
+}
+/** opens the adopt panel for THIS delivery — the capability loads on demand, like every other lazy screen */
+function c2Adopt(){
+  var id = (C2 && (C2.id || (C2.data && C2.data.chit_id))) || null;
+  if (!id) { if (typeof toast === 'function') toast('No delivery open'); return; }
+  ensureCap('adopt').then(function(){ adoptOpen(id); })
+    .catch(function(e){ if (typeof toast === 'function') toast((e && e.message) || 'Could not open it'); });
+}
+
 function c2Entry(i){ return ((C2.data || {}).live_set || [])[i] || null; }
 
 function c2AmendLine(i, wantPick){

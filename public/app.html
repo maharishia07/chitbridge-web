@@ -1800,6 +1800,16 @@ const EP = {
   pulse:           {m:"GET",   p:"/api/chits/pulse",             ok:"y"},   // has anything changed? one cheap watermark
   eventsTicket:    {m:"POST",  p:"/api/events/ticket",           ok:"y"},   // the mailbox bell: a one-time ticket for the push stream
   profileGet:      {m:"GET",   p:"/api/governance/profile",       ok:"y"},
+  profilePut:      {m:"PUT",   p:"/api/governance/profile",       ok:"y"},   // the trade profile itself — markets, SECTORS, adopted certs
+  /* ⭐ SUPPLIES — what a shop buys to USE. Deliberately four calls and no more: this is the most ERP-shaped
+     and least differentiating part of the platform, and depth here competes with Tally on its own ground. */
+  supplyList:      {m:"GET",   p:"/api/supplies",                 ok:"y"},
+  supplyAdd:       {m:"POST",  p:"/api/supplies",                 ok:"✓"},
+  supplyBuy:       {m:"POST",  p:"/api/supplies/purchase",        ok:"✓"},
+  supplyUse:       {m:"POST",  p:"/api/supplies/:id/issue",       ok:"✓"},
+  /* ⭐ ADOPT — a supplier delivery becoming YOUR catalogue. Read offers; accept only what is named. */
+  adoptRead:       {m:"GET",   p:"/api/adopt/:id",                ok:"y"},
+  adoptAccept:     {m:"POST",  p:"/api/adopt/:id",                ok:"✓"},
   profilePut:      {m:"PUT",   p:"/api/governance/profile",       ok:"y"},   // the trade profile itself — markets, SECTORS, adopted certs   // trade profile incl. .vault and .invoice_party (core: the product page reads it before Settings has loaded)
   unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
@@ -3991,7 +4001,7 @@ const MENUS = {
     ["Catalogue",[["catalogue","🗂️","Catalogue"],["selfbill","🧾","Record a sale"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
     /* ⭐ MATCH SITS WITH SUPPLIERS, because a difference is always WITH somebody. Athi, 2026-09-08: the three-way match across
        parties is the thing an ERP cannot do, so it gets a row of its own rather than hiding inside an order. */
-    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["supplies","🧴","Supplies"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
        key, which is where things that WATCH you live; a report is a place you GO. */
@@ -4031,6 +4041,7 @@ const PURPOSE = {
   network:"Design your organisation here — your own branches and units, up to the lead node. Internal structure; for other businesses use Connections.",
   connections:"Connect with other businesses — suppliers, customers, agents. External; for your own structure use Network.",
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
+  supplies:"Things the shop buys and USES — packing, cleaning, stationery. Never on your storefront and never priced. What you buy to SELL lives in Catalogue.",
   customers:"Your CRM — everyone who ordered from your storefront. They exist only under your shop; the platform never takes them over.",
   catalogue:"What you sell — products and price.",
   categories:"How your shelf is sorted. Make a category here, then tick products in the Catalogue and attach them. A product can sit in several.",
@@ -4433,6 +4444,7 @@ function _renderApp(){
        existed for weeks with nothing calling it, which is what made per-line assignment unusable. */
     if(UI.nav==="worklist"){ ensureCap("worklist").then(function(){ if(typeof wlLoad==="function" && !WL.data && !WL.busy) wlLoad(); }); }
     if(UI.nav==="suppliers") loadSuppliers();
+    if(UI.nav==="supplies"){ ensureCap("supplies").then(function(){ if(typeof supLoad==="function" && SUP.rows===null && !SUP.busy) supLoad(); }); }
     if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
     /**
@@ -11588,6 +11600,7 @@ function mainBody(){
   if(UI.nav==="settings") return capScreen("settingsScreen");
   if(UI.nav==="network") return capScreen("networkScreen");
   if(UI.nav==="suppliers") return suppliersScreen();
+  if(UI.nav==="supplies") return capScreen("suppliesScreen");
   if(UI.nav==="customers") return customersScreen();
   /**
    * ⚠️⚠️ NOT AN ENTRY POINT — A DETAIL SCREEN. Athi, 2026-09-02: *"we have catalogue setup and set up your
