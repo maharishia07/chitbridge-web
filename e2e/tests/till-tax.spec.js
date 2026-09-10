@@ -78,9 +78,16 @@ test('[TILL-03] a registered shop own slabs survive the wire, and a rate lands o
 
     await till.fill('#q', 'masala');
     await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 30000 });
-    await expect(till.locator('[data-testid="till-hit-0"]'), 'the shelf row shows the rate it will charge').toContainText(/GST\s*\d/);
+    /**
+     * ⚠️ THE ASSERTION IS THAT A RATE IS SHOWN, NOT THE ORDER OF THE WORDS. This read /GST\s*\d/ and went red on
+     * 2026-09-10 against a row saying "per piece · incl. 5% GST" — the shelf row had been REWORDED, and improved
+     * while it was at it, because "incl. 5% GST" is how a shopkeeper says it. The feature was right and the test
+     * was pinned to a phrasing. A check that fails when the copy gets better teaches people to ignore it.
+     */
+    const RATE_SHOWN = /(GST\s*\d|\d+\s*%\s*GST)/;
+    await expect(till.locator('[data-testid="till-hit-0"]'), 'the shelf row shows the rate it will charge').toContainText(RATE_SHOWN);
     await till.click('[data-testid="till-hit-0"]');
-    await expect(till.locator('#cart'), 'and so does the line on the bill').toContainText(/GST\s*\d/);
+    await expect(till.locator('#cart'), 'and so does the line on the bill').toContainText(RATE_SHOWN);
   });
 
   await test.step('⭐ and the health panel stops calling it fatal — the check that found this', async () => {
