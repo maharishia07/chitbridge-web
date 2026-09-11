@@ -1887,7 +1887,7 @@ function matrixHTML(){
     /* ⭐ the break between the triad and what it rides on — an order is only a claim a reader can see */
     if (AREA_TIER[a] !== lastTier) {
       lastTier = AREA_TIER[a];
-      h += '<tr class="tier"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 6) + '">'
+      h += '<tr class="tier"><td colspan="' + (COLS.length + 6) + '">'
         + TIER_NAME[lastTier] + '</td></tr>';
     }
     var mopen = isOpenSection('mtx:' + a, 9);
@@ -1949,7 +1949,7 @@ function matrixHTML(){
           + (made.length - 60) + ' more</td></tr>';
         inner += '</tbody></table>';
       }
-      h += '<tr class="acases"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 7)
+      h += '<tr class="acases"><td colspan="' + (COLS.length + 6)
         + '">' + inner + '</td></tr>';
     }
   });
@@ -1967,9 +1967,8 @@ function matrixHTML(){
   if (unplaced) {
     h += '<tr class="unplaced"><td class="areacell"><span class="area">Not placed</span>'
        + '<span class="what">Tests that reach nothing this measurement can name — in the total, not in a row.</span></td>';
-    KINDS.forEach(function(t){
-      if (!colN[t]) return;
-      var un = CASES.filter(function(c){ return !(c.areas || []).length && c.test_type === t; }).length;
+    COLS.forEach(function(c){
+      var un = CASES.filter(function(x){ return !(x.areas || []).length && x.test_type === c.k; }).length;
       h += '<td class="num">' + (un ? '<span class="warnn">' + un + '</span>' : '<span class="dim">—</span>') + '</td>';
     });
     h += '<td class="num"><span class="dim">—</span></td><td class="sep"></td>'
