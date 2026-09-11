@@ -193,6 +193,25 @@
         padding:13px 16px; margin-bottom:16px; font-size:var(--fs-2); line-height:1.6; color:var(--ink-2); }
   .why-note b{ color:var(--ink); }
 
+  /* ── try it: run a pure function on your own input ── */
+  .try{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:14px 16px;
+        margin-bottom:12px; }
+  .try h3{ font-size:var(--fs-3); margin:0 0 3px; font-weight:600; }
+  .try .sig{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:var(--grey-2);
+        margin-bottom:9px; }
+  .try .row{ display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .try input[type=text]{ flex:1 1 220px; font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-2); }
+  .try .out{ margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--paper);
+        border:1px solid var(--line-2); font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-2);
+        white-space:pre-wrap; word-break:break-word; line-height:1.55; }
+  .try .out.bad{ background:var(--bad-tint); border-color:#eccbc9; color:var(--bad); }
+  .try .eg{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .try .eg button{ font:inherit; font-size:var(--fs-1); padding:3px 9px; border:1px solid var(--line);
+        background:var(--paper); border-radius:99px; cursor:pointer; color:var(--ink-2);
+        font-family:ui-monospace,Menlo,monospace; }
+  .try .eg button:hover{ background:var(--blue-tint); border-color:var(--blue); }
+  .gone{ color:var(--grey-2); font-size:var(--fs-2); }
+
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
@@ -224,6 +243,8 @@
       title="Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
     <button id="t_rel" onclick="setView('reliability')"
       title="How often each test has run, and how often it changed its answer">Reliability</button>
+    <button id="t_try" onclick="setView('try')"
+      title="Run a pure engine function on your own input, here, with no server">Try it</button>
   </div>
 </div>
 <div class="bar">
@@ -264,6 +285,32 @@
   <button class="btn" onclick="document.getElementById('f_file').click()" title="Load a .feature file — the Feature description becomes the spec clause">Import .feature</button>
   <input type="file" id="f_file" accept=".feature,.txt" style="display:none" onchange="importFeature(this)">
 </div>
+
+<!--
+  ⭐⭐⭐ THE ENGINES, LOADED INTO THE LAB SO A PERSON CAN RUN THEM.
+
+  Athi, 2026-09-11: "for automation test cases, or the function which does not require any database info, we
+  have to provide an execute function to run the test there itself and show the result — or if we need input,
+  provide an option to type input and test the result. So each function is validated by a human and confirmed."
+
+  ⚠️ THESE ARE PURE. Every one is Tier A — no database, no network, no session. That is exactly why they can
+  run in a page: the answer a person sees here is the SAME answer the counter gets, from the same file, with
+  no server in between to blame.
+
+  ⚠️ A guard proves a function against the inputs somebody thought of. This lets a person try the input they
+  actually have — which is the half no test suite can cover, because the suite has never met their data.
+-->
+<script src="/engine/money.js"></script>
+<script src="/engine/locale.js"></script>
+<script src="/engine/docnumber.js"></script>
+<script src="/engine/nums.js"></script>
+<script src="/engine/tax.js" onerror="void 0"></script>
+<script src="/engine/pricing.js" onerror="void 0"></script>
+<script src="/engine/offers.js" onerror="void 0"></script>
+<script src="/engine/rewards.js" onerror="void 0"></script>
+<script src="/engine/lots.js" onerror="void 0"></script>
+<script src="/engine/gs1.js" onerror="void 0"></script>
+<script src="/engine/search.js" onerror="void 0"></script>
 
 <main id="main"><div class="say">Reading the board…</div></main>
 
@@ -511,9 +558,11 @@ function setView(v){
   for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'cases') ? 'bar' : 'bar hide';
   document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
   document.getElementById('t_rel').className = (v === 'reliability') ? 'on' : '';
+  document.getElementById('t_try').className = (v === 'try') ? 'on' : '';
   if (v === 'summary') paintSummary();
   else if (v === 'report') paintReport();
   else if (v === 'reliability') paintReliability();
+  else if (v === 'try') paintTry();
   else paint();
 }
 
@@ -556,6 +605,224 @@ function pct(a, b){ return b ? Math.round((a / b) * 100) : 0; }
  * or deleted. Sorting by FLIPS puts the ones you cannot believe at the top, which is the order you want to
  * read them in.
  */
+/**
+ * ⭐⭐⭐ TRY IT — run a pure engine on your own input, here, with no server and no database.
+ *
+ * Athi, 2026-09-11: *"for automation test cases, or the function which does not require any database info, we
+ * have to provide an execute function to run the test there itself and show the result… so each function is
+ * validated by a human and confirmed."* And then, concretely: *"for example currency format testing — change the
+ * currency and it showcases the format, change the sender currency, change the receiver currency, so the
+ * combination is understood and also the said rule."*
+ *
+ * ⭐⭐ A GUARD PROVES A FUNCTION AGAINST THE INPUTS SOMEBODY THOUGHT OF. This lets a person try the input they
+ * ACTUALLY HAVE — which is the half no suite can cover, because the suite has never met their data. And it is
+ * the same file the counter runs: no server in between to blame for a difference.
+ */
+var TRY_OUT = {};
+
+function tryCard(id, title, sig, body, egs){
+  return '<div class="try" id="try_' + id + '"><h3>' + esc(title) + '</h3>'
+    + '<div class="sig">' + esc(sig) + '</div>'
+    + (egs ? '<div class="eg">' + egs + '</div>' : '')
+    + body
+    + '<div class="out" id="out_' + id + '">—</div></div>';
+}
+function trySay(id, text, bad){
+  var el = document.getElementById('out_' + id);
+  if (!el) return;
+  el.className = 'out' + (bad ? ' bad' : '');
+  el.textContent = text;
+}
+
+/**
+ * ⭐⭐⭐ CURRENCY — the combination, which is the only way the rule is visible.
+ *
+ * ⚠️⚠️ THE POINT OF SHOWING BOTH SIDES IS THAT THEY ARE THE SAME. An amount of money is CONTENT, not
+ * presentation: a chit travels, and the figure on it has to read the same to whoever opens it. So changing the
+ * READER changes nothing, and changing the CURRENCY changes everything — and a person can see that in one
+ * screen instead of being told it.
+ *
+ * ⭐ The third line is what the old rule would have produced, kept deliberately: "₹ grouped for a dollar" is
+ * abstract until you see $12,34,567.50 sitting under the right answer.
+ */
+function tryMoney(){
+  var amt = parseFloat((document.getElementById('tm_amt') || {}).value);
+  var cur = ((document.getElementById('tm_cur') || {}).value || 'INR').trim().toUpperCase();
+  var send = ((document.getElementById('tm_send') || {}).value || 'en-IN');
+  var recv = ((document.getElementById('tm_recv') || {}).value || 'en-US');
+  if (!isFinite(amt)) { trySay('money', 'Type an amount.', true); return; }
+  try {
+    var L2 = window.CBLocale;
+    if (!L2 || !L2.money) { trySay('money', 'The locale engine did not load.', true); return; }
+    var out = L2.money(amt, cur);
+    /* what each side would see if the READER decided — the rule we removed */
+    var asSender = new Intl.NumberFormat(send, { style: 'currency', currency: cur }).format(amt);
+    var asRecv = new Intl.NumberFormat(recv, { style: 'currency', currency: cur }).format(amt);
+    trySay('money',
+      'THE CHIT SAYS         ' + out + '\n' +
+      '  sender reads        ' + out + '\n' +
+      '  receiver reads      ' + out + '\n' +
+      (asSender === asRecv ? '' :
+        '\n\u26a0 if the READER decided instead \u2014 the rule we removed:\n' +
+        '  sender (' + send + ')  ' + asSender + '\n' +
+        '  receiver (' + recv + ')  ' + asRecv + '\n' +
+        '  \u2026one figure, two shapes, on a document that travels.') +
+      '\n\nrule: the CURRENCY groups the amount. ' +
+      (cur === 'INR' ? 'INR is lakh-grouped (2-2-3) \u2014 verified.'
+                     : cur + ' takes the international grouping (3-3-3).'));
+  } catch (e) { trySay('money', String(e.message || e), true); }
+}
+
+/** ⭐ NUMERALS — type what a customer actually said. This is the engine where `pathu kilo` once came back as 5. */
+function tryNums(){
+  var t = (document.getElementById('tn_text') || {}).value || '';
+  var N2 = window.CBNums;
+  if (!N2 || !N2.numeralsIn) { trySay('nums', 'The numerals engine did not load.', true); return; }
+  try {
+    var found = N2.numeralsIn(t).map(function (x) { return (x && x.value !== undefined) ? x.value : x; });
+    var neg = N2.negationIn ? N2.negationIn(t) : null;
+    var q = parseFloat((document.getElementById('tn_qty') || {}).value);
+    var v = (isFinite(q) && N2.verifyQuantity) ? N2.verifyQuantity(t, q) : null;
+    trySay('nums',
+      'numbers heard   ' + (found.length ? found.join(' \u00b7 ') : '(none)') + '\n' +
+      (neg ? 'negation        ' + (neg.ambiguous ? '\u26a0 AMBIGUOUS \u2014 ' + neg.reason
+                                 : (neg.negated ? 'REFUSED (\u201cdo not want\u201d)' : 'none')) + '\n' : '') +
+      (v ? '\nchecking ' + q + ':  ' + (v.ok ? (v.checked ? '\u2713 agrees' : '\u2014 nothing to check \u2014 ' + v.reason)
+                                             : '\u2717 DISAGREES \u2014 ' + v.reason) : '') +
+      '\n\n\u26a0 it VERIFIES, it never substitutes. A disagreement is a refusal with a reason, never a corrected number.');
+  } catch (e) { trySay('nums', String(e.message || e), true); }
+}
+
+/** ⭐ DOCUMENT NUMBER — the country decides the shape, and says when it has not been checked. */
+function tryDoc(){
+  var D = window.CBDoc;
+  if (!D || !D.compose) { trySay('doc', 'The docnumber engine did not load.', true); return; }
+  var c = ((document.getElementById('td_cty') || {}).value || 'IN').trim().toUpperCase();
+  var pre = ((document.getElementById('td_till') || {}).value || 'C1').trim();
+  var seq = parseInt((document.getElementById('td_seq') || {}).value, 10) || 1;
+  try {
+    var r = D.rules(c);
+    var lines = ['sale          ' + D.compose({ country: c, prefix: pre, seq: seq }),
+                 'goods receipt ' + D.compose({ country: c, prefix: pre, seq: seq, kind: 'receipt' }),
+                 'despatch      ' + D.compose({ country: c, prefix: pre, seq: seq, kind: 'despatch' })];
+    var checks = lines.map(function (l) {
+      var no = l.split(/\s+/).pop();
+      var k = D.check(no, c);
+      return l + '   ' + (k.ok ? '\u2713 ' + no.length + ' chars' : '\u2717 ' + k.reason);
+    });
+    trySay('doc', checks.join('\n') +
+      '\n\nrule: ' + r.name + '  \u00b7  till id at most ' + D.maxPrefix(c) + ' character(s)' +
+      '\n' + (r.verified ? '\u2713 these rules have been checked for ' + c
+                          : '\u26a0 NOT CHECKED for ' + c + ' \u2014 ' + r.says));
+  } catch (e) { trySay('doc', String(e.message || e), true); }
+}
+
+function setVal(id, v){ var el = document.getElementById(id); if (el) { el.value = v; } }
+
+/**
+ * ⭐⭐⭐ WHICH CASES CAN BE RUN ON THE SPOT.
+ *
+ * Athi, 2026-09-11: *"the try view can be in the header of the test case itself, so people know that they
+ * can press the button and run the test case."*
+ *
+ * ⭐⭐ HE IS RIGHT AND A SEPARATE TAB WAS THE WRONG PLACE. A tester works down a list of cases; a tool on
+ * another screen is a tool they have to remember exists, and nobody remembers a tab they have not needed
+ * yet. A ▶ on the case is an offer made at the moment it is useful.
+ *
+ * ⚠️ ONLY CASES WHOSE RULE IS A PURE FUNCTION. Most cases need a screen, a shop and a person — a Run button
+ * on those would be a promise the page cannot keep. These four are the ones where the engine IS the
+ * behaviour, so running it is genuinely the test rather than a demonstration beside it.
+ */
+var RUNNABLE = {
+  'RULE-05': 'money',   /* ISO 4217 — a price carries its own currency */
+  'RULE-06': 'money',   /* the CURRENCY groups the amount, not the reader */
+  'RULE-03': 'doc',     /* jurisdiction — the country decides the shape */
+  'ENG-01':  'nums',    /* numerals — the closed class */
+};
+
+/** the try card for one engine, rendered INSIDE an open case */
+function runnerHTML(which){
+  if (which === 'money') return tryCardMoney();
+  if (which === 'nums') return tryCardNums();
+  if (which === 'doc') return tryCardDoc();
+  return '';
+}
+
+/** ⭐ run whichever engine this case is about, then paint its answer */
+function runFor(which){
+  if (which === 'money') tryMoney();
+  else if (which === 'nums') tryNums();
+  else if (which === 'doc') tryDoc();
+}
+
+/* ⭐ ONE BUILDER PER ENGINE, so the same card can appear on a case and on the Try tab. Two copies of a
+   control is how two controls drift into disagreeing about what the engine does. */
+function tryCardMoney(){
+  return tryCard('money', 'Currency \u00b7 the same figure, whoever reads it',
+    'CBLocale.money(amount, currencyCode)',
+    '<div class="row">'
+    + '<input type="text" id="tm_amt" value="1234567.5" style="flex:0 0 130px">'
+    + '<select id="tm_cur" onchange="tryMoney()">'
+    +   ['INR','USD','AED','EUR','GBP','JPY','KWD','SGD','LKR','PKR'].map(function(c){
+          return '<option' + (c === 'INR' ? ' selected' : '') + '>' + c + '</option>'; }).join('')
+    + '</select>'
+    + '<span class="dim" style="font-size:var(--fs-1)">sender</span>'
+    + '<select id="tm_send" onchange="tryMoney()">'
+    +   ['en-IN','en-US','en-GB','de-DE','ar-AE','ta-IN'].map(function(c){ return '<option>' + c + '</option>'; }).join('')
+    + '</select>'
+    + '<span class="dim" style="font-size:var(--fs-1)">receiver</span>'
+    + '<select id="tm_recv" onchange="tryMoney()">'
+    +   ['en-US','en-IN','en-GB','de-DE','ar-AE','ja-JP'].map(function(c){ return '<option>' + c + '</option>'; }).join('')
+    + '</select>'
+    + '<button class="btn pri" onclick="tryMoney()">Run</button></div>',
+    ['1234567.5 INR', '1234567.5 USD', '1234567 JPY', '1234567.5 KWD'].map(function (e) {
+      var b = e.split(' ');
+      return '<button onclick="setVal(\'tm_amt\',\'' + b[0] + '\');setVal(\'tm_cur\',\'' + b[1] + '\');tryMoney()">'
+        + esc(e) + '</button>'; }).join(''));
+}
+
+function tryCardNums(){
+  return tryCard('nums', 'Numerals \u00b7 what a customer actually said',
+    'CBNums.numeralsIn(text) \u00b7 verifyQuantity(text, qty) \u00b7 negationIn(text)',
+    '<div class="row">'
+    + '<input type="text" id="tn_text" value="pathu kilo thakkali">'
+    + '<span class="dim" style="font-size:var(--fs-1)">check qty</span>'
+    + '<input type="text" id="tn_qty" value="10" style="flex:0 0 70px">'
+    + '<button class="btn pri" onclick="tryNums()">Run</button></div>',
+    [['pathu kilo thakkali','10'], ['oru watter bottle','1'], ['dr fix oru 4 packet','4'],
+     ['chicken oru 10 piece','10'], ['3 kg thakkali and 10kg onion','10'], ['thakkali venam','']]
+      .map(function (e) {
+        return '<button onclick="setVal(\'tn_text\',\'' + e[0] + '\');setVal(\'tn_qty\',\'' + e[1] + '\');tryNums()">'
+          + esc(e[0]) + '</button>'; }).join(''));
+}
+
+function tryCardDoc(){
+  return tryCard('doc', 'Document number \u00b7 the country decides the shape',
+    'CBDoc.compose({country, prefix, kind, seq}) \u00b7 check(number, country)',
+    '<div class="row">'
+    + '<span class="dim" style="font-size:var(--fs-1)">country</span>'
+    + '<input type="text" id="td_cty" value="IN" style="flex:0 0 70px">'
+    + '<span class="dim" style="font-size:var(--fs-1)">till</span>'
+    + '<input type="text" id="td_till" value="C1" style="flex:0 0 80px">'
+    + '<span class="dim" style="font-size:var(--fs-1)">no.</span>'
+    + '<input type="text" id="td_seq" value="41" style="flex:0 0 80px">'
+    + '<button class="btn pri" onclick="tryDoc()">Run</button></div>',
+    [['IN','C1','41'], ['IN','ABCDEF','41'], ['AE','C1','41'], ['IN','C1','9999999']]
+      .map(function (e) {
+        return '<button onclick="setVal(\'td_cty\',\'' + e[0] + '\');setVal(\'td_till\',\'' + e[1]
+          + '\');setVal(\'td_seq\',\'' + e[2] + '\');tryDoc()">' + esc(e.join(' / ')) + '</button>'; }).join(''));
+}
+
+function paintTry(){
+  var h = '<div class="why-note"><b>Run the real engine on your own input.</b> These are the same '
+    + 'files the counter runs \u2014 pure, no server, no database, nothing stored. A guard proves a function '
+    + 'against the inputs somebody thought of; this is for the input you actually have.</div>';
+  h += tryCardMoney() + tryCardNums() + tryCardDoc();
+  document.getElementById('main').innerHTML = h;
+  /* ⭐ run all three straight away — a page of empty boxes teaches nothing; a page of worked answers does */
+  try { tryMoney(); tryNums(); tryDoc(); } catch (_) {}
+}
+
 async function paintReliability(){
   document.getElementById('main').innerHTML = '<div class="say">Reading the history…</div>';
   var r;
@@ -954,6 +1221,22 @@ function caseHTML(c){
                   + '; this case cites v' + STALE[c.case_key].cited_version + '.')
             + '">spec moved</span>'
           : '')
+    /**
+     * ⭐⭐⭐ THE OFFER IS MADE ON THE CASE, not on a tab somebody has to remember exists.
+     *
+     * Athi: *"the try view can be in the header of the test case itself, so people know that they can press
+     * the button and run the test case."* A tester works down a list; a tool on another screen is a tool
+     * they have not needed yet and will not think of.
+     *
+     * ⚠️ ONLY WHERE THE ENGINE *IS* THE BEHAVIOUR. A ▶ on a case that needs a shop, a screen and a person
+     * would be a promise the page cannot keep — and a button that does less than it looks like it does is
+     * worse than no button.
+     */
+    +   (RUNNABLE[c.case_key]
+          ? '<button class="btn" title="Run this here \u2014 the real engine, your own input, no server" '
+            + 'onclick="event.stopPropagation();runCase(\'' + esc(c.case_key) + '\')" '
+            + 'style="padding:2px 9px;font-weight:700;color:var(--blue);border-color:var(--blue)">\u25b6 Run</button>'
+          : '')
     +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
     +   '<span class="pri">' + esc(c.priority || '') + '</span>'
     + '</div>';
@@ -969,6 +1252,8 @@ function caseHTML(c){
       h += '</table>';
     }
     if (c.note) h += '<div class="note">' + esc(c.note) + '</div>';
+    /* ⭐ the engine, inline, above the verdict buttons — so the answer and the verdict are in one glance */
+    if (RUNNABLE[c.case_key]) h += runnerHTML(RUNNABLE[c.case_key]);
 
     h += '<div class="acts">'
       +  '<input type="text" id="n_' + esc(c.case_key) + '" placeholder="What did you see? (kept with the result)">'
@@ -982,6 +1267,19 @@ function caseHTML(c){
       + '</div>';
   }
   return h + '</article>';
+}
+
+/**
+ * ⭐ Pressing ▶ opens the case AND runs it, because a tester who pressed Run wants the answer, not a form.
+ * ⚠ The run happens after the paint — the inputs do not exist until the case is open.
+ */
+function runCase(k){
+  OPEN[k] = true;
+  paint();
+  var which = RUNNABLE[k];
+  if (which) setTimeout(function(){ try { runFor(which); } catch (_) {} }, 0);
+  var el = document.getElementById('c_' + k);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 function toggle(k){ OPEN[k] = !OPEN[k]; repaintCase(k); }
