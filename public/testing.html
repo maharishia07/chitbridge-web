@@ -126,7 +126,7 @@
   .say{ padding:14px; background:var(--card); border:1px solid var(--line); border-radius:10px; line-height:1.6; }
   .say b{ display:block; margin-bottom:5px; }
   /* ── the summary: coverage by area, and the sittings ── */
-  .tabs{ display:flex; gap:4px; }
+  .tabs{ display:flex; flex-wrap:wrap; gap:4px;   /* ⚠ five tabs need ~430px and a phone is 360 */ }
   .tabs button{ font:inherit; font-size:var(--fs-2); padding:6px 13px; border:1px solid var(--line);
         background:var(--card); color:var(--grey-2); border-radius:8px; cursor:pointer; min-height:32px; }
   .tabs button.on{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
@@ -178,6 +178,9 @@
   .pnum{ font-size:var(--fs-1); font-variant-numeric:tabular-nums; color:var(--grey-2); }
   /* ⚠️ a column we KNOW should exist and does not carries its zero in the heading, so the gap is not silence */
   .zeroflag{ font-style:normal; color:var(--warn); font-weight:700; }
+  /* ⭐ n/a means NOBODY CAN, and it must not look like the dash that means nobody has yet */
+  .na{ font-size:var(--fs-1); color:var(--grey-2); border-bottom:1px dotted var(--grey-2); cursor:help;
+       font-style:italic; }
   .scroll{ overflow-x:auto; }
 
   /* ── the completion report ── */
@@ -356,15 +359,22 @@
 <div class="bar chips" id="f_chips"></div>
 
 <div class="bar">
-  <label for="f_kind">Recording as</label>
+  <!--
+    ⚠️⚠️ THIS DROPDOWN IS THE ORIGINAL COMPLAINT, UNTOUCHED UNTIL NOW. Athi: *"I spent time to understand what
+    each dropdown is"* — and *"T1, T2 are the test yardsticks for YOU"*. T0-T3 are how much of the suite I run
+    before shipping and who authorises it. They are MY working discipline, not a word a tester should have to
+    decode while holding a shop's till.
+    ⭐ So each option now says what it means in the option itself, and the internal ones say whose they are.
+  -->
+  <label for="f_kind">This run is</label>
   <select id="f_kind" onchange="saveRun()">
-    <option value="manual">Manual</option>
-    <option value="t0">T0 · guard</option>
-    <option value="t1">T1 · one spec</option>
-    <option value="t2">T2 · scoped</option>
-    <option value="t3">T3 · full</option>
-    <option value="unit">Unit</option>
-    <option value="regression">Regression</option>
+    <option value="manual" title="A person working through cases on this screen.">Someone testing by hand</option>
+    <option value="unit" title="An automated suite reporting itself — what the Post a run button records.">An automated run</option>
+    <option value="regression" title="Everything, re-run to check nothing that worked has stopped working.">A full regression</option>
+    <option value="t0" title="Claude's own ladder: browser check + parse + static guards, ~30s, run on every change.">T0 · Claude's quick check</option>
+    <option value="t1" title="Claude's own ladder: the one spec for what just changed, ~50s.">T1 · Claude, one spec</option>
+    <option value="t2" title="Claude's own ladder: every spec for that surface, ~7 min, run on leaving a panel.">T2 · Claude, one surface</option>
+    <option value="t3" title="Claude's own ladder: everything, ~55 min. Athi decides when.">T3 · Claude, everything</option>
   </select>
   <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
   <label for="f_who">Tester</label>
@@ -594,7 +604,15 @@ async function importResults(input){
   var files = input && input.files ? [].slice.call(input.files) : [];
   input.value = '';
   if (!files.length) return;
-  var kind = document.getElementById('f_kind').value || 'unit';
+  /**
+   * ⚠️⚠️ A MACHINE'S RESULTS MUST NEVER BE RECORDED AS A PERSON'S. This took whatever the 'This run is'
+   * dropdown happened to hold, and that dropdown DEFAULTS TO MANUAL — so dropping a suite's XML would have
+   * filed 185 automated results as somebody's hand-testing, and the board would have reported human
+   * coverage that never happened. A JUnit file is by definition automated; the only choice worth offering
+   * is whether it was a routine run or a full regression.
+   */
+  var picked = document.getElementById('f_kind').value;
+  var kind = (picked === 'regression') ? 'regression' : 'unit';
   var done = 0, rows = 0, missed = 0, skipped = 0;
   for (var i = 0; i < files.length; i++) {
     try {
@@ -817,6 +835,32 @@ var ALWAYS_SHOW = { penetration: true };
 var AREA_ORDER = ['api', 'middleware', 'engine', 'web', 'database', 'connector'];
 var AREA_LABEL = { api: 'API', middleware: 'Middleware', engine: 'Engine', web: 'Web',
                    database: 'Database', connector: 'Connector' };
+/**
+ * ── ⭐⭐⭐ WHERE A PERSON CANNOT BE THE EVIDENCE ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"same thing applies for each other area like middleware — we cannot really test it, it is
+ * the code or the tester does it."*
+ *
+ * ⚠️⚠️ HE IS RIGHT AND THE TABLE WAS LYING BY OMISSION. Middleware's Manual column is empty and so is a column
+ * for something nobody has got round to — and they rendered identically, as a dash. But there is no button
+ * that forges a token, no screen that exhausts a rate limit, no click that proves one tenant cannot read
+ * another's rows. A tester cannot produce that evidence at all, so an empty cell there is CORRECT, and reading
+ * it as a gap sends somebody off to write cases that can never be executed.
+ *
+ * ⭐ Engine is the opposite and worth the contrast: the arithmetic is a guard's job, but a person can see the
+ * price on the bill and say it is wrong. So Engine's 35 manual cases are real evidence of a different kind.
+ *
+ * ⚠️ THIS IS A DECLARED JUDGEMENT, not a measurement — the only one on this screen. It can go stale if the
+ * product grows a way to exercise middleware from a screen, which is why it is four lines somebody can read
+ * rather than a rule buried in a scoring function.
+ */
+var NO_MANUAL = {
+  middleware: 'No screen can forge a token, pin an algorithm or prove tenant isolation. '
+            + 'This evidence can only be automated — an empty cell here is correct, not a gap.',
+  database: 'Schema, migrations and RLS policies are not reachable from a screen. '
+          + 'A person sees the consequence, never the policy.',
+};
+
 var AREA_SAYS = {
   api: 'The endpoints — everything a client can call.',
   middleware: 'What decides who may do what: auth, the hat gate, the key scopes.',
@@ -868,7 +912,17 @@ function tally(){
   if (n.todo)    h += '<span class="t todo"><b>' + n.todo + '</b> not yet tested</span>';
   var staleN = CASES.filter(function (c) { return STALE[c.case_key]; }).length;
   if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
-  h += '<span class="t">' + CASES.length + ' cases</span>';
+  /**
+   * ⚠️⚠️ TWO TOTALS ON ONE SCREEN THAT DISAGREE IS WORSE THAN ONE THAT IS WRONG.
+   *
+   * This ladder counts ALL cases; the toolbar totals count what the filters have left. Pick Kind = unit and
+   * the two "not yet tested" numbers differ, side by side, styled identically, with nothing saying why —
+   * inside the control built to answer *"how many completed, how many remaining"*.
+   * ⭐ So this one says what it is counting, every time, and steps back when a filter is on.
+   */
+  var filtered = shown().length !== CASES.length;
+  h += '<span class="t whole">' + CASES.length + ' cases in all'
+     + (filtered ? ' <i>— the numbers beside the filters count what is left</i>' : '') + '</span>';
   /**
    * ⭐⭐ THE LADDER, ALWAYS VISIBLE — and it is an honest counterweight to the total beside it.
    *
@@ -877,7 +931,10 @@ function tally(){
    */
   var ty = {};
   CASES.forEach(function(c){ if (c.test_type) ty[c.test_type] = (ty[c.test_type] || 0) + 1; });
-  ['acceptance','unit','integration','system','static','support'].forEach(function(k){
+  /* ⚠️ THE LADDER MUST BE THE WHOLE VOCABULARY. It was a hand-written list that omitted performance and
+     security, so two kinds counted toward the total beside it and appeared in no pill — a breakdown that
+     silently does not add up. KIND_ORDER is the one list; there is no second copy to forget. */
+  KIND_ORDER.forEach(function(k){
     if (!ty[k]) return;
     h += '<span class="t" style="cursor:pointer" title="' + esc(LEVEL_SAYS[k] || '')
        + '" onclick="document.getElementById(\'f_type\').value=\'' + k + '\';paint()"><b>'
@@ -1335,7 +1392,7 @@ var CHART_TONES = [
   ['passed', 'var(--ok)'],
   ['failed', 'var(--bad)'],
   ['blocked', 'var(--warn)'],
-  ['untested', 'var(--flat)'],
+  ['untested', 'var(--line)'],   /* ⚠ was var(--flat), which is defined nowhere — an undefined custom property paints an SVG fill BLACK, and untested is the largest slice on every one of these charts */
 ];
 
 function chartLegend(keys){
@@ -1474,17 +1531,27 @@ function matrixHTML(){
   ];
 
   var cell = {}, rowAll = {}, rowDone = {}, colN = {}, unplaced = 0, unplacedDone = 0;
+  /**
+   * ⚠️⚠️ SUPPORT FILES ARE OUT OF THE DENOMINATOR, OR 100% IS UNREACHABLE FOREVER.
+   *
+   * A fixture is not a test and can never report a result, so 27 of them sitting in the total would hold the
+   * completion percentage permanently below 96% for a reason that has nothing to do with testing. ⭐ A
+   * percentage that cannot reach 100 teaches people to ignore it, which costs more than the number is worth.
+   * They stay COUNTED in the Support column and in the case list — they are simply not pretended to be pending.
+   */
+  var testable = function(c){ return c.test_type !== 'support'; };
   CASES.forEach(function(c){
     var t = c.test_type || '?';
     var done = !!LAST[c.case_key];
     colN[t] = (colN[t] || 0) + 1;
     var list = (c.areas || []);
-    if (!list.length) { unplaced++; if (done) unplacedDone++; return; }
+    if (!list.length) { if (testable(c)) { unplaced++; if (done) unplacedDone++; } return; }
     /* ⚠️ a test reaching two areas is counted in both — the rows do not sum to the total, and the note says so */
     list.forEach(function(a){
+      cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
+      if (!testable(c)) return;
       rowAll[a] = (rowAll[a] || 0) + 1;
       if (done) rowDone[a] = (rowDone[a] || 0) + 1;
-      cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
     });
   });
 
@@ -1502,7 +1569,10 @@ function matrixHTML(){
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
     + 'Rows are where a test reaches; columns are what kind it is. <b>Done</b> means a result has ever been '
     + 'recorded — not that it passed. ⚠️ A test reaching two areas is counted in both, so the rows do not add '
-    + 'up to ' + CASES.length + '. Click any number to open exactly those cases.</div>'
+    + 'up to ' + CASES.length + '. <b>n/a</b> means nobody CAN produce that evidence — no screen forges a '
+    + 'token — as against <b>—</b>, which means nobody has. Support files are counted but left out of the '
+    + 'percentage: a fixture can never report a result, and a figure that cannot reach 100% gets ignored. '
+    + 'Click any number to open exactly those cases.</div>'
     + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
   COLS.forEach(function(c){
     h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '">'
@@ -1517,16 +1587,20 @@ function matrixHTML(){
        + '<span class="sub">' + esc(AREA_SAYS[a] || '') + '</span></td>';
     COLS.forEach(function(c){
       var n = cell[a + '|' + c.k] || 0;
+      /* ⭐ "nobody can" is not "nobody has" — see NO_MANUAL */
+      var impossible = (c.k === 'acceptance' || c.k === 'uat') && NO_MANUAL[a] && !n;
       h += '<td class="num">' + (n
         ? '<span class="big clickable" onclick="drill(\'' + a + '\',\'' + c.k + '\')">' + n + '</span>'
-        : '<span class="dim">—</span>') + '</td>';
+        : (impossible ? '<span class="na" title="' + esc(NO_MANUAL[a]) + '">n/a</span>'
+                      : '<span class="dim">—</span>')) + '</td>';
     });
     h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
     h += '</tr>';
   });
 
   /* ── the bottom line ── */
-  var allDone = CASES.filter(function(c){ return LAST[c.case_key]; }).length;
+  var allTestable = CASES.filter(testable);
+  var allDone = allTestable.filter(function(c){ return LAST[c.case_key]; }).length;
   h += '<tr class="foot"><td><b>Everything</b></td>';
   COLS.forEach(function(c){
     var n = colN[c.k] || 0;
@@ -1534,7 +1608,7 @@ function matrixHTML(){
       ? '<b class="clickable" onclick="drill(\'\',\'' + c.k + '\')">' + n + '</b>'
       : '<span class="dim">0</span>') + '</td>';
   });
-  h += '<td class="sep"></td>' + barCell(allDone, CASES.length) + '</tr>';
+  h += '<td class="sep"></td>' + barCell(allDone, allTestable.length) + '</tr>';
   h += '</table></div>';
 
   /* ⚠️ what the table could not place, said out loud rather than absorbed into a row */
