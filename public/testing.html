@@ -1127,12 +1127,13 @@ var ALWAYS_SHOW = { penetration: true };
  * column exists to carry. The engine holds RULES; the API holds ENDPOINTS; the database holds MIGRATIONS.
  * ⚠️ "Built" counts what EXISTS, not what is tested — the two numbers sit side by side on purpose.
  */
+/* ⭐ the database row lists TABLES now, not the migrations that made them (Athi, 2026-09-11) */
 var BUILT_NOUN = { engine: 'rules', middleware: 'gates', web: 'screens', api: 'route files',
-                   database: 'migrations', connector: 'adapters' };
+                   database: 'tables', connector: 'adapters' };
 var BUILT_HEAD = { engine: 'Rule', middleware: 'Gate', web: 'Screen', api: 'Route file',
-                   database: 'Migration', connector: 'Adapter' };
+                   database: 'Table', connector: 'Adapter' };
 var BUILT_NOTE = { engine: 'Size', middleware: 'Size', web: 'Size', api: 'Function points',
-                   database: '', connector: 'Size' };
+                   database: 'Columns', connector: 'Size' };
 var CONTENTS = null;
 /**
  * ⭐⭐ WHAT EACH ROW LEAVES OUT. Athi, 2026-09-11, on IoT: *"not an explicit stuff, it is part of
