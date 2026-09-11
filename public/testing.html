@@ -86,8 +86,26 @@
   .pri{ font-size:var(--fs-1); color:var(--grey-2); white-space:nowrap; }
   .lay{ font-size:var(--fs-1); border:1px solid var(--line); border-radius:99px; padding:1px 7px; color:var(--grey-2);
         background:var(--paper); white-space:nowrap; }
+  /* ⭐ the kind reads at a glance, and the WIDTH of the ladder is the point: acceptance is the darkest because
+     it is the only evidence a customer would recognise; support is the faintest because it proves nothing. */
+  .lay.ty{ font-weight:700; letter-spacing:.02em; }
+  .lay.ty.acceptance { color:#1d4ed8; border-color:#c3d4fb; background:#f2f6ff; }
+  .lay.ty.system     { color:#0f766e; border-color:#bfe0dc; background:#f1faf8; }
+  .lay.ty.integration{ color:#7c4a03; border-color:#e8d7ae; background:#fdf8ee; }
+  .lay.ty.unit       { color:#3f6212; border-color:#d3e3b8; background:#f6faf0; }
+  .lay.ty.static     { color:#5b5b66; border-color:var(--line); background:var(--paper); }
+  .lay.ty.support    { color:var(--grey-2); border-style:dashed; background:transparent; }
 
   .body{ padding:0 11px 11px; border-top:1px solid var(--line-2); }
+  /* ⭐ the four project-manager facts, side by side and wrapping — a grid so the labels line up down the page */
+  .facts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1px;
+          background:var(--line-2); border:1px solid var(--line-2); margin:9px 0 2px; }
+  .facts > div{ background:var(--paper); padding:7px 9px; }
+  .facts dt{ font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em; color:var(--grey-2);
+             font-weight:700; margin:0 0 2px; }
+  .facts dd{ margin:0; font-size:var(--fs-1); color:var(--ink-2); line-height:1.5; }
+  .facts dd.mono{ font-family:ui-monospace,Consolas,monospace; }
+  .facts dd i.dim{ color:var(--grey-2); }
   .meta{ font-size:var(--fs-1); color:var(--grey-2); margin:8px 0; line-height:1.6; }
   .meta b{ color:var(--ink-2); }
   table.steps{ width:100%; border-collapse:collapse; font-size:var(--fs-2); margin:6px 0 2px; }
@@ -256,6 +274,42 @@
     <option value="todo">Not yet tested</option>
     <option value="fail">Failed or blocked</option>
     <option value="pass">Passed</option>
+  </select>
+  <!--
+    ⭐⭐ Athi, 2026-09-11: "say it is unit, integration and so on."
+    ⚠️ THE LEVELS ARE NOT INTERCHANGEABLE AND THE TITLES SAY SO. A green unit test and a green system test are
+    not the same amount of evidence, and the commonest way a coverage figure lies is by adding them together.
+  -->
+  <label for="f_type">Kind</label>
+  <select id="f_type" onchange="paint()">
+    <option value="">Every kind</option>
+    <option value="acceptance" title="A person deciding whether it does the job — the only kind that finds &quot;correct but useless&quot;">Acceptance · written for a person</option>
+    <option value="unit" title="One module on its own. Proves that function, and nothing about the product.">Unit</option>
+    <option value="integration" title="Several of our pieces wired together — a route over a stubbed database.">Integration</option>
+    <option value="system" title="The whole product: a real browser, a live API, or a real database.">System</option>
+    <option value="static" title="Reads the source and judges the text. Nothing is executed — real evidence, of a different thing.">Static · reads the code</option>
+    <option value="support" title="Not a test. A fixture or harness other tests stand on.">Support · not a test</option>
+  </select>
+  <!--
+    ⭐⭐ AREA IS NOT MODULE. A test SITS in a module and REACHES into areas — api, middleware, engine, web,
+    database, connector. ⚠️ It is a visible control rather than hidden state set by the summary: an invisible
+    filter is a board quietly showing a third of itself while looking complete.
+  -->
+  <label for="f_area">Reaches</label>
+  <select id="f_area" onchange="paint()">
+    <option value="">Anywhere</option>
+    <option value="api">API</option>
+    <option value="middleware">Middleware</option>
+    <option value="engine">Engine</option>
+    <option value="web">Web</option>
+    <option value="database">Database</option>
+    <option value="connector">Connector</option>
+  </select>
+  <label for="f_auto">By</label>
+  <select id="f_auto" onchange="paint()">
+    <option value="">Anyone</option>
+    <option value="auto">The machine</option>
+    <option value="human">A person</option>
   </select>
   <input type="text" id="f_q" placeholder="Search a case…" oninput="paint()">
 </div>
@@ -498,19 +552,88 @@ async function load(){
   }
 }
 
+/**
+ * ⭐⭐⭐ THE MODULE LIST COUNTS WHAT IS LEFT AFTER THE FILTERS ABOVE IT, NOT EVERYTHING.
+ *
+ * Athi, 2026-09-11: *"so my first filter would be that — just click unit, then it filters based on the next
+ * level, how many use cases etc."*
+ *
+ * ⚠️⚠️ A DROPDOWN THAT KEEPS SHOWING THE UNFILTERED COUNT IS WORSE THAN ONE SHOWING NO COUNT. Pick `unit` and a
+ * static list still offers `CTR · Counter (18)` — eighteen cases that are not units, promising a drill-down it
+ * cannot deliver. Recomputed, the same list offers only the directories that actually hold unit tests, with how
+ * many, which is the whole of what a drill-down is.
+ *
+ * ⚠️ IT EXCLUDES ITS OWN FILTER. Counting with the module filter applied would leave exactly one option — the
+ * one already chosen — and there would be no way back up.
+ */
 function fillModules(){
-  var sel = document.getElementById('f_mod'), seen = {};
-  CASES.forEach(function(c){ if (!seen[c.module_key]) { seen[c.module_key] = c.module_name || c.module_key;
-    var o = document.createElement('option'); o.value = c.module_key;
-    o.textContent = c.module_key + ' · ' + (c.module_name || ''); sel.appendChild(o); } });
+  var sel = document.getElementById('f_mod');
+  var keep = sel.value;
+  var ty = (document.getElementById('f_type') || {}).value || '';
+  var au = (document.getElementById('f_auto') || {}).value || '';
+  var st = (document.getElementById('f_state') || {}).value || '';
+  var ar = (document.getElementById('f_area') || {}).value || '';
+
+  var n = {}, name = {}, order = [];
+  CASES.forEach(function(c){
+    if (ty && c.test_type !== ty) return;
+    if (ar && (c.areas || []).indexOf(ar) < 0) return;
+    if (au === 'auto' && !c.automated) return;
+    if (au === 'human' && c.automated) return;
+    var last = LAST[c.case_key];
+    if (st === 'todo' && last) return;
+    if (st === 'pass' && (!last || last.status !== 'pass')) return;
+    if (st === 'fail' && (!last || (last.status !== 'fail' && last.status !== 'blocked'))) return;
+    if (!n[c.module_key]) { n[c.module_key] = 0; name[c.module_key] = c.module_name || ''; order.push(c.module_key); }
+    n[c.module_key]++;
+  });
+
+  /* ⚠ rebuilt from scratch — appending to a list that already has options is how a dropdown comes to offer the
+     same module three times after a reload. */
+  sel.innerHTML = '<option value="">All areas</option>';
+  order.forEach(function(k){
+    var o = document.createElement('option'); o.value = k;
+    o.textContent = k + ' · ' + name[k] + '  (' + n[k] + ')';
+    sel.appendChild(o);
+  });
+  /* ⚠ a chosen module that the new filter excludes must stay selectable, or choosing a kind silently widens the
+     board back out without saying it did */
+  if (keep && !n[keep]) {
+    var o = document.createElement('option'); o.value = keep;
+    o.textContent = keep + '  (0 of this kind)'; sel.appendChild(o);
+  }
+  sel.value = keep;
 }
+
+/**
+ * ⭐⭐ WHAT EACH LEVEL IS WORTH, in one sentence, on the badge itself.
+ *
+ * ⚠️ These are not decoration. The commonest way a coverage number misleads is by adding a unit test to a system
+ * test and reporting "2 passed" — and the person reading it has no way to know that one of them proved a
+ * function and the other proved the product. The tooltip is where that stops being invisible.
+ */
+var LEVEL_SAYS = {
+  unit: 'Unit — one module, on its own. Proves that function, and nothing about the product.',
+  integration: 'Integration — several of our pieces wired together (a route over a stubbed database).',
+  system: 'System — the whole product: a real browser, a live API, or a real database.',
+  acceptance: 'Acceptance — a person deciding whether it does the job. The only kind that finds "correct but useless".',
+  'static': 'Static — reads the source and judges the TEXT. Nothing is executed; real evidence, of a different thing.',
+  support: 'Support — not a test. A fixture or harness other tests stand on.',
+};
 
 function shown(){
   var mod = document.getElementById('f_mod').value;
   var st = document.getElementById('f_state').value;
+  var ty = document.getElementById('f_type').value;
+  var au = document.getElementById('f_auto').value;
+  var ar = document.getElementById('f_area').value;
   var q = document.getElementById('f_q').value.trim().toLowerCase();
   return CASES.filter(function(c){
     if (mod && c.module_key !== mod) return false;
+    if (ty && c.test_type !== ty) return false;
+    if (ar && (c.areas || []).indexOf(ar) < 0) return false;
+    if (au === 'auto' && !c.automated) return false;
+    if (au === 'human' && c.automated) return false;
     var last = LAST[c.case_key];
     if (st === 'todo' && last) return false;
     if (st === 'pass' && (!last || last.status !== 'pass')) return false;
@@ -532,6 +655,20 @@ function tally(){
   var staleN = CASES.filter(function (c) { return STALE[c.case_key]; }).length;
   if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
   h += '<span class="t">' + CASES.length + ' cases</span>';
+  /**
+   * ⭐⭐ THE LADDER, ALWAYS VISIBLE — and it is an honest counterweight to the total beside it.
+   *
+   * ⚠️ 608 cases sounds like a lot until you see that 238 of them are system tests nobody runs unattended and 29
+   * are not tests at all. The shape matters more than the count, and the shape should not need a click.
+   */
+  var ty = {};
+  CASES.forEach(function(c){ if (c.test_type) ty[c.test_type] = (ty[c.test_type] || 0) + 1; });
+  ['acceptance','unit','integration','system','static','support'].forEach(function(k){
+    if (!ty[k]) return;
+    h += '<span class="t" style="cursor:pointer" title="' + esc(LEVEL_SAYS[k] || '')
+       + '" onclick="document.getElementById(\'f_type\').value=\'' + k + '\';paint()"><b>'
+       + ty[k] + '</b> ' + k + '</span>';
+  });
   document.getElementById('tally').innerHTML = h;
 }
 
@@ -1062,6 +1199,139 @@ function chartCard(title, ask, body, keys){
 }
 
 /** the four charts — each answers a different question, which is why there are four */
+/**
+ * ── ⭐⭐⭐ WHAT KIND OF TESTING EACH AREA HAS, AND WHAT IT HAS NONE OF ────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"just click unit, then it filters based on the next level, how many use cases etc."*
+ *
+ * ⚠️⚠️ AND THE FIRST THING THIS TABLE SHOWS IS A FAULT IN THE BOARD, NOT IN THE PRODUCT. It comes out almost
+ * perfectly diagonal: the written areas (CTR, SELL, REW…) hold only acceptance cases, and the code areas
+ * (chitbridge-api/tests, chitbridge-web/e2e) hold only automated ones. That is not a finding about testing —
+ * it is the two halves of the board using two different vocabularies. A case is filed by PRODUCT MODULE; a
+ * guard is filed by DIRECTORY, because a file path is the only identity a guard has.
+ *
+ * ⭐ So "does the Counter have unit tests?" is a question this cannot answer yet: a counter unit test lives in
+ * `chitbridge-web/e2e` by path and under `CTR` by meaning, and nothing connects the two. Naming what is missing
+ * is worth more than a table that looks full — see TEST-BOARD-GUIDE.md.
+ *
+ * ⚠️ IT COUNTS CASES, NOT PASSES, and says so. Coverage of intention, not of evidence — the table below it is
+ * where verdicts live. Conflating the two is how a board comes to report a number nobody meant.
+ *
+ * ⚠️ Computed from CASES, which is already in hand: a matrix like this over a server round trip would be a
+ * second source of truth for a figure the page can add up itself.
+ */
+function matrixHTML(){
+  var KINDS = ['acceptance', 'unit', 'integration', 'system', 'static', 'support'];
+  var AREAS = ['api', 'middleware', 'engine', 'web', 'database', 'connector'];
+  var cell = {}, rowN = {}, colN = {}, none = 0;
+  CASES.forEach(function(c){
+    var t = c.test_type || '?';
+    colN[t] = (colN[t] || 0) + 1;
+    var ar = c.areas || [];
+    if (!ar.length) { none++; return; }
+    /* ⚠️ a test reaching two areas is counted in BOTH, so the rows do not sum to the total — said below */
+    ar.forEach(function(a){
+      rowN[a] = (rowN[a] || 0) + 1;
+      cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
+    });
+  });
+  if (!Object.keys(rowN).length) return '';
+
+  /**
+   * ── ⭐⭐⭐ HAS IT EVER ACTUALLY RUN? ──────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11: *"if a unit test is done, can we update it with when it last ran, so we know that this
+   * test case has been passed through?"*
+   *
+   * ⚠️⚠️ THE COUNT OF TESTS AND THE COUNT OF EVIDENCE ARE DIFFERENT NUMBERS, AND THE FIRST ONE FLATTERS. 97
+   * unit tests is a fact about the repository. How many of them have ever reported a result is a fact about
+   * the product, and it is the one a person asking "is this tested?" actually means.
+   *
+   * ⭐ NEVER RUN is therefore the column to read, not the pass rate. A level that is 100% green on four of
+   * ninety-seven is not 100% of anything.
+   */
+  var lvl = {};
+  CASES.forEach(function(c){
+    var t = c.test_type || '?';
+    var L = lvl[t] || (lvl[t] = { n: 0, pass: 0, fail: 0, never: 0, at: null });
+    L.n++;
+    var last = LAST[c.case_key];
+    if (!last) { L.never++; return; }
+    if (last.status === 'pass') L.pass++;
+    else if (last.status === 'fail' || last.status === 'blocked') L.fail++;
+    if (!L.at || (last.at && last.at > L.at)) L.at = last.at;
+  });
+  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Evidence by level</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    + 'How many tests exist at each level, and how many have ever reported a result. '
+    + '⚠️ <b>Never run</b> is the column to read: a level that is all green on four of ninety-seven is not '
+    + 'all green on anything.</div>'
+    + '<div class="scroll"><table class="sum"><tr><th>Level</th><th class="num">Tests</th>'
+    + '<th class="num">Passed</th><th class="num">Failed</th><th class="num">Never run</th>'
+    + '<th>Last result</th></tr>';
+  KINDS.forEach(function(t){
+    var L = lvl[t]; if (!L) return;
+    h += '<tr class="clickable" onclick="drill(\'\',\'' + t + '\')">'
+      + '<td><span class="lay ty ' + t + '" title="' + esc(LEVEL_SAYS[t] || '') + '">' + t + '</span></td>'
+      + '<td class="num"><b>' + L.n + '</b></td>'
+      + '<td class="num">' + (L.pass ? '<span class="big">' + L.pass + '</span>' : '<span class="dim">0</span>') + '</td>'
+      + '<td class="num">' + (L.fail ? '<span class="bad">' + L.fail + '</span>' : '<span class="dim">0</span>') + '</td>'
+      + '<td class="num">' + (L.never ? '<span class="warnn">' + L.never + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="dim">' + (L.at ? ago(L.at) : 'no result has ever been recorded') + '</td></tr>';
+  });
+  h += '</table></div>';
+
+  h += '<h2 style="font-size:var(--fs-3);margin:22px 0 9px">Coverage by area and level</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    + 'Which part of the system each test actually reaches — read from what a file requires, what it reads '
+    + 'off disk and what it calls over HTTP, not from where it sits. ⚠️ A test reaching two areas is '
+    + 'counted in both, so the rows do not sum to ' + CASES.length + '. Click any number to open those cases.'
+    + '</div>'
+    + '<div class="scroll"><table class="sum"><tr><th>Area</th>';
+  KINDS.forEach(function(t){ if (colN[t]) h += '<th class="num" title="' + esc(LEVEL_SAYS[t] || '') + '">' + t + '</th>'; });
+  h += '<th class="num">Tests</th></tr>';
+
+  AREAS.forEach(function(a){
+    if (!rowN[a]) return;
+    h += '<tr><td><span class="area">' + esc(a) + '</span></td>';
+    KINDS.forEach(function(t){
+      if (!colN[t]) return;
+      var n = cell[a + '|' + t] || 0;
+      h += '<td class="num">' + (n
+        ? '<span class="big clickable" onclick="drill(\'' + a + '\',\'' + t + '\')">' + n + '</span>'
+        : '<span class="dim">—</span>') + '</td>';
+    });
+    h += '<td class="num"><b class="clickable" onclick="drill(\'' + a + '\',\'\')">' + rowN[a] + '</b></td></tr>';
+  });
+
+  h += '<tr><td><b>Every area</b></td>';
+  KINDS.forEach(function(t){
+    if (!colN[t]) return;
+    h += '<td class="num"><b class="clickable" onclick="drill(\'\',\'' + t + '\')">' + colN[t] + '</b></td>';
+  });
+  h += '<td class="num"><b>' + CASES.length + '</b></td></tr></table></div>';
+  /* ⚠️ said out loud rather than absorbed into a row: a measurement that could not place something must report
+     it, or the table quietly claims to cover everything. */
+  if (none) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 14px">⚠ ' + none
+    + ' test(s) reach nothing this measurement can name. They are in the totals and out of this table — '
+    + 'filing them somewhere plausible would be worse than leaving them visible.</div>';
+  return h;
+}
+
+/**
+ * one cell → the Cases tab, already filtered. The summary is for deciding, the cases are for doing.
+ * ⚠️ The AREA filter is not the module dropdown — a test reaches areas, it sits in a module, and conflating the
+ * two is what made the first version of this table come out as a useless diagonal.
+ */
+function drill(area, type){
+  document.getElementById('f_area').value = area;
+  document.getElementById('f_mod').value = '';
+  document.getElementById('f_type').value = type;
+  document.getElementById('f_state').value = '';
+  document.getElementById('f_auto').value = '';
+  setView('cases');
+}
+
 function chartsHTML(){
   var g = (window.__cover_groups) || {};
   var areas = COVER.map(function (a) { return { key: a.module_key, total: a.total, passed: a.passed,
@@ -1086,7 +1356,7 @@ async function paintSummary(){
   tally();
 
   /* ⭐ the charts first: a person opening the Summary wants the shape before the numbers */
-  var h = chartsHTML();
+  var h = matrixHTML() + chartsHTML();
   h += '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Coverage by area</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
     + 'The latest word on every case. \u26a0 An area with cases nobody has run is the one to do next \u2014 a wall '
@@ -1182,6 +1452,8 @@ async function openRun(id){
 
 function paint(){
   tally();
+  /* ⭐ the next level down is recomputed every time, so each choice narrows the one below it */
+  fillModules();
   var list = shown(), byMod = {}, order = [];
   list.forEach(function(c){ if (!byMod[c.module_key]) { byMod[c.module_key] = []; order.push(c.module_key); }
     byMod[c.module_key].push(c); });
@@ -1237,12 +1509,39 @@ function caseHTML(c){
             + 'onclick="event.stopPropagation();runCase(\'' + esc(c.case_key) + '\')" '
             + 'style="padding:2px 9px;font-weight:700;color:var(--blue);border-color:var(--blue)">\u25b6 Run</button>'
           : '')
+    /**
+     * ⭐⭐ THE KIND, ON EVERY ROW. A reader scanning the board has to be able to tell, without clicking, whether
+     * a green line means "a function returned the right number" or "a person used it and it worked". ⚠️ Those
+     * are the two ends of the V and they are not substitutes for one another.
+     */
+    +   (c.test_type ? '<span class="lay ty ' + esc(c.test_type) + '" title="' + esc(LEVEL_SAYS[c.test_type] || '')
+          + '">' + esc(c.test_type) + '</span>' : '')
     +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
     +   '<span class="pri">' + esc(c.priority || '') + '</span>'
     + '</div>';
 
   if (open) {
     h += '<div class="body">';
+    /**
+     * ⭐⭐⭐ THE FOUR FACTS A PROJECT MANAGER ASKS OF ANY TEST — Athi, 2026-09-11: *"each level, how many test
+     * cases, what are they, which function it belongs to, what it proves, who runs it."*
+     *
+     * ⚠️ "Not stated in the file" IS ONE OF THE ANSWERS, and it is shown rather than hidden. 244 of the 464
+     * automated tests carry no claim in their header; a filename dressed up as a sentence in a row headed
+     * "what it proves" would be read as evidence by exactly the person reading this line.
+     */
+    if (c.areas || c.subjects || c.claim || c.run_by) {
+      h += '<div class="facts">';
+      if ((c.areas || []).length)
+        h += '<div><dt>Reaches</dt><dd>' + c.areas.map(function(a){ return esc(a); }).join(' · ') + '</dd></div>';
+      if ((c.subjects || []).length)
+        h += '<div><dt>Module under test</dt><dd class="mono">'
+           + c.subjects.map(function(s){ return esc(s); }).join('<br>') + '</dd></div>';
+      h += '<div><dt>What it proves</dt><dd>' + (c.claim ? esc(c.claim)
+           : (c.automated ? '<i class="dim">not stated in the file</i>' : esc(c.title || ''))) + '</dd></div>';
+      if (c.run_by) h += '<div><dt>Run by</dt><dd>' + esc(c.run_by) + '</dd></div>';
+      h += '</div>';
+    }
     if (c.pre)  h += '<div class="meta"><b>Before you start:</b> ' + esc(c.pre) + '</div>';
     if (c.data) h += '<div class="meta"><b>Use:</b> ' + esc(c.data) + '</div>';
     if ((c.steps || []).length) {
