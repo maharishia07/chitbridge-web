@@ -219,7 +219,7 @@
   }
   function priceOf(r) {
     var p = dataOf(r).price;
-    var v = (p && typeof p === 'object' && p.amount !== undefined) ? p.amount : p;
+    var v = (typeof CBMoney !== 'undefined') ? CBMoney.amountOfLoose(p) : ((p && typeof p === 'object' && p.amount !== undefined) ? p.amount : p);
     return parseFloat(v);
   }
   function sigOf(cat) {
@@ -306,7 +306,7 @@
   function viewerGroups(cat) { return (cat && cat.shop && Array.isArray(cat.shop.viewer_groups)) ? cat.shop.viewer_groups : []; }
   function dealFor(d, offers, o) {
     o = o || {}; d = d || {};
-    var base = (o.price != null) ? Number(o.price) : (function (v) { return (v && typeof v === 'object') ? Number(v.amount) : Number(v); })(d.price);
+    var base = (o.price != null) ? Number(o.price) : CBMoney.amountOfLoose(d.price);
     return dealCalc(d, d.item_id || o.item_id || 'x', base, o.qty || 1, offers, { now: new Date(), currency: o.currency || 'INR', customer_groups: o.customer_groups || [], money: o.money || function (n) { return String(n); } });
   }
   function dealOf(ns, r, base) {
@@ -1854,7 +1854,7 @@
   /** the same column for an item OUTSIDE a cart (the seller's Catalogue list): priceHTML(item_data, { id, offers, tax, money, currency }) */
   function priceHTML(d, o) {
     o = o || {}; d = d || {};
-    var list = (d.price && typeof d.price === 'object') ? Number(d.price.amount) : Number(d.price);
+    var list = CBMoney.amountOfLoose(d.price);
     var deal = (root.CBCart && root.CBCart.dealFor) ? root.CBCart.dealFor(d, o.offers || [], { price: list, currency: o.currency, money: o.money, item_id: o.id }) : null;
     var b = priceBits({ id: o.id || d.item_id || 'x', list: list, amount: deal ? deal.unit : list, deal: deal, tax: o.tax || d.tax || null, money: o.money || String });
     return '<span class="cbcat-pr">' + b.price + b.taxChip + '</span>';

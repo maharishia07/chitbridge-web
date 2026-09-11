@@ -695,12 +695,63 @@
      * caller. On an RTL page they stay: there they are what keeps a price readable. Callers that compose money
      * with other text should still isolate it in <bdi> for the RTL case; this fixes the LTR one at the source.
      */
+    /**
+     * ⚠️⚠️ READING A STAMPED PRICE IS *NOT* THIS FILE'S JOB, and for an hour on 2026-09-11 it was — I added an
+     * amount() here before finding that lib/money.js has been the one definition since 2026-07-31 and was simply
+     * never vendored to the browser. That would have made SIX copies of the rule while claiming to remove five.
+     *
+     * ⭐ THE SPLIT IS THE POINT: money.js says what an amount IS (the shape, the currency that travels with it,
+     * what may be summed); locale.js says how it READS to a person (symbol, grouping, decimals, bidi). One is the
+     * value, the other is the presentation, and keeping them apart is why neither has to know the other's rules.
+     *
+     * Use CBMoney.amountOf / amountOfLoose / currencyOf — /engine/money.js, the ninth vendored engine.
+     */
+
+    /**
+     * ── ⚠️⚠️ WHAT ARBITRARY INPUT USED TO DO ────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-11: *"have we checked for rouble, Russian, and any other currency which is arbitrary?"* The
+     * real currencies were all correct — RUB, VND, OMR, MGA, XOF, every decimal right. What was not correct was
+     * everything else that can reach this function:
+     *
+     *     money(1234.5, "INR'); DROP--")  →  "INR'); DROP-- 1,234.5"   the input, echoed into the page
+     *     money(1234.5, { code: 'INR' })  →  "[object Object] 1,234.5"
+     *     money({}, 'RUB')                →  "RUBNaN"                  a bill printing NaN
+     *     money(NaN, 'RUB')               →  "RUB 0.00"                silently zero — and inconsistent with ↑
+     *     money(1234.5, 'RUPEES')         →  "RUPEES 1,234.5"          one decimal, not two
+     *
+     * ⭐ A CURRENCY CODE IS THREE LETTERS (ISO 4217). Anything else is not a currency, and the honest answer is
+     * the shop's default rather than the caller's typo printed on a customer's bill — a garbled code beside a
+     * real number reads as a real price in a currency nobody can name.
+     *
+     * ⚠️ AND IT MUST NEVER ECHO ITS INPUT. Whatever reaches a screen through innerHTML is a hole if it came from
+     * a field somebody can type in, and a price is rendered into innerHTML on every surface we have.
+     */
     money: function (amount, code) {
-      var n = Number(amount || 0), c = code || 'INR', loc = L.tag(), s;
+      /**
+       * ⚠️ THE STAMPED-PRICE RULE LIVES IN money.js, NOT HERE — this only needs a finite number to format. It
+       * forwards when the module is present (it is, on every surface) and otherwise coerces, which is a
+       * formatter's own business and not a second definition of what a price IS.
+       */
+      /**
+       * ⚠️⚠️ amountOfLoose, NOT amountOf. The strict reader THROWS on a legacy bare number ('no currency and none
+       * supplied to assume') — correct for the server, fatal for a renderer: a counter must never fail to show a
+       * price because a value predates the money type. Loose returns NaN, which becomes 0 here.
+       */
+      var raw = (typeof CBMoney !== 'undefined' && CBMoney.amountOfLoose) ? CBMoney.amountOfLoose(amount) : Number(amount);
+      var n = isFinite(raw) ? raw : 0;
+      /* ISO 4217 is exactly three ASCII letters; Intl accepts any case and we normalise so 'inr' still works */
+      var raw = (typeof code === 'string') ? code.trim().toUpperCase() : '';
+      var c = /^[A-Z]{3}$/.test(raw) ? raw : 'INR';
+      var loc = L.tag(), s;
       try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'symbol' }).format(n); }
       catch (e) {
         try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
-        catch (_) { return c + ' ' + n.toLocaleString(); }   /* an unknown currency code must still print */
+        catch (_) {
+          /* ⚠️ THE LAST RESORT STILL SHOWS TWO DECIMALS. It printed "1,234.5" before, which reads as a different
+             price from "1,234.50" to anybody checking a bill against a till roll. */
+          return c + ' ' + n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
       }
       return L.ltr(s);
     },

@@ -1593,6 +1593,9 @@ img.attImg{object-fit:cover;display:block}
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/inr_/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
      across a border: language, direction, numerals, numbers, money, dates, times and SORT ORDER. -->
+<!-- ⭐ MONEY — an amount is never a bare number. The ONE reader (lib/money.js, vendored). Loaded BEFORE
+     everything that reads a price, because cbAmount() and the cart both forward to it. -->
+<script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
@@ -5358,11 +5361,22 @@ function navTo(k){try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTim
 // Must be live BEFORE any row is stamped: the idiom it replaces is `+d.price||0`, and `+{amount:3290}` is NaN while
 // `NaN||0` is 0 — so a stamped product would render as FREE with no error and no log. Identical behaviour otherwise
 // (0 for absent), so this adds a readable shape and changes nothing else.
-function cbAmount(v){
-  if(v&&typeof v==='object'&&typeof v.amount==='number'&&isFinite(v.amount)) return v.amount;
-  var n=+v; return isFinite(n)?n:0;
-}
-function cbCurrency(v){ return (v&&typeof v==='object'&&typeof v.currency==='string')?v.currency:null; }
+/**
+ * ⭐⭐⭐ ONE READER FOR A STAMPED PRICE, and it is not this file's (2026-09-11).
+ *
+ * ⚠️⚠️ THE RULE WAS WRITTEN OUT FIVE TIMES IN THE BROWSER — here, three times in cart.js, once in pricing.js —
+ * and a sixth place (offer-lab.html) forgot, read Number(price) on a stamped value, and silently dropped an
+ * entire catalogue while reporting 'no priced products yet'. The copies were never carelessness: lib/money.js
+ * has been the one definition on the server since 2026-07-31 and was the only engine of its kind never vendored,
+ * so there was nothing to import.
+ *
+ * ⭐ These three keep their names because 24 call sites use them and a rename would be churn, not a fix. What
+ * changes is that they no longer DECIDE anything — they forward to the one module. Athi, 2026-09-11: 'remove any
+ * duplicate code, call it perfectly.'
+ */
+/* ⚠️ LOOSE, not strict: amountOf() throws on a legacy bare number and 24 call sites pass one. */
+function cbAmount(v){ var n=CBMoney.amountOfLoose(v); return isFinite(n)?n:0; }
+function cbCurrency(v){ return CBMoney.currencyOf(v); }
 function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
 let CC={items:[], rcpts:[], fields:{}};

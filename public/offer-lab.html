@@ -171,6 +171,8 @@
   </section>
 </div>
 
+<!-- ⭐ the ONE money reader — this file had its own copy until 2026-09-11 -->
+<script src="engine/money.js"></script>
 <script src="app/offers.js"></script>
 <script src="app/pricing.js"></script>
 <script src="app/locale.js"></script>
@@ -532,10 +534,8 @@ async function labLoadMine(quiet) {
      * does it three times, pricing.js once more, and none of them is exported. That is five copies of one rule
      * and it is in the backlog; a sixth that is merely honest about being a copy beats a private cleverness.
      */
-    var amountOf = function (v) {
-      if (v && typeof v === 'object' && typeof v.amount === 'number' && isFinite(v.amount)) return v.amount;
-      var n = Number(v); return isFinite(n) ? n : 0;
-    };
+    /* ⭐ THE ONE READER, now that it is vendored to the browser — this inline copy was the sixth. */
+    var amountOf = function (v) { var n = CBMoney.amountOfLoose(v); return isFinite(n) ? n : 0; };
     var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (p) { return p && p.item_data && amountOf(p.item_data.price) > 0; });
     if (!items.length) {
       labSaySource(who + ' — no priced products yet, so these are examples');

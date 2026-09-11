@@ -49,8 +49,8 @@ const CAP_CATALOGUE = [
    * of the stamped-price reader and only one of them is named (backlog). L3 needs one exported reader and the
    * others deleted — an enforced single implementation, which is what separates a capability from a convention.
    */
-  { id:'money-language', name:'Money & language — one renderer, one string layer', icon:'💱', load:'eager', maturity:2, target:3,
-    gov:2, govTarget:3, governedUnder:'the standards register (ECMA-402 · CLDR · BCP 47 · RFC 4647 · ISO 4217)',
+  { id:'money-language', name:'Money & language — one renderer, one string layer', icon:'💱', load:'eager', maturity:3, target:4,
+    gov:3, govTarget:4, governedUnder:'the standards register (ECMA-402 · CLDR · BCP 47 · RFC 4647 · ISO 4217)',
     governedBy:[
       'ONE RENDERER: CBLocale.money(amount, code) — app/locale.js, vendored to /engine/locale.js for the counter and the shop screen',
       'THE READER GROUPS, THE CURRENCY DOES NOT: grouping and separators come from the reader\'s locale (India is 2-2-3, not 3-3-3); the currency sets only the symbol and the decimals (JPY 0 · INR/USD/AED 2 · KWD/BHD 3)',
@@ -61,7 +61,7 @@ const CAP_CATALOGUE = [
       'guard snapshot-wire: no shipped screen may print a currency symbol inside a string it emits',
     ],
     govGap:[
-      'FIVE copies of the stamped-price reader (cbAmount in app.html · three in cart.js · one in pricing.js) and none exported — which is exactly why offer-lab.html forgot. L3 = one reader in locale.js and the other five DELETED',
+      'the two engines (cart.js · pricing.js) keep a GUARDED fallback: they forward to CBMoney and only unwrap inline if the engine failed to load. Defensible for an engine that must run alone, and still two places where the rule is written — L4 decides whether an engine may hard-depend on another',
       'the counter\'s fallback when CBLocale fails to load still prints two decimals for every currency — wrong for JPY and KWD, right for the rest',
       'no spec drives a non-INR shop end to end: the renderer is proven per currency, the SCREENS are proven only in rupees',
     ],
@@ -74,7 +74,8 @@ const CAP_CATALOGUE = [
       {n:'tx() adopts gettext: the English string IS the key', s:'done'},
       {n:'The shop screen and the offer lab joined the renderer (both were hard-coding ₹)', s:'done'},
       {n:'Guard: no screen prints its own currency symbol', s:'done'},
-      {n:'ONE exported reader for a stamped price, and the five copies deleted', s:'next'},
+      {n:'ONE reader: lib/money.js vendored as the ninth engine (CBMoney) — the five browser copies now forward to it', s:'done'},
+      {n:'⚠️ strict vs loose: amountOf() THROWS on a legacy bare number (right for the server), amountOfLoose() returns NaN — every browser reader uses loose, because a counter must never fail to show a price', s:'done'},
       {n:'A spec that drives a non-INR shop through counter, screen and slip', s:'next'},
     ] },
 

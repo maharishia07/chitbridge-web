@@ -44,7 +44,9 @@
   /** unitPrice(item_data, qty, listPrice) — the price of ONE unit at that quantity, and why */
   function unitPrice(d, qty, listPrice) {
     d = d || {}; var q = num(qty); if (q === null || q <= 0) q = 1;
-    var list = num(listPrice); if (list === null) list = num(d.price && typeof d.price === 'object' ? d.price.amount : d.price);
+    /* ⚠️ ONE READER (CBMoney, /engine/money.js). Guarded because pricing is an ENGINE and may be loaded alone —
+       but it is never loaded alone in this product, and a missing money engine is reported by the counter. */
+    var list = num(listPrice); if (list === null) list = num((typeof CBMoney !== 'undefined') ? CBMoney.amountOfLoose(d.price) : (d.price && typeof d.price === 'object' ? d.price.amount : d.price));
     var kind = d.pricing_kind || null;
     var out = { amount: list, kind: kind, tier: null, list: list, why: kind ? '' : 'list price', violation: null, name: d.pricing_def_name || null };
     if (kind === 'fixed') { if (num(d.pricing_amount) !== null) { out.amount = num(d.pricing_amount); out.why = 'fixed at ' + out.amount; } else out.why = 'fixed — the list price'; return out; }
