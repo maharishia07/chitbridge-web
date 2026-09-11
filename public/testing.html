@@ -1331,7 +1331,26 @@ async function paintReliability(){
     var lastCls = c.last_status === 'pass' ? 'big' : (c.last_status === 'fail' ? 'bad'
       : (c.last_status === 'blocked' ? 'warnn' : 'dim'));
     h += '<tr><td><span class="area">' + esc(c.case_key) + '</span>'
-      +   '<span class="sub">' + esc(c.kinds || '') + (c.layers ? ' \u00b7 ' + esc(c.layers) : '') + '</span></td>'
+      /**
+       * ⚠️⚠️ THIS SHOWED THE RESULT'S `layer`, AND EVERY ROW SAID "engine". Athi: *"under the reliability tab,
+       * everything shows as engine — what does this tab refer to?"*
+       *
+       * `layer` is WHAT A RUN EXERCISED, and it sits on the result rather than the case for a good reason: one
+       * case can be proved at two levels — the offer arithmetic green as a unit test and red at the counter.
+       * But post-suite.cjs defaults it to "engine", written when the only thing posting was a suite of pure
+       * functions; I copied that default while posting 367 results, and 235 of those files drive a BROWSER.
+       * ⭐ A column with one value in every row is worse than no column: it still looks like information.
+       *
+       * ⭐ The CASE knows better, and knows it by MEASUREMENT — which areas its source actually requires,
+       * reads and calls. That is shown here instead, and it is right retroactively, which a stamped column
+       * can never be: test_result is append-only by design, so those 367 rows say engine and always will.
+       */
+      +   '<span class="sub">' + esc(c.kinds || '')
+      +     (function () {
+            var cs = CASES.filter(function (x) { return x.case_key === c.case_key; })[0];
+            var ar = (cs && (cs.areas || []).length) ? cs.areas.join(', ') : (c.layers || '');
+            return ar ? ' \u00b7 ' + esc(ar) : '';
+          })() + '</span></td>'
       + '<td class="num">' + c.runs + '</td>'
       + '<td class="num' + (c.failed ? ' bad' : ' dim') + '">' + c.failed + '</td>'
       /* \u2b50 the number that decides the order, and the one people will not expect to be here */
