@@ -205,6 +205,10 @@
   /* ⭐ the caveat that has to be available without being in the way */
   .fine{ display:block; margin-top:3px; color:var(--grey-2); opacity:.85; }
   /* ⭐ the journey position, shown so the ordering is legible rather than merely applied */
+  /* ⭐ the core group, readable at a glance and comparable down a column */
+  .grp{ display:inline-block; font-size:var(--fs-1); font-weight:600; color:var(--ink-2);
+        background:var(--neutral-tint); border-radius:99px; padding:1px 8px; margin-inline-end:4px;
+        white-space:nowrap; }
   .step{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:var(--grey-2);
         background:var(--neutral-tint); border-radius:4px; padding:1px 5px; margin-inline-end:7px; }
 
@@ -1322,7 +1326,16 @@ async function paintReliability(){
     return;
   }
 
-  h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th class="num">Runs</th>'
+  /**
+   * ⭐⭐ GROUP IS A COLUMN, NOT A SUBTITLE. Athi, 2026-09-11: *"keep it as a column, so if you are referring as
+   * engine, web, middleware etc, so we know the core group."*
+   *
+   * ⚠️ It was grey text tucked under the test name, at the small size, where it could not be compared down the
+   * page — which is the only thing a group is FOR. A reader wants to run an eye down and see that everything
+   * red is web, or that middleware has three rows in total. In its own column that takes a second; as a
+   * subtitle it takes reading every line.
+   */
+  h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th>Group</th><th class="num">Runs</th>'
     + '<th class="num">Failed</th><th class="num">Changed</th><th>Last</th><th>Verdict</th></tr>';
 
   (r.cases || []).forEach(function (c) {
@@ -1330,7 +1343,10 @@ async function paintReliability(){
       : (c.runs < 2 ? 'once' : (c.failed ? 'broke' : 'settled')));
     var lastCls = c.last_status === 'pass' ? 'big' : (c.last_status === 'fail' ? 'bad'
       : (c.last_status === 'blocked' ? 'warnn' : 'dim'));
-    h += '<tr><td><span class="area">' + esc(c.case_key) + '</span>'
+    /* ⭐ the measured area — see the note above the ingest on why this is the case's, not the result's */
+    var _cs = CASES.filter(function (x) { return x.case_key === c.case_key; })[0];
+    var _grp = (_cs && (_cs.areas || []).length) ? _cs.areas : (c.layers ? [c.layers] : []);
+    h += '<tr><td><span class="area">' + esc(shortKey(c.case_key)) + '</span>'
       /**
        * ⚠️⚠️ THIS SHOWED THE RESULT'S `layer`, AND EVERY ROW SAID "engine". Athi: *"under the reliability tab,
        * everything shows as engine — what does this tab refer to?"*
@@ -1342,15 +1358,14 @@ async function paintReliability(){
        * ⭐ A column with one value in every row is worse than no column: it still looks like information.
        *
        * ⭐ The CASE knows better, and knows it by MEASUREMENT — which areas its source actually requires,
-       * reads and calls. That is shown here instead, and it is right retroactively, which a stamped column
+       * reads and calls. That is what the Group column shows, and it is right retroactively, which a stamped
        * can never be: test_result is append-only by design, so those 367 rows say engine and always will.
        */
-      +   '<span class="sub">' + esc(c.kinds || '')
-      +     (function () {
-            var cs = CASES.filter(function (x) { return x.case_key === c.case_key; })[0];
-            var ar = (cs && (cs.areas || []).length) ? cs.areas.join(', ') : (c.layers || '');
-            return ar ? ' \u00b7 ' + esc(ar) : '';
-          })() + '</span></td>'
+      +   '<span class="sub">' + esc(c.kinds || '') + '</span></td>'
+      /* ⭐ the core group, in its own cell, so a reader can compare it down the page */
+      +   '<td>' + (_grp.length
+          ? _grp.map(function (a) { return '<span class="grp">' + esc(a) + '</span>'; }).join('')
+          : '<span class="dim">—</span>') + '</td>'
       + '<td class="num">' + c.runs + '</td>'
       + '<td class="num' + (c.failed ? ' bad' : ' dim') + '">' + c.failed + '</td>'
       /* \u2b50 the number that decides the order, and the one people will not expect to be here */
