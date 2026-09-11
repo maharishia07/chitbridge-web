@@ -505,7 +505,27 @@ async function labLoadMine(quiet) {
 
     var r = await fetch(API + '/api/products?limit=500', { headers: { Authorization: 'Bearer ' + sess.token } });
     var j = await r.json();
-    var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (p) { return p && p.item_data && Number(p.item_data.price) > 0; });
+    /**
+     * ── ⚠️⚠️ A PRICE IS NOT A NUMBER ────────────────────────────────────────────────────────────────────────
+     *
+     * The catalogue stores a STAMPED money value — `{ amount, currency }` — and this read `Number(d.price)`, which
+     * is NaN for every one of them. So the filter below dropped every real product, the lab said "your catalogue
+     * has no priced products yet", and it fell back to the samples.
+     *
+     * ⭐⭐ WHICH MEANS "Use my catalogue" HAS NEVER WORKED ON A REAL SHOP, and could not have: the failure looks
+     * exactly like an empty catalogue, so anyone who pressed it would conclude their products were not priced
+     * rather than that the button was broken. Found 2026-09-11 only because a spec printed the raw value and it
+     * read `[object Object]`.
+     *
+     * ⚠️ THE UNWRAP IS INLINE HERE BECAUSE THERE IS NOWHERE SHARED TO PUT IT — app.html has cbAmount(), cart.js
+     * does it three times, pricing.js once more, and none of them is exported. That is five copies of one rule
+     * and it is in the backlog; a sixth that is merely honest about being a copy beats a private cleverness.
+     */
+    var amountOf = function (v) {
+      if (v && typeof v === 'object' && typeof v.amount === 'number' && isFinite(v.amount)) return v.amount;
+      var n = Number(v); return isFinite(n) ? n : 0;
+    };
+    var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (p) { return p && p.item_data && amountOf(p.item_data.price) > 0; });
     if (!items.length) {
       labSaySource(who + ' — no priced products yet, so these are examples');
       return false;
@@ -517,8 +537,8 @@ async function labLoadMine(quiet) {
       var cats = Array.isArray(d.categories) ? d.categories.slice()
                : (d.category ? [String(d.category)] : (Array.isArray(d.category_ids) ? d.category_ids.slice() : []));
       return { item_id: p.item_id,
-               item_data: { name: d.name, unit: d.unit, price: Number(d.price), code: d.code || d.sku || null,
-                            mrp: (Number(d.mrp) > 0 ? Number(d.mrp) : null),
+               item_data: { name: d.name, unit: d.unit, price: amountOf(d.price), code: d.code || d.sku || null,
+                            mrp: (amountOf(d.mrp) > 0 ? amountOf(d.mrp) : null),
                             category: cats[0] || null, categories: cats },
                tax: (d.gst_rate != null) ? { rate: Number(d.gst_rate), name: 'GST' } : null };
     });
