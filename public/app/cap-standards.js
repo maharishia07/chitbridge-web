@@ -14,6 +14,20 @@
  * payload — loaded by ensureCap('standards') from whichever surface asks first.
  */
 var STANDARDS = [
+  { g:'Verification', n:'ISO/IEC/IEEE 29119-3', w:'Test completion report — the template a run is written up on',
+    ex:"6 · Test completion evaluation", exWhy:"The clause that asks whether the exit criteria were MET. We render the numbers under it and say plainly that the judgement is not ours to generate — a report that fills this heading with plausible prose looks signed off and is not.",
+    s:'part',
+    note:'The measured sections are generated from the ledger; the judgement sections (deviations, completion evaluation, residual risks, lessons, approval) are marked “needs a person” and carry the question instead of an answer. No test PLAN is declared anywhere yet, so section 5 has nothing to compare against.',
+    at:'Testing › Report', go:'testing', why:'⭐ It SUPERSEDED IEEE 829 in 2013 — which is the name most people still reach for, and using the withdrawn one would have looked more familiar to more readers and been wrong. A completion report on a known template is one an auditor, a customer or a new engineer can read without being taught our format.' },
+  { g:'Verification', n:'JUnit XML', w:'Test result interchange — what every CI writes and every tool reads',
+    ex:"<testcase name=\"[CTR-05] a single click chooses\"/>", exWhy:"Playwright emits this with one config line; Kiwi TCMS, TestRail, Allure and ReportPortal all import it. The case key in brackets is what joins a run to our board.",
+    s:'live',
+    at:'POST /api/testing/results/junit', go:'testing', why:'A private results format would strand every automated run inside one screen, and would have to be re-implemented by anything that ever wanted to read it.' },
+  { g:'Verification', n:'Gherkin', w:'The spec and the test as one text — Given / When / Then',
+    ex:"Given Counter open on Sell", exWhy:"Our case shape already WAS Given/When/Then (pre / step / expected), so nothing is translated — the file is rendered and read back, and all 110 real cases round-trip unchanged.",
+    s:'part',
+    note:'The FORMAT is adopted; Cucumber the RUNNER is deliberately not — every “When I click the row” would need a step definition, a second codebase mapping sentences onto clicks.',
+    at:'Testing — export/import .feature', go:'testing', why:'A .feature file carries the spec clause (the Feature description) and the cases against it in one text, so neither can be edited without the other in front of you.' },
   { g:'Localisation', n:'BCP 47 (RFC 5646)',      w:'Language tags — en-IN, ar-AE, ta',                 ex:"ta-IN", exWhy:"A browser sends exactly this as <code>' + tx('Accept-Language') + '</code>. Any system on earth reads it as \"Tamil, as written in India\" — no lookup table, no mapping file.",
     s:'live',
     at:'Localisation', go:'locale', why:'A language tag nobody else parses means every counterparty re-guesses what "Tamil" meant.' },

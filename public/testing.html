@@ -132,6 +132,42 @@
   .warnn{ color:var(--warn); font-weight:700; } .dim{ color:var(--grey-2); }
   .scroll{ overflow-x:auto; }
 
+  /* ── the completion report ── */
+  .rep h2{ font-size:var(--fs-4); margin:26px 0 4px; letter-spacing:-.01em; }
+  .rep h2:first-of-type{ margin-top:6px; }
+  .rep .num-s{ font-family:ui-monospace,Menlo,monospace; color:var(--grey-2); font-size:var(--fs-2);
+        margin-inline-end:7px; }
+  .rep .sec{ background:var(--card); border:1px solid var(--line); border-radius:11px;
+        padding:14px 17px; margin:0 0 14px; }
+  /* ⭐ THE WHOLE POINT OF THE STYLING: a measured section and a judgement section must not look alike. */
+  .rep .sec.ask{ background:var(--warn-tint); border-color:#e8d7ae; }
+  .rep .tag{ display:inline-block; font-size:var(--fs-1); font-weight:700; letter-spacing:.07em;
+        text-transform:uppercase; border-radius:5px; padding:2px 8px; margin-bottom:9px; }
+  .rep .tag.m{ background:var(--ok-tint); color:var(--ok); }
+  .rep .tag.a{ background:#f3e2bd; color:var(--warn); }
+  .rep .kv{ display:grid; grid-template-columns:auto 1fr; gap:5px 16px; font-size:var(--fs-2); }
+  .rep .kv dt{ color:var(--grey-2); white-space:nowrap; }
+  .rep .kv dd{ margin:0; }
+  .rep .big-n{ display:flex; gap:20px; flex-wrap:wrap; margin:4px 0 12px; }
+  .rep .big-n div{ min-width:74px; }
+  .rep .big-n b{ display:block; font-size:26px; line-height:1.15; letter-spacing:-.02em; }
+  .rep .big-n span{ font-size:var(--fs-1); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
+  .rep .inc{ border-top:1px solid var(--line-2); padding:9px 0; font-size:var(--fs-2); }
+  .rep .inc:first-of-type{ border-top:0; }
+  .rep .inc .k2{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
+  .rep .caveat{ margin-top:9px; font-size:var(--fs-2); line-height:1.55; }
+  .rep .caveat li{ margin-bottom:4px; }
+  .rep .sign{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:18px; }
+  .rep .sign div{ border-top:1px solid var(--ink); padding-top:5px; font-size:var(--fs-1); color:var(--grey-2); }
+  /* ⚠️ a report is printed and filed. Everything that is a CONTROL must not be on the paper. */
+  @media print{
+    body{ background:#fff; }
+    header, .bar, .noprint{ display:none !important; }
+    main{ padding:0; max-width:none; }
+    .rep .sec{ break-inside:avoid; box-shadow:none; }
+    .rep h2{ break-after:avoid; }
+  }
+
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
@@ -152,6 +188,7 @@
   <div class="tabs">
     <button id="t_cases" class="on" onclick="setView('cases')">Cases</button>
     <button id="t_sum" onclick="setView('summary')">Summary</button>
+    <button id="t_rep" onclick="setView('report')">Report</button>
   </div>
 </div>
 <div class="bar">
@@ -433,10 +470,14 @@ function setView(v){
   VIEW = v;
   document.getElementById('t_cases').className = (v === 'cases') ? 'on' : '';
   document.getElementById('t_sum').className = (v === 'summary') ? 'on' : '';
+  /* the case filters mean nothing on either of the other two views */
   /* the case filters mean nothing on the summary — hide them rather than leave them inert */
   var bars = document.querySelectorAll('.bar');
-  for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'summary') ? 'bar hide' : 'bar';
-  if (v === 'summary') paintSummary(); else paint();
+  for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'cases') ? 'bar' : 'bar hide';
+  document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
+  if (v === 'summary') paintSummary();
+  else if (v === 'report') paintReport();
+  else paint();
 }
 
 async function loadSummary(){
@@ -449,6 +490,111 @@ async function loadSummary(){
 }
 
 function pct(a, b){ return b ? Math.round((a / b) * 100) : 0; }
+
+/**
+ * ⭐⭐⭐ THE TEST COMPLETION REPORT, on ISO/IEC/IEEE 29119-3's own template.
+ *
+ * Athi: *"is there any report available… standard report template?"* — 29119-3 is the current one, and it
+ * superseded IEEE 829, which is the name most people still reach for and which was withdrawn in 2013.
+ *
+ * ⚠️⚠️ HALF OF A COMPLETION REPORT IS JUDGEMENT. Whether the exit criteria were met, what risk is left, who
+ * accepts it — no database holds any of that. A generator that fills those headings with plausible prose
+ * produces a document that LOOKS signed off and is not, and a report is read by people who were not in the
+ * room and cannot tell invented text from evidence.
+ *
+ * ⭐ So the measured sections and the judgement sections are rendered DIFFERENTLY on purpose, and the ones
+ * that need a person carry the question rather than an answer.
+ */
+async function paintReport(){
+  document.getElementById('main').innerHTML = '<div class="say">Building the report…</div>';
+  var r;
+  try { r = await call('/api/testing/report'); }
+  catch (e) { say('Could not build the report: ' + e.message, true); return; }
+
+  var sec = function (s, inner) {
+    var ask = s.source !== 'measured';
+    return '<h2><span class="num-s">' + esc(s.id) + '</span>' + esc(s.title) + '</h2>'
+      + '<div class="sec' + (ask ? ' ask' : '') + '">'
+      + '<span class="tag ' + (ask ? 'a' : 'm') + '">' + (ask ? 'Needs a person' : 'Measured') + '</span>'
+      + inner + '</div>';
+  };
+
+  var h = '<div class="rep">'
+    + '<div class="noprint" style="margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap">'
+    +   '<button class="btn pri" onclick="window.print()">Print / save as PDF</button>'
+    +   '<button class="btn" onclick="paintSummary();setView(\'summary\')">\u2190 Summary</button></div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.06em;text-transform:uppercase;'
+    +   'font-weight:700">' + esc(r.standard) + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">supersedes ' + esc(r.supersedes)
+    +   ' \u00b7 generated ' + new Date(r.generated_at).toLocaleString()
+    +   ' \u00b7 scope: ' + esc(r.scope) + '</div>';
+
+  r.sections.forEach(function (s) {
+    var b = s.body || {};
+    var inner;
+
+    if (s.id === '1') {
+      inner = '<dl class="kv">'
+        + '<dt>Tested by</dt><dd>' + esc(b.tested_by || '\u2014') + '</dd>'
+        + '<dt>Period</dt><dd>' + (b.period ? new Date(b.period.from).toLocaleString() + ' \u2014 '
+            + new Date(b.period.to).toLocaleString() : 'nothing recorded yet') + '</dd>'
+        + '<dt>Sittings</dt><dd>' + b.runs + '</dd>'
+        + '<dt>How</dt><dd>' + esc((b.kinds || []).join(', ') || '\u2014') + '</dd>'
+        + '<dt>Levels</dt><dd>' + esc((b.layers || []).join(', ') || '\u2014') + '</dd>'
+        + '<dt>Build</dt><dd>' + esc((b.builds || []).join(', ') || 'not recorded') + '</dd>'
+        + '</dl>';
+    } else if (s.id === '2') {
+      var t = b.totals || {};
+      inner = '<div class="big-n">'
+        + '<div><b>' + b.coverage_pct + '%</b><span>covered</span></div>'
+        + '<div><b class="big">' + b.pass_pct + '%</b><span>of those, passed</span></div>'
+        + '<div><b>' + t.total + '</b><span>cases</span></div>'
+        + '<div><b class="bad">' + t.failed + '</b><span>failed</span></div>'
+        + '<div><b class="warnn">' + t.blocked + '</b><span>blocked</span></div>'
+        + '<div><b class="warnn">' + t.untested + '</b><span>never run</span></div></div>'
+        + '<div class="scroll"><table class="sum" style="margin:0"><tr><th>Feature</th>'
+        + '<th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
+        + '<th class="num">Blocked</th><th class="num">Never run</th></tr>'
+        + (b.by_feature || []).map(function (f) {
+            return '<tr><td><span class="area">' + esc(f.module_key) + '</span>'
+              + '<span class="sub">' + esc(f.module_name || '') + '</span></td>'
+              + '<td class="num">' + f.total + '</td>'
+              + '<td class="num big">' + f.passed + '</td>'
+              + '<td class="num' + (Number(f.failed) ? ' bad' : ' dim') + '">' + f.failed + '</td>'
+              + '<td class="num' + (Number(f.blocked) ? ' warnn' : ' dim') + '">' + f.blocked + '</td>'
+              + '<td class="num' + (Number(f.untested) ? ' warnn' : ' dim') + '">' + f.untested
+              + (Number(f.high_untested) ? ' \u26a0' : '') + '</td></tr>'; }).join('')
+        + '</table></div>';
+    } else if (s.id === '3' || s.id === '4') {
+      var items = b.items || [];
+      inner = items.length
+        ? items.map(function (x) {
+            return '<div class="inc"><span class="k2">' + esc(x.case_key) + '</span> '
+              + '<span class="' + (x.status === 'fail' ? 'bad' : 'warnn') + '">' + esc(x.status.toUpperCase())
+              + '</span> <span class="dim">' + esc(x.tester_name || '') + ' \u00b7 '
+              + new Date(x.at).toLocaleString() + '</span>'
+              + (x.note ? '<div style="margin-top:3px">' + esc(x.note) + '</div>' : '')
+              + (x.evidence ? '<div class="sub">' + esc(x.evidence) + '</div>' : '') + '</div>'; }).join('')
+        : '<span class="dim">None.</span>';
+    } else if (s.id === '8') {
+      inner = '<dl class="kv"><dt>Cases</dt><dd>' + b.cases + '</dd>'
+        + '<dt>Features</dt><dd>' + b.features + '</dd></dl>'
+        + '<div class="sub" style="margin-top:7px">' + esc(b.note || '') + '</div>';
+    } else if (s.id === '10') {
+      inner = '<div>' + esc(s.asks) + '</div>'
+        + '<div class="sign"><div>Name and role</div><div>Date</div></div>';
+    } else {
+      inner = '<div>' + esc(s.asks || '') + '</div>'
+        + ((s.caveats || []).length
+            ? '<ul class="caveat">' + s.caveats.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('')
+              + '</ul>' : '');
+    }
+    h += sec(s, inner);
+  });
+
+  h += '</div>';
+  document.getElementById('main').innerHTML = h;
+}
 
 async function paintSummary(){
   if (!COVER.length && !RUNS.length) {
