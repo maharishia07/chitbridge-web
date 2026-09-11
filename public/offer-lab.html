@@ -496,12 +496,14 @@ async function labLoadMine(quiet) {
     return false;
   }
   try {
-    /* ⭐ WHO, as well as what. The lab must name the shop it is testing, or a person with two tabs open cannot
-       tell whose offers they are proving. */
-    var me = null;
-    try { var mr = await fetch(API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + sess.token } });
-          me = mr.ok ? await mr.json() : null; } catch (_) {}
-    var who = (me && (me.display_name || (me.entity && me.entity.display_name))) || 'your shop';
+    /**
+     * ⭐ WHO, as well as what. The lab must name the shop it is testing, or a person with two tabs open cannot
+     * tell whose offers they are proving.
+     * ⚠️ FROM THE SESSION ON DISK, not from a request. `cb_sess` already carries the entity name — the app put it
+     * there at sign-in — so asking the server for something it has already been told is a round trip that can
+     * fail and leave the lab unable to name a shop it is perfectly able to read.
+     */
+    var who = sess.entity || sess.name || 'your shop';
 
     var r = await fetch(API + '/api/products?limit=500', { headers: { Authorization: 'Bearer ' + sess.token } });
     var j = await r.json();
