@@ -109,11 +109,46 @@ files.forEach((f) => {
   while ((m = useRe.exec(code))) count[m[1]] = (count[m[1]] || 0) + 1;
   const used = new Set(Object.keys(count).filter(function (k) { return count[k] >= 3; }));
 
+  /**
+   * ⭐ EVERY NAME A var/let/const STATEMENT INTRODUCES, commas included. The statement is read up to its
+   * terminator and each clause's head is taken — which is what a declaration list actually is.
+   * ⚠️ It over-collects rather than under-collects on purpose: a name wrongly believed declared costs a missed
+   * warning, a name wrongly believed undeclared costs the guard's credibility, and only one of those is fatal.
+   */
+  const DECLARED = new Set();
+  /**
+   * ⚠️ AND THE FIRST FIX STOPPED AT THE INITIALISER. Reading the statement up to a terminator meant
+   * `var NOTES = {}, FOOT = '', MATURITY = null;` was captured as "NOTES = " — the `{}` ended the match — so
+   * the second and third names were still invisible and MATURITY was still reported on the line declaring it.
+   *
+   * ⭐ A declaration in this codebase is a LINE. So the line is taken and its comma clauses are read, which is
+   * the shape the code actually has, rather than a regex trying to know where a statement ends.
+   */
+  code.split('\n').forEach(function (line) {
+    const kw = line.match(/\b(?:var|let|const|function)\s+/);
+    if (!kw) return;
+    line.slice(kw.index + kw[0].length).split(',').forEach(function (clause) {
+      const head = clause.trim().split(/[\s=:(){}[\]]/)[0];
+      if (/^[A-Za-z_$][\w$]*$/.test(head)) DECLARED.add(head);
+    });
+  });
+
   used.forEach((name) => {
     if (KNOWN.has(name)) return;
     if (SHARED.has(name)) return;   /* declared in app.html, shared into every capability */
     /* declared here in any of the shapes this codebase uses? */
-    const decl = new RegExp('(?:var|let|const|function)\\s+' + name + '\\b|\\b' + name + '\\s*[:=]\\s*(?:function|\\{|\\[)');
+    /**
+     * ⚠️⚠️ A COMMA LIST IS A DECLARATION, AND THIS DID NOT KNOW THAT. It required the keyword immediately
+     * before the name, so `var NOTES = {}, FOOT = '', MATURITY = null;` declared three names and this guard
+     * recognised one. It reported MATURITY as undeclared on the line that declares it.
+     *
+     * ⭐ Which is the failure mode this file's own header warns about: a guard that fires on healthy code is a
+     * guard somebody switches off, and then it is not there on the day it is right. So DECLARED is gathered
+     * once per file — every name introduced by a var/let/const statement, commas included — instead of being
+     * re-guessed with a regex per name.
+     */
+    if (DECLARED.has(name)) return;
+    const decl = new RegExp('\\b' + name + '\\s*[:=]\\s*(?:function|\\{|\\[)');
     if (decl.test(code)) return;
     /* a property (x.NAME) or a string key is not a free identifier */
     const free = new RegExp('(?:^|[^.\\w$\'"])' + name + '\\s*(?:[.,;)\\]}]|\\[|\\.|\\s*\\+)');

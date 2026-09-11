@@ -28,6 +28,7 @@
 <style>
   :root{
     --font-ui:Inter,system-ui,-apple-system,sans-serif;
+    --prose:78ch;   /* ⭐ the READING measure — belongs to prose, not to the page (see main, below) */
     --ink:#20303b; --ink-2:#3a4048; --grey:#8a949c; --grey-2:#545A61;
     --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
     --blue:#3F66A6; --blue-tint:#E9F0FA;
@@ -64,7 +65,23 @@
   .btn.pri{ background:var(--blue); color:#fff; border-color:var(--blue); }
   .btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
 
-  main{ padding:12px 14px 80px; max-width:980px; margin:0 auto; }
+/**
+ * ── ⚠️⚠️ A 980px COLUMN ON A 2560px SCREEN, AND EVERY TABLE SQUEEZED INTO IT ────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"you can see what the full screen size is and you bring it for the entire screen."*
+ *
+ * ⚠️ 980px is a READING measure, and it is the right one for a paragraph — but this board is mostly TABLES:
+ * eleven engine rules each stating a full sentence of purpose beside four numeric columns, and the pivot with
+ * a column per kind. Held at 980 the purpose column got maybe thirty characters of track and wrapped into a
+ * tall grey block, on a screen with two thirds of its width empty.
+ *
+ * ⭐ So the measure moves OFF the page and ONTO the prose. `main` takes the screen (1760 is a runaway guard for
+ * an ultrawide, not a layout); the paragraphs that are actually read keep ~78 characters via --prose. A table
+ * wants width, a sentence does not, and they no longer have to agree.
+ */
+  main{ padding:12px 18px 80px; max-width:1760px; margin:0 auto; }
+  /* ⭐ the reading measure, kept for prose only — see above */
+  .modhead .intro, .note, .lede, .prose{ max-width:var(--prose); }
   .mod{ margin:0 0 18px; }
   .modhead{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:0 0 7px; }
   .modhead h2{ font-size:var(--fs-3); margin:0; letter-spacing:.02em; }
@@ -96,11 +113,23 @@
    */
   .chead{ display:grid; grid-template-columns:minmax(0,17em) minmax(0,1fr) auto; gap:11px;
         align-items:baseline; padding:9px 11px; cursor:pointer; }
+  /**
+   * ⚠️ THE LAST ELLIPSIS ON THE PAGE, and it was hiding the useful half. A case key is a PATH —
+   * 'chitbridge-api/scripts/journey-supplier-hop.js' — and clipping the end of a path removes the filename,
+   * which is the part that identifies it. Every row read 'chitbridge-api/scri…'.
+   * ⭐ It wraps on its own separators now. The column is a fixed track, so the rows still line up.
+   */
   .chead .key{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); font-weight:700; color:var(--grey-2);
-        background:var(--neutral-tint); border-radius:5px; padding:2px 6px; white-space:nowrap;
-        overflow:hidden; text-overflow:ellipsis; }
+        background:var(--neutral-tint); border-radius:5px; padding:2px 6px;
+        overflow-wrap:anywhere; word-break:break-word; }
+  /**
+   * ⚠️ AND THE SAME FAULT ONE LAYER UP: this clipped every case title to a single line with an ellipsis, which
+   * is the other half of *"many of the text are only partly present"*. It was there to keep the rows on a grid
+   * — but the grid comes from the fixed TRACKS, not from forcing one line, so a title can wrap and the columns
+   * still line up. ⭐ It now wraps to as many lines as the title needs — nothing is hidden.
+   */
   .chead .ttl{ min-width:0; font-weight:600; line-height:1.35; font-size:var(--fs-2);
-        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        overflow-wrap:anywhere; }
   .chead .ttl.noclaim{ font-weight:400; font-style:italic; color:var(--grey-2); }
   /* ⭐ the verdict lives in the badge track now, so it is in the same place on every row */
   .chead .badges{ display:flex; gap:6px; align-items:center; white-space:nowrap; }
@@ -204,6 +233,46 @@
   .zeroflag{ font-style:normal; color:var(--warn); font-weight:700; }
   /* ⭐ the caveat that has to be available without being in the way */
   .fine{ display:block; margin-top:3px; color:var(--grey-2); opacity:.85; }
+  /* ⭐ a row’s own boundary, in its own words — prose, so it keeps the reading measure */
+  .areanote{ max-width:var(--prose); margin:2px 0 10px; padding:8px 11px; font-size:var(--fs-1);
+        line-height:1.55; color:var(--ink-2); background:var(--paper);
+        border-inline-start:3px solid var(--line); border-radius:0 7px 7px 0; }
+  .areafoot{ max-width:var(--prose); margin:-12px 0 22px; font-size:var(--fs-1); line-height:1.55;
+        color:var(--grey-2); }
+
+  /**
+   * ── ⭐ THE TREE, BORROWING cap-network.js's SHAPE ─────────────────────────────────────────────────────────
+   * Depth is padding-inline-start, the glyph carries the branch, the purpose sits underneath its own node.
+   * ⚠️ The network tree clamps that purpose to one line with nowrap + ellipsis. Not copied — that is the exact
+   * fault Athi reported on this board, and a pattern's bugs are not part of the pattern.
+   */
+  .tree{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:8px 4px;
+        margin-bottom:14px; overflow-x:auto; }
+  .tnode{ padding:6px 10px; border-radius:8px; font-size:var(--fs-2); line-height:1.4;
+        display:flex; flex-wrap:wrap; align-items:baseline; gap:7px; }
+  .tnode[onclick]{ cursor:pointer; }
+  .tnode[onclick]:hover{ background:var(--neutral-tint); }
+  .tnode.open{ background:var(--neutral-tint); font-weight:600; }
+  .tglyph{ font-family:ui-monospace,Menlo,monospace; color:var(--grey); flex:0 0 auto; }
+  .tlabel{ font-weight:600; }
+  .tcount{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); font-weight:700;
+        background:var(--neutral-tint); border-radius:5px; padding:1px 6px; font-variant-numeric:tabular-nums; }
+  .tof{ font-size:var(--fs-1); color:var(--grey-2); font-weight:400; }
+  .ttier{ font-size:var(--fs-1); color:var(--grey); font-weight:400; margin-inline-start:auto;
+        text-transform:uppercase; letter-spacing:.06em; }
+  .tarea{ font-size:var(--fs-1); font-weight:700; border-radius:5px; padding:1px 6px;
+        background:var(--blue-tint); color:var(--blue); }
+  /* ⭐ the purpose WRAPS, and keeps the reading measure — it is a sentence, not a label */
+  .tnote{ flex:1 1 100%; max-width:var(--prose); font-size:var(--fs-1); color:var(--grey-2);
+        font-weight:400; line-height:1.55; margin-top:2px; }
+  /* ⭐ a grade as a POSITION, not a number to be averaged; hollow pips are the declared target */
+  .pips{ display:inline-flex; gap:3px; align-items:center; }
+  .pips i{ width:9px; height:9px; border-radius:50%; border:1.5px solid var(--line);
+        background:transparent; display:inline-block; }
+  .pips i.on{ background:var(--blue); border-color:var(--blue); }
+  .pips i.want{ border-color:var(--blue); border-style:dashed; }
+  .sumswitch{ display:flex; gap:7px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
+  .sumswitch .fine{ flex:1 1 100%; max-width:var(--prose); margin-top:2px; }
   /* ⭐ the journey position, shown so the ordering is legible rather than merely applied */
   /* ⭐ the core group, readable at a glance and comparable down a column */
   /* ── ⭐ folding ── */
@@ -719,7 +788,9 @@ async function loadEngine(){
     ENGINE = r && r.engine ? r.engine : false;
     /* ⭐ what is inside every area, for the matrix to open into */
     CONTENTS = r && r.contents ? r.contents : null;
-  } catch (e) { ENGINE = false; CONTENTS = null; }
+    NOTES = (r && r.notes) || {}; FOOT = (r && r.foot) || '';
+    MATURITY = (r && r.maturity) || null;
+  } catch (e) { ENGINE = false; CONTENTS = null; NOTES = {}; FOOT = ''; MATURITY = null; }
 }
 
 async function seed(){
@@ -1063,6 +1134,13 @@ var BUILT_HEAD = { engine: 'Rule', middleware: 'Gate', web: 'Screen', api: 'Rout
 var BUILT_NOTE = { engine: 'Size', middleware: 'Size', web: 'Size', api: 'Function points',
                    database: '', connector: 'Size' };
 var CONTENTS = null;
+/**
+ * ⭐⭐ WHAT EACH ROW LEAVES OUT. Athi, 2026-09-11, on IoT: *"not an explicit stuff, it is part of
+ * connectors, we can mention as a notes."* ⚠ The six rows are built by six different rules and not one of
+ * them said what it excluded — which is how a row headed "connector" showed no Tally at all and still
+ * looked right. A boundary a reader can see is one they can argue with.
+ */
+var NOTES = {}, FOOT = '', MATURITY = null;
 
 var AREA_TIER = { engine: 1, middleware: 1, web: 1, api: 2, database: 2, connector: 2 };
 var TIER_NAME = { 1: 'The architecture \u2014 engine, middleware, web', 2: 'What it rides on' };
@@ -1692,16 +1770,28 @@ function chartLegend(keys){
 function chartStack(rows, opts){
   var o = opts || {};
   if (!rows || !rows.length) return '<div class="none">Nothing to draw yet.</div>';
-  var rowH = 26, pad = 4, labelW = o.labelW || 74;
+  var rowH = 26, pad = 4;
+  /**
+   * ⭐ MEASURED, NOT ASSUMED. 74px at 10.5px monospace is about eleven and a half characters, which is why
+   * an 11-character cut looked like it fitted — the two numbers were tuned to each other by accident. One
+   * new area or kind with a longer name and the label would have been clipped in a chart, the one place a
+   * reader cannot tell a shortened name from a real one.
+   * ⚠️ 6.3 is the advance width of this face at this size; it is an approximation, so the column is given a
+   * character of slack rather than being fitted exactly.
+   */
+  var longest = rows.reduce(function(m, r){ return Math.max(m, String(r.key || '').length); }, 0);
+  var labelW = o.labelW || Math.max(74, Math.ceil((longest + 1) * 6.3));
+  var W = labelW + 226;   /* the bar track and the count keep their room whatever the labels need */
   var h = rows.length * rowH + pad;
-  var out = '<svg viewBox="0 0 340 ' + h + '" role="img" aria-label="' + esc(o.label || '') + '">';
+  var out = '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' + esc(o.label || '') + '">';
   rows.forEach(function (r, i) {
     var y = i * rowH + pad;
     var total = r.total || 1;
     var x = labelW;
-    var w = 340 - labelW - 44;   /* room on the right for the count — labels must fit INSIDE the viewBox */
+    var w = W - labelW - 44;   /* room on the right for the count — labels must fit INSIDE the viewBox */
+    /* ⭐ never cut — labelW above is measured from the longest of these */
     out += '<text x="0" y="' + (y + 12) + '" font-size="10.5" font-family="ui-monospace,Menlo,monospace" '
-      + 'fill="var(--ink-2)" font-weight="700">' + esc(String(r.key).slice(0, 11)) + '</text>';
+      + 'fill="var(--ink-2)" font-weight="700">' + esc(String(r.key)) + '</text>';
     CHART_TONES.forEach(function (t) {
       var v = Number(r[t[0]] || 0);
       if (!v) return;
@@ -1711,7 +1801,7 @@ function chartStack(rows, opts){
       x += seg;
     });
     /* ⭐ the number, because a bar you have to measure by eye is decoration */
-    out += '<text x="' + (340 - 40) + '" y="' + (y + 12) + '" font-size="10.5" fill="var(--grey-2)">'
+    out += '<text x="' + (W - 40) + '" y="' + (y + 12) + '" font-size="10.5" fill="var(--grey-2)">'
       + (r.total - (r.untested || 0)) + '/' + r.total + '</text>';
   });
   return out + '</svg>';
@@ -1942,11 +2032,12 @@ function matrixHTML(){
      * none says so, which is a finding about that file rather than a blank in this table.
      */
     if (mopen) {
-      var inner = '';
+      /* ⭐ the boundary first, then the list — it is the frame for the numbers, not a footnote to them */
+      var inner = NOTES[a] ? '<p class="areanote">' + esc(NOTES[a]) + '</p>' : '';
       if (!made || !made.length) {
-        inner = '<div class="fine" style="padding:8px 2px">Nothing is listed for this area yet.</div>';
+        inner += '<div class="fine" style="padding:8px 2px">Nothing is listed for this area yet.</div>';
       } else {
-        inner = '<table class="inside"><thead><tr><th>' + esc(BUILT_HEAD[a] || 'Name')
+        inner += '<table class="inside"><thead><tr><th>' + esc(BUILT_HEAD[a] || 'Name')
           + '</th><th>What it does</th><th>' + esc(BUILT_NOTE[a] || 'Size') + '</th></tr></thead><tbody>';
         made.slice(0, 60).forEach(function(x){
           inner += '<tr><td><span class="k">' + esc(x.name) + '</span>'
@@ -1997,6 +2088,9 @@ function matrixHTML(){
         .reduce(function(t, k){ return t + CONTENTS[k].length; }, 0) : '—') + '</b></td>';
   h += '<td class="sep"></td>' + barCell(allDone, allTestable.length) + '</tr>';
   h += '</table></div>';
+
+  /* ⭐ the one thing no row can ever reach, said once — six rows are the ARCHITECTURE, not an inventory */
+  if (FOOT) h += '<p class="areafoot">' + esc(FOOT) + '</p>';
 
   /* ⚠️ what the table could not place, said out loud rather than absorbed into a row */
   if (unplaced) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 8px">⚠ ' + unplaced
@@ -2158,6 +2252,266 @@ function chartsHTML(){
     + '</div>';
 }
 
+/**
+ * ── ⭐⭐ THE SAME ARCHITECTURE AS A TREE ──────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"if it is a tree format we can do that as well, so it is visible — we have a tree structure
+ * built for networking and we can use it, or a tree view would be good."*
+ *
+ * ⭐ ADOPTED FROM `_netTree` in cap-network.js, which is the tree this platform already has: recursion, depth as
+ * padding-inline-start, the node's own purpose on a second line underneath it. Same shape, so both read alike.
+ *
+ * ⚠️ ONE THING DELIBERATELY NOT COPIED. The network tree clamps that purpose line with nowrap + ellipsis. That
+ * is the exact fault Athi reported on this board an hour ago — "many of the text are only partly present" — and
+ * copying a pattern means copying its judgement, not its bugs. Here the purpose wraps.
+ *
+ * ⚠️ AND IT IS A SECOND VIEW, NOT A REPLACEMENT. The table stays. His standing instruction on this board is to
+ * keep what is built and audit before dropping anything, and a tree and a table answer different questions: a
+ * table compares rows, a tree shows containment. The toggle costs one line and settles nothing prematurely.
+ */
+var SUMVIEW = 'table';
+function setSumView(v){ SUMVIEW = v; paintSummary(); }
+
+/** a branch: label, count, optional note, and the rows underneath it */
+function treeNode(depth, glyph, label, count, tail, note, open, key){
+  var pad = 10 + depth * 18;
+  return '<div class="tnode' + (open ? ' open' : '') + '"' + (key ? ' onclick="foldSection(\'' + key + '\')"' : '')
+    + ' style="padding-inline-start:' + pad + 'px">'
+    + '<span class="tglyph">' + glyph + '</span>'
+    + '<span class="tlabel">' + esc(label) + '</span>'
+    + (count === null || count === undefined ? '' : '<span class="tcount">' + count + '</span>')
+    + (tail || '')
+    + (note ? '<div class="tnote" style="margin-inline-start:' + (pad + 4) + 'px">' + esc(note) + '</div>' : '')
+    + '</div>';
+}
+
+/**
+ * ── ⭐⭐ AND THE SAME THING BY FOLDER ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11, straight after asking for a tree: *"or in the folder structure?"*
+ *
+ * ⭐⭐ WHICH IS THE BETTER ANSWER TO HIS OTHER QUESTION. He had just asked whether any of this is reproducible
+ * as the platform grows. A LAYER tree cannot be: the six rows are six hand-written rules, and every one of them
+ * excludes something — that is exactly how the connector row showed no Tally at all. A FOLDER tree is built
+ * from the paths themselves, so a new directory appears in it the day it exists, without anyone deciding to
+ * add it. Nothing can be left out of a view that is derived from where the files actually are.
+ *
+ * ⚠️ IT IS NOT A REPLACEMENT FOR THE LAYER VIEW, because a folder is not an architecture: lib/ holds nine
+ * declared engine rules and 116 files that are not, and no amount of path-reading will tell them apart. The
+ * layer view carries the JUDGEMENT; the folder view carries the COMPLETENESS. Each covers the other's gap,
+ * which is why both are here.
+ */
+function folderTreeHTML(){
+  if (!CONTENTS) return '<div class="note">The architecture loads with the cases \u2014 press <b>Load cases</b>.</div>';
+
+  /* every entry the board knows, filed under its real path */
+  var root = { kids: {}, items: [] };
+  AREA_ORDER.forEach(function(a){
+    (CONTENTS[a] || []).forEach(function(x){
+      if (!x.file) return;
+      var parts = x.file.split('/');
+      var leaf = parts.pop();
+      var at = root;
+      parts.forEach(function(seg){
+        if (!at.kids[seg]) at.kids[seg] = { kids: {}, items: [] };
+        at = at.kids[seg];
+      });
+      at.items.push({ leaf: leaf, area: a, x: x });
+    });
+  });
+
+  /* ⭐ a folder's weight is everything beneath it, not just its own files */
+  var deep = function(n){
+    var t = n.items.length;
+    Object.keys(n.kids).forEach(function(k){ t += deep(n.kids[k]); });
+    return t;
+  };
+
+  var walk = function(node, name, depth, path){
+    var kids = Object.keys(node.kids).sort();
+    var key = 'dir:' + path;
+    var open = isOpenSection(key, deep(node));
+    var h = '';
+    if (name !== null) {
+      h += treeNode(depth, open ? '\u2500' : '\u253c', name + '/', deep(node),
+        '<span class="tof">' + node.items.length + ' here</span>', '', open, key);
+      if (!open) return h;
+      depth += 1;
+    }
+    kids.forEach(function(k){ h += walk(node.kids[k], k, depth, path + '/' + k); });
+    node.items.sort(function(a, b){ return a.leaf < b.leaf ? -1 : 1; }).forEach(function(it, i){
+      var last = i === node.items.length - 1 && !kids.length;
+      var xt = CASES.filter(function(c){ return (c.subjects || []).indexOf(it.x.file) >= 0
+        || (c.subjects || []).indexOf(it.x.file.split('/').slice(1).join('/')) >= 0; });
+      var xr = xt.filter(function(c){ return LAST[c.case_key]; }).length;
+      /* ⭐ the LAYER as a chip here — the folder says where it lives, the chip says what it is */
+      var tail = '<span class="tarea t-' + esc(it.area) + '">' + esc(AREA_LABEL[it.area] || it.area) + '</span>'
+        + (it.x.stage ? '<span class="stage ' + esc(it.x.stage) + '">' + esc(it.x.stage) + '</span>' : '')
+        + (xt.length ? '<span class="tof">' + xr + '/' + xt.length + ' run</span>'
+                     : '<span class="tof dim">no case names it</span>');
+      h += treeNode(depth, last ? '\u2514' : '\u251c', it.leaf, null, tail,
+        it.x.purpose || '\u26a0 this file does not say what it is for', false, '');
+    });
+    return h;
+  };
+
+  return '<div class="tree">' + walk(root, null, 0, '') + '</div>'
+    + '<p class="areafoot">\u26a0 This is where the files ARE, which is why nothing can be missing from it \u2014 '
+    + 'but a folder is not an architecture. lib/ holds the declared engine rules and everything that is not one, '
+    + 'and only the layer view can tell them apart. Read the two together.</p>';
+}
+
+function treeHTML(){
+  if (!CONTENTS) return '<div class="note">The architecture loads with the cases \u2014 press <b>Load cases</b>.</div>';
+
+  var h = '<div class="tree">';
+  var total = AREA_ORDER.reduce(function(t, a){ return t + ((CONTENTS[a] || []).length); }, 0);
+  h += treeNode(0, '\u25c6', 'Chit & Bridge', total, '<span class="tof">built</span>', '', true, '');
+
+  AREA_ORDER.forEach(function(a){
+    var made = CONTENTS[a] || [];
+    var tests = CASES.filter(function(c){ return (c.areas || []).indexOf(a) >= 0; });
+    var run = tests.filter(function(c){ return LAST[c.case_key]; }).length;
+    var bad = tests.filter(function(c){ var l = LAST[c.case_key];
+      return l && (l.status === 'fail' || l.status === 'blocked'); }).length;
+    var key = 'tree:' + a;
+    var open = isOpenSection(key, made.length);
+
+    /* ⭐ the layer's own evidence, on the branch — built, tested, and what is red */
+    var tail = '<span class="tof">' + tests.length + ' case(s) \u00b7 ' + run + ' run'
+      + (bad ? ' \u00b7 <b class="bad">' + bad + ' red</b>' : '') + '</span>'
+      + '<span class="ttier">' + (AREA_TIER[a] === 1 ? 'the product' : 'what it rides on') + '</span>';
+
+    h += treeNode(1, open ? '\u2500' : '\u253c', AREA_LABEL[a] || a, made.length, tail, NOTES[a] || '', open, key);
+    if (!open) return;
+
+    /**
+     * ⭐ THE TIER IS A REAL BRANCH, not a badge. connector splits adapter / kit / channel and engine splits
+     * pure / bound — those groupings are declared in the source, and a tree is the one view that can show a
+     * grouping as containment rather than as a column of repeated words.
+     */
+    var byTier = {}, order = [];
+    made.forEach(function(x){
+      var t = x.tier || '';
+      if (!(t in byTier)) { byTier[t] = []; order.push(t); }
+      byTier[t].push(x);
+    });
+
+    order.forEach(function(t){
+      var kids = byTier[t];
+      var d = 2;
+      if (t) { h += treeNode(2, '\u251c', t, kids.length, '', '', true, ''); d = 3; }
+      kids.slice(0, 60).forEach(function(x, i){
+        var last = i === Math.min(kids.length, 60) - 1;
+        var xt = CASES.filter(function(c){ return (c.subjects || []).indexOf(x.file) >= 0; });
+        var xr = xt.filter(function(c){ return LAST[c.case_key]; }).length;
+        var t2 = (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '')
+          + (xt.length ? '<span class="tof">' + xr + '/' + xt.length + ' run</span>'
+                       : '<span class="tof dim">no case names it</span>');
+        h += treeNode(d, last ? '\u2514' : '\u251c', x.name, null, t2,
+          x.purpose || '\u26a0 this file does not say what it is for', false, '');
+      });
+      if (kids.length > 60) h += treeNode(d, '\u2514', (kids.length - 60) + ' more', null, '', '', false, '');
+    });
+  });
+
+  h += '</div>';
+  if (FOOT) h += '<p class="areafoot">' + esc(FOOT) + '</p>';
+  return h;
+}
+
+/**
+ * ── ⭐⭐ TWO MATURITIES, AND THE GAP BETWEEN THEM IS THE POINT ────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"if we can include level of maturity somewhere that would be great — product maturity /
+ * test maturity."*
+ *
+ * ⭐ THE PRODUCT GRADE IS ADOPTED, NOT INVENTED. app/cap-legend.js has graded every capability for months on
+ * two declared axes — maturity 1-5 (what it DOES) and gov 1-5 (how it is GOVERNED), each with a target and a
+ * govGap naming the lever. Nothing on this board ever read it. Grading them again here would have produced the
+ * fault this page keeps catching: two numbers for one thing under labels that do not say which is which.
+ *
+ * ⭐⭐ THE TEST GRADE IS THE GENUINELY MISSING ONE, and it is not a second opinion about the product — it is a
+ * fact about the EVIDENCE. A capability its author grades 3, whose tests are all unit tests nobody has run this
+ * month, is not the same asset as one graded 3 with a green acceptance pass behind it.
+ *
+ * ⚠️ A RUNG IS EARNED BY A GREEN ON THE LAST RUN, not by the test existing. A red at rung 4 does not leave you
+ * at 4 with an asterisk — it leaves you at 3, because the claim is not currently supported.
+ * ⚠️ And a kind can only prove what that kind proves: unit tests earn rung 3 and can never earn rung 5.
+ */
+var TEST_RUNGS = ['nothing names it', 'covered', 'exercised', 'isolated', 'integrated', 'accepted'];
+
+function testRung(cases){
+  if (!cases.length) return { n: 0, why: 'nothing names it' };
+  var run = cases.filter(function(c){ return LAST[c.case_key]; });
+  var green = cases.filter(function(c){ var l = LAST[c.case_key]; return l && l.status === 'pass'; });
+  if (!run.length)   return { n: 1, why: cases.length + ' case(s), none run' };
+  if (!green.length) return { n: 1, why: run.length + ' run, none green' };
+  var of = function(ks){ return green.filter(function(c){ return ks.indexOf(c.test_type) >= 0; }).length; };
+  var acc = of(['acceptance']), integ = of(['integration', 'system']), iso = of(['unit', 'static']);
+  if (acc)   return { n: 5, why: acc + ' acceptance pass' + (acc > 1 ? 'es' : '') };
+  if (integ) return { n: 4, why: integ + ' integration/system green' };
+  if (iso)   return { n: 3, why: iso + ' unit/static green \u2014 nothing proves it in place' };
+  return { n: 2, why: green.length + ' green, none of a kind that isolates or integrates' };
+}
+
+/** ⭐ five pips, so a grade reads as a position rather than as a number to be compared arithmetically */
+function pips(n, target){
+  var h = '<span class="pips">';
+  for (var i = 1; i <= 5; i++) {
+    h += '<i class="' + (n >= i ? 'on' : (target && target >= i ? 'want' : '')) + '"></i>';
+  }
+  return h + '</span>';
+}
+
+function maturityHTML(){
+  if (!MATURITY) return '';
+  if (MATURITY.error) return '<div class="note">\u26a0 The capability map could not be read: '
+    + esc(MATURITY.error) + '</div>';
+
+  var h = '<h2 style="font-size:var(--fs-3);margin:22px 0 9px">Maturity</h2>'
+    + '<div class="prose" style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.55">'
+    + '<b>Product</b> is what <code>app/cap-legend.js</code> declares \u2014 1 Proven \u00b7 2 Packaged \u00b7 '
+    + '3 Itemised &amp; Isolated \u00b7 4 Governed \u00b7 5 Productized \u2014 graded by the person who built it. '
+    + '<b>Test</b> is what the evidence supports, derived from the cases below: '
+    + '1 covered \u00b7 2 exercised \u00b7 3 isolated \u00b7 4 integrated \u00b7 5 accepted. '
+    + '\u2b50 <b>The gap between the two columns is the interesting number.</b> A claim graded above its '
+    + 'evidence is not wrong \u2014 it is unproven, which is a different and more useful thing to know.</div>';
+
+  h += '<div class="scroll"><table class="sum"><tr><th>Capability</th>'
+    + '<th>Product</th><th class="num">Now</th><th class="num">Target</th>'
+    + '<th>Test</th><th class="num">Rung</th><th>On what evidence</th><th class="num">Gov</th></tr>';
+
+  var behind = 0, ahead = 0;
+  MATURITY.forEach(function(m){
+    /* the cases that name this capability's file, plus any whose module says so */
+    var cs = m.file ? CASES.filter(function(c){ return (c.subjects || []).indexOf(m.file) >= 0
+      || (c.subjects || []).indexOf(m.file.split('/').slice(2).join('/')) >= 0; }) : [];
+    var t = testRung(cs);
+    if (m.maturity && t.n && t.n < m.maturity) behind++;
+    if (m.maturity && t.n > m.maturity) ahead++;
+
+    h += '<tr><td><b>' + esc(m.icon ? m.icon + ' ' : '') + esc(m.name) + '</b>'
+      + (m.lever ? '<span class="sub">lever: ' + esc(m.lever) + '</span>' : '') + '</td>'
+      + '<td>' + (m.maturity ? pips(m.maturity, m.target) : '<span class="dim">not graded</span>') + '</td>'
+      + '<td class="num">' + (m.maturity || '<span class="dim">\u2014</span>') + '</td>'
+      + '<td class="num dim">' + (m.target || '\u2014') + '</td>'
+      + '<td>' + (m.file ? pips(t.n, m.maturity) : '<span class="dim">no capability file</span>') + '</td>'
+      + '<td class="num">' + (m.file
+          ? (m.maturity && t.n < m.maturity ? '<span class="warnn">' + t.n + '</span>' : '<b>' + t.n + '</b>')
+          : '<span class="dim">\u2014</span>') + '</td>'
+      + '<td class="fine">' + esc(m.file ? t.why : 'nothing to test yet \u2014 this is an idea, not code') + '</td>'
+      + '<td class="num dim">' + (m.gov === null ? 'n/a' : m.gov + '/' + (m.govTarget || '\u2014')) + '</td></tr>';
+  });
+  h += '</table></div>';
+
+  h += '<p class="areafoot">' + behind + ' of ' + MATURITY.length + ' capabilities are graded ABOVE what their '
+    + 'tests currently prove' + (ahead ? ', and ' + ahead + ' below' : '') + '. '
+    + '\u26a0 That is not a list of lies \u2014 a grade is a judgement about what was built, a rung is a fact '
+    + 'about what has been shown. The rows where they disagree are where a demo would go badly.</p>';
+  return h;
+}
+
 async function paintSummary(){
   await loadEngine();
   if (!COVER.length && !RUNS.length) {
@@ -2184,7 +2538,17 @@ async function paintSummary(){
    * ⚠️ The two things the matrix had and the pivot did not — the architecture tier break and the n/a
    * distinction — were moved INTO the pivot rather than dropped with it.
    */
-  var h = matrixHTML() + engineHTML() + chartsHTML();
+  /* ⭐ table or tree — the same data, two questions: a table compares, a tree contains */
+  var h = '<div class="sumswitch">'
+    + '<button class="btn' + (SUMVIEW === 'table' ? ' pri' : '') + '" onclick="setSumView(\'table\')">Table</button>'
+    + '<button class="btn' + (SUMVIEW === 'tree' ? ' pri' : '') + '" onclick="setSumView(\'tree\')">Tree \u00b7 by layer</button>'
+    + '<button class="btn' + (SUMVIEW === 'folder' ? ' pri' : '') + '" onclick="setSumView(\'folder\')">Tree \u00b7 by folder</button>'
+    + '<span class="fine">The table compares the layers. The layer tree shows what is inside each one. '
+    + 'The folder tree shows where the files actually are \u2014 the only one of the three that cannot leave anything out.</span>'
+    + '</div>';
+  h += (SUMVIEW === 'tree' ? treeHTML()
+      : SUMVIEW === 'folder' ? folderTreeHTML()
+      : matrixHTML()) + maturityHTML() + engineHTML() + chartsHTML();
   /* ⚠️ "Coverage by area" lived here and was the Cases pivot's default cut, drawn twice. */
   h += '<div class="note" style="margin:18px 0">Counts by area, kind, status or who runs them are on the '
     + '<b>Cases</b> tab — choose what the rows and columns are. <i>A summary that repeats the list is the '
@@ -2480,7 +2844,22 @@ function isOpenSection(k, howMany){
  * ⭐ One repaint that respects the current view. There is no situation in which a fold on Summary should draw
  * the Cases tab, and there never was — this was a single missing branch.
  */
-function repaintCurrent(){ if (VIEW === 'summary') paintSummary(); else paint(); }
+/**
+ * ⚠️⚠️ AND I ONLY FIXED TWO OF THE FIVE TABS. Athi, 2026-09-11: *"other tabs?"*
+ *
+ * This was written to stop a fold on Summary from drawing the Cases table over it, and it did — for Summary.
+ * Report, Reliability and Try all fell through to the same else, so folding anything on those three still
+ * painted Cases on top. The bug was never "summary repaints wrong"; it was "this function knows one tab".
+ * ⭐ setView already holds the whole map. This defers to it rather than keeping a second, shorter copy that
+ * was wrong the moment a fourth tab existed.
+ */
+function repaintCurrent(){
+  if (VIEW === 'summary') paintSummary();
+  else if (VIEW === 'report') paintReport();
+  else if (VIEW === 'reliability') paintReliability();
+  else if (VIEW === 'try') paintTry();
+  else paint();
+}
 function foldSection(k){ FOLD[k] = !isOpenSection(k, 99); foldSave(); repaintCurrent(); }
 /* ⚠️ a STATE, not a one-off: the next repaint would undo an action, and the board repaints on every tap */
 function foldAll(open){ FOLD = { _all: !!open }; foldSave(); repaintCurrent(); }
