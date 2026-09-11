@@ -41,7 +41,7 @@
  */
 'use strict';
 
-var CBTEST = { on: false, cases: [], last: {}, area: '', open: null, run: null, busy: false, adding: false, stale: {}, cover: [], suggest: null };
+var CBTEST = { on: false, cases: [], last: {}, area: '', kind: '', open: null, run: null, busy: false, adding: false, stale: {}, cover: [], suggest: null };
 
 /* ── WHICH CASES BELONG TO THE SCREEN YOU ARE ON ──────────────────────────────────────────────────────────────
  * ⚠️ A GUESS, AND IT SAYS SO. The map is deliberately partial: a nav with no entry opens on "All areas" rather
@@ -283,15 +283,67 @@ function testAgo(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
+/**
+ * ⚠️ THE AREA COUNTS ARE OF WHAT THE KIND FILTER HAS LEFT. A list still offering "CTR · Counter" after picking
+ * Unit would promise ten cases and deliver none — the same fault the board had before this afternoon.
+ */
 function testAreas() {
   var seen = {}, out = [];
   CBTEST.cases.forEach(function (c) {
-    if (!seen[c.module_key]) { seen[c.module_key] = 1; out.push({ key: c.module_key, name: c.module_name || '' }); } });
+    /* ⚠ the kind filter, applied HERE and not only to the list below — otherwise this dropdown keeps
+       offering areas that hold nothing of the chosen kind */
+    if (CBTEST.kind && c.test_type !== CBTEST.kind) return;
+    if (!seen[c.module_key]) {
+      seen[c.module_key] = { key: c.module_key, name: c.module_name || '', n: 0 };
+      out.push(seen[c.module_key]);
+    }
+    seen[c.module_key].n++;
+  });
   return out.sort(function (a, b) { return a.key < b.key ? -1 : 1; });
 }
 
+/**
+ * ── ⭐⭐⭐ WHAT KIND OF TEST — THE FIRST QUESTION, IN THE PANEL TOO ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11, looking at this panel: *"my expectation was the very first dropdown box is Unit Test etc,
+ * is it the one you have given me?"*
+ *
+ * ⚠️⚠️ IT WAS NOT, AND THE REASON IS WORTH WRITING DOWN. Every change that afternoon went into testing.html —
+ * the full-page board — and this panel is a different file that nothing touched. So he asked four times why
+ * the dropdowns had not moved while looking at a screen I had never edited, and I kept answering about the
+ * other one. ⭐ Two surfaces showing the same board must be changed together or the one left behind makes a
+ * liar of the answer.
+ */
+var TEST_KINDS = ['acceptance', 'unit', 'integration', 'system', 'performance', 'security', 'penetration',
+                  'static', 'support'];
+var TEST_KIND_LABEL = {
+  acceptance: 'Manual · a person', unit: 'Unit', integration: 'Integration', system: 'System',
+  performance: 'Performance', security: 'Security', penetration: 'Penetration',
+  'static': 'Static · reads code', support: 'Support · not a test',
+};
+
 function testShown() {
-  return CBTEST.cases.filter(function (c) { return !CBTEST.area || c.module_key === CBTEST.area; });
+  return CBTEST.cases.filter(function (c) {
+    if (CBTEST.kind && c.test_type !== CBTEST.kind) return false;
+    return !CBTEST.area || c.module_key === CBTEST.area;
+  });
+}
+
+/** ⚠️ counts of what the OTHER control has left, so picking a kind narrows the areas rather than lying about them */
+function testKindCounts() {
+  var n = {};
+  CBTEST.cases.forEach(function (c) {
+    if (CBTEST.area && c.module_key !== CBTEST.area) return;
+    var k = c.test_type || '—'; n[k] = (n[k] || 0) + 1;
+  });
+  return n;
+}
+
+function testSetKindFilter(v) { CBTEST.kind = v; CBTEST.area = ''; CBTEST.open = null; testPaint(); }
+
+/** how many cases the KIND filter alone leaves — the honest number for "All areas" */
+function testKindTotal() {
+  return CBTEST.cases.filter(function (c) { return !CBTEST.kind || c.test_type === CBTEST.kind; }).length;
 }
 
 function testPaint() {
@@ -338,11 +390,27 @@ function testPaint() {
     +   '<button class="btn" title="Close" onclick="testModeSet(false)" style="padding:2px 8px">✕</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
+    /* ⭐ FIRST, because "what kind of test" is the first question anybody asks of this list */
+    +   '<select onchange="testSetKindFilter(this.value)" title="What kind of test"'
+    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
+    +     (function () {
+            var n = testKindCounts();
+            var tot = Object.keys(n).reduce(function (a, k) { return a + n[k]; }, 0);
+            return '<option value=""' + (CBTEST.kind ? '' : ' selected') + '>Every kind · ' + tot + '</option>'
+              + TEST_KINDS.map(function (k) {
+                  /* ⚠️ an empty category we KNOW should exist is still offered — "Penetration · 0" states a
+                     fact, while leaving it out lets the absence read as "not applicable" */
+                  if (!n[k] && k !== 'penetration') return '';
+                  return '<option value="' + k + '"' + (CBTEST.kind === k ? ' selected' : '') + '>'
+                    + testEsc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (n[k] || 0) + '</option>';
+                }).join('');
+          })()
+    +   '</select>'
     +   '<select onchange="testSetArea(this.value)" style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
-    +     '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas · ' + CBTEST.cases.length + '</option>'
+    +     '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas · ' + testKindTotal() + '</option>'
     +     testAreas().map(function (a) {
             return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
-                 + testEsc(a.key + ' · ' + a.name) + '</option>'; }).join('')
+                 + testEsc(a.key + ' · ' + a.name) + ' · ' + a.n + '</option>'; }).join('')
     +   '</select>'
     /**
      * ⭐⭐⭐ FOCUS. Athi: *"can we force an area to test? This area testing not done yet?"*
@@ -363,9 +431,21 @@ function testPaint() {
               + testEsc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
               + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
     +   '</select>'
-    +   '<select onchange="testSetKind(this.value)" title="How this is being tested" style="font-size:var(--fs-2);padding:3px 5px">'
-    +     ['manual', 't0', 't1', 't2', 't3', 'unit', 'regression'].map(function (k) {
-            return '<option value="' + k + '"' + (CBTEST.run.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('')
+    /**
+     * ⚠️⚠️ THIS SAID "manual · t0 · t1 · t2 · t3 · unit · regression" AND NOTHING ELSE.
+     *
+     * Athi: *"I spent time to understand what each dropdown is"* — and, on the ladder itself, *"T1, T2 are the
+     * test yardsticks for YOU."* They are: how much of the suite Claude runs before shipping and who authorises
+     * it. Seven bare tokens, four of them somebody else's working vocabulary, on the panel a tester lands on.
+     * ⭐ Each option now says what it is, and the internal four say whose they are.
+     */
+    +   '<select onchange="testSetKind(this.value)" title="Who is doing this run, and how much of it"'
+    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:200px">'
+    +     [['manual', 'Me, by hand'], ['unit', 'An automated run'], ['regression', 'A full regression'],
+           ['t0', 'T0 · Claude, quick check'], ['t1', 'T1 · Claude, one spec'],
+           ['t2', 'T2 · Claude, one surface'], ['t3', 'T3 · Claude, everything']].map(function (k) {
+            return '<option value="' + k[0] + '"' + (CBTEST.run.kind === k[0] ? ' selected' : '') + '>'
+              + testEsc(k[1]) + '</option>'; }).join('')
     +   '</select>'
     /* ⚠️ ASKED FOR, NOT ASSUMED. Left blank the row still records the login that wrote it — which is the
        truth either way; this only adds a name when a login is shared. */
