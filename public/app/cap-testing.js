@@ -509,16 +509,48 @@ function testPaint() {
       var isOpen = CBTEST.open === c.case_key;
       h += '<div style="border:1px solid var(--line,#e7e3d8);border-left:3px solid ' + (col ? col[0] : 'transparent')
         +  ';border-radius:8px;margin-bottom:6px;background:var(--card,#fff)">'
-        +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:flex;gap:7px;align-items:flex-start;'
+        /**
+         * ── ⭐⭐⭐ A TABLE, NOT A RAGGED LIST ────────────────────────────────────────────────────────────────
+         *
+         * Athi, 2026-09-11: *"this is not properly aligned… can you keep as a proper tabular format, so we know
+         * the status clearly."*
+         *
+         * ⚠️⚠️ IT WAS A FLEX ROW, SO THE KEY SET THE COLUMN WIDTH AND EVERY ROW SET IT DIFFERENTLY. With written
+         * cases the keys are all five characters and it looked like a table by luck. The moment the automated
+         * ones arrived — `chitbridge-api/scripts/journey-supplier-hop.js` beside `gold-demo.js` — the titles
+         * started at a different x on every line and the eye had nothing to run down.
+         *
+         * ⚠️ AND THE STATUS WAS NESTED INSIDE THE TITLE, so it wrapped underneath and moved with the text. The
+         * one column a person scans for was the one column that never held still.
+         *
+         * ⭐ A grid with three fixed tracks: the key ellipsised at a set width, the title taking what is left,
+         * the verdict in its own column at the right. `min-width:0` on the middle track is what lets a long
+         * title shrink instead of shoving the verdict off the edge.
+         */
+        +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:grid;'
+        +    'grid-template-columns:minmax(0,14em) minmax(0,1fr) auto;gap:9px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
-        +    '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);font-weight:700;'
+        +    '<span title="' + testEsc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
+        +      'font-size:var(--fs-1);font-weight:700;'
         +      'background:' + (col ? col[1] : 'var(--neutral-tint)') + ';color:' + (col ? col[0] : 'var(--grey-2)')
-        +      ';border-radius:4px;padding:2px 5px;white-space:nowrap">' + testEsc(c.case_key) + '</span>'
-        +    '<span style="flex:1;min-width:0;font-size:var(--fs-2);line-height:1.35">' + testEsc(c.title || '')
-        +      '<span style="display:block;color:var(--grey-2,var(--grey-2));font-size:var(--fs-1);margin-top:2px">'
-        +      (l ? testEsc(l.status.toUpperCase() + ' · ' + (l.tester_name || '') + ' · ' + testAgo(l.at))
-                 + (l.note ? ' — ' + testEsc(l.note) : '')
-               : 'not tested yet') + '</span></span>'
+        +      ';border-radius:4px;padding:2px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'
+        /* ⭐ the SHORT name in the column, the full path in the tooltip. `chitbridge-api/scripts/` is the same
+           twenty-two characters on a hundred rows — it identifies nothing and costs the width the title needs.
+           ⚠ NOT ellipsised from the left with direction:rtl, which is what I reached for first: that reorders
+           the slashes in a path and produces `js.x/stpircs/` — the exact bidi trap already written down. */
+        +      '">' + testEsc(testShortKey(c.case_key)) + '</span>'
+        +    '<span style="min-width:0;font-size:var(--fs-2);line-height:1.35;overflow:hidden;'
+        +      'text-overflow:ellipsis;white-space:nowrap'
+        /* ⚠ 244 of the automated files state no claim in their header. Repeating the filename in the title
+           column — `akums-demo.js   akums-demo.js` — fills the row with nothing and hides the fact. */
+        +      (c.automated && !c.claim ? ';color:var(--grey-2);font-style:italic' : '') + '">'
+        +      testEsc(c.automated && !c.claim ? 'no claim written in the file' : (c.title || '')) + '</span>'
+        /* ⭐ the verdict, in its own column, so it is always in the same place on every row */
+        +    '<span style="font-size:var(--fs-1);white-space:nowrap;font-weight:' + (l ? '700' : '400') + ';'
+        +      'color:' + (col ? col[0] : 'var(--grey-2)') + '">'
+        +      (l ? testEsc(l.status.toUpperCase()) : 'not run')
+        +      '<span style="font-weight:400;color:var(--grey-2);margin-inline-start:5px">'
+        +      (l ? testEsc(testAgo(l.at)) : '') + '</span></span>'
         /* ⚠️ THE SPEC MOVED, SO THE CASE IS SUSPECT — said on the row, not hidden behind a filter. A green
            case whose clause has changed is the most misleading thing a board can show. */
         + (CBTEST.stale[c.case_key]
@@ -535,6 +567,15 @@ function testPaint() {
   }
   h += '</div>';
   body.innerHTML = h;
+}
+
+/**
+ * ⭐ The name that identifies a case in a column: a written case IS its key (CTR-01); a file is its basename.
+ * ⚠️ The directory is not dropped, it moves to the tooltip — two cases can share a basename across repos.
+ */
+function testShortKey(k) {
+  var s = String(k || '');
+  return s.indexOf('/') < 0 ? s : s.slice(s.lastIndexOf('/') + 1);
 }
 
 function testCaseBodyHTML(c) {

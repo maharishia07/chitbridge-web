@@ -77,11 +77,35 @@
   .case.fail{ border-left:4px solid var(--bad); }
   .case.blocked{ border-left:4px solid var(--warn); }
   .case.skipped{ border-left:4px solid var(--grey); }
-  .chead{ display:flex; gap:9px; align-items:flex-start; padding:9px 11px; cursor:pointer; }
+  /**
+   * ── ⭐⭐⭐ THE ROW IS A TABLE, NOT A FLEX LINE ──────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11: *"this is not properly aligned… can you keep as a proper tabular format, so we know the
+   * status clearly."*
+   *
+   * ⚠️⚠️ AS FLEX, THE KEY SET THE FIRST COLUMN AND EVERY ROW SET IT DIFFERENTLY. While every case was a
+   * five-character CTR-01 it looked like a table by luck; the moment the 464 file-backed cases arrived, a row
+   * keyed `chitbridge-api/scripts/journey-supplier-hop.js` sat beside one keyed `gold-demo.js` and the titles
+   * started at a different x on every line. There was nothing for the eye to run down.
+   *
+   * ⚠️ AND THE VERDICT WAS NESTED INSIDE THE TITLE, wrapping underneath it and moving with the text — so the
+   * one column a person scans was the one column that never held still.
+   *
+   * ⭐ Fixed tracks: key, title, then the badges. `min-width:0` on the title is what lets a long one shrink
+   * instead of shoving everything right of it off the edge.
+   */
+  .chead{ display:grid; grid-template-columns:minmax(0,17em) minmax(0,1fr) auto; gap:11px;
+        align-items:baseline; padding:9px 11px; cursor:pointer; }
   .chead .key{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); font-weight:700; color:var(--grey-2);
-        background:var(--neutral-tint); border-radius:5px; padding:2px 6px; white-space:nowrap; }
-  .chead .ttl{ flex:1; min-width:0; font-weight:600; line-height:1.35; font-size:var(--fs-2); }
-  .chead .ttl .last{ display:block; font-weight:400; color:var(--grey-2); font-size:var(--fs-1); margin-top:3px; }
+        background:var(--neutral-tint); border-radius:5px; padding:2px 6px; white-space:nowrap;
+        overflow:hidden; text-overflow:ellipsis; }
+  .chead .ttl{ min-width:0; font-weight:600; line-height:1.35; font-size:var(--fs-2);
+        overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chead .ttl.noclaim{ font-weight:400; font-style:italic; color:var(--grey-2); }
+  /* ⭐ the verdict lives in the badge track now, so it is in the same place on every row */
+  .chead .badges{ display:flex; gap:6px; align-items:center; white-space:nowrap; }
+  .chead .last{ font-size:var(--fs-1); font-weight:700; }
+  .chead .last.none{ font-weight:400; color:var(--grey-2); }
   .chead .ttl .last.fail{ color:var(--bad); }
   .pri{ font-size:var(--fs-1); color:var(--grey-2); white-space:nowrap; }
   .lay{ font-size:var(--fs-1); border:1px solid var(--line); border-radius:99px; padding:1px 7px; color:var(--grey-2);
@@ -1801,19 +1825,35 @@ function paint(){
   document.getElementById('main').innerHTML = h;
 }
 
+/**
+ * ⭐ What identifies a case in a narrow column: a written case IS its key (CTR-01); a file is its basename.
+ * ⚠️ The directory is not lost — it moves to the tooltip, because two files can share a basename across repos.
+ */
+function shortKey(k){
+  var s = String(k || '');
+  return s.indexOf('/') < 0 ? s : s.slice(s.lastIndexOf('/') + 1);
+}
+
 function caseHTML(c){
   var l = LAST[c.case_key], st = l ? l.status : '';
   var open = !!OPEN[c.case_key];
+  /* ⭐ the verdict is a COLUMN now — short enough to hold its width, with the detail in the tooltip */
   var last = l
-    ? '<span class="last ' + (st === 'fail' ? 'fail' : '') + '">' + st.toUpperCase()
-      + ' · ' + esc(l.tester_name || '') + ' · ' + ago(l.at)
-      + (l.run_kind ? ' · ' + esc(l.run_kind) : '') + (l.note ? ' — ' + esc(l.note) : '') + '</span>'
-    : '<span class="last">not tested yet</span>';
+    ? '<span class="last ' + (st === 'fail' ? 'fail' : '') + '" title="'
+      + esc(st.toUpperCase() + ' · ' + (l.tester_name || '') + ' · ' + ago(l.at)
+            + (l.run_kind ? ' · ' + l.run_kind : '') + (l.note ? ' — ' + l.note : ''))
+      + '" style="color:' + (st === 'fail' || st === 'blocked' ? 'var(--bad)' : 'var(--ok)') + '">'
+      + st.toUpperCase() + '</span>'
+    : '<span class="last none">not run</span>';
 
   var h = '<article class="case ' + st + '" id="c_' + esc(c.case_key) + '">'
     + '<div class="chead" onclick="toggle(\'' + esc(c.case_key) + '\')">'
-    +   '<span class="key">' + esc(c.case_key) + '</span>'
-    +   '<span class="ttl">' + esc(c.title || '') + last + '</span>'
+    +   '<span class="key" title="' + esc(c.case_key) + '">' + esc(shortKey(c.case_key)) + '</span>'
+    /* ⚠️ 244 automated files state no claim. Echoing the filename back as a title fills the column with
+       nothing and hides the fact; saying so is a finding about the test. */
+    +   '<span class="ttl' + (c.automated && !c.claim ? ' noclaim' : '') + '">'
+    +     esc(c.automated && !c.claim ? 'no claim written in the file' : (c.title || '')) + '</span>'
+    +   '<span class="badges">' + last
     /* ⚠️ ON THE ROW, not behind a filter — a tester must see it without going looking for it. */
     +   (STALE[c.case_key]
           ? '<span class="lay" style="background:#fbf3e3;border-color:#e8d7ae;color:#8a5a1e" title="'
@@ -1846,7 +1886,7 @@ function caseHTML(c){
           + '">' + esc(c.test_type) + '</span>' : '')
     +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
     +   '<span class="pri">' + esc(c.priority || '') + '</span>'
-    + '</div>';
+    + '</span></div>';
 
   if (open) {
     h += '<div class="body">';
