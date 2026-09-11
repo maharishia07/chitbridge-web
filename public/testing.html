@@ -213,6 +213,19 @@
         line-height:1.5; }
   .lens b{ color:var(--ink); }
   .lens i{ font-style:normal; color:var(--grey-2); }
+  /* ── ⭐ the Cases tab as one table: a row per area, expandable in place ── */
+  table.areas td{ vertical-align:middle; }
+  table.areas .arow{ cursor:pointer; }
+  table.areas .arow:hover td{ background:var(--neutral-tint); }
+  table.areas .arow.open td{ background:var(--neutral-tint); }
+  table.areas .arow:focus-visible td{ outline:2px solid var(--blue); outline-offset:-2px; }
+  table.areas .aname{ margin-inline-start:8px; font-weight:600; }
+  table.areas .k{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:#fff;
+        background:var(--grey-2); border-radius:4px; padding:1px 6px; }
+  table.areas .reach{ white-space:nowrap; }
+  /* ⚠️ the expanded cases span every column, so opening one area cannot shift the columns of the others */
+  table.areas .acases > td{ padding:2px 11px 12px; background:var(--paper); }
+  table.areas tfoot td{ background:var(--neutral-tint); border-top:2px solid var(--line); font-weight:700; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
   .modhead{ cursor:pointer; user-select:none; border-radius:6px; padding:3px 5px; margin-inline-start:-5px; }
@@ -885,16 +898,20 @@ function fillFilters(){
     nm[c.module_key]++;
   });
   order.sort(function(a, b){ return nm[b] - nm[a]; });
+  /**
+   * ⚠️⚠️ THE CHIPS WERE THE AREA COLUMN, PRINTED TWICE. A chip reading "MNT 10" sat above a row reading
+   * "MNT · Maintenance · 10 cases" — two places to look for one number, wrapping over two lines to do it.
+   * ⭐ Athi: *"if you make it as a tabular, I guess you can remove most of the top panel."* He is right: a
+   * summary that repeats the list underneath it is not a summary, it is the list again.
+   *
+   * ⚠️ ONE THING SURVIVES, because the table cannot say it: how many tests reach nothing we can name. That
+   * number belongs nowhere in a Reaches column and must not therefore disappear.
+   */
   var chips = document.getElementById('f_chips');
-  chips.innerHTML = order.length
-    ? order.map(function(k){
-        return '<button class="chip' + (MODFILT === k ? ' on' : '') + '" onclick="setMod(\'' + esc(k) + '\')" '
-          + 'title="' + esc(label[k]) + '">' + esc(k) + ' <i>' + nm[k] + '</i></button>';
-      }).join('') + (MODFILT ? '<button class="chip clear" onclick="setMod(\'\')">clear</button>' : '')
+  chips.innerHTML = (noArea && !ar)
+    ? '<span class="chipnote">\u26a0 ' + noArea + ' test(s) reach nothing this measurement can name — '
+      + 'counted in the totals, left out of the Reaches column.</span>'
     : '';
-  /* ⚠️ the unplaceable ones are reported rather than absorbed — see classify-tests.cjs */
-  if (noArea && !ar) chips.innerHTML += '<span class="chipnote">⚠ ' + noArea
-    + ' reach nothing we can name</span>';
 }
 
 function setState(v){ document.getElementById('f_state').value = v; paint(); }
@@ -1963,43 +1980,80 @@ function paint(){
    * ⚠️ A SECTION YOU OPENED MUST NOT CLOSE ITSELF when the board reloads. The open set is remembered per
    * device, and "expand all" is a state rather than a one-off action, or the first repaint would undo it.
    */
+  /**
+   * ── ⭐⭐⭐ ONE TABLE, ONE ROW PER AREA, EXPANDABLE ─────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11, with a screenshot: *"if you make it as a tabular, I guess you can remove most of the top
+   * panel… MNT 10 in the top is the count of test, then that can be one of the column here, so another 3
+   * columns for passed, failed, not run… look at what you have presented and see how you can make it simple
+   * one pager and expandable."*
+   *
+   * ⚠️⚠️ THE CHIP ROW AND THE SECTION LIST WERE THE SAME DATA TWICE. A chip reading "MNT 10" sat above a
+   * heading reading "MNT · Maintenance · 10 not run" — two places to look for one number, and the chips wrapped
+   * over two lines to say what the rows below already said. ⭐ In a table the count IS a column, so the chips
+   * are not a summary of the list; they were a second copy of it.
+   *
+   * ⚠️ REACHES IS NOT ONE-TO-ONE, and the column says so rather than picking a winner. Measured: 18 of 28
+   * areas reach exactly one part of the system; 10 reach more, and `chitbridge-api/tests` reaches all six.
+   * Showing one value would be tidy and false.
+   */
   var h = '<div class="foldbar">'
     + '<button class="btn" onclick="foldAll(true)">Expand all</button>'
     + '<button class="btn" onclick="foldAll(false)">Collapse all</button>'
     + '<span class="foldnote">' + order.length + ' area' + (order.length === 1 ? '' : 's')
     + ' · ' + list.length + ' case' + (list.length === 1 ? '' : 's') + '</span></div>';
 
+  h += '<div class="scroll"><table class="sum areas"><thead><tr>'
+    + '<th>Area</th><th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
+    + '<th class="num">Not run</th><th>Reaches</th></tr></thead><tbody>';
+
+  var tot = { n: 0, pass: 0, bad: 0, todo: 0 };
   order.forEach(function(k){
     var first = byMod[k][0];
     var open = isOpenSection(k, order.length);
-    /* ⭐ the numbers live on the header, so a folded section still answers "how far along is this one" */
     var n = { pass: 0, bad: 0, todo: 0 };
+    var reach = {};
     byMod[k].forEach(function(c){
       var l = LAST[c.case_key];
       if (!l) n.todo++;
       else if (l.status === 'fail' || l.status === 'blocked') n.bad++;
       else n.pass++;
+      (c.areas || []).forEach(function(a){ reach[a] = (reach[a] || 0) + 1; });
     });
+    tot.n += byMod[k].length; tot.pass += n.pass; tot.bad += n.bad; tot.todo += n.todo;
     var step = (first.seq !== undefined && first.seq < 90)
       ? (first.seq < 10 ? '0' + first.seq : String(first.seq)) : '';
-    h += '<section class="mod' + (open ? '' : ' shut') + '">'
-       + '<div class="modhead" onclick="foldSection(\'' + esc(k) + '\')" role="button" tabindex="0"'
-       +   ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();foldSection(\'' + esc(k) + '\');}">'
-       + '<span class="caret">' + (open ? '\u25be' : '\u25b8') + '</span>'
-       + (step ? '<span class="step">' + step + '</span>' : '')
-       + '<span class="k">' + esc(k) + '</span>'
-       + '<h2>' + esc(first.module_name || '') + '</h2>'
-       + '<span class="modn">'
-       +   (n.pass ? '<b class="big">' + n.pass + '</b> passed ' : '')
-       +   (n.bad ? '<b class="bad">' + n.bad + '</b> failed ' : '')
-       +   (n.todo ? '<b class="warnn">' + n.todo + '</b> not run' : '')
-       + '</span></div>';
+
+    h += '<tr class="arow' + (open ? ' open' : '') + '" onclick="foldSection(\'' + esc(k) + '\')"'
+      + ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'' + esc(k) + '\');}">'
+      + '<td><span class="caret">' + (open ? '\u25be' : '\u25b8') + '</span>'
+      +   (step ? '<span class="step">' + step + '</span>' : '')
+      +   '<span class="k">' + esc(k) + '</span>'
+      +   '<span class="aname">' + esc(first.module_name || '') + '</span></td>'
+      + '<td class="num"><b>' + byMod[k].length + '</b></td>'
+      + '<td class="num">' + (n.pass ? '<span class="big">' + n.pass + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="num">' + (n.bad ? '<span class="bad">' + n.bad + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="num">' + (n.todo ? '<span class="warnn">' + n.todo + '</span>' : '<span class="dim">—</span>') + '</td>'
+      /* ⚠️ every area it reaches, not the commonest one — see the note above on one-to-one */
+      + '<td class="reach">' + (Object.keys(reach).length
+          ? Object.keys(reach).sort(function(a,b){ return reach[b] - reach[a]; })
+              .map(function(a){ return '<span class="grp">' + esc(a) + '</span>'; }).join('')
+          : '<span class="dim">—</span>') + '</td></tr>';
+
+    /* ⭐ the cases themselves, in a row that spans the table — so opening one does not shift the columns */
     if (open) {
-      if (first.intro) h += '<div class="intro">' + esc(first.intro) + '</div>';
-      byMod[k].forEach(function(c){ h += caseHTML(c); });
+      var inner = '';
+      if (first.intro) inner += '<div class="intro">' + esc(first.intro) + '</div>';
+      byMod[k].forEach(function(c){ inner += caseHTML(c); });
+      h += '<tr class="acases"><td colspan="6">' + inner + '</td></tr>';
     }
-    h += '</section>';
   });
+
+  h += '</tbody><tfoot><tr><td><b>Everything shown</b></td>'
+    + '<td class="num"><b>' + tot.n + '</b></td>'
+    + '<td class="num"><b class="big">' + tot.pass + '</b></td>'
+    + '<td class="num"><b class="bad">' + tot.bad + '</b></td>'
+    + '<td class="num"><b class="warnn">' + tot.todo + '</b></td><td></td></tr></tfoot></table></div>';
   document.getElementById('main').innerHTML = h;
 }
 
