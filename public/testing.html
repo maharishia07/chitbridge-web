@@ -226,6 +226,8 @@
   /* ⚠️ the expanded cases span every column, so opening one area cannot shift the columns of the others */
   table.areas .acases > td{ padding:2px 11px 12px; background:var(--paper); }
   table.areas tfoot td{ background:var(--neutral-tint); border-top:2px solid var(--line); font-weight:700; }
+  /* ⭐ the pivot sits with the filters, because choosing the cut is the same kind of act as choosing a subset */
+  .pivotbar{ gap:7px; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
   .modhead{ cursor:pointer; user-select:none; border-radius:6px; padding:3px 5px; margin-inline-start:-5px; }
@@ -457,6 +459,40 @@
   -->
   <span class="tot" id="f_tot"></span>
   <input type="hidden" id="f_state" value="">
+</div>
+
+<!--
+  ── ⭐⭐⭐ THE PIVOT ────────────────────────────────────────────────────────────────────────────────────────────
+
+  Athi, 2026-09-11: *"I guess it is the pivotal view of the data, so possibly you can provide based on pivotal
+  format so the pivotal can change the results?"* — right after working out for himself that *"it is all the
+  same metrics in different format and different focus."*
+
+  ⭐⭐ HE IS DESCRIBING WHAT THE TABS ALREADY WERE. Cases grouped by area; Summary grouped by area against kind;
+  the evidence table grouped by kind — three hardcoded cuts of ONE list, each written separately, each free to
+  drift from the others. A pivot is not a feature added on top of that. It is the thing all three were
+  approximations of, and having it means the next question does not need a fourth table.
+-->
+<div class="bar pivotbar">
+  <label for="p_rows">Rows</label>
+  <select id="p_rows" onchange="paint()">
+    <option value="area" selected>Area</option>
+    <option value="kind">Kind</option>
+    <option value="reaches">Reaches</option>
+    <option value="priority">Priority</option>
+    <option value="who">Run by</option>
+    <option value="status">Status</option>
+  </select>
+  <label for="p_cols">Columns</label>
+  <select id="p_cols" onchange="paint()">
+    <option value="area">Area</option>
+    <option value="kind">Kind</option>
+    <option value="reaches">Reaches</option>
+    <option value="priority">Priority</option>
+    <option value="who">Run by</option>
+    <option value="status" selected>Status</option>
+  </select>
+  <span class="foldnote">the same cases, cut a different way</span>
 </div>
 
 <!--
@@ -1997,63 +2033,117 @@ function paint(){
    * areas reach exactly one part of the system; 10 reach more, and `chitbridge-api/tests` reaches all six.
    * Showing one value would be tidy and false.
    */
+  /**
+   * ── ⭐⭐⭐ A PIVOT, BECAUSE THERE WAS ONLY EVER ONE TABLE ──────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11: *"I guess it is the pivotal view of the data, so possibly you can provide based on
+   * pivotal format so the pivotal can change the results?"* — after working out for himself that *"it is all
+   * the same metrics in different format and different focus."*
+   *
+   * ⭐⭐ HE IS DESCRIBING WHAT THE FIVE TABS ACTUALLY ARE. Cases grouped by area, Summary grouped by area
+   * against kind, the evidence table grouped by kind — three hardcoded cuts of one list, each written
+   * separately, each able to drift from the others. A pivot is not a feature on top of that; it is the thing
+   * they were all approximations of.
+   *
+   * ⚠️ A CASE CAN LAND IN TWO ROWS. Group by Reaches and a test touching api and web counts in both, so the
+   * column will not sum to the total — the footer says so rather than letting the arithmetic look broken.
+   */
+  var PIVOTS = {
+    area:     { label: 'Area',     of: function(c){ return [c.module_key || '—']; } },
+    kind:     { label: 'Kind',     of: function(c){ return [c.test_type || '—']; } },
+    reaches:  { label: 'Reaches',  of: function(c){ return (c.areas || []).length ? c.areas : ['not placed']; } },
+    priority: { label: 'Priority', of: function(c){ return [c.priority || '—']; } },
+    who:      { label: 'Run by',   of: function(c){ return [c.automated ? 'the machine' : 'a person']; } },
+    status:   { label: 'Status',   of: function(c){
+                 var l = LAST[c.case_key];
+                 return [!l ? 'not run' : (l.status === 'fail' || l.status === 'blocked' ? 'failed' : 'passed')]; } },
+  };
+  var rowsBy = document.getElementById('p_rows') ? document.getElementById('p_rows').value : 'area';
+  var colsBy = document.getElementById('p_cols') ? document.getElementById('p_cols').value : 'status';
+  if (!PIVOTS[rowsBy]) rowsBy = 'area';
+  if (!PIVOTS[colsBy]) colsBy = 'status';
+
+  /* ⭐ the cases that belong to each row, kept so a row can still be opened and read */
+  var rowKeys = [], rowOf = {}, colKeys = [], cell = {}, multi = false;
+  var seqOf = {}, nameOf = {};
+  list.forEach(function(c){
+    var rs = PIVOTS[rowsBy].of(c), cs = PIVOTS[colsBy].of(c);
+    if (rs.length > 1 || cs.length > 1) multi = true;
+    rs.forEach(function(r){
+      if (!rowOf[r]) { rowOf[r] = []; rowKeys.push(r); }
+      rowOf[r].push(c);
+      if (rowsBy === 'area') {
+        if (seqOf[r] === undefined) seqOf[r] = (c.seq === undefined ? 99 : c.seq);
+        if (!nameOf[r]) nameOf[r] = c.module_name || '';
+      }
+      cs.forEach(function(k){
+        if (colKeys.indexOf(k) < 0) colKeys.push(k);
+        cell[r + '\u0000' + k] = (cell[r + '\u0000' + k] || 0) + 1;
+      });
+    });
+  });
+
+  /* ⚠️ status has a natural order (done, broken, untouched); everything else reads best biggest-first */
+  var ORDER = { status: ['passed', 'failed', 'not run'], kind: KIND_ORDER, reaches: AREA_ORDER,
+                priority: ['High', 'Medium', 'Low'] };
+  if (ORDER[colsBy]) colKeys.sort(function(a, b){
+    var i = ORDER[colsBy].indexOf(a), j = ORDER[colsBy].indexOf(b);
+    return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+  });
+  if (rowsBy === 'area') rowKeys.sort(function(a, b){ return (seqOf[a] - seqOf[b]) || (a < b ? -1 : 1); });
+  else if (ORDER[rowsBy]) rowKeys.sort(function(a, b){
+    var i = ORDER[rowsBy].indexOf(a), j = ORDER[rowsBy].indexOf(b);
+    return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+  });
+  else rowKeys.sort(function(a, b){ return rowOf[b].length - rowOf[a].length; });
+
   var h = '<div class="foldbar">'
     + '<button class="btn" onclick="foldAll(true)">Expand all</button>'
     + '<button class="btn" onclick="foldAll(false)">Collapse all</button>'
-    + '<span class="foldnote">' + order.length + ' area' + (order.length === 1 ? '' : 's')
+    + '<span class="foldnote">' + rowKeys.length + ' row' + (rowKeys.length === 1 ? '' : 's')
     + ' · ' + list.length + ' case' + (list.length === 1 ? '' : 's') + '</span></div>';
 
-  h += '<div class="scroll"><table class="sum areas"><thead><tr>'
-    + '<th>Area</th><th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
-    + '<th class="num">Not run</th><th>Reaches</th></tr></thead><tbody>';
+  h += '<div class="scroll"><table class="sum areas"><thead><tr><th>'
+    + esc(PIVOTS[rowsBy].label) + '</th><th class="num">Cases</th>';
+  colKeys.forEach(function(k){ h += '<th class="num">' + esc(k) + '</th>'; });
+  h += '</tr></thead><tbody>';
 
-  var tot = { n: 0, pass: 0, bad: 0, todo: 0 };
-  order.forEach(function(k){
-    var first = byMod[k][0];
-    var open = isOpenSection(k, order.length);
-    var n = { pass: 0, bad: 0, todo: 0 };
-    var reach = {};
-    byMod[k].forEach(function(c){
-      var l = LAST[c.case_key];
-      if (!l) n.todo++;
-      else if (l.status === 'fail' || l.status === 'blocked') n.bad++;
-      else n.pass++;
-      (c.areas || []).forEach(function(a){ reach[a] = (reach[a] || 0) + 1; });
-    });
-    tot.n += byMod[k].length; tot.pass += n.pass; tot.bad += n.bad; tot.todo += n.todo;
-    var step = (first.seq !== undefined && first.seq < 90)
-      ? (first.seq < 10 ? '0' + first.seq : String(first.seq)) : '';
-
-    h += '<tr class="arow' + (open ? ' open' : '') + '" onclick="foldSection(\'' + esc(k) + '\')"'
-      + ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'' + esc(k) + '\');}">'
+  var tot = {};
+  rowKeys.forEach(function(r){
+    var cs = rowOf[r];
+    var open = isOpenSection(r, rowKeys.length);
+    var step = (rowsBy === 'area' && seqOf[r] !== undefined && seqOf[r] < 90)
+      ? (seqOf[r] < 10 ? '0' + seqOf[r] : String(seqOf[r])) : '';
+    h += '<tr class="arow' + (open ? ' open' : '') + '" onclick="foldSection(\'' + esc(r) + '\')"'
+      + ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'' + esc(r) + '\');}">'
       + '<td><span class="caret">' + (open ? '\u25be' : '\u25b8') + '</span>'
       +   (step ? '<span class="step">' + step + '</span>' : '')
-      +   '<span class="k">' + esc(k) + '</span>'
-      +   '<span class="aname">' + esc(first.module_name || '') + '</span></td>'
-      + '<td class="num"><b>' + byMod[k].length + '</b></td>'
-      + '<td class="num">' + (n.pass ? '<span class="big">' + n.pass + '</span>' : '<span class="dim">—</span>') + '</td>'
-      + '<td class="num">' + (n.bad ? '<span class="bad">' + n.bad + '</span>' : '<span class="dim">—</span>') + '</td>'
-      + '<td class="num">' + (n.todo ? '<span class="warnn">' + n.todo + '</span>' : '<span class="dim">—</span>') + '</td>'
-      /* ⚠️ every area it reaches, not the commonest one — see the note above on one-to-one */
-      + '<td class="reach">' + (Object.keys(reach).length
-          ? Object.keys(reach).sort(function(a,b){ return reach[b] - reach[a]; })
-              .map(function(a){ return '<span class="grp">' + esc(a) + '</span>'; }).join('')
-          : '<span class="dim">—</span>') + '</td></tr>';
-
-    /* ⭐ the cases themselves, in a row that spans the table — so opening one does not shift the columns */
+      +   '<span class="k">' + esc(r) + '</span>'
+      +   (nameOf[r] ? '<span class="aname">' + esc(nameOf[r]) + '</span>' : '') + '</td>'
+      + '<td class="num"><b>' + cs.length + '</b></td>';
+    colKeys.forEach(function(k){
+      var n = cell[r + '\u0000' + k] || 0;
+      tot[k] = (tot[k] || 0) + n;
+      var cls = k === 'failed' ? 'bad' : (k === 'not run' ? 'warnn' : 'big');
+      h += '<td class="num">' + (n ? '<span class="' + cls + '">' + n + '</span>'
+                                   : '<span class="dim">\u2014</span>') + '</td>';
+    });
+    h += '</tr>';
     if (open) {
       var inner = '';
-      if (first.intro) inner += '<div class="intro">' + esc(first.intro) + '</div>';
-      byMod[k].forEach(function(c){ inner += caseHTML(c); });
-      h += '<tr class="acases"><td colspan="6">' + inner + '</td></tr>';
+      cs.forEach(function(c){ inner += caseHTML(c); });
+      h += '<tr class="acases"><td colspan="' + (colKeys.length + 2) + '">' + inner + '</td></tr>';
     }
   });
 
-  h += '</tbody><tfoot><tr><td><b>Everything shown</b></td>'
-    + '<td class="num"><b>' + tot.n + '</b></td>'
-    + '<td class="num"><b class="big">' + tot.pass + '</b></td>'
-    + '<td class="num"><b class="bad">' + tot.bad + '</b></td>'
-    + '<td class="num"><b class="warnn">' + tot.todo + '</b></td><td></td></tr></tfoot></table></div>';
+  h += '</tbody><tfoot><tr><td><b>Everything shown</b></td><td class="num"><b>' + list.length + '</b></td>';
+  colKeys.forEach(function(k){ h += '<td class="num"><b>' + (tot[k] || 0) + '</b></td>'; });
+  h += '</tr></tfoot></table></div>';
+  /* ⚠️ said when it is true, not always — an arithmetic warning that is always on is one nobody reads */
+  if (multi) h += '<div class="fine" style="margin:0 0 14px">\u26a0 A case reaching more than one '
+    + esc(PIVOTS[rowsBy === 'reaches' ? 'reaches' : 'kind'].label).toLowerCase()
+    + ' is counted in each, so the columns do not sum to ' + list.length + '.</div>';
+
   document.getElementById('main').innerHTML = h;
 }
 
