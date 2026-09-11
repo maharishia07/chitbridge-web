@@ -1735,19 +1735,190 @@ function chartCard(title, ask, body, keys){
  * second source of truth for a figure the page can add up itself.
  */
 /**
- * ── ⚠️⚠️ matrixHTML() WAS HERE, AND IS GONE ──────────────────────────────────────────────────────────────────
+ * ── ⚠️⚠️ I DELETED THIS AND IT WAS THE WRONG THING TO DELETE ─────────────────────────────────────────────────
  *
- * It drew area × kind on the Summary tab. Making Cases a pivot turned it into that pivot with the columns set
- * to Kind — the same table, twice, free to drift apart. Athi spotted it within the hour: *"are you building the
- * summary tab? It is showing same / similar tab cases?"*
+ * Athi asked *"are you building the summary tab? It is showing same / similar tab cases?"* — a question about
+ * why Summary had changed. I read it as an instruction to remove the duplication and removed THIS, the better
+ * of the two views. His next message, with a screenshot of it: *"this is an excellent view of the overall
+ * architecture, this is what I want with expandable."*
  *
- * ⭐ IT WAS DELETED RATHER THAN LEFT UNCALLED. A function nobody calls is the fault this session has found
- * three times already — the dead spec panel, the loader that only rendered on an empty board, seed() with no
- * button. Each one existed, looked finished, and did nothing.
+ * ⭐ THE DUPLICATION WAS REAL AND THE CURE WAS AIMED WRONG. What genuinely repeated the Cases pivot was the
+ * "Coverage by area" table underneath — module, covered, passed, failed, not run, which is the pivot's default
+ * cut exactly. That one is gone and stays gone. This one shows something the pivot does not: the ARCHITECTURE,
+ * area against kind, with the tier break and the n/a distinction, read left to right in one picture.
  *
- * ⚠️ The two things it knew that the pivot did not were MOVED, not dropped: the architecture tier break, and
- * the n/a distinction between "nobody can test this" and "nobody has".
+ * ⚠️ A question is not an instruction, and "is this the same?" is not "delete it". Asking would have cost one
+ * line.
  */
+/**
+ * ── ⭐⭐⭐ THE TABLE ATHI DREW ────────────────────────────────────────────────────────────────────────────────
+ *
+ *       Unit  Integration  Manual  UAT  Preprod  Pen  Performance
+ *   Eng   10       5         10     10
+ *   Web
+ *   Supplier
+ *
+ * Rows are where a test reaches, columns are what kind it is, and every row ends with the three numbers
+ * anybody asks next: how many, how many done, how many left — and the percentage, because a fraction is not a
+ * progress report.
+ *
+ * ── ⚠️⚠️ TWO OF HIS COLUMNS ARE NOT KINDS OF TEST, AND THEY ARE SHOWN ANYWAY ─────────────────────────────────
+ *
+ * UAT and PREPROD are not properties of a case; they are WHERE and WHEN a run happened. The same manual case
+ * is acceptance testing when we run it and user acceptance testing when a shopkeeper runs it before adopting —
+ * nothing about the case changes, only who held the mouse.
+ *
+ * ⭐ They are here, at zero, on purpose. There is no pre-production environment on this platform — everything
+ * is local or live — and no customer has yet run anything. Deleting the columns would let both facts pass for
+ * "not applicable"; showing them empty says the true thing, which is that this is the next gap to close.
+ * Filling them needs a run to carry an environment and a purpose, which is a migration (see §B of
+ * BACKLOG-nonfunctional.md).
+ */
+function matrixHTML(){
+  /* the columns, in the order he wrote them, plus the ones the board already holds */
+  var COLS = [
+    { k: 'unit',        label: 'Unit' },
+    { k: 'integration', label: 'Integration' },
+    { k: 'acceptance',  label: 'Manual' },
+    { k: 'uat',         label: 'UAT',      empty: 'No customer has run a case yet. A manual case becomes UAT when a shopkeeper runs it before adopting — the case does not change, the runner does.' },
+    { k: 'preprod',     label: 'Preprod',  empty: 'There is no pre-production environment. Everything is local or live, which is why "system" here means the real thing.' },
+    { k: 'penetration', label: 'Pen',      empty: 'There is no penetration testing. scripts/penetration.js is MARKET penetration and is not one.' },
+    { k: 'performance', label: 'Performance' },
+    { k: 'security',    label: 'Security' },
+    { k: 'system',      label: 'System' },
+    { k: 'static',      label: 'Static' },
+  ];
+
+  var cell = {}, rowAll = {}, rowDone = {}, colN = {}, unplaced = 0, unplacedDone = 0;
+  /**
+   * ⚠️⚠️ SUPPORT FILES ARE OUT OF THE DENOMINATOR, OR 100% IS UNREACHABLE FOREVER.
+   *
+   * A fixture is not a test and can never report a result, so 27 of them sitting in the total would hold the
+   * completion percentage permanently below 96% for a reason that has nothing to do with testing. ⭐ A
+   * percentage that cannot reach 100 teaches people to ignore it, which costs more than the number is worth.
+   * They stay COUNTED in the Support column and in the case list — they are simply not pretended to be pending.
+   */
+  var testable = function(c){ return c.test_type !== 'support'; };
+  CASES.forEach(function(c){
+    var t = c.test_type || '?';
+    var done = !!LAST[c.case_key];
+    colN[t] = (colN[t] || 0) + 1;
+    var list = (c.areas || []);
+    if (!list.length) { if (testable(c)) { unplaced++; if (done) unplacedDone++; } return; }
+    /* ⚠️ a test reaching two areas is counted in both — the rows do not sum to the total, and the note says so */
+    list.forEach(function(a){
+      cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
+      if (!testable(c)) return;
+      rowAll[a] = (rowAll[a] || 0) + 1;
+      if (done) rowDone[a] = (rowDone[a] || 0) + 1;
+    });
+  });
+
+  var pct = function(done, all){ return all ? Math.round((done / all) * 100) : 0; };
+  var barCell = function(done, all){
+    var q = pct(done, all);
+    return '<td class="num"><b>' + all + '</b></td>'
+      + '<td class="num">' + (done ? '<span class="big">' + done + '</span>' : '<span class="dim">0</span>') + '</td>'
+      + '<td class="num">' + ((all - done) ? '<span class="warnn">' + (all - done) + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="num pctcell"><div class="pbar"><i style="width:' + q + '%"></i></div>'
+      + '<span class="pnum">' + q + '%</span></td>';
+  };
+
+  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">What is tested, where, and how far along</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    /**
+     * ⚠️⚠️ THIS WAS SIX LINES OF CAVEAT ABOVE THE TABLE IT INTRODUCES, and it pushed the data below the fold
+     * on a laptop. Every sentence in it was true and each had been added to head off a misreading — which is
+     * how a caption grows until nobody reads any of it, including the one line that mattered.
+     * ⭐ One line here; the rest moved onto the things they describe, where a reader meets them at the moment
+     * they would otherwise get it wrong.
+     */
+    + '<b>Done</b> means a result was ever recorded, not that it passed. '
+    + '<b>n/a</b> = nobody <i>can</i> test it; <b>—</b> = nobody has. Click a number to open those cases.'
+    + '<span class="fine"> ⚠️ A test reaching two areas is counted in both, so rows do not sum to '
+    + CASES.length + '; support files are counted but left out of the percentage.</span></div>'
+    + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
+  COLS.forEach(function(c){
+    h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '"><span>'
+      + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</span></th>';
+  });
+  h += '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
+    + '<th class="num"><span>Left</span></th><th class="num"><span>Complete</span></th></tr>';
+
+  var lastTier = null;
+  AREA_ORDER.forEach(function(a){
+    if (!rowAll[a]) return;
+    /* ⭐ the break between the triad and what it rides on — an order is only a claim a reader can see */
+    if (AREA_TIER[a] !== lastTier) {
+      lastTier = AREA_TIER[a];
+      h += '<tr class="tier"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 6) + '">'
+        + TIER_NAME[lastTier] + '</td></tr>';
+    }
+    var mopen = isOpenSection('mtx:' + a, 9);
+    h += '<tr class="arow' + (mopen ? ' open' : '') + '" onclick="foldSection(\'mtx:' + a + '\')"'
+       + ' role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'){foldSection(\'mtx:' + a + '\');}">'
+       + '<td class="areacell"><span class="caret">' + (mopen ? '\u25be' : '\u25b8') + '</span>'
+       + '<span class="area">' + esc(AREA_LABEL[a]) + '</span>'
+       + '<span class="what">' + esc(AREA_SAYS[a] || '') + '</span></td>';
+    COLS.forEach(function(c){
+      var n = cell[a + '|' + c.k] || 0;
+      /* ⭐ "nobody can" is not "nobody has" — see NO_MANUAL */
+      var impossible = (c.k === 'acceptance' || c.k === 'uat') && NO_MANUAL[a] && !n;
+      h += '<td class="num">' + (n
+        ? '<span class="big clickable" onclick="drill(\'' + a + '\',\'' + c.k + '\')">' + n + '</span>'
+        : (impossible ? '<span class="na" title="' + esc(NO_MANUAL[a]) + '">n/a</span>'
+                      : '<span class="dim">—</span>')) + '</td>';
+    });
+    h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
+    h += '</tr>';
+    /**
+     * ⭐ THE ROW OPENS INTO ITS OWN CASES. Athi: *"this is an excellent view of the overall architecture, this
+     * is what I want with expandable."* A number you can only click through to another tab is a number you
+     * have to leave the picture to read.
+     * ⚠️ Only what REACHES this area, which is the row's own meaning — not the module it happens to sit in.
+     */
+    if (mopen) {
+      var inner = '', shownN = 0;
+      CASES.filter(function(c){ return (c.areas || []).indexOf(a) >= 0; })
+        .sort(function(x, y){ return (x.seq === undefined ? 99 : x.seq) - (y.seq === undefined ? 99 : y.seq)
+          || (x.case_key < y.case_key ? -1 : 1); })
+        .forEach(function(c){ if (shownN++ < 60) inner += caseHTML(c); });
+      if (shownN > 60) inner += '<div class="fine" style="padding:6px 2px">Showing 60 of ' + shownN
+        + '. The Cases tab holds them all, and can be cut by kind, status or who runs them.</div>';
+      h += '<tr class="acases"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 6)
+        + '">' + inner + '</td></tr>';
+    }
+  });
+
+  /* ── the bottom line ── */
+  var allTestable = CASES.filter(testable);
+  var allDone = allTestable.filter(function(c){ return LAST[c.case_key]; }).length;
+  h += '<tr class="foot"><td><b>Everything</b></td>';
+  COLS.forEach(function(c){
+    var n = colN[c.k] || 0;
+    h += '<td class="num">' + (n
+      ? '<b class="clickable" onclick="drill(\'\',\'' + c.k + '\')">' + n + '</b>'
+      : '<span class="dim">0</span>') + '</td>';
+  });
+  h += '<td class="sep"></td>' + barCell(allDone, allTestable.length) + '</tr>';
+  h += '</table></div>';
+
+  /* ⚠️ what the table could not place, said out loud rather than absorbed into a row */
+  if (unplaced) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 8px">⚠ ' + unplaced
+    + ' test(s) reach nothing this measurement can name (' + unplacedDone + ' of them run). They are in '
+    + 'the bottom line and out of the rows — filing them somewhere plausible would be worse than leaving them '
+    + 'visible.</div>';
+
+  /* ⚠️⚠️ and the empty columns explain themselves, because an empty column invites the reader to assume */
+  var blanks = COLS.filter(function(c){ return c.empty && !colN[c.k]; });
+  if (blanks.length) {
+    h += '<div class="why-note" style="margin:2px 0 18px"><b>Three columns are empty, and each is a different '
+      + 'kind of nothing.</b><ul style="margin:6px 0 0;padding-inline-start:18px;line-height:1.6">'
+      + blanks.map(function(c){ return '<li><b>' + c.label + '</b> — ' + esc(c.empty) + '</li>'; }).join('')
+      + '</ul></div>';
+  }
+  return h;
+}
 
 /**
  * one cell → the Cases tab, already filtered. The summary is for deciding, the cases are for doing.
@@ -1869,7 +2040,7 @@ async function paintSummary(){
    * ⚠️ The two things the matrix had and the pivot did not — the architecture tier break and the n/a
    * distinction — were moved INTO the pivot rather than dropped with it.
    */
-  var h = engineHTML() + chartsHTML();
+  var h = matrixHTML() + engineHTML() + chartsHTML();
   /* ⚠️ "Coverage by area" lived here and was the Cases pivot's default cut, drawn twice. */
   h += '<div class="note" style="margin:18px 0">Counts by area, kind, status or who runs them are on the '
     + '<b>Cases</b> tab — choose what the rows and columns are. <i>A summary that repeats the list is the '
