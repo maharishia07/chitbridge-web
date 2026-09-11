@@ -179,7 +179,16 @@
 <script>
 /* the globals cart.js expects from the app; the lab stands alone */
 var SESSION = { currency: 'INR' }; function tx(s) { return s; } function txf(s, v) { return String(s).replace(/\{(\w+)\}/g, function (_, k) { return v && v[k] != null ? v[k] : ''; }); }
-function fmtMoney(n, c) { try { return CBLocale.money(Math.round(Number(n) * 100) / 100, c || 'INR'); } catch (_) { return '₹' + Number(n).toFixed(2); } }
+/**
+ * ⚠️ THE SHOP'S OWN CURRENCY, not a hard-coded INR. The lab now opens on a REAL catalogue, so a Gulf shop was
+ * being shown its own dirham prices with a rupee sign — and the offers it proved here would read as a different
+ * amount at the counter, which is the one thing a lab must never do.
+ * ⚠️ The fallback drops the symbol rather than guessing one: a wrong symbol is a wrong price.
+ */
+var LAB_CUR = 'INR';
+/** the shop's currency as a word for a FORM LABEL — never for a figure, which always goes through fmtMoney */
+function curWord(){ try { return (window.CBLocale && CBLocale.symbol && CBLocale.symbol(LAB_CUR)) || LAB_CUR; } catch (_) { return LAB_CUR; } }
+function fmtMoney(n, c) { try { return CBLocale.money(Math.round(Number(n) * 100) / 100, c || LAB_CUR); } catch (_) { return (c || LAB_CUR) + ' ' + Number(n).toFixed(2); } }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 
@@ -197,9 +206,9 @@ function prodOptions(sel) { return PRODUCTS.map(function (p) { return '<option v
 /* ── the offer cards: one per kind, every field the editor has ── */
 var KINDS = [
   { id: 'pct', title: '% off', what: 'the commonest offer', fields: 'pct' },
-  { id: 'amt', title: '₹ off', what: 'a flat amount, capped at the value', fields: 'amt' },
+  { id: 'amt', title: 'Amount off', what: 'a flat amount, capped at the value', fields: 'amt' },
   { id: 'tier', title: 'Quantity break', what: 'a lower price from N units', fields: 'tier' },
-  { id: 'thr', title: 'Spend threshold', what: '"spend ₹X, get …"', fields: 'thr' },
+  { id: 'thr', title: 'Spend threshold', what: '"spend a set amount, get …"', fields: 'thr' },
   { id: 'bxgy', title: 'Buy X get Y', what: 'free units, or another product', fields: 'bxgy' },
   { id: 'bundle', title: 'Bundle', what: 'two products for one price', fields: 'bundle' },
   { id: 'ship', title: 'Shipping', what: 'free · flat · % off shipping', fields: 'ship' },
@@ -211,13 +220,13 @@ function num(id, val, w) { return '<input type="number" id="' + id + '" value="'
 function valueCell(k) {
   switch (k.id) {
     case 'pct': return '<label>' + num('pct-v', 10, 52) + ' % off</label><label>on ' + scope('pct') + '</label>';
-    case 'amt': return '<label>₹ ' + num('amt-v', 10) + ' off</label><label>on ' + scope('amt') + '</label>';
+    case 'amt': return '<label>' + curWord() + ' ' + num('amt-v', 10) + ' off</label><label>on ' + scope('amt') + '</label>';
     case 'tier': return '<span class="hint">set under each product on the right: the ranges and the percentage off per range</span>';
     case 'thr': return '<span class="hint">set at cart level on the right — the limit, the reward, and how far the basket is from it</span>';
     case 'bxgy': return '<span class="hint">set under each product on the right: buy how many, what comes free, and at what discount</span>';
-    case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ₹ ' + num('bundle-p', 400) + '</label><span class="hint">parked — how a real combination is picked is still open</span>';
+    case 'bundle': return '<label><select id="bundle-a" onchange="labRepaint()">' + prodOptions('grapes') + '</select> + <select id="bundle-b" onchange="labRepaint()">' + prodOptions('oil') + '</select></label><label>for ' + curWord() + ' ' + num('bundle-p', 400) + '</label><span class="hint">parked — how a real combination is picked is still open</span>';
     case 'ship': return '<span class="hint">set at cart level on the right — what delivery costs and from which order value it is free</span>';
-    case 'band': return '<label>₹ ' + num('band-min', 50) + ' – ₹ ' + num('band-max', 220) + '</label>';
+    case 'band': return '<label>' + curWord() + ' ' + num('band-min', 50) + ' – ' + num('band-max', 220) + '</label>';
   }
   return '';
 }
@@ -353,7 +362,7 @@ function labOffers() {
      threshold and delivery — judge the order itself, so they stay. */
   var noneTicked = !!(APPLY && APPLY.size === 0);
   if (!noneTicked && on('pct')) out.push(withCommon('pct', { id: 'pct', label: n('pct-v') + '% off', kind: 'percent_off', percent: n('pct-v'), scope: v('pct-scope') }));
-  if (!noneTicked && on('amt')) out.push(withCommon('amt', { id: 'amt', label: '₹' + n('amt-v') + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
+  if (!noneTicked && on('amt')) out.push(withCommon('amt', { id: 'amt', label: fmtMoney(n('amt-v')) + ' off', kind: 'amount_off', amount: n('amt-v'), scope: v('amt-scope') }));
   if (!noneTicked && on('tier')) PRODUCTS.forEach(function (p) {
     if (!labApplies(p.item_id)) return;
     var tiers = tiersOf(p.item_id).filter(function (t) { return t.on !== false && Number(t.qty) > 0 && Number(t.percent) > 0; });
@@ -441,7 +450,7 @@ function paintCartLevel(ev, sel) {
   subtotal = Math.round(subtotal * 100) / 100;
   if (on('thr')) {
     var min = CART_RULES.thrMin, pct = CART_RULES.thrPct, item = CART_RULES.thrItem;
-    rows.push('<div class="lab-rule"><b>Spend threshold</b> ₹' + ruleNum('thrMin') + ' → ' + ruleNum('thrPct', 46) + '% off the order'
+    rows.push('<div class="lab-rule"><b>Spend threshold</b> ' + curWord() + ' ' + ruleNum('thrMin') + ' → ' + ruleNum('thrPct', 46) + '% off the order'
       + ' · or free <select data-testid="lab-rule-thrItem" onchange="labRule(\'thrItem\',this.value)"><option value="">—</option>'
       + PRODUCTS.map(function (p) { return '<option value="' + esc(p.item_id) + '"' + (item === p.item_id ? ' selected' : '') + '>' + esc(p.item_data.name) + '</option>'; }).join('') + '</select> × ' + ruleNum('thrQty', 42) + '</div>');
     var got = ev && (ev.adjustments || []).filter(function (a) { return a.offer_id === 'thr'; })[0];
@@ -452,9 +461,9 @@ function paintCartLevel(ev, sel) {
   }
   if (on('ship')) {
     var smin = CART_RULES.shipMin, charge = CART_RULES.shipCharge;
-    rows.push('<div class="lab-rule"><b>Delivery</b> costs ₹' + ruleNum('shipCharge', 56)
-      + ' · <select data-testid="lab-rule-shipMode" onchange="labRule(\'shipMode\',this.value)"><option value="free"' + (CART_RULES.shipMode === 'free' ? ' selected' : '') + '>free</option><option value="flat"' + (CART_RULES.shipMode === 'flat' ? ' selected' : '') + '>flat ₹</option><option value="pct"' + (CART_RULES.shipMode === 'pct' ? ' selected' : '') + '>% off</option></select> ' + ruleNum('shipV', 46)
-      + ' · from ₹' + ruleNum('shipMin', 62) + ' on the order</div>');
+    rows.push('<div class="lab-rule"><b>Delivery</b> costs ' + curWord() + ' ' + ruleNum('shipCharge', 56)
+      + ' · <select data-testid="lab-rule-shipMode" onchange="labRule(\'shipMode\',this.value)"><option value="free"' + (CART_RULES.shipMode === 'free' ? ' selected' : '') + '>free</option><option value="flat"' + (CART_RULES.shipMode === 'flat' ? ' selected' : '') + '>flat ' + curWord() + '</option><option value="pct"' + (CART_RULES.shipMode === 'pct' ? ' selected' : '') + '>% off</option></select> ' + ruleNum('shipV', 46)
+      + ' · from ' + curWord() + ' ' + ruleNum('shipMin', 62) + ' on the order</div>');
     var free = ev && Number(ev.shipping) < charge;
     if (free) rows.push('<div class="ok">🚚 Delivery: <b>' + (Number(ev.shipping) === 0 ? 'free' : fmtMoney(ev.shipping)) + '</b> on this order' + (smin ? ' (from ' + fmtMoney(smin) + ')' : '') + '</div>');
     else rows.push('<div class="note">🚚 Delivery ' + fmtMoney(charge) + (smin ? ' — free from ' + fmtMoney(smin) + ', the basket is at <b>' + fmtMoney(subtotal) + '</b>' + (subtotal < smin ? ', <b>' + fmtMoney(Math.round((smin - subtotal) * 100) / 100) + '</b> to go' : '') : '') + '</div>');
@@ -544,6 +553,8 @@ async function labLoadMine(quiet) {
                             category: cats[0] || null, categories: cats },
                tax: (d.gst_rate != null) ? { rate: Number(d.gst_rate), name: 'GST' } : null };
     });
+    /* ⭐ and the shop's CURRENCY comes with its catalogue — the lab must quote the same money the counter will */
+    LAB_CUR = (sess.shop && sess.shop.currency_code) || (sess.shop && sess.shop.currency) || LAB_CUR;
     CATS = labCategories(); paintScopeCat();
     labSaySource(who + ' · ' + PRODUCTS.length + ' products · ' + CATS.length + ' categories');
     paintCards(); labRepaint(true);
@@ -663,7 +674,7 @@ function labAdvise() {
     out.push('<div class="prop"><b>Exclusive 25% for one customer</b>: instead of every other offer — the row names only that one. <button class="btn" onclick="labTry(\'loyalx\',25)">Try it</button></div>');
     out.push('<div class="hint" style="flex:1 1 100%">Switch "Who is looking" to see the same basket as a stranger: the offer is skipped and says why.</div>');
   } else if (goal === 'basket') {
-    var avg = Math.max(price, 300), thr2 = Math.ceil(avg * 1.3 / 100) * 100; out.push('<div class="prop"><b>Spend ' + fmtMoney(thr2) + ', get 5% off the order</b> — about 30% above a typical basket: the shortfall message ("you are ₹x away") does the selling. <button class="btn" onclick="labTry(\'thr\',' + thr2 + ')">Try it</button></div>');
+    var avg = Math.max(price, 300), thr2 = Math.ceil(avg * 1.3 / 100) * 100; out.push('<div class="prop"><b>Spend ' + fmtMoney(thr2) + ', get 5% off the order</b> — about 30% above a typical basket: the shortfall message ("you are X away") does the selling. <button class="btn" onclick="labTry(\'thr\',' + thr2 + ')">Try it</button></div>');
     out.push('<div class="prop"><b>Free shipping over ' + fmtMoney(thr2) + '</b> — the most understood basket-builder in retail. <button class="btn" onclick="labTry(\'ship\')">Try it</button></div>');
   }
   document.getElementById('adv-out').innerHTML = '<div class="hint" style="flex:1 1 100%">' + head + '</div>' + out.join('');
