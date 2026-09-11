@@ -95,12 +95,20 @@ kind('threshold', '⭐⭐ threshold — spend, and the shortfall is reported whe
   assert.strictEqual(short.notes[0].shortfall, 200, 'the number, not only the sentence');
 });
 
-kind('buy_x_get_y', '⭐ buy_x_get_y — the cheapest qualifying units are the free ones', () => {
+kind('buy_x_get_y', '⭐⭐ buy_x_get_y — earned PER PRODUCT, never pooled across the category', () => {
+  /**
+   * ⚠⚠ CHANGED ON PURPOSE, 2026-09-10. Athi, looking at a counter line reading ₹0.00 for a single packet:
+   * *"we cannot offer for different product."* It used to pool the category and give away the cheapest unit in
+   * it, so three different biscuits earned a free one and the line holding one packet showed ₹0.00 with nothing
+   * to explain it. Three of ONE thing now earns one of that thing — which costs the shop more on a mixed
+   * basket, and is the intended behaviour.
+   * ⭐ The cheapest-free convention moved to mix_and_match, which is tested just below.
+   */
   const o = { id: 'b', kind: 'buy_x_get_y', label: 'BOGO rice', buy: 2, get: 1,
               applies_to: { item_ids: ['rice'] } };
   const a = only(ev(o));
   assert.strictEqual(a.amount, -100, 'qty 3 = one set of (2+1), one unit free');
-  assert.strictEqual(a.why, '1 × free — buy 2 get 1 (1 set, cheapest units taken)');
+  assert.strictEqual(a.why, '1 × free — buy 2 get 1 (1 set of this product)');
   assert.strictEqual(O.promise(o, CTX), 'Buy 2 get 1 free');
   /* ⭐ A DIFFERENT PRODUCT AS THE REWARD, which the same-item form cannot say. */
   const cross = { id: 'x', kind: 'buy_x_get_y', label: 'Rice → oil', buy: 3, get: 1,
@@ -132,6 +140,25 @@ kind('price_range', '⭐ price_range — a CONSTRAINT: it reports a violation an
   assert.strictEqual(r.total, 800, 'and the order is unchanged');
   assert.strictEqual(ev(Object.assign({}, o, { min: 50 })).notes.length, 0, 'inside the band, nothing to say');
   assert.strictEqual(O.promise(o, CTX), null, 'a band is the price, not a discount off one');
+});
+
+/**
+ * ⭐⭐⭐ MIX AND MATCH — and this case exists because the registry check below went red for it.
+ *
+ * Athi, 2026-09-10: *"in cloth line it works as per category, so possibly we need a different naming
+ * convention"*, then *"cheapest free for mix and match"*. It is the POOLED kind: any N from the rail, and the
+ * cheapest qualifying units are the free ones — exactly what buy_x_get_y used to do and no longer does.
+ *
+ * ⚠ I added the kind and did not add a case, and the "every kind is exercised" assertion is the only thing
+ * that noticed. That guard earning its keep is worth more than the case itself.
+ */
+kind('mix_and_match', '⭐⭐ mix_and_match — pooled across the category, and the CHEAPEST units are free', () => {
+  const o = { id: 'mm', kind: 'mix_and_match', label: 'Any 2 grains', buy: 1, get: 1,
+              applies_to: { category: 'grains' } };
+  const r = ev(o);
+  assert.strictEqual(r.adjustments.length, 1, 'ONE adjustment — the pool is the unit, not the line');
+  assert.ok(/cheapest qualifying unit/.test(r.adjustments[0].why),
+    'the cheapest-free convention is what this kind means: ' + r.adjustments[0].why);
 });
 
 t('⚠️ EVERY KIND IN THE REGISTRY IS EXERCISED ABOVE', () => {

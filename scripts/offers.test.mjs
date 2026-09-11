@@ -53,9 +53,34 @@ console.log('\n1 · the shapes an offer can take');
 
   r = run([{ id: 'o5', kind: 'buy_x_get_y', buy: 1, get: 1, label: 'BOGO grain',
              applies_to: { category: 'grain' } }]);
+  /**
+   * ⚠⚠⚠ THIS ASSERTION CHANGED ON PURPOSE, 2026-09-10, AND THE OLD ONE WAS RIGHT UNTIL THEN.
+   *
+   * Athi, looking at a counter line showing ₹0.00 for a single packet: *"we cannot offer for different
+   * product."* buy_x_get_y used to POOL the whole category and give away the cheapest unit in it — so three
+   * different biscuits earned a free one, and the line holding one packet read ₹0.00 with nothing to explain it.
+   *
+   * ⭐ It is now earned PER PRODUCT: three of one thing earns one of that thing. It costs the shop MORE on a
+   * mixed basket, and that is the intended behaviour.
+   */
   ok('buy-one-get-one takes whole sets from 6 qualifying units', r.adjustments.length > 0);
-  ok('⭐ …and the CHEAPEST units are the free ones — the defensible convention',
-     /cheapest units taken/.test(r.adjustments[0].why), r.adjustments[0].why);
+  ok('⭐⭐ …PER PRODUCT — each qualifying line earns its own sets, never the category pooled',
+     r.adjustments.length === 2 && /sets of this product/.test(r.adjustments[0].why),
+     r.adjustments.map((x) => x.why));
+
+  /**
+   * ⭐⭐ AND THE CHEAPEST-FREE CONVENTION DID NOT DISAPPEAR — IT MOVED. It is what mix_and_match means, which
+   * is the kind a clothes shop wants ("any two from this rail"). Asserted here rather than deleted, because an
+   * assertion that is removed rather than relocated is a rule nobody is checking any more.
+   */
+  r = run([{ id: 'o5b', kind: 'mix_and_match', buy: 1, get: 1, label: 'any 2 grain',
+             applies_to: { category: 'grain' } }]);
+  ok('⭐ mix_and_match pools the category and the CHEAPEST qualifying units are the free ones',
+     r.adjustments.length === 1 && /cheapest qualifying units/.test(r.adjustments[0].why),
+     (r.adjustments[0] || {}).why);
+
+  r = run([{ id: 'o5', kind: 'buy_x_get_y', buy: 1, get: 1, label: 'BOGO grain',
+             applies_to: { category: 'grain' } }]);
 
   r = run([{ id: 'o6', kind: 'shipping', free: true, label: 'free shipping' }], { shipping: 80 });
   ok('free shipping zeroes the shipping leg, not the goods', r.shipping === 0 && r.subtotal === 1000,
