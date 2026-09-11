@@ -230,6 +230,12 @@
   /* ⭐ the two levels of the architecture, NAMED on the table rather than implied by the order */
   table.mtx tr.tier td{ background:var(--paper); font-size:var(--fs-1); font-weight:700; letter-spacing:.08em;
         text-transform:uppercase; color:var(--grey-2); padding:10px 11px 4px; border-bottom:0; }
+  /* ⭐ how mature a rule is — the codebase has always known, and never been asked */
+  .stage{ font-size:var(--fs-1); font-weight:700; border-radius:99px; padding:1px 8px;
+        margin-inline-start:7px; text-transform:uppercase; letter-spacing:.04em; }
+  .stage.proven{ color:var(--ok-2,var(--ok)); background:var(--ok-tint); }
+  .stage.tested{ color:var(--blue); background:var(--blue-tint,var(--neutral-tint)); }
+  .stage.held{ color:var(--warn-2,var(--warn)); background:var(--warn-tint); }
   .pivotbar{ gap:7px; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
@@ -673,6 +679,18 @@ function say(msg, bad){
 }
 
 /** ⭐ load the documented cases onto this shop's board — an upsert, so pressing it twice is safe */
+/**
+ * ⭐ THE PURE RULES, fetched from the same file the cases ship in. ⚠️ Not stored on the board as definitions:
+ * they are not test cases, they are what the tests are ABOUT, and putting them in the case table would make
+ * them countable as coverage.
+ */
+var ENGINE = null;
+async function loadEngine(){
+  if (ENGINE !== null) return;
+  try { var r = await call('/api/testing/engine'); ENGINE = r && r.engine ? r.engine : false; }
+  catch (e) { ENGINE = false; }
+}
+
 async function seed(){
   try {
     var r = await call('/api/testing/cases/seed', { method:'POST' });
@@ -1878,6 +1896,71 @@ function drill(area, type){
   setView('cases');
 }
 
+/**
+ * ── ⭐⭐⭐ WHAT THE PURE RULES ACTUALLY ARE ──────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"can we expand the engine to state what those pure rules are, all of them if possible? Or
+ * are we showcasing anywhere else what those pure rules are? And I guess it gets updated as we mature the
+ * platform as part of our lifecycle — this has to be tidy with the spec."*
+ *
+ * ⭐⭐ WE WERE ALREADY SHOWCASING THEM, TO OURSELVES. `tests/engine-manifest.js` declares the tiers and
+ * `engine-boundary.test.js` enforces them: the day a Tier A file grows a single `require`, the suite goes red.
+ * ⚠️ It has never been on a screen, so the one list that is both true and guarded was the one nobody could see.
+ *
+ * ⚠️⚠️ AND IT CORRECTS THE ROW ABOVE IT. "Engine" as an AREA means a test reaches lib/ or public/engine/ —
+ * 136 tests across 127 library files. THE PURE RULES ARE NINE. A reader seeing 136 beside the word engine would
+ * conclude the rules are well covered, when what is well covered is lib/ in general.
+ *
+ * ⭐ It matures with the platform because `@stage` is already on these files — held · tested · proven — and
+ * the boundary guard insists on it. How mature each rule is is a question the codebase has always answered
+ * about itself and never been asked.
+ */
+function engineHTML(){
+  if (!ENGINE) return '';
+  var row = function(r){
+    /* ⚠️ the tests that name THIS module, not the ones that merely reach the engine area */
+    var tests = CASES.filter(function(c){ return (c.subjects || []).indexOf(r.file) >= 0; });
+    var done = tests.filter(function(c){ return LAST[c.case_key]; }).length;
+    var bad = tests.filter(function(c){ var l = LAST[c.case_key];
+      return l && (l.status === 'fail' || l.status === 'blocked'); }).length;
+    return '<tr><td><span class="k">' + esc(r.name) + '</span>'
+      + (r.stage ? '<span class="stage ' + esc(r.stage) + '">' + esc(r.stage) + '</span>' : '')
+      + '</td>'
+      /* ⭐ the rule in its own words — from @stage-note or its heading, never inferred */
+      + '<td>' + (r.says ? esc(r.says)
+          : '<i class="dim">⚠ this rule does not say what it is</i>') + '</td>'
+      + '<td class="num">' + r.lines + '</td>'
+      + '<td class="num">' + (tests.length ? tests.length : '<span class="dim">—</span>') + '</td>'
+      + '<td class="num">' + (bad ? '<span class="bad">' + bad + '</span>'
+          : (done ? '<span class="big">' + done + '</span>' : '<span class="warnn">not run</span>')) + '</td></tr>';
+  };
+
+  var h = '<h2 style="font-size:var(--fs-3);margin:22px 0 9px">The pure rules</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    + 'Tier A of <code>tests/engine-manifest.js</code> — <b>zero dependencies, forever</b>. '
+    + '<code>engine-boundary.test.js</code> fails the day one of them grows a <code>require</code>. '
+    + '⚠️ These nine are the engine; the <b>Engine</b> row above counts every test reaching <code>lib/</code>, '
+    + 'which is 127 files. <i>The area is not the core.</i></div>'
+    + '<div class="scroll"><table class="sum"><tr><th>Rule</th><th>What it decides</th>'
+    + '<th class="num">Lines</th><th class="num">Tests</th><th class="num">Last</th></tr>';
+  ENGINE.pure.forEach(function(r){ h += row(r); });
+  h += '</table></div>';
+
+  if ((ENGINE.bound || []).length) {
+    h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:10px 0 6px">'
+      + '<b>Tier B</b> — the same rules, but needing a database handle. Portable with an adapter, not as a file.'
+      + '</div><div class="scroll"><table class="sum">';
+    ENGINE.bound.forEach(function(r){ h += row(r); });
+    h += '</table></div>';
+  }
+  var o = ENGINE.other || {};
+  h += '<div class="fine" style="margin:8px 0 16px">The rest of <code>lib/</code> is declared too, and is '
+    + 'deliberately NOT called a rule: ' + (o.engine_adjacent || 0) + ' engine-adjacent · '
+    + (o.adoption || 0) + ' adoption layers · ' + (o.infrastructure || 0) + ' infrastructure. '
+    + '⚠️ Adding a rule means adding it to a bucket in the manifest — one edit, guarded, where the rule lives.</div>';
+  return h;
+}
+
 function chartsHTML(){
   var g = (window.__cover_groups) || {};
   var areas = COVER.map(function (a) { return { key: a.module_key, total: a.total, passed: a.passed,
@@ -1895,6 +1978,7 @@ function chartsHTML(){
 }
 
 async function paintSummary(){
+  await loadEngine();
   if (!COVER.length && !RUNS.length) {
     document.getElementById('main').innerHTML = '<div class="say">Reading the summary…</div>';
     await loadSummary();
@@ -1902,7 +1986,7 @@ async function paintSummary(){
   tally();
 
   /* ⭐ the charts first: a person opening the Summary wants the shape before the numbers */
-  var h = matrixHTML() + chartsHTML();
+  var h = matrixHTML() + engineHTML() + chartsHTML();
   h += '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Coverage by area</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
     + 'The latest word on every case. \u26a0 An area with cases nobody has run is the one to do next \u2014 a wall '
