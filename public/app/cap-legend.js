@@ -29,6 +29,55 @@ const CAP_CATALOGUE = [
       {n:'One file, one capability: app/cart.js', s:'done'},
       {n:'Parity spec across surfaces [PAR-01] + exposure [EXP-01]', s:'done'},
     ] },
+  /**
+   * ⭐⭐⭐ MONEY AND LANGUAGE AS A CAPABILITY (Athi, 2026-09-11: *"the currency handling and the language handling,
+   * can we keep it as a capability, its rules and convention etc — because any application we develop, if it has
+   * to follow currency, then these conventions would be useful"*).
+   *
+   * ⭐ HE IS NAMING SOMETHING THAT WAS ALREADY TRUE AND UNDECLARED. One renderer, one string layer and one set of
+   * conventions were already serving the app, the counter, the shop screen, the storefront and the lab — but
+   * nothing said so, so each new surface rediscovered them. promo.html hard-coded '₹' and en-IN and shipped a
+   * rupee sign to a Dubai customer, and offer-lab.html read Number(price) on a stamped money value; both were
+   * written by someone who had no list of the rules to follow.
+   *
+   * ⚠️⚠️ THE FAULTS THIS CAPABILITY EXISTS TO PREVENT ARE ALL INVISIBLE TO THE AUTHOR. A wrong currency symbol is
+   * a wrong price and it is correct in the one currency the developer tests in. A dropped bidi mark scrambles an
+   * Arabic price only on an Arabic device. A missing translation looks like English working fine. None of them
+   * throws, and the person who would notice is the one nobody asked.
+   *
+   * ⚠️ maturity 2 (designed), NOT 3: the rules are written down and the guards exist, but there are FIVE copies
+   * of the stamped-price reader and only one of them is named (backlog). L3 needs one exported reader and the
+   * others deleted — an enforced single implementation, which is what separates a capability from a convention.
+   */
+  { id:'money-language', name:'Money & language — one renderer, one string layer', icon:'💱', load:'eager', maturity:2, target:3,
+    gov:2, govTarget:3, governedUnder:'the standards register (ECMA-402 · CLDR · BCP 47 · RFC 4647 · ISO 4217)',
+    governedBy:[
+      'ONE RENDERER: CBLocale.money(amount, code) — app/locale.js, vendored to /engine/locale.js for the counter and the shop screen',
+      'THE READER GROUPS, THE CURRENCY DOES NOT: grouping and separators come from the reader\'s locale (India is 2-2-3, not 3-3-3); the currency sets only the symbol and the decimals (JPY 0 · INR/USD/AED 2 · KWD/BHD 3)',
+      'ltr() strips the LRM/RLM/ALM marks an Arabic-region format inserts — they serve an RTL paragraph and mislead the bidi algorithm on an LTR page (a price once read "10 / ₹ 620.00KG")',
+      'A PRICE IS A STAMPED VALUE — { amount, currency } — never a bare number; reading one with Number() is NaN and silently drops the product',
+      'English IS the key (gettext): tx() takes the English string, so a missing translation degrades to readable English rather than to a key',
+      'Region bounds language (RFC 4647, at most 3 per region) — a shop is not offered a language its region does not use',
+      'guard snapshot-wire: no shipped screen may print a currency symbol inside a string it emits',
+    ],
+    govGap:[
+      'FIVE copies of the stamped-price reader (cbAmount in app.html · three in cart.js · one in pricing.js) and none exported — which is exactly why offer-lab.html forgot. L3 = one reader in locale.js and the other five DELETED',
+      'the counter\'s fallback when CBLocale fails to load still prints two decimals for every currency — wrong for JPY and KWD, right for the rest',
+      'no spec drives a non-INR shop end to end: the renderer is proven per currency, the SCREENS are proven only in rupees',
+    ],
+    blurb:'Money is not a number with a symbol in front of it, and a language is not a lookup table. One renderer carries the shop\'s currency and the reader\'s grouping to every surface; one string layer keeps English as the key so a missing translation is still readable.',
+    features:[
+      {n:'CBLocale.money — symbol, grouping, decimals and bidi marks, from one place (55 call sites on the counter alone)', s:'done'},
+      {n:'Per-currency decimals: JPY none · INR/USD/AED/GBP/EUR two · KWD/BHD three — verified across all eight', s:'done'},
+      {n:'An unknown currency code still prints (code + number) rather than throwing mid-sale', s:'done'},
+      {n:'RTL as structure, not translation — 4 language packs (ar/fr/hi/ta), 617 labels each', s:'done'},
+      {n:'tx() adopts gettext: the English string IS the key', s:'done'},
+      {n:'The shop screen and the offer lab joined the renderer (both were hard-coding ₹)', s:'done'},
+      {n:'Guard: no screen prints its own currency symbol', s:'done'},
+      {n:'ONE exported reader for a stamped price, and the five copies deleted', s:'next'},
+      {n:'A spec that drives a non-INR shop through counter, screen and slip', s:'next'},
+    ] },
+
   { id:'core', name:'Core — Governance rail', icon:'🛤️', load:'eager', maturity:2, target:3,
     gov:3, govTarget:4, governedUnder:'the constitution + the RLS isolation floor',
     governedBy:['RLS entity isolation (FORCE, per-copy)','append-only state_log','governed delivery fns (SECURITY DEFINER)'],
