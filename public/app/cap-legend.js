@@ -79,7 +79,7 @@ const CAP_CATALOGUE = [
       {n:'A spec that drives a non-INR shop through counter, screen and slip', s:'next'},
     ] },
 
-  { id:'testing', name:'Testing — cases, results and the spec they cite', icon:'🧪', load:'lazy', maturity:2, target:3,
+  { id:'testing', name:'Test lab — cases, results and the spec they cite', icon:'🧪', load:'lazy', maturity:2, target:3,
     gov:3, govTarget:4, governedUnder:'the same definition/version rail every declared rule uses, plus the b219 append-only grant',
     governedBy:[
       'A TEST CASE IS A DEFINITION (kind testcase), versioned like a tax slab — so a result records WHICH WORDING was in front of the tester, and editing a case cannot retroactively claim that today\'s words passed on a day they did not exist',

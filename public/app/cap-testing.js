@@ -162,7 +162,7 @@ function testGuide(force) {
       + '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--grey-2)">' + body + '</div></div>';
   };
 
-  modal('<div class="mhd"><div class="t">' + tx('Testing') + '</div>'
+  modal('<div class="mhd"><div class="t">' + tx('Test lab') + '</div>'
     + '<div class="s">' + tx('Read a case, do it, say what happened — without leaving the screen you are on.')
     + '</div></div>'
     + '<div class="mbody" style="line-height:1.6">'
@@ -310,10 +310,21 @@ function testPaint() {
   /* ── the header: who is recording, into which run, over which area ── */
   var hd = ''
     + '<div style="display:flex;align-items:center;gap:8px">'
-    +   '<b style="font-size:var(--fs-3)">🧪 Testing</b>'
+    +   '<b style="font-size:var(--fs-3)">🧪 Test lab</b>'
     +   '<span style="flex:1"></span>'
     +   '<button class="btn" title="Add a case for something you just found" onclick="testAddOpen()" '
     +     'style="padding:2px 9px;font-size:var(--fs-4);line-height:1.3">+</button>'
+    /**
+     * ⭐⭐ THE REPORT, FROM THE LAB. Athi, 2026-09-11: *"where is the report in the test lab?"* — it was only
+     * on the full board, which is the one place a tester is not.
+     *
+     * ⚠ IT OPENS A TAB RATHER THAN RENDERING HERE, and that is the right trade rather than a shortcut. A
+     * completion report is a wide document that gets PRINTED and filed; squeezing ten sections into a 420px
+     * panel would make it unreadable in the one place it has to be legible — on paper, to somebody who was
+     * not here.
+     */
+    +   '<button class="btn" title="Test Completion Report (ISO/IEC/IEEE 29119-3)" '
+    +     'onclick="testReport()" style="padding:2px 8px">☷</button>'
     +   '<button class="btn" title="How to use this" onclick="testGuide(true)" style="padding:2px 8px">ⓘ</button>'
     +   '<button class="btn" title="Read the cases again" onclick="testLoad(true)" style="padding:2px 8px">↻</button>'
     /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
@@ -674,6 +685,12 @@ async function testSeed() {
     if (typeof toast === 'function') toast(tx('Could not load the test cases') + ' — ' + e.message, true);
   }
   CBTEST.seeding = false; testPaint();
+}
+
+/** ⭐ the completion report — on the board, where it has the width to be read and printed */
+function testReport() {
+  try { window.open('/testing.html#report', '_blank'); }
+  catch (_) { if (typeof toast === 'function') toast(tx('Open /testing.html to read the report.')); }
 }
 
 function testAddOpen() { CBTEST.adding = true; testPaint(); }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Test board · Chit &amp; Bridge</title>
+<title>Test lab · Chit &amp; Bridge</title>
 <!--
   THE TEST BOARD — the test cases as a thing you can tap, not a PDF you cannot write on.
 
@@ -176,8 +176,9 @@
 
 <header>
   <div class="htop">
-    <h1>Test board</h1>
+    <h1>Test lab</h1>
     <span class="sub" id="who">…</span>
+    <span class="sub" style="opacity:.75">· cases, results and the completion report — ISO/IEC/IEEE 29119-3</span>
   </div>
   <div class="tally" id="tally"></div>
 </header>
@@ -186,9 +187,16 @@
   <!-- ⭐ Athi, 2026-09-11: "where can we see the summary result?" — the totals endpoint existed and nothing
        rendered it. An endpoint with no screen is a number nobody reads. -->
   <div class="tabs">
-    <button id="t_cases" class="on" onclick="setView('cases')">Cases</button>
-    <button id="t_sum" onclick="setView('summary')">Summary</button>
-    <button id="t_rep" onclick="setView('report')">Report</button>
+    <!-- ⭐ Athi: "we name it as per standard, reference the standard where possible?" — each tab says which
+         of 29119-3's document types it corresponds to, so a reader can look ours up in theirs rather than
+         learning our words. ⚠️ Only where it genuinely corresponds: the Summary is OURS, because 29119-3's
+         Test Status Report is written DURING execution against a plan and we have no plan. -->
+    <button id="t_cases" class="on" onclick="setView('cases')"
+      title="Test Case Specification (ISO/IEC/IEEE 29119-3)">Cases</button>
+    <button id="t_sum" onclick="setView('summary')"
+      title="Coverage and the execution log — ours, not a named document of the standard">Summary</button>
+    <button id="t_rep" onclick="setView('report')"
+      title="Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
   </div>
 </div>
 <div class="bar">
@@ -527,7 +535,11 @@ async function paintReport(){
     +   'font-weight:700">' + esc(r.standard) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">supersedes ' + esc(r.supersedes)
     +   ' \u00b7 generated ' + new Date(r.generated_at).toLocaleString()
-    +   ' \u00b7 scope: ' + esc(r.scope) + '</div>';
+    +   ' \u00b7 scope: ' + esc(r.scope) + '</div>'
+    /* ⭐ our words mapped onto the standard's, so a reader can look ours up in theirs rather than learning ours */
+    + (r.names ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:7px;line-height:1.6">'
+        + 'A case is a <b>' + esc(r.names.case) + '</b> \u00b7 a sitting is a <b>' + esc(r.names.run) + '</b>'
+        + ' \u00b7 a failure is an <b>' + esc(r.names.incident) + '</b></div>' : '');
 
   r.sections.forEach(function (s) {
     var b = s.body || {};
@@ -824,6 +836,9 @@ async function caseHistory(k){
   } catch (e) { box.textContent = e.message; }
 }
 
+/* ⭐ the lab links straight here — /testing.html#report opens the report rather than the case list */
+if (location.hash === '#report') { setTimeout(function(){ setView('report'); }, 0); }
+else if (location.hash === '#summary') { setTimeout(function(){ setView('summary'); }, 0); }
 loadRun();
 load();
 </script>
