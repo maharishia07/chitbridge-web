@@ -206,6 +206,23 @@
   .fine{ display:block; margin-top:3px; color:var(--grey-2); opacity:.85; }
   /* ⭐ the journey position, shown so the ordering is legible rather than merely applied */
   /* ⭐ the core group, readable at a glance and comparable down a column */
+  /* ── ⭐ folding ── */
+  /* ⭐ the question this tab answers — same place, same voice, on every tab */
+  .lens{ font-size:var(--fs-2); color:var(--ink-2); background:var(--card); border:1px solid var(--line);
+        border-inline-start:3px solid var(--blue); border-radius:4px; padding:7px 11px; margin:0 0 12px;
+        line-height:1.5; }
+  .lens b{ color:var(--ink); }
+  .lens i{ font-style:normal; color:var(--grey-2); }
+  .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
+  .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
+  .modhead{ cursor:pointer; user-select:none; border-radius:6px; padding:3px 5px; margin-inline-start:-5px; }
+  .modhead:hover{ background:var(--neutral-tint); }
+  .modhead:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
+  .caret{ font-size:var(--fs-2); color:var(--grey-2); width:.9em; display:inline-block; }
+  /* ⭐ the counts on the header are what make a FOLDED section still worth looking at */
+  .modn{ margin-inline-start:auto; font-size:var(--fs-1); color:var(--grey-2); white-space:nowrap; }
+  .modn b{ font-variant-numeric:tabular-nums; }
+  .mod.shut{ margin-bottom:4px; }
   .grp{ display:inline-block; font-size:var(--fs-1); font-weight:600; color:var(--ink-2);
         background:var(--neutral-tint); border-radius:99px; padding:1px 8px; margin-inline-end:4px;
         white-space:nowrap; }
@@ -361,6 +378,20 @@
       title="Run a pure engine function on your own input, here, with no server">Try it</button>
   </div>
 </div>
+<!--
+  ── ⭐⭐⭐ FIVE LENSES, ONE SET OF NUMBERS ──────────────────────────────────────────────────────────────────
+
+  Athi, 2026-09-11: *"I understand it is all the same metrics in different format and different focus, so we
+  have to give that significance."*
+
+  ⚠️⚠️ HE WORKED THAT OUT BY READING FIVE TABS AND NOTICING THE NUMBERS AGREED. Nothing on the screen said it.
+  Until you see it, five tabs look like five reports and the natural question is which one is right — which
+  is exactly the confusion that made "everything shows as engine" hard to place.
+
+  ⭐ So each tab states the QUESTION IT ANSWERS, in the same place, in the same voice. The data is one table
+  of results; what changes is what you are asking it.
+-->
+<div class="lens" id="lens"></div>
 <!--
   ── ⭐⭐⭐ TWO BOXES, NOT FIVE ────────────────────────────────────────────────────────────────────────────────
 
@@ -1017,8 +1048,27 @@ var VIEW = 'cases', COVER = [], RUNS = [];
  * ⚠️ Showing only the second is the common mistake: a wall of green runs says nothing about the module
  * nobody has opened.
  */
+/**
+ * ⭐ WHAT EACH TAB IS ASKING. Same results table underneath all five — the lens is the difference, and a reader
+ * who cannot see the lens reasonably assumes the tabs disagree.
+ */
+var LENS = {
+  cases: '<b>What should be true.</b> Every case, in the order somebody would walk the product — '
+       + 'register, sign in, find your way, set up, sell. <i>This tab cannot tell you whether any of it ran.</i>',
+  summary: '<b>What has been run, and how far along.</b> The same cases, counted by area and by kind. '
+         + '<i>Done means a result exists — not that it passed.</i>',
+  report: '<b>The same numbers as a document you could hand somebody.</b> ISO/IEC/IEEE 29119-3. '
+        + '<i>Counts are measured; the judgements carry a question, never a generated answer.</i>',
+  reliability: '<b>Whether a test can be believed.</b> Not pass or fail — how often each one <i>changed its '
+             + 'answer</i>. A test that flips proves nothing, however green it looks today.',
+  'try': '<b>The engines themselves, on your own input.</b> The same files the counter runs, with no server '
+       + 'in between to blame. <i>Nothing here is recorded — it is for seeing, not for scoring.</i>',
+};
+
 function setView(v){
   VIEW = v;
+  var lens = document.getElementById('lens');
+  if (lens) lens.innerHTML = LENS[v] || '';
   document.getElementById('t_cases').className = (v === 'cases') ? 'on' : '';
   document.getElementById('t_sum').className = (v === 'summary') ? 'on' : '';
   /* the case filters mean nothing on either of the other two views */
@@ -1899,13 +1949,55 @@ function paint(){
   if (!list.length) { document.getElementById('main').innerHTML =
     '<div class="say"><b>Nothing matches.</b>Clear the search or choose a different filter.</div>'; return; }
 
-  var h = '';
+  /**
+   * ── ⭐⭐⭐ SECTIONS FOLD, SO THE WHOLE BOARD FITS ON ONE SCREEN ─────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11: *"the header item as a collapsable, with expand all option, that will be good, so we can
+   * see all in a single page — same thing applies everywhere."*
+   *
+   * ⚠️ WITH 616 CASES A LIST IS NOT A VIEW. Every module fully open means scrolling past a hundred rows to
+   * learn that there are twenty-three modules — a fact that fits on half a screen. ⭐ Folded, the shape of the
+   * whole thing is visible at once and the numbers are on the headers, so collapsed is INFORMATIVE rather than
+   * merely small.
+   *
+   * ⚠️ A SECTION YOU OPENED MUST NOT CLOSE ITSELF when the board reloads. The open set is remembered per
+   * device, and "expand all" is a state rather than a one-off action, or the first repaint would undo it.
+   */
+  var h = '<div class="foldbar">'
+    + '<button class="btn" onclick="foldAll(true)">Expand all</button>'
+    + '<button class="btn" onclick="foldAll(false)">Collapse all</button>'
+    + '<span class="foldnote">' + order.length + ' area' + (order.length === 1 ? '' : 's')
+    + ' · ' + list.length + ' case' + (list.length === 1 ? '' : 's') + '</span></div>';
+
   order.forEach(function(k){
     var first = byMod[k][0];
-    h += '<section class="mod"><div class="modhead"><span class="k">' + esc(k) + '</span>'
+    var open = isOpenSection(k, order.length);
+    /* ⭐ the numbers live on the header, so a folded section still answers "how far along is this one" */
+    var n = { pass: 0, bad: 0, todo: 0 };
+    byMod[k].forEach(function(c){
+      var l = LAST[c.case_key];
+      if (!l) n.todo++;
+      else if (l.status === 'fail' || l.status === 'blocked') n.bad++;
+      else n.pass++;
+    });
+    var step = (first.seq !== undefined && first.seq < 90)
+      ? (first.seq < 10 ? '0' + first.seq : String(first.seq)) : '';
+    h += '<section class="mod' + (open ? '' : ' shut') + '">'
+       + '<div class="modhead" onclick="foldSection(\'' + esc(k) + '\')" role="button" tabindex="0"'
+       +   ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();foldSection(\'' + esc(k) + '\');}">'
+       + '<span class="caret">' + (open ? '\u25be' : '\u25b8') + '</span>'
+       + (step ? '<span class="step">' + step + '</span>' : '')
+       + '<span class="k">' + esc(k) + '</span>'
        + '<h2>' + esc(first.module_name || '') + '</h2>'
-       + (first.intro ? '<div class="intro">' + esc(first.intro) + '</div>' : '') + '</div>';
-    byMod[k].forEach(function(c){ h += caseHTML(c); });
+       + '<span class="modn">'
+       +   (n.pass ? '<b class="big">' + n.pass + '</b> passed ' : '')
+       +   (n.bad ? '<b class="bad">' + n.bad + '</b> failed ' : '')
+       +   (n.todo ? '<b class="warnn">' + n.todo + '</b> not run' : '')
+       + '</span></div>';
+    if (open) {
+      if (first.intro) h += '<div class="intro">' + esc(first.intro) + '</div>';
+      byMod[k].forEach(function(c){ h += caseHTML(c); });
+    }
     h += '</section>';
   });
   document.getElementById('main').innerHTML = h;
@@ -1919,6 +2011,27 @@ function shortKey(k){
   var s = String(k || '');
   return s.indexOf('/') < 0 ? s : s.slice(s.lastIndexOf('/') + 1);
 }
+
+/**
+ * ── ⭐ WHICH SECTIONS ARE OPEN ────────────────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THE DEFAULT IS THE WHOLE DECISION. Open-by-default with twenty-three areas is the wall of rows this
+ * replaced; shut-by-default when a person has filtered down to one area hides the only thing they asked for.
+ * ⭐ So: one area showing means they went looking for it — open it. Several means they are surveying — fold.
+ */
+var FOLD = (function () {
+  try { return JSON.parse(localStorage.getItem('cb_test_fold') || '{}'); } catch (_) { return {}; }
+})();
+function foldSave(){ try { localStorage.setItem('cb_test_fold', JSON.stringify(FOLD)); } catch (_) {} }
+
+function isOpenSection(k, howMany){
+  if (FOLD[k] !== undefined) return !!FOLD[k];      /* a choice already made wins over any default */
+  if (FOLD._all !== undefined) return !!FOLD._all;
+  return howMany <= 2;
+}
+function foldSection(k){ FOLD[k] = !isOpenSection(k, 99); foldSave(); paint(); }
+/* ⚠️ a STATE, not a one-off: the next repaint would undo an action, and the board repaints on every tap */
+function foldAll(open){ FOLD = { _all: !!open }; foldSave(); paint(); }
 
 function caseHTML(c){
   var l = LAST[c.case_key], st = l ? l.status : '';

@@ -503,7 +503,51 @@ function testPaint() {
     h += '<div style="padding:12px;font-size:var(--fs-2);color:var(--grey-2,var(--grey-2))">Nothing in this area yet — '
       +  'press <b>+</b> to add the first case for it.</div>';
   } else {
+    /**
+     * ── ⭐⭐⭐ GROUPED AND FOLDABLE HERE TOO ───────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-11: *"the header item as a collapsable, with expand all option… same thing applies
+     * everywhere."*
+     *
+     * ⚠️ THE PANEL HAD NO GROUPING AT ALL — a flat list, which was fine while it always opened on one area and
+     * stopped being fine the moment "All areas" meant 616 rows in a floating window four inches wide.
+     * ⭐ Folded, the panel shows the shape of the board without becoming a second board.
+     */
+    var groups = [], byG = {};
     shown.forEach(function (c) {
+      if (!byG[c.module_key]) { byG[c.module_key] = []; groups.push(c.module_key); }
+      byG[c.module_key].push(c);
+    });
+    if (groups.length > 1) {
+      h += '<div style="display:flex;gap:5px;align-items:center;padding:4px 2px 7px">'
+        + '<button class="btn" style="padding:1px 8px;font-size:var(--fs-1)" onclick="testFoldAll(true)">Expand all</button>'
+        + '<button class="btn" style="padding:1px 8px;font-size:var(--fs-1)" onclick="testFoldAll(false)">Collapse all</button>'
+        + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + groups.length + ' areas · '
+        + shown.length + ' cases</span></div>';
+    }
+
+    groups.forEach(function (gk) {
+      var list = byG[gk];
+      var open = testSectionOpen(gk, groups.length);
+      if (groups.length > 1) {
+        /* ⭐ the counts on the header, so a folded area still says how far along it is */
+        var gn = { pass: 0, bad: 0, todo: 0 };
+        list.forEach(function (c) {
+          var ll = CBTEST.last[c.case_key];
+          if (!ll) gn.todo++; else if (ll.status === 'fail' || ll.status === 'blocked') gn.bad++; else gn.pass++;
+        });
+        h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:flex;gap:6px;align-items:baseline;'
+          + 'cursor:pointer;padding:5px 6px;margin:3px 0 4px;border-radius:6px;background:var(--neutral-tint)">'
+          + '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
+          + '<b style="font-size:var(--fs-2)">' + testEsc(gk) + '</b>'
+          + '<span style="font-size:var(--fs-1);color:var(--grey-2);flex:1;min-width:0;overflow:hidden;'
+          + 'text-overflow:ellipsis;white-space:nowrap">' + testEsc(list[0].module_name || '') + '</span>'
+          + '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap">'
+          + (gn.pass ? gn.pass + ' passed ' : '') + (gn.bad ? gn.bad + ' failed ' : '')
+          + (gn.todo ? gn.todo + ' not run' : '') + '</span></div>';
+      }
+      if (!open) return;
+      list.forEach(function (c) {
       var l = CBTEST.last[c.case_key];
       var col = l ? STAT[l.status] : null;
       var isOpen = CBTEST.open === c.case_key;
@@ -563,6 +607,7 @@ function testPaint() {
         +  '</div>';
       if (isOpen) h += testCaseBodyHTML(c);
       h += '</div>';
+      });
     });
   }
   h += '</div>';
@@ -573,6 +618,25 @@ function testPaint() {
  * ⭐ The name that identifies a case in a column: a written case IS its key (CTR-01); a file is its basename.
  * ⚠️ The directory is not dropped, it moves to the tooltip — two cases can share a basename across repos.
  */
+/**
+ * ⭐ WHICH AREAS ARE OPEN — the same rule as the board, and deliberately the same rule.
+ * ⚠️ One area showing means somebody went looking for it: open it. Several means they are surveying: fold.
+ * A choice already made always wins over the default, and "expand all" is a STATE rather than an action —
+ * the panel repaints on every tap, and an action would be undone by the next one.
+ */
+function testFoldGet() {
+  try { return JSON.parse(localStorage.getItem('cb_test_fold_panel') || '{}'); } catch (_) { return {}; }
+}
+function testFoldSet(o) { try { localStorage.setItem('cb_test_fold_panel', JSON.stringify(o)); } catch (_) {} }
+function testSectionOpen(k, howMany) {
+  var f = testFoldGet();
+  if (f[k] !== undefined) return !!f[k];
+  if (f._all !== undefined) return !!f._all;
+  return howMany <= 2;
+}
+function testFold(k) { var f = testFoldGet(); f[k] = !testSectionOpen(k, 99); testFoldSet(f); testPaint(); }
+function testFoldAll(open) { testFoldSet({ _all: !!open }); testPaint(); }
+
 function testShortKey(k) {
   var s = String(k || '');
   return s.indexOf('/') < 0 ? s : s.slice(s.lastIndexOf('/') + 1);
