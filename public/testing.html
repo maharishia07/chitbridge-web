@@ -180,6 +180,19 @@
   .legend i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
   @media print{ .chart{ break-inside:avoid; } }
 
+  /* ── reliability: what can be believed, as opposed to what should be tested ── */
+  .verdict{ font-size:var(--fs-1); font-weight:700; white-space:nowrap; }
+  .verdict.drift{ color:var(--bad); }
+  .verdict.broke{ color:var(--warn); }
+  .verdict.settled{ color:var(--ok); }
+  .verdict.once{ color:var(--grey-2); font-weight:400; }
+  /* ⭐ the sequence itself, because "3 failures" and "failed every other run" look identical as a number */
+  .seq{ display:inline-flex; gap:2px; vertical-align:middle; }
+  .seq i{ width:7px; height:14px; border-radius:2px; display:inline-block; }
+  .why-note{ background:var(--card); border:1px solid var(--line); border-radius:11px;
+        padding:13px 16px; margin-bottom:16px; font-size:var(--fs-2); line-height:1.6; color:var(--ink-2); }
+  .why-note b{ color:var(--ink); }
+
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
@@ -209,6 +222,8 @@
       title="Coverage and the execution log — ours, not a named document of the standard">Summary</button>
     <button id="t_rep" onclick="setView('report')"
       title="Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
+    <button id="t_rel" onclick="setView('reliability')"
+      title="How often each test has run, and how often it changed its answer">Reliability</button>
   </div>
 </div>
 <div class="bar">
@@ -495,8 +510,10 @@ function setView(v){
   var bars = document.querySelectorAll('.bar');
   for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'cases') ? 'bar' : 'bar hide';
   document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
+  document.getElementById('t_rel').className = (v === 'reliability') ? 'on' : '';
   if (v === 'summary') paintSummary();
   else if (v === 'report') paintReport();
+  else if (v === 'reliability') paintReliability();
   else paint();
 }
 
@@ -527,6 +544,68 @@ function pct(a, b){ return b ? Math.round((a / b) * 100) : 0; }
  * ⭐ So the measured sections and the judgement sections are rendered DIFFERENTLY on purpose, and the ones
  * that need a person carry the question rather than an answer.
  */
+/**
+ * ⭐⭐⭐ RELIABILITY — what can be BELIEVED, as opposed to what should be tested.
+ *
+ * Athi, 2026-09-11: *"the total number of times it ran and how many times it failed… this particular test is
+ * drifting, which means it is still not matured."*
+ *
+ * ⚠️⚠️ THE FAILURE COUNT IS THE WRONG HEADLINE and this screen is arranged around saying so. Three failures
+ * out of five runs describes two opposite situations: something that broke once and stayed broken, and
+ * something nobody can trust. The first is a defect with a fix; the second is a test that has to be rewritten
+ * or deleted. Sorting by FLIPS puts the ones you cannot believe at the top, which is the order you want to
+ * read them in.
+ */
+async function paintReliability(){
+  document.getElementById('main').innerHTML = '<div class="say">Reading the history…</div>';
+  var r;
+  try { r = await call('/api/testing/reliability'); }
+  catch (e) { say('Could not read the history: ' + e.message, true); return; }
+
+  var t = r.totals || {};
+  var h = '<div class="why-note">'
+    + '<b>Failures are not the headline here \u2014 changes of answer are.</b> A test that went '
+    + 'pass\u00b7pass\u00b7fail\u00b7fail\u00b7fail broke once and stayed broken: that is a defect, and its failure count '
+    + 'describes it fairly. A test that went pass\u00b7fail\u00b7pass\u00b7fail\u00b7pass failed the same number of times and '
+    + 'is something else entirely \u2014 nothing about the product changed between those runs, so the TEST is what is '
+    + 'not mature. The worst are listed first.</div>';
+
+  h += '<div class="big-n" style="margin-bottom:18px">'
+    + '<div><b>' + (t.tracked || 0) + '</b><span>tests with a history</span></div>'
+    + '<div><b>' + (t.runs || 0) + '</b><span>runs recorded</span></div>'
+    + '<div><b class="bad">' + (t.drifting || 0) + '</b><span>drifting</span></div>'
+    + '<div><b class="big">' + (t.settled || 0) + '</b><span>settled</span></div>'
+    + '<div><b class="dim">' + (t.once || 0) + '</b><span>run only once</span></div></div>';
+
+  if (!(r.cases || []).length) {
+    document.getElementById('main').innerHTML = h
+      + '<div class="say"><b>Nothing recorded yet.</b>Run a test, or post an automated run, and the history '
+      + 'starts here.</div>';
+    return;
+  }
+
+  h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th class="num">Runs</th>'
+    + '<th class="num">Failed</th><th class="num">Changed</th><th>Last</th><th>Verdict</th></tr>';
+
+  (r.cases || []).forEach(function (c) {
+    var cls = c.flips >= 2 ? 'drift' : (c.flips === 0 && c.failed ? 'broke'
+      : (c.runs < 2 ? 'once' : (c.failed ? 'broke' : 'settled')));
+    var lastCls = c.last_status === 'pass' ? 'big' : (c.last_status === 'fail' ? 'bad'
+      : (c.last_status === 'blocked' ? 'warnn' : 'dim'));
+    h += '<tr><td><span class="area">' + esc(c.case_key) + '</span>'
+      +   '<span class="sub">' + esc(c.kinds || '') + (c.layers ? ' \u00b7 ' + esc(c.layers) : '') + '</span></td>'
+      + '<td class="num">' + c.runs + '</td>'
+      + '<td class="num' + (c.failed ? ' bad' : ' dim') + '">' + c.failed + '</td>'
+      /* \u2b50 the number that decides the order, and the one people will not expect to be here */
+      + '<td class="num' + (c.flips >= 2 ? ' bad' : ' dim') + '">' + c.flips + '</td>'
+      + '<td><span class="' + lastCls + '">' + esc((c.last_status || '').toUpperCase()) + '</span>'
+      +   '<span class="sub">' + ago(c.last_seen) + '</span></td>'
+      + '<td><span class="verdict ' + cls + '">' + esc(c.verdict) + '</span></td></tr>';
+  });
+  h += '</table></div>';
+  document.getElementById('main').innerHTML = h;
+}
+
 async function paintReport(){
   document.getElementById('main').innerHTML = '<div class="say">Building the report…</div>';
   var r;
@@ -964,6 +1043,7 @@ async function caseHistory(k){
 
 /* ⭐ the lab links straight here — /testing.html#report opens the report rather than the case list */
 if (location.hash === '#report') { setTimeout(function(){ setView('report'); }, 0); }
+else if (location.hash === '#reliability') { setTimeout(function(){ setView('reliability'); }, 0); }
 else if (location.hash === '#summary') { setTimeout(function(){ setView('summary'); }, 0); }
 loadRun();
 load();
