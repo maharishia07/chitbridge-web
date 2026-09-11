@@ -1250,7 +1250,13 @@ async function paintReliability(){
 
   h += '<div class="big-n" style="margin-bottom:18px">'
     + '<div><b>' + (t.tracked || 0) + '</b><span>tests with a history</span></div>'
-    + '<div><b>' + (t.runs || 0) + '</b><span>runs recorded</span></div>'
+    /**
+     * ⚠️⚠️ THIS SAID "runs recorded" AND SHOWED THE RESULT-ROW COUNT. Two sittings of 186 tests reported
+     * "368 runs recorded" — off by a factor of 184 on the one figure that tells a reader how much history
+     * there is to trust. ⭐ Both numbers are worth having; they are not the same number.
+     */
+    + '<div><b>' + (t.runs || 0) + '</b><span>sitting' + (t.runs === 1 ? '' : 's') + ' posted</span></div>'
+    + '<div><b>' + (t.results || 0) + '</b><span>results in all</span></div>'
     + '<div><b class="bad">' + (t.drifting || 0) + '</b><span>drifting</span></div>'
     + '<div><b class="big">' + (t.settled || 0) + '</b><span>settled</span></div>'
     + '<div><b class="dim">' + (t.once || 0) + '</b><span>run only once</span></div></div>';
