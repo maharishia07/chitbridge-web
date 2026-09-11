@@ -236,6 +236,22 @@
   .stage.proven{ color:var(--ok-2,var(--ok)); background:var(--ok-tint); }
   .stage.tested{ color:var(--blue); background:var(--blue-tint,var(--neutral-tint)); }
   .stage.held{ color:var(--warn-2,var(--warn)); background:var(--warn-tint); }
+  /* ── ⭐ what an area CONTAINS, opened in place ── */
+  .built{ font-size:var(--fs-3); font-variant-numeric:tabular-nums; }
+  .builtwhat{ display:block; font-size:var(--fs-1); color:var(--grey-2); font-weight:400; margin-top:1px; }
+  table.inside{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line-2);
+        margin:4px 0 2px; }
+  table.inside th{ text-align:start; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.07em;
+        color:var(--grey-2); padding:7px 10px; border-bottom:1px solid var(--line-2); background:var(--paper); }
+  table.inside td{ padding:6px 10px; border-bottom:1px solid var(--line-2); vertical-align:top;
+        font-size:var(--fs-1); line-height:1.45; }
+  table.inside tr:last-child td{ border-bottom:0; }
+  table.inside .k{ font-family:ui-monospace,Menlo,monospace; font-weight:700; color:var(--ink); }
+  .tag.tier-pure{ color:var(--ok-2,var(--ok)); border-color:var(--ok); margin-inline-start:6px; }
+  .tag.tier-bound{ color:var(--grey-2); margin-inline-start:6px; }
+  /* ⚠️ the unplaced are shown as an absence, not as an area — they are not part of the architecture */
+  table.mtx tr.unplaced td{ background:var(--paper); }
+  table.mtx tr.unplaced .area{ color:var(--grey-2); font-style:italic; }
   .pivotbar{ gap:7px; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
@@ -687,8 +703,12 @@ function say(msg, bad){
 var ENGINE = null;
 async function loadEngine(){
   if (ENGINE !== null) return;
-  try { var r = await call('/api/testing/engine'); ENGINE = r && r.engine ? r.engine : false; }
-  catch (e) { ENGINE = false; }
+  try {
+    var r = await call('/api/testing/engine');
+    ENGINE = r && r.engine ? r.engine : false;
+    /* ⭐ what is inside every area, for the matrix to open into */
+    CONTENTS = r && r.contents ? r.contents : null;
+  } catch (e) { ENGINE = false; CONTENTS = null; }
 }
 
 async function seed(){
@@ -1020,6 +1040,19 @@ var ALWAYS_SHOW = { penetration: true };
  * ⚠️ It is not MVC and must not be read as it. There is no controller layer here worth naming: a route is a
  * door onto an engine, and the interesting code is on either side of it, never in it.
  */
+/**
+ * ⭐ EACH AREA CONTAINS A DIFFERENT KIND OF THING, and calling them all "items" would flatten the one fact the
+ * column exists to carry. The engine holds RULES; the API holds ENDPOINTS; the database holds MIGRATIONS.
+ * ⚠️ "Built" counts what EXISTS, not what is tested — the two numbers sit side by side on purpose.
+ */
+var BUILT_NOUN = { engine: 'rules', middleware: 'gates', web: 'screens', api: 'route files',
+                   database: 'migrations', connector: 'adapters' };
+var BUILT_HEAD = { engine: 'Rule', middleware: 'Gate', web: 'Screen', api: 'Route file',
+                   database: 'Migration', connector: 'Adapter' };
+var BUILT_NOTE = { engine: 'Size', middleware: 'Size', web: 'Size', api: 'Function points',
+                   database: '', connector: 'Size' };
+var CONTENTS = null;
+
 var AREA_TIER = { engine: 1, middleware: 1, web: 1, api: 2, database: 2, connector: 2 };
 var TIER_NAME = { 1: 'The architecture \u2014 engine, middleware, web', 2: 'What it rides on' };
 var AREA_ORDER = ['engine', 'middleware', 'web', 'api', 'database', 'connector'];
@@ -1842,7 +1875,10 @@ function matrixHTML(){
     h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '"><span>'
       + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</span></th>';
   });
-  h += '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
+  /* ⭐ Athi: *"add the rules count"* — what the area CONTAINS, beside how much of it is tested. Nine rules
+     with 135 tests reaching them is a different fact from 135 tests. */
+  h += '<th class="num"><span>Built</span></th>'
+    + '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
     + '<th class="num"><span>Left</span></th><th class="num"><span>Complete</span></th></tr>';
 
   var lastTier = null;
@@ -1869,6 +1905,11 @@ function matrixHTML(){
         : (impossible ? '<span class="na" title="' + esc(NO_MANUAL[a]) + '">n/a</span>'
                       : '<span class="dim">—</span>')) + '</td>';
     });
+    /* what is inside this area, and what it is called */
+    var made = (CONTENTS && CONTENTS[a]) ? CONTENTS[a] : null;
+    h += '<td class="num">' + (made
+      ? '<b class="built">' + made.length + '</b><span class="builtwhat">' + esc(BUILT_NOUN[a] || '') + '</span>'
+      : '<span class="dim">—</span>') + '</td>';
     h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
     h += '</tr>';
     /**
@@ -1877,15 +1918,38 @@ function matrixHTML(){
      * have to leave the picture to read.
      * ⚠️ Only what REACHES this area, which is the row's own meaning — not the module it happens to sit in.
      */
+    /**
+     * ⭐⭐⭐ OPENING AN AREA SHOWS WHAT IS IN IT, LINE BY LINE.
+     *
+     * Athi: *"if someone wants to know what is inside engine, show each of the rules we have built line by
+     * line — name of the rule, purpose and anything else worth mentioning in a single line, possibly a
+     * 3-column tabular. Similarly for each item."*
+     *
+     * ⚠️ NOT THE TEST CASES. Those are one tab away and countable there. What nothing anywhere could answer
+     * was "what IS the engine" — the question a person asks first, and the one this whole row is about.
+     * ⚠️ The purpose is READ from each file's own declared heading, never written here. A file that states
+     * none says so, which is a finding about that file rather than a blank in this table.
+     */
     if (mopen) {
-      var inner = '', shownN = 0;
-      CASES.filter(function(c){ return (c.areas || []).indexOf(a) >= 0; })
-        .sort(function(x, y){ return (x.seq === undefined ? 99 : x.seq) - (y.seq === undefined ? 99 : y.seq)
-          || (x.case_key < y.case_key ? -1 : 1); })
-        .forEach(function(c){ if (shownN++ < 60) inner += caseHTML(c); });
-      if (shownN > 60) inner += '<div class="fine" style="padding:6px 2px">Showing 60 of ' + shownN
-        + '. The Cases tab holds them all, and can be cut by kind, status or who runs them.</div>';
-      h += '<tr class="acases"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 6)
+      var inner = '';
+      if (!made || !made.length) {
+        inner = '<div class="fine" style="padding:8px 2px">Nothing is listed for this area yet.</div>';
+      } else {
+        inner = '<table class="inside"><thead><tr><th>' + esc(BUILT_HEAD[a] || 'Name')
+          + '</th><th>What it does</th><th>' + esc(BUILT_NOTE[a] || 'Size') + '</th></tr></thead><tbody>';
+        made.slice(0, 60).forEach(function(x){
+          inner += '<tr><td><span class="k">' + esc(x.name) + '</span>'
+            + (x.tier ? '<span class="tag tier-' + esc(x.tier) + '">' + esc(x.tier) + '</span>' : '')
+            + (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '') + '</td>'
+            + '<td>' + (x.purpose ? esc(x.purpose)
+                : '<i class="dim">this file does not say what it is for</i>') + '</td>'
+            + '<td class="num dim">' + esc(x.note || '') + '</td></tr>';
+        });
+        if (made.length > 60) inner += '<tr><td colspan="3" class="dim">'
+          + (made.length - 60) + ' more</td></tr>';
+        inner += '</tbody></table>';
+      }
+      h += '<tr class="acases"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 7)
         + '">' + inner + '</td></tr>';
     }
   });
@@ -1893,6 +1957,25 @@ function matrixHTML(){
   /* ── the bottom line ── */
   var allTestable = CASES.filter(testable);
   var allDone = allTestable.filter(function(c){ return LAST[c.case_key]; }).length;
+  /**
+   * ⭐ THE UNPLACED ARE A ROW NOW, not a sentence underneath. Athi asked for it, and he is right: the rows did
+   * not add up to the bottom line and the explanation for that sat below the table, where a reader who had
+   * already decided the arithmetic was broken would never reach it.
+   * ⚠️ It is styled as an absence rather than an area — it is not part of the architecture, it is what the
+   * measurement could not place.
+   */
+  if (unplaced) {
+    h += '<tr class="unplaced"><td class="areacell"><span class="area">Not placed</span>'
+       + '<span class="what">Tests that reach nothing this measurement can name — in the total, not in a row.</span></td>';
+    KINDS.forEach(function(t){
+      if (!colN[t]) return;
+      var un = CASES.filter(function(c){ return !(c.areas || []).length && c.test_type === t; }).length;
+      h += '<td class="num">' + (un ? '<span class="warnn">' + un + '</span>' : '<span class="dim">—</span>') + '</td>';
+    });
+    h += '<td class="num"><span class="dim">—</span></td><td class="sep"></td>'
+       + barCell(unplacedDone, unplaced) + '</tr>';
+  }
+
   h += '<tr class="foot"><td><b>Everything</b></td>';
   COLS.forEach(function(c){
     var n = colN[c.k] || 0;
@@ -1900,6 +1983,8 @@ function matrixHTML(){
       ? '<b class="clickable" onclick="drill(\'\',\'' + c.k + '\')">' + n + '</b>'
       : '<span class="dim">0</span>') + '</td>';
   });
+  h += '<td class="num"><b>' + (CONTENTS ? Object.keys(CONTENTS)
+        .reduce(function(t, k){ return t + CONTENTS[k].length; }, 0) : '—') + '</b></td>';
   h += '<td class="sep"></td>' + barCell(allDone, allTestable.length) + '</tr>';
   h += '</table></div>';
 
