@@ -1772,7 +1772,17 @@ function paint(){
   tally();
   /* ⭐ the next level down is recomputed every time, so each choice narrows the one below it */
   fillFilters();
-  var list = shown(), byMod = {}, order = [];
+  /**
+   * ⭐⭐ IN THE ORDER SOMEBODY WOULD WALK THE PRODUCT, not alphabetically. Athi: *"can we add the order in
+   * which the manual scripts can be tested, so someone understands the flow."* ⚠️ Sorted by name, a test plan
+   * reads as a filing cabinet and a missing first step is invisible — which is how there came to be no
+   * registration cases at all.
+   */
+  var list = shown().slice().sort(function (a, b) {
+    var d = (a.seq === undefined ? 99 : a.seq) - (b.seq === undefined ? 99 : b.seq);
+    return d || (a.case_key < b.case_key ? -1 : 1);
+  });
+  var byMod = {}, order = [];
   list.forEach(function(c){ if (!byMod[c.module_key]) { byMod[c.module_key] = []; order.push(c.module_key); }
     byMod[c.module_key].push(c); });
 

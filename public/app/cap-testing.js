@@ -323,7 +323,11 @@ var TEST_KIND_LABEL = {
 };
 
 function testShown() {
-  return CBTEST.cases.filter(function (c) {
+  /* ⭐ the journey order, same as the board — see build-test-cases.cjs FLOW */
+  return CBTEST.cases.slice().sort(function (x, y) {
+    var d = (x.seq === undefined ? 99 : x.seq) - (y.seq === undefined ? 99 : y.seq);
+    return d || (x.case_key < y.case_key ? -1 : 1);
+  }).filter(function (c) {
     if (CBTEST.kind && c.test_type !== CBTEST.kind) return false;
     return !CBTEST.area || c.module_key === CBTEST.area;
   });
