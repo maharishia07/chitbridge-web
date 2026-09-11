@@ -146,6 +146,11 @@
     <option value="regression">Regression</option>
   </select>
   <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
+  <label for="f_who">Tester</label>
+  <!-- ⚠️ THE ENTITY NAME IS NOT AN ANSWER TO "who tested this". The server always records the identity off
+       the token, which cannot be typed in and is the evidence; this is who was at the keyboard, which only
+       matters — and only differs — when one login is shared. Kept on this device. -->
+  <input type="text" id="f_who" placeholder="who is at the keyboard" oninput="saveWho()" style="max-width:150px">
   <button class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
   <span style="flex:1"></span>
   <!-- ⭐ Gherkin: the spec clause and its cases as ONE text. The Feature description IS the clause, so a
@@ -172,11 +177,19 @@ var CASES = [], LAST = {}, OPEN = {}, RUN = null, STALE = {};
 /* ── the run this sitting belongs to ─────────────────────────────────────────────────────────────────────────
  * ⭐ IT SURVIVES A RELOAD. A run is a sitting, and a sitting includes closing the tab to go and look at
  * something. Losing the run id on refresh would scatter one afternoon's testing across nine "runs". */
+/** who is at the keyboard — a courtesy beside the identity, not a substitute for it */
+function who(){ try { return localStorage.getItem('cb_tester') || ''; } catch (_) { return ''; } }
+function saveWho(){
+  var v = (document.getElementById('f_who').value || '').trim().slice(0, 60);
+  try { if (v) localStorage.setItem('cb_tester', v); else localStorage.removeItem('cb_tester'); } catch (_) {}
+}
+
 function loadRun(){
   try { RUN = JSON.parse(localStorage.getItem('cb_testrun') || 'null'); } catch (_) { RUN = null; }
   if (!RUN || !RUN.id) RUN = { id: uuid(), label: '', kind: 'manual' };
   document.getElementById('f_run').value = RUN.label || '';
   document.getElementById('f_kind').value = RUN.kind || 'manual';
+  document.getElementById('f_who').value = who();
 }
 function saveRun(){
   RUN.label = document.getElementById('f_run').value.trim();
@@ -463,7 +476,7 @@ async function mark(k, status){
   try {
     var r = await call('/api/testing/results', { method:'POST', body: {
       run_id: RUN.id, run_label: RUN.label || null,
-      results: [{ case_key: k, module_key: c.module_key, status: status,
+      results: [{ case_key: k, module_key: c.module_key, status: status, tester_name: who() || undefined,
                   run_kind: RUN.kind || 'manual', layer: c.layer || null, note: note || null }] }});
     /* ⚠️ take the row the SERVER wrote, not the one we hoped it would — the time and the tester come from it */
     var saved = (r.results || [])[0];

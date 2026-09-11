@@ -115,7 +115,17 @@ function testPanelOpen() {
     + 'width:min(420px,calc(100vw - 32px));max-height:min(70vh,620px);display:flex;flex-direction:column;'
     + 'background:var(--card,#fff);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
     + 'box-shadow:0 10px 34px rgba(0,0,0,.16);z-index:4000;overflow:hidden">'
-    + '<div id="cbtestbody" style="display:flex;flex-direction:column;min-height:0;flex:1"></div></div>';
+    /**
+     * ⚠️ THE HEADER IS ITS OWN ELEMENT, and that is what makes minimise mean anything. makeMovable collapses
+     * every child EXCEPT the one classed `mhd`, so with a single child the panel would minimise to an empty
+     * box — which is a close button with extra steps, not a minimise.
+     * ⚠️ padding-inline-start leaves room for the drag grip makeMovable pins at the top-left corner; without
+     * it the grip sits on top of the title and neither can be read.
+     */
+    + '<div id="cbtesthead" class="mhd" style="padding:9px 11px 9px 30px;border-bottom:1px solid var(--line,#e7e3d8);'
+    +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0;margin:0"></div>'
+    + '<div id="cbtestbody" data-mv-fit="1" style="display:flex;flex-direction:column;min-height:0;flex:1;'
+    +   'overflow:auto"></div></div>';
   document.body.appendChild(host);
 
   /**
@@ -125,7 +135,16 @@ function testPanelOpen() {
    */
   try {
     if (typeof makeMovable === 'function') {
-      makeMovable(document.getElementById('cbtestpanel'), { key: 'cb_testpanel', minW: 300, minH: 220 });
+      makeMovable(document.getElementById('cbtestpanel'), {
+        key: 'cb_testpanel', minW: 280, minH: 180,
+        /* ⭐ Athi, 2026-09-11: *"a minimise button, so we can minimise the test case"* — and it already
+           existed, behind an option I had not passed. It HIDES, it never closes: whatever is half-typed in a
+           note box is still there when it comes back. */
+        minimise: true,
+        /* ⚠️ WITHOUT `fit`, DRAGGING THE CORNER TALLER GROWS THE FRAME AND NOT THE LIST — you get a band of
+           empty card under the cases, which reads as a bug rather than as a resize that did nothing. */
+        fit: '#cbtestbody',
+      });
     }
   } catch (_) {}
 
@@ -159,7 +178,8 @@ function testShown() {
 
 function testPaint() {
   var body = document.getElementById('cbtestbody');
-  if (!body) return;
+  var head = document.getElementById('cbtesthead');
+  if (!body || !head) return;
 
   var STAT = { pass: ['#2c7a43', '#e6f4ea'], fail: ['#b4453f', '#fbeceb'],
                blocked: ['#8a5a1e', '#fbf3e3'], skipped: ['#8a949c', '#EEF1F5'] };
@@ -170,13 +190,21 @@ function testPaint() {
   var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
 
   /* ── the header: who is recording, into which run, over which area ── */
-  var h = '<div style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);background:var(--paper,#faf8f3)">'
+  var hd = ''
     + '<div style="display:flex;align-items:center;gap:8px">'
     +   '<b style="font-size:13px">🧪 Testing</b>'
     +   '<span style="flex:1"></span>'
     +   '<button class="btn" title="Add a case for something you just found" onclick="testAddOpen()" '
     +     'style="padding:2px 9px;font-size:15px;line-height:1.3">+</button>'
     +   '<button class="btn" title="Read the cases again" onclick="testLoad(true)" style="padding:2px 8px">↻</button>'
+    /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
+       on the test case and where we are looking at."* The corner still drags freely; this is for the times
+       when you know what you want and do not want to aim at a 16-pixel triangle to get it. */
+    +   '<select onchange="testSize(this.value)" title="Size" style="font-size:11px;padding:2px 4px">'
+    +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
+           ['large', 'Large'], ['full', 'Full height']].map(function (o) {
+            return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
+    +   '</select>'
     +   '<button class="btn" title="Close" onclick="testModeSet(false)" style="padding:2px 8px">✕</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
@@ -190,6 +218,11 @@ function testPaint() {
     +     ['manual', 't0', 't1', 't2', 't3', 'unit', 'regression'].map(function (k) {
             return '<option value="' + k + '"' + (CBTEST.run.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('')
     +   '</select>'
+    /* ⚠️ ASKED FOR, NOT ASSUMED. Left blank the row still records the login that wrote it — which is the
+       truth either way; this only adds a name when a login is shared. */
+    +   '<input type="text" placeholder="' + (testEsc(testDefaultWho())) + '" value="' + testEsc(testWho()) + '"'
+    +     ' onchange="testSetWho(this.value)" title="Who is testing — kept on this device"'
+    +     ' style="font-size:12px;padding:3px 5px;flex:1;min-width:90px">'
     + '</div>'
     /* ⭐ the tally is the reason to keep the panel open — it is the only place that says how far you have got */
     + '<div style="margin-top:6px;font-size:11px;color:var(--grey-2,#545A61)">'
@@ -202,10 +235,13 @@ function testPaint() {
     + '</div>'
     + '</div>';
 
-  if (CBTEST.adding) { body.innerHTML = h + testAddHTML(); return; }
+  /* ⚠️ THE HEAD IS WRITTEN SEPARATELY so that minimising can hide the body and keep this. */
+  head.innerHTML = hd;
+
+  if (CBTEST.adding) { body.innerHTML = testAddHTML(); return; }
 
   /* ── the list ── */
-  h += '<div style="flex:1;overflow:auto;padding:7px 9px;min-height:0">';
+  var h = '<div style="flex:1;padding:7px 9px;min-height:0">';
   if (CBTEST.busy && !CBTEST.cases.length) {
     h += '<div style="padding:14px;color:var(--grey-2,#545A61);font-size:12px">Reading the cases…</div>';
   } else if (!CBTEST.cases.length) {
@@ -292,6 +328,90 @@ function testMarkBtn(key, status, label, fg, bg) {
     + label + '</button>';
 }
 
+/** what the server would record if nobody types a name — shown as the placeholder, so it is never a surprise */
+function testDefaultWho() {
+  try { return (typeof SESSION !== 'undefined' && (SESSION.name || SESSION.entity)) || 'this login'; }
+  catch (_) { return 'this login'; }
+}
+
+/**
+ * ⭐⭐ SIZE PRESETS. Athi, 2026-09-11: *"keep it wider or lengthier etc, this depends on the test case and
+ * where we are looking at etc matters, so it has to be flexible."*
+ *
+ * He is describing two different needs and they want two different controls. A case with long expectations
+ * wants WIDTH; a module with forty cases wants HEIGHT; and which you want changes every few minutes. The
+ * corner still drags freely for anything in between — this is for when you already know, and would rather
+ * not aim at a 16-pixel triangle to say so.
+ *
+ * ⚠️ IT WRITES makeMovable's OWN SAVED SHAPE, not a second one. Two stores for one panel would disagree the
+ * first time somebody used a preset and then dragged the corner, and the panel would jump on next open.
+ */
+var TEST_SIZES = {
+  normal: { w: 420, h: 460 },
+  wide:   { w: 720, h: 460 },
+  tall:   { w: 420, h: Math.max(360, Math.round(window.innerHeight * 0.82)) },
+  large:  { w: 720, h: Math.max(360, Math.round(window.innerHeight * 0.82)) },
+  full:   { w: 460, h: Math.max(360, window.innerHeight - 40) },
+};
+function testSize(name) {
+  var s = TEST_SIZES[name];
+  if (!s) return;
+  var el = document.getElementById('cbtestpanel');
+  if (!el) return;
+  /* ⚠️ once a size is chosen the panel must stop being anchored to the bottom-right, or growing it taller
+     pushes it UP off the top of the window rather than getting bigger. */
+  var r = el.getBoundingClientRect();
+  el.style.position = 'fixed'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.margin = '0';
+  if (!el.style.left) el.style.left = Math.max(8, r.left) + 'px';
+  if (!el.style.top) el.style.top = Math.max(8, r.top) + 'px';
+  el.style.width = s.w + 'px';
+  el.style.height = s.h + 'px';
+  el.style.maxHeight = 'none';
+
+  /* keep it on screen — a preset taller than the window would otherwise hang off the bottom */
+  var top = parseFloat(el.style.top) || 0;
+  if (top + s.h > window.innerHeight - 8) el.style.top = Math.max(8, window.innerHeight - s.h - 8) + 'px';
+  var left = parseFloat(el.style.left) || 0;
+  if (left + s.w > window.innerWidth - 8) el.style.left = Math.max(8, window.innerWidth - s.w - 8) + 'px';
+
+  /* ⭐ the same key and the same shape makeMovable persists, so the next open restores what you chose */
+  try {
+    localStorage.setItem('cb_testpanel', JSON.stringify({
+      left: parseFloat(el.style.left), top: parseFloat(el.style.top),
+      width: s.w, height: s.h }));
+  } catch (_) {}
+
+  /* the list has to grow with the frame, or the panel gets bigger and shows no more cases */
+  var b = document.getElementById('cbtestbody');
+  if (b) { b.style.maxHeight = 'none'; b.style.flex = '1 1 auto'; b.style.minHeight = '0'; b.style.overflowY = 'auto'; }
+}
+
+/**
+ * ⭐⭐⭐ WHO IS TESTING — and Athi is right that the entity name is not an answer.
+ *
+ * He asked, 2026-09-11: *"do we know who is testing? The entity name we can pick it up? Anything else as a
+ * tester name, do we need it?"*
+ *
+ * ⚠️ THE SERVER ALREADY RECORDS THE TRUTH: `tested_by` is the identity_id off the token and cannot be typed
+ * in. But `tester_name` fell back to the display name, and when you sign in AS THE BUSINESS that is "Tally
+ * Test Shop" — which says the shop tested it, and a shop cannot hold a phone. A co-assist login already gives
+ * a person's name; an owner login does not.
+ *
+ * ⭐ SO BOTH, AND THEY ANSWER DIFFERENT QUESTIONS. The identity is the unforgeable record of WHICH LOGIN wrote
+ * the row. This label is who was at the keyboard — which matters exactly when one login is shared, i.e. the
+ * case he is describing. It is kept on this device, because it is a property of who is sitting here.
+ * ⚠️ It can be wrong, deliberately: it is a courtesy, not evidence, and the identity beside it is the evidence.
+ */
+function testWho() {
+  try { var v = localStorage.getItem('cb_tester'); if (v) return v; } catch (_) {}
+  return '';
+}
+function testSetWho(v) {
+  var s = String(v || '').trim().slice(0, 60);
+  try { if (s) localStorage.setItem('cb_tester', s); else localStorage.removeItem('cb_tester'); } catch (_) {}
+  CBTEST.who = s;
+}
+
 function testSetArea(v) { CBTEST.area = v; CBTEST.open = null; testPaint(); }
 function testSetKind(v) { CBTEST.run.kind = v; testRunSave(); testPaint(); }
 /**
@@ -339,6 +459,7 @@ async function testMark(key, status) {
     var r = await api('testRecord', { body: {
       run_id: CBTEST.run.id, run_label: CBTEST.run.label || null,
       results: [{ case_key: key, module_key: c.module_key, status: status, run_kind: CBTEST.run.kind || 'manual',
+                  tester_name: testWho() || undefined,
                   layer: c.layer || null, note: note || null, evidence: ev || null }] } });
     var saved = ((r && r.results) || [])[0] || {};
     CBTEST.last[key] = Object.assign({
