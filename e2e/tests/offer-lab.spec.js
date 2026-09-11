@@ -51,8 +51,15 @@ test('[LAB-01] the lab opens on your own catalogue, scopes an offer to a categor
     /* ⚠️ it loads the catalogue asynchronously on boot — wait for the real thing, do not race it */
     await lab.waitForFunction((s) => PRODUCTS.some((p) => String(p.item_data.name).includes(s)), stamp, { timeout: 40000 });
 
+    /**
+     * ⚠️ ASSERTED AGAINST THE SESSION, NOT A LITERAL. mintEntity's  is a label for the TEST — the entity is
+     * actually registered as e2eco-…, so an expectation of 'Lab ' was testing my own assumption and failed three
+     * times while the lab was right. Ask the browser who it is signed in as and check the lab agrees.
+     */
+    const who = await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('cb_sess') || '{}'); return s.entity || s.name || ''; });
+    expect(who, 'the browser holds no entity name to compare against').toBeTruthy();
     const src = await lab.locator('#src').textContent();
-    expect(src, 'the lab does not say whose catalogue it is showing').toMatch(/Lab /);
+    expect(src, 'the lab does not name the shop it is showing').toContain(who);
     expect(src, 'the lab is still on the sample set').not.toMatch(/sample/i);
 
     const names = await lab.evaluate(() => PRODUCTS.map((p) => p.item_data.name).join(' | '));
