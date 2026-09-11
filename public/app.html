@@ -3797,7 +3797,7 @@ function themePaletteHTML(){
       + "<span style=\"width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto\"></span>"
       + "<span style=\"height:4px;border-radius:2px;background:var(--ink);opacity:.7;flex:1\"></span></div>"
       + "<div style=\"display:flex;gap:3px;margin-top:5px\">"
-      + "<span style=\"font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px\">' + tx('Aa') + '</span>"
+      + "<span style=\"font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px\">Aa</span>"
       + "<span style=\"font-size:8px;font-weight:700;background:var(--ok-tint);color:var(--ok-2);border-radius:3px;padding:0 4px\">ok</span>"
       + "<span style=\"font-size:8px;font-weight:700;background:var(--danger-tint);color:var(--disp);border-radius:3px;padding:0 4px\">!</span>"
       + "</div></div></div>"
@@ -3875,7 +3875,7 @@ function themePaletteHTML(){
     + "</div>"
     + needs.map(a11yRow).join("")
     + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:4px\">"
-    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>' + tx('Okabe–Ito') + '</b>."
+    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
     + "</div>";
 }
 
@@ -12415,7 +12415,10 @@ async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toas
   if(ids.length>1) showBusy(txn('Unarchiving {count} record…', 'Unarchiving {count} records…', ids.length)); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
 function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
   confirmAsk('Delete '+ids.length+' item'+(ids.length===1?'':'s')+' permanently?',
-    "This <b>can't be undone</b>.<div style=\"margin-top:7px\">${txf('Only {drafts} can be purged — sent and received chits stay where they are, because the other party holds a copy.', { drafts: '<b>' + tx('drafts') + '</b>' })}</div>",
+    "This <b>can't be undone</b>.<div style=\"margin-top:7px\">"
+      + txf('Only {drafts} can be purged — sent and received chits stay where they are, because the other party holds a copy.',
+             { drafts: '<b>' + tx('drafts') + '</b>' })
+      + "</div>",
     'Delete', function(){ _bulkPurge(ids); }, true); }
 async function _bulkPurge(ids){
   if(ids.length>1) showBusy(txn('Deleting {count} record…', 'Deleting {count} records…', ids.length));
