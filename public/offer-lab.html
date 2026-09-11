@@ -86,6 +86,9 @@
   #p_list .lab-head .lab-sel{ position:absolute; left:8px; top:50%; transform:translateY(-50%); white-space:nowrap; }
   #p_list .lab-apply{ position:absolute; left:8px; top:50%; transform:translateY(-50%); display:flex; align-items:center; gap:5px; }
   #p_list .lab-apply input[type=number]{ width:46px; height:24px; padding:2px 4px; font-size:var(--fs-1); }
+  /* ⭐ the override tick reads as a REFUSAL, not a second selection — warn-coloured, so an eye scanning the
+     column can see at once which one or two products are being held out of the category offer. */
+  #p_list .lab-out{ accent-color: var(--warn, #b26a00); margin-inline-start:2px; }
   @media (max-width:1000px){ .lab{ grid-template-columns:1fr; } .pane.left{ border-right:0; border-bottom:1px solid var(--line); } }
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
 </style>
@@ -94,8 +97,12 @@
 <header>
   <div><h1>Offer lab</h1><div class="sub">One line per offer. Switch it on and the right half shows what the customer sees — the same engine and the same cart as the shop.</div></div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)">
-    <span id="src" class="chip">sample products</span>
-    <button class="btn" data-testid="lab-load-mine" onclick="labLoadMine()">Use my catalogue</button>
+    <span id="src" class="chip">reading your catalogue…</span>
+    <!-- ⭐ THE SCOPE, PICKED NOT TYPED. A category that does not exist matches nothing and the offer simply never
+         fires — a list cannot be misspelt. Empty = the offers reach whatever is ticked on the right, as before. -->
+    <label style="display:flex;gap:6px;align-items:center" title="attach every offer below to a category — products ticked on the right are added to it">
+      <span style="color:var(--dim)">Category</span><span id="scope-cat-host"></span></label>
+    <button class="btn" data-testid="lab-load-mine" onclick="labLoadMine()">Re-read my catalogue</button>
     <a class="btn" href="app.html" style="text-decoration:none">← app</a>
   </div>
 </header>
@@ -282,7 +289,56 @@ function tierLineHTML(id) {
 }
 function labTierSet(id, i, k, val) { var t = tiersOf(id); t[i][k] = (k === 'on') ? !!val : Math.max(0, Number(val) || 0); labRepaint(); }
 /* the offers a product's own breaks make: one tier offer for that product, its ranges as percentages */
-function applyTo() { if (!APPLY) return undefined; var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); }); return (ids.length && ids.length < PRODUCTS.length) ? { item_ids: ids } : undefined; }
+/**
+ * ── ⭐⭐⭐ WHAT AN OFFER APPLIES TO — A CATEGORY, SOME PRODUCTS, OR BOTH ───────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"anything should be possible"*, and *"if it is attached to a category it applies to all
+ * products; one or two products we should be able to override with different offers."*
+ *
+ * ⭐ THE ENGINE HAS ALWAYS ALLOWED THIS. `eligibleFor` takes item_ids ∪ skus ∪ category as a UNION, with the
+ * price bounds and min-qty as AND — the lab was the thing forcing a single choice, by only ever emitting
+ * `item_ids`. So this is not a new capability, it is the form catching up with the rule.
+ *
+ * ⚠️ AND THE CATEGORY IS PICKED, NEVER TYPED. A misspelt scope KEY silently applied an offer to the whole basket
+ * until 2026-09-10 (₹40 off a bill that owed ₹9); a misspelt category VALUE still quietly matches nothing, which
+ * is the same fault wearing the opposite costume — the offer simply never fires and the lab reports "no line
+ * qualifies", which reads as a rule that is wrong rather than a word that was misspelt. A list cannot be misspelt.
+ */
+function applyTo() {
+  var to = {};
+  var cat = v('scope-cat');
+  if (cat) to.category = cat;
+  if (APPLY) {
+    var ids = PRODUCTS.map(function (p) { return p.item_id; }).filter(function (id) { return APPLY.has(id); });
+    /* ⚠️ "all of them ticked" is not a scope, it is the absence of one — emitting every id would turn a category
+       offer into a product list that stops covering anything added tomorrow. */
+    if (ids.length && ids.length < PRODUCTS.length) to.item_ids = ids;
+  }
+  return Object.keys(to).length ? to : undefined;
+}
+/** the category picker, built from the catalogue's own categories with a count each */
+function scopeCatSelect() {
+  if (!CATS.length) return '<span class="hint">no categories on this catalogue yet</span>';
+  return '<select id="scope-cat" onchange="labRepaint()"><option value="">— no category —</option>'
+    + CATS.map(function (c) { return '<option value="' + esc(c.name) + '">' + esc(c.name) + ' · ' + c.n + '</option>'; }).join('')
+    + '</select>';
+}
+/**
+ * ⭐⭐ THE OVERRIDE, MADE VISIBLE. A product's only answer to a category offer is an explicit opt-out
+ * (`item_data.offers_excluded`, carried on the line as `excluded`) — Athi, 2026-09-04: *"no two directions,
+ * governance or override"*. Tick a product OUT here and give it its own offer, and the narrower one is all that
+ * applies to it while the category offer still reaches everything else.
+ * ⚠️ IT IS TWO DELIBERATE ACTS AND NOT ONE, deliberately. If a narrower offer silently beat a broader one, every
+ * stacked offer already in the product would change meaning overnight and nobody would be told. Without the
+ * opt-out they STACK — ₹675 against ₹750 on a ₹1,000 hamper, from one unticked box.
+ */
+/** the offers currently scoped to a CATEGORY — the ones an opted-out product is excused from */
+function catScopedIds() {
+  return labOffers().filter(function (o) { return o && o.applies_to && o.applies_to.category; })
+                    .map(function (o) { return String(o.id); });
+}
+var OPTOUT = {};    /* item id → true: this product is taken OUT of the category-scoped offers */
+function labOptOut(id, on) { if (on) OPTOUT[id] = true; else delete OPTOUT[id]; labRepaint(); }
 function withCommon(id, o) {
   var only = v(id + '-only'); if (only) { o.customer_group = only; o.customer_name = { new: 'New customers', regular: 'Regular customers', high_value: 'High-value customers', 'group:dealers': 'dealers', 'customer:one': 'this customer' }[only] || only; }
   if (document.getElementById(id + '-excl').checked) o.exclusive = true;
@@ -336,7 +392,22 @@ function labRepaint(rebuild) {
   try { CBCatUI.ensureCss(); } catch (_) {}
   injectApplies(); paintWhy(); paintMarkup();
 }
-function engineLines(sel) { return sel.map(function (l) { var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0] || { item_data: {} }; return { key: String(l.item_id), item_id: l.item_id, sku: p.item_data.code || null, categories: p.item_data.categories || [], excluded: [], qty: Number(l.quantity || l.qty) || 0, unitPrice: Number(p.item_data.price) || 0, tax: p.tax || null }; }); }
+function engineLines(sel) {
+  /**
+   * ⚠️⚠️ THE OPT-OUT NAMES OFFER IDS, NEVER '*'. The platform's '*' means "out of EVERY offer" (lib/exposure.js)
+   * — which would take the product out of its OWN offer too, the exact opposite of an override. What is being
+   * asked for is "not the CATEGORY one; mine instead", so only the category-scoped ids are named.
+   * ⚠️ Worked out ONCE per evaluation, not once per line: it builds the whole offer list to answer.
+   */
+  var excusedFrom = Object.keys(OPTOUT).length ? catScopedIds() : [];
+  return sel.map(function (l) {
+    var p = PRODUCTS.filter(function (x) { return x.item_id === l.item_id; })[0] || { item_data: {} };
+    return { key: String(l.item_id), item_id: l.item_id, sku: p.item_data.code || null,
+             categories: p.item_data.categories || [],
+             excluded: OPTOUT[l.item_id] ? excusedFrom : [],
+             qty: Number(l.quantity || l.qty) || 0, unitPrice: Number(p.item_data.price) || 0, tax: p.tax || null };
+  });
+}
 function evalFor(viewer, sel) { var lines = engineLines(sel); var ship = on('ship') ? CART_RULES.shipCharge : 0; var ev = CBOffers.evaluate({ lines: lines, offers: labOffers(), ctx: { now: new Date(), currency: 'INR', customer_groups: groupsFor(viewer), shipping: ship, money: function (x) { return fmtMoney(x); } } }); return { lines: lines, ev: ev, per: CBOffers.perLine(ev, lines) || {} }; }
 function paintWhy() {
   var sel = []; try { sel = CART.selected(); } catch (_) {}
@@ -398,17 +469,90 @@ function paintMarkup() {
   var list = Math.floor(book / (1 - d) * 100) / 100, shown = Math.round(list * (1 - d) * 100) / 100;
   o.innerHTML = '<b>Declare the list price as ' + fmtMoney(list) + '</b> and run a ' + n('mk-pct') + '% off: the customer sees <s>' + fmtMoney(list) + '</s> <b>' + fmtMoney(shown) + '</b>, and you still receive your book price of ' + fmtMoney(book) + ' (rounded down, so it never lands below). A connector sync must not overwrite a declared list price — that is the <i>markup</i> pricing kind (backlog).';
 }
-async function labLoadMine() {
+/**
+ * ── ⭐⭐⭐ THE LAB OPENS ON THE REAL CATALOGUE ─────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"can you bring the real catalogue into offer lab instead of test data — which entity opens
+ * and its catalogue"*, and *"we have to see how to bring categories and the product as well, the catalogue
+ * structure as such, so the offer can be attached to category rather than the individual product."*
+ *
+ * ⚠️⚠️ IT COULD ALREADY READ THE CATALOGUE AND ALMOST NOBODY WOULD HAVE. It was a button, so the lab opened on
+ * five invented products — grapes, oil, rice — and a shop testing an offer was testing it against a shop that
+ * does not exist. An offer proved on Grapes tells you nothing about whether it fires on YOUR biscuits.
+ *
+ * ⭐ AND THE SAMPLE SET IS NOT DELETED. A new entity with an empty catalogue would otherwise open on a blank
+ * screen, which is a worse first look than an obviously-labelled example. It stays as the fallback and says so.
+ *
+ * ⚠️ `category` WAS BEING DROPPED. The mapper read `d.categories || d.category_ids` and the catalogue stores the
+ * singular `d.category` — so every product arrived with no category at all, and a category-scoped offer could
+ * match nothing. That is invisible: the offer simply never fires, and the lab reports it as "no line qualifies",
+ * which reads as a rule that is wrong rather than a field that was lost in transit.
+ */
+async function labLoadMine(quiet) {
   var sess = null; try { sess = JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) {}
-  if (!sess || !sess.token) { alert('Sign in to the app on this browser first, then press again.'); return; }
+  if (!sess || !sess.token) {
+    if (!quiet) alert('Sign in to the app on this browser first, then press again.');
+    labSaySource('example products — sign in to use your own catalogue');
+    return false;
+  }
   try {
-    var r = await fetch(API + '/api/products?limit=200', { headers: { Authorization: 'Bearer ' + sess.token } }); var j = await r.json();
+    /* ⭐ WHO, as well as what. The lab must name the shop it is testing, or a person with two tabs open cannot
+       tell whose offers they are proving. */
+    var me = null;
+    try { var mr = await fetch(API + '/api/entities/me', { headers: { Authorization: 'Bearer ' + sess.token } });
+          me = mr.ok ? await mr.json() : null; } catch (_) {}
+    var who = (me && (me.display_name || (me.entity && me.entity.display_name))) || 'your shop';
+
+    var r = await fetch(API + '/api/products?limit=500', { headers: { Authorization: 'Bearer ' + sess.token } });
+    var j = await r.json();
     var items = (j.items || j.products || j.rows || (Array.isArray(j) ? j : [])).filter(function (p) { return p && p.item_data && Number(p.item_data.price) > 0; });
-    if (!items.length) { alert('Your catalogue has no priced products yet — the sample set stays.'); return; }
-    PRODUCTS = items.map(function (p) { var d = p.item_data; return { item_id: p.item_id, item_data: { name: d.name, unit: d.unit, price: Number(d.price), code: d.code || d.sku || null, categories: d.categories || d.category_ids || [] }, tax: (d.gst_rate != null) ? { rate: Number(d.gst_rate), name: 'GST' } : null }; });
-    document.getElementById('src').textContent = 'your catalogue · ' + PRODUCTS.length + ' products';
+    if (!items.length) {
+      labSaySource(who + ' — no priced products yet, so these are examples');
+      return false;
+    }
+    PRODUCTS = items.map(function (p) {
+      var d = p.item_data;
+      /* ⚠️ SINGULAR FIRST — `category` is what the catalogue actually writes, and reading only the plurals is
+         how every product arrived here uncategorised. The engine takes either (its line normaliser folds them). */
+      var cats = Array.isArray(d.categories) ? d.categories.slice()
+               : (d.category ? [String(d.category)] : (Array.isArray(d.category_ids) ? d.category_ids.slice() : []));
+      return { item_id: p.item_id,
+               item_data: { name: d.name, unit: d.unit, price: Number(d.price), code: d.code || d.sku || null,
+                            mrp: (Number(d.mrp) > 0 ? Number(d.mrp) : null),
+                            category: cats[0] || null, categories: cats },
+               tax: (d.gst_rate != null) ? { rate: Number(d.gst_rate), name: 'GST' } : null };
+    });
+    CATS = labCategories(); paintScopeCat();
+    labSaySource(who + ' · ' + PRODUCTS.length + ' products · ' + CATS.length + ' categories');
     paintCards(); labRepaint(true);
-  } catch (e) { alert('Could not read your catalogue: ' + (e && e.message)); }
+    return true;
+  } catch (e) {
+    if (!quiet) alert('Could not read your catalogue: ' + (e && e.message));
+    labSaySource('example products — your catalogue could not be read');
+    return false;
+  }
+}
+function labSaySource(t) { var el = document.getElementById('src'); if (el) el.textContent = t; }
+/* ⚠️ repainted whenever the catalogue does — a picker built once would offer the sample set for ever */
+function paintScopeCat() { var h = document.getElementById('scope-cat-host'); if (!h) return;
+  var was = v('scope-cat'); h.innerHTML = scopeCatSelect();
+  var el = document.getElementById('scope-cat'); if (el && was) el.value = was; }
+
+/**
+ * ⭐⭐ THE CATALOGUE'S OWN CATEGORIES, with a count each — so an offer is scoped by PICKING one rather than by
+ * typing a string nobody checks.
+ * ⚠️ That typing is not a hypothetical risk: a misspelt scope key silently applied an offer to the entire basket
+ * until 2026-09-10 (₹40 off a bill that owed ₹9), and a misspelt category VALUE still quietly matches nothing.
+ * A list cannot be misspelt.
+ */
+var CATS = [];
+function labCategories() {
+  var by = {};
+  PRODUCTS.forEach(function (p) {
+    (p.item_data.categories || []).forEach(function (c) { if (c) by[c] = (by[c] || 0) + 1; });
+  });
+  return Object.keys(by).sort(function (a, b) { return by[b] - by[a]; })
+    .map(function (c) { return { name: c, n: by[c] }; });
 }
 /* ── the tick on every row: what the offers apply to ── */
 function labApplies(id) { return !APPLY || APPLY.has(id); }
@@ -423,10 +567,28 @@ function injectApplies() {
   document.querySelectorAll('#p_list .cbcat-row:not(.lab-head)').forEach(function (row) {
     var id = (row.getAttribute('data-testid') || '').replace(/^cbcat-row-/, ''); if (!id) return;
     var q = MINQ[id] || '';
-    if (row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input[type=checkbox]'); if (old) old.checked = labApplies(id); var oq = row.querySelector('.lab-apply input[type=number]'); if (oq && document.activeElement !== oq) oq.value = q; return; }
+    if (row.querySelector('.lab-apply')) { var old = row.querySelector('.lab-apply input[type=checkbox]'); if (old) old.checked = labApplies(id); var oq = row.querySelector('.lab-apply input[type=number]'); if (oq && document.activeElement !== oq) oq.value = q;
+      /* ⚠️ the opt-out appears and disappears with the category scope, so the row is rebuilt when that changes */
+      var hasOut = !!row.querySelector('.lab-out');
+      if (hasOut !== !!v('scope-cat')) { row.querySelector('.lab-apply').remove(); row.classList.remove('lab-has-apply'); }
+      else { var oo = row.querySelector('.lab-out'); if (oo) oo.checked = !!OPTOUT[id]; return; } }
     var lab = document.createElement('label'); lab.className = 'lab-apply'; lab.title = 'the offer applies to this product';
     /* the tick (the offer applies to it) and the MINIMUM ORDER SIZE (Athi, 2026-09-06 22:2x: "the order size is the number we set; when the + crosses the number, the offer applies") — the stepper on the right is what the customer takes */
     lab.innerHTML = '<input type="checkbox" data-testid="lab-apply-' + esc(id) + '"' + (labApplies(id) ? ' checked' : '') + '><input type="number" min="0" step="1" value="' + q + '" placeholder="any" data-testid="lab-qty-' + esc(id) + '" title="minimum order size for the offer on this product">';
+    /**
+     * ⭐⭐ OUT OF THE CATEGORY OFFER — the override, made a tick rather than a thing to reason about. Athi:
+     * *'if it is attached to a category it applies to all products; one or two products we should be able to
+     * override with different offers.'* Tick this and give the product its own offer: the narrower one is all
+     * that reaches it, while the category offer still reaches everything else.
+     * ⚠️ ONLY SHOWN WHEN A CATEGORY IS SCOPED. A control that cannot do anything is worse than one that is absent.
+     */
+    if (v('scope-cat')) {
+      var ox = document.createElement('input'); ox.type = 'checkbox'; ox.className = 'lab-out';
+      ox.checked = !!OPTOUT[id]; ox.title = 'take this product OUT of the category offer, so its own offer is the only one that reaches it';
+      ox.setAttribute('data-testid', 'lab-optout-' + id);
+      ox.addEventListener('change', function (e) { e.stopPropagation(); labOptOut(id, this.checked); });
+      lab.appendChild(ox);
+    }
     lab.querySelector('input[type=checkbox]').addEventListener('change', function (e) { e.stopPropagation(); labApplyOne(id, this.checked); });
     lab.querySelector('input[type=number]').addEventListener('change', function (e) { e.stopPropagation(); MINQ[id] = Math.max(0, Math.floor(Number(this.value) || 0)); labRepaint(); });
     lab.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -506,7 +668,13 @@ function labTry(what, a, b) {
   try { if (!CART.selected().length) CART.setQty(p.item_id, what === 'bxgy' ? Number(a || 2) + 1 : (what === 'tier' ? 10 : 1)); } catch (_) {}
   paintWhy();
 }
+/**
+ * ⭐⭐ THE LAB OPENS ON THE REAL CATALOGUE, not on a button. An offer proved against invented products tells a
+ * shop nothing about whether it fires on THEIRS — and until now 'grapes, oil, rice' was the first thing anyone
+ * saw. ⚠️ Quietly: not signed in, or an empty catalogue, must not throw an alert in somebody's face on load.
+ */
 paintCards(); labAdvise(); labRepaint();
+labLoadMine(true).then(function (ok) { if (ok) { paintCards(); labAdvise(); labRepaint(true); } });
 </script>
 </body>
 </html>
