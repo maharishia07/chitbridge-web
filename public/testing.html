@@ -147,6 +147,12 @@
   </select>
   <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
   <button class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
+  <span style="flex:1"></span>
+  <!-- ⭐ Gherkin: the spec clause and its cases as ONE text. The Feature description IS the clause, so a
+       file that goes into the repository carries both arms of the V and neither can be edited alone. -->
+  <button class="btn" onclick="exportFeature()" title="Download the cases as a .feature file">Export .feature</button>
+  <button class="btn" onclick="document.getElementById('f_file').click()" title="Load a .feature file — the Feature description becomes the spec clause">Import .feature</button>
+  <input type="file" id="f_file" accept=".feature,.txt" style="display:none" onchange="importFeature(this)">
 </div>
 
 <main id="main"><div class="say">Reading the board…</div></main>
@@ -161,7 +167,7 @@ var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbrid
  */
 function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) { return null; } }
 
-var CASES = [], LAST = {}, OPEN = {}, RUN = null;
+var CASES = [], LAST = {}, OPEN = {}, RUN = null, STALE = {};
 
 /* ── the run this sitting belongs to ─────────────────────────────────────────────────────────────────────────
  * ⭐ IT SURVIVES A RELOAD. A run is a sitting, and a sitting includes closing the tab to go and look at
@@ -236,6 +242,56 @@ async function seed(){
   } catch (e) { say('Could not load them: ' + e.message, true); }
 }
 
+/**
+ * ⭐⭐ EXPORT — the board as a .feature file.
+ *
+ * ⚠️ IT GOES THROUGH fetch, NOT A PLAIN LINK, because the endpoint needs the Authorization header. A bare
+ * <a href> would arrive unauthenticated and download a 401 as a file called chitbridge.feature, which looks
+ * exactly like a successful download until somebody opens it.
+ */
+async function exportFeature(){
+  var s = sess();
+  if (!s || !s.token) { say('Sign in first.', true); return; }
+  var mod = document.getElementById('f_mod').value;
+  try {
+    var r = await fetch(API + '/api/testing/cases/gherkin' + (mod ? '?module=' + encodeURIComponent(mod) : ''),
+      { headers: { Authorization: 'Bearer ' + s.token } });
+    if (!r.ok) throw new Error('the server said ' + r.status);
+    var text = await r.text();
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = (mod || 'chitbridge') + '.feature';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+    say('Downloaded ' + a.download + '. The Feature description is the spec clause — edit it there and import it back.');
+  } catch (e) { say('Could not export: ' + e.message, true); }
+}
+
+/**
+ * ⭐⭐⭐ IMPORT — and this is the loop Athi described.
+ *
+ * Edit the Feature description (the spec clause) and send the file: the clause gains a VERSION, and every case
+ * still citing the old one is marked "spec moved" — by construction, exactly the set that has to be looked at
+ * again. Edit a Scenario and the case gains a version. Nothing has to be remembered.
+ *
+ * ⚠️ WHAT COULD NOT BE READ IS SHOWN, never swallowed. A scenario that was skipped is a test that silently
+ * does not exist, and the board would be claiming coverage it does not have.
+ */
+async function importFeature(input){
+  var file = input && input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  try {
+    var text = await file.text();
+    var r = await call('/api/testing/cases/gherkin', { method:'POST', body:{ text: text } });
+    var moved = (r.clauses || []).filter(function (c) { return c.changed; });
+    say(r.added + ' added, ' + r.updated + ' updated, ' + r.unchanged + ' unchanged'
+      + (moved.length ? ' \u00b7 ' + moved.length + ' clause(s) changed, so cases citing the old wording now read "spec moved"' : ''));
+    if ((r.problems || []).length) say('Not everything was read: ' + r.problems.join(' \u00b7 '), true);
+    await load();
+  } catch (e) { say('Could not import: ' + e.message, true); }
+}
+
 async function load(){
   var s = sess();
   document.getElementById('who').textContent = s ? ((s.entity || s.name || 'your business') + ' · signed in') : 'not signed in';
@@ -243,6 +299,11 @@ async function load(){
     /* two calls, not one per case — see the round-trip note in routes/testing.js */
     var a = await call('/api/testing/cases');
     var b = await call('/api/testing/results');
+    /* ⭐ which cases were written against wording that has since changed. A green case whose clause has
+       moved is the most misleading thing a board can show, so it is read every time, not on request. */
+    var st = await call('/api/testing/stale');
+    STALE = {};
+    ((st && st.stale) || []).forEach(function (x) { STALE[x.case_key] = x; });
     CASES = a.cases || [];
     LAST = {};
     (b.results || []).forEach(function(r){
@@ -300,6 +361,8 @@ function tally(){
   if (n.blocked) h += '<span class="t blocked"><b>' + n.blocked + '</b> blocked</span>';
   if (n.skipped) h += '<span class="t"><b>' + n.skipped + '</b> skipped</span>';
   if (n.todo)    h += '<span class="t todo"><b>' + n.todo + '</b> not yet tested</span>';
+  var staleN = CASES.filter(function (c) { return STALE[c.case_key]; }).length;
+  if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
   h += '<span class="t">' + CASES.length + ' cases</span>';
   document.getElementById('tally').innerHTML = h;
 }
@@ -338,6 +401,13 @@ function caseHTML(c){
     + '<div class="chead" onclick="toggle(\'' + esc(c.case_key) + '\')">'
     +   '<span class="key">' + esc(c.case_key) + '</span>'
     +   '<span class="ttl">' + esc(c.title || '') + last + '</span>'
+    /* ⚠️ ON THE ROW, not behind a filter — a tester must see it without going looking for it. */
+    +   (STALE[c.case_key]
+          ? '<span class="lay" style="background:#fbf3e3;border-color:#e8d7ae;color:#8a5a1e" title="'
+            + esc('Clause ' + STALE[c.case_key].clause + ' is now v' + STALE[c.case_key].clause_now
+                  + '; this case cites v' + STALE[c.case_key].cited_version + '.')
+            + '">spec moved</span>'
+          : '')
     +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
     +   '<span class="pri">' + esc(c.priority || '') + '</span>'
     + '</div>';

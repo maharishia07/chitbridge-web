@@ -1900,6 +1900,10 @@ const EP = {
   testResults:     {m:"GET",   p:"/api/testing/results",         ok:"y"},   // default: the latest word per (case, layer)
   testRecord:      {m:"POST",  p:"/api/testing/results",         ok:"y"},   // ⚠ APPEND ONLY — a re-test is a new row
   testRuns:        {m:"GET",   p:"/api/testing/runs",            ok:"y"},
+  /* ⭐ the cases whose SPEC CLAUSE has moved on since they were written — the "and test again" half of
+     Athi's loop, made visible. Reports only; nothing is retired and no result is deleted. */
+  testStale:       {m:"GET",   p:"/api/testing/stale",           ok:"y"},
+  testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
   defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer

@@ -24,7 +24,7 @@
  */
 'use strict';
 
-var CBTEST = { on: false, cases: [], last: {}, area: '', open: null, run: null, busy: false, adding: false };
+var CBTEST = { on: false, cases: [], last: {}, area: '', open: null, run: null, busy: false, adding: false, stale: {} };
 
 /* ── WHICH CASES BELONG TO THE SCREEN YOU ARE ON ──────────────────────────────────────────────────────────────
  * ⚠️ A GUESS, AND IT SAYS SO. The map is deliberately partial: a nav with no entry opens on "All areas" rather
@@ -76,6 +76,11 @@ async function testLoad(force) {
     /* two calls for the whole panel — never one per case. See the round-trip note in routes/testing.js. */
     var a = await api('testCases');
     var b = await api('testResults');
+    /* ⭐ a third read, and worth its round trip: without it a tester works through cases that were written
+       against wording nobody stands behind any more, and records passes that prove nothing. */
+    var st = await api('testStale');
+    CBTEST.stale = {};
+    ((st && st.stale) || []).forEach(function (x) { CBTEST.stale[x.case_key] = x; });
     CBTEST.cases = (a && a.cases) || [];
     CBTEST.last = {};
     ((b && b.results) || []).forEach(function (r) {
@@ -162,6 +167,7 @@ function testPaint() {
   var shown = testShown();
   var n = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
   shown.forEach(function (c) { var l = CBTEST.last[c.case_key]; if (!l) n.todo++; else n[l.status]++; });
+  var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
 
   /* ── the header: who is recording, into which run, over which area ── */
   var h = '<div style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);background:var(--paper,#faf8f3)">'
@@ -191,6 +197,7 @@ function testPaint() {
     +   (n.fail ? '<b style="color:#b4453f">' + n.fail + '</b> failed · ' : '')
     +   (n.blocked ? '<b style="color:#8a5a1e">' + n.blocked + '</b> blocked · ' : '')
     +   '<b>' + n.todo + '</b> to go'
+    +   (staleN ? ' \u00b7 <b style="color:#8a5a1e">' + staleN + '</b> spec moved' : '')
     +   (CBTEST.run.label ? ' · ' + testEsc(CBTEST.run.label) : '')
     + '</div>'
     + '</div>';
@@ -229,6 +236,15 @@ function testPaint() {
         +      (l ? testEsc(l.status.toUpperCase() + ' · ' + (l.tester_name || '') + ' · ' + testAgo(l.at))
                  + (l.note ? ' — ' + testEsc(l.note) : '')
                : 'not tested yet') + '</span></span>'
+        /* ⚠️ THE SPEC MOVED, SO THE CASE IS SUSPECT — said on the row, not hidden behind a filter. A green
+           case whose clause has changed is the most misleading thing a board can show. */
+        + (CBTEST.stale[c.case_key]
+            ? '<span title="' + testEsc('The clause this case proves has changed since it was written — '
+                + 'clause ' + CBTEST.stale[c.case_key].clause + ' is now v' + CBTEST.stale[c.case_key].clause_now
+                + ', this case cites v' + CBTEST.stale[c.case_key].cited_version + '.')
+              + '" style="font-size:9.5px;background:#fbf3e3;color:#8a5a1e;border-radius:4px;'
+              + 'padding:2px 5px;white-space:nowrap">spec moved</span>'
+            : '')
         +  '</div>';
       if (isOpen) h += testCaseBodyHTML(c);
       h += '</div>';
