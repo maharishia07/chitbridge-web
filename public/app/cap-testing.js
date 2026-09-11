@@ -18,6 +18,23 @@
  * the same append-only ledger through the same recorder. A result tapped here and a result tapped on the board
  * are the same row, and a Playwright run lands beside both.
  *
+ * ⭐⭐⭐ EVERY SIZE AND COLOUR HERE IS A TOKEN, AND THE FIRST VERSION OF THIS FILE GOT THAT WRONG.
+ *
+ * Athi, 2026-09-11: *"the text size is not changing if I increase the size — I guess you have not used the
+ * capability here. I am just trying to test how the capability behaves when we design a new one."*
+ *
+ * ⚠️ HE WAS TESTING THE CAPABILITY, NOT THE PANEL, AND THE PANEL FAILED IT. appearanceApply() scales the
+ * --fs-* tokens on <html>, so `var(--fs-2)` follows a reader who chose Large or Extra large and a raw `12px`
+ * does not. Thirty-six raw sizes here meant the whole panel ignored that setting — invisible to anyone who
+ * never changes it, which is the worst kind of accessibility failure.
+ *
+ * ⚠️ THE COLOURS WERE THE SAME MISTAKE and theme-literals.cjs caught them the moment it was run: a hex
+ * `color:` is dark ink with nothing painted under it, so it disappears on a dark theme.
+ *
+ * ⭐ The tokens INHERIT — that part genuinely works, down the DOM, live, with no import. What does not inherit
+ * is the discipline of using them, and that is why the ratchet in e2e/type-scale.cjs now refuses a NEW file
+ * that adds raw sizes. The cascade is the mechanism; the guard is what makes it unforgettable.
+ *
  * ⚠️ PASS/FAIL IS RECORDED AGAINST THE VERSION OF THE CASE THE SERVER HOLDS, not against the words on screen. If
  * somebody edits a case while you have the panel open, your result says v3 and the panel says v2 — the server is
  * right, and the board shows the version each result was actually given.
@@ -181,8 +198,8 @@ function testPaint() {
   var head = document.getElementById('cbtesthead');
   if (!body || !head) return;
 
-  var STAT = { pass: ['#2c7a43', '#e6f4ea'], fail: ['#b4453f', '#fbeceb'],
-               blocked: ['#8a5a1e', '#fbf3e3'], skipped: ['#8a949c', '#EEF1F5'] };
+  var STAT = { pass: ['var(--ok-2)', 'var(--ok-tint)'], fail: ['var(--disp)', 'var(--disp-tint, #fbeceb)'],
+               blocked: ['var(--warn-2)', 'var(--warn-tint)'], skipped: ['var(--grey)', 'var(--neutral-tint)'] };
 
   var shown = testShown();
   var n = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
@@ -192,15 +209,15 @@ function testPaint() {
   /* ── the header: who is recording, into which run, over which area ── */
   var hd = ''
     + '<div style="display:flex;align-items:center;gap:8px">'
-    +   '<b style="font-size:13px">🧪 Testing</b>'
+    +   '<b style="font-size:var(--fs-3)">🧪 Testing</b>'
     +   '<span style="flex:1"></span>'
     +   '<button class="btn" title="Add a case for something you just found" onclick="testAddOpen()" '
-    +     'style="padding:2px 9px;font-size:15px;line-height:1.3">+</button>'
+    +     'style="padding:2px 9px;font-size:var(--fs-4);line-height:1.3">+</button>'
     +   '<button class="btn" title="Read the cases again" onclick="testLoad(true)" style="padding:2px 8px">↻</button>'
     /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
        on the test case and where we are looking at."* The corner still drags freely; this is for the times
        when you know what you want and do not want to aim at a 16-pixel triangle to get it. */
-    +   '<select onchange="testSize(this.value)" title="Size" style="font-size:11px;padding:2px 4px">'
+    +   '<select onchange="testSize(this.value)" title="Size" style="font-size:var(--fs-1);padding:2px 4px">'
     +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
            ['large', 'Large'], ['full', 'Full height']].map(function (o) {
             return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
@@ -208,13 +225,13 @@ function testPaint() {
     +   '<button class="btn" title="Close" onclick="testModeSet(false)" style="padding:2px 8px">✕</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
-    +   '<select onchange="testSetArea(this.value)" style="font-size:12px;padding:3px 5px;max-width:190px">'
+    +   '<select onchange="testSetArea(this.value)" style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
     +     '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas · ' + CBTEST.cases.length + '</option>'
     +     testAreas().map(function (a) {
             return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
                  + testEsc(a.key + ' · ' + a.name) + '</option>'; }).join('')
     +   '</select>'
-    +   '<select onchange="testSetKind(this.value)" title="How this is being tested" style="font-size:12px;padding:3px 5px">'
+    +   '<select onchange="testSetKind(this.value)" title="How this is being tested" style="font-size:var(--fs-2);padding:3px 5px">'
     +     ['manual', 't0', 't1', 't2', 't3', 'unit', 'regression'].map(function (k) {
             return '<option value="' + k + '"' + (CBTEST.run.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('')
     +   '</select>'
@@ -222,15 +239,15 @@ function testPaint() {
        truth either way; this only adds a name when a login is shared. */
     +   '<input type="text" placeholder="' + (testEsc(testDefaultWho())) + '" value="' + testEsc(testWho()) + '"'
     +     ' onchange="testSetWho(this.value)" title="Who is testing — kept on this device"'
-    +     ' style="font-size:12px;padding:3px 5px;flex:1;min-width:90px">'
+    +     ' style="font-size:var(--fs-2);padding:3px 5px;flex:1;min-width:90px">'
     + '</div>'
     /* ⭐ the tally is the reason to keep the panel open — it is the only place that says how far you have got */
-    + '<div style="margin-top:6px;font-size:11px;color:var(--grey-2,#545A61)">'
-    +   (n.pass ? '<b style="color:#2c7a43">' + n.pass + '</b> passed · ' : '')
-    +   (n.fail ? '<b style="color:#b4453f">' + n.fail + '</b> failed · ' : '')
-    +   (n.blocked ? '<b style="color:#8a5a1e">' + n.blocked + '</b> blocked · ' : '')
+    + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">'
+    +   (n.pass ? '<b style="color:var(--ok-2)">' + n.pass + '</b> passed · ' : '')
+    +   (n.fail ? '<b style="color:var(--disp)">' + n.fail + '</b> failed · ' : '')
+    +   (n.blocked ? '<b style="color:var(--warn-2)">' + n.blocked + '</b> blocked · ' : '')
     +   '<b>' + n.todo + '</b> to go'
-    +   (staleN ? ' \u00b7 <b style="color:#8a5a1e">' + staleN + '</b> spec moved' : '')
+    +   (staleN ? ' \u00b7 <b style="color:var(--warn-2)">' + staleN + '</b> spec moved' : '')
     +   (CBTEST.run.label ? ' · ' + testEsc(CBTEST.run.label) : '')
     + '</div>'
     + '</div>';
@@ -243,17 +260,17 @@ function testPaint() {
   /* ── the list ── */
   var h = '<div style="flex:1;padding:7px 9px;min-height:0">';
   if (CBTEST.busy && !CBTEST.cases.length) {
-    h += '<div style="padding:14px;color:var(--grey-2,#545A61);font-size:12px">Reading the cases…</div>';
+    h += '<div style="padding:14px;color:var(--grey-2,var(--grey-2));font-size:var(--fs-2)">Reading the cases…</div>';
   } else if (!CBTEST.cases.length) {
     /* ⚠️ AN EMPTY BOARD IS NOT AN ERROR, and must not read like one. Say what to do. */
-    h += '<div style="padding:14px 12px;font-size:12px;line-height:1.6;color:var(--grey-2,#545A61);text-align:center">'
+    h += '<div style="padding:14px 12px;font-size:var(--fs-2);line-height:1.6;color:var(--grey-2,var(--grey-2));text-align:center">'
       +  '<div style="margin-bottom:9px">No test cases on this board yet.</div>'
-      +  '<button class="btn pri" onclick="testSeed()" style="font-size:12px;padding:6px 14px">'
+      +  '<button class="btn pri" onclick="testSeed()" style="font-size:var(--fs-2);padding:6px 14px">'
       +  (CBTEST.seeding ? 'Loading…' : 'Load the test cases') + '</button>'
-      +  '<div style="margin-top:9px;font-size:10.5px">The documented cases — the counter, the bill, the queue, '
+      +  '<div style="margin-top:9px;font-size:var(--fs-1)">The documented cases — the counter, the bill, the queue, '
       +  'suppliers, the offer lab. Or press <b>+</b> to write your own.</div></div>';
   } else if (!shown.length) {
-    h += '<div style="padding:12px;font-size:12px;color:var(--grey-2,#545A61)">Nothing in this area yet — '
+    h += '<div style="padding:12px;font-size:var(--fs-2);color:var(--grey-2,var(--grey-2))">Nothing in this area yet — '
       +  'press <b>+</b> to add the first case for it.</div>';
   } else {
     shown.forEach(function (c) {
@@ -264,11 +281,11 @@ function testPaint() {
         +  ';border-radius:8px;margin-bottom:6px;background:var(--card,#fff)">'
         +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:flex;gap:7px;align-items:flex-start;'
         +    'padding:7px 9px;cursor:pointer">'
-        +    '<span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;'
-        +      'background:' + (col ? col[1] : '#EEF1F5') + ';color:' + (col ? col[0] : '#545A61')
+        +    '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);font-weight:700;'
+        +      'background:' + (col ? col[1] : 'var(--neutral-tint)') + ';color:' + (col ? col[0] : 'var(--grey-2)')
         +      ';border-radius:4px;padding:2px 5px;white-space:nowrap">' + testEsc(c.case_key) + '</span>'
-        +    '<span style="flex:1;min-width:0;font-size:12px;line-height:1.35">' + testEsc(c.title || '')
-        +      '<span style="display:block;color:var(--grey-2,#545A61);font-size:10.5px;margin-top:2px">'
+        +    '<span style="flex:1;min-width:0;font-size:var(--fs-2);line-height:1.35">' + testEsc(c.title || '')
+        +      '<span style="display:block;color:var(--grey-2,var(--grey-2));font-size:var(--fs-1);margin-top:2px">'
         +      (l ? testEsc(l.status.toUpperCase() + ' · ' + (l.tester_name || '') + ' · ' + testAgo(l.at))
                  + (l.note ? ' — ' + testEsc(l.note) : '')
                : 'not tested yet') + '</span></span>'
@@ -278,7 +295,7 @@ function testPaint() {
             ? '<span title="' + testEsc('The clause this case proves has changed since it was written — '
                 + 'clause ' + CBTEST.stale[c.case_key].clause + ' is now v' + CBTEST.stale[c.case_key].clause_now
                 + ', this case cites v' + CBTEST.stale[c.case_key].cited_version + '.')
-              + '" style="font-size:9.5px;background:#fbf3e3;color:#8a5a1e;border-radius:4px;'
+              + '" style="font-size:var(--fs-1);background:var(--warn-tint);color:var(--warn-2);border-radius:4px;'
               + 'padding:2px 5px;white-space:nowrap">spec moved</span>'
             : '')
         +  '</div>';
@@ -291,40 +308,40 @@ function testPaint() {
 }
 
 function testCaseBodyHTML(c) {
-  var h = '<div style="border-top:1px solid var(--line-2,#efece4);padding:8px 9px;font-size:11.5px;line-height:1.5">';
-  if (c.pre) h += '<div style="color:var(--grey-2,#545A61);margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';
-  if (c.data) h += '<div style="color:var(--grey-2,#545A61);margin-bottom:5px"><b>Use:</b> ' + testEsc(c.data) + '</div>';
+  var h = '<div style="border-top:1px solid var(--line-2,#efece4);padding:8px 9px;font-size:var(--fs-1);line-height:1.5">';
+  if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';
+  if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + testEsc(c.data) + '</div>';
   (c.steps || []).forEach(function (s, i) {
     h += '<div style="display:flex;gap:6px;margin:4px 0">'
-      +  '<span style="color:#8a949c;min-width:13px">' + (i + 1) + '</span>'
+      +  '<span style="color:var(--grey);min-width:13px">' + (i + 1) + '</span>'
       +  '<span style="flex:1">' + testEsc(s[0])
-      +    '<span style="display:block;color:var(--grey-2,#545A61)">→ ' + testEsc(s[1]) + '</span></span></div>';
+      +    '<span style="display:block;color:var(--grey-2,var(--grey-2))">→ ' + testEsc(s[1]) + '</span></span></div>';
   });
   if (c.note) h += '<div style="margin-top:6px;padding:6px 8px;background:var(--paper,#faf8f3);'
-    + 'border:1px solid var(--line-2,#efece4);border-radius:7px;color:var(--grey-2,#545A61)">' + testEsc(c.note) + '</div>';
+    + 'border:1px solid var(--line-2,#efece4);border-radius:7px;color:var(--grey-2,var(--grey-2))">' + testEsc(c.note) + '</div>';
 
   /* ⭐ EVIDENCE IS A FIELD OF ITS OWN, because Athi asked for it and because "what you saw" and "where to look at
      it" are different sentences. A note is prose; evidence is a bill number, a spec name, a screenshot filename. */
   h += '<input type="text" id="cbt_n_' + testEsc(c.case_key) + '" placeholder="What did you see?" '
-    +  'style="width:100%;margin-top:8px;font-size:12px;padding:5px 7px">'
+    +  'style="width:100%;margin-top:8px;font-size:var(--fs-2);padding:5px 7px">'
     +  '<input type="text" id="cbt_e_' + testEsc(c.case_key) + '" placeholder="Evidence — bill number, screenshot" '
-    +  'style="width:100%;margin-top:5px;font-size:12px;padding:5px 7px">'
+    +  'style="width:100%;margin-top:5px;font-size:var(--fs-2);padding:5px 7px">'
     /* ⚠ SAY WHETHER THE CALLS ARE BEING KEPT. api() only records while spec is on, so without this the tester
        believes the endpoints are being attached and they are not — a quiet nothing, which is the worst kind. */
     + (typeof specOn === 'function' && specOn()
-        ? '<div style="font-size:10px;color:var(--grey-2,#545A61);margin-top:3px">The API calls this case makes will be attached.</div>'
-        : '<div style="font-size:10px;color:var(--grey-2,#545A61);margin-top:3px">Turn <b>spec</b> on to attach the API calls too.</div>')
+        ? '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));margin-top:3px">The API calls this case makes will be attached.</div>'
+        : '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));margin-top:3px">Turn <b>spec</b> on to attach the API calls too.</div>')
     +  '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'
-    +    testMarkBtn(c.case_key, 'pass', 'Pass', '#2c7a43', '#e6f4ea')
-    +    testMarkBtn(c.case_key, 'fail', 'Fail', '#b4453f', '#fbeceb')
-    +    testMarkBtn(c.case_key, 'blocked', 'Blocked', '#8a5a1e', '#fbf3e3')
-    +    testMarkBtn(c.case_key, 'skipped', 'Skip', '#545A61', '#EEF1F5')
+    +    testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
+    +    testMarkBtn(c.case_key, 'fail', 'Fail', 'var(--disp)', 'var(--disp-tint, #fbeceb)')
+    +    testMarkBtn(c.case_key, 'blocked', 'Blocked', 'var(--warn-2)', 'var(--warn-tint)')
+    +    testMarkBtn(c.case_key, 'skipped', 'Skip', 'var(--grey-2)', 'var(--neutral-tint)')
     +  '</div></div>';
   return h;
 }
 function testMarkBtn(key, status, label, fg, bg) {
   return '<button class="btn" onclick="testMark(\'' + testEsc(key) + '\',\'' + status + '\')" '
-    + 'style="font-size:12px;padding:4px 10px;font-weight:700;color:' + fg + ';background:' + bg + ';border-color:' + bg + '">'
+    + 'style="font-size:var(--fs-2);padding:4px 10px;font-weight:700;color:' + fg + ';background:' + bg + ';border-color:' + bg + '">'
     + label + '</button>';
 }
 
@@ -509,31 +526,31 @@ function testAddClose() { CBTEST.adding = false; testPaint(); }
 function testAddHTML() {
   var areas = testAreas();
   var suggested = CBTEST.area || testAreaGuess() || (areas[0] && areas[0].key) || 'NEW';
-  return '<div style="flex:1;overflow:auto;padding:10px 11px;min-height:0;font-size:12px">'
+  return '<div style="flex:1;overflow:auto;padding:10px 11px;min-height:0;font-size:var(--fs-2)">'
     + '<div style="font-weight:700;margin-bottom:7px">New case</div>'
-    + '<label style="font-size:11px;color:var(--grey-2,#545A61)">Area</label>'
+    + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Area</label>'
     + '<input type="text" id="cbt_a_mod" value="' + testEsc(suggested) + '" '
-    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:12px">'
-    + '<label style="font-size:11px;color:var(--grey-2,#545A61)">What should happen</label>'
+    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'
+    + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">What should happen</label>'
     + '<input type="text" id="cbt_a_title" placeholder="e.g. A local supplier cannot be sent a chit" '
-    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:12px">'
-    + '<label style="font-size:11px;color:var(--grey-2,#545A61)">Do this</label>'
+    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'
+    + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Do this</label>'
     + '<input type="text" id="cbt_a_do" placeholder="The one action that shows it" '
-    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:12px">'
-    + '<label style="font-size:11px;color:var(--grey-2,#545A61)">You should see</label>'
+    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'
+    + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">You should see</label>'
     + '<input type="text" id="cbt_a_see" placeholder="What a correct answer looks like" '
-    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:12px">'
-    + '<label style="font-size:11px;color:var(--grey-2,#545A61)">Why this case exists</label>'
+    +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'
+    + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Why this case exists</label>'
     + '<input type="text" id="cbt_a_note" placeholder="What went wrong, in your words" '
-    +   'style="width:100%;margin-bottom:9px;padding:5px 7px;font-size:12px">'
+    +   'style="width:100%;margin-bottom:9px;padding:5px 7px;font-size:var(--fs-2)">'
     /* ⚠️ SAID BEFORE THEY SAVE, not after. The document in the repository is where the wording is reviewed, and a
        case written here is real but is not yet in it — so it is not in the printed script either. */
-    + '<div style="font-size:10.5px;color:var(--grey-2,#545A61);line-height:1.5;margin-bottom:9px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));line-height:1.5;margin-bottom:9px">'
     +   'This becomes a real case on the board straight away. To get it into the printed script as well, add it to '
     +   '<code>TEST-CASES-V2.js</code> — the document stays where the wording is reviewed.</div>'
     + '<div style="display:flex;gap:6px">'
-    +   '<button class="btn pri" onclick="testAddSave()" style="font-size:12px">Add the case</button>'
-    +   '<button class="btn" onclick="testAddClose()" style="font-size:12px">Cancel</button>'
+    +   '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)">Add the case</button>'
+    +   '<button class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>'
     + '</div></div>';
 }
 
