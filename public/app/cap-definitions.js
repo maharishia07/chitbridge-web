@@ -467,7 +467,11 @@ function cbDefOfferLabel(k){
     amount_off:  'Flat amount off',
     tier_price:  'Quantity tier — a RE-PRICE, not a discount',
     threshold:   'Spend or quantity threshold — reports the shortfall when it does not fire',
-    buy_x_get_y: 'Buy X get Y — cheapest qualifying units are the free ones (1+1 is buy 1 get 1)',
+    /* ⚠️ THIS LABEL WAS DESCRIBING THE OTHER KIND. It read 'cheapest qualifying units are the free ones',
+       which is mix_and_match — and the shop that read it while creating a buy_x_get_y was told the wrong rule at
+       the exact moment it was choosing. Athi, 2026-09-10: 'we cannot offer for different product.' */
+    buy_x_get_y: 'Buy X get Y of the SAME product — 3 of a thing earns one of that thing',
+    mix_and_match: 'Mix and match — any X across the category, and the CHEAPEST one is free',
     bundle_price: 'Bundle — named items together for one price; complete sets only',
     shipping:    'Shipping — free, flat or a percentage',
     price_range: '⚠️ A declared band — reports a violation, never clamps a negotiated price'
@@ -605,6 +609,13 @@ function cbDefRuleFields(kind, sub){
                                   g.push({ k: 'max_sets', label: 'Max sets per order (blank = no cap)', num: true, half: true }); }
     if (sub === 'tier_price') g.push({ k: 'tiers', label: 'Price breaks', tiers: true, area: true,
       ph: '10 = 170\n50 = 160', hint: 'One per line: quantity = price each.' });
+    /* ⭐ mix and match asks for the same three numbers and NOT get_item_id: its reward is always drawn from
+       what already qualified, so naming another product would be a field the kind cannot honour. */
+    if (sub === 'mix_and_match') { g.push({ k: 'buy', label: 'Buy any', ph: '2', num: true, half: true });
+                                   g.push({ k: 'get', label: 'Get', ph: '1', num: true, half: true });
+                                   g.push({ k: 'get_percent', label: 'Reward discount', num: true, half: true,
+                                            ph: '100', hint: '100 = free. The cheapest qualifying unit is the one it comes off.' });
+                                   g.push({ k: 'max_sets', label: 'Max sets per order (blank = no cap)', num: true, half: true }); }
     if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true, half: true });
                                  g.push({ k: 'get', label: 'Get', ph: '1', num: true, half: true });
                                  g.push({ k: 'get_percent', label: 'Reward discount', num: true, half: true,
@@ -1268,6 +1279,7 @@ function cbDefMissingValue(kind, sub, r){
     if (sub === 'threshold' && !(n(r.percent) > 0) && !(n(r.amount) > 0) && !r.get_item_id) return 'A threshold offer needs a percent, an amount, or a reward item.';
     if (sub === 'tier_price' && !(Array.isArray(r.tiers) && r.tiers.length)) return 'At least one tier (quantity = price) is needed.';
     if (sub === 'buy_x_get_y' && !(n(r.buy) > 0 && n(r.get) > 0)) return 'Buy X get Y needs both numbers.';
+    if (sub === 'mix_and_match' && !(n(r.buy) > 0 && n(r.get) > 0)) return 'Mix and match needs both numbers.';
     if (sub === 'bundle_price' && !(n(r.bundle_price) > 0)) return 'A bundle needs its price.';
   }
   if (kind === 'tax' && !(n(r.rate) >= 0) ) return 'The rate is needed (0 for a zero-rated slab).';
