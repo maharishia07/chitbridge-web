@@ -333,11 +333,35 @@
   <input type="text" id="f_who" placeholder="who is at the keyboard" oninput="saveWho()" style="max-width:150px">
   <button class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
   <span style="flex:1"></span>
+  <!--
+    ⭐⭐⭐ THE LOADER LIVES HERE NOW, AND IT HAS TO.
+    ⚠️⚠️ It was rendered ONLY inside `if (!CASES.length)` — the empty-board message. So it was a one-time
+    onboarding button that vanished the moment it worked, while its own copy said *"safe to press again later —
+    it reloads the wording and leaves every result exactly where it is."* A board with 110 cases on it had no
+    way to take the 498 new ones, and I spent an afternoon telling Athi to press a button that was not there.
+    ⭐ An upsert that cannot be re-run is not an upsert. A control whose description says "press it again"
+    belongs where a person can.
+  -->
+  <button class="btn pri" onclick="seed()"
+    title="Load the documented cases — an upsert. Safe to press again: it refreshes the wording and adds anything new, and leaves every result exactly where it is.">Load cases</button>
   <!-- ⭐ Gherkin: the spec clause and its cases as ONE text. The Feature description IS the clause, so a
        file that goes into the repository carries both arms of the V and neither can be edited alone. -->
   <button class="btn" onclick="exportFeature()" title="Download the cases as a .feature file">Export .feature</button>
   <button class="btn" onclick="document.getElementById('f_file').click()" title="Load a .feature file — the Feature description becomes the spec clause">Import .feature</button>
   <input type="file" id="f_file" accept=".feature,.txt" style="display:none" onchange="importFeature(this)">
+  <!--
+    ⭐⭐⭐ EVIDENCE, WITHOUT A TERMINAL. Athi, 2026-09-11: *"see how the evidence can be included."*
+
+    ⚠️⚠️ POSTING A RUN NEEDED A COPIED TOKEN AND A COMMAND LINE, WHICH IS WHY IT HAD NEVER BEEN DONE ONCE. The
+    board has held a history since this morning and every row still says "not tested yet" — not because the
+    mechanism was missing but because using it meant leaving the screen. That is the same finding as the cases
+    themselves, which needed `node build-test-cases.cjs` until Athi said it should be a button.
+
+    ⭐ So: drop the XML the suite already writes. Same endpoint, same ledger, same rows a person taps Pass into.
+  -->
+  <button class="btn pri" onclick="document.getElementById('f_res').click()"
+    title="Post a run — drop the JUnit XML any suite writes (node C:\dev\suite.cjs --junit test-results/suite.xml)">Post a run</button>
+  <input type="file" id="f_res" accept=".xml" multiple style="display:none" onchange="importResults(this)">
 </div>
 
 <!--
@@ -509,6 +533,54 @@ async function importFeature(input){
     if ((r.problems || []).length) say('Not everything was read: ' + r.problems.join(' \u00b7 '), true);
     await load();
   } catch (e) { say('Could not import: ' + e.message, true); }
+}
+
+/**
+ * ⭐⭐⭐ POST A RUN — the JUnit XML any suite writes, dropped onto the board.
+ *
+ * Athi, 2026-09-11: *"see how the evidence can be included."*
+ *
+ * ⚠️⚠️ THE MECHANISM HAS EXISTED ALL DAY AND HAS NEVER BEEN USED ONCE, because using it meant copying a token
+ * out of the console and running a command. The board therefore holds 608 cases and zero evidence. This is the
+ * same lesson the cases themselves taught this morning — *"can we say load the test cases in the icon?"*
+ *
+ * ⭐ SEVERAL FILES AT ONCE, IN THE ORDER THEY WERE PICKED, because a history needs more than one point: two
+ * runs is what makes the Reliability tab able to say anything at all.
+ * ⚠️ Each file is ONE run, posted separately — merging them would fabricate a sitting that never happened and
+ * every flip between the two would disappear.
+ */
+async function importResults(input){
+  var files = input && input.files ? [].slice.call(input.files) : [];
+  input.value = '';
+  if (!files.length) return;
+  var kind = document.getElementById('f_kind').value || 'unit';
+  var done = 0, rows = 0, missed = 0, skipped = 0;
+  for (var i = 0; i < files.length; i++) {
+    try {
+      var text = await files[i].text();
+      var r = await call('/api/testing/results/junit', { method:'POST', body:{
+        xml: text,
+        /* ⚠️ the file path IS the case key for a guard run — it is what joins the result to the case, and
+           without this the ingest looks for [ABC-01] in the name and reports every test as unmatched */
+        key_from: 'name',
+        run_kind: kind,
+        layer: 'engine',
+        run_label: files[i].name.replace(/\.xml$/i, ''),
+      }});
+      done++; rows += (r.recorded || 0); missed += ((r.unmatched || []).length);
+      skipped += (r.skipped || 0);
+    } catch (e) { say('Could not post ' + files[i].name + ': ' + e.message, true); }
+  }
+  if (done) say(rows + ' result(s) recorded from ' + done + ' run(s)'
+    /**
+     * ⚠️⚠️ SKIPPED IS THE ONE THAT MUST NOT BE SWALLOWED. A result is recorded against a CASE; if the cases
+     * were never loaded onto this board, every single result is skipped and the post "succeeds" with nothing
+     * written. A quiet zero there would leave somebody believing the board had their run.
+     */
+    + (skipped ? ' · ⚠ ' + skipped + ' skipped — those tests are not on this board yet. Press "Load the cases" '
+                 + 'first, then post again.' : '')
+    + (missed ? ' · ⚠ ' + missed + ' test(s) carried no case key and were reported, not dropped' : ''));
+  await load();
 }
 
 async function load(){
