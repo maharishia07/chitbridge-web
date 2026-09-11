@@ -202,6 +202,36 @@
   .pnum{ font-size:var(--fs-1); font-variant-numeric:tabular-nums; color:var(--grey-2); }
   /* ⚠️ a column we KNOW should exist and does not carries its zero in the heading, so the gap is not silence */
   .zeroflag{ font-style:normal; color:var(--warn); font-weight:700; }
+  /* ⭐ the caveat that has to be available without being in the way */
+  .fine{ display:block; margin-top:3px; color:var(--grey-2); opacity:.85; }
+  /* ⭐ the journey position, shown so the ordering is legible rather than merely applied */
+  .step{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:var(--grey-2);
+        background:var(--neutral-tint); border-radius:4px; padding:1px 5px; margin-inline-end:7px; }
+
+  /**
+   * ── ⭐⭐⭐ THE MATRIX AS A SMALL TABLE ───────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-11: *"this is not readable, area details can be in the same line, and make the header
+   * vertical, so it takes less space and make the font bigger and so on, so it looks a small table."*
+   *
+   * ⚠️⚠️ TEN COLUMNS OF HORIZONTAL HEADING SET THE WIDTH OF THE WHOLE TABLE. "Integration", "Performance",
+   * "Penetration" are each wider than the two-digit number underneath them, so every column was sized by a word
+   * nobody re-reads — and the table scrolled sideways while the data in it would have fitted on a phone.
+   *
+   * ⭐ Turned on their side the headings cost one line of height ONCE, and each column shrinks to its number.
+   * The width that frees is what pays for the larger type, which is the actual request: a table you can read.
+   */
+  table.mtx{ font-size:var(--fs-2); }
+  table.mtx th.num{ height:7.5em; vertical-align:bottom; padding:5px 3px 7px; }
+  table.mtx th.num span{ writing-mode:vertical-rl; transform:rotate(180deg); display:inline-block;
+        text-transform:none; letter-spacing:.02em; font-size:var(--fs-2); font-weight:600; color:var(--ink-2); }
+  table.mtx td.num{ padding:6px 4px; font-size:var(--fs-3); font-variant-numeric:tabular-nums; }
+  table.mtx td.num .dim{ font-size:var(--fs-2); }
+  /* ⭐ the area and what it means on ONE line — the description was a second line on every row, which doubled
+     the height of the table to repeat what a tooltip already says */
+  table.mtx td.areacell{ white-space:nowrap; }
+  table.mtx .areacell .area{ font-size:var(--fs-2); font-weight:700; }
+  table.mtx .areacell .what{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:7px; font-weight:400; }
   /* ⭐ the one figure a person outside this desk asks for, in the header, where it cannot be confused with */
   /*    the filtered numbers beside the filters — because there are no other numbers up there any more */
   .tally .pcwrap{ display:inline-flex; align-items:center; gap:5px; }
@@ -1600,24 +1630,29 @@ function matrixHTML(){
 
   var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">What is tested, where, and how far along</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
-    + 'Rows are where a test reaches; columns are what kind it is. <b>Done</b> means a result has ever been '
-    + 'recorded — not that it passed. ⚠️ A test reaching two areas is counted in both, so the rows do not add '
-    + 'up to ' + CASES.length + '. <b>n/a</b> means nobody CAN produce that evidence — no screen forges a '
-    + 'token — as against <b>—</b>, which means nobody has. Support files are counted but left out of the '
-    + 'percentage: a fixture can never report a result, and a figure that cannot reach 100% gets ignored. '
-    + 'Click any number to open exactly those cases.</div>'
+    /**
+     * ⚠️⚠️ THIS WAS SIX LINES OF CAVEAT ABOVE THE TABLE IT INTRODUCES, and it pushed the data below the fold
+     * on a laptop. Every sentence in it was true and each had been added to head off a misreading — which is
+     * how a caption grows until nobody reads any of it, including the one line that mattered.
+     * ⭐ One line here; the rest moved onto the things they describe, where a reader meets them at the moment
+     * they would otherwise get it wrong.
+     */
+    + '<b>Done</b> means a result was ever recorded, not that it passed. '
+    + '<b>n/a</b> = nobody <i>can</i> test it; <b>—</b> = nobody has. Click a number to open those cases.'
+    + '<span class="fine"> ⚠️ A test reaching two areas is counted in both, so rows do not sum to '
+    + CASES.length + '; support files are counted but left out of the percentage.</span></div>'
     + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
   COLS.forEach(function(c){
-    h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '">'
-      + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</th>';
+    h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '"><span>'
+      + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</span></th>';
   });
-  h += '<th class="num sep">Total</th><th class="num">Done</th><th class="num">Left</th>'
-    + '<th class="num">Complete</th></tr>';
+  h += '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
+    + '<th class="num"><span>Left</span></th><th class="num"><span>Complete</span></th></tr>';
 
   AREA_ORDER.forEach(function(a){
     if (!rowAll[a]) return;
-    h += '<tr><td><span class="area">' + esc(AREA_LABEL[a]) + '</span>'
-       + '<span class="sub">' + esc(AREA_SAYS[a] || '') + '</span></td>';
+    h += '<tr><td class="areacell"><span class="area">' + esc(AREA_LABEL[a]) + '</span>'
+       + '<span class="what">' + esc(AREA_SAYS[a] || '') + '</span></td>';
     COLS.forEach(function(c){
       var n = cell[a + '|' + c.k] || 0;
       /* ⭐ "nobody can" is not "nobody has" — see NO_MANUAL */
@@ -1710,10 +1745,27 @@ async function paintSummary(){
   if (!COVER.length) {
     h += '<tr><td colspan="6" class="dim">No cases on the board yet.</td></tr>';
   } else {
-    COVER.forEach(function(a){
+    /**
+     * ⭐⭐ THE SAME ORDER AS EVERYTHING ELSE. Athi: *"the summary should be in the same order."*
+     *
+     * ⚠️ The server returns coverage in whatever order the query produced. The Cases tab walks the product as
+     * a journey — 00 register, 01 sign in, 02 menus — and a summary sorted differently is a second opinion
+     * about the same list, two inches down the same page.
+     * ⚠️ The sequence lives on the CASES and is read from them: one table of journey positions, no second copy.
+     */
+    var seqOf = {};
+    CASES.forEach(function(c){ if (seqOf[c.module_key] === undefined) seqOf[c.module_key] = (c.seq === undefined ? 99 : c.seq); });
+    COVER.slice().sort(function(x, y){
+      var d = (seqOf[x.module_key] === undefined ? 99 : seqOf[x.module_key])
+            - (seqOf[y.module_key] === undefined ? 99 : seqOf[y.module_key]);
+      return d || (x.module_key < y.module_key ? -1 : 1);
+    }).forEach(function(a){
       var done = a.total - a.untested;
+      var st = seqOf[a.module_key];
       h += '<tr class="clickable" onclick="jumpTo(\'' + esc(a.module_key) + '\')">'
-        + '<td><span class="area">' + esc(a.module_key) + '</span>'
+        /* ⭐ the step number ON the row — an order nobody can see is an order nobody follows */
+        + '<td><span class="step">' + (st !== undefined && st < 90 ? (st < 10 ? '0' + st : st) : '··') + '</span>'
+        + '<span class="area">' + esc(a.module_key) + '</span>'
         +   '<span class="sub">' + esc(a.module_name || '') + '</span></td>'
         + '<td style="min-width:140px"><div class="bar-cov">'
         +   '<i style="width:' + pct(a.passed, a.total) + '%;background:var(--ok)"></i>'
