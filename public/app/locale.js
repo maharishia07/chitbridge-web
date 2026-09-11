@@ -17,6 +17,13 @@
  *   times         12h/24h, am/pm wording       was: pinned 'en-IN' in fmtAt
  *   sort          how a list orders            was: default JS sort — wrong in every non-English script
  *
+ * ⚠⚠⚠ READ THE NEXT PARAGRAPH WITH ITS CORRECTION, 2026-09-11. What follows was the reasoning for removing
+ * `CCY_LOCALE`, and it was HALF right: currency is genuinely not locale, and pinning DATES and TIMES to en-IN
+ * for every reader was wrong. But the same sweep took the grouping of the AMOUNT with it, and that part has
+ * been reversed — see the note above `money()`. Athi: *"currency has to follow currency standard; Indian
+ * standard is for Indian rupees only."* An amount of money is CONTENT and travels; the interface around it is
+ * presentation and belongs to the reader.
+ *
  * ⚠️⚠️ THE BUG THIS FILE EXISTS TO FIX: CURRENCY IS NOT LOCALE. `CCY_LOCALE` mapped INR→en-IN, USD→en-US, and
  * formatted money with the locale of the MONEY rather than of the READER. Measured:
  *     every viewer of a USD price saw   $123,456.50      (US grouping)
@@ -743,7 +750,29 @@
       /* ISO 4217 is exactly three ASCII letters; Intl accepts any case and we normalise so 'inr' still works */
       var raw = (typeof code === 'string') ? code.trim().toUpperCase() : '';
       var c = /^[A-Z]{3}$/.test(raw) ? raw : 'INR';
-      var loc = L.tag(), s;
+      /**
+       * ⭐⭐⭐ THE CURRENCY DECIDES HOW THE AMOUNT IS WRITTEN — NOT THE READER.
+       *
+       * Athi, 2026-09-11, twice and unambiguously: *"an Indian shop quoting $ cannot use the Indian standard, it
+       * has to be the currency standard. Everyone understands currency standard globally, but not the Indian
+       * standard — so if an Indian company writes a $ chit, it has to be currency standard only."* And then:
+       * *"currency has to follow currency standard; Indian standard is for Indian rupees only."*
+       *
+       * ⚠⚠ THIS REVERSES WHAT THE HEADER OF THIS FILE SAYS, AND THE HEADER WAS WRONG ABOUT WHY. `CCY_LOCALE`
+       * was removed because a French reader saw lakh grouping on a rupee price, and that was called the bug. It
+       * is not. ₹12,34,567.50 IS how rupees are written, to anybody, anywhere — and $12,34,567.50 is how dollars
+       * are written to nobody at all.
+       *
+       * ⭐⭐ THE DISTINCTION THE OLD FIX COLLAPSED IS ATHI'S: AN AMOUNT OF MONEY IS CONTENT, NOT PRESENTATION.
+       * A chit travels to a counterparty we cannot see and whose locale we do not know. The reader's locale is
+       * the right authority for the INTERFACE — labels, dates, sort order, which language a button is in. It is
+       * the wrong authority for the FIGURE, because the figure is the thing being sent, and it has to be legible
+       * to whoever opens it. The currency's own convention is the only shared standard there is.
+       *
+       * ⚠ SO THE READER STILL DECIDES EVERYTHING ELSE. This changes the grouping of a number and nothing about
+       * the language, the date order, or the direction of the page.
+       */
+      var loc = L.moneyTag(c), s;
       try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'symbol' }).format(n); }
       catch (e) {
         try { s = new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
@@ -754,6 +783,28 @@
         }
       }
       return L.ltr(s);
+    },
+
+    /**
+     * ⭐⭐ WHICH CONVENTION WRITES THIS CURRENCY — one small, checkable table rather than a guess per call.
+     *
+     * ⚠ IT CARRIES WHAT HAS BEEN VERIFIED AND WHAT HAS NOT, the same discipline lib/docnumber.js uses for
+     * numbering rules. The Indian rupee is lakh-grouped and that is checked. Most of the world is three-three-
+     * three and that is checked. The other South Asian currencies are CONVENTIONALLY lakh-grouped too — PKR,
+     * BDT, LKR, NPR — but I have not verified it, so they are NOT in the table and get the international
+     * grouping. ⚠ A guessed convention that puts lakhs on somebody's invoice is worse than the plain one.
+     */
+    MONEY_LOCALE: { INR: 'en-IN' },
+
+    /**
+     * The formatting tag for an AMOUNT. Defaults to the international convention, which is what every currency
+     * except the listed ones uses.
+     * ⚠ 'en-US' is chosen for its NUMBER shape (1,234,567.50), not because the money is American — Intl takes
+     * the symbol and the decimals from the currency code regardless of the tag.
+     */
+    moneyTag: function (code) {
+      var c = String(code || '').trim().toUpperCase();
+      return (L.MONEY_LOCALE && L.MONEY_LOCALE[c]) || 'en-US';
     },
 
     /**
