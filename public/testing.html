@@ -250,6 +250,15 @@
         margin-bottom:14px; overflow-x:auto; }
   .tnode{ padding:6px 10px; border-radius:8px; font-size:var(--fs-2); line-height:1.4;
         display:flex; flex-wrap:wrap; align-items:baseline; gap:7px; }
+  /**
+   * ⭐ A FILE ROW IS A TABLE ROW. Four tracks, so the purpose column starts at one x down the whole tree.
+   * ⚠️ minmax(0, …) on every flexible track — without the 0 floor a long word sets the minimum and the row
+   * grows past the container instead of wrapping inside it.
+   */
+  .tnode.tleaf{ display:grid; gap:0 10px; align-items:baseline;
+        grid-template-columns:auto minmax(0,15em) minmax(0,13em) minmax(0,1fr); }
+  .tnode.tleaf .tnote{ margin:0; grid-column:4; }
+  .tbadges{ display:flex; gap:5px; align-items:baseline; flex-wrap:wrap; min-width:0; }
   .tnode[onclick]{ cursor:pointer; }
   .tnode[onclick]:hover{ background:var(--neutral-tint); }
   .tnode.open{ background:var(--neutral-tint); font-weight:600; }
@@ -2153,7 +2162,7 @@ function engineHTML(){
   if (!ENGINE) return '';
   var row = function(r){
     /* ⚠️ the tests that name THIS module, not the ones that merely reach the engine area */
-    var tests = CASES.filter(function(c){ return (c.subjects || []).indexOf(r.file) >= 0; });
+    var tests = casesFor(r.file);
     var done = tests.filter(function(c){ return LAST[c.case_key]; }).length;
     var bad = tests.filter(function(c){ var l = LAST[c.case_key];
       return l && (l.status === 'fail' || l.status === 'blocked'); }).length;
@@ -2274,15 +2283,63 @@ var SUMVIEW = 'table';
 function setSumView(v){ SUMVIEW = v; paintSummary(); }
 
 /** a branch: label, count, optional note, and the rows underneath it */
+/**
+ * ── ⚠️⚠️ THE ROW WAS A FLEX LINE AGAIN, AND I HAVE ALREADY FIXED THIS ONCE ───────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"tree by layer is not properly aligned"* — and the screenshot shows it exactly: the
+ * purpose starts at a different x on every single row, because in a flex line each item begins where the one
+ * before it ended. `money` is short so its sentence starts early; `form-handshake PROVEN` is long so its
+ * sentence starts late. There is nothing for the eye to run down.
+ *
+ * ⚠️ THE CASES TAB HAD THIS SAME BUG AND CARRIES THE SAME NOTE — *"THE ROW IS A TABLE, NOT A FLEX LINE"*. I
+ * fixed it there, then built this tree as a flex row hours later. A lesson recorded in one file is not a
+ * lesson applied in the next.
+ *
+ * ⭐ FIXED TRACKS: glyph · name · badges · purpose. Every sentence now starts at the same x whatever the name
+ * beside it is doing, and `minmax(0, …)` is what lets a long one shrink instead of shoving the column off the
+ * edge. Depth stays as padding on the row itself, so the indent still reads as containment.
+ *
+ * ⚠️ Branch rows (a layer, a tier) keep the flex line ON PURPOSE — they carry a count and a boundary note, not
+ * a name/purpose pair, so there is no column for them to line up with.
+ */
+/**
+ * ── ⚠️⚠️ I ROOTED THE PATHS AND BROKE EVERY LOOKUP THAT READ THEM ───────────────────────────────────────────
+ *
+ * Athi's screenshot, 2026-09-11: every engine rule reads "no case names it" — and order-input has SIX. The
+ * board was reporting the whole engine as untested an hour after I gave it a maturity column.
+ *
+ * ⚠️ MY OWN CHANGE, EARLIER THE SAME DAY. Building the folder tree needed unambiguous paths, so contents
+ * entries became `chitbridge-api/lib/order-input.js`. A case's `subjects` still say `lib/order-input.js`,
+ * which is what the test file actually names. Four call sites compared the two, and each had guessed at the
+ * fix separately: one stripped ONE segment, one stripped TWO, two stripped nothing at all. Three different
+ * answers to one question is not four bugs, it is one missing function.
+ *
+ * ⭐ So the comparison lives here. It tries the path as given and then repo-relative, because a subject is
+ * written the way the file refers to itself and the board now roots it — both are the same file.
+ */
+function casesFor(file){
+  if (!file) return [];
+  var parts = String(file).split('/');
+  var forms = [file, parts.slice(1).join('/'), parts.slice(2).join('/')];
+  return CASES.filter(function(c){
+    var s = c.subjects || [];
+    for (var i = 0; i < forms.length; i++) if (forms[i] && s.indexOf(forms[i]) >= 0) return true;
+    return false;
+  });
+}
+
 function treeNode(depth, glyph, label, count, tail, note, open, key){
   var pad = 10 + depth * 18;
-  return '<div class="tnode' + (open ? ' open' : '') + '"' + (key ? ' onclick="foldSection(\'' + key + '\')"' : '')
+  var leaf = !!note && !key;   /* a file: name and purpose, in tracks */
+  return '<div class="tnode' + (leaf ? ' tleaf' : '') + (open ? ' open' : '') + '"'
+    + (key ? ' onclick="foldSection(\'' + key + '\')"' : '')
     + ' style="padding-inline-start:' + pad + 'px">'
     + '<span class="tglyph">' + glyph + '</span>'
     + '<span class="tlabel">' + esc(label) + '</span>'
     + (count === null || count === undefined ? '' : '<span class="tcount">' + count + '</span>')
-    + (tail || '')
-    + (note ? '<div class="tnote" style="margin-inline-start:' + (pad + 4) + 'px">' + esc(note) + '</div>' : '')
+    + (leaf ? '<span class="tbadges">' + (tail || '') + '</span>' : (tail || ''))
+    + (note ? '<div class="tnote"' + (leaf ? '' : ' style="margin-inline-start:' + (pad + 4) + 'px"') + '>'
+        + esc(note) + '</div>' : '')
     + '</div>';
 }
 
@@ -2342,8 +2399,7 @@ function folderTreeHTML(){
     kids.forEach(function(k){ h += walk(node.kids[k], k, depth, path + '/' + k); });
     node.items.sort(function(a, b){ return a.leaf < b.leaf ? -1 : 1; }).forEach(function(it, i){
       var last = i === node.items.length - 1 && !kids.length;
-      var xt = CASES.filter(function(c){ return (c.subjects || []).indexOf(it.x.file) >= 0
-        || (c.subjects || []).indexOf(it.x.file.split('/').slice(1).join('/')) >= 0; });
+      var xt = casesFor(it.x.file);
       var xr = xt.filter(function(c){ return LAST[c.case_key]; }).length;
       /* ⭐ the LAYER as a chip here — the folder says where it lives, the chip says what it is */
       var tail = '<span class="tarea t-' + esc(it.area) + '">' + esc(AREA_LABEL[it.area] || it.area) + '</span>'
@@ -2404,7 +2460,7 @@ function treeHTML(){
       if (t) { h += treeNode(2, '\u251c', t, kids.length, '', '', true, ''); d = 3; }
       kids.slice(0, 60).forEach(function(x, i){
         var last = i === Math.min(kids.length, 60) - 1;
-        var xt = CASES.filter(function(c){ return (c.subjects || []).indexOf(x.file) >= 0; });
+        var xt = casesFor(x.file);
         var xr = xt.filter(function(c){ return LAST[c.case_key]; }).length;
         var t2 = (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '')
           + (xt.length ? '<span class="tof">' + xr + '/' + xt.length + ' run</span>'
@@ -2486,8 +2542,7 @@ function maturityHTML(){
   var behind = 0, ahead = 0;
   MATURITY.forEach(function(m){
     /* the cases that name this capability's file, plus any whose module says so */
-    var cs = m.file ? CASES.filter(function(c){ return (c.subjects || []).indexOf(m.file) >= 0
-      || (c.subjects || []).indexOf(m.file.split('/').slice(2).join('/')) >= 0; }) : [];
+    var cs = casesFor(m.file);
     var t = testRung(cs);
     if (m.maturity && t.n && t.n < m.maturity) behind++;
     if (m.maturity && t.n > m.maturity) ahead++;
