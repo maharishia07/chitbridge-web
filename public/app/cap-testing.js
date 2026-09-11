@@ -203,9 +203,12 @@ function testPaint() {
     h += '<div style="padding:14px;color:var(--grey-2,#545A61);font-size:12px">Reading the cases…</div>';
   } else if (!CBTEST.cases.length) {
     /* ⚠️ AN EMPTY BOARD IS NOT AN ERROR, and must not read like one. Say what to do. */
-    h += '<div style="padding:12px;font-size:12px;line-height:1.6;color:var(--grey-2,#545A61)">'
-      +  'No cases on the board yet. Load the documented ones with '
-      +  '<code>node C:\\dev\\load-test-cases.cjs &lt;token&gt;</code>, or press <b>+</b> to write one now.</div>';
+    h += '<div style="padding:14px 12px;font-size:12px;line-height:1.6;color:var(--grey-2,#545A61);text-align:center">'
+      +  '<div style="margin-bottom:9px">No test cases on this board yet.</div>'
+      +  '<button class="btn pri" onclick="testSeed()" style="font-size:12px;padding:6px 14px">'
+      +  (CBTEST.seeding ? 'Loading…' : 'Load the test cases') + '</button>'
+      +  '<div style="margin-top:9px;font-size:10.5px">The documented cases — the counter, the bill, the queue, '
+      +  'suppliers, the offer lab. Or press <b>+</b> to write your own.</div></div>';
   } else if (!shown.length) {
     h += '<div style="padding:12px;font-size:12px;color:var(--grey-2,#545A61)">Nothing in this area yet — '
       +  'press <b>+</b> to add the first case for it.</div>';
@@ -252,8 +255,13 @@ function testCaseBodyHTML(c) {
      it" are different sentences. A note is prose; evidence is a bill number, a spec name, a screenshot filename. */
   h += '<input type="text" id="cbt_n_' + testEsc(c.case_key) + '" placeholder="What did you see?" '
     +  'style="width:100%;margin-top:8px;font-size:12px;padding:5px 7px">'
-    +  '<input type="text" id="cbt_e_' + testEsc(c.case_key) + '" placeholder="Evidence — bill number, screenshot, spec" '
+    +  '<input type="text" id="cbt_e_' + testEsc(c.case_key) + '" placeholder="Evidence — bill number, screenshot" '
     +  'style="width:100%;margin-top:5px;font-size:12px;padding:5px 7px">'
+    /* ⚠ SAY WHETHER THE CALLS ARE BEING KEPT. api() only records while spec is on, so without this the tester
+       believes the endpoints are being attached and they are not — a quiet nothing, which is the worst kind. */
+    + (typeof specOn === 'function' && specOn()
+        ? '<div style="font-size:10px;color:var(--grey-2,#545A61);margin-top:3px">The API calls this case makes will be attached.</div>'
+        : '<div style="font-size:10px;color:var(--grey-2,#545A61);margin-top:3px">Turn <b>spec</b> on to attach the API calls too.</div>')
     +  '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'
     +    testMarkBtn(c.case_key, 'pass', 'Pass', '#2c7a43', '#e6f4ea')
     +    testMarkBtn(c.case_key, 'fail', 'Fail', '#b4453f', '#fbeceb')
@@ -270,11 +278,46 @@ function testMarkBtn(key, status, label, fg, bg) {
 
 function testSetArea(v) { CBTEST.area = v; CBTEST.open = null; testPaint(); }
 function testSetKind(v) { CBTEST.run.kind = v; testRunSave(); testPaint(); }
-function testOpen(k) { CBTEST.open = (CBTEST.open === k ? null : k); testPaint(); }
+/**
+ * ⭐⭐⭐ OPENING A CASE MARKS THE API LOG, so that marking it records WHICH CALLS THIS CASE MADE.
+ *
+ * Athi, 2026-09-11: *"if we make it happen like this API is called etc, for this purpose, so the spec and the
+ * test cases can match?"* — this is that join. The case says what should happen; the spec panel says which
+ * endpoints were actually hit; the RESULT now carries both, so a failure is not "the supplier screen was wrong"
+ * but "SPR-02 failed and these three calls are what it made".
+ *
+ * ⚠ ONLY WHILE SPEC IS ON, because that is the only time api() keeps anything. Off, evidence stays whatever the
+ * tester typed — and the panel says so rather than silently attaching nothing.
+ */
+function testOpen(k) {
+  try { CBTEST.mark = (window.CBCALLS || []).length; } catch (_) { CBTEST.mark = 0; }
+  CBTEST.open = (CBTEST.open === k ? null : k);
+  testPaint();
+}
+/**
+ * The calls made since this case was opened, newest first, as one readable line.
+ * ⚠ CAPPED AT SIX. Evidence is meant to be read by a person deciding what broke; a full network log is not
+ * evidence, it is homework.
+ */
+function testCallsSince() {
+  try {
+    var all = window.CBCALLS || [];
+    if (!all.length) return '';
+    var since = Math.max(0, all.length - (CBTEST.mark || 0));
+    if (!since) return '';
+    return all.slice(0, Math.min(since, 6)).map(function (c) {
+      return c.m + ' ' + c.path + ' ' + c.status;
+    }).join(' | ');
+  } catch (_) { return ''; }
+}
 
 async function testMark(key, status) {
   var nb = document.getElementById('cbt_n_' + key), eb = document.getElementById('cbt_e_' + key);
   var note = nb ? nb.value.trim() : '', ev = eb ? eb.value.trim() : '';
+  /* ⭐ what the tester typed comes FIRST; the calls are appended. Their sentence is the evidence that matters,
+     and burying it under a machine-generated list would be the wrong way round. */
+  var calls = testCallsSince();
+  if (calls) ev = (ev ? ev + ' · ' : '') + calls;
   var c = CBTEST.cases.filter(function (x) { return x.case_key === key; })[0] || {};
   try {
     var r = await api('testRecord', { body: {
@@ -299,6 +342,30 @@ async function testMark(key, status) {
  * Athi: *"add more issues as a plus icon."* The moment you find something is the moment you can describe it; an
  * hour later it is "something was wrong with the supplier screen". So the form is four fields and lands as a
  * real, versioned case on the same board — not a note in a different place. */
+/**
+ * ⭐⭐ LOAD THE DOCUMENTED CASES. Safe to press twice — it is an upsert, so an unchanged case keeps its version,
+ * an edited one gains a new version, and every result already recorded keeps pointing at the version it was
+ * actually given. There is deliberately no "already loaded" flag: a flag is a thing that can be wrong.
+ */
+async function testSeed() {
+  if (CBTEST.seeding) return;
+  CBTEST.seeding = true; testPaint();
+  try {
+    var r = await api('testSeed');
+    await testLoad(true);
+    if (typeof toast === 'function') {
+      /* ⚠ SAY WHAT CHANGED, not "done". On a second press `added` is 0 and that is the correct answer — a bare
+         success would read as though nothing happened. */
+      toast(r.added + ' cases loaded'
+        + (r.updated ? ', ' + r.updated + ' updated' : '')
+        + (r.unchanged ? ', ' + r.unchanged + ' already current' : ''));
+    }
+  } catch (e) {
+    if (typeof toast === 'function') toast(tx('Could not load the test cases') + ' — ' + e.message, true);
+  }
+  CBTEST.seeding = false; testPaint();
+}
+
 function testAddOpen() { CBTEST.adding = true; testPaint(); }
 function testAddClose() { CBTEST.adding = false; testPaint(); }
 

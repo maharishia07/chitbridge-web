@@ -226,6 +226,16 @@ function say(msg, bad){
   setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 6000);
 }
 
+/** ⭐ load the documented cases onto this shop's board — an upsert, so pressing it twice is safe */
+async function seed(){
+  try {
+    var r = await call('/api/testing/cases/seed', { method:'POST' });
+    say(r.added + ' cases loaded' + (r.updated ? ', ' + r.updated + ' updated' : '')
+        + (r.unchanged ? ', ' + r.unchanged + ' already current' : ''));
+    await load();
+  } catch (e) { say('Could not load them: ' + e.message, true); }
+}
+
 async function load(){
   var s = sess();
   document.getElementById('who').textContent = s ? ((s.entity || s.name || 'your business') + ' · signed in') : 'not signed in';
@@ -245,8 +255,11 @@ async function load(){
     });
     if (!CASES.length) {
       document.getElementById('main').innerHTML =
-        '<div class="say"><b>No test cases on the board yet.</b>Run <code>node C:\\dev\\load-test-cases.cjs &lt;token&gt;</code> '
-        + 'to put the documented cases in. The document stays the source of truth for the wording; this board holds the results.</div>';
+        '<div class="say"><b>No test cases on this board yet.</b>'
+        + '<button class="btn pri" onclick="seed()" style="margin:6px 0">Load the test cases</button>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:5px;line-height:1.55">The documented cases '
+        + 'for the counter, the bill, the queue, suppliers and the offer lab. Safe to press again later — it reloads '
+        + 'the wording and leaves every result exactly where it is.</div></div>';
       return;
     }
     fillModules();

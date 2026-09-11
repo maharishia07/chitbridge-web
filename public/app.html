@@ -1896,6 +1896,7 @@ const EP = {
      record — only the RESULT ledger is new, because results accumulate and a definition does not. */
   testCases:       {m:"GET",   p:"/api/testing/cases",           ok:"y"},
   testCaseAdd:     {m:"POST",  p:"/api/testing/cases/import",    ok:"y"},   // upsert by case key → a NEW VERSION on an edit
+  testSeed:        {m:"POST",  p:"/api/testing/cases/seed",      ok:"y"},   // ⭐ the button: load the documented cases, no terminal   // upsert by case key → a NEW VERSION on an edit
   testResults:     {m:"GET",   p:"/api/testing/results",         ok:"y"},   // default: the latest word per (case, layer)
   testRecord:      {m:"POST",  p:"/api/testing/results",         ok:"y"},   // ⚠ APPEND ONLY — a re-test is a new row
   testRuns:        {m:"GET",   p:"/api/testing/runs",            ok:"y"},
@@ -6877,6 +6878,26 @@ function specCallsBar(){
   return '<div id="speccalls" style="position:fixed;inset-inline:10px;bottom:10px;z-index:9998;max-height:38vh;'
     + 'overflow:auto;background:var(--card);border:1px dashed var(--line);border-radius:10px;'
     + 'box-shadow:0 6px 22px rgba(15,46,61,.18);padding:4px 10px 8px">' + specCalls() + '</div>';
+}
+
+/**
+ * ⭐⭐⭐ specCallsRepaint() — WITHOUT THIS THE PANEL IS DEAD, and it was.
+ *
+ * Athi, 2026-09-11: *"when I click the spec, at the bottom an overlay appears, but nothing is changing — I guess
+ * it is a dead function."* He is right, and the cause is an ordering one rather than a missing feature.
+ *
+ * ⚠⚠ THE BAR IS PAINTED BY renderApp(); THE CALL IS RECORDED WHEN THE RESPONSE ARRIVES. So every record lands
+ * AFTER the paint for that action, and the panel shows the calls from the PREVIOUS action — on a screen that does
+ * not re-render, it shows "No calls yet" forever. The data was always right; nothing ever asked for it again.
+ *
+ * ⚠ IT REPAINTS THE BAR, NOT THE APP. Calling renderApp() on every response would rebuild the screen underneath
+ * somebody who is mid-inspection, which is the exact opposite of what a panel you turned on to observe should do.
+ */
+function specCallsRepaint(){
+  try {
+    var el = document.getElementById('speccalls');
+    if (el) el.innerHTML = specCalls();
+  } catch(_) {}
 }
 
 function specToggleBody(i){

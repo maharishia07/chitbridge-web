@@ -589,6 +589,10 @@ async function api(key, {params, query, body}={}){
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
+        /* ⚠ AND SAY SO. Recording without repainting is what made the spec panel look dead — the rows were
+           there and nothing ever asked the bar to draw them again. Athi found it: "an overlay appears, but
+           nothing is changing, I guess it is a dead function." */
+        if (typeof specCallsRepaint === 'function') specCallsRepaint();
       }
     } catch(_) {}
     /* a product write drops the memoised own-catalogue VIEW (ownCatalogueView) — the next outlet to open reads fresh */
