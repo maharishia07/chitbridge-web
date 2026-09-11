@@ -227,6 +227,9 @@
   table.areas .acases > td{ padding:2px 11px 12px; background:var(--paper); }
   table.areas tfoot td{ background:var(--neutral-tint); border-top:2px solid var(--line); font-weight:700; }
   /* ⭐ the pivot sits with the filters, because choosing the cut is the same kind of act as choosing a subset */
+  /* ⭐ the two levels of the architecture, NAMED on the table rather than implied by the order */
+  table.mtx tr.tier td{ background:var(--paper); font-size:var(--fs-1); font-weight:700; letter-spacing:.08em;
+        text-transform:uppercase; color:var(--grey-2); padding:10px 11px 4px; border-bottom:0; }
   .pivotbar{ gap:7px; }
   .foldbar{ display:flex; gap:6px; align-items:center; margin:0 0 12px; }
   .foldbar .foldnote{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:4px; }
@@ -979,9 +982,31 @@ var KIND_LABEL = {
 /* ⚠️ offered even at zero: "Penetration (0)" states a fact; omitting it lets the absence read as "not applicable" */
 var ALWAYS_SHOW = { penetration: true };
 
-var AREA_ORDER = ['api', 'middleware', 'engine', 'web', 'database', 'connector'];
-var AREA_LABEL = { api: 'API', middleware: 'Middleware', engine: 'Engine', web: 'Web',
-                   database: 'Database', connector: 'Connector' };
+/**
+ * ── ⭐⭐⭐ THE ARCHITECTURE IS ENGINE · MIDDLEWARE · WEB, AND THE ORDER SAYS SO ────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"if our platform is defined instead of MVC model, ours is Engine, Middleware and Web —
+ * that is the overall architecture, so how we say that in the summary outcome? The order should be that way.
+ * Other areas like database, API are the next level, so we have to showcase that way."*
+ *
+ * ⚠️⚠️ THE ORDER WAS THE ONE I HAPPENED TO TYPE, AND A READER TAKES AN ORDER FOR A CLAIM. api · middleware ·
+ * engine · web put the API first and the rules fourth — the opposite of how this platform is built and of how
+ * its author thinks about it. Nothing was wrong with any number; the sequence was making an argument nobody
+ * had made.
+ *
+ * ⭐ THE TRIAD IS THE PRODUCT. The ENGINE holds the rules — money, tax, offers, numerals, document numbers —
+ * and is the half provable with no database and no screen. MIDDLEWARE decides who may do what. WEB is where a
+ * person meets both. Everything else is what those three RIDE ON: the API is how they are reached, the
+ * DATABASE is where their results rest, the CONNECTOR is how they leave the building.
+ *
+ * ⚠️ It is not MVC and must not be read as it. There is no controller layer here worth naming: a route is a
+ * door onto an engine, and the interesting code is on either side of it, never in it.
+ */
+var AREA_TIER = { engine: 1, middleware: 1, web: 1, api: 2, database: 2, connector: 2 };
+var TIER_NAME = { 1: 'The architecture \u2014 engine, middleware, web', 2: 'What it rides on' };
+var AREA_ORDER = ['engine', 'middleware', 'web', 'api', 'database', 'connector'];
+var AREA_LABEL = { engine: 'Engine', middleware: 'Middleware', web: 'Web',
+                   api: 'API', database: 'Database', connector: 'Connector' };
 /**
  * ── ⭐⭐⭐ WHERE A PERSON CANNOT BE THE EVIDENCE ───────────────────────────────────────────────────────────────
  *
@@ -1009,12 +1034,12 @@ var NO_MANUAL = {
 };
 
 var AREA_SAYS = {
-  api: 'The endpoints — everything a client can call.',
+  engine: 'The rules themselves — money, tax, offers, numerals, document numbers. Provable with no database and no screen.',
   middleware: 'What decides who may do what: auth, the hat gate, the key scopes.',
-  engine: 'The pure rules — money, tax, offers, numerals, document numbers.',
-  web: 'The screens: the counter, the app, the storefront.',
-  database: 'Schema, migrations and the isolation policies.',
-  connector: 'Tally, Zoho, and anything that carries a chit off the rail.',
+  web: 'Where a person meets the other two: the counter, the app, the storefront.',
+  api: 'How the three are reached — every endpoint a client can call.',
+  database: 'Where their results rest: schema, migrations, the isolation policies.',
+  connector: 'How they leave the building — Tally, Zoho, anything carrying a chit off the rail.',
 };
 
 var LEVEL_SAYS = {
@@ -1786,8 +1811,15 @@ function matrixHTML(){
   h += '<th class="sep"></th><th class="num"><span>Total</span></th><th class="num"><span>Done</span></th>'
     + '<th class="num"><span>Left</span></th><th class="num"><span>Complete</span></th></tr>';
 
+  var lastTier = null;
   AREA_ORDER.forEach(function(a){
     if (!rowAll[a]) return;
+    /* ⭐ the break between the triad and what it rides on — an order is only a claim a reader can see */
+    if (AREA_TIER[a] !== lastTier) {
+      lastTier = AREA_TIER[a];
+      h += '<tr class="tier"><td colspan="' + (KINDS.filter(function(t){ return colN[t]; }).length + 6) + '">'
+        + TIER_NAME[lastTier] + '</td></tr>';
+    }
     h += '<tr><td class="areacell"><span class="area">' + esc(AREA_LABEL[a]) + '</span>'
        + '<span class="what">' + esc(AREA_SAYS[a] || '') + '</span></td>';
     COLS.forEach(function(c){
