@@ -178,6 +178,11 @@
   .pnum{ font-size:var(--fs-1); font-variant-numeric:tabular-nums; color:var(--grey-2); }
   /* ⚠️ a column we KNOW should exist and does not carries its zero in the heading, so the gap is not silence */
   .zeroflag{ font-style:normal; color:var(--warn); font-weight:700; }
+  /* ⭐ the one figure a person outside this desk asks for, in the header, where it cannot be confused with */
+  /*    the filtered numbers beside the filters — because there are no other numbers up there any more */
+  .tally .pcwrap{ display:inline-flex; align-items:center; gap:5px; }
+  .tally .pcwrap .pbar{ height:6px; }
+  .tally .pcwrap .sub{ font-style:normal; font-size:var(--fs-1); color:var(--grey-2); }
   /* ⭐ n/a means NOBODY CAN, and it must not look like the dash that means nobody has yet */
   .na{ font-size:var(--fs-1); color:var(--grey-2); border-bottom:1px dotted var(--grey-2); cursor:help;
        font-style:italic; }
@@ -901,45 +906,43 @@ function shown(){
   });
 }
 
+/**
+ * ── ⭐⭐⭐ ONE PLACE FOR THE NUMBERS, BECAUSE TWO PLACES IS THE BUG ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"total, how many completed / how many remaining, so anyone understand it, say completion
+ * percentage"* — then, looking at the result: *"you have not changed the position of the dropdown box?"*
+ *
+ * ⚠️⚠️ HE WAS LOOKING AT THE WRONG NUMBERS, AND THAT WAS THE SCREEN'S FAULT, NOT HIS. This header carried a
+ * full ladder — passed · not yet tested · 608 cases · 144 acceptance · 96 unit · … — six hundred pixels above a
+ * filter row carrying its own totals. Both bold, both counting, one of them ignoring the filters. Picking
+ * Kind = unit changed one set and not the other.
+ *
+ * ⭐ My first attempt at this was to LABEL the difference ("608 cases in all"). That is the move to distrust:
+ * explaining why two contradictory numbers are both correct, instead of having one number. The ladder's job —
+ * "what shape is the testing" — is now done by the Kind dropdown, which carries the same counts inside the
+ * choices. So the header keeps only what nothing else says: how much of the board has any evidence at all.
+ */
 function tally(){
-  var n = { pass:0, fail:0, blocked:0, skipped:0, todo:0 };
-  CASES.forEach(function(c){ var l = LAST[c.case_key]; if (!l) n.todo++; else n[l.status]++; });
-  var h = '';
-  if (n.pass)    h += '<span class="t pass"><b>' + n.pass + '</b> passed</span>';
-  if (n.fail)    h += '<span class="t fail"><b>' + n.fail + '</b> failed</span>';
-  if (n.blocked) h += '<span class="t blocked"><b>' + n.blocked + '</b> blocked</span>';
-  if (n.skipped) h += '<span class="t"><b>' + n.skipped + '</b> skipped</span>';
-  if (n.todo)    h += '<span class="t todo"><b>' + n.todo + '</b> not yet tested</span>';
+  var done = 0, bad = 0;
+  CASES.forEach(function(c){
+    var l = LAST[c.case_key];
+    if (!l) return;
+    done++;
+    if (l.status === 'fail' || l.status === 'blocked') bad++;
+  });
+  /* ⚠️ support files can never report a result — counting them would hold the percentage below 100 forever */
+  var testable = CASES.filter(function(c){ return c.test_type !== 'support'; }).length;
+  var pc = testable ? Math.round((done / testable) * 100) : 0;
+
+  var h = '<span class="t whole"><b>' + CASES.length + '</b> cases</span>'
+        + '<span class="t"><b>' + done + '</b> with a result</span>'
+        + (bad ? '<span class="t fail"><b>' + bad + '</b> failing</span>' : '');
   var staleN = CASES.filter(function (c) { return STALE[c.case_key]; }).length;
   if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
-  /**
-   * ⚠️⚠️ TWO TOTALS ON ONE SCREEN THAT DISAGREE IS WORSE THAN ONE THAT IS WRONG.
-   *
-   * This ladder counts ALL cases; the toolbar totals count what the filters have left. Pick Kind = unit and
-   * the two "not yet tested" numbers differ, side by side, styled identically, with nothing saying why —
-   * inside the control built to answer *"how many completed, how many remaining"*.
-   * ⭐ So this one says what it is counting, every time, and steps back when a filter is on.
-   */
-  var filtered = shown().length !== CASES.length;
-  h += '<span class="t whole">' + CASES.length + ' cases in all'
-     + (filtered ? ' <i>— the numbers beside the filters count what is left</i>' : '') + '</span>';
-  /**
-   * ⭐⭐ THE LADDER, ALWAYS VISIBLE — and it is an honest counterweight to the total beside it.
-   *
-   * ⚠️ 608 cases sounds like a lot until you see that 238 of them are system tests nobody runs unattended and 29
-   * are not tests at all. The shape matters more than the count, and the shape should not need a click.
-   */
-  var ty = {};
-  CASES.forEach(function(c){ if (c.test_type) ty[c.test_type] = (ty[c.test_type] || 0) + 1; });
-  /* ⚠️ THE LADDER MUST BE THE WHOLE VOCABULARY. It was a hand-written list that omitted performance and
-     security, so two kinds counted toward the total beside it and appeared in no pill — a breakdown that
-     silently does not add up. KIND_ORDER is the one list; there is no second copy to forget. */
-  KIND_ORDER.forEach(function(k){
-    if (!ty[k]) return;
-    h += '<span class="t" style="cursor:pointer" title="' + esc(LEVEL_SAYS[k] || '')
-       + '" onclick="document.getElementById(\'f_type\').value=\'' + k + '\';paint()"><b>'
-       + ty[k] + '</b> ' + k + '</span>';
-  });
+  /* ⭐ the one figure a person outside this desk actually asks for, and it is not on any other screen */
+  h += '<span class="t pcwrap"><span class="pbar" style="width:120px;display:inline-block;vertical-align:middle">'
+     + '<i style="width:' + pc + '%"></i></span> <b>' + pc + '%</b> tested'
+     + '<i class="sub" style="margin-inline-start:6px">of ' + testable + ' testable</i></span>';
   document.getElementById('tally').innerHTML = h;
 }
 
