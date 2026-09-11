@@ -80,7 +80,11 @@ function testUuid() {
 function testModeSet(on) {
   CBTEST.on = !!on;
   try { localStorage.setItem('cb_testmode', CBTEST.on ? '1' : ''); } catch (_) {}
-  if (CBTEST.on) { testPanelOpen(); } else { testPanelClose(); }
+  if (CBTEST.on) {
+    testPanelOpen();
+    /* ⭐ the first tick explains itself. After that it never asks again — the ⓘ is there for when it is wanted. */
+    try { testGuide(false); } catch (_) {}
+  } else { testPanelClose(); }
   if (typeof renderApp === 'function') renderApp();
 }
 function testModeIsOn() { try { return localStorage.getItem('cb_testmode') === '1'; } catch (_) { return false; } }
@@ -119,6 +123,89 @@ async function testLoad(force) {
 }
 
 /* ── the panel ────────────────────────────────────────────────────────────────────────────────────────────── */
+/**
+ * ⭐⭐⭐ THE GUIDE, IN THE APP — so there is nothing to send anybody.
+ *
+ * Athi, 2026-09-11: *"just show the Test and give this info and then provide the check box there itself, so
+ * we don't need to send it to anyone. I have to say, just check the test in the top level, that is it."*
+ *
+ * ⚠️ A LINK IS A THING SOMEBODY HAS TO BE SENT, AND THEN FIND AGAIN. Tick 🧪 Test and the instructions are
+ * already in front of you; the ⓘ in the panel brings them back. Nothing to forward, nothing to bookmark,
+ * nothing that goes stale in an inbox while the panel it describes changes.
+ *
+ * ⚠️ SHOWN ONCE, NOT EVERY TIME. A person who has read it does not need it again, and a dialog that reopens
+ * on every toggle is a dialog people learn to dismiss without reading — which costs the FIRST reader too.
+ */
+function testGuideSeen() {
+  try { return localStorage.getItem('cb_testguide') === '1'; } catch (_) { return false; }
+}
+function testGuide(force) {
+  if (!force && testGuideSeen()) return false;
+  try { localStorage.setItem('cb_testguide', '1'); } catch (_) {}
+  if (typeof modal !== 'function') return false;
+
+  var step = function (nn, title, body) {
+    return '<div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:13px">'
+      + '<span style="flex:0 0 25px;height:25px;border-radius:50%;background:var(--blue);color:#fff;'
+      +   'font-size:var(--fs-1);font-weight:700;line-height:25px;text-align:center">' + nn + '</span>'
+      + '<div style="flex:1;min-width:0"><b style="font-size:var(--fs-3)">' + title + '</b>'
+      + '<div style="color:var(--grey-2);font-size:var(--fs-2);line-height:1.55;margin-top:2px">' + body
+      + '</div></div></div>';
+  };
+  var verdict = function (name, fg, bg, body) {
+    return '<div style="border-inline-start:3px solid ' + fg + ';background:var(--card);'
+      + 'border:1px solid var(--line);border-inline-start-width:3px;border-radius:9px;padding:9px 12px;'
+      + 'margin-bottom:7px">'
+      + '<span style="display:inline-block;font-size:var(--fs-1);font-weight:700;letter-spacing:.07em;'
+      +   'text-transform:uppercase;color:' + fg + ';background:' + bg + ';border-radius:4px;'
+      +   'padding:2px 7px;margin-bottom:5px">' + name + '</span>'
+      + '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--grey-2)">' + body + '</div></div>';
+  };
+
+  modal('<div class="mhd"><div class="t">' + tx('Testing') + '</div>'
+    + '<div class="s">' + tx('Read a case, do it, say what happened — without leaving the screen you are on.')
+    + '</div></div>'
+    + '<div class="mbody" style="line-height:1.6">'
+    + step(1, tx('The panel follows you'),
+        tx('It opens at the bottom right and stays with you on every screen. Drag it by the ⠿, minimise it '
+         + 'with –, or pick a Size. Where you leave it is where it comes back.'))
+    + step(2, tx('Load the cases, once'),
+        tx('If the panel says there are none, press Load the test cases. Pressing it again later is harmless.'))
+    + step(3, tx('Say who you are'),
+        tx('Type your name in the Tester box. Leave it blank and the record still shows which login tested — '
+         + 'the name is only so a shared login can tell two people apart.'))
+    + step(4, tx('Pick a Focus'),
+        tx('It lists each area with how many cases nobody has run. ⚠ marks the important ones. Pick one and '
+         + 'the panel counts it down for you.'))
+    + step(5, tx('Work through them'),
+        tx('Each case tells you what must be true before you start, what to do, and what you should see. '
+         + 'Then tap a verdict.'))
+    + step(6, tx('Found something with no case? Press +'),
+        tx('The moment you find it is the moment you can still describe it. An hour later it is “something '
+         + 'was wrong with the supplier screen”.'))
+    + '<div style="font-size:var(--fs-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
+    +   'color:var(--grey-2);margin:18px 0 9px">' + tx('The four verdicts') + '</div>'
+    + verdict(tx('Pass'), 'var(--ok-2)', 'var(--ok-tint)',
+        tx('It did what the case says. The case closes and you move on.'))
+    + verdict(tx('Fail'), 'var(--disp)', 'var(--disp-tint, #FBECEB)',
+        '<b>' + tx('Write what you saw in the note box.') + '</b> '
+        + tx('That sentence is the whole value of the run — a status on its own tells nobody anything. '
+           + 'Both numbers help: the one shown and the one you expected.'))
+    + verdict(tx('Blocked'), 'var(--warn-2)', 'var(--warn-tint)',
+        tx('You could not get to it because something earlier is broken. ') + '<b>'
+        + tx('This is not a fail.') + '</b> '
+        + tx('It says nothing about the case itself, and counting it as one makes a red board nobody can act on.'))
+    + verdict(tx('Skip'), 'var(--grey-2)', 'var(--neutral-tint)',
+        tx('Deliberately not this time — not applicable, or out of scope for this sitting.'))
+    + '<div style="margin-top:15px;padding:10px 13px;border-radius:9px;background:var(--ok-tint);'
+    +   'color:var(--ok-2);font-size:var(--fs-2);line-height:1.55"><b>' + tx('You cannot break anything.')
+    +   '</b> ' + tx('Nothing is ever overwritten — testing a case again writes a new line, and the older one '
+    +   'stays readable. A wrong verdict is fixed by marking it again.') + '</div>'
+    + '</div>'
+    + '<div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Start testing') + '</button></div>');
+  return true;
+}
+
 function testPanelClose() {
   var el = document.getElementById('cbtesthost');
   if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -224,6 +311,7 @@ function testPaint() {
     +   '<span style="flex:1"></span>'
     +   '<button class="btn" title="Add a case for something you just found" onclick="testAddOpen()" '
     +     'style="padding:2px 9px;font-size:var(--fs-4);line-height:1.3">+</button>'
+    +   '<button class="btn" title="How to use this" onclick="testGuide(true)" style="padding:2px 8px">ⓘ</button>'
     +   '<button class="btn" title="Read the cases again" onclick="testLoad(true)" style="padding:2px 8px">↻</button>'
     /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
        on the test case and where we are looking at."* The corner still drags freely; this is for the times
