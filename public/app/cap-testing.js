@@ -41,7 +41,7 @@
  */
 'use strict';
 
-var CBTEST = { on: false, cases: [], last: {}, area: '', open: null, run: null, busy: false, adding: false, stale: {} };
+var CBTEST = { on: false, cases: [], last: {}, area: '', open: null, run: null, busy: false, adding: false, stale: {}, cover: [], suggest: null };
 
 /* ── WHICH CASES BELONG TO THE SCREEN YOU ARE ON ──────────────────────────────────────────────────────────────
  * ⚠️ A GUESS, AND IT SAYS SO. The map is deliberately partial: a nav with no entry opens on "All areas" rather
@@ -96,6 +96,10 @@ async function testLoad(force) {
     /* ⭐ a third read, and worth its round trip: without it a tester works through cases that were written
        against wording nobody stands behind any more, and records passes that prove nothing. */
     var st = await api('testStale');
+    /* ⭐ the gap, ranked. Read on every load because it is what decides where the panel opens. */
+    var cv = await api('testCoverage', { query: { run_id: CBTEST.run && CBTEST.run.id } });
+    CBTEST.cover = (cv && cv.areas) || [];
+    CBTEST.suggest = (cv && cv.suggest) || null;
     CBTEST.stale = {};
     ((st && st.stale) || []).forEach(function (x) { CBTEST.stale[x.case_key] = x; });
     CBTEST.cases = (a && a.cases) || [];
@@ -123,7 +127,14 @@ function testPanelClose() {
 function testPanelOpen() {
   if (document.getElementById('cbtesthost')) { testPaint(); return; }
   testRunLoad();
-  if (!CBTEST.area) CBTEST.area = testAreaGuess();
+  /**
+   * ⭐⭐ WHERE THE PANEL OPENS, and the order is the whole of Athi's answer.
+   *
+   * A FOCUS chosen for this run wins — that is somebody having decided. Otherwise the screen you are on,
+   * because testing what is in front of you is the natural thing. The gap comes in behind both, once the
+   * coverage has been read, and only when neither of the first two applies.
+   */
+  if (!CBTEST.area) CBTEST.area = (CBTEST.run && CBTEST.run.focus) || testAreaGuess();
 
   var host = document.createElement('div');
   host.id = 'cbtesthost';
@@ -231,6 +242,25 @@ function testPaint() {
             return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
                  + testEsc(a.key + ' · ' + a.name) + '</option>'; }).join('')
     +   '</select>'
+    /**
+     * ⭐⭐⭐ FOCUS. Athi: *"can we force an area to test? This area testing not done yet?"*
+     *
+     * ⚠️ IT PINS, IT DOES NOT LOCK — and that is deliberate, not a shortcut. A panel that refuses to show
+     * anything but one module is a panel somebody closes, and then nothing is tested at all: you have lost
+     * the only thing you actually had, which was their willingness. What this does instead is make the gap
+     * impossible to miss and count it down, which is the only pressure that works on someone doing you a
+     * favour.
+     */
+    +   '<select onchange="testSetFocus(this.value)" title="Focus — the area this sitting is meant to cover"'
+    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
+    +     '<option value="">Focus: anywhere</option>'
+    +     CBTEST.cover.map(function (a) {
+            var left = a.untested;
+            return '<option value="' + testEsc(a.module_key) + '"'
+              + ((CBTEST.run.focus === a.module_key) ? ' selected' : '') + '>'
+              + testEsc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
+              + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
+    +   '</select>'
     +   '<select onchange="testSetKind(this.value)" title="How this is being tested" style="font-size:var(--fs-2);padding:3px 5px">'
     +     ['manual', 't0', 't1', 't2', 't3', 'unit', 'regression'].map(function (k) {
             return '<option value="' + k + '"' + (CBTEST.run.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('')
@@ -250,7 +280,20 @@ function testPaint() {
     +   (staleN ? ' \u00b7 <b style="color:var(--warn-2)">' + staleN + '</b> spec moved' : '')
     +   (CBTEST.run.label ? ' · ' + testEsc(CBTEST.run.label) : '')
     + '</div>'
-    + '</div>';
+    /* ⭐ THE COUNTDOWN. Naming the area and the number left is what turns "please test the suppliers screen"
+       into something a person can finish. ⚠️ It reports the gap for the WHOLE board, not this run, because
+       a case somebody else covered yesterday does not need doing again today. */
+    + (CBTEST.run.focus ? (function () {
+        var a = CBTEST.cover.filter(function (x) { return x.module_key === CBTEST.run.focus; })[0];
+        if (!a) return '';
+        var done = a.total - a.untested;
+        return '<div style="margin-top:5px;font-size:var(--fs-1);padding:4px 7px;border-radius:6px;'
+          + (a.untested ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)')
+          + '">Focus ' + testEsc(a.module_key) + ' \u00b7 ' + done + ' of ' + a.total
+          + (a.untested ? ' \u00b7 ' + a.untested + ' still to run' : ' \u00b7 all run') + '</div>';
+      })() : (CBTEST.suggest ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">'
+          + 'Nothing has been run in ' + testEsc(CBTEST.suggest) + ' yet.</div>' : ''))
+    + '';
 
   /* ⚠️ THE HEAD IS WRITTEN SEPARATELY so that minimising can hide the body and keep this. */
   head.innerHTML = hd;
@@ -429,7 +472,28 @@ function testSetWho(v) {
   CBTEST.who = s;
 }
 
-function testSetArea(v) { CBTEST.area = v; CBTEST.open = null; testPaint(); }
+/**
+ * ⭐ A FOCUS IS A PROPERTY OF THE RUN, not of the device — so a sitting labelled "before release, suppliers"
+ * carries what it was meant to cover, and the results it produced can be read against that intention later.
+ */
+function testSetFocus(v) {
+  CBTEST.run.focus = v || '';
+  testRunSave();
+  /* ⚠️ CHOOSING A FOCUS MOVES YOU THERE. Setting it and then still looking at another module is the state
+     nobody wants and everybody would reach by accident. */
+  if (v) { CBTEST.area = v; CBTEST.open = null; }
+  testPaint();
+}
+
+function testSetArea(v) {
+  /* ⚠️ SAID, NOT PREVENTED. Wandering off a focus is often the right thing — something looked wrong on the
+     way past. It should just not happen without being noticed. */
+  if (CBTEST.run.focus && v !== CBTEST.run.focus && typeof toast === 'function') {
+    var a = CBTEST.cover.filter(function (x) { return x.module_key === CBTEST.run.focus; })[0];
+    if (a && a.untested) toast(a.untested + ' case(s) still to run in ' + CBTEST.run.focus);
+  }
+  CBTEST.area = v; CBTEST.open = null; testPaint();
+}
 function testSetKind(v) { CBTEST.run.kind = v; testRunSave(); testPaint(); }
 /**
  * ⭐⭐⭐ OPENING A CASE MARKS THE API LOG, so that marking it records WHICH CALLS THIS CASE MADE.
