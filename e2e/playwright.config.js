@@ -37,7 +37,13 @@ module.exports = defineConfig({
    */
   workers: 1,
   retries: 0,                  // a real break must show RED, not be retried away
-  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  /* ⭐ JUnit XML is the ADOPTED standard, not a format of ours: Playwright writes it, every CI reads it, and
+     Kiwi TCMS / TestRail / Allure all import it. `node post-results.cjs <token>` pushes this file to the test
+     board, so an automated run and a person tapping Pass on a phone land on the same board. ⚠ A spec's case
+     key must be in its title in brackets — `[CTR-05] a single click chooses` — which is the convention the
+     specs already follow; the ingest REPORTS any test whose name carries no key rather than dropping it. */
+  reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }],
+             ['junit', { outputFile: 'test-results/junit.xml' }]],
   use: {
     baseURL: process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app',
     viewport: COUNTER,         // the counter's real screen size

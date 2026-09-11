@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test board · Chit &amp; Bridge</title>
+<!--
+  THE TEST BOARD — the test cases as a thing you can tap, not a PDF you cannot write on.
+
+  Athi, 2026-09-11: "in the PDF we cannot update pass or fail. Can we have a simple application from our framework itself to create the
+  test cases and update the status and the result, so we know that each of the test cases passed and who has tested? And we can always
+  append the use case. Also we can qualify with engine, transport, web, capability etc." Then: "pass/fail status for each run — unit test /
+  T1 / T2 / regression and so on, manual and so on."
+
+  ⭐⭐ NOTHING NEW WAS INVENTED UNDERNEATH IT. A test CASE is a `definition` of kind 'testcase' — authored, named, versioned, entity-isolated
+  by the same RLS as everything else — because it is the same kind of thing as a tax slab: a rule somebody declared that has to be quotable
+  months later against a result it produced. Only the RESULT ledger is new (b219), for the same reason the points ledger was: results
+  accumulate and a definition does not.
+
+  ⭐ AND THE RESULTS SPEAK A STANDARD. POST /api/testing/results/junit takes JUnit XML verbatim, which Playwright emits with one config line
+  and which Kiwi TCMS, TestRail and Allure all import. The automated suite and a person writing on a phone land on the same board, and
+  nothing here is a format anyone else would have to re-implement.
+
+  ⚠️ APPEND-ONLY. Tapping Pass twice writes two rows; the latest wins and the earlier one stays readable. That is deliberate: "failed on
+  Thursday, passed on Friday" is the useful sentence, and a flaky case shows as pass/fail/pass instead of collapsing into whatever was
+  tapped last.
+-->
+<style>
+  :root{
+    --font-ui:Inter,system-ui,-apple-system,sans-serif;
+    --ink:#20303b; --ink-2:#3a4048; --grey:#8a949c; --grey-2:#545A61;
+    --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
+    --blue:#3F66A6; --blue-tint:#E9F0FA;
+    --ok:#2c7a43; --ok-tint:#e6f4ea;
+    --bad:#b4453f; --bad-tint:#fbeceb;
+    --warn:#8a5a1e; --warn-tint:#fbf3e3;
+    --neutral-tint:#EEF1F5;
+    --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper);
+        font-size:var(--fs-3); font-variant-numeric:tabular-nums; -webkit-text-size-adjust:100%; }
+
+  header{ position:sticky; top:0; z-index:20; background:var(--card); border-bottom:1px solid var(--line); padding:9px 14px; }
+  .htop{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  h1{ font-size:var(--fs-4); margin:0; }
+  .sub{ color:var(--grey-2); font-size:var(--fs-2); }
+  .tally{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .t{ font-size:var(--fs-1); padding:2px 8px; border-radius:99px; border:1px solid var(--line); background:var(--paper); white-space:nowrap; }
+  .t b{ font-size:var(--fs-2); }
+  .t.pass{ background:var(--ok-tint); border-color:#bfe0c9; color:var(--ok); }
+  .t.fail{ background:var(--bad-tint); border-color:#eccbc9; color:var(--bad); }
+  .t.blocked{ background:var(--warn-tint); border-color:#e8d7ae; color:var(--warn); }
+  .t.todo{ background:var(--neutral-tint); color:var(--grey-2); }
+
+  .bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px;
+        border-bottom:1px solid var(--line); background:var(--card); }
+  .bar label{ font-size:var(--fs-1); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
+  select, input[type=text]{ font:inherit; font-size:var(--fs-2); padding:5px 7px; border:1px solid var(--line);
+        border-radius:7px; background:#fff; color:var(--ink); min-height:32px; }
+  input[type=text]{ min-width:120px; flex:1 1 140px; }
+  .btn{ font:inherit; font-size:var(--fs-2); padding:6px 11px; border:1px solid var(--line); border-radius:8px;
+        background:var(--card); color:var(--ink); cursor:pointer; white-space:nowrap; min-height:32px; }
+  .btn.pri{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  .btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
+
+  main{ padding:12px 14px 80px; max-width:980px; margin:0 auto; }
+  .mod{ margin:0 0 18px; }
+  .modhead{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin:0 0 7px; }
+  .modhead h2{ font-size:var(--fs-3); margin:0; letter-spacing:.02em; }
+  .modhead .k{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:#fff; background:var(--grey-2);
+        border-radius:5px; padding:1px 6px; }
+  .modhead .intro{ flex:1 1 100%; color:var(--grey-2); font-size:var(--fs-1); line-height:1.5; }
+
+  .case{ background:var(--card); border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  .case.pass{ border-left:4px solid var(--ok); }
+  .case.fail{ border-left:4px solid var(--bad); }
+  .case.blocked{ border-left:4px solid var(--warn); }
+  .case.skipped{ border-left:4px solid var(--grey); }
+  .chead{ display:flex; gap:9px; align-items:flex-start; padding:9px 11px; cursor:pointer; }
+  .chead .key{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); font-weight:700; color:var(--grey-2);
+        background:var(--neutral-tint); border-radius:5px; padding:2px 6px; white-space:nowrap; }
+  .chead .ttl{ flex:1; min-width:0; font-weight:600; line-height:1.35; font-size:var(--fs-2); }
+  .chead .ttl .last{ display:block; font-weight:400; color:var(--grey-2); font-size:var(--fs-1); margin-top:3px; }
+  .chead .ttl .last.fail{ color:var(--bad); }
+  .pri{ font-size:var(--fs-1); color:var(--grey-2); white-space:nowrap; }
+  .lay{ font-size:var(--fs-1); border:1px solid var(--line); border-radius:99px; padding:1px 7px; color:var(--grey-2);
+        background:var(--paper); white-space:nowrap; }
+
+  .body{ padding:0 11px 11px; border-top:1px solid var(--line-2); }
+  .meta{ font-size:var(--fs-1); color:var(--grey-2); margin:8px 0; line-height:1.6; }
+  .meta b{ color:var(--ink-2); }
+  table.steps{ width:100%; border-collapse:collapse; font-size:var(--fs-2); margin:6px 0 2px; }
+  table.steps th{ text-align:left; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em;
+        color:var(--grey-2); border-bottom:1px solid var(--line); padding:4px 6px; font-weight:700; }
+  table.steps td{ border-bottom:1px solid var(--line-2); padding:6px; vertical-align:top; line-height:1.45; }
+  table.steps td.n{ width:22px; color:var(--grey); font-size:var(--fs-1); }
+  .note{ font-size:var(--fs-1); color:var(--grey-2); line-height:1.55; background:var(--paper);
+        border:1px solid var(--line-2); border-radius:8px; padding:7px 9px; margin:8px 0 0; }
+  .acts{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .acts .btn.pass{ background:var(--ok-tint); border-color:#bfe0c9; color:var(--ok); font-weight:700; }
+  .acts .btn.fail{ background:var(--bad-tint); border-color:#eccbc9; color:var(--bad); font-weight:700; }
+  .acts .btn.blocked{ background:var(--warn-tint); border-color:#e8d7ae; color:var(--warn); font-weight:700; }
+  .acts input[type=text]{ flex:1 1 100%; }
+  .hist{ font-size:var(--fs-1); color:var(--grey-2); margin-top:8px; line-height:1.6; }
+  .hist .r{ display:block; }
+
+  .say{ padding:14px; background:var(--card); border:1px solid var(--line); border-radius:10px; line-height:1.6; }
+  .say b{ display:block; margin-bottom:5px; }
+  .hide{ display:none !important; }
+  @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="htop">
+    <h1>Test board</h1>
+    <span class="sub" id="who">…</span>
+  </div>
+  <div class="tally" id="tally"></div>
+</header>
+
+<div class="bar">
+  <label for="f_mod">Module</label>
+  <select id="f_mod" onchange="paint()"><option value="">All</option></select>
+  <label for="f_state">Show</label>
+  <select id="f_state" onchange="paint()">
+    <option value="">Everything</option>
+    <option value="todo">Not yet tested</option>
+    <option value="fail">Failed or blocked</option>
+    <option value="pass">Passed</option>
+  </select>
+  <input type="text" id="f_q" placeholder="Search a case…" oninput="paint()">
+</div>
+
+<div class="bar">
+  <label for="f_kind">Recording as</label>
+  <select id="f_kind" onchange="saveRun()">
+    <option value="manual">Manual</option>
+    <option value="t0">T0 · guard</option>
+    <option value="t1">T1 · one spec</option>
+    <option value="t2">T2 · scoped</option>
+    <option value="t3">T3 · full</option>
+    <option value="unit">Unit</option>
+    <option value="regression">Regression</option>
+  </select>
+  <input type="text" id="f_run" placeholder="This sitting, e.g. v2.0 before release" oninput="saveRun()">
+  <button class="btn" onclick="newRun()" title="Start a fresh run — the results already recorded stay where they are">New run</button>
+</div>
+
+<main id="main"><div class="say">Reading the board…</div></main>
+
+<script>
+var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+
+/**
+ * ⚠️ THE SESSION COMES OFF DISK, exactly as the offer lab reads it. This page is a tool for somebody already
+ * signed in on this browser; asking them to sign in twice would be asking for a second credential to reach data
+ * the first one already opens.
+ */
+function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) { return null; } }
+
+var CASES = [], LAST = {}, OPEN = {}, RUN = null;
+
+/* ── the run this sitting belongs to ─────────────────────────────────────────────────────────────────────────
+ * ⭐ IT SURVIVES A RELOAD. A run is a sitting, and a sitting includes closing the tab to go and look at
+ * something. Losing the run id on refresh would scatter one afternoon's testing across nine "runs". */
+function loadRun(){
+  try { RUN = JSON.parse(localStorage.getItem('cb_testrun') || 'null'); } catch (_) { RUN = null; }
+  if (!RUN || !RUN.id) RUN = { id: uuid(), label: '', kind: 'manual' };
+  document.getElementById('f_run').value = RUN.label || '';
+  document.getElementById('f_kind').value = RUN.kind || 'manual';
+}
+function saveRun(){
+  RUN.label = document.getElementById('f_run').value.trim();
+  RUN.kind = document.getElementById('f_kind').value;
+  try { localStorage.setItem('cb_testrun', JSON.stringify(RUN)); } catch (_) {}
+}
+function newRun(){
+  RUN = { id: uuid(), label: '', kind: document.getElementById('f_kind').value };
+  document.getElementById('f_run').value = '';
+  saveRun();
+  say('Started a new run. Results already recorded are untouched — nothing here is ever overwritten.');
+}
+function uuid(){
+  if (crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+    var r = Math.random()*16|0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+}
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){
+  return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]; }); }
+
+/** ⚠️ "3 minutes ago" is what a tester wants; a timestamp is what a log wants. */
+function ago(iso){
+  if (!iso) return '';
+  var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 90) return 'just now';
+  if (s < 5400) return Math.round(s/60) + ' min ago';
+  if (s < 172800) return Math.round(s/3600) + ' h ago';
+  return new Date(iso).toLocaleDateString();
+}
+
+async function call(path, opts){
+  var s = sess();
+  if (!s || !s.token) throw new Error('Sign in to the app on this browser first, then reload this page.');
+  var o = opts || {};
+  var r = await fetch(API + path, {
+    method: o.method || 'GET',
+    headers: Object.assign({ Authorization: 'Bearer ' + s.token }, o.body ? { 'Content-Type': 'application/json' } : {}),
+    body: o.body ? JSON.stringify(o.body) : undefined,
+  });
+  var j = await r.json().catch(function(){ return {}; });
+  if (!r.ok) throw new Error(j.message || j.error || (r.status + ''));
+  return j;
+}
+
+function say(msg, bad){
+  var m = document.getElementById('main');
+  var el = document.createElement('div');
+  el.className = 'say';
+  el.style.borderColor = bad ? '#eccbc9' : 'var(--line)';
+  el.textContent = msg;
+  m.insertBefore(el, m.firstChild);
+  setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 6000);
+}
+
+async function load(){
+  var s = sess();
+  document.getElementById('who').textContent = s ? ((s.entity || s.name || 'your business') + ' · signed in') : 'not signed in';
+  try {
+    /* two calls, not one per case — see the round-trip note in routes/testing.js */
+    var a = await call('/api/testing/cases');
+    var b = await call('/api/testing/results');
+    CASES = a.cases || [];
+    LAST = {};
+    (b.results || []).forEach(function(r){
+      /* ⭐ ONE HEADLINE PER CASE. A case may hold results at two layers; the board shows the WORST of them,
+         because a green unit test beside a red counter is not a green case. */
+      var cur = LAST[r.case_key];
+      var rank = { fail: 4, blocked: 3, skipped: 2, pass: 1 };
+      if (!cur || rank[r.status] > rank[cur.status] ||
+          (rank[r.status] === rank[cur.status] && new Date(r.at) > new Date(cur.at))) LAST[r.case_key] = r;
+    });
+    if (!CASES.length) {
+      document.getElementById('main').innerHTML =
+        '<div class="say"><b>No test cases on the board yet.</b>Run <code>node C:\\dev\\load-test-cases.cjs &lt;token&gt;</code> '
+        + 'to put the documented cases in. The document stays the source of truth for the wording; this board holds the results.</div>';
+      return;
+    }
+    fillModules();
+    paint();
+  } catch (e) {
+    document.getElementById('main').innerHTML = '<div class="say"><b>Could not read the board.</b>' + esc(e.message) + '</div>';
+  }
+}
+
+function fillModules(){
+  var sel = document.getElementById('f_mod'), seen = {};
+  CASES.forEach(function(c){ if (!seen[c.module_key]) { seen[c.module_key] = c.module_name || c.module_key;
+    var o = document.createElement('option'); o.value = c.module_key;
+    o.textContent = c.module_key + ' · ' + (c.module_name || ''); sel.appendChild(o); } });
+}
+
+function shown(){
+  var mod = document.getElementById('f_mod').value;
+  var st = document.getElementById('f_state').value;
+  var q = document.getElementById('f_q').value.trim().toLowerCase();
+  return CASES.filter(function(c){
+    if (mod && c.module_key !== mod) return false;
+    var last = LAST[c.case_key];
+    if (st === 'todo' && last) return false;
+    if (st === 'pass' && (!last || last.status !== 'pass')) return false;
+    if (st === 'fail' && (!last || (last.status !== 'fail' && last.status !== 'blocked'))) return false;
+    if (q && (c.case_key + ' ' + (c.title || '')).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+
+function tally(){
+  var n = { pass:0, fail:0, blocked:0, skipped:0, todo:0 };
+  CASES.forEach(function(c){ var l = LAST[c.case_key]; if (!l) n.todo++; else n[l.status]++; });
+  var h = '';
+  if (n.pass)    h += '<span class="t pass"><b>' + n.pass + '</b> passed</span>';
+  if (n.fail)    h += '<span class="t fail"><b>' + n.fail + '</b> failed</span>';
+  if (n.blocked) h += '<span class="t blocked"><b>' + n.blocked + '</b> blocked</span>';
+  if (n.skipped) h += '<span class="t"><b>' + n.skipped + '</b> skipped</span>';
+  if (n.todo)    h += '<span class="t todo"><b>' + n.todo + '</b> not yet tested</span>';
+  h += '<span class="t">' + CASES.length + ' cases</span>';
+  document.getElementById('tally').innerHTML = h;
+}
+
+function paint(){
+  tally();
+  var list = shown(), byMod = {}, order = [];
+  list.forEach(function(c){ if (!byMod[c.module_key]) { byMod[c.module_key] = []; order.push(c.module_key); }
+    byMod[c.module_key].push(c); });
+
+  if (!list.length) { document.getElementById('main').innerHTML =
+    '<div class="say"><b>Nothing matches.</b>Clear the search or choose a different filter.</div>'; return; }
+
+  var h = '';
+  order.forEach(function(k){
+    var first = byMod[k][0];
+    h += '<section class="mod"><div class="modhead"><span class="k">' + esc(k) + '</span>'
+       + '<h2>' + esc(first.module_name || '') + '</h2>'
+       + (first.intro ? '<div class="intro">' + esc(first.intro) + '</div>' : '') + '</div>';
+    byMod[k].forEach(function(c){ h += caseHTML(c); });
+    h += '</section>';
+  });
+  document.getElementById('main').innerHTML = h;
+}
+
+function caseHTML(c){
+  var l = LAST[c.case_key], st = l ? l.status : '';
+  var open = !!OPEN[c.case_key];
+  var last = l
+    ? '<span class="last ' + (st === 'fail' ? 'fail' : '') + '">' + st.toUpperCase()
+      + ' · ' + esc(l.tester_name || '') + ' · ' + ago(l.at)
+      + (l.run_kind ? ' · ' + esc(l.run_kind) : '') + (l.note ? ' — ' + esc(l.note) : '') + '</span>'
+    : '<span class="last">not tested yet</span>';
+
+  var h = '<article class="case ' + st + '" id="c_' + esc(c.case_key) + '">'
+    + '<div class="chead" onclick="toggle(\'' + esc(c.case_key) + '\')">'
+    +   '<span class="key">' + esc(c.case_key) + '</span>'
+    +   '<span class="ttl">' + esc(c.title || '') + last + '</span>'
+    +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
+    +   '<span class="pri">' + esc(c.priority || '') + '</span>'
+    + '</div>';
+
+  if (open) {
+    h += '<div class="body">';
+    if (c.pre)  h += '<div class="meta"><b>Before you start:</b> ' + esc(c.pre) + '</div>';
+    if (c.data) h += '<div class="meta"><b>Use:</b> ' + esc(c.data) + '</div>';
+    if ((c.steps || []).length) {
+      h += '<table class="steps"><tr><th></th><th>Do this</th><th>You should see</th></tr>';
+      c.steps.forEach(function(s, i){
+        h += '<tr><td class="n">' + (i+1) + '</td><td>' + esc(s[0]) + '</td><td>' + esc(s[1]) + '</td></tr>'; });
+      h += '</table>';
+    }
+    if (c.note) h += '<div class="note">' + esc(c.note) + '</div>';
+
+    h += '<div class="acts">'
+      +  '<input type="text" id="n_' + esc(c.case_key) + '" placeholder="What did you see? (kept with the result)">'
+      +  '<button class="btn pass"    onclick="mark(\'' + esc(c.case_key) + '\',\'pass\')">Pass</button>'
+      +  '<button class="btn fail"    onclick="mark(\'' + esc(c.case_key) + '\',\'fail\')">Fail</button>'
+      +  '<button class="btn blocked" onclick="mark(\'' + esc(c.case_key) + '\',\'blocked\')">Blocked</button>'
+      +  '<button class="btn"         onclick="mark(\'' + esc(c.case_key) + '\',\'skipped\')">Skip</button>'
+      +  '<button class="btn"         onclick="caseHistory(\'' + esc(c.case_key) + '\')">History</button>'
+      + '</div>'
+      + '<div class="hist" id="h_' + esc(c.case_key) + '"></div>'
+      + '</div>';
+  }
+  return h + '</article>';
+}
+
+function toggle(k){ OPEN[k] = !OPEN[k]; repaintCase(k); }
+
+/**
+ * ⭐⭐ REPAINT THE ROW, NEVER THE PAGE. Standing rule, and it matters most here: repainting the board would
+ * collapse every case a tester had open and scroll them back to the top, in the middle of working through a
+ * module. One card changes, everything else stays exactly where it was.
+ */
+function repaintCase(k){
+  var el = document.getElementById('c_' + k);
+  var c = CASES.filter(function(x){ return x.case_key === k; })[0];
+  if (!el || !c) { paint(); return; }
+  var tmp = document.createElement('div');
+  tmp.innerHTML = caseHTML(c);
+  el.parentNode.replaceChild(tmp.firstChild, el);
+  tally();
+}
+
+async function mark(k, status){
+  var box = document.getElementById('n_' + k);
+  var note = box ? box.value.trim() : '';
+  var c = CASES.filter(function(x){ return x.case_key === k; })[0] || {};
+  saveRun();
+  try {
+    var r = await call('/api/testing/results', { method:'POST', body: {
+      run_id: RUN.id, run_label: RUN.label || null,
+      results: [{ case_key: k, module_key: c.module_key, status: status,
+                  run_kind: RUN.kind || 'manual', layer: c.layer || null, note: note || null }] }});
+    /* ⚠️ take the row the SERVER wrote, not the one we hoped it would — the time and the tester come from it */
+    var saved = (r.results || [])[0];
+    LAST[k] = Object.assign({ case_key:k, status:status, note:note, run_kind:RUN.kind,
+                              tester_name:(sess()||{}).name || 'you', at:new Date().toISOString() }, saved || {});
+    OPEN[k] = (status === 'fail' || status === 'blocked');   /* a failure stays open — you are about to write a note */
+    repaintCase(k);
+  } catch (e) { say('Not recorded: ' + e.message, true); }
+}
+
+/* ⚠ NOT `history` — a top-level function of that name writes to `window.history`, which is a read-only
+   accessor on Window. The assignment fails silently in strict-ish contexts and the button does nothing. */
+async function caseHistory(k){
+  var box = document.getElementById('h_' + k);
+  if (!box) return;
+  box.textContent = 'reading…';
+  try {
+    var r = await call('/api/testing/results?case_key=' + encodeURIComponent(k));
+    var rows = r.results || [];
+    if (!rows.length) { box.textContent = 'Nothing recorded for this case yet.'; return; }
+    /* ⭐ every row, oldest at the bottom — a flaky case is only visible as a sequence */
+    box.innerHTML = rows.map(function(x){
+      return '<span class="r">' + esc(x.status.toUpperCase()) + ' · ' + esc(x.tester_name || '')
+        + ' · ' + esc(x.run_kind) + (x.layer ? ' · ' + esc(x.layer) : '')
+        + ' · ' + new Date(x.at).toLocaleString()
+        + (x.run_label ? ' · ' + esc(x.run_label) : '')
+        + (x.note ? ' — ' + esc(x.note) : '')
+        + (x.case_version ? ' <i>(case v' + x.case_version + ')</i>' : '') + '</span>'; }).join('');
+  } catch (e) { box.textContent = e.message; }
+}
+
+loadRun();
+load();
+</script>
+</body>
+</html>

@@ -1892,6 +1892,13 @@ const EP = {
   defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
   defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
   defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
+  /* ⭐ THE TEST BOARD (b219). Cases are `definition`s of kind 'testcase', so nothing here is a new kind of
+     record — only the RESULT ledger is new, because results accumulate and a definition does not. */
+  testCases:       {m:"GET",   p:"/api/testing/cases",           ok:"y"},
+  testCaseAdd:     {m:"POST",  p:"/api/testing/cases/import",    ok:"y"},   // upsert by case key → a NEW VERSION on an edit
+  testResults:     {m:"GET",   p:"/api/testing/results",         ok:"y"},   // default: the latest word per (case, layer)
+  testRecord:      {m:"POST",  p:"/api/testing/results",         ok:"y"},   // ⚠ APPEND ONLY — a re-test is a new row
+  testRuns:        {m:"GET",   p:"/api/testing/runs",            ok:"y"},
   defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
   defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
@@ -2716,8 +2723,8 @@ function renderRegister(){
        Only the entity ever registers. Employees are created by the business, network stores are minted by their
        parent, and customers register at a storefront automatically. */
     form = `${onbBanner()}<label class="fl">User ID <span ${muted}>(Register.UserID)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
-       <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · letters, numbers and dashes · no {at} or {dot} — those make an employee or a network store.{br}{fixed} Your business name can be anything, and you set it after signing in.', {
-        at: '<b>@</b>', dot: '<b>.</b>', br: '<br>',
+       <div style="font-size:var(--fs-1);color:var(--grey);margin:-2px 0 8px;line-height:1.5">${txf('8 characters or more · lowercase letters, numbers and dashes — nothing else.{br}No spaces, and no punctuation: {at} {dot} {tilde} each already mean something here — they make an employee, a network store, and a supplier you write down yourself — so they are kept for that.{br}{fixed} Your business name can be anything you like, spaces and all, and you set it after signing in.', {
+        at: '<b>@</b>', dot: '<b>.</b>', tilde: '<b>~</b>', br: '<br>',
         fixed: '<b>' + tx('This cannot be changed later.') + '</b>' })}</div>
        <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
@@ -2759,7 +2766,15 @@ async function doRegister(){
     if(uid.indexOf("@")>=0){ R.err='A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.'; return renderRegister(); }
     if(uid.indexOf(".")>=0){ R.err='A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.'; return renderRegister(); }
     if(uid.length<8){ R.err='A User ID is at least 8 characters. "'+uid+'" is '+uid.length+'.'; return renderRegister(); }
-    if(!/^[a-z0-9][a-z0-9-]*$/.test(uid)||/-$/.test(uid)){ R.err="A User ID can use letters, numbers and dashes, starting with a letter or number."; return renderRegister(); }
+    if(!/^[a-z0-9][a-z0-9-]*$/.test(uid)||/-$/.test(uid)){
+      /* ⚠ SAY WHICH CHARACTER. "letters, numbers and dashes" makes the person re-read their own typing to find
+         what offended; the first bad character is something we already know. */
+      var badch=(uid.match(/[^a-z0-9-]/)||[])[0];
+      R.err = badch
+        ? (badch===' ' ? 'A User ID cannot contain a space. Use a dash instead — corner-hardware.'
+                       : 'A User ID cannot contain "'+badch+'". Letters, numbers and dashes only — the rest are kept for internal use.')
+        : 'A User ID starts and ends with a letter or number — not a dash.';
+      return renderRegister(); }
     R.name=uid; R.email=v_email.trim();
   }
   R.err=""; R.busy=true; renderRegister();
@@ -3876,6 +3891,35 @@ function logout(){
     'Anything you have not saved on this screen is lost. You will need your one-time code to sign back in.',
     'Sign out', logoutNow, true);
 }
+/**
+ * ⭐ THE TEST-MODE CHECKBOX. Athi, 2026-09-11: *"like laptop, mobile, we enable test as a check box, and then say
+ * which area and bring the relevant test cases."*
+ *
+ * ⚠ IT LIVES IN THE AVATAR MENU, beside the theme picker and the language pack — with the things that change how
+ * YOU work rather than what the business does. It is not a business setting: turning it on must not be something a
+ * second person at the same shop inherits, and it must not reach the entity record at all.
+ *
+ * ⚠ THE CAPABILITY IS LAZY. cap-testing.js is not loaded until the box is ticked, so a shop that never tests pays
+ * nothing for it — the same rule every other capability follows.
+ */
+function testModeRowHTML(){
+  var on = false; try { on = localStorage.getItem("cb_testmode") === "1"; } catch(_){}
+  return `<button onclick="UI.avMenu=false;testModeToggle()" style="display:block;width:100%;text-align:start;border:0;
+      background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);
+      color:${on ? "var(--blue)" : "var(--on-card)"};font-weight:${on ? 700 : 400}">
+      ${on ? "☑" : "☐"} ${esc(tx("Testing"))}
+      <span style="display:block;font-size:var(--fs-1);color:var(--grey);font-weight:400;line-height:1.45;margin-top:2px">
+      ${esc(tx(on ? "The test panel is open on every screen." : "Show the test cases for whatever screen you are on."))}
+      </span></button>`;
+}
+function testModeToggle(){
+  var on = false; try { on = localStorage.getItem("cb_testmode") === "1"; } catch(_){}
+  if (on) { if (typeof testModeSet === "function") testModeSet(false);
+            else { try { localStorage.removeItem("cb_testmode"); } catch(_){} renderApp(); }
+            return; }
+  ensureCap("testing").then(function(){ testModeSet(true); })
+    .catch(function(){ if (typeof toast === "function") toast(tx("Could not load the testing panel."), true); });
+}
 function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}/* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */try{localStorage.removeItem('cb_sess');localStorage.removeItem(uk('cb_nav'));}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
@@ -4097,7 +4141,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-01j';
+const CB_BUILD = '2026-09-11a';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -4250,6 +4294,14 @@ function _renderApp(){
   const role=SESSION.role, M=MENUS[role]||MENUS.entity;
   const isEntityUser = (role!=='actor' && role!=='customer');
   if(role==="customer" && (UI.nav==="task"||UI.nav==="compose")) UI.nav="order";
+  /* ⭐ TEST MODE SURVIVES A RELOAD. The panel is where a tester keeps their place in a module, and the app
+     reloads constantly while being tested — that is what testing IS. Losing the panel on every reload would
+     mean re-opening it, re-choosing the area and re-finding the case, dozens of times an afternoon.
+     ⚠ Still lazy: this runs only when the box is already ticked. */
+  if(SESSION.token && !SESSION._testBooted){ SESSION._testBooted=true;
+    var _tm=false; try{ _tm = localStorage.getItem("cb_testmode")==="1"; }catch(_){}
+    if(_tm) ensureCap("testing").then(function(){ if(typeof testModeSet==="function") testModeSet(true); })
+              .catch(function(){}); }
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)
   if(SESSION.token && role!=="customer" && SESSION._hdChecked===undefined){ SESSION._hdChecked=true;
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) bgRenderApp(); }).catch(function(){}); }
@@ -4415,6 +4467,7 @@ function _renderApp(){
             }
             return out;
           })()}
+          ${testModeRowHTML()}
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
@@ -6515,7 +6568,7 @@ function addActorModal(){
   modal(`<div class="mhd"><div class="t">${tx('🧑‍💼 Add co-assist')}</div><div class="s">someone who acts for you</div></div>
    <div class="mbody"><label class="fl">${tx('Display name')}</label><input class="inp" id="ac_name" placeholder="e.g. Anitha">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">What you &amp; your team see in lists — can be their full name.</div>
-     <label class="fl" style="margin-top:11px">User ID <span style="color:var(--grey);font-weight:400">— how they sign in (not their name)</span></label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. anitha">
+     <label class="fl" style="margin-top:11px">User ID <span style="color:var(--grey);font-weight:400">— how they sign in (not their name)</span></label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. anitha" maxlength="12" autocapitalize="off" spellcheck="false">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
      <div style="background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:9px;font-size:var(--fs-2);color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
      <label class="fl" style="margin-top:11px">${tx('Hat (what they do)')}</label><select class="inp" id="ac_hat"><option value="act">${tx('Act — does the work (assignable)')}</option><option value="manager">${tx('Manager — acts + assigns/manages')}</option><option value="audit">${tx('Audit — review only')}</option><option value="mis">${tx('MIS — reports only')}</option><option value="view_only">${tx('View-only')}</option></select>
@@ -6528,6 +6581,9 @@ function addActorModal(){
 async function submitActor(){
   const name=val("ac_name"), key=(val("ac_key")||"").toLowerCase().trim(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
   if(!name||key.length<4){ if(err)err.textContent="A display name and a User ID of 4+ characters are required."; return; }
+  /* ⚠ 4–12, matching the server. Their sign-in JOINS this to the business's own User ID (key@business), so an
+     unbounded key here makes a login nobody can type. */
+  if(key.length>12){ if(err)err.textContent="A User ID is at most 12 characters — they sign in as "+key.slice(0,12)+"@"+(SESSION.handle||'yourbusiness')+", so it has to stay typeable."; return; }
   if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="User ID: lowercase letters and numbers only."; return; }
   try{ const r=await api("addActor",{body:{display_name:name,actor_key:key,hat:val("ac_hat")||'act'}});
     const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
