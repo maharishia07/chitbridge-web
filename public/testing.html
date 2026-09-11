@@ -148,6 +148,36 @@
   .bar-cov i{ display:block; height:100%; }
   .big{ color:var(--ok); font-weight:700; } .bad{ color:var(--bad); font-weight:700; }
   .warnn{ color:var(--warn); font-weight:700; } .dim{ color:var(--grey-2); }
+
+  /* ── ⭐ the totals ARE the third filter — see the note in the toolbar ── */
+  .tot{ display:flex; gap:13px; align-items:baseline; margin-inline-start:auto; flex-wrap:wrap; }
+  .tot b{ font-size:var(--fs-3); font-weight:700; font-variant-numeric:tabular-nums; cursor:pointer;
+          border-bottom:2px solid transparent; padding-bottom:1px; }
+  .tot b:hover{ border-bottom-color:var(--line); }
+  .tot b.on{ border-bottom-color:var(--blue); color:var(--blue); }
+  .tot b.bad{ color:var(--bad); } .tot b.bad.on{ border-bottom-color:var(--bad); }
+  .tot span{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:3px; }
+
+  /* ── ⭐ the expansion line · chips say their own name and their own count, so they need no legend ── */
+  .bar.chips{ gap:5px; padding-top:0; border-top:0; }
+  .chip{ font-size:var(--fs-1); border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+         border-radius:99px; padding:2px 9px; cursor:pointer; font-weight:600; }
+  .chip i{ font-style:normal; color:var(--grey-2); font-variant-numeric:tabular-nums; margin-inline-start:3px; }
+  .chip:hover{ border-color:var(--grey-2); }
+  .chip.on{ background:var(--blue); border-color:var(--blue); color:#fff; }
+  .chip.on i{ color:#fff; opacity:.75; }
+  .chip.clear{ border-style:dashed; color:var(--grey-2); font-weight:400; }
+  .chipnote{ font-size:var(--fs-1); color:var(--grey-2); align-self:center; margin-inline-start:6px; }
+
+  /* ── ⭐ completion, as a bar and a number: a fraction is not a progress report ── */
+  table.mtx td.sep, table.mtx th.sep{ border-inline-start:2px solid var(--line); width:6px; padding:0; }
+  table.mtx tr.foot td{ background:var(--paper); font-weight:700; border-top:2px solid var(--line); }
+  .pctcell{ min-width:88px; }
+  .pbar{ height:5px; background:var(--line-2); border-radius:99px; overflow:hidden; margin-bottom:3px; }
+  .pbar i{ display:block; height:100%; background:var(--ok); }
+  .pnum{ font-size:var(--fs-1); font-variant-numeric:tabular-nums; color:var(--grey-2); }
+  /* ⚠️ a column we KNOW should exist and does not carries its zero in the heading, so the gap is not silence */
+  .zeroflag{ font-style:normal; color:var(--warn); font-weight:700; }
   .scroll{ overflow-x:auto; }
 
   /* ── the completion report ── */
@@ -265,54 +295,65 @@
       title="Run a pure engine function on your own input, here, with no server">Try it</button>
   </div>
 </div>
+<!--
+  ── ⭐⭐⭐ TWO BOXES, NOT FIVE ────────────────────────────────────────────────────────────────────────────────
+
+  Athi, 2026-09-11: *"I spent time to understand what each dropdown is."* There were five, and three of them
+  answered questions nobody had asked: Show, By, and a Module list whose relationship to Reaches took a
+  paragraph to explain.
+
+  ⚠️⚠️ A FILTER A PERSON HAS TO DECODE IS NOT A FILTER, IT IS HOMEWORK. The board's own job is to make the
+  shape of the testing obvious; five controls made finding anything an exercise in remembering which box meant
+  what.
+
+  ⭐ So: WHAT KIND of test, WHERE it reaches, and the totals — in one line, with the counts inside the options
+  so the number and the choice are the same thing. The module breakdown became CHIPS on the line below, which
+  need no legend: they say their own name and their own count.
+-->
 <div class="bar">
-  <label for="f_mod">Module</label>
-  <select id="f_mod" onchange="paint()"><option value="">All</option></select>
-  <label for="f_state">Show</label>
-  <select id="f_state" onchange="paint()">
-    <option value="">Everything</option>
-    <option value="todo">Not yet tested</option>
-    <option value="fail">Failed or blocked</option>
-    <option value="pass">Passed</option>
-  </select>
   <!--
-    ⭐⭐ Athi, 2026-09-11: "say it is unit, integration and so on."
-    ⚠️ THE LEVELS ARE NOT INTERCHANGEABLE AND THE TITLES SAY SO. A green unit test and a green system test are
+    ⭐⭐ THE FIRST QUESTION IS WHAT KIND OF TEST, AND THE COUNT IS INSIDE THE CHOICE.
+
+    Athi: *"in the filter itself eng - count."* A dropdown that makes you pick blind and then look elsewhere for
+    the number is two steps where there should be one.
+
+    ⚠️⚠️ THE KINDS ARE NOT INTERCHANGEABLE AND THE TITLES SAY SO. A green unit test and a green system test are
     not the same amount of evidence, and the commonest way a coverage figure lies is by adding them together.
+
+    ⭐ PURPOSE WHERE A PERSON WOULD SAY PURPOSE. Athi: *"I guess it is only unit, integration, manual, pen,
+    performance etc."* A load test is a system test and nobody looks for it there, so performance and security
+    are their own entries — declared by name in classify-tests.cjs, because detecting them from the source put
+    money.test.js under performance and returned eighty-nine security files.
   -->
   <label for="f_type">Kind</label>
-  <select id="f_type" onchange="paint()">
-    <option value="">Every kind</option>
-    <option value="acceptance" title="A person deciding whether it does the job — the only kind that finds &quot;correct but useless&quot;">Acceptance · written for a person</option>
-    <option value="unit" title="One module on its own. Proves that function, and nothing about the product.">Unit</option>
-    <option value="integration" title="Several of our pieces wired together — a route over a stubbed database.">Integration</option>
-    <option value="system" title="The whole product: a real browser, a live API, or a real database.">System</option>
-    <option value="static" title="Reads the source and judges the text. Nothing is executed — real evidence, of a different thing.">Static · reads the code</option>
-    <option value="support" title="Not a test. A fixture or harness other tests stand on.">Support · not a test</option>
-  </select>
+  <select id="f_type" onchange="paint()"></select>
+
   <!--
-    ⭐⭐ AREA IS NOT MODULE. A test SITS in a module and REACHES into areas — api, middleware, engine, web,
-    database, connector. ⚠️ It is a visible control rather than hidden state set by the summary: an invisible
-    filter is a board quietly showing a third of itself while looking complete.
+    ⭐⭐ AND THE SECOND IS WHERE IT REACHES — api · middleware · engine · web · database · connector. Read from
+    what a file requires, reads off disk and calls over HTTP, so it is measured rather than filed by hand.
   -->
   <label for="f_area">Reaches</label>
-  <select id="f_area" onchange="paint()">
-    <option value="">Anywhere</option>
-    <option value="api">API</option>
-    <option value="middleware">Middleware</option>
-    <option value="engine">Engine</option>
-    <option value="web">Web</option>
-    <option value="database">Database</option>
-    <option value="connector">Connector</option>
-  </select>
-  <label for="f_auto">By</label>
-  <select id="f_auto" onchange="paint()">
-    <option value="">Anyone</option>
-    <option value="auto">The machine</option>
-    <option value="human">A person</option>
-  </select>
-  <input type="text" id="f_q" placeholder="Search a case…" oninput="paint()">
+  <select id="f_area" onchange="paint()"></select>
+
+  <input type="search" id="f_q" placeholder="Search a path, a module, a claim…" oninput="paint()">
+
+  <!--
+    ⭐⭐⭐ THE TOTALS ARE THE THIRD FILTER, SO THERE IS NO THIRD FILTER.
+    Athi: *"if we can bring the total cases / completed / remain in the same place we don't need a third filter
+    box."* Exactly right — "show me the ones not yet tested" and "how many are not yet tested" are the same
+    question asked twice, and it was a dropdown and a tally sitting in different places.
+    ⚠️ The hidden input keeps the one piece of state the rest of the board already reads; what changed is that a
+    person now clicks the number instead of decoding a menu.
+  -->
+  <span class="tot" id="f_tot"></span>
+  <input type="hidden" id="f_state" value="">
 </div>
+
+<!--
+  ⭐ THE EXPANSION LINE — Athi: *"in the second line the details about the ENG, expansion."* Chips need no
+  legend: each says its own name and its own count, and they narrow to whatever the two boxes above have left.
+-->
+<div class="bar chips" id="f_chips"></div>
 
 <div class="bar">
   <label for="f_kind">Recording as</label>
@@ -495,7 +536,7 @@ async function seed(){
 async function exportFeature(){
   var s = sess();
   if (!s || !s.token) { say('Sign in first.', true); return; }
-  var mod = document.getElementById('f_mod').value;
+  var mod = MODFILT;   /* the chip selection — Export .feature follows what is on screen */
   try {
     var r = await fetch(API + '/api/testing/cases/gherkin' + (mod ? '?module=' + encodeURIComponent(mod) : ''),
       { headers: { Authorization: 'Bearer ' + s.token } });
@@ -617,7 +658,7 @@ async function load(){
     /* ⚠️ the summary is derived from the same two reads — refresh it here or it shows yesterday */
     await loadSummary();
     if (VIEW === 'summary') { paintSummary(); return; }
-    fillModules();
+    fillFilters();
     paint();
   } catch (e) {
     document.getElementById('main').innerHTML = '<div class="say"><b>Could not read the board.</b>' + esc(e.message) + '</div>';
@@ -638,44 +679,114 @@ async function load(){
  * ⚠️ IT EXCLUDES ITS OWN FILTER. Counting with the module filter applied would leave exactly one option — the
  * one already chosen — and there would be no way back up.
  */
-function fillModules(){
-  var sel = document.getElementById('f_mod');
-  var keep = sel.value;
+/**
+ * ── ⭐⭐⭐ ONE FUNCTION FILLS BOTH BOXES, THE TOTALS AND THE CHIPS, AND EVERY COUNT IS OF WHAT IS LEFT ─────────
+ *
+ * Athi: *"in the filter itself eng - count, and in the second line the details about the ENG, expansion... so I
+ * don't need to think too much about the third filter."*
+ *
+ * ⚠️⚠️ A COUNT THAT IGNORES THE FILTERS ABOVE IT IS A LIE THAT LOOKS LIKE HELP. Pick `unit` and a static list
+ * still offers "Counter (18)" — eighteen cases, none of them a unit test, promising a drill-down it cannot
+ * deliver. So every number here is computed against the OTHER controls, and each control leaves its own out so
+ * there is always a way back up.
+ */
+var MODFILT = '';   /* the chip selection — a module, chosen from the expansion line rather than a dropdown */
+
+function fillFilters(){
   var ty = (document.getElementById('f_type') || {}).value || '';
-  var au = (document.getElementById('f_auto') || {}).value || '';
-  var st = (document.getElementById('f_state') || {}).value || '';
   var ar = (document.getElementById('f_area') || {}).value || '';
+  var st = (document.getElementById('f_state') || {}).value || '';
+  var q  = (document.getElementById('f_q') || {}).value.trim().toLowerCase();
 
-  var n = {}, name = {}, order = [];
-  CASES.forEach(function(c){
-    if (ty && c.test_type !== ty) return;
-    if (ar && (c.areas || []).indexOf(ar) < 0) return;
-    if (au === 'auto' && !c.automated) return;
-    if (au === 'human' && c.automated) return;
-    var last = LAST[c.case_key];
-    if (st === 'todo' && last) return;
-    if (st === 'pass' && (!last || last.status !== 'pass')) return;
-    if (st === 'fail' && (!last || (last.status !== 'fail' && last.status !== 'blocked'))) return;
-    if (!n[c.module_key]) { n[c.module_key] = 0; name[c.module_key] = c.module_name || ''; order.push(c.module_key); }
-    n[c.module_key]++;
-  });
+  /** does this case survive everything EXCEPT the named control? */
+  function keep(c, skip){
+    if (skip !== 'ty' && ty && c.test_type !== ty) return false;
+    if (skip !== 'ar' && ar && (c.areas || []).indexOf(ar) < 0) return false;
+    if (skip !== 'mod' && MODFILT && c.module_key !== MODFILT) return false;
+    if (skip !== 'st') {
+      var l = LAST[c.case_key];
+      if (st === 'todo' && l) return false;
+      if (st === 'done' && !l) return false;
+      if (st === 'fail' && (!l || (l.status !== 'fail' && l.status !== 'blocked'))) return false;
+    }
+    if (q && (c.case_key + ' ' + (c.title || '') + ' ' + (c.claim || '')).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }
 
-  /* ⚠ rebuilt from scratch — appending to a list that already has options is how a dropdown comes to offer the
-     same module three times after a reload. */
-  sel.innerHTML = '<option value="">All areas</option>';
-  order.forEach(function(k){
-    var o = document.createElement('option'); o.value = k;
-    o.textContent = k + ' · ' + name[k] + '  (' + n[k] + ')';
+  /* ── box 1 · the kind, counted ── */
+  var nk = {};
+  CASES.forEach(function(c){ if (keep(c, 'ty')) nk[c.test_type || '—'] = (nk[c.test_type || '—'] || 0) + 1; });
+  var sel = document.getElementById('f_type');
+  var total = CASES.filter(function(c){ return keep(c, 'ty'); }).length;
+  sel.innerHTML = '<option value="">Every kind (' + total + ')</option>';
+  KIND_ORDER.forEach(function(k){
+    /* ⚠️ AN EMPTY CATEGORY IS STILL OFFERED when we know it should exist — "Penetration (0)" says something
+       true; leaving it out lets the absence pass for "not applicable". */
+    var n = nk[k] || 0;
+    if (!n && !ALWAYS_SHOW[k]) return;
+    var o = document.createElement('option');
+    o.value = k; o.title = LEVEL_SAYS[k] || '';
+    o.textContent = KIND_LABEL[k] + ' (' + n + ')';
     sel.appendChild(o);
   });
-  /* ⚠ a chosen module that the new filter excludes must stay selectable, or choosing a kind silently widens the
-     board back out without saying it did */
-  if (keep && !n[keep]) {
-    var o = document.createElement('option'); o.value = keep;
-    o.textContent = keep + '  (0 of this kind)'; sel.appendChild(o);
+  sel.value = ty;
+
+  /* ── box 2 · where it reaches, counted ── */
+  var na = {}, noArea = 0;
+  CASES.forEach(function(c){
+    if (!keep(c, 'ar')) return;
+    var list = c.areas || [];
+    if (!list.length) { noArea++; return; }
+    list.forEach(function(a){ na[a] = (na[a] || 0) + 1; });
+  });
+  var sa = document.getElementById('f_area');
+  sa.innerHTML = '<option value="">Anywhere</option>';
+  AREA_ORDER.forEach(function(a){
+    if (!na[a]) return;
+    var o = document.createElement('option');
+    o.value = a; o.title = AREA_SAYS[a] || '';
+    o.textContent = AREA_LABEL[a] + ' (' + na[a] + ')';
+    sa.appendChild(o);
+  });
+  sa.value = ar;
+
+  /* ── the totals, which ARE the third filter ── */
+  var all = CASES.filter(function(c){ return keep(c, 'st'); });
+  var done = all.filter(function(c){ return LAST[c.case_key]; }).length;
+  var bad = all.filter(function(c){ var l = LAST[c.case_key];
+    return l && (l.status === 'fail' || l.status === 'blocked'); }).length;
+  var tot = document.getElementById('f_tot');
+  function n(val, label, key, cls){
+    return '<b class="t' + (st === key ? ' on' : '') + (cls ? ' ' + cls : '') + '" onclick="setState(\'' + key + '\')">'
+      + val + '</b> <span>' + label + '</span>';
   }
-  sel.value = keep;
+  tot.innerHTML = n(all.length, 'cases', '')
+    + n(done, 'tested', 'done')
+    + n(all.length - done, 'not yet', 'todo')
+    + (bad ? n(bad, 'failed', 'fail', 'bad') : '');
+
+  /* ── the expansion line · chips, which need no legend ── */
+  var nm = {}, label = {}, order = [];
+  CASES.forEach(function(c){
+    if (!keep(c, 'mod')) return;
+    if (!nm[c.module_key]) { nm[c.module_key] = 0; label[c.module_key] = c.module_name || ''; order.push(c.module_key); }
+    nm[c.module_key]++;
+  });
+  order.sort(function(a, b){ return nm[b] - nm[a]; });
+  var chips = document.getElementById('f_chips');
+  chips.innerHTML = order.length
+    ? order.map(function(k){
+        return '<button class="chip' + (MODFILT === k ? ' on' : '') + '" onclick="setMod(\'' + esc(k) + '\')" '
+          + 'title="' + esc(label[k]) + '">' + esc(k) + ' <i>' + nm[k] + '</i></button>';
+      }).join('') + (MODFILT ? '<button class="chip clear" onclick="setMod(\'\')">clear</button>' : '')
+    : '';
+  /* ⚠️ the unplaceable ones are reported rather than absorbed — see classify-tests.cjs */
+  if (noArea && !ar) chips.innerHTML += '<span class="chipnote">⚠ ' + noArea
+    + ' reach nothing we can name</span>';
 }
+
+function setState(v){ document.getElementById('f_state').value = v; paint(); }
+function setMod(k){ MODFILT = k; paint(); }
 
 /**
  * ⭐⭐ WHAT EACH LEVEL IS WORTH, in one sentence, on the badge itself.
@@ -684,6 +795,37 @@ function fillModules(){
  * test and reporting "2 passed" — and the person reading it has no way to know that one of them proved a
  * function and the other proved the product. The tooltip is where that stops being invisible.
  */
+/**
+ * ── ⭐⭐⭐ THE VOCABULARY, IN ONE PLACE, IN THE WORDS A PERSON USES ───────────────────────────────────────────
+ *
+ * Athi: *"I guess it is only unit, integration, manual, pen, performance etc."*
+ *
+ * ⚠️ `acceptance` is what the standard calls it; MANUAL is what everyone here calls it. The board shows the
+ * second and stores the first, because the stored word has to match ISO/IEC/IEEE 29119 for the report to mean
+ * anything to an outside reader, and the shown word has to match the person in the room.
+ */
+var KIND_ORDER = ['acceptance', 'unit', 'integration', 'system', 'performance', 'security', 'penetration',
+                  'static', 'support'];
+var KIND_LABEL = {
+  acceptance: 'Manual · a person runs it', unit: 'Unit', integration: 'Integration', system: 'System',
+  performance: 'Performance', security: 'Security', penetration: 'Penetration',
+  'static': 'Static · reads the code', support: 'Support · not a test',
+};
+/* ⚠️ offered even at zero: "Penetration (0)" states a fact; omitting it lets the absence read as "not applicable" */
+var ALWAYS_SHOW = { penetration: true };
+
+var AREA_ORDER = ['api', 'middleware', 'engine', 'web', 'database', 'connector'];
+var AREA_LABEL = { api: 'API', middleware: 'Middleware', engine: 'Engine', web: 'Web',
+                   database: 'Database', connector: 'Connector' };
+var AREA_SAYS = {
+  api: 'The endpoints — everything a client can call.',
+  middleware: 'What decides who may do what: auth, the hat gate, the key scopes.',
+  engine: 'The pure rules — money, tax, offers, numerals, document numbers.',
+  web: 'The screens: the counter, the app, the storefront.',
+  database: 'Schema, migrations and the isolation policies.',
+  connector: 'Tally, Zoho, and anything that carries a chit off the rail.',
+};
+
 var LEVEL_SAYS = {
   unit: 'Unit — one module, on its own. Proves that function, and nothing about the product.',
   integration: 'Integration — several of our pieces wired together (a route over a stubbed database).',
@@ -691,24 +833,24 @@ var LEVEL_SAYS = {
   acceptance: 'Acceptance — a person deciding whether it does the job. The only kind that finds "correct but useless".',
   'static': 'Static — reads the source and judges the TEXT. Nothing is executed; real evidence, of a different thing.',
   support: 'Support — not a test. A fixture or harness other tests stand on.',
+  performance: 'Performance — round trips, query shape, load and concurrency. Declared by name, not detected.',
+  security: 'Security — forged tokens, algorithm pinning, key scopes, tenant isolation, unguarded routes.',
+  penetration: 'Penetration — ⚠ there is none. The category is shown at zero so the absence cannot pass for '
+             + '"not applicable". scripts/penetration.js is MARKET penetration and is not a security test.',
 };
 
 function shown(){
-  var mod = document.getElementById('f_mod').value;
   var st = document.getElementById('f_state').value;
   var ty = document.getElementById('f_type').value;
-  var au = document.getElementById('f_auto').value;
   var ar = document.getElementById('f_area').value;
   var q = document.getElementById('f_q').value.trim().toLowerCase();
   return CASES.filter(function(c){
-    if (mod && c.module_key !== mod) return false;
+    if (MODFILT && c.module_key !== MODFILT) return false;
     if (ty && c.test_type !== ty) return false;
     if (ar && (c.areas || []).indexOf(ar) < 0) return false;
-    if (au === 'auto' && !c.automated) return false;
-    if (au === 'human' && c.automated) return false;
     var last = LAST[c.case_key];
     if (st === 'todo' && last) return false;
-    if (st === 'pass' && (!last || last.status !== 'pass')) return false;
+    if (st === 'done' && !last) return false;
     if (st === 'fail' && (!last || (last.status !== 'fail' && last.status !== 'blocked'))) return false;
     if (q && (c.case_key + ' ' + (c.title || '')).toLowerCase().indexOf(q) < 0) return false;
     return true;
@@ -1292,101 +1434,123 @@ function chartCard(title, ask, body, keys){
  * ⚠️ Computed from CASES, which is already in hand: a matrix like this over a server round trip would be a
  * second source of truth for a figure the page can add up itself.
  */
+/**
+ * ── ⭐⭐⭐ THE TABLE ATHI DREW ────────────────────────────────────────────────────────────────────────────────
+ *
+ *       Unit  Integration  Manual  UAT  Preprod  Pen  Performance
+ *   Eng   10       5         10     10
+ *   Web
+ *   Supplier
+ *
+ * Rows are where a test reaches, columns are what kind it is, and every row ends with the three numbers
+ * anybody asks next: how many, how many done, how many left — and the percentage, because a fraction is not a
+ * progress report.
+ *
+ * ── ⚠️⚠️ TWO OF HIS COLUMNS ARE NOT KINDS OF TEST, AND THEY ARE SHOWN ANYWAY ─────────────────────────────────
+ *
+ * UAT and PREPROD are not properties of a case; they are WHERE and WHEN a run happened. The same manual case
+ * is acceptance testing when we run it and user acceptance testing when a shopkeeper runs it before adopting —
+ * nothing about the case changes, only who held the mouse.
+ *
+ * ⭐ They are here, at zero, on purpose. There is no pre-production environment on this platform — everything
+ * is local or live — and no customer has yet run anything. Deleting the columns would let both facts pass for
+ * "not applicable"; showing them empty says the true thing, which is that this is the next gap to close.
+ * Filling them needs a run to carry an environment and a purpose, which is a migration (see §B of
+ * BACKLOG-nonfunctional.md).
+ */
 function matrixHTML(){
-  var KINDS = ['acceptance', 'unit', 'integration', 'system', 'static', 'support'];
-  var AREAS = ['api', 'middleware', 'engine', 'web', 'database', 'connector'];
-  var cell = {}, rowN = {}, colN = {}, none = 0;
+  /* the columns, in the order he wrote them, plus the ones the board already holds */
+  var COLS = [
+    { k: 'unit',        label: 'Unit' },
+    { k: 'integration', label: 'Integration' },
+    { k: 'acceptance',  label: 'Manual' },
+    { k: 'uat',         label: 'UAT',      empty: 'No customer has run a case yet. A manual case becomes UAT when a shopkeeper runs it before adopting — the case does not change, the runner does.' },
+    { k: 'preprod',     label: 'Preprod',  empty: 'There is no pre-production environment. Everything is local or live, which is why "system" here means the real thing.' },
+    { k: 'penetration', label: 'Pen',      empty: 'There is no penetration testing. scripts/penetration.js is MARKET penetration and is not one.' },
+    { k: 'performance', label: 'Performance' },
+    { k: 'security',    label: 'Security' },
+    { k: 'system',      label: 'System' },
+    { k: 'static',      label: 'Static' },
+  ];
+
+  var cell = {}, rowAll = {}, rowDone = {}, colN = {}, unplaced = 0, unplacedDone = 0;
   CASES.forEach(function(c){
     var t = c.test_type || '?';
+    var done = !!LAST[c.case_key];
     colN[t] = (colN[t] || 0) + 1;
-    var ar = c.areas || [];
-    if (!ar.length) { none++; return; }
-    /* ⚠️ a test reaching two areas is counted in BOTH, so the rows do not sum to the total — said below */
-    ar.forEach(function(a){
-      rowN[a] = (rowN[a] || 0) + 1;
+    var list = (c.areas || []);
+    if (!list.length) { unplaced++; if (done) unplacedDone++; return; }
+    /* ⚠️ a test reaching two areas is counted in both — the rows do not sum to the total, and the note says so */
+    list.forEach(function(a){
+      rowAll[a] = (rowAll[a] || 0) + 1;
+      if (done) rowDone[a] = (rowDone[a] || 0) + 1;
       cell[a + '|' + t] = (cell[a + '|' + t] || 0) + 1;
     });
   });
-  if (!Object.keys(rowN).length) return '';
 
-  /**
-   * ── ⭐⭐⭐ HAS IT EVER ACTUALLY RUN? ──────────────────────────────────────────────────────────────────────
-   *
-   * Athi, 2026-09-11: *"if a unit test is done, can we update it with when it last ran, so we know that this
-   * test case has been passed through?"*
-   *
-   * ⚠️⚠️ THE COUNT OF TESTS AND THE COUNT OF EVIDENCE ARE DIFFERENT NUMBERS, AND THE FIRST ONE FLATTERS. 97
-   * unit tests is a fact about the repository. How many of them have ever reported a result is a fact about
-   * the product, and it is the one a person asking "is this tested?" actually means.
-   *
-   * ⭐ NEVER RUN is therefore the column to read, not the pass rate. A level that is 100% green on four of
-   * ninety-seven is not 100% of anything.
-   */
-  var lvl = {};
-  CASES.forEach(function(c){
-    var t = c.test_type || '?';
-    var L = lvl[t] || (lvl[t] = { n: 0, pass: 0, fail: 0, never: 0, at: null });
-    L.n++;
-    var last = LAST[c.case_key];
-    if (!last) { L.never++; return; }
-    if (last.status === 'pass') L.pass++;
-    else if (last.status === 'fail' || last.status === 'blocked') L.fail++;
-    if (!L.at || (last.at && last.at > L.at)) L.at = last.at;
-  });
-  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Evidence by level</h2>'
+  var pct = function(done, all){ return all ? Math.round((done / all) * 100) : 0; };
+  var barCell = function(done, all){
+    var q = pct(done, all);
+    return '<td class="num"><b>' + all + '</b></td>'
+      + '<td class="num">' + (done ? '<span class="big">' + done + '</span>' : '<span class="dim">0</span>') + '</td>'
+      + '<td class="num">' + ((all - done) ? '<span class="warnn">' + (all - done) + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="num pctcell"><div class="pbar"><i style="width:' + q + '%"></i></div>'
+      + '<span class="pnum">' + q + '%</span></td>';
+  };
+
+  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">What is tested, where, and how far along</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
-    + 'How many tests exist at each level, and how many have ever reported a result. '
-    + '⚠️ <b>Never run</b> is the column to read: a level that is all green on four of ninety-seven is not '
-    + 'all green on anything.</div>'
-    + '<div class="scroll"><table class="sum"><tr><th>Level</th><th class="num">Tests</th>'
-    + '<th class="num">Passed</th><th class="num">Failed</th><th class="num">Never run</th>'
-    + '<th>Last result</th></tr>';
-  KINDS.forEach(function(t){
-    var L = lvl[t]; if (!L) return;
-    h += '<tr class="clickable" onclick="drill(\'\',\'' + t + '\')">'
-      + '<td><span class="lay ty ' + t + '" title="' + esc(LEVEL_SAYS[t] || '') + '">' + t + '</span></td>'
-      + '<td class="num"><b>' + L.n + '</b></td>'
-      + '<td class="num">' + (L.pass ? '<span class="big">' + L.pass + '</span>' : '<span class="dim">0</span>') + '</td>'
-      + '<td class="num">' + (L.fail ? '<span class="bad">' + L.fail + '</span>' : '<span class="dim">0</span>') + '</td>'
-      + '<td class="num">' + (L.never ? '<span class="warnn">' + L.never + '</span>' : '<span class="dim">—</span>') + '</td>'
-      + '<td class="dim">' + (L.at ? ago(L.at) : 'no result has ever been recorded') + '</td></tr>';
+    + 'Rows are where a test reaches; columns are what kind it is. <b>Done</b> means a result has ever been '
+    + 'recorded — not that it passed. ⚠️ A test reaching two areas is counted in both, so the rows do not add '
+    + 'up to ' + CASES.length + '. Click any number to open exactly those cases.</div>'
+    + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
+  COLS.forEach(function(c){
+    h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '">'
+      + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</th>';
   });
-  h += '</table></div>';
+  h += '<th class="num sep">Total</th><th class="num">Done</th><th class="num">Left</th>'
+    + '<th class="num">Complete</th></tr>';
 
-  h += '<h2 style="font-size:var(--fs-3);margin:22px 0 9px">Coverage by area and level</h2>'
-    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
-    + 'Which part of the system each test actually reaches — read from what a file requires, what it reads '
-    + 'off disk and what it calls over HTTP, not from where it sits. ⚠️ A test reaching two areas is '
-    + 'counted in both, so the rows do not sum to ' + CASES.length + '. Click any number to open those cases.'
-    + '</div>'
-    + '<div class="scroll"><table class="sum"><tr><th>Area</th>';
-  KINDS.forEach(function(t){ if (colN[t]) h += '<th class="num" title="' + esc(LEVEL_SAYS[t] || '') + '">' + t + '</th>'; });
-  h += '<th class="num">Tests</th></tr>';
-
-  AREAS.forEach(function(a){
-    if (!rowN[a]) return;
-    h += '<tr><td><span class="area">' + esc(a) + '</span></td>';
-    KINDS.forEach(function(t){
-      if (!colN[t]) return;
-      var n = cell[a + '|' + t] || 0;
+  AREA_ORDER.forEach(function(a){
+    if (!rowAll[a]) return;
+    h += '<tr><td><span class="area">' + esc(AREA_LABEL[a]) + '</span>'
+       + '<span class="sub">' + esc(AREA_SAYS[a] || '') + '</span></td>';
+    COLS.forEach(function(c){
+      var n = cell[a + '|' + c.k] || 0;
       h += '<td class="num">' + (n
-        ? '<span class="big clickable" onclick="drill(\'' + a + '\',\'' + t + '\')">' + n + '</span>'
+        ? '<span class="big clickable" onclick="drill(\'' + a + '\',\'' + c.k + '\')">' + n + '</span>'
         : '<span class="dim">—</span>') + '</td>';
     });
-    h += '<td class="num"><b class="clickable" onclick="drill(\'' + a + '\',\'\')">' + rowN[a] + '</b></td></tr>';
+    h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
+    h += '</tr>';
   });
 
-  h += '<tr><td><b>Every area</b></td>';
-  KINDS.forEach(function(t){
-    if (!colN[t]) return;
-    h += '<td class="num"><b class="clickable" onclick="drill(\'\',\'' + t + '\')">' + colN[t] + '</b></td>';
+  /* ── the bottom line ── */
+  var allDone = CASES.filter(function(c){ return LAST[c.case_key]; }).length;
+  h += '<tr class="foot"><td><b>Everything</b></td>';
+  COLS.forEach(function(c){
+    var n = colN[c.k] || 0;
+    h += '<td class="num">' + (n
+      ? '<b class="clickable" onclick="drill(\'\',\'' + c.k + '\')">' + n + '</b>'
+      : '<span class="dim">0</span>') + '</td>';
   });
-  h += '<td class="num"><b>' + CASES.length + '</b></td></tr></table></div>';
-  /* ⚠️ said out loud rather than absorbed into a row: a measurement that could not place something must report
-     it, or the table quietly claims to cover everything. */
-  if (none) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 14px">⚠ ' + none
-    + ' test(s) reach nothing this measurement can name. They are in the totals and out of this table — '
-    + 'filing them somewhere plausible would be worse than leaving them visible.</div>';
+  h += '<td class="sep"></td>' + barCell(allDone, CASES.length) + '</tr>';
+  h += '</table></div>';
+
+  /* ⚠️ what the table could not place, said out loud rather than absorbed into a row */
+  if (unplaced) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 8px">⚠ ' + unplaced
+    + ' test(s) reach nothing this measurement can name (' + unplacedDone + ' of them run). They are in '
+    + 'the bottom line and out of the rows — filing them somewhere plausible would be worse than leaving them '
+    + 'visible.</div>';
+
+  /* ⚠️⚠️ and the empty columns explain themselves, because an empty column invites the reader to assume */
+  var blanks = COLS.filter(function(c){ return c.empty && !colN[c.k]; });
+  if (blanks.length) {
+    h += '<div class="why-note" style="margin:2px 0 18px"><b>Three columns are empty, and each is a different '
+      + 'kind of nothing.</b><ul style="margin:6px 0 0;padding-inline-start:18px;line-height:1.6">'
+      + blanks.map(function(c){ return '<li><b>' + c.label + '</b> — ' + esc(c.empty) + '</li>'; }).join('')
+      + '</ul></div>';
+  }
   return h;
 }
 
@@ -1397,10 +1561,9 @@ function matrixHTML(){
  */
 function drill(area, type){
   document.getElementById('f_area').value = area;
-  document.getElementById('f_mod').value = '';
   document.getElementById('f_type').value = type;
   document.getElementById('f_state').value = '';
-  document.getElementById('f_auto').value = '';
+  MODFILT = '';
   setView('cases');
 }
 
@@ -1488,7 +1651,7 @@ async function paintSummary(){
 
 /** a row in the coverage table takes you to that area, on the Cases tab — the summary is for deciding, the cases are for doing */
 function jumpTo(mod){
-  document.getElementById('f_mod').value = mod;
+  MODFILT = mod;
   document.getElementById('f_state').value = 'todo';
   setView('cases');
 }
@@ -1525,7 +1688,7 @@ async function openRun(id){
 function paint(){
   tally();
   /* ⭐ the next level down is recomputed every time, so each choice narrows the one below it */
-  fillModules();
+  fillFilters();
   var list = shown(), byMod = {}, order = [];
   list.forEach(function(c){ if (!byMod[c.module_key]) { byMod[c.module_key] = []; order.push(c.module_key); }
     byMod[c.module_key].push(c); });
