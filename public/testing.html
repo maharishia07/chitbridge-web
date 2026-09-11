@@ -107,6 +107,31 @@
 
   .say{ padding:14px; background:var(--card); border:1px solid var(--line); border-radius:10px; line-height:1.6; }
   .say b{ display:block; margin-bottom:5px; }
+  /* ── the summary: coverage by area, and the sittings ── */
+  .tabs{ display:flex; gap:4px; }
+  .tabs button{ font:inherit; font-size:var(--fs-2); padding:6px 13px; border:1px solid var(--line);
+        background:var(--card); color:var(--grey-2); border-radius:8px; cursor:pointer; min-height:32px; }
+  .tabs button.on{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
+  table.sum{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line);
+        border-radius:11px; overflow:hidden; font-size:var(--fs-2); margin-bottom:22px; }
+  table.sum th{ text-align:start; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em;
+        color:var(--grey-2); font-weight:700; padding:9px 11px; background:var(--neutral-tint);
+        border-bottom:1px solid var(--line); white-space:nowrap; }
+  table.sum td{ padding:9px 11px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
+  table.sum tr:last-child td{ border-bottom:0; }
+  table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap; }
+  table.sum .area{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
+  table.sum .sub{ display:block; color:var(--grey-2); font-size:var(--fs-1); font-weight:400; }
+  table.sum tr.clickable{ cursor:pointer; }
+  table.sum tr.clickable:hover td{ background:var(--blue-tint); }
+  /* ⭐ ONE BAR, READ AT A GLANCE. A row of numbers is arithmetic; a bar is a state. */
+  .bar-cov{ display:flex; height:7px; border-radius:4px; overflow:hidden; background:var(--neutral-tint);
+        min-width:90px; }
+  .bar-cov i{ display:block; height:100%; }
+  .big{ color:var(--ok); font-weight:700; } .bad{ color:var(--bad); font-weight:700; }
+  .warnn{ color:var(--warn); font-weight:700; } .dim{ color:var(--grey-2); }
+  .scroll{ overflow-x:auto; }
+
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
@@ -121,6 +146,14 @@
   <div class="tally" id="tally"></div>
 </header>
 
+<div class="bar">
+  <!-- ⭐ Athi, 2026-09-11: "where can we see the summary result?" — the totals endpoint existed and nothing
+       rendered it. An endpoint with no screen is a number nobody reads. -->
+  <div class="tabs">
+    <button id="t_cases" class="on" onclick="setView('cases')">Cases</button>
+    <button id="t_sum" onclick="setView('summary')">Summary</button>
+  </div>
+</div>
 <div class="bar">
   <label for="f_mod">Module</label>
   <select id="f_mod" onchange="paint()"><option value="">All</option></select>
@@ -336,6 +369,9 @@ async function load(){
         + 'the wording and leaves every result exactly where it is.</div></div>';
       return;
     }
+    /* ⚠️ the summary is derived from the same two reads — refresh it here or it shows yesterday */
+    await loadSummary();
+    if (VIEW === 'summary') { paintSummary(); return; }
     fillModules();
     paint();
   } catch (e) {
@@ -378,6 +414,140 @@ function tally(){
   if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
   h += '<span class="t">' + CASES.length + ' cases</span>';
   document.getElementById('tally').innerHTML = h;
+}
+
+var VIEW = 'cases', COVER = [], RUNS = [];
+
+/**
+ * ⭐⭐ THE SUMMARY. Two questions, and they are not the same one:
+ *
+ *   COVERAGE — has this area been tested at all? A property of the BOARD, and the one that decides what to
+ *              do next. It is what somebody asking "are we ready" actually wants.
+ *   SITTINGS — what happened in one run. A property of an EVENT, and the one you read after an automated
+ *              suite has just finished, or when you want to know what somebody covered on Tuesday.
+ *
+ * ⚠️ Showing only the second is the common mistake: a wall of green runs says nothing about the module
+ * nobody has opened.
+ */
+function setView(v){
+  VIEW = v;
+  document.getElementById('t_cases').className = (v === 'cases') ? 'on' : '';
+  document.getElementById('t_sum').className = (v === 'summary') ? 'on' : '';
+  /* the case filters mean nothing on the summary — hide them rather than leave them inert */
+  var bars = document.querySelectorAll('.bar');
+  for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'summary') ? 'bar hide' : 'bar';
+  if (v === 'summary') paintSummary(); else paint();
+}
+
+async function loadSummary(){
+  try {
+    var a = await call('/api/testing/coverage');
+    var b = await call('/api/testing/runs');
+    COVER = (a && a.areas) || [];
+    RUNS = (b && b.runs) || [];
+  } catch (e) { say('Could not read the summary: ' + e.message, true); }
+}
+
+function pct(a, b){ return b ? Math.round((a / b) * 100) : 0; }
+
+async function paintSummary(){
+  if (!COVER.length && !RUNS.length) {
+    document.getElementById('main').innerHTML = '<div class="say">Reading the summary…</div>';
+    await loadSummary();
+  }
+  tally();
+
+  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Coverage by area</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    + 'The latest word on every case. \u26a0 An area with cases nobody has run is the one to do next \u2014 a wall '
+    + 'of green runs says nothing about a module nobody has opened.</div>'
+    + '<div class="scroll"><table class="sum"><tr><th>Area</th><th>Covered</th>'
+    + '<th class="num">Passed</th><th class="num">Failed</th><th class="num">Blocked</th>'
+    + '<th class="num">Not run</th></tr>';
+
+  if (!COVER.length) {
+    h += '<tr><td colspan="6" class="dim">No cases on the board yet.</td></tr>';
+  } else {
+    COVER.forEach(function(a){
+      var done = a.total - a.untested;
+      h += '<tr class="clickable" onclick="jumpTo(\'' + esc(a.module_key) + '\')">'
+        + '<td><span class="area">' + esc(a.module_key) + '</span>'
+        +   '<span class="sub">' + esc(a.module_name || '') + '</span></td>'
+        + '<td style="min-width:140px"><div class="bar-cov">'
+        +   '<i style="width:' + pct(a.passed, a.total) + '%;background:var(--ok)"></i>'
+        +   '<i style="width:' + pct(a.failed, a.total) + '%;background:var(--bad)"></i>'
+        +   '<i style="width:' + pct(a.blocked, a.total) + '%;background:var(--warn)"></i>'
+        + '</div><span class="sub">' + done + ' of ' + a.total + '</span></td>'
+        + '<td class="num">' + (a.passed ? '<span class="big">' + a.passed + '</span>' : '<span class="dim">0</span>') + '</td>'
+        + '<td class="num">' + (a.failed ? '<span class="bad">' + a.failed + '</span>' : '<span class="dim">0</span>') + '</td>'
+        + '<td class="num">' + (a.blocked ? '<span class="warnn">' + a.blocked + '</span>' : '<span class="dim">0</span>') + '</td>'
+        /* \u26a0 the \u26a0 marks High-priority cases nobody has run \u2014 the number that should pull somebody in */
+        + '<td class="num">' + (a.untested ? '<span class="warnn">' + a.untested
+            + (a.high_untested ? ' \u26a0' : '') + '</span>' : '<span class="dim">\u2014</span>') + '</td></tr>';
+    });
+  }
+  h += '</table></div>';
+
+  h += '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Sittings</h2>'
+    + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
+    + 'Each run, newest first \u2014 a person working through a module, or an automated suite reporting itself. '
+    + 'Click one to read what it recorded.</div>'
+    + '<div class="scroll"><table class="sum"><tr><th>Run</th><th>Who</th><th>When</th>'
+    + '<th class="num">Pass</th><th class="num">Fail</th><th class="num">Blocked</th><th class="num">Total</th></tr>';
+
+  if (!RUNS.length) {
+    h += '<tr><td colspan="7" class="dim">Nothing recorded yet.</td></tr>';
+  } else {
+    RUNS.forEach(function(r){
+      h += '<tr class="clickable" onclick="openRun(\'' + esc(r.run_id) + '\')">'
+        + '<td><b>' + esc(r.run_label || 'unlabelled') + '</b>'
+        +   '<span class="sub">' + esc(r.kinds || '') + (r.build ? ' \u00b7 ' + esc(r.build) : '') + '</span></td>'
+        + '<td>' + esc(r.testers || '') + '</td>'
+        + '<td class="dim">' + ago(r.finished) + '</td>'
+        + '<td class="num">' + (Number(r.passed) ? '<span class="big">' + r.passed + '</span>' : '<span class="dim">0</span>') + '</td>'
+        + '<td class="num">' + (Number(r.failed) ? '<span class="bad">' + r.failed + '</span>' : '<span class="dim">0</span>') + '</td>'
+        + '<td class="num">' + (Number(r.blocked) ? '<span class="warnn">' + r.blocked + '</span>' : '<span class="dim">0</span>') + '</td>'
+        + '<td class="num"><b>' + r.total + '</b></td></tr>';
+    });
+  }
+  h += '</table></div>';
+  document.getElementById('main').innerHTML = h;
+}
+
+/** a row in the coverage table takes you to that area, on the Cases tab — the summary is for deciding, the cases are for doing */
+function jumpTo(mod){
+  document.getElementById('f_mod').value = mod;
+  document.getElementById('f_state').value = 'todo';
+  setView('cases');
+}
+
+/**
+ * ⭐ WHAT ONE SITTING RECORDED — the answer to "the suite just ran, what happened?"
+ * ⚠️ Failures first. A run of 174 results is not read top to bottom; the four that failed are the whole point,
+ * and putting them after 170 passes is the same as not showing them.
+ */
+async function openRun(id){
+  try {
+    var r = await call('/api/testing/results?run_id=' + encodeURIComponent(id));
+    var rows = (r.results || []).slice();
+    var rank = { fail:0, blocked:1, skipped:2, pass:3 };
+    rows.sort(function(a,b){ return (rank[a.status] - rank[b.status]) || (a.case_key < b.case_key ? -1 : 1); });
+    var first = rows[0] || {};
+    var h = '<div style="margin-bottom:12px"><button class="btn" onclick="paintSummary()">\u2190 Back to the summary</button></div>'
+      + '<h2 style="font-size:var(--fs-3);margin:0 0 9px">' + esc(first.run_label || 'This sitting') + '</h2>'
+      + '<div class="scroll"><table class="sum"><tr><th>Case</th><th>Verdict</th><th>Who</th><th>What they saw</th></tr>';
+    rows.forEach(function(x){
+      var cls = x.status === 'pass' ? 'big' : (x.status === 'fail' ? 'bad' : (x.status === 'blocked' ? 'warnn' : 'dim'));
+      h += '<tr><td><span class="area">' + esc(x.case_key) + '</span>'
+        +   '<span class="sub">' + esc(x.run_kind || '') + (x.layer ? ' \u00b7 ' + esc(x.layer) : '') + '</span></td>'
+        + '<td><span class="' + cls + '">' + esc(x.status.toUpperCase()) + '</span></td>'
+        + '<td class="dim">' + esc(x.tester_name || '') + '</td>'
+        + '<td>' + esc(x.note || '') 
+        +   (x.evidence ? '<span class="sub">' + esc(x.evidence) + '</span>' : '') + '</td></tr>';
+    });
+    h += '</table></div>';
+    document.getElementById('main').innerHTML = h;
+  } catch (e) { say('Could not read that run: ' + e.message, true); }
 }
 
 function paint(){

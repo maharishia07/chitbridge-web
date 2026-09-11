@@ -239,8 +239,11 @@ function testPanelOpen() {
      */
     + '<div id="cbtesthead" class="mhd" style="padding:9px 11px 9px 30px;border-bottom:1px solid var(--line,#e7e3d8);'
     +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0;margin:0"></div>'
-    + '<div id="cbtestbody" data-mv-fit="1" style="display:flex;flex-direction:column;min-height:0;flex:1;'
-    +   'overflow:auto"></div></div>';
+    /* ⚠⚠ A SCROLL CONTAINER, NOT A FLEX COLUMN. It was both, and that is why nothing scrolled: a flex
+       parent SIZES its child to fit, so the list never overflowed and there was nothing for overflow:auto to
+       scroll. Athi found it in a minute — "I couldn't roll inside the panel". */
+    + '<div id="cbtestbody" data-mv-fit="1" style="flex:1 1 auto;min-height:0;overflow-y:auto;'
+    +   'overflow-x:hidden"></div></div>';
   document.body.appendChild(host);
 
   /**
@@ -389,7 +392,8 @@ function testPaint() {
   if (CBTEST.adding) { body.innerHTML = testAddHTML(); return; }
 
   /* ── the list ── */
-  var h = '<div style="flex:1;padding:7px 9px;min-height:0">';
+  /* ⚠ NO flex:1 HERE. The body scrolls; this just holds the rows and is allowed to be taller than it. */
+  var h = '<div style="padding:7px 9px">';
   if (CBTEST.busy && !CBTEST.cases.length) {
     h += '<div style="padding:14px;color:var(--grey-2,var(--grey-2));font-size:var(--fs-2)">Reading the cases…</div>';
   } else if (!CBTEST.cases.length) {
