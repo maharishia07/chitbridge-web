@@ -1,4 +1,4 @@
-/* Does the rail actually lead with the Counter, and does its door open? (2026-09-08)
+/* counter-rail.cjs — Does the rail actually lead with the Counter, and does its door open? (2026-09-08)
  * Athi asked for the counter in place of Compose, with one button that puts it on the shop's PC. This drives the deployed app with
  * the shared session and checks the three things that could silently be wrong: the lead row, that Compose is still reachable, and
  * that the door offers both ways in. It does NOT press the buttons — one mints a key and the other downloads a file.

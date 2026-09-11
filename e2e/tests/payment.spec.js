@@ -1,4 +1,4 @@
-// [PAY-01] The payment loop, level 1 (UPI QR). The store's UPI id (from the profile map) reaches the storefront; "Order
+// payment.spec.js — [PAY-01] The payment loop, level 1 (UPI QR). The store's UPI id (from the profile map) reaches the storefront; "Order
 // placed" shows a QR carrying the id, the amount and the chit reference; the seller's chit reads Unpaid with Mark paid
 // and Show QR; Mark paid THROUGH THE CONTROL records the payment on the seller's copy and the cell reads Paid · UPI · ref.
 // Athi, 2026-09-05: "or QR code and get the payment loop done" → level 1 autonomously.

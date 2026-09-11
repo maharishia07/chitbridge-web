@@ -1,4 +1,4 @@
-// [INT-01] Integrations is the home of connectors: the catalogue lists Tally · Zoho · CSV with a download and instructions
+// integrations.spec.js — [INT-01] Integrations is the home of connectors: the catalogue lists Tally · Zoho · CSV with a download and instructions
 // each; the download is a real zip of the kit with connector.json pre-filled (key empty); a running connector's heartbeat
 // (with a connector key) appears under "Running connectors". Athi, 2026-09-05: "include the tally connector as a
 // downloadable option in the system itself … all should reside as part of integrations".

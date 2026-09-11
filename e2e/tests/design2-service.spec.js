@@ -1,5 +1,5 @@
 'use strict';
-/* ── DESIGN 2 · ONE SERVICE JOB, CARRIED END TO END ────────────────────────────────────────────────────────────
+/* design2-service.spec.js — ── DESIGN 2 · ONE SERVICE JOB, CARRIED END TO END ────────────────────────────────────────────────────────────
  *
  * Athi, 2026-08-23: *"do this flow — a product item should be selected, fill data in each section you have
  * created in design 2, and see the values are populated correctly and the final cost is gathered. Create a

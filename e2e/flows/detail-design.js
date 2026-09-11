@@ -1,5 +1,5 @@
 'use strict';
-/* ── THE DETAIL-PAGE CHOICE, AS A DRIVER ───────────────────────────────────────────────────────────────────────
+/* detail-design.js — ── THE DETAIL-PAGE CHOICE, AS A DRIVER ───────────────────────────────────────────────────────────────────────
  *
  * ⭐ EXTRACTED ON THE SECOND CALL SITE, not the third. `detail-design.spec.js` proved the choice for one entity;
  * `detail-design-parties.spec.js` proves it for two. Two copies of "set the preference" is how two specs end up

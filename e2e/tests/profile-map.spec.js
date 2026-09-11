@@ -1,4 +1,4 @@
-// [PRO-01] The profile from their system: the map of what we look for, filled by the connector from the store's own
+// profile-map.spec.js — [PRO-01] The profile from their system: the map of what we look for, filled by the connector from the store's own
 // records (here profile.csv; Tally's company master answers the same shape), each value copied with source + date, then
 // CHECKED where a check can be done alone (GSTIN check digit, PAN inside the GSTIN, state = GSTIN state, PIN in that
 // state) — and a held higher rung is never overwritten by a lower one. Athi, 2026-09-05.

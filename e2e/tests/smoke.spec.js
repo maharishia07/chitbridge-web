@@ -1,4 +1,4 @@
-// SMOKE: after minting, open EVERY menu item + toolbar icon and confirm each part renders (no crash).
+// smoke.spec.js — SMOKE: after minting, open EVERY menu item + toolbar icon and confirm each part renders (no crash).
 // This is the "we've seen each part is working" pass. Menu items auto-get a nav-<key> testid (menuBtn), so this list
 // is the coverage checklist — extend it as the panel grows. Capability-gated items (connectors/disputes) may be hidden;
 // those are skipped (not failed) when absent.

@@ -1,4 +1,4 @@
-// [PROMO-02] A SCREEN JOINS WITH SIX CHARACTERS, AND SHOWS THE SHOP'S OWN PICTURE.
+// promo-pair.spec.js — [PROMO-02] A SCREEN JOINS WITH SIX CHARACTERS, AND SHOWS THE SHOP'S OWN PICTURE.
 //
 // Athi, 2026-09-09: "please add pairing so we can test 1 to many devices" and "if we add our own image for a product, that image
 // should come, correct? can you add an image and see that works?"

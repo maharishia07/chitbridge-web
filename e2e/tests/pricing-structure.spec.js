@@ -1,4 +1,4 @@
-// [PRC-01] A pricing structure the product cites: authored under Catalogue setup (kind 'pricing', tiered), attached on
+// pricing-structure.spec.js — [PRC-01] A pricing structure the product cites: authored under Catalogue setup (kind 'pricing', tiered), attached on
 // the product's Pricing row THROUGH THE CONTROL, the bands shown at once; the cart, the storefront basket and the
 // order line all price the unit at the quantity — 10 bags at ₹950, not ₹1,000. Athi, 2026-09-05: "in catalogue setup
 // I have fixed and tier pricing. how do I invoke the same in the catalogue while setting up the price?"

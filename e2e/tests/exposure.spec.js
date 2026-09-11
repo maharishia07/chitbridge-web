@@ -1,4 +1,4 @@
-// [EXP-01] SHOWN TO CUSTOMERS, per item. The seller switches the tax line and the offers off for one product; the public
+// exposure.spec.js — [EXP-01] SHOWN TO CUSTOMERS, per item. The seller switches the tax line and the offers off for one product; the public
 // catalogue view — the one projection every surface reads — carries no tax for it and marks every offer excluded; the
 // storefront row shows no tax line and no offer badge, while another product keeps both. The business default (stock off)
 // removes the stamp from every item; the item's own switch wins over the default. Athi, 2026-09-05.

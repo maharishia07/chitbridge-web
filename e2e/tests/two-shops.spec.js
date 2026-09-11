@@ -1,4 +1,4 @@
-// [ISO-01] TWO SHOPS IN ONE CHROME, AND NOTHING CROSSES.
+// two-shops.spec.js — [ISO-01] TWO SHOPS IN ONE CHROME, AND NOTHING CROSSES.
 //
 // Athi, 2026-09-09: "try to load different shops with a small set of products in the same chrome and see how genuinely the
 // distinction is kept, and create chit life cycle and should not cross over."

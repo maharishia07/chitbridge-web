@@ -1,4 +1,4 @@
-// [CAP-02] A CAPTURED MESSAGE GETS THE SAME OFFER AND TAX AS A STOREFRONT ORDER. The seller's Grapes carry a 5% rate and a
+// capture-offers.spec.js — [CAP-02] A CAPTURED MESSAGE GETS THE SAME OFFER AND TAX AS A STOREFRONT ORDER. The seller's Grapes carry a 5% rate and a
 // live 10% offer. A WhatsApp message "2 kg grapes" becomes a chit through the one send path (to self, with its channel in
 // business_json.via — exactly what the intake page posts after a human confirms). The chit's line carries the list price,
 // the discount, the offer's name and the rate; its invoice says ₹378 — the storefront's figure for the same basket.

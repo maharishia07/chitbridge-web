@@ -1,4 +1,4 @@
-// [INV-03] The invoice's supplier block comes from the profile + the Business identity vault; what is missing is named on
+// invoice-party.spec.js — [INV-03] The invoice's supplier block comes from the profile + the Business identity vault; what is missing is named on
 // the Invoice row AND on Trade ready (same reader). Fill the vault → both clear.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');

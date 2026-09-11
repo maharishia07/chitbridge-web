@@ -1,4 +1,4 @@
-// [SUP-01] THE SUPPLIES SCREEN, DRIVEN. Athi: "we may have to have a screen to add sundry items in case if it is
+// supplies-screen.spec.js — [SUP-01] THE SUPPLIES SCREEN, DRIVEN. Athi: "we may have to have a screen to add sundry items in case if it is
 // not coming through the channel." Built 2026-09-10 and opened by nobody — this is the first time it runs.
 //
 // ⚠️ IT DRIVES THE SCREEN, NOT THE API. The routes are already covered by [ADOPT-01]; what is untested here is

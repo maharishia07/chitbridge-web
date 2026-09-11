@@ -1,5 +1,5 @@
 /**
- * Run the chart renderers outside the browser with real-shaped data, because an SVG that draws a label off the
+ * chart-smoke.cjs — Run the chart renderers outside the browser with real-shaped data, because an SVG that draws a label off the
  * edge of its own viewBox, or emits NaN into a width, looks like a blank card and says nothing about why.
  */
 const fs = require('fs');

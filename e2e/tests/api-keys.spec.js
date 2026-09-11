@@ -1,4 +1,4 @@
-// [KEY-01] API keys for other systems, THROUGH THE CONTROL: Settings › Integrations › mint → the key is shown once →
+// api-keys.spec.js — [KEY-01] API keys for other systems, THROUGH THE CONTROL: Settings › Integrations › mint → the key is shown once →
 // it calls the offer service with X-Api-Key → it cannot manage keys → revoke through the control → it is dead at once.
 // Athi, 2026-09-05: "create the entire offer as a capability and attach it to any other systems".
 const { test, expect } = require('@playwright/test');

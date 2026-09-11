@@ -1,4 +1,4 @@
-// [SVC-01] The governed capabilities as SERVICES (rung 2): with one key scoped 'services', another system prices a line
+// services.spec.js — [SVC-01] The governed capabilities as SERVICES (rung 2): with one key scoped 'services', another system prices a line
 // by the entity's tiered structure, gets the tax slab a product resolves to, computes GST on a walk-in sale, and builds
 // a whole invoice (pricing → offers → tax) — the same figures the two-party tour shows on the chit. One contract lists all.
 const { test, expect } = require('@playwright/test');

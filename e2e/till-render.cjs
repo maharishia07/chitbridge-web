@@ -1,4 +1,4 @@
-/* Does the new paper actually DRAW? (2026-09-08)
+/* till-render.cjs — Does the new paper actually DRAW? (2026-09-08)
  * The day-close arithmetic is unit-tested outside a browser; this is the other half — that dayCloseHTML renders in the real page, and
  * that a typed quantity puts its green line above the list. No key and no shop: the point is the render path, not the data.
  * Run: node e2e/till-render.cjs

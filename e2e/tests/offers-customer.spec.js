@@ -1,4 +1,4 @@
-// [OFF-03] A CUSTOMER-ONLY OFFER THROUGH THE SUPPLIERS MENU. Athi, 2026-09-06: "assume Chola Auto Care is the registered customer of
+// offers-customer.spec.js — [OFF-03] A CUSTOMER-ONLY OFFER THROUGH THE SUPPLIERS MENU. Athi, 2026-09-06: "assume Chola Auto Care is the registered customer of
 // tallytest — can he pass additional off through the link? … so each customer gets a personalised discount"; "see how you can pass
 // customer based discount through supplier menu". The seller writes "Regulars 10%" Only for → New customers. A buyer who has never
 // traded sees the list price (₹200) and no badge; the anonymous storefront payload carries no such offer at all. After one order the

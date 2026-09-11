@@ -1,4 +1,4 @@
-// [TILL-01] THE COUNTER BILLS, WITH THE LINE UP AND WITH IT DOWN. Athi, 2026-09-07: "someone runs a store without a computer… why can't
+// till.spec.js — [TILL-01] THE COUNTER BILLS, WITH THE LINE UP AND WITH IT DOWN. Athi, 2026-09-07: "someone runs a store without a computer… why can't
 // we develop a desktop application — the minimum sits on the desktop so the billing works faster" and "it works with IndexedDB and syncs
 // with the cloud regularly". This drives the REAL page (/till.html) against the REAL API: pair once with a till key, take the shop in one
 // call, bill, and find the sale in Task as an ordinary chit. Then pull the plug and bill again — the counter must not care.

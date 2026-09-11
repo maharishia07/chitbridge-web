@@ -1,4 +1,4 @@
-/* [CAT-03], second pass: the API is fine (adopt → schemaFields returns fineness), so the fault is on the screen.
+/* cat03-probe.cjs — [CAT-03], second pass: the API is fine (adopt → schemaFields returns fineness), so the fault is on the screen.
    This walks the spec's exact steps in a real browser and then reports what the form actually holds. */
 'use strict';
 const { chromium } = require('@playwright/test');

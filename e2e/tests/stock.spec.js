@@ -1,4 +1,4 @@
-// [STK-01] Stock with a stamp, then on demand. The connector reads closing stock from its source (here the CSV's stock
+// stock.spec.js — [STK-01] Stock with a stamp, then on demand. The connector reads closing stock from its source (here the CSV's stock
 // column) and writes it in one call with the moment it was read; the storefront shows the figure ONLY with its age;
 // when the storefront asks, the connector holding the bell re-reads the source and the stamp moves.
 // Athi, 2026-09-05: "does it read on demand, for example availability?" → "go ahead with both, stock with stamp first".

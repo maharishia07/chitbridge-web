@@ -1,4 +1,4 @@
-// [STK-02] The stamped stock reaches the ORDER. A fresh zero (under an hour old) refuses the line with the time of the count;
+// stock-guard.spec.js — [STK-02] The stamped stock reaches the ORDER. A fresh zero (under an hour old) refuses the line with the time of the count;
 // a shortfall never refuses — it rides the line as `stock` and the seller's chit shows "short by N". Without a stamp
 // nothing changes. Athi, 2026-09-05: "stock with stamp first".
 const { test, expect } = require('@playwright/test');

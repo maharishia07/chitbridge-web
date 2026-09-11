@@ -1,4 +1,4 @@
-// [CAT-05] Categories › Edit › product ticks: attach a product to a category FROM the category side.
+// categories-attach.spec.js — [CAT-05] Categories › Edit › product ticks: attach a product to a category FROM the category side.
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle } = require('../fixtures');
 

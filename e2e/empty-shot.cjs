@@ -1,4 +1,4 @@
-/* Photograph the register as a brand-new entity meets it: nothing recorded, nowhere to record it yet. */
+/* empty-shot.cjs — Photograph the register as a brand-new entity meets it: nothing recorded, nowhere to record it yet. */
 const { chromium } = require('@playwright/test');
 const path = require('path');
 const { mintEntity } = require('./fixtures');

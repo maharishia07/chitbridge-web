@@ -1,4 +1,4 @@
-// MODULE: A slab does not go dark under its products (Athi, 2026-09-05). Retiring a cited slab is refused until a takeover
+// tax-takeover.spec.js — MODULE: A slab does not go dark under its products (Athi, 2026-09-05). Retiring a cited slab is refused until a takeover
 // slab is named; the takeover re-points the product with the travelling rate; a dead citation falls through and offers
 // the attach; a retired slab can be reinstated.
 // LOCATORS: catset-sec-tax · catset-tax-new · cbdef-* · catset-tax-retire · cbdef-takeover(-go) · catset-tax-reinstate-* ·

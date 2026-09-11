@@ -1,4 +1,4 @@
-// [B2B-02] ONE CHIT, TWO BOOKS. A Karnataka buyer orders from a Tamil Nadu seller through Compose. The seller's connector
+// two-books.spec.js — [B2B-02] ONE CHIT, TWO BOOKS. A Karnataka buyer orders from a Tamil Nadu seller through Compose. The seller's connector
 // books a Sales voucher in the seller's (fake) Tally; the buyer marks the chit completed and the buyer's connector books a
 // Purchase voucher in the buyer's (fake) Tally — the seller as a supplier with GSTIN, the material created, the same
 // CB-<8> reference on both vouchers. Athi, 2026-09-05: "the sales record from the seller needs to be added into the buyer

@@ -1,5 +1,5 @@
 'use strict';
-/* ── THE DETAIL-PAGE CHOICE ────────────────────────────────────────────────────────────────────────────────────
+/* detail-design.spec.js — ── THE DETAIL-PAGE CHOICE ────────────────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-08-24: *"attach design 1 or design 2 as per the choice in the settings, in the header record — so we
  * avoid complication of moving from one record type to another and both can be tested independently."* And on

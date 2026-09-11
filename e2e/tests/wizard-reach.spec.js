@@ -1,5 +1,5 @@
 'use strict';
-/* ── THE PRIMARY ACTION MUST BE ON THE SCREEN ──────────────────────────────────────────────────────────────────
+/* wizard-reach.spec.js — ── THE PRIMARY ACTION MUST BE ON THE SCREEN ──────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-08-23, with a screenshot of the IoT wizard: *"I couldn't progress after the first step."* The Next
  * button was painted, correct, and **at y=2483 in a 1408-tall viewport** — outside the world, unclickable, and

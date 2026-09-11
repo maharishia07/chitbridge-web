@@ -1,4 +1,4 @@
-// [TILL-04] THE COUNTER BILLS FOR THE SHOP YOU CLICKED IT FROM. Athi, 2026-09-08, on a counter opened from tallytest:
+// counter-key.spec.js — [TILL-04] THE COUNTER BILLS FOR THE SHOP YOU CLICKED IT FROM. Athi, 2026-09-08, on a counter opened from tallytest:
 // "i dont know what is happening, this is counter for tallytest?" — it was not. The header read `e2eco-mts0e88b673`, a throwaway
 // entity a test run had made that morning, and the footer correctly said "No GSTIN on this shop, so no GST is charged".
 //

@@ -1,4 +1,4 @@
-// [B2B-01] An order from ANOTHER SHOP (a registered buyer) reaches the seller's Tally as a B2B voucher: the connector reads the
+// b2b.spec.js — [B2B-01] An order from ANOTHER SHOP (a registered buyer) reaches the seller's Tally as a B2B voucher: the connector reads the
 // chit's invoice through the key, creates the buyer's party ledger (GSTIN, state) and posts the voucher with PARTYGSTIN and
 // the place of supply — while a storefront (walk-in) order still books against the walk-in ledger with no GSTIN.
 // Athi, 2026-09-05: "if we try ordering from another shop instead of storefront? their GSTIN and so on" → "go ahead".

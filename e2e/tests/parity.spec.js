@@ -1,4 +1,4 @@
-// [PAR-01] ONE PRODUCT, TWO SURFACES, ONE ANSWER. The seller's Grapes carry a 5% rate and a 10% offer. Seen from the public
+// parity.spec.js — [PAR-01] ONE PRODUCT, TWO SURFACES, ONE ANSWER. The seller's Grapes carry a 5% rate and a 10% offer. Seen from the public
 // storefront and from a buyer's Suppliers screen, the row must show the same listed price, the same tax line and the same
 // offer promise — because both read the same catalogue view and render through the same picker. Athi, 2026-09-05: "either
 // storefront or from supplier or through API all should have the same principle … single source of truth".

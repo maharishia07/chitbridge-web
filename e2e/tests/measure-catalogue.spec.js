@@ -1,4 +1,4 @@
-// MEASUREMENT (kept): per phase, every API call with its real duration (resource timings). Runs only with MEASURE=1 —
+// measure-catalogue.spec.js — MEASUREMENT (kept): per phase, every API call with its real duration (resource timings). Runs only with MEASURE=1 —
 // it is a ruler, not a test. Baseline 2026-09-05 (Railway sfo ↔ Supabase Mumbai): every call 1.4–2.4 s. Re-run after a region move.
 const { test } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle, dismissModal } = require('../fixtures');

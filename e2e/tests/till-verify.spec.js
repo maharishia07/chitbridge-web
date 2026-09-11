@@ -1,4 +1,4 @@
-// [TILL-05] A COUNTER CAN PROVE ITSELF, AND A DELETED ROW CANNOT HIDE IN IT.
+// till-verify.spec.js — [TILL-05] A COUNTER CAN PROVE ITSELF, AND A DELETED ROW CANNOT HIDE IN IT.
 //
 // Athi, 2026-09-09, after emptying a catalogue in SQL and reloading it while his counter went on listing the old rows:
 // "i am going crazy now — how to gain confidence it is reading the entire catalogue and also not mixing up, and counter works fine

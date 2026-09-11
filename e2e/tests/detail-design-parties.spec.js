@@ -1,5 +1,5 @@
 'use strict';
-/* ── EACH PARTY READS THEIR OWN COPY THEIR OWN WAY ─────────────────────────────────────────────────────────────
+/* detail-design-parties.spec.js — ── EACH PARTY READS THEIR OWN COPY THEIR OWN WAY ─────────────────────────────────────────────────────────────
  *
  * Athi, 2026-08-24: *"the customer copy and supplier copy should be the same, but the interpretation can be in
  * another tab — how the customer request is interpreted can stay within the receiving end. That is what we are

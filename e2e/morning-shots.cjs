@@ -1,4 +1,4 @@
-/* Photograph what shipped overnight (2026-09-03 → 04) for Athi's morning check: the rebuilt Edit-offer modal
+/* morning-shots.cjs — Photograph what shipped overnight (2026-09-03 → 04) for Athi's morning check: the rebuilt Edit-offer modal
  * (laptop + phone), the product's Offers tab with the cart preview, Catalogue setup › Tax, and the product's
  * Pricing & tax pane with the invoice split. Runs against the DEPLOYED app on a fresh entity, exactly the way the
  * specs do — a screenshot of prod is evidence; a screenshot of a mock is a drawing.

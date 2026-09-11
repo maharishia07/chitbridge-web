@@ -1,4 +1,4 @@
-// MODULE: tax and offers at CATEGORY level, and the one-list-per-category view (Athi, 2026-09-05).
+// tax-categories.spec.js — MODULE: tax and offers at CATEGORY level, and the one-list-per-category view (Athi, 2026-09-05).
 // LOCATORS: catset-tax-catgs · catset-tax-catg-<id> · catset-tax-register · catset-tax-conflict · catset-tax-clash · prod-tax-resolved
 const { test, expect } = require('@playwright/test');
 const { mintEntity, addProduct, clickNav, settle, dismissModal, openTab } = require('../fixtures');

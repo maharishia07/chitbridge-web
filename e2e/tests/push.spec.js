@@ -1,4 +1,4 @@
-// [PUSH-01] The mailbox bell: a signed-in tab holds one push stream; a chit that arrives for this entity rings it, and
+// push.spec.js — [PUSH-01] The mailbox bell: a signed-in tab holds one push stream; a chit that arrives for this entity rings it, and
 // the list refreshes without the timer. Athi, 2026-09-04: "why can't we notify like a mailbox?"
 //
 // Driven through the app's own controls: the stream is opened by sign-in (startAutoRefresh → cbPushStart), the chit

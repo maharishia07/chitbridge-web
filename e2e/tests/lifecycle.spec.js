@@ -1,4 +1,4 @@
-// [LIFE-01] THE WHOLE CHAIN, ONE SHOP, ONE RUN.
+// lifecycle.spec.js — [LIFE-01] THE WHOLE CHAIN, ONE SHOP, ONE RUN.
 //
 // Athi, 2026-09-10: *"one shop connects to 3 different shops … so the receiver shop A can have the details of each
 // of the product with its attributes and can it show in the catalogue so it can reflect in counter, storefront?"*

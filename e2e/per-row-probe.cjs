@@ -1,4 +1,4 @@
-/* DOES A VALUE CHANGE STILL FLIP THE WHOLE PANE? (Athi, 2026-09-08: "the view never changes, it is only the data has to move")
+/* per-row-probe.cjs — DOES A VALUE CHANGE STILL FLIP THE WHOLE PANE? (Athi, 2026-09-08: "the view never changes, it is only the data has to move")
  *
  * The claim to check is not "it is fast" — it is that the DOM NODES SURVIVE. A repaint that replaces a container throws away the
  * caret, the scroll and every row a lazy list had revealed, and no timing number shows that. So each node is marked before the

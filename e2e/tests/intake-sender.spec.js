@@ -1,5 +1,5 @@
 'use strict';
-/* ── A CAPTURED JOB MUST KNOW WHO ASKED ────────────────────────────────────────────────────────────────────────
+/* intake-sender.spec.js — ── A CAPTURED JOB MUST KNOW WHO ASKED ────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-08-24, after testing design 2 on WhatsApp jobs: *"data was not moving from customer to supplier."*
  *

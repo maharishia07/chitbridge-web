@@ -1,4 +1,4 @@
-// Shared helpers for the e2e specs. Kept tiny so each MODULE spec stays self-describing.
+// fixtures.js — Shared helpers for the e2e specs. Kept tiny so each MODULE spec stays self-describing.
 const { expect } = require('@playwright/test');   // composeChit asserts the wizard actually advanced
 const DEV_OTP = process.env.CB_DEV_OTP || '123456';   // relies on DEV_OTP set on the API during dev (Athi's standing choice)
 

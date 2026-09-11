@@ -1,4 +1,4 @@
-/* Is the product page looping on a catalogue like Athi's? His localhost tab stays "busy" after every load on
+/* loop-probe.cjs — Is the product page looping on a catalogue like Athi's? His localhost tab stays "busy" after every load on
  * 2026-09-04 morning (many declared columns, values in all of them, the new tabs). A fresh entity in the specs never
  * hits that shape. Mimic it on prod, open the product, then COUNT API calls over 20s: a settled page makes a handful
  * (auto-refresh every 20s); a loop makes dozens.  node e2e/loop-probe.cjs */

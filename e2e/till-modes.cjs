@@ -1,4 +1,4 @@
-/* Do the three modes actually work in a browser? (2026-09-08)
+/* till-modes.cjs — Do the three modes actually work in a browser? (2026-09-08)
  * The arithmetic and the rules are unit-tested outside a browser (tests/till-vendor.test.js). This is the other half: the menu
  * switches, each pane appears, the search box changes what it means, and the two new screens paint without throwing.
  * No key and no shop — the point is the wiring, not the data.

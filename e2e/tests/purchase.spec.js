@@ -1,4 +1,4 @@
-// [PUR-01] GOODS IN, AND THE MATCH THAT FOLLOWS. Athi, 2026-09-08: "purchase, sales, despatch in the till format" and, on the
+// purchase.spec.js — [PUR-01] GOODS IN, AND THE MATCH THAT FOLLOWS. Athi, 2026-09-08: "purchase, sales, despatch in the till format" and, on the
 // matching: "how does the received qty match against the bill received?"
 //
 // This drives the REAL counter against the REAL API: place an order, receive LESS than was ordered with a reason, and then read the

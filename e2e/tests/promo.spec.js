@@ -1,4 +1,4 @@
-// [PROMO-01] THE SHOP'S SCREEN DRAWS THE SHOP'S OWN ANSWERS. Athi, 2026-09-08: "how we can bring it to instagram, facebook,
+// promo.spec.js — [PROMO-01] THE SHOP'S SCREEN DRAWS THE SHOP'S OWN ANSWERS. Athi, 2026-09-08: "how we can bring it to instagram, facebook,
 // whatsapp status, in the tv in the shop… it is not a shopping cart, it is the advertisement of the product, dynamically based on
 // the offer and other criteria" — and then: "create an excellent campaign layer, so the same can be run in the TV of the shop and
 // pushed to other places."

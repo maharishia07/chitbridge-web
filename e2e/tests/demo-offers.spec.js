@@ -1,4 +1,4 @@
-// SHOWCASE (DEMO=1 only): two products, every offer kind in different combinations, and the screens that show each —
+// demo-offers.spec.js — SHOWCASE (DEMO=1 only): two products, every offer kind in different combinations, and the screens that show each —
 // the Setup › Offers register, each product's Offers tab (the cart breakdown), the compose cart with both lines.
 // Athi, 2026-09-05: "if the offer is for the entire chit or based on slab, how will this be displayed … create a
 // couple of products, add each type of offer and show it here, for different combinations".

@@ -1,4 +1,4 @@
-/* WHERE DOES A TEN-THOUSAND ITEM SHOP HANG? (Athi, 2026-09-08: "I tried opening tallytest on another PC, completely hanged, both in
+/* scale-probe.cjs — WHERE DOES A TEN-THOUSAND ITEM SHOP HANG? (Athi, 2026-09-08: "I tried opening tallytest on another PC, completely hanged, both in
  * web and in till.")
  *
  * Guessing at performance is how you optimise the wrong loop. This drives the REAL deployed pages with a synthetic shop of 10,000

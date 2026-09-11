@@ -1,4 +1,4 @@
-// [SB-01] RECORD A SALE FOLLOWS THE SAME CART. The seller's Grapes carry a 5% rate and a live 10% offer. In Record a sale the
+// record-sale.spec.js — [SB-01] RECORD A SALE FOLLOWS THE SAME CART. The seller's Grapes carry a 5% rate and a live 10% offer. In Record a sale the
 // picker row shows the tax line and the offer badge, the foot shows the cart's money block (2 × ₹200 − 10% = ₹360 + 5% = ₹378),
 // and the chit it records carries list price · discount · the offer's name · the rate — so its invoice says ₹378 too.
 // Athi, 2026-09-05: "we created something called record a sale, that is also a billing application, does it follow the same?"

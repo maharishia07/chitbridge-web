@@ -1,4 +1,4 @@
-/* Does the Match screen open, load and say something true? (2026-09-08)
+/* match-probe.cjs — Does the Match screen open, load and say something true? (2026-09-08)
  * It is the screen the product is sold on, so the failure mode that matters is silence: a rail row that opens an empty panel because
  * the capability did not load, or a table that renders "undefined" for a shop with no purchase orders yet.
  * Run: node e2e/match-probe.cjs

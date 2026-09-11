@@ -1,5 +1,5 @@
 /**
- * Run the counter's nextNumber() outside the browser, against a fresh series and a LEGACY one, because the whole
+ * docnumber-continuity.cjs — Run the counter's nextNumber() outside the browser, against a fresh series and a LEGACY one, because the whole
  * promise made to Athi was "as long as it is not an issue for the continuity" — and continuity is precisely the
  * thing a fresh-install test cannot see.
  */

@@ -1,4 +1,4 @@
-// [BOOKS-01] AN ORDER GOES TO THE BOOKS ON A TRIGGER, AND THE TASK SAYS SO. Athi, 2026-09-06: "each task cannot be done on its own,
+// books-at.spec.js — [BOOKS-01] AN ORDER GOES TO THE BOOKS ON A TRIGGER, AND THE TASK SAYS SO. Athi, 2026-09-06: "each task cannot be done on its own,
 // there must be some trigger to be allowed to go to Tally, from the task; also there must be a detail somewhere in the task that it has
 // been written to Tally". The entity's policy (Orders go to the books) rides the connector's heartbeat; the kit's gate is a pure function
 // (core.booksGate) checked here for every setting × state; the kit's write-back lands on MY copy and the Task prints it.

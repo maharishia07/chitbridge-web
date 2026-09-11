@@ -1,4 +1,4 @@
-// [OFF-04] NAMED CUSTOMER GROUPS (decision 2, Athi 2026-09-06: "we should be having option to name them"). The seller adds a buyer by
+// offers-groups.spec.js — [OFF-04] NAMED CUSTOMER GROUPS (decision 2, Athi 2026-09-06: "we should be having option to name them"). The seller adds a buyer by
 // hand, places them in "dealers", and scopes an offer "Only for" that group, shown as "Dealer price". The buyer's Suppliers row carries
 // the tag by the alias; taken out of the group, the tag is gone. Skips itself — and says so — until migration customer_groups is run.
 const { test, expect } = require('@playwright/test');

@@ -1,4 +1,4 @@
-// [REC-01] ONE OWNER PER STREAM, AND A RECONCILIATION THAT SAYS WHAT LANDED. Athi, 2026-09-07: "say quantity gets posted in ERP, sales
+// reconcile.spec.js — [REC-01] ONE OWNER PER STREAM, AND A RECONCILIATION THAT SAYS WHAT LANDED. Athi, 2026-09-07: "say quantity gets posted in ERP, sales
 // record in Tally and possibly Zoho CRM — will it not confuse the purpose?" and "need to be sure of reconciliation … do we have a
 // mechanism to check if not posted before the next day?". Two connectors check in: the first claims the streams it can carry, the second
 // is told they are taken, and the owner hands one over in Settings. Then an order walks waiting → due → booked, and the counts say so.
