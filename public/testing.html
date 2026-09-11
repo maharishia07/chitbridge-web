@@ -215,10 +215,21 @@
   .lens i{ font-style:normal; color:var(--grey-2); }
   /* ── ⭐ the Cases tab as one table: a row per area, expandable in place ── */
   table.areas td{ vertical-align:middle; }
-  table.areas .arow{ cursor:pointer; }
-  table.areas .arow:hover td{ background:var(--neutral-tint); }
-  table.areas .arow.open td{ background:var(--neutral-tint); }
-  table.areas .arow:focus-visible td{ outline:2px solid var(--blue); outline-offset:-2px; }
+  /**
+   * ⚠️⚠️ SCOPED TO THE WRONG TABLE. Athi: *"the mouse pointer is not coming when I go to expand the engine or
+   * middleware."* These rules said `table.areas`, which is the Cases pivot; the matrix is `table.mtx`. Its
+   * rows carried the same class, the same handler and the same caret — and looked completely inert, because
+   * nothing under the cursor said it could be pressed.
+   * ⭐ A control that does not look like a control is a control nobody presses. The rules are on the CLASS now,
+   * so any table that builds a foldable row gets them without anybody remembering to.
+   */
+  .arow{ cursor:pointer; }
+  .arow:hover td{ background:var(--neutral-tint); }
+  .arow.open td{ background:var(--neutral-tint); }
+  .arow:focus-visible td{ outline:2px solid var(--blue); outline-offset:-2px; }
+  /* ⭐ and the caret turns, so the row says which way it is about to go */
+  .arow .caret{ transition:transform .12s ease; display:inline-block; }
+  .arow:hover .caret{ color:var(--ink-2); }
   table.areas .aname{ margin-inline-start:8px; font-weight:600; }
   table.areas .k{ font-family:ui-monospace,Menlo,monospace; font-size:var(--fs-1); color:#fff;
         background:var(--grey-2); border-radius:4px; padding:1px 6px; }
@@ -2009,7 +2020,14 @@ function matrixHTML(){
  * ⚠️ The AREA filter is not the module dropdown — a test reaches areas, it sits in a module, and conflating the
  * two is what made the first version of this table come out as a useless diagonal.
  */
+/**
+ * ⚠️⚠️ AND THE NUMBERS DOUBLE-FIRED. Each count is a <span onclick="drill(…)"> INSIDE a <tr onclick=
+ * "foldSection(…)">, so clicking a number ran both: it jumped to the Cases tab AND toggled the area's fold.
+ * Two different things happening from one click, one of them invisible until you came back.
+ * ⭐ The row handler now only runs when the click did not come from a number.
+ */
 function drill(area, type){
+  if (window.event && window.event.stopPropagation) window.event.stopPropagation();
   document.getElementById('f_area').value = area;
   document.getElementById('f_type').value = type;
   document.getElementById('f_state').value = '';
@@ -2082,17 +2100,59 @@ function engineHTML(){
   return h;
 }
 
+/**
+ * ── ⚠️⚠️ THE CHARTS CONTRADICTED THE TABLE DIRECTLY ABOVE THEM ───────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"fix the charts to use the same axis."*
+ *
+ * "By level" grouped on the case's `layer` — the OLD inferred taxonomy — and reported engine 246, web 292,
+ * transport 11, and FORTY CASES in a bucket called "(not set)". The matrix two inches above it, grouped on the
+ * measured `areas`, said engine 138 and api 219. Two numbers for engine on one screen, and a reader has no way
+ * to know which is the real one. ⭐ Nothing was wrong with either count; they were counting different things
+ * under labels that did not say so.
+ *
+ * "By area" grouped on `module_key` — CTR, chitbridge-web/e2e — which is the CASES axis, not the architecture.
+ *
+ * ⭐ All three now group on what the rest of the tab groups on, and they are computed from CASES rather than
+ * fetched, so they cannot drift from the table they sit under: one list, one set of numbers, three pictures.
+ */
 function chartsHTML(){
   var g = (window.__cover_groups) || {};
-  var areas = COVER.map(function (a) { return { key: a.module_key, total: a.total, passed: a.passed,
-    failed: a.failed, blocked: a.blocked, untested: a.untested }; });
+
+  /** tally CASES by a key function, in the pass/fail/untested shape the chart draws */
+  var by = function (keyOf, order) {
+    var m = {}, out = [];
+    CASES.forEach(function (c) {
+      (keyOf(c) || []).forEach(function (k) {
+        if (!m[k]) { m[k] = { key: k, total: 0, passed: 0, failed: 0, blocked: 0, untested: 0 }; out.push(m[k]); }
+        m[k].total++;
+        var l = LAST[c.case_key];
+        if (!l) m[k].untested++;
+        else if (l.status === 'fail') m[k].failed++;
+        else if (l.status === 'blocked') m[k].blocked++;
+        else m[k].passed++;
+      });
+    });
+    if (order) out.sort(function (x, y) {
+      var i = order.indexOf(x.key), j = order.indexOf(y.key);
+      return (i < 0 ? 99 : i) - (j < 0 ? 99 : j);
+    });
+    else out.sort(function (x, y) { return y.total - x.total; });
+    return out;
+  };
+
   return '<div class="charts">'
-    + chartCard('By area', 'Which part of the product nobody has opened \u2014 this is the one that decides what to test next.',
-        chartStack(areas, { label: 'Coverage by area' }))
-    + chartCard('By level', 'Whether anything below the screen is proved. All-web coverage is shallow coverage.',
-        chartStack(g.by_layer || [], { label: 'Coverage by level' }))
+    + chartCard('By layer', 'Engine, middleware and web are the product; the rest is what they ride on. '
+        + 'The same rows as the table above, drawn.',
+        chartStack(by(function (c) { return (c.areas || []).length ? c.areas : ['not placed']; }, AREA_ORDER),
+          { label: 'Coverage by layer' }))
+    + chartCard('By kind', 'A green unit test and a green system test are not the same amount of evidence. '
+        + 'This is the shape of what we have.',
+        chartStack(by(function (c) { return [c.test_type || '\u2014']; }, KIND_ORDER),
+          { label: 'Coverage by kind' }))
     + chartCard('By priority', 'Whether the important cases are the done ones \u2014 a high pass rate on Low cases is not coverage.',
-        chartStack(g.by_priority || [], { label: 'Coverage by priority' }))
+        chartStack(by(function (c) { return [c.priority || '\u2014']; }, ['High', 'Medium', 'Low']),
+          { label: 'Coverage by priority' }))
     + chartCard('Per sitting', 'What each run recorded, oldest first. The only one of the four that is a trend.',
         chartTrend(g.trend || []), ['passed','failed','blocked'])
     + '</div>';
@@ -2406,9 +2466,24 @@ function isOpenSection(k, howMany){
   if (FOLD._all !== undefined) return !!FOLD._all;
   return howMany <= 2;
 }
-function foldSection(k){ FOLD[k] = !isOpenSection(k, 99); foldSave(); paint(); }
+/**
+ * ── ⚠️⚠️ REPAINT THE VIEW YOU ARE ON, NOT ALWAYS THE CASES TAB ───────────────────────────────────────────────
+ *
+ * Athi, 2026-09-11: *"when I click the Engine or Middleware it is going to the Cases tab or the previous
+ * summary tab; after two or three attempts it is showing the expandable menu."*
+ *
+ * ⚠️ EXACTLY THAT. Both of these called `paint()`, which renders the CASES pivot into #main whatever tab you
+ * are looking at. So opening an area on Summary toggled the fold correctly and then drew the Cases table over
+ * the top — and the "two or three attempts" was him pressing Summary again, which repainted it with the fold
+ * now open, so it looked as though it had finally worked.
+ *
+ * ⭐ One repaint that respects the current view. There is no situation in which a fold on Summary should draw
+ * the Cases tab, and there never was — this was a single missing branch.
+ */
+function repaintCurrent(){ if (VIEW === 'summary') paintSummary(); else paint(); }
+function foldSection(k){ FOLD[k] = !isOpenSection(k, 99); foldSave(); repaintCurrent(); }
 /* ⚠️ a STATE, not a one-off: the next repaint would undo an action, and the board repaints on every tap */
-function foldAll(open){ FOLD = { _all: !!open }; foldSave(); paint(); }
+function foldAll(open){ FOLD = { _all: !!open }; foldSave(); repaintCurrent(); }
 
 function caseHTML(c){
   var l = LAST[c.case_key], st = l ? l.status : '';
