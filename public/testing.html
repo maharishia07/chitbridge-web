@@ -168,6 +168,18 @@
     .rep h2{ break-after:avoid; }
   }
 
+  /* ── charts: inline SVG, theme tokens, no library ── */
+  .charts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-bottom:22px; }
+  .chart{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:14px 16px 12px; }
+  .chart h3{ font-size:var(--fs-3); margin:0 0 2px; font-weight:600; letter-spacing:-.01em; }
+  .chart .ask{ font-size:var(--fs-1); color:var(--grey-2); margin:0 0 11px; line-height:1.5; }
+  .chart svg{ display:block; width:100%; height:auto; overflow:visible; }
+  .chart .none{ font-size:var(--fs-2); color:var(--grey-2); padding:10px 0; }
+  .legend{ display:flex; flex-wrap:wrap; gap:9px 15px; margin-top:11px; font-size:var(--fs-1); color:var(--grey-2); }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .legend i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+  @media print{ .chart{ break-inside:avoid; } }
+
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
@@ -493,6 +505,8 @@ async function loadSummary(){
     var a = await call('/api/testing/coverage');
     var b = await call('/api/testing/runs');
     COVER = (a && a.areas) || [];
+    /* ⚠️ on window rather than a local, because chartsHTML() is called from a repaint that does not carry it */
+    window.__cover_groups = (a && a.groups) || {};
     RUNS = (b && b.runs) || [];
   } catch (e) { say('Could not read the summary: ' + e.message, true); }
 }
@@ -608,6 +622,116 @@ async function paintReport(){
   document.getElementById('main').innerHTML = h;
 }
 
+/**
+ * ⭐⭐⭐ ONE CHART RENDERER, FOUR GROUPINGS. Athi, 2026-09-11: *"any graph / chart according to group?"*
+ *
+ * ⚠️ NO CHART LIBRARY, and that is a decision rather than laziness. cap-admin.js already draws its trend as
+ * inline SVG with theme tokens; pulling in 200KB for four stacked bars would be a dependency that has to be
+ * version-tracked, CSP-allowed and kept in step with the theme system it knows nothing about.
+ *
+ * ⚠️ THE SCALE IS THE WHOLE WIDTH OF THE GROUP'S OWN TOTAL, not the largest group. A row of bars each scaled
+ * to itself compares nothing; a row scaled to the biggest makes a small complete area look worse than a big
+ * half-done one. Each bar is that group's 100%, and the count is printed beside it so the bar never has to
+ * be measured by eye.
+ */
+var CHART_TONES = [
+  ['passed', 'var(--ok)'],
+  ['failed', 'var(--bad)'],
+  ['blocked', 'var(--warn)'],
+  ['untested', 'var(--flat)'],
+];
+
+function chartLegend(keys){
+  return '<div class="legend">' + CHART_TONES.filter(function(t){ return !keys || keys.indexOf(t[0]) >= 0; })
+    .map(function(t){ return '<span><i style="background:' + t[1] + '"></i>' + t[0] + '</span>'; }).join('')
+    + '</div>';
+}
+
+/** a stacked bar per row — the group name, the bar, and the numbers that make it checkable */
+function chartStack(rows, opts){
+  var o = opts || {};
+  if (!rows || !rows.length) return '<div class="none">Nothing to draw yet.</div>';
+  var rowH = 26, pad = 4, labelW = o.labelW || 74;
+  var h = rows.length * rowH + pad;
+  var out = '<svg viewBox="0 0 340 ' + h + '" role="img" aria-label="' + esc(o.label || '') + '">';
+  rows.forEach(function (r, i) {
+    var y = i * rowH + pad;
+    var total = r.total || 1;
+    var x = labelW;
+    var w = 340 - labelW - 44;   /* room on the right for the count — labels must fit INSIDE the viewBox */
+    out += '<text x="0" y="' + (y + 12) + '" font-size="10.5" font-family="ui-monospace,Menlo,monospace" '
+      + 'fill="var(--ink-2)" font-weight="700">' + esc(String(r.key).slice(0, 11)) + '</text>';
+    CHART_TONES.forEach(function (t) {
+      var v = Number(r[t[0]] || 0);
+      if (!v) return;
+      var seg = (v / total) * w;
+      out += '<rect x="' + x.toFixed(1) + '" y="' + y + '" width="' + seg.toFixed(1) + '" height="15" '
+        + 'fill="' + t[1] + '"><title>' + esc(t[0] + ': ' + v) + '</title></rect>';
+      x += seg;
+    });
+    /* ⭐ the number, because a bar you have to measure by eye is decoration */
+    out += '<text x="' + (340 - 40) + '" y="' + (y + 12) + '" font-size="10.5" fill="var(--grey-2)">'
+      + (r.total - (r.untested || 0)) + '/' + r.total + '</text>';
+  });
+  return out + '</svg>';
+}
+
+/**
+ * ⚠️ THE TREND IS A DIFFERENT SHAPE BECAUSE IT ANSWERS A DIFFERENT QUESTION. The others say where we stand;
+ * this says what happened in each sitting. Columns, oldest on the left, because that is how a trend reads.
+ */
+function chartTrend(runs){
+  if (!runs || runs.length < 2) return '<div class="none">One sitting so far \u2014 a trend needs at least two.</div>';
+  var max = Math.max.apply(null, runs.map(function (r) { return r.total; })) || 1;
+  var w = 340, h = 120, pad = 18, colW = (w - pad * 2) / runs.length;
+  var out = '<svg viewBox="0 0 ' + w + ' ' + (h + 16) + '" role="img" aria-label="Results per sitting">';
+  /* ⚠️ one faint baseline, not a grid — a grid on twelve columns is noise */
+  out += '<line x1="' + pad + '" y1="' + h + '" x2="' + (w - pad) + '" y2="' + h + '" stroke="var(--line)"/>';
+  runs.forEach(function (r, i) {
+    var x = pad + i * colW + colW * 0.18;
+    var bw = colW * 0.64;
+    var y = h;
+    [['passed', 'var(--ok)'], ['blocked', 'var(--warn)'], ['failed', 'var(--bad)']].forEach(function (t) {
+      var v = Number(r[t[0]] || 0);
+      if (!v) return;
+      var bh = (v / max) * (h - 10);
+      y -= bh;
+      out += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" '
+        + 'height="' + bh.toFixed(1) + '" fill="' + t[1] + '"><title>' + esc((r.run_label || 'sitting')
+        + ' \u2014 ' + t[0] + ': ' + v) + '</title></rect>';
+    });
+    /* ⚠️ label every third column at most — twelve dates overlap into a grey smear */
+    if (i === 0 || i === runs.length - 1 || i % 3 === 0) {
+      out += '<text x="' + (x + bw / 2) + '" y="' + (h + 12) + '" font-size="9" fill="var(--grey-2)" '
+        + 'text-anchor="middle">' + esc(new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}))
+        + '</text>';
+    }
+  });
+  return out + '</svg>';
+}
+
+function chartCard(title, ask, body, keys){
+  return '<div class="chart"><h3>' + esc(title) + '</h3><p class="ask">' + esc(ask) + '</p>'
+    + body + chartLegend(keys) + '</div>';
+}
+
+/** the four charts — each answers a different question, which is why there are four */
+function chartsHTML(){
+  var g = (window.__cover_groups) || {};
+  var areas = COVER.map(function (a) { return { key: a.module_key, total: a.total, passed: a.passed,
+    failed: a.failed, blocked: a.blocked, untested: a.untested }; });
+  return '<div class="charts">'
+    + chartCard('By area', 'Which part of the product nobody has opened \u2014 this is the one that decides what to test next.',
+        chartStack(areas, { label: 'Coverage by area' }))
+    + chartCard('By level', 'Whether anything below the screen is proved. All-web coverage is shallow coverage.',
+        chartStack(g.by_layer || [], { label: 'Coverage by level' }))
+    + chartCard('By priority', 'Whether the important cases are the done ones \u2014 a high pass rate on Low cases is not coverage.',
+        chartStack(g.by_priority || [], { label: 'Coverage by priority' }))
+    + chartCard('Per sitting', 'What each run recorded, oldest first. The only one of the four that is a trend.',
+        chartTrend(g.trend || []), ['passed','failed','blocked'])
+    + '</div>';
+}
+
 async function paintSummary(){
   if (!COVER.length && !RUNS.length) {
     document.getElementById('main').innerHTML = '<div class="say">Reading the summary…</div>';
@@ -615,7 +739,9 @@ async function paintSummary(){
   }
   tally();
 
-  var h = '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Coverage by area</h2>'
+  /* ⭐ the charts first: a person opening the Summary wants the shape before the numbers */
+  var h = chartsHTML();
+  h += '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Coverage by area</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
     + 'The latest word on every case. \u26a0 An area with cases nobody has run is the one to do next \u2014 a wall '
     + 'of green runs says nothing about a module nobody has opened.</div>'
