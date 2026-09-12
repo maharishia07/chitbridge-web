@@ -1925,6 +1925,13 @@ const EP = {
   testStale:       {m:"GET",   p:"/api/testing/stale",           ok:"y"},
   /* ⭐ which areas nobody has run, worst first — what the panel opens on when no focus is chosen */
   testCoverage:    {m:"GET",   p:"/api/testing/coverage",        ok:"y"},
+  /* ⭐⭐ A REQUIREMENT RAISED WHILE TESTING (2026-09-12). Athi: *"the testers will not have you, so it has to be
+     written down and we have to pick it up... and the status has to be updated as implemented or rejected."*
+     A requirement IS a spec clause (definition kind 'spec'), so the case that raised it CITES it — which is the
+     citation the board has never had: 0 of 889 cases cited anything before this. */
+  testReqRaise:    {m:"POST",  p:"/api/testing/requirements",    ok:"y"},
+  testReqList:     {m:"GET",   p:"/api/testing/requirements",    ok:"y"},   // ?state=open — the not-actioned filter
+  testReqSet:      {m:"PATCH", p:"/api/testing/requirements/:id",ok:"y"},   // ⚠ append-only: every decision keeps its history
   testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
   defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
@@ -12195,12 +12202,47 @@ function makeMovable(panel, opts){
        that the parse check is what catches it, so run it every time. */
     left: parseFloat(panel.style.left), top: parseFloat(panel.style.top),
       width: parseFloat(panel.style.width), height: parseFloat(panel.style.height) })); }catch(e){} }
+    /**
+     * ── ⚠️⚠️⚠️ A PANEL WIDER THAN THE SCREEN TAKES ITS OWN CONTROLS WITH IT ──────────────────────
+     *
+     * Athi, 2026-09-12: *"current window is bigger than my screen, i couldn't move left side as the movement is
+     * only on the right side, now i couldn't close the window or reduce the size?"*
+     *
+     * ⚠️ THIS CLAMPED THE POSITION AND NEVER THE SIZE. A panel sized on a wide screen — or grown by `fit` —
+     * comes back wider than the window, `innerWidth - width` goes negative, the left edge pins to 0, and every
+     * control in the header's right-hand group is off the screen: close, size, refresh, all of them. The panel
+     * is then unusable AND unclosable, and the only way out is clearing localStorage, which no shopkeeper and
+     * no tester should ever be asked to do.
+     *
+     * ⭐ THE SIZE IS CLAMPED FIRST, THEN THE POSITION — in that order, because clamping a position against a
+     * width that is still too big just pins it to the corner again.
+     * ⚠️ minW/minH still win: a panel is allowed to overflow a genuinely tiny window rather than collapse into
+     * something with no content, but it will start at the left edge where its header can at least be grabbed.
+     * ⚠️ A MARGIN, not the exact edge — a control flush against the last pixel is a control nobody can hit.
+     */
+    var EDGE = 8;
     function clampIntoView(){
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var w = parseFloat(panel.style.width), h = parseFloat(panel.style.height);
+      if(!isNaN(w)) panel.style.width  = Math.max(minW, Math.min(w, vw - EDGE * 2)) + 'px';
+      if(!isNaN(h)){ panel.style.height = Math.max(minH, Math.min(h, vh - EDGE * 2)) + 'px'; fitBody(); }
       var r = panel.getBoundingClientRect();
       var l = parseFloat(panel.style.left), t = parseFloat(panel.style.top);
-      if(!isNaN(l)) panel.style.left = Math.min(Math.max(0, l), Math.max(0, window.innerWidth - r.width)) + 'px';
-      if(!isNaN(t)) panel.style.top  = Math.min(Math.max(0, t), Math.max(0, window.innerHeight - r.height)) + 'px';
+      if(!isNaN(l)) panel.style.left = Math.min(Math.max(EDGE, l), Math.max(EDGE, vw - r.width - EDGE)) + 'px';
+      if(!isNaN(t)) panel.style.top  = Math.min(Math.max(EDGE, t), Math.max(EDGE, vh - r.height - EDGE)) + 'px';
     }
+    /**
+     * ⭐ AND IT RUNS WHEN THE WINDOW CHANGES, not only when the panel is dragged. The trap above needs no
+     * dragging at all: open a laptop after working on a monitor and the saved geometry is already too big.
+     * ⚠️ Debounced — a resize fires continuously while a window is being dragged, and re-laying out on every
+     * frame is how a resize feels broken.
+     */
+    try{
+      var _mvT;
+      window.addEventListener('resize', function(){
+        clearTimeout(_mvT); _mvT = setTimeout(function(){ clampIntoView(); save(); }, 150);
+      });
+    }catch(e){}
     /**
      * ⭐⭐ RESIZING A PANEL HAS TO RESIZE WHAT IS INSIDE IT. Every modal body carries `max-height:54vh` from the
      * stylesheet (`72vh` when wide), so dragging the corner taller grew the FRAME and left a band of empty card
@@ -12249,30 +12291,106 @@ function makeMovable(panel, opts){
      * indistinguishable from the ✕ beside it — so this only collapses the panel to its header, and the same
      * button restores it. Everything in the fields is still there when it comes back.
      */
-    if (opts.minimise) {
-      var min = false;
-      var mb = btn('–', 'Minimise', function(){
-        min = !min;
-        [].slice.call(panel.children).forEach(function(c){
-          if (c === bar || c.getAttribute('data-mv') === 'rz' || c.classList.contains('mx')) return;
-          if (c.classList.contains('mhd')) return;                 // the header stays, so it can be restored
-          c.style.display = min ? 'none' : '';
-        });
-        panel.style.height = min ? 'auto' : panel.style.height;
-        mb.textContent = min ? '□' : '–';
-        mb.title = min ? 'Restore' : 'Minimise';
+    /**
+     * ── ⭐⭐ THE COLLAPSE IS A FUNCTION, AND THE BUTTON BELONGS WITH THE CLOSE ─────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"i have used so many screens, the minimise, close etc always on the [right] hand side
+     * and the menu, bar etc on the left hand side — you created the other way around"* · *"just switch the
+     * control, left to right and make the close minimise on the right hand side."*
+     *
+     * He is right and it is not a preference: every window anybody has used keeps its window controls together
+     * at one end. Split across two corners, half of them get hunted for — and on the day the panel was wider
+     * than his screen, the half on the right had gone off it entirely.
+     *
+     * ⚠️⚠️ BUT A PANEL'S HEADER IS RE-RENDERED ON EVERY PAINT, so a button appended into it from here would
+     * vanish on the next repaint and take the escape with it — the exact class of bug being fixed today. ⭐ So
+     * the collapse is a FUNCTION on `panel._mv`, and a panel that draws its own header draws its own minimise
+     * beside its own close, where it survives every repaint because the panel writes it every time.
+     */
+    var min = false, wasW = null, mb = null;
+    function toggleMin(){
+      min = !min;
+      [].slice.call(panel.children).forEach(function(c){
+        if (c === bar || c.getAttribute('data-mv') === 'rz' || c.classList.contains('mx')) return;
+        if (c.classList.contains('mhd')) return;                 // the header stays, so it can be restored
+        c.style.display = min ? 'none' : '';
       });
-      bar.appendChild(mb);
+      /**
+       * ⚠️⚠️ MINIMISE COLLAPSED THE HEIGHT AND NEVER THE WIDTH, which made it useless in the one situation it was
+       * reached for. Athi, stuck behind a panel wider than his screen: *"no minimise is not working"* — and it
+       * was not: the panel became a SHORT bar still two thousand pixels wide, its close and size controls still
+       * off the right-hand edge.
+       * ⭐ Minimised is now a small pill. The previous width is remembered and given back on restore, so the
+       * tester who sized it for six columns gets those six columns back — hiding is not resizing.
+       */
+      if (min) { wasW = panel.style.width; panel.style.width = Math.min(260, window.innerWidth - 16) + 'px'; }
+      else if (wasW) { panel.style.width = wasW; }
+      panel.style.height = min ? 'auto' : panel.style.height;
+      if (!min) clampIntoView();
+      save();
+      if (mb) { mb.textContent = min ? '□' : '–'; mb.title = min ? 'Restore' : 'Minimise'; }
     }
+    if (opts.minimise) { mb = btn('–', 'Minimise', toggleMin); bar.appendChild(mb); }
     panel.appendChild(bar);
+    /**
+     * ── ⭐⭐⭐ THE ESCAPE MUST NOT LIVE INSIDE THE THING THAT BROKE ────────────────────────────────────────────
+     *
+     * Every way out of an oversized panel was a control ON that panel, and the failure was precisely that its
+     * controls had gone off the screen. Athi had to be talked through `localStorage.removeItem` in a browser
+     * console, which is not a thing to ask of anybody — and no shopkeeper would ever get there.
+     *
+     * ⭐ Escape brings the panel back into view and to a size the window can hold. A keystroke has no position,
+     * so it cannot be pushed off the edge by the very bug it recovers from.
+     * ⚠️ It does NOT close: closing on Escape would lose whatever is half-typed, and this panel holds notes a
+     * tester is in the middle of writing. It makes the panel reachable, and the reachable controls do the rest.
+     */
+    try{
+      document.addEventListener('keydown', function(e){
+        if (e.key !== 'Escape' || !document.body.contains(panel)) return;
+        if (panel.offsetParent === null) return;              /* hidden — nothing to rescue */
+        clampIntoView(); save();
+      });
+    }catch(e){}
     // drag by grip
     var d = null;
     function dmove(e){ if(!d) return; panel.style.left = (d.l + e.clientX - d.x) + 'px'; panel.style.top = (d.t + e.clientY - d.y) + 'px'; }
     function dup(){ if(!d) return; d = null; grip.style.cursor = 'grab'; clampIntoView(); save();
       document.removeEventListener('mousemove', dmove); document.removeEventListener('mouseup', dup); }
-    grip.addEventListener('mousedown', function(e){ floatOut(); var r = panel.getBoundingClientRect();
+    function startDrag(e){ floatOut(); var r = panel.getBoundingClientRect();
       d = { x: e.clientX, y: e.clientY, l: r.left, t: r.top }; grip.style.cursor = 'grabbing';
-      document.addEventListener('mousemove', dmove); document.addEventListener('mouseup', dup); e.preventDefault(); });
+      document.addEventListener('mousemove', dmove); document.addEventListener('mouseup', dup); e.preventDefault(); }
+    grip.addEventListener('mousedown', startDrag);
+    /**
+     * ── ⭐⭐ THE WHOLE HEADER DRAGS ───────────────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"the move can be centered? it has to work anywhere in the top panel."*
+     *
+     * ⭐ A twelve-pixel grip is a target to aim at; a title bar is what every window in the world is moved by,
+     * and nobody has to be told about it.
+     *
+     * ⭐⭐ SO THE GRIP GOES ALTOGETHER — Athi: *"follow the industry standard, do not invent anything."* The
+     * standard title bar is the same everywhere and has three parts and no fourth: the TITLE on the left, the
+     * WINDOW CONTROLS on the right, and the whole bar is the drag handle. Windows, macOS, GNOME and every
+     * dialog inside them agree. A visible grip — left, right or centred — is a thing we would be inventing, and
+     * a reader would have to learn it. [[feedback-adopt-dont-reinvent]]
+     * ⚠️ `cursor:grab` on the bar is what says it moves, which is also the standard signal.
+     *
+     * ⚠️ NOT OVER A CONTROL. A mousedown on a button, a select or a text box inside the header must reach that
+     * control, or the filters along the top of this panel become dead things you can only drag by.
+     */
+    try{
+      var head = opts.dragOn ? panel.querySelector(opts.dragOn) : null;
+      if (head) {
+        grip.style.display = 'none';
+        head.style.cursor = 'grab';
+        head.addEventListener('mousedown', function(e){
+          if (e.button !== 0) return;
+          var t = e.target;
+          if (t && t.closest && t.closest('button,select,input,textarea,a,label,[contenteditable]')) return;
+          startDrag(e);
+        });
+      }
+    }catch(e){}
     // resize corner
     var rz = document.createElement('div'); rz.setAttribute('data-mv','rz');
     rz.style.cssText = 'position:absolute;inset-inline-end:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:6;background:linear-gradient(135deg,transparent 48%,rgba(0,0,0,.22) 48%);border-radius:0 0 8px 0';
@@ -12293,6 +12411,8 @@ function makeMovable(panel, opts){
       panel.style.zoom = '';                     // clear a zoom a previous build may have left on the element
       clampIntoView();
     }
+    /* ⭐ the seam a panel uses to draw its own window controls — and to rescue itself */
+    try { panel._mv = { toggleMin: toggleMin, isMin: function(){ return min; }, clamp: clampIntoView }; } catch(e){}
   }catch(e){ /* best-effort — never break the panel */ }
 }
 

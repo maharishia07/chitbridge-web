@@ -356,7 +356,9 @@ function testPanelOpen() {
      * ⚠️ padding-inline-start leaves room for the drag grip makeMovable pins at the top-left corner; without
      * it the grip sits on top of the title and neither can be read.
      */
-    + '<div id="cbtesthead" class="mhd" style="padding:9px 11px 9px 30px;border-bottom:1px solid var(--line,#e7e3d8);'
+    /* ⚠️ the 30px left inset was room for the drag grip; the grip is gone now that the whole header drags,
+       and the extra space read as a wonky margin. */
+    + '<div id="cbtesthead" class="mhd" style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);'
     +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0;margin:0"></div>'
     /* ⚠⚠ A SCROLL CONTAINER, NOT A FLEX COLUMN. It was both, and that is why nothing scrolled: a flex
        parent SIZES its child to fit, so the list never overflowed and there was nothing for overflow:auto to
@@ -386,10 +388,15 @@ function testPanelOpen() {
     if (typeof makeMovable === 'function') {
       makeMovable(document.getElementById('cbtestpanel'), {
         key: 'cb_testpanel', minW: 280, minH: 180,
+        /* ⭐ the whole header drags — Athi: *"it has to work anywhere in the top panel"* */
+        dragOn: '#cbtesthead',
         /* ⭐ Athi, 2026-09-11: *"a minimise button, so we can minimise the test case"* — and it already
            existed, behind an option I had not passed. It HIDES, it never closes: whatever is half-typed in a
            note box is still there when it comes back. */
-        minimise: true,
+        /* ⚠️ FALSE HERE ON PURPOSE: this panel draws its own minimise beside its own close, on the RIGHT, where
+           every window keeps them. makeMovable's built-in one is pinned top-LEFT, which is the split Athi asked
+           to end — and being outside the header, it also survived nothing that repaints. */
+        minimise: false,
         /* ⚠️ WITHOUT `fit`, DRAGGING THE CORNER TALLER GROWS THE FRAME AND NOT THE LIST — you get a band of
            empty card under the cases, which reads as a bug rather than as a resize that did nothing. */
         fit: '#cbtestbody',
@@ -712,6 +719,21 @@ function testPaint() {
            ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
             return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
     +   '</select>'
+    /**
+     * ⭐⭐⭐ OUT OF THE WAY OF THE THING BEING TESTED. Athi, 2026-09-12: *"when we test it, it has to be away from
+     * the current screen, so one side test scripts and another side i can test it, it should be openable in
+     * another window?"*
+     *
+     * ⭐ THE SECOND WINDOW ALREADY EXISTS — /testing.html is the full board, reading the same session out of the
+     * same localStorage on the same origin. This is a link, not a build. [[feedback-adopt-dont-reinvent]]
+     * ⚠️ A FLOATING PANEL CAN NEVER SOLVE THIS: whatever it is not covering, it is still in front of, and a
+     * tester dragging it aside ten times an hour is the tax this removes.
+     * ⚠️ A named target, so pressing it twice raises the window already open instead of stacking a second one.
+     */
+    +   '<button title="Open the board in its own window — the app on one screen, the scripts on the other" '
+    +     'onclick="testPopOut()" style="' + ico + '">↗</button>'
+    /* ⭐ minimise sits WITH close, at the right, and is redrawn on every paint like everything else here */
+    +   '<button title="Minimise" onclick="testMinimise()" style="' + ico + '">\u2013</button>'
     +   '<button title="Close" onclick="testModeSet(false)" style="' + ico + '">\u2715</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
@@ -950,6 +972,14 @@ function testPaint() {
      */
     if (CBTEST.view === 'menu') {
       h += testMenuHTML(shown);
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
+    /* ⭐ the requirements are their own list and do NOT read from `shown`: a case filter has nothing to say
+       about a requirement raised months ago from a case that has since been retired. */
+    if (CBTEST.view === 'req') {
+      h += testReqHTML();
       h += '</div>';
       body.innerHTML = h;
       return;
@@ -1239,13 +1269,187 @@ function testPaint() {
  * repeatedly. Same rule as the folds beside it.
  */
 /* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
+var TEST_VIEWS = ['list', 'menu', 'req'];
 function testViewGet() {
-  try { return localStorage.getItem('cb_test_view') === 'menu' ? 'menu' : 'list'; } catch (_) { return 'list'; }
+  try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'list'; }
+  catch (_) { return 'list'; }
 }
 function testSetView(v) {
-  try { localStorage.setItem('cb_test_view', v === 'menu' ? 'menu' : 'list'); } catch (_) {}
+  if (TEST_VIEWS.indexOf(v) < 0) v = 'list';
+  try { localStorage.setItem('cb_test_view', v); } catch (_) {}
   CBTEST.view = v;
-  testPaint();
+  /* ⚠️ the requirements are read on ARRIVAL, not with the cases: a list nobody has opened should not be one
+     more call on every panel open. [[feedback-on-demand-loading]] */
+  if (v === 'req' && !CBTEST.reqs) testReqLoad(); else testPaint();
+}
+
+/**
+ * ── ⭐⭐⭐ THE REQUIREMENTS RAISED WHILE TESTING ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"we must be having an option to filter the requirements which are not actioned, so we can
+ * set the flag"* · *"this testlab is only for the developers and testers so we can conveniently showcase all
+ * the requirements captured"* · *"this will help to keep it prioritised, backlog and so on."*
+ *
+ * ⭐ SO IT IS A BACKLOG, NOT A LOG. It opens on what is NOT ACTIONED, sorts by priority with the oldest first
+ * inside each, and can show everything ever captured — the audience is developers and testers, so it says the
+ * state, the priority, who raised it and from which case, without softening any of it.
+ */
+var TEST_REQ_STATES = ['raised', 'accepted', 'implemented', 'rejected'];
+function testReqFilterGet() {
+  try { var v = localStorage.getItem('cb_test_reqf'); return v || 'open'; } catch (_) { return 'open'; }
+}
+function testReqFilter(v) {
+  try { localStorage.setItem('cb_test_reqf', v); } catch (_) {}
+  testReqLoad();
+}
+async function testReqLoad() {
+  CBTEST.reqBusy = true; testPaint();
+  try { CBTEST.reqs = await api('testReqList', { query: { state: testReqFilterGet() } }); CBTEST.reqErr = null; }
+  catch (e) { CBTEST.reqErr = (e && e.message) || 'Could not read them.'; }
+  CBTEST.reqBusy = false; testPaint();
+}
+/**
+ * ⚠️⚠️ REJECTING ASKS FOR THE REASON AND WILL NOT PROCEED WITHOUT ONE. The server refuses it too — but a refusal
+ * that arrives after the click is a worse way to learn it. A "no" with no reason gets re-raised by the next
+ * tester, and rightly.
+ */
+async function testReqSet(id, state) {
+  var why = null;
+  if (state === 'rejected') {
+    why = window.prompt('Why is this rejected? The next tester will read this instead of raising it again.');
+    if (why === null) return;                       /* cancelled — nothing is changed */
+    if (!String(why).trim()) { if (typeof toast === 'function') toast('A rejection needs its reason.'); return; }
+  }
+  try {
+    await api('testReqSet', { params: { id: id }, body: { state: state, why: why } });
+    if (typeof toast === 'function') toast('Marked ' + state);
+    testReqLoad();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
+}
+async function testReqPri(id, priority) {
+  try { await api('testReqSet', { params: { id: id }, body: { state: null, priority: priority } }); testReqLoad(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
+}
+
+/**
+ * ── ⭐⭐⭐ THE BOX A TESTER WRITES IT IN ───────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"we may have to have a text box to add new requirement so it can be considered, because
+ * the testers will not have you."*
+ *
+ * ⚠️⚠️ TWO FIELDS, NOT ONE, and the second is the one people skip. **What must be true** is the requirement;
+ * **what you saw** is why anybody should believe it. A list of rules with no evidence is a wish-list, and six
+ * months later nobody can tell which entries were ever real.
+ *
+ * ⭐ THE CASE KEY IS PREFILLED FROM WHERE THE TESTER IS STANDING, because the whole value of raising it here
+ * rather than in a document is that the link back to the case is made for free — that is the citation the
+ * board has never had.
+ */
+function testReqFormHTML() {
+  var open = CBTEST.reqForm;
+  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;background:var(--card,#fff);color:var(--grey-2,#545A61);';
+  if (!open) {
+    return '<button onclick="testReqForm(1)" style="' + base + 'font-weight:700">+ Raise a requirement</button>';
+  }
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;background:var(--card,#fff);color:var(--ink,#1a1a1a);margin-bottom:5px;box-sizing:border-box';
+  return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:8px;margin-bottom:9px">'
+    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:4px">'
+    +   'What must the product do — and what did you see that says it does not?</div>'
+    + '<input id="reqWhat" style="' + inp + '" placeholder="What must be true — e.g. a unit sold by weight must accept a fraction">'
+    + '<input id="reqSeen" style="' + inp + '" placeholder="What you saw — e.g. typed 0.5 kg and the line disappeared">'
+    + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
+    +   '<select id="reqPri" style="' + inp + ';width:auto;margin:0">'
+    +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
+    +   '<input id="reqCase" style="' + inp + ';width:auto;flex:1;margin:0" placeholder="from case (optional)" value="'
+    +     testEsc(CBTEST.focusCase || '') + '">'
+    +   '<button onclick="testReqSend()" style="' + base + 'font-weight:700">Raise</button>'
+    +   '<button onclick="testReqForm(0)" style="' + base + '">Cancel</button>'
+    + '</div></div>';
+}
+function testReqForm(on) { CBTEST.reqForm = !!on; testPaint(); }
+/**
+ * ⚠️ THE FIELDS ARE READ FROM THE DOM, NOT FROM STATE, and that is deliberate: a keystroke-by-keystroke state
+ * would repaint the panel under the cursor, which is how a half-typed sentence is lost. [[feedback-repaint-locally]]
+ */
+async function testReqSend() {
+  var g = function (id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+  var what = g('reqWhat'), seen = g('reqSeen');
+  /* ⚠️ said here rather than after a round trip — the server refuses these too, but not before the typing is gone */
+  if (!what) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
+  if (!seen) { if (typeof toast === 'function') toast('Say what you saw — a requirement with no evidence cannot be judged.'); return; }
+  try {
+    var r = await api('testReqRaise', { body: {
+      requirement: what, observed: seen, priority: g('reqPri') || 'Medium', case_key: g('reqCase') || null } });
+    if (typeof toast === 'function') {
+      toast('Raised ' + (r && r.clause ? r.clause : '') + (r && r.cited ? ' — and the case now cites it' : ''));
+    }
+    CBTEST.reqForm = false;
+    testReqLoad();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not raise it.'); }
+}
+
+function testReqHTML() {
+  var d = CBTEST.reqs, f = testReqFilterGet();
+  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
+  var chips = [['open', 'Not actioned'], ['raised', 'Raised'], ['accepted', 'Accepted'],
+               ['implemented', 'Implemented'], ['rejected', 'Rejected'], ['all', 'Everything']]
+    .map(function (x) {
+      var on = f === x[0];
+      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
+      return '<button onclick="testReqFilter(\'' + x[0] + '\')" style="' + base
+        + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
+              : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+        + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
+    }).join('');
+
+  var h = testReqFormHTML() + '<div style="margin:6px 0 8px">' + chips + '</div>';
+  if (CBTEST.reqBusy) return h + '<div style="color:var(--note);font-size:var(--fs-1)">reading…</div>';
+  if (CBTEST.reqErr) return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.reqErr) + '</div>';
+  var list = (d && d.requirements) || [];
+  if (!list.length) {
+    /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS. "Nothing raised yet" and "nothing left to action" are different
+       facts and only one of them is good news. */
+    return h + '<div style="color:var(--note);font-size:var(--fs-1);padding:8px 0">'
+      + (d && d.total ? 'Nothing in this state — ' + d.total + ' captured altogether.'
+                      : 'Nothing raised yet. Raise one from a case when a test finds something the product should do.')
+      + '</div>';
+  }
+
+  var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--note,#8a8378)' };
+  h += list.map(function (q) {
+    var acts = '';
+    if (q.state === 'raised') {
+      acts = '<button onclick="testReqSet(\'' + q.definition_id + '\',\'accepted\')" style="' + base + '">Accept</button>'
+           + '<button onclick="testReqSet(\'' + q.definition_id + '\',\'rejected\')" style="' + base + '">Reject</button>';
+    } else if (q.state === 'accepted') {
+      acts = '<button onclick="testReqSet(\'' + q.definition_id + '\',\'implemented\')" style="' + base + '">Implemented</button>'
+           + '<button onclick="testReqSet(\'' + q.definition_id + '\',\'rejected\')" style="' + base + '">Reject</button>';
+    }
+    return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
+      + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
+      +   '<b style="color:' + (PRI[q.priority] || PRI.Medium) + ';font-size:var(--fs-1)">' + testEsc(q.priority) + '</b>'
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.clause) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;padding:1px 6px">'
+      +     testEsc(q.state) + '</span>'
+      +   (q.raised_from ? '<span style="font-size:var(--fs-1);color:var(--note)">from '
+            + testEsc(q.raised_from) + '</span>' : '')
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(q.requirement) + '</div>'
+      /* ⚠️ THE EVIDENCE IS SHOWN BESIDE THE RULE, ALWAYS. Six months on, "what was seen" is the only thing that
+         says whether the requirement was ever real. */
+      + (q.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">seen: '
+          + testEsc(q.observed) + '</div>' : '')
+      + (q.why ? '<div style="font-size:var(--fs-1);color:var(--disp,#B3261E);margin-top:2px">because: '
+          + testEsc(q.why) + '</div>' : '')
+      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">'
+      +   testEsc(q.raised_by || 'someone') + (q.raised_at ? ' · ' + testEsc(String(q.raised_at).slice(0, 10)) : '')
+      +   (acts ? '<span style="margin-inline-start:9px">' + acts + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+  return h;
 }
 
 /**
@@ -1254,16 +1458,19 @@ function testSetView(v) {
  * what is missing.
  */
 function testViewToggleHTML() {
-  var menu = CBTEST.view === 'menu';
+  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req';
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
   var on = 'background:var(--grey-2,#545A61);color:#fff';
+  /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   return '<span style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:7px;overflow:hidden">'
     + '<button onclick="testSetView(\'list\')" title="Every case, grouped by area" '
-    +   'style="' + base + (menu ? off : on) + '">List</button>'
+    +   'style="' + base + (menu || req ? off : on) + '">List</button>'
     + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
     +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (menu ? on : off) + '">Menu tree</button>'
+    +   (menu && !req ? on : off) + '">Menu tree</button>'
+    + '<button onclick="testSetView(\'req\')" title="Requirements raised while testing — what is not actioned yet" '
+    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (req ? on : off) + '">Requirements</button>'
     + '</span>';
 }
 
@@ -1477,6 +1684,46 @@ var TEST_SIZES = {
    */
   full:   { w: Math.max(360, window.innerWidth - 16), h: Math.max(320, window.innerHeight - 16) },
 };
+/**
+ * ⚠️ A POPUP IS ONLY ALLOWED WHEN A CLICK ASKED FOR IT, which is why this runs straight from the button's own
+ * handler and does nothing asynchronous first. If the browser blocks it anyway, SAY so and name the address —
+ * a window that silently does not open reads as a broken button, and the tester tries it four more times.
+ */
+/**
+ * ⚠️ THE COLLAPSE LIVES IN makeMovable, not here — two implementations of "hide the body" would disagree about
+ * the remembered width the first time one of them changed. `panel._mv` is the seam it exposes.
+ */
+function testMinimise() {
+  var el = document.getElementById('cbtestpanel');
+  if (el && el._mv && typeof el._mv.toggleMin === 'function') el._mv.toggleMin();
+  else if (typeof toast === 'function') toast('This panel is not movable in this build.');
+}
+
+function testPopOut() {
+  var w = Math.min(1100, Math.max(720, Math.round(window.screen.availWidth * 0.48)));
+  var h = Math.max(600, Math.round(window.screen.availHeight * 0.9));
+  /* ⭐ the RIGHT half by default: the app keeps the side the tester is already working on */
+  var x = Math.max(0, window.screen.availWidth - w);
+  var win = null;
+  try {
+    win = window.open('/testing.html', 'cbtestlab',
+      'width=' + w + ',height=' + h + ',left=' + x + ',top=0,resizable=yes,scrollbars=yes');
+  } catch (_) { win = null; }
+  if (!win) {
+    if (typeof toast === 'function') toast('Your browser blocked the window — open /testing.html yourself.');
+    return;
+  }
+  try { win.focus(); } catch (_) {}
+  /**
+   * ⭐ AND THE PANEL GETS OUT OF THE WAY (Athi: *"close the current window"*). Leaving both open is the worst of
+   * the three states — two boards, one of them stale, and the floating one still covering the app you moved the
+   * board off in order to see.
+   * ⚠️ It CLOSES rather than minimises: minimised, it is still a thing to notice and re-open by accident. The
+   * board is now the other window, and the avatar menu re-opens the panel whenever it is wanted back.
+   */
+  try { testModeSet(false); } catch (_) {}
+}
+
 function testSize(name) {
   var s = TEST_SIZES[name];
   if (!s) return;
