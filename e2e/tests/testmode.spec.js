@@ -424,4 +424,95 @@ test.describe('test mode', () => {
     expect(rows.filter((p) => p.failed === 1).length).toBe(1);
     expect(new Set(rows.map((p) => p.tester_id)).size).toBe(3);
   });
+
+  /**
+   * ── ⭐⭐ THE THREE THINGS THAT MADE "BEHIND" WRONG THE FIRST TIME ─────────────────────────────────────────
+   *
+   * Every one of these was found by looking at the live panel, not by a guard, and every one of them made the
+   * area report MORE coverage than the screen has. That is the direction that matters: a tester who reads
+   * "44 passing underneath" and moves on has been misled by their own tool.
+   */
+  test('[TM-17] Behind names the file that draws the screen, and counts only real links', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM seventeen ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+    await page.locator('[data-testid="nav-catalogue"]').click();
+    await openPanel(page);
+    await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
+
+    await page.locator('#cbcasesbody button', { hasText: /^Behind/ }).first().click();
+    const body = page.locator('#cbcasesbody');
+
+    /* the EXACT rung: the register knows which capability draws the Catalogue */
+    await expect(body).toContainText('cap-catalogue.js');
+
+    /**
+     * ⚠️ AND THE NAME MATCH IS NEVER FOLDED INTO THE COUNT. The tab number must equal the linked rows only.
+     * A word match dressed up as coverage is the whole failure this area was built to avoid, so it is
+     * asserted rather than trusted to the comment that says so.
+     */
+    const n = await page.evaluate(() => {
+      const b = testBehindOf(CBTEST.popupFor);
+      return { tab: testBehindCount(CBTEST.popupFor), linked: b.linked.length, named: b.named.length };
+    });
+    expect(n.tab, 'the tab count does not match the linked rows').toBe(n.linked || null);
+    if (n.named) {
+      await expect(body).toContainText('Named after');
+      expect(n.tab).not.toBe((n.linked || 0) + n.named);
+    }
+  });
+
+  test('[TM-18] the tester’s own tool never appears as something the screen depends on', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM eighteen ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+    await page.locator('[data-testid="nav-catalogue"]').click();
+    await openPanel(page);
+    await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
+
+    /**
+     * ⚠️⚠️ READING THE BOARD, SAVING A VERDICT AND POSTING A SCREENSHOT ALL HIT /api/testing. Left in, every
+     * screen in the product listed the tester’s own tool among its dependencies — and dragged that
+     * route’s whole module fan-out, and every test of it, in behind. Opening the panel is the act that
+     * causes it, so the panel being open IS the test.
+     */
+    const seen = await page.evaluate(() => testBehindOf(CBTEST.popupFor).routes);
+    expect(seen.filter((r) => /routes\/testing\.js$/.test(r)), 'the test tool listed itself').toEqual([]);
+
+    /* and the same for the Speed reading — a measurement that counts itself is not one */
+    const paths = await page.evaluate(() => (window.CBCALLS || [])
+      .filter((c) => /^\/api\/testing/.test(c.path || '')).length);
+    expect(paths, 'the fixture never called /api/testing — this test proves nothing').toBeGreaterThan(0);
+    await page.locator('#cbcasesbody button', { hasText: /^Speed/ }).first().click();
+    await expect(page.locator('#cbcasesbody')).not.toContainText('/api/testing');
+  });
+
+  test('[TM-19] a second visit to a screen does not inherit the first visit’s calls', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM nineteen ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+    await openPanel(page);
+
+    /**
+     * ⚠️⚠️ THE VISIT NUMBER HAS TO ADVANCE EVEN WHEN A SCREEN ASKS THE SERVER FOR NOTHING. Counting it inside
+     * the call recorder alone left it stuck at 1 across two navigations — caught in the browser, not here —
+     * and the Catalogue went on presenting the app’s whole start-up as its own dependencies: ten routes and
+     * 83 tests underneath, against one route and 38 once this was right.
+     */
+    await page.locator('[data-testid="nav-catalogue"]').click();
+    await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
+    const first = await page.evaluate(() => window.CBGEN || 0);
+
+    await page.locator('[data-testid="nav-suppliers"]').click();
+    await expect(page.locator('#cbcaseshead')).toContainText('BUS002', { timeout: 20000 });
+    await page.locator('[data-testid="nav-catalogue"]').click();
+    await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
+
+    const back = await page.evaluate(() => window.CBGEN || 0);
+    expect(back, 'the visit number stood still across two navigations').toBeGreaterThan(first);
+
+    /* and the app’s start-up is no longer being counted against a screen the tester walked back to */
+    const booting = await page.evaluate(() => testBehindOf(CBTEST.popupFor).booting);
+    expect(booting, 'a revisited screen still reports itself as mid-boot').toBeFalsy();
+  });
 });
