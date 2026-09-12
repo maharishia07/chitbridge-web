@@ -154,29 +154,41 @@ window.CBSCREENS = {
    "icon": "📄",
    "label": "Chit detail"
   },
-  "chit-messages": {
-   "code": "DTL002",
-   "path": "Detail › Chit messages",
-   "icon": "💬",
-   "label": "Chit messages"
+  "catalogue-product": {
+   "code": "CAT005",
+   "path": "Catalogue › Product detail",
+   "icon": "📦",
+   "label": "Product detail"
   },
   "connector-erp": {
-   "code": "DTL003",
-   "path": "Detail › Connector cockpit (ERP)",
+   "code": "BUS006",
+   "path": "Business › Connector cockpit (ERP)",
    "icon": "🔌",
    "label": "Connector cockpit (ERP)"
   },
   "connector-iot": {
-   "code": "DTL004",
-   "path": "Detail › Connector cockpit (IoT)",
+   "code": "BUS007",
+   "path": "Business › Connector cockpit (IoT)",
    "icon": "📡",
    "label": "Connector cockpit (IoT)"
   },
   "coassist-actor": {
-   "code": "DTL005",
-   "path": "Detail › Co-assist cockpit",
+   "code": "BUS008",
+   "path": "Business › Co-assist cockpit",
    "icon": "👤",
    "label": "Co-assist cockpit"
+  },
+  "chit2-detail": {
+   "code": "DTL006",
+   "path": "Detail › Chit detail (design 2)",
+   "icon": "🗂️",
+   "label": "Chit detail (design 2)"
+  },
+  "chit-messages": {
+   "code": "MSG001",
+   "path": "Message › Chit messages",
+   "icon": "💬",
+   "label": "Chit messages"
   }
  },
  "byPath": {
@@ -224,10 +236,6 @@ window.CBSCREENS = {
   "Inside a screen › Testing": "SCR010",
   "Inside a screen › Cmdb": "SCR011",
   "Detail › Chit detail": "DTL001",
-  "Detail › Chit messages": "DTL002",
-  "Detail › Connector cockpit (ERP)": "DTL003",
-  "Detail › Connector cockpit (IoT)": "DTL004",
-  "Detail › Co-assist cockpit": "DTL005",
   "Popup › _aiCtxExporter": "POP001",
   "Popup › _aiMd": "POP002",
   "Popup › _aiOrderDocPdf": "POP003",
@@ -737,7 +745,13 @@ window.CBSCREENS = {
   "Control › The app itself › app.html • include": "CTL430",
   "Control › The app itself › app.html • json ▾": "CTL431",
   "Control › The app itself › app.html • no longer live": "CTL432",
-  "Control › The app itself › app.html • use local API": "CTL433"
+  "Control › The app itself › app.html • use local API": "CTL433",
+  "Catalogue › Product detail": "CAT005",
+  "Business › Connector cockpit (ERP)": "BUS006",
+  "Business › Connector cockpit (IoT)": "BUS007",
+  "Business › Co-assist cockpit": "BUS008",
+  "Detail › Chit detail (design 2)": "DTL006",
+  "Message › Chit messages": "MSG001"
  },
  "rows": [
   {
@@ -1133,42 +1147,6 @@ window.CBSCREENS = {
    "group": "Detail",
    "screen": "Chit detail",
    "nav": "chit-detail",
-   "cases": 0,
-   "since": "2026-09-12"
-  },
-  {
-   "code": "DTL002",
-   "path": "Detail › Chit messages",
-   "group": "Detail",
-   "screen": "Chit messages",
-   "nav": "chit-messages",
-   "cases": 0,
-   "since": "2026-09-12"
-  },
-  {
-   "code": "DTL003",
-   "path": "Detail › Connector cockpit (ERP)",
-   "group": "Detail",
-   "screen": "Connector cockpit (ERP)",
-   "nav": "connector-erp",
-   "cases": 0,
-   "since": "2026-09-12"
-  },
-  {
-   "code": "DTL004",
-   "path": "Detail › Connector cockpit (IoT)",
-   "group": "Detail",
-   "screen": "Connector cockpit (IoT)",
-   "nav": "connector-iot",
-   "cases": 0,
-   "since": "2026-09-12"
-  },
-  {
-   "code": "DTL005",
-   "path": "Detail › Co-assist cockpit",
-   "group": "Detail",
-   "screen": "Co-assist cockpit",
-   "nav": "coassist-actor",
    "cases": 0,
    "since": "2026-09-12"
   },
@@ -5759,6 +5737,60 @@ window.CBSCREENS = {
    "group": "Control",
    "screen": "The app itself › app.html • use local API",
    "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CAT005",
+   "path": "Catalogue › Product detail",
+   "group": "Catalogue",
+   "screen": "Product detail",
+   "nav": "catalogue-product",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS006",
+   "path": "Business › Connector cockpit (ERP)",
+   "group": "Business",
+   "screen": "Connector cockpit (ERP)",
+   "nav": "connector-erp",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS007",
+   "path": "Business › Connector cockpit (IoT)",
+   "group": "Business",
+   "screen": "Connector cockpit (IoT)",
+   "nav": "connector-iot",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS008",
+   "path": "Business › Co-assist cockpit",
+   "group": "Business",
+   "screen": "Co-assist cockpit",
+   "nav": "coassist-actor",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL006",
+   "path": "Detail › Chit detail (design 2)",
+   "group": "Detail",
+   "screen": "Chit detail (design 2)",
+   "nav": "chit2-detail",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "MSG001",
+   "path": "Message › Chit messages",
+   "group": "Message",
+   "screen": "Chit messages",
+   "nav": "chit-messages",
    "cases": 0,
    "since": "2026-09-12"
   }

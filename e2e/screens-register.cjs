@@ -74,7 +74,6 @@ ok('no code is claimed by two screens' + (dup.length ? ': ' + dup.join(' · ') :
 ok('screens are reachable by nav key, or the code can never be shown on the screen it names',
    Object.keys(CB.byNav || {}).length > 10);
 
-fails.forEach((f) => console.error('  ✗ ' + f));
 /**
  * ── ⚠️⚠️ THE DECLARED SUB-VIEWS MUST STILL BE WHAT THE APP CALLS THEM ────────────────────────────────────────
  *
@@ -90,8 +89,10 @@ fails.forEach((f) => console.error('  ✗ ' + f));
   /* ⚠️ read here rather than assumed: this file guards two registers and had no app.html to hand */
   const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
   const reg2 = JSON.parse(fs.readFileSync(REG, 'utf8'));
-  const subs = Object.entries(reg2.screens)
-    .filter(([k, v]) => k.indexOf('Detail ') === 0 && !v.retired && v.nav);
+  /* ⭐ `sub` is stamped by screens.cjs on every declared sub-view, wherever it is filed — a chit detail lives
+     under DTL because it is SHARED, a product detail under CAT because the catalogue owns it, and neither
+     placement is something this guard should have to know about. */
+  const subs = Object.entries(reg2.screens).filter(([, v]) => v.sub && !v.retired && v.nav);
   ok('the register declares the sub-views (' + subs.length + ')', subs.length >= 4);
   const orphan = subs.filter(([, v]) => app.indexOf("'" + v.nav + "'") < 0).map(([k, v]) => v.nav + ' (' + v.code + ')');
   ok('every declared sub-view is a name _fineScreen() still returns'
@@ -103,6 +104,36 @@ fails.forEach((f) => console.error('  ✗ ' + f));
   const missing2 = [...new Set(returned)].filter((n) => !known.has(n) && n.indexOf('-') > 0);
   ok('no sub-view the app can report is missing from the register'
      + (missing2.length ? ': ' + missing2.join(' · ') : ''), missing2.length === 0);
+}
+
+/**
+ * ── ⚠️ THE THREE WAYS THE STAMP HAS ALREADY GONE WRONG ───────────────────────────────────────────────────────
+ *
+ * Every one of these shipped, passed every guard there was, and was found by opening the app and looking:
+ *
+ *   1. the heading was picked with `querySelector('.sec, h1, h2, b')`, which is not a priority list -- it
+ *      returns the first match in DOCUMENT ORDER, so on Intake the code was painted into a sentence:
+ *      "A message is a WRK003 notice".
+ *   2. the detail title was asked for as `.dh .dt`; design 2 writes `.dt` with no `.dh`, so the one screen
+ *      that had just been given its own code was the one screen not showing it.
+ *   3. `UI.chit2` was read as "design 2 is on screen" when it is really "the last chit read that way", and it
+ *      is never cleared -- so a product detail was headed DTL006, a chit that had left the page.
+ *
+ * ⚠️ THESE ARE SOURCE CHECKS AND THEY PROVE LESS THAN THEY LOOK: they show the fix is still written, not that
+ * the code appears on the screen. Only opening the app proves that. They are here so a later edit cannot
+ * quietly undo a fix that cost an hour to find.
+ */
+{
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+  ok('the heading is found by what it says, not by the first bold word',
+     app.indexOf('function screenHeadEl') > 0 && app.indexOf(".querySelector('.sec, h1, h2, b')") < 0);
+  ok('the detail title is not required to sit in a .dh -- design 2 has none',
+     app.indexOf(".querySelector('#detailpane .dh .dt')") < 0
+     && app.indexOf(".querySelector('#detailpane .dt')") > 0);
+  ok('design 2 is only reported while its own chit is open',
+     app.indexOf("U.chit2 && U.sel && U.chit2 === U.sel") > 0);
+  ok('the pane is watched, so a painter nobody has written yet still gets a code',
+     app.indexOf('function watchDetailPane') > 0);
 }
 
 /**
@@ -139,6 +170,7 @@ if (fs.existsSync(AREG)) {
 }
 
 if (fails.length) {
+  fails.forEach((f) => console.error('  ✗ ' + f));
   console.error('\n  Run `node C:\\dev\\screens.cjs` and `node C:\\dev\\assets.cjs`, then commit — the copies have parted.\n');
 }
 if (!fails.length) console.log('\n  ' + pass + ' passed\n');

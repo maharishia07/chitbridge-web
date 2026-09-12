@@ -1344,7 +1344,11 @@ function chit2Screen(){
     + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>'
-    + '<span style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
+    /* ⭐ CLASSED `dt` SO THE SCREEN CODE CAN FIND IT. Athi, 2026-09-12: *"if i open design 2, the name does
+       not appear"* — this header is design 2's own markup and shares nothing with the classic detail, so the
+       stamper had nothing to hook onto. One class, and the same stamper works here as everywhere else
+       rather than a second copy that knows about this file. */
+    + '<span class="dt" style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
     /**
      * ⭐⭐ THE SWITCH IS A CONTROL NOW, NOT A LABEL. It read "design 2" as plain grey text — a statement of
      * where you were with no way to leave, so the only exit was Back to the list and then in again by another

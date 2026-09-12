@@ -2302,6 +2302,59 @@ function screenCode(){
  * ⚠️ IT FINDS A HEADING OR IT DOES NOTHING. No heading means no stamp — inventing a bar above the content would
  * push every screen down by a row to display a code, which is a worse trade than the code being absent.
  */
+/**
+ * -- WHICH ELEMENT IS THE HEADING -----------------------------------------------------------------------------
+ *
+ * The first version asked `querySelector('.sec, h1, h2, b')`, which reads as a priority list and IS NOT ONE:
+ * a comma list returns the first match in DOCUMENT ORDER. Intake's title is a bare <span>, so no branch of that
+ * list matched it and the winner was the <b> in the sentence below -- the screen code was painted into the
+ * middle of a paragraph, reading "A message is a WRK003 notice".
+ *
+ * It looked plausible on the screens that happen to use a section head, which is the dangerous kind of wrong.
+ *
+ * So the heading is found by WHAT IT SAYS, not by what it is made of: the register already knows this screen's
+ * icon and label, and the heading is the leaf element showing exactly that. Structure is only the fallback.
+ *
+ * A screen whose title does not match gets NO STAMP AT ALL. A missing code is a gap someone reports; a code in
+ * the wrong sentence is a statement that is simply false, and nobody reports those because they look finished.
+ */
+/**
+ * The icon run at the front of a heading, removed.
+ *
+ * A heading writes its icon as the first characters of its own text, so there is no element to skip -- the
+ * characters have to be counted off.
+ *
+ * No regular expression on purpose: the class for this has now been mangled on its way into the file TWICE,
+ * the second time into one holding a raw NUL byte and a stray letter. A loop over character codes cannot be
+ * corrupted into something that still runs and quietly matches the wrong thing.
+ */
+function leadIconOff(txt){
+  var t = String(txt == null ? '' : txt).trim(), i = 0;
+  while (i < t.length && t.charCodeAt(i) > 127) i++;
+  return t.slice(i).trim();
+}
+
+function screenHeadEl(body, info){
+  var lab = String(info.label || '').trim().toLowerCase();
+  if (lab) {
+    /**
+     * The icon is STRIPPED rather than matched. Intake is drawn with a tray and the rail lists it with an
+     * envelope, so "icon + label" found nothing and the screen went unnamed -- the register and the screen do
+     * not have to agree about the picture for the code to be placed correctly. (That they disagree at all is a
+     * separate finding, and one for the CMDB to raise rather than for this function to paper over.)
+     */
+    var all = body.querySelectorAll('span, div, h1, h2, h3, b, strong');
+    for (var i = 0; i < all.length && i < 500; i++) {
+      var e = all[i];
+      if (e.children.length) continue;   /* the leaf that HOLDS the words, not a wrapper around it */
+      var t = leadIconOff(e.textContent).toLowerCase();
+      if (t && t === lab) return e;
+    }
+  }
+  /* ⚠️ 'b' is deliberately NOT in this list: any bold word in the first paragraph would win it */
+  return body.querySelector('.sec') || body.querySelector('h1') || body.querySelector('h2') || null;
+}
+
 function stampScreenHeading(){
   try{
     var body = document.getElementById('mainbody');
@@ -2313,8 +2366,7 @@ function stampScreenHeading(){
      */
     var info = screenInfo(true);
     if (!info) return;
-    /* the first thing that reads as this screen's title: the crumb, a section head, or a real heading */
-    var head = body.querySelector('.sec, h1, h2, b');
+    var head = screenHeadEl(body, info);
     if (!head) return;
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'screen-code');
@@ -2349,13 +2401,43 @@ function stampScreenHeading(){
 }
 
 /** the register's row for wherever we are: code, icon and name, or null when this is not a registered screen */
+/**
+ * ── ⭐⭐ WHICH SCREEN, FOR THE PURPOSE OF NAMING IT ──────────────────────────────────────────────────────────
+ *
+ * ⚠️ NOT `_fineScreen()` ALONE, and deliberately not by changing it. That function feeds the ASSISTANT's
+ * question chain, where a new value silently changes which answers a person gets. Naming needs finer
+ * distinctions than the assistant does, so it makes them here and leaves that alone.
+ *
+ * Athi, 2026-09-12: *"if I open design 2, the name does not appear — it has to get another name"*, and
+ * *"CAT001 detail page should not get a DTL00 number."* Design 2 is a different renderer with different
+ * controls, and a product detail is a CATALOGUE screen: both are their own rows in the register now.
+ */
+function codeScreenKey(){
+  try {
+    var U = (typeof UI !== 'undefined') ? UI : {};
+    /**
+     * ⚠️⚠️ `UI.chit2` IS NOT "DESIGN 2 IS ON SCREEN" -- IT IS THE LAST CHIT READ THAT WAY, AND IT IS NEVER
+     * CLEARED. Open a chit in design 2, then click Catalogue and a product, and the product detail was headed
+     * DTL006: the code of a chit that is no longer anywhere on the page. Correct on the screen it was written
+     * for and wrong on every screen after it -- which is the whole failure mode these codes exist to prevent,
+     * since a tester would have quoted DTL006 while looking at a product.
+     *
+     * ⭐ So the flag is only believed WHILE THAT CHIT IS THE OPEN ONE. The stale id is left alone on purpose:
+     * design 2 remembers how you last read a chit, and naming a screen is no reason to change what the app
+     * remembers.
+     */
+    if (U.chit2 && U.sel && U.chit2 === U.sel) return 'chit2-detail';
+    if (U.nav === 'catalogue' && (U.prodMode === 'new' || U.prodMode === 'edit' || U.prodSel)) return 'catalogue-product';
+    return (typeof _fineScreen === 'function') ? _fineScreen() : (U.nav || null);
+  } catch (_) { return null; }
+}
+
 function screenInfo(navOnly){
   try {
     var U = (typeof UI !== 'undefined') ? UI : {};
     var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
     if (navOnly) return reg[U.nav] || null;
-    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
-    return reg[fine] || reg[U.nav] || null;
+    return reg[codeScreenKey()] || reg[U.nav] || null;
   } catch (_) { return null; }
 }
 
@@ -2373,9 +2455,49 @@ function screenInfo(navOnly){
  * ⭐ It goes in `.dt` — the detail's own title, the same shape as the screen heading stamp — so the pane's
  * child structure is untouched.
  */
+/**
+ * -- WHY THIS ONE IS WATCHED AND THE REST ARE CALLED ---------------------------------------------------------
+ *
+ * The detail pane has at least five painters, and they live in different modules: paintDetail() here,
+ * openChit2() in cap-chit2.js, and paintSupDetail / paintCustDetail / paintProdDetail elsewhere. Each one
+ * writes #detailpane.innerHTML directly.
+ *
+ * Adding a stamp call to five call sites means the sixth painter, written next month by someone who has never
+ * read this comment, produces a detail screen with no code on it -- and nothing reports that, because a
+ * missing label throws nothing. Design 2 was already that sixth painter: the stamp shipped, the guards were
+ * green, and the one screen that had just been given its own code was the one screen not showing it.
+ *
+ * So the PANE is watched instead of the painters being trusted. The observer is deliberately narrow -- one
+ * element, not the app -- and it cannot spin: stamping is itself a mutation, so the callback is debounced and
+ * stampDetailTitle() returns immediately when its tag is already there.
+ */
+function watchDetailPane(){
+  try{
+    var dp = document.getElementById('detailpane');
+    if (!dp) return;
+    if (window._dpWatch && window._dpWatchEl === dp) return;   /* already watching THIS element */
+    if (window._dpWatch) window._dpWatch.disconnect();          /* the shell replaced the pane */
+    var t = null;
+    window._dpWatch = new MutationObserver(function(){
+      clearTimeout(t);
+      t = setTimeout(function(){ try { stampDetailTitle(); } catch(_) {} }, 50);
+    });
+    window._dpWatchEl = dp;
+    window._dpWatch.observe(dp, { childList: true, subtree: true });
+  }catch(e){}
+}
+
 function stampDetailTitle(){
   try{
-    var dt = document.querySelector('#detailpane .dh .dt');
+    /**
+     * ⚠️ `.dh .dt`, NOT `.dt`. Design 1 wraps its title in a detail head; DESIGN 2 DOES NOT -- it writes the
+     * same `.dt` span with no `.dh` around it, so the stamp silently skipped the one screen that had just
+     * been given its own code. The two designs are different renderers and this is exactly the kind of
+     * difference that makes a selector written against one of them wrong about the other.
+     *
+     * ⭐ So the title is asked for by WHAT IT IS -- the detail title -- and not by what it happens to sit in.
+     */
+    var dt = document.querySelector('#detailpane .dt');
     if (!dt || dt.querySelector('[data-testid="detail-code"]')) return;
     var info = screenInfo();
     if (!info) return;
@@ -4773,7 +4895,7 @@ function _renderApp(){
    * place one label. `stampDetailTitle()` is cheap, guarded against double-stamping, and called from the two
    * places a detail can appear.
    */
-  try { stampScreenHeading(); stampDetailTitle(); } catch(_) {}
+  try { stampScreenHeading(); stampDetailTitle(); watchDetailPane(); } catch(_) {}
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
