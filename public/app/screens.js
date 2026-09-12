@@ -435,7 +435,251 @@ window.CBSCREENS = {
   "Control › Work › Intake • Settings": "CTL179",
   "Control › Work › Intake • copy": "CTL180",
   "Control › Work › Messages • Open the line": "CTL181",
-  "Control › Work › Messages • everything, including dealt with": "CTL182"
+  "Control › Work › Messages • everything, including dealt with": "CTL182",
+  "Control › Inside a screen › Adopt • Close": "CTL183",
+  "Control › Inside a screen › Adopt • Nothing ready yet": "CTL184",
+  "Control › Inside a screen › Connector • Add": "CTL187",
+  "Control › Inside a screen › Connector • Cancel": "CTL188",
+  "Control › Inside a screen › Connector • Co-assists": "CTL189",
+  "Control › Inside a screen › Connector • Get the Pi installer": "CTL190",
+  "Control › Inside a screen › Connector • Got it": "CTL191",
+  "Control › Inside a screen › Connector • Open chit": "CTL192",
+  "Control › Inside a screen › Connector • Reissue": "CTL193",
+  "Control › Inside a screen › Connector • Reissue raw key (advanced)": "CTL194",
+  "Control › Inside a screen › Connector • Retry": "CTL195",
+  "Control › Inside a screen › Connector • Send a test document": "CTL196",
+  "Control › Inside a screen › Connector • Send code": "CTL197",
+  "Control › Inside a screen › Connector • What governs this signal — licence · seale": "CTL198",
+  "Control › Inside a screen › Definitions • Ask the assistant about this screen": "CTL199",
+  "Control › Inside a screen › Definitions • Cancel": "CTL200",
+  "Control › Inside a screen › Definitions • Edit": "CTL201",
+  "Control › Inside a screen › Definitions • Retire": "CTL202",
+  "Control › Inside a screen › Definitions • Retire and hand over": "CTL203",
+  "Control › Inside a screen › Definitions • Save": "CTL204",
+  "Control › Inside a screen › Definitions • test as": "CTL205",
+  "Control › Inside a screen › Folders • Cancel": "CTL206",
+  "Control › Inside a screen › Folders • Delete": "CTL207",
+  "Control › Inside a screen › Folders • New folder": "CTL208",
+  "Control › Inside a screen › Folders • Remove from folder (back to mailbox)": "CTL209",
+  "Control › Inside a screen › Folders • Rename": "CTL210",
+  "Control › Inside a screen › Folders • Save rule": "CTL211",
+  "Control › Inside a screen › Folders • What would this catch?": "CTL212",
+  "Control › Inside a screen › Folders • matched through a misspelling": "CTL213",
+  "Control › Inside a screen › Legend • Close": "CTL214",
+  "Control › Inside a screen › Register • Cancel": "CTL215",
+  "Control › Inside a screen › Register • Close this register": "CTL216",
+  "Control › Inside a screen › Register • Edit": "CTL217",
+  "Control › Inside a screen › Register • End it": "CTL218",
+  "Control › Inside a screen › Register • End →": "CTL219",
+  "Control › Inside a screen › Register • New": "CTL220",
+  "Control › Inside a screen › Register • Record it": "CTL221",
+  "Control › Inside a screen › Register • Save change": "CTL222",
+  "Control › Inside a screen › Register • What this waits on": "CTL223",
+  "Control › Inside a screen › Register • the whole order": "CTL224",
+  "Control › Inside a screen › Service • Accept this pause": "CTL225",
+  "Control › Inside a screen › Service • Back": "CTL226",
+  "Control › Inside a screen › Service • Close": "CTL227",
+  "Control › Inside a screen › Service • End this pause": "CTL228",
+  "Control › Inside a screen › Service • Mark responded": "CTL229",
+  "Control › Inside a screen › Service • Pause": "CTL230",
+  "Control › Inside a screen › Service • Pause the clock": "CTL231",
+  "Control › Inside a screen › Service • Resolve": "CTL232",
+  "Control › Inside a screen › Service • Start the clock": "CTL233",
+  "Control › Inside a screen › Supplies • Add": "CTL234",
+  "Control › Inside a screen › Supplies • Add a supply": "CTL235",
+  "Control › Inside a screen › Supplies • Cancel": "CTL236",
+  "Control › Inside a screen › Supplies • Record": "CTL237",
+  "Control › Inside a screen › Supplies • Record a purchase": "CTL238",
+  "Control › Inside a screen › Supplies • Record it": "CTL239",
+  "Control › Inside a screen › Supplies • Used some": "CTL240",
+  "Control › Inside a screen › Supplies • another line": "CTL241",
+  "Control › Inside a screen › Testing • Accept": "CTL242",
+  "Control › Inside a screen › Testing • Add a case for something you just found": "CTL243",
+  "Control › Inside a screen › Testing • Add the case": "CTL244",
+  "Control › Inside a screen › Testing • Cancel": "CTL245",
+  "Control › Inside a screen › Testing • Clear filters": "CTL246",
+  "Control › Inside a screen › Testing • Expand all": "CTL247",
+  "Control › Inside a screen › Testing • Focus": "CTL248",
+  "Control › Inside a screen › Testing • List": "CTL249",
+  "Control › Inside a screen › Testing • Load cases": "CTL250",
+  "Control › Inside a screen › Testing • Open the board in its own window": "CTL251",
+  "Control › Inside a screen › Testing • Raise": "CTL252",
+  "Control › Inside a screen › Testing • Size": "CTL253",
+  "Control › Inside a screen › Testing • Start testing": "CTL254",
+  "Control › Inside a screen › Testing • What kind of test": "CTL255",
+  "Control › Inside a screen › Testing • Who is doing this run, and how much of it": "CTL256",
+  "Control › Inside a screen › Testing • Who is testing": "CTL257",
+  "Control › Its own app › Counter • Clear and read the shop again": "CTL263",
+  "Control › Its own app › Counter • Clear · Esc": "CTL264",
+  "Control › Its own app › Counter • Close": "CTL265",
+  "Control › Its own app › Counter • Confirm receipt · F9": "CTL266",
+  "Control › Its own app › Counter • Count and hand over": "CTL267",
+  "Control › Its own app › Counter • Day close sheet": "CTL268",
+  "Control › Its own app › Counter • Discard": "CTL269",
+  "Control › Its own app › Counter • Everything": "CTL270",
+  "Control › Its own app › Counter • Freight &amp; costs · F5": "CTL271",
+  "Control › Its own app › Counter • Hand over": "CTL272",
+  "Control › Its own app › Counter • Health check": "CTL273",
+  "Control › Its own app › Counter • Next carton · F8": "CTL274",
+  "Control › Its own app › Counter • Pack &amp; despatch · F9": "CTL275",
+  "Control › Its own app › Counter • Park · F6": "CTL276",
+  "Control › Its own app › Counter • Print": "CTL277",
+  "Control › Its own app › Counter • Print a test slip": "CTL278",
+  "Control › Its own app › Counter • Save": "CTL279",
+  "Control › Its own app › Counter • Save &amp; print · F9": "CTL280",
+  "Control › Its own app › Counter • Send now": "CTL281",
+  "Control › Its own app › Counter • Show every hidden key again": "CTL282",
+  "Control › Its own app › Counter • Today · on this device": "CTL283",
+  "Control › Its own app › Counter • bills, the shop screen, settings": "CTL284",
+  "Control › Its own app › Counter • bring this bill back": "CTL285",
+  "Control › Its own app › Counter • not going": "CTL286",
+  "Control › Its own app › Counter • not on this counter": "CTL287",
+  "Control › Its own app › Counter • one fewer": "CTL288",
+  "Control › Its own app › Counter • one more": "CTL289",
+  "Control › Its own app › Counter • print": "CTL290",
+  "Control › Its own app › Counter • put back": "CTL291",
+  "Control › Its own app › Counter • remove": "CTL292",
+  "Control › Its own app › Counter • remove this part": "CTL293",
+  "Control › Its own app › Counter • speak (the browser listens": "CTL294",
+  "Control › Its own app › Counter • speak the number": "CTL295",
+  "Control › Its own app › Counter • take part of this bill in this way, and th": "CTL296",
+  "Control › Its own app › Counter • the GST rate on their invoice": "CTL297",
+  "Control › Its own app › Counter • what are you doing?": "CTL298",
+  "Control › Its own app › Counter • what do they call it?": "CTL299",
+  "Control › Its own app › Counter • who is signed in at this counter (F7 to ha": "CTL300",
+  "Control › Its own app › Storefront • Change": "CTL301",
+  "Control › Its own app › Storefront • Done": "CTL302",
+  "Control › Its own app › Storefront • Order this combination →": "CTL303",
+  "Control › Its own app › Storefront • Place order": "CTL304",
+  "Control › Its own app › Storefront • Send code": "CTL305",
+  "Control › The app itself › app.html • AI drafts a trade document from this order": "CTL306",
+  "Control › The app itself › app.html • AI turns your description into line items": "CTL307",
+  "Control › The app itself › app.html • API base not set": "CTL308",
+  "Control › The app itself › app.html • Accept &amp; file on rail": "CTL309",
+  "Control › The app itself › app.html • Accept again": "CTL310",
+  "Control › The app itself › app.html • Activity": "CTL311",
+  "Control › The app itself › app.html • Add": "CTL312",
+  "Control › The app itself › app.html • Add everything to the cart": "CTL313",
+  "Control › The app itself › app.html • Add id": "CTL314",
+  "Control › The app itself › app.html • Add product": "CTL315",
+  "Control › The app itself › app.html • Add these columns": "CTL316",
+  "Control › The app itself › app.html • All": "CTL317",
+  "Control › The app itself › app.html • Answer &amp; publish": "CTL318",
+  "Control › The app itself › app.html • Apply": "CTL319",
+  "Control › The app itself › app.html • Ask": "CTL320",
+  "Control › The app itself › app.html • Ask AI": "CTL321",
+  "Control › The app itself › app.html • Assign": "CTL322",
+  "Control › The app itself › app.html • Attach files": "CTL323",
+  "Control › The app itself › app.html • Attach this slab": "CTL324",
+  "Control › The app itself › app.html • Attach this structure": "CTL325",
+  "Control › The app itself › app.html • Attach to this item": "CTL326",
+  "Control › The app itself › app.html • Availability": "CTL327",
+  "Control › The app itself › app.html • Available": "CTL328",
+  "Control › The app itself › app.html • Back to all of $": "CTL329",
+  "Control › The app itself › app.html • CMDB": "CTL330",
+  "Control › The app itself › app.html • Cancel": "CTL331",
+  "Control › The app itself › app.html • Cancel my copy too": "CTL332",
+  "Control › The app itself › app.html • Catalogue": "CTL333",
+  "Control › The app itself › app.html • Categorise": "CTL334",
+  "Control › The app itself › app.html • Change": "CTL335",
+  "Control › The app itself › app.html • Check": "CTL336",
+  "Control › The app itself › app.html • Check compliance": "CTL337",
+  "Control › The app itself › app.html • Clear": "CTL338",
+  "Control › The app itself › app.html • Clear all": "CTL339",
+  "Control › The app itself › app.html • Clear types": "CTL340",
+  "Control › The app itself › app.html • Close": "CTL341",
+  "Control › The app itself › app.html • Continue to register": "CTL342",
+  "Control › The app itself › app.html • Create": "CTL343",
+  "Control › The app itself › app.html • Create one": "CTL344",
+  "Control › The app itself › app.html • Delete": "CTL345",
+  "Control › The app itself › app.html • Delete (drafts → trash": "CTL346",
+  "Control › The app itself › app.html • Delete forever": "CTL347",
+  "Control › The app itself › app.html • Discard draft": "CTL348",
+  "Control › The app itself › app.html • Dispute": "CTL349",
+  "Control › The app itself › app.html • Disputed only": "CTL350",
+  "Control › The app itself › app.html • Done": "CTL351",
+  "Control › The app itself › app.html • Download the desktop counter": "CTL352",
+  "Control › The app itself › app.html • Draft doc": "CTL353",
+  "Control › The app itself › app.html • Duty": "CTL354",
+  "Control › The app itself › app.html • Fill": "CTL355",
+  "Control › The app itself › app.html • Filter": "CTL356",
+  "Control › The app itself › app.html • Find a product": "CTL357",
+  "Control › The app itself › app.html • Flip role (To/CC/For)": "CTL358",
+  "Control › The app itself › app.html • Forward": "CTL359",
+  "Control › The app itself › app.html • Get started": "CTL360",
+  "Control › The app itself › app.html • Group sum": "CTL361",
+  "Control › The app itself › app.html • Have a shop link?": "CTL362",
+  "Control › The app itself › app.html • Import": "CTL363",
+  "Control › The app itself › app.html • Internal": "CTL364",
+  "Control › The app itself › app.html • Internal priority": "CTL365",
+  "Control › The app itself › app.html • Laptop": "CTL366",
+  "Control › The app itself › app.html • Lean": "CTL367",
+  "Control › The app itself › app.html • Lines": "CTL368",
+  "Control › The app itself › app.html • Load more": "CTL369",
+  "Control › The app itself › app.html • Log": "CTL370",
+  "Control › The app itself › app.html • Mark paid": "CTL371",
+  "Control › The app itself › app.html • Messages": "CTL372",
+  "Control › The app itself › app.html • Move to Trash": "CTL373",
+  "Control › The app itself › app.html • My Task": "CTL374",
+  "Control › The app itself › app.html • Offer": "CTL375",
+  "Control › The app itself › app.html • Open": "CTL376",
+  "Control › The app itself › app.html • Open in compose": "CTL377",
+  "Control › The app itself › app.html • Open the shop screen": "CTL378",
+  "Control › The app itself › app.html • PDF": "CTL379",
+  "Control › The app itself › app.html • Pair a TV or another device": "CTL380",
+  "Control › The app itself › app.html • Preferred": "CTL381",
+  "Control › The app itself › app.html • Previous": "CTL382",
+  "Control › The app itself › app.html • Print label": "CTL383",
+  "Control › The app itself › app.html • RAID report — governance overview": "CTL384",
+  "Control › The app itself › app.html • Record": "CTL385",
+  "Control › The app itself › app.html • Register": "CTL386",
+  "Control › The app itself › app.html • Remove": "CTL387",
+  "Control › The app itself › app.html • Rename": "CTL388",
+  "Control › The app itself › app.html • Report it": "CTL389",
+  "Control › The app itself › app.html • Required certificates": "CTL390",
+  "Control › The app itself › app.html • Restore": "CTL391",
+  "Control › The app itself › app.html • Resume &amp; edit": "CTL392",
+  "Control › The app itself › app.html • Resume compose": "CTL393",
+  "Control › The app itself › app.html • Rows": "CTL394",
+  "Control › The app itself › app.html • Save": "CTL395",
+  "Control › The app itself › app.html • Save as PDF": "CTL396",
+  "Control › The app itself › app.html • Save grouping": "CTL397",
+  "Control › The app itself › app.html • Save to my catalogue": "CTL398",
+  "Control › The app itself › app.html • Select": "CTL399",
+  "Control › The app itself › app.html • Select everything shown": "CTL400",
+  "Control › The app itself › app.html • Select records": "CTL401",
+  "Control › The app itself › app.html • Send question": "CTL402",
+  "Control › The app itself › app.html • Send this to the help desk": "CTL403",
+  "Control › The app itself › app.html • Send to books": "CTL404",
+  "Control › The app itself › app.html • Set status": "CTL405",
+  "Control › The app itself › app.html • Show QR": "CTL406",
+  "Control › The app itself › app.html • Show the search box, filter chips and the": "CTL407",
+  "Control › The app itself › app.html • Sign out": "CTL408",
+  "Control › The app itself › app.html • Sort order": "CTL409",
+  "Control › The app itself › app.html • Speak status changes aloud": "CTL410",
+  "Control › The app itself › app.html • Spec": "CTL411",
+  "Control › The app itself › app.html • Status": "CTL412",
+  "Control › The app itself › app.html • Status ▾": "CTL413",
+  "Control › The app itself › app.html • Sum": "CTL414",
+  "Control › The app itself › app.html • Suppliers": "CTL415",
+  "Control › The app itself › app.html • Tabs": "CTL416",
+  "Control › The app itself › app.html • Tailor one": "CTL417",
+  "Control › The app itself › app.html • Test lab": "CTL418",
+  "Control › The app itself › app.html • Things we sell": "CTL419",
+  "Control › The app itself › app.html • Unarchive": "CTL420",
+  "Control › The app itself › app.html • Unassigned": "CTL421",
+  "Control › The app itself › app.html • Unread": "CTL422",
+  "Control › The app itself › app.html • Use the defaults for this item": "CTL423",
+  "Control › The app itself › app.html • View saved": "CTL424",
+  "Control › The app itself › app.html • What we serve": "CTL425",
+  "Control › The app itself › app.html • Withdraw": "CTL426",
+  "Control › The app itself › app.html • change": "CTL427",
+  "Control › The app itself › app.html • change item": "CTL428",
+  "Control › The app itself › app.html • contact the team": "CTL429",
+  "Control › The app itself › app.html • include": "CTL430",
+  "Control › The app itself › app.html • json ▾": "CTL431",
+  "Control › The app itself › app.html • no longer live": "CTL432",
+  "Control › The app itself › app.html • use local API": "CTL433"
  },
  "rows": [
   {
@@ -3260,6 +3504,2202 @@ window.CBSCREENS = {
    "path": "Control › Work › Messages • everything, including dealt with",
    "group": "Control",
    "screen": "Work › Messages • everything, including dealt with",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL183",
+   "path": "Control › Inside a screen › Adopt • Close",
+   "group": "Control",
+   "screen": "Inside a screen › Adopt • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL184",
+   "path": "Control › Inside a screen › Adopt • Nothing ready yet",
+   "group": "Control",
+   "screen": "Inside a screen › Adopt • Nothing ready yet",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL187",
+   "path": "Control › Inside a screen › Connector • Add",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Add",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL188",
+   "path": "Control › Inside a screen › Connector • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL189",
+   "path": "Control › Inside a screen › Connector • Co-assists",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Co-assists",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL190",
+   "path": "Control › Inside a screen › Connector • Get the Pi installer",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Get the Pi installer",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL191",
+   "path": "Control › Inside a screen › Connector • Got it",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Got it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL192",
+   "path": "Control › Inside a screen › Connector • Open chit",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Open chit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL193",
+   "path": "Control › Inside a screen › Connector • Reissue",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Reissue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL194",
+   "path": "Control › Inside a screen › Connector • Reissue raw key (advanced)",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Reissue raw key (advanced)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL195",
+   "path": "Control › Inside a screen › Connector • Retry",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Retry",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL196",
+   "path": "Control › Inside a screen › Connector • Send a test document",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Send a test document",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL197",
+   "path": "Control › Inside a screen › Connector • Send code",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • Send code",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL198",
+   "path": "Control › Inside a screen › Connector • What governs this signal — licence · seale",
+   "group": "Control",
+   "screen": "Inside a screen › Connector • What governs this signal — licence · seale",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL199",
+   "path": "Control › Inside a screen › Definitions • Ask the assistant about this screen",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Ask the assistant about this screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL200",
+   "path": "Control › Inside a screen › Definitions • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL201",
+   "path": "Control › Inside a screen › Definitions • Edit",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL202",
+   "path": "Control › Inside a screen › Definitions • Retire",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Retire",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL203",
+   "path": "Control › Inside a screen › Definitions • Retire and hand over",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Retire and hand over",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL204",
+   "path": "Control › Inside a screen › Definitions • Save",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • Save",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL205",
+   "path": "Control › Inside a screen › Definitions • test as",
+   "group": "Control",
+   "screen": "Inside a screen › Definitions • test as",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL206",
+   "path": "Control › Inside a screen › Folders • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL207",
+   "path": "Control › Inside a screen › Folders • Delete",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • Delete",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL208",
+   "path": "Control › Inside a screen › Folders • New folder",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • New folder",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL209",
+   "path": "Control › Inside a screen › Folders • Remove from folder (back to mailbox)",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • Remove from folder (back to mailbox)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL210",
+   "path": "Control › Inside a screen › Folders • Rename",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • Rename",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL211",
+   "path": "Control › Inside a screen › Folders • Save rule",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • Save rule",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL212",
+   "path": "Control › Inside a screen › Folders • What would this catch?",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • What would this catch?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL213",
+   "path": "Control › Inside a screen › Folders • matched through a misspelling",
+   "group": "Control",
+   "screen": "Inside a screen › Folders • matched through a misspelling",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL214",
+   "path": "Control › Inside a screen › Legend • Close",
+   "group": "Control",
+   "screen": "Inside a screen › Legend • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL215",
+   "path": "Control › Inside a screen › Register • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Register • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL216",
+   "path": "Control › Inside a screen › Register • Close this register",
+   "group": "Control",
+   "screen": "Inside a screen › Register • Close this register",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL217",
+   "path": "Control › Inside a screen › Register • Edit",
+   "group": "Control",
+   "screen": "Inside a screen › Register • Edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL218",
+   "path": "Control › Inside a screen › Register • End it",
+   "group": "Control",
+   "screen": "Inside a screen › Register • End it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL219",
+   "path": "Control › Inside a screen › Register • End →",
+   "group": "Control",
+   "screen": "Inside a screen › Register • End →",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL220",
+   "path": "Control › Inside a screen › Register • New",
+   "group": "Control",
+   "screen": "Inside a screen › Register • New",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL221",
+   "path": "Control › Inside a screen › Register • Record it",
+   "group": "Control",
+   "screen": "Inside a screen › Register • Record it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL222",
+   "path": "Control › Inside a screen › Register • Save change",
+   "group": "Control",
+   "screen": "Inside a screen › Register • Save change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL223",
+   "path": "Control › Inside a screen › Register • What this waits on",
+   "group": "Control",
+   "screen": "Inside a screen › Register • What this waits on",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL224",
+   "path": "Control › Inside a screen › Register • the whole order",
+   "group": "Control",
+   "screen": "Inside a screen › Register • the whole order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL225",
+   "path": "Control › Inside a screen › Service • Accept this pause",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Accept this pause",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL226",
+   "path": "Control › Inside a screen › Service • Back",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL227",
+   "path": "Control › Inside a screen › Service • Close",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL228",
+   "path": "Control › Inside a screen › Service • End this pause",
+   "group": "Control",
+   "screen": "Inside a screen › Service • End this pause",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL229",
+   "path": "Control › Inside a screen › Service • Mark responded",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Mark responded",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL230",
+   "path": "Control › Inside a screen › Service • Pause",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Pause",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL231",
+   "path": "Control › Inside a screen › Service • Pause the clock",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Pause the clock",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL232",
+   "path": "Control › Inside a screen › Service • Resolve",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Resolve",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL233",
+   "path": "Control › Inside a screen › Service • Start the clock",
+   "group": "Control",
+   "screen": "Inside a screen › Service • Start the clock",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL234",
+   "path": "Control › Inside a screen › Supplies • Add",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Add",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL235",
+   "path": "Control › Inside a screen › Supplies • Add a supply",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Add a supply",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL236",
+   "path": "Control › Inside a screen › Supplies • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL237",
+   "path": "Control › Inside a screen › Supplies • Record",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Record",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL238",
+   "path": "Control › Inside a screen › Supplies • Record a purchase",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Record a purchase",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL239",
+   "path": "Control › Inside a screen › Supplies • Record it",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Record it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL240",
+   "path": "Control › Inside a screen › Supplies • Used some",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • Used some",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL241",
+   "path": "Control › Inside a screen › Supplies • another line",
+   "group": "Control",
+   "screen": "Inside a screen › Supplies • another line",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL242",
+   "path": "Control › Inside a screen › Testing • Accept",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Accept",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL243",
+   "path": "Control › Inside a screen › Testing • Add a case for something you just found",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Add a case for something you just found",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL244",
+   "path": "Control › Inside a screen › Testing • Add the case",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Add the case",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL245",
+   "path": "Control › Inside a screen › Testing • Cancel",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL246",
+   "path": "Control › Inside a screen › Testing • Clear filters",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Clear filters",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL247",
+   "path": "Control › Inside a screen › Testing • Expand all",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Expand all",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL248",
+   "path": "Control › Inside a screen › Testing • Focus",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Focus",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL249",
+   "path": "Control › Inside a screen › Testing • List",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • List",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL250",
+   "path": "Control › Inside a screen › Testing • Load cases",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Load cases",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL251",
+   "path": "Control › Inside a screen › Testing • Open the board in its own window",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Open the board in its own window",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL252",
+   "path": "Control › Inside a screen › Testing • Raise",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Raise",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL253",
+   "path": "Control › Inside a screen › Testing • Size",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Size",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL254",
+   "path": "Control › Inside a screen › Testing • Start testing",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Start testing",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL255",
+   "path": "Control › Inside a screen › Testing • What kind of test",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • What kind of test",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL256",
+   "path": "Control › Inside a screen › Testing • Who is doing this run, and how much of it",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Who is doing this run, and how much of it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL257",
+   "path": "Control › Inside a screen › Testing • Who is testing",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Who is testing",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL263",
+   "path": "Control › Its own app › Counter • Clear and read the shop again",
+   "group": "Control",
+   "screen": "Its own app › Counter • Clear and read the shop again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL264",
+   "path": "Control › Its own app › Counter • Clear · Esc",
+   "group": "Control",
+   "screen": "Its own app › Counter • Clear · Esc",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL265",
+   "path": "Control › Its own app › Counter • Close",
+   "group": "Control",
+   "screen": "Its own app › Counter • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL266",
+   "path": "Control › Its own app › Counter • Confirm receipt · F9",
+   "group": "Control",
+   "screen": "Its own app › Counter • Confirm receipt · F9",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL267",
+   "path": "Control › Its own app › Counter • Count and hand over",
+   "group": "Control",
+   "screen": "Its own app › Counter • Count and hand over",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL268",
+   "path": "Control › Its own app › Counter • Day close sheet",
+   "group": "Control",
+   "screen": "Its own app › Counter • Day close sheet",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL269",
+   "path": "Control › Its own app › Counter • Discard",
+   "group": "Control",
+   "screen": "Its own app › Counter • Discard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL270",
+   "path": "Control › Its own app › Counter • Everything",
+   "group": "Control",
+   "screen": "Its own app › Counter • Everything",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL271",
+   "path": "Control › Its own app › Counter • Freight &amp; costs · F5",
+   "group": "Control",
+   "screen": "Its own app › Counter • Freight &amp; costs · F5",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL272",
+   "path": "Control › Its own app › Counter • Hand over",
+   "group": "Control",
+   "screen": "Its own app › Counter • Hand over",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL273",
+   "path": "Control › Its own app › Counter • Health check",
+   "group": "Control",
+   "screen": "Its own app › Counter • Health check",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL274",
+   "path": "Control › Its own app › Counter • Next carton · F8",
+   "group": "Control",
+   "screen": "Its own app › Counter • Next carton · F8",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL275",
+   "path": "Control › Its own app › Counter • Pack &amp; despatch · F9",
+   "group": "Control",
+   "screen": "Its own app › Counter • Pack &amp; despatch · F9",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL276",
+   "path": "Control › Its own app › Counter • Park · F6",
+   "group": "Control",
+   "screen": "Its own app › Counter • Park · F6",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL277",
+   "path": "Control › Its own app › Counter • Print",
+   "group": "Control",
+   "screen": "Its own app › Counter • Print",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL278",
+   "path": "Control › Its own app › Counter • Print a test slip",
+   "group": "Control",
+   "screen": "Its own app › Counter • Print a test slip",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL279",
+   "path": "Control › Its own app › Counter • Save",
+   "group": "Control",
+   "screen": "Its own app › Counter • Save",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL280",
+   "path": "Control › Its own app › Counter • Save &amp; print · F9",
+   "group": "Control",
+   "screen": "Its own app › Counter • Save &amp; print · F9",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL281",
+   "path": "Control › Its own app › Counter • Send now",
+   "group": "Control",
+   "screen": "Its own app › Counter • Send now",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL282",
+   "path": "Control › Its own app › Counter • Show every hidden key again",
+   "group": "Control",
+   "screen": "Its own app › Counter • Show every hidden key again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL283",
+   "path": "Control › Its own app › Counter • Today · on this device",
+   "group": "Control",
+   "screen": "Its own app › Counter • Today · on this device",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL284",
+   "path": "Control › Its own app › Counter • bills, the shop screen, settings",
+   "group": "Control",
+   "screen": "Its own app › Counter • bills, the shop screen, settings",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL285",
+   "path": "Control › Its own app › Counter • bring this bill back",
+   "group": "Control",
+   "screen": "Its own app › Counter • bring this bill back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL286",
+   "path": "Control › Its own app › Counter • not going",
+   "group": "Control",
+   "screen": "Its own app › Counter • not going",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL287",
+   "path": "Control › Its own app › Counter • not on this counter",
+   "group": "Control",
+   "screen": "Its own app › Counter • not on this counter",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL288",
+   "path": "Control › Its own app › Counter • one fewer",
+   "group": "Control",
+   "screen": "Its own app › Counter • one fewer",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL289",
+   "path": "Control › Its own app › Counter • one more",
+   "group": "Control",
+   "screen": "Its own app › Counter • one more",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL290",
+   "path": "Control › Its own app › Counter • print",
+   "group": "Control",
+   "screen": "Its own app › Counter • print",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL291",
+   "path": "Control › Its own app › Counter • put back",
+   "group": "Control",
+   "screen": "Its own app › Counter • put back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL292",
+   "path": "Control › Its own app › Counter • remove",
+   "group": "Control",
+   "screen": "Its own app › Counter • remove",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL293",
+   "path": "Control › Its own app › Counter • remove this part",
+   "group": "Control",
+   "screen": "Its own app › Counter • remove this part",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL294",
+   "path": "Control › Its own app › Counter • speak (the browser listens",
+   "group": "Control",
+   "screen": "Its own app › Counter • speak (the browser listens",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL295",
+   "path": "Control › Its own app › Counter • speak the number",
+   "group": "Control",
+   "screen": "Its own app › Counter • speak the number",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL296",
+   "path": "Control › Its own app › Counter • take part of this bill in this way, and th",
+   "group": "Control",
+   "screen": "Its own app › Counter • take part of this bill in this way, and th",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL297",
+   "path": "Control › Its own app › Counter • the GST rate on their invoice",
+   "group": "Control",
+   "screen": "Its own app › Counter • the GST rate on their invoice",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL298",
+   "path": "Control › Its own app › Counter • what are you doing?",
+   "group": "Control",
+   "screen": "Its own app › Counter • what are you doing?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL299",
+   "path": "Control › Its own app › Counter • what do they call it?",
+   "group": "Control",
+   "screen": "Its own app › Counter • what do they call it?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL300",
+   "path": "Control › Its own app › Counter • who is signed in at this counter (F7 to ha",
+   "group": "Control",
+   "screen": "Its own app › Counter • who is signed in at this counter (F7 to ha",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL301",
+   "path": "Control › Its own app › Storefront • Change",
+   "group": "Control",
+   "screen": "Its own app › Storefront • Change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL302",
+   "path": "Control › Its own app › Storefront • Done",
+   "group": "Control",
+   "screen": "Its own app › Storefront • Done",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL303",
+   "path": "Control › Its own app › Storefront • Order this combination →",
+   "group": "Control",
+   "screen": "Its own app › Storefront • Order this combination →",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL304",
+   "path": "Control › Its own app › Storefront • Place order",
+   "group": "Control",
+   "screen": "Its own app › Storefront • Place order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL305",
+   "path": "Control › Its own app › Storefront • Send code",
+   "group": "Control",
+   "screen": "Its own app › Storefront • Send code",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL306",
+   "path": "Control › The app itself › app.html • AI drafts a trade document from this order",
+   "group": "Control",
+   "screen": "The app itself › app.html • AI drafts a trade document from this order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL307",
+   "path": "Control › The app itself › app.html • AI turns your description into line items",
+   "group": "Control",
+   "screen": "The app itself › app.html • AI turns your description into line items",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL308",
+   "path": "Control › The app itself › app.html • API base not set",
+   "group": "Control",
+   "screen": "The app itself › app.html • API base not set",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL309",
+   "path": "Control › The app itself › app.html • Accept &amp; file on rail",
+   "group": "Control",
+   "screen": "The app itself › app.html • Accept &amp; file on rail",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL310",
+   "path": "Control › The app itself › app.html • Accept again",
+   "group": "Control",
+   "screen": "The app itself › app.html • Accept again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL311",
+   "path": "Control › The app itself › app.html • Activity",
+   "group": "Control",
+   "screen": "The app itself › app.html • Activity",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL312",
+   "path": "Control › The app itself › app.html • Add",
+   "group": "Control",
+   "screen": "The app itself › app.html • Add",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL313",
+   "path": "Control › The app itself › app.html • Add everything to the cart",
+   "group": "Control",
+   "screen": "The app itself › app.html • Add everything to the cart",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL314",
+   "path": "Control › The app itself › app.html • Add id",
+   "group": "Control",
+   "screen": "The app itself › app.html • Add id",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL315",
+   "path": "Control › The app itself › app.html • Add product",
+   "group": "Control",
+   "screen": "The app itself › app.html • Add product",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL316",
+   "path": "Control › The app itself › app.html • Add these columns",
+   "group": "Control",
+   "screen": "The app itself › app.html • Add these columns",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL317",
+   "path": "Control › The app itself › app.html • All",
+   "group": "Control",
+   "screen": "The app itself › app.html • All",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL318",
+   "path": "Control › The app itself › app.html • Answer &amp; publish",
+   "group": "Control",
+   "screen": "The app itself › app.html • Answer &amp; publish",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL319",
+   "path": "Control › The app itself › app.html • Apply",
+   "group": "Control",
+   "screen": "The app itself › app.html • Apply",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL320",
+   "path": "Control › The app itself › app.html • Ask",
+   "group": "Control",
+   "screen": "The app itself › app.html • Ask",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL321",
+   "path": "Control › The app itself › app.html • Ask AI",
+   "group": "Control",
+   "screen": "The app itself › app.html • Ask AI",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL322",
+   "path": "Control › The app itself › app.html • Assign",
+   "group": "Control",
+   "screen": "The app itself › app.html • Assign",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL323",
+   "path": "Control › The app itself › app.html • Attach files",
+   "group": "Control",
+   "screen": "The app itself › app.html • Attach files",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL324",
+   "path": "Control › The app itself › app.html • Attach this slab",
+   "group": "Control",
+   "screen": "The app itself › app.html • Attach this slab",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL325",
+   "path": "Control › The app itself › app.html • Attach this structure",
+   "group": "Control",
+   "screen": "The app itself › app.html • Attach this structure",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL326",
+   "path": "Control › The app itself › app.html • Attach to this item",
+   "group": "Control",
+   "screen": "The app itself › app.html • Attach to this item",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL327",
+   "path": "Control › The app itself › app.html • Availability",
+   "group": "Control",
+   "screen": "The app itself › app.html • Availability",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL328",
+   "path": "Control › The app itself › app.html • Available",
+   "group": "Control",
+   "screen": "The app itself › app.html • Available",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL329",
+   "path": "Control › The app itself › app.html • Back to all of $",
+   "group": "Control",
+   "screen": "The app itself › app.html • Back to all of $",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL330",
+   "path": "Control › The app itself › app.html • CMDB",
+   "group": "Control",
+   "screen": "The app itself › app.html • CMDB",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL331",
+   "path": "Control › The app itself › app.html • Cancel",
+   "group": "Control",
+   "screen": "The app itself › app.html • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL332",
+   "path": "Control › The app itself › app.html • Cancel my copy too",
+   "group": "Control",
+   "screen": "The app itself › app.html • Cancel my copy too",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL333",
+   "path": "Control › The app itself › app.html • Catalogue",
+   "group": "Control",
+   "screen": "The app itself › app.html • Catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL334",
+   "path": "Control › The app itself › app.html • Categorise",
+   "group": "Control",
+   "screen": "The app itself › app.html • Categorise",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL335",
+   "path": "Control › The app itself › app.html • Change",
+   "group": "Control",
+   "screen": "The app itself › app.html • Change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL336",
+   "path": "Control › The app itself › app.html • Check",
+   "group": "Control",
+   "screen": "The app itself › app.html • Check",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL337",
+   "path": "Control › The app itself › app.html • Check compliance",
+   "group": "Control",
+   "screen": "The app itself › app.html • Check compliance",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL338",
+   "path": "Control › The app itself › app.html • Clear",
+   "group": "Control",
+   "screen": "The app itself › app.html • Clear",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL339",
+   "path": "Control › The app itself › app.html • Clear all",
+   "group": "Control",
+   "screen": "The app itself › app.html • Clear all",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL340",
+   "path": "Control › The app itself › app.html • Clear types",
+   "group": "Control",
+   "screen": "The app itself › app.html • Clear types",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL341",
+   "path": "Control › The app itself › app.html • Close",
+   "group": "Control",
+   "screen": "The app itself › app.html • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL342",
+   "path": "Control › The app itself › app.html • Continue to register",
+   "group": "Control",
+   "screen": "The app itself › app.html • Continue to register",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL343",
+   "path": "Control › The app itself › app.html • Create",
+   "group": "Control",
+   "screen": "The app itself › app.html • Create",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL344",
+   "path": "Control › The app itself › app.html • Create one",
+   "group": "Control",
+   "screen": "The app itself › app.html • Create one",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL345",
+   "path": "Control › The app itself › app.html • Delete",
+   "group": "Control",
+   "screen": "The app itself › app.html • Delete",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL346",
+   "path": "Control › The app itself › app.html • Delete (drafts → trash",
+   "group": "Control",
+   "screen": "The app itself › app.html • Delete (drafts → trash",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL347",
+   "path": "Control › The app itself › app.html • Delete forever",
+   "group": "Control",
+   "screen": "The app itself › app.html • Delete forever",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL348",
+   "path": "Control › The app itself › app.html • Discard draft",
+   "group": "Control",
+   "screen": "The app itself › app.html • Discard draft",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL349",
+   "path": "Control › The app itself › app.html • Dispute",
+   "group": "Control",
+   "screen": "The app itself › app.html • Dispute",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL350",
+   "path": "Control › The app itself › app.html • Disputed only",
+   "group": "Control",
+   "screen": "The app itself › app.html • Disputed only",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL351",
+   "path": "Control › The app itself › app.html • Done",
+   "group": "Control",
+   "screen": "The app itself › app.html • Done",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL352",
+   "path": "Control › The app itself › app.html • Download the desktop counter",
+   "group": "Control",
+   "screen": "The app itself › app.html • Download the desktop counter",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL353",
+   "path": "Control › The app itself › app.html • Draft doc",
+   "group": "Control",
+   "screen": "The app itself › app.html • Draft doc",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL354",
+   "path": "Control › The app itself › app.html • Duty",
+   "group": "Control",
+   "screen": "The app itself › app.html • Duty",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL355",
+   "path": "Control › The app itself › app.html • Fill",
+   "group": "Control",
+   "screen": "The app itself › app.html • Fill",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL356",
+   "path": "Control › The app itself › app.html • Filter",
+   "group": "Control",
+   "screen": "The app itself › app.html • Filter",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL357",
+   "path": "Control › The app itself › app.html • Find a product",
+   "group": "Control",
+   "screen": "The app itself › app.html • Find a product",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL358",
+   "path": "Control › The app itself › app.html • Flip role (To/CC/For)",
+   "group": "Control",
+   "screen": "The app itself › app.html • Flip role (To/CC/For)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL359",
+   "path": "Control › The app itself › app.html • Forward",
+   "group": "Control",
+   "screen": "The app itself › app.html • Forward",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL360",
+   "path": "Control › The app itself › app.html • Get started",
+   "group": "Control",
+   "screen": "The app itself › app.html • Get started",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL361",
+   "path": "Control › The app itself › app.html • Group sum",
+   "group": "Control",
+   "screen": "The app itself › app.html • Group sum",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL362",
+   "path": "Control › The app itself › app.html • Have a shop link?",
+   "group": "Control",
+   "screen": "The app itself › app.html • Have a shop link?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL363",
+   "path": "Control › The app itself › app.html • Import",
+   "group": "Control",
+   "screen": "The app itself › app.html • Import",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL364",
+   "path": "Control › The app itself › app.html • Internal",
+   "group": "Control",
+   "screen": "The app itself › app.html • Internal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL365",
+   "path": "Control › The app itself › app.html • Internal priority",
+   "group": "Control",
+   "screen": "The app itself › app.html • Internal priority",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL366",
+   "path": "Control › The app itself › app.html • Laptop",
+   "group": "Control",
+   "screen": "The app itself › app.html • Laptop",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL367",
+   "path": "Control › The app itself › app.html • Lean",
+   "group": "Control",
+   "screen": "The app itself › app.html • Lean",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL368",
+   "path": "Control › The app itself › app.html • Lines",
+   "group": "Control",
+   "screen": "The app itself › app.html • Lines",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL369",
+   "path": "Control › The app itself › app.html • Load more",
+   "group": "Control",
+   "screen": "The app itself › app.html • Load more",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL370",
+   "path": "Control › The app itself › app.html • Log",
+   "group": "Control",
+   "screen": "The app itself › app.html • Log",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL371",
+   "path": "Control › The app itself › app.html • Mark paid",
+   "group": "Control",
+   "screen": "The app itself › app.html • Mark paid",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL372",
+   "path": "Control › The app itself › app.html • Messages",
+   "group": "Control",
+   "screen": "The app itself › app.html • Messages",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL373",
+   "path": "Control › The app itself › app.html • Move to Trash",
+   "group": "Control",
+   "screen": "The app itself › app.html • Move to Trash",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL374",
+   "path": "Control › The app itself › app.html • My Task",
+   "group": "Control",
+   "screen": "The app itself › app.html • My Task",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL375",
+   "path": "Control › The app itself › app.html • Offer",
+   "group": "Control",
+   "screen": "The app itself › app.html • Offer",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL376",
+   "path": "Control › The app itself › app.html • Open",
+   "group": "Control",
+   "screen": "The app itself › app.html • Open",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL377",
+   "path": "Control › The app itself › app.html • Open in compose",
+   "group": "Control",
+   "screen": "The app itself › app.html • Open in compose",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL378",
+   "path": "Control › The app itself › app.html • Open the shop screen",
+   "group": "Control",
+   "screen": "The app itself › app.html • Open the shop screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL379",
+   "path": "Control › The app itself › app.html • PDF",
+   "group": "Control",
+   "screen": "The app itself › app.html • PDF",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL380",
+   "path": "Control › The app itself › app.html • Pair a TV or another device",
+   "group": "Control",
+   "screen": "The app itself › app.html • Pair a TV or another device",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL381",
+   "path": "Control › The app itself › app.html • Preferred",
+   "group": "Control",
+   "screen": "The app itself › app.html • Preferred",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL382",
+   "path": "Control › The app itself › app.html • Previous",
+   "group": "Control",
+   "screen": "The app itself › app.html • Previous",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL383",
+   "path": "Control › The app itself › app.html • Print label",
+   "group": "Control",
+   "screen": "The app itself › app.html • Print label",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL384",
+   "path": "Control › The app itself › app.html • RAID report — governance overview",
+   "group": "Control",
+   "screen": "The app itself › app.html • RAID report — governance overview",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL385",
+   "path": "Control › The app itself › app.html • Record",
+   "group": "Control",
+   "screen": "The app itself › app.html • Record",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL386",
+   "path": "Control › The app itself › app.html • Register",
+   "group": "Control",
+   "screen": "The app itself › app.html • Register",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL387",
+   "path": "Control › The app itself › app.html • Remove",
+   "group": "Control",
+   "screen": "The app itself › app.html • Remove",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL388",
+   "path": "Control › The app itself › app.html • Rename",
+   "group": "Control",
+   "screen": "The app itself › app.html • Rename",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL389",
+   "path": "Control › The app itself › app.html • Report it",
+   "group": "Control",
+   "screen": "The app itself › app.html • Report it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL390",
+   "path": "Control › The app itself › app.html • Required certificates",
+   "group": "Control",
+   "screen": "The app itself › app.html • Required certificates",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL391",
+   "path": "Control › The app itself › app.html • Restore",
+   "group": "Control",
+   "screen": "The app itself › app.html • Restore",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL392",
+   "path": "Control › The app itself › app.html • Resume &amp; edit",
+   "group": "Control",
+   "screen": "The app itself › app.html • Resume &amp; edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL393",
+   "path": "Control › The app itself › app.html • Resume compose",
+   "group": "Control",
+   "screen": "The app itself › app.html • Resume compose",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL394",
+   "path": "Control › The app itself › app.html • Rows",
+   "group": "Control",
+   "screen": "The app itself › app.html • Rows",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL395",
+   "path": "Control › The app itself › app.html • Save",
+   "group": "Control",
+   "screen": "The app itself › app.html • Save",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL396",
+   "path": "Control › The app itself › app.html • Save as PDF",
+   "group": "Control",
+   "screen": "The app itself › app.html • Save as PDF",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL397",
+   "path": "Control › The app itself › app.html • Save grouping",
+   "group": "Control",
+   "screen": "The app itself › app.html • Save grouping",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL398",
+   "path": "Control › The app itself › app.html • Save to my catalogue",
+   "group": "Control",
+   "screen": "The app itself › app.html • Save to my catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL399",
+   "path": "Control › The app itself › app.html • Select",
+   "group": "Control",
+   "screen": "The app itself › app.html • Select",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL400",
+   "path": "Control › The app itself › app.html • Select everything shown",
+   "group": "Control",
+   "screen": "The app itself › app.html • Select everything shown",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL401",
+   "path": "Control › The app itself › app.html • Select records",
+   "group": "Control",
+   "screen": "The app itself › app.html • Select records",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL402",
+   "path": "Control › The app itself › app.html • Send question",
+   "group": "Control",
+   "screen": "The app itself › app.html • Send question",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL403",
+   "path": "Control › The app itself › app.html • Send this to the help desk",
+   "group": "Control",
+   "screen": "The app itself › app.html • Send this to the help desk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL404",
+   "path": "Control › The app itself › app.html • Send to books",
+   "group": "Control",
+   "screen": "The app itself › app.html • Send to books",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL405",
+   "path": "Control › The app itself › app.html • Set status",
+   "group": "Control",
+   "screen": "The app itself › app.html • Set status",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL406",
+   "path": "Control › The app itself › app.html • Show QR",
+   "group": "Control",
+   "screen": "The app itself › app.html • Show QR",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL407",
+   "path": "Control › The app itself › app.html • Show the search box, filter chips and the",
+   "group": "Control",
+   "screen": "The app itself › app.html • Show the search box, filter chips and the",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL408",
+   "path": "Control › The app itself › app.html • Sign out",
+   "group": "Control",
+   "screen": "The app itself › app.html • Sign out",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL409",
+   "path": "Control › The app itself › app.html • Sort order",
+   "group": "Control",
+   "screen": "The app itself › app.html • Sort order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL410",
+   "path": "Control › The app itself › app.html • Speak status changes aloud",
+   "group": "Control",
+   "screen": "The app itself › app.html • Speak status changes aloud",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL411",
+   "path": "Control › The app itself › app.html • Spec",
+   "group": "Control",
+   "screen": "The app itself › app.html • Spec",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL412",
+   "path": "Control › The app itself › app.html • Status",
+   "group": "Control",
+   "screen": "The app itself › app.html • Status",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL413",
+   "path": "Control › The app itself › app.html • Status ▾",
+   "group": "Control",
+   "screen": "The app itself › app.html • Status ▾",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL414",
+   "path": "Control › The app itself › app.html • Sum",
+   "group": "Control",
+   "screen": "The app itself › app.html • Sum",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL415",
+   "path": "Control › The app itself › app.html • Suppliers",
+   "group": "Control",
+   "screen": "The app itself › app.html • Suppliers",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL416",
+   "path": "Control › The app itself › app.html • Tabs",
+   "group": "Control",
+   "screen": "The app itself › app.html • Tabs",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL417",
+   "path": "Control › The app itself › app.html • Tailor one",
+   "group": "Control",
+   "screen": "The app itself › app.html • Tailor one",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL418",
+   "path": "Control › The app itself › app.html • Test lab",
+   "group": "Control",
+   "screen": "The app itself › app.html • Test lab",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL419",
+   "path": "Control › The app itself › app.html • Things we sell",
+   "group": "Control",
+   "screen": "The app itself › app.html • Things we sell",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL420",
+   "path": "Control › The app itself › app.html • Unarchive",
+   "group": "Control",
+   "screen": "The app itself › app.html • Unarchive",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL421",
+   "path": "Control › The app itself › app.html • Unassigned",
+   "group": "Control",
+   "screen": "The app itself › app.html • Unassigned",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL422",
+   "path": "Control › The app itself › app.html • Unread",
+   "group": "Control",
+   "screen": "The app itself › app.html • Unread",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL423",
+   "path": "Control › The app itself › app.html • Use the defaults for this item",
+   "group": "Control",
+   "screen": "The app itself › app.html • Use the defaults for this item",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL424",
+   "path": "Control › The app itself › app.html • View saved",
+   "group": "Control",
+   "screen": "The app itself › app.html • View saved",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL425",
+   "path": "Control › The app itself › app.html • What we serve",
+   "group": "Control",
+   "screen": "The app itself › app.html • What we serve",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL426",
+   "path": "Control › The app itself › app.html • Withdraw",
+   "group": "Control",
+   "screen": "The app itself › app.html • Withdraw",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL427",
+   "path": "Control › The app itself › app.html • change",
+   "group": "Control",
+   "screen": "The app itself › app.html • change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL428",
+   "path": "Control › The app itself › app.html • change item",
+   "group": "Control",
+   "screen": "The app itself › app.html • change item",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL429",
+   "path": "Control › The app itself › app.html • contact the team",
+   "group": "Control",
+   "screen": "The app itself › app.html • contact the team",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL430",
+   "path": "Control › The app itself › app.html • include",
+   "group": "Control",
+   "screen": "The app itself › app.html • include",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL431",
+   "path": "Control › The app itself › app.html • json ▾",
+   "group": "Control",
+   "screen": "The app itself › app.html • json ▾",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL432",
+   "path": "Control › The app itself › app.html • no longer live",
+   "group": "Control",
+   "screen": "The app itself › app.html • no longer live",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL433",
+   "path": "Control › The app itself › app.html • use local API",
+   "group": "Control",
+   "screen": "The app itself › app.html • use local API",
    "nav": null,
    "cases": 0,
    "since": "2026-09-12"
