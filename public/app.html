@@ -2320,7 +2320,26 @@ function stampScreenHeading(){
       + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
       + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
       + 'margin-inline-end:7px;vertical-align:middle';
-    head.insertBefore(tag, head.firstChild);
+    /**
+     * ── ⚠️ ICON, THEN CODE, THEN NAME ─────────────────────────────────────────────────────────────────────
+     *
+     * Athi asked for *"the icon, screen id, and screen name"* in that order, and simply prepending gave
+     * "RAL005 🗄️ Archive" — the code in front of the icon.
+     *
+     * ⚠️ THE ICON IS NOT AN ELEMENT. Every heading writes it as the first characters of its own text
+     * ("🗄️ Archive"), so there is nothing to insert between — the text node has to be SPLIT at the space after
+     * the emoji. ⭐ Done by looking for a leading non-ASCII run: it is the shape every one of these headings
+     * uses, and where a heading has no icon the code simply goes first, which is the same order minus a part.
+     */
+    var t = head.firstChild;
+    while (t && t.nodeType !== 3) t = t.firstChild;      /* the crumb wraps its text in a span */
+    var lead = t && t.nodeValue && t.nodeValue.match(/^\s*([^\u0000-\u007F][^\u0000-\u007F\s]*)\s+/);
+    if (lead) {
+      var after = t.splitText(lead[0].length);           /* the icon stays put; the rest moves right */
+      after.parentNode.insertBefore(tag, after);
+    } else {
+      head.insertBefore(tag, head.firstChild);
+    }
   }catch(e){}
 }
 
