@@ -2757,6 +2757,13 @@ function stampPanelCode(head, key){
       var d = k ? getComputedStyle(k).display : '';
       row = (d === 'flex' || d === 'grid') ? k : head;
     }
+    /**
+     * ⚠️⚠️ NOT THE TEST PANEL. Its header is about the screen UNDER TEST — "Test · RAL002 Task" — and
+     * stamping its own PNL007 in front of that put TWO codes in one line, about two different things,
+     * which is the exact ambiguity these codes exist to remove. It keeps its code in the register, where
+     * a reader who wants to name the panel can find it.
+     */
+    try { if (row.closest && row.closest('#cbcasespanel')) return; } catch (_) {}
     placeCodeTag(row, tag);
     /**
      * ⚠️ THE CHIP WAS ONLY ON THE RAIL SCREENS. Athi, 2026-09-12: *"the icon is active only in RAL002, it

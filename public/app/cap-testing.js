@@ -2289,10 +2289,12 @@ async function testCaseSend(outcome) {
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
+    /* ⚠️ AFTER the repaint, not before: the repaint carries values across now, so clearing first would
+       have them carried straight back in. */
+    if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
     ['wcTitle', 'wcDo', 'wcSee', 'wcGot'].forEach(function (id) {
       var el = document.getElementById(id); if (el) el.value = '';
     });
-    if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
     try { document.getElementById('wcTitle').focus(); } catch (_) {}
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save it.'); }
 }
@@ -2896,6 +2898,30 @@ function screenCasesPaint() {
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
       + '</div>';
   }
+  /**
+   * ── ⚠️⚠️⚠️ A REPAINT MUST NOT EAT WHAT SOMEBODY IS TYPING ────────────────────────────────────────────
+   *
+   * Found by the Playwright spec, 2026-09-13: fill one field, press Save, get refused — and every field is
+   * empty. The refusal was right; the emptiness was not. This function rebuilds the form with innerHTML,
+   * and ANY repaint does it: a verdict recorded, the incident counts arriving a beat later, the panel
+   * following you. A tester writing a careful sentence loses it to a background fetch finishing.
+   *
+   * ⭐ So the values are carried across the rebuild. ⚠️ Read BEFORE innerHTML and written back after — and
+   * only into fields that came back, because the form may legitimately have gone (Cancel, or a save that
+   * cleared it on purpose).
+   */
+  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcCtl'];
+  var typed = {};
+  FIELDS.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) typed[id] = el.value;
+  });
+  /* ⚠️ the caret too: putting the text back and the cursor at the end is its own small theft */
+  var focused = document.activeElement;
+  var focusId = focused && FIELDS.indexOf(focused.id) >= 0 ? focused.id : null;
+  var caret = null;
+  try { if (focusId && focused.selectionStart != null) caret = focused.selectionStart; } catch (_) {}
+
   var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; }).length;
   var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; }).length;
   var known = !!(CBTEST.scrInc && CBTEST.scrReq);
@@ -2909,6 +2935,17 @@ function screenCasesPaint() {
     + testCaseFormHTML()
     + testCaseListHTML(code)
     + testRaisedHTML(code);
+  Object.keys(typed).forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el && typed[id] != null && typed[id] !== '') el.value = typed[id];
+  });
+  if (focusId) {
+    var back = document.getElementById(focusId);
+    if (back) {
+      try { back.focus(); if (caret != null && back.setSelectionRange) back.setSelectionRange(caret, caret); }
+      catch (_) {}
+    }
+  }
   try { testShotPasteBind(); } catch (_) {}
   if (!known && !CBTEST._popCounts) {
     CBTEST._popCounts = 1;

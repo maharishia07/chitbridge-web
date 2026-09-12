@@ -36,6 +36,18 @@ async function modeOn(page) {
   await expect(page.locator('[data-testid="screen-cases"]').first()).toBeVisible({ timeout: 30000 });
 }
 
+/**
+ * ⭐ the first time the lab is opened it explains itself in a modal — by design (“the first tick explains
+ * itself”). A spec has seen it before, so it closes it; a modal backdrop otherwise swallows every click.
+ */
+async function dismissModal(page) {
+  const m = page.locator("#modalhost .modal");
+  if (await m.count()) {
+    await page.evaluate(() => { try { closeModal(); } catch (_) {} });
+    await expect(m).toHaveCount(0);
+  }
+}
+
 /** the panel, opened the way a tester opens it: by the chip on the screen */
 async function openPanel(page) {
   await page.locator('[data-testid="screen-cases"]').first().click();
@@ -79,7 +91,9 @@ test.describe('test mode', () => {
     /* the lab is its own door and does not exist until it is opened */
     await expect(page.locator('#cbtesthost')).toHaveCount(0);
     await page.locator('[data-testid="vp-lab"]').click();
-    await expect(page.locator('#cbtesthost')).toBeVisible();
+    /* ⚠ the PANEL, not the host: #cbtesthost is a zero-size wrapper and Playwright rightly calls it hidden */
+    await expect(page.locator('#cbtestpanel')).toBeVisible();
+    await dismissModal(page);
 
     /**
      * ⚠️ CLOSING THE LAB MUST NOT TURN THE MODE OFF. Until 2026-09-12 they were one button, so a person putting
