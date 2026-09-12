@@ -387,6 +387,28 @@ function testPaint() {
   var shown = testShown();
   var n = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
   shown.forEach(function (c) { var l = CBTEST.last[c.case_key]; if (!l) n.todo++; else n[l.status]++; });
+
+  /**
+   * ── ⚠️⚠️ "IN THE LAB, EVERYTHING NOT RUN?" ────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12. And no — the board has 160 passed and 27 failed. TWO things hid that from him:
+   *
+   * ⚠️ The panel opens FILTERED to one area (see testOpen), so the tally counted a slice.
+   * ⚠️ And each figure rendered only when NON-ZERO — `n.pass ? … : ''` — so a slice with no results collapsed
+   *    to "N to go" and read as though nothing had ever been run anywhere.
+   *
+   * ⭐ A zero is a fact and has to hold its place. "0 passed" says the work has not started; a missing "passed"
+   * says nothing at all, and the reader fills the silence with the worst reading.
+   *
+   * ⭐ So the panel counts the WHOLE board too, and leads with it — the same four figures as the Report, in
+   * the same order, so the two surfaces can be compared instead of doubted.
+   */
+  var all = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
+  CBTEST.cases.forEach(function (c) {
+    var l = CBTEST.last[c.case_key];
+    if (!l) all.todo++; else all[l.status]++;
+  });
+  var filtered = shown.length !== CBTEST.cases.length;
   var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
 
   /* ── the header: who is recording, into which run, over which area ── */
@@ -523,15 +545,33 @@ function testPaint() {
     +     ' onchange="testSetWho(this.value)" title="Who is testing — kept on this device"'
     +     ' style="font-size:var(--fs-2);padding:3px 5px;flex:1;min-width:90px">'
     + '</div>'
-    /* ⭐ the tally is the reason to keep the panel open — it is the only place that says how far you have got */
-    + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">'
-    +   (n.pass ? '<b style="color:var(--ok-2)">' + n.pass + '</b> passed · ' : '')
-    +   (n.fail ? '<b style="color:var(--disp)">' + n.fail + '</b> failed · ' : '')
-    +   (n.blocked ? '<b style="color:var(--warn-2)">' + n.blocked + '</b> blocked · ' : '')
-    +   '<b>' + n.todo + '</b> to go'
-    +   (staleN ? ' \u00b7 <b style="color:var(--warn-2)">' + staleN + '</b> spec moved' : '')
-    +   (CBTEST.run.label ? ' · ' + testEsc(CBTEST.run.label) : '')
+    /**
+     * ⭐ THE SAME FOUR FIGURES AS THE REPORT, IN THE SAME ORDER. Athi, 2026-09-12: *"can we show the same
+     * level of summary on the first landing page — cases, passed, failed, not run."*
+     * ⚠️ Whole board FIRST, because that is the question "how are we doing" actually asks. The filtered slice
+     * is a second line, clearly labelled, so a small number never reads as the whole story.
+     */
+    + '<div style="margin-top:7px;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;'
+    +   'font-size:var(--fs-1);color:var(--grey-2,#545A61)">'
+    +   '<span><b style="font-size:var(--fs-2);color:var(--ink,#20303b)">' + CBTEST.cases.length + '</b> cases</span>'
+    +   '<span><b style="font-size:var(--fs-2);color:var(--ok-2)">' + all.pass + '</b> passed</span>'
+    +   '<span><b style="font-size:var(--fs-2);color:' + (all.fail ? 'var(--disp)' : 'inherit') + '">'
+    +     all.fail + '</b> failed</span>'
+    +   (all.blocked ? '<span><b style="font-size:var(--fs-2);color:var(--warn-2)">' + all.blocked
+                     + '</b> blocked</span>' : '')
+    +   '<span><b style="font-size:var(--fs-2)">' + all.todo + '</b> not run</span>'
+    +   (staleN ? '<span><b style="color:var(--warn-2)">' + staleN + '</b> spec moved</span>' : '')
     + '</div>'
+    /* ⚠️ the slice, only when it IS a slice — and never instead of the whole */
+    + (filtered
+        ? '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--blue,#3F66A6)">'
+          + 'In view: <b>' + shown.length + '</b> \u00b7 ' + n.pass + ' passed \u00b7 ' + n.fail + ' failed \u00b7 '
+          + n.todo + ' not run</div>'
+        : '')
+    + (CBTEST.run.label
+        ? '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey-2,#545A61)">Recording into: '
+          + testEsc(CBTEST.run.label) + '</div>'
+        : '')
     /* ⭐ THE COUNTDOWN. Naming the area and the number left is what turns "please test the suppliers screen"
        into something a person can finish. ⚠️ It reports the gap for the WHOLE board, not this run, because
        a case somebody else covered yesterday does not need doing again today. */
