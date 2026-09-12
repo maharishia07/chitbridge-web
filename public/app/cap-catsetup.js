@@ -583,7 +583,7 @@ function catsetBody(k){
       + 'validity window and a jurisdiction, and it has to survive into a dispute intact. That is why it is '
       + 'authored once here rather than edited on a product. <b>' + tx('Live') + '</b> offers apply; a draft is one you are '
       + 'still writing.</div>',
-      '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the shop's own engine and cart" style="text-decoration:none;margin-right:6px">🧪 ' + tx('Offer lab') + '</a>'
+      '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the same engine as the shop" style="text-decoration:none;margin-right:6px">🧪 ' + tx('Offer lab') + '</a>'
       + '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
     + catsetCard('The next six months', catsetOfferPlanHTML(),
       '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>')
