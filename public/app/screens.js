@@ -253,7 +253,189 @@ window.CBSCREENS = {
   "Popup › svcResolveAsk": "POP081",
   "Popup › testGuide": "POP082",
   "Popup › verifyReadiness": "POP083",
-  "Popup › wlPaintCard": "POP084"
+  "Popup › wlPaintCard": "POP084",
+  "Control › Business › Co-assists • Ask the assistant about this screen": "CTL001",
+  "Control › Business › Co-assists • Back": "CTL002",
+  "Control › Business › Co-assists • Cancel": "CTL003",
+  "Control › Business › Co-assists • Close": "CTL004",
+  "Control › Business › Co-assists • Co-assists": "CTL005",
+  "Control › Business › Co-assists • Deactivate": "CTL006",
+  "Control › Business › Co-assists • Download install package": "CTL007",
+  "Control › Business › Co-assists • How $": "CTL008",
+  "Control › Business › Co-assists • How it works": "CTL009",
+  "Control › Business › Co-assists • Re-invite": "CTL010",
+  "Control › Business › Co-assists • Reset PIN": "CTL011",
+  "Control › Business › Co-assists • Retry": "CTL012",
+  "Control › Business › Co-assists • Save": "CTL013",
+  "Control › Business › Co-assists • See the full walkthrough": "CTL014",
+  "Control › Business › Co-assists • see how it works": "CTL015",
+  "Control › Business › Match • Cancel": "CTL016",
+  "Control › Business › Match • Open the order": "CTL017",
+  "Control › Business › Match • Raise a dispute": "CTL018",
+  "Control › Business › Match • Raise it": "CTL019",
+  "Control › Business › Network • Add owned node": "CTL020",
+  "Control › Business › Network • Add partner": "CTL021",
+  "Control › Business › Network • Cancel": "CTL022",
+  "Control › Business › Network • Change": "CTL023",
+  "Control › Business › Network • Change visibility": "CTL024",
+  "Control › Business › Network • Copy": "CTL025",
+  "Control › Business › Network • Discard all": "CTL026",
+  "Control › Business › Network • I have the codes — done": "CTL027",
+  "Control › Business › Network • Issue a new sign-in code": "CTL028",
+  "Control › Business › Network • Make these changes": "CTL029",
+  "Control › Business › Network • Move up among its siblings": "CTL030",
+  "Control › Business › Network • Name the stores and create them": "CTL031",
+  "Control › Business › Network • Open in compose": "CTL032",
+  "Control › Business › Network • Remove": "CTL033",
+  "Control › Business › Network • Remove it": "CTL034",
+  "Control › Business › Network • Rename": "CTL035",
+  "Control › Business › Network • Start designing": "CTL036",
+  "Control › Business › Network • Start over": "CTL037",
+  "Control › Business › Network • Turn on for this store": "CTL038",
+  "Control › Business › Network • add attachment": "CTL039",
+  "Control › Business › Network • add certification": "CTL040",
+  "Control › Business › Network • add off-rail inlet": "CTL041",
+  "Control › Business › Network • all stores": "CTL042",
+  "Control › Business › Network • collect field": "CTL043",
+  "Control › Business › Network • component": "CTL044",
+  "Control › Business › Network • connection": "CTL045",
+  "Control › Business › Network • connector": "CTL046",
+  "Control › Business › Network • is this party on C&B?": "CTL047",
+  "Control › Business › Network • partner": "CTL048",
+  "Control › Business › Network • price": "CTL049",
+  "Control › Business › Network • region": "CTL050",
+  "Control › Business › Network • remove": "CTL051",
+  "Control › Business › Network • requirement": "CTL052",
+  "Control › Business › Network • role": "CTL053",
+  "Control › Business › Network • standard": "CTL054",
+  "Control › Business › Network • state": "CTL055",
+  "Control › Business › Network • system name": "CTL056",
+  "Control › Business › Network • system to feed back": "CTL057",
+  "Control › Business › Network • trigger": "CTL058",
+  "Control › Business › Network • turn off": "CTL059",
+  "Control › Business › Network • unit": "CTL060",
+  "Control › Business › Network • variant": "CTL061",
+  "Control › Catalogue › Catalogue setup • Add columns": "CTL062",
+  "Control › Catalogue › Catalogue setup • All": "CTL063",
+  "Control › Catalogue › Catalogue setup • Another month": "CTL064",
+  "Control › Catalogue › Catalogue setup • Blank template": "CTL065",
+  "Control › Catalogue › Catalogue setup • Cancel": "CTL066",
+  "Control › Catalogue › Catalogue setup • Catalogue": "CTL067",
+  "Control › Catalogue › Catalogue setup • Catalogue setup": "CTL068",
+  "Control › Catalogue › Catalogue setup • Change": "CTL069",
+  "Control › Catalogue › Catalogue setup • Check &amp; import": "CTL070",
+  "Control › Catalogue › Catalogue setup • Create all as live": "CTL071",
+  "Control › Catalogue › Catalogue setup • Decimal allowed": "CTL072",
+  "Control › Catalogue › Catalogue setup • Edit": "CTL073",
+  "Control › Catalogue › Catalogue setup • English always shows": "CTL074",
+  "Control › Catalogue › Catalogue setup • Export CSV": "CTL075",
+  "Control › Catalogue › Catalogue setup • Plan several": "CTL076",
+  "Control › Catalogue › Catalogue setup • Reinstate": "CTL077",
+  "Control › Catalogue › Catalogue setup • Retire": "CTL078",
+  "Control › Catalogue › Catalogue setup • See the blueprints available": "CTL079",
+  "Control › Catalogue › Catalogue setup • See the columns your trade expects": "CTL080",
+  "Control › Catalogue › Catalogue setup • required": "CTL081",
+  "Control › Catalogue › Categories • All": "CTL082",
+  "Control › Catalogue › Categories • Author one": "CTL083",
+  "Control › Catalogue › Categories • Cancel": "CTL084",
+  "Control › Catalogue › Categories • Catalogue": "CTL085",
+  "Control › Catalogue › Categories • Categories": "CTL086",
+  "Control › Catalogue › Categories • Edit": "CTL087",
+  "Control › Catalogue › Categories • Put back on the shelf": "CTL088",
+  "Control › Catalogue › Categories • Retire": "CTL089",
+  "Control › Catalogue › Categories • See these →": "CTL090",
+  "Control › Catalogue › Categories • Start from a standard set": "CTL091",
+  "Control › Insight › MIS • Approve this PC": "CTL092",
+  "Control › Insight › MIS • Ask again": "CTL093",
+  "Control › Insight › MIS • Back": "CTL094",
+  "Control › Insight › MIS • Bind": "CTL095",
+  "Control › Insight › MIS • Change PIN": "CTL096",
+  "Control › Insight › MIS • Configure AI assists in Co-assists": "CTL097",
+  "Control › Insight › MIS • Discard": "CTL098",
+  "Control › Insight › MIS • Download": "CTL099",
+  "Control › Insight › MIS • Edit": "CTL100",
+  "Control › Insight › MIS • Explain": "CTL101",
+  "Control › Insight › MIS • GSTR-1 JSON": "CTL102",
+  "Control › Insight › MIS • Hide where these come from": "CTL103",
+  "Control › Insight › MIS • Localisation": "CTL104",
+  "Control › Insight › MIS • Mint a key": "CTL105",
+  "Control › Insight › MIS • New / clear": "CTL106",
+  "Control › Insight › MIS • Open": "CTL107",
+  "Control › Insight › MIS • Open the layer that declares this": "CTL108",
+  "Control › Insight › MIS • Publish to catalogue": "CTL109",
+  "Control › Insight › MIS • Reject": "CTL110",
+  "Control › Insight › MIS • Remove this detail": "CTL111",
+  "Control › Insight › MIS • Remove this section": "CTL112",
+  "Control › Insight › MIS • Revoke": "CTL113",
+  "Control › Insight › MIS • Save": "CTL114",
+  "Control › Insight › MIS • Save auto-assign": "CTL115",
+  "Control › Insight › MIS • Save settings": "CTL116",
+  "Control › Insight › MIS • Save vault": "CTL117",
+  "Control › Insight › MIS • Send after all": "CTL118",
+  "Control › Insight › MIS • Stay here": "CTL119",
+  "Control › Insight › MIS • Unbind": "CTL120",
+  "Control › Insight › MIS • Use the regional default": "CTL121",
+  "Control › Insight › MIS • hide the technical detail": "CTL122",
+  "Control › Insight › MIS • less": "CTL123",
+  "Control › Insight › MIS • overdue policy": "CTL124",
+  "Control › Insight › MIS • we use this": "CTL125",
+  "Control › Insight › Traceability • Recall set": "CTL126",
+  "Control › Insight › Traceability • Trace by batch #": "CTL127",
+  "Control › Insight › Trade ready • Accept &amp; attach as evidence": "CTL128",
+  "Control › Insight › Trade ready • Back": "CTL129",
+  "Control › Insight › Trade ready • Copy": "CTL130",
+  "Control › Insight › Trade ready • Done": "CTL131",
+  "Control › Insight › Trade ready • Draft with AI": "CTL132",
+  "Control › Insight › Trade ready • Matrix": "CTL133",
+  "Control › Insight › Trade ready • PDF": "CTL134",
+  "Control › Insight › Trade ready • Record clearance on the rail": "CTL135",
+  "Control › Insight › Trade ready • Standards": "CTL136",
+  "Control › Insight › Trade ready • Suggest": "CTL137",
+  "Control › Insight › Trade ready • Verify ID": "CTL138",
+  "Control › Insight › Trade ready • Verify at source": "CTL139",
+  "Control › Insight › Trade ready • Your registered country (fixed)": "CTL140",
+  "Control › Rail › Compose • Add new products to my catalogue": "CTL141",
+  "Control › Rail › Compose • Assign": "CTL142",
+  "Control › Rail › Compose • Assign together": "CTL143",
+  "Control › Rail › Compose • Back": "CTL144",
+  "Control › Rail › Compose • Clear": "CTL145",
+  "Control › Rail › Compose • Close": "CTL146",
+  "Control › Rail › Compose • Delivered": "CTL147",
+  "Control › Rail › Compose • Every line": "CTL148",
+  "Control › Rail › Compose • Price from catalogue": "CTL149",
+  "Control › Rail › Compose • Service clock &amp; SLA": "CTL150",
+  "Control › Rail › Compose • Take materials": "CTL151",
+  "Control › Rail › Compose • open the full original": "CTL152",
+  "Control › Rail › Task • Close": "CTL153",
+  "Control › Rail › Task • Close it": "CTL154",
+  "Control › Rail › Task • Open the order": "CTL155",
+  "Control › Rail › Task • Record something": "CTL156",
+  "Control › Rail › Task • Take materials from the catalogue": "CTL157",
+  "Control › Rail › Task • clear": "CTL158",
+  "Control › Rail › Task • close": "CTL159",
+  "Control › Rail › Task • expand all": "CTL160",
+  "Control › Rail › Task • total by product": "CTL161",
+  "Control › Work › Disputes • About this screen": "CTL162",
+  "Control › Work › Disputes • Close": "CTL163",
+  "Control › Work › Disputes • Done": "CTL164",
+  "Control › Work › Disputes • Raise dispute": "CTL165",
+  "Control › Work › Disputes • Resolve": "CTL166",
+  "Control › Work › Disputes • Send ↔": "CTL167",
+  "Control › Work › Disputes • Suggest wording": "CTL168",
+  "Control › Work › Disputes • Summarize": "CTL169",
+  "Control › Work › Intake • Add to the queue": "CTL170",
+  "Control › Work › Intake • Ask the assistant about this screen": "CTL171",
+  "Control › Work › Intake • Close": "CTL172",
+  "Control › Work › Intake • Dismiss": "CTL173",
+  "Control › Work › Intake • File as a request in your inbox, in their": "CTL174",
+  "Control › Work › Intake • Make this a chit": "CTL175",
+  "Control › Work › Intake • Record a message": "CTL176",
+  "Control › Work › Intake • Refresh": "CTL177",
+  "Control › Work › Intake • See exactly what was read, and what the ch": "CTL178",
+  "Control › Work › Intake • Settings": "CTL179",
+  "Control › Work › Intake • copy": "CTL180",
+  "Control › Work › Messages • Open the line": "CTL181",
+  "Control › Work › Messages • everything, including dealt with": "CTL182"
  },
  "rows": [
   {
@@ -1440,6 +1622,1644 @@ window.CBSCREENS = {
    "path": "Popup › wlPaintCard",
    "group": "Popup",
    "screen": "wlPaintCard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL001",
+   "path": "Control › Business › Co-assists • Ask the assistant about this screen",
+   "group": "Control",
+   "screen": "Business › Co-assists • Ask the assistant about this screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL002",
+   "path": "Control › Business › Co-assists • Back",
+   "group": "Control",
+   "screen": "Business › Co-assists • Back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL003",
+   "path": "Control › Business › Co-assists • Cancel",
+   "group": "Control",
+   "screen": "Business › Co-assists • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL004",
+   "path": "Control › Business › Co-assists • Close",
+   "group": "Control",
+   "screen": "Business › Co-assists • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL005",
+   "path": "Control › Business › Co-assists • Co-assists",
+   "group": "Control",
+   "screen": "Business › Co-assists • Co-assists",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL006",
+   "path": "Control › Business › Co-assists • Deactivate",
+   "group": "Control",
+   "screen": "Business › Co-assists • Deactivate",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL007",
+   "path": "Control › Business › Co-assists • Download install package",
+   "group": "Control",
+   "screen": "Business › Co-assists • Download install package",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL008",
+   "path": "Control › Business › Co-assists • How $",
+   "group": "Control",
+   "screen": "Business › Co-assists • How $",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL009",
+   "path": "Control › Business › Co-assists • How it works",
+   "group": "Control",
+   "screen": "Business › Co-assists • How it works",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL010",
+   "path": "Control › Business › Co-assists • Re-invite",
+   "group": "Control",
+   "screen": "Business › Co-assists • Re-invite",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL011",
+   "path": "Control › Business › Co-assists • Reset PIN",
+   "group": "Control",
+   "screen": "Business › Co-assists • Reset PIN",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL012",
+   "path": "Control › Business › Co-assists • Retry",
+   "group": "Control",
+   "screen": "Business › Co-assists • Retry",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL013",
+   "path": "Control › Business › Co-assists • Save",
+   "group": "Control",
+   "screen": "Business › Co-assists • Save",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL014",
+   "path": "Control › Business › Co-assists • See the full walkthrough",
+   "group": "Control",
+   "screen": "Business › Co-assists • See the full walkthrough",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL015",
+   "path": "Control › Business › Co-assists • see how it works",
+   "group": "Control",
+   "screen": "Business › Co-assists • see how it works",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL016",
+   "path": "Control › Business › Match • Cancel",
+   "group": "Control",
+   "screen": "Business › Match • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL017",
+   "path": "Control › Business › Match • Open the order",
+   "group": "Control",
+   "screen": "Business › Match • Open the order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL018",
+   "path": "Control › Business › Match • Raise a dispute",
+   "group": "Control",
+   "screen": "Business › Match • Raise a dispute",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL019",
+   "path": "Control › Business › Match • Raise it",
+   "group": "Control",
+   "screen": "Business › Match • Raise it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL020",
+   "path": "Control › Business › Network • Add owned node",
+   "group": "Control",
+   "screen": "Business › Network • Add owned node",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL021",
+   "path": "Control › Business › Network • Add partner",
+   "group": "Control",
+   "screen": "Business › Network • Add partner",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL022",
+   "path": "Control › Business › Network • Cancel",
+   "group": "Control",
+   "screen": "Business › Network • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL023",
+   "path": "Control › Business › Network • Change",
+   "group": "Control",
+   "screen": "Business › Network • Change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL024",
+   "path": "Control › Business › Network • Change visibility",
+   "group": "Control",
+   "screen": "Business › Network • Change visibility",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL025",
+   "path": "Control › Business › Network • Copy",
+   "group": "Control",
+   "screen": "Business › Network • Copy",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL026",
+   "path": "Control › Business › Network • Discard all",
+   "group": "Control",
+   "screen": "Business › Network • Discard all",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL027",
+   "path": "Control › Business › Network • I have the codes — done",
+   "group": "Control",
+   "screen": "Business › Network • I have the codes — done",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL028",
+   "path": "Control › Business › Network • Issue a new sign-in code",
+   "group": "Control",
+   "screen": "Business › Network • Issue a new sign-in code",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL029",
+   "path": "Control › Business › Network • Make these changes",
+   "group": "Control",
+   "screen": "Business › Network • Make these changes",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL030",
+   "path": "Control › Business › Network • Move up among its siblings",
+   "group": "Control",
+   "screen": "Business › Network • Move up among its siblings",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL031",
+   "path": "Control › Business › Network • Name the stores and create them",
+   "group": "Control",
+   "screen": "Business › Network • Name the stores and create them",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL032",
+   "path": "Control › Business › Network • Open in compose",
+   "group": "Control",
+   "screen": "Business › Network • Open in compose",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL033",
+   "path": "Control › Business › Network • Remove",
+   "group": "Control",
+   "screen": "Business › Network • Remove",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL034",
+   "path": "Control › Business › Network • Remove it",
+   "group": "Control",
+   "screen": "Business › Network • Remove it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL035",
+   "path": "Control › Business › Network • Rename",
+   "group": "Control",
+   "screen": "Business › Network • Rename",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL036",
+   "path": "Control › Business › Network • Start designing",
+   "group": "Control",
+   "screen": "Business › Network • Start designing",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL037",
+   "path": "Control › Business › Network • Start over",
+   "group": "Control",
+   "screen": "Business › Network • Start over",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL038",
+   "path": "Control › Business › Network • Turn on for this store",
+   "group": "Control",
+   "screen": "Business › Network • Turn on for this store",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL039",
+   "path": "Control › Business › Network • add attachment",
+   "group": "Control",
+   "screen": "Business › Network • add attachment",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL040",
+   "path": "Control › Business › Network • add certification",
+   "group": "Control",
+   "screen": "Business › Network • add certification",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL041",
+   "path": "Control › Business › Network • add off-rail inlet",
+   "group": "Control",
+   "screen": "Business › Network • add off-rail inlet",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL042",
+   "path": "Control › Business › Network • all stores",
+   "group": "Control",
+   "screen": "Business › Network • all stores",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL043",
+   "path": "Control › Business › Network • collect field",
+   "group": "Control",
+   "screen": "Business › Network • collect field",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL044",
+   "path": "Control › Business › Network • component",
+   "group": "Control",
+   "screen": "Business › Network • component",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL045",
+   "path": "Control › Business › Network • connection",
+   "group": "Control",
+   "screen": "Business › Network • connection",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL046",
+   "path": "Control › Business › Network • connector",
+   "group": "Control",
+   "screen": "Business › Network • connector",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL047",
+   "path": "Control › Business › Network • is this party on C&B?",
+   "group": "Control",
+   "screen": "Business › Network • is this party on C&B?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL048",
+   "path": "Control › Business › Network • partner",
+   "group": "Control",
+   "screen": "Business › Network • partner",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL049",
+   "path": "Control › Business › Network • price",
+   "group": "Control",
+   "screen": "Business › Network • price",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL050",
+   "path": "Control › Business › Network • region",
+   "group": "Control",
+   "screen": "Business › Network • region",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL051",
+   "path": "Control › Business › Network • remove",
+   "group": "Control",
+   "screen": "Business › Network • remove",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL052",
+   "path": "Control › Business › Network • requirement",
+   "group": "Control",
+   "screen": "Business › Network • requirement",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL053",
+   "path": "Control › Business › Network • role",
+   "group": "Control",
+   "screen": "Business › Network • role",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL054",
+   "path": "Control › Business › Network • standard",
+   "group": "Control",
+   "screen": "Business › Network • standard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL055",
+   "path": "Control › Business › Network • state",
+   "group": "Control",
+   "screen": "Business › Network • state",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL056",
+   "path": "Control › Business › Network • system name",
+   "group": "Control",
+   "screen": "Business › Network • system name",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL057",
+   "path": "Control › Business › Network • system to feed back",
+   "group": "Control",
+   "screen": "Business › Network • system to feed back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL058",
+   "path": "Control › Business › Network • trigger",
+   "group": "Control",
+   "screen": "Business › Network • trigger",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL059",
+   "path": "Control › Business › Network • turn off",
+   "group": "Control",
+   "screen": "Business › Network • turn off",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL060",
+   "path": "Control › Business › Network • unit",
+   "group": "Control",
+   "screen": "Business › Network • unit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL061",
+   "path": "Control › Business › Network • variant",
+   "group": "Control",
+   "screen": "Business › Network • variant",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL062",
+   "path": "Control › Catalogue › Catalogue setup • Add columns",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Add columns",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL063",
+   "path": "Control › Catalogue › Catalogue setup • All",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • All",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL064",
+   "path": "Control › Catalogue › Catalogue setup • Another month",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Another month",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL065",
+   "path": "Control › Catalogue › Catalogue setup • Blank template",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Blank template",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL066",
+   "path": "Control › Catalogue › Catalogue setup • Cancel",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL067",
+   "path": "Control › Catalogue › Catalogue setup • Catalogue",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL068",
+   "path": "Control › Catalogue › Catalogue setup • Catalogue setup",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Catalogue setup",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL069",
+   "path": "Control › Catalogue › Catalogue setup • Change",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Change",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL070",
+   "path": "Control › Catalogue › Catalogue setup • Check &amp; import",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Check &amp; import",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL071",
+   "path": "Control › Catalogue › Catalogue setup • Create all as live",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Create all as live",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL072",
+   "path": "Control › Catalogue › Catalogue setup • Decimal allowed",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Decimal allowed",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL073",
+   "path": "Control › Catalogue › Catalogue setup • Edit",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL074",
+   "path": "Control › Catalogue › Catalogue setup • English always shows",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • English always shows",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL075",
+   "path": "Control › Catalogue › Catalogue setup • Export CSV",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Export CSV",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL076",
+   "path": "Control › Catalogue › Catalogue setup • Plan several",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Plan several",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL077",
+   "path": "Control › Catalogue › Catalogue setup • Reinstate",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Reinstate",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL078",
+   "path": "Control › Catalogue › Catalogue setup • Retire",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • Retire",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL079",
+   "path": "Control › Catalogue › Catalogue setup • See the blueprints available",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • See the blueprints available",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL080",
+   "path": "Control › Catalogue › Catalogue setup • See the columns your trade expects",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • See the columns your trade expects",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL081",
+   "path": "Control › Catalogue › Catalogue setup • required",
+   "group": "Control",
+   "screen": "Catalogue › Catalogue setup • required",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL082",
+   "path": "Control › Catalogue › Categories • All",
+   "group": "Control",
+   "screen": "Catalogue › Categories • All",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL083",
+   "path": "Control › Catalogue › Categories • Author one",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Author one",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL084",
+   "path": "Control › Catalogue › Categories • Cancel",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL085",
+   "path": "Control › Catalogue › Categories • Catalogue",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL086",
+   "path": "Control › Catalogue › Categories • Categories",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Categories",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL087",
+   "path": "Control › Catalogue › Categories • Edit",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL088",
+   "path": "Control › Catalogue › Categories • Put back on the shelf",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Put back on the shelf",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL089",
+   "path": "Control › Catalogue › Categories • Retire",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Retire",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL090",
+   "path": "Control › Catalogue › Categories • See these →",
+   "group": "Control",
+   "screen": "Catalogue › Categories • See these →",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL091",
+   "path": "Control › Catalogue › Categories • Start from a standard set",
+   "group": "Control",
+   "screen": "Catalogue › Categories • Start from a standard set",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL092",
+   "path": "Control › Insight › MIS • Approve this PC",
+   "group": "Control",
+   "screen": "Insight › MIS • Approve this PC",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL093",
+   "path": "Control › Insight › MIS • Ask again",
+   "group": "Control",
+   "screen": "Insight › MIS • Ask again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL094",
+   "path": "Control › Insight › MIS • Back",
+   "group": "Control",
+   "screen": "Insight › MIS • Back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL095",
+   "path": "Control › Insight › MIS • Bind",
+   "group": "Control",
+   "screen": "Insight › MIS • Bind",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL096",
+   "path": "Control › Insight › MIS • Change PIN",
+   "group": "Control",
+   "screen": "Insight › MIS • Change PIN",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL097",
+   "path": "Control › Insight › MIS • Configure AI assists in Co-assists",
+   "group": "Control",
+   "screen": "Insight › MIS • Configure AI assists in Co-assists",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL098",
+   "path": "Control › Insight › MIS • Discard",
+   "group": "Control",
+   "screen": "Insight › MIS • Discard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL099",
+   "path": "Control › Insight › MIS • Download",
+   "group": "Control",
+   "screen": "Insight › MIS • Download",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL100",
+   "path": "Control › Insight › MIS • Edit",
+   "group": "Control",
+   "screen": "Insight › MIS • Edit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL101",
+   "path": "Control › Insight › MIS • Explain",
+   "group": "Control",
+   "screen": "Insight › MIS • Explain",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL102",
+   "path": "Control › Insight › MIS • GSTR-1 JSON",
+   "group": "Control",
+   "screen": "Insight › MIS • GSTR-1 JSON",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL103",
+   "path": "Control › Insight › MIS • Hide where these come from",
+   "group": "Control",
+   "screen": "Insight › MIS • Hide where these come from",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL104",
+   "path": "Control › Insight › MIS • Localisation",
+   "group": "Control",
+   "screen": "Insight › MIS • Localisation",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL105",
+   "path": "Control › Insight › MIS • Mint a key",
+   "group": "Control",
+   "screen": "Insight › MIS • Mint a key",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL106",
+   "path": "Control › Insight › MIS • New / clear",
+   "group": "Control",
+   "screen": "Insight › MIS • New / clear",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL107",
+   "path": "Control › Insight › MIS • Open",
+   "group": "Control",
+   "screen": "Insight › MIS • Open",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL108",
+   "path": "Control › Insight › MIS • Open the layer that declares this",
+   "group": "Control",
+   "screen": "Insight › MIS • Open the layer that declares this",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL109",
+   "path": "Control › Insight › MIS • Publish to catalogue",
+   "group": "Control",
+   "screen": "Insight › MIS • Publish to catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL110",
+   "path": "Control › Insight › MIS • Reject",
+   "group": "Control",
+   "screen": "Insight › MIS • Reject",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL111",
+   "path": "Control › Insight › MIS • Remove this detail",
+   "group": "Control",
+   "screen": "Insight › MIS • Remove this detail",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL112",
+   "path": "Control › Insight › MIS • Remove this section",
+   "group": "Control",
+   "screen": "Insight › MIS • Remove this section",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL113",
+   "path": "Control › Insight › MIS • Revoke",
+   "group": "Control",
+   "screen": "Insight › MIS • Revoke",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL114",
+   "path": "Control › Insight › MIS • Save",
+   "group": "Control",
+   "screen": "Insight › MIS • Save",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL115",
+   "path": "Control › Insight › MIS • Save auto-assign",
+   "group": "Control",
+   "screen": "Insight › MIS • Save auto-assign",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL116",
+   "path": "Control › Insight › MIS • Save settings",
+   "group": "Control",
+   "screen": "Insight › MIS • Save settings",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL117",
+   "path": "Control › Insight › MIS • Save vault",
+   "group": "Control",
+   "screen": "Insight › MIS • Save vault",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL118",
+   "path": "Control › Insight › MIS • Send after all",
+   "group": "Control",
+   "screen": "Insight › MIS • Send after all",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL119",
+   "path": "Control › Insight › MIS • Stay here",
+   "group": "Control",
+   "screen": "Insight › MIS • Stay here",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL120",
+   "path": "Control › Insight › MIS • Unbind",
+   "group": "Control",
+   "screen": "Insight › MIS • Unbind",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL121",
+   "path": "Control › Insight › MIS • Use the regional default",
+   "group": "Control",
+   "screen": "Insight › MIS • Use the regional default",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL122",
+   "path": "Control › Insight › MIS • hide the technical detail",
+   "group": "Control",
+   "screen": "Insight › MIS • hide the technical detail",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL123",
+   "path": "Control › Insight › MIS • less",
+   "group": "Control",
+   "screen": "Insight › MIS • less",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL124",
+   "path": "Control › Insight › MIS • overdue policy",
+   "group": "Control",
+   "screen": "Insight › MIS • overdue policy",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL125",
+   "path": "Control › Insight › MIS • we use this",
+   "group": "Control",
+   "screen": "Insight › MIS • we use this",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL126",
+   "path": "Control › Insight › Traceability • Recall set",
+   "group": "Control",
+   "screen": "Insight › Traceability • Recall set",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL127",
+   "path": "Control › Insight › Traceability • Trace by batch #",
+   "group": "Control",
+   "screen": "Insight › Traceability • Trace by batch #",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL128",
+   "path": "Control › Insight › Trade ready • Accept &amp; attach as evidence",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Accept &amp; attach as evidence",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL129",
+   "path": "Control › Insight › Trade ready • Back",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL130",
+   "path": "Control › Insight › Trade ready • Copy",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Copy",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL131",
+   "path": "Control › Insight › Trade ready • Done",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Done",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL132",
+   "path": "Control › Insight › Trade ready • Draft with AI",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Draft with AI",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL133",
+   "path": "Control › Insight › Trade ready • Matrix",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Matrix",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL134",
+   "path": "Control › Insight › Trade ready • PDF",
+   "group": "Control",
+   "screen": "Insight › Trade ready • PDF",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL135",
+   "path": "Control › Insight › Trade ready • Record clearance on the rail",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Record clearance on the rail",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL136",
+   "path": "Control › Insight › Trade ready • Standards",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Standards",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL137",
+   "path": "Control › Insight › Trade ready • Suggest",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Suggest",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL138",
+   "path": "Control › Insight › Trade ready • Verify ID",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Verify ID",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL139",
+   "path": "Control › Insight › Trade ready • Verify at source",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Verify at source",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL140",
+   "path": "Control › Insight › Trade ready • Your registered country (fixed)",
+   "group": "Control",
+   "screen": "Insight › Trade ready • Your registered country (fixed)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL141",
+   "path": "Control › Rail › Compose • Add new products to my catalogue",
+   "group": "Control",
+   "screen": "Rail › Compose • Add new products to my catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL142",
+   "path": "Control › Rail › Compose • Assign",
+   "group": "Control",
+   "screen": "Rail › Compose • Assign",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL143",
+   "path": "Control › Rail › Compose • Assign together",
+   "group": "Control",
+   "screen": "Rail › Compose • Assign together",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL144",
+   "path": "Control › Rail › Compose • Back",
+   "group": "Control",
+   "screen": "Rail › Compose • Back",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL145",
+   "path": "Control › Rail › Compose • Clear",
+   "group": "Control",
+   "screen": "Rail › Compose • Clear",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL146",
+   "path": "Control › Rail › Compose • Close",
+   "group": "Control",
+   "screen": "Rail › Compose • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL147",
+   "path": "Control › Rail › Compose • Delivered",
+   "group": "Control",
+   "screen": "Rail › Compose • Delivered",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL148",
+   "path": "Control › Rail › Compose • Every line",
+   "group": "Control",
+   "screen": "Rail › Compose • Every line",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL149",
+   "path": "Control › Rail › Compose • Price from catalogue",
+   "group": "Control",
+   "screen": "Rail › Compose • Price from catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL150",
+   "path": "Control › Rail › Compose • Service clock &amp; SLA",
+   "group": "Control",
+   "screen": "Rail › Compose • Service clock &amp; SLA",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL151",
+   "path": "Control › Rail › Compose • Take materials",
+   "group": "Control",
+   "screen": "Rail › Compose • Take materials",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL152",
+   "path": "Control › Rail › Compose • open the full original",
+   "group": "Control",
+   "screen": "Rail › Compose • open the full original",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL153",
+   "path": "Control › Rail › Task • Close",
+   "group": "Control",
+   "screen": "Rail › Task • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL154",
+   "path": "Control › Rail › Task • Close it",
+   "group": "Control",
+   "screen": "Rail › Task • Close it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL155",
+   "path": "Control › Rail › Task • Open the order",
+   "group": "Control",
+   "screen": "Rail › Task • Open the order",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL156",
+   "path": "Control › Rail › Task • Record something",
+   "group": "Control",
+   "screen": "Rail › Task • Record something",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL157",
+   "path": "Control › Rail › Task • Take materials from the catalogue",
+   "group": "Control",
+   "screen": "Rail › Task • Take materials from the catalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL158",
+   "path": "Control › Rail › Task • clear",
+   "group": "Control",
+   "screen": "Rail › Task • clear",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL159",
+   "path": "Control › Rail › Task • close",
+   "group": "Control",
+   "screen": "Rail › Task • close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL160",
+   "path": "Control › Rail › Task • expand all",
+   "group": "Control",
+   "screen": "Rail › Task • expand all",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL161",
+   "path": "Control › Rail › Task • total by product",
+   "group": "Control",
+   "screen": "Rail › Task • total by product",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL162",
+   "path": "Control › Work › Disputes • About this screen",
+   "group": "Control",
+   "screen": "Work › Disputes • About this screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL163",
+   "path": "Control › Work › Disputes • Close",
+   "group": "Control",
+   "screen": "Work › Disputes • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL164",
+   "path": "Control › Work › Disputes • Done",
+   "group": "Control",
+   "screen": "Work › Disputes • Done",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL165",
+   "path": "Control › Work › Disputes • Raise dispute",
+   "group": "Control",
+   "screen": "Work › Disputes • Raise dispute",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL166",
+   "path": "Control › Work › Disputes • Resolve",
+   "group": "Control",
+   "screen": "Work › Disputes • Resolve",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL167",
+   "path": "Control › Work › Disputes • Send ↔",
+   "group": "Control",
+   "screen": "Work › Disputes • Send ↔",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL168",
+   "path": "Control › Work › Disputes • Suggest wording",
+   "group": "Control",
+   "screen": "Work › Disputes • Suggest wording",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL169",
+   "path": "Control › Work › Disputes • Summarize",
+   "group": "Control",
+   "screen": "Work › Disputes • Summarize",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL170",
+   "path": "Control › Work › Intake • Add to the queue",
+   "group": "Control",
+   "screen": "Work › Intake • Add to the queue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL171",
+   "path": "Control › Work › Intake • Ask the assistant about this screen",
+   "group": "Control",
+   "screen": "Work › Intake • Ask the assistant about this screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL172",
+   "path": "Control › Work › Intake • Close",
+   "group": "Control",
+   "screen": "Work › Intake • Close",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL173",
+   "path": "Control › Work › Intake • Dismiss",
+   "group": "Control",
+   "screen": "Work › Intake • Dismiss",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL174",
+   "path": "Control › Work › Intake • File as a request in your inbox, in their",
+   "group": "Control",
+   "screen": "Work › Intake • File as a request in your inbox, in their",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL175",
+   "path": "Control › Work › Intake • Make this a chit",
+   "group": "Control",
+   "screen": "Work › Intake • Make this a chit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL176",
+   "path": "Control › Work › Intake • Record a message",
+   "group": "Control",
+   "screen": "Work › Intake • Record a message",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL177",
+   "path": "Control › Work › Intake • Refresh",
+   "group": "Control",
+   "screen": "Work › Intake • Refresh",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL178",
+   "path": "Control › Work › Intake • See exactly what was read, and what the ch",
+   "group": "Control",
+   "screen": "Work › Intake • See exactly what was read, and what the ch",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL179",
+   "path": "Control › Work › Intake • Settings",
+   "group": "Control",
+   "screen": "Work › Intake • Settings",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL180",
+   "path": "Control › Work › Intake • copy",
+   "group": "Control",
+   "screen": "Work › Intake • copy",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL181",
+   "path": "Control › Work › Messages • Open the line",
+   "group": "Control",
+   "screen": "Work › Messages • Open the line",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CTL182",
+   "path": "Control › Work › Messages • everything, including dealt with",
+   "group": "Control",
+   "screen": "Work › Messages • everything, including dealt with",
    "nav": null,
    "cases": 0,
    "since": "2026-09-12"

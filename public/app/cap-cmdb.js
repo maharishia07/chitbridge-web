@@ -60,8 +60,21 @@ function cmdbEsc(x) {
  * person is looking for one or the other, never both.
  */
 function cmdbRows() {
-  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group !== 'Popup'; }); }
-  catch (_) { return []; }
+  try {
+    return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
+      .filter(function (r) { return r.group !== 'Popup' && r.group !== 'Control'; });
+  } catch (_) { return []; }
+}
+/**
+ * ⭐ THE CONTROLS. Athi, 2026-09-12: *"each screen, each icon and report… all those should be in CMDB."*
+ * ⚠️ 151 of them carry no readable name and deliberately have NO code — a tester cannot be given a label that
+ * appears nowhere on their screen, so the register says so instead of inventing one.
+ */
+function cmdbControls() {
+  try {
+    return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
+      .filter(function (r) { return r.group === 'Control'; });
+  } catch (_) { return []; }
 }
 function cmdbPopups() {
   try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Popup'; }); }
@@ -121,6 +134,7 @@ function cmdbKindsHTML() {
   var A = cmdbAssets();
   var kinds = [['SCREEN', 'Screens', cmdbRows().length]];
   if (cmdbPopups().length) kinds.push(['POPUP', 'Popups', cmdbPopups().length]);
+  if (cmdbControls().length) kinds.push(['CONTROL', 'Controls', cmdbControls().length]);
   ['CAP', 'ENG', 'API'].forEach(function (k) {
     var n = A.filter(function (x) { return x.type === k; });
     /* ⚠ A PLURAL IS NOT A NOUN PLUS S. It read "Capabilitys" the first time this was shown to Athi — small,
@@ -155,6 +169,49 @@ function cmdbKindsHTML() {
  * OPENER and not the dialog. Shown with a "·" and said in words, rather than letting a reader assume every code
  * is precise. ⭐ An honest gap beats an invented ordinal that shifts the moment a line is added above it.
  */
+/**
+ * ── ⭐⭐ THE CONTROLS — EVERY ICON A TESTER CAN PRESS ─────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"each screen, each icon and report and so on, entire product catalogue"* · *"I am doing all
+ * those so when I ask the external tester to perform testing they should be able to record against it."*
+ *
+ * ⚠️⚠️ CONTROLS ALREADY HAD IDENTIFIERS AND THEY WERE THE WRONG KIND: the sweep issues M-R-COMPOSE-001, -002,
+ * -003, which are POSITIONAL. Add a button at the top of that screen and every number below it shifts, so a
+ * result recorded against -004 last month now describes a different control and nothing says so. These codes
+ * are assigned once, keyed by the screen and the name a person can actually read on the control.
+ *
+ * ⚠️ 151 controls carry no readable name and have NO code, deliberately. A tester cannot be handed a label that
+ * appears nowhere on their screen; the sweep says so and so does this.
+ */
+function cmdbControlHTML(q2) {
+  var A = cmdbControls();
+  var q = String(CBCMDB.q || '').toLowerCase();
+  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+    + '<b>' + A.length + '</b> control(s), each named by the screen it is on and the words on it — not by its '
+    + 'position, so adding a button above one does not rename it.'
+    + '<br>⚠️ Controls with no readable name are not listed: they have no code, because a tester cannot '
+    + 'record against a label that appears nowhere on their screen.'
+    + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
+    + '<th style="text-align:start;padding:3px 6px">Control</th>'
+    + '<th style="text-align:start;padding:3px 0 3px 6px">On</th></tr>';
+  A.forEach(function (x) {
+    /* the stored name is "Rail › Compose • open the full original" — split it back for reading */
+    var bits = String(x.screen).split('•');
+    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+      + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
+      +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + cmdbEsc((bits[1] || '').trim()) + '</td>'
+      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + cmdbEsc((bits[0] || '').trim()) + '</td>'
+      + '</tr>';
+  });
+  return h + '</table>';
+}
+
 function cmdbPopupHTML(q2) {
   var A = cmdbPopups();
   var q = String(CBCMDB.q || '').toLowerCase();
@@ -277,6 +334,7 @@ function cmdbPaint() {
 
   var q2 = 'font-size:var(--fs-1);color:var(--note)';
   if (CBCMDB.kind === 'POPUP') { body.innerHTML = cmdbPopupHTML(q2); return; }
+  if (CBCMDB.kind === 'CONTROL') { body.innerHTML = cmdbControlHTML(q2); return; }
   if (CBCMDB.kind !== 'SCREEN') { body.innerHTML = cmdbSoftwareHTML(q2); return; }
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
     + '<b>' + rows.length + '</b> configuration item(s). Every screen carries a code that is <b>assigned once and '
