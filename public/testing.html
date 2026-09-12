@@ -162,8 +162,31 @@
    * ⭐ Fixed tracks: key, title, then the badges. `min-width:0` on the title is what lets a long one shrink
    * instead of shoving everything right of it off the edge.
    */
-  .chead{ display:grid; grid-template-columns:minmax(0,17em) minmax(0,1fr) auto; gap:11px;
+  /**
+   * ── ⭐ FIVE NAMED TRACKS, so every value on a case row sits under a word that describes it ────────────────
+   *
+   * Athi, 2026-09-12: *"in the detail page you are showing unit under every item — if it is test type, then
+   * make it as a column so it clearly states that. Also status, red every time, not able to understand."*
+   *
+   * ⚠️ THE VERDICT, THE KIND AND THE PRIORITY SHARED ONE `auto` TRACK with no header above any of them, and
+   * because the case list lives inside a colspan they visually lined up under the PARENT table's PASSED /
+   * FAILED / NOT RUN headings — which they have nothing to do with. A heading that belongs to different data
+   * is worse than no heading: the reader trusts it.
+   *
+   * ⚠️ The three fact tracks are em-based so they hold their width whatever the title does. That is the whole
+   * point of a column — a reader runs their eye DOWN it, and a column that moves per row is not one.
+   */
+  .chead{ display:grid;
+        grid-template-columns:minmax(0,15em) minmax(0,1fr) 7.5em 6em 5em auto; gap:9px;
         align-items:baseline; padding:9px 11px; cursor:pointer; }
+  .chead .c-kind, .chead .c-status, .chead .c-pri{ font-size:var(--fs-1); min-width:0; }
+  .chead .c-pri{ color:var(--grey-2); }
+  /* ⭐ the header row is the SAME grid, so it cannot drift from the rows beneath it */
+  .chead.chhead{ cursor:default; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em;
+        color:var(--grey-2); font-weight:700; padding:6px 11px 4px; border-bottom:1px solid var(--line);
+        margin:0 0 4px; background:none; }
+  .chead.chhead .key{ background:none; padding:0; color:var(--grey-2); font-weight:700; }
+  .chead.chhead .ttl{ font-weight:700; }
   /**
    * ⚠️ THE LAST ELLIPSIS ON THE PAGE, and it was hiding the useful half. A case key is a PATH —
    * 'chitbridge-api/scripts/journey-supplier-hop.js' — and clipping the end of a path removes the filename,
@@ -2971,7 +2994,9 @@ function paint(){
     h += '</tr>';
     if (open) {
       var inner = '';
-      cs.forEach(function(c){ inner += caseHTML(c); });
+      var inner2 = caseHeaderHTML();
+      cs.forEach(function(c){ inner2 += caseHTML(c); });
+      inner = inner2;
       h += '<tr class="acases"><td colspan="' + (colKeys.length + 2) + '">' + inner + '</td></tr>';
     }
   });
@@ -3077,6 +3102,20 @@ function foldSection(k){ FOLD[k] = !isOpenSection(k, 99); foldSave(); repaintCur
 /* ⚠️ a STATE, not a one-off: the next repaint would undo an action, and the board repaints on every tap */
 function foldAll(open){ FOLD = { _all: !!open }; foldSave(); repaintCurrent(); }
 
+/**
+ * ⭐ ONE HEADER FOR THE CASE LIST. Without it the columns are a guess — and the guess a reader makes is that
+ * they belong to the parent table's headings, which is the confusion this exists to end.
+ */
+function caseHeaderHTML(){
+  return '<div class="chead chhead">'
+    + '<span class="key">Case</span>'
+    + '<span class="ttl">What it proves</span>'
+    + '<span class="c-kind">Kind</span>'
+    + '<span class="c-status">Status</span>'
+    + '<span class="c-pri">Priority</span>'
+    + '<span class="badges"></span></div>';
+}
+
 function caseHTML(c){
   var l = LAST[c.case_key], st = l ? l.status : '';
   var open = !!OPEN[c.case_key];
@@ -3096,7 +3135,28 @@ function caseHTML(c){
        nothing and hides the fact; saying so is a finding about the test. */
     +   '<span class="ttl' + (c.automated && !c.claim ? ' noclaim' : '') + '">'
     +     esc(c.automated && !c.claim ? 'no claim written in the file' : (c.title || '')) + '</span>'
-    +   '<span class="badges">' + last
+    /**
+     * ── ⚠️⚠️ THREE FACTS IN ONE UNLABELLED TRACK ──────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"in the detail page you are showing unit under every item — if it is test type, then
+     * make it as a column so it clearly states that. Also status, red every time, not able to understand what
+     * it says."*
+     *
+     * ⚠️ THE VERDICT, THE KIND AND THE PRIORITY ALL SAT IN ONE `auto` track with no header above any of them.
+     * "not run · acceptance · High" read as three unrelated words, and because the case rows live inside a
+     * colspan they lined up under the PARENT table's PASSED / FAILED / NOT RUN headings — which they have
+     * nothing to do with. A column heading that belongs to different data is worse than no heading.
+     *
+     * ⭐ Each fact gets its own track, and caseHeaderHTML() above the list names them. Same fix as the tree
+     * and the table cells: a row is a TABLE, not whatever is left over after the text.
+     */
+    +   '<span class="c-kind">'
+    +     (c.test_type ? '<span class="lay ty ' + esc(c.test_type) + '" title="'
+          + esc(LEVEL_SAYS[c.test_type] || '') + '">' + esc(c.test_type) + '</span>' : '<span class="dim">—</span>')
+    +   '</span>'
+    +   '<span class="c-status">' + last + '</span>'
+    +   '<span class="c-pri">' + esc(c.priority || '') + '</span>'
+    +   '<span class="badges">'
     /* ⚠️ ON THE ROW, not behind a filter — a tester must see it without going looking for it. */
     +   (STALE[c.case_key]
           ? '<span class="lay" style="background:#fbf3e3;border-color:#e8d7ae;color:#8a5a1e" title="'
@@ -3125,10 +3185,7 @@ function caseHTML(c){
      * a green line means "a function returned the right number" or "a person used it and it worked". ⚠️ Those
      * are the two ends of the V and they are not substitutes for one another.
      */
-    +   (c.test_type ? '<span class="lay ty ' + esc(c.test_type) + '" title="' + esc(LEVEL_SAYS[c.test_type] || '')
-          + '">' + esc(c.test_type) + '</span>' : '')
     +   (c.layer ? '<span class="lay">' + esc(c.layer) + '</span>' : '')
-    +   '<span class="pri">' + esc(c.priority || '') + '</span>'
     + '</span></div>';
 
   if (open) {
