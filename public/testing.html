@@ -136,6 +136,15 @@
   .tsize button:first-child{ border-radius:7px 0 0 7px; }
   .tsize button:last-child{ border-radius:0 7px 7px 0; border-inline-start:0; }
   .tsize button:hover{ background:var(--neutral-tint); }
+  /* ⭐ outside #main, so a repaint cannot wipe it — see seed() */
+  #notice.notice{ position:relative; margin:10px 18px 0; padding:11px 40px 11px 14px; border-radius:10px;
+        background:var(--blue-tint); border:1px solid var(--blue); color:var(--ink);
+        font-size:var(--fs-2); line-height:1.55; max-width:var(--prose); }
+  #notice.notice.bad{ background:var(--bad-tint,#fdeceb); border-color:#eccbc9; }
+  #notice .n2{ margin-top:4px; font-size:var(--fs-1); }
+  #notice .x{ position:absolute; inset-block-start:6px; inset-inline-end:8px; border:0; background:none;
+        font-size:var(--fs-3); line-height:1; cursor:pointer; color:var(--grey-2); padding:2px 6px; }
+  #notice .x:hover{ color:var(--ink); }
   main{ padding:12px 18px 80px; max-width:1760px; margin:0 auto; }
   /* ⭐ the reading measure, kept for prose only — see above */
   .modhead .intro, .note, .lede, .prose{ max-width:var(--prose); }
@@ -825,6 +834,12 @@
 <script src="/engine/gs1.js" onerror="void 0"></script>
 <script src="/engine/search.js" onerror="void 0"></script>
 
+<!--
+  ⭐ A NOTICE THAT OUTLIVES A REPAINT. It sits OUTSIDE #main on purpose: seed() used to write its summary
+  into #main and then call load(), which repaints #main — so the summary appeared and was painted over a
+  second later. Athi, 2026-09-12: *"it just blinks reading, after few seconds nothing."*
+-->
+<div id="notice" hidden></div>
 <main id="main"><div class="say">Reading the board…</div></main>
 
 <script>
@@ -929,13 +944,67 @@ async function loadEngine(){
   } catch (e) { ENGINE = false; CONTENTS = null; NOTES = {}; FOOT = ''; MATURITY = null; }
 }
 
+/**
+ * ── ⚠️⚠️ IT DID REPORT, AND THEN PAINTED OVER ITS OWN REPORT ─────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"I pressed the reload button — what does it mean? While loading it just blinks reading,
+ * after a few seconds nothing. Does it mean loading completed? It has to state explicitly, refreshing test
+ * cases, and show some summary so people understand the cases loaded."*
+ *
+ * ⚠️ THE SUMMARY EXISTED AND LASTED ABOUT A SECOND. say() writes into #main; the very next line called load(),
+ * which repaints #main. So the one press that changes 616 rows said nothing it could be read — which is the
+ * standing fault on this platform, a quiet operation reporting nothing, in the tool built to find exactly that.
+ *
+ * ⭐ Three changes, and none of them is decoration:
+ *   · it says WHAT IT IS DOING while it runs, not "reading" — a person pressing a button wants the verb
+ *   · the summary lands in #notice, OUTSIDE #main, so the repaint cannot wipe it
+ *   · it says what actually MOVED — claims and file facts before and after — because "616 unchanged" and
+ *     "616 updated" look identical otherwise, and only one of them means the press did anything
+ */
+function notice(html, bad){
+  var n = document.getElementById('notice');
+  if (!n) return;
+  n.hidden = false;
+  n.className = 'notice' + (bad ? ' bad' : '');
+  n.innerHTML = html
+    + '<button class="x" onclick="document.getElementById(\'notice\').hidden=true" title="Dismiss">\u00d7</button>';
+}
+
 async function seed(){
+  var before = {
+    claims: CASES.filter(function (c) { return c.claim; }).length,
+    facts:  CASES.filter(function (c) { return c.changed_at; }).length,
+    total:  CASES.length,
+  };
+  notice('<b>Refreshing the test cases\u2026</b> reading the document and upserting every case. '
+       + 'This takes a few seconds.');
   try {
     var r = await call('/api/testing/cases/seed', { method:'POST' });
-    say(r.added + ' cases loaded' + (r.updated ? ', ' + r.updated + ' updated' : '')
-        + (r.unchanged ? ', ' + r.unchanged + ' already current' : ''));
     await load();
-  } catch (e) { say('Could not load them: ' + e.message, true); }
+    var after = {
+      claims: CASES.filter(function (c) { return c.claim; }).length,
+      facts:  CASES.filter(function (c) { return c.changed_at; }).length,
+      total:  CASES.length,
+    };
+    var moved = function (label, a, b2) {
+      if (a === b2) return '<span class="dim">' + label + ' ' + b2 + ' (unchanged)</span>';
+      return '<b>' + label + ' ' + a + ' \u2192 ' + b2 + '</b>';
+    };
+    notice('<b>Test cases refreshed.</b> '
+      + (r.added ? r.added + ' added \u00b7 ' : '')
+      + (r.updated ? r.updated + ' updated \u00b7 ' : '')
+      + (r.unchanged ? r.unchanged + ' already current' : '').replace(/ \u00b7 $/, '')
+      + '<div class="n2">' + moved('cases', before.total, after.total)
+      + ' \u00b7 ' + moved('with a stated claim', before.claims, after.claims)
+      + ' \u00b7 ' + moved('carrying file facts', before.facts, after.facts) + '</div>'
+      /* ⚠️ the honest caveat: an upsert that changes nothing is a SUCCESS, and looks like a failure */
+      + (!r.added && !r.updated
+          ? '<div class="n2 dim">Nothing moved \u2014 the board already matched the document. '
+            + 'That is a completed refresh, not a failed one.</div>'
+          : ''));
+  } catch (e) {
+    notice('<b>Could not refresh the cases.</b> ' + esc(e.message), true);
+  }
 }
 
 /**
