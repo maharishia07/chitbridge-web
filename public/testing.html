@@ -1045,8 +1045,24 @@ async function seed(){
       + '<div class="n2">' + moved('cases', before.total, after.total)
       + ' \u00b7 ' + moved('with a stated claim', before.claims, after.claims)
       + ' \u00b7 ' + moved('carrying file facts', before.facts, after.facts) + '</div>'
+      /**
+       * ⭐ WHAT WAS RETIRED, BY NAME. A case whose file has gone is removed from the board by this press, and a
+       * removal nobody is told about is the same silence the refresh summary exists to end. ⚠️ Retired, not
+       * deleted — the case and its whole result history stay on the record.
+       */
+      + (r.retired
+          ? '<div class="n2"><b>' + r.retired + ' retired</b> \u2014 their file no longer exists: '
+            + esc((r.orphans || []).slice(0, 6).join(' \u00b7 '))
+            + ((r.orphans || []).length > 6 ? ' \u00b7 +' + ((r.orphans || []).length - 6) + ' more' : '')
+            + '. They keep their history and can be brought back by name.</div>'
+          : '')
+      /* ⚠️ and when the guard HELD, say so — "0 retired" otherwise reads as "nothing was orphaned" */
+      + (r.retire_held
+          ? '<div class="n2 dim">\u26a0 ' + esc((r.orphans || []).length) + ' case(s) are on the board and not '
+            + 'in the document, and nothing was retired: ' + esc(r.retire_held) + '.</div>'
+          : '')
       /* ⚠️ the honest caveat: an upsert that changes nothing is a SUCCESS, and looks like a failure */
-      + (!r.added && !r.updated
+      + (!r.added && !r.updated && !r.retired
           ? '<div class="n2 dim">Nothing moved \u2014 the board already matched the document. '
             + 'That is a completed refresh, not a failed one.</div>'
           : ''));
