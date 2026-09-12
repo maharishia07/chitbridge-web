@@ -103,7 +103,8 @@
   .bar.filtered{ background:var(--blue-tint); border-bottom-color:var(--blue); }
   .fclear{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:8px;
         font-size:var(--fs-1); color:var(--blue); font-weight:600; }
-  .fclear .btn{ font-size:var(--ui); padding:3px 10px; border-color:var(--blue); color:var(--blue); }
+  #f_clear:disabled{ opacity:.45; cursor:default; }
+  #f_clear:disabled:hover{ background:var(--card); color:var(--ink); }
   .bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px;
         border-bottom:1px solid var(--line); background:var(--card); }
   .bar label{ font-size:var(--ui); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
@@ -725,6 +726,18 @@
     saying how many of how many are showing. It appears only when a filter is on — a permanent Clear button is
     noise, and noise is what you stop seeing.
   -->
+  <!--
+    ⚠️ I ARGUED FOR SHOWING THIS ONLY WHEN A FILTER WAS ON — "a permanent Clear button is noise, and noise is
+    what you stop seeing" — and Athi said, plainly: *"no, give a clear filter button."* He is right and my
+    reasoning was backwards for this case. A control that APPEARS is a control you have to notice before you
+    can use it, and the whole complaint was that he could not tell a filter was on in the first place. You
+    cannot go looking for a button whose existence depends on the thing you failed to spot.
+
+    ⭐ So it is always here, always in the same place. The COUNT beside it still appears only when something is
+    filtered — that is information, and information about nothing is the noise I was worried about.
+  -->
+  <button class="btn" id="f_clear" onclick="clearFilters()"
+    title="Clear every filter — kind, reaches, search, and the one the header chips set">Clear filters</button>
   <span id="f_state_show" class="fclear" hidden></span>
 
   <!--
@@ -1233,10 +1246,13 @@ function showFilterState(shown){
   if (MODFILT) on.push(MODFILT);
 
   if (bar) bar.className = on.length ? 'bar filtered' : 'bar';
+  /* ⭐ always present, but it says whether it has anything to do — a live-looking button that does nothing
+     teaches people to distrust the control */
+  var btn = document.getElementById('f_clear');
+  if (btn) { btn.disabled = !on.length; btn.className = on.length ? 'btn pri' : 'btn'; }
   if (!on.length) { el.hidden = true; el.innerHTML = ''; return; }
   el.hidden = false;
-  el.innerHTML = '<b>' + shown + '</b> of ' + CASES.length + ' \u00b7 filtered by ' + esc(on.join(' \u00b7 '))
-    + '<button class="btn" onclick="clearFilters()">Show all ' + CASES.length + '</button>';
+  el.innerHTML = '<b>' + shown + '</b> of ' + CASES.length + ' \u00b7 filtered by ' + esc(on.join(' \u00b7 '));
 }
 
 /** ⭐ every filter, including the hidden one the header chips set — a "clear" that leaves one on is worse than none */
