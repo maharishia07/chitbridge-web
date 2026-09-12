@@ -296,7 +296,21 @@
         border-bottom:1px solid var(--line); white-space:nowrap; }
   table.sum td{ padding:9px 11px; border-bottom:1px solid var(--line-2); vertical-align:middle; }
   table.sum tr:last-child td{ border-bottom:0; }
-  table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap; }
+  /**
+   * ── ⚠️⚠️ "CASESPASSEDFAILED" — HEADERS RUNNING INTO EACH OTHER ────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"text are overlapping."*
+   *
+   * ⚠️ `white-space:nowrap` was already here and is NOT enough. When a table's content needs more width than
+   * its container has, the browser compresses cells as a last resort and nowrap does not save them — the words
+   * end up touching. It never showed locally because this page is wide; at a bigger text size in a narrower
+   * window the same table needs 1812px inside 1724px and starts squeezing.
+   *
+   * ⭐ A minimum width makes the columns INCOMPRESSIBLE, so the table overflows into .scroll — which exists for
+   * exactly that — instead of folding in on itself. Overflowing is visible and scrollable; compressing is
+   * silent and unreadable.
+   */
+  table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap; min-width:4.6em; }
   table.sum .area{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
   /* ⭐ the feature key is a code, so it keeps its own narrow track and never wraps */
   table.sum td .area{ white-space:nowrap; }
@@ -2660,7 +2674,15 @@ function engineHTML(){
   if ((ENGINE.bound || []).length) {
     h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:10px 0 6px">'
       + '<b>Tier B</b> — the same rules, but needing a database handle. Portable with an adapter, not as a file.'
-      + '</div><div class="scroll"><table class="sum">';
+      /**
+       * ⚠️⚠️ THIS TABLE HAD NO HEADER ROW AT ALL — five columns of values under nothing. It shares the row()
+       * renderer with the pure-rules table above and I let it share the HEADER too, by assuming a reader
+       * carries one down the page across a paragraph of prose and a second table. They do not.
+       * ⭐ Found by e2e/layout-honest.cjs on its FIRST run, not by Athi on his next screenshot — which is the
+       * entire reason that guard now exists.
+       */
+      + '</div><div class="scroll"><table class="sum"><tr><th>Rule</th><th>What it decides</th>'
+      + '<th class="num">Lines</th><th class="num">Tests</th><th class="num">Last</th></tr>';
     ENGINE.bound.forEach(function(r){ h += row(r); });
     h += '</table></div>';
   }

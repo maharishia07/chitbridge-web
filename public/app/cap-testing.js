@@ -703,8 +703,16 @@ function testPaint() {
        * ⭐ AND THE AREA LIST GETS THE REPORT'S HEADER — AREA · CASES · PASSED · FAILED · NOT RUN — from the same
        * grid constant the rows use, so the two cannot drift apart.
        */
-      h += '<div style="display:grid;grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;'
-        + 'padding:3px 6px 4px;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;'
+      /**
+       * ⭐ STICKY, SO THE SCROLL STARTS BELOW IT. Athi, 2026-09-12: *"scroll has to start below area?"*
+       * ⚠️ The header renders INSIDE #cbtestbody, which is the scroll container — so it scrolled away with
+       * the first row and the columns lost their names exactly when the list got long enough to need them.
+       * ⚠️ An OPAQUE background is not decoration here: a transparent sticky header lets the rows scroll
+       * through it and both become unreadable.
+       */
+      h += '<div style="position:sticky;top:0;z-index:2;background:var(--card,#fff);'
+        + 'display:grid;grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;'
+        + 'padding:5px 6px 4px;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;'
         + 'color:var(--grey-2,#545A61);font-weight:700;border-bottom:1px solid var(--line,#e7e3d8)">'
         + '<span>Area</span><span></span>'
         + '<span style="text-align:end">Cases</span><span style="text-align:end">Passed</span>'
@@ -755,14 +763,22 @@ function testPaint() {
         h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:grid;'
           + 'grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;align-items:baseline;'
           + 'cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line-2,#efece4)">'
-          + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0">'
+          + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0;overflow:hidden">'
           +   '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
           +   (seq ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);'
                    + 'color:var(--grey-2,#545A61)">' + seq + '</span>' : '')
           /* ⭐ the key as a CHIP, so it reads as a code rather than as the first word of the name */
-          +   '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);font-weight:700;'
+          /**
+           * ⚠️⚠️ AND A LONG KEY RODE STRAIGHT OVER THE NAME. `chitbridge-api/scripts` is 22 characters in a
+           * track sized for `REG`, and with nowrap and no overflow rule the chip simply drew on top of the
+           * text beside it — "chitbridge-api/scripts and proofs" as one unreadable smear.
+           * ⭐ min-width:0 lets the flex item shrink at all (it defaults to auto, which is why it did not), and
+           * the ellipsis keeps the start of the key, which is the half that identifies it.
+           */
+          +   '<span title="' + testEsc(gk) + '" style="font-family:ui-monospace,Menlo,monospace;'
+          +     'font-size:var(--fs-1);font-weight:700;min-width:0;'
           +     'background:var(--grey-2,#545A61);color:#fff;border-radius:4px;padding:1px 5px;'
-          +     'white-space:nowrap">' + testEsc(gk) + '</span>'
+          +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + testEsc(gk) + '</span>'
           + '</span>'
           + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;'
           + 'text-overflow:ellipsis;white-space:nowrap">' + testEsc(list[0].module_name || '') + '</span>'
