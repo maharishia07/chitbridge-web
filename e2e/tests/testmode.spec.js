@@ -26,8 +26,20 @@ const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.rai
 
 const tokenOf = (p) => p.evaluate(() => SESSION.token);
 
-/** turn test mode on through its own switch, and wait for the board it reads */
+/**
+ * turn test mode on through its own switch, and wait for the board it reads.
+ *
+ * ⚠⚠ THE REMEMBERED PREFERENCES ARE CLEARED FIRST, and that is not tidiness. The case filter and the lab
+ * view are kept in localStorage — rightly, a tester works one way all day — so TM-10 leaving the filter on
+ * “Passed” made TM-12 and TM-13 read a list with their own new case filtered OUT of it. Both passed alone and
+ * failed in the batch: the most expensive kind of failure, because it reads as a regression in whatever was
+ * changed last.
+ */
 async function modeOn(page) {
+  await page.evaluate(() => {
+    try { localStorage.removeItem('cb_case_filter'); localStorage.removeItem('cb_test_view');
+          localStorage.removeItem('cb_test_scrsort'); } catch (_) {}
+  });
   const sw = page.locator('[data-testid="vp-test"]');
   await expect(sw).toBeVisible();
   if (!(await sw.textContent() || '').includes('on')) await sw.click();
@@ -238,6 +250,8 @@ test.describe('test mode', () => {
     await expect(page.locator('[data-testid="screen-code"]').first()).toHaveText('BUS002', { timeout: 20000 });
     await openPanel(page);
     await writeCase(page, { req: 'a supplier thing', op: 'open a supplier', exp: 'it says what it is' });
+    /* ⚠ wait for the board to come back before reading it: writeCase presses the button, it does not wait */
+    await expect(page.locator('#cbcasesbody')).toContainText('1 case(s) written', { timeout: 30000 });
 
     /* ⚠️ a written case once landed with NO menu, mapped to no screen, and vanished from the view that wrote it */
     const keys = await page.evaluate(() => (CBTEST.cases || [])

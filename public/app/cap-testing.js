@@ -2047,9 +2047,32 @@ async function testShotGrab() {
     }
     var stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' } });
     var track = stream.getVideoTracks()[0];
-    /* a frame, then stop the capture at once — a tester must never be left sharing their screen */
+    /**
+     * ── ⭐⭐⭐ THE PANEL GETS OUT OF THE PICTURE ────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"the screenshot should work like the snipping tool — it has to minimise the current
+     * testing window, take a screenshot of the screen and then back, otherwise you are capturing it with the
+     * test window also."*
+     *
+     * ⚠️ HE IS RIGHT AND THE EVIDENCE WAS WORTHLESS WITHOUT IT. A screenshot of a broken screen with the tool
+     * that reported it sitting across the middle proves nothing about the screen and quite a lot about the
+     * tool. Worse, the panel covers the part of the screen the tester is usually complaining about.
+     *
+     * ⚠️ HIDDEN, NOT CLOSED. Closing would lose the four fields already filled in — the whole reason the
+     * picture is being taken. `visibility` rather than `display` so nothing reflows: the screen behind must
+     * be photographed exactly as the tester saw it, not re-laid-out for the camera.
+     *
+     * ⚠️ AND RESTORED IN A `finally`. A capture that throws halfway through must not leave the tester with an
+     * invisible panel and no way to get it back.
+     */
+    var hide = document.getElementById('cbcaseshost');
     var blob = null;
     try {
+      if (hide) hide.style.visibility = 'hidden';
+      /* ⚠️ two frames of grace: the compositor has not necessarily redrawn by the time the promise resolves,
+         and a capture taken too early gets the panel anyway — which looks exactly like the bug not being
+         fixed. */
+      await new Promise(function (r) { requestAnimationFrame(function () { setTimeout(r, 120); }); });
       if (typeof ImageCapture === 'function') {
         var bmp = await new ImageCapture(track).grabFrame();
         var cv = document.createElement('canvas');
@@ -2057,7 +2080,10 @@ async function testShotGrab() {
         cv.getContext('2d').drawImage(bmp, 0, 0);
         blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); });
       }
-    } finally { try { track.stop(); stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} }
+    } finally {
+      if (hide) hide.style.visibility = '';
+      try { track.stop(); stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {}
+    }
     if (!blob) {
       if (typeof toast === 'function') toast('Could not grab a frame \u2014 paste one instead.');
       return;
@@ -2291,6 +2317,8 @@ async function testCaseSend(outcome) {
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
     /* ⚠️ AFTER the repaint, not before: the repaint carries values across now, so clearing first would
        have them carried straight back in. */
+    /* ⭐ after writing, the list is where the work is — and where the case just written can be seen */
+    if (CBTEST.popupFor) { try { localStorage.setItem('cb_case_area', 'cases'); } catch (_) {} }
     if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
     ['wcTitle', 'wcDo', 'wcSee', 'wcGot'].forEach(function (id) {
       var el = document.getElementById(id); if (el) el.value = '';
@@ -2814,127 +2842,114 @@ async function screenCasesPopup(code, name) {
   } catch (_) {}
 }
 
-/* repainted in place after every verdict, so the panel shows what was just recorded */
 /**
- * ── ⭐⭐⭐ WHAT WAS RAISED HERE, NOT JUST HOW MANY ────────────────────────────────────────────────────────────
+ * ── ⭐⭐⭐ THREE AREAS, ONE AT A TIME ─────────────────────────────────────────────────────────────────────────
  *
- * Athi, 2026-09-13: *"I have raised 1 incident and 1 requirement, it says in the top, but I could not see
- * what is the incident / requirement etc which has been written now."*
+ * Athi, 2026-09-13: *"design the screen beautifully with options to view each of the area."*
  *
- * ⚠️⚠️ A COUNT YOU CANNOT OPEN IS A DEAD END, and worse than no count: it tells you something exists and
- * then makes you go and look for it somewhere else — which is the switching this whole panel was built to
- * remove. He raised them from here thirty seconds earlier and could not read them back.
+ * ⚠️ IT WAS ONE LONG SCROLL and that is what made it feel heavy: the form, then every case, then everything
+ * ever raised — so a tester wanting to mark one case passed scrolled past a form they were not filling in,
+ * and a tester writing a case scrolled past seventeen they were not running.
  *
- * ⭐ So they are listed where they were raised, newest first, each saying what it is, what state it is in,
- * and the sentence that was written. Nothing new is stored: both lists were already loaded for the counts.
+ *   WRITE    the four parts and the outcome
+ *   CASES    what exists here, with To do · Passed · All
+ *   RAISED   the incidents and requirements that came out of it
+ *
+ * ⭐ IT OPENS ON THE ONE WITH WORK IN IT: Cases when there are any, Write when the screen is untouched. A
+ * tester on a fresh screen is there to write; a tester on a covered screen is there to run.
+ *
+ * ⚠️ THE COUNTS ARE ON THE TABS, so nothing is hidden without a number — the same rule as the case filter.
+ * A tab reading "Raised 2" is an invitation; an unlabelled tab is a thing nobody presses.
  */
-function testRaisedHTML(code) {
-  var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; });
-  var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; });
-  if (!inc.length && !req.length) return '';
-  var wrap = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line,#e7e3d8)';
-  var h = '<div style="' + wrap + '">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
-    +   'text-transform:uppercase;margin-bottom:5px">Raised on this screen</div>';
-
-  var pill = function (t, fg, bg) {
-    return '<span style="font-size:var(--fs-1);font-weight:700;color:' + fg + ';background:' + bg
-      + ';border-radius:5px;padding:1px 6px;white-space:nowrap">' + testEsc(t) + '</span>';
-  };
-
-  /* ⚠️ newest first: the one you just raised is the one you are looking for */
-  h += inc.slice().reverse().map(function (x) {
-    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
-      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
-      +   pill(x.severity || 'Sev-3', 'var(--disp,#B3261E)', 'var(--disp-tint,#fbeceb)')
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref) + '</code>'
-      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
-      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
-      /* ⭐ the picture, if one was attached — one click from the report it belongs to */
-      +   (x.evidence_id ? '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" '
-            + 'onclick="testShotView(\'' + testEsc(x.evidence_id) + '\')">screenshot</button>' : '')
-      + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
-      + (x.state === 'raised'
-        ? '<button class="btn" style="margin-top:4px;font-size:var(--fs-1)" onclick="testIncSet(\''
-          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>' : '')
-      + '</div>';
-  }).join('');
-
-  h += req.slice().reverse().map(function (x) {
-    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
-      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
-      +   pill(x.priority || 'Medium', 'var(--grey-2,#545A61)', 'var(--neutral-tint)')
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.clause) + '</code>'
-      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
-      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
-      + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.requirement || '') + '</div>'
-      /* ⚠️ the evidence beside the rule, always — six months on it is the only thing that says it was real */
-      + (x.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">seen: '
-          + testEsc(x.observed) + '</div>' : '')
-      + '</div>';
-  }).join('');
-
-  return h + '</div>';
+function testAreaGet() {
+  try { return localStorage.getItem('cb_case_area') || ''; } catch (_) { return ''; }
+}
+function testArea(v) {
+  try { localStorage.setItem('cb_case_area', v); } catch (_) {}
+  screenCasesPaint();
 }
 
+/* repainted in place after every verdict, so the panel shows what was just recorded */
 function screenCasesPaint() {
   var code = CBTEST.popupFor;
   if (!code) return;
   var head = document.getElementById('cbcaseshead');
   var host = document.getElementById('cbcasesbody');
   if (!host) { CBTEST.popupFor = null; return; }
-  var name = (CBTEST.writeFor && CBTEST.writeFor.name) || '';
-  var t = testScreenTally(code) || { total: 0, pass: 0, fail: 0 };
-  if (head) {
-    var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;'
-      + 'border-radius:7px;width:24px;height:24px;font-size:var(--fs-1);line-height:1;padding:0;'
-      + 'color:var(--grey-2,#545A61)';
-    head.innerHTML = '<div style="display:flex;align-items:center;gap:6px">'
-      + '<b style="font-size:var(--fs-3);white-space:nowrap">\ud83e\uddea Test \u00b7 '
-      +   testEsc(code) + ' ' + testEsc(name) + '</b>'
-      + '<span style="flex:1 1 auto"></span>'
-      + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
-      + '</div>';
-  }
+
   /**
    * ── ⚠️⚠️⚠️ A REPAINT MUST NOT EAT WHAT SOMEBODY IS TYPING ────────────────────────────────────────────
    *
-   * Found by the Playwright spec, 2026-09-13: fill one field, press Save, get refused — and every field is
-   * empty. The refusal was right; the emptiness was not. This function rebuilds the form with innerHTML,
-   * and ANY repaint does it: a verdict recorded, the incident counts arriving a beat later, the panel
-   * following you. A tester writing a careful sentence loses it to a background fetch finishing.
-   *
-   * ⭐ So the values are carried across the rebuild. ⚠️ Read BEFORE innerHTML and written back after — and
-   * only into fields that came back, because the form may legitimately have gone (Cancel, or a save that
-   * cleared it on purpose).
+   * Found by the Playwright spec: fill one field, press Save, get refused — and every field is empty. The
+   * refusal was right; the emptiness was not. ANY repaint rebuilds this with innerHTML — a verdict recorded,
+   * the counts arriving a beat later, the panel following you — so a careful sentence is lost to a background
+   * fetch finishing, which is the kind of fault people blame themselves for.
    */
   var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcCtl'];
   var typed = {};
-  FIELDS.forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) typed[id] = el.value;
-  });
-  /* ⚠️ the caret too: putting the text back and the cursor at the end is its own small theft */
+  FIELDS.forEach(function (id) { var el = document.getElementById(id); if (el) typed[id] = el.value; });
   var focused = document.activeElement;
   var focusId = focused && FIELDS.indexOf(focused.id) >= 0 ? focused.id : null;
   var caret = null;
   try { if (focusId && focused.selectionStart != null) caret = focused.selectionStart; } catch (_) {}
 
+  var name = (CBTEST.writeFor && CBTEST.writeFor.name) || codeName(code) || '';
+  var t = testScreenTally(code) || { total: 0, pass: 0, fail: 0 };
   var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; }).length;
   var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; }).length;
   var known = !!(CBTEST.scrInc && CBTEST.scrReq);
-  host.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:9px 0 8px;'
-    +   'padding-bottom:7px;border-bottom:1px solid var(--line,#e7e3d8)">'
-    +   '<b>' + t.total + '</b> case(s) written \u00b7 <b>' + t.pass + '</b> passed \u00b7 <b>' + t.fail
-    +   '</b> failed'
-    +   (known ? ' \u00b7 <b>' + inc + '</b> incident(s) \u00b7 <b>' + req + '</b> requirement(s)' : '')
-    +   (t.total ? '' : ' \u2014 nothing written for this screen yet')
-    + '</div>'
-    + testCaseFormHTML()
-    + testCaseListHTML(code)
-    + testRaisedHTML(code);
+
+  /* ── the header: what this is, and how it stands ── */
+  if (head) {
+    var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;'
+      + 'border-radius:7px;width:24px;height:24px;font-size:var(--fs-1);line-height:1;padding:0;'
+      + 'color:var(--grey-2,#545A61)';
+    /* ⭐ a figure and its word, not a sentence to parse — the same shape the lab uses above its list */
+    var stat = function (n, word, colour) {
+      return '<span style="display:inline-flex;flex-direction:column;line-height:1.05">'
+        + '<b style="font-size:var(--fs-2)' + (colour ? ';color:' + colour : '') + '">' + n + '</b>'
+        + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + word + '</span></span>';
+    };
+    head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
+      + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+      +   '\ud83e\uddea ' + testEsc(code) + ' ' + testEsc(name) + '</b>'
+      + '<span style="flex:1 1 auto"></span>'
+      + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
+      + '</div>'
+      + '<div style="display:flex;gap:16px;margin-top:6px">'
+      +   stat(t.total, 'written')
+      +   stat(t.pass, 'passed', t.pass ? 'var(--ok-2,#1B7F4B)' : null)
+      +   stat(t.fail, 'failed', t.fail ? 'var(--disp,#B3261E)' : null)
+      +   (known ? stat(inc, 'incidents', inc ? 'var(--disp,#B3261E)' : null) : '')
+      +   (known ? stat(req, 'requirements') : '')
+      + '</div>';
+  }
+
+  /* ── the three areas ── */
+  var area = testAreaGet() || (t.total ? 'cases' : 'write');
+  if (area === 'raised' && !(inc + req)) area = t.total ? 'cases' : 'write';
+  var tab = 'font:inherit;font-size:var(--fs-1);padding:4px 11px;border:0;cursor:pointer;';
+  var on = 'background:var(--grey-2,#545A61);color:#fff';
+  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var seg = function (id, label, n) {
+    return '<button onclick="testArea(\'' + id + '\')" style="' + tab + (area === id ? on : off)
+      + (id === 'write' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
+      + label + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
+  };
+  var tabs = '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
+    + 'overflow:hidden;margin:10px 0 4px">'
+    + seg('write', 'Write', null)
+    + seg('cases', 'Cases', t.total)
+    + seg('raised', 'Raised', known ? (inc + req) : null)
+    + '</div>';
+
+  var body = area === 'write' ? testCaseFormHTML()
+           : area === 'raised' ? (testRaisedHTML(code)
+             || '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">Nothing has been raised '
+               + 'on this screen.</div>')
+           : testCaseListHTML(code);
+  host.innerHTML = tabs + body;
+
   Object.keys(typed).forEach(function (id) {
     var el = document.getElementById(id);
     if (el && typed[id] != null && typed[id] !== '') el.value = typed[id];
