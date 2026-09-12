@@ -3000,7 +3000,19 @@ function menuTreeHTML(){
    */
   if (typeof testMenuTree !== 'function') return '<div class="note">The menu\u2019s shape lives in app/test-menu-tree.js and it has not loaded. Reload the page.</div>';
   var T = testMenuTree(CASES, LAST);
-  if (!T.groups.length) return '<div class="note">No case names a menu door yet. The sweep writes that field \u2014 rebuild the board and load again.</div>';
+  /**
+   * ⚠️ THE SAME DISTINCTION AS THE LAB, and drawn from the same fact: is it the DATA that has no doors, or
+   * this VIEW? Athi hit the first and was told to check the second.
+   */
+  if (!T.groups.length) {
+    var anyMenu = CASES.some(function(c){ return !!c.menu; });
+    return '<div class="note"><b>' + (anyMenu
+      ? 'No door matches the current filter.</b> The board does hold swept cases \u2014 they are not in view. '
+        + 'Journey steps and automated files belong to no single door and never appear here.'
+      : 'This board is older than the menu sweep.</b> None of its ' + CASES.length + ' cases names a door yet, '
+        + 'so there is no tree to draw. Press <b>Load cases</b> above \u2014 it is an upsert, and every result '
+        + 'already recorded stays where it is.') + '</div>';
+  }
 
   var h = '<div class="tree">';
   h += treeNode(0, '\u25c6', 'The product, as it is on screen', T.total,

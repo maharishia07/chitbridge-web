@@ -1305,7 +1305,24 @@ function testMenuHTML(shown) {
   }
   var T = testMenuTree(shown, CBTEST.last);
   if (!T.groups.length) {
-    return '<div style="padding:10px;color:var(--grey-2,#545A61);font-size:var(--fs-1)"><b>Nothing here names a menu door.</b><br>The swept cases carry one; journey steps and automated files do not. Clear the filters, or switch back to <b>List</b>.</div>';
+    /**
+     * ⚠️⚠️ WHICH EMPTY IS THIS? Asked of the WHOLE board, not of the filtered view — that is the whole
+     * distinction. A board with no menu anywhere is older than the sweep and needs loading; a board that has
+     * doors none of which survived the filter needs the filter cleared. Telling a person to clear filters
+     * when the data is stale sends them somewhere there is nothing to find.
+     */
+    var anyMenu = CBTEST.cases.some(function (c) { return !!c.menu; });
+    if (!anyMenu) {
+      return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
+        + '<b>This board is older than the menu sweep.</b><br>'
+        + '<span style="color:var(--grey-2,#545A61)">None of its ' + CBTEST.cases.length + ' cases names a door yet, so there is no tree to draw. The 266 swept cases \u2014 one per control behind every door \u2014 are in the documented set, waiting to be read in.</span><br>'
+        + '<button class="btn pri" onclick="testSeed()" style="margin-top:9px;font-size:var(--fs-2);padding:6px 14px">Load cases</button>'
+        + '<div style="margin-top:6px;color:var(--grey-2,#545A61);font-size:var(--fs-1)">Safe to press: it is an upsert, and every result already recorded stays exactly where it is.</div></div>';
+    }
+    return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
+      + '<b>No door matches this filter.</b><br>'
+      + '<span style="color:var(--grey-2,#545A61)">The board does hold swept cases \u2014 they are just not in view. Journey steps and automated files belong to no single door and never appear here.</span><br>'
+      + '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>';
   }
 
   var q = 'color:var(--grey-2,#545A61);font-size:var(--fs-1)';
