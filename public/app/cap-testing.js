@@ -1366,6 +1366,15 @@ function testReqFormHTML() {
     +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
     +   '<input id="reqCase" style="' + inp + ';width:auto;flex:1;margin:0" placeholder="from case (optional)" value="'
     +     testEsc(CBTEST.focusCase || '') + '">'
+    /* ⚠️ SHOWN, NOT SILENT. Capturing where somebody is standing without telling them is the kind of quiet
+       cleverness that makes people distrust a tool — it says what it will record, before they press Raise. */
+    + '</div><div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+    +   (typeof screenCode === 'function' && screenCode()
+        ? 'Recorded against <b>' + testEsc(screenCode()) + '</b>'
+        : 'No screen code here — this one will be recorded without it')
+    +   (document.querySelector('[data-testid="popup-code"]')
+        ? ' and <b>' + testEsc(String(document.querySelector('[data-testid="popup-code"]').textContent).trim()) + '</b>'
+        : '')
     +   '<button onclick="testReqSend()" style="' + base + 'font-weight:700">Raise</button>'
     +   '<button onclick="testReqForm(0)" style="' + base + '">Cancel</button>'
     + '</div></div>';
@@ -1382,8 +1391,21 @@ async function testReqSend() {
   if (!what) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
   if (!seen) { if (typeof toast === 'function') toast('Say what you saw — a requirement with no evidence cannot be judged.'); return; }
   try {
+    /**
+     * ⭐⭐ THE CODES RIDE ALONG, UNASKED. A tester should not have to know what a screen code is to record one —
+     * the panel is open on top of the screen they are testing, so it already knows.
+     * ⚠️ Whatever is showing AT THE MOMENT OF RAISING, not when the form was opened: somebody types the sentence,
+     * goes back to look again, and comes back. The second look is the one that matters.
+     */
+    var sc = (typeof screenCode === 'function') ? screenCode() : null;
+    var pc = null;
+    try {
+      var pe = document.querySelector('[data-testid="popup-code"]');
+      pc = pe ? String(pe.textContent).replace(/[^A-Z0-9]/g, '') : null;
+    } catch (_) { pc = null; }
     var r = await api('testReqRaise', { body: {
-      requirement: what, observed: seen, priority: g('reqPri') || 'Medium', case_key: g('reqCase') || null } });
+      requirement: what, observed: seen, priority: g('reqPri') || 'Medium', case_key: g('reqCase') || null,
+      screen_code: sc, popup_code: pc } });
     if (typeof toast === 'function') {
       toast('Raised ' + (r && r.clause ? r.clause : '') + (r && r.cited ? ' — and the case now cites it' : ''));
     }
@@ -1436,6 +1458,12 @@ function testReqHTML() {
       +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.clause) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;padding:1px 6px">'
       +     testEsc(q.state) + '</span>'
+      +   (q.screen_code ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+            + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">'
+            + testEsc(q.screen_code) + '</code>' : '')
+      +   (q.popup_code ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+            + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">'
+            + testEsc(q.popup_code) + '</code>' : '')
       +   (q.raised_from ? '<span style="font-size:var(--fs-1);color:var(--note)">from '
             + testEsc(q.raised_from) + '</span>' : '')
       + '</div>'
