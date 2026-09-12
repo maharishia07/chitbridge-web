@@ -112,5 +112,18 @@
   },
   "what_it_cost_me": "⚠️ THE WALK BROKE ITSELF THREE TIMES BEFORE IT RAN: it pressed \"use cloud API\" and repointed his app at Railway (restored); it pressed toggleNavGroup and COLLAPSED the rail, so Order, Drafts, Archive and Trash reported \"no rail button\" for the rest of the run (restored); and its results node was appended to <body>, which the app repaints, so every write went to a detached element nobody could read (moved to localStorage). ⭐ Each was the instrument, not the product — the same lesson as every other measurement today.",
   "not_covered": "Order · Drafts · Archive · Trash were skipped after the rail collapsed. They share the chit-list renderer with Task, so most of their controls were already pressed there — but \"most\" is not \"all\", and this says so rather than rounding up."
+ },
+ "counter": {
+  "_what": "The Counter (till.html) walked on 2026-09-12 after Athi approved pairing this browser as a counter for Tally Test Shop.",
+  "pairing": "app.html > Counter > “Set up the counter here” mints a till key into this browser and opens till.html in a new tab. The door offers four routes: set up here · download the desktop counter · open the shop screen · pair a TV or another device.",
+  "first_state": "Opens with NO shop copy and says so plainly: “No copy of the shop yet — press ↻ once, while online.” ⭐ An empty counter that explains itself, which is the right behaviour for a page whose whole point is working when the line is down.",
+  "after_sync": "↻ Read the shop again pulls GET /api/till/snapshot and GET /api/till/bills. The header then reads “Tally Test Shop · prices as at 14:34 · ✓” and the catalogue is there (Spices 1461, Rice & grains, …). ⭐ THE COPY IS TIMESTAMPED ON SCREEN — a counter that shows how old its prices are is telling the operator the one thing that matters when it is offline.",
+  "controls": "23 on the page: Sell · Receive · Despatch · Maintenance, and within them openWho, openHealth, toggleMenu, fromMenu, listen (🎤 voice), pickPay, addPart, clearBill, parkBill (F6), finish (Save & print F9), rcvClear/rcvCosts/rcvConfirm, dspClear/dspCarton/dspConfirm, printSlip, shiftClose, billsTab, dayClose, quickReset.",
+  "not_pressed": "⚠ finish (Save & print), rcvConfirm, dspConfirm, shiftClose, dayClose — each writes a real bill, receipt, despatch or shift close into the shop. They are the cases that need a person who means it, and they are the reason the counter exists.",
+  "two_findings_that_were_MINE_not_the_products": [
+   "⚠ OPTIONS /api/till/snapshot returned 500 from localhost. The API is locked to ALLOWED_ORIGINS and localhost:4173 is correctly not one of them — so this is the test setup, not a defect. ⭐ WORTH A LOOK ANYWAY: a rejected origin surfaces as 500 rather than 403, which reads as a server fault when it is a policy decision.",
+   "⚠ Then 401 through the proxy: serve-web.cjs forwarded only authorization/content-type/accept/idempotency-key, and the counter signs with X-Api-Key. Fixed — the proxy now forwards it, and the snapshot loads."
+  ],
+  "still_unobserved": "What the counter does OFFLINE — take a bill with the line down, hold it, and sync it back. That is the reason this page exists and it cannot be walked from a browser with a working connection; it needs the network cut deliberately. The single most valuable case left on the board."
  }
 }
