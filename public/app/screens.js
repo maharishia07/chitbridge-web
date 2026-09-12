@@ -756,7 +756,12 @@ window.CBSCREENS = {
   "Business › Connector cockpit (IoT)": "BUS007",
   "Business › Co-assist cockpit": "BUS008",
   "Detail › Chit detail (design 2)": "DTL006",
-  "Message › Chit messages": "MSG001"
+  "Message › Chit messages": "MSG001",
+  "Panel › Assistant": "PNL001",
+  "Panel › Floating cart": "PNL002",
+  "Panel › The register (CMDB)": "PNL003",
+  "Panel › Test lab": "PNL004",
+  "Panel › Line card": "PNL005"
  },
  "rows": [
   {
@@ -5798,6 +5803,51 @@ window.CBSCREENS = {
    "nav": "chit-messages",
    "cases": 0,
    "since": "2026-09-12"
+  },
+  {
+   "code": "PNL001",
+   "path": "Panel › Assistant",
+   "group": "Panel",
+   "screen": "Assistant",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "PNL002",
+   "path": "Panel › Floating cart",
+   "group": "Panel",
+   "screen": "Floating cart",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "PNL003",
+   "path": "Panel › The register (CMDB)",
+   "group": "Panel",
+   "screen": "The register (CMDB)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "PNL004",
+   "path": "Panel › Test lab",
+   "group": "Panel",
+   "screen": "Test lab",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "PNL005",
+   "path": "Panel › Line card",
+   "group": "Panel",
+   "screen": "Line card",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
   }
  ],
  "byFn": {
@@ -6221,6 +6271,13 @@ window.CBSCREENS = {
    "file": "cap-worklist.js",
    "ambiguous": true
   }
+ },
+ "byPanel": {
+  "cb_assist": "PNL001",
+  "cb_cart_float": "PNL002",
+  "cb_cmdbpanel": "PNL003",
+  "cb_testpanel": "PNL004",
+  "cb_wl_line": "PNL005"
  },
  "withdrawn": [
   {

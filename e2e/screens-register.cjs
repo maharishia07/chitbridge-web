@@ -107,6 +107,61 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
 }
 
 /**
+ * ── ⭐⭐ EVERY PANEL HAS A NAME, AND THE PRODUCT IS ASKED, NOT THE REGISTER ───────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"now the same way each panel has to get the name."*
+ *
+ * ⚠️ THE REGISTER AGREEING WITH ITSELF PROVES NOTHING. The question is whether a panel that EXISTS has a code
+ * — so the panels are found in the source the same way screens.cjs finds them, and the register is checked
+ * against that. A panel added next month fails this line rather than shipping unnamed.
+ */
+{
+  const pub = path.join(__dirname, '..', 'public');
+  let srcs = [];
+  try {
+    srcs = ['app.html'].concat(fs.readdirSync(path.join(pub, 'app'))
+      .filter((f) => f.endsWith('.js')).map((f) => 'app/' + f));
+  } catch (_) {}
+  const found = {};
+  for (const f of srcs) {
+    let src = '';
+    try { src = fs.readFileSync(path.join(pub, f), 'utf8'); } catch (_) { continue; }
+    for (const fn of ['makeMovable(', 'modal(']) {
+      let i = 0;
+      while ((i = src.indexOf(fn, i)) >= 0) {
+        const m = src.slice(i, i + 300).match(/key:\s*'(cb_[A-Za-z0-9_]+)'/);
+        if (m && m[1].indexOf('cb_mv_') !== 0) found[m[1]] = f;
+        i += fn.length;
+      }
+    }
+  }
+  const keys = Object.keys(found);
+  const byPanel = CB.byPanel || {};
+  const unnamed = keys.filter((k) => !byPanel[k]);
+  ok('every panel in the source has a code (' + keys.length + ')'
+     + (unnamed.length ? ': ' + unnamed.join(' · ') : ''), keys.length > 0 && unnamed.length === 0);
+  ok('every panel code is AAA### like the rest',
+     Object.values(byPanel).every((c) => /^[A-Z]{3}[0-9]{3}$/.test(c)));
+  /* ⚠️ a panel and a screen sharing a code would make both meaningless */
+  const screenCodes = new Set(rows.map((r) => r.code));
+  const clash = Object.entries(byPanel).filter(([, c]) => {
+    const r = rows.filter((x) => x.code === c)[0];
+    return r && r.group !== 'Panel';
+  }).map(([k, c]) => k + String.fromCharCode(61) + c);
+  ok('no panel code is also a screen code' + (clash.length ? ': ' + clash.join(' · ') : ''),
+     screenCodes.size > 0 && clash.length === 0);
+
+  const app2 = fs.readFileSync(path.join(pub, 'app.html'), 'utf8');
+  /* ⭐ ONE PLACE, and the guard says so: the stamp is inside makeMovable, which is the only function in the
+     product that holds a panel and its key at the same moment. Five call sites would be five to forget. */
+  ok('the stamp is inside makeMovable, not at the call sites',
+     app2.indexOf('function stampPanelCode') > 0 && app2.indexOf('stampPanelCode(head, key)') > 0);
+  /* ⚠️ a panel repaints its own header, which wipes the stamp — proved, not assumed */
+  ok('the panel is watched, because its own repaint removes the code',
+     app2.indexOf('function watchPanelHead') > 0);
+}
+
+/**
  * ── ⭐⭐⭐ THE RULE ATHI CHOSE, GUARDED ───────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-12: *"follow the standard, so live by standard"* — and then, on what happens when the scheme

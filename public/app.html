@@ -2397,7 +2397,28 @@ function stampScreenHeading(){
     var info = screenInfo(true);
     if (!info) return;
     var head = screenHeadEl(body, info);
-    if (!head) return;
+    /**
+     * ── ⚠️⚠️ SIX OF TWENTY SCREENS HAD NO CODE, AND "EVERYWHERE" MEANT EVERYWHERE ─────────────────────────
+     *
+     * Athi, 2026-09-12: *"is the naming getting updated everywhere?"* ⭐ Counted rather than assumed, by
+     * driving every rail item: Messages, Everyone's work, Suppliers, Network, Traceability and Readiness came
+     * back with nothing. None of them repeats its menu word in its own body — Network opens on a tab strip and
+     * a heading that reads "Tally Test Shop network" — so there was no leaf to match and the stamp, correctly,
+     * refused to guess.
+     *
+     * ⭐ THE REFUSAL WAS RIGHT AND THE OUTCOME WAS NOT. So when no title can be identified the code goes in a
+     * line of its OWN at the top of the screen: still top-left, still exactly one code, and attached to
+     * nothing it could misdescribe. ⚠️ That is the whole distinction from the bug this rule was written for —
+     * "A message is a WRK003 notice" put the code INSIDE someone else's sentence. A label on its own line
+     * claims nothing but its own position.
+     */
+    var loose = false;
+    if (!head) {
+      head = document.createElement('div');
+      head.style.cssText = 'margin:0 0 6px';
+      body.insertBefore(head, body.firstChild);
+      loose = true;
+    }
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'screen-code');
     tag.textContent = info.code;
@@ -2418,7 +2439,7 @@ function stampScreenHeading(){
      * the emoji. ⭐ Done by looking for a leading non-ASCII run: it is the shape every one of these headings
      * uses, and where a heading has no icon the code simply goes first, which is the same order minus a part.
      */
-    var t = head.firstChild;
+    var t = loose ? null : head.firstChild;
     while (t && t.nodeType !== 3) t = t.firstChild;      /* the crumb wraps its text in a span */
     var lead = t && t.nodeValue && t.nodeValue.match(/^\s*([^\u0000-\u007F][^\u0000-\u007F\s]*)\s+/);
     if (lead) {
@@ -2514,6 +2535,91 @@ function watchDetailPane(){
     });
     window._dpWatchEl = dp;
     window._dpWatch.observe(dp, { childList: true, subtree: true });
+  }catch(e){}
+}
+
+/**
+ * ── ⭐⭐⭐ AND EVERY PANEL SAYS WHICH PANEL IT IS ─────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"now the same way each panel has to get the name."*
+ *
+ * ⭐⭐ ONE PLACE, NOT FIVE. `makeMovable()` already has the panel's key in hand at the moment it builds the
+ * title bar, so the code goes on there and every panel in the product carries one without a single caller
+ * being edited. The same argument that made the header drag universal instead of per-panel, and the same one
+ * that gave 127 dialogs their code from inside `modal()`.
+ *
+ * ⚠️ A PANEL IS NOT THE SCREEN UNDERNEATH IT. You can be on CAT001 with PNL004 open, and both are true — so
+ * this must never reuse the screen stamp, which is about where you ARE rather than what you are looking at.
+ *
+ * ⚠️ AND A PANEL WITH NO REGISTERED KEY GETS NOTHING, deliberately. The sixty dialogs that borrow a derived
+ * `cb_mv_*` key are POP-coded already; stamping a second identifier on them would mean two names for one
+ * thing, which is worse than one name — a tester quoting either would be half right.
+ */
+/**
+ * ⚠️⚠️ A PANEL REPAINTS ITS OWN HEADER, AND THAT WIPES THE STAMP. Proved rather than assumed: stamping the
+ * test lab by hand worked, and one `testPaint()` removed it — the header's innerHTML is rebuilt on every
+ * repaint, and a repaint happens whenever a filter changes or a background read finishes.
+ *
+ * ⭐ SO THE PANEL IS WATCHED, exactly as the detail pane is, and for the same reason: the alternative is
+ * editing five painters and trusting the sixth to remember. The observer is narrow — one panel, debounced,
+ * and stampPanelCode() returns immediately when its tag is already there, so it cannot chase its own writes.
+ *
+ * ⚠️ THE PANEL IS WATCHED, NOT THE HEADER. A panel that rebuilds its header ELEMENT rather than its contents
+ * would silently drop an observer bound to the old one, and the code would vanish on some panels and not
+ * others — the kind of difference nobody reports because it looks like a panel that never had a code.
+ */
+function watchPanelHead(panel, sel, key){
+  try{
+    if (!panel || panel._headWatch) return;
+    var t = null;
+    panel._headWatch = new MutationObserver(function(){
+      clearTimeout(t);
+      t = setTimeout(function(){
+        try { stampPanelCode(panel.querySelector(sel || '.mhd'), key); } catch(_) {}
+      }, 50);
+    });
+    panel._headWatch.observe(panel, { childList: true, subtree: true });
+  }catch(e){}
+}
+
+function stampPanelCode(head, key){
+  try{
+    if (!head || head.querySelector('[data-testid="panel-code"]')) return;
+    var reg = (window.CBSCREENS && window.CBSCREENS.byPanel) || {};
+    var code = reg[String(key || '')];
+    if (!code) return;
+    var tag = document.createElement('span');
+    tag.setAttribute('data-testid', 'panel-code');
+    tag.textContent = code;
+    tag.title = tx('The code for this panel — quote it instead of describing it');
+    /* ⚠️ pointer-events stay ON so the code can be selected, but the header drag ignores it: startDrag
+       already skips a target inside a button or a field, and a span is neither — so it must not swallow the
+       mousedown either. It does not: the listener is on the header and this is a child of it. */
+    tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+      + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
+      + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
+      + 'margin-inline-end:7px;vertical-align:middle;flex:0 0 auto';
+    /**
+     * ⭐ TOP LEFT, ON THE TITLE'S OWN LINE — Athi: *"the screen id should be on the top left corner, that is
+     * how it has to be everywhere."*
+     *
+     * ⚠️ "THE HEADER IS A FLEX ROW" WAS AN ASSUMPTION AND IT WAS WRONG. The test lab's header is a BLOCK
+     * holding several rows — a title row, a filter row, the tallies — so inserting at the top of the header
+     * put PNL004 on a line of its own above the title, which reads like a stray label rather than the name
+     * of the thing under it.
+     *
+     * ⭐ So the row is found, not assumed: the title (`.t`) if the panel uses the modal convention, else the
+     * first laid-out row in the header, else the header itself. Each of those IS the title line on the panel
+     * that has it, and the fallback is the old behaviour rather than nothing.
+     */
+    var t = head.querySelector('.t');
+    var row = t ? t.parentNode : null;
+    if (!row) {
+      var k = head.firstElementChild;
+      var d = k ? getComputedStyle(k).display : '';
+      row = (d === 'flex' || d === 'grid') ? k : head;
+    }
+    row.insertBefore(tag, row.firstChild);
   }catch(e){}
 }
 
@@ -12812,7 +12918,41 @@ function makeMovable(panel, opts){
        * simply was not being used. `dragOn` stays for a panel whose header is not `.mhd`.
        */
       var head = panel.querySelector(opts.dragOn || '.mhd');
+      /**
+       * ⚠️ THE ASSISTANT HAS NO `.mhd`, AND IT WAS THE ONE PANEL LEFT UNNAMED. It predates the header
+       * convention and still wears the old corner grip, so the header lookup found nothing and the stamp
+       * quietly did not happen — exactly the miss a "one place, no call sites" claim is supposed to prevent.
+       *
+       * ⚠️⚠️ AND THE FIRST FIX PUT IT ON THE CONTROL BAR, WHICH IS WORSE THAN MISSING. That bar is absolutely
+       * positioned — it FLOATS OVER the panel — so PNL001 landed on top of the word "Assistant". A label
+       * covering the name of the thing it labels is not a smaller version of the right answer.
+       *
+       * ⭐ The assistant does have a title row; it simply is not called `.mhd`. So the row is found the same
+       * way it is found inside a header: the first laid-out row that is part of the panel rather than
+       * floating above it. ⚠️ NAMING ONLY — the drag stays exactly where it was. Making this panel drag by
+       * its title too is a change worth making and is not this change.
+       */
+      if (!head) {
+        try {
+          var kids = panel.children, row = null;
+          for (var ki = 0; ki < kids.length && !row; ki++) {
+            var cs2 = getComputedStyle(kids[ki]);
+            if (cs2.position === 'static' && (cs2.display === 'flex' || cs2.display === 'grid')) row = kids[ki];
+          }
+          if (row) {
+            stampPanelCode(row, key);
+            /* ⚠️ THE OLD CORNER GRIP IS STILL THERE ON THIS KIND OF PANEL and it sits exactly where the code
+               now goes, clipping its left edge. A panel with a header hides the grip; this one cannot, since
+               the grip is its only way to be dragged. So the code steps aside for it. */
+            var mine = row.querySelector('[data-testid="panel-code"]');
+            if (mine) mine.style.marginInlineStart = '18px';
+          }
+        } catch(_) {}
+      }
       if (head) {
+        /* ⭐ the panel names itself here, because this is the one line in the product that has a panel's
+           header and its key at the same moment — and keeps naming itself through its own repaints */
+        try { stampPanelCode(head, key); watchPanelHead(panel, opts.dragOn || '.mhd', key); } catch(_) {}
         /* ⭐ the grip goes: a standard title bar is a title, the window controls, and nothing else. cursor:grab
            is the signal, and it is the one every reader already knows. */
         grip.style.display = 'none';

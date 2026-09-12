@@ -62,7 +62,9 @@ function cmdbEsc(x) {
 function cmdbRows() {
   try {
     return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
-      .filter(function (r) { return r.group !== 'Popup' && r.group !== 'Control'; });
+      .filter(function (r) {
+        return r.group !== 'Popup' && r.group !== 'Control' && r.group !== 'Panel';
+      });
   } catch (_) { return []; }
 }
 /**
@@ -75,6 +77,24 @@ function cmdbControls() {
     return ((window.CBSCREENS && window.CBSCREENS.rows) || [])
       .filter(function (r) { return r.group === 'Control'; });
   } catch (_) { return []; }
+}
+/**
+ * ⭐ THE PANELS. Athi, 2026-09-12: *"now the same way each panel has to get the name."*
+ * ⚠️ Their own kind for the same reason popups have one: a panel is not a screen. It floats OVER whatever
+ * screen you are on and stays there, so five of them inside a list of forty-eight screens would make the
+ * screen count wrong and answer a question nobody asked.
+ */
+function cmdbPanels() {
+  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Panel'; }); }
+  catch (_) { return []; }
+}
+/**
+ * ⭐⭐ AND THE WITHDRAWN CODES, WHICH IS WHERE THE QUESTION ACTUALLY GETS ASKED. Athi asked "which one is
+ * DTL002?" hours after it was withdrawn. A register that can only list what currently exists cannot answer
+ * that, and a code you cannot look up is a code people stop quoting.
+ */
+function cmdbGone() {
+  try { return (window.CBSCREENS && window.CBSCREENS.withdrawn) || []; } catch (_) { return []; }
 }
 function cmdbPopups() {
   try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Popup'; }); }
@@ -134,6 +154,7 @@ function cmdbKindsHTML() {
   var A = cmdbAssets();
   var kinds = [['SCREEN', 'Screens', cmdbRows().length]];
   if (cmdbPopups().length) kinds.push(['POPUP', 'Popups', cmdbPopups().length]);
+  if (cmdbPanels().length) kinds.push(['PANEL', 'Panels', cmdbPanels().length]);
   if (cmdbControls().length) kinds.push(['CONTROL', 'Controls', cmdbControls().length]);
   ['CAP', 'ENG', 'API'].forEach(function (k) {
     var n = A.filter(function (x) { return x.type === k; });
@@ -141,6 +162,9 @@ function cmdbKindsHTML() {
        but a register whose own labels are wrong is not one anybody trusts with a number. Declared per type. */
     if (n.length) kinds.push([k, PLURAL[k] || (n[0].kind + 's'), n.length]);
   });
+  /* ⚠️ LAST, and only when there are any: withdrawn codes are a lookup, not a list anybody browses. Putting
+     them beside the live kinds would suggest they are things you can still open. */
+  if (cmdbGone().length) kinds.push(['GONE', 'Withdrawn', cmdbGone().length]);
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;';
   return kinds.map(function (k) {
@@ -183,6 +207,61 @@ function cmdbKindsHTML() {
  * ⚠️ 151 controls carry no readable name and have NO code, deliberately. A tester cannot be handed a label that
  * appears nowhere on their screen; the sweep says so and so does this.
  */
+function cmdbPanelHTML() {
+  var A = cmdbPanels();
+  var q = String(CBCMDB.q || '').toLowerCase();
+  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+    + '<b>' + A.length + '</b> panel(s). A panel floats over whatever screen you are on and stays there \u2014 so '
+    + 'you can be on CAT001 with PNL004 open, and both codes are true at once.'
+    + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
+    + '<th style="text-align:start;padding:3px 6px">Panel</th></tr>';
+  h += A.map(function (r) {
+    return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
+      + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
+      +   'ui-monospace,monospace;user-select:all">' + cmdbEsc(r.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + cmdbEsc(r.screen) + '</td></tr>';
+  }).join('');
+  return h + '</table>';
+}
+
+/**
+ * ⚠️⚠️ A WITHDRAWN CODE IS NOT A DELETED ONE, AND THIS IS WHERE THAT PAYS FOR ITSELF. Athi, 2026-09-12,
+ * within hours of the first withdrawal: *"which one is DTL002?"*
+ *
+ * ⭐ The answer is here for ever, and it says plainly that the code names nothing now and what took over. A
+ * gap in the numbering costs nothing while it can answer for itself; mute, it costs a conversation each time.
+ */
+function cmdbGoneHTML() {
+  var A = cmdbGone();
+  var q = String(CBCMDB.q || '').toLowerCase();
+  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.path).toLowerCase().indexOf(q) >= 0; });
+  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+    + '<b>' + A.length + '</b> withdrawn code(s). They are reserved for ever and name nothing else \u2014 a case '
+    + 'citing one must never come to mean something built later. The gaps in the numbering are these.'
+    + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
+    + '<th style="text-align:start;padding:3px 6px">Was</th>'
+    + '<th style="text-align:start;padding:3px 6px">Since</th></tr>';
+  h += A.map(function (r) {
+    return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
+      + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
+      +   'ui-monospace,monospace;user-select:all;color:var(--note)">' + cmdbEsc(r.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + cmdbEsc(r.path)
+      +   (r.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + cmdbEsc(r.why)
+            + '</div>' : '') + '</td>'
+      + '<td style="padding:4px 6px;white-space:nowrap;color:var(--note)">' + cmdbEsc(r.until || '') + '</td></tr>';
+  }).join('');
+  return h + '</table>';
+}
+
 function cmdbControlHTML(q2) {
   var A = cmdbControls();
   var q = String(CBCMDB.q || '').toLowerCase();
@@ -333,6 +412,8 @@ function cmdbPaint() {
   }
 
   var q2 = 'font-size:var(--fs-1);color:var(--note)';
+  if (CBCMDB.kind === 'PANEL') { body.innerHTML = cmdbPanelHTML(q2); return; }
+  if (CBCMDB.kind === 'GONE') { body.innerHTML = cmdbGoneHTML(q2); return; }
   if (CBCMDB.kind === 'POPUP') { body.innerHTML = cmdbPopupHTML(q2); return; }
   if (CBCMDB.kind === 'CONTROL') { body.innerHTML = cmdbControlHTML(q2); return; }
   if (CBCMDB.kind !== 'SCREEN') { body.innerHTML = cmdbSoftwareHTML(q2); return; }
