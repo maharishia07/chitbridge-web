@@ -2248,8 +2248,16 @@ function cmdbOpenToggle(){
 
 function screenCode(){
   try {
+    /**
+     * ⚠️⚠️ THE FINE SCREEN, NOT THE NAV KEY. Athi, 2026-09-12: *"the detail page should be having the screen
+     * name?"* — it was showing RAL002 there, the code of the LIST he had left, because opening a chit does not
+     * change the nav. A code that names the wrong screen is worse than no code: somebody quotes it in a note.
+     * ⭐ `_fineScreen()` already knew the difference and has for months; nothing was asking it.
+     */
+    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
     var U = (typeof UI !== 'undefined') ? UI : {};
-    return (typeof cbScreenCode === 'function') ? cbScreenCode(U.nav) : null;
+    if (typeof cbScreenCode !== 'function') return null;
+    return cbScreenCode(fine) || cbScreenCode(U.nav);
   } catch (_) { return null; }
 }
 function screenCodeHTML(){

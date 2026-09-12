@@ -99,6 +99,26 @@ window.CBSCREENS = {
   "readiness": {
    "code": "INS004",
    "path": "Insight › Trade ready"
+  },
+  "chit-detail": {
+   "code": "DTL001",
+   "path": "Detail › Chit detail"
+  },
+  "chit-messages": {
+   "code": "DTL002",
+   "path": "Detail › Chit messages"
+  },
+  "connector-erp": {
+   "code": "DTL003",
+   "path": "Detail › Connector cockpit (ERP)"
+  },
+  "connector-iot": {
+   "code": "DTL004",
+   "path": "Detail › Connector cockpit (IoT)"
+  },
+  "coassist-actor": {
+   "code": "DTL005",
+   "path": "Detail › Co-assist cockpit"
   }
  },
  "byPath": {
@@ -143,7 +163,13 @@ window.CBSCREENS = {
   "Inside a screen › Register": "SCR007",
   "Inside a screen › Service": "SCR008",
   "Inside a screen › Supplies": "SCR009",
-  "Inside a screen › Testing": "SCR010"
+  "Inside a screen › Testing": "SCR010",
+  "Inside a screen › Cmdb": "SCR011",
+  "Detail › Chit detail": "DTL001",
+  "Detail › Chit messages": "DTL002",
+  "Detail › Connector cockpit (ERP)": "DTL003",
+  "Detail › Connector cockpit (IoT)": "DTL004",
+  "Detail › Co-assist cockpit": "DTL005"
  },
  "rows": [
   {
@@ -413,7 +439,7 @@ window.CBSCREENS = {
    "group": "The app itself",
    "screen": "app.html",
    "nav": null,
-   "cases": 263,
+   "cases": 264,
    "since": "2026-09-12"
   },
   {
@@ -522,6 +548,60 @@ window.CBSCREENS = {
    "screen": "Testing",
    "nav": null,
    "cases": 27,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR011",
+   "path": "Inside a screen › Cmdb",
+   "group": "Inside a screen",
+   "screen": "Cmdb",
+   "nav": null,
+   "cases": 3,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL001",
+   "path": "Detail › Chit detail",
+   "group": "Detail",
+   "screen": "Chit detail",
+   "nav": "chit-detail",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL002",
+   "path": "Detail › Chit messages",
+   "group": "Detail",
+   "screen": "Chit messages",
+   "nav": "chit-messages",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL003",
+   "path": "Detail › Connector cockpit (ERP)",
+   "group": "Detail",
+   "screen": "Connector cockpit (ERP)",
+   "nav": "connector-erp",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL004",
+   "path": "Detail › Connector cockpit (IoT)",
+   "group": "Detail",
+   "screen": "Connector cockpit (IoT)",
+   "nav": "connector-iot",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL005",
+   "path": "Detail › Co-assist cockpit",
+   "group": "Detail",
+   "screen": "Co-assist cockpit",
+   "nav": "coassist-actor",
+   "cases": 0,
    "since": "2026-09-12"
   }
  ]

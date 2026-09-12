@@ -437,8 +437,10 @@ window.CBASSETS = {
    "name": "cap-cmdb.js",
    "path": "chitbridge-web/public/app/cap-cmdb.js",
    "group": "web.capability",
-   "stage": null,
-   "draws": []
+   "stage": "tested",
+   "draws": [
+    "SCR011"
+   ]
   },
   {
    "code": "CAP007",
@@ -1870,6 +1872,7 @@ window.CBASSETS = {
   "ACC002": "chitbridge-web/public/app/cap-admin.js",
   "APP001": "chitbridge-web/public/app/cap-worklist.js",
   "SCR001": "chitbridge-web/public/app/cap-adopt.js",
+  "SCR011": "chitbridge-web/public/app/cap-cmdb.js",
   "SCR002": "chitbridge-web/public/app/cap-connector.js",
   "SCR003": "chitbridge-web/public/app/cap-definitions.js",
   "SCR004": "chitbridge-web/public/app/cap-folders.js",

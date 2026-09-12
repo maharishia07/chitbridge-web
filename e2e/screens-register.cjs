@@ -76,6 +76,36 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
 
 fails.forEach((f) => console.error('  ✗ ' + f));
 /**
+ * ── ⚠️⚠️ THE DECLARED SUB-VIEWS MUST STILL BE WHAT THE APP CALLS THEM ────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"the detail page should be having the screen name?"* — it was showing the code of the LIST
+ * he had left, because opening a chit does not change the nav key. The fix reads `_fineScreen()`, which has
+ * always distinguished `chit-detail`, `chit-messages` and the three cockpits.
+ *
+ * ⭐ Those five rows are the only DECLARED ones in the register — every other screen is derived from the live
+ * rail. ⚠️ So they are the only ones that can quietly stop matching the product: rename a branch inside
+ * `_fineScreen()` and the register keeps describing a screen the app no longer has, with nothing to say so.
+ */
+{
+  /* ⚠️ read here rather than assumed: this file guards two registers and had no app.html to hand */
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+  const reg2 = JSON.parse(fs.readFileSync(REG, 'utf8'));
+  const subs = Object.entries(reg2.screens)
+    .filter(([k, v]) => k.indexOf('Detail ') === 0 && !v.retired && v.nav);
+  ok('the register declares the sub-views (' + subs.length + ')', subs.length >= 4);
+  const orphan = subs.filter(([, v]) => app.indexOf("'" + v.nav + "'") < 0).map(([k, v]) => v.nav + ' (' + v.code + ')');
+  ok('every declared sub-view is a name _fineScreen() still returns'
+     + (orphan.length ? ': ' + orphan.join(' · ') : ''), orphan.length === 0);
+  /* ⚠️ and the reverse: a sub-view the app returns and the register has never heard of shows NO code at all */
+  const fine = app.slice(app.indexOf('function _fineScreen'), app.indexOf('function _screenChain'));
+  const returned = [...fine.matchAll(/return\s*\(?[^;]*?'([a-z][a-z-]{3,})'/g)].map((m) => m[1]);
+  const known = new Set(subs.map(([, v]) => v.nav).concat(['task']));
+  const missing2 = [...new Set(returned)].filter((n) => !known.has(n) && n.indexOf('-') > 0);
+  ok('no sub-view the app can report is missing from the register'
+     + (missing2.length ? ': ' + missing2.join(' · ') : ''), missing2.length === 0);
+}
+
+/**
  * ── ⭐ THE ASSET REGISTER, UNDER THE SAME RULES ───────────────────────────────────────────────────────────────
  *
  * ASSETS.json is the software half (ITIL 4 SACM · ISO/IEC 19770) and public/app/assets.js is its generated copy.
