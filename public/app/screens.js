@@ -792,7 +792,8 @@ window.CBSCREENS = {
   "Detail › Chit input": "DTL007",
   "Control › Inside a screen › Testing • Looking at it": "CTL434",
   "Control › Inside a screen › Testing • Re-grade it": "CTL435",
-  "Control › Inside a screen › Testing • Record": "CTL436"
+  "Control › Inside a screen › Testing • Record": "CTL436",
+  "Panel › Test cases for this screen": "PNL007"
  },
  "rows": [
   {
@@ -7086,6 +7087,17 @@ window.CBSCREENS = {
    "since": "2026-09-12",
    "reached_from": null,
    "walk": 572
+  },
+  {
+   "code": "PNL007",
+   "path": "Panel › Test cases for this screen",
+   "group": "Panel",
+   "screen": "Test cases for this screen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 573
   }
  ],
  "byFn": {
@@ -7515,7 +7527,8 @@ window.CBSCREENS = {
   "cb_cart_float": "PNL002",
   "cb_cmdbpanel": "PNL003",
   "cb_testpanel": "PNL004",
-  "cb_wl_line": "PNL005"
+  "cb_wl_line": "PNL005",
+  "cb_casespanel": "PNL007"
  },
  "withdrawn": [
   {
@@ -7622,6 +7635,13 @@ window.CBSCREENS = {
    "since": "2026-09-12",
    "until": "2026-09-12",
    "why": "the screen was refiled — it is DTL006 now"
+  },
+  {
+   "code": "PNL006",
+   "path": "Panel › casespanel",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "no longer in the product"
   }
  ]
 };

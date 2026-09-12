@@ -1960,6 +1960,9 @@ const EP = {
   /* ⭐ ONE CASE, WRITTEN BY A PERSON. The importer already takes { cases: [...] } and upserts, so writing
      a case needs no new route \u2014 only a door. [[feedback-search-before-you-build]] */
   testCaseWrite:   {m:"POST",  p:"/api/testing/cases/import",     ok:"y"},
+  /* ⭐ a screenshot, stored in cb_attachment with no chit — read back through /api/attachments/:id,
+     which is already entity-scoped and refuses to render anything but an image. */
+  testShot:        {m:"POST",  p:"/api/testing/evidence",         ok:"y"},
   testIncNew:      {m:"POST",  p:"/api/testing/incidents",        ok:"y"},
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
   testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
@@ -2422,9 +2425,24 @@ function placeCodeTag(host, tag){
  * away: 🧪 3/5 is three passed of five written. ⚠️ No chip at all until the lab has read the board — "0"
  * and "not counted yet" are different facts and only one of them is a finding.
  */
+/* the register's name for a code — read, never derived, so three stampers cannot disagree about a screen */
+function codeName(code){
+  try {
+    var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
+    var r = rows.filter(function (x) { return x.code === code; })[0];
+    return r ? (r.screen || '') : '';
+  } catch (_) { return ''; }
+}
+
 function stampTestChip(host, code, name){
   try{
     if (!code || !host || host.querySelector('[data-testid="screen-cases"]')) return;
+    /**
+     * ⚠ NOT ON THE TEST PANEL ITSELF. It has a code like every panel (PNL007) and that is right, but a Test
+     * chip on it would invite writing a test case about the box you are writing test cases in — and the count
+     * beside it would be counting the wrong thing on the screen you are actually looking at.
+     */
+    try { if (host.closest && host.closest('#cbcasespanel')) return; } catch (_) {}
     if (typeof CBTEST === 'undefined' || !CBTEST.on) return;
     var t = (typeof testScreenTally === 'function') ? testScreenTally(code) : null;
     if (!t) return;
@@ -2541,6 +2559,8 @@ function stampScreenHeading(){
     if (loose) head.insertBefore(tag, head.firstChild); else placeCodeTag(head, tag);
     /* ⭐ the count rides beside the code, from the one place that already knows both */
     try { stampTestChip(tag.parentNode, info.code, info.label); } catch(_) {}
+    /* ⭐ the panel keeps up with the walk, from the same place the code is written */
+    try { if (typeof screenCasesFollow === 'function') screenCasesFollow(); } catch(_) {}
   }catch(e){}
 }
 
@@ -2738,6 +2758,15 @@ function stampPanelCode(head, key){
       row = (d === 'flex' || d === 'grid') ? k : head;
     }
     placeCodeTag(row, tag);
+    /**
+     * ⚠️ THE CHIP WAS ONLY ON THE RAIL SCREENS. Athi, 2026-09-12: *"the icon is active only in RAL002, it
+     * has to be available in the DTL screen also, every screen, so the relevant test can be updated."*
+     *
+     * ⭐ A detail and a panel are screens with codes of their own — that was the whole argument for DTL001
+     * and PNL004 — so each carries its own count and writes against its OWN code. Testing the chit detail
+     * must not file the case under the list it was opened from.
+     */
+    try { stampTestChip(row, code, codeName(code)); } catch(_) {}
   }catch(e){}
 }
 
@@ -2764,6 +2793,8 @@ function stampDetailTitle(){
       + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
       + 'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
     placeCodeTag(dt, tag);
+    try { stampTestChip(dt, info.code, info.label); } catch(_) {}
+    try { if (typeof screenCasesFollow === 'function') screenCasesFollow(); } catch(_) {}
   }catch(e){}
 }
 
@@ -13225,6 +13256,8 @@ function modalStamp(host){
       + 'user-select:all;margin-inline-end:7px;vertical-align:middle';
     var t = box.querySelector('.t') || box;
     placeCodeTag(t, el);
+    /* ⭐ a dialog is the thing in front now, so the test panel follows it there */
+    try { if (typeof screenCasesFollow === 'function') screenCasesFollow(); } catch(_) {}
   }catch(_){}
 }
 

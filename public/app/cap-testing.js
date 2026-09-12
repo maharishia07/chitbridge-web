@@ -1992,6 +1992,97 @@ function testCtlOptions(code) {
   } catch (_) { return ''; }
 }
 
+/**
+ * ── ⭐⭐⭐ A PICTURE OF WHAT THEY ARE SEEING ──────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"simple one, usable in the longer run, and it has to follow the tester without much
+ * trouble \u2014 if he wants a screenshot to be taken, can we provide an icon, so the screenshot is taken and
+ * attached?"*
+ *
+ * ⭐⭐ TWO WAYS IN, BECAUSE ONE OF THEM ASKS PERMISSION AND ONE OF THEM CANNOT FAIL.
+ *
+ *   📷    getDisplayMedia \u2014 one click, the browser asks which window, a frame is grabbed and attached.
+ *   Ctrl+V any screenshot already on the clipboard, from the tool the tester already uses.
+ *
+ * ⚠️ THE PASTE IS THE ONE THAT WILL ACTUALLY GET USED and it is why the icon is not the only path. Screen
+ * capture prompts every time in most browsers, is refused outright in some, and does not exist on a phone.
+ * Win+Shift+S then Ctrl+V is what a tester already does; the box just has to accept it.
+ *
+ * ⚠️ ONE SHOT AT A TIME, deliberately. A gallery per case is a feature nobody asked for and a thumbnail
+ * strip to maintain; the picture that matters is the one of the thing that just went wrong.
+ */
+async function testShotSend(blob, name) {
+  try {
+    if (!blob) return;
+    if (blob.size > 4 * 1024 * 1024) {
+      if (typeof toast === 'function') toast('That is over 4 MB \u2014 crop it to the part that matters.');
+      return;
+    }
+    var b64 = await new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(String(fr.result || '').split(',')[1] || ''); };
+      fr.onerror = rej;
+      fr.readAsDataURL(blob);
+    });
+    var r = await api('testShot', { body: {
+      name: name || 'screenshot.png', mime: blob.type || 'image/png', data_base64: b64 } });
+    CBTEST.shot = { id: r.id, name: r.name, size: r.size };
+    screenCasesPaint();
+    if (typeof toast === 'function') toast('Screenshot attached');
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not attach it.'); }
+}
+
+/* ⚠️ the browser decides what may be captured, and the person decides which window — neither is ours to
+   assume. A refusal is normal (they changed their mind) and must not read as a failure. */
+async function testShotGrab() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      if (typeof toast === 'function') toast('This browser cannot capture \u2014 take one and paste it here.');
+      return;
+    }
+    var stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' } });
+    var track = stream.getVideoTracks()[0];
+    /* a frame, then stop the capture at once — a tester must never be left sharing their screen */
+    var blob = null;
+    try {
+      if (typeof ImageCapture === 'function') {
+        var bmp = await new ImageCapture(track).grabFrame();
+        var cv = document.createElement('canvas');
+        cv.width = bmp.width; cv.height = bmp.height;
+        cv.getContext('2d').drawImage(bmp, 0, 0);
+        blob = await new Promise(function (r) { cv.toBlob(r, 'image/png'); });
+      }
+    } finally { try { track.stop(); stream.getTracks().forEach(function (t) { t.stop(); }); } catch (_) {} }
+    if (!blob) {
+      if (typeof toast === 'function') toast('Could not grab a frame \u2014 paste one instead.');
+      return;
+    }
+    await testShotSend(blob, 'screen.png');
+  } catch (e) { /* refused, or nothing chosen — say nothing */ }
+}
+
+function testShotDrop() { CBTEST.shot = null; screenCasesPaint(); }
+
+/* the paste, bound once to the panel — the tester\u2019s own screenshot tool, and no permission at all */
+function testShotPasteBind() {
+  try {
+    var host = document.getElementById('cbcasespanel');
+    if (!host || host._pasteBound) return;
+    host._pasteBound = 1;
+    host.addEventListener('paste', function (e) {
+      try {
+        var items = (e.clipboardData && e.clipboardData.items) || [];
+        for (var i = 0; i < items.length; i++) {
+          if (String(items[i].type || '').indexOf('image/') === 0) {
+            var f = items[i].getAsFile();
+            if (f) { e.preventDefault(); testShotSend(f, f.name || 'pasted.png'); return; }
+          }
+        }
+      } catch (_) {}
+    });
+  } catch (e) {}
+}
+
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
   if (!w) return '';
@@ -2039,6 +2130,18 @@ function testCaseFormHTML() {
     +   '<button onclick="testCaseSend(\'\')" style="' + btn + '" title="Write it now, run it later">Save'
     +     '</button>'
     +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
+    + '</div>'
+    /* ⭐ the picture, and what is attached right now — said in words, because a thumbnail alone leaves a
+       tester wondering whether it actually saved */
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;'
+    +   'font-size:var(--fs-1);color:var(--grey-2)">'
+    +   '<button onclick="testShotGrab()" style="' + btn + '" title="Capture this window and attach it">'
+    +     '\ud83d\udcf7 Screenshot</button>'
+    +   (CBTEST.shot
+      ? '<span>attached \u00b7 <a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(CBTEST.shot.id)
+        + '" target="_blank" rel="noopener">view</a> '
+        + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
+      : '<span>\u2026 or paste one here with Ctrl+V</span>')
     + '</div></div>';
 }
 function testCaseCancel() { CBTEST.writeFor = null; if (CBTEST.popupFor) screenCasesPaint(); else testPaint(); }
@@ -2303,6 +2406,8 @@ async function testFromCase(key, kind) {
       await testMark(key, 'fail');
       await api('testIncNew', { body: {
         observed: seen + (exp ? '  \u2014 expected: ' + exp : ''),
+        /* ⭐ the picture rides with the report, not in a folder somebody has to be told about */
+        evidence_id: (CBTEST.shot && CBTEST.shot.id) || null,
         affected: 'found by ' + key, severity: 'Sev-3',
         screen_code: code, case_key: key,
         build: (window.CBBUILD || null) } });
@@ -2466,80 +2571,154 @@ function testScrCasesHTML(x) {
 }
 
 /**
- * ── ⭐⭐⭐ THE POPUP, SO NOBODY HAS TO GO ANYWHERE ────────────────────────────────────────────────────────────
+ * ── ⭐⭐⭐ A PANEL BESIDE THE SCREEN, NOT A DIALOG OVER IT ────────────────────────────────────────────────────
  *
- * Athi, 2026-09-12: *"we bring it as a popup, so a person need not switch or see anywhere else to move."*
+ * Athi, 2026-09-12: *"the screen should be active side by side, so operation can be done and also the action
+ * can be written — just minimise and keep it below when focus, maximise it."*
  *
- * ⚠️ THE LAB PANEL WAS THE WRONG ANSWER AND HE SAID SO IMMEDIATELY. Opening the whole board — its filters,
- * its tallies, every area — to read four cases about the screen behind it is a context switch wearing a
- * floating panel. This asks one question and shows one answer.
+ * ⚠️⚠️ A MODAL WAS THE WRONG PRIMITIVE AND HE SPOTTED IT IMMEDIATELY. It was the right choice for a dialog:
+ * free POP code, movable, closes on Escape. But a modal lays a backdrop over the app, and the ONE THING this
+ * has to allow is operating the screen while writing about it. You cannot document what you cannot touch.
  *
- * ⭐ It is a `modal()`, so it gets a POP code like every other dialog in the product, is movable, and closes
- * on Escape or the backdrop — none of which had to be built.
- *
- * ⚠️ THE BOARD MAY NOT BE LOADED, because a person can be on a screen having never opened the lab. It says
- * "reading the board" and then draws, rather than showing an empty list that means "none written" to every
- * reader who sees it.
+ * ⭐ So it is built the way the test lab and the register are: a fixed panel, bottom-right, no backdrop, with
+ * a `.mhd` header that drags and a minimise that leaves the header behind to restore from. Nothing invented —
+ * the same three lines of makeMovable those two already use, and it earns a PNL code from the register
+ * without asking, because the register finds panels by the makeMovable key.
  */
-async function screenCasesPopup(code, name) {
-  if (typeof modal !== 'function') return;
-  var head = function (body) {
-    return '<div class="mhd"><div class="t">\ud83e\uddea Test cases \u00b7 ' + testEsc(code)
-      + ' ' + testEsc(name || '') + '</div></div><div class="mbody" style="padding:12px 14px">'
-      + body + '</div>';
-  };
-  modal(head('<div style="color:var(--note);font-size:var(--fs-2)">reading the board\u2026</div>'), true);
+/**
+ * ── ⭐⭐⭐ THE PANEL FOLLOWS YOU ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"so I don't need to switch"*, and then *"similarly, message box, popup and so on."*
+ *
+ * ⚠️ IT WAS OPENED PER SCREEN, which is a switch by another name. Walking Counter → Compose → Task meant
+ * opening it three times, and a tester walking 59 screens would open it 59 times.
+ *
+ * ⭐ SO IT RETARGETS TO WHATEVER IS IN FRONT, most specific first:
+ *
+ *     a dialog on top   POP067   \u2014 what you are actually looking at
+ *     a record open     DTL001   \u2014 the detail, not the list it came from
+ *     otherwise         RAL002   \u2014 the screen
+ *
+ * ⚠️⚠️ AND IT NEVER RETARGETS WHILE YOU ARE TYPING. Following the reader is helpful; throwing away a
+ * half-written sentence because they clicked something is not. If any field has text in it, the panel
+ * stays where it is until that is saved or cancelled.
+ */
+function testFollowTarget() {
   try {
-    if (!CBTEST.cases || !CBTEST.cases.length) await testLoad();
-  } catch (_) {}
-  CBTEST.writeFor = { code: code, name: name };
-  CBTEST.popupFor = code;
-  screenCasesPaint();
+    /* a dialog wins: it is the thing in front, and it has a code of its own */
+    if (typeof modalCode === 'function' && document.querySelector('#modalhost .modal')) {
+      var mc = modalCode();
+      if (mc && mc.code) return { code: mc.code, name: (mc.fn ? mc.fn + '()' : 'dialog') };
+    }
+    var d = document.querySelector('[data-testid="detail-code"]');
+    if (d) return { code: String(d.textContent || '').trim(), name: codeName(String(d.textContent || '').trim()) };
+    var t = document.querySelector('[data-testid="screen-code"]');
+    if (t) return { code: String(t.textContent || '').trim(), name: codeName(String(t.textContent || '').trim()) };
+    return null;
+  } catch (_) { return null; }
 }
 
-/* repainted in place after every verdict, so the popup shows what was just recorded */
+/* is the tester mid-sentence? then nothing moves */
+function testFormDirty() {
+  try {
+    return ['wcTitle', 'wcDo', 'wcSee', 'wcGot'].some(function (id) {
+      var el = document.getElementById(id);
+      return el && String(el.value || '').trim();
+    });
+  } catch (_) { return false; }
+}
+
+function screenCasesFollow() {
+  try {
+    if (!CBTEST.popupFor || !document.getElementById('cbcasespanel')) return;
+    var t = testFollowTarget();
+    if (!t || !t.code || t.code === CBTEST.popupFor) return;
+    if (testFormDirty()) return;
+    CBTEST.popupFor = t.code;
+    CBTEST.writeFor = { code: t.code, name: t.name };
+    screenCasesPaint();
+  } catch (e) {}
+}
+
+function screenCasesClose() {
+  var el = document.getElementById('cbcaseshost');
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+  CBTEST.popupFor = null;
+  CBTEST.writeFor = null;
+}
+
+async function screenCasesPopup(code, name) {
+  screenCasesClose();
+  var host = document.createElement('div');
+  host.id = 'cbcaseshost';
+  host.innerHTML =
+    '<div id="cbcasespanel" role="dialog" aria-label="Test cases for this screen" style="position:fixed;'
+    + 'inset-inline-end:16px;bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(72vh,660px);'
+    + 'display:flex;flex-direction:column;background:var(--card,#fff);'
+    + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16);'
+    /* ⚠️ under the modal layer on purpose: a real dialog must still be able to open over this */
+    + 'z-index:3900;overflow:hidden">'
+    + '<div id="cbcaseshead" class="mhd" style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);'
+    +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0"></div>'
+    + '<div id="cbcasesbody" style="overflow:auto;padding:0 11px 11px"></div>'
+    + '</div>';
+  document.body.appendChild(host);
+  try {
+    if (typeof makeMovable === 'function') {
+      makeMovable(document.getElementById('cbcasespanel'), {
+        key: 'cb_casespanel', minW: 340, minH: 200, minimise: true,
+        dragOn: '#cbcaseshead', fit: '#cbcasesbody',
+      });
+    }
+  } catch (_) {}
+  CBTEST.popupFor = code;
+  CBTEST.writeFor = { code: code, name: name };
+  screenCasesPaint();
+  /* ⚠️ the board may not be read yet — a person can be on a screen having never opened the lab */
+  try {
+    if (!CBTEST.cases || !CBTEST.cases.length) { await testLoad(); screenCasesPaint(); }
+  } catch (_) {}
+}
+
+/* repainted in place after every verdict, so the panel shows what was just recorded */
 function screenCasesPaint() {
   var code = CBTEST.popupFor;
   if (!code) return;
-  var host = document.querySelector('#modalhost .modal .mbody');
+  var head = document.getElementById('cbcaseshead');
+  var host = document.getElementById('cbcasesbody');
   if (!host) { CBTEST.popupFor = null; return; }
+  var name = (CBTEST.writeFor && CBTEST.writeFor.name) || '';
   var t = testScreenTally(code) || { total: 0, pass: 0, fail: 0 };
-  /**
-   * ── ⭐⭐ THE SCREEN'S OWN REPORT, IN THE POPUP ────────────────────────────────────────────────────────────
-   *
-   * Athi, 2026-09-12: *"here we can see it as a report?"*
-   *
-   * ⭐ Everything ever said about this one screen, on one line: what it is for, how many cases exist, how
-   * they went, and what testing PRODUCED — the incidents recorded on it and the requirements raised from it.
-   * That is the chain the register was built for, read from the screen it is about.
-   *
-   * ⚠️ The incident and requirement counts are only shown once they have been READ. Printing 0 before the
-   * call returns says "none" about a screen that may have three, and a zero nobody can distinguish from an
-   * unknown is worse than a blank.
-   */
+  if (head) {
+    var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;'
+      + 'border-radius:7px;width:24px;height:24px;font-size:var(--fs-1);line-height:1;padding:0;'
+      + 'color:var(--grey-2,#545A61)';
+    head.innerHTML = '<div style="display:flex;align-items:center;gap:6px">'
+      + '<b style="font-size:var(--fs-3);white-space:nowrap">\ud83e\uddea Test \u00b7 '
+      +   testEsc(code) + ' ' + testEsc(name) + '</b>'
+      + '<span style="flex:1 1 auto"></span>'
+      + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
+      + '</div>';
+  }
   var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; }).length;
   var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; }).length;
   var known = !!(CBTEST.scrInc && CBTEST.scrReq);
-  var purpose = (((window.CBSCREENS && window.CBSCREENS.rows) || [])
-    .filter(function (r) { return r.code === code; })[0] || {}).screen || '';
-  host.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:0 0 8px;'
+  host.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:9px 0 8px;'
     +   'padding-bottom:7px;border-bottom:1px solid var(--line,#e7e3d8)">'
     +   '<b>' + t.total + '</b> case(s) written \u00b7 <b>' + t.pass + '</b> passed \u00b7 <b>' + t.fail
     +   '</b> failed'
     +   (known ? ' \u00b7 <b>' + inc + '</b> incident(s) \u00b7 <b>' + req + '</b> requirement(s)' : '')
-    +   (t.total ? '' : ' \u2014 nothing has been written for this screen yet')
+    +   (t.total ? '' : ' \u2014 nothing written for this screen yet')
     + '</div>'
     + testCaseFormHTML()
     + testCaseListHTML(code);
-  /* ⚠️ read once, in the background: the popup must open now and gain the two counts a beat later, not
-     wait on two calls before it shows anything. */
+  try { testShotPasteBind(); } catch (_) {}
   if (!known && !CBTEST._popCounts) {
     CBTEST._popCounts = 1;
     testScrLoad().then(function () { CBTEST._popCounts = 0; if (CBTEST.popupFor) screenCasesPaint(); })
       .catch(function () { CBTEST._popCounts = 0; });
   }
 }
-
 function testViewToggleHTML() {
   var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc',
       scr = CBTEST.view === 'scr';
