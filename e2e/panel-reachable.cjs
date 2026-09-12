@@ -41,8 +41,13 @@ console.log('\n══ a panel can always be closed ══');
  * or not, which is the least useful red there is: it is checked below rather than assumed.
  */
 const mvStart = src.indexOf('function makeMovable');
-const mv = src.slice(mvStart, mvStart + 14000);
-if (mv.indexOf('function fitBody') < 0 || mv.indexOf("e.key !== 'Escape'") < 0) {
+/* ⭐ to the NEXT top-level function, not a guessed number of characters. Twice today a fixed window was too
+   short — first at 6000, then at 14000 after a comment was added — and each time the checks beyond it reported
+   working code as missing. A reader measured in characters goes stale every time the file grows. */
+const mvEnd = src.indexOf(String.fromCharCode(10) + 'function ', mvStart + 10);
+const mv = src.slice(mvStart, mvEnd > mvStart ? mvEnd : mvStart + 20000);
+if (mv.indexOf('function fitBody') < 0 || mv.indexOf("e.key !== 'Escape'") < 0
+    || mv.indexOf("opts.dragOn ||") < 0) {
   console.error('  x the reader window no longer spans makeMovable — widen it before trusting any result below.');
   process.exit(1);
 }
@@ -109,6 +114,18 @@ ok('minimise shrinks the WIDTH too — collapsing only the height leaves the con
    mv.indexOf('panel.style.width = Math.min(260') >= 0);
 ok('Escape rescues the panel — an escape with no position cannot be pushed off the edge',
    mv.indexOf("e.key !== 'Escape'") >= 0 && mv.indexOf('clampIntoView(); save();') >= 0);
+
+/**
+ * ⭐⭐ EVERY PANEL, NOT ONE. Athi, 2026-09-12: *"it has to be applied everywhere."* The header drag was an
+ * OPT-IN for one panel, which is worse than nobody having it — a reader learns the rule on the test lab and it
+ * is wrong on the next screen. `.mhd` is the header on every modal and panel, so it is the default.
+ */
+ok('the header drag is the DEFAULT for every panel, not an opt-in for one',
+   mv.indexOf("panel.querySelector(opts.dragOn || '.mhd')") >= 0);
+ok('the grip is hidden wherever a header is found — a title bar has no fourth thing on it',
+   mv.indexOf("grip.style.display = 'none'") >= 0);
+ok('a mousedown on a control inside the header still reaches that control',
+   mv.indexOf("closest('button,select,input,textarea,a,label,[contenteditable]')") >= 0);
 
 fails.forEach((f) => console.error('  ✗ ' + f));
 if (!fails.length) console.log('\n  ' + pass + ' passed\n');

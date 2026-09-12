@@ -12467,9 +12467,27 @@ function makeMovable(panel, opts){
      * control, or the filters along the top of this panel become dead things you can only drag by.
      */
     try{
-      var head = opts.dragOn ? panel.querySelector(opts.dragOn) : null;
+      /**
+       * ⚠⚠ IT WAS AN OPT-IN AND THAT WAS THE MISTAKE. Athi, 2026-09-12: *"every screen move icon is in a
+       * corner or something. How we have done it for testlab, it has to be on the top panel itself so the
+       * screen should be able to move anywhere — it has to be applied everywhere."*
+       *
+       * `dragOn` was added for the test panel, so the test panel got a title bar and the other eight kept a
+       * twelve-pixel grip in a corner. One panel behaving like every window in the world and the rest not is
+       * WORSE than none of them doing it: a reader learns the rule on one screen and it is wrong on the next.
+       *
+       * ⭐⭐ `.mhd` IS ALREADY THE HEADER, EVERYWHERE — every modal is built as `<div class="mhd">…` and this
+       * function already knows the class, because minimise keeps `.mhd` visible precisely for being the header.
+       * So the default needs no new convention and no caller has to change: the thing was already named, it
+       * simply was not being used. `dragOn` stays for a panel whose header is not `.mhd`.
+       */
+      var head = panel.querySelector(opts.dragOn || '.mhd');
       if (head) {
+        /* ⭐ the grip goes: a standard title bar is a title, the window controls, and nothing else. cursor:grab
+           is the signal, and it is the one every reader already knows. */
         grip.style.display = 'none';
+        /* ⚠ the BAR only disappears when it holds nothing else — with minimise, it still carries that button */
+        if (!opts.minimise) bar.style.display = 'none';
         head.style.cursor = 'grab';
         head.addEventListener('mousedown', function(e){
           if (e.button !== 0) return;
