@@ -101,17 +101,35 @@ function testModeIsOn() { try { return localStorage.getItem('cb_testmode') === '
  *
  * ⚠️ It resolves even on FAILURE. A missing verdict must cost the panel a column, never the panel.
  */
-function testEnsureVerdict() {
-  if (typeof testVerdict === 'function') return Promise.resolve();
-  if (CBTEST._verdictP) return CBTEST._verdictP;
-  return (CBTEST._verdictP = new Promise(function (resolve) {
+/**
+ * ⭐ ONE LOADER, because there is now more than one shared file: the verdict and the menu’s shape. A second
+ * copy of this five-line dance, differing only in a filename, is the same duplication the shared files exist
+ * to end. ⚠️ Each is fetched ONCE and remembered by src, and a failure still resolves — a missing shared
+ * file must cost the panel a column, never the panel.
+ */
+function testEnsureFile(src, ready) {
+  if (ready()) return Promise.resolve();
+  CBTEST._files = CBTEST._files || {};
+  if (CBTEST._files[src]) return CBTEST._files[src];
+  return (CBTEST._files[src] = new Promise(function (resolve) {
     var el = document.createElement('script');
-    el.src = '/app/test-verdict.js' + (typeof CB_BUILD !== 'undefined' ? '?v=' + CB_BUILD : '');
+    el.src = src + (typeof CB_BUILD !== 'undefined' ? '?v=' + CB_BUILD : '');
     el.async = false;
     el.onload = function () { resolve(); };
     el.onerror = function () { resolve(); };
     document.head.appendChild(el);
   }));
+}
+
+function testEnsureVerdict() {
+  /**
+   * ⭐ BOTH SHARED FILES, TOGETHER. They are wanted at the same moment — the first paint — and asking for
+   * them separately would mean a tree that renders one repaint after the list it replaces.
+   */
+  return Promise.all([
+    testEnsureFile('/app/test-verdict.js', function () { return typeof testVerdict === 'function'; }),
+    testEnsureFile('/app/test-menu-tree.js', function () { return typeof testMenuTree === 'function'; }),
+  ]);
 }
 
 /**
@@ -597,6 +615,13 @@ function testColDrag(e, i) {
 }
 
 function testPaint() {
+  /**
+   * ⚠️ THE REMEMBERED VIEW HAS TO BE READ SOMEWHERE, and nothing was reading it: testViewGet() existed, the
+   * toggle wrote localStorage, and every paint still drew the list because CBTEST.view was undefined. A
+   * preference that is stored and never loaded is worse than none — it looks broken rather than absent.
+   * ⭐ Once, on the first paint; the toggle sets it directly after that.
+   */
+  if (!CBTEST.view) CBTEST.view = testViewGet();
   var body = document.getElementById('cbtestbody');
   var head = document.getElementById('cbtesthead');
   if (!body || !head) return;
@@ -721,6 +746,13 @@ function testPaint() {
      * carries: a control that only APPEARS is one you must notice before you can use it, and not noticing is
      * the whole problem. ⚠️ Here it matters more, because the lab filters ITSELF on open.
      */
+    /**
+     * ⭐ LIST or TREE, as two quiet buttons showing which one you are in. ⚠️ Not a dropdown: with exactly two
+     * choices a dropdown hides the one you are not in and costs a click to discover — and Athi settled the
+     * same question on the Report (*"no, give a clear filter button"*): you cannot hover over something to
+     * find out that hovering does anything.
+     */
+    +   testViewToggleHTML()
     +   '<button onclick="testClearFilters()" ' + (CBTEST.kind || CBTEST.area ? '' : 'disabled ')
     +     'title="Clear the kind and area filters — show every case" '
     +     'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:7px;cursor:pointer;'
@@ -909,6 +941,20 @@ function testPaint() {
      * stopped being fine the moment "All areas" meant 616 rows in a floating window four inches wide.
      * ⭐ Folded, the panel shows the shape of the board without becoming a second board.
      */
+    /**
+     * ⭐⭐ THE MENU TREE, WHEN THAT IS WHAT IS BEING ASKED. Athi: *"yes, give the lab its own tree as well."*
+     *
+     * ⚠️ IT REPLACES THE LIST, NOT THE SUMMARY. The four figures above stay put, because the tree answers
+     * "where am I" and never "how far along is the whole board" — losing the totals on switching view would
+     * make the two views disagree about the one number Athi has asked to match twice.
+     */
+    if (CBTEST.view === 'menu') {
+      h += testMenuHTML(shown);
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
+
     var groups = [], byG = {};
     shown.forEach(function (c) {
       if (!byG[c.module_key]) { byG[c.module_key] = []; groups.push(c.module_key); }
@@ -1180,6 +1226,47 @@ function testPaint() {
  * A choice already made always wins over the default, and "expand all" is a STATE rather than an action —
  * the panel repaints on every tap, and an action would be undone by the next one.
  */
+/**
+ * ── ⭐⭐ TWO WAYS TO READ ONE BOARD ──────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"yes, give the lab its own tree as well."*
+ *
+ * ⭐ THE LIST ANSWERS "what is left to do"; THE TREE ANSWERS "where am I, and what is behind this door".
+ * They are the same cases and the same counts — testMenuTree() and testCounts() are shared with the Report —
+ * so switching view changes what the reader is asking, never what the board says.
+ *
+ * ⚠️ REMEMBERED, because a view is a way of working and re-choosing it on every open is a small tax charged
+ * repeatedly. Same rule as the folds beside it.
+ */
+/* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
+function testViewGet() {
+  try { return localStorage.getItem('cb_test_view') === 'menu' ? 'menu' : 'list'; } catch (_) { return 'list'; }
+}
+function testSetView(v) {
+  try { localStorage.setItem('cb_test_view', v === 'menu' ? 'menu' : 'list'); } catch (_) {}
+  CBTEST.view = v;
+  testPaint();
+}
+
+/**
+ * ⭐ THE TWO VIEWS, AS A SEGMENTED PAIR. The one you are in is filled; the other is not. ⚠️ Both are always
+ * drawn — a toggle that shows only the alternative makes the reader work out which state they are in from
+ * what is missing.
+ */
+function testViewToggleHTML() {
+  var menu = CBTEST.view === 'menu';
+  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
+  var on = 'background:var(--grey-2,#545A61);color:#fff';
+  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  return '<span style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:7px;overflow:hidden">'
+    + '<button onclick="testSetView(\'list\')" title="Every case, grouped by area" '
+    +   'style="' + base + (menu ? off : on) + '">List</button>'
+    + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
+    +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
+    +   (menu ? on : off) + '">Menu tree</button>'
+    + '</span>';
+}
+
 function testFoldGet() {
   try { return JSON.parse(localStorage.getItem('cb_test_fold_panel') || '{}'); } catch (_) { return {}; }
 }
@@ -1196,6 +1283,107 @@ function testFoldAll(open) { testFoldSet({ _all: !!open }); testPaint(); }
 function testShortKey(k) {
   var s = String(k || '');
   return s.indexOf('/') < 0 ? s : s.slice(s.lastIndexOf('/') + 1);
+}
+
+/**
+ * ── ⭐⭐⭐ THE PRODUCT AS A MENU, IN THE PANEL ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"yes, give the lab its own tree as well."*
+ *
+ * ⭐ THE SHAPE IS SHARED WITH THE REPORT (app/test-menu-tree.js) AND THE DRAWING IS NOT, which is the same
+ * line already drawn for testVerdict and testCounts. A 420px panel cannot carry the Report’s full-width
+ * tracks; making it try is how this panel’s rows once ended up sitting under the Report’s headings.
+ *
+ * ⚠️ IT DRAWS THE FILTERED LIST, not the whole board. The panel filters itself to the screen you are on, and
+ * a tree that ignored that would answer a question nobody asked while the header says a filter is active.
+ * ⭐ The door counts therefore describe what is SHOWN — and the line under the tree says so, because "0 of 3
+ * run" means something different when it is 3 of 19 controls.
+ */
+function testMenuHTML(shown) {
+  if (typeof testMenuTree !== 'function') {
+    return '<div style="padding:10px;color:var(--grey-2,#545A61);font-size:var(--fs-1)">The menu\u2019s shape lives in app/test-menu-tree.js and it has not loaded. Press \u21bb to read the cases again.</div>';
+  }
+  var T = testMenuTree(shown, CBTEST.last);
+  if (!T.groups.length) {
+    return '<div style="padding:10px;color:var(--grey-2,#545A61);font-size:var(--fs-1)"><b>Nothing here names a menu door.</b><br>The swept cases carry one; journey steps and automated files do not. Clear the filters, or switch back to <b>List</b>.</div>';
+  }
+
+  var q = 'color:var(--grey-2,#545A61);font-size:var(--fs-1)';
+  var h = '';
+
+  /* ⭐ the root says what is being counted, since the panel is usually filtered */
+  h += '<div style="padding:5px 4px 7px;font-size:var(--fs-2)"><b>' + T.total + '</b> case(s) behind <b>'
+    + T.doors + '</b> door(s) in ' + T.groups.length + ' menu group(s)'
+    + (T.offMenu ? ' <span style="' + q + '">\u00b7 ' + T.offMenu + ' not on the menu</span>' : '') + '</div>';
+
+  T.groups.forEach(function (g) {
+    var gkey = 'menu:' + g.name;
+    var gopen = testSectionOpen(gkey, g.doors.length);
+    /**
+     * ⚠️ THE FOLD KEYS ARE THE SAME STRINGS THE REPORT USES (`menu:Rail`, `menu:Rail:Task`) but they are
+     * stored under this panel’s own key — see testFoldGet. Two surfaces sharing a fold STATE would mean
+     * collapsing a door here silently collapsed it on a board somebody else is reading.
+     */
+    h += '<div onclick="testFold(\'' + testEsc(gkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line-2,#efece4)">'
+      + '<span style="' + q + '">' + (gopen ? '\u25be' : '\u25b8') + '</span>'
+      + '<b style="font-size:var(--fs-2)">' + testEsc(g.name) + '</b>'
+      + '<span style="' + q + '">' + g.doors.length + ' door(s)</span>'
+      + '<span style="flex:1 1 auto"></span>'
+      + '<span style="' + q + ';font-variant-numeric:tabular-nums">' + g.run + ' of ' + g.total + ' run</span>'
+      + (g.bad ? '<b style="color:var(--disp);font-size:var(--fs-1)">' + g.bad + ' red</b>' : '')
+      + '</div>';
+    if (!gopen) return;
+
+    g.doors.forEach(function (d) {
+      var dkey = 'menu:' + g.name + ':' + d.name;
+      var dopen = testSectionOpen(dkey, d.cases.length);
+      h += '<div onclick="testFold(\'' + testEsc(dkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">'
+        + '<span style="' + q + '">' + (dopen ? '\u25be' : '\u25b8') + '</span>'
+        + '<span style="font-size:var(--fs-2)">' + testEsc(d.name) + '</span>'
+        + '<span style="flex:1 1 auto"></span>'
+        /**
+         * ⭐ THE THREE FIGURES A DOOR OWES A TESTER: how many controls, how many have ever been run, and how
+         * many of those cases were SWEPT rather than written. ⚠️ The last one is what stops a door of green
+         * ticks reading as proof — a swept pass says the control did something, not that it did the right
+         * thing, because nobody has written what the right thing is.
+         */
+        + '<span style="' + q + ';font-variant-numeric:tabular-nums">' + d.run + ' of ' + d.total + ' run'
+        +   (d.gen ? ' \u00b7 ' + d.gen + ' swept' : '') + '</span>'
+        + (d.bad ? '<b style="color:var(--disp);font-size:var(--fs-1)">' + d.bad + '</b>' : '')
+        + '</div>';
+      if (!dopen) return;
+
+      d.cases.forEach(function (c) {
+        var l = CBTEST.last[c.case_key];
+        var isOpen = CBTEST.open === c.case_key;
+        /**
+         * ⭐ A LEAF IS THE CASE ITSELF — tapping it opens the same body the list opens, through the same
+         * testOpen(). A tree that only NAMED the controls would send a tester back to the list to do anything,
+         * which is two views of one board rather than one board with two views.
+         */
+        h += '<div style="border-inline-start:2px solid ' + (l ? (l.status === 'fail' || l.status === 'blocked'
+              ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') + ';margin-inline-start:26px">'
+          + '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
+          +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || c.case_key) + '</span>'
+          +   '<span style="flex:1 1 auto"></span>'
+          +   (c.generated ? '<span style="' + q + '">swept ·</span>' : '')
+          +   '<span style="' + q + '">' + (l ? testEsc(l.status) : 'not run') + '</span>'
+          + '</div>'
+          + (isOpen ? testCaseBodyHTML(c) : '')
+          + '</div>';
+      });
+    });
+  });
+
+  /**
+   * ⭐⭐ WHAT RETIREMENT MEANS — the SAME sentence the Report prints, from the shared file. Athi: *"the same
+   * has to be updated with retired if it is not going to be useful anymore."* ⚠️ Two wordings of one
+   * mechanism is how a reader ends up believing whichever one is wrong.
+   */
+  h += '<div style="margin:10px 4px 4px;padding:7px 9px;border-radius:7px;background:var(--paper,#faf8f3);'
+    + 'border:1px solid var(--line-2,#efece4);' + q + '"><b>This tree rebuilds itself.</b> '
+    + (typeof TEST_MENU_RETIRED_NOTE === 'string' ? TEST_MENU_RETIRED_NOTE : '') + '</div>';
+  return h;
 }
 
 function testCaseBodyHTML(c) {

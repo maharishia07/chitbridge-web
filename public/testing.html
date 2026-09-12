@@ -945,6 +945,8 @@
   time the copy that got fixed was not the copy being read.
 -->
 <script src="app/test-verdict.js"></script>
+<!-- ⭐ and the menu's own shape, shared with the lab for the same reason — see the file's header -->
+<script src="app/test-menu-tree.js"></script>
 <!--
   ⭐ AND THE READER SETS THE WIDTHS. No set I choose is right for a five-character key beside a
   twenty-two character path, at four text sizes, on his screen and not mine — which is why the same class of
@@ -2990,52 +2992,31 @@ function folderTreeHTML(){
 function menuTreeHTML(){
   if (!CASES.length) return '<div class="note">The cases load with the board \u2014 press <b>Load cases</b>.</div>';
 
-  /* group › door, split off the path the sweep wrote; anything with no menu is stated, not hidden */
-  var tree = {}, gorder = [], off = 0;
-  CASES.forEach(function(c){
-    if (!c.menu) { off++; return; }
-    var bits = String(c.menu).split('\u203a');
-    var g = (bits[0] || '').trim() || 'Elsewhere';
-    var d = (bits[1] || '').trim() || g;
-    if (!tree[g]) { tree[g] = {}; gorder.push(g); }
-    (tree[g][d] = tree[g][d] || []).push(c);
-  });
-  if (!gorder.length) return '<div class="note">No case names a menu door yet. The sweep writes that field \u2014 '
-    + 'rebuild the board and load again.</div>';
-
-  /* what a branch has actually been RUN for — the same reading the other two trees use */
-  function evidence(list){
-    var run = 0, bad = 0, gen = 0;
-    list.forEach(function(c){
-      var l = LAST[c.case_key];
-      if (l) run++;
-      if (l && (l.status === 'fail' || l.status === 'blocked')) bad++;
-      if (c.generated) gen++;
-    });
-    return { run: run, bad: bad, gen: gen };
-  }
+  /**
+   * ⭐ THE SHAPE IS SHARED (app/test-menu-tree.js), THE DRAWING IS NOT. The lab draws the same groups and
+   * doors in a narrow panel; neither surface decides on its own what a door is or what "run" counts as.
+   * ⚠️ Falls back to saying so rather than to a second copy — a missing shared file costs this tab, never
+   * the page, and never a silently different answer from the one the lab is showing.
+   */
+  if (typeof testMenuTree !== 'function') return '<div class="note">The menu\u2019s shape lives in app/test-menu-tree.js and it has not loaded. Reload the page.</div>';
+  var T = testMenuTree(CASES, LAST);
+  if (!T.groups.length) return '<div class="note">No case names a menu door yet. The sweep writes that field \u2014 rebuild the board and load again.</div>';
 
   var h = '<div class="tree">';
-  var all = gorder.reduce(function(t, g){
-    return t + Object.keys(tree[g]).reduce(function(u, d){ return u + tree[g][d].length; }, 0); }, 0);
-  h += treeNode(0, '\u25c6', 'The product, as it is on screen', all,
-    '<span class="tof">' + gorder.length + ' menu group(s)</span>', '', true, '');
+  h += treeNode(0, '\u25c6', 'The product, as it is on screen', T.total,
+    '<span class="tof">' + T.groups.length + ' menu group(s) \u00b7 ' + T.doors + ' door(s)</span>', '', true, '');
 
-  gorder.forEach(function(g){
-    var doors = Object.keys(tree[g]);
-    var flat = doors.reduce(function(a, d){ return a.concat(tree[g][d]); }, []);
-    var e = evidence(flat);
-    var gkey = 'menu:' + g;
-    var gopen = isOpenSection(gkey, doors.length);
-    var gtail = '<span class="tof">' + flat.length + ' case(s) \u00b7 ' + e.run + ' run'
-      + (e.bad ? ' \u00b7 <b class="bad">' + e.bad + ' red</b>' : '') + '</span>';
-    h += treeNode(1, gopen ? '\u2500' : '\u253c', g, doors.length, gtail, '', gopen, gkey);
+  T.groups.forEach(function(g){
+    var gkey = 'menu:' + g.name;
+    var gopen = isOpenSection(gkey, g.doors.length);
+    var gtail = '<span class="tof">' + g.total + ' case(s) \u00b7 ' + g.run + ' run'
+      + (g.bad ? ' \u00b7 <b class="bad">' + g.bad + ' red</b>' : '') + '</span>';
+    h += treeNode(1, gopen ? '\u2500' : '\u253c', g.name, g.doors.length, gtail, '', gopen, gkey);
     if (!gopen) return;
 
-    doors.forEach(function(d){
-      var list = tree[g][d];
-      var de = evidence(list);
-      var dkey = 'menu:' + g + ':' + d;
+    g.doors.forEach(function(de){
+      var list = de.cases;
+      var dkey = 'menu:' + g.name + ':' + de.name;
       var dopen = isOpenSection(dkey, list.length);
       /**
        * ⭐ THE DOOR CARRIES THE HONEST NUMBER: how many controls behind it, how many have ever been run, and
@@ -3045,11 +3026,11 @@ function menuTreeHTML(){
       var dtail = '<span class="tof">' + de.run + ' of ' + list.length + ' run'
         + (de.bad ? ' \u00b7 <b class="bad">' + de.bad + ' red</b>' : '')
         + (de.gen ? ' \u00b7 ' + de.gen + ' swept' : '') + '</span>';
-      h += treeNode(2, dopen ? '\u2500' : '\u253c', d, list.length, dtail, '', dopen, dkey);
+      h += treeNode(2, dopen ? '\u2500' : '\u253c', de.name, list.length, dtail, '', dopen, dkey);
       if (!dopen) return;
 
-      /* the controls themselves — the leaf a tester taps, with what it last did */
-      list.slice().sort(function(a, b){ return a.case_key < b.case_key ? -1 : 1; }).forEach(function(c){
+      /* the controls themselves — the leaf a tester taps, with what it last did (sorted by the shared shape) */
+      list.forEach(function(c){
         var l = LAST[c.case_key];
         var mark = !l ? '<span class="tof dim">not run</span>'
           : (l.status === 'fail' || l.status === 'blocked')
@@ -3065,7 +3046,7 @@ function menuTreeHTML(){
    * ⚠️ AND THE REST OF THE BOARD, SAID OUT LOUD. Most cases belong to no door — a journey walks several, an
    * automated file walks none — and a tree that showed only the swept ones would read as the whole board.
    */
-  if (off) h += treeNode(1, '\u253c', 'Not on the menu', off,
+  if (T.offMenu) h += treeNode(1, '\u253c', 'Not on the menu', T.offMenu,
     '<span class="tof">journey steps and automated files \u2014 they belong to no single door</span>', '', false, '');
   h += '</div>';
 
@@ -3074,13 +3055,8 @@ function menuTreeHTML(){
    * ⚠️ And it is a statement about a mechanism that already runs — not a plan. If this ever stops being
    * true, this paragraph becomes the most misleading thing on the page.
    */
-  h += '<div class="note" style="margin:14px 0"><b>This tree rebuilds itself.</b> It is swept from the '
-    + 'live rail and the live screens, so a door or a control added tomorrow appears here without anybody '
-    + 'adding it \u2014 and one that is <b>removed stops being swept</b>, which retires its case at the next '
-    + '<b>Load cases</b>. <i>Retired is not deleted:</i> the case and every result ever recorded against it '
-    + 'stay on the record and can be brought back by name. \u26a0 A load carrying less than 90% of what the '
-    + 'board already holds retires nothing at all and says so, because a half-written file must never be '
-    + 'read as a decision to remove six hundred cases.</div>';
+  h += '<div class="note" style="margin:14px 0"><b>This tree rebuilds itself.</b> '
+    + (typeof TEST_MENU_RETIRED_NOTE === 'string' ? TEST_MENU_RETIRED_NOTE : '') + '</div>';
   return h;
 }
 
