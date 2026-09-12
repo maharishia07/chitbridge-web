@@ -3508,11 +3508,16 @@ function testCaseBodyHTML(c) {
     +  'style="width:100%;margin-top:8px;font-size:var(--fs-2);padding:5px 7px">'
     +  '<input type="text" id="cbt_e_' + testEsc(c.case_key) + '" placeholder="Evidence — bill number, screenshot" '
     +  'style="width:100%;margin-top:5px;font-size:var(--fs-2);padding:5px 7px">'
-    /* ⚠ SAY WHETHER THE CALLS ARE BEING KEPT. api() only records while spec is on, so without this the tester
-       believes the endpoints are being attached and they are not — a quiet nothing, which is the worst kind. */
-    + (typeof specOn === 'function' && specOn()
+    /**
+     * ⚠ SAY WHETHER THE CALLS ARE BEING KEPT, and say it from the SAME condition the recorder uses. This line
+     * read "Turn spec on to attach the API calls too" for a day after test mode started recording them by
+     * itself — so a tester with the calls already attached was being told to switch something on to get them.
+     * ⭐ A changed behaviour and the sentence describing it ship together, or the sentence becomes a lie that
+     * looks authoritative.
+     */
+    + (((typeof specOn === 'function' && specOn()) || CBTEST.on)
         ? '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));margin-top:3px">The API calls this case makes will be attached.</div>'
-        : '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));margin-top:3px">Turn <b>spec</b> on to attach the API calls too.</div>')
+        : '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));margin-top:3px">Turn <b>test mode</b> or <b>spec</b> on to attach the API calls too.</div>')
     +  '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'
     +    testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
     +    testMarkBtn(c.case_key, 'fail', 'Fail', 'var(--disp)', 'var(--disp-tint, #fbeceb)')

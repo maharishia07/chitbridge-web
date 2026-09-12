@@ -515,4 +515,92 @@ test.describe('test mode', () => {
     const booting = await page.evaluate(() => testBehindOf(CBTEST.popupFor).booting);
     expect(booting, 'a revisited screen still reports itself as mid-boot').toBeFalsy();
   });
+
+  test('[TM-20] a failure carries the build and the browser; a pass does not', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM twenty ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+    await openPanel(page);
+
+    /**
+     * ⚠️⚠️ WITHOUT THIS, A MONTH-OLD FAILURE IS A RUMOUR. `test_result.build` existed from b219 and nothing
+     * wrote to it. The first question anyone asks a bug report is which build and which browser.
+     */
+    await writeCase(page, {
+      req: 'the environment rides along with a failure',
+      op: 'Record a failure from the panel.',
+      exp: 'The build and the browser are kept with it.',
+      got: 'Checking that they are.',
+    }, 'inc');
+
+    await expect.poll(async () => page.evaluate(() => Object.keys(CBTEST.last || {}).length),
+      { timeout: 30000 }).toBeGreaterThan(0);
+
+    const tok = await tokenOf(page);
+    const r = await page.request.get(API + '/api/testing/results',
+      { headers: { Authorization: 'Bearer ' + tok } });
+    expect(r.ok()).toBeTruthy();
+    const j = await r.json();
+    const bad = (j.results || []).filter((x) => x.status === 'fail');
+    expect(bad.length, 'no failure was recorded').toBeGreaterThan(0);
+
+    /* ⚠️ the VALUES, not merely that something was stored — an empty string would pass a truthiness check */
+    const ev = String(bad[0].evidence || '');
+    expect(ev, 'the failure carries no build: ' + ev).toContain('build ');
+    expect(ev, 'the failure carries no viewport: ' + ev).toMatch(/[0-9]+×[0-9]+/);
+
+    /**
+     * ⚠️ AND CHROME MUST NOT BE REPORTED AS SAFARI. Chrome’s user-agent ends with "Safari/537", so reading
+     * the last match names every Chrome tester Safari — wrong in a way nobody would question. Playwright
+     * drives Chromium here, so the right answer is knowable.
+     */
+    expect(ev, 'the browser was read from the wrong end of the user-agent: ' + ev).not.toContain('Safari');
+  });
+
+  test('[TM-21] blocked will not record without saying what blocked it', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM twentyone ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+
+    /**
+     * ⭐ ISO/IEC/IEEE 29119-3 asks for the reason a case could not be run. A blocked case with no reason reads
+     * the same as one nobody got to, and the two lead to opposite actions: fix the blocker, or find a tester.
+     *
+     * ⚠️ A CASE HAS TO EXIST FIRST. A freshly minted entity has an empty board, so the lab opens with nothing
+     * in it — the first version of this test looked for a Blocked button on a screen that had no rows at all
+     * and reported a missing guard where there was simply nothing to press.
+     */
+    await openPanel(page);
+    await writeCase(page, {
+      req: 'a blocked verdict has to say what blocked it',
+      op: 'Press Blocked in the lab with the observation box empty.',
+      exp: 'It refuses, and nothing is recorded.',
+    });
+    await expect.poll(async () => page.evaluate(() => (CBTEST.cases || []).length),
+      { timeout: 30000 }).toBeGreaterThan(0);
+
+    await page.locator('[data-testid="vp-lab"]').click();
+    /* ⚠ the PANEL, not the host: #cbtesthost is a zero-size wrapper and Playwright rightly calls it hidden */
+    await expect(page.locator('#cbtestpanel')).toBeVisible({ timeout: 30000 });
+    await dismissModal(page);
+
+    /* the verdict buttons live inside an OPENED case, so a case is opened the way a tester opens one */
+    const row = page.locator('#cbtestpanel [onclick^="testOpen("]').first();
+    await expect(row).toBeVisible({ timeout: 30000 });
+    await row.click();
+    const blocked = page.locator('#cbtestpanel button', { hasText: /^Blocked$/ }).first();
+    await expect(blocked).toBeVisible({ timeout: 30000 });
+
+    const before = await page.evaluate(() => Object.keys(CBTEST.last || {}).length);
+    await blocked.click();
+    await page.waitForTimeout(2500);
+    expect(await page.evaluate(() => Object.keys(CBTEST.last || {}).length),
+      'a blocked verdict recorded with no reason').toBe(before);
+
+    /* ⭐ and it is a refusal, not a dead button: give it the reason and it records */
+    await page.locator('#cbtestpanel input[id^="cbt_n_"]').first().fill('the supplier screen will not open');
+    await blocked.click();
+    await expect.poll(async () => page.evaluate(() => Object.keys(CBTEST.last || {}).length),
+      { timeout: 30000 }).toBe(before + 1);
+  });
 });
