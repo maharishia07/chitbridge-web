@@ -106,12 +106,15 @@ function cmdbMinimise() {
 }
 
 /** the four kinds, with their counts — a switch that cannot say how many is a switch you press to find out */
+var PLURAL = { CAP: 'Capabilities', ENG: 'Engines', API: 'Routes' };
 function cmdbKindsHTML() {
   var A = cmdbAssets();
   var kinds = [['SCREEN', 'Screens', cmdbRows().length]];
   ['CAP', 'ENG', 'API'].forEach(function (k) {
     var n = A.filter(function (x) { return x.type === k; });
-    if (n.length) kinds.push([k, n[0].kind + 's', n.length]);
+    /* ⚠ A PLURAL IS NOT A NOUN PLUS S. It read "Capabilitys" the first time this was shown to Athi — small,
+       but a register whose own labels are wrong is not one anybody trusts with a number. Declared per type. */
+    if (n.length) kinds.push([k, PLURAL[k] || (n[0].kind + 's'), n.length]);
   });
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;';
