@@ -1957,6 +1957,9 @@ const EP = {
      line and it earns its keep: the shop does not care which module is broken, it cares that billing stopped.
      An incident LINKS to a defect and to the commit that fixed it; it never becomes either. No migration —
      `definition.kind` is free text (b160), so an incident is a definition like a case and a clause. */
+  /* ⭐ ONE CASE, WRITTEN BY A PERSON. The importer already takes { cases: [...] } and upserts, so writing
+     a case needs no new route \u2014 only a door. [[feedback-search-before-you-build]] */
+  testCaseWrite:   {m:"POST",  p:"/api/testing/cases/import",     ok:"y"},
   testIncNew:      {m:"POST",  p:"/api/testing/incidents",        ok:"y"},
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
   testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
@@ -13735,7 +13738,24 @@ async function loadList(silent){
   const _nav0=UI.nav, _left=function(){ return UI.nav!==_nav0; };
   UI.loading=true;
   if(!silent){ const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-    const dp0=document.getElementById("detailpane"); if(dp0){dp0.className="detail"; dp0.innerHTML=detailSkeleton();} }
+    /**
+     * ── ⚠️⚠️⚠️ THE LOADING PANEL WAS PAINTING OVER A RECORD THAT WAS ALREADY THERE ─────────────────────────
+     *
+     * This is the actual root of "Loading record" sticking, and my first fix missed it. Two things call
+     * loadList() around a boot or a send. The first fills the detail pane properly. The SECOND repaints this
+     * skeleton over it and then, finding the pane already matches the selection, correctly decides there is
+     * nothing to open — so the skeleton is the last thing written and nothing ever replaces it.
+     *
+     * ⚠️ EVERY PIECE WAS BEHAVING CORRECTLY, WHICH IS WHY IT SURVIVED THREE SIGHTINGS. The fetch answered in
+     * a second, the record was in memory the whole time, and re-running openChit() by hand painted it
+     * instantly. Nothing was broken except the ORDER, and nothing logged a thing.
+     *
+     * ⭐ A PLACEHOLDER IS FOR AN EMPTY PANE. If a record is already on screen it stays there while the list
+     * reloads behind it — which is also the better behaviour: a list refresh should not blank the thing the
+     * person is reading.
+     */
+    const dp0=document.getElementById("detailpane");
+    if(dp0 && !UI.detail){ dp0.className="detail"; dp0.innerHTML=detailSkeleton(); } }
   try{
     UI.rows=[]; await pgFirst('list');
     UI.loading=false;
@@ -13746,7 +13766,32 @@ async function loadList(silent){
     // The rollup only refines the per-state counts; it must not sit between "list shown" and "record selected".
     // Foreground load only — a silent refresh must not hijack the detail pane or flash anything.
     if(!silent){
-      if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
+      /**
+       * ── ⚠️⚠️⚠️ "LOADING RECORD" FOREVER — THE CONDITION WAS `!UI.sel` AND THAT WAS THE BUG ──────────────
+       *
+       * Athi, 2026-09-12: *"fix the loading record issue."* Seen three times in one session and each time it
+       * looked like a slow API. It was not: the GET answered in about a second every time, and re-running
+       * `openChit(UI.sel)` by hand painted the record instantly.
+       *
+       * ⚠️ THE LIST PAINTS A SKELETON INTO THE DETAIL PANE BEFORE IT LOADS, and then opened a record ONLY
+       * when nothing was selected. So whenever a selection ARRIVED WITH YOU — sending a chit lands you on
+       * Order with the new one selected, and coming back to a folder keeps the id you left on — the guard
+       * read "something is already selected, nothing to do", nothing fetched, and the skeleton it had just
+       * painted stayed on screen until the person clicked something.
+       *
+       * ⭐ THE QUESTION IS NOT "IS ANYTHING SELECTED" BUT "IS THE PANE SHOWING WHAT IS SELECTED". Those come
+       * apart in exactly the case that broke: a selection with no detail behind it yet. Asking the right
+       * question also fixes a second one nobody reported — arriving with a selection from ANOTHER folder
+       * left the previous chit on screen beside a list that does not contain it.
+       *
+       * ⚠️ A stale skeleton is the worst shape a failure can take: it looks like work in progress, so nobody
+       * reports it for the first minute and everybody blames the network after that.
+       */
+      if(UI.rows.length){
+        const here = UI.sel && UI.rows.some(c=>c.id===UI.sel);
+        const want = here ? UI.sel : ((UI.rows.find(c=>c.state===UI.state)||UI.rows[0]||{}).id || null);
+        if(want && (!UI.detail || UI.detail.id!==want)) openChit(want,true);
+      }
       else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
     }
     paintRowsOnly();

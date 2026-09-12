@@ -1251,7 +1251,25 @@ function testPaint() {
         /* ⭐ name the FILE and the fix — "no claim written in the file" named neither (Athi, 2026-09-12) */
         +      testEsc(c.automated && !c.claim
                 ? '\u26a0 no heading in ' + String(c.case_key).split('/').pop()
-                : (c.title || '')) + '</span>'
+                : (c.title || ''))
+        /**
+         * ⭐ WHERE THIS CASE HAPPENS, on the row rather than one click inside it. Athi, 2026-09-12: *"can I
+         * see the names of the screen in the test lab?"* The code was already reachable by expanding a case;
+         * a tester scanning a thousand rows for "everything on the catalogue screen" should not have to open
+         * a thousand of them.
+         *
+         * ⚠️ IN THE TITLE CELL, NOT A COLUMN OF ITS OWN. The row grid is six columns and the sticky header
+         * shares the same template — a seventh span slides every heading one place left, which is a worse
+         * bug than the one being fixed and looks like a rendering glitch rather than a mistake.
+         *
+         * ⚠️ Nothing for a case that is not on a screen: a guard file is not a screen, and a name beside one
+         * would be a category error dressed as a hint.
+         */
+        +      (c.menu && testScreenName(c.menu)
+        ? '<span style="color:var(--note);font-weight:400"> \u00b7 ' + testEsc(testScreenName(c.menu))
+          + '</span>' : '')
+        +      '</span>'
+
         /* ⭐ the KIND in its own track — see the note on the grid */
         +    '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
         +      'text-overflow:ellipsis" title="What kind of test this is">'
@@ -1540,6 +1558,26 @@ function testReqHTML() {
  * ⚠️ Empty when the case is not on a menu — the guard files and the harness are not screens, and a code beside
  * them would be a category error rather than a helpful hint.
  */
+/**
+ * ⭐⭐ THE SCREEN NAME, NOT ONLY ITS CODE. Athi, 2026-09-12: *"can I see the names of the screen in the test
+ * lab?"*
+ *
+ * ⚠️ A CODE ALONE IS UNREADABLE UNTIL YOU HAVE LEARNED IT, which is the wrong way round: the code exists so
+ * a screen can be QUOTED, not so it can be looked up. On a list of a thousand rows, "CAT004" tells a tester
+ * nothing they can act on and "CAT004 Catalogue setup" tells them where to stand.
+ *
+ * ⭐ Read from the register, never written here — the same rule as the code itself.
+ */
+function testScreenName(menu) {
+  try {
+    if (!menu || !window.CBSCREENS) return '';
+    var code = window.CBSCREENS.byPath[String(menu)];
+    if (!code) return '';
+    var row = (window.CBSCREENS.rows || []).filter(function (r) { return r.code === code; })[0];
+    return row ? (row.screen || '') : '';
+  } catch (_) { return ''; }
+}
+
 function testScreenCode(menu) {
   try {
     if (!menu || !window.CBSCREENS) return '';
@@ -1803,6 +1841,15 @@ function testIncHTML() {
  * ⚠️ A SCREEN WITH NO CASES IS THE POINT OF THE WHOLE VIEW, so it is listed first, not omitted. A list of what
  * IS tested answers a question nobody urgently has.
  */
+/* ⭐ remembered per browser: a person who works in menu order works in menu order every day */
+function testScrSortGet() {
+  try { return localStorage.getItem('cb_test_scrsort') || 'menu'; } catch (_) { return 'menu'; }
+}
+function testScrSort(v) {
+  try { localStorage.setItem('cb_test_scrsort', v); } catch (_) {}
+  testPaint();
+}
+
 async function testScrLoad() {
   CBTEST.scrBusy = true; testPaint();
   try {
@@ -1820,6 +1867,95 @@ function testScrOf(c) {
     if (!c || !c.menu || !window.CBSCREENS) return '';
     return window.CBSCREENS.byPath[String(c.menu)] || '';
   } catch (_) { return ''; }
+}
+
+/**
+ * ── ⭐⭐⭐ WRITING A CASE FOR A SCREEN, AND MARKING IT PASS OR FAIL ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"wait, how to create test case for each screen and record it as pass or fail?"*
+ *
+ * ⚠️⚠️ HALF OF THAT ALREADY WORKED AND HALF OF IT WAS IMPOSSIBLE. Recording a verdict has been there all
+ * along — open a case in the List and press Pass / Fail / Blocked / Skip. WRITING one could not be done
+ * from the app at all: every case on the board came from the sweep, so the only way to add one was to edit
+ * a generator and re-import. That is the wrong way round, because the person who knows what a screen must
+ * do is the person standing on it.
+ *
+ * ⭐ NO NEW ROUTE. `/cases/import` already takes `{ cases: [...] }` and upserts, so this needed a door and
+ * not a mechanism. [[feedback-search-before-you-build]]
+ *
+ * ⚠️ THE KEY IS MINTED FROM THE SCREEN CODE — `CAT001-H01`, `H` for hand-written — so a case written here
+ * can never collide with a swept `M-RAIL-…` key, and re-pressing the sweep button cannot overwrite it.
+ * ⚠️ And it is marked `generic:false`: this is the real test, and the By-screen view stops calling that
+ * screen "generic only" the moment one exists.
+ */
+function testCaseFor(code, name) {
+  CBTEST.writeFor = { code: code, name: name };
+  testPaint();
+  setTimeout(function () { try { document.getElementById("wcTitle").focus(); } catch (_) {} }, 120);
+}
+function testCaseCancel() { CBTEST.writeFor = null; testPaint(); }
+
+function testCaseFormHTML() {
+  var w = CBTEST.writeFor;
+  if (!w) return '';
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
+    + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
+  return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">A case for '
+    +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b></div>'
+    + '<input id="wcTitle" placeholder="What must be true? — e.g. a supplier with no catalogue says so" '
+    +   'style="' + inp + '">'
+    + '<input id="wcDo" placeholder="What you do — e.g. open a supplier who has published nothing" '
+    +   'style="' + inp + '">'
+    + '<input id="wcSee" placeholder="What you should see — e.g. \u2018your catalogue is empty\u2019, not a blank list" '
+    +   'style="' + inp + '">'
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    +   '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
+    +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
+    +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
+    +   '<button onclick="testCaseSend()" style="' + btn + '">Write it</button>'
+    +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
+    +   '<span style="font-size:var(--fs-1);color:var(--note)">It lands on the board straight away, and '
+    +     'you mark it Pass or Fail in the List.</span>'
+    + '</div></div>';
+}
+
+async function testCaseSend() {
+  var w = CBTEST.writeFor; if (!w) return;
+  var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
+  var title = g('wcTitle'), doIt = g('wcDo'), see = g('wcSee');
+  /* ⚠️ all three, and refused rather than defaulted: a case with no expectation cannot be failed, and one
+     nobody can fail is a note. The same rule the requirement box already enforces. */
+  if (!title) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
+  if (!doIt || !see) { if (typeof toast === 'function') toast('Say what you do, and what you should see.'); return; }
+  /* the next free hand-written number on this screen, read from what is already on the board */
+  var n = 1;
+  (CBTEST.cases || []).forEach(function (c) {
+    var m = String(c.case_key || '').match(new RegExp('^' + w.code + '-H(\\d+)$'));
+    if (m) n = Math.max(n, Number(m[1]) + 1);
+  });
+  var key = w.code + '-H' + String(n).padStart(2, '0');
+  try {
+    await api('testCaseWrite', { body: { cases: [{
+      case_key: key,
+      module_key: w.code, module_name: w.code + ' \u00b7 ' + w.name,
+      title: title,
+      priority: g('wcPri') || 'Medium',
+      test_type: 'screen',
+      pre: 'Signed in, and on ' + w.code + ' ' + w.name + '.',
+      steps: [[doIt, see]],
+      menu: (CBTEST.writeMenu || ''),
+      note: 'Written by hand on ' + new Date().toISOString().slice(0, 10) + '.',
+    }] } });
+    CBTEST.writeFor = null;
+    if (typeof toast === 'function') toast('Written \u2014 ' + key);
+    /* ⚠️ re-read rather than push a row locally: the importer decides the key and the version, and a
+       client-side guess at either is a copy that starts drifting on the first edit. */
+    if (typeof testLoad === 'function') await testLoad(); else location.reload();
+    testPaint();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not write it.'); }
 }
 
 function testScrHTML() {
@@ -1862,33 +1998,65 @@ function testScrHTML() {
       + 'there is nothing to map against.</div>';
   }
   var q = String(CBTEST.q || '').toLowerCase();
-  var list = rows.map(function (r) {
+  /* ⭐ walk is the register’s own number for where a screen sits in the product — the rail top to bottom
+     with each screen followed by whatever you reach from it. A row without one sorts to the end and is
+     visibly unplaced, rather than silently landing first. */
+  var list = rows.map(function (r, i) {
     var b = byCode[r.code] || { total: 0, pass: 0, fail: 0, notrun: 0 };
-    return { code: r.code, name: r.screen, group: r.group, total: b.total, pass: b.pass,
+    return { at: (r.walk || (10000 + i)), code: r.code, name: r.screen, group: r.group, total: b.total, pass: b.pass,
              fail: b.fail, notrun: b.notrun, purpose: b.purpose || null,
              real: b.real || 0, generic: b.generic || 0 };
   });
   /**
-   * ⚠️ SORTED BY WHAT NEEDS ATTENTION, not alphabetically: a failure first, then a screen with no case at
-   * all, then the untested. An A-to-Z list of 100 screens is a list nobody reads twice.
+   * ── ⭐⭐⭐ MENU ORDER IS THE DEFAULT, BECAUSE THAT IS HOW A PERSON WALKS THE PRODUCT ─────────────────────────
+   *
+   * Athi, 2026-09-12: *"we understand through each screen and if I can provide according to menu, it will be
+   * easier … so first one should be Counter, then Compose, Task and so on."*
+   *
+   * ⭐⭐ AND THE TWO LEVELS HE ASKED FOR ALREADY EXIST — they are the rail's own: which GROUP a screen is in,
+   * and where it sits WITHIN that group. The register is built by walking the live rail top to bottom, so its
+   * natural order IS the menu order; nothing had to be stored, and there is no second ordering to keep in
+   * step with the first. ⚠️ A hand-kept sequence beside a rail that already has one is two answers to the
+   * same question, and the day they disagree neither is trusted.
+   *
+   * ⚠️ MY DEFAULT WAS WRONG AND IT WAS WRONG FOR A DEFENSIBLE REASON, which is the dangerous kind. Sorting by
+   * failures first is right for someone auditing a finished run and wrong for someone WORKING THROUGH the
+   * product, because it reorders itself under them as they record verdicts. So it stays, as a choice.
    */
-  list.sort(function (a, b) {
-    return (b.fail - a.fail)
-        || ((a.total ? 1 : 0) - (b.total ? 1 : 0))
-        || (b.notrun - a.notrun)
-        || String(a.code).localeCompare(String(b.code));
-  });
+  if (testScrSortGet() === 'attention') {
+    list.sort(function (a, b) {
+      return (b.fail - a.fail)
+          || ((a.total ? 1 : 0) - (b.total ? 1 : 0))
+          || (b.notrun - a.notrun)
+          || (a.at - b.at);
+    });
+  } else {
+    list.sort(function (a, b) { return a.at - b.at; });
+  }
 
   var naked = list.filter(function (x) { return !x.total; }).length;
   var withFail = list.filter(function (x) { return x.fail; }).length;
   /* ⚠️ named but not tested: the row exists, the thinking has not happened */
   var onlyGeneric = list.filter(function (x) { return x.total && !x.real; }).length;
-  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+  var h = testCaseFormHTML()
+    + '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
     + '<b>' + list.length + '</b> screens \u00b7 <b>' + naked + '</b> with no case at all \u00b7 <b>'
     + withFail + '</b> with a failure \u00b7 <b>' + onlyGeneric + '</b> covered ONLY by the standard '
     + 'screen check, which names a screen rather than testing it.'
     + '<br>\u26a0\ufe0f <b>' + offScreen + '</b> case(s) are on no screen — guards, engines and the harness. '
     + 'They are counted here and left out of the per-screen numbers rather than out of sight.'
+    + '</div>';
+
+  var sb = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
+  var son = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var soff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var mode = testScrSortGet();
+  h += '<div style="margin:2px 0 8px">'
+    + '<button onclick="testScrSort(\'menu\')" title="The order the rail is in \u2014 walk the product" style="'
+    +   sb + (mode !== 'attention' ? son : soff) + '">In menu order</button>'
+    + '<button onclick="testScrSort(\'attention\')" title="Failures first, then screens with no case" style="'
+    +   sb + (mode === 'attention' ? son : soff) + '">What needs attention</button>'
     + '</div>';
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
@@ -1898,7 +2066,8 @@ function testScrHTML() {
     + '<th style="text-align:end;padding:3px 6px">Cases</th>'
     + '<th style="text-align:end;padding:3px 6px">Passed</th>'
     + '<th style="text-align:end;padding:3px 6px">Failed</th>'
-    + '<th style="text-align:end;padding:3px 6px">Not run</th></tr>';
+    + '<th style="text-align:end;padding:3px 6px">Not run</th>'
+    + '<th style="text-align:end;padding:3px 6px"></th></tr>';
   h += list.filter(function (x) {
     return !q || (x.code + ' ' + x.name).toLowerCase().indexOf(q) >= 0;
   }).map(function (x) {
@@ -1922,6 +2091,12 @@ function testScrHTML() {
       + num(x.pass, 'var(--ok,#1B7F4B)')
       + num(x.fail, 'var(--disp,#B3261E)')
       + num(x.notrun)
+      /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
+      + '<td style="padding:4px 6px;text-align:end"><button onclick="testCaseFor(\'' + x.code
+      +   '\', ' + JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;')
+      +   ')" title="Write a case for this screen" style="font:inherit;font-size:var(--fs-1);'
+      +   'padding:1px 7px;border:1px solid var(--line,#e7e3d8);border-radius:7px;cursor:pointer;'
+      +   'background:var(--card,#fff)">\u2295</button></td>'
       + '</tr>';
   }).join('');
   return h + '</table>';
@@ -2098,7 +2273,8 @@ function testCaseBodyHTML(c) {
   /* ⭐ the screen CODE first, then the path it names — the code is what gets quoted, the path is what
      makes it readable the first time. */
   if (c.menu) h += '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.03em;margin-bottom:6px">'
-    + testScreenCode(c.menu) + testEsc(c.menu) + '</div>';
+    + testScreenCode(c.menu) + '<b>' + testEsc(testScreenName(c.menu) || c.menu) + '</b>'
+    + (testScreenName(c.menu) ? ' \u00b7 ' + testEsc(c.menu) : '') + '</div>';
   if (c.generated) h += '<div style="font-size:var(--fs-1);margin-bottom:7px;padding:6px 8px;border-radius:7px;background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17">'
     + 'Swept from the menu \u2014 it names the control but carries no written expectation. Judge it against what the screen is FOR, and if you decide what it should do, write that into the case.</div>';
   if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';

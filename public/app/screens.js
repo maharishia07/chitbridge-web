@@ -789,7 +789,10 @@ window.CBSCREENS = {
   "Business › Customer detail": "BUS010",
   "Business › Find a product": "BUS011",
   "Business › Required certificates": "BUS012",
-  "Detail › Chit input": "DTL007"
+  "Detail › Chit input": "DTL007",
+  "Control › Inside a screen › Testing • Looking at it": "CTL434",
+  "Control › Inside a screen › Testing • Re-grade it": "CTL435",
+  "Control › Inside a screen › Testing • Record": "CTL436"
  },
  "rows": [
   {
@@ -799,7 +802,9 @@ window.CBSCREENS = {
    "screen": "Counter",
    "nav": "counter",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 1
   },
   {
    "code": "RAL001",
@@ -808,7 +813,9 @@ window.CBSCREENS = {
    "screen": "Compose",
    "nav": "compose",
    "cases": 19,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 2
   },
   {
    "code": "RAL002",
@@ -817,7 +824,9 @@ window.CBSCREENS = {
    "screen": "Task",
    "nav": "task",
    "cases": 17,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 3
   },
   {
    "code": "RAL003",
@@ -826,7 +835,9 @@ window.CBSCREENS = {
    "screen": "Order",
    "nav": "order",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 8
   },
   {
    "code": "RAL004",
@@ -835,7 +846,9 @@ window.CBSCREENS = {
    "screen": "Drafts",
    "nav": "drafts",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 9
   },
   {
    "code": "RAL005",
@@ -844,7 +857,9 @@ window.CBSCREENS = {
    "screen": "Archive",
    "nav": "archive",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 10
   },
   {
    "code": "RAL006",
@@ -853,7 +868,9 @@ window.CBSCREENS = {
    "screen": "Trash",
    "nav": "trash",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 11
   },
   {
    "code": "WRK001",
@@ -862,7 +879,9 @@ window.CBSCREENS = {
    "screen": "Messages",
    "nav": "messages",
    "cases": 8,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 12
   },
   {
    "code": "WRK002",
@@ -871,7 +890,9 @@ window.CBSCREENS = {
    "screen": "Everyone's work",
    "nav": "worklist",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 13
   },
   {
    "code": "WRK003",
@@ -880,7 +901,9 @@ window.CBSCREENS = {
    "screen": "Intake",
    "nav": "intake",
    "cases": 13,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 14
   },
   {
    "code": "WRK004",
@@ -889,7 +912,9 @@ window.CBSCREENS = {
    "screen": "Disputes",
    "nav": "disputes",
    "cases": 15,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 15
   },
   {
    "code": "CAT001",
@@ -898,7 +923,9 @@ window.CBSCREENS = {
    "screen": "Catalogue",
    "nav": "catalogue",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 16
   },
   {
    "code": "CAT002",
@@ -907,7 +934,9 @@ window.CBSCREENS = {
    "screen": "Record a sale",
    "nav": "selfbill",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 18
   },
   {
    "code": "CAT003",
@@ -916,7 +945,9 @@ window.CBSCREENS = {
    "screen": "Categories",
    "nav": "categories",
    "cases": 23,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 19
   },
   {
    "code": "CAT004",
@@ -925,7 +956,9 @@ window.CBSCREENS = {
    "screen": "Catalogue setup",
    "nav": "catsetup",
    "cases": 39,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 20
   },
   {
    "code": "BUS001",
@@ -934,7 +967,9 @@ window.CBSCREENS = {
    "screen": "Customers",
    "nav": "customers",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 21
   },
   {
    "code": "BUS002",
@@ -943,7 +978,9 @@ window.CBSCREENS = {
    "screen": "Suppliers",
    "nav": "suppliers",
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 23
   },
   {
    "code": "BUS003",
@@ -952,7 +989,9 @@ window.CBSCREENS = {
    "screen": "Match",
    "nav": "match",
    "cases": 6,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 27
   },
   {
    "code": "BUS004",
@@ -961,7 +1000,9 @@ window.CBSCREENS = {
    "screen": "Network",
    "nav": "network",
    "cases": 105,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 28
   },
   {
    "code": "BUS005",
@@ -970,7 +1011,9 @@ window.CBSCREENS = {
    "screen": "Co-assists",
    "nav": "coassists",
    "cases": 26,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 29
   },
   {
    "code": "INS001",
@@ -979,7 +1022,9 @@ window.CBSCREENS = {
    "screen": "MIS",
    "nav": "mis",
    "cases": 62,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 33
   },
   {
    "code": "INS003",
@@ -988,7 +1033,9 @@ window.CBSCREENS = {
    "screen": "Traceability",
    "nav": "traceability",
    "cases": 5,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 34
   },
   {
    "code": "INS004",
@@ -997,7 +1044,9 @@ window.CBSCREENS = {
    "screen": "Trade ready",
    "nav": "readiness",
    "cases": 19,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 35
   },
   {
    "code": "ACC001",
@@ -1006,7 +1055,9 @@ window.CBSCREENS = {
    "screen": "Profile",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 36
   },
   {
    "code": "ACC002",
@@ -1015,7 +1066,9 @@ window.CBSCREENS = {
    "screen": "Settings",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 37
   },
   {
    "code": "ACC003",
@@ -1024,7 +1077,9 @@ window.CBSCREENS = {
    "screen": "Language",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 38
   },
   {
    "code": "ACC004",
@@ -1033,7 +1088,9 @@ window.CBSCREENS = {
    "screen": "Appearance",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 39
   },
   {
    "code": "ACC005",
@@ -1042,7 +1099,9 @@ window.CBSCREENS = {
    "screen": "Sign out",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 40
   },
   {
    "code": "APP001",
@@ -1051,7 +1110,9 @@ window.CBSCREENS = {
    "screen": "app.html",
    "nav": null,
    "cases": 264,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 41
   },
   {
    "code": "OWN001",
@@ -1060,7 +1121,9 @@ window.CBSCREENS = {
    "screen": "Counter",
    "nav": null,
    "cases": 60,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 42
   },
   {
    "code": "OWN002",
@@ -1069,7 +1132,9 @@ window.CBSCREENS = {
    "screen": "Storefront",
    "nav": null,
    "cases": 17,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 43
   },
   {
    "code": "SCR001",
@@ -1078,7 +1143,9 @@ window.CBSCREENS = {
    "screen": "Adopt",
    "nav": null,
    "cases": 4,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 44
   },
   {
    "code": "SCR002",
@@ -1087,7 +1154,9 @@ window.CBSCREENS = {
    "screen": "Connector",
    "nav": null,
    "cases": 14,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 45
   },
   {
    "code": "SCR003",
@@ -1096,7 +1165,9 @@ window.CBSCREENS = {
    "screen": "Definitions",
    "nav": null,
    "cases": 18,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 46
   },
   {
    "code": "SCR004",
@@ -1105,7 +1176,9 @@ window.CBSCREENS = {
    "screen": "Folders",
    "nav": null,
    "cases": 15,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 47
   },
   {
    "code": "SCR005",
@@ -1114,7 +1187,9 @@ window.CBSCREENS = {
    "screen": "Iddocs",
    "nav": null,
    "cases": 1,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 48
   },
   {
    "code": "SCR006",
@@ -1123,7 +1198,9 @@ window.CBSCREENS = {
    "screen": "Legend",
    "nav": null,
    "cases": 2,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 49
   },
   {
    "code": "SCR007",
@@ -1132,7 +1209,9 @@ window.CBSCREENS = {
    "screen": "Register",
    "nav": null,
    "cases": 17,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 50
   },
   {
    "code": "SCR008",
@@ -1141,7 +1220,9 @@ window.CBSCREENS = {
    "screen": "Service",
    "nav": null,
    "cases": 10,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 51
   },
   {
    "code": "SCR009",
@@ -1150,7 +1231,9 @@ window.CBSCREENS = {
    "screen": "Supplies",
    "nav": null,
    "cases": 8,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 52
   },
   {
    "code": "SCR010",
@@ -1158,8 +1241,10 @@ window.CBSCREENS = {
    "group": "Inside a screen",
    "screen": "Testing",
    "nav": null,
-   "cases": 27,
-   "since": "2026-09-12"
+   "cases": 32,
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 53
   },
   {
    "code": "SCR011",
@@ -1168,7 +1253,9 @@ window.CBSCREENS = {
    "screen": "Cmdb",
    "nav": null,
    "cases": 3,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 54
   },
   {
    "code": "DTL001",
@@ -1177,7 +1264,9 @@ window.CBSCREENS = {
    "screen": "Chit detail",
    "nav": "chit-detail",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "task",
+   "walk": 4
   },
   {
    "code": "POP001",
@@ -1186,7 +1275,9 @@ window.CBSCREENS = {
    "screen": "_aiCtxExporter",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 55
   },
   {
    "code": "POP002",
@@ -1195,7 +1286,9 @@ window.CBSCREENS = {
    "screen": "_aiMd",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 56
   },
   {
    "code": "POP003",
@@ -1204,7 +1297,9 @@ window.CBSCREENS = {
    "screen": "_aiOrderDocPdf",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 57
   },
   {
    "code": "POP004",
@@ -1213,7 +1308,9 @@ window.CBSCREENS = {
    "screen": "_mtxCell",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 58
   },
   {
    "code": "POP005",
@@ -1222,7 +1319,9 @@ window.CBSCREENS = {
    "screen": "_netConfirmNarrow",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 59
   },
   {
    "code": "POP006",
@@ -1231,7 +1330,9 @@ window.CBSCREENS = {
    "screen": "acHowItWorks",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 60
   },
   {
    "code": "POP007",
@@ -1240,7 +1341,9 @@ window.CBSCREENS = {
    "screen": "acReissueGate",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 61
   },
   {
    "code": "POP008",
@@ -1249,7 +1352,9 @@ window.CBSCREENS = {
    "screen": "acTypeInfo",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 62
   },
   {
    "code": "POP009",
@@ -1258,7 +1363,9 @@ window.CBSCREENS = {
    "screen": "actorCleanupModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 63
   },
   {
    "code": "POP010",
@@ -1267,7 +1374,9 @@ window.CBSCREENS = {
    "screen": "actorInviteModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 64
   },
   {
    "code": "POP011",
@@ -1276,7 +1385,9 @@ window.CBSCREENS = {
    "screen": "addActorModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 65
   },
   {
    "code": "POP012",
@@ -1285,7 +1396,9 @@ window.CBSCREENS = {
    "screen": "adoptPaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 66
   },
   {
    "code": "POP013",
@@ -1294,7 +1407,9 @@ window.CBSCREENS = {
    "screen": "aiSlotInfo",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 67
   },
   {
    "code": "POP014",
@@ -1303,7 +1418,9 @@ window.CBSCREENS = {
    "screen": "amdPickUnit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 68
   },
   {
    "code": "POP015",
@@ -1312,7 +1429,9 @@ window.CBSCREENS = {
    "screen": "amendPaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 69
   },
   {
    "code": "POP016",
@@ -1321,7 +1440,9 @@ window.CBSCREENS = {
    "screen": "answerPublish",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 70
   },
   {
    "code": "POP017",
@@ -1330,7 +1451,9 @@ window.CBSCREENS = {
    "screen": "askAiOrderDoc",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 71
   },
   {
    "code": "POP018",
@@ -1339,7 +1462,9 @@ window.CBSCREENS = {
    "screen": "awRender",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 72
   },
   {
    "code": "POP019",
@@ -1348,7 +1473,9 @@ window.CBSCREENS = {
    "screen": "c2AssignOpen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 73
   },
   {
    "code": "POP020",
@@ -1357,7 +1484,9 @@ window.CBSCREENS = {
    "screen": "c2RepricePaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 74
   },
   {
    "code": "POP021",
@@ -1366,7 +1495,9 @@ window.CBSCREENS = {
    "screen": "catUnusedRow",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 75
   },
   {
    "code": "POP022",
@@ -1375,7 +1506,9 @@ window.CBSCREENS = {
    "screen": "catsetBody",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 76
   },
   {
    "code": "POP023",
@@ -1384,7 +1517,9 @@ window.CBSCREENS = {
    "screen": "catsetPlanPaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 77
   },
   {
    "code": "POP024",
@@ -1393,7 +1528,9 @@ window.CBSCREENS = {
    "screen": "cbDefGoHome",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 78
   },
   {
    "code": "POP025",
@@ -1402,7 +1539,9 @@ window.CBSCREENS = {
    "screen": "cbDefPaintForm",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 79
   },
   {
    "code": "POP026",
@@ -1411,7 +1550,9 @@ window.CBSCREENS = {
    "screen": "cbRenderCatalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 80
   },
   {
    "code": "POP027",
@@ -1420,7 +1561,9 @@ window.CBSCREENS = {
    "screen": "cbcatSeedAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 81
   },
   {
    "code": "POP028",
@@ -1429,7 +1572,9 @@ window.CBSCREENS = {
    "screen": "cbcatSeedPick",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 82
   },
   {
    "code": "POP029",
@@ -1438,7 +1583,9 @@ window.CBSCREENS = {
    "screen": "ccRender",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 83
   },
   {
    "code": "POP030",
@@ -1447,7 +1594,9 @@ window.CBSCREENS = {
    "screen": "ccRenderCatPick",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 84
   },
   {
    "code": "POP031",
@@ -1456,7 +1605,9 @@ window.CBSCREENS = {
    "screen": "checkCatalogueFile",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 85
   },
   {
    "code": "POP032",
@@ -1465,7 +1616,9 @@ window.CBSCREENS = {
    "screen": "chitMarkPaid",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 86
   },
   {
    "code": "POP033",
@@ -1474,7 +1627,9 @@ window.CBSCREENS = {
    "screen": "clearFolder",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 87
   },
   {
    "code": "POP034",
@@ -1483,7 +1638,9 @@ window.CBSCREENS = {
    "screen": "confirmAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 88
   },
   {
    "code": "POP035",
@@ -1492,7 +1649,9 @@ window.CBSCREENS = {
    "screen": "confirmAssign",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 89
   },
   {
    "code": "POP036",
@@ -1501,7 +1660,9 @@ window.CBSCREENS = {
    "screen": "counterHasKey",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 90
   },
   {
    "code": "POP037",
@@ -1510,7 +1671,9 @@ window.CBSCREENS = {
    "screen": "counterOpen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 91
   },
   {
    "code": "POP038",
@@ -1519,7 +1682,9 @@ window.CBSCREENS = {
    "screen": "ctDeclaredViewRows",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 92
   },
   {
    "code": "POP039",
@@ -1528,7 +1693,9 @@ window.CBSCREENS = {
    "screen": "deleteFolder",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 93
   },
   {
    "code": "POP040",
@@ -1537,7 +1704,9 @@ window.CBSCREENS = {
    "screen": "disputeOverlay",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 94
   },
   {
    "code": "POP041",
@@ -1546,7 +1715,9 @@ window.CBSCREENS = {
    "screen": "disputesScreen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 95
   },
   {
    "code": "POP042",
@@ -1555,7 +1726,9 @@ window.CBSCREENS = {
    "screen": "gatherReadiness",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 96
   },
   {
    "code": "POP043",
@@ -1564,7 +1737,9 @@ window.CBSCREENS = {
    "screen": "intakeDismiss",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 97
   },
   {
    "code": "POP044",
@@ -1573,7 +1748,9 @@ window.CBSCREENS = {
    "screen": "loadSupplierConfidence",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 98
   },
   {
    "code": "POP045",
@@ -1582,7 +1759,9 @@ window.CBSCREENS = {
    "screen": "makeMovable",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 99
   },
   {
    "code": "POP046",
@@ -1591,7 +1770,9 @@ window.CBSCREENS = {
    "screen": "matchDispute",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 100
   },
   {
    "code": "POP047",
@@ -1600,7 +1781,9 @@ window.CBSCREENS = {
    "screen": "modal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 101
   },
   {
    "code": "POP048",
@@ -1609,7 +1792,9 @@ window.CBSCREENS = {
    "screen": "netBuild",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 102
   },
   {
    "code": "POP049",
@@ -1618,7 +1803,9 @@ window.CBSCREENS = {
    "screen": "netMint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 103
   },
   {
    "code": "POP050",
@@ -1627,7 +1814,9 @@ window.CBSCREENS = {
    "screen": "netMintGo",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 104
   },
   {
    "code": "POP051",
@@ -1636,7 +1825,9 @@ window.CBSCREENS = {
    "screen": "netReissueKey",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 105
   },
   {
    "code": "POP052",
@@ -1645,7 +1836,9 @@ window.CBSCREENS = {
    "screen": "openBlueprint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 106
   },
   {
    "code": "POP053",
@@ -1654,7 +1847,9 @@ window.CBSCREENS = {
    "screen": "pickBox",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 107
   },
   {
    "code": "POP054",
@@ -1663,7 +1858,9 @@ window.CBSCREENS = {
    "screen": "pickChitStatus",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 108
   },
   {
    "code": "POP055",
@@ -1672,7 +1869,9 @@ window.CBSCREENS = {
    "screen": "prodAvailAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 109
   },
   {
    "code": "POP056",
@@ -1681,7 +1880,9 @@ window.CBSCREENS = {
    "screen": "prodCategoriseAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 110
   },
   {
    "code": "POP057",
@@ -1690,7 +1891,9 @@ window.CBSCREENS = {
    "screen": "prodPickBarHTML",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 111
   },
   {
    "code": "POP058",
@@ -1699,7 +1902,9 @@ window.CBSCREENS = {
    "screen": "prodRowsPick",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 112
   },
   {
    "code": "POP059",
@@ -1708,7 +1913,9 @@ window.CBSCREENS = {
    "screen": "prodStatusPick",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 113
   },
   {
    "code": "POP060",
@@ -1717,7 +1924,9 @@ window.CBSCREENS = {
    "screen": "profGuard",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 114
   },
   {
    "code": "POP061",
@@ -1726,7 +1935,9 @@ window.CBSCREENS = {
    "screen": "promptAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 115
   },
   {
    "code": "POP062",
@@ -1735,7 +1946,9 @@ window.CBSCREENS = {
    "screen": "quickDelete",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 116
   },
   {
    "code": "POP063",
@@ -1744,7 +1957,9 @@ window.CBSCREENS = {
    "screen": "quickStatus",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 117
   },
   {
    "code": "POP064",
@@ -1753,7 +1968,9 @@ window.CBSCREENS = {
    "screen": "repriority",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 118
   },
   {
    "code": "POP065",
@@ -1762,7 +1979,9 @@ window.CBSCREENS = {
    "screen": "resolveDispute",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 119
   },
   {
    "code": "POP066",
@@ -1771,7 +1990,9 @@ window.CBSCREENS = {
    "screen": "rgGo",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 120
   },
   {
    "code": "POP067",
@@ -1780,7 +2001,9 @@ window.CBSCREENS = {
    "screen": "rgPaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 121
   },
   {
    "code": "POP068",
@@ -1789,7 +2012,9 @@ window.CBSCREENS = {
    "screen": "rgScope",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 122
   },
   {
    "code": "POP069",
@@ -1798,7 +2023,9 @@ window.CBSCREENS = {
    "screen": "rollupQuery",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 123
   },
   {
    "code": "POP070",
@@ -1807,7 +2034,9 @@ window.CBSCREENS = {
    "screen": "selfBillOpen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 124
   },
   {
    "code": "POP071",
@@ -1816,7 +2045,9 @@ window.CBSCREENS = {
    "screen": "sendMessage",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 125
   },
   {
    "code": "POP072",
@@ -1825,7 +2056,9 @@ window.CBSCREENS = {
    "screen": "setMsgTypeSet",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 126
   },
   {
    "code": "POP073",
@@ -1834,7 +2067,9 @@ window.CBSCREENS = {
    "screen": "showHelp",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 127
   },
   {
    "code": "POP074",
@@ -1843,7 +2078,9 @@ window.CBSCREENS = {
    "screen": "supAddModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 128
   },
   {
    "code": "POP075",
@@ -1852,7 +2089,9 @@ window.CBSCREENS = {
    "screen": "supBuyModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 129
   },
   {
    "code": "POP076",
@@ -1861,7 +2100,9 @@ window.CBSCREENS = {
    "screen": "supEdit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 130
   },
   {
    "code": "POP077",
@@ -1870,7 +2111,9 @@ window.CBSCREENS = {
    "screen": "supFindBodyHTML",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 131
   },
   {
    "code": "POP078",
@@ -1879,7 +2122,9 @@ window.CBSCREENS = {
    "screen": "supUseModal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 132
   },
   {
    "code": "POP079",
@@ -1888,7 +2133,9 @@ window.CBSCREENS = {
    "screen": "svcPaint",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 133
   },
   {
    "code": "POP080",
@@ -1897,7 +2144,9 @@ window.CBSCREENS = {
    "screen": "svcPauseAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 134
   },
   {
    "code": "POP081",
@@ -1906,7 +2155,9 @@ window.CBSCREENS = {
    "screen": "svcResolveAsk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 135
   },
   {
    "code": "POP082",
@@ -1915,7 +2166,9 @@ window.CBSCREENS = {
    "screen": "testGuide",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 136
   },
   {
    "code": "POP083",
@@ -1924,7 +2177,9 @@ window.CBSCREENS = {
    "screen": "verifyReadiness",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 137
   },
   {
    "code": "POP084",
@@ -1933,7 +2188,9 @@ window.CBSCREENS = {
    "screen": "wlPaintCard",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 138
   },
   {
    "code": "CTL001",
@@ -1942,7 +2199,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Ask the assistant about this screen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 139
   },
   {
    "code": "CTL002",
@@ -1951,7 +2210,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 140
   },
   {
    "code": "CTL003",
@@ -1960,7 +2221,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 141
   },
   {
    "code": "CTL004",
@@ -1969,7 +2232,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 142
   },
   {
    "code": "CTL005",
@@ -1978,7 +2243,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Co-assists",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 143
   },
   {
    "code": "CTL006",
@@ -1987,7 +2254,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Deactivate",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 144
   },
   {
    "code": "CTL007",
@@ -1996,7 +2265,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Download install package",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 145
   },
   {
    "code": "CTL008",
@@ -2005,7 +2276,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • How $",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 146
   },
   {
    "code": "CTL009",
@@ -2014,7 +2287,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • How it works",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 147
   },
   {
    "code": "CTL010",
@@ -2023,7 +2298,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Re-invite",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 148
   },
   {
    "code": "CTL011",
@@ -2032,7 +2309,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Reset PIN",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 149
   },
   {
    "code": "CTL012",
@@ -2041,7 +2320,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Retry",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 150
   },
   {
    "code": "CTL013",
@@ -2050,7 +2331,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • Save",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 151
   },
   {
    "code": "CTL014",
@@ -2059,7 +2342,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • See the full walkthrough",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 152
   },
   {
    "code": "CTL015",
@@ -2068,7 +2353,9 @@ window.CBSCREENS = {
    "screen": "Business › Co-assists • see how it works",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 153
   },
   {
    "code": "CTL016",
@@ -2077,7 +2364,9 @@ window.CBSCREENS = {
    "screen": "Business › Match • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 154
   },
   {
    "code": "CTL017",
@@ -2086,7 +2375,9 @@ window.CBSCREENS = {
    "screen": "Business › Match • Open the order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 155
   },
   {
    "code": "CTL018",
@@ -2095,7 +2386,9 @@ window.CBSCREENS = {
    "screen": "Business › Match • Raise a dispute",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 156
   },
   {
    "code": "CTL019",
@@ -2104,7 +2397,9 @@ window.CBSCREENS = {
    "screen": "Business › Match • Raise it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 157
   },
   {
    "code": "CTL020",
@@ -2113,7 +2408,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Add owned node",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 158
   },
   {
    "code": "CTL021",
@@ -2122,7 +2419,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Add partner",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 159
   },
   {
    "code": "CTL022",
@@ -2131,7 +2430,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 160
   },
   {
    "code": "CTL023",
@@ -2140,7 +2441,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 161
   },
   {
    "code": "CTL024",
@@ -2149,7 +2452,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Change visibility",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 162
   },
   {
    "code": "CTL025",
@@ -2158,7 +2463,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Copy",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 163
   },
   {
    "code": "CTL026",
@@ -2167,7 +2474,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Discard all",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 164
   },
   {
    "code": "CTL027",
@@ -2176,7 +2485,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • I have the codes — done",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 165
   },
   {
    "code": "CTL028",
@@ -2185,7 +2496,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Issue a new sign-in code",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 166
   },
   {
    "code": "CTL029",
@@ -2194,7 +2507,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Make these changes",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 167
   },
   {
    "code": "CTL030",
@@ -2203,7 +2518,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Move up among its siblings",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 168
   },
   {
    "code": "CTL031",
@@ -2212,7 +2529,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Name the stores and create them",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 169
   },
   {
    "code": "CTL032",
@@ -2221,7 +2540,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Open in compose",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 170
   },
   {
    "code": "CTL033",
@@ -2230,7 +2551,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Remove",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 171
   },
   {
    "code": "CTL034",
@@ -2239,7 +2562,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Remove it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 172
   },
   {
    "code": "CTL035",
@@ -2248,7 +2573,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Rename",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 173
   },
   {
    "code": "CTL036",
@@ -2257,7 +2584,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Start designing",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 174
   },
   {
    "code": "CTL037",
@@ -2266,7 +2595,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Start over",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 175
   },
   {
    "code": "CTL038",
@@ -2275,7 +2606,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • Turn on for this store",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 176
   },
   {
    "code": "CTL039",
@@ -2284,7 +2617,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • add attachment",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 177
   },
   {
    "code": "CTL040",
@@ -2293,7 +2628,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • add certification",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 178
   },
   {
    "code": "CTL041",
@@ -2302,7 +2639,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • add off-rail inlet",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 179
   },
   {
    "code": "CTL042",
@@ -2311,7 +2650,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • all stores",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 180
   },
   {
    "code": "CTL043",
@@ -2320,7 +2661,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • collect field",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 181
   },
   {
    "code": "CTL044",
@@ -2329,7 +2672,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • component",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 182
   },
   {
    "code": "CTL045",
@@ -2338,7 +2683,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • connection",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 183
   },
   {
    "code": "CTL046",
@@ -2347,7 +2694,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • connector",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 184
   },
   {
    "code": "CTL047",
@@ -2356,7 +2705,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • is this party on C&B?",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 185
   },
   {
    "code": "CTL048",
@@ -2365,7 +2716,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • partner",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 186
   },
   {
    "code": "CTL049",
@@ -2374,7 +2727,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • price",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 187
   },
   {
    "code": "CTL050",
@@ -2383,7 +2738,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • region",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 188
   },
   {
    "code": "CTL051",
@@ -2392,7 +2749,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • remove",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 189
   },
   {
    "code": "CTL052",
@@ -2401,7 +2760,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • requirement",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 190
   },
   {
    "code": "CTL053",
@@ -2410,7 +2771,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • role",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 191
   },
   {
    "code": "CTL054",
@@ -2419,7 +2782,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • standard",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 192
   },
   {
    "code": "CTL055",
@@ -2428,7 +2793,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • state",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 193
   },
   {
    "code": "CTL056",
@@ -2437,7 +2804,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • system name",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 194
   },
   {
    "code": "CTL057",
@@ -2446,7 +2815,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • system to feed back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 195
   },
   {
    "code": "CTL058",
@@ -2455,7 +2826,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • trigger",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 196
   },
   {
    "code": "CTL059",
@@ -2464,7 +2837,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • turn off",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 197
   },
   {
    "code": "CTL060",
@@ -2473,7 +2848,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • unit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 198
   },
   {
    "code": "CTL061",
@@ -2482,7 +2859,9 @@ window.CBSCREENS = {
    "screen": "Business › Network • variant",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 199
   },
   {
    "code": "CTL062",
@@ -2491,7 +2870,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Add columns",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 200
   },
   {
    "code": "CTL063",
@@ -2500,7 +2881,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • All",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 201
   },
   {
    "code": "CTL064",
@@ -2509,7 +2892,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Another month",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 202
   },
   {
    "code": "CTL065",
@@ -2518,7 +2903,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Blank template",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 203
   },
   {
    "code": "CTL066",
@@ -2527,7 +2914,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 204
   },
   {
    "code": "CTL067",
@@ -2536,7 +2925,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 205
   },
   {
    "code": "CTL068",
@@ -2545,7 +2936,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Catalogue setup",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 206
   },
   {
    "code": "CTL069",
@@ -2554,7 +2947,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 207
   },
   {
    "code": "CTL070",
@@ -2563,7 +2958,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Check &amp; import",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 208
   },
   {
    "code": "CTL071",
@@ -2572,7 +2969,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Create all as live",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 209
   },
   {
    "code": "CTL072",
@@ -2581,7 +2980,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Decimal allowed",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 210
   },
   {
    "code": "CTL073",
@@ -2590,7 +2991,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 211
   },
   {
    "code": "CTL074",
@@ -2599,7 +3002,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • English always shows",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 212
   },
   {
    "code": "CTL075",
@@ -2608,7 +3013,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Export CSV",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 213
   },
   {
    "code": "CTL076",
@@ -2617,7 +3024,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Plan several",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 214
   },
   {
    "code": "CTL077",
@@ -2626,7 +3035,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Reinstate",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 215
   },
   {
    "code": "CTL078",
@@ -2635,7 +3046,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • Retire",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 216
   },
   {
    "code": "CTL079",
@@ -2644,7 +3057,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • See the blueprints available",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 217
   },
   {
    "code": "CTL080",
@@ -2653,7 +3068,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • See the columns your trade expects",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 218
   },
   {
    "code": "CTL081",
@@ -2662,7 +3079,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Catalogue setup • required",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 219
   },
   {
    "code": "CTL082",
@@ -2671,7 +3090,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • All",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 220
   },
   {
    "code": "CTL083",
@@ -2680,7 +3101,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Author one",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 221
   },
   {
    "code": "CTL084",
@@ -2689,7 +3112,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 222
   },
   {
    "code": "CTL085",
@@ -2698,7 +3123,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 223
   },
   {
    "code": "CTL086",
@@ -2707,7 +3134,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Categories",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 224
   },
   {
    "code": "CTL087",
@@ -2716,7 +3145,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 225
   },
   {
    "code": "CTL088",
@@ -2725,7 +3156,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Put back on the shelf",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 226
   },
   {
    "code": "CTL089",
@@ -2734,7 +3167,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Retire",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 227
   },
   {
    "code": "CTL090",
@@ -2743,7 +3178,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • See these →",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 228
   },
   {
    "code": "CTL091",
@@ -2752,7 +3189,9 @@ window.CBSCREENS = {
    "screen": "Catalogue › Categories • Start from a standard set",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 229
   },
   {
    "code": "CTL092",
@@ -2761,7 +3200,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Approve this PC",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 230
   },
   {
    "code": "CTL093",
@@ -2770,7 +3211,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Ask again",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 231
   },
   {
    "code": "CTL094",
@@ -2779,7 +3222,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 232
   },
   {
    "code": "CTL095",
@@ -2788,7 +3233,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Bind",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 233
   },
   {
    "code": "CTL096",
@@ -2797,7 +3244,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Change PIN",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 234
   },
   {
    "code": "CTL097",
@@ -2806,7 +3255,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Configure AI assists in Co-assists",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 235
   },
   {
    "code": "CTL098",
@@ -2815,7 +3266,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Discard",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 236
   },
   {
    "code": "CTL099",
@@ -2824,7 +3277,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Download",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 237
   },
   {
    "code": "CTL100",
@@ -2833,7 +3288,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 238
   },
   {
    "code": "CTL101",
@@ -2842,7 +3299,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Explain",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 239
   },
   {
    "code": "CTL102",
@@ -2851,7 +3310,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • GSTR-1 JSON",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 240
   },
   {
    "code": "CTL103",
@@ -2860,7 +3321,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Hide where these come from",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 241
   },
   {
    "code": "CTL104",
@@ -2869,7 +3332,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Localisation",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 242
   },
   {
    "code": "CTL105",
@@ -2878,7 +3343,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Mint a key",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 243
   },
   {
    "code": "CTL106",
@@ -2887,7 +3354,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • New / clear",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 244
   },
   {
    "code": "CTL107",
@@ -2896,7 +3365,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Open",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 245
   },
   {
    "code": "CTL108",
@@ -2905,7 +3376,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Open the layer that declares this",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 246
   },
   {
    "code": "CTL109",
@@ -2914,7 +3387,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Publish to catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 247
   },
   {
    "code": "CTL110",
@@ -2923,7 +3398,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Reject",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 248
   },
   {
    "code": "CTL111",
@@ -2932,7 +3409,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Remove this detail",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 249
   },
   {
    "code": "CTL112",
@@ -2941,7 +3420,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Remove this section",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 250
   },
   {
    "code": "CTL113",
@@ -2950,7 +3431,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Revoke",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 251
   },
   {
    "code": "CTL114",
@@ -2959,7 +3442,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Save",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 252
   },
   {
    "code": "CTL115",
@@ -2968,7 +3453,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Save auto-assign",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 253
   },
   {
    "code": "CTL116",
@@ -2977,7 +3464,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Save settings",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 254
   },
   {
    "code": "CTL117",
@@ -2986,7 +3475,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Save vault",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 255
   },
   {
    "code": "CTL118",
@@ -2995,7 +3486,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Send after all",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 256
   },
   {
    "code": "CTL119",
@@ -3004,7 +3497,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Stay here",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 257
   },
   {
    "code": "CTL120",
@@ -3013,7 +3508,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Unbind",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 258
   },
   {
    "code": "CTL121",
@@ -3022,7 +3519,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • Use the regional default",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 259
   },
   {
    "code": "CTL122",
@@ -3031,7 +3530,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • hide the technical detail",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 260
   },
   {
    "code": "CTL123",
@@ -3040,7 +3541,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • less",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 261
   },
   {
    "code": "CTL124",
@@ -3049,7 +3552,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • overdue policy",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 262
   },
   {
    "code": "CTL125",
@@ -3058,7 +3563,9 @@ window.CBSCREENS = {
    "screen": "Insight › MIS • we use this",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 263
   },
   {
    "code": "CTL126",
@@ -3067,7 +3574,9 @@ window.CBSCREENS = {
    "screen": "Insight › Traceability • Recall set",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 264
   },
   {
    "code": "CTL127",
@@ -3076,7 +3585,9 @@ window.CBSCREENS = {
    "screen": "Insight › Traceability • Trace by batch #",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 265
   },
   {
    "code": "CTL128",
@@ -3085,7 +3596,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Accept &amp; attach as evidence",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 266
   },
   {
    "code": "CTL129",
@@ -3094,7 +3607,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 267
   },
   {
    "code": "CTL130",
@@ -3103,7 +3618,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Copy",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 268
   },
   {
    "code": "CTL131",
@@ -3112,7 +3629,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Done",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 269
   },
   {
    "code": "CTL132",
@@ -3121,7 +3640,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Draft with AI",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 270
   },
   {
    "code": "CTL133",
@@ -3130,7 +3651,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Matrix",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 271
   },
   {
    "code": "CTL134",
@@ -3139,7 +3662,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • PDF",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 272
   },
   {
    "code": "CTL135",
@@ -3148,7 +3673,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Record clearance on the rail",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 273
   },
   {
    "code": "CTL136",
@@ -3157,7 +3684,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Standards",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 274
   },
   {
    "code": "CTL137",
@@ -3166,7 +3695,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Suggest",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 275
   },
   {
    "code": "CTL138",
@@ -3175,7 +3706,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Verify ID",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 276
   },
   {
    "code": "CTL139",
@@ -3184,7 +3717,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Verify at source",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 277
   },
   {
    "code": "CTL140",
@@ -3193,7 +3728,9 @@ window.CBSCREENS = {
    "screen": "Insight › Trade ready • Your registered country (fixed)",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 278
   },
   {
    "code": "CTL141",
@@ -3202,7 +3739,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Add new products to my catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 279
   },
   {
    "code": "CTL142",
@@ -3211,7 +3750,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Assign",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 280
   },
   {
    "code": "CTL143",
@@ -3220,7 +3761,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Assign together",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 281
   },
   {
    "code": "CTL144",
@@ -3229,7 +3772,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 282
   },
   {
    "code": "CTL145",
@@ -3238,7 +3783,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Clear",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 283
   },
   {
    "code": "CTL146",
@@ -3247,7 +3794,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 284
   },
   {
    "code": "CTL147",
@@ -3256,7 +3805,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Delivered",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 285
   },
   {
    "code": "CTL148",
@@ -3265,7 +3816,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Every line",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 286
   },
   {
    "code": "CTL149",
@@ -3274,7 +3827,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Price from catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 287
   },
   {
    "code": "CTL150",
@@ -3283,7 +3838,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Service clock &amp; SLA",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 288
   },
   {
    "code": "CTL151",
@@ -3292,7 +3849,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • Take materials",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 289
   },
   {
    "code": "CTL152",
@@ -3301,7 +3860,9 @@ window.CBSCREENS = {
    "screen": "Rail › Compose • open the full original",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 290
   },
   {
    "code": "CTL153",
@@ -3310,7 +3871,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 291
   },
   {
    "code": "CTL154",
@@ -3319,7 +3882,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • Close it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 292
   },
   {
    "code": "CTL155",
@@ -3328,7 +3893,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • Open the order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 293
   },
   {
    "code": "CTL156",
@@ -3337,7 +3904,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • Record something",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 294
   },
   {
    "code": "CTL157",
@@ -3346,7 +3915,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • Take materials from the catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 295
   },
   {
    "code": "CTL158",
@@ -3355,7 +3926,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • clear",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 296
   },
   {
    "code": "CTL159",
@@ -3364,7 +3937,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 297
   },
   {
    "code": "CTL160",
@@ -3373,7 +3948,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • expand all",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 298
   },
   {
    "code": "CTL161",
@@ -3382,7 +3959,9 @@ window.CBSCREENS = {
    "screen": "Rail › Task • total by product",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 299
   },
   {
    "code": "CTL162",
@@ -3391,7 +3970,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • About this screen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 300
   },
   {
    "code": "CTL163",
@@ -3400,7 +3981,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 301
   },
   {
    "code": "CTL164",
@@ -3409,7 +3992,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Done",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 302
   },
   {
    "code": "CTL165",
@@ -3418,7 +4003,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Raise dispute",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 303
   },
   {
    "code": "CTL166",
@@ -3427,7 +4014,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Resolve",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 304
   },
   {
    "code": "CTL167",
@@ -3436,7 +4025,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Send ↔",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 305
   },
   {
    "code": "CTL168",
@@ -3445,7 +4036,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Suggest wording",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 306
   },
   {
    "code": "CTL169",
@@ -3454,7 +4047,9 @@ window.CBSCREENS = {
    "screen": "Work › Disputes • Summarize",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 307
   },
   {
    "code": "CTL170",
@@ -3463,7 +4058,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Add to the queue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 308
   },
   {
    "code": "CTL171",
@@ -3472,7 +4069,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Ask the assistant about this screen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 309
   },
   {
    "code": "CTL172",
@@ -3481,7 +4080,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 310
   },
   {
    "code": "CTL173",
@@ -3490,7 +4091,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Dismiss",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 311
   },
   {
    "code": "CTL174",
@@ -3499,7 +4102,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • File as a request in your inbox, in their",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 312
   },
   {
    "code": "CTL175",
@@ -3508,7 +4113,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Make this a chit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 313
   },
   {
    "code": "CTL176",
@@ -3517,7 +4124,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Record a message",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 314
   },
   {
    "code": "CTL177",
@@ -3526,7 +4135,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Refresh",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 315
   },
   {
    "code": "CTL178",
@@ -3535,7 +4146,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • See exactly what was read, and what the ch",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 316
   },
   {
    "code": "CTL179",
@@ -3544,7 +4157,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • Settings",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 317
   },
   {
    "code": "CTL180",
@@ -3553,7 +4168,9 @@ window.CBSCREENS = {
    "screen": "Work › Intake • copy",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 318
   },
   {
    "code": "CTL181",
@@ -3562,7 +4179,9 @@ window.CBSCREENS = {
    "screen": "Work › Messages • Open the line",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 319
   },
   {
    "code": "CTL182",
@@ -3571,7 +4190,9 @@ window.CBSCREENS = {
    "screen": "Work › Messages • everything, including dealt with",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 320
   },
   {
    "code": "CTL183",
@@ -3580,7 +4201,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Adopt • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 321
   },
   {
    "code": "CTL184",
@@ -3589,7 +4212,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Adopt • Nothing ready yet",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 322
   },
   {
    "code": "CTL187",
@@ -3598,7 +4223,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Add",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 323
   },
   {
    "code": "CTL188",
@@ -3607,7 +4234,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 324
   },
   {
    "code": "CTL189",
@@ -3616,7 +4245,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Co-assists",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 325
   },
   {
    "code": "CTL190",
@@ -3625,7 +4256,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Get the Pi installer",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 326
   },
   {
    "code": "CTL191",
@@ -3634,7 +4267,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Got it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 327
   },
   {
    "code": "CTL192",
@@ -3643,7 +4278,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Open chit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 328
   },
   {
    "code": "CTL193",
@@ -3652,7 +4289,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Reissue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 329
   },
   {
    "code": "CTL194",
@@ -3661,7 +4300,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Reissue raw key (advanced)",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 330
   },
   {
    "code": "CTL195",
@@ -3670,7 +4311,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Retry",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 331
   },
   {
    "code": "CTL196",
@@ -3679,7 +4322,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Send a test document",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 332
   },
   {
    "code": "CTL197",
@@ -3688,7 +4333,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • Send code",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 333
   },
   {
    "code": "CTL198",
@@ -3697,7 +4344,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Connector • What governs this signal — licence · seale",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 334
   },
   {
    "code": "CTL199",
@@ -3706,7 +4355,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Ask the assistant about this screen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 335
   },
   {
    "code": "CTL200",
@@ -3715,7 +4366,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 336
   },
   {
    "code": "CTL201",
@@ -3724,7 +4377,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 337
   },
   {
    "code": "CTL202",
@@ -3733,7 +4388,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Retire",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 338
   },
   {
    "code": "CTL203",
@@ -3742,7 +4399,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Retire and hand over",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 339
   },
   {
    "code": "CTL204",
@@ -3751,7 +4410,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • Save",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 340
   },
   {
    "code": "CTL205",
@@ -3760,7 +4421,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Definitions • test as",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 341
   },
   {
    "code": "CTL206",
@@ -3769,7 +4432,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 342
   },
   {
    "code": "CTL207",
@@ -3778,7 +4443,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • Delete",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 343
   },
   {
    "code": "CTL208",
@@ -3787,7 +4454,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • New folder",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 344
   },
   {
    "code": "CTL209",
@@ -3796,7 +4465,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • Remove from folder (back to mailbox)",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 345
   },
   {
    "code": "CTL210",
@@ -3805,7 +4476,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • Rename",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 346
   },
   {
    "code": "CTL211",
@@ -3814,7 +4487,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • Save rule",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 347
   },
   {
    "code": "CTL212",
@@ -3823,7 +4498,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • What would this catch?",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 348
   },
   {
    "code": "CTL213",
@@ -3832,7 +4509,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Folders • matched through a misspelling",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 349
   },
   {
    "code": "CTL214",
@@ -3841,7 +4520,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Legend • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 350
   },
   {
    "code": "CTL215",
@@ -3850,7 +4531,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 351
   },
   {
    "code": "CTL216",
@@ -3859,7 +4542,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • Close this register",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 352
   },
   {
    "code": "CTL217",
@@ -3868,7 +4553,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • Edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 353
   },
   {
    "code": "CTL218",
@@ -3877,7 +4564,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • End it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 354
   },
   {
    "code": "CTL219",
@@ -3886,7 +4575,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • End →",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 355
   },
   {
    "code": "CTL220",
@@ -3895,7 +4586,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • New",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 356
   },
   {
    "code": "CTL221",
@@ -3904,7 +4597,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • Record it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 357
   },
   {
    "code": "CTL222",
@@ -3913,7 +4608,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • Save change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 358
   },
   {
    "code": "CTL223",
@@ -3922,7 +4619,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • What this waits on",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 359
   },
   {
    "code": "CTL224",
@@ -3931,7 +4630,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Register • the whole order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 360
   },
   {
    "code": "CTL225",
@@ -3940,7 +4641,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Accept this pause",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 361
   },
   {
    "code": "CTL226",
@@ -3949,7 +4652,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 362
   },
   {
    "code": "CTL227",
@@ -3958,7 +4663,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 363
   },
   {
    "code": "CTL228",
@@ -3967,7 +4674,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • End this pause",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 364
   },
   {
    "code": "CTL229",
@@ -3976,7 +4685,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Mark responded",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 365
   },
   {
    "code": "CTL230",
@@ -3985,7 +4696,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Pause",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 366
   },
   {
    "code": "CTL231",
@@ -3994,7 +4707,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Pause the clock",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 367
   },
   {
    "code": "CTL232",
@@ -4003,7 +4718,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Resolve",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 368
   },
   {
    "code": "CTL233",
@@ -4012,7 +4729,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Service • Start the clock",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 369
   },
   {
    "code": "CTL234",
@@ -4021,7 +4740,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Add",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 370
   },
   {
    "code": "CTL235",
@@ -4030,7 +4751,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Add a supply",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 371
   },
   {
    "code": "CTL236",
@@ -4039,7 +4762,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 372
   },
   {
    "code": "CTL237",
@@ -4048,7 +4773,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Record",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 373
   },
   {
    "code": "CTL238",
@@ -4057,7 +4784,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Record a purchase",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 374
   },
   {
    "code": "CTL239",
@@ -4066,7 +4795,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Record it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 375
   },
   {
    "code": "CTL240",
@@ -4075,7 +4806,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • Used some",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 376
   },
   {
    "code": "CTL241",
@@ -4084,7 +4817,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Supplies • another line",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 377
   },
   {
    "code": "CTL242",
@@ -4093,7 +4828,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Accept",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 378
   },
   {
    "code": "CTL243",
@@ -4102,7 +4839,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Add a case for something you just found",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 379
   },
   {
    "code": "CTL244",
@@ -4111,7 +4850,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Add the case",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 380
   },
   {
    "code": "CTL245",
@@ -4120,7 +4861,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 381
   },
   {
    "code": "CTL246",
@@ -4129,7 +4872,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Clear filters",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 382
   },
   {
    "code": "CTL247",
@@ -4138,7 +4883,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Expand all",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 383
   },
   {
    "code": "CTL248",
@@ -4147,7 +4894,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Focus",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 384
   },
   {
    "code": "CTL249",
@@ -4156,7 +4905,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • List",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 385
   },
   {
    "code": "CTL250",
@@ -4165,7 +4916,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Load cases",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 386
   },
   {
    "code": "CTL251",
@@ -4174,7 +4927,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Open the board in its own window",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 387
   },
   {
    "code": "CTL252",
@@ -4183,7 +4938,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Raise",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 388
   },
   {
    "code": "CTL253",
@@ -4192,7 +4949,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Size",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 389
   },
   {
    "code": "CTL254",
@@ -4201,7 +4960,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Start testing",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 390
   },
   {
    "code": "CTL255",
@@ -4210,7 +4971,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • What kind of test",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 391
   },
   {
    "code": "CTL256",
@@ -4219,7 +4982,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Who is doing this run, and how much of it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 392
   },
   {
    "code": "CTL257",
@@ -4228,7 +4993,9 @@ window.CBSCREENS = {
    "screen": "Inside a screen › Testing • Who is testing",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 393
   },
   {
    "code": "CTL263",
@@ -4237,7 +5004,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Clear and read the shop again",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 394
   },
   {
    "code": "CTL264",
@@ -4246,7 +5015,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Clear · Esc",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 395
   },
   {
    "code": "CTL265",
@@ -4255,7 +5026,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 396
   },
   {
    "code": "CTL266",
@@ -4264,7 +5037,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Confirm receipt · F9",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 397
   },
   {
    "code": "CTL267",
@@ -4273,7 +5048,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Count and hand over",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 398
   },
   {
    "code": "CTL268",
@@ -4282,7 +5059,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Day close sheet",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 399
   },
   {
    "code": "CTL269",
@@ -4291,7 +5070,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Discard",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 400
   },
   {
    "code": "CTL270",
@@ -4300,7 +5081,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Everything",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 401
   },
   {
    "code": "CTL271",
@@ -4309,7 +5092,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Freight &amp; costs · F5",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 402
   },
   {
    "code": "CTL272",
@@ -4318,7 +5103,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Hand over",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 403
   },
   {
    "code": "CTL273",
@@ -4327,7 +5114,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Health check",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 404
   },
   {
    "code": "CTL274",
@@ -4336,7 +5125,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Next carton · F8",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 405
   },
   {
    "code": "CTL275",
@@ -4345,7 +5136,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Pack &amp; despatch · F9",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 406
   },
   {
    "code": "CTL276",
@@ -4354,7 +5147,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Park · F6",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 407
   },
   {
    "code": "CTL277",
@@ -4363,7 +5158,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Print",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 408
   },
   {
    "code": "CTL278",
@@ -4372,7 +5169,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Print a test slip",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 409
   },
   {
    "code": "CTL279",
@@ -4381,7 +5180,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Save",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 410
   },
   {
    "code": "CTL280",
@@ -4390,7 +5191,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Save &amp; print · F9",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 411
   },
   {
    "code": "CTL281",
@@ -4399,7 +5202,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Send now",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 412
   },
   {
    "code": "CTL282",
@@ -4408,7 +5213,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Show every hidden key again",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 413
   },
   {
    "code": "CTL283",
@@ -4417,7 +5224,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • Today · on this device",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 414
   },
   {
    "code": "CTL284",
@@ -4426,7 +5235,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • bills, the shop screen, settings",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 415
   },
   {
    "code": "CTL285",
@@ -4435,7 +5246,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • bring this bill back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 416
   },
   {
    "code": "CTL286",
@@ -4444,7 +5257,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • not going",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 417
   },
   {
    "code": "CTL287",
@@ -4453,7 +5268,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • not on this counter",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 418
   },
   {
    "code": "CTL288",
@@ -4462,7 +5279,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • one fewer",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 419
   },
   {
    "code": "CTL289",
@@ -4471,7 +5290,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • one more",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 420
   },
   {
    "code": "CTL290",
@@ -4480,7 +5301,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • print",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 421
   },
   {
    "code": "CTL291",
@@ -4489,7 +5312,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • put back",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 422
   },
   {
    "code": "CTL292",
@@ -4498,7 +5323,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • remove",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 423
   },
   {
    "code": "CTL293",
@@ -4507,7 +5334,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • remove this part",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 424
   },
   {
    "code": "CTL294",
@@ -4516,7 +5345,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • speak (the browser listens",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 425
   },
   {
    "code": "CTL295",
@@ -4525,7 +5356,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • speak the number",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 426
   },
   {
    "code": "CTL296",
@@ -4534,7 +5367,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • take part of this bill in this way, and th",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 427
   },
   {
    "code": "CTL297",
@@ -4543,7 +5378,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • the GST rate on their invoice",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 428
   },
   {
    "code": "CTL298",
@@ -4552,7 +5389,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • what are you doing?",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 429
   },
   {
    "code": "CTL299",
@@ -4561,7 +5400,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • what do they call it?",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 430
   },
   {
    "code": "CTL300",
@@ -4570,7 +5411,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Counter • who is signed in at this counter (F7 to ha",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 431
   },
   {
    "code": "CTL301",
@@ -4579,7 +5422,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Storefront • Change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 432
   },
   {
    "code": "CTL302",
@@ -4588,7 +5433,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Storefront • Done",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 433
   },
   {
    "code": "CTL303",
@@ -4597,7 +5444,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Storefront • Order this combination →",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 434
   },
   {
    "code": "CTL304",
@@ -4606,7 +5455,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Storefront • Place order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 435
   },
   {
    "code": "CTL305",
@@ -4615,7 +5466,9 @@ window.CBSCREENS = {
    "screen": "Its own app › Storefront • Send code",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 436
   },
   {
    "code": "CTL306",
@@ -4624,7 +5477,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • AI drafts a trade document from this order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 437
   },
   {
    "code": "CTL307",
@@ -4633,7 +5488,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • AI turns your description into line items",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 438
   },
   {
    "code": "CTL308",
@@ -4642,7 +5499,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • API base not set",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 439
   },
   {
    "code": "CTL309",
@@ -4651,7 +5510,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Accept &amp; file on rail",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 440
   },
   {
    "code": "CTL310",
@@ -4660,7 +5521,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Accept again",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 441
   },
   {
    "code": "CTL311",
@@ -4669,7 +5532,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Activity",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 442
   },
   {
    "code": "CTL312",
@@ -4678,7 +5543,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Add",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 443
   },
   {
    "code": "CTL313",
@@ -4687,7 +5554,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Add everything to the cart",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 444
   },
   {
    "code": "CTL314",
@@ -4696,7 +5565,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Add id",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 445
   },
   {
    "code": "CTL315",
@@ -4705,7 +5576,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Add product",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 446
   },
   {
    "code": "CTL316",
@@ -4714,7 +5587,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Add these columns",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 447
   },
   {
    "code": "CTL317",
@@ -4723,7 +5598,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • All",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 448
   },
   {
    "code": "CTL318",
@@ -4732,7 +5609,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Answer &amp; publish",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 449
   },
   {
    "code": "CTL319",
@@ -4741,7 +5620,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Apply",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 450
   },
   {
    "code": "CTL320",
@@ -4750,7 +5631,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Ask",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 451
   },
   {
    "code": "CTL321",
@@ -4759,7 +5642,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Ask AI",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 452
   },
   {
    "code": "CTL322",
@@ -4768,7 +5653,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Assign",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 453
   },
   {
    "code": "CTL323",
@@ -4777,7 +5664,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Attach files",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 454
   },
   {
    "code": "CTL324",
@@ -4786,7 +5675,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Attach this slab",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 455
   },
   {
    "code": "CTL325",
@@ -4795,7 +5686,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Attach this structure",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 456
   },
   {
    "code": "CTL326",
@@ -4804,7 +5697,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Attach to this item",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 457
   },
   {
    "code": "CTL327",
@@ -4813,7 +5708,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Availability",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 458
   },
   {
    "code": "CTL328",
@@ -4822,7 +5719,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Available",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 459
   },
   {
    "code": "CTL329",
@@ -4831,7 +5730,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Back to all of $",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 460
   },
   {
    "code": "CTL330",
@@ -4840,7 +5741,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • CMDB",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 461
   },
   {
    "code": "CTL331",
@@ -4849,7 +5752,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Cancel",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 462
   },
   {
    "code": "CTL332",
@@ -4858,7 +5763,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Cancel my copy too",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 463
   },
   {
    "code": "CTL333",
@@ -4867,7 +5774,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 464
   },
   {
    "code": "CTL334",
@@ -4876,7 +5785,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Categorise",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 465
   },
   {
    "code": "CTL335",
@@ -4885,7 +5796,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 466
   },
   {
    "code": "CTL336",
@@ -4894,7 +5807,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Check",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 467
   },
   {
    "code": "CTL337",
@@ -4903,7 +5818,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Check compliance",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 468
   },
   {
    "code": "CTL338",
@@ -4912,7 +5829,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Clear",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 469
   },
   {
    "code": "CTL339",
@@ -4921,7 +5840,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Clear all",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 470
   },
   {
    "code": "CTL340",
@@ -4930,7 +5851,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Clear types",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 471
   },
   {
    "code": "CTL341",
@@ -4939,7 +5862,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Close",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 472
   },
   {
    "code": "CTL342",
@@ -4948,7 +5873,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Continue to register",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 473
   },
   {
    "code": "CTL343",
@@ -4957,7 +5884,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Create",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 474
   },
   {
    "code": "CTL344",
@@ -4966,7 +5895,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Create one",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 475
   },
   {
    "code": "CTL345",
@@ -4975,7 +5906,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Delete",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 476
   },
   {
    "code": "CTL346",
@@ -4984,7 +5917,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Delete (drafts → trash",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 477
   },
   {
    "code": "CTL347",
@@ -4993,7 +5928,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Delete forever",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 478
   },
   {
    "code": "CTL348",
@@ -5002,7 +5939,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Discard draft",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 479
   },
   {
    "code": "CTL349",
@@ -5011,7 +5950,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Dispute",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 480
   },
   {
    "code": "CTL350",
@@ -5020,7 +5961,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Disputed only",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 481
   },
   {
    "code": "CTL351",
@@ -5029,7 +5972,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Done",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 482
   },
   {
    "code": "CTL352",
@@ -5038,7 +5983,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Download the desktop counter",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 483
   },
   {
    "code": "CTL353",
@@ -5047,7 +5994,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Draft doc",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 484
   },
   {
    "code": "CTL354",
@@ -5056,7 +6005,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Duty",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 485
   },
   {
    "code": "CTL355",
@@ -5065,7 +6016,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Fill",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 486
   },
   {
    "code": "CTL356",
@@ -5074,7 +6027,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Filter",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 487
   },
   {
    "code": "CTL357",
@@ -5083,7 +6038,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Find a product",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 488
   },
   {
    "code": "CTL358",
@@ -5092,7 +6049,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Flip role (To/CC/For)",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 489
   },
   {
    "code": "CTL359",
@@ -5101,7 +6060,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Forward",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 490
   },
   {
    "code": "CTL360",
@@ -5110,7 +6071,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Get started",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 491
   },
   {
    "code": "CTL361",
@@ -5119,7 +6082,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Group sum",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 492
   },
   {
    "code": "CTL362",
@@ -5128,7 +6093,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Have a shop link?",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 493
   },
   {
    "code": "CTL363",
@@ -5137,7 +6104,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Import",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 494
   },
   {
    "code": "CTL364",
@@ -5146,7 +6115,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Internal",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 495
   },
   {
    "code": "CTL365",
@@ -5155,7 +6126,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Internal priority",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 496
   },
   {
    "code": "CTL366",
@@ -5164,7 +6137,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Laptop",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 497
   },
   {
    "code": "CTL367",
@@ -5173,7 +6148,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Lean",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 498
   },
   {
    "code": "CTL368",
@@ -5182,7 +6159,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Lines",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 499
   },
   {
    "code": "CTL369",
@@ -5191,7 +6170,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Load more",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 500
   },
   {
    "code": "CTL370",
@@ -5200,7 +6181,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Log",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 501
   },
   {
    "code": "CTL371",
@@ -5209,7 +6192,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Mark paid",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 502
   },
   {
    "code": "CTL372",
@@ -5218,7 +6203,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Messages",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 503
   },
   {
    "code": "CTL373",
@@ -5227,7 +6214,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Move to Trash",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 504
   },
   {
    "code": "CTL374",
@@ -5236,7 +6225,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • My Task",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 505
   },
   {
    "code": "CTL375",
@@ -5245,7 +6236,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Offer",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 506
   },
   {
    "code": "CTL376",
@@ -5254,7 +6247,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Open",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 507
   },
   {
    "code": "CTL377",
@@ -5263,7 +6258,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Open in compose",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 508
   },
   {
    "code": "CTL378",
@@ -5272,7 +6269,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Open the shop screen",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 509
   },
   {
    "code": "CTL379",
@@ -5281,7 +6280,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • PDF",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 510
   },
   {
    "code": "CTL380",
@@ -5290,7 +6291,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Pair a TV or another device",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 511
   },
   {
    "code": "CTL381",
@@ -5299,7 +6302,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Preferred",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 512
   },
   {
    "code": "CTL382",
@@ -5308,7 +6313,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Previous",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 513
   },
   {
    "code": "CTL383",
@@ -5317,7 +6324,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Print label",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 514
   },
   {
    "code": "CTL384",
@@ -5326,7 +6335,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • RAID report — governance overview",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 515
   },
   {
    "code": "CTL385",
@@ -5335,7 +6346,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Record",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 516
   },
   {
    "code": "CTL386",
@@ -5344,7 +6357,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Register",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 517
   },
   {
    "code": "CTL387",
@@ -5353,7 +6368,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Remove",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 518
   },
   {
    "code": "CTL388",
@@ -5362,7 +6379,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Rename",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 519
   },
   {
    "code": "CTL389",
@@ -5371,7 +6390,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Report it",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 520
   },
   {
    "code": "CTL390",
@@ -5380,7 +6401,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Required certificates",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 521
   },
   {
    "code": "CTL391",
@@ -5389,7 +6412,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Restore",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 522
   },
   {
    "code": "CTL392",
@@ -5398,7 +6423,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Resume &amp; edit",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 523
   },
   {
    "code": "CTL393",
@@ -5407,7 +6434,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Resume compose",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 524
   },
   {
    "code": "CTL394",
@@ -5416,7 +6445,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Rows",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 525
   },
   {
    "code": "CTL395",
@@ -5425,7 +6456,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Save",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 526
   },
   {
    "code": "CTL396",
@@ -5434,7 +6467,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Save as PDF",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 527
   },
   {
    "code": "CTL397",
@@ -5443,7 +6478,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Save grouping",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 528
   },
   {
    "code": "CTL398",
@@ -5452,7 +6489,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Save to my catalogue",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 529
   },
   {
    "code": "CTL399",
@@ -5461,7 +6500,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Select",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 530
   },
   {
    "code": "CTL400",
@@ -5470,7 +6511,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Select everything shown",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 531
   },
   {
    "code": "CTL401",
@@ -5479,7 +6522,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Select records",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 532
   },
   {
    "code": "CTL402",
@@ -5488,7 +6533,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Send question",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 533
   },
   {
    "code": "CTL403",
@@ -5497,7 +6544,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Send this to the help desk",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 534
   },
   {
    "code": "CTL404",
@@ -5506,7 +6555,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Send to books",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 535
   },
   {
    "code": "CTL405",
@@ -5515,7 +6566,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Set status",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 536
   },
   {
    "code": "CTL406",
@@ -5524,7 +6577,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Show QR",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 537
   },
   {
    "code": "CTL407",
@@ -5533,7 +6588,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Show the search box, filter chips and the",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 538
   },
   {
    "code": "CTL408",
@@ -5542,7 +6599,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Sign out",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 539
   },
   {
    "code": "CTL409",
@@ -5551,7 +6610,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Sort order",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 540
   },
   {
    "code": "CTL410",
@@ -5560,7 +6621,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Speak status changes aloud",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 541
   },
   {
    "code": "CTL411",
@@ -5569,7 +6632,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Spec",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 542
   },
   {
    "code": "CTL412",
@@ -5578,7 +6643,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Status",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 543
   },
   {
    "code": "CTL413",
@@ -5587,7 +6654,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Status ▾",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 544
   },
   {
    "code": "CTL414",
@@ -5596,7 +6665,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Sum",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 545
   },
   {
    "code": "CTL415",
@@ -5605,7 +6676,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Suppliers",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 546
   },
   {
    "code": "CTL416",
@@ -5614,7 +6687,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Tabs",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 547
   },
   {
    "code": "CTL417",
@@ -5623,7 +6698,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Tailor one",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 548
   },
   {
    "code": "CTL418",
@@ -5632,7 +6709,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Test lab",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 549
   },
   {
    "code": "CTL419",
@@ -5641,7 +6720,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Things we sell",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 550
   },
   {
    "code": "CTL420",
@@ -5650,7 +6731,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Unarchive",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 551
   },
   {
    "code": "CTL421",
@@ -5659,7 +6742,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Unassigned",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 552
   },
   {
    "code": "CTL422",
@@ -5668,7 +6753,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Unread",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 553
   },
   {
    "code": "CTL423",
@@ -5677,7 +6764,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Use the defaults for this item",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 554
   },
   {
    "code": "CTL424",
@@ -5686,7 +6775,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • View saved",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 555
   },
   {
    "code": "CTL425",
@@ -5695,7 +6786,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • What we serve",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 556
   },
   {
    "code": "CTL426",
@@ -5704,7 +6797,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • Withdraw",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 557
   },
   {
    "code": "CTL427",
@@ -5713,7 +6808,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • change",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 558
   },
   {
    "code": "CTL428",
@@ -5722,7 +6819,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • change item",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 559
   },
   {
    "code": "CTL429",
@@ -5731,7 +6830,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • contact the team",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 560
   },
   {
    "code": "CTL430",
@@ -5740,7 +6841,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • include",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 561
   },
   {
    "code": "CTL431",
@@ -5749,7 +6852,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • json ▾",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 562
   },
   {
    "code": "CTL432",
@@ -5758,7 +6863,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • no longer live",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 563
   },
   {
    "code": "CTL433",
@@ -5767,7 +6874,9 @@ window.CBSCREENS = {
    "screen": "The app itself › app.html • use local API",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 564
   },
   {
    "code": "CAT005",
@@ -5776,7 +6885,9 @@ window.CBSCREENS = {
    "screen": "Product detail",
    "nav": "catalogue-product",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "catalogue",
+   "walk": 17
   },
   {
    "code": "BUS006",
@@ -5785,7 +6896,9 @@ window.CBSCREENS = {
    "screen": "Connector cockpit (ERP)",
    "nav": "connector-erp",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "coassists",
+   "walk": 30
   },
   {
    "code": "BUS007",
@@ -5794,7 +6907,9 @@ window.CBSCREENS = {
    "screen": "Connector cockpit (IoT)",
    "nav": "connector-iot",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "coassists",
+   "walk": 31
   },
   {
    "code": "BUS008",
@@ -5803,7 +6918,9 @@ window.CBSCREENS = {
    "screen": "Co-assist cockpit",
    "nav": "coassist-actor",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "coassists",
+   "walk": 32
   },
   {
    "code": "DTL006",
@@ -5812,7 +6929,9 @@ window.CBSCREENS = {
    "screen": "Chit detail (design 2)",
    "nav": "chit2-detail",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "chit-detail",
+   "walk": 5
   },
   {
    "code": "MSG001",
@@ -5821,7 +6940,9 @@ window.CBSCREENS = {
    "screen": "Chit messages",
    "nav": "chit-messages",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "chit-detail",
+   "walk": 6
   },
   {
    "code": "PNL001",
@@ -5830,7 +6951,9 @@ window.CBSCREENS = {
    "screen": "Assistant",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 565
   },
   {
    "code": "PNL002",
@@ -5839,7 +6962,9 @@ window.CBSCREENS = {
    "screen": "Floating cart",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 566
   },
   {
    "code": "PNL003",
@@ -5848,7 +6973,9 @@ window.CBSCREENS = {
    "screen": "The register (CMDB)",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 567
   },
   {
    "code": "PNL004",
@@ -5857,7 +6984,9 @@ window.CBSCREENS = {
    "screen": "Test lab",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 568
   },
   {
    "code": "PNL005",
@@ -5866,7 +6995,9 @@ window.CBSCREENS = {
    "screen": "Line card",
    "nav": null,
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 569
   },
   {
    "code": "BUS009",
@@ -5875,7 +7006,9 @@ window.CBSCREENS = {
    "screen": "Supplier detail",
    "nav": "supplier-detail",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "suppliers",
+   "walk": 24
   },
   {
    "code": "BUS010",
@@ -5884,7 +7017,9 @@ window.CBSCREENS = {
    "screen": "Customer detail",
    "nav": "customer-detail",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "customers",
+   "walk": 22
   },
   {
    "code": "BUS011",
@@ -5893,7 +7028,9 @@ window.CBSCREENS = {
    "screen": "Find a product",
    "nav": "supplier-find",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "suppliers",
+   "walk": 25
   },
   {
    "code": "BUS012",
@@ -5902,7 +7039,9 @@ window.CBSCREENS = {
    "screen": "Required certificates",
    "nav": "supplier-certs",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "suppliers",
+   "walk": 26
   },
   {
    "code": "DTL007",
@@ -5911,7 +7050,42 @@ window.CBSCREENS = {
    "screen": "Chit input",
    "nav": "chit-input",
    "cases": 0,
-   "since": "2026-09-12"
+   "since": "2026-09-12",
+   "reached_from": "chit-detail",
+   "walk": 7
+  },
+  {
+   "code": "CTL434",
+   "path": "Control › Inside a screen › Testing • Looking at it",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Looking at it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 570
+  },
+  {
+   "code": "CTL435",
+   "path": "Control › Inside a screen › Testing • Re-grade it",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Re-grade it",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 571
+  },
+  {
+   "code": "CTL436",
+   "path": "Control › Inside a screen › Testing • Record",
+   "group": "Control",
+   "screen": "Inside a screen › Testing • Record",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12",
+   "reached_from": null,
+   "walk": 572
   }
  ],
  "byFn": {
