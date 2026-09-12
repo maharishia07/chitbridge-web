@@ -2188,6 +2188,35 @@ async function paintReport(){
         + '<dt>Levels</dt><dd>' + esc((b.layers || []).join(', ') || '\u2014') + '</dd>'
         + '<dt>Build</dt><dd>' + esc((b.builds || []).join(', ') || 'not recorded') + '</dd>'
         + '</dl>';
+    } else if (s.id === '1b') {
+      /**
+       * ── ⭐⭐⭐ WHO DID WHAT ────────────────────────────────────────────────────────────────────────────────
+       *
+       * Athi, 2026-09-13: *"if 10 people are doing testing using 10 different ids, we should get all report
+       * together? per id?"* Both: one board for the entity, and a row per person, because every result
+       * already carries the identity that recorded it.
+       *
+       * ⚠️ THE COUNT IS CASES, NOT KEYPRESSES — the latest word per case, the same rule the totals use. A
+       * tester who ran one case five times has tested one case, and a leaderboard that says five is a
+       * leaderboard that rewards pressing the button again.
+       */
+      var people = b.people || [];
+      if (!people.length) {
+        inner = '<p class="muted">Nobody has recorded a result yet.</p>';
+      } else {
+        inner = '<table class="tbl"><tr><th>Tester</th><th class="n">Cases</th><th class="n">Passed</th>'
+          + '<th class="n">Failed</th><th class="n">Blocked</th><th>Last recorded</th></tr>'
+          + people.map(function (p) {
+            return '<tr><td>' + esc(p.tester) + '</td>'
+              + '<td class="n">' + p.recorded + '</td>'
+              + '<td class="n">' + (p.passed || '\u2014') + '</td>'
+              + '<td class="n">' + (p.failed || '\u2014') + '</td>'
+              + '<td class="n">' + (p.blocked || '\u2014') + '</td>'
+              + '<td>' + (p.last_at ? new Date(p.last_at).toLocaleString() : '\u2014') + '</td></tr>';
+          }).join('')
+          + '</table>'
+          + '<p class="muted">' + esc(b.note || '') + '</p>';
+      }
     } else if (s.id === '2') {
       var t = b.totals || {};
       inner = '<div class="big-n">'
