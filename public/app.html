@@ -2306,7 +2306,12 @@ function stampScreenHeading(){
   try{
     var body = document.getElementById('mainbody');
     if (!body || body.querySelector('[data-testid="screen-code"]')) return;
-    var info = screenInfo();
+    /**
+     * ⚠️⚠️ THE SCREEN'S OWN CODE, NOT THE SUB-VIEW'S. Asking screenInfo() plainly answers with the FINE screen,
+     * so with a chit open every list heading read "DTL001 📥 Task" — the detail's code on the list's title.
+     * Two panes are on screen at once here and one answer cannot be right for both.
+     */
+    var info = screenInfo(true);
     if (!info) return;
     /* the first thing that reads as this screen's title: the crumb, a section head, or a real heading */
     var head = body.querySelector('.sec, h1, h2, b');
@@ -2344,13 +2349,46 @@ function stampScreenHeading(){
 }
 
 /** the register's row for wherever we are: code, icon and name, or null when this is not a registered screen */
-function screenInfo(){
+function screenInfo(navOnly){
   try {
-    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
     var U = (typeof UI !== 'undefined') ? UI : {};
     var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
+    if (navOnly) return reg[U.nav] || null;
+    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
     return reg[fine] || reg[U.nav] || null;
   } catch (_) { return null; }
+}
+
+/**
+ * ── ⭐⭐⭐ THE DETAIL NAMES ITSELF, IN ITS OWN TITLE ──────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"it has to be on the top left corner for the detail page, so even if we define 100s of
+ * detail screens each one can have its own name."*
+ *
+ * ⚠️⚠️ THE FIRST ATTEMPT PUT IT IN THE WRONG NODE AND I SHIPPED IT WITHOUT OPENING A CHIT. It inserted a DIV as
+ * the first child of #detailpane. Parse checks, guards and dup-functions were all green — none of them can see
+ * a runtime failure, and the one check that would have caught it was clicking a chit, with a browser open in
+ * front of me the whole time.
+ *
+ * ⭐ It goes in `.dt` — the detail's own title, the same shape as the screen heading stamp — so the pane's
+ * child structure is untouched.
+ */
+function stampDetailTitle(){
+  try{
+    var dt = document.querySelector('#detailpane .dh .dt');
+    if (!dt || dt.querySelector('[data-testid="detail-code"]')) return;
+    var info = screenInfo();
+    if (!info) return;
+    var tag = document.createElement('span');
+    tag.setAttribute('data-testid', 'detail-code');
+    tag.textContent = info.code;
+    tag.title = tx('The code for this detail screen — quote it instead of describing it');
+    tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+      + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
+      + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
+      + 'margin-inline-end:7px;vertical-align:middle';
+    dt.insertBefore(tag, dt.firstChild);
+  }catch(e){}
 }
 
 function screenCodeHTML(){
@@ -4441,6 +4479,21 @@ function bgRenderApp(){
      guard on the pane painter was bypassed (innerHTML probe, 2026-09-04). Same rule: the list may refresh, the
      person's work-in-progress may not. */
   if(typeof UI!=='undefined' && UI.nav==='catalogue' && (UI.prodMode==='new' || UI.prodMode==='edit')) return;
+  /**
+   * ⚠⚠⚠ AN OPEN CHIT IS WORK IN PROGRESS TOO, AND THIS GUARD DID NOT COVER IT. Athi, 2026-09-12: *"it is
+   * broken now, couldn't load detail page."*
+   *
+   * A background refresh rebuilt the shell, which paints #detailpane as a SKELETON, and nothing ever re-filled
+   * it: UI.detail stayed set, renderDetail() kept returning its 13,632 characters, and the pane sat at 43 for
+   * ever. Reading a chit, you lost it — to a /me fetch, a capability resolving, or the poll.
+   *
+   * ⭐ PROVEN BY CONTROL, NOT BY GUESS. I first blamed my own screen-code stamp; removing the stamp entirely
+   * and calling bgRenderApp() alone reproduced it exactly. The stamp was innocent and this was pre-existing.
+   * ⚠ The trade is the one the guards above already make: while a chit is open the list does not repaint. The
+   * comment at the top of this function is the rule — *the list may refresh, the person's work-in-progress may
+   * not* — and a chit somebody is reading is exactly that.
+   */
+  if(typeof UI!=='undefined' && UI.detail) return;
   var ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && ae.closest && ae.closest('#detailpane')) return;
   var mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
   var lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
@@ -4714,7 +4767,13 @@ function _renderApp(){
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
-  try { stampScreenHeading(); } catch(_) {}
+  /**
+   * ⚠️ BOTH STAMPS RUN HERE, AND THE DETAIL ONE ALSO RUNS AFTER THE PANE PAINTS. An observer over the whole app
+   * was the first idea and it is too big a hammer for this: it fires on every DOM change in the product to
+   * place one label. `stampDetailTitle()` is cheap, guarded against double-stamping, and called from the two
+   * places a detail can appear.
+   */
+  try { stampScreenHeading(); stampDetailTitle(); } catch(_) {}
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
@@ -13884,7 +13943,7 @@ async function openChit(id, silent){
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
 }
-function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();}}
+function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();} try{stampDetailTitle();}catch(_){}}
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
 /**
  * ⭐⭐ DESIGN 1 AND DESIGN 2 ARE ALTERNATIVES IN THE SAME SLOT. Athi, 2026-08-23: *"design 2 and design 1 can be
