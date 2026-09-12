@@ -2803,6 +2803,7 @@ function screenCasesFollow() {
     CBTEST.popupFor = t.code;
     CBTEST.writeFor = { code: t.code, name: t.name };
     testAreaOpen(!!(testScreenTally(t.code) || {}).total);
+    testDiagMark();
     screenCasesPaint();
   } catch (e) {}
 }
@@ -2842,6 +2843,7 @@ async function screenCasesPopup(code, name) {
   CBTEST.writeFor = { code: code, name: name };
   /* ⭐ the one place the default belongs: opening it */
   testAreaOpen(!!(testScreenTally(code) || {}).total);
+  testDiagMark();
   screenCasesPaint();
   /* ⚠️ the board may not be read yet — a person can be on a screen having never opened the lab */
   try {
@@ -2868,6 +2870,86 @@ async function screenCasesPopup(code, name) {
  * ⚠️ THE COUNTS ARE ON THE TABS, so nothing is hidden without a number — the same rule as the case filter.
  * A tab reading "Raised 2" is an invitation; an unlabelled tab is a thing nobody presses.
  */
+/**
+ * ── ⭐⭐⭐ WHAT THIS SCREEN COST ─────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"we may have to see how to bring the types of testing in this window — for example
+ * speed test, how the API is responding, how many round trips it makes… kind of diagnostic tool, so we can
+ * take the required action."*
+ *
+ * ⭐⭐ NOTHING NEW IS MEASURED. `CBCALLS` already holds the last forty API calls with their method, path,
+ * status, correlation id and duration — it was built for the Spec overlay and only had to be switched on
+ * for test mode as well. A second timer would be a second set of numbers to reconcile.
+ *
+ * ⚠️⚠️ ROUND TRIPS ARE THE NUMBER THAT MATTERS HERE, not milliseconds. Measured 2026-09-08: Railway (sfo) to
+ * Supabase (Mumbai) is 1.4–2.4 s PER CALL, four database round trips inside each one. So a screen making
+ * six calls is not slightly slower than one making two — it is a different screen to use, and the count is
+ * the thing a person can actually act on.
+ *
+ * ⚠️ SINCE THE PANEL OPENED, not since the tab loaded. A diagnostic that includes the sign-in and the boot
+ * says nothing about the screen you are standing on.
+ */
+function testDiagMark() { CBTEST._diagFrom = (window.CBCALLS || []).length ? (CBCALLS[0].rid || null) : null;
+  CBTEST._diagAt = Date.now(); }
+
+function testDiagHTML() {
+  var all = (window.CBCALLS || []).slice();
+  if (!all.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+      + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
+      + 'appear here \u2014 the log starts when test mode goes on.</div>';
+  }
+  /* CBCALLS is newest-first; take everything above the mark, which is where the panel opened */
+  var mine = [];
+  for (var i = 0; i < all.length; i++) {
+    if (CBTEST._diagFrom && all[i].rid === CBTEST._diagFrom) break;
+    mine.push(all[i]);
+  }
+  if (!mine.length) mine = all.slice(0, 1);
+
+  var total = mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
+  var slow = mine.slice().sort(function (a, b) { return (b.ms || 0) - (a.ms || 0); })[0] || {};
+  var bad = mine.filter(function (c) { return (c.status || 0) >= 400; });
+
+  /* ⭐ the reading in words first: a table of numbers is a thing to interpret, a sentence is a thing to act on */
+  var verdict = mine.length >= 6 ? 'That is a lot of round trips for one screen.'
+            : mine.length >= 3 ? 'Three or more round trips \u2014 worth asking whether they can be one.'
+            : 'Few enough round trips.';
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
+    + '<b>' + mine.length + '</b> API call(s) since this panel opened \u00b7 <b>' + total + ' ms</b> in total'
+    + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
+    + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
+    + '<br>' + verdict
+    + '<br>\u26a0\ufe0f Each call is roughly 1.4\u20132.4 s to the database and back, so the COUNT matters '
+    + 'more than the milliseconds.</div>';
+
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Call</th>'
+    + '<th style="text-align:start;padding:3px 6px">Path</th>'
+    + '<th style="text-align:end;padding:3px 6px">ms</th>'
+    + '<th style="text-align:end;padding:3px 6px">Status</th></tr>';
+  h += mine.map(function (c) {
+    var ok = (c.status || 0) < 400;
+    return '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+      + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1)">' + testEsc(c.key) + '</code></td>'
+      + '<td style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey-2);max-width:16em;'
+      +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + testEsc(c.path || '') + '">'
+      +   testEsc(c.m + ' ' + (c.path || '')) + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:' + ((c.ms || 0) > 1500 ? '700' : '400')
+      +   ';color:' + ((c.ms || 0) > 1500 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + (c.ms || 0) + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;color:'
+      +   (ok ? 'var(--ok-2,#1B7F4B)' : 'var(--disp,#B3261E)') + '">' + (c.status || '\u2014') + '</td>'
+      + '</tr>';
+  }).join('');
+  /* ⚠ the correlation id is the thing that joins this to the server's own line — quoted, never invented */
+  h += '</table>'
+    + '<div style="font-size:var(--fs-1);color:var(--note);padding:7px 0 0">'
+    + 'Quote a call\u2019s id when reporting it: ' + testEsc((mine[0] && mine[0].rid) || '\u2014')
+    + ' \u2014 the server logged the same one.</div>';
+  return h;
+}
+
 function testAreaGet() {
   try { return localStorage.getItem('cb_case_area') || ''; } catch (_) { return ''; }
 }
@@ -2964,9 +3046,11 @@ function screenCasesPaint() {
     + seg('write', 'Write', null)
     + seg('cases', 'Cases', t.total)
     + seg('raised', 'Raised', known ? (inc + req) : null)
+    + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
     + '</div>';
 
-  var body = area === 'write' ? testCaseFormHTML()
+  var body = area === 'diag' ? testDiagHTML()
+           : area === 'write' ? testCaseFormHTML()
            : area === 'raised' ? (testRaisedHTML(code)
              || '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">Nothing has been raised '
                + 'on this screen.</div>')

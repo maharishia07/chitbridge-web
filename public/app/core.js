@@ -583,7 +583,17 @@ async function api(key, {params, query, body}={}){
      */
     const _out = unwrap(res.status===204?null:await res.json());
     try {
-      if (typeof specOn === 'function' && specOn()) {
+      /**
+       * ⭐ TEST MODE RECORDS TOO. Athi, 2026-09-13: *"how the API is responding, how many round trips it
+       * makes… kind of diagnostic tool, so we can take the required action."* The log this needs already
+       * existed for the Spec overlay — the same forty calls, the same shape. It only had to be switched on
+       * for the other reader. [[feedback-search-before-you-build]]
+       * ⚠️ Still OFF by default: with neither mode on this is one boolean and nothing is kept, so no
+       * response body sits around in a tab that is merely open.
+       */
+      var _rec = (typeof specOn === 'function' && specOn())
+        || (typeof CBTEST !== 'undefined' && CBTEST && CBTEST.on);
+      if (_rec) {
         window.CBCALLS = window.CBCALLS || [];
         CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
