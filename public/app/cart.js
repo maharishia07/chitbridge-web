@@ -122,18 +122,94 @@
    * can delete a line is the bug this whole change exists to end.
    */
   var QTY_TOL = 0.01;
-  function snapWhole(n, o) {
-    var tol = (o && o.tol != null) ? Number(o.tol) : QTY_TOL;
-    if (!isFinite(tol) || tol <= 0) return n;
-    var w = Math.round(n);
+
+  /**
+   * ── ⭐⭐⭐ ONE PLACE: THE UNITS THIS ENTITY USES, AND WHAT EACH OF THEM ALLOWS ─────────────────
+   *
+   * Athi, 2026-09-12: *"we have selection, what are the units applied for this entity. for each entity we can
+   * set decimal allowed, if so tollerance and min qty. that will be perfect. and each product obeys that."*
+   *
+   * ⭐⭐ THE CATALOGUE ALREADY CHOOSES ITS UNITS — `face.units` — so the answer hangs off a list that exists,
+   * and no product is ever asked. Three fields per unit, and the SECOND is the gate:
+   *
+   *     decimals   may this unit be halved at all
+   *     tol        how far from a whole number still counts as that whole number   (only if decimals)
+   *     min_qty    the quantity from which the margin applies at all               (only if decimals)
+   *
+   * ⚠️⚠️ MIN_QTY IS THE HALF THAT MAKES A MARGIN SAFE, and it is the half I had missed. Ten grams on a kilo
+   * is 1%; the same ten grams on a fifty-gram sale is 20%. Below `min_qty` a number means itself, exactly.
+   *
+   * ⚠️ AN UNDECLARED UNIT IS NOT A REFUSAL. It falls back to the kind: Weight, Volume, Length and Area take
+   * decimals, Count and Pack do not, and a unit in no kind at all — "gunny" — keeps whole numbers rather than
+   * being guessed into a grain. That way a catalogue that has never opened the screen still behaves sensibly.
+   *
+   * ⭐ The shape is lib/defaults.js wearing a fourth coat: *the catalogue declares it, and we know which
+   * answered.* ⚠️ Unlike unit or pricing model, there is deliberately NO per-product override — Athi:
+   * *"each product obeys that"*. One place to set it, one place to look when a number surprises somebody.
+   */
+  function unitRule(unit, shop) {
+    var declared = (shop && shop.unit_rules && typeof shop.unit_rules === 'object' && unit)
+      ? (shop.unit_rules[String(unit)] || null) : null;
+    /**
+     * ⭐ DEFAULT YES — IN THE SCREEN, NOT HERE (Athi, 2026-09-12: *"decimal allowed, default yes"*).
+     *
+     * ⚠️⚠️ THE TWO PLACES THAT DEFAULT COULD LIVE ARE NOT THE SAME THING, and putting it here broke an
+     * authored case that predates this whole thread: *"a decimal is floored — 2.7 tins is not a thing"*. A
+     * default in the SETUP SCREEN is a suggestion a person sees and saves; a default in the ENGINE silently
+     * changes every catalogue that has never opened the screen, including ones nobody is looking at.
+     *
+     * ⭐ So the screen pre-ticks Decimal allowed for every unit and WRITES it when the shop saves — his intent,
+     * explicitly recorded — while an unconfigured catalogue keeps behaving as it always has: the unit's kind
+     * decides, and 2.7 tins is still two tins.
+     */
+    /**
+     * ⭐⭐ A COUNT CANNOT BE HALF, AND THAT IS A RULE RATHER THAN A PREFERENCE (Athi, 2026-09-12: *"no, the
+     * count cannot be half"*). So a unit whose kind is Count or Pack answers NO even if a declaration says
+     * otherwise — the screen should not offer the switch at all, and the engine does not trust that it didn't.
+     * ⚠️ A setting the data can hold but the world cannot is how a bill ends up saying 2.5 boxes.
+     *
+     * ⭐ For a unit that CAN be halved, undeclared means yes (*"decimal allowed, default yes"*) — the screen
+     * pre-ticks it and writes it on save, and an unopened catalogue behaves the same way.
+     * ⚠️ A unit in no kind at all — "gunny" — stays whole: it is not known to be divisible, and guessing
+     * that it is would invent a grain nobody declared.
+     */
+    if (isDiscrete(unit)) return { decimals: false, band: 0, floor: 0 };
+    var decimals = isContinuous(unit)
+      ? ((declared && declared.decimals != null) ? !!declared.decimals : true)
+      : ((declared && declared.decimals != null) ? !!declared.decimals : false);
+    if (!decimals) return { decimals: false, band: 0, floor: 0 };
+    var band = (declared && declared.tol != null) ? Number(declared.tol) : QTY_TOL;
+    var floor = (declared && declared.min_qty != null) ? Number(declared.min_qty) : 0;
+    return {
+      decimals: true,
+      band: (isFinite(band) && band > 0) ? band : 0,          /* 0 = decimals, but no margin */
+      floor: (isFinite(floor) && floor > 0) ? floor : 0,
+    };
+  }
+
+  /** the margin, applied only where the entity said it may be */
+  function snapWhole(n, unit, shop) {
+    var r = unitRule(unit, shop);
+    if (!r.decimals || !r.band) return n;
+    if (n < r.floor) return n;                   /* below the minimum, the number is kept exactly as typed */
+    /**
+     * ⭐⭐ IT ROUNDS DOWN, NOT TO THE NEAREST (Athi, 2026-09-12: *"round is good, basically floor, ground"*).
+     *
+     * ⚠️⚠️ THIS IS A DIRECTION, AND THE DIRECTION IS MONEY. Rounding to the nearest would take 0.995 kg up to
+     * a kilo and bill five grams the scale never weighed. Down only means the excess above a whole number is
+     * dropped and the shortfall below one is kept — the customer is never charged for what did not arrive, and
+     * this file's own rule stays intact: *"A MODEL NEVER SILENTLY CORRECTS UPWARD."*
+     * ⚠️ So 1.010 is one kilo and 0.995 stays 0.995. Both are deliberate.
+     */
+    var w = Math.floor(n);
     if (w <= 0) return n;                        /* never toward nothing */
     /**
-     * ⚠⚠ THE COMPARISON IS ROUNDED, AND THE EXAMPLE ATHI GAVE IS EXACTLY WHY. |1.01 - 1| is
+     * ⚠️⚠️ THE COMPARISON IS ROUNDED, AND THE EXAMPLE ATHI GAVE IS EXACTLY WHY. |1.01 - 1| is
      * 0.010000000000000009 in binary floating point, so a bare <= 0.01 refused the one case he asked for by
      * nine quintillionths of a kilo. ⭐ The band is compared at the same three places the quantity itself is
      * held to — anything finer is not a weight, it is an artefact of how the number is stored.
      */
-    return Math.round(Math.abs(n - w) * 1000) / 1000 <= tol ? w : n;
+    return Math.round(Math.abs(n - w) * 1000) / 1000 <= r.band ? w : n;
   }
 
   /**
@@ -182,8 +258,8 @@
     measure: {
       label: 'amount',
       // Decimal, because 2.5 kg is a real order. Rounded to 3 places so floating point cannot produce 2.4999999.
-      coerce: function (v, o) { var n = parseFloat(v); if (!isFinite(n) || n <= 0) return 0;
-        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, o)); },
+      coerce: function (v, o, u, shop) { var n = parseFloat(v); if (!isFinite(n) || n <= 0) return 0;
+        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, u, shop)); },
       next: function (v, d, o) { var s = Number(o.step) || 1; return Math.max(0, Math.round(((Number(v) || 0) + d * s) * 1000) / 1000); },
       hint: function (o) { return o.step ? 'in steps of ' + o.step : ''; }
     },
@@ -201,12 +277,12 @@
     range: {
       label: 'range',
       /* ⚠️ Below the minimum is REFUSED, never rounded up. Ordering more than someone asked for costs them money. */
-      coerce: function (v, o) {
+      coerce: function (v, o, u, shop) {
         var n = parseFloat(v);
         if (!isFinite(n) || n <= 0) return 0;
         if (o.min != null && n < Number(o.min)) return 0;
         if (o.max != null && n > Number(o.max)) return Number(o.max);   // a ceiling may clamp; a floor may not
-        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, o));
+        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, u, shop));
       },
       next: function (v, d, o) {
         var s = Number(o.step) || 1, cur = Number(v) || 0;
@@ -256,8 +332,13 @@
     var o = declOf(ns, r);
     if (o && o.unresolved) return null;
     if (MODELS[o.model]) return MODELS[o.model];
-    /* ⭐ no model declared: the UNIT answers. Continuous → measure, everything else → count, as before. */
-    return isContinuous((dataOf(r) || {}).unit) ? MODELS.measure : MODELS.count;
+    /**
+     * ⭐ NO MODEL DECLARED: THE UNIT ANSWERS — and the ENTITY's declaration about that unit answers first.
+     * A shop that has said "box takes decimals" gets a measure model on its boxes without attaching one to
+     * every product; a shop that has said nothing falls back to the unit's kind. ⚠️ Reading the kind here and
+     * the entity's rule elsewhere would be two answers to one question. */
+    return unitRule((dataOf(r) || {}).unit, (C[ns] && C[ns].cat && C[ns].cat.shop) || null).decimals
+      ? MODELS.measure : MODELS.count;
   }
   /** Row lookup by id — models need the declaration, and every mutation is given only an id. */
   function rowById(ns, id) {
@@ -688,15 +769,21 @@
        wrong rule — "Carton of 6" silently becoming "6 each" — so the line takes no quantity until its
        definition can be read. Refusing is visible; guessing is not. */
     if (!m) return;
-    var v = m.coerce(raw, o);
+    /* ⚠️ the unit and the shop travel WITH the value: what a quantity may look like is a property of what is
+       being counted, and a coerce that cannot see the unit can only ever be generic — what Athi ruled out. */
+    var unit = (dataOf(r) || {}).unit, shop = (s.cat && s.cat.shop) || null;
+    var v = m.coerce(raw, o, unit, shop);
     /**
-     * ⚠️⚠️ THE UNIT HAS THE LAST WORD ON THE GRAIN. A measure model attached to a product sold in BOXES would
-     * otherwise put half a box on a bill, and no screen would question it. The model still decides steps,
-     * minimums and price; it does not get to decide that half a box exists.
-     * ⚠️ Rounded to the nearest whole, not floored: 1.6 boxes means two, and flooring would quietly under-order.
-     * A value that rounds to nothing is refused, which removes the line — the model's own declared rule.
+     * ⚠️⚠️ THE UNIT HAS THE LAST WORD ON THE GRAIN, whatever model is attached. A measure model on something
+     * sold in BOXES would otherwise put half a box on a bill and no screen would question it. The model still
+     * decides steps, minimums and price; it does not get to decide that half a box exists.
+     * ⚠️⚠️ AND IT ROUNDS DOWN, not to the nearest. I wrote "nearest" first, reasoning that 1.6 boxes means
+     * two — and this same file, forty lines up, already says the opposite and says it better: *"A MODEL NEVER
+     * SILENTLY CORRECTS UPWARD... quietly ordering more than someone asked for is the failure that costs them
+     * money."* ⭐ Flooring agrees with `count.coerce`, which has floored since it was written, so one rule
+     * governs the grain instead of two that disagree at .5.
      */
-    if (v > 0 && isDiscrete((dataOf(r) || {}).unit)) v = Math.round(v);
+    if (v > 0 && !unitRule(unit, shop).decimals) v = Math.floor(v);
     if (v > 0) s.sel[id] = v; else delete s.sel[id];
     touched(ns);
   }

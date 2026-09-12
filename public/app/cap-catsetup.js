@@ -329,6 +329,35 @@ async function catsetSelToggle(flag, code, on){
 }
 
 var _UNITSEL = null;   // the entity's chosen units, as last read
+/**
+ * ⭐⭐ WHAT EACH CHOSEN UNIT ALLOWS — { kg: { decimals, tol, min_qty } } — as last read.
+ * Athi, 2026-09-12: *"for each entity we can set decimal allowed, if so tollerance and min qty... and each
+ * product obeys that."* ⚠️ Kept beside `_UNITSEL` because they are one screen and one save; two states that
+ * can disagree about the same unit is how a switch stops matching what the cart does.
+ */
+var _UNITRULES = null;
+/**
+ * ⚠️⚠️ A COUNT CANNOT BE HALF — Athi: *"no, the count cannot be half"*. So the three questions are asked ONLY
+ * for units that can be halved, and the row for a countable unit says so instead of offering a switch nobody
+ * should be able to flip. The kinds come from the catalogue model, not a second list here.
+ */
+var _MEASURED_KINDS = ['Weight', 'Volume', 'Length', 'Area'];
+function catsetUnitMeasured(u){
+  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  if (!M || typeof M.unitKind !== 'function') return false;
+  var k = M.unitKind(u);
+  return !!k && _MEASURED_KINDS.indexOf(k.label || k.key) >= 0;
+}
+/** the effective answer for a unit: what is declared, else what its kind implies — the cart's own fallback */
+function catsetUnitRule(u){
+  var r = (_UNITRULES && _UNITRULES[u]) || null;
+  return {
+    decimals: (r && r.decimals != null) ? !!r.decimals : catsetUnitMeasured(u),
+    tol: (r && r.tol != null) ? Number(r.tol) : 0.01,
+    min_qty: (r && r.min_qty != null) ? Number(r.min_qty) : 0,
+    declared: !!r,
+  };
+}
 var _LANGSEL = ['en'];  // the entity's languages — a READING preference, never a parsing rule
 
 /**
@@ -380,6 +409,70 @@ async function catsetLangToggle(code){
   catch (e) { if (typeof toast === 'function') toast('Could not save the language choice — ' + ((e && e.message) || 'try again')); }
 }
 
+/**
+ * ── ⭐⭐⭐ WHAT THIS UNIT ALLOWS ──────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"catalogue set-up, units of measure, each unit, we can ask those parameter"* ·
+ * *"decimal allowed, default yes"* · *"no, the count cannot be half"* · *"round is good, basically floor"*.
+ *
+ * ⚠️⚠️ THIS IS NOT THE TOLERANCE ON THE COUNTER, and the words have to keep them apart. That one asks
+ * *"ordered 1000 kg, 998 arrived — is that a dispute?"* and is a percentage. This one asks *"the scale reads
+ * 1.010 — what goes on the bill?"* and is flat. Calling both "tolerance" would cost somebody an afternoon.
+ *
+ * ⭐ ROUNDING IS DOWNWARD ONLY, and the sentence says so: the excess above a whole number is dropped, the
+ * shortfall below one is kept, so a customer is never billed for grams the scale did not weigh.
+ */
+function catsetUomRuleHTML(u){
+  if (!catsetUnitMeasured(u)) {
+    /* ⚠️ Said, not hidden. A row that simply lacks the controls reads as an oversight; this reads as a rule. */
+    return '<div class="uom-rule flat"><span class="urn">Whole numbers — a count cannot be half.</span></div>';
+  }
+  var r = catsetUnitRule(u), id = 'uomr_' + u;
+  return '<div class="uom-rule">'
+    + '<label class="urk"><input type="checkbox" ' + (r.decimals ? 'checked' : '')
+    +   ' onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'decimals\',this.checked)"> ' + tx('Decimal allowed') + '</label>'
+    + (r.decimals
+        ? '<span class="urf"><label for="' + id + '_t">' + tx('Round down within') + '</label>'
+          + '<input id="' + id + '_t" type="number" min="0" step="0.001" inputmode="decimal" value="' + esc(String(r.tol))
+          + '" data-testid="uom-tol-' + esc(u) + '" onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'tol\',this.value)">'
+          + '<span class="uru">' + esc(u) + '</span></span>'
+          + '<span class="urf"><label for="' + id + '_m">' + tx('from') + '</label>'
+          + '<input id="' + id + '_m" type="number" min="0" step="0.001" inputmode="decimal" value="' + esc(String(r.min_qty))
+          + '" data-testid="uom-min-' + esc(u) + '" onchange="catsetUomRuleSet(\'' + esc(u) + '\',\'min_qty\',this.value)">'
+          + '<span class="uru">' + esc(u) + '</span></span>'
+          + '<span class="urn">' + txf('{ex} becomes {r} — downward only, so {lo} stays {lo}.', {
+              ex: '<b>' + esc(String(1 + (Number(r.tol) || 0))) + '</b>', r: '<b>1</b>', lo: '<b>0.995</b>' }) + '</span>'
+        : '<span class="urn">' + tx('Whole numbers only for this unit.') + '</span>')
+    + '</div>';
+}
+
+/**
+ * ⚠️ ONE FIELD AT A TIME, MERGED — never a whole-object PUT. Sending the map back wholesale would carry every
+ * other unit's row with it, and a second tab's edit would be overwritten by whatever this tab last read.
+ * [[feedback-partial-writes-merge-patch]]
+ */
+async function catsetUomRuleSet(u, field, value){
+  _UNITRULES = _UNITRULES || {};
+  var row = _UNITRULES[u] || {};
+  if (field === 'decimals') row.decimals = !!value;
+  else {
+    var n = Number(value);
+    if (!isFinite(n) || n < 0) { if (typeof toast === 'function') toast('That needs to be a number, zero or more.'); return; }
+    row[field] = n;
+  }
+  /* ⭐ a row that has been touched declares all three, so what the cart reads is what the screen showed */
+  var eff = catsetUnitRule(u);
+  if (row.decimals == null) row.decimals = eff.decimals;
+  if (row.tol == null) row.tol = eff.tol;
+  if (row.min_qty == null) row.min_qty = eff.min_qty;
+  _UNITRULES[u] = row;
+  /* ⚠️ the SWITCH repaints the row (its two boxes appear or go); a number does not — repainting under a
+     cursor is how a half-typed value is lost. [[feedback-repaint-locally]] */
+  if (field === 'decimals') catsetPaintDetail();
+  try { await api('policySet', { body: { unit_rules: _UNITRULES } }); }
+  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
+}
+
 function catsetUnitsHTML(){
   var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
   if (!M || !M.UNIT_KINDS) return catsetCard('⚖️ Units of measure', '<div class="catset-none">not loaded</div>');
@@ -408,7 +501,12 @@ function catsetUnitsHTML(){
            contrast audit (63 false positives on this screen alone) and, worse, a screen reader announces
            "middle dot" between every word. aria-hidden states what it already is. */
         + (shown.length ? '<div class="ua">' + shown.map(function(x){ return esc(x.w); }).join('<span class="sep" aria-hidden="true">·</span>') + '</div>' : '')
-        + '</label>';
+        + '</label>'
+        /**
+         * ⭐⭐ THE THREE ANSWERS, ONLY WHERE THEY MEAN SOMETHING, and only for a unit actually in use.
+         * ⚠️ OUTSIDE the <label>: a number box inside a label toggles the checkbox on every click.
+         */
+        + (on ? catsetUomRuleHTML(u) : '');
     }).join('');
     return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
   }).join('');
@@ -430,6 +528,7 @@ function catsetUnitsHTML(){
 async function catsetUnitsLoad(){
   try { var f = await api('policyGet'); var fl = (f && f.flags) || {};
         _UNITSEL = fl.units || [];
+        _UNITRULES = (fl.unit_rules && typeof fl.unit_rules === 'object') ? fl.unit_rules : {};
         /* ⚠️ English is forced in even if the stored set somehow lacks it — see catsetLangBar(). */
         var lg = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
         if (lg.indexOf('en') < 0) lg.unshift('en');
@@ -1589,6 +1688,18 @@ function catsetCss(){
     /* The spellings, indented to sit under the NAME so the eye reads down one edge. */
     '.uom-row .ua{margin-top:3px;padding-inline-start:108px;color:var(--note);font-size:var(--fs-1);line-height:1.5}',
     '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
+    /* the three answers sit under the unit, indented to the same edge as its spellings */
+    '.uom-rule{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:4px 13px 8px 121px;'
+      + 'border-bottom:1px solid var(--line);font-size:var(--fs-1);background:var(--paper)}',
+    '.uom-rule.flat{color:var(--note)}',
+    '.uom-rule .urk{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--ink)}',
+    '.uom-rule .urf{display:inline-flex;align-items:center;gap:5px;color:var(--grey-2)}',
+    '.uom-rule .urf input{width:74px;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line);'
+      + 'border-radius:6px;background:var(--card);color:var(--ink)}',
+    '.uom-rule .uru{color:var(--note)}',
+    '.uom-rule .urn{color:var(--note);flex:1 1 100%}',
+    /* ⚠️ at phone width the two boxes stack rather than squeezing the labels to nothing */
+    '@media(max-width:520px){.uom-rule{padding-inline-start:13px}}',
     '.lang-bar{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:2px 0 10px;background:var(--paper)}',
     '.lang-g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:5px}',
     '.lang-gh{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;min-width:62px}',

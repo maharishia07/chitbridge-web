@@ -372,29 +372,80 @@ console.log('\ncart-ui · fractions, unit by unit');
  * of a unit, FLAT — ten grams on a kilo, and still ten grams on a tonne. A percentage would have been 10 kg of
  * a tonne and the first anybody heard of it would be an invoice.
  */
-console.log('\ncart-ui · the margin');
+/**
+ * ── ⭐⭐ THE MARGIN IS THE ENTITY'S, PER UNIT — AND EVERY PRODUCT OBEYS IT ────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"we have selection, what are the units applied for this entity. for each entity we can set
+ * decimal allowed, if so tollerance and min qty. that will be perfect. and each product obeys that."*
+ *
+ * ⚠️⚠️ THE CASES THAT MATTER MOST ARE THE ONES WHERE IT MUST NOT FIRE, because this one changes money. A
+ * hundredth of a unit, FLAT — ten grams on a kilo and still ten grams on a tonne. A percentage would have been
+ * 10 kg of a tonne, and the first anybody heard of it would be an invoice.
+ */
+console.log('\ncart-ui · the margin, declared per unit by the entity');
 {
-  const kg = (v, order) => {
-    const item = { item_id: 'x', item_data: { name: 'Rice', unit: 'kg', price: 100 } };
-    if (order) item.item_data.order = order;
-    K.init('m', { shop: { bridge_id: 'B1' }, items: [item] });
+  /** one product in one unit, under one entity's declared unit rules */
+  const buy = (unit, v, rules) => {
+    const shop = { bridge_id: 'B1' };
+    if (rules) shop.unit_rules = rules;
+    K.init('m', { shop: shop, items: [{ item_id: 'x', item_data: { name: 'Rice', unit: unit, price: 100 } }] });
     K.add('m', 'x'); K.setQty('m', 'x', v);
     return K.qtyOf('m', 'x');
   };
 
-  ok('★★★ 1.010 kg is one kilo', kg(1.010) === 1);
-  ok('★ 0.995 kg is one kilo too — the margin is a band, not a floor', kg(0.995) === 1);
-  ok('★★ 1.02 kg is NOT one kilo — twenty grams is a quantity, not noise', kg(1.02) === 1.02);
-  ok('★★ 10.05 stays 10.05 — the margin is FLAT, so it does not widen with the number', kg(10.05) === 10.05);
-  ok('★★★ the margin never snaps toward nothing: 0.004 kg keeps itself', kg(0.004) === 0.004);
-  ok('★ a half is a half — nowhere near a whole number, nothing to snap', kg(0.5) === 0.5);
-  ok('★ 2.5 is untouched', kg(2.5) === 2.5);
+  console.log('  — the default, for a catalogue that has never opened the screen —');
+  ok('★★★ 1.010 kg is one kilo', buy('kg', 1.010) === 1);
+  /**
+   * ⭐⭐ DOWN ONLY, and this case is the whole reason to say so out loud. Athi, 2026-09-12: *"round is good,
+   * basically floor, ground"*. Rounding to the NEAREST would bill five grams the scale never weighed — the
+   * excess above a whole number is dropped, the shortfall below one is kept, and the customer is never
+   * charged for what did not arrive.
+   */
+  ok('★★★ 0.995 kg is NOT rounded up to a kilo — the margin only ever takes off, never adds',
+     buy('kg', 0.995) === 0.995);
+  ok('★★ 1.02 kg is NOT one kilo — twenty grams is a quantity, not noise', buy('kg', 1.02) === 1.02);
+  ok('★★ 10.05 stays 10.05 — the band is FLAT, it does not widen with the number', buy('kg', 10.05) === 10.05);
+  ok('★★★ it never snaps toward nothing: 0.004 kg keeps itself', buy('kg', 0.004) === 0.004);
+  ok('★ a half is a half — nowhere near a whole number', buy('kg', 0.5) === 0.5);
 
-  ok('★★ a trade that cannot afford a margin turns it off: tol 0 keeps 1.010',
-     kg(1.010, { model: 'measure', tol: 0 }) === 1.01);
-  ok('★★ and a trade that wants a wider one declares it: tol 0.1 makes 1.05 one',
-     kg(1.05, { model: 'measure', tol: 0.1 }) === 1);
-  ok('★ a declared margin still never reaches zero', kg(0.05, { model: 'measure', tol: 0.5 }) === 0.05);
+  console.log('  — decimals, declared per unit by the entity —');
+  ok('★★★ decimals OFF makes a continuous unit whole: 2.4 kg is 2',
+     buy('kg', 2.4, { kg: { decimals: false } }) === 2);
+  ok('★★ and nothing is asked about tolerance for a unit that cannot be halved',
+     buy('kg', 1.010, { kg: { decimals: false } }) === 1);
+  /* ⚠⚠ Athi, 2026-09-12: *"no, the count cannot be half"* — a RULE, not a preference, so a declaration
+     saying otherwise is refused rather than honoured. A setting the data can hold but the world cannot is how
+     a bill ends up reading 2.5 boxes. */
+  ok('★★★ a countable unit refuses a fraction even when the entity declares decimals on',
+     buy('box', 2.5, { box: { decimals: true } }) === 2);
+  /* ⚠ DOWN, not to the nearest: this file's own rule is that a model never silently corrects upward. */
+  ok('★ and OFF is the default for a countable unit, with nothing declared', buy('box', 2.5) === 2);
+
+  console.log('  — the margin and its minimum —');
+  ok('★★ a wider band is declared, not coded: tol 0.1 makes 1.05 one',
+     buy('kg', 1.05, { kg: { decimals: true, tol: 0.1 } }) === 1);
+  ok('★★ tol 0 keeps the decimals and drops the margin',
+     buy('kg', 1.010, { kg: { decimals: true, tol: 0 } }) === 1.01);
+  ok('★★★ MIN QTY: a margin that is 1% of a kilo is 20% of fifty grams, so below the minimum it does not apply',
+     buy('kg', 1.010, { kg: { decimals: true, min_qty: 5 } }) === 1.01);
+  ok('★★★ …and above the minimum the same margin does apply',
+     buy('kg', 7.005, { kg: { decimals: true, min_qty: 5 } }) === 7);
+  ok('★ the minimum is read against the quantity, not the whole number it would snap to',
+     buy('kg', 4.999, { kg: { decimals: true, min_qty: 5 } }) === 4.999);
+
+  console.log('  — every product in that unit obeys, without being asked —');
+  const shop = { bridge_id: 'B1', unit_rules: { kg: { decimals: true, tol: 0.02, min_qty: 2 } } };
+  K.init('m2', { shop: shop, items: [
+    { item_id: 'a', item_data: { name: 'Rice', unit: 'kg', price: 50 } },
+    { item_id: 'b', item_data: { name: 'Dal',  unit: 'kg', price: 90, order: { model: 'measure' } } },
+    { item_id: 'c', item_data: { name: 'Soap', unit: 'box', price: 20 } },
+  ] });
+  K.add('m2', 'a'); K.setQty('m2', 'a', 3.015);
+  K.add('m2', 'b'); K.setQty('m2', 'b', 3.015);
+  K.add('m2', 'c'); K.setQty('m2', 'c', 3.015);
+  ok('★★★ a product with no order model obeys the unit', K.qtyOf('m2', 'a') === 3);
+  ok('★★★ a product WITH a measure model obeys the same unit — one place to look', K.qtyOf('m2', 'b') === 3);
+  ok('★★ and a box in the same catalogue is still whole', K.qtyOf('m2', 'c') === 3);
 }
 
 console.log('\n  ' + (failed ? failed + ' FAILED' : 'all passed') + '\n');

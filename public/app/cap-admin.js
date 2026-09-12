@@ -5046,6 +5046,33 @@ var POLICY_FLAGS = [
   /* ⭐ Athi, 2026-09-07: "do we have a mechanism to check if not posted before the next day?" — the window after which an order the
      trigger released, and nothing booked, is called overdue in Settings › Integrations › In the books. */
   { key:'books_overdue_hours', label:'Overdue after (hours)', type:'number', def:12, level:'entity', gov:'entity', help:'How long an order released by the trigger may go unbooked before reconciliation calls it overdue. 12 = by the next morning.' },
+  /**
+   * ── ⭐⭐⭐ HOW MUCH DIFFERENCE IS NOT A DISPUTE ────────────────────────────────────────────────────────────
+   *
+   * ⚠️⚠️ THESE THREE HAVE BEEN LIVE SINCE 2026-09-08 WITH NO WAY TO SET THEM. routes/till.js reads them on every
+   * receipt and every reconciliation; nothing anywhere could change them, so every shop on the platform has been
+   * running the defaults and none of them was ever asked. A policy nobody can see is a policy nobody agreed to.
+   *
+   * Their own note, kept: *"Loose goods do not arrive to the gram: moisture, dust and the weighbridge move a
+   * lorry of rice by a few kilos, and a counter that called every one of those a shortage would teach the shop
+   * to ignore the word."*
+   *
+   * ⚠️⚠️ NOT THE SAME THING AS Catalogue → Units of measure, and the words must keep them apart. That one asks
+   * *"the scale reads 1.010 — what goes on the bill?"* and is FLAT. This one asks *"ordered 1000 kg, 998
+   * arrived — is that a dispute?"* and is a PERCENTAGE, because a lorry's variance scales with the lorry.
+   *
+   * ⭐ STORED IN BASIS POINTS, SHOWN AS A PERCENTAGE. The flag type truncates, so half a percent had to be 50
+   * rather than 0.5 — but nobody types basis points. `scale` renders the human number and stores the integer.
+   */
+  { key:'tol_weight_bp',     label:'Short delivery allowed (weighed goods)', type:'number', scale:100, suffix:'%', step:0.01,
+    def:50, level:'entity', gov:'entity',
+    help:'How much less than ordered may arrive on WEIGHED goods before the counter calls it short. 0.50% is the usual figure — moisture, dust and the weighbridge move a lorry by a few kilos. Set 0 to call every gram.' },
+  { key:'tol_count_units',   label:'Short delivery allowed (counted goods)', type:'number', suffix:'units',
+    def:0, level:'entity', gov:'entity',
+    help:'The same question for goods that are COUNTED, in whole units rather than a percentage. 0 is right for almost every shop — a packet is a packet, and one missing is one missing.' },
+  { key:'tol_rate_bp',       label:'Rate difference allowed',               type:'number', scale:100, suffix:'%', step:0.01,
+    def:0, level:'entity', gov:'entity',
+    help:'How far a supplier\'s billed RATE may differ from the order before it is named. ⚠️ Keep this at 0 unless you mean it: a quantity can be short by weather, a price cannot. "Close enough" on a rate is a decision somebody made, and it belongs in front of a person.' },
   { key:'trade_cover',       label:'Trade cover on chits',    type:'enum',   options:['off','on'],                    def:'off',  level:'entity', gov:'entity',   help:'ON — the Summary of a chit also shows the supplier clearances and the commercial-cover (FRM) frame. OFF — the financial summary of the cart and the delivery only (most trades).' },
   /**
    * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
@@ -5086,7 +5113,13 @@ function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inheri
    The card repaints from what the SERVER returns, so what is on screen is what is stored. */
 async function setPolFlag(key, v){
   var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0];
-  if(def&&def.type==='number') v=(v===''?0:Number(v));
+  /**
+   * ⚠️ A SCALED FIELD IS STORED IN ITS OWN UNIT, NOT THE ONE ON SCREEN. 0.50% is shown, 50 is stored — and the
+   * rounding is deliberate: the flag type truncates, so 0.505% would land as 50 either way, and doing it here
+   * means the number that comes back matches the number that was typed.
+   */
+  if(def&&def.type==='number'&&def.scale) v=(v===''?0:Math.round(Number(v)*def.scale));
+  else if(def&&def.type==='number') v=(v===''?0:Number(v));
   _POL.busy=true; _POL.err=null; paintPolicy();
   try{
     var body={}; body[key]=v;
@@ -5118,7 +5151,15 @@ function _polControl(def){ var v=_polVal(def);
    * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
    */
   if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
-  if(def.type==='number') return '<input type="number"'+dis+' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">';
+  if(def.type==='number'){
+    /* ⭐ shown in the unit a person thinks in; `setPolFlag` puts it back into the unit the flag is stored in */
+    var shown = def.scale ? (Number(v)/def.scale) : v;
+    return '<input type="number"'+dis+(def.step?' step="'+esc(String(def.step))+'"':'')+' min="0"'
+      + ' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(shown))+'"'
+      + ' onchange="setPolFlag(\''+def.key+'\',this.value)"'
+      + ' style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+      + (def.suffix ? '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:5px">'+esc(def.suffix)+'</span>' : '');
+  }
   return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">';
 }
 
