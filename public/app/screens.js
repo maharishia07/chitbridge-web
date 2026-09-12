@@ -169,7 +169,91 @@ window.CBSCREENS = {
   "Detail › Chit messages": "DTL002",
   "Detail › Connector cockpit (ERP)": "DTL003",
   "Detail › Connector cockpit (IoT)": "DTL004",
-  "Detail › Co-assist cockpit": "DTL005"
+  "Detail › Co-assist cockpit": "DTL005",
+  "Popup › _aiCtxExporter": "POP001",
+  "Popup › _aiMd": "POP002",
+  "Popup › _aiOrderDocPdf": "POP003",
+  "Popup › _mtxCell": "POP004",
+  "Popup › _netConfirmNarrow": "POP005",
+  "Popup › acHowItWorks": "POP006",
+  "Popup › acReissueGate": "POP007",
+  "Popup › acTypeInfo": "POP008",
+  "Popup › actorCleanupModal": "POP009",
+  "Popup › actorInviteModal": "POP010",
+  "Popup › addActorModal": "POP011",
+  "Popup › adoptPaint": "POP012",
+  "Popup › aiSlotInfo": "POP013",
+  "Popup › amdPickUnit": "POP014",
+  "Popup › amendPaint": "POP015",
+  "Popup › answerPublish": "POP016",
+  "Popup › askAiOrderDoc": "POP017",
+  "Popup › awRender": "POP018",
+  "Popup › c2AssignOpen": "POP019",
+  "Popup › c2RepricePaint": "POP020",
+  "Popup › catUnusedRow": "POP021",
+  "Popup › catsetBody": "POP022",
+  "Popup › catsetPlanPaint": "POP023",
+  "Popup › cbDefGoHome": "POP024",
+  "Popup › cbDefPaintForm": "POP025",
+  "Popup › cbRenderCatalogue": "POP026",
+  "Popup › cbcatSeedAsk": "POP027",
+  "Popup › cbcatSeedPick": "POP028",
+  "Popup › ccRender": "POP029",
+  "Popup › ccRenderCatPick": "POP030",
+  "Popup › checkCatalogueFile": "POP031",
+  "Popup › chitMarkPaid": "POP032",
+  "Popup › clearFolder": "POP033",
+  "Popup › confirmAsk": "POP034",
+  "Popup › confirmAssign": "POP035",
+  "Popup › counterHasKey": "POP036",
+  "Popup › counterOpen": "POP037",
+  "Popup › ctDeclaredViewRows": "POP038",
+  "Popup › deleteFolder": "POP039",
+  "Popup › disputeOverlay": "POP040",
+  "Popup › disputesScreen": "POP041",
+  "Popup › gatherReadiness": "POP042",
+  "Popup › intakeDismiss": "POP043",
+  "Popup › loadSupplierConfidence": "POP044",
+  "Popup › makeMovable": "POP045",
+  "Popup › matchDispute": "POP046",
+  "Popup › modal": "POP047",
+  "Popup › netBuild": "POP048",
+  "Popup › netMint": "POP049",
+  "Popup › netMintGo": "POP050",
+  "Popup › netReissueKey": "POP051",
+  "Popup › openBlueprint": "POP052",
+  "Popup › pickBox": "POP053",
+  "Popup › pickChitStatus": "POP054",
+  "Popup › prodAvailAsk": "POP055",
+  "Popup › prodCategoriseAsk": "POP056",
+  "Popup › prodPickBarHTML": "POP057",
+  "Popup › prodRowsPick": "POP058",
+  "Popup › prodStatusPick": "POP059",
+  "Popup › profGuard": "POP060",
+  "Popup › promptAsk": "POP061",
+  "Popup › quickDelete": "POP062",
+  "Popup › quickStatus": "POP063",
+  "Popup › repriority": "POP064",
+  "Popup › resolveDispute": "POP065",
+  "Popup › rgGo": "POP066",
+  "Popup › rgPaint": "POP067",
+  "Popup › rgScope": "POP068",
+  "Popup › rollupQuery": "POP069",
+  "Popup › selfBillOpen": "POP070",
+  "Popup › sendMessage": "POP071",
+  "Popup › setMsgTypeSet": "POP072",
+  "Popup › showHelp": "POP073",
+  "Popup › supAddModal": "POP074",
+  "Popup › supBuyModal": "POP075",
+  "Popup › supEdit": "POP076",
+  "Popup › supFindBodyHTML": "POP077",
+  "Popup › supUseModal": "POP078",
+  "Popup › svcPaint": "POP079",
+  "Popup › svcPauseAsk": "POP080",
+  "Popup › svcResolveAsk": "POP081",
+  "Popup › testGuide": "POP082",
+  "Popup › verifyReadiness": "POP083",
+  "Popup › wlPaintCard": "POP084"
  },
  "rows": [
   {
@@ -603,8 +687,1186 @@ window.CBSCREENS = {
    "nav": "coassist-actor",
    "cases": 0,
    "since": "2026-09-12"
+  },
+  {
+   "code": "POP001",
+   "path": "Popup › _aiCtxExporter",
+   "group": "Popup",
+   "screen": "_aiCtxExporter",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP002",
+   "path": "Popup › _aiMd",
+   "group": "Popup",
+   "screen": "_aiMd",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP003",
+   "path": "Popup › _aiOrderDocPdf",
+   "group": "Popup",
+   "screen": "_aiOrderDocPdf",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP004",
+   "path": "Popup › _mtxCell",
+   "group": "Popup",
+   "screen": "_mtxCell",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP005",
+   "path": "Popup › _netConfirmNarrow",
+   "group": "Popup",
+   "screen": "_netConfirmNarrow",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP006",
+   "path": "Popup › acHowItWorks",
+   "group": "Popup",
+   "screen": "acHowItWorks",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP007",
+   "path": "Popup › acReissueGate",
+   "group": "Popup",
+   "screen": "acReissueGate",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP008",
+   "path": "Popup › acTypeInfo",
+   "group": "Popup",
+   "screen": "acTypeInfo",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP009",
+   "path": "Popup › actorCleanupModal",
+   "group": "Popup",
+   "screen": "actorCleanupModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP010",
+   "path": "Popup › actorInviteModal",
+   "group": "Popup",
+   "screen": "actorInviteModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP011",
+   "path": "Popup › addActorModal",
+   "group": "Popup",
+   "screen": "addActorModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP012",
+   "path": "Popup › adoptPaint",
+   "group": "Popup",
+   "screen": "adoptPaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP013",
+   "path": "Popup › aiSlotInfo",
+   "group": "Popup",
+   "screen": "aiSlotInfo",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP014",
+   "path": "Popup › amdPickUnit",
+   "group": "Popup",
+   "screen": "amdPickUnit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP015",
+   "path": "Popup › amendPaint",
+   "group": "Popup",
+   "screen": "amendPaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP016",
+   "path": "Popup › answerPublish",
+   "group": "Popup",
+   "screen": "answerPublish",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP017",
+   "path": "Popup › askAiOrderDoc",
+   "group": "Popup",
+   "screen": "askAiOrderDoc",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP018",
+   "path": "Popup › awRender",
+   "group": "Popup",
+   "screen": "awRender",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP019",
+   "path": "Popup › c2AssignOpen",
+   "group": "Popup",
+   "screen": "c2AssignOpen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP020",
+   "path": "Popup › c2RepricePaint",
+   "group": "Popup",
+   "screen": "c2RepricePaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP021",
+   "path": "Popup › catUnusedRow",
+   "group": "Popup",
+   "screen": "catUnusedRow",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP022",
+   "path": "Popup › catsetBody",
+   "group": "Popup",
+   "screen": "catsetBody",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP023",
+   "path": "Popup › catsetPlanPaint",
+   "group": "Popup",
+   "screen": "catsetPlanPaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP024",
+   "path": "Popup › cbDefGoHome",
+   "group": "Popup",
+   "screen": "cbDefGoHome",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP025",
+   "path": "Popup › cbDefPaintForm",
+   "group": "Popup",
+   "screen": "cbDefPaintForm",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP026",
+   "path": "Popup › cbRenderCatalogue",
+   "group": "Popup",
+   "screen": "cbRenderCatalogue",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP027",
+   "path": "Popup › cbcatSeedAsk",
+   "group": "Popup",
+   "screen": "cbcatSeedAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP028",
+   "path": "Popup › cbcatSeedPick",
+   "group": "Popup",
+   "screen": "cbcatSeedPick",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP029",
+   "path": "Popup › ccRender",
+   "group": "Popup",
+   "screen": "ccRender",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP030",
+   "path": "Popup › ccRenderCatPick",
+   "group": "Popup",
+   "screen": "ccRenderCatPick",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP031",
+   "path": "Popup › checkCatalogueFile",
+   "group": "Popup",
+   "screen": "checkCatalogueFile",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP032",
+   "path": "Popup › chitMarkPaid",
+   "group": "Popup",
+   "screen": "chitMarkPaid",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP033",
+   "path": "Popup › clearFolder",
+   "group": "Popup",
+   "screen": "clearFolder",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP034",
+   "path": "Popup › confirmAsk",
+   "group": "Popup",
+   "screen": "confirmAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP035",
+   "path": "Popup › confirmAssign",
+   "group": "Popup",
+   "screen": "confirmAssign",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP036",
+   "path": "Popup › counterHasKey",
+   "group": "Popup",
+   "screen": "counterHasKey",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP037",
+   "path": "Popup › counterOpen",
+   "group": "Popup",
+   "screen": "counterOpen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP038",
+   "path": "Popup › ctDeclaredViewRows",
+   "group": "Popup",
+   "screen": "ctDeclaredViewRows",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP039",
+   "path": "Popup › deleteFolder",
+   "group": "Popup",
+   "screen": "deleteFolder",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP040",
+   "path": "Popup › disputeOverlay",
+   "group": "Popup",
+   "screen": "disputeOverlay",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP041",
+   "path": "Popup › disputesScreen",
+   "group": "Popup",
+   "screen": "disputesScreen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP042",
+   "path": "Popup › gatherReadiness",
+   "group": "Popup",
+   "screen": "gatherReadiness",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP043",
+   "path": "Popup › intakeDismiss",
+   "group": "Popup",
+   "screen": "intakeDismiss",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP044",
+   "path": "Popup › loadSupplierConfidence",
+   "group": "Popup",
+   "screen": "loadSupplierConfidence",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP045",
+   "path": "Popup › makeMovable",
+   "group": "Popup",
+   "screen": "makeMovable",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP046",
+   "path": "Popup › matchDispute",
+   "group": "Popup",
+   "screen": "matchDispute",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP047",
+   "path": "Popup › modal",
+   "group": "Popup",
+   "screen": "modal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP048",
+   "path": "Popup › netBuild",
+   "group": "Popup",
+   "screen": "netBuild",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP049",
+   "path": "Popup › netMint",
+   "group": "Popup",
+   "screen": "netMint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP050",
+   "path": "Popup › netMintGo",
+   "group": "Popup",
+   "screen": "netMintGo",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP051",
+   "path": "Popup › netReissueKey",
+   "group": "Popup",
+   "screen": "netReissueKey",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP052",
+   "path": "Popup › openBlueprint",
+   "group": "Popup",
+   "screen": "openBlueprint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP053",
+   "path": "Popup › pickBox",
+   "group": "Popup",
+   "screen": "pickBox",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP054",
+   "path": "Popup › pickChitStatus",
+   "group": "Popup",
+   "screen": "pickChitStatus",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP055",
+   "path": "Popup › prodAvailAsk",
+   "group": "Popup",
+   "screen": "prodAvailAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP056",
+   "path": "Popup › prodCategoriseAsk",
+   "group": "Popup",
+   "screen": "prodCategoriseAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP057",
+   "path": "Popup › prodPickBarHTML",
+   "group": "Popup",
+   "screen": "prodPickBarHTML",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP058",
+   "path": "Popup › prodRowsPick",
+   "group": "Popup",
+   "screen": "prodRowsPick",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP059",
+   "path": "Popup › prodStatusPick",
+   "group": "Popup",
+   "screen": "prodStatusPick",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP060",
+   "path": "Popup › profGuard",
+   "group": "Popup",
+   "screen": "profGuard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP061",
+   "path": "Popup › promptAsk",
+   "group": "Popup",
+   "screen": "promptAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP062",
+   "path": "Popup › quickDelete",
+   "group": "Popup",
+   "screen": "quickDelete",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP063",
+   "path": "Popup › quickStatus",
+   "group": "Popup",
+   "screen": "quickStatus",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP064",
+   "path": "Popup › repriority",
+   "group": "Popup",
+   "screen": "repriority",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP065",
+   "path": "Popup › resolveDispute",
+   "group": "Popup",
+   "screen": "resolveDispute",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP066",
+   "path": "Popup › rgGo",
+   "group": "Popup",
+   "screen": "rgGo",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP067",
+   "path": "Popup › rgPaint",
+   "group": "Popup",
+   "screen": "rgPaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP068",
+   "path": "Popup › rgScope",
+   "group": "Popup",
+   "screen": "rgScope",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP069",
+   "path": "Popup › rollupQuery",
+   "group": "Popup",
+   "screen": "rollupQuery",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP070",
+   "path": "Popup › selfBillOpen",
+   "group": "Popup",
+   "screen": "selfBillOpen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP071",
+   "path": "Popup › sendMessage",
+   "group": "Popup",
+   "screen": "sendMessage",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP072",
+   "path": "Popup › setMsgTypeSet",
+   "group": "Popup",
+   "screen": "setMsgTypeSet",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP073",
+   "path": "Popup › showHelp",
+   "group": "Popup",
+   "screen": "showHelp",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP074",
+   "path": "Popup › supAddModal",
+   "group": "Popup",
+   "screen": "supAddModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP075",
+   "path": "Popup › supBuyModal",
+   "group": "Popup",
+   "screen": "supBuyModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP076",
+   "path": "Popup › supEdit",
+   "group": "Popup",
+   "screen": "supEdit",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP077",
+   "path": "Popup › supFindBodyHTML",
+   "group": "Popup",
+   "screen": "supFindBodyHTML",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP078",
+   "path": "Popup › supUseModal",
+   "group": "Popup",
+   "screen": "supUseModal",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP079",
+   "path": "Popup › svcPaint",
+   "group": "Popup",
+   "screen": "svcPaint",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP080",
+   "path": "Popup › svcPauseAsk",
+   "group": "Popup",
+   "screen": "svcPauseAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP081",
+   "path": "Popup › svcResolveAsk",
+   "group": "Popup",
+   "screen": "svcResolveAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP082",
+   "path": "Popup › testGuide",
+   "group": "Popup",
+   "screen": "testGuide",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP083",
+   "path": "Popup › verifyReadiness",
+   "group": "Popup",
+   "screen": "verifyReadiness",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "POP084",
+   "path": "Popup › wlPaintCard",
+   "group": "Popup",
+   "screen": "wlPaintCard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
   }
- ]
+ ],
+ "byFn": {
+  "_aiCtxExporter": {
+   "code": "POP001",
+   "file": "cap-readiness.js",
+   "ambiguous": false
+  },
+  "_aiMd": {
+   "code": "POP002",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "_aiOrderDocPdf": {
+   "code": "POP003",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "_mtxCell": {
+   "code": "POP004",
+   "file": "cap-readiness.js",
+   "ambiguous": false
+  },
+  "_netConfirmNarrow": {
+   "code": "POP005",
+   "file": "cap-network.js",
+   "ambiguous": false
+  },
+  "acHowItWorks": {
+   "code": "POP006",
+   "file": "cap-connector.js",
+   "ambiguous": false
+  },
+  "acReissueGate": {
+   "code": "POP007",
+   "file": "cap-connector.js",
+   "ambiguous": false
+  },
+  "acTypeInfo": {
+   "code": "POP008",
+   "file": "cap-workforce.js",
+   "ambiguous": false
+  },
+  "actorCleanupModal": {
+   "code": "POP009",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "actorInviteModal": {
+   "code": "POP010",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "addActorModal": {
+   "code": "POP011",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "adoptPaint": {
+   "code": "POP012",
+   "file": "cap-adopt.js",
+   "ambiguous": false
+  },
+  "aiSlotInfo": {
+   "code": "POP013",
+   "file": "cap-workforce.js",
+   "ambiguous": false
+  },
+  "amdPickUnit": {
+   "code": "POP014",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "amendPaint": {
+   "code": "POP015",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "answerPublish": {
+   "code": "POP016",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "askAiOrderDoc": {
+   "code": "POP017",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "awRender": {
+   "code": "POP018",
+   "file": "cap-workforce.js",
+   "ambiguous": false
+  },
+  "c2AssignOpen": {
+   "code": "POP019",
+   "file": "cap-chit2.js",
+   "ambiguous": true
+  },
+  "c2RepricePaint": {
+   "code": "POP020",
+   "file": "cap-chit2.js",
+   "ambiguous": true
+  },
+  "catUnusedRow": {
+   "code": "POP021",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "catsetBody": {
+   "code": "POP022",
+   "file": "cap-catsetup.js",
+   "ambiguous": false
+  },
+  "catsetPlanPaint": {
+   "code": "POP023",
+   "file": "cap-catsetup.js",
+   "ambiguous": false
+  },
+  "cbDefGoHome": {
+   "code": "POP024",
+   "file": "cap-definitions.js",
+   "ambiguous": false
+  },
+  "cbDefPaintForm": {
+   "code": "POP025",
+   "file": "cap-definitions.js",
+   "ambiguous": false
+  },
+  "cbRenderCatalogue": {
+   "code": "POP026",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "cbcatSeedAsk": {
+   "code": "POP027",
+   "file": "cap-categories.js",
+   "ambiguous": false
+  },
+  "cbcatSeedPick": {
+   "code": "POP028",
+   "file": "cap-categories.js",
+   "ambiguous": false
+  },
+  "ccRender": {
+   "code": "POP029",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "ccRenderCatPick": {
+   "code": "POP030",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "checkCatalogueFile": {
+   "code": "POP031",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "chitMarkPaid": {
+   "code": "POP032",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "clearFolder": {
+   "code": "POP033",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "confirmAsk": {
+   "code": "POP034",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "confirmAssign": {
+   "code": "POP035",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "counterHasKey": {
+   "code": "POP036",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "counterOpen": {
+   "code": "POP037",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "ctDeclaredViewRows": {
+   "code": "POP038",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "deleteFolder": {
+   "code": "POP039",
+   "file": "cap-folders.js",
+   "ambiguous": false
+  },
+  "disputeOverlay": {
+   "code": "POP040",
+   "file": "cap-dispute.js",
+   "ambiguous": false
+  },
+  "disputesScreen": {
+   "code": "POP041",
+   "file": "cap-dispute.js",
+   "ambiguous": false
+  },
+  "gatherReadiness": {
+   "code": "POP042",
+   "file": "cap-readiness.js",
+   "ambiguous": false
+  },
+  "intakeDismiss": {
+   "code": "POP043",
+   "file": "cap-intake.js",
+   "ambiguous": false
+  },
+  "loadSupplierConfidence": {
+   "code": "POP044",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "makeMovable": {
+   "code": "POP045",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "matchDispute": {
+   "code": "POP046",
+   "file": "cap-match.js",
+   "ambiguous": false
+  },
+  "modal": {
+   "code": "POP047",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "netBuild": {
+   "code": "POP048",
+   "file": "cap-network.js",
+   "ambiguous": false
+  },
+  "netMint": {
+   "code": "POP049",
+   "file": "cap-network.js",
+   "ambiguous": false
+  },
+  "netMintGo": {
+   "code": "POP050",
+   "file": "cap-network.js",
+   "ambiguous": false
+  },
+  "netReissueKey": {
+   "code": "POP051",
+   "file": "cap-network.js",
+   "ambiguous": false
+  },
+  "openBlueprint": {
+   "code": "POP052",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "pickBox": {
+   "code": "POP053",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "pickChitStatus": {
+   "code": "POP054",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "prodAvailAsk": {
+   "code": "POP055",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "prodCategoriseAsk": {
+   "code": "POP056",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "prodPickBarHTML": {
+   "code": "POP057",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "prodRowsPick": {
+   "code": "POP058",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "prodStatusPick": {
+   "code": "POP059",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "profGuard": {
+   "code": "POP060",
+   "file": "cap-admin.js",
+   "ambiguous": false
+  },
+  "promptAsk": {
+   "code": "POP061",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "quickDelete": {
+   "code": "POP062",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "quickStatus": {
+   "code": "POP063",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "repriority": {
+   "code": "POP064",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "resolveDispute": {
+   "code": "POP065",
+   "file": "cap-dispute.js",
+   "ambiguous": false
+  },
+  "rgGo": {
+   "code": "POP066",
+   "file": "cap-register.js",
+   "ambiguous": false
+  },
+  "rgPaint": {
+   "code": "POP067",
+   "file": "cap-register.js",
+   "ambiguous": true
+  },
+  "rgScope": {
+   "code": "POP068",
+   "file": "cap-register.js",
+   "ambiguous": true
+  },
+  "rollupQuery": {
+   "code": "POP069",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "selfBillOpen": {
+   "code": "POP070",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "sendMessage": {
+   "code": "POP071",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "setMsgTypeSet": {
+   "code": "POP072",
+   "file": "app.html",
+   "ambiguous": true
+  },
+  "showHelp": {
+   "code": "POP073",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "supAddModal": {
+   "code": "POP074",
+   "file": "cap-supplies.js",
+   "ambiguous": false
+  },
+  "supBuyModal": {
+   "code": "POP075",
+   "file": "cap-supplies.js",
+   "ambiguous": false
+  },
+  "supEdit": {
+   "code": "POP076",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "supFindBodyHTML": {
+   "code": "POP077",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "supUseModal": {
+   "code": "POP078",
+   "file": "cap-supplies.js",
+   "ambiguous": false
+  },
+  "svcPaint": {
+   "code": "POP079",
+   "file": "cap-service.js",
+   "ambiguous": true
+  },
+  "svcPauseAsk": {
+   "code": "POP080",
+   "file": "cap-service.js",
+   "ambiguous": false
+  },
+  "svcResolveAsk": {
+   "code": "POP081",
+   "file": "cap-service.js",
+   "ambiguous": false
+  },
+  "testGuide": {
+   "code": "POP082",
+   "file": "cap-testing.js",
+   "ambiguous": false
+  },
+  "verifyReadiness": {
+   "code": "POP083",
+   "file": "cap-readiness.js",
+   "ambiguous": false
+  },
+  "wlPaintCard": {
+   "code": "POP084",
+   "file": "cap-worklist.js",
+   "ambiguous": true
+  }
+ }
 };
 /* the code for a nav key, or null when the screen is not on the rail (a modal, a sub-page) */
 window.cbScreenCode = function (nav) {

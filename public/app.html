@@ -12592,7 +12592,64 @@ function mvModal(host, wide, opt){
                      barAt: o.barAt || 'right', minimise: !!o.minimise, fit: o.fit });
   }catch(e){ /* best-effort — a modal that cannot be moved must still open */ }
 }
-function modal(html, wide, opt){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; mvModal(h, wide, opt); }
+/**
+ * ── ⭐⭐⭐ EVERY DIALOG SAYS WHICH DIALOG IT IS ────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"if a popup comes, then it has to have a name... when someone looks at the screen, they
+ * wouldn't know what the mechanism is. POP005 shows this message which is wrong — that is what they are going
+ * to say."*
+ *
+ * ⭐⭐ ONE PLACE, NOT 127. `modal()` reads the function that called it out of its own stack and looks the code
+ * up in the generated register. So every dialog in the product carries an identifier without a single call site
+ * being edited — the same argument that made the header drag universal instead of per-panel.
+ *
+ * ⚠️⚠️ THE STACK IS A BEST EFFORT AND IS TREATED AS ONE. Frame formats differ between browsers, an inlined or
+ * anonymous caller has no name, and a minifier would rename everything. When the caller cannot be identified,
+ * NOTHING is shown — a wrong code on a dialog is worse than no code, because it is the thing somebody quotes.
+ *
+ * ⚠️ AMBIGUOUS IS MARKED, NOT HIDDEN. 16 functions open more than one dialog, so their code names the OPENER
+ * rather than the dialog. Those show the code with a "·" after it and say so in the tooltip, because a reader
+ * has to know the difference between "this dialog" and "the function that produced this dialog".
+ */
+function modalCode(){
+  try{
+    var st = (new Error()).stack || '';
+    var lines = st.split(String.fromCharCode(10));
+    var skip = { modalCode:1, modalStamp:1, modal:1, mvModal:1, Error:1 };
+    for (var i = 1; i < lines.length; i++){
+      var m = lines[i].match(/at\s+(?:new\s+)?([A-Za-z_$][\w$]*)\s/);
+      if (!m) continue;
+      var fn = m[1];
+      if (skip[fn]) continue;
+      var reg = (window.CBSCREENS && window.CBSCREENS.byFn) || {};
+      return reg[fn] ? { code: reg[fn].code, fn: fn, ambiguous: !!reg[fn].ambiguous } : null;
+    }
+  }catch(_){}
+  return null;
+}
+/** put it in the dialog's own header, where a reader is already looking for the title */
+function modalStamp(host){
+  try{
+    var info = modalCode();
+    if (!info) return;
+    var box = host.querySelector('.mhd') || host.querySelector('.modal');
+    if (!box || box.querySelector('[data-testid="popup-code"]')) return;
+    var el = document.createElement('span');
+    el.setAttribute('data-testid', 'popup-code');
+    el.textContent = info.code + (info.ambiguous ? ' \u00b7' : '');
+    el.title = info.ambiguous
+      ? 'This code names ' + info.fn + '(), which opens more than one dialog — quote it with what you were doing'
+      : 'The code for this dialog \u2014 quote it instead of describing it';
+    /* \u26a0 muted, monospaced, selectable: it is a reference, and the whole point is that it gets quoted */
+    el.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+      + 'color:var(--grey-2);background:var(--neutral-tint);border-radius:5px;padding:1px 6px;'
+      + 'user-select:all;margin-inline-start:8px;vertical-align:middle';
+    var t = box.querySelector('.t') || box;
+    t.appendChild(el);
+  }catch(_){}
+}
+
+function modal(html, wide, opt){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; mvModal(h, wide, opt); modalStamp(h); }
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }

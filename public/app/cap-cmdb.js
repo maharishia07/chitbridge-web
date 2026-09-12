@@ -54,8 +54,18 @@ function cmdbEsc(x) {
   });
 }
 
+/**
+ * ⚠⚠ SCREENS AND POPUPS ARE BOTH IN THE REGISTER AND MUST NOT SHARE A LIST. 84 dialogs dropped into a list of
+ * 48 screens would bury the screens and make the count meaningless — they are different kinds of thing and a
+ * person is looking for one or the other, never both.
+ */
 function cmdbRows() {
-  try { return (window.CBSCREENS && window.CBSCREENS.rows) || []; } catch (_) { return []; }
+  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group !== 'Popup'; }); }
+  catch (_) { return []; }
+}
+function cmdbPopups() {
+  try { return ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) { return r.group === 'Popup'; }); }
+  catch (_) { return []; }
 }
 
 function cmdbToggle() { cmdbSet(!CBCMDB.on); }
@@ -110,6 +120,7 @@ var PLURAL = { CAP: 'Capabilities', ENG: 'Engines', API: 'Routes' };
 function cmdbKindsHTML() {
   var A = cmdbAssets();
   var kinds = [['SCREEN', 'Screens', cmdbRows().length]];
+  if (cmdbPopups().length) kinds.push(['POPUP', 'Popups', cmdbPopups().length]);
   ['CAP', 'ENG', 'API'].forEach(function (k) {
     var n = A.filter(function (x) { return x.type === k; });
     /* ⚠ A PLURAL IS NOT A NOUN PLUS S. It read "Capabilitys" the first time this was shown to Athi — small,
@@ -134,6 +145,47 @@ function cmdbKindsHTML() {
  * shown as **not stated** in every one of those rows rather than left blank — a blank cell reads as "fine", and
  * "nobody has ever said what state this is in" is a finding, not a formatting problem.
  */
+/**
+ * ── ⭐⭐ THE DIALOGS ──────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"POP005 shows this message which is wrong — that is what they are going to say."*
+ *
+ * ⚠️⚠️ THE AMBIGUOUS ONES ARE MARKED, because the difference matters to the person quoting a code. A dialog's
+ * identity is the function that opens it, and 16 functions open more than one — for those, the code names the
+ * OPENER and not the dialog. Shown with a "·" and said in words, rather than letting a reader assume every code
+ * is precise. ⭐ An honest gap beats an invented ordinal that shifts the moment a line is added above it.
+ */
+function cmdbPopupHTML(q2) {
+  var A = cmdbPopups();
+  var q = String(CBCMDB.q || '').toLowerCase();
+  if (q) A = A.filter(function (x) { return (x.code + ' ' + x.screen).toLowerCase().indexOf(q) >= 0; });
+  if (!A.length) return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">Nothing matches.</div>';
+  var byFn = (window.CBSCREENS && window.CBSCREENS.byFn) || {};
+  var amb = A.filter(function (x) { return (byFn[x.screen] || {}).ambiguous; }).length;
+  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+    + '<b>' + A.length + '</b> dialog(s), each named by the function that opens it — a title cannot be the '
+    + 'identity, because several are built from the row they were opened from.'
+    + (amb ? '<br>⚠️ <b>' + amb + '</b> name a function that opens MORE than one dialog (marked ·): '
+      + 'for those the code identifies the opener, not the dialog.' : '')
+    + '</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
+    + '<th style="text-align:start;padding:3px 6px">Opened by</th>'
+    + '<th style="text-align:start;padding:3px 0 3px 6px">In</th></tr>';
+  A.forEach(function (x) {
+    var meta = byFn[x.screen] || {};
+    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+      + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
+      +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code>'
+      +   (meta.ambiguous ? '<span title="opens more than one dialog" style="' + q2 + '"> ·</span>' : '') + '</td>'
+      + '<td style="padding:4px 6px">' + cmdbEsc(x.screen) + '()</td>'
+      + '<td style="padding:4px 0 4px 6px;' + q2 + '">' + cmdbEsc(meta.file || '') + '</td>'
+      + '</tr>';
+  });
+  return h + '</table>';
+}
+
 function cmdbSoftwareHTML(q2) {
   var A = cmdbAssets().filter(function (x) { return x.type === CBCMDB.kind; });
   var q = String(CBCMDB.q || '').toLowerCase();
@@ -224,6 +276,7 @@ function cmdbPaint() {
   }
 
   var q2 = 'font-size:var(--fs-1);color:var(--note)';
+  if (CBCMDB.kind === 'POPUP') { body.innerHTML = cmdbPopupHTML(q2); return; }
   if (CBCMDB.kind !== 'SCREEN') { body.innerHTML = cmdbSoftwareHTML(q2); return; }
   var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
     + '<b>' + rows.length + '</b> configuration item(s). Every screen carries a code that is <b>assigned once and '
