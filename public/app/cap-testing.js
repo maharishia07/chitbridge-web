@@ -96,6 +96,8 @@ function testModeSet(on) {
   CBTEST.on = !!on;
   try { localStorage.setItem('cb_testmode', CBTEST.on ? '1' : ''); } catch (_) {}
   if (!CBTEST.on) testPanelClose();
+  /* ⭐ mode on IS the start of a sitting — the run is the thing every verdict of it will belong to */
+  if (CBTEST.on) { try { testRunLoad(); } catch (_) {} }
   /**
    * ⚠️⚠️ MODE ON HAS TO READ THE BOARD, and splitting it from the lab is what broke this. Opening the panel
    * used to load the cases as a side effect; with the panel gone the chip had nothing to count, so it hid
@@ -2681,6 +2683,70 @@ async function screenCasesPopup(code, name) {
 }
 
 /* repainted in place after every verdict, so the panel shows what was just recorded */
+/**
+ * ── ⭐⭐⭐ WHAT WAS RAISED HERE, NOT JUST HOW MANY ────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"I have raised 1 incident and 1 requirement, it says in the top, but I could not see
+ * what is the incident / requirement etc which has been written now."*
+ *
+ * ⚠️⚠️ A COUNT YOU CANNOT OPEN IS A DEAD END, and worse than no count: it tells you something exists and
+ * then makes you go and look for it somewhere else — which is the switching this whole panel was built to
+ * remove. He raised them from here thirty seconds earlier and could not read them back.
+ *
+ * ⭐ So they are listed where they were raised, newest first, each saying what it is, what state it is in,
+ * and the sentence that was written. Nothing new is stored: both lists were already loaded for the counts.
+ */
+function testRaisedHTML(code) {
+  var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; });
+  var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; });
+  if (!inc.length && !req.length) return '';
+  var wrap = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line,#e7e3d8)';
+  var h = '<div style="' + wrap + '">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+    +   'text-transform:uppercase;margin-bottom:5px">Raised on this screen</div>';
+
+  var pill = function (t, fg, bg) {
+    return '<span style="font-size:var(--fs-1);font-weight:700;color:' + fg + ';background:' + bg
+      + ';border-radius:5px;padding:1px 6px;white-space:nowrap">' + testEsc(t) + '</span>';
+  };
+
+  /* ⚠️ newest first: the one you just raised is the one you are looking for */
+  h += inc.slice().reverse().map(function (x) {
+    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
+      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
+      +   pill(x.severity || 'Sev-3', 'var(--disp,#B3261E)', 'var(--disp-tint,#fbeceb)')
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
+      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
+      /* ⭐ the picture, if one was attached — one click from the report it belongs to */
+      +   (x.evidence_id ? '<a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(x.evidence_id)
+            + '" target="_blank" rel="noopener" style="font-size:var(--fs-1)">screenshot</a>' : '')
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
+      + (x.state === 'raised'
+        ? '<button class="btn" style="margin-top:4px;font-size:var(--fs-1)" onclick="testIncSet(\''
+          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>' : '')
+      + '</div>';
+  }).join('');
+
+  h += req.slice().reverse().map(function (x) {
+    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
+      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
+      +   pill(x.priority || 'Medium', 'var(--grey-2,#545A61)', 'var(--neutral-tint)')
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.clause) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
+      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.requirement || '') + '</div>'
+      /* ⚠️ the evidence beside the rule, always — six months on it is the only thing that says it was real */
+      + (x.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">seen: '
+          + testEsc(x.observed) + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  return h + '</div>';
+}
+
 function screenCasesPaint() {
   var code = CBTEST.popupFor;
   if (!code) return;
@@ -2711,7 +2777,8 @@ function screenCasesPaint() {
     +   (t.total ? '' : ' \u2014 nothing written for this screen yet')
     + '</div>'
     + testCaseFormHTML()
-    + testCaseListHTML(code);
+    + testCaseListHTML(code)
+    + testRaisedHTML(code);
   try { testShotPasteBind(); } catch (_) {}
   if (!known && !CBTEST._popCounts) {
     CBTEST._popCounts = 1;
@@ -3124,7 +3191,23 @@ function testCallsSince() {
   } catch (_) { return ''; }
 }
 
+/**
+ * ⚠️⚠️ THE RUN IS ENSURED HERE, AND THAT IS THE FIX FOR "cannot read properties of null (reading id)".
+ *
+ * Athi, 2026-09-12, first time he pressed Pass from a screen: *"tried updating a pass, I got a message that
+ * not updated, cannot read properties of null (reading id)."*
+ *
+ * ⚠️ MY OWN SPLIT CAUSED IT. `testRunLoad()` was called in exactly one place — `testPanelOpen()` — so the run
+ * existed as a SIDE EFFECT of opening the lab. The moment test mode stopped opening the lab, a verdict
+ * recorded from a screen had no run to belong to and `CBTEST.run.id` threw.
+ *
+ * ⭐ A RUN IS NEEDED BY WHOEVER RECORDS, so whoever records asks for one. It is cheap (localStorage) and
+ * idempotent, and putting it here means the next caller — from a screen, a popup, a keyboard shortcut, a
+ * place nobody has built yet — cannot hit the same wall. Relying on a panel having been opened first was
+ * never a rule anybody could see.
+ */
 async function testMark(key, status) {
+  if (!CBTEST.run || !CBTEST.run.id) testRunLoad();
   var nb = document.getElementById('cbt_n_' + key), eb = document.getElementById('cbt_e_' + key);
   var note = nb ? nb.value.trim() : '', ev = eb ? eb.value.trim() : '';
   /* ⭐ what the tester typed comes FIRST; the calls are appended. Their sentence is the evidence that matters,
@@ -3147,6 +3230,9 @@ async function testMark(key, status) {
        note box away at the exact moment it is needed. A pass closes, because there is nothing more to say. */
     CBTEST.open = (status === 'fail' || status === 'blocked') ? key : null;
     testPaint();
+    /* ⭐ and the in-screen panel, when it is the thing the person is looking at — it holds the same counts,
+       and a tally that does not move when you press Pass reads as a press that did not land. */
+    if (CBTEST.popupFor) { try { screenCasesPaint(); } catch (_) {} }
   } catch (e) {
     if (typeof toast === 'function') toast(tx('Not recorded') + ' — ' + e.message, true);
   }
