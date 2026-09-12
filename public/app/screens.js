@@ -3,6 +3,11 @@
    *"it has to be numeric or some char say 6 character screen name, yes it has to be static so always that
    system stays."* Assigned once, never recomputed, never reused — see SCREENS.md. */
 window.CBSCREENS = {
+ "edition": {
+  "n": 1,
+  "since": "2026-09-12",
+  "why": "the first. A bulk overhaul mints the next one, with a crosswalk, and never renumbers this one."
+ },
  "byNav": {
   "counter": {
    "code": "CTR001",
@@ -6216,9 +6221,120 @@ window.CBSCREENS = {
    "file": "cap-worklist.js",
    "ambiguous": true
   }
- }
+ },
+ "withdrawn": [
+  {
+   "code": "DTL002",
+   "path": "Detail › Chit messages",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is MSG001 now"
+  },
+  {
+   "code": "DTL003",
+   "path": "Detail › Connector cockpit (ERP)",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is BUS006 now"
+  },
+  {
+   "code": "DTL004",
+   "path": "Detail › Connector cockpit (IoT)",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is BUS007 now"
+  },
+  {
+   "code": "DTL005",
+   "path": "Detail › Co-assist cockpit",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is BUS008 now"
+  },
+  {
+   "code": "CTL185",
+   "path": "Control › Inside a screen › Cmdb • u2013",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL186",
+   "path": "Control › Inside a screen › Cmdb • u2715",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL258",
+   "path": "Control › Inside a screen › Testing • u2013",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL259",
+   "path": "Control › Inside a screen › Testing • u21bb",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL260",
+   "path": "Control › Inside a screen › Testing • u24d8",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL261",
+   "path": "Control › Inside a screen › Testing • u2637",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "CTL262",
+   "path": "Control › Inside a screen › Testing • u2715",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the label was an escape sequence, not words anybody could read"
+  },
+  {
+   "code": "RAL007",
+   "path": "Rail › Chit detail",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is DTL001 now"
+  },
+  {
+   "code": "RAL008",
+   "path": "Rail › Chit messages",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is MSG001 now"
+  },
+  {
+   "code": "RAL009",
+   "path": "Rail › Chit detail (design 2)",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "the screen was refiled — it is DTL006 now"
+  }
+ ]
 };
 /* the code for a nav key, or null when the screen is not on the rail (a modal, a sub-page) */
 window.cbScreenCode = function (nav) {
   try { var s = window.CBSCREENS.byNav[String(nav || '')]; return s ? s.code : null; } catch (e) { return null; }
+};
+/* What a code names. ⭐ Answers for a WITHDRAWN code too, which is the whole reason a gap is affordable:
+   "which one is DTL002?" has an answer for ever, and the answer says it names nothing now. */
+window.cbScreenBy = function (code) {
+  try {
+    var c = String(code || '').toUpperCase();
+    var r = window.CBSCREENS.rows.filter(function (x) { return x.code === c; })[0];
+    if (r) return { code: c, path: r.path, live: true };
+    var w = window.CBSCREENS.withdrawn.filter(function (x) { return x.code === c; })[0];
+    return w ? { code: c, path: w.path, live: false, until: w.until, why: w.why } : null;
+  } catch (e) { return null; }
 };

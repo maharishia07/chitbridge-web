@@ -107,6 +107,54 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
 }
 
 /**
+ * ── ⭐⭐⭐ THE RULE ATHI CHOSE, GUARDED ───────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"follow the standard, so live by standard"* — and then, on what happens when the scheme
+ * itself needs to change: *"we just need a reference; assuming we do an overhaul, as a bulk we can do the
+ * overhaul and renumber according to that day."*
+ *
+ * Which is two rules, and the second is what makes the first affordable:
+ *
+ *   1. WITHIN AN EDITION a published code is never reused, whatever happens to the screen.
+ *   2. A BULK RENUMBER IS A NEW EDITION — dated, with a crosswalk — never an edit of the old one.
+ *
+ * ⚠️ The failure this prevents is silent by construction: a reused code makes an old report READ CORRECTLY
+ * and mean something false. Nothing throws. Nobody notices. So it is checked on every run instead.
+ */
+{
+  const reg3 = JSON.parse(fs.readFileSync(REG, 'utf8'));
+  const ed = reg3.edition || null;
+  ok('the register declares which edition it is' + (ed ? ' (' + ed.n + ', since ' + ed.since + ')' : ''),
+     !!(ed && ed.n >= 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(ed.since))));
+  /* ⚠️ a code stored without its edition is a guess the day a second edition exists */
+  ok('the browser is told the edition too', !!(CB.edition && CB.edition.n === (ed && ed.n)));
+
+  const gone = Object.entries(reg3.screens).filter(([, v]) => v.retired);
+  const liveCodes = new Set(Object.entries(reg3.screens).filter(([, v]) => !v.retired).map(([, v]) => v.code));
+  const reused = gone.filter(([, v]) => liveCodes.has(v.code)).map(([, v]) => v.code);
+  /**
+   * ⚠️⚠️ THE ONE THAT MATTERS. ISO 3166 reserves a withdrawn country code for fifty years because CS was
+   * reused — Czechoslovakia, then Serbia and Montenegro — and broke data in systems nobody could enumerate.
+   */
+  ok('no withdrawn code has been handed out again' + (reused.length ? ': ' + reused.join(' · ') : ''),
+     reused.length === 0);
+
+  /* ⭐ A GAP MUST BE ABLE TO ANSWER FOR ITSELF. Athi asked "which one is DTL002?" within hours of it being
+     withdrawn, and a mute gap is the only thing that makes this rule expensive to live with. */
+  const mute = gone.filter(([, v]) => !v.retired_why).map(([, v]) => v.code);
+  ok('every withdrawn code says why it went (' + gone.length + ')'
+     + (mute.length ? ': ' + mute.slice(0, 4).join(' · ') : ''), mute.length === 0);
+  ok('the withdrawn codes reach the browser, so the question can be asked there',
+     Array.isArray(CB.withdrawn) && CB.withdrawn.length === gone.length);
+
+  /* the lookup itself, driven rather than read: it is the thing a person actually uses */
+  let answered = null;
+  try { answered = sandbox.window.cbScreenBy(gone.length ? gone[0][1].code : 'NONE00'); } catch (_) {}
+  ok('a withdrawn code still resolves, and says it names nothing now',
+     !gone.length || !!(answered && answered.live === false && answered.why));
+}
+
+/**
  * ── ⚠️ THE THREE WAYS THE STAMP HAS ALREADY GONE WRONG ───────────────────────────────────────────────────────
  *
  * Every one of these shipped, passed every guard there was, and was found by opening the app and looking:
