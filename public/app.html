@@ -12679,6 +12679,14 @@ function mapApiChit(c){
     /* ⭐ the five figures the header records at send (summary_json.money, 2026-09-07): gross · savings · net · tax · total.
        Absent on every chit sent before that, and absent is NOT zero — the columns print "—" rather than invent a figure. */
     money:sum.money||null,
+    /**
+     * ⭐⭐ IS THIS A DRAFT? The deletion policy turns on it: only a draft may be deleted, because a sent chit is
+     * co-held and the other party keeps their copy. `role` comes straight from chit_header, so the UI and the
+     * database agree by construction rather than by a rule written out twice.
+     * ⚠️ Until 2026-09-12 the list never received `role`, so every draft failed the test and 🗑️ told the user
+     * their unsent chit was held by somebody else.
+     */
+    isDraft:(c.role==='Draft'),
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
     /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
