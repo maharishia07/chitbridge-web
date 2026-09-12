@@ -72,7 +72,12 @@
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper);
         font-size:var(--fs-3); font-variant-numeric:tabular-nums; -webkit-text-size-adjust:100%; }
 
-  header{ position:sticky; top:0; z-index:20; background:var(--card); border-bottom:1px solid var(--line); padding:9px 14px; }
+  /**
+   * ⭐ THE FROZEN BLOCK: title, tally chips and the five tabs. Sticky moves to the WRAPPER — two separately
+   * sticky children each stick to the viewport top and overlap each other, which is why this is one element.
+   */
+  .frozen{ position:sticky; top:0; z-index:20; background:var(--card); box-shadow:0 1px 0 var(--line); }
+  header{ background:var(--card); border-bottom:1px solid var(--line); padding:9px 14px; }
   .htop{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
   h1{ font-size:var(--fs-4); margin:0; }
   .sub{ color:var(--grey-2); font-size:var(--fs-2); }
@@ -280,6 +285,14 @@
   /* ⭐ the caveat that has to be available without being in the way */
   .fine{ display:block; margin-top:3px; color:var(--grey-2); opacity:.85; }
   /* ⭐ a row’s own boundary, in its own words — prose, so it keeps the reading measure */
+  /* ⭐ a name cell is a row: the name on the left, its chips against the right edge */
+  table.inside td.named{ display:flex; align-items:baseline; gap:8px; }
+  table.inside td.named .k{ min-width:0; overflow-wrap:anywhere; }
+  table.inside td.named .chips{ margin-inline-start:auto; display:flex; gap:5px; align-items:baseline;
+        flex:0 0 auto; }
+  /* ⚠️ shared is NOT a warning — it is the correct state for reference data, so it must not look like one */
+  .tag.tier-shared{ background:var(--neutral-tint); color:var(--grey-2); }
+  .tag.tier-unguarded{ background:var(--warn-tint,#FDF1DC); color:var(--warn-2,#8A5A00); font-weight:700; }
   .areanote{ max-width:var(--prose); margin:2px 0 10px; padding:8px 11px; font-size:var(--fs-1);
         line-height:1.55; color:var(--ink-2); background:var(--paper);
         border-inline-start:3px solid var(--line); border-radius:0 7px 7px 0; }
@@ -525,6 +538,20 @@
 </head>
 <body>
 
+<!--
+  ── ⭐⭐ FREEZE THE CHROME, SCROLL THE REPORT ─────────────────────────────────────────────────────────────
+
+  Athi, 2026-09-12: *"can you freeze until case summary report, reliability chip, the scroll bar to
+  operate below that."*
+
+  ⚠️ `header` was already sticky and the TAB BAR was not, so the five tabs and the tally chips scrolled
+  away the moment you started reading — and on a board this long that is the one row you most need to
+  still be able to reach. Half a sticky header is worse than none: it looks deliberate.
+
+  ⭐ Both are one sticky block now. The FILTER bar below is deliberately NOT in it — it belongs to the
+  Cases view, it is hidden on the others, and freezing a bar that disappears would make the page jump.
+-->
+<div class="frozen">
 <header>
   <div class="htop">
     <h1>Test lab</h1>
@@ -557,6 +584,7 @@
     <span class="tsize"><button onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
   </div>
 </div>
+</div><!-- /.frozen -->
 <!--
   ── ⭐⭐⭐ FIVE LENSES, ONE SET OF NUMBERS ──────────────────────────────────────────────────────────────────
 
@@ -1188,11 +1216,11 @@ var ALWAYS_SHOW = { penetration: true };
  */
 /* ⭐ the database row lists TABLES now, not the migrations that made them (Athi, 2026-09-11) */
 var BUILT_NOUN = { engine: 'rules', middleware: 'gates', web: 'screens', api: 'route files',
-                   database: 'tables', connector: 'adapters' };
+                   database: 'tables', connector: 'adapters', bridge: 'crossings' };
 var BUILT_HEAD = { engine: 'Rule', middleware: 'Gate', web: 'Screen', api: 'Route file',
-                   database: 'Table', connector: 'Adapter' };
+                   database: 'Table', connector: 'Adapter', bridge: 'Where it happens' };
 var BUILT_NOTE = { engine: 'Size', middleware: 'Size', web: 'Size', api: 'Function points',
-                   database: 'Columns', connector: 'Size' };
+                   database: 'Columns', connector: 'Size', bridge: 'Size' };
 var CONTENTS = null;
 /**
  * ⭐⭐ WHAT EACH ROW LEAVES OUT. Athi, 2026-09-11, on IoT: *"not an explicit stuff, it is part of
@@ -1202,11 +1230,18 @@ var CONTENTS = null;
  */
 var NOTES = {}, FOOT = '', MATURITY = null;
 
-var AREA_TIER = { engine: 1, middleware: 1, web: 1, api: 2, database: 2, connector: 2 };
+var AREA_TIER = { engine: 1, middleware: 1, web: 1, bridge: 1, api: 2, database: 2, connector: 2 };
 var TIER_NAME = { 1: 'The architecture \u2014 engine, middleware, web', 2: 'What it rides on' };
-var AREA_ORDER = ['engine', 'middleware', 'web', 'api', 'database', 'connector'];
+/**
+ * ⭐⭐⭐ THE BRIDGE SITS BETWEEN THE PRODUCT AND WHAT IT RIDES ON, because that is what it is: the crossing the
+ * layers perform, not a layer of its own. Athi, 2026-09-12: *"where is the bridge coming?"* — it was scattered
+ * across three rows on a board named after it.
+ * ⚠️ Its files are DELIBERATELY counted twice: routes/chits.js is on the API row as a route file and here as
+ * the thing that resolves a recipient. A crossing is a JOB, and the same file can hold a job and a place.
+ */
+var AREA_ORDER = ['engine', 'middleware', 'web', 'bridge', 'api', 'database', 'connector'];
 var AREA_LABEL = { engine: 'Engine', middleware: 'Middleware', web: 'Web',
-                   api: 'API', database: 'Database', connector: 'Connector' };
+                   bridge: 'Bridge', api: 'API', database: 'Database', connector: 'Connector' };
 /**
  * ── ⭐⭐⭐ WHERE A PERSON CANNOT BE THE EVIDENCE ───────────────────────────────────────────────────────────────
  *
@@ -1237,6 +1272,8 @@ var AREA_SAYS = {
   engine: 'The rules themselves — money, tax, offers, numerals, document numbers. Provable with no database and no screen.',
   middleware: 'What decides who may do what: auth, the hat gate, the key scopes.',
   web: 'Where a person meets the other two: the counter, the app, the storefront.',
+  /* ⭐⭐ the CROSSING — the half of the name that had no row until Athi asked where it was */
+  bridge: 'The crossing itself: identify the recipient or refuse, mint one copy each, then let the database keep them apart.',
   api: 'How the three are reached — every endpoint a client can call.',
   database: 'Where their results rest: schema, migrations, the isolation policies.',
   connector: 'How they leave the building — Tally, Zoho, anything carrying a chit off the rail.',
@@ -2123,9 +2160,18 @@ function matrixHTML(){
         inner += '<table class="inside"><thead><tr><th>' + esc(BUILT_HEAD[a] || 'Name')
           + '</th><th>What it does</th><th>' + esc(BUILT_NOTE[a] || 'Size') + '</th></tr></thead><tbody>';
         made.slice(0, 60).forEach(function(x){
-          inner += '<tr><td><span class="k">' + esc(x.name) + '</span>'
+          /**
+           * ⚠️⚠️ THE NAME AND ITS CHIPS RAN TOGETHER — "access_eventspolicy PROVEN". Three spans with no
+           * separator and no track, so the chips started wherever the name happened to end and the column had
+           * no edge to read down. Athi, 2026-09-12: *"can you make it right aligned, so it looks good."*
+           * ⭐ Name left, chips pushed to the right edge of their own cell. Same fix as the case rows and the
+           * tree: a column is a TRACK, not whatever is left over after the text.
+           */
+          inner += '<tr><td class="named"><span class="k">' + esc(x.name) + '</span>'
+            + '<span class="chips">'
             + (x.tier ? '<span class="tag tier-' + esc(x.tier) + '">' + esc(x.tier) + '</span>' : '')
-            + (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '') + '</td>'
+            + (x.stage ? '<span class="stage ' + esc(x.stage) + '">' + esc(x.stage) + '</span>' : '')
+            + '</span></td>'
             + '<td>' + (x.purpose ? esc(x.purpose)
                 : '<i class="dim">this file does not say what it is for</i>') + '</td>'
             + '<td class="num dim">' + esc(x.note || '') + '</td></tr>';
