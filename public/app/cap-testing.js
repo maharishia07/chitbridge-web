@@ -2889,6 +2889,218 @@ async function screenCasesPopup(code, name) {
  * ⚠️ SINCE THE PANEL OPENED, not since the tab loaded. A diagnostic that includes the sign-in and the boot
  * says nothing about the screen you are standing on.
  */
+/**
+ * ── ⭐⭐⭐ WHAT IS BEHIND THIS SCREEN, AND HOW ITS TESTS STAND ─────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"can you bring the other test cases like engine, web, middleware etc which were run or
+ * should run as part of the screen in the same place in different tabs… with status."*
+ *
+ * ⭐⭐ A SCREEN IS THE TIP OF A STACK. Marking CAT001 passed says the catalogue LOOKED right; whether the tax
+ * arithmetic under it is proved lives in an engine unit test three layers down, on a board the tester on that
+ * screen never opens. This area walks the stack downwards from where they are standing.
+ *
+ * ⭐⭐ THE CHAIN IS BUILT FROM LINKS THAT ALREADY EXIST — nothing here is invented, and each rung says how
+ * strong it is, because a tester reading "8 engine cases, all passing" must know whether that is a fact:
+ *
+ *   1  DRAWS IT      the asset register knows which capability file draws which screen (CBASSETS.drawnBy)
+ *   2  IT CALLED     the routes this screen really hit, from its own network log — observed, not guessed
+ *   3  DECLARED      cases whose `subjects` NAME one of those files. ⭐ THIS IS THE REAL FIND: 128 test
+ *                    files already declare the module they test, and nothing was reading it. An exact,
+ *                    stored, two-way link from a screen to the engine tests underneath it.
+ *   4  IS THE CASE   the file IS a case in its own right (481 cases are keyed by their own path)
+ *   5  NAMED AFTER   the key merely contains the word. ⚠️ A LEAD, NOT COVERAGE — and it is labelled so in
+ *                    the list itself, never folded into the counts above it.
+ */
+function testBehindOf(code) {
+  var A = (window.CBASSETS || {});
+  var rows = A.rows || [];
+  var drawn = (A.drawnBy || {})[code] || '';
+  var files = [];
+  String(drawn).split(',').forEach(function (p) { p = p.trim(); if (p) files.push(p); });
+
+  /* ⭐ what it actually called — the same forty-call log the Speed area reads, no second measurement */
+  var routes = [], seen = {};
+  (window.CBCALLS || []).forEach(function (c) {
+    var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
+    if (!m) return;
+    var f = 'chitbridge-api/routes/' + m[1].toLowerCase() + '.js';
+    if (!seen[f]) { seen[f] = 1; routes.push(f); }
+  });
+
+  /**
+   * ⚠️ TWO SPELLINGS OF THE SAME FILE. The register writes the repo in (`chitbridge-api/routes/tax.js`);
+   * `subjects` writes it repo-relative (`routes/tax.js`), because a test file names its module the way its
+   * own repo sees it. Matching one against the other raw finds nothing at all — which looks exactly like
+   * "this screen has no engine tests" and would have been believed.
+   */
+  var rel = function (p) { return String(p).replace(/^chitbridge-(api|web)\//, ''); };
+  var stem = function (p) { return String(p).split('/').pop().replace(/\.[a-z]+$/i, '').toLowerCase(); };
+
+  var all = files.concat(routes);
+
+  /**
+   * ⚠️⚠️ ONE HOP FURTHER, OR THE CATALOGUE READS AS UNTESTED. No unit test declares `routes/catalogue.js` as
+   * its subject — they are written against `lib/catalogue-read.js`, which the route requires. Stopping at the
+   * route reported "nothing declares itself a test of that code" for one of the most heavily proved parts of
+   * the system: a FALSE gap, which is worse than a silent one because someone acts on it.
+   *
+   * ⭐ `uses` is a static require edge recorded by assets.cjs — a fact in the source, not a resemblance.
+   */
+  var mods = [];
+  all.forEach(function (p) {
+    var a = (rows.filter(function (r) { return r.path === p; })[0] || {});
+    (a.uses || []).forEach(function (u) { if (mods.indexOf(u) < 0) mods.push(u); });
+  });
+
+  var relSet = {}, stemSet = {};
+  all.forEach(function (p) { relSet[rel(p)] = 1; stemSet[stem(p)] = 1; });
+  var modSet = {};
+  mods.forEach(function (u) { modSet[u] = 1; });
+
+  /**
+   * ⭐⭐ EVERY ROW CARRIES THE REASON IT IS THERE. A list of forty-three engine cases under a screen is only
+   * useful if the tester can see WHY each one is claimed to be underneath it — "because it tests lib/tax.js,
+   * which routes/catalogue.js requires" is checkable; a bare list is something to take on faith.
+   */
+  var linked = [], named = [];
+  (CBTEST.cases || []).forEach(function (c) {
+    if (c.menu) return;                       /* a screen case belongs on the Cases tab, not underneath it */
+    var key = String(c.case_key || '');
+    var sub = c.subjects || [];
+    var hit = null;
+    sub.forEach(function (x) { if (!hit && relSet[String(x)]) hit = String(x); });
+    if (hit) { linked.push({ c: c, why: 'tests ' + hit }); return; }
+    sub.forEach(function (x) { if (!hit && modSet[String(x)]) hit = String(x); });
+    if (hit) { linked.push({ c: c, why: 'tests ' + hit + ', which this screen\u2019s code requires' }); return; }
+    if (relSet[rel(key)] || all.indexOf(key) >= 0) { linked.push({ c: c, why: 'is that file' }); return; }
+    var k = key.toLowerCase();
+    var w = Object.keys(stemSet).filter(function (x) { return x.length > 4 && k.indexOf(x) >= 0; })[0];
+    if (w) named.push({ c: c, why: 'named after ' + w });
+  });
+  return { files: files, routes: routes, mods: mods, linked: linked, named: named };
+}
+
+/** the tab number counts only what is actually linked — a name match must not inflate it */
+function testBehindCount(code) {
+  if (!(CBTEST.cases || []).length) return null;
+  var b = testBehindOf(code);
+  var n = b.linked.length;
+  return n || null;
+}
+
+function testBehindHTML(code) {
+  var A = (window.CBASSETS || {});
+  var rows = A.rows || [];
+  var b = testBehindOf(code);
+  var asset = function (p) { return rows.filter(function (r) { return r.path === p; })[0] || null; };
+
+  var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;'
+    + 'letter-spacing:.04em;text-transform:uppercase;margin:11px 0 4px">' + t + '</div>'; };
+  var quiet = function (t) { return '<div style="font-size:var(--fs-1);color:var(--note);padding:2px 0">'
+    + t + '</div>'; };
+
+  var fileRow = function (p) {
+    var a = asset(p);
+    return '<div style="font-size:var(--fs-2);padding:2px 0;overflow:hidden;text-overflow:ellipsis;'
+      +   'white-space:nowrap">'
+      + (a ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(a.code) + '</code> ' : '')
+      + testEsc(p)
+      + (a && a.stage ? ' <span style="font-size:var(--fs-1);color:var(--note)">\u00b7 ' + testEsc(a.stage)
+          + '</span>' : '')
+      + '</div>';
+  };
+
+  /* ⭐ the verdict is the whole point of the ask — one badge, the same three colours as everywhere else */
+  var caseRow = function (x, warn) {
+    var c = x.c, l = (CBTEST.last || {})[c.case_key];
+    var st = l ? String(l.status) : '';
+    var col = st === 'pass' ? 'var(--ok-2,#1B7F4B)' : st === 'fail' ? 'var(--disp,#B3261E)'
+            : st ? 'var(--warn-2,#8a6d00)' : 'var(--note)';
+    return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
+      +   'border-top:1px solid var(--line-2,#efece4)">'
+      + '<span style="flex:1 1 auto;min-width:0">'
+      +   '<span style="font-size:var(--fs-2);display:block;overflow:hidden;text-overflow:ellipsis;'
+      +     'white-space:nowrap">' + (warn ? '\u26a0\ufe0f ' : '') + testEsc(c.title || c.case_key) + '</span>'
+      +   '<span style="font-size:var(--fs-1);color:var(--note);display:block;overflow:hidden;'
+      +     'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.case_key)
+      +     (c.test_type ? ' \u00b7 ' + testEsc(c.test_type) : '')
+      +     ((c.areas || []).length ? ' \u00b7 ' + testEsc(c.areas.join(', ')) : '') + '</span>'
+      +   '<span style="font-size:var(--fs-1);color:var(--note);display:block">\u2937 '
+      +     testEsc(x.why) + '</span>'
+      + '</span>'
+      + '<span style="font-size:var(--fs-1);font-weight:700;flex:0 0 auto;color:' + col + '">'
+      +   (l ? testEsc(st.toUpperCase()) : 'not run') + '</span>'
+      + '</div>';
+  };
+
+  var h = '';
+
+  /* ── 1 · what draws it ── */
+  h += lab('Draws this screen');
+  h += b.files.length ? b.files.map(fileRow).join('')
+    : quiet('The register does not say which file draws this screen \u2014 that is a gap in the register, '
+      + 'not an answer about this screen.');
+
+  /* ── 2 · what it called ── */
+  h += lab('Server code it called');
+  h += b.routes.length ? b.routes.map(fileRow).join('')
+    : quiet('No API call recorded yet. Use the screen behind this panel and it will appear.');
+
+  /* ── 3 · the modules that code leans on ── */
+  if (b.mods.length) {
+    h += lab('Modules underneath \u00b7 ' + b.mods.length);
+    /* ⚠️ a route can require thirty modules; printed in full this becomes the whole area and buries the
+       verdicts below it, which are what the tester came for */
+    h += '<div style="font-size:var(--fs-1);color:var(--grey-2);line-height:1.6;'
+      +   'word-break:break-word">' + b.mods.slice(0, 18).map(testEsc).join(' \u00b7 ')
+      +   (b.mods.length > 18 ? ' \u00b7 \u2026and ' + (b.mods.length - 18) + ' more' : '') + '</div>';
+  }
+
+  /* ── 4+5 · the linked cases, with their standing ── */
+  var linked = b.linked;
+  var tally = { pass: 0, fail: 0, other: 0, none: 0 };
+  linked.forEach(function (x) {
+    var l = (CBTEST.last || {})[x.c.case_key];
+    if (!l) tally.none++; else if (l.status === 'pass') tally.pass++;
+    else if (l.status === 'fail') tally.fail++; else tally.other++;
+  });
+  /**
+   * ⭐⭐ FAILING FIRST, THEN NEVER RUN, THEN PASSING. Sorted by case key this list opens on whatever happens
+   * to start with "a" — and the one red line sits at row thirty-one. A tester looks at this area to find out
+   * whether the ground under the screen is solid; the answer belongs at the top.
+   */
+  var rank = { fail: 0, blocked: 1, na: 2 };
+  linked = linked.slice().sort(function (p, q) {
+    var lp = (CBTEST.last || {})[p.c.case_key], lq = (CBTEST.last || {})[q.c.case_key];
+    var rp = lp ? (rank[lp.status] === undefined ? 4 : rank[lp.status]) : 3;
+    var rq = lq ? (rank[lq.status] === undefined ? 4 : rank[lq.status]) : 3;
+    return rp - rq || (p.c.case_key < q.c.case_key ? -1 : 1);
+  });
+
+  h += lab('Tests underneath it \u00b7 ' + linked.length);
+  if (!linked.length) {
+    h += quiet('Nothing declares itself a test of that code. \u26a0\ufe0f That is a real coverage finding \u2014 '
+      + 'worth raising as a requirement from this very panel.');
+  } else {
+    h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:0 0 4px">'
+      + '<b style="color:var(--ok-2,#1B7F4B)">' + tally.pass + '</b> passing \u00b7 '
+      + '<b' + (tally.fail ? ' style="color:var(--disp,#B3261E)"' : '') + '>' + tally.fail + '</b> failing \u00b7 '
+      + '<b>' + (tally.none + tally.other) + '</b> not passing yet</div>';
+    h += linked.slice(0, 40).map(function (c) { return caseRow(c, false); }).join('');
+    if (linked.length > 40) h += quiet('\u2026 and ' + (linked.length - 40) + ' more, further down the same order. The full board is in the Test lab.');
+  }
+
+  /* ── 5 · the weak rung, kept apart and marked ── */
+  if (b.named.length) {
+    h += lab('Named after that code \u00b7 ' + b.named.length);
+    h += quiet('\u26a0\ufe0f Matched on the WORD in the file name, not on a declared link. Read these as leads. '
+      + 'They are counted nowhere above.');
+    h += b.named.slice(0, 25).map(function (c) { return caseRow(c, true); }).join('');
+    if (b.named.length > 25) h += quiet('\u2026 and ' + (b.named.length - 25) + ' more.');
+  }
+  return h;
+}
+
 function testDiagMark() { CBTEST._diagFrom = (window.CBCALLS || []).length ? (CBCALLS[0].rid || null) : null;
   CBTEST._diagAt = Date.now(); }
 
@@ -3046,10 +3258,12 @@ function screenCasesPaint() {
     + seg('write', 'Write', null)
     + seg('cases', 'Cases', t.total)
     + seg('raised', 'Raised', known ? (inc + req) : null)
+    + seg('behind', 'Behind', testBehindCount(code))
     + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
     + '</div>';
 
-  var body = area === 'diag' ? testDiagHTML()
+  var body = area === 'behind' ? testBehindHTML(code)
+           : area === 'diag' ? testDiagHTML()
            : area === 'write' ? testCaseFormHTML()
            : area === 'raised' ? (testRaisedHTML(code)
              || '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">Nothing has been raised '

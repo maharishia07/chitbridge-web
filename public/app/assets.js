@@ -14,7 +14,19 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/actors.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/access-events.js",
+    "lib/bridgeid.js",
+    "lib/dev-otp.js",
+    "lib/handle.js",
+    "lib/meter.js",
+    "lib/otp.js",
+    "lib/respond.js",
+    "lib/schema.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API002",
@@ -24,7 +36,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/adopt.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/adopt.js",
+    "lib/mint-product.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API003",
@@ -34,7 +51,18 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/assist.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/assist-kb.js",
+    "lib/catalogue-build.js",
+    "lib/compliance.js",
+    "lib/container.js",
+    "lib/logger.js",
+    "lib/money.js",
+    "lib/regional.js",
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API004",
@@ -44,7 +72,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/attachments.js",
    "group": "api.route",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/respond.js",
+    "lib/storage.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API005",
@@ -54,7 +87,16 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/capture.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/autoraise.js",
+    "lib/capture.js",
+    "lib/channels.js",
+    "lib/consolidate.js",
+    "lib/respond.js",
+    "lib/stores.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API006",
@@ -64,7 +106,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/catalogue-face.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/identity.js",
+    "lib/order-input.js",
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API007",
@@ -74,7 +122,39 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/catalogue.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/ai.js",
+    "lib/bridgeid.js",
+    "lib/catalogue-build.js",
+    "lib/catalogue-read.js",
+    "lib/catalogue-view.js",
+    "lib/conformance.js",
+    "lib/container.js",
+    "lib/dev-otp.js",
+    "lib/events.js",
+    "lib/identity.js",
+    "lib/itemmatch.js",
+    "lib/itemstatus.js",
+    "lib/mint.js",
+    "lib/money.js",
+    "lib/network-view.js",
+    "lib/notify.js",
+    "lib/offers-live.js",
+    "lib/order-input.js",
+    "lib/otp.js",
+    "lib/pricing-engine.js",
+    "lib/regional.js",
+    "lib/respond.js",
+    "lib/storage.js",
+    "lib/tax-shelf.js",
+    "lib/tax-slab.js",
+    "lib/visibility-cap.js",
+    "lib/workpattern.js",
+    "middleware/auth.js",
+    "middleware/customer-auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API008",
@@ -84,7 +164,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/channels.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/channels.js",
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API009",
@@ -94,7 +179,44 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/chits.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/access.js",
+    "lib/adopt.js",
+    "lib/amend.js",
+    "lib/assign.js",
+    "lib/catalogue-view.js",
+    "lib/cost.js",
+    "lib/deliverline.js",
+    "lib/docnumber.js",
+    "lib/events.js",
+    "lib/handle.js",
+    "lib/instruments.js",
+    "lib/itemmatch.js",
+    "lib/logger.js",
+    "lib/meter.js",
+    "lib/mint.js",
+    "lib/money.js",
+    "lib/offers-live.js",
+    "lib/policy.js",
+    "lib/profile.js",
+    "lib/raida.js",
+    "lib/readiness.js",
+    "lib/regional.js",
+    "lib/reprice.js",
+    "lib/respond.js",
+    "lib/schema.js",
+    "lib/stock-from-chit.js",
+    "lib/storage.js",
+    "lib/tax-copy.js",
+    "lib/tax-lines.js",
+    "lib/tax-shelf.js",
+    "lib/trace.js",
+    "lib/whatsapp-out.js",
+    "lib/workpattern.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API010",
@@ -104,7 +226,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/connections.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/meter.js",
+    "lib/respond.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API011",
@@ -114,7 +242,20 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/connectors.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js",
+    "lib/canon.js",
+    "lib/dev-otp.js",
+    "lib/mint.js",
+    "lib/notify.js",
+    "lib/otp.js",
+    "lib/respond.js",
+    "lib/storage.js",
+    "lib/workpattern.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API012",
@@ -124,7 +265,17 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/definitions.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/definition-check.js",
+    "lib/regional.js",
+    "lib/respond.js",
+    "lib/shopchanged.js",
+    "lib/slab-cites.js",
+    "lib/tax-governance.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API013",
@@ -134,7 +285,28 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/entities.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js",
+    "lib/channels.js",
+    "lib/exposure.js",
+    "lib/govresolve.js",
+    "lib/handle.js",
+    "lib/logger.js",
+    "lib/notify.js",
+    "lib/otp.js",
+    "lib/policy.js",
+    "lib/profile.js",
+    "lib/rates.js",
+    "lib/readiness.js",
+    "lib/respond.js",
+    "lib/schema-bootstrap.js",
+    "lib/schema.js",
+    "lib/visibility-cap.js",
+    "middleware/auth.js",
+    "middleware/validate.js",
+    "routes/governance.js"
+   ]
   },
   {
    "code": "API014",
@@ -144,7 +316,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/events.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/events.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API015",
@@ -154,7 +330,19 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/folders.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/assign.js",
+    "lib/folder-rules.js",
+    "lib/groupsum.js",
+    "lib/match.js",
+    "lib/measure.js",
+    "lib/policy.js",
+    "lib/respond.js",
+    "lib/select.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API016",
@@ -164,7 +352,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/forms.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/forms.js",
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API017",
@@ -174,7 +367,28 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/governance.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "governance/entitlements.js",
+    "governance/mint.js",
+    "governance/resolver.js",
+    "lib/ai.js",
+    "lib/boilerplate.js",
+    "lib/bridgeid.js",
+    "lib/confcache.js",
+    "lib/conformance.js",
+    "lib/instruments.js",
+    "lib/profile.js",
+    "lib/public-facts.js",
+    "lib/readiness.js",
+    "lib/reference.js",
+    "lib/respond.js",
+    "lib/schema.js",
+    "lib/source.js",
+    "lib/verify.js",
+    "lib/workpattern.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API018",
@@ -184,7 +398,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/identity-docs.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/respond.js",
+    "lib/schema.js",
+    "lib/vaultcrypto.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API019",
@@ -194,7 +414,17 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/integrations.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js",
+    "lib/events.js",
+    "lib/policy.js",
+    "lib/profile-map.js",
+    "lib/profile.js",
+    "lib/zip-store.js",
+    "middleware/auth.js",
+    "routes/keys.js"
+   ]
   },
   {
    "code": "API020",
@@ -204,7 +434,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/invoice.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/services.js",
+    "lib/tax-copy.js",
+    "lib/tax-lines.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API021",
@@ -214,7 +450,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/keys.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API022",
@@ -224,7 +463,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/kyb.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/kyb.js",
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API023",
@@ -234,7 +478,21 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/network-design.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/availability.js",
+    "lib/catalogue-view.js",
+    "lib/dev-otp.js",
+    "lib/govresolve.js",
+    "lib/handle.js",
+    "lib/money.js",
+    "lib/network-build.js",
+    "lib/respond.js",
+    "lib/schema-bootstrap.js",
+    "lib/visibility-cap.js",
+    "middleware/auth.js",
+    "routes/governance.js"
+   ]
   },
   {
    "code": "API024",
@@ -244,7 +502,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/notifications.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/respond.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API025",
@@ -254,7 +516,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/offers.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-view.js",
+    "lib/offers-engine.js",
+    "middleware/auth.js",
+    "routes/openapi.js"
+   ]
   },
   {
    "code": "API026",
@@ -264,7 +532,15 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/openapi.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "routes/integrations.js",
+    "routes/invoice.js",
+    "routes/keys.js",
+    "routes/offers.js",
+    "routes/pricing.js",
+    "routes/tax.js"
+   ]
   },
   {
    "code": "API027",
@@ -274,7 +550,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/pricing.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/pricing-engine.js",
+    "lib/services.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API028",
@@ -284,7 +565,30 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/products.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/availability.js",
+    "lib/catalogue-columns.js",
+    "lib/csv-preflight.js",
+    "lib/csv.js",
+    "lib/defaults.js",
+    "lib/identity.js",
+    "lib/itemstatus.js",
+    "lib/meter.js",
+    "lib/mint-product.js",
+    "lib/money.js",
+    "lib/order-input.js",
+    "lib/regional.js",
+    "lib/respond.js",
+    "lib/schedule.js",
+    "lib/schema-bootstrap.js",
+    "lib/sheet.js",
+    "lib/shopchanged.js",
+    "lib/starter-fields.js",
+    "lib/storage-object.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API029",
@@ -294,7 +598,29 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/relationships.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-build.js",
+    "lib/catalogue-read.js",
+    "lib/catalogue-view.js",
+    "lib/container.js",
+    "lib/customer-groups.js",
+    "lib/handle.js",
+    "lib/identity.js",
+    "lib/local-identity.js",
+    "lib/measure.js",
+    "lib/offers-engine.js",
+    "lib/order-input.js",
+    "lib/policy.js",
+    "lib/public-facts.js",
+    "lib/respond.js",
+    "lib/reward-store.js",
+    "lib/rewards.js",
+    "lib/select.js",
+    "lib/visibility-cap.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API030",
@@ -304,7 +630,16 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/schemas.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-columns.js",
+    "lib/column-rules.js",
+    "lib/respond.js",
+    "lib/schema-bootstrap.js",
+    "lib/schema.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API031",
@@ -314,7 +649,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/service.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/sla.js",
+    "middleware/auth.js",
+    "middleware/validate.js"
+   ]
   },
   {
    "code": "API032",
@@ -324,7 +664,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/simulator.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/respond.js"
+   ]
   },
   {
    "code": "API033",
@@ -334,7 +677,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/supplies.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/supply-store.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API034",
@@ -344,7 +691,14 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/tax.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/respond.js",
+    "lib/services.js",
+    "lib/tax-copy.js",
+    "lib/tax-lines.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API035",
@@ -354,7 +708,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/testing.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/gherkin.js",
+    "lib/storage.js",
+    "middleware/auth.js"
+   ]
   },
   {
    "code": "API036",
@@ -364,7 +723,25 @@ window.CBASSETS = {
    "path": "chitbridge-api/routes/till.js",
    "group": "api.route",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-view.js",
+    "lib/deliverline.js",
+    "lib/itemstatus.js",
+    "lib/logger.js",
+    "lib/lotfields.js",
+    "lib/policy.js",
+    "lib/profile.js",
+    "lib/regional.js",
+    "lib/reward-store.js",
+    "lib/rewards.js",
+    "lib/select.js",
+    "lib/shopchanged.js",
+    "lib/speech.js",
+    "lib/tax-shelf.js",
+    "middleware/auth.js",
+    "routes/keys.js"
+   ]
   },
   {
    "code": "API037",
@@ -374,7 +751,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/db/index.js",
    "group": "api.db",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/reqctx.js",
+    "lib/trips.js"
+   ]
   },
   {
    "code": "API038",
@@ -384,7 +765,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/jest.setup.js",
    "group": "api.entry",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "API039",
@@ -394,7 +776,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/middleware/auth.js",
    "group": "api.middleware",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/reqctx.js",
+    "lib/schema.js",
+    "middleware/hat-gate.js"
+   ]
   },
   {
    "code": "API040",
@@ -404,7 +791,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/middleware/customer-auth.js",
    "group": "api.middleware",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "API041",
@@ -414,7 +802,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/middleware/hat-gate.js",
    "group": "api.middleware",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/access.js"
+   ]
   },
   {
    "code": "API042",
@@ -424,7 +815,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/middleware/idempotency.js",
    "group": "api.middleware",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/canon.js"
+   ]
   },
   {
    "code": "API043",
@@ -434,7 +828,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/middleware/validate.js",
    "group": "api.middleware",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "API044",
@@ -444,7 +839,51 @@ window.CBASSETS = {
    "path": "chitbridge-api/server.js",
    "group": "api.entry",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/dev-otp.js",
+    "lib/logger.js",
+    "lib/trips.js",
+    "middleware/idempotency.js",
+    "routes/actors.js",
+    "routes/adopt.js",
+    "routes/assist.js",
+    "routes/attachments.js",
+    "routes/capture.js",
+    "routes/catalogue-face.js",
+    "routes/catalogue.js",
+    "routes/channels.js",
+    "routes/chits.js",
+    "routes/connections.js",
+    "routes/connectors.js",
+    "routes/definitions.js",
+    "routes/entities.js",
+    "routes/events.js",
+    "routes/folders.js",
+    "routes/forms.js",
+    "routes/governance.js",
+    "routes/identity-docs.js",
+    "routes/integrations.js",
+    "routes/invoice.js",
+    "routes/keys.js",
+    "routes/kyb.js",
+    "routes/network-design.js",
+    "routes/notifications.js",
+    "routes/offers.js",
+    "routes/openapi.js",
+    "routes/pricing.js",
+    "routes/products.js",
+    "routes/relationships.js",
+    "routes/schemas.js",
+    "routes/service.js",
+    "routes/simulator.js",
+    "routes/supplies.js",
+    "routes/tax.js",
+    "routes/testing.js",
+    "routes/till.js",
+    "src/routes/catalogue.js",
+    "src/routes/network.js"
+   ]
   },
   {
    "code": "CAP001",
@@ -458,7 +897,8 @@ window.CBASSETS = {
     "INS001",
     "ACC001",
     "ACC002"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP002",
@@ -470,7 +910,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR001"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP003",
@@ -482,7 +923,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "CAT003"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP004",
@@ -494,7 +936,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "CAT004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP005",
@@ -508,7 +951,8 @@ window.CBASSETS = {
     "RAL001",
     "RAL003",
     "RAL004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP006",
@@ -520,7 +964,8 @@ window.CBASSETS = {
    "stage": "tested",
    "draws": [
     "SCR011"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP007",
@@ -532,7 +977,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR002"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP008",
@@ -544,7 +990,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR003"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP009",
@@ -556,7 +1003,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "WRK004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP010",
@@ -568,7 +1016,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP011",
@@ -580,7 +1029,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR005"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP012",
@@ -592,7 +1042,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "WRK003"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP013",
@@ -604,7 +1055,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR006"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP014",
@@ -616,7 +1068,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "BUS003"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP015",
@@ -628,7 +1081,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "WRK001"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP016",
@@ -640,7 +1094,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "BUS004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP017",
@@ -652,7 +1107,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "INS004"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP018",
@@ -664,7 +1120,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR007"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP019",
@@ -676,7 +1133,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR008"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP020",
@@ -686,7 +1144,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/cap-standards.js",
    "group": "web.capability",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "CAP021",
@@ -698,7 +1157,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR009"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP022",
@@ -710,7 +1170,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "SCR010"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP023",
@@ -722,7 +1183,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "INS003"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP024",
@@ -734,7 +1196,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [
     "BUS005"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "CAP025",
@@ -750,7 +1213,8 @@ window.CBASSETS = {
     "RAL006",
     "WRK002",
     "APP001"
-   ]
+   ],
+   "uses": []
   },
   {
    "code": "ENG001",
@@ -760,7 +1224,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/access-events.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG002",
@@ -770,7 +1235,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/access.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG003",
@@ -780,7 +1246,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/adopt.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/lotfields.js"
+   ]
   },
   {
    "code": "ENG004",
@@ -790,7 +1259,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/ai.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG005",
@@ -800,7 +1270,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/amend.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/gs1.js"
+   ]
   },
   {
    "code": "ENG006",
@@ -810,7 +1283,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/assign.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG007",
@@ -820,7 +1294,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/assist-kb.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG008",
@@ -830,7 +1305,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/autoraise.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/capture.js",
+    "lib/events.js",
+    "lib/logger.js"
+   ]
   },
   {
    "code": "ENG009",
@@ -840,7 +1320,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/availability.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG010",
@@ -850,7 +1331,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/beckn-map.js",
    "group": "engine.adopted",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG011",
@@ -860,7 +1342,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/boilerplate.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG012",
@@ -870,7 +1353,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/bridgeid.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG013",
@@ -880,7 +1364,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/canon.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG014",
@@ -890,7 +1375,19 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/capture.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/ai.js",
+    "lib/events.js",
+    "lib/gs1.js",
+    "lib/itemmatch.js",
+    "lib/money.js",
+    "lib/numerals.js",
+    "lib/policy.js",
+    "lib/select.js",
+    "lib/stores.js",
+    "lib/whatsapp-media.js"
+   ]
   },
   {
    "code": "ENG015",
@@ -900,7 +1397,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/catalogue-build.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG016",
@@ -910,7 +1408,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/catalogue-columns.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/column-rules.js",
+    "lib/csv-preflight.js"
+   ]
   },
   {
    "code": "ENG017",
@@ -920,7 +1422,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/catalogue-read.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG018",
@@ -930,7 +1433,20 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/catalogue-view.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/availability.js",
+    "lib/customer-groups.js",
+    "lib/defaults.js",
+    "lib/exposure.js",
+    "lib/itemstatus.js",
+    "lib/policy.js",
+    "lib/profile.js",
+    "lib/regional.js",
+    "lib/schedule.js",
+    "lib/tax-shelf.js",
+    "lib/tax-slab.js"
+   ]
   },
   {
    "code": "ENG019",
@@ -940,7 +1456,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/channels.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/whatsapp-templates.js"
+   ]
   },
   {
    "code": "ENG020",
@@ -950,7 +1469,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/column-rules.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG021",
@@ -960,7 +1480,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/compliance.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG022",
@@ -970,7 +1491,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/confcache.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG023",
@@ -980,7 +1502,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/conformance.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/boilerplate.js"
+   ]
   },
   {
    "code": "ENG024",
@@ -990,7 +1515,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/consolidate.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/itemmatch.js",
+    "lib/units.js"
+   ]
   },
   {
    "code": "ENG025",
@@ -1000,7 +1529,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/container.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG026",
@@ -1010,7 +1540,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/cost.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG027",
@@ -1020,7 +1551,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/csv-preflight.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG028",
@@ -1030,7 +1562,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/csv.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG029",
@@ -1040,7 +1573,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/customer-groups.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG030",
@@ -1050,7 +1584,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/defaults.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG031",
@@ -1060,7 +1595,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/definition-check.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/rewards.js"
+   ]
   },
   {
    "code": "ENG032",
@@ -1070,7 +1608,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/deliverline.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG033",
@@ -1080,7 +1619,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/dev-otp.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG034",
@@ -1090,7 +1630,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/events.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG035",
@@ -1100,7 +1641,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/exposure.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG036",
@@ -1110,7 +1652,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/folder-rules.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/match.js",
+    "lib/select.js"
+   ]
   },
   {
    "code": "ENG037",
@@ -1120,7 +1666,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/forms.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/profile.js",
+    "lib/storage.js"
+   ]
   },
   {
    "code": "ENG038",
@@ -1130,7 +1680,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/gherkin.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG039",
@@ -1140,7 +1691,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/govresolve.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/confcache.js"
+   ]
   },
   {
    "code": "ENG040",
@@ -1150,7 +1704,14 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/groupsum.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/amend.js",
+    "lib/consolidate.js",
+    "lib/itemmatch.js",
+    "lib/measure.js",
+    "lib/select.js"
+   ]
   },
   {
    "code": "ENG041",
@@ -1160,7 +1721,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/gs1.browser.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG042",
@@ -1170,7 +1732,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/gs1.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG043",
@@ -1180,7 +1743,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/handle.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG044",
@@ -1190,7 +1754,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/identity.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG045",
@@ -1200,7 +1765,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/instruments.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG046",
@@ -1210,7 +1776,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/itemmatch.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/itemstatus.js",
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG047",
@@ -1220,7 +1790,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/itemstatus.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG048",
@@ -1230,7 +1801,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/kyb.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/profile.js",
+    "lib/readiness.js"
+   ]
   },
   {
    "code": "ENG049",
@@ -1240,7 +1815,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/local-identity.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js",
+    "lib/handle.js"
+   ]
   },
   {
    "code": "ENG050",
@@ -1250,7 +1829,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/logger.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG051",
@@ -1260,7 +1840,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/lotfields.browser.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG052",
@@ -1270,7 +1851,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/lotfields.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG053",
@@ -1280,7 +1862,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/match.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG054",
@@ -1290,7 +1873,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/measure.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG055",
@@ -1300,7 +1886,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/meter.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/logger.js",
+    "lib/rates.js"
+   ]
   },
   {
    "code": "ENG056",
@@ -1310,7 +1900,15 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/mint-product.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-columns.js",
+    "lib/meter.js",
+    "lib/money.js",
+    "lib/regional.js",
+    "lib/schema-bootstrap.js",
+    "lib/shopchanged.js"
+   ]
   },
   {
    "code": "ENG057",
@@ -1320,7 +1918,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/mint.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/folder-rules.js"
+   ]
   },
   {
    "code": "ENG058",
@@ -1330,7 +1931,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/network-build.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/handle.js"
+   ]
   },
   {
    "code": "ENG059",
@@ -1340,7 +1944,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/network-view.js",
    "group": "engine.adopted",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG060",
@@ -1350,7 +1955,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/notify.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/dev-otp.js",
+    "lib/logger.js"
+   ]
   },
   {
    "code": "ENG061",
@@ -1360,7 +1969,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/numerals.browser.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG062",
@@ -1370,7 +1980,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/numerals.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG063",
@@ -1380,7 +1991,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/offers-engine.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG064",
@@ -1390,7 +2002,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/offers-live.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-view.js",
+    "lib/customer-groups.js",
+    "lib/money.js",
+    "lib/offers-engine.js"
+   ]
   },
   {
    "code": "ENG065",
@@ -1400,7 +2018,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/otp.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG066",
@@ -1410,7 +2029,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/plans.js",
    "group": "engine.adopted",
    "stage": "held",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG067",
@@ -1420,7 +2040,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/policy.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG068",
@@ -1430,7 +2051,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/pricing-engine.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG069",
@@ -1440,7 +2062,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/profile-map.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG070",
@@ -1450,7 +2073,13 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/profile.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/jurisdiction.js",
+    "lib/profile-map.js",
+    "lib/readiness.js",
+    "lib/vaultcrypto.js"
+   ]
   },
   {
    "code": "ENG071",
@@ -1460,7 +2089,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/public-facts.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/profile-map.js"
+   ]
   },
   {
    "code": "ENG072",
@@ -1470,7 +2102,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/raida.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/reqctx.js",
+    "lib/schema.js"
+   ]
   },
   {
    "code": "ENG073",
@@ -1480,7 +2116,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/rates.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG074",
@@ -1490,7 +2127,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/readiness.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/boilerplate.js",
+    "lib/profile-map.js",
+    "lib/profile.js"
+   ]
   },
   {
    "code": "ENG075",
@@ -1500,7 +2142,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/reference.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG076",
@@ -1510,7 +2153,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/reprice.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/amend.js",
+    "lib/itemmatch.js",
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG077",
@@ -1520,7 +2168,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/reqctx.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG078",
@@ -1530,7 +2179,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/respond.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/logger.js"
+   ]
   },
   {
    "code": "ENG079",
@@ -1540,7 +2192,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/retention.js",
    "group": "engine.infra",
    "stage": "poc",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG080",
@@ -1550,7 +2203,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/reward-store.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/rewards.js"
+   ]
   },
   {
    "code": "ENG081",
@@ -1560,7 +2216,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/schedule.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/schema.js"
+   ]
   },
   {
    "code": "ENG082",
@@ -1570,7 +2229,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/schema-bootstrap.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG083",
@@ -1580,7 +2240,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/schema.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG084",
@@ -1590,7 +2251,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/search-engine.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG085",
@@ -1600,7 +2262,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/select.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG086",
@@ -1610,7 +2273,16 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/services.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/catalogue-view.js",
+    "lib/offers-engine.js",
+    "lib/pricing-engine.js",
+    "lib/regional.js",
+    "lib/tax-lines.js",
+    "lib/tax-shelf.js",
+    "lib/tax.js"
+   ]
   },
   {
    "code": "ENG087",
@@ -1620,7 +2292,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/sheet.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/defaults.js"
+   ]
   },
   {
    "code": "ENG088",
@@ -1630,7 +2305,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/shopchanged.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/events.js"
+   ]
   },
   {
    "code": "ENG089",
@@ -1640,7 +2318,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/sla.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG090",
@@ -1650,7 +2329,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/slab-cites.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/tax-slab.js"
+   ]
   },
   {
    "code": "ENG091",
@@ -1660,7 +2342,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/source.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js"
+   ]
   },
   {
    "code": "ENG092",
@@ -1670,7 +2355,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/speech.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG093",
@@ -1680,7 +2366,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/starter-fields.js",
    "group": "engine.adopted",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG094",
@@ -1690,7 +2377,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/stock-from-chit.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/inventory.js",
+    "lib/lotfields.js",
+    "lib/stock-store.js"
+   ]
   },
   {
    "code": "ENG095",
@@ -1700,7 +2392,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/stock-store.js",
    "group": "engine.adopted",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/inventory.js",
+    "lib/lotfields.js"
+   ]
   },
   {
    "code": "ENG096",
@@ -1710,7 +2406,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/storage-object.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/schema.js"
+   ]
   },
   {
    "code": "ENG097",
@@ -1720,7 +2419,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/storage.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/storage-object.js"
+   ]
   },
   {
    "code": "ENG098",
@@ -1730,7 +2432,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/stores.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG099",
@@ -1740,7 +2443,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/supply-store.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/stock-store.js"
+   ]
   },
   {
    "code": "ENG100",
@@ -1750,7 +2456,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-copy.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/tax-lines.js"
+   ]
   },
   {
    "code": "ENG101",
@@ -1760,7 +2469,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-engine.browser.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG102",
@@ -1770,7 +2480,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-governance.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG103",
@@ -1780,7 +2491,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-lines.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/tax-slab.js",
+    "lib/tax.js",
+    "lib/units.js"
+   ]
   },
   {
    "code": "ENG104",
@@ -1790,7 +2506,12 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-shelf.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/schedule.js",
+    "lib/tax-governance.js",
+    "lib/tax-slab.js"
+   ]
   },
   {
    "code": "ENG105",
@@ -1800,7 +2521,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax-slab.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG106",
@@ -1810,7 +2532,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/tax.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG107",
@@ -1820,7 +2543,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/trace.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG108",
@@ -1830,7 +2554,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/transcribe.js",
    "group": "engine.infra",
    "stage": "held",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG109",
@@ -1840,7 +2565,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/trips.js",
    "group": "engine.infra",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG110",
@@ -1850,7 +2576,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/vaultcrypto.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG111",
@@ -1860,7 +2587,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/verify.js",
    "group": "engine.adopted",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/logger.js"
+   ]
   },
   {
    "code": "ENG112",
@@ -1870,7 +2600,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/visibility-cap.js",
    "group": "engine.other",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG113",
@@ -1880,7 +2611,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/whatsapp-media.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG114",
@@ -1890,7 +2622,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/whatsapp-out.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/whatsapp-templates.js"
+   ]
   },
   {
    "code": "ENG115",
@@ -1900,7 +2635,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/whatsapp-templates.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG116",
@@ -1910,7 +2646,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/workpattern.js",
    "group": "engine.other",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/boilerplate.js"
+   ]
   },
   {
    "code": "ENG117",
@@ -1920,7 +2659,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/zip-store.js",
    "group": "engine.infra",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG118",
@@ -1930,7 +2670,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/docnumber.js",
    "group": "engine.tier",
    "stage": "held",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG119",
@@ -1940,7 +2681,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/form-handshake.js",
    "group": "engine.tier",
    "stage": "proven",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG120",
@@ -1950,7 +2692,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/inventory.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG121",
@@ -1960,7 +2703,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/jurisdiction.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG122",
@@ -1970,7 +2714,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/money.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG123",
@@ -1980,7 +2725,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/order-input.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG124",
@@ -1990,7 +2736,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/points.js",
    "group": "engine.tier",
    "stage": "held",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG125",
@@ -2000,7 +2747,10 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/regional.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/container.js"
+   ]
   },
   {
    "code": "ENG126",
@@ -2010,7 +2760,11 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/reporting.js",
    "group": "engine.tier",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": [
+    "lib/money.js",
+    "lib/regional.js"
+   ]
   },
   {
    "code": "ENG127",
@@ -2020,7 +2774,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/rewards.js",
    "group": "engine.tier",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "ENG128",
@@ -2030,7 +2785,8 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/units.js",
    "group": "engine.tier",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB001",
@@ -2040,7 +2796,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/assets.js",
    "group": "web.primitive",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB002",
@@ -2050,7 +2807,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/attach-ui.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB003",
@@ -2060,7 +2818,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/barcode.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB004",
@@ -2070,7 +2829,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/cart.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB005",
@@ -2080,7 +2840,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/catalogue-lines.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB006",
@@ -2090,7 +2851,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/catalogue-model.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB007",
@@ -2100,7 +2862,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/catalogue-starter-categories.js",
    "group": "web.pack",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB008",
@@ -2110,7 +2873,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/core.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB009",
@@ -2120,7 +2884,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/helpers.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB010",
@@ -2130,7 +2895,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/locale.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB011",
@@ -2140,7 +2906,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/offers.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB012",
@@ -2150,7 +2917,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/pick.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB013",
@@ -2160,7 +2928,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/price-resolve.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB014",
@@ -2170,7 +2939,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/pricing.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB015",
@@ -2180,7 +2950,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/screens.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB016",
@@ -2190,7 +2961,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/search.js",
    "group": "web.primitive",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB017",
@@ -2200,7 +2972,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/step-flow.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB018",
@@ -2210,7 +2983,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/strings-ar.js",
    "group": "web.pack",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB019",
@@ -2220,7 +2994,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/strings-fr.js",
    "group": "web.pack",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB020",
@@ -2230,7 +3005,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/strings-hi.js",
    "group": "web.pack",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB021",
@@ -2240,7 +3016,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/strings-ta.js",
    "group": "web.pack",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB022",
@@ -2250,7 +3027,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/table-resize.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB023",
@@ -2260,7 +3038,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/tax-engine.js",
    "group": "web.primitive",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB024",
@@ -2270,7 +3049,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/tax-slab.js",
    "group": "web.primitive",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB025",
@@ -2280,7 +3060,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/tax.js",
    "group": "web.primitive",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB026",
@@ -2290,7 +3071,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/test-menu-tree.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB027",
@@ -2300,7 +3082,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/test-verdict.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB028",
@@ -2310,7 +3093,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/app/units.js",
    "group": "web.primitive",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB029",
@@ -2320,7 +3104,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/cb-offline.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB030",
@@ -2330,7 +3115,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/cb-sw.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB031",
@@ -2340,7 +3126,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/docnumber.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB032",
@@ -2350,7 +3137,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/gs1.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB033",
@@ -2360,7 +3148,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/locale.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB034",
@@ -2370,7 +3159,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/lots.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB035",
@@ -2380,7 +3170,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/money.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB036",
@@ -2390,7 +3181,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/nums.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB037",
@@ -2400,7 +3192,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/offers.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB038",
@@ -2410,7 +3203,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/pricing.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB039",
@@ -2420,7 +3214,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/qr.js",
    "group": "web.shell",
    "stage": null,
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB040",
@@ -2430,7 +3225,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/rewards.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB041",
@@ -2440,7 +3236,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/search.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB042",
@@ -2450,7 +3247,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/engine/tax.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   },
   {
    "code": "WEB043",
@@ -2460,7 +3258,8 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/till-sw.js",
    "group": "web.shell",
    "stage": "tested",
-   "draws": []
+   "draws": [],
+   "uses": []
   }
  ],
  "drawnBy": {
