@@ -1797,7 +1797,16 @@ async function paintReliability(){
    * red is web, or that middleware has three rows in total. In its own column that takes a second; as a
    * subtitle it takes reading every line.
    */
-  h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th>Group</th><th class="num">Runs</th>'
+  /**
+   * ⚠️ THE KIND WAS A SUB-LINE UNDER THE FILENAME, AND WE SETTLED THIS ON THE CASES TAB AN HOUR AGO. Athi,
+   * 2026-09-12: *"under test column, unit is coming — we mentioned keep it as a column."*
+   * ⭐ Same fix, same reason: a kind is a FACT ABOUT THE TEST, and a fact a reader compares down a page
+   * belongs in a column. Stacked under the name it cannot be scanned, and it makes the name column wider
+   * than the names need.
+   * ⚠️ Fixing one tab and not the other is how a page ends up with two conventions — which is the thing
+   * that made this board confusing in the first place.
+   */
+  h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th>Kind</th><th>Group</th><th class="num">Runs</th>'
     + '<th class="num">Failed</th><th class="num">Changed</th><th>Last</th>'
     + '<th>To make it green</th><th>Verdict</th></tr>';
 
@@ -1824,7 +1833,11 @@ async function paintReliability(){
        * reads and calls. That is what the Group column shows, and it is right retroactively, which a stamped
        * can never be: test_result is append-only by design, so those 367 rows say engine and always will.
        */
-      +   '<span class="sub">' + esc(c.kinds || '') + '</span></td>'
+      +   '</td>'
+      /* ⭐ the kind in its own cell — see the note on the header */
+      +   '<td>' + (c.kinds
+            ? '<span class="lay ty ' + esc(String(c.kinds).split(/[,\s]+/)[0]) + '">' + esc(c.kinds) + '</span>'
+            : '<span class="dim">—</span>') + '</td>'
       /* ⭐ the core group, in its own cell, so a reader can compare it down the page */
       +   '<td>' + (_grp.length
           ? _grp.map(function (a) { return '<span class="grp">' + esc(a) + '</span>'; }).join('')
@@ -3220,6 +3233,7 @@ var TODO_WORDS = {
   'environment': { icon: '\u2699', cls: 'warnn', say: 'needs ' },
   'decision':    { icon: '\u23f8', cls: 'warnn', say: 'a decision: ' },
   'defect':      { icon: '\u2717', cls: 'bad',   say: 'a defect \u2014 unchanged since this result, and it needs nothing it did not have' },
+  'unknown':     { icon: '?',      cls: 'dim',   say: 'cannot tell yet \u2014 this board has not been rebuilt since the file facts were added' },
 };
 
 function whatToDo(c){
@@ -3239,6 +3253,22 @@ function whatToDo(c){
     return { kind: 'environment', why: 'needs ' + c.needs.join(' and ') };
   }
   if (c.held) return { kind: 'decision', why: 'a decision: ' + c.held };
+
+  /**
+   * ── ⚠️⚠️ AND I MADE THE EXACT MISTAKE THIS COLUMN EXISTS TO STOP ─────────────────────────────────────────
+   *
+   * "defect" was what fell out when the other three were ruled out — and the first live run showed SEVEN reds
+   * as defects, including two I had FIXED hours earlier. Not because the rule was wrong, but because the board
+   * was serving data built before `changed_at` existed, so "the file has not changed since the result" was not
+   * a finding, it was a MISSING FIELD read as a finding.
+   *
+   * ⚠️ DEFECT IS THE STRONGEST THING THIS COLUMN CAN SAY, and I let it be the DEFAULT — the one place a
+   * default is never acceptable. Absence of evidence became evidence, in a column built to stop exactly that.
+   *
+   * ⭐ A case with no `changed_at` cannot rule out "re-run", so it must not claim anything. It says so, and
+   * says why, which also makes a stale board visible instead of silently confident.
+   */
+  if (!c.changed_at) return { kind: 'unknown', why: TODO_WORDS.unknown.say };
   return { kind: 'defect', why: TODO_WORDS.defect.say };
 }
 
@@ -3247,6 +3277,7 @@ function todoHTML(c){
   var t = whatToDo(c);
   var w = TODO_WORDS[t.kind] || TODO_WORDS.defect;
   if (t.kind === 'ok') return '';
+  if (t.kind === 'unknown') return '<span class="todo dim" title="' + esc(t.why) + '">? unknown</span>';
   return '<span class="todo ' + w.cls + '" title="' + esc(t.why) + '">' + w.icon + ' ' + esc(t.kind) + '</span>';
 }
 
