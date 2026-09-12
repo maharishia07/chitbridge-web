@@ -3709,6 +3709,51 @@ function testOpen(k) {
  * ⚠ CAPPED AT SIX. Evidence is meant to be read by a person deciding what broke; a full network log is not
  * evidence, it is homework.
  */
+/**
+ * ── ⭐⭐⭐ WHERE THE TESTER WAS STANDING WHEN IT BROKE ────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THE FIRST QUESTION ANYONE ASKS A BUG REPORT IS *which build, which browser* — and until now a verdict
+ * carried neither. `test_result.build` has existed since b219 and the panel never filled it in. A month-old
+ * failure with no environment is not evidence, it is a rumour. This is the one thing Jam and Marker.io lead
+ * with, and every value is sitting in the page at the moment Save is pressed.
+ *
+ * ⚠️ THE BROWSER MUST BE READ IN PREFERENCE ORDER, NOT BY TAKING THE LAST MATCH. Chrome’s user-agent ends
+ * with "Safari/537", so the obvious reading reports every Chrome tester as Safari — wrong in a way nobody
+ * would question, because it looks like a plausible answer.
+ *
+ * ⚠️ AND IT IS WHAT THE BROWSER SAYS ABOUT ITSELF, which is not the same as the truth. Named that way in the
+ * text so nobody reads it as detection.
+ */
+function testEnv() {
+  try {
+    var ua = String((navigator || {}).userAgent || '');
+    var br = 'browser not named';
+    ['Edg', 'Chrome', 'Firefox', 'Version'].some(function (n) {
+      var m = ua.match(new RegExp(n + '/([0-9]+)'));
+      if (!m) return false;
+      br = (n === 'Edg' ? 'Edge' : n === 'Version' ? 'Safari' : n) + ' ' + m[1];
+      return true;
+    });
+    var os = /Windows/.test(ua) ? 'Windows' : /Android/.test(ua) ? 'Android'
+      : /iPhone|iPad|iPod/.test(ua) ? 'iOS' : /Mac OS X/.test(ua) ? 'macOS'
+      : /Linux/.test(ua) ? 'Linux' : 'OS not named';
+    return {
+      build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
+      browser: br, os: os,
+      viewport: (window.innerWidth || 0) + '×' + (window.innerHeight || 0),
+      where: String(location.hash || '#/'),
+      screen: CBTEST.popupFor || null,
+    };
+  } catch (_) { return {}; }
+}
+
+/** the same facts as one readable line, for the evidence field a person will actually read */
+function testEnvLine() {
+  var e = testEnv();
+  return [e.build && 'build ' + e.build, e.browser, e.os, e.viewport, e.where, e.screen]
+    .filter(Boolean).join(' · ');
+}
+
 function testCallsSince() {
   try {
     var all = window.CBCALLS || [];
@@ -3740,14 +3785,33 @@ async function testMark(key, status) {
   if (!CBTEST.run || !CBTEST.run.id) testRunLoad();
   var nb = document.getElementById('cbt_n_' + key), eb = document.getElementById('cbt_e_' + key);
   var note = nb ? nb.value.trim() : '', ev = eb ? eb.value.trim() : '';
+  /* ⭐ asked here as well as refused at the server, so the tester is told by the box they must fill and not
+     by a red toast after a round trip — the same shape as the observation an incident already demands */
+  if (status === 'blocked' && !note) {
+    if (typeof toast === 'function') toast('Say what blocked it — a blocked case with no reason reads the '
+      + 'same as one nobody reached.');
+    try { if (nb) nb.focus(); } catch (_) {}
+    return;
+  }
   /* ⭐ what the tester typed comes FIRST; the calls are appended. Their sentence is the evidence that matters,
      and burying it under a machine-generated list would be the wrong way round. */
   var calls = testCallsSince();
   if (calls) ev = (ev ? ev + ' · ' : '') + calls;
   var c = CBTEST.cases.filter(function (x) { return x.case_key === key; })[0] || {};
   try {
+    /**
+     * ⭐ ON A FAILURE, NOT ON A PASS. A pass needs no reproduction, and stamping the browser onto three
+     * hundred green rows would bury the tester’s own sentence under machinery on the rows where it is the
+     * only thing worth reading. ⚠ `blocked` counts as a failure here: it is the one a person comes back to.
+     */
+    if (status === 'fail' || status === 'blocked') {
+      var env = testEnvLine();
+      if (env) ev = (ev ? ev + ' · ' : '') + env;
+    }
     var r = await api('testRecord', { body: {
       run_id: CBTEST.run.id, run_label: CBTEST.run.label || null,
+      /* ⚠ the column has been there since b219 and nothing ever wrote to it */
+      build: (typeof CB_BUILD !== 'undefined' && CB_BUILD) || null,
       results: [{ case_key: key, module_key: c.module_key, status: status, run_kind: CBTEST.run.kind || 'manual',
                   tester_name: testWho() || undefined,
                   layer: c.layer || null, note: note || null, evidence: ev || null }] } });
