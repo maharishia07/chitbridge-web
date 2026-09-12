@@ -1012,6 +1012,12 @@ function testPaint() {
        about a requirement raised months ago from a case that has since been retired. */
     /* ⭐ incidents are their own board for the same reason requirements are: a case filter has nothing to
        say about something a person experienced at the counter. */
+    if (CBTEST.view === 'scr') {
+      h += testScrHTML();
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
     if (CBTEST.view === 'inc') {
       h += testIncHTML();
       h += '</div>';
@@ -1309,7 +1315,7 @@ function testPaint() {
  * repeatedly. Same rule as the folds beside it.
  */
 /* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
-var TEST_VIEWS = ['list', 'menu', 'req', 'inc'];
+var TEST_VIEWS = ['list', 'menu', 'req', 'inc', 'scr'];
 function testViewGet() {
   try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'list'; }
   catch (_) { return 'list'; }
@@ -1322,6 +1328,7 @@ function testSetView(v) {
      more call on every panel open. [[feedback-on-demand-loading]] */
   if (v === 'req' && !CBTEST.reqs) testReqLoad();
   else if (v === 'inc' && !CBTEST.incs) testIncLoad();
+  else if (v === 'scr' && !CBTEST.scrRes) testScrLoad();
   else testPaint();
 }
 
@@ -1778,8 +1785,151 @@ function testIncHTML() {
   return h;
 }
 
+/**
+ * ── ⭐⭐⭐ THE LAB, MAPPED ONTO THE SCREENS ────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"can we map the test lab against each of the screens?"*
+ *
+ * ⭐ NOTHING NEW IS STORED FOR THIS. The board already knows which menu path each case came from, the register
+ * already turns a menu path into a code, and the ledger already holds the latest word per case. The map is the
+ * join of three things that were each already true — and a joined view can never drift from them, which a
+ * fourth stored copy would.
+ *
+ * ⚠️⚠️ AND IT SAYS WHAT IT CANNOT SEE. Coverage screens are where people lie to themselves: 630 of 1448 cases
+ * are not on any screen at all (guards, engines, the harness), and a table that quietly dropped them would
+ * report a tidier product than exists. They are counted, named as off-screen, and kept out of the per-screen
+ * arithmetic rather than out of sight.
+ *
+ * ⚠️ A SCREEN WITH NO CASES IS THE POINT OF THE WHOLE VIEW, so it is listed first, not omitted. A list of what
+ * IS tested answers a question nobody urgently has.
+ */
+async function testScrLoad() {
+  CBTEST.scrBusy = true; testPaint();
+  try {
+    /* the latest word per case — the ledger is append-only, so this endpoint already collapses it */
+    var rows = await api('testResults', {});
+    CBTEST.scrRes = Array.isArray(rows) ? rows : ((rows && rows.results) || []);
+    CBTEST.scrErr = null;
+  } catch (e) { CBTEST.scrErr = (e && e.message) || 'Could not read the results.'; }
+  CBTEST.scrBusy = false; testPaint();
+}
+
+/* ⭐ one place that decides which screen a case belongs to, so the count and the row can never disagree */
+function testScrOf(c) {
+  try {
+    if (!c || !c.menu || !window.CBSCREENS) return '';
+    return window.CBSCREENS.byPath[String(c.menu)] || '';
+  } catch (_) { return ''; }
+}
+
+function testScrHTML() {
+  if (CBTEST.scrBusy) return '<div style="color:var(--note);font-size:var(--fs-1)">reading…</div>';
+  if (CBTEST.scrErr) {
+    return '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.scrErr) + '</div>';
+  }
+  var cases = CBTEST.cases || [], res = CBTEST.scrRes || [];
+  var last = {};
+  res.forEach(function (r) { if (r && r.case_key) last[r.case_key] = r.status; });
+
+  var byCode = {}, offScreen = 0;
+  cases.forEach(function (c) {
+    var code = testScrOf(c);
+    if (!code) { offScreen++; return; }
+    var b = byCode[code] || (byCode[code] = { code: code, total: 0, pass: 0, fail: 0, notrun: 0,
+                                              purpose: null, real: 0, generic: 0 });
+    b.total++;
+    var st = last[c.case_key];
+    if (st === 'pass') b.pass++; else if (st === 'fail') b.fail++; else b.notrun++;
+    /**
+     * ⭐⭐ WHAT THE SCREEN DOES, AND WHETHER ANYBODY HAS REALLY TESTED IT. Athi, 2026-09-12: *"so we know what
+     * that screen does and what are we evidencing … if your existing narrative is not correct or generic,
+     * change it to human readable test case and mark it clearly."*
+     *
+     * ⚠️ A GENERIC CASE COUNTS AS A ROW AND NOT AS A TEST. Every door gets the same standard check, so a
+     * screen whose ONLY case is that one has been named, not tested — and a table that adds them together
+     * reports thought that has not happened.
+     */
+    if (c.screen_purpose && !b.purpose) b.purpose = c.screen_purpose;
+    if (c.generic) b.generic++; else b.real++;
+  });
+
+  /* ⭐ EVERY LIVE SCREEN, not only the ones with cases — a screen the lab has never heard of is the finding */
+  var rows = ((window.CBSCREENS && window.CBSCREENS.rows) || []).filter(function (r) {
+    return r.group !== 'Control' && r.group !== 'Popup';
+  });
+  if (!rows.length) {
+    return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">The register did not load, so '
+      + 'there is nothing to map against.</div>';
+  }
+  var q = String(CBTEST.q || '').toLowerCase();
+  var list = rows.map(function (r) {
+    var b = byCode[r.code] || { total: 0, pass: 0, fail: 0, notrun: 0 };
+    return { code: r.code, name: r.screen, group: r.group, total: b.total, pass: b.pass,
+             fail: b.fail, notrun: b.notrun, purpose: b.purpose || null,
+             real: b.real || 0, generic: b.generic || 0 };
+  });
+  /**
+   * ⚠️ SORTED BY WHAT NEEDS ATTENTION, not alphabetically: a failure first, then a screen with no case at
+   * all, then the untested. An A-to-Z list of 100 screens is a list nobody reads twice.
+   */
+  list.sort(function (a, b) {
+    return (b.fail - a.fail)
+        || ((a.total ? 1 : 0) - (b.total ? 1 : 0))
+        || (b.notrun - a.notrun)
+        || String(a.code).localeCompare(String(b.code));
+  });
+
+  var naked = list.filter(function (x) { return !x.total; }).length;
+  var withFail = list.filter(function (x) { return x.fail; }).length;
+  /* ⚠️ named but not tested: the row exists, the thinking has not happened */
+  var onlyGeneric = list.filter(function (x) { return x.total && !x.real; }).length;
+  var h = '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
+    + '<b>' + list.length + '</b> screens \u00b7 <b>' + naked + '</b> with no case at all \u00b7 <b>'
+    + withFail + '</b> with a failure \u00b7 <b>' + onlyGeneric + '</b> covered ONLY by the standard '
+    + 'screen check, which names a screen rather than testing it.'
+    + '<br>\u26a0\ufe0f <b>' + offScreen + '</b> case(s) are on no screen — guards, engines and the harness. '
+    + 'They are counted here and left out of the per-screen numbers rather than out of sight.'
+    + '</div>';
+
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
+    + '<th style="text-align:start;padding:3px 6px">Screen</th>'
+    + '<th style="text-align:end;padding:3px 6px">Cases</th>'
+    + '<th style="text-align:end;padding:3px 6px">Passed</th>'
+    + '<th style="text-align:end;padding:3px 6px">Failed</th>'
+    + '<th style="text-align:end;padding:3px 6px">Not run</th></tr>';
+  h += list.filter(function (x) {
+    return !q || (x.code + ' ' + x.name).toLowerCase().indexOf(q) >= 0;
+  }).map(function (x) {
+    var num = function (n, colour) {
+      return '<td style="text-align:end;padding:4px 6px' + (colour ? ';color:' + colour : '')
+        + (n ? ';font-weight:700' : ';color:var(--note)') + '">' + (n || '\u2014') + '</td>';
+    };
+    return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
+      + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
+      +   'ui-monospace,monospace;user-select:all">' + testEsc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px">' + testEsc(x.name)
+      /* ⭐ a screen with nothing on it says so in words, where the eye already is */
+      +   (x.total ? '' : '<span style="color:var(--note);font-size:var(--fs-1)"> \u00b7 no case yet</span>')
+      +   (x.total && !x.real
+        ? '<span style="color:var(--disp,#B3261E);font-size:var(--fs-1)"> \u00b7 generic only</span>' : '')
+      /* ⭐ WHAT IT DOES, under the name — the sentence a tester needs before deciding what to evidence */
+      +   (x.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">'
+        + testEsc(x.purpose) + '</div>' : '')
+      + '</td>'
+      + num(x.total)
+      + num(x.pass, 'var(--ok,#1B7F4B)')
+      + num(x.fail, 'var(--disp,#B3261E)')
+      + num(x.notrun)
+      + '</tr>';
+  }).join('');
+  return h + '</table>';
+}
+
 function testViewToggleHTML() {
-  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc';
+  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc',
+      scr = CBTEST.view === 'scr';
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
   var on = 'background:var(--grey-2,#545A61);color:#fff';
   /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
@@ -1789,12 +1939,15 @@ function testViewToggleHTML() {
     +   'style="' + base + (menu || req ? off : on) + '">List</button>'
     + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
     +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (menu && !req && !inc ? on : off) + '">Menu tree</button>'
+    +   (menu && !req && !inc && !scr ? on : off) + '">Menu tree</button>'
     + '<button onclick="testSetView(\'req\')" title="Requirements raised while testing — what is not actioned yet" '
     +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (req ? on : off) + '">Requirements</button>'
     + '<button onclick="testSetView(\'inc\')" title="Incidents \u2014 what a person experienced, and what was '
     +   'done about it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
     +   (inc ? on : off) + '">Incidents</button>'
+    + '<button onclick="testSetView(\'scr\')" title="Every screen, and what the lab knows about it" '
+    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (scr ? on : off)
+    +   '">By screen</button>'
     + '</span>';
 }
 
