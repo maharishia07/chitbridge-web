@@ -4150,7 +4150,19 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * every single page load, which is the opposite failure — the offline work exists precisely so the app is not
  * chatty. A stamp that changes when the CODE changes is the only one that is right on both counts.
  */
-const CB_BUILD = '2026-09-11b';
+/**
+ * ⚠️⚠️ BUMP THIS WHENEVER A CAPABILITY FILE CHANGES, or the change does not reach anybody.
+ *
+ * Every cap-*.js is fetched with this string as its ?v= query, so a browser that has already seen a
+ * version keeps serving the OLD file from cache. On 2026-09-12 the test lab gained a menu tree, a full-screen
+ * size, two rewritten empty states and a fixed refresh — and not one of them could reach a browser, because
+ * this line still said 2026-09-11b.
+ *
+ * ⭐ FOUND BY TESTING THE PRODUCT RATHER THAN THE CODE: the Intake refresh was fixed, reloaded, pressed, and
+ * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
+ * a fix, and nothing in the build would have said so.
+ */
+const CB_BUILD = '2026-09-12a';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -4502,7 +4514,7 @@ function _renderApp(){
     if(UI.nav==="profile") loadProfile();
     if(UI.nav==="settings") loadSettings();
     if(UI.nav==="network") loadNetwork();
-    if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake();
+    if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake(true);  /* quiet: opening a screen is not a hand press */
     if(UI.nav==="messages" && typeof loadMessages==="function" && typeof RPL!=="undefined" && RPL.data===null && !RPL.busy) loadMessages();
     /* One integer, once per session — see ?count=1. `undefined` means "not yet asked", so an entity with zero
        unread does not re-request on every paint. Same shape as the folder prefetch above. */

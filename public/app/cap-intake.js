@@ -153,7 +153,7 @@ function intakeDraftHTML(c, s){
 }
 
 /* ── the API calls. Each one narrow, each one saying what failed. ────────────────────────────────────────────── */
-async function loadIntake(){
+async function loadIntake(quiet){
   _INTAKE.busy=true; _INTAKE.err=null; paintIntake();
   try{
     var r=await api('capturePending');
@@ -165,6 +165,19 @@ async function loadIntake(){
     _INTAKE.list=_INTAKE.list||[];
   }
   _INTAKE.busy=false; paintIntake();
+  /**
+   * ⭐ SAY WHAT THE READ FOUND. An empty queue repaints to exactly the same screen, so without this the
+   * button is indistinguishable from a dead one — which is how Athi described the board’s own refresh
+   * before it was fixed. ⚠️ Only on a HAND press: `quiet` is passed by the callers that load on open, and a
+   * toast nobody asked for on every screen entry is its own kind of noise.
+   */
+  if(!quiet && typeof toast==='function'){
+    if(_INTAKE.err) toast(_INTAKE.err, true);
+    else if(_INTAKE.migrated===false) toast('The intake queue is not switched on yet for this shop.');
+    else toast(_INTAKE.list.length
+      ? ('Intake re-read \u2014 ' + _INTAKE.list.length + ' waiting')
+      : 'Intake re-read \u2014 nothing waiting');
+  }
 }
 async function intakeSimulate(){
   var ch=val('in_ch')||'whatsapp', from=(val('in_from')||'').trim(), text=(val('in_text')||'').trim();
@@ -184,7 +197,7 @@ async function intakeSimulate(){
   try{
     await api('captureSimulate',{body:{channel:ch, sender_ref:from, sender_name:from, raw_text:text}});
     var t=document.getElementById('in_text'); if(t)t.value='';
-    await loadIntake();
+    await loadIntake(true);
   }catch(e){ toast((e&&e.message)||'Could not record the message', true); }
 }
 async function intakeStructure(id){
@@ -201,7 +214,7 @@ function intakeDismiss(id){
     'Dismiss', function(){ _intakeDismiss(id); });
 }
 async function _intakeDismiss(id){
-  try{ await api('captureDismiss',{params:{id:id}}); await loadIntake(); }
+  try{ await api('captureDismiss',{params:{id:id}}); await loadIntake(true); }
   catch(e){ toast((e&&e.message)||'Could not dismiss it', true); }
 }
 /**
@@ -256,7 +269,7 @@ async function intakeRaise(id){
     if(!r){ _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false}); paintIntake(); return; }
     /* sendChit already navigates to the Task list and reloads it — the request is on screen where it landed. The
        intake queue is re-read too, because /convert has just taken this message off it. */
-    await loadIntake();
+    await loadIntake(true);
   }catch(e){
     UI._captureId=null;
     _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false, err:(e&&e.message)||'Could not raise it as a request.'});

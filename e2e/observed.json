@@ -86,7 +86,8 @@
      "rgGo",
      "_rdSelect"
     ],
-    "verdict": "⭐ NOT A DEFECT, at least not for the one that was checked. These are filters and selectors, and the walk pressed each in the state it was ALREADY in — pressing \"Open\" while already on Open changes nothing, correctly. Proven for setState: pressed with a different value (Act) and the list filtered immediately (−398 characters). ⚠️ THE OTHER THIRTEEN WERE NOT CHECKED THAT WAY and are the honest remainder: each needs one press at a DIFFERENT value to settle it."
+    "verdict": "⭐ SETTLED 2026-09-12 by pressing each at a DIFFERENT value: twelve of the fourteen respond (setState, wlPrimary, prodAvailFilter, catsetSetSec, selectCust, setAcTypeF, setAcFlt, misSetBand, rgGo, _rdSelect, and two only reachable in a state the walk had left behind). ⚠ The silence was the DETECTOR, not the controls: it measured innerText LENGTH, so a control that scrolls to a section, highlights a row or swaps a class looked dead. catsetSetSec draws ten sections on one long page — pressing Tax scrolls to the GST slabs and changes not one character.",
+    "real_finding": "loadIntake (↻ Refresh on Intake) worked — GET /api/capture/pending, 200 — and said NOTHING, because an empty queue repaints identically. FIXED: it now reports what the read found (“Intake re-read — nothing waiting” / “— 3 waiting”), on a hand press only. ⭐ Athi had already ruled on this exact pattern for the board’s own refresh, so the rule was applied rather than re-asked."
    },
    "never_pressed": {
     "why": "⭐ REFUSED ON PURPOSE. Each of these sends, deletes, pays, assigns, archives or changes the environment. A machine pressing them on a live shop is not testing, it is vandalism with good intentions. They are the cases that need a person who means it.",
