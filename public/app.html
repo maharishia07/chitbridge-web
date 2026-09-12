@@ -1953,6 +1953,13 @@ const EP = {
   testReqRaise:    {m:"POST",  p:"/api/testing/requirements",    ok:"y"},
   testReqList:     {m:"GET",   p:"/api/testing/requirements",    ok:"y"},   // ?state=open — the not-actioned filter
   testReqSet:      {m:"PATCH", p:"/api/testing/requirements/:id",ok:"y"},   // ⚠ append-only: every decision keeps its history
+  /* ⭐⭐ INCIDENTS — what a person EXPERIENCED, which is not what is wrong with the code. ITIL 4 draws that
+     line and it earns its keep: the shop does not care which module is broken, it cares that billing stopped.
+     An incident LINKS to a defect and to the commit that fixed it; it never becomes either. No migration —
+     `definition.kind` is free text (b160), so an incident is a definition like a case and a clause. */
+  testIncNew:      {m:"POST",  p:"/api/testing/incidents",        ok:"y"},
+  testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
+  testIncSet:      {m:"PATCH", p:"/api/testing/incidents/:id",    ok:"y"},   // ⚠ append-only, and resolving must cite a commit
   testGherkinIn:   {m:"POST",  p:"/api/testing/cases/gherkin",   ok:"y"},   // .feature text in: clause + cases together
   defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
   defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes

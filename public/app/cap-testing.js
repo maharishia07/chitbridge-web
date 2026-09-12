@@ -980,6 +980,14 @@ function testPaint() {
     }
     /* ⭐ the requirements are their own list and do NOT read from `shown`: a case filter has nothing to say
        about a requirement raised months ago from a case that has since been retired. */
+    /* ⭐ incidents are their own board for the same reason requirements are: a case filter has nothing to
+       say about something a person experienced at the counter. */
+    if (CBTEST.view === 'inc') {
+      h += testIncHTML();
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
     if (CBTEST.view === 'req') {
       h += testReqHTML();
       h += '</div>';
@@ -1271,7 +1279,7 @@ function testPaint() {
  * repeatedly. Same rule as the folds beside it.
  */
 /* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
-var TEST_VIEWS = ['list', 'menu', 'req'];
+var TEST_VIEWS = ['list', 'menu', 'req', 'inc'];
 function testViewGet() {
   try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'list'; }
   catch (_) { return 'list'; }
@@ -1282,7 +1290,9 @@ function testSetView(v) {
   CBTEST.view = v;
   /* ⚠️ the requirements are read on ARRIVAL, not with the cases: a list nobody has opened should not be one
      more call on every panel open. [[feedback-on-demand-loading]] */
-  if (v === 'req' && !CBTEST.reqs) testReqLoad(); else testPaint();
+  if (v === 'req' && !CBTEST.reqs) testReqLoad();
+  else if (v === 'inc' && !CBTEST.incs) testIncLoad();
+  else testPaint();
 }
 
 /**
@@ -1503,8 +1513,243 @@ function testScreenCode(menu) {
   } catch (_) { return ''; }
 }
 
+/**
+ * ── ⭐⭐⭐ THE INCIDENT BOARD ─────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"similarly we have to create incident management tool from our system so we can use it
+ * to record incidents and the entire change control."*
+ *
+ * ⚠️⚠️ IT OPENS ON WHAT IS STILL OPEN, AND IT LEADS WITH SEVERITY, because the question anybody opens this to
+ * ask is *"what is broken right now, and how badly."* A log sorted newest-first answers a different question
+ * and buries the oldest Sev-1, which is precisely the row that must never sink.
+ *
+ * ⭐ THE NUMBERS COME FROM THE SERVER, NOT FROM COUNTING THE ROWS ON SCREEN. A filtered list counting itself
+ * reports the filter, and every chip would then say the same number.
+ */
+var TEST_INC_SEV = ['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'];
+function testIncFilterGet() {
+  try { return localStorage.getItem('cb_test_incf') || 'open'; } catch (_) { return 'open'; }
+}
+function testIncFilter(v) {
+  try { localStorage.setItem('cb_test_incf', v); } catch (_) {}
+  testIncLoad();
+}
+async function testIncLoad() {
+  CBTEST.incBusy = true; testPaint();
+  try { CBTEST.incs = await api('testIncList', { query: { state: testIncFilterGet() } }); CBTEST.incErr = null; }
+  catch (e) { CBTEST.incErr = (e && e.message) || 'Could not read them.'; }
+  CBTEST.incBusy = false; testPaint();
+}
+
+/**
+ * ⚠️⚠️ RESOLVING ASKS WHAT CHANGED AND WILL NOT PROCEED WITHOUT AN ANSWER. The server refuses it too, but a
+ * refusal arriving after the click is a worse way to learn the rule. ⭐ A commit sha is accepted as the answer
+ * and CITED — the message, the diff and the author stay in git, where they cannot drift from the truth.
+ */
+async function testIncSet(id, state) {
+  var body = { state: state };
+  if (state === 'resolved') {
+    var a = window.prompt('What fixed it? Paste the commit sha, or say why nothing needed changing.');
+    if (a === null) return;
+    a = String(a).trim();
+    if (!a) { if (typeof toast === 'function') toast('A resolution needs the commit, or a reason.'); return; }
+    /* ⭐ a sha is a citation; anything else is an explanation, and both are legitimate answers */
+    if (/^[0-9a-fA-F]{7,40}$/.test(a)) body.change = { sha: a.toLowerCase() };
+    else body.why = a;
+  }
+  if (state === 'closed') {
+    var w = window.prompt('Why is this closed? The next person reads this instead of reopening it.');
+    if (w === null) return;
+    if (!String(w).trim()) { if (typeof toast === 'function') toast('Closing needs its reason.'); return; }
+    body.why = String(w).trim();
+  }
+  try {
+    await api('testIncSet', { params: { id: id }, body: body });
+    if (typeof toast === 'function') toast('Marked ' + state);
+    testIncLoad();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
+}
+async function testIncSev(id, severity) {
+  try { await api('testIncSet', { params: { id: id }, body: { state: null, severity: severity } }); testIncLoad(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
+}
+
+/**
+ * ── ⚠️⚠️ THE BOX, AND WHERE IT IS NOT ────────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ A FORM REACHED THROUGH A MENU, AFTER THE FACT, IS A FORM NOBODY FILLS IN. The honest evidence is in this
+ * repo: a policy flag sat unsettable for four days and nobody noticed, because nothing put it in front of
+ * anybody. This box works for the person already in the lab; the door for someone standing on a broken screen
+ * is the screen code itself, and that is where the next piece of this goes.
+ *
+ * ⭐ WHAT IT CAPTURES WITHOUT ASKING: the screen code, the dialog code if one is open, and the build. Three
+ * things a person will not think to write and an investigator cannot work without.
+ */
+function testIncFormHTML() {
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
+    + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
+  if (!CBTEST.incForm) {
+    return '<div style="margin:2px 0 8px"><button onclick="testIncForm(true)" style="' + btn + '">'
+      + '\u2295 Record an incident</button></div>';
+  }
+  var sc = testHereScreen();
+  var sevs = TEST_INC_SEV.map(function (x) {
+    return '<option value="' + x + '"' + (x === 'Sev-3' ? ' selected' : '') + '>' + x + '</option>';
+  }).join('');
+  return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
+    + '<textarea id="incWhat" rows="2" placeholder="What happened? \u2014 the counter stopped taking bills at 4pm" '
+    +   'style="' + inp + '"></textarea>'
+    + '<input id="incWho" placeholder="Who is affected? \u2014 the shop, one till, just me" style="' + inp + '">'
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    +   '<select id="incSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
+    +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' + sevs + '</select>'
+    +   '<button onclick="testIncSend()" style="' + btn + '">Record</button>'
+    +   '<button onclick="testIncForm(false)" style="' + btn + '">Cancel</button>'
+    +   '<span style="font-size:var(--fs-1);color:var(--note)">Recorded against '
+    +     (sc ? '<code>' + testEsc(sc) + '</code>' : 'no screen') + ' \u00b7 now</span>'
+    + '</div></div>';
+}
+function testIncForm(on) { CBTEST.incForm = !!on; testPaint(); }
+
+/**
+ * ⭐ WHERE THE PERSON IS STANDING, read from the app's own stamp rather than asked for. ⚠️ Read at the moment
+ * of recording, never remembered: a code captured when the panel opened would name the screen they left.
+ */
+function testHereScreen() {
+  try {
+    var t = document.querySelector('[data-testid="detail-code"]')
+         || document.querySelector('[data-testid="screen-code"]');
+    return t ? String(t.textContent || '').trim() : '';
+  } catch (_) { return ''; }
+}
+
+async function testIncSend() {
+  var what = (document.getElementById('incWhat') || {}).value || '';
+  var who = (document.getElementById('incWho') || {}).value || '';
+  var sev = (document.getElementById('incSev') || {}).value || 'Sev-3';
+  if (!String(what).trim()) { if (typeof toast === 'function') toast('Say what happened.'); return; }
+  try {
+    await api('testIncNew', { body: {
+      observed: what, affected: who, severity: sev,
+      screen_code: testHereScreen(),
+      popup_code: (typeof modalCode === 'function') ? modalCode() : null,
+      build: (window.CBBUILD || null),
+    } });
+    CBTEST.incForm = false;
+    if (typeof toast === 'function') toast('Recorded');
+    testIncLoad();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not record it.'); }
+}
+
+function testIncHTML() {
+  var d = CBTEST.incs, f = testIncFilterGet();
+  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
+  var chips = [['open', 'Open'], ['raised', 'Raised'], ['investigating', 'Being looked at'],
+               ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'Everything']]
+    .map(function (x) {
+      var on = f === x[0];
+      var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
+      return '<button onclick="testIncFilter(\'' + x[0] + '\')" style="' + base
+        + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
+              : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+        + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
+    }).join('');
+
+  /* ⭐ THE ONE LINE A RELEASE GATE ASKS FOR, above the list rather than inside it: how many open, at what
+     severity. ⚠️ It says "none open" rather than showing four zeros — four zeros is a thing to decode. */
+  var gate = '';
+  if (d && d.open_by_severity) {
+    var bits = TEST_INC_SEV.filter(function (k) { return d.open_by_severity[k]; })
+      .map(function (k) { return '<b>' + d.open_by_severity[k] + '</b> ' + k; });
+    gate = '<div style="font-size:var(--fs-1);color:var(--note);margin:2px 0 6px">'
+      + (bits.length ? 'Open: ' + bits.join(' \u00b7 ') : 'Nothing open.') + '</div>';
+  }
+
+  var h = testIncFormHTML() + gate + '<div style="margin:6px 0 8px">' + chips + '</div>';
+  if (CBTEST.incBusy) return h + '<div style="color:var(--note);font-size:var(--fs-1)">reading\u2026</div>';
+  if (CBTEST.incErr) {
+    return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.incErr) + '</div>';
+  }
+  var list = (d && d.incidents) || [];
+  if (!list.length) {
+    /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS: "none recorded" and "none left open" are different facts. */
+    return h + '<div style="color:var(--note);font-size:var(--fs-1);padding:8px 0">'
+      + (d && d.total ? 'Nothing in this state \u2014 ' + d.total + ' recorded altogether.'
+                      : 'Nothing recorded yet. Record one the moment something stops working.')
+      + '</div>';
+  }
+
+  var SEV = { 'Sev-1': 'var(--disp,#B3261E)', 'Sev-2': 'var(--disp,#B3261E)',
+              'Sev-3': 'var(--grey-2,#545A61)', 'Sev-4': 'var(--note,#8a8378)' };
+  h += list.map(function (q) {
+    var acts = '';
+    if (q.state === 'raised') {
+      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'investigating\')" style="' + base + '">Looking at it</button>'
+           + '<button onclick="testIncSet(\'' + q.definition_id + '\',\'resolved\')" style="' + base + '">Resolved</button>';
+    } else if (q.state === 'investigating') {
+      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'resolved\')" style="' + base + '">Resolved</button>';
+    } else if (q.state === 'resolved') {
+      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'closed\')" style="' + base + '">Close</button>';
+    }
+    /**
+     * ⭐ SEVERITY CAN BE RE-GRADED WHILE THE INCIDENT IS STILL OPEN, and only then. What looked like one
+     * awkward screen turns out to be the till, and the first person to file it is the least informed person
+     * who will ever look at it. ⚠️ On a closed row it would silently rewrite history for no purpose: the
+     * severity somebody worked to is part of what happened.
+     */
+    if (q.state === 'raised' || q.state === 'investigating') {
+      acts += '<select onchange="testIncSev(\'' + q.definition_id + '\', this.value)" '
+        + 'title="Re-grade it" style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid '
+        + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">'
+        + TEST_INC_SEV.map(function (x) {
+            return '<option' + (x === q.severity ? ' selected' : '') + '>' + x + '</option>';
+          }).join('')
+        + '</select>';
+    }
+    /* ⭐ THE TWO DURATIONS, SHOWN ONLY WHEN THEY SAY SOMETHING. "0 min unnoticed" is noise on a row somebody
+       recorded while it was happening; an hour unnoticed is the whole story of that incident. */
+    var clock = '';
+    if (q.unnoticed_mins) clock += testEsc(q.unnoticed_mins + ' min before anybody knew');
+    if (q.open_mins) clock += (clock ? ' \u00b7 ' : '') + testEsc(q.open_mins + ' min to resolve');
+    var code = function (v) {
+      return v ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+        + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">' + testEsc(v) + '</code>' : '';
+    };
+    return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
+      + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
+      +   '<b style="color:' + (SEV[q.severity] || SEV['Sev-3']) + ';font-size:var(--fs-1)" title="'
+      +     testEsc(q.severity_means || '') + '">' + testEsc(q.severity) + '</b>'
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.ref) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;'
+      +     'padding:1px 6px">' + testEsc(q.state) + '</span>'
+      +   code(q.screen_code) + code(q.popup_code)
+      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.affected)
+            + '</span>' : '')
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(q.observed) + '</div>'
+      /* ⭐ THE SEVERITY IN WORDS, not only its number: "Sev-2" means whatever the reader assumes. */
+      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
+      +   testEsc(q.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
+      /* ⭐ THE CHANGE THAT FIXED IT, as a citation into git — never a copy of the commit message. */
+      + ((q.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
+          + q.changes.map(function (c) { return '<code>' + testEsc(String(c.sha).slice(0, 8)) + '</code>'
+              + (c.repo ? ' in ' + testEsc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
+      + (q.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
+          + testEsc(q.why) + '</div>' : '')
+      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">'
+      +   testEsc(q.raised_by || 'someone')
+      +   (q.happened_at ? ' \u00b7 ' + testEsc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
+      +   (acts ? '<span style="margin-inline-start:9px">' + acts + '</span>' : '')
+      + '</div></div>';
+  }).join('');
+  return h;
+}
+
 function testViewToggleHTML() {
-  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req';
+  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc';
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
   var on = 'background:var(--grey-2,#545A61);color:#fff';
   /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
@@ -1514,9 +1759,12 @@ function testViewToggleHTML() {
     +   'style="' + base + (menu || req ? off : on) + '">List</button>'
     + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
     +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (menu && !req ? on : off) + '">Menu tree</button>'
+    +   (menu && !req && !inc ? on : off) + '">Menu tree</button>'
     + '<button onclick="testSetView(\'req\')" title="Requirements raised while testing — what is not actioned yet" '
     +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (req ? on : off) + '">Requirements</button>'
+    + '<button onclick="testSetView(\'inc\')" title="Incidents \u2014 what a person experienced, and what was '
+    +   'done about it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
+    +   (inc ? on : off) + '">Incidents</button>'
     + '</span>';
 }
 
