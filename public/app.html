@@ -2280,6 +2280,60 @@ function screenCode(){
  * ⚠️ Only the CODE is `user-select:all`: it is the part that gets quoted, and selecting the whole phrase would
  * put an emoji into somebody's bug report.
  */
+/**
+ * ── ⭐⭐⭐ THE CODE GOES IN THE SCREEN'S OWN HEADING ──────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"the task name should be inside the screen, not on the panel — it has to be here"*, with a
+ * picture of the heading line itself: **📇 Archive — archived chits**. *"So all the screens will get the
+ * placement."*
+ *
+ * ⚠️⚠️ THIRD PLACEMENT, AND EACH MOVE WAS A REAL CORRECTION rather than taste. It began in the BUILD PREVIEW
+ * ribbon, which a tester on the live product never sees at all; then in the topbar, which is the app's chrome
+ * and not the screen; and a person reading a screen looks at that screen's heading. The lesson is the one this
+ * whole register exists for: an identifier is worth nothing where the person needing it does not look.
+ *
+ * ── ⚠️ WHY THIS IS DONE AFTER THE PAINT AND NOT IN EACH SCREEN ───────────────────────────────────────────────
+ *
+ * "All the screens" is the requirement, and every capability draws its own heading — around thirty of them. An
+ * edit per screen would be thirty chances to differ and would be half-done within a fortnight; a new screen
+ * would arrive with no code and nothing would say so. ⭐ So the shell stamps the first heading inside
+ * `#mainbody` once per paint: one implementation, and a screen cannot opt out by forgetting.
+ *
+ * ⚠️ IT FINDS A HEADING OR IT DOES NOTHING. No heading means no stamp — inventing a bar above the content would
+ * push every screen down by a row to display a code, which is a worse trade than the code being absent.
+ */
+function stampScreenHeading(){
+  try{
+    var body = document.getElementById('mainbody');
+    if (!body || body.querySelector('[data-testid="screen-code"]')) return;
+    var info = screenInfo();
+    if (!info) return;
+    /* the first thing that reads as this screen's title: the crumb, a section head, or a real heading */
+    var head = body.querySelector('.sec, h1, h2, b');
+    if (!head) return;
+    var tag = document.createElement('span');
+    tag.setAttribute('data-testid', 'screen-code');
+    tag.textContent = info.code;
+    tag.title = tx('The code for this screen — quote it instead of describing where you are');
+    /* ⚠️ user-select:all on the CODE alone: selecting the heading should still select the heading */
+    tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+      + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
+      + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
+      + 'margin-inline-end:7px;vertical-align:middle';
+    head.insertBefore(tag, head.firstChild);
+  }catch(e){}
+}
+
+/** the register's row for wherever we are: code, icon and name, or null when this is not a registered screen */
+function screenInfo(){
+  try {
+    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
+    var U = (typeof UI !== 'undefined') ? UI : {};
+    var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
+    return reg[fine] || reg[U.nav] || null;
+  } catch (_) { return null; }
+}
+
 function screenCodeHTML(){
   var info = null;
   try {
@@ -4494,7 +4548,7 @@ function _renderApp(){
   <div class="appwrap ${UI.vp==='mob'?'m':''}"><div class="shell">
     <div class="topbar">
       <button class="ham" data-testid="nav-drawer" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
-      <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span>${screenCodeHTML()}</div>
+      <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
       <button class="info" id="legendbtn" data-testid="icon-legend" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
       <!-- ⭐ 💬 DROPPED — Athi, 2026-08-15: *"if the message is duplicate, we can drop the icon … but messaging
            not required. If we have anything else like RAID, we can keep it as a RAID icon."*
@@ -4640,6 +4694,8 @@ function _renderApp(){
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
+  /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
+  try { stampScreenHeading(); } catch(_) {}
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
