@@ -413,7 +413,13 @@ var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
  * the NUMBERS and then put words above them.
  * ⭐ Wide enough for the LABEL, which is always the longer of the two.
  */
-var TEST_AREA_COLS = 'minmax(0,9em) minmax(0,1fr) 4.2em 4.6em 4.4em 4.8em';
+/**
+ * ⚠️ 9em HELD THE SEQ, THE CHIP AND NOTHING ELSE. Athi, 2026-09-12: *"Area width can be a little more wider,
+ * and 10 char possibly."* A key like `chitbridge-api/scripts` was ellipsised to almost nothing beside a
+ * two-digit sequence, so the column that identifies the row was the one with no room in it.
+ * ⭐ 12.5em fits ten characters of key plus the sequence and the caret at every text size on this scale.
+ */
+var TEST_AREA_COLS = 'minmax(0,12.5em) minmax(0,1fr) 4.2em 4.6em 4.4em 4.8em';
 
 function testPaint() {
   var body = document.getElementById('cbtestbody');

@@ -888,7 +888,27 @@
   .notifrow{display:flex;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
   .notifrow .ni{font-size:var(--fs-3)}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:var(--fs-1);color:var(--grey);background:var(--paper)}
-  .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
+  /**
+   * ── ⚠️⚠️ A MODAL WAS BELOW ALMOST EVERYTHING THAT FLOATS ──────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"when I click the information icon, the information has gone behind the current screen
+   * — it has to be on top."*
+   *
+   * ⚠️ AND IT IS NOT ONLY THAT ICON. `.mover` is the backdrop for EVERY modal in the app, and it sat at 280
+   * while the test panel sits at 4000 and another overlay at 1400. So every dialog opened from a floating
+   * panel — the guide, a confirm, a picker — rendered UNDERNEATH the thing that opened it. The modal was there
+   * and working the whole time; it was just invisible, which is the worst way for a control to fail.
+   *
+   * ⭐ A MODAL IS BLOCKING BY DEFINITION: it takes the whole screen's attention and nothing may sit over it
+   * except a message ABOUT it. So it goes above every panel, and stays below the toast (9999) and the busy
+   * overlay (9999), which are exactly that message.
+   *
+   * ⚠️ THE REAL FAULT IS THAT THESE NUMBERS WERE NEVER A SCALE. 280, 300, 1400, 4000, 9999 were each chosen to
+   * beat whatever was on screen that day, so "above" was decided by the order things were built rather than by
+   * what they are. Fixing the number without saying that would leave the next panel to pick 5000 and break it
+   * again — so the order is written down here: chrome < panels < modals < messages about them.
+   */
+  .mover{position:fixed;inset:0;z-index:5000;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
   .composepill{position:fixed;inset-inline-start:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
   .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:var(--card)}

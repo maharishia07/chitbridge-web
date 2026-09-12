@@ -107,10 +107,29 @@
    * ⚠️ z-index above the cell text, or a long heading swallows the handle and the column cannot be dragged.
    */
   th{ position:relative; }
-  .colgrip{ position:absolute; inset-block:0; inset-inline-end:0; width:6px; cursor:col-resize;
-        z-index:3; background:transparent; }
-  table:hover .colgrip{ background:linear-gradient(to right, transparent, var(--line)); }
-  .colgrip:hover{ background:var(--blue) !important; }
+  /**
+   * ── ⭐ A CONTROL NOBODY CAN SEE IS NOT A CONTROL ──────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"it is adjustable width, it is not a problem — can you give a pipeline in the header
+   * and show it is adjustable?"*
+   *
+   * ⚠️ MY FIRST VERSION ONLY APPEARED ON HOVER, which is the same mistake as the Clear filters button an hour
+   * ago: you cannot hover over something to discover that hovering does anything. A drag handle that hides
+   * until you find it is a feature only its author knows exists.
+   *
+   * ⭐ A visible rule between every heading — the "pipeline" — which reads as a column divider whether or not
+   * you ever drag it, and thickens into a grab target under the pointer. Quiet enough to be furniture, present
+   * enough to be an invitation.
+   */
+  .colgrip{ position:absolute; inset-block:5px; inset-inline-end:0; width:9px; cursor:col-resize; z-index:3;
+        background:transparent; }
+  /* ⭐ the pipeline itself: a hairline, always there */
+  .colgrip::before{ content:''; position:absolute; inset-block:0; inset-inline-end:4px; width:1px;
+        background:var(--line); }
+  .colgrip:hover::before{ inset-block:-5px; width:3px; inset-inline-end:3px; background:var(--blue);
+        border-radius:2px; }
+  /* ⚠️ the last heading has no column after it, so its rule would draw against the table edge */
+  th:last-child .colgrip::before{ display:none; }
   .fclear{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:8px;
         font-size:var(--fs-1); color:var(--blue); font-weight:600; }
   #f_clear:disabled{ opacity:.45; cursor:default; }
