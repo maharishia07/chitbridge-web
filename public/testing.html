@@ -1785,7 +1785,7 @@ async function paintReport(){
   var h = '<div class="rep">'
     + '<div class="noprint" style="margin-bottom:14px;display:flex;gap:7px;flex-wrap:wrap">'
     +   '<button class="btn pri" onclick="window.print()">Print / save as PDF</button>'
-    +   '<button class="btn" onclick="paintSummary();setView(\'summary\')">\u2190 Summary</button></div>'
+    +   '<button class="btn" onclick="setView(\'summary\')">\u2190 Summary</button></div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.06em;text-transform:uppercase;'
     +   'font-weight:700">' + esc(r.standard) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">supersedes ' + esc(r.supersedes)
@@ -2703,8 +2703,6 @@ async function paintSummary(){
     document.getElementById('main').innerHTML = '<div class="say">Reading the summary…</div>';
     await loadSummary();
   }
-  tally();
-
   /* ⭐ the charts first: a person opening the Summary wants the shape before the numbers */
   /**
    * ── ⭐⭐⭐ SUMMARY KEEPS ONLY WHAT THE PIVOT CANNOT SAY ────────────────────────────────────────────────────
@@ -2784,7 +2782,7 @@ async function openRun(id){
     var rank = { fail:0, blocked:1, skipped:2, pass:3 };
     rows.sort(function(a,b){ return (rank[a.status] - rank[b.status]) || (a.case_key < b.case_key ? -1 : 1); });
     var first = rows[0] || {};
-    var h = '<div style="margin-bottom:12px"><button class="btn" onclick="paintSummary()">\u2190 Back to the summary</button></div>'
+    var h = '<div style="margin-bottom:12px"><button class="btn" onclick="setView(\'summary\')">\u2190 Back to the summary</button></div>'
       + '<h2 style="font-size:var(--fs-3);margin:0 0 9px">' + esc(first.run_label || 'This sitting') + '</h2>'
       + '<div class="scroll"><table class="sum"><tr><th>Case</th><th>Verdict</th><th>Who</th><th>What they saw</th></tr>';
     rows.forEach(function(x){
@@ -3051,6 +3049,24 @@ function isOpenSection(k, howMany){
  * ⭐ ONE function now. setView and load() both call it.
  */
 function repaintCurrent(){
+  /**
+   * ── ⚠️⚠️ THE CHIPS WERE DRAWN BY TWO OF THE FIVE VIEWS ───────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"when you first load the page… pass, fail is not coming, but when you move to another
+   * chip, that line appears."*
+   *
+   * ⚠️ `tally()` was called inside paint() and paintSummary() and NOWHERE ELSE, so landing on Report,
+   * Reliability or Try drew no chips at all — and the moment you touched Cases or Summary they appeared and
+   * then stayed, because they are the same DOM node. That is why it looked intermittent rather than missing.
+   *
+   * ⭐ THE CHIPS ARE A FACT ABOUT THE BOARD, NOT ABOUT A VIEW — 616 cases and 27 failing are the same numbers
+   * whichever tab is open. So they are drawn HERE, once, by the one dispatch, instead of by whichever
+   * renderers happened to remember.
+   *
+   * ⚠️ Same shape as the bug above it: a thing done on some paths and not others. Having one dispatch is what
+   * makes this a one-line fix instead of a fourth scattered call.
+   */
+  tally();
   if (VIEW === 'summary') paintSummary();
   else if (VIEW === 'report') paintReport();
   else if (VIEW === 'reliability') paintReliability();
