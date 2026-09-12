@@ -82,7 +82,13 @@
   h1{ font-size:var(--fs-4); margin:0; }
   .sub{ color:var(--grey-2); font-size:var(--fs-2); }
   .tally{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
-  .t{ font-size:var(--fs-1); padding:2px 8px; border-radius:99px; border:1px solid var(--line); background:var(--paper); white-space:nowrap; }
+  .t{ font-size:var(--fs-1); padding:2px 8px; border-radius:99px; border:1px solid var(--line);
+        background:var(--paper); white-space:nowrap; }
+  /* ⭐ these three are controls now, so they say so — see tally() */
+  .t[onclick]{ cursor:pointer; }
+  .t[onclick]:hover{ border-color:var(--blue); color:var(--blue); }
+  .t[onclick]:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
+  .t.on{ border-color:var(--blue); background:var(--blue-tint); color:var(--blue); font-weight:600; }
   .t b{ font-size:var(--fs-2); }
   .t.pass{ background:var(--ok-tint); border-color:#bfe0c9; color:var(--ok); }
   .t.fail{ background:var(--bad-tint); border-color:#eccbc9; color:var(--bad); }
@@ -177,9 +183,11 @@
    * point of a column — a reader runs their eye DOWN it, and a column that moves per row is not one.
    */
   .chead{ display:grid;
-        grid-template-columns:minmax(0,15em) minmax(0,1fr) 7.5em 6em 5em auto; gap:9px;
+        grid-template-columns:minmax(0,15em) minmax(0,1fr) 7.5em 6em 11em 5em auto; gap:9px;
         align-items:baseline; padding:9px 11px; cursor:pointer; }
-  .chead .c-kind, .chead .c-status, .chead .c-pri{ font-size:var(--fs-1); min-width:0; }
+  .chead .c-kind, .chead .c-status, .chead .c-todo, .chead .c-pri{ font-size:var(--fs-1); min-width:0; }
+  /* ⭐ the action, not the adjective — short enough to hold a column, full sentence in the tooltip */
+  .todo{ white-space:nowrap; font-weight:600; }
   .chead .c-pri{ color:var(--grey-2); }
   /* ⭐ the header row is the SAME grid, so it cannot drift from the rows beneath it */
   .chead.chhead{ cursor:default; font-size:var(--fs-1); text-transform:uppercase; letter-spacing:.06em;
@@ -491,6 +499,10 @@
   .rep .tag.a{ background:#f3e2bd; color:var(--warn); }
   .rep .kv{ display:grid; grid-template-columns:auto 1fr; gap:5px 16px; font-size:var(--fs-2); }
   .rep .kv dt{ color:var(--grey-2); white-space:nowrap; }
+  /* ⭐ our word → the standard's, one mapping per line */
+  ul.names{ margin:8px 0 0; padding-inline-start:20px; font-size:var(--fs-1); color:var(--grey-2);
+        line-height:1.8; max-width:var(--prose); }
+  ul.names span{ font-weight:600; color:var(--ink-2); }
   .rep .kv dd{ margin:0; }
   .rep .big-n{ display:flex; gap:20px; flex-wrap:wrap; margin:4px 0 12px; }
   .rep .big-n div{ min-width:74px; }
@@ -526,7 +538,9 @@
   @media print{ .chart{ break-inside:avoid; } }
 
   /* ── reliability: what can be believed, as opposed to what should be tested ── */
-  .verdict{ font-size:var(--fs-1); font-weight:700; white-space:nowrap; }
+  /* ⭐ the LABEL holds the column; its reasoning wraps under it — see the reliability row */
+  .verdict{ font-size:var(--fs-1); font-weight:700; white-space:nowrap; display:block; }
+  .verdict + .sub{ white-space:normal; max-width:24em; line-height:1.45; }
   .verdict.drift{ color:var(--bad); }
   .verdict.broke{ color:var(--warn); }
   .verdict.settled{ color:var(--ok); }
@@ -1189,6 +1203,21 @@ function fillFilters(){
     : '';
 }
 
+/**
+ * ⭐ A chip is a question: "show me the ones you just counted." So it clears every other filter, sets the one
+ * it names, and goes to the tab where cases live — anything less and the number it showed stops being true.
+ */
+function chipTo(state){
+  var el = document.getElementById('f_state');
+  /* ⭐ pressing the ACTIVE chip clears it — the way back is the same control as the way in */
+  if (el && el.value === state) state = '';
+  if (el) el.value = state;
+  ['f_type', 'f_area'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+  var q = document.getElementById('f_q'); if (q) q.value = '';
+  MODFILT = '';
+  setView('cases');
+}
+
 function setState(v){ document.getElementById('f_state').value = v; paint(); }
 function setMod(k){ MODFILT = k; paint(); }
 
@@ -1367,9 +1396,29 @@ function tally(){
   var testable = CASES.filter(function(c){ return c.test_type !== 'support'; }).length;
   var pc = testable ? Math.round((done / testable) * 100) : 0;
 
-  var h = '<span class="t whole"><b>' + CASES.length + '</b> cases</span>'
-        + '<span class="t"><b>' + done + '</b> with a result</span>'
-        + (bad ? '<span class="t fail"><b>' + bad + '</b> failing</span>' : '');
+  /**
+   * ── ⭐⭐ A COUNT NOBODY CAN OPEN IS A DEAD END ────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"27 failing — everyone may want to see what those are. If it is a chip and shows what
+   * those are, that would be good. So all the three should be a chip and take / filter the right details."*
+   *
+   * ⭐ AND THE FILTER ALREADY EXISTED. `f_state` has understood '', 'done' and 'fail' all along — these three
+   * chips were describing three filters nobody could reach from them. Wiring a number to the list it counts
+   * is the smallest possible change and the one a reader expects to work the moment they see a number.
+   *
+   * ⚠️ Each chip also CLEARS the other filters. A chip that says 27 and lands you on 4 because a kind filter
+   * was still set is worse than one that does nothing — the number would be lying about where it sent you.
+   */
+  var st = (document.getElementById('f_state') || {}).value || '';
+  var chip = function (state, n, label, cls) {
+    return '<span class="t ' + (cls || '') + (st === state ? ' on' : '') + '" onclick="chipTo(\'' + state + '\')"'
+      + ' title="Show these on the Cases tab" role="button" tabindex="0"'
+      + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();chipTo(\'' + state + '\')}">'
+      + '<b>' + n + '</b> ' + label + '</span>';
+  };
+  var h = chip('', CASES.length, 'cases', 'whole')
+        + chip('done', done, 'with a result')
+        + (bad ? chip('fail', bad, 'failing', 'fail') : '');
   var staleN = CASES.filter(function (c) { return STALE[c.case_key]; }).length;
   if (staleN) h += '<span class="t blocked"><b>' + staleN + '</b> spec moved</span>';
   /* ⭐ the one figure a person outside this desk actually asks for, and it is not on any other screen */
@@ -1749,7 +1798,8 @@ async function paintReliability(){
    * subtitle it takes reading every line.
    */
   h += '<div class="scroll"><table class="sum"><tr><th>Test</th><th>Group</th><th class="num">Runs</th>'
-    + '<th class="num">Failed</th><th class="num">Changed</th><th>Last</th><th>Verdict</th></tr>';
+    + '<th class="num">Failed</th><th class="num">Changed</th><th>Last</th>'
+    + '<th>To make it green</th><th>Verdict</th></tr>';
 
   (r.cases || []).forEach(function (c) {
     var cls = c.flips >= 2 ? 'drift' : (c.flips === 0 && c.failed ? 'broke'
@@ -1785,7 +1835,33 @@ async function paintReliability(){
       + '<td class="num' + (c.flips >= 2 ? ' bad' : ' dim') + '">' + c.flips + '</td>'
       + '<td><span class="' + lastCls + '">' + esc((c.last_status || '').toUpperCase()) + '</span>'
       +   '<span class="sub">' + ago(c.last_seen) + '</span></td>'
-      + '<td><span class="verdict ' + cls + '">' + esc(c.verdict) + '</span></td></tr>';
+      /**
+       * ⭐⭐ THE ACTION, BESIDE THE JUDGEMENT. Athi, 2026-09-12: *"status — red every time, not able to
+       * understand what it says. What action is required to make it green?"*
+       *
+       * ⚠️ The VERDICT is about the test's maturity — did it flip, or has it been red all along — and it is
+       * computed API-side from results alone, which is why it can only ever say "a defect, or a stale test;
+       * this cannot tell which". That is honest and it is where the reader gets stuck.
+       * ⭐ The two facts that settle it live on the CASE, here on the page: when the file last changed, and
+       * what it needs to run. So the action is computed where the facts are and sits next to the judgement
+       * rather than replacing it — one column says how much to trust the test, the next says what to do.
+       */
+      + '<td>' + (_cs ? todoHTML(_cs) : '<span class="dim">—</span>') + '</td>'
+      /**
+       * ⭐ THE VERDICT IS TWO THINGS, SO IT IS TWO LINES. Athi, 2026-09-12: *"changed once — underneath, a fix
+       * or a regression text can be there, so you will get space for action."*
+       *
+       * ⚠️ "changed once — a fix or a regression, not drift" is a LABEL and its REASONING run together, and as
+       * one long string it set the column's width for every row on the page, which is what squeezed the action
+       * column he had just asked for. ⭐ The label holds the column; the reasoning wraps underneath it, where
+       * it costs nothing.
+       */
+      + '<td>' + (function (v) {
+          var i = String(v || '').indexOf(' \u2014 ');
+          if (i < 0) return '<span class="verdict ' + cls + '">' + esc(v) + '</span>';
+          return '<span class="verdict ' + cls + '">' + esc(v.slice(0, i)) + '</span>'
+               + '<span class="sub">' + esc(v.slice(i + 3)) + '</span>';
+        })(c.verdict) + '</td></tr>';
   });
   h += '</table></div>';
   document.getElementById('main').innerHTML = h;
@@ -1815,9 +1891,18 @@ async function paintReport(){
     +   ' \u00b7 generated ' + new Date(r.generated_at).toLocaleString()
     +   ' \u00b7 scope: ' + esc(r.scope) + '</div>'
     /* ⭐ our words mapped onto the standard's, so a reader can look ours up in theirs rather than learning ours */
-    + (r.names ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:7px;line-height:1.6">'
-        + 'A case is a <b>' + esc(r.names.case) + '</b> \u00b7 a sitting is a <b>' + esc(r.names.run) + '</b>'
-        + ' \u00b7 a failure is an <b>' + esc(r.names.incident) + '</b></div>' : '');
+    /**
+     * ⭐ THREE DEFINITIONS ARE A LIST, NOT A SENTENCE. Athi, 2026-09-12: *"under ISO/IEC — a case, a sitting,
+     * a failure — if it is in bullet point that would be good."*
+     * ⚠️ Run together with middots they read as one long clause and a reader has to parse where each mapping
+     * ends. Three lines, one mapping each: our word on the left, the standard's on the right, which is the
+     * shape of the thing being said.
+     */
+    + (r.names ? '<ul class="names">'
+        + '<li><span>a case</span> is a <b>' + esc(r.names.case) + '</b></li>'
+        + '<li><span>a sitting</span> is a <b>' + esc(r.names.run) + '</b></li>'
+        + '<li><span>a failure</span> is an <b>' + esc(r.names.incident) + '</b></li>'
+        + '</ul>' : '');
 
   r.sections.forEach(function (s) {
     var b = s.body || {};
@@ -3106,12 +3191,72 @@ function foldAll(open){ FOLD = { _all: !!open }; foldSave(); repaintCurrent(); }
  * ⭐ ONE HEADER FOR THE CASE LIST. Without it the columns are a guess — and the guess a reader makes is that
  * they belong to the parent table's headings, which is the confusion this exists to end.
  */
+/**
+ * ── ⭐⭐⭐ A RED THAT SAYS WHAT WOULD MAKE IT GREEN ────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"status — red every time, not able to understand what it says. What action is required to
+ * make it green, that is what is required I guess."*
+ *
+ * ⚠️⚠️ THE OLD VERDICT WAS HONEST AND USELESS: *"red every time — a defect, or a test that has gone stale;
+ * this cannot tell which."* True, and it leaves the reader exactly where they started. A board that can only
+ * say "something is wrong" is a board people stop opening.
+ *
+ * ⭐ IT NEEDED NO NEW DATA. Two facts the build now carries — when the FILE last changed, and what the file
+ * NEEDS to run — answer it against the time of the last result:
+ *
+ *   ⟳ re-run      the file changed AFTER this result. The red describes code that no longer exists.
+ *   ⚙ environment it needs a database, the API, or a browser that the run did not have.
+ *   ⏸ decision    the file declares a held decision — red because nobody has chosen yet.
+ *   ✗ defect      red, unchanged since the result, needing nothing it lacked. ⭐ THE REAL ONE.
+ *
+ * ⚠️ DEFECT IS WHAT IS LEFT WHEN THE OTHER THREE ARE RULED OUT, and it is the narrowest bucket on purpose.
+ * The value of this is not the four labels — it is that the genuinely broken tests stop hiding among the ones
+ * that are merely out of date.
+ */
+var TODO_WORDS = {
+  'never run':   { icon: '\u25cb', cls: 'dim',   say: 'nobody has run it' },
+  'ok':          { icon: '\u2713', cls: 'big',   say: 'nothing to do' },
+  're-run':      { icon: '\u27f3', cls: 'warnn', say: 're-run \u2014 the file changed after this result' },
+  'environment': { icon: '\u2699', cls: 'warnn', say: 'needs ' },
+  'decision':    { icon: '\u23f8', cls: 'warnn', say: 'a decision: ' },
+  'defect':      { icon: '\u2717', cls: 'bad',   say: 'a defect \u2014 unchanged since this result, and it needs nothing it did not have' },
+};
+
+function whatToDo(c){
+  var l = LAST[c.case_key];
+  if (!l) return { kind: 'never run', why: TODO_WORDS['never run'].say };
+  if (l.status === 'pass') return { kind: 'ok', why: TODO_WORDS.ok.say };
+
+  /**
+   * ⚠️ THE COMPARISON THAT MATTERS, and it has to be this way round: a file changed AFTER its last result
+   * means the result describes code that is gone. Ruling that out FIRST is what stops a stale red being
+   * called a defect — which is the mistake the old verdict refused to make by refusing to say anything.
+   */
+  if (c.changed_at && l.at && new Date(c.changed_at) > new Date(l.at)) {
+    return { kind: 're-run', why: TODO_WORDS['re-run'].say };
+  }
+  if (c.needs && c.needs.length) {
+    return { kind: 'environment', why: 'needs ' + c.needs.join(' and ') };
+  }
+  if (c.held) return { kind: 'decision', why: 'a decision: ' + c.held };
+  return { kind: 'defect', why: TODO_WORDS.defect.say };
+}
+
+/** the short badge for a row; the full sentence rides in the tooltip */
+function todoHTML(c){
+  var t = whatToDo(c);
+  var w = TODO_WORDS[t.kind] || TODO_WORDS.defect;
+  if (t.kind === 'ok') return '';
+  return '<span class="todo ' + w.cls + '" title="' + esc(t.why) + '">' + w.icon + ' ' + esc(t.kind) + '</span>';
+}
+
 function caseHeaderHTML(){
   return '<div class="chead chhead">'
     + '<span class="key">Case</span>'
     + '<span class="ttl">What it proves</span>'
     + '<span class="c-kind">Kind</span>'
     + '<span class="c-status">Status</span>'
+    + '<span class="c-todo">To make it green</span>'
     + '<span class="c-pri">Priority</span>'
     + '<span class="badges"></span></div>';
 }
@@ -3155,6 +3300,7 @@ function caseHTML(c){
           + esc(LEVEL_SAYS[c.test_type] || '') + '">' + esc(c.test_type) + '</span>' : '<span class="dim">—</span>')
     +   '</span>'
     +   '<span class="c-status">' + last + '</span>'
+    +   '<span class="c-todo">' + todoHTML(c) + '</span>'
     +   '<span class="c-pri">' + esc(c.priority || '') + '</span>'
     +   '<span class="badges">'
     /* ⚠️ ON THE ROW, not behind a filter — a tester must see it without going looking for it. */
