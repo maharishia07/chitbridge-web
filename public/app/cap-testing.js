@@ -2317,8 +2317,12 @@ async function testCaseSend(outcome) {
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
     /* ⚠️ AFTER the repaint, not before: the repaint carries values across now, so clearing first would
        have them carried straight back in. */
-    /* ⭐ after writing, the list is where the work is — and where the case just written can be seen */
-    if (CBTEST.popupFor) { try { localStorage.setItem('cb_case_area', 'cases'); } catch (_) {} }
+    /**
+     * ⚠⚠ IT STAYS ON WRITE. Sending the tester to the Cases list after a save felt tidy and was the same
+     * fault Athi reported earlier in a new coat: the form disappears, and writing a second case costs a hunt.
+     * He asked for “an option to create more”, and the answer is that the form is simply still there. The
+     * Cases tab count going up is how the save announces itself.
+     */
     if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
     ['wcTitle', 'wcDo', 'wcSee', 'wcGot'].forEach(function (id) {
       var el = document.getElementById(id); if (el) el.value = '';

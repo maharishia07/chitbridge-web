@@ -38,7 +38,9 @@ const tokenOf = (p) => p.evaluate(() => SESSION.token);
 async function modeOn(page) {
   await page.evaluate(() => {
     try { localStorage.removeItem('cb_case_filter'); localStorage.removeItem('cb_test_view');
-          localStorage.removeItem('cb_test_scrsort'); } catch (_) {}
+          localStorage.removeItem('cb_test_scrsort');
+          /* ⚠ and the panel's own area — the third remembered preference to leak between tests */
+          localStorage.removeItem('cb_case_area'); } catch (_) {}
   });
   const sw = page.locator('[data-testid="vp-test"]');
   await expect(sw).toBeVisible();
@@ -67,6 +69,12 @@ async function openPanel(page) {
 }
 
 async function writeCase(page, { req, op, exp, got }, outcome) {
+  /* ⭐ the panel opens on CASES when a screen has any, so writing starts by asking for the Write area —
+     which is what a tester does too. */
+  if (!(await page.locator('#wcTitle').count())) {
+    await page.locator('#cbcasesbody button', { hasText: /^Write$/ }).first().click();
+    await expect(page.locator('#wcTitle')).toBeVisible();
+  }
   await page.fill('#wcTitle', req);
   await page.fill('#wcDo', op);
   await page.fill('#wcSee', exp);
@@ -141,7 +149,7 @@ test.describe('test mode', () => {
 
     /* ⚠️ the assertion is the COUNT MOVING, not the absence of a toast: a verdict that recorded but did not
        repaint reads to a tester exactly like a press that did not land. */
-    await expect(page.locator('#cbcasesbody')).toContainText('1 passed', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Passed 1', { timeout: 30000 });
     await expect(page.locator('#cbcasesbody')).not.toContainText('cannot read properties');
   });
 
@@ -206,12 +214,12 @@ test.describe('test mode', () => {
     await openPanel(page);
 
     await writeCase(page, { req: 'first thing that must be true', op: 'do the first thing', exp: 'the first result' });
-    await expect(page.locator('#cbcasesbody')).toContainText('1 case(s) written', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 1', { timeout: 30000 });
     /* ⚠️ the form must still be standing, and empty — saving used to remove it, so the first case was the last */
     await expect(page.locator('#wcTitle')).toHaveValue('');
 
     await writeCase(page, { req: 'second thing that must be true', op: 'do the second thing', exp: 'the second result' });
-    await expect(page.locator('#cbcasesbody')).toContainText('2 case(s) written', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 2', { timeout: 30000 });
 
     await page.locator('#cbcasespanel button', { hasText: /^Cancel$/ }).first().click();
     await expect(page.locator('#wcTitle')).toHaveCount(0);
@@ -226,7 +234,7 @@ test.describe('test mode', () => {
     await openPanel(page);
 
     await writeCase(page, { req: 'a thing that passes', op: 'do it', exp: 'it works', got: 'As expected.' }, 'pass');
-    await expect(page.locator('#cbcasesbody')).toContainText('1 passed', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Passed 1', { timeout: 30000 });
 
     /* the default pile is TO DO, and a passed case is not in it */
     await expect(page.locator('#cbcasesbody')).toContainText('To do');
@@ -251,7 +259,7 @@ test.describe('test mode', () => {
     await openPanel(page);
     await writeCase(page, { req: 'a supplier thing', op: 'open a supplier', exp: 'it says what it is' });
     /* ⚠ wait for the board to come back before reading it: writeCase presses the button, it does not wait */
-    await expect(page.locator('#cbcasesbody')).toContainText('1 case(s) written', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 1', { timeout: 30000 });
 
     /* ⚠️ a written case once landed with NO menu, mapped to no screen, and vanished from the view that wrote it */
     const keys = await page.evaluate(() => (CBTEST.cases || [])
@@ -356,17 +364,19 @@ test.describe('test mode', () => {
       });
       expect(made.ok(), 'could not create ' + who.key + ': ' + made.status()).toBeTruthy();
       const body = await made.json();
-      const id = (body.actor && body.actor.actor_id) || body.actor_id || (body.actor && body.actor.id);
-
-      const pin = await page.request.post(API + '/api/actors/set-pin', {
-        headers: { Authorization: 'Bearer ' + owner, 'Content-Type': 'application/json' },
-        data: { actor_id: id, pin: '4321' },
-      });
-      expect(pin.ok(), 'could not set a pin: ' + pin.status()).toBeTruthy();
+      /**
+       * ⭐ EVERYTHING THE INVITE NEEDS COMES BACK FROM THE CREATE. The response carries the OTP and the exact
+       *  — key@entity-slug — so nothing has to be assembled here. My first attempt built the
+       * username from the entity’s user_id and asked for a second OTP against , a field this API
+       * does not use (it is ), which 500’d on /actors/undefined/otp.
+       */
+      const code = body.otp;
+      const username = (body.actor && body.actor.login_format) || (who.key + '@' + userId);
+      expect(code, 'no OTP came back with the new actor').toBeTruthy();
 
       const login = await page.request.post(API + '/api/actors/login', {
         headers: { 'Content-Type': 'application/json' },
-        data: { username: who.key + '@' + userId, pin: '4321' },
+        data: { username, otp: String(code) },
       });
       expect(login.ok(), 'could not sign in as ' + who.key + ': ' + login.status()).toBeTruthy();
       const lj = await login.json();
