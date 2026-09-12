@@ -2374,47 +2374,6 @@ function screenInfo(navOnly){
  * ⚠️ TOP-LEFT OF THE PANE, not of the app: the detail sits beside a list that has its own code, and putting
  * both in one place would be two codes with nothing saying which is which.
  */
-/**
- * ── ⭐⭐⭐ HOW EACH ONE GETS ITS NAME, WITHOUT ANYBODY NAMING IT ──────────────────────────────────────────────
- *
- * Athi, 2026-09-12: *"I don't know if it is a container or something, it is technical — how do we name each
- * one?"*
- *
- * ⭐ NOTHING IS NAMED BY HAND. Three rules, and every screen, pane and dialog in the product falls under one:
- *
- *   a SCREEN   is a nav key on the rail        → its code comes from the register  (RAL002)
- *   a PANE     is a sub-view of one            → `_fineScreen()` already names it   (DTL001)
- *   a DIALOG   is whatever function opened it  → read from the call stack          (POP063)
- *
- * So "naming each one" is not a job anybody does: a thing gets a name by being REGISTERED, and the register is
- * generated from the live rail and the live source. A new detail pane built next month is named the day it is
- * added to the register, and nothing in this file changes.
- *
- * ── ⚠️ AND WHY AN OBSERVER RATHER THAN A CALL AFTER EACH RENDER ──────────────────────────────────────────────
- *
- * The detail pane is drawn AFTER the shell paints. Stamping at the end of renderApp() ran before the pane
- * existed, so the code silently never appeared — the same shape as every other bug today: the work was right
- * and it happened at the wrong moment. ⭐ Watching for panes catches them whenever they arrive, including the
- * ones nobody has built yet.
- *
- * ⚠️ IT MUST NOT LOOP. Stamping is itself a DOM change, so it is debounced and every stamper checks for its own
- * tag before inserting. An observer that reacts to its own writes is a spinning browser tab.
- */
-function watchPanes(){
-  try{
-    if (window._paneWatch) return;
-    var t = null;
-    window._paneWatch = new MutationObserver(function(){
-      clearTimeout(t);
-      t = setTimeout(function(){
-        try { stampScreenHeading(); stampDetailPane(); } catch(_) {}
-      }, 60);
-    });
-    window._paneWatch.observe(document.getElementById('root') || document.body,
-      { childList: true, subtree: true });
-  }catch(e){}
-}
-
 function stampDetailPane(){
   try{
     var pane = document.getElementById('detailpane');
@@ -4794,7 +4753,7 @@ function _renderApp(){
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
-  try { stampScreenHeading(); stampDetailPane(); watchPanes(); } catch(_) {}
+  try { stampScreenHeading(); stampDetailPane(); } catch(_) {}
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
