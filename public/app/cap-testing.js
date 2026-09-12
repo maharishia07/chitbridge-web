@@ -1581,6 +1581,10 @@ function testMenuHTML(shown) {
       var dopen = testSectionOpen(dkey, d.cases.length);
       h += '<div onclick="testFold(\'' + testEsc(dkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">'
         + '<span style="' + q + '">' + (dopen ? '\u25be' : '\u25b8') + '</span>'
+        /* ⭐ THE SCREEN CODE, so a row of metrics can be quoted as 'CAT004 is 0 of 39'. Athi, 2026-09-12:
+           *"so can you give the metrics by screen name as well?"* — the figures were already here; what was
+           missing was the name to put in front of them. */
+        + testScreenCode(g.name + ' › ' + d.name)
         + '<span style="font-size:var(--fs-2)">' + testEsc(d.name) + '</span>'
         + '<span style="flex:1 1 auto"></span>'
         /**

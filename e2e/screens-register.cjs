@@ -1,0 +1,82 @@
+'use strict';
+/**
+ * screens-register.cjs — THE REGISTER THE BROWSER GETS IS THE REGISTER ON DISK.
+ *
+ * ── ⭐⭐ WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"maybe a table that remembers the codes and the system should use it to refer. It is like a
+ * CMDB kind of."* — so `C:\dev\SCREENS.json` is the register, and `public/app/screens.js` is a GENERATED copy of
+ * it for the browser.
+ *
+ * ⚠️⚠️ A GENERATED FILE THAT NOBODY REGENERATES IS THE SAME BUG AS A HAND-MAINTAINED ONE, and it is quieter: the
+ * app keeps working, showing codes that were true last week. The whole value of a code is that it means exactly
+ * one thing, so the two copies disagreeing is the one failure this system cannot absorb.
+ *
+ * ⚠️ Same shape as the cache-buster and the CORS header list before it: two places, one fact, nothing joining
+ * them. This is the join.
+ *
+ * Run: node e2e/screens-register.cjs
+ */
+const fs = require('fs');
+const path = require('path');
+
+const DEV = path.join(__dirname, '..', '..');
+const REG = path.join(DEV, 'SCREENS.json');
+const JS = path.join(__dirname, '..', 'public', 'app', 'screens.js');
+
+let pass = 0;
+const fails = [];
+const ok = (what, cond) => { if (cond) { pass++; console.log('  ✓ ' + what); } else { fails.push(what); } };
+
+if (!fs.existsSync(REG)) {
+  console.log('\n── screen register ──\n  skipped: SCREENS.json not present (docs repo not checked out)\n');
+  process.exit(0);
+}
+
+console.log('\n══ the screen register ══');
+
+const reg = JSON.parse(fs.readFileSync(REG, 'utf8'));
+const live = Object.entries(reg.screens).filter(([, s]) => !s.retired);
+
+ok('the browser copy exists at all — it is generated and committed, not built at runtime', fs.existsSync(JS));
+if (!fs.existsSync(JS)) { fails.forEach((f) => console.error('  ✗ ' + f)); process.exit(1); }
+
+const sandbox = { window: {} };
+try { new Function('window', fs.readFileSync(JS, 'utf8'))(sandbox.window); }
+catch (e) { console.error('  ✗ the generated copy does not evaluate: ' + e.message); process.exit(1); }
+const CB = sandbox.window.CBSCREENS || {};
+const rows = CB.rows || [];
+
+ok('every live screen reaches the browser (' + live.length + ')', rows.length === live.length);
+
+const codes = new Set(rows.map((r) => r.code));
+const missing = live.filter(([, s]) => !codes.has(s.code)).map(([k, s]) => s.code + ' ' + k);
+ok('none is missing' + (missing.length ? ': ' + missing.slice(0, 4).join(' · ') : ''), missing.length === 0);
+
+/* ⚠️ A RETIRED SCREEN MUST NOT BE OFFERED. Its code stays reserved forever, but showing it would say the screen
+   still exists — the opposite of what retiring it recorded. */
+const retired = Object.entries(reg.screens).filter(([, s]) => s.retired).map(([, s]) => s.code);
+const leaked = retired.filter((c) => codes.has(c));
+ok('no retired screen is offered' + (leaked.length ? ': ' + leaked.join(' · ') : ''), leaked.length === 0);
+
+/* ⚠️ THE SHAPE IS THE STANDARD: three letters, three digits, six characters. A code that does not fit is a code
+   somebody typed by hand into a register that is supposed to be generated. */
+const wrong = rows.filter((r) => !/^[A-Z]{3}[0-9]{3}$/.test(r.code)).map((r) => r.code);
+ok('every code is AAA### — three letters, three digits' + (wrong.length ? ': ' + wrong.join(' · ') : ''),
+   wrong.length === 0);
+
+/* ⚠️⚠️ THE RULE THE WHOLE DESIGN RESTS ON: one code, one screen, for ever. */
+const seen = {}, dup = [];
+rows.forEach((r) => { if (seen[r.code]) dup.push(r.code); seen[r.code] = r.path; });
+ok('no code is claimed by two screens' + (dup.length ? ': ' + dup.join(' · ') : ''), dup.length === 0);
+
+/* the panel and the app both read this — if the lookup by nav key is empty, the code never appears on a screen */
+ok('screens are reachable by nav key, or the code can never be shown on the screen it names',
+   Object.keys(CB.byNav || {}).length > 10);
+
+fails.forEach((f) => console.error('  ✗ ' + f));
+if (fails.length) {
+  console.error('\n  Run `node C:\\dev\\screens.cjs` and commit both files — the copies have parted.\n');
+}
+if (!fails.length) console.log('\n  ' + pass + ' passed\n');
+process.exit(fails.length ? 1 : 0);

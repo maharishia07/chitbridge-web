@@ -2227,6 +2227,21 @@ let _assistOpen=false;
  * ⚠️ IT ANSWERS null RATHER THAN GUESSING. A modal, a sub-page or a screen that is not on the rail has no code,
  * and inventing one for it would put a number in front of somebody that resolves to nothing.
  */
+/**
+ * ── ⭐⭐ THE CONFIGURATION REGISTER, ONE CLICK AWAY ──────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"like testlab, show CMDB as an icon and display for my visibility."*
+ *
+ * ⚠️ LAZY, like every other capability: a register nobody has opened should not be twelve kilobytes on every
+ * boot. [[feedback-on-demand-loading]]
+ * ⚠️ And the failure is SAID. A capability that silently fails to load leaves a button that does nothing, which
+ * is the most expensive kind of broken — the person presses it four more times before mentioning it.
+ */
+function cmdbOpenToggle(){
+  ensureCap('cmdb').then(function(){ if(typeof cmdbToggle==='function') cmdbToggle(); })
+    .catch(function(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not open the register.'); });
+}
+
 function screenCode(){
   try {
     var U = (typeof UI !== 'undefined') ? UI : {};
@@ -4393,6 +4408,9 @@ function _renderApp(){
      * codebase, one session, and a window that contains nothing but the lab.
      * ⚠️ `?lab=1` keeps the app visible for anybody who wants both in the second window.
      */
+    /* ⭐ the register reopens where it was left, like the lab: it is a reference held open beside the work */
+    try{ if(localStorage.getItem('cb_cmdb')==='1')
+      ensureCap('cmdb').then(function(){ if(typeof cmdbSet==='function') cmdbSet(true); }).catch(function(){}); }catch(_){}
     var _lab=''; try{ _lab = new URLSearchParams(location.search).get('lab') || ''; }catch(_){}
     if(_lab){
       _tm = true;
@@ -14811,7 +14829,7 @@ function modeRibbon(){
   const eff = CFG.API_BASE;                                  // what is ACTUALLY called
   const overridden = !st.mock && eff !== (st.base || '');
   /* ⭐ the code rides with the viewport switches: the one strip that is on every screen, whatever is below it */
-  const vpsw = SESSION.token ? `${screenCodeHTML()}<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_testmode')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-test" onclick="testModeToggle()" title="${tx('The test lab — read a case, do it, say what happened, without leaving the screen you are on')}">${tx('🧪 Test lab')}</button></span>` : '';
+  const vpsw = SESSION.token ? `${screenCodeHTML()}<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_cmdb')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-cmdb" onclick="cmdbOpenToggle()" title="${tx('The configuration register — every screen, and the code it is known by')}">${tx('🗂️ CMDB')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_testmode')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-test" onclick="testModeToggle()" title="${tx('The test lab — read a case, do it, say what happened, without leaving the screen you are on')}">${tx('🧪 Test lab')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;

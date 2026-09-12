@@ -144,7 +144,387 @@ window.CBSCREENS = {
   "Inside a screen › Service": "SCR008",
   "Inside a screen › Supplies": "SCR009",
   "Inside a screen › Testing": "SCR010"
- }
+ },
+ "rows": [
+  {
+   "code": "CTR001",
+   "path": "Counter › Counter",
+   "group": "Counter",
+   "screen": "Counter",
+   "nav": "counter",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL001",
+   "path": "Rail › Compose",
+   "group": "Rail",
+   "screen": "Compose",
+   "nav": "compose",
+   "cases": 19,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL002",
+   "path": "Rail › Task",
+   "group": "Rail",
+   "screen": "Task",
+   "nav": "task",
+   "cases": 17,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL003",
+   "path": "Rail › Order",
+   "group": "Rail",
+   "screen": "Order",
+   "nav": "order",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL004",
+   "path": "Rail › Drafts",
+   "group": "Rail",
+   "screen": "Drafts",
+   "nav": "drafts",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL005",
+   "path": "Rail › Archive",
+   "group": "Rail",
+   "screen": "Archive",
+   "nav": "archive",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "RAL006",
+   "path": "Rail › Trash",
+   "group": "Rail",
+   "screen": "Trash",
+   "nav": "trash",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "WRK001",
+   "path": "Work › Messages",
+   "group": "Work",
+   "screen": "Messages",
+   "nav": "messages",
+   "cases": 8,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "WRK002",
+   "path": "Work › Everyone's work",
+   "group": "Work",
+   "screen": "Everyone's work",
+   "nav": "worklist",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "WRK003",
+   "path": "Work › Intake",
+   "group": "Work",
+   "screen": "Intake",
+   "nav": "intake",
+   "cases": 13,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "WRK004",
+   "path": "Work › Disputes",
+   "group": "Work",
+   "screen": "Disputes",
+   "nav": "disputes",
+   "cases": 15,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CAT001",
+   "path": "Catalogue › Catalogue",
+   "group": "Catalogue",
+   "screen": "Catalogue",
+   "nav": "catalogue",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CAT002",
+   "path": "Catalogue › Record a sale",
+   "group": "Catalogue",
+   "screen": "Record a sale",
+   "nav": "selfbill",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CAT003",
+   "path": "Catalogue › Categories",
+   "group": "Catalogue",
+   "screen": "Categories",
+   "nav": "categories",
+   "cases": 23,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "CAT004",
+   "path": "Catalogue › Catalogue setup",
+   "group": "Catalogue",
+   "screen": "Catalogue setup",
+   "nav": "catsetup",
+   "cases": 39,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS001",
+   "path": "Business › Customers",
+   "group": "Business",
+   "screen": "Customers",
+   "nav": "customers",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS002",
+   "path": "Business › Suppliers",
+   "group": "Business",
+   "screen": "Suppliers",
+   "nav": "suppliers",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS003",
+   "path": "Business › Match",
+   "group": "Business",
+   "screen": "Match",
+   "nav": "match",
+   "cases": 6,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS004",
+   "path": "Business › Network",
+   "group": "Business",
+   "screen": "Network",
+   "nav": "network",
+   "cases": 105,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS005",
+   "path": "Business › Co-assists",
+   "group": "Business",
+   "screen": "Co-assists",
+   "nav": "coassists",
+   "cases": 26,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "INS001",
+   "path": "Insight › MIS",
+   "group": "Insight",
+   "screen": "MIS",
+   "nav": "mis",
+   "cases": 62,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "INS002",
+   "path": "Insight › Register",
+   "group": "Insight",
+   "screen": "Register",
+   "nav": "raida",
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "INS003",
+   "path": "Insight › Traceability",
+   "group": "Insight",
+   "screen": "Traceability",
+   "nav": "traceability",
+   "cases": 5,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "INS004",
+   "path": "Insight › Trade ready",
+   "group": "Insight",
+   "screen": "Trade ready",
+   "nav": "readiness",
+   "cases": 19,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "ACC001",
+   "path": "Account › Profile",
+   "group": "Account",
+   "screen": "Profile",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "ACC002",
+   "path": "Account › Settings",
+   "group": "Account",
+   "screen": "Settings",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "ACC003",
+   "path": "Account › Language",
+   "group": "Account",
+   "screen": "Language",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "ACC004",
+   "path": "Account › Appearance",
+   "group": "Account",
+   "screen": "Appearance",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "ACC005",
+   "path": "Account › Sign out",
+   "group": "Account",
+   "screen": "Sign out",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "APP001",
+   "path": "The app itself › app.html",
+   "group": "The app itself",
+   "screen": "app.html",
+   "nav": null,
+   "cases": 263,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "OWN001",
+   "path": "Its own app › Counter",
+   "group": "Its own app",
+   "screen": "Counter",
+   "nav": null,
+   "cases": 60,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "OWN002",
+   "path": "Its own app › Storefront",
+   "group": "Its own app",
+   "screen": "Storefront",
+   "nav": null,
+   "cases": 17,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR001",
+   "path": "Inside a screen › Adopt",
+   "group": "Inside a screen",
+   "screen": "Adopt",
+   "nav": null,
+   "cases": 4,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR002",
+   "path": "Inside a screen › Connector",
+   "group": "Inside a screen",
+   "screen": "Connector",
+   "nav": null,
+   "cases": 14,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR003",
+   "path": "Inside a screen › Definitions",
+   "group": "Inside a screen",
+   "screen": "Definitions",
+   "nav": null,
+   "cases": 18,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR004",
+   "path": "Inside a screen › Folders",
+   "group": "Inside a screen",
+   "screen": "Folders",
+   "nav": null,
+   "cases": 15,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR005",
+   "path": "Inside a screen › Iddocs",
+   "group": "Inside a screen",
+   "screen": "Iddocs",
+   "nav": null,
+   "cases": 1,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR006",
+   "path": "Inside a screen › Legend",
+   "group": "Inside a screen",
+   "screen": "Legend",
+   "nav": null,
+   "cases": 2,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR007",
+   "path": "Inside a screen › Register",
+   "group": "Inside a screen",
+   "screen": "Register",
+   "nav": null,
+   "cases": 17,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR008",
+   "path": "Inside a screen › Service",
+   "group": "Inside a screen",
+   "screen": "Service",
+   "nav": null,
+   "cases": 10,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR009",
+   "path": "Inside a screen › Supplies",
+   "group": "Inside a screen",
+   "screen": "Supplies",
+   "nav": null,
+   "cases": 8,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "SCR010",
+   "path": "Inside a screen › Testing",
+   "group": "Inside a screen",
+   "screen": "Testing",
+   "nav": null,
+   "cases": 27,
+   "since": "2026-09-12"
+  }
+ ]
 };
 /* the code for a nav key, or null when the screen is not on the rail (a modal, a sub-page) */
 window.cbScreenCode = function (nav) {
