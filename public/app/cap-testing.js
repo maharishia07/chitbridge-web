@@ -87,6 +87,36 @@ function testModeSet(on) {
   } else { testPanelClose(); }
   if (typeof renderApp === 'function') renderApp();
 }
+/**
+ * ── ⭐⭐⭐ THE DOOR IS THE SCREEN CODE ITSELF ──────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THE ONE THING THE BRIEF WARNED ABOUT: *a form nobody fills in.* An incident box reached through a menu,
+ * after the fact, is a form — and the evidence is in this repo, where a policy flag sat unsettable for four
+ * days because nothing put it in front of anybody.
+ *
+ * ⭐ So the door is the thing already in the corner of every screen. Click `CAT005` and the box opens with the
+ * screen code, the dialog code and the build already known — which are the three things a person will not
+ * think to write down and an investigator cannot work without.
+ *
+ * ⚠️ IT OPENS THE ONE BOX, IN THE ONE PLACE. A second incident form floating over the screen would be a
+ * second thing to maintain and a second set of rules to forget: the chip is the door, the lab is the room.
+ */
+function incidentHere() {
+  try {
+    CBTEST.view = "inc";
+    try { localStorage.setItem("cb_test_view", "inc"); } catch (_) {}
+    CBTEST.incForm = true;
+    /* ⚠️ opening the panel is what LOADS the board — setting the view alone would show an empty list and
+       teach the person that recording an incident does not work. */
+    if (!CBTEST.on) { testModeSet(true); } else { testPanelOpen(); }
+    if (!CBTEST.incs) testIncLoad(); else testPaint();
+    /* the box, not the top of the panel: they clicked to write something */
+    setTimeout(function () {
+      try { var f = document.getElementById("incWhat"); if (f) f.focus(); } catch (_) {}
+    }, 260);
+  } catch (e) {}
+}
+
 function testModeIsOn() { try { return localStorage.getItem('cb_testmode') === '1'; } catch (_) { return false; } }
 
 /* ── loading ──────────────────────────────────────────────────────────────────────────────────────────────── */

@@ -2341,6 +2341,29 @@ function leadIconOff(txt){
   return t.slice(i).trim();
 }
 
+/**
+ * ⭐ THE CODE CHIP IS A DOOR, and it is one function because both stamps draw the same chip. Two copies of a
+ * click handler is how one of them stops working and nobody notices for a month.
+ *
+ * ⚠️ It stays a plain span. A <button> here would join the tab order of every screen in the product, ahead of
+ * the thing the person actually came to do.
+ */
+function codeChipDoor(tag, what){
+  try{
+    /* ⚠️ NOT the cursor: `style.cssText` is assigned after this runs and would wipe it.
+       It is declared with the rest of the chip's styling instead. */
+    tag.title = what;
+    tag.setAttribute('role', 'button');
+    tag.addEventListener('click', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      if (typeof ensureCap === 'function') {
+        ensureCap('testing').then(function(){ if (typeof incidentHere === 'function') incidentHere(); })
+          .catch(function(){});
+      } else if (typeof incidentHere === 'function') { incidentHere(); }
+    });
+  }catch(e){}
+}
+
 function screenHeadEl(body, info){
   var lab = String(info.label || '').trim().toLowerCase();
   if (lab) {
@@ -2378,12 +2401,12 @@ function stampScreenHeading(){
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'screen-code');
     tag.textContent = info.code;
-    tag.title = tx('The code for this screen — quote it instead of describing where you are');
+    codeChipDoor(tag, tx('The code for this screen — quote it, or click to record an incident here'));
     /* ⚠️ user-select:all on the CODE alone: selecting the heading should still select the heading */
     tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
       + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
       + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
-      + 'margin-inline-end:7px;vertical-align:middle';
+      + 'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
     /**
      * ── ⚠️ ICON, THEN CODE, THEN NAME ─────────────────────────────────────────────────────────────────────
      *
@@ -2511,11 +2534,11 @@ function stampDetailTitle(){
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'detail-code');
     tag.textContent = info.code;
-    tag.title = tx('The code for this detail screen — quote it instead of describing it');
+    codeChipDoor(tag, tx('The code for this detail screen — quote it, or click to record an incident here'));
     tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
       + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
       + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
-      + 'margin-inline-end:7px;vertical-align:middle';
+      + 'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
     dt.insertBefore(tag, dt.firstChild);
   }catch(e){}
 }
