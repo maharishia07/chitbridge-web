@@ -292,6 +292,8 @@ async function testLoad(force) {
     clearTimeout(CBTEST._noticeT);
     CBTEST._noticeT = setTimeout(function () { CBTEST.notice = null; testPaint(); }, 9000);
   }
+  /* ⚠ the board has been READ — which is not the same as it having anything in it */
+  CBTEST._read = 1;
   testPaint();
 }
 
@@ -2548,7 +2550,12 @@ function testCasesForScreen(code) {
  */
 function testScreenTally(code) {
   try {
-    if (!CBTEST.cases || !CBTEST.cases.length) return null;
+    /* ⚠⚠ READ-AND-EMPTY IS A REAL ANSWER (0/0); UNREAD is the only case with nothing to say. Conflating
+       them hid the Test chip on every screen of a BRAND-NEW shop — where a tester most needs it, because a
+       fresh product has no cases until somebody writes the first. Caught by the Playwright spec on its first
+       run against a freshly minted entity; no amount of using it on this shop would have found it. */
+    if (!CBTEST._read) return null;
+    if (!CBTEST.cases) return { total: 0, pass: 0, fail: 0 };
     var t = { total: 0, pass: 0, fail: 0 };
     CBTEST.cases.forEach(function (c) {
       if (testScrOf(c) !== code) return;
