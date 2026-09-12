@@ -407,7 +407,13 @@ function testKindTotal() {
  */
 var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
 /* ⭐ the AREA row's tracks, read by the header and every row — see the note on TEST_ROW_COLS */
-var TEST_AREA_COLS = 'minmax(0,9em) minmax(0,1fr) 3.2em 3.4em 3.4em 3.8em';
+/**
+ * ⚠️⚠️ AND THE HEADER'S OWN WORDS DID NOT FIT ITS TRACKS: "CASESPASSEDFAILED" ran together because CASES,
+ * PASSED, FAILED and NOT RUN are wider than 3.2em once uppercased and letter-spaced. I sized these tracks for
+ * the NUMBERS and then put words above them.
+ * ⭐ Wide enough for the LABEL, which is always the longer of the two.
+ */
+var TEST_AREA_COLS = 'minmax(0,9em) minmax(0,1fr) 4.2em 4.6em 4.4em 4.8em';
 
 function testPaint() {
   var body = document.getElementById('cbtestbody');
@@ -445,12 +451,30 @@ function testPaint() {
   var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
 
   /* ── the header: who is recording, into which run, over which area ── */
+  /**
+   * ── ⚠️⚠️ THE HEADER WAS FIVE DARK BARS AND A SQUEEZED TITLE ───────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"header itself not looking good… polish it."*
+   *
+   * ⚠️ THESE BUTTONS INHERITED app.html's .btn, WHICH STRETCHES. Inside a flex row with no basis they each
+   * took an equal share of a 1900px panel, so +, ☷, ⓘ, ↻ and ✕ became five heavy dark slabs running the whole
+   * width — the loudest thing on a panel whose actual job is the list below them. And they pushed the title
+   * into a two-character column, so "Test lab" wrapped onto two lines.
+   *
+   * ⭐ AN ICON BUTTON IS A SQUARE. flex:0 0 auto stops the stretch, a fixed 30px box gives them a rhythm, and
+   * quiet borders put them back where secondary chrome belongs. The title holds one line because a panel whose
+   * own name wraps looks broken before you have read anything on it.
+   */
+  var ico = 'flex:0 0 auto;width:30px;height:28px;display:inline-flex;align-items:center;'
+    + 'justify-content:center;font:inherit;font-size:var(--fs-2);line-height:1;padding:0;cursor:pointer;'
+    + 'border:1px solid var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);'
+    + 'color:var(--ink-2,#3a4048)';
   var hd = ''
-    + '<div style="display:flex;align-items:center;gap:8px">'
-    +   '<b style="font-size:var(--fs-3)">🧪 Test lab</b>'
-    +   '<span style="flex:1"></span>'
-    +   '<button class="btn" title="Add a case for something you just found" onclick="testAddOpen()" '
-    +     'style="padding:2px 9px;font-size:var(--fs-4);line-height:1.3">+</button>'
+    + '<div style="display:flex;align-items:center;gap:6px">'
+    +   '<b style="font-size:var(--fs-3);white-space:nowrap">🧪 Test lab</b>'
+    +   '<span style="flex:1 1 auto;min-width:8px"></span>'
+    +   '<button title="Add a case for something you just found" onclick="testAddOpen()" '
+    +     'style="' + ico + ';font-size:var(--fs-3)">+</button>'
     /**
      * ⭐⭐ THE REPORT, FROM THE LAB. Athi, 2026-09-11: *"where is the report in the test lab?"* — it was only
      * on the full board, which is the one place a tester is not.
@@ -460,19 +484,20 @@ function testPaint() {
      * panel would make it unreadable in the one place it has to be legible — on paper, to somebody who was
      * not here.
      */
-    +   '<button class="btn" title="Test Completion Report (ISO/IEC/IEEE 29119-3)" '
-    +     'onclick="testReport()" style="padding:2px 8px">☷</button>'
-    +   '<button class="btn" title="How to use this" onclick="testGuide(true)" style="padding:2px 8px">ⓘ</button>'
-    +   '<button class="btn" title="Read the cases again" onclick="testLoad(true)" style="padding:2px 8px">↻</button>'
+    +   '<button title="Test Completion Report (ISO/IEC/IEEE 29119-3)" '
+    +     'onclick="testReport()" style="' + ico + '">\u2637</button>'
+    +   '<button title="How to use this" onclick="testGuide(true)" style="' + ico + '">\u24d8</button>'
+    +   '<button title="Read the cases again" onclick="testLoad(true)" style="' + ico + '">\u21bb</button>'
     /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
        on the test case and where we are looking at."* The corner still drags freely; this is for the times
        when you know what you want and do not want to aim at a 16-pixel triangle to get it. */
-    +   '<select onchange="testSize(this.value)" title="Size" style="font-size:var(--fs-1);padding:2px 4px">'
+    +   '<select onchange="testSize(this.value)" title="Size" style="flex:0 0 auto;font-size:var(--fs-1);'
+    +     'padding:3px 4px;border-radius:7px;border:1px solid var(--line,#e7e3d8)">'
     +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
            ['large', 'Large'], ['full', 'Full height']].map(function (o) {
             return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
     +   '</select>'
-    +   '<button class="btn" title="Close" onclick="testModeSet(false)" style="padding:2px 8px">✕</button>'
+    +   '<button title="Close" onclick="testModeSet(false)" style="' + ico + '">\u2715</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
     /* ⭐ FIRST, because "what kind of test" is the first question anybody asks of this list */
@@ -600,8 +625,14 @@ function testPaint() {
           ['not run', all.todo, n.todo, 'inherit'],
         ];
         if (all.blocked) cols.splice(3, 0, ['blocked', all.blocked, n.blocked, 'var(--warn-2)']);
-        var grid = 'display:grid;grid-template-columns:repeat(' + cols.length + ',minmax(0,1fr));gap:2px 8px;'
-                 + 'font-variant-numeric:tabular-nums;';
+        /**
+         * ⚠️ 1fr EACH SPREAD FOUR SMALL NUMBERS ACROSS 1900px, so "621 cases" and "621 not run" sat at opposite
+         * ends of the panel with a hand-span of nothing between them and nothing to compare. Figures that are
+         * meant to be read TOGETHER have to sit together.
+         * ⭐ Each column takes the width it needs, they group at the left, and the set stops before it sprawls.
+         */
+        var grid = 'display:grid;grid-template-columns:repeat(' + cols.length + ',minmax(3.6em,auto));'
+                 + 'gap:2px 18px;justify-content:start;font-variant-numeric:tabular-nums;';
         return '<div style="margin-top:8px;' + grid + '">'
           /* the whole board */
           + cols.map(function (c) {
@@ -780,8 +811,21 @@ function testPaint() {
           +     'background:var(--grey-2,#545A61);color:#fff;border-radius:4px;padding:1px 5px;'
           +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + testEsc(gk) + '</span>'
           + '</span>'
-          + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;'
-          + 'text-overflow:ellipsis;white-space:nowrap">' + testEsc(list[0].module_name || '') + '</span>'
+          + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;display:flex;gap:6px;'
+          + 'align-items:baseline">'
+          +   '<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
+          +     testEsc(list[0].module_name || '') + '</span>'
+          /**
+           * ⭐ ADD A CASE HERE. ⚠️ stopPropagation is not optional: this sits inside the row's fold handler, so
+           * without it pressing + would also collapse the area you were adding to — the exact double-fire
+           * already fixed once on the Report's drill-down numbers.
+           */
+          +   '<button title="Add a case to ' + testEsc(gk) + '" '
+          +     'onclick="event.stopPropagation();testAddOpen(\'' + testEsc(gk) + '\')" '
+          +     'style="flex:0 0 auto;border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);'
+          +     'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);'
+          +     'line-height:1;padding:1px 6px;cursor:pointer">+</button>'
+          + '</span>'
           + '<span style="text-align:end;font-weight:700;font-size:var(--fs-2);'
           + 'font-variant-numeric:tabular-nums">' + list.length + '</span>'
           + num(gn.pass, 'var(--ok-2)') + num(gn.bad, 'var(--disp)')
@@ -1170,14 +1214,47 @@ function testReport() {
   catch (_) { if (typeof toast === 'function') toast(tx('Open /testing.html to read the report.')); }
 }
 
-function testAddOpen() { CBTEST.adding = true; testPaint(); }
-function testAddClose() { CBTEST.adding = false; testPaint(); }
+/**
+ * ── ⭐⭐ ADD IT WHERE YOU ARE LOOKING ────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"+ icon adding a case — where does it add? If you want to add a case against a section,
+ * say 00 REG, it has to be there."*
+ *
+ * ⚠️ THE ONE + IN THE HEADER COULD NOT ANSWER THAT QUESTION. It opened a form that GUESSED the area — the
+ * current filter, then the screen you came from, then whatever happened to be first — and wrote the guess
+ * into an editable box. A guess in a field a person did not fill is indistinguishable from a choice they made,
+ * and the case lands somewhere they did not intend.
+ *
+ * ⭐ Pressing + ON AN AREA says where it goes, because you pressed it there. The header + still exists for a
+ * case that belongs to no area yet, and the form now SAYS which of the two happened rather than presenting
+ * both identically.
+ */
+function testAddOpen(area) {
+  CBTEST.adding = true;
+  CBTEST.addTo = area || '';          /* ⭐ '' means "you pressed the header +", which is a different intent */
+  testPaint();
+}
+function testAddClose() { CBTEST.adding = false; CBTEST.addTo = ''; testPaint(); }
 
 function testAddHTML() {
   var areas = testAreas();
-  var suggested = CBTEST.area || testAreaGuess() || (areas[0] && areas[0].key) || 'NEW';
+  /**
+   * ⭐ A CHOSEN AREA IS NOT A GUESSED ONE, and the form has to be able to tell them apart. When + was pressed
+   * on a row the area is settled and the form says so; when it was pressed in the header it is still a guess
+   * and the form says THAT, so nobody accepts a suggestion believing they made it.
+   */
+  var chosen = CBTEST.addTo || '';
+  var suggested = chosen || CBTEST.area || testAreaGuess() || (areas[0] && areas[0].key) || 'NEW';
+  var named = (areas.filter(function (a) { return a.key === suggested; })[0] || {}).name || '';
   return '<div style="flex:1;overflow:auto;padding:10px 11px;min-height:0;font-size:var(--fs-2)">'
-    + '<div style="font-weight:700;margin-bottom:7px">New case</div>'
+    + '<div style="font-weight:700;margin-bottom:3px">New case</div>'
+    + '<div style="font-size:var(--fs-1);color:' + (chosen ? 'var(--blue,#3F66A6)' : 'var(--grey-2,#545A61)')
+    +   ';margin-bottom:8px">'
+    +   (chosen
+        ? 'Adding to <b>' + testEsc(suggested) + '</b>' + (named ? ' \u00b7 ' + testEsc(named) : '')
+        : '\u26a0 No area chosen \u2014 <b>' + testEsc(suggested) + '</b> is a suggestion. '
+          + 'Press + on an area row to be sure, or edit it below.')
+    + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Area</label>'
     + '<input type="text" id="cbt_a_mod" value="' + testEsc(suggested) + '" '
     +   'style="width:100%;margin-bottom:7px;padding:5px 7px;font-size:var(--fs-2)">'

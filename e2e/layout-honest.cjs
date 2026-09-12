@@ -89,11 +89,19 @@ const PROBE = `(() => {
     /* ⚠ NOT 'tr:first-child th, thead th' — a table with a <thead> matches BOTH and every header is
        counted twice, which reported "35 headers vs 17 cells" on a table that is perfectly well formed. The
        first guard finding of the day was the guard. */
-    const head = t.querySelector('thead') || t.querySelector('tr');
+    /**
+     * ⚠️⚠️ :scope, OR IT WALKS INTO A NESTED TABLE. The matrix opens with a bare <tr> and has no <thead> of
+     * its own, while the table INSIDE its expanded rows does — so querySelector('thead') found the nested
+     * one and reported "3 headers vs 17 cells" on a table that is correct. Both of this guard's header bugs
+     * have now been the same mistake: counting cells that belong to a different table.
+     */
+    const head = t.querySelector(':scope > thead') 
+      || t.querySelector(':scope > tbody > tr') || t.querySelector(':scope > tr');
     const th = head ? head.querySelectorAll('th').length : 0;
-    const row = [...t.querySelectorAll('tbody tr, tr')].find((r) => r.querySelectorAll('td').length > 1);
+    const row = [...t.querySelectorAll(':scope > tbody > tr, :scope > tr')]
+      .find((r) => r.querySelectorAll(':scope > td').length > 1);
     if (!row) return;
-    const td = [...row.querySelectorAll('td')]
+    const td = [...row.querySelectorAll(':scope > td')]
       .reduce((n, c) => n + (parseInt(c.getAttribute('colspan'), 10) || 1), 0);
     if (th && td !== th) out.unnamed.push(name(t) + '  ' + th + ' headers vs ' + td + ' cells');
     if (!th) out.unnamed.push(name(t) + '  NO HEADER ROW at all (' + td + ' columns)');

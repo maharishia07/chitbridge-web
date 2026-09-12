@@ -101,6 +101,16 @@
    * WHAT and gives you the way out. Either alone leaves you hunting.
    */
   .bar.filtered{ background:var(--blue-tint); border-bottom-color:var(--blue); }
+  /**
+   * ⭐ THE GRIP. 6px is the smallest target a person reliably hits without it becoming visible furniture —
+   * it stays invisible until the pointer is in the header, then shows where the edge is.
+   * ⚠️ z-index above the cell text, or a long heading swallows the handle and the column cannot be dragged.
+   */
+  th{ position:relative; }
+  .colgrip{ position:absolute; inset-block:0; inset-inline-end:0; width:6px; cursor:col-resize;
+        z-index:3; background:transparent; }
+  table:hover .colgrip{ background:linear-gradient(to right, transparent, var(--line)); }
+  .colgrip:hover{ background:var(--blue) !important; }
   .fclear{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:8px;
         font-size:var(--fs-1); color:var(--blue); font-weight:600; }
   #f_clear:disabled{ opacity:.45; cursor:default; }
@@ -902,6 +912,12 @@
   time the copy that got fixed was not the copy being read.
 -->
 <script src="app/test-verdict.js"></script>
+<!--
+  ⭐ AND THE READER SETS THE WIDTHS. No set I choose is right for a five-character key beside a
+  twenty-two character path, at four text sizes, on his screen and not mine — which is why the same class of
+  complaint has come back five times today. A width somebody dragged is correct by definition.
+-->
+<script src="app/table-resize.js"></script>
 <main id="main"><div class="say">Reading the board…</div></main>
 
 <script>
@@ -3413,6 +3429,26 @@ function isOpenSection(k, howMany){
  *
  * ⭐ ONE function now. setView and load() both call it.
  */
+/**
+ * ⭐⭐ ONE WIRING THAT CATCHES EVERY RENDER PATH.
+ *
+ * ⚠️ My first attempt called this from repaintCurrent — and the widths vanished on the first filter change,
+ * because paint() is called DIRECTLY by the filters and never passes through it. The obvious next move was to
+ * add the call to paint(), paintSummary(), paintReport(), paintReliability() and paintTry() — which is the
+ * scattered-call fault I have now fixed four times on this page.
+ *
+ * ⭐ Every render writes to #main, so watching #main catches all of them, including the ones somebody adds
+ * next month. The observer is the seam; the renderers do not have to know this feature exists.
+ */
+function applyColWidths(){ try { if (typeof tblResizable === "function") tblResizable(document.getElementById("main")); } catch (_) {} }
+(function watchMain(){
+  var m = document.getElementById("main");
+  if (!m || typeof MutationObserver !== "function") return;
+  /* ⚠️ childList only, and never attributes: tblResizable SETS th.style.width, so watching attributes would
+     re-enter on its own writes. */
+  new MutationObserver(function(){ applyColWidths(); }).observe(m, { childList: true, subtree: true });
+})();
+
 function repaintCurrent(){
   /**
    * ── ⚠️⚠️ THE CHIPS WERE DRAWN BY TWO OF THE FIVE VIEWS ───────────────────────────────────────────────────
@@ -3432,6 +3468,7 @@ function repaintCurrent(){
    * makes this a one-line fix instead of a fourth scattered call.
    */
   tally();
+  setTimeout(applyColWidths, 0);
   if (VIEW === 'summary') paintSummary();
   else if (VIEW === 'report') paintReport();
   else if (VIEW === 'reliability') paintReliability();
