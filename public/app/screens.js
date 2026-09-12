@@ -188,6 +188,18 @@ window.CBSCREENS = {
    "path": "Message › Chit messages",
    "icon": "💬",
    "label": "Chit messages"
+  },
+  "supplier-detail": {
+   "code": "BUS009",
+   "path": "Business › Supplier detail",
+   "icon": "📦",
+   "label": "Supplier detail"
+  },
+  "customer-detail": {
+   "code": "BUS010",
+   "path": "Business › Customer detail",
+   "icon": "🧾",
+   "label": "Customer detail"
   }
  },
  "byPath": {
@@ -754,7 +766,9 @@ window.CBSCREENS = {
   "Panel › Floating cart": "PNL002",
   "Panel › The register (CMDB)": "PNL003",
   "Panel › Test lab": "PNL004",
-  "Panel › Line card": "PNL005"
+  "Panel › Line card": "PNL005",
+  "Business › Supplier detail": "BUS009",
+  "Business › Customer detail": "BUS010"
  },
  "rows": [
   {
@@ -5830,6 +5844,24 @@ window.CBSCREENS = {
    "group": "Panel",
    "screen": "Line card",
    "nav": null,
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS009",
+   "path": "Business › Supplier detail",
+   "group": "Business",
+   "screen": "Supplier detail",
+   "nav": "supplier-detail",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS010",
+   "path": "Business › Customer detail",
+   "group": "Business",
+   "screen": "Customer detail",
+   "nav": "customer-detail",
    "cases": 0,
    "since": "2026-09-12"
   }

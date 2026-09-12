@@ -2514,6 +2514,10 @@ function codeScreenKey(){
      */
     if (U.chit2 && U.sel && U.chit2 === U.sel) return 'chit2-detail';
     if (U.nav === 'catalogue' && (U.prodMode === 'new' || U.prodMode === 'edit' || U.prodSel)) return 'catalogue-product';
+    /* ⚠️ a list and the record open beside it are TWO screens on one page, and one code cannot be right
+       for both — the same split the chit list and the chit detail already make. */
+    if (U.nav === 'suppliers' && U.supSel) return 'supplier-detail';
+    if (U.nav === 'customers' && U.custSel) return 'customer-detail';
     return (typeof _fineScreen === 'function') ? _fineScreen() : (U.nav || null);
   } catch (_) { return null; }
 }
