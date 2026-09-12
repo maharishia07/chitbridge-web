@@ -300,8 +300,20 @@ function testPanelOpen() {
     /* ⚠⚠ A SCROLL CONTAINER, NOT A FLEX COLUMN. It was both, and that is why nothing scrolled: a flex
        parent SIZES its child to fit, so the list never overflowed and there was nothing for overflow:auto to
        scroll. Athi found it in a minute — "I couldn't roll inside the panel". */
+    /**
+     * ── ⚠️ THE LAST ROW WAS UNREACHABLE ─────────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"we had a standing rule, scrolling has to move a bit more — I could not see the last
+     * record."*
+     *
+     * ⚠️ AND THE RULE IS ALREADY APPLIED ON THE REPORT, which ends with . This panel
+     * had none, so the final row sat flush against the bottom edge — reachable in principle and unreadable in
+     * practice, with nothing below it to show you had arrived.
+     * ⭐ Room to scroll PAST the last row. The rule was written down; it had only ever been applied to one of
+     * the two surfaces, which is the same one-of-two fault as the counts and the dispatch.
+     */
     + '<div id="cbtestbody" data-mv-fit="1" style="flex:1 1 auto;min-height:0;overflow-y:auto;'
-    +   'overflow-x:hidden"></div></div>';
+    +   'overflow-x:hidden;padding-bottom:72px;scroll-padding-block-end:72px"></div></div>';
   document.body.appendChild(host);
 
   /**
