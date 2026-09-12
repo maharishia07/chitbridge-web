@@ -7909,7 +7909,7 @@ function supEdit(id){
     +   ['resale','own_use'].map(function(k){ const on=supKindOf(x)===k;
           return '<button data-testid="sup-kind-'+k+'" onclick="setSupplierKind(\''+id+'\',\''+k+'\')" style="flex:1;border:1px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:9px;background:'+(on?'var(--blue-tint-bg)':'var(--card)')+';color:'+(on?'var(--blue)':'var(--grey)')+';font-size:var(--fs-1);font-weight:700;padding:7px 9px;text-align:start;line-height:1.4">'
             + (k==='resale'?'🏭 '+tx('Things we sell'):'🧴 '+tx('Things we use'))
-            + '<div style="font-weight:400;font-size:var(--fs-0);margin-top:2px">'
+            + '<div style="font-weight:400;font-size:var(--fs-1);margin-top:2px">'
             + (k==='resale'?tx('offered to your catalogue'):tx('goes to supplies, never a storefront'))+'</div></button>'; }).join('')
     + '</div>'
     + '<label class="fl">' + tx('Category / tag') + '</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'

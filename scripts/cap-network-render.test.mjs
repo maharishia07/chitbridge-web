@@ -135,17 +135,21 @@ runInContext(read('public/app/locale.js'), ctx, { filename: 'locale.js' });
 runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
 runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });
-runInContext(read('public/app/cart-ui.js'), ctx, { filename: 'cart-ui.js' });
 /**
- * ⚠️ AFTER cart-ui.js, BECAUSE catalogue-ui READS CBCart.fmt — the same order app.html loads them in, and the
- * reason that order is asserted rather than assumed.
+ * ⚠️⚠️ THIS TEST HAD BEEN BROKEN SINCE THE CART CAPABILITY LANDED (bf14516, 2026-09-05), and nothing said so in
+ * words anybody read: cart-ui.js and catalogue-ui.js were MERGED into cart.js, "every loader repointed" — every
+ * loader except this one. It then died at ENOENT before its first assertion, so the suite counted it red and the
+ * five things it actually guards were proving nothing at all.
  *
- * This line was missing for about ten minutes after cap-network.js started calling CBCatalogue.pickerHTML, and
- * the harness went 5 FAILED immediately. That is the harness earning its place: the browser would have thrown
- * `CBCatalogue is not defined` on the Network browse screen, which is behind a login AND behind ensureCap(), so
- * no browser spec reaches it — this is the only thing standing between that and a broken screen in production.
+ * ⭐ Both globals survived the merge on purpose (CBCart and CBCatUI), so one file replaces the two loads. The
+ * ordering note that used to live here — catalogue-ui AFTER cart-ui, because it reads CBCart.fmt — is now the
+ * file's own internal order and cannot be got wrong from outside.
+ *
+ * ⚠️ What it guards is unchanged and still worth having: cap-network.js calls CBCatalogue.pickerHTML, the browse
+ * screen sits behind a login AND behind ensureCap(), and no browser spec reaches it.
+ * [[feedback-improvise-update-cases]] — a change and its test case ship together.
  */
-runInContext(read('public/app/catalogue-ui.js'), ctx, { filename: 'catalogue-ui.js' });
+runInContext(read('public/app/cart.js'), ctx, { filename: 'cart.js' });
 runInContext(read('public/app/cap-network.js'), ctx, { filename: 'cap-network.js' });
 
 console.log('\ncap-network · the browse screen renders');

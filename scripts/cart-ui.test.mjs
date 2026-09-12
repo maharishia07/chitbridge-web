@@ -12,7 +12,10 @@
  * "type": "module" they land on globalThis, which is what a browser would give them too.
  */
 await import('../public/app/catalogue-lines.js');   // the walk cart-ui builds on
-await import('../public/app/cart-ui.js');
+/* ⚠️ cart-ui.js became part of cart.js in bf14516 and this import was not repointed, so the file threw
+   ERR_MODULE_NOT_FOUND before its first assertion — red in the suite, and silent about which of the cart's
+   rules had stopped being checked. CBCart is still the global; only the file moved. */
+await import('../public/app/cart.js');
 const K = globalThis.CBCart;
 
 let failed = 0;
