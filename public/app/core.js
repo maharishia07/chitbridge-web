@@ -595,7 +595,19 @@ async function api(key, {params, query, body}={}){
         || (typeof CBTEST !== 'undefined' && CBTEST && CBTEST.on);
       if (_rec) {
         window.CBCALLS = window.CBCALLS || [];
-        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid,
+        /**
+         * ⭐⭐ WHICH SCREEN MADE THE CALL, stamped at the moment it is made. Without this the log is a
+         * single pile of the last forty calls, and the tester panel reading it credited the Catalogue with
+         * eleven routes — most of them the rail, the notifications poll, and the test tool asking about
+         * itself. Eighty-three "tests underneath this screen", nearly all of them underneath something else.
+         *
+         * ⚠️ `navScreenKey()` READS `UI.nav`, WHICH IS SET BEFORE THE LOADING STARTS — unlike the code
+         * stamped into the heading, which arrives after the paint. Attributing by the heading would have
+         * credited every screen’s own load calls to the screen before it.
+         */
+        var _scr = null;
+        try { if (typeof navScreenKey === 'function') _scr = navScreenKey(); } catch (_) {}
+        CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid, scr: _scr,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
         CBCALLS.length = Math.min(CBCALLS.length, 40);

@@ -2918,11 +2918,25 @@ function testBehindOf(code) {
   var files = [];
   String(drawn).split(',').forEach(function (p) { p = p.trim(); if (p) files.push(p); });
 
-  /* ⭐ what it actually called — the same forty-call log the Speed area reads, no second measurement */
+  /**
+   * ⭐ WHAT IT ACTUALLY CALLED — the same forty-call log the Speed area reads, no second measurement. But
+   * narrowed twice, because the first version of this was wrong in a way that flattered it:
+   *
+   * ⚠️ ONLY THIS SCREEN’S CALLS. The log is the whole session. Unfiltered, the Catalogue claimed eleven
+   * routes — the rail’s, the notification poll’s — and 83 tests underneath it. A wrong link is worse
+   * than no link: it reports coverage the screen does not have.
+   *
+   * ⚠️ AND NEVER THE TEST TOOL’S OWN TRAFFIC. Reading the board, saving a verdict and posting a
+   * screenshot all hit /api/testing, so every screen in the product would list the tester’s own tool as
+   * something it depends on. It depends on nothing of the kind; the tool is standing in the room.
+   */
+  var here = null;
+  try { if (typeof navScreenKey === 'function') here = navScreenKey(); } catch (_) {}
   var routes = [], seen = {};
   (window.CBCALLS || []).forEach(function (c) {
+    if (here && c.scr && c.scr !== here) return;
     var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
-    if (!m) return;
+    if (!m || m[1].toLowerCase() === 'testing') return;
     var f = 'chitbridge-api/routes/' + m[1].toLowerCase() + '.js';
     if (!seen[f]) { seen[f] = 1; routes.push(f); }
   });
@@ -3105,7 +3119,11 @@ function testDiagMark() { CBTEST._diagFrom = (window.CBCALLS || []).length ? (CB
   CBTEST._diagAt = Date.now(); }
 
 function testDiagHTML() {
-  var all = (window.CBCALLS || []).slice();
+  /* ⚠ the tester’s own tool is not part of what the screen cost — reading the board and saving a verdict
+     are the measurement, and a measurement that counts itself is not one */
+  var all = (window.CBCALLS || []).filter(function (c) {
+    return !/^\/api\/testing/i.test(String(c.path || ''));
+  });
   if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
       + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
