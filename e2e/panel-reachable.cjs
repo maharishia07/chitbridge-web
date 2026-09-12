@@ -91,8 +91,15 @@ if (fs.existsSync(testing)) {
      t.indexOf('_mv.toggleMin') >= 0);
   ok('the whole header drags — no grip to aim at, which is what every title bar does',
      t.indexOf("dragOn: '#cbtesthead'") >= 0);
-  ok('and it can be opened in its own window, so it need not cover the app at all',
-     /function testPopOut/.test(t) && /testing\.html/.test(t));
+  /**
+   * ⚠️ THIS PASSED FOR THE WRONG REASON. It asked whether `testing.html` appeared anywhere in the file — and it
+   * does, because the ☷ report button opens it. So the check stayed green while the pop-out was pointing at the
+   * REPORT board instead of the lab, which is exactly the bug Athi found by pressing it:
+   * *"open the board on its own window opens the report panel, not the test lab panel."*
+   * ⭐ A guard that cannot tell the two apart is measuring the wrong thing. It now reads the target.
+   */
+  ok('the pop-out opens the LAB in its own window, not the report board',
+     t.indexOf('function testPopOut') >= 0 && t.indexOf("window.open('/app.html?lab=only'") >= 0);
 }
 
 /* ⭐⭐ THE TWO THAT MATTER MOST, because both were reached for in the trap and neither worked. */

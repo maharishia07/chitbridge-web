@@ -1601,6 +1601,18 @@ img.attImg{object-fit:cover;display:block}
 .msgss{display:inline-flex;align-items:center;gap:6px;margin-inline-start:auto}
 .msgsi{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);min-width:120px;font-family:inherit}
 .msgord{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
+
+/**
+ * ── ⭐ THE LAB-ONLY WINDOW ────────────────────────────────────────────────────────────────────────────────
+ * Everything the app draws is hidden and the panel is un-floated: no shadow, no rounded corners, no position
+ * — a floating card inside an empty window looks like a mistake. ⚠️ The panel keeps its own header, so the
+ * close and minimise still work and the window still behaves like a window.
+ */
+body.lab-only > *:not(#cbtesthost){ display:none !important; }
+body.lab-only #cbtestpanel{
+  position:fixed !important; inset:0 !important; width:auto !important; height:auto !important;
+  max-height:none !important; border:0 !important; border-radius:0 !important; box-shadow:none !important;
+}
 </style>
 </head>
 <body>
@@ -4328,6 +4340,29 @@ function _renderApp(){
      ⚠ Still lazy: this runs only when the box is already ticked. */
   if(SESSION.token && !SESSION._testBooted){ SESSION._testBooted=true;
     var _tm=false; try{ _tm = localStorage.getItem("cb_testmode")==="1"; }catch(_){}
+    /**
+     * ── ⭐⭐⭐ THE LAB IN A WINDOW OF ITS OWN ────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"when we test it, it has to be away from the current screen, so one side test scripts
+     * and another side i can test it"* — then, when the button opened /testing.html: *"open the board on its own
+     * window opens the report panel, not the test lab panel... i want the testlab to be opened on its own
+     * window."*
+     *
+     * ⚠️ THE TWO ARE NOT THE SAME THING and it was my mistake to point at the wrong one. testing.html is the
+     * REPORT board — five tabs, a completion report, no way to add a case. The LAB is cap-testing.js: the
+     * filters, the case you are working through, the note box, the + that writes a new case.
+     *
+     * ⭐ AND THE LAB IS A CAPABILITY INSIDE THIS APP, so a second host for it would be a second copy of every
+     * global it stands on — api(), toast(), esc(), tx(), modal() — and two copies of a screen is how they start
+     * disagreeing. `?lab=only` boots THIS app, opens the lab, and hides the app's own shell around it. One
+     * codebase, one session, and a window that contains nothing but the lab.
+     * ⚠️ `?lab=1` keeps the app visible for anybody who wants both in the second window.
+     */
+    var _lab=''; try{ _lab = new URLSearchParams(location.search).get('lab') || ''; }catch(_){}
+    if(_lab){
+      _tm = true;
+      if(_lab==='only'){ try{ document.body.classList.add('lab-only'); }catch(_){ } }
+    }
     if(_tm) ensureCap("testing").then(function(){ if(typeof testModeSet==="function") testModeSet(true); })
               .catch(function(){}); }
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)

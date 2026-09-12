@@ -724,8 +724,10 @@ function testPaint() {
      * the current screen, so one side test scripts and another side i can test it, it should be openable in
      * another window?"*
      *
-     * ⭐ THE SECOND WINDOW ALREADY EXISTS — /testing.html is the full board, reading the same session out of the
-     * same localStorage on the same origin. This is a link, not a build. [[feedback-adopt-dont-reinvent]]
+     * ⭐ IT IS THIS APP, BOOTED WITH THE LAB OPEN AND ITS OWN SHELL HIDDEN (`?lab=only`) — not a second host.
+     * The lab stands on api(), toast(), esc(), tx() and modal(); a page of its own would be a second copy of
+     * every one of them, and two copies of a screen is how they start disagreeing.
+     * [[feedback-adopt-dont-reinvent]] · [[feedback-no-duplicate-functions]]
      * ⚠️ A FLOATING PANEL CAN NEVER SOLVE THIS: whatever it is not covering, it is still in front of, and a
      * tester dragging it aside ten times an hour is the tax this removes.
      * ⚠️ A named target, so pressing it twice raises the window already open instead of stacking a second one.
@@ -1706,7 +1708,13 @@ function testPopOut() {
   var x = Math.max(0, window.screen.availWidth - w);
   var win = null;
   try {
-    win = window.open('/testing.html', 'cbtestlab',
+    /**
+     * ⚠️ THIS POINTED AT /testing.html AND THAT WAS WRONG. Athi: *"open the board on its own window opens the
+     * report panel, not the test lab panel."* The report board is a different thing with a different job and no
+     * way to add a case — ⭐ [[feedback-name-vs-behaviour]]: both are called "the test lab" and only one of them
+     * is the thing a tester works in.
+     */
+    win = window.open('/app.html?lab=only', 'cbtestlab',
       'width=' + w + ',height=' + h + ',left=' + x + ',top=0,resizable=yes,scrollbars=yes');
   } catch (_) { win = null; }
   if (!win) {
