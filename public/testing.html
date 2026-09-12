@@ -36,7 +36,37 @@
     --bad:#b4453f; --bad-tint:#fbeceb;
     --warn:#8a5a1e; --warn-tint:#fbf3e3;
     --neutral-tint:#EEF1F5;
-    --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px;
+    /**
+     * ── ⚠️⚠️ 11px FOR THE TEXT THAT CARRIES THE MEANING ──────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"test report are good, but couldn't read, you kept the font size so small, can you
+     * make it bigger."*
+     *
+     * ⚠️ AND --fs-1 WAS THE WORST PLACE TO BE SMALL. It is not just chips and badges: it is the PURPOSE
+     * column, the row notes, the "on what evidence" column — every sentence on this board that a person is
+     * actually meant to READ. I spent the day making sure those sentences were complete and then set them at
+     * eleven pixels.
+     *
+     * ⭐ The whole scale moves together, which is what the tokens are for. ~1.18× across the board, and the
+     * em-based grid tracks scale with it so nothing needs re-tuning.
+     * ⭐ --ui is separate now: controls and chips do NOT need to grow with the prose, and growing them is what
+     * makes a bumped page feel clumsy rather than legible.
+     */
+    /**
+     * ⚠️⚠️ AND IN px THE CONTROL WOULD HAVE DONE NOTHING. I set the scale in pixels and then wrote an A−/A+
+     * that scales the ROOT — and a percentage on the root moves rem and em, never px. The buttons would have
+     * clicked, the value would have persisted, and not one character on the page would have changed size.
+     *
+     * ⭐ Caught before it shipped by asking what the wire actually carries rather than whether it was
+     * connected. rem is what makes the root multiplier mean anything: 1rem = the root size, so every token
+     * below moves with it. The px values in the comments are what each resolves to at the 16px default.
+     */
+    --fs-1:0.8125rem;   /* 13px  — the reading size: purposes, notes, evidence */
+    --fs-2:0.9062rem;   /* 14.5px — table rows */
+    --fs-3:1rem;        /* 16px  — base + section headings */
+    --fs-4:1.1875rem;   /* 19px  — h1 */
+    --fs-5:1.5rem;      /* 24px */
+    --ui:0.7812rem;     /* 12.5px — chips, pills, controls: deliberately NOT the reading size */
   }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper);
@@ -56,11 +86,11 @@
 
   .bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px;
         border-bottom:1px solid var(--line); background:var(--card); }
-  .bar label{ font-size:var(--fs-1); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
-  select, input[type=text]{ font:inherit; font-size:var(--fs-2); padding:5px 7px; border:1px solid var(--line);
+  .bar label{ font-size:var(--ui); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
+  select, input[type=text]{ font:inherit; font-size:var(--ui); padding:5px 7px; border:1px solid var(--line);
         border-radius:7px; background:#fff; color:var(--ink); min-height:32px; }
   input[type=text]{ min-width:120px; flex:1 1 140px; }
-  .btn{ font:inherit; font-size:var(--fs-2); padding:6px 11px; border:1px solid var(--line); border-radius:8px;
+  .btn{ font:inherit; font-size:var(--ui); padding:6px 11px; border:1px solid var(--line); border-radius:8px;
         background:var(--card); color:var(--ink); cursor:pointer; white-space:nowrap; min-height:32px; }
   .btn.pri{ background:var(--blue); color:#fff; border-color:var(--blue); }
   .btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
@@ -79,6 +109,22 @@
  * an ultrawide, not a layout); the paragraphs that are actually read keep ~78 characters via --prose. A table
  * wants width, a sentence does not, and they no longer have to agree.
  */
+  /**
+   * ⭐⭐ A CONTROL, NOT JUST A BIGGER NUMBER. Athi asked once for bigger text; the honest fix is that HE sets
+   * it, because the right size depends on the screen he happens to be at and I cannot see that. The whole page
+   * is driven by one scale, so a multiplier on the root moves everything together — prose, tables, tree and
+   * chart labels — with no layout re-tuning, which is the payoff for having tokenised it in the first place.
+   *
+   * ⚠️ It persists per browser (localStorage), wrapped, because a private window or blocked site data throws
+   * on read and the page must still render at the default rather than not at all.
+   */
+  html{ font-size:100%; }
+  .tsize{ display:inline-flex; gap:0; margin-inline-start:auto; align-items:center; }
+  .tsize button{ font:inherit; font-size:var(--ui); line-height:1; padding:5px 9px; cursor:pointer;
+        border:1px solid var(--line); background:var(--card); color:var(--ink-2); min-height:30px; }
+  .tsize button:first-child{ border-radius:7px 0 0 7px; }
+  .tsize button:last-child{ border-radius:0 7px 7px 0; border-inline-start:0; }
+  .tsize button:hover{ background:var(--neutral-tint); }
   main{ padding:12px 18px 80px; max-width:1760px; margin:0 auto; }
   /* ⭐ the reading measure, kept for prose only — see above */
   .modhead .intro, .note, .lede, .prose{ max-width:var(--prose); }
@@ -410,7 +456,8 @@
   .rep .kv dd{ margin:0; }
   .rep .big-n{ display:flex; gap:20px; flex-wrap:wrap; margin:4px 0 12px; }
   .rep .big-n div{ min-width:74px; }
-  .rep .big-n b{ display:block; font-size:26px; line-height:1.15; letter-spacing:-.02em; }
+  /* ⭐ rem, not 26px, so the A−/A+ control reaches the big report numbers too */
+  .rep .big-n b{ display:block; font-size:1.625rem; line-height:1.15; letter-spacing:-.02em; }
   .rep .big-n span{ font-size:var(--fs-1); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
   .rep .inc{ border-top:1px solid var(--line-2); padding:9px 0; font-size:var(--fs-2); }
   .rep .inc:first-of-type{ border-top:0; }
@@ -490,6 +537,8 @@
 <div class="bar">
   <!-- ⭐ Athi, 2026-09-11: "where can we see the summary result?" — the totals endpoint existed and nothing
        rendered it. An endpoint with no screen is a number nobody reads. -->
+  <!-- ⭐ Athi, 2026-09-12: "couldn't read, you kept the font size so small". Bigger by default AND his to set,
+       because the right size depends on the screen he is at and I cannot see that. -->
   <div class="tabs">
     <!-- ⭐ Athi: "we name it as per standard, reference the standard where possible?" — each tab says which
          of 29119-3's document types it corresponds to, so a reader can look ours up in theirs rather than
@@ -505,6 +554,7 @@
       title="How often each test has run, and how often it changed its answer">Reliability</button>
     <button id="t_try" onclick="setView('try')"
       title="Run a pure engine function on your own input, here, with no server">Try it</button>
+    <span class="tsize"><button onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
   </div>
 </div>
 <!--
@@ -1293,6 +1343,28 @@ var LENS = {
        + 'in between to blame. <i>Nothing here is recorded — it is for seeing, not for scoring.</i>',
 };
 
+/**
+ * ⭐ ONE MULTIPLIER ON THE ROOT MOVES EVERYTHING — prose, tables, tree, chart labels — because the whole page
+ * is drawn from one type scale. That is the payoff for tokenising it; nothing needs re-tuning.
+ *
+ * ⚠️ localStorage READ AND WRITE ARE BOTH WRAPPED. A private window or blocked site data throws on access, and
+ * a page that fails to render because it could not remember a font size is a worse page than one that forgets.
+ */
+function applyTextSize(){
+  var pct = 100;
+  try { pct = parseInt(localStorage.getItem('cb.testsize'), 10) || 100; } catch (_) {}
+  pct = Math.max(85, Math.min(145, pct));
+  document.documentElement.style.fontSize = pct + '%';
+  return pct;
+}
+function textSize(step){
+  var pct = applyTextSize() + step * 10;
+  pct = Math.max(85, Math.min(145, pct));
+  try { localStorage.setItem('cb.testsize', String(pct)); } catch (_) {}
+  document.documentElement.style.fontSize = pct + '%';
+}
+applyTextSize();
+
 function setView(v){
   VIEW = v;
   var lens = document.getElementById('lens');
@@ -1790,7 +1862,8 @@ function chartStack(rows, opts){
    * character of slack rather than being fitted exactly.
    */
   var longest = rows.reduce(function(m, r){ return Math.max(m, String(r.key || '').length); }, 0);
-  var labelW = o.labelW || Math.max(74, Math.ceil((longest + 1) * 6.3));
+  /* ⚠️ 6.3 was the advance width at 10.5px; the label text is 12px now, so the column must widen with it */
+  var labelW = o.labelW || Math.max(84, Math.ceil((longest + 1) * 7.2));
   var W = labelW + 226;   /* the bar track and the count keep their room whatever the labels need */
   var h = rows.length * rowH + pad;
   var out = '<svg viewBox="0 0 ' + W + ' ' + h + '" role="img" aria-label="' + esc(o.label || '') + '">';
@@ -1800,7 +1873,7 @@ function chartStack(rows, opts){
     var x = labelW;
     var w = W - labelW - 44;   /* room on the right for the count — labels must fit INSIDE the viewBox */
     /* ⭐ never cut — labelW above is measured from the longest of these */
-    out += '<text x="0" y="' + (y + 12) + '" font-size="10.5" font-family="ui-monospace,Menlo,monospace" '
+    out += '<text x="0" y="' + (y + 12) + '" font-size="12" font-family="ui-monospace,Menlo,monospace" '
       + 'fill="var(--ink-2)" font-weight="700">' + esc(String(r.key)) + '</text>';
     CHART_TONES.forEach(function (t) {
       var v = Number(r[t[0]] || 0);
@@ -1811,7 +1884,7 @@ function chartStack(rows, opts){
       x += seg;
     });
     /* ⭐ the number, because a bar you have to measure by eye is decoration */
-    out += '<text x="' + (W - 40) + '" y="' + (y + 12) + '" font-size="10.5" fill="var(--grey-2)">'
+    out += '<text x="' + (W - 40) + '" y="' + (y + 12) + '" font-size="12" fill="var(--grey-2)">'
       + (r.total - (r.untested || 0)) + '/' + r.total + '</text>';
   });
   return out + '</svg>';
