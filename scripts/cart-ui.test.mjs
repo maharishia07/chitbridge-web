@@ -11,6 +11,8 @@
  * ⚠️ ESM, imported for SIDE EFFECTS — both files are browser files that attach to `window`; under this package's
  * "type": "module" they land on globalThis, which is what a browser would give them too.
  */
+/* the unit table — UNIT_KINDS is what tells a continuous unit from a countable one */
+await import('../public/app/catalogue-model.js');
 await import('../public/app/catalogue-lines.js');   // the walk cart-ui builds on
 /* ⚠️ cart-ui.js became part of cart.js in bf14516 and this import was not repointed, so the file threw
    ERR_MODULE_NOT_FOUND before its first assertion — red in the suite, and silent about which of the cart's
@@ -294,6 +296,106 @@ ok('★ placed says what was ASKED as well as what landed, so a person can see t
    res.placed.find((p) => p.name === 'Bolts').asked === 2);
 ok('★ nothing is minted — load fills a cart, a human still confirms', cart.lines() === 2);
 cart.destroy();
+
+/**
+ * ── ⭐⭐⭐ HALF A KILO — EVERY UNIT, ASKED ONE BY ONE ─────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"is the weight and kg allows fraction? it requires, can you test that? in fact every
+ * unit."*
+ *
+ * ⚠️⚠️ THE UNIT DECIDES NOTHING. Quantity is decided by the line's order MODEL, and `modelOf` ends with
+ * `MODELS[o.model] || MODELS.count` — so a product with no order model attached is counted in whole numbers
+ * whatever it is measured in. Type 0.5 against a kilo of rice and `count.coerce` floors it to 0, and 0 does not
+ * mean zero: **it removes the line from the cart**. The shopkeeper sees the row disappear, not a refusal.
+ *
+ * ⭐ AND THE DATA TO GET THIS RIGHT IS ALREADY THERE, UNUSED. `CBCatalogue.UNIT_KINDS` groups every unit —
+ * Weight · Volume · Length · Area are continuous, Count · Pack are discrete — and `unitKind(u)` is exported and
+ * called by NOTHING. A default model derived from the kind would make half a kilo work on the day a product is
+ * created, and still let an explicit order model win.
+ *
+ * ⚠️ THE CONTINUOUS HALF OF THIS TEST IS RED ON PURPOSE and names a real gap. It is not describing what the
+ * cart does; it is describing what a shop selling by weight requires. [[feedback-document-status]]
+ */
+console.log('\ncart-ui · fractions, unit by unit');
+{
+  const KINDS = globalThis.CBCatalogue.UNIT_KINDS || [];
+  const CONTINUOUS = ['Weight', 'Volume', 'Length', 'Area'];
+  const cont = [], disc = [];
+  KINDS.forEach((k) => (CONTINUOUS.indexOf(k.label) >= 0 ? cont : disc).push(...(k.units || [])));
+
+  /** one product, one unit, one optional order model — the smallest thing that can hold a quantity */
+  const one = (unit, model) => {
+    const item = { item_id: 'x', item_data: { name: 'P', unit: unit, price: 100 } };
+    if (model) item.item_data.order = { model: model };
+    const c = { shop: { bridge_id: 'B1' }, items: [item] };
+    K.init('frac', c); K.add('frac', 'x'); K.setQty('frac', 'x', 0.5);
+    return K.qtyOf('frac', 'x');
+  };
+
+  const brokenDefault = cont.filter((u) => one(u) !== 0.5);
+  ok('★★★ a unit measured continuously takes half of it — with NO order model attached: '
+     + (brokenDefault.length ? brokenDefault.join(', ') + ' floor 0.5 to 0, which REMOVES the line'
+                             : 'all of ' + cont.join(', ')),
+     brokenDefault.length === 0);
+
+  const brokenMeasure = cont.filter((u) => one(u, 'measure') !== 0.5);
+  ok('★★ and every one of them takes it once a measure model IS attached',
+     brokenMeasure.length === 0);
+
+  /* ⚠️ The other direction is just as real: half a box is not a thing, and today NOTHING stops it. */
+  const loose = disc.filter((u) => one(u, 'measure') === 0.5);
+  ok('★★ a DISCRETE unit refuses half of itself: '
+     + (loose.length ? loose.join(', ') + ' accept 0.5 when a measure model is attached — nothing checks the unit'
+                     : 'none accept a fraction'),
+     loose.length === 0);
+
+  ok('★ a discrete unit with no model counts in whole numbers, and says so by refusing 0.5',
+     disc.every((u) => one(u) === 0));
+
+  /* ⭐ three decimal places, because 2.5 kg is a real order and 0.001 kg is a gram. */
+  const item = { item_id: 'x', item_data: { name: 'P', unit: 'kg', price: 100, order: { model: 'measure' } } };
+  K.init('frac', { shop: { bridge_id: 'B1' }, items: [item] }); K.add('frac', 'x');
+  K.setQty('frac', 'x', 2.5);      ok('★ 2.5 kg survives exactly', K.qtyOf('frac', 'x') === 2.5);
+  K.setQty('frac', 'x', 0.001);    ok('★ a gram expressed in kilos survives', K.qtyOf('frac', 'x') === 0.001);
+  K.setQty('frac', 'x', 0.0004);   ok('★ below a milligram of a kilo is not kept as a fiction',
+                                      K.qtyOf('frac', 'x') === 0);
+  K.setQty('frac', 'x', 1.0005);   ok('★ rounding is to three places, not floating-point noise',
+                                      K.qtyOf('frac', 'x') === 1.001 || K.qtyOf('frac', 'x') === 1);
+}
+
+/**
+ * ── ⭐⭐ THE MARGIN: A SCALE THAT SETTLES AT 1.010 MEANS ONE KILO ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"allow margin, in the sense, 1.010, to be considered as 1, kind of?"*
+ *
+ * ⚠️⚠️ THIS ONE CHANGES MONEY, so the cases that matter most are the ones where it must NOT fire. A hundredth
+ * of a unit, FLAT — ten grams on a kilo, and still ten grams on a tonne. A percentage would have been 10 kg of
+ * a tonne and the first anybody heard of it would be an invoice.
+ */
+console.log('\ncart-ui · the margin');
+{
+  const kg = (v, order) => {
+    const item = { item_id: 'x', item_data: { name: 'Rice', unit: 'kg', price: 100 } };
+    if (order) item.item_data.order = order;
+    K.init('m', { shop: { bridge_id: 'B1' }, items: [item] });
+    K.add('m', 'x'); K.setQty('m', 'x', v);
+    return K.qtyOf('m', 'x');
+  };
+
+  ok('★★★ 1.010 kg is one kilo', kg(1.010) === 1);
+  ok('★ 0.995 kg is one kilo too — the margin is a band, not a floor', kg(0.995) === 1);
+  ok('★★ 1.02 kg is NOT one kilo — twenty grams is a quantity, not noise', kg(1.02) === 1.02);
+  ok('★★ 10.05 stays 10.05 — the margin is FLAT, so it does not widen with the number', kg(10.05) === 10.05);
+  ok('★★★ the margin never snaps toward nothing: 0.004 kg keeps itself', kg(0.004) === 0.004);
+  ok('★ a half is a half — nowhere near a whole number, nothing to snap', kg(0.5) === 0.5);
+  ok('★ 2.5 is untouched', kg(2.5) === 2.5);
+
+  ok('★★ a trade that cannot afford a margin turns it off: tol 0 keeps 1.010',
+     kg(1.010, { model: 'measure', tol: 0 }) === 1.01);
+  ok('★★ and a trade that wants a wider one declares it: tol 0.1 makes 1.05 one',
+     kg(1.05, { model: 'measure', tol: 0.1 }) === 1);
+  ok('★ a declared margin still never reaches zero', kg(0.05, { model: 'measure', tol: 0.5 }) === 0.05);
+}
 
 console.log('\n  ' + (failed ? failed + ' FAILED' : 'all passed') + '\n');
 process.exit(failed ? 1 : 0);

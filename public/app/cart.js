@@ -75,6 +75,68 @@
   var MAX_QTY = 100000;  // the server's own line cap; refuse at the row so a typo is caught where it was made
 
   /**
+   * ── ⭐⭐⭐ THE GRAIN OF A UNIT — WHETHER HALF OF IT EXISTS ────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"is the weight and kg allows fraction? it requires… in fact every unit."*
+   *
+   * ⚠️⚠️ IT DID NOT, AND THE FAILURE WAS INVISIBLE. Quantity was decided only by the order MODEL, defaulting to
+   * `count`, so a kilo of rice with no model attached floored 0.5 to 0 — and 0 does not mean zero here, it
+   * REMOVES THE LINE. The shopkeeper saw the row disappear rather than a refusal. Measured over all sixteen
+   * units on 2026-09-12: eight continuous ones behaved that way, and eight discrete ones would happily take
+   * half a box the moment somebody attached a measure model.
+   *
+   * ⭐ THE ANSWER WAS ALREADY IN THE DATA, UNUSED. `CBCatalogue.UNIT_KINDS` groups every unit and `unitKind()`
+   * was exported and called by NOTHING. The unit now decides the GRAIN — may this be halved — and the order
+   * model decides everything else: steps, minimums, ceilings, price. Two different questions, two owners.
+   *
+   * ⚠️ AN UNKNOWN UNIT IS LEFT ALONE. "gunny" is in no kind, so it keeps the old whole-number default rather
+   * than being guessed into a grain — the same rule the alias table follows: an unknown unit SURVIVES.
+   */
+  var CONTINUOUS_KINDS = ['Weight', 'Volume', 'Length', 'Area'];
+  /** looked up at CALL time: cart.js must not care whether catalogue-model.js loaded before or after it */
+  function kindOf(unit) {
+    var M = (typeof CBCatalogue !== 'undefined' && CBCatalogue)
+      || (typeof window !== 'undefined' && window.CBCatalogue) || null;
+    if (!M || typeof M.unitKind !== 'function' || !unit) return null;
+    var k = M.unitKind(String(unit));
+    return k ? (k.label || k.key || null) : null;
+  }
+  function isContinuous(unit) { return CONTINUOUS_KINDS.indexOf(kindOf(unit)) >= 0; }
+  /** ⚠️ discrete only when the unit is KNOWN to be countable — never by absence of information */
+  function isDiscrete(unit) { var k = kindOf(unit); return !!k && CONTINUOUS_KINDS.indexOf(k) < 0; }
+
+  /**
+   * ── ⭐⭐ THE MARGIN: 1.010 IS ONE ──────────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"allow margin, in the sense, 1.010, to be considered as 1, kind of?"*
+   *
+   * A scale settles at 1.010 and a shopkeeper means one kilo. Carrying the ten grams forward makes every
+   * downstream number slightly untrue and makes a person argue with an input box.
+   *
+   * ⚠️⚠️ THIS CHANGES MONEY, so it is deliberately small, FLAT, and declarable — not a percentage. A hundredth
+   * of a unit is ten grams on a kilo and stays ten grams on a tonne; a 1% band would have been 10 kg of a tonne
+   * and nobody would have noticed until an invoice did. A model may set its own `tol`, and `tol: 0` turns it
+   * off entirely for a trade that cannot afford it.
+   *
+   * ⚠️ IT NEVER SNAPS TO ZERO. 0.004 kg stays 0.004 and is refused elsewhere on its own merits — a margin that
+   * can delete a line is the bug this whole change exists to end.
+   */
+  var QTY_TOL = 0.01;
+  function snapWhole(n, o) {
+    var tol = (o && o.tol != null) ? Number(o.tol) : QTY_TOL;
+    if (!isFinite(tol) || tol <= 0) return n;
+    var w = Math.round(n);
+    if (w <= 0) return n;                        /* never toward nothing */
+    /**
+     * ⚠⚠ THE COMPARISON IS ROUNDED, AND THE EXAMPLE ATHI GAVE IS EXACTLY WHY. |1.01 - 1| is
+     * 0.010000000000000009 in binary floating point, so a bare <= 0.01 refused the one case he asked for by
+     * nine quintillionths of a kilo. ⭐ The band is compared at the same three places the quantity itself is
+     * held to — anything finer is not a weight, it is an artefact of how the number is stored.
+     */
+    return Math.round(Math.abs(n - w) * 1000) / 1000 <= tol ? w : n;
+  }
+
+  /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
    *  ORDER MODELS — how a line is quantified. ONE registry, and every surface obeys it.
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -120,7 +182,8 @@
     measure: {
       label: 'amount',
       // Decimal, because 2.5 kg is a real order. Rounded to 3 places so floating point cannot produce 2.4999999.
-      coerce: function (v) { var n = parseFloat(v); return isFinite(n) && n > 0 ? Math.min(MAX_QTY, Math.round(n * 1000) / 1000) : 0; },
+      coerce: function (v, o) { var n = parseFloat(v); if (!isFinite(n) || n <= 0) return 0;
+        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, o)); },
       next: function (v, d, o) { var s = Number(o.step) || 1; return Math.max(0, Math.round(((Number(v) || 0) + d * s) * 1000) / 1000); },
       hint: function (o) { return o.step ? 'in steps of ' + o.step : ''; }
     },
@@ -143,7 +206,7 @@
         if (!isFinite(n) || n <= 0) return 0;
         if (o.min != null && n < Number(o.min)) return 0;
         if (o.max != null && n > Number(o.max)) return Number(o.max);   // a ceiling may clamp; a floor may not
-        return Math.min(MAX_QTY, Math.round(n * 1000) / 1000);
+        return Math.min(MAX_QTY, snapWhole(Math.round(n * 1000) / 1000, o));
       },
       next: function (v, d, o) {
         var s = Number(o.step) || 1, cur = Number(v) || 0;
@@ -192,7 +255,9 @@
   function modelOf(ns, r) {
     var o = declOf(ns, r);
     if (o && o.unresolved) return null;
-    return MODELS[o.model] || MODELS.count;
+    if (MODELS[o.model]) return MODELS[o.model];
+    /* ⭐ no model declared: the UNIT answers. Continuous → measure, everything else → count, as before. */
+    return isContinuous((dataOf(r) || {}).unit) ? MODELS.measure : MODELS.count;
   }
   /** Row lookup by id — models need the declaration, and every mutation is given only an id. */
   function rowById(ns, id) {
@@ -624,6 +689,14 @@
        definition can be read. Refusing is visible; guessing is not. */
     if (!m) return;
     var v = m.coerce(raw, o);
+    /**
+     * ⚠️⚠️ THE UNIT HAS THE LAST WORD ON THE GRAIN. A measure model attached to a product sold in BOXES would
+     * otherwise put half a box on a bill, and no screen would question it. The model still decides steps,
+     * minimums and price; it does not get to decide that half a box exists.
+     * ⚠️ Rounded to the nearest whole, not floored: 1.6 boxes means two, and flooring would quietly under-order.
+     * A value that rounds to nothing is refused, which removes the line — the model's own declared rule.
+     */
+    if (v > 0 && isDiscrete((dataOf(r) || {}).unit)) v = Math.round(v);
     if (v > 0) s.sel[id] = v; else delete s.sel[id];
     touched(ns);
   }
