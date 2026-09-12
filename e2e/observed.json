@@ -42,7 +42,9 @@
     "why": "app.html decides with isDraft = c => !!(c && (c.isDraft || c.state === \"draft\")). The Drafts list shows this chit with status OPEN and the row carries no isDraft, so the test fails and the chit is treated as sent. The SERVER is fine: routes/chits.js honours is_draft throughout, and the chit did land in the Drafts folder.",
     "finding": "⚠⚠ A DRAFT CANNOT BE DELETED FROM THE ONE SCREEN WHERE DELETION IS SUPPOSED TO WORK, and the refusal tells the user something untrue about their own unsent chit. The deletion policy in app.html says it plainly: \"only DRAFTS can be deleted\" — so the rule is right and the row cannot answer the question the rule asks.",
     "athi_call": "Where should the flag come from — the list payload carrying isDraft, or the folder the row is in? That is a product decision, not a bug fix, which is why it is written here rather than changed.",
-    "left_behind": "A draft titled “TEST - draft delete case (Claude)” (subject: Order from Tally Test Shop — 12 Sept 2026) is still in Drafts on Tally Test Shop. It could not be removed — that is this finding."
+    "left_behind": "A draft titled “TEST - draft delete case (Claude)” (subject: Order from Tally Test Shop — 12 Sept 2026) is still in Drafts on Tally Test Shop. It could not be removed — that is this finding.",
+    "fixed": "⭐ FIXED 2026-09-12 and proven end to end: GET /chits/folder now returns ch.role and mapApiChit carries isDraft, so the row can answer the question the deletion policy asks. Pressing the bin on a draft now says “Ὕ1 Delete 1 draft? It moves to Trash — from there you can Restore or delete forever.” Pressed Move to Trash: Drafts went empty and the chit appeared in Trash, restorable. The full cycle create → delete → Trash is proven.",
+    "check": "on a DRAFT, offers Move to Trash (restorable) — not the co-held refusal"
    }
   }
  },
