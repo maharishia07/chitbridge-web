@@ -493,7 +493,108 @@ var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
  * two-digit sequence, so the column that identifies the row was the one with no room in it.
  * ⭐ 12.5em fits ten characters of key plus the sequence and the caret at every text size on this scale.
  */
-var TEST_AREA_COLS = 'minmax(0,12.5em) minmax(0,1fr) 4.2em 4.6em 4.4em 4.8em';
+/**
+ * ⚠️ minmax(0,1fr) ON DETAILS COLLAPSED IT TO ZERO in a 420px panel — the four figure columns and the Area
+ * key took every pixel, and the column holding the area NAME had none left. It looked fine on Athi's wide
+ * panel and vanished on the default one, which is the worst kind of layout bug: correct wherever it is
+ * being looked at.
+ * ⭐ A floor of 6em means Details can shrink but never disappear, and the row wraps the panel instead.
+ */
+/**
+ * ⚠️⚠️ BOTH FLEXIBLE TRACKS NEED A FLOOR, and only giving one to Details moved the collapse rather than
+ * fixing it: Area then computed to TWO PIXELS in a 420px panel, so the key chip had nowhere to go. A
+ * minmax(0,…) track will shrink to nothing whenever the row is over-subscribed, and this row is, at the
+ * panel's default width.
+ * ⭐ Floors on both. The panel is genuinely tight for six columns at 420px — the Size control exists for
+ * that — but no column may ever disappear.
+ */
+/**
+ * ⚠️⚠️⚠️ em IN A GRID TRACK IS RELATIVE TO THAT ELEMENT'S OWN FONT-SIZE — and the header is deliberately
+ * smaller than the rows it labels. So the SAME template produced different pixels on each:
+ *
+ *     header   225  164  60.9  66.7  63.8  69.6
+ *     row      225  137  67.2  73.6  70.4  76.8
+ *
+ * Identical string, identical container width, columns that could never line up. This is the real cause of
+ * every "not properly aligned" report in this panel, and no amount of adjusting the NUMBERS would have
+ * fixed it — the unit was wrong.
+ *
+ * ⭐ rem is relative to the ROOT, so one template means one set of widths wherever it is used. ⚠️ Which also
+ * means these tracks no longer shrink when the panel's own font shrinks — correct: a column is a property of
+ * the TABLE, not of the text that happens to sit in it.
+ */
+var TEST_AREA_DEFAULT = 'minmax(4.5rem,8rem) minmax(5rem,1fr) 3.4rem 3.9rem 3.7rem 4.1rem';
+
+/**
+ * ── ⭐⭐ THE COLUMNS ARE ADJUSTABLE HERE TOO ─────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"have you given an adjustable column with | here, for Area?"*
+ *
+ * ⚠️ NO — the resizer I built lives in app/table-resize.js and works on a <table>, by setting a width on a
+ * <th>. This panel is a CSS GRID, so there is no th to set and nothing that file can grab. Same feature, two
+ * different mechanisms, and I had quietly delivered it to one surface.
+ *
+ * ⭐ For a grid the adjustable thing is the TEMPLATE itself. One string, stored, read by the header and every
+ * row — which is why they cannot drift apart, and why a drag moves both at once.
+ *
+ * ⚠️ THE FIRST TWO TRACKS ARE minmax(), NOT FIXED WIDTHS, and a drag has to preserve that: Area must still be
+ * able to shrink on a narrow panel and Details must still take what is left. Dragging sets the MINIMUM of the
+ * track it grabbed; it does not convert a flexible column into a rigid one.
+ */
+function testAreaCols() {
+  try {
+    var v = localStorage.getItem('cb.labcols');
+    if (v) return v;
+  } catch (_) {}
+  return TEST_AREA_DEFAULT;
+}
+function testSetAreaCols(tpl) {
+  try { tpl ? localStorage.setItem('cb.labcols', tpl) : localStorage.removeItem('cb.labcols'); } catch (_) {}
+}
+/** ⭐ every column back to the width this panel shipped with */
+function testResetCols() { testSetAreaCols(''); testPaint(); }
+
+/**
+ * Drag one boundary. `i` is the track to the LEFT of the grip.
+ * ⚠️ It reads the LIVE widths from the header row rather than parsing the template, because a template of
+ * minmax() and fr cannot be turned into pixels without the browser having laid it out — and the number a
+ * person is dragging is the one they can see.
+ */
+function testColDrag(e, i) {
+  e.preventDefault(); e.stopPropagation();
+  var head = document.getElementById('cbt_areahead');
+  if (!head) return;
+  var cells = [].slice.call(head.children);
+  var startX = e.clientX;
+  var startW = cells[i] ? cells[i].getBoundingClientRect().width : 0;
+  var move = function (ev) {
+    var w = Math.max(32, Math.round(startW + (ev.clientX - startX)));
+    var parts = testAreaCols().split(' ');
+    /* ⭐ keep a flexible track flexible — set its floor, not its width */
+    parts[i] = (i <= 1) ? 'minmax(' + w + 'px,' + (i === 1 ? '1fr' : w + 'px') + ')' : w + 'px';
+    head.style.gridTemplateColumns = parts.join(' ');
+    [].slice.call(document.querySelectorAll('[data-arearow]')).forEach(function (r) {
+      r.style.gridTemplateColumns = parts.join(' ');
+    });
+    head.dataset.pending = parts.join(' ');
+  };
+  var up = function () {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    document.body.style.cursor = '';
+    if (head.dataset.pending) {
+      testSetAreaCols(head.dataset.pending);
+      head.dataset.pending = '';
+      /* ⚠️ REPAINT, do not leave the inline styles the drag wrote. The drag sets the header and the rows it
+         can SEE; a row rendered afterwards, or one inside a collapsed area, would keep the old template and
+         the columns would silently disagree. Re-rendering from the stored value is the only way they cannot. */
+      testPaint();
+    }
+  };
+  document.body.style.cursor = 'col-resize';
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
 
 function testPaint() {
   var body = document.getElementById('cbtestbody');
@@ -846,13 +947,31 @@ function testPaint() {
        * ⚠️ An OPAQUE background is not decoration here: a transparent sticky header lets the rows scroll
        * through it and both become unreadable.
        */
-      h += '<div style="position:sticky;top:0;z-index:2;background:var(--card,#fff);'
-        + 'display:grid;grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;'
+      /**
+       * ⭐ EVERY COLUMN IS NAMED, INCLUDING THE SECOND. Athi: *"next column header could be Details."* It was
+       * an empty <span> holding a track open — a column of prose with no word above it, which is the same
+       * "values under nothing" this board keeps finding elsewhere.
+       * ⚠️ white-space:nowrap on the figures, or "NOT RUN" wraps to two lines and the header grows a row.
+       * ⭐ A grip between each pair, visible as a hairline — the | he asked for — and draggable.
+       */
+      var hcell = function (label, i, end) {
+        return '<span style="position:relative;min-width:0;overflow:hidden;white-space:nowrap'
+          + (end ? ';text-align:end' : '') + '">' + label
+          + (i < 5 ? '<span onmousedown="testColDrag(event,' + i + ')" title="Drag to set this column\u2019s '
+              + 'width" style="position:absolute;inset-block:-4px;inset-inline-end:-4px;width:9px;'
+              + 'cursor:col-resize;z-index:3">'
+              + '<span style="position:absolute;inset-block:2px;inset-inline-end:4px;width:1px;'
+              + 'background:var(--line,#e7e3d8);display:block"></span></span>'
+            : '')
+          + '</span>';
+      };
+      h += '<div id="cbt_areahead" style="position:sticky;top:0;z-index:2;background:var(--card,#fff);'
+        + 'display:grid;grid-template-columns:' + testAreaCols() + ';gap:6px;'
         + 'padding:5px 6px 4px;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;'
         + 'color:var(--grey-2,#545A61);font-weight:700;border-bottom:1px solid var(--line,#e7e3d8)">'
-        + '<span>Area</span><span></span>'
-        + '<span style="text-align:end">Cases</span><span style="text-align:end">Passed</span>'
-        + '<span style="text-align:end">Failed</span><span style="text-align:end">Not run</span></div>';
+        + hcell('Area', 0) + hcell('Details', 1)
+        + hcell('Cases', 2, 1) + hcell('Passed', 3, 1)
+        + hcell('Failed', 4, 1) + hcell('Not run', 5, 1) + '</div>';
     }
 
     groups.forEach(function (gk) {
@@ -896,8 +1015,8 @@ function testPaint() {
           var q = (typeof c.seq === 'number') ? c.seq : 99; return q < m ? q : m; }, 99);
         var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
 
-        h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:grid;'
-          + 'grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;align-items:baseline;'
+        h += '<div data-arearow="1" onclick="testFold(\'' + testEsc(gk) + '\')" style="display:grid;'
+          + 'grid-template-columns:' + testAreaCols() + ';gap:6px;align-items:baseline;'
           + 'cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line-2,#efece4)">'
           + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0;overflow:hidden">'
           +   '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
