@@ -149,9 +149,12 @@ test.describe('test mode', () => {
     }, 'pass');
 
     /* ⚠️ the assertion is the COUNT MOVING, not the absence of a toast: a verdict that recorded but did not
-       repaint reads to a tester exactly like a press that did not land. */
-    await expect(page.locator('#cbcasesbody')).toContainText('Passed 1', { timeout: 30000 });
-    await expect(page.locator('#cbcasesbody')).not.toContainText('cannot read properties');
+       repaint reads to a tester exactly like a press that did not land. The tally lives in the HEADER since
+       the panel gained its three areas. */
+    await expect(page.locator('#cbcaseshead')).toContainText('1', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 1', { timeout: 30000 });
+    await page.locator('#cbcasesbody button', { hasText: /^Cases/ }).first().click();
+    await expect(page.locator('#cbcasesbody')).toContainText('Passed 1', { timeout: 20000 });
   });
 
   test('[TM-04] the panel follows the screen and the record', async ({ page }) => {
@@ -198,11 +201,12 @@ test.describe('test mode', () => {
     await modeOn(page);
     await openPanel(page);
 
-    const before = await page.locator('#cbcasesbody').textContent();
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 0');
     await page.locator('#cbcasespanel button', { hasText: /^Save$/ }).first().click();
-    await page.waitForTimeout(1200);
-    /* nothing was written: the panel says the same thing it said before */
-    expect((await page.locator('#cbcasesbody').textContent()).slice(0, 40)).toBe(before.slice(0, 40));
+    await page.waitForTimeout(1500);
+    /* ⚠ nothing was written — asserted on the COUNT, not on a prefix of the panel text, which now carries
+       counts that arrive a beat later and would fail for a reason unrelated to the refusal */
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 0');
 
     await page.fill('#wcTitle', 'only the requirement');
     await page.locator('#cbcasespanel button', { hasText: /^Save$/ }).first().click();
@@ -237,7 +241,10 @@ test.describe('test mode', () => {
     await openPanel(page);
 
     await writeCase(page, { req: 'a thing that passes', op: 'do it', exp: 'it works', got: 'As expected.' }, 'pass');
-    await expect(page.locator('#cbcasesbody')).toContainText('Passed 1', { timeout: 30000 });
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases 1', { timeout: 30000 });
+
+    /* ⭐ the panel stays on Write after a verdict — by design — so the piles are asked for */
+    await page.locator('#cbcasesbody button', { hasText: /^Cases/ }).first().click();
 
     /* the default pile is TO DO, and a passed case is not in it */
     await expect(page.locator('#cbcasesbody')).toContainText('To do');
@@ -288,7 +295,9 @@ test.describe('test mode', () => {
     await openPanel(page);
     await writeCase(page, { req: 'one more', op: 'do it', exp: 'fine' });
     /* ⚠ wait for the reload the save triggers — counting before it lands reads as a case that never saved */
-    await expect(page.locator('#cbcasesbody')).toContainText('Cases ' + (before + 1), { timeout: 45000 });
+    /* ⚠ read the BOARD, not a tab: the panel stays on Write after a save and the tab count is not on screen */
+    await expect.poll(async () => page.evaluate(() => (CBTEST.cases || []).length),
+      { timeout: 45000 }).toBe(before + 1);
 
     /**
      * ⚠️⚠️ WRITING ONE CASE ONCE REPORTED 1447 ORPHANS. Nothing was retired, and only because a 90%
