@@ -114,9 +114,30 @@ function testEnsureVerdict() {
   }));
 }
 
+/**
+ * ── ⚠️⚠️ PRESSING ↻ SAID NOTHING AT ALL ──────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"when I press the refresh button I asked for a proper reading box, and when done, a
+ * reading-completed message — otherwise not sure what was happening. Or give a message, these many test cases
+ * loaded."*
+ *
+ * ⚠️ THE PANEL DID HAVE A "Reading the cases…" STATE, behind `CBTEST.busy && !CBTEST.cases.length` — so it
+ * showed on the FIRST load and never again. Pressing ↻ with cases already loaded did four network calls, took
+ * several seconds and produced no change on screen whatsoever. Indistinguishable from a dead button.
+ *
+ * ⭐ IT SAYS WHAT IT IS DOING WHILE IT RUNS, and what it got when it finished. ⚠️ And it reports the RESULTS
+ * count, not only the cases: the lab spent its whole life loading 0 results and reporting nothing, and a
+ * message that had said "186 results" would have exposed that on the first press.
+ *
+ * ⚠️ Same fault as the Report's Load cases an hour ago, which wrote its summary and then painted over it. Both
+ * surfaces now say the same three things: what is happening, what arrived, and whether anything moved.
+ */
 async function testLoad(force) {
   if (CBTEST.cases.length && !force) return;
-  CBTEST.busy = true; testPaint();
+  var was = { cases: CBTEST.cases.length, results: Object.keys(CBTEST.last || {}).length };
+  CBTEST.busy = true;
+  CBTEST.notice = { tone: 'work', text: 'Reading the test cases\u2026' };
+  testPaint();
   try {
     /* two calls for the whole panel — never one per case. See the round-trip note in routes/testing.js. */
     await testEnsureVerdict();
@@ -161,9 +182,31 @@ async function testLoad(force) {
           || (rank[r.status] === rank[cur.status] && new Date(r.at) > new Date(cur.at))) CBTEST.last[r.case_key] = r;
     });
   } catch (e) {
+    /* ⚠️ a toast fades in four seconds; the reason a read failed has to stay until it is dealt with */
+    CBTEST.notice = { tone: 'bad', text: 'Could not read the test cases \u2014 ' + testEsc(e.message) };
     if (typeof toast === 'function') toast(tx('Could not read the test cases') + ' — ' + e.message, true);
   }
-  CBTEST.busy = false; testPaint();
+  CBTEST.busy = false;
+  /**
+   * ⭐ THE COMPLETION MESSAGE, and it names the numbers rather than saying "done". "Reading completed" tells a
+   * reader the button worked; "620 cases · 186 results" tells them WHAT it worked on, which is the only part
+   * that can be checked against what they expected.
+   */
+  if (!CBTEST.notice || CBTEST.notice.tone !== 'bad') {
+    var now = { cases: CBTEST.cases.length, results: Object.keys(CBTEST.last || {}).length };
+    var n = (typeof testCounts === 'function') ? testCounts(CBTEST.cases, CBTEST.last) : null;
+    var moved = (now.cases !== was.cases) || (now.results !== was.results);
+    CBTEST.notice = {
+      tone: 'done',
+      text: 'Reading completed \u00b7 <b>' + now.cases + '</b> cases \u00b7 <b>' + now.results + '</b> with a result'
+        + (n ? ' \u00b7 ' + n.pass + ' passed \u00b7 ' + n.fail + ' failed \u00b7 ' + n.todo + ' not run' : '')
+        + (was.cases && !moved ? ' \u2014 unchanged since the last read' : ''),
+    };
+    /* ⚠️ a notice that never leaves becomes furniture and stops being read */
+    clearTimeout(CBTEST._noticeT);
+    CBTEST._noticeT = setTimeout(function () { CBTEST.notice = null; testPaint(); }, 9000);
+  }
+  testPaint();
 }
 
 /* ── the panel ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -725,6 +768,22 @@ function testPaint() {
   /* ── the list ── */
   /* ⚠ NO flex:1 HERE. The body scrolls; this just holds the rows and is allowed to be taller than it. */
   var h = '<div style="padding:7px 9px">';
+
+  /**
+   * ⭐ THE NOTICE, ABOVE THE LIST AND NOT INSTEAD OF IT. A refresh must not blank the thing you were reading
+   * just to tell you it is refreshing it — that is the Report's seed() fault inverted.
+   */
+  if (CBTEST.notice) {
+    var tone = CBTEST.notice.tone;
+    var col = tone === 'bad' ? ['var(--disp-tint,#fbeceb)', '#eccbc9', 'var(--disp)']
+            : tone === 'work' ? ['var(--warn-tint,#fdf1dc)', '#e8d7ae', 'var(--warn-2,#8A5A00)']
+            : ['var(--blue-tint,#E9F0FA)', 'var(--blue,#3F66A6)', 'var(--ink,#20303b)'];
+    h += '<div style="margin:0 0 8px;padding:8px 11px;border-radius:9px;background:' + col[0]
+      + ';border:1px solid ' + col[1] + ';color:' + col[2] + ';font-size:var(--fs-1);line-height:1.5">'
+      + (tone === 'work' ? '\u25cc ' : tone === 'bad' ? '\u26a0 ' : '\u2713 ')
+      + CBTEST.notice.text + '</div>';
+  }
+
   if (CBTEST.busy && !CBTEST.cases.length) {
     h += '<div style="padding:14px;color:var(--grey-2,var(--grey-2));font-size:var(--fs-2)">Reading the cases…</div>';
   } else if (!CBTEST.cases.length) {
