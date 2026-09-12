@@ -2029,6 +2029,7 @@ async function testShotSend(blob, name) {
     var r = await api('testShot', { body: {
       name: name || 'screenshot.png', mime: blob.type || 'image/png', data_base64: b64 } });
     CBTEST.shot = { id: r.id, name: r.name, size: r.size };
+    testShotThumb(blob);
     screenCasesPaint();
     if (typeof toast === 'function') toast('Screenshot attached');
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not attach it.'); }
@@ -2063,7 +2064,61 @@ async function testShotGrab() {
   } catch (e) { /* refused, or nothing chosen — say nothing */ }
 }
 
-function testShotDrop() { CBTEST.shot = null; screenCasesPaint(); }
+/**
+ * ── ⚠️⚠️ A PLAIN <a href> COULD NEVER HAVE WORKED, AND I WROTE ONE ANYWAY ────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"I am trying to attach a screen and open in view mode, it is not opening — either
+ * getting 404 or some other window is opening, but not the screenshot."*
+ *
+ * TWO FAULTS IN ONE LINE, both mine:
+ *
+ *   1. it read `CFG.API`, which does not exist. The base is `CFG.API_BASE`, so the href collapsed to a
+ *      path on the WEB origin — hence the 404, and hence "some other window": the SPA answered it.
+ *   2. even with the right host it would have failed, because `/api/attachments/:id` is authenticated and
+ *      A LINK CARRIES NO Authorization HEADER. It would have 401'd, not shown a picture.
+ *
+ * ⭐ THE CODEBASE HAD ALREADY SOLVED THIS AND SAID SO. `exportCatalogueCSV()` carries the note: *"Not a plain
+ * <a href> — the endpoint is authenticated, and a link carries no Authorization header."* Same fetch, same
+ * blob, same temporary link. [[feedback-search-before-you-build]] — the answer was written down before the
+ * mistake was made.
+ *
+ * ⚠️ NOT ROUTED THROUGH api(): that helper JSON-parses every response, which would turn a PNG into a parse
+ * error — the same reason the CSV export does its own fetch.
+ */
+async function testShotView(id) {
+  if (!id) return;
+  try {
+    var res = await fetch(CFG.API_BASE + '/api/attachments/' + encodeURIComponent(id), {
+      cache: 'no-store',
+      headers: (typeof SESSION !== 'undefined' && SESSION.token)
+        ? { Authorization: 'Bearer ' + SESSION.token } : {},
+    });
+    if (!res.ok) {
+      var msg = ''; try { var j = await res.json(); msg = j.message || j.error || ''; } catch (_) {}
+      throw new Error(msg || ('Could not fetch it (' + res.status + ')'));
+    }
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    var w = window.open(url, '_blank');
+    /* ⚠️ revoked LATER, not now: revoking before the new tab has read it gives a blank window, which is
+       exactly the "some other window" symptom in a different disguise. */
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 60000);
+    if (!w && typeof toast === 'function') toast('Allow pop-ups to view it, or it is on the incident.');
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not open it.'); }
+}
+
+/**
+ * ⭐ AND A THUMBNAIL, so nobody has to open anything to know the right picture is attached. It is the blob
+ * that was just uploaded — no second fetch, and it proves the bytes made the round trip.
+ */
+function testShotThumb(blob) {
+  try {
+    if (CBTEST._thumb) { try { URL.revokeObjectURL(CBTEST._thumb); } catch (_) {} }
+    CBTEST._thumb = blob ? URL.createObjectURL(blob) : null;
+  } catch (_) { CBTEST._thumb = null; }
+}
+
+function testShotDrop() { CBTEST.shot = null; testShotThumb(null); screenCasesPaint(); }
 
 /* the paste, bound once to the panel — the tester\u2019s own screenshot tool, and no permission at all */
 function testShotPasteBind() {
@@ -2152,8 +2207,12 @@ function testCaseFormHTML() {
     +   '<button onclick="testShotGrab()" style="' + btn + '" title="Capture this window and attach it">'
     +     '\ud83d\udcf7 Screenshot</button>'
     +   (CBTEST.shot
-      ? '<span>attached \u00b7 <a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(CBTEST.shot.id)
-        + '" target="_blank" rel="noopener">view</a> '
+      ? '<span style="display:inline-flex;gap:6px;align-items:center">'
+        /* ⭐ the picture itself, small — the fastest possible answer to "is the right one attached?" */
+        + (CBTEST._thumb ? '<img src="' + CBTEST._thumb + '" alt="" style="height:26px;width:auto;'
+            + 'border:1px solid var(--line,#e7e3d8);border-radius:4px;vertical-align:middle">' : '')
+        + '<button onclick="testShotView(\'' + testEsc(CBTEST.shot.id) + '\')" style="' + btn
+          + ';padding:1px 7px">view</button>'
         + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
       : '<span>\u2026 or paste one here with Ctrl+V</span>')
     + '</div></div>';
@@ -2211,6 +2270,7 @@ async function testCaseSend(outcome) {
    * one, which would attach evidence of the wrong thing and look deliberate.
    */
     CBTEST.shot = null;
+    testShotThumb(null);
     if (typeof testLoad === 'function') await testLoad(true);
 
     if (outcome) {
@@ -2782,8 +2842,8 @@ function testRaisedHTML(code) {
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
       +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
       /* ⭐ the picture, if one was attached — one click from the report it belongs to */
-      +   (x.evidence_id ? '<a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(x.evidence_id)
-            + '" target="_blank" rel="noopener" style="font-size:var(--fs-1)">screenshot</a>' : '')
+      +   (x.evidence_id ? '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" '
+            + 'onclick="testShotView(\'' + testEsc(x.evidence_id) + '\')">screenshot</button>' : '')
       + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
       + (x.state === 'raised'
