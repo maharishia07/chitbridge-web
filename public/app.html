@@ -2415,7 +2415,17 @@ function screenHeadEl(body, info){
      * not have to agree about the picture for the code to be placed correctly. (That they disagree at all is a
      * separate finding, and one for the CMDB to raise rather than for this function to paper over.)
      */
-    var all = body.querySelectorAll('span, div, h1, h2, h3, b, strong');
+    /**
+     * ⚠️⚠️ `button` WAS MISSING FROM THIS LIST, AND THAT IS THE WHOLE ALIGNMENT FAULT. Athi, 2026-09-12,
+     * with a screenshot: *"in supplier alignment is missing, because of that Find a product screen number
+     * not visible."* Suppliers writes its title as a TAB BUTTON, so nothing matched, the loose-line
+     * fallback fired, and BUS002 floated on a line of its own above the tab strip — detached from the tab
+     * it names, and silent about which tab you were on.
+     *
+     * ⭐ With buttons searched, the code goes INSIDE the active tab: "🏭 BUS002 Suppliers" — aligned with
+     * the strip, and it moves to whichever tab is on, which is exactly what the tab rule needs.
+     */
+    var all = body.querySelectorAll('span, div, h1, h2, h3, b, strong, button');
     for (var i = 0; i < all.length && i < 500; i++) {
       var e = all[i];
       if (e.children.length) continue;   /* the leaf that HOLDS the words, not a wrapper around it */
@@ -2498,6 +2508,22 @@ function stampScreenHeading(){
  * *"CAT001 detail page should not get a DTL00 number."* Design 2 is a different renderer with different
  * controls, and a product detail is a CATALOGUE screen: both are their own rows in the register now.
  */
+/**
+ * ⭐⭐ WHICH SCREEN YOU ARE ON — TABS INCLUDED, RECORDS NOT.
+ *
+ * ⚠️ The heading asks this and the detail asks codeScreenKey(), and the split matters: a TAB changes what
+ * the screen is, a RECORD open beside it does not. Suppliers → Find a product is a different task; Beta
+ * Fresh being selected is not. One answer for both put BUS002 on all three tabs.
+ */
+function navScreenKey(){
+  try {
+    var U = (typeof UI !== 'undefined') ? UI : {};
+    if (U.nav === 'suppliers' && U.supFind) return 'supplier-find';
+    if (U.nav === 'suppliers' && U.supReq) return 'supplier-certs';
+    return U.nav || null;
+  } catch (_) { return null; }
+}
+
 function codeScreenKey(){
   try {
     var U = (typeof UI !== 'undefined') ? UI : {};
@@ -2518,6 +2544,9 @@ function codeScreenKey(){
        for both — the same split the chit list and the chit detail already make. */
     if (U.nav === 'suppliers' && U.supSel) return 'supplier-detail';
     if (U.nav === 'customers' && U.custSel) return 'customer-detail';
+    /* ⚠️ a tab still wins over the bare nav when no record is open */
+    var byTab = navScreenKey();
+    if (byTab && byTab !== U.nav) return byTab;
     return (typeof _fineScreen === 'function') ? _fineScreen() : (U.nav || null);
   } catch (_) { return null; }
 }
@@ -2526,7 +2555,7 @@ function screenInfo(navOnly){
   try {
     var U = (typeof UI !== 'undefined') ? UI : {};
     var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
-    if (navOnly) return reg[U.nav] || null;
+    if (navOnly) return reg[navScreenKey()] || reg[U.nav] || null;
     return reg[codeScreenKey()] || reg[U.nav] || null;
   } catch (_) { return null; }
 }

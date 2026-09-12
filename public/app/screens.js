@@ -200,6 +200,18 @@ window.CBSCREENS = {
    "path": "Business › Customer detail",
    "icon": "🧾",
    "label": "Customer detail"
+  },
+  "supplier-find": {
+   "code": "BUS011",
+   "path": "Business › Find a product",
+   "icon": "🔎",
+   "label": "Find a product"
+  },
+  "supplier-certs": {
+   "code": "BUS012",
+   "path": "Business › Required certificates",
+   "icon": "📋",
+   "label": "Required certificates"
   }
  },
  "byPath": {
@@ -768,7 +780,9 @@ window.CBSCREENS = {
   "Panel › Test lab": "PNL004",
   "Panel › Line card": "PNL005",
   "Business › Supplier detail": "BUS009",
-  "Business › Customer detail": "BUS010"
+  "Business › Customer detail": "BUS010",
+  "Business › Find a product": "BUS011",
+  "Business › Required certificates": "BUS012"
  },
  "rows": [
   {
@@ -5862,6 +5876,24 @@ window.CBSCREENS = {
    "group": "Business",
    "screen": "Customer detail",
    "nav": "customer-detail",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS011",
+   "path": "Business › Find a product",
+   "group": "Business",
+   "screen": "Find a product",
+   "nav": "supplier-find",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "BUS012",
+   "path": "Business › Required certificates",
+   "group": "Business",
+   "screen": "Required certificates",
+   "nav": "supplier-certs",
    "cases": 0,
    "since": "2026-09-12"
   }
