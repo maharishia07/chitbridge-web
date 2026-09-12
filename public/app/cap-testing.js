@@ -1946,7 +1946,7 @@ function testScrOf(c) {
  */
 function testCaseFor(code, name) {
   CBTEST.writeFor = { code: code, name: name };
-  testPaint();
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
   setTimeout(function () { try { document.getElementById("wcTitle").focus(); } catch (_) {} }, 120);
 }
 
@@ -2087,7 +2087,19 @@ function testShotPasteBind() {
 
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
-  if (!w) return '';
+  /**
+   * ⚠️ CANCEL USED TO BE A ONE-WAY DOOR. With no form and no button, the only way back was closing the panel
+   * and re-opening it from the chip — which is a switch, and this panel exists to remove switches.
+   */
+  if (!w) {
+    var here = CBTEST.popupFor;
+    if (!here) return '';
+    return '<div style="margin:2px 0 9px"><button onclick="testCaseFor(\'' + here
+      + '\', \'' + testEsc(codeName ? codeName(here) : '') + '\')" '
+      + 'style="font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
+      + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)">'
+      + '\u002b New test case</button></div>';
+  }
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
     + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
   var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
@@ -2188,7 +2200,17 @@ async function testCaseSend(outcome) {
       control_code: g('wcCtl') || null,
       note: 'Written by hand on ' + new Date().toISOString().slice(0, 10) + '.',
     }] } });
-    CBTEST.writeFor = null;
+  /**
+   * ⚠️⚠️ THE FORM USED TO VANISH ON SAVE, AND THAT WAS THE END OF THE SITTING. Athi, 2026-09-13: *"I created
+   * a new incident, after that the test gathering box is gone — if I want to create another observation or
+   * test case, how do I create? We need an option to create more."*
+   *
+   * ⭐ A tester on a screen has three or four things to say about it, not one. The form STAYS, cleared, with
+   * the screen it belongs to still named — so the second case costs a sentence rather than a click hunt.
+   * ⚠️ And the screenshot is dropped with it: the picture of the last finding must not ride onto the next
+   * one, which would attach evidence of the wrong thing and look deliberate.
+   */
+    CBTEST.shot = null;
     if (typeof testLoad === 'function') await testLoad(true);
 
     if (outcome) {
@@ -2205,7 +2227,11 @@ async function testCaseSend(outcome) {
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
+    ['wcTitle', 'wcDo', 'wcSee', 'wcGot'].forEach(function (id) {
+      var el = document.getElementById(id); if (el) el.value = '';
+    });
     if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+    try { document.getElementById('wcTitle').focus(); } catch (_) {}
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save it.'); }
 }
 
@@ -2489,42 +2515,99 @@ function testScrOpen(code) {
  * second set of rules about what a verdict carries — and the day they drift, the ledger holds two kinds of
  * truth. The frame differs; the list does not.
  */
+/* which cases the panel is showing — remembered, because a tester works one way all day */
+function testCaseFilterGet() {
+  try { return localStorage.getItem('cb_case_filter') || 'todo'; } catch (_) { return 'todo'; }
+}
+function testCaseFilter(v) {
+  try { localStorage.setItem('cb_case_filter', v); } catch (_) {}
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
+/* a passed case opened again on purpose — one at a time, and not remembered */
+function testRetest(key) {
+  CBTEST.retest = CBTEST.retest || {};
+  CBTEST.retest[key] = 1;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
+
+/**
+ * ── ⭐⭐ ONE LIST, TWO FRAMES ───────────────────────────────────────────────────────────────────────────────
+ *
+ * The cases on a screen, with what should happen, a box for what IS happening, and the three outcomes. Used
+ * by the By-screen table AND by the panel that opens from the screen itself.
+ *
+ * ⚠️⚠️ WRITTEN ONCE ON PURPOSE. A second copy for the panel would be a second place to mark a case and a
+ * second set of rules about what a verdict carries — and the day they drift, the ledger holds two kinds of
+ * truth. The frame differs; the list does not.
+ *
+ * ── ⭐⭐⭐ A PASSED CASE STANDS DOWN ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"when the result is pass, why is that row still active? We should be able to filter
+ * only those still to be tested, and there must be an option to see the passed one."*
+ *
+ * ⚠️ A DONE THING THAT STILL LOOKS LIKE WORK IS WORSE THAN A HIDDEN ONE. Seventeen cases all wearing three
+ * buttons and an empty box give a tester no idea where they are in the walk, and the passed ones are the
+ * majority by the end of it.
+ *
+ * ⭐ So the default is TO DO — anything not yet passed, which includes a failure, because a failure is very
+ * much still work. Passed collapses to one quiet line with a Re-test if you want it back, and the filter
+ * says how many are in each pile so nothing is hidden without a number.
+ */
 function testCaseListHTML(code) {
-  var mine = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
-  if (!mine.length) {
+  var all = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
+  if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
       + 'No case on this screen yet. Write the first one above.</div>';
   }
-  return mine.map(function (c) {
+  var isPass = function (c) { var l = CBTEST.last[c.case_key]; return !!(l && l.status === 'pass'); };
+  var nPass = all.filter(isPass).length;
+  var nTodo = all.length - nPass;
+  var f = testCaseFilterGet();
+  var mine = f === 'passed' ? all.filter(isPass)
+           : f === 'all' ? all
+           : all.filter(function (c) { return !isPass(c); });
 
+  var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
+  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var h = '<div style="margin:8px 0 2px">'
+    + [['todo', 'To do', nTodo], ['passed', 'Passed', nPass], ['all', 'All', all.length]]
+      .map(function (x) {
+        return '<button onclick="testCaseFilter(\'' + x[0] + '\')" style="' + chip
+          + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+      }).join('')
+    + '</div>';
+
+  if (!mine.length) {
+    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
+      + (f === 'todo' ? 'Nothing left to test on this screen.' : 'None in this pile.') + '</div>';
+  }
+
+  return h + mine.map(function (c) {
     var l = CBTEST.last[c.case_key];
-    /* the written expectation: the 'then' half of the first step, which is where the sweep and the hand-
-       written form both put it */
     var st0 = (c.steps || [])[0];
     var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
     var col = l && l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
             : l && l.status === 'fail' ? 'var(--disp,#B3261E)' : 'var(--note)';
+    var done = isPass(c) && !((CBTEST.retest || {})[c.case_key]);
+
+    /* ⭐ a passed case: one line, out of the way, and openable again on purpose */
+    if (done) {
+      return '<div style="display:flex;gap:8px;align-items:baseline;padding:3px 0;'
+        +   'border-top:1px solid var(--line-2,#efece4);opacity:.72">'
+        + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
+        + '<span style="font-size:var(--fs-1);flex:1 1 12em;min-width:0;overflow:hidden;'
+        +   'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || '') + '</span>'
+        + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">PASS</span>'
+        + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\''
+        +   testEsc(c.case_key) + '\')">Re-test</button>'
+        + '</div>';
+    }
+
     return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;'
       +   'border-top:1px solid var(--line-2,#efece4)">'
       + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
-      /**
-       * ── ⭐⭐⭐ WHAT YOU SHOULD SEE, AND WHAT YOU ARE ACTUALLY SEEING ────────────────────────────────────
-       *
-       * Athi, 2026-09-12: *"one more column should be there I guess — what you should see; the 4th one is,
-       * instead, what are you observing?"*
-       *
-       * ⭐⭐ AND THE PAIR BELONGS IN TWO DIFFERENT PLACES, which is the whole reason it was missing. What you
-       * SHOULD see is written once, when the case is written, and never changes — it is the case. What you
-       * ARE seeing is different every run, and belongs to the RESULT. Putting both on the case would make a
-       * case that rewrites itself; putting both on the result would lose the expectation the moment nobody
-       * ran it.
-       *
-       * ⚠️ SO THE EXPECTATION IS PRINTED, NOT EDITABLE, and the observation is a box that starts empty every
-       * time. A tester reads one line and types the other, and the difference between them is the finding.
-       *
-       * ⚠️ The box is `cbt_n_<key>` — the SAME id testMark() already reads in the List. A second field with a
-       * second name would be a second place a note can hide.
-       */
       + '<span style="flex:1 1 16em;min-width:0">'
       +   '<div style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</div>'
       +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '
@@ -2536,26 +2619,7 @@ function testCaseListHTML(code) {
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
       +   (l ? testEsc(String(l.status).toUpperCase()) : 'not run') + '</span>'
-      /* ⚠ testMarkBtn wears class="btn", which the List lays out as a full-width block. Dropped into a flex
-         row it stretched to the whole width and the four verdicts stacked like paragraphs. They are boxed in
-         a track of their own rather than restyled: the List is where that class belongs and it is right there. */
       + '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">'
-      /**
-       * ⭐⭐ THE THREE OUTCOMES, AND THEY ARE HIS: *"if the result is the same it is pass, else it is an
-       * incident, if something further to be done then it is the requirement."*
-       *
-       * ⚠️ SO "FAIL" IS NOT A BUTTON HERE. A mismatch is not a verdict to be filed and forgotten — it is an
-       * INCIDENT, with a severity and a clock and somebody waiting. Pressing it records the fail AND opens
-       * the incident carrying what you just typed, the screen code and the case, so the report is written
-       * where the finding happened rather than from memory afterwards.
-       *
-       * ⚠️ AND A REQUIREMENT IS NOT A FAILURE. "It works, and it should also do X" must not mark the case
-       * red — that is how a board ends up with failures nobody can reproduce. It raises the requirement and
-       * leaves the verdict alone.
-       *
-       * ⭐ Blocked and Skip are still in the List. They are ledger states, not outcomes of a comparison, and
-       * putting five buttons here would bury the three that answer the question.
-       */
       + testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
       + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'inc\')" '
       +   'style="color:var(--disp);background:var(--disp-tint,#fbeceb)">Incident</button>'
@@ -2565,7 +2629,6 @@ function testCaseListHTML(code) {
       + '</div>';
   }).join('');
 }
-
 /* the table frame: the same list, inside a row that spans the columns */
 function testScrCasesHTML(x) {
   return '<tr><td colspan="9" style="padding:2px 6px 10px 0;background:var(--neutral-tint,#f7f5ef)">'
