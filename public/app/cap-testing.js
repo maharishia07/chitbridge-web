@@ -221,7 +221,21 @@ function testPanelOpen() {
    * because testing what is in front of you is the natural thing. The gap comes in behind both, once the
    * coverage has been read, and only when neither of the first two applies.
    */
-  if (!CBTEST.area) CBTEST.area = (CBTEST.run && CBTEST.run.focus) || testAreaGuess();
+  if (!CBTEST.area) {
+    CBTEST.area = (CBTEST.run && CBTEST.run.focus) || testAreaGuess();
+    /**
+     * ⚠️⚠️ AND THE PANEL MUST SAY THAT IT CHOSE. Athi, 2026-09-12: *"it is filtered on something, not sure why
+     * the filter stays… otherwise I keep searching how to reset the data to full."*
+     *
+     * ⭐ Opening on the area you are looking at is RIGHT — testing what is in front of you is the natural
+     * thing, and the ordering above is his own answer. ⚠️ But a filter the panel applied ON YOUR BEHALF, and
+     * never mentions, is indistinguishable from a board that has lost your cases: the counts are smaller than
+     * the board's and nothing on screen explains why.
+     *
+     * ⭐ So it records WHO chose. A filter a person set needs no explanation; one the panel set does.
+     */
+    CBTEST.areaAuto = !!CBTEST.area;
+  }
 
   var host = document.createElement('div');
   host.id = 'cbtesthost';
@@ -343,7 +357,19 @@ function testKindCounts() {
   return n;
 }
 
-function testSetKindFilter(v) { CBTEST.kind = v; CBTEST.area = ''; CBTEST.open = null; testPaint(); }
+function testSetKindFilter(v) { CBTEST.kind = v; CBTEST.area = ''; CBTEST.areaAuto = false; CBTEST.open = null; testPaint(); }
+
+/**
+ * ⭐ Clear BOTH, and clear the panel's own guess with them. ⚠️ areaAuto has to be cleared too, or the next
+ * paint re-reads it and the line still claims the panel chose an area that is no longer set.
+ */
+function testClearFilters() {
+  CBTEST.kind = '';
+  CBTEST.area = '';
+  CBTEST.areaAuto = false;
+  CBTEST.open = null;
+  testPaint();
+}
 
 /** how many cases the KIND filter alone leaves — the honest number for "All areas" */
 function testKindTotal() {
@@ -416,6 +442,46 @@ function testPaint() {
             return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
                  + testEsc(a.key + ' · ' + a.name) + ' · ' + a.n + '</option>'; }).join('')
     +   '</select>'
+    /**
+     * ── ⭐⭐ THE SAME TWO CONTROLS AS THE REPORT, BECAUSE IT IS THE SAME CONFUSION ─────────────────────────
+     *
+     * Athi, 2026-09-12: *"in lab also we need to showcase filter and clear."*
+     *
+     * ⭐ A permanent Clear, in a fixed place — he settled that on the Report an hour ago and the reasoning
+     * carries: a control that only APPEARS is one you must notice before you can use it, and not noticing is
+     * the whole problem. ⚠️ Here it matters more, because the lab filters ITSELF on open.
+     */
+    +   '<button onclick="testClearFilters()" ' + (CBTEST.kind || CBTEST.area ? '' : 'disabled ')
+    +     'title="Clear the kind and area filters — show every case" '
+    +     'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:7px;cursor:pointer;'
+    +     'border:1px solid ' + (CBTEST.kind || CBTEST.area ? 'var(--blue,#3F66A6);color:var(--blue,#3F66A6)'
+                                                           : 'var(--line,#e7e3d8);color:var(--grey-2,#545A61);opacity:.55')
+    +     ';background:var(--card,#fff)">Clear filters</button>'
+    /**
+     * ── ⚠️⚠️ THE PANEL FILTERS ITSELF ON OPEN, AND NEVER SAID SO ──────────────────────────────────────────
+     *
+     * `CBTEST.area` is set before the first paint from the run's focus, or GUESSED from the screen you were
+     * on. That is the right behaviour — testing what is in front of you is the natural thing — but a filter
+     * applied on your behalf and never mentioned is indistinguishable from a board that has lost your cases:
+     * the count is smaller than the Report's and nothing on screen explains the difference.
+     *
+     * ⭐ So it says what is on, and — the part that matters — WHO CHOSE IT. "the panel opened here" is the
+     * sentence that was missing, and it is the only one that explains a filter nobody remembers setting.
+     */
+    +   (function () {
+          var on = [];
+          if (CBTEST.kind) on.push(CBTEST.kind);
+          if (CBTEST.area) on.push(CBTEST.area);
+          if (!on.length) return '';
+          return '<div style="flex:1 1 100%;font-size:var(--fs-1);color:var(--blue,#3F66A6);margin-top:3px">'
+            + '<b>' + shown.length + '</b> of ' + CBTEST.cases.length + ' \u00b7 filtered by '
+            + testEsc(on.join(' \u00b7 '))
+            + (CBTEST.areaAuto && CBTEST.area
+                ? ' <span style="color:var(--grey-2,#545A61)">\u2014 the panel opened here, on the screen you '
+                  + 'were looking at. Clear it to see every case.</span>'
+                : '')
+            + '</div>';
+        })()
     /**
      * ⭐⭐⭐ FOCUS. Athi: *"can we force an area to test? This area testing not done yet?"*
      *
