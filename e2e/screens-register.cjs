@@ -75,8 +75,41 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
    Object.keys(CB.byNav || {}).length > 10);
 
 fails.forEach((f) => console.error('  ✗ ' + f));
+/**
+ * ── ⭐ THE ASSET REGISTER, UNDER THE SAME RULES ───────────────────────────────────────────────────────────────
+ *
+ * ASSETS.json is the software half (ITIL 4 SACM · ISO/IEC 19770) and public/app/assets.js is its generated copy.
+ * ⚠️ The same rot applies as to the screens: a generated file nobody regenerates keeps the app working while it
+ * shows last week's truth — and a register is exactly the thing people stop double-checking.
+ */
+const AREG = path.join(DEV, 'ASSETS.json');
+const AJS = path.join(__dirname, '..', 'public', 'app', 'assets.js');
+if (fs.existsSync(AREG)) {
+  ok('the asset register has a browser copy', fs.existsSync(AJS));
+  if (fs.existsSync(AJS)) {
+    const w = {};
+    try { new Function('window', fs.readFileSync(AJS, 'utf8'))(w); }
+    catch (e) { fails.push('assets.js does not evaluate: ' + e.message); }
+    const A = (w.CBASSETS && w.CBASSETS.rows) || [];
+    const areg = JSON.parse(fs.readFileSync(AREG, 'utf8'));
+    const aliveA = Object.values(areg.assets || {}).filter((x) => !x.retired);
+    ok('every live asset reaches the browser (' + aliveA.length + ')', A.length === aliveA.length);
+    ok('every asset code is AAA### too', A.every((x) => /^[A-Z]{3}[0-9]{3}$/.test(x.code)));
+    /**
+     * ⚠️⚠️ THE LINK IS THE WHOLE POINT OF THE REGISTER. If it ever reads zero the chain is broken — and broken
+     * silently, because every row still renders and only the last column goes quiet.
+     */
+    ok('screens are linked to the capability that draws them',
+       Object.keys((w.CBASSETS && w.CBASSETS.drawnBy) || {}).length > 10);
+    /* ⭐ the lifecycle is REPORTED, never assumed: a register where everything said "tested" without any file
+       declaring it would mean the reader had started guessing on our behalf. */
+    ok('the lifecycle stage is only ever what a file declared',
+       A.every((x) => x.stage === null || /^[a-z][a-z-]*$/.test(x.stage)));
+  }
+}
+
 if (fails.length) {
-  console.error('\n  Run `node C:\\dev\\screens.cjs` and commit both files — the copies have parted.\n');
+  console.error('\n  Run `node C:\\dev\\screens.cjs` and `node C:\\dev\\assets.cjs`, then commit — the copies have parted.\n');
 }
 if (!fails.length) console.log('\n  ' + pass + ' passed\n');
 process.exit(fails.length ? 1 : 0);
