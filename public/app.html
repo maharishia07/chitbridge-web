@@ -2559,6 +2559,19 @@ function stampScreenHeading(){
     if (loose) head.insertBefore(tag, head.firstChild); else placeCodeTag(head, tag);
     /* ⭐ the count rides beside the code, from the one place that already knows both */
     try { stampTestChip(tag.parentNode, info.code, info.label); } catch(_) {}
+    /**
+     * ⚠️ A SCREEN THAT ASKS THE SERVER FOR NOTHING STILL COUNTS AS A VISIT. The visit number is normally
+     * advanced by the call recorder, which is early enough to catch a screen’s own load. But leave the
+     * Catalogue for a screen already in memory and come back, and not one call is made — so the number never
+     * moved, and the panel went on presenting the FIRST visit’s calls as this one’s.
+     *
+     * ⭐ Same key, same comparison, so the two never fight: whichever notices the change first advances it,
+     * and the other sees it has already happened.
+     */
+    try {
+      var _nk = (typeof navScreenKey === 'function') ? navScreenKey() : null;
+      if (_nk && window.CBNAV !== _nk) { window.CBNAV = _nk; window.CBGEN = (window.CBGEN || 0) + 1; }
+    } catch(_) {}
     /* ⭐ the panel keeps up with the walk, from the same place the code is written */
     try { if (typeof screenCasesFollow === 'function') screenCasesFollow(); } catch(_) {}
   }catch(e){}
