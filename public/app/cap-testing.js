@@ -551,23 +551,43 @@ function testPaint() {
      * ⚠️ Whole board FIRST, because that is the question "how are we doing" actually asks. The filtered slice
      * is a second line, clearly labelled, so a small number never reads as the whole story.
      */
-    + '<div style="margin-top:7px;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline;'
-    +   'font-size:var(--fs-1);color:var(--grey-2,#545A61)">'
-    +   '<span><b style="font-size:var(--fs-2);color:var(--ink,#20303b)">' + CBTEST.cases.length + '</b> cases</span>'
-    +   '<span><b style="font-size:var(--fs-2);color:var(--ok-2)">' + all.pass + '</b> passed</span>'
-    +   '<span><b style="font-size:var(--fs-2);color:' + (all.fail ? 'var(--disp)' : 'inherit') + '">'
-    +     all.fail + '</b> failed</span>'
-    +   (all.blocked ? '<span><b style="font-size:var(--fs-2);color:var(--warn-2)">' + all.blocked
-                     + '</b> blocked</span>' : '')
-    +   '<span><b style="font-size:var(--fs-2)">' + all.todo + '</b> not run</span>'
-    +   (staleN ? '<span><b style="color:var(--warn-2)">' + staleN + '</b> spec moved</span>' : '')
-    + '</div>'
-    /* ⚠️ the slice, only when it IS a slice — and never instead of the whole */
-    + (filtered
-        ? '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--blue,#3F66A6)">'
-          + 'In view: <b>' + shown.length + '</b> \u00b7 ' + n.pass + ' passed \u00b7 ' + n.fail + ' failed \u00b7 '
-          + n.todo + ' not run</div>'
-        : '')
+    /**
+     * ⭐ COLUMNS, NOT A SENTENCE. Athi, 2026-09-12: *"show the count in three different columns."*
+     * ⚠️ Run together with middots the four figures read as prose and nothing lines up, so the eye cannot
+     * compare passed against not-run — which is the one comparison this summary exists for. A fixed grid gives
+     * each figure a track, and the FILTERED row sits directly under the whole-board row in the SAME tracks, so
+     * the two numbers a reader wants to hold against each other are literally above and below.
+     * ⚠️ tabular-nums, or the digits jitter between columns and the alignment is decorative rather than real.
+     */
+    + (function () {
+        var cols = [
+          ['cases', CBTEST.cases.length, shown.length, 'var(--ink,#20303b)'],
+          ['passed', all.pass, n.pass, 'var(--ok-2)'],
+          ['failed', all.fail, n.fail, all.fail ? 'var(--disp)' : 'inherit'],
+          ['not run', all.todo, n.todo, 'inherit'],
+        ];
+        if (all.blocked) cols.splice(3, 0, ['blocked', all.blocked, n.blocked, 'var(--warn-2)']);
+        var grid = 'display:grid;grid-template-columns:repeat(' + cols.length + ',minmax(0,1fr));gap:2px 8px;'
+                 + 'font-variant-numeric:tabular-nums;';
+        return '<div style="margin-top:8px;' + grid + '">'
+          /* the whole board */
+          + cols.map(function (c) {
+              return '<div><div style="font-size:var(--fs-3);font-weight:700;line-height:1.15;color:' + c[3] + '">'
+                + c[1] + '</div>'
+                + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + c[0] + '</div></div>';
+            }).join('')
+          /* ⚠️ the slice in the same tracks, only when it IS a slice — never instead of the whole */
+          + (filtered
+              ? cols.map(function (c) {
+                  return '<div style="font-size:var(--fs-1);color:var(--blue,#3F66A6);border-top:1px solid '
+                    + 'var(--line,#e7e3d8);padding-top:3px;margin-top:2px"><b>' + c[2] + '</b>'
+                    + (c[0] === 'cases' ? ' in view' : '') + '</div>';
+                }).join('')
+              : '')
+          + '</div>'
+          + (staleN ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--warn-2)"><b>' + staleN
+                    + '</b> spec moved</div>' : '');
+      })()
     + (CBTEST.run.label
         ? '<div style="margin-top:3px;font-size:var(--fs-1);color:var(--grey-2,#545A61)">Recording into: '
           + testEsc(CBTEST.run.label) + '</div>'
@@ -642,15 +662,34 @@ function testPaint() {
           var ll = CBTEST.last[c.case_key];
           if (!ll) gn.todo++; else if (ll.status === 'fail' || ll.status === 'blocked') gn.bad++; else gn.pass++;
         });
+        /**
+         * ── ⭐ EVERY LINE ITEM GETS THE SAME TRACKS ────────────────────────────────────────────────────────
+         *
+         * Athi, 2026-09-12: *"show the count in three different columns"* · *"3 or 4, whatever columns
+         * required, for each line item."*
+         *
+         * ⚠️ THIS ROW HAD THE SUMMARY'S TWO FAULTS AT ONCE. The three figures were concatenated into one
+         * string, so nothing lined up between one area and the next — and each was hidden when zero, so an
+         * area with nothing run showed a blank where the reader was looking for a number.
+         *
+         * ⭐ Fixed em tracks, and zeros shown. A column a reader can run their eye down is the entire reason
+         * to have a column; a number that moves per row is a sentence wearing a column's clothes.
+         * ⚠️ tabular-nums, or the digits jitter and the alignment is decorative rather than real.
+         */
+        var num = function (v, colour) {
+          return '<span style="width:3.4em;text-align:end;font-variant-numeric:tabular-nums;'
+            + 'color:' + (v ? colour : 'var(--grey,#8a949c)') + (v ? ';font-weight:600' : '') + '">' + v + '</span>';
+        };
         h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:flex;gap:6px;align-items:baseline;'
           + 'cursor:pointer;padding:5px 6px;margin:3px 0 4px;border-radius:6px;background:var(--neutral-tint)">'
           + '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
           + '<b style="font-size:var(--fs-2)">' + testEsc(gk) + '</b>'
           + '<span style="font-size:var(--fs-1);color:var(--grey-2);flex:1;min-width:0;overflow:hidden;'
           + 'text-overflow:ellipsis;white-space:nowrap">' + testEsc(list[0].module_name || '') + '</span>'
-          + '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap">'
-          + (gn.pass ? gn.pass + ' passed ' : '') + (gn.bad ? gn.bad + ' failed ' : '')
-          + (gn.todo ? gn.todo + ' not run' : '') + '</span></div>';
+          + '<span style="font-size:var(--fs-1);display:flex;gap:4px;white-space:nowrap" '
+          + 'title="passed \u00b7 failed \u00b7 not run">'
+          + num(gn.pass, 'var(--ok-2)') + num(gn.bad, 'var(--disp)') + num(gn.todo, 'var(--ink-2,#3a4048)')
+          + '</span></div>';
       }
       if (!open) return;
       list.forEach(function (c) {
