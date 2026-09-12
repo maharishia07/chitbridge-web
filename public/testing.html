@@ -95,6 +95,15 @@
   .t.blocked{ background:var(--warn-tint); border-color:#e8d7ae; color:var(--warn); }
   .t.todo{ background:var(--neutral-tint); color:var(--grey-2); }
 
+  /**
+   * ⭐ AN ACTIVE FILTER CHANGES THE BAR ITSELF. Athi asked for “a difference in colour if filter active OR a
+   * reset icon” — it is both, because a colour tells you THAT something is filtered and the control tells you
+   * WHAT and gives you the way out. Either alone leaves you hunting.
+   */
+  .bar.filtered{ background:var(--blue-tint); border-bottom-color:var(--blue); }
+  .fclear{ margin-inline-start:auto; display:inline-flex; align-items:center; gap:8px;
+        font-size:var(--fs-1); color:var(--blue); font-weight:600; }
+  .fclear .btn{ font-size:var(--ui); padding:3px 10px; border-color:var(--blue); color:var(--blue); }
   .bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px;
         border-bottom:1px solid var(--line); background:var(--card); }
   .bar label{ font-size:var(--ui); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
@@ -700,6 +709,25 @@
   <input type="search" id="f_q" placeholder="Search a path, a module, a claim…" oninput="paint()">
 
   <!--
+    ── ⚠️⚠️ A FILTER YOU CANNOT SEE IS A BOARD THAT IS LYING ─────────────────────────────────────────────────
+
+    Athi, 2026-09-12: *"when the reload completes it has to show all the cases — it is filtered on something,
+    not sure why the filter stays. Either we show a difference in colour if a filter is active, or a reset
+    filter icon, otherwise I keep searching how to reset the data to full."*
+
+    ⚠️ HE SPENT TIME HUNTING FOR A CONTROL THAT DID NOT EXIST. Four filters — kind, reaches, search, and the
+    hidden state set by the header chips — persist across a repaint, and NONE of them announced itself. After a
+    refresh the counts looked wrong and there was no way to tell that the board was answering a narrower
+    question than the one being asked.
+
+    ⭐ Both of the things he suggested, because either alone is half a fix: the bar CHANGES COLOUR so an active
+    filter is visible without reading anything, and there is one control that clears every filter at once,
+    saying how many of how many are showing. It appears only when a filter is on — a permanent Clear button is
+    noise, and noise is what you stop seeing.
+  -->
+  <span id="f_state_show" class="fclear" hidden></span>
+
+  <!--
     ⭐⭐⭐ THE TOTALS ARE THE THIRD FILTER, SO THERE IS NO THIRD FILTER.
     Athi: *"if we can bring the total cases / completed / remain in the same place we don't need a third filter
     box."* Exactly right — "show me the ones not yet tested" and "how many are not yet tested" are the same
@@ -1184,6 +1212,42 @@ async function load(){
  * there is always a way back up.
  */
 var MODFILT = '';   /* the chip selection — a module, chosen from the expansion line rather than a dropdown */
+
+/**
+ * ⭐ ONE PLACE THAT KNOWS WHETHER THE BOARD IS ANSWERING A NARROWER QUESTION — and says so in two ways at
+ * once, because a colour tells you THAT and the control tells you WHAT and gives you the way out.
+ */
+function showFilterState(shown){
+  var bar = document.querySelectorAll('.bar')[1];
+  var el = document.getElementById('f_state_show');
+  if (!el) return;
+  var on = [];
+  var ty = (document.getElementById('f_type') || {}).value || '';
+  var ar = (document.getElementById('f_area') || {}).value || '';
+  var st = (document.getElementById('f_state') || {}).value || '';
+  var q  = ((document.getElementById('f_q') || {}).value || '').trim();
+  if (ty) on.push(ty);
+  if (ar) on.push('reaches ' + ar);
+  if (st) on.push(st === 'fail' ? 'failing' : st === 'done' ? 'with a result' : st);
+  if (q) on.push('"' + q + '"');
+  if (MODFILT) on.push(MODFILT);
+
+  if (bar) bar.className = on.length ? 'bar filtered' : 'bar';
+  if (!on.length) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = '<b>' + shown + '</b> of ' + CASES.length + ' \u00b7 filtered by ' + esc(on.join(' \u00b7 '))
+    + '<button class="btn" onclick="clearFilters()">Show all ' + CASES.length + '</button>';
+}
+
+/** ⭐ every filter, including the hidden one the header chips set — a "clear" that leaves one on is worse than none */
+function clearFilters(){
+  ['f_type', 'f_area', 'f_state'].forEach(function (id) {
+    var e = document.getElementById(id); if (e) e.value = '';
+  });
+  var q = document.getElementById('f_q'); if (q) q.value = '';
+  MODFILT = '';
+  paint();
+}
 
 function fillFilters(){
   var ty = (document.getElementById('f_type') || {}).value || '';
@@ -3049,6 +3113,8 @@ function paint(){
     var d = (a.seq === undefined ? 99 : a.seq) - (b.seq === undefined ? 99 : b.seq);
     return d || (a.case_key < b.case_key ? -1 : 1);
   });
+  /* ⭐ say whether this list is the whole board or a narrower question — see showFilterState */
+  showFilterState(list.length);
   var byMod = {}, order = [];
   list.forEach(function(c){ if (!byMod[c.module_key]) { byMod[c.module_key] = []; order.push(c.module_key); }
     byMod[c.module_key].push(c); });
