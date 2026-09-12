@@ -881,6 +881,13 @@
   second later. Athi, 2026-09-12: *"it just blinks reading, after few seconds nothing."*
 -->
 <div id="notice" hidden></div>
+<!--
+  ⭐ ONE JUDGEMENT, TWO SURFACES. "what would make this red green" is now app/test-verdict.js, because
+  the LAB needs the same answer and writing it twice is the shape that produced every bug of the last
+  two days: three copies of a heading reader, three of a tab dispatch, two of a canonicaliser — and each
+  time the copy that got fixed was not the copy being read.
+-->
+<script src="app/test-verdict.js"></script>
 <main id="main"><div class="say">Reading the board…</div></main>
 
 <script>
@@ -3423,59 +3430,21 @@ function foldAll(open){ FOLD = { _all: !!open }; foldSave(); repaintCurrent(); }
  * The value of this is not the four labels — it is that the genuinely broken tests stop hiding among the ones
  * that are merely out of date.
  */
-var TODO_WORDS = {
-  'never run':   { icon: '\u25cb', cls: 'dim',   say: 'nobody has run it' },
-  'ok':          { icon: '\u2713', cls: 'big',   say: 'nothing to do' },
-  're-run':      { icon: '\u27f3', cls: 'warnn', say: 're-run \u2014 the file changed after this result' },
-  'environment': { icon: '\u2699', cls: 'warnn', say: 'needs ' },
-  'decision':    { icon: '\u23f8', cls: 'warnn', say: 'a decision: ' },
-  'defect':      { icon: '\u2717', cls: 'bad',   say: 'a defect \u2014 unchanged since this result, and it needs nothing it did not have' },
-  'unknown':     { icon: '?',      cls: 'dim',   say: 'cannot tell yet \u2014 this board has not been rebuilt since the file facts were added' },
-};
+/**
+ * ⭐ THE JUDGEMENT MOVED TO app/test-verdict.js so the lab can use the same one — see the script tag above.
+ * What stays here is only how this page DRAWS it; what it MEANS is shared.
+ */
+var TODO_CLS = { dim: 'dim', ok: 'big', warn: 'warnn', bad: 'bad' };
 
-function whatToDo(c){
-  var l = LAST[c.case_key];
-  if (!l) return { kind: 'never run', why: TODO_WORDS['never run'].say };
-  if (l.status === 'pass') return { kind: 'ok', why: TODO_WORDS.ok.say };
-
-  /**
-   * ⚠️ THE COMPARISON THAT MATTERS, and it has to be this way round: a file changed AFTER its last result
-   * means the result describes code that is gone. Ruling that out FIRST is what stops a stale red being
-   * called a defect — which is the mistake the old verdict refused to make by refusing to say anything.
-   */
-  if (c.changed_at && l.at && new Date(c.changed_at) > new Date(l.at)) {
-    return { kind: 're-run', why: TODO_WORDS['re-run'].say };
-  }
-  if (c.needs && c.needs.length) {
-    return { kind: 'environment', why: 'needs ' + c.needs.join(' and ') };
-  }
-  if (c.held) return { kind: 'decision', why: 'a decision: ' + c.held };
-
-  /**
-   * ── ⚠️⚠️ AND I MADE THE EXACT MISTAKE THIS COLUMN EXISTS TO STOP ─────────────────────────────────────────
-   *
-   * "defect" was what fell out when the other three were ruled out — and the first live run showed SEVEN reds
-   * as defects, including two I had FIXED hours earlier. Not because the rule was wrong, but because the board
-   * was serving data built before `changed_at` existed, so "the file has not changed since the result" was not
-   * a finding, it was a MISSING FIELD read as a finding.
-   *
-   * ⚠️ DEFECT IS THE STRONGEST THING THIS COLUMN CAN SAY, and I let it be the DEFAULT — the one place a
-   * default is never acceptable. Absence of evidence became evidence, in a column built to stop exactly that.
-   *
-   * ⭐ A case with no `changed_at` cannot rule out "re-run", so it must not claim anything. It says so, and
-   * says why, which also makes a stale board visible instead of silently confident.
-   */
-  if (!c.changed_at) return { kind: 'unknown', why: TODO_WORDS.unknown.say };
-  return { kind: 'defect', why: TODO_WORDS.defect.say };
-}
+function whatToDo(c){ return testVerdict(c, LAST[c.case_key]); }
 
 /** the short badge for a row; the full sentence rides in the tooltip */
 function todoHTML(c){
   var t = whatToDo(c);
-  var w = TODO_WORDS[t.kind] || TODO_WORDS.defect;
   if (t.kind === 'ok') return '';
-  if (t.kind === 'unknown') return '<span class="todo dim" title="' + esc(t.why) + '">? unknown</span>';
-  return '<span class="todo ' + w.cls + '" title="' + esc(t.why) + '">' + w.icon + ' ' + esc(t.kind) + '</span>';
+  var w = TEST_TODO[t.kind] || TEST_TODO.defect;
+  return '<span class="todo ' + (TODO_CLS[w.tone] || 'bad') + '" title="' + esc(t.why) + '">'
+    + w.icon + ' ' + esc(t.kind) + '</span>';
 }
 
 function caseHeaderHTML(){

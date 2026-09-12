@@ -90,11 +90,36 @@ function testModeSet(on) {
 function testModeIsOn() { try { return localStorage.getItem('cb_testmode') === '1'; } catch (_) { return false; } }
 
 /* ── loading ──────────────────────────────────────────────────────────────────────────────────────────────── */
+/**
+ * ⭐ THE SHARED JUDGEMENT, FETCHED ON DEMAND. app/test-verdict.js answers "what would make this red green" for
+ * BOTH the lab and the Report, so neither owns a copy.
+ *
+ * ⚠️ NOT ADDED TO app.html's EAGER LIST. The standing rule here is never pre-load — the lab is a lazy panel
+ * most sessions never open, and paying for its dependency on every app start to save one fetch when it does
+ * is the trade that rule exists to refuse. ensureCap() loads exactly one file per capability, so the panel
+ * fetches this itself.
+ *
+ * ⚠️ It resolves even on FAILURE. A missing verdict must cost the panel a column, never the panel.
+ */
+function testEnsureVerdict() {
+  if (typeof testVerdict === 'function') return Promise.resolve();
+  if (CBTEST._verdictP) return CBTEST._verdictP;
+  return (CBTEST._verdictP = new Promise(function (resolve) {
+    var el = document.createElement('script');
+    el.src = '/app/test-verdict.js' + (typeof CB_BUILD !== 'undefined' ? '?v=' + CB_BUILD : '');
+    el.async = false;
+    el.onload = function () { resolve(); };
+    el.onerror = function () { resolve(); };
+    document.head.appendChild(el);
+  }));
+}
+
 async function testLoad(force) {
   if (CBTEST.cases.length && !force) return;
   CBTEST.busy = true; testPaint();
   try {
     /* two calls for the whole panel — never one per case. See the round-trip note in routes/testing.js. */
+    await testEnsureVerdict();
     var a = await api('testCases');
     var b = await api('testResults');
     /* ⭐ a third read, and worth its round trip: without it a tester works through cases that were written
@@ -716,8 +741,16 @@ function testPaint() {
          * the verdict in its own column at the right. `min-width:0` on the middle track is what lets a long
          * title shrink instead of shoving the verdict off the edge.
          */
+        /**
+         * ⭐ THE SAME FACTS AS THE REPORT'S CASES TAB. Athi, 2026-09-12: *"this is nothing but the cases tab in
+         * the report — those information should be here as well."* He is right: it is the same list of the
+         * same cases, and a fact worth a column on one surface is worth it on the other.
+         * ⚠️ Two extra tracks only, not six. The panel is 420px wide beside a working screen; the Report is a
+         * full page. Same information, and the ones that earn the space here are the KIND (a green unit test
+         * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
+         */
         +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:grid;'
-        +    'grid-template-columns:minmax(0,14em) minmax(0,1fr) auto;gap:9px;align-items:baseline;'
+        +    'grid-template-columns:minmax(0,11em) minmax(0,1fr) 5.5em auto;gap:7px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
         +    '<span title="' + testEsc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
         +      'font-size:var(--fs-1);font-weight:700;'
@@ -733,13 +766,31 @@ function testPaint() {
         /* ⚠ 244 of the automated files state no claim in their header. Repeating the filename in the title
            column — `akums-demo.js   akums-demo.js` — fills the row with nothing and hides the fact. */
         +      (c.automated && !c.claim ? ';color:var(--grey-2);font-style:italic' : '') + '">'
-        +      testEsc(c.automated && !c.claim ? 'no claim written in the file' : (c.title || '')) + '</span>'
+        /* ⭐ name the FILE and the fix — "no claim written in the file" named neither (Athi, 2026-09-12) */
+        +      testEsc(c.automated && !c.claim
+                ? '\u26a0 no heading in ' + String(c.case_key).split('/').pop()
+                : (c.title || '')) + '</span>'
+        /* ⭐ the KIND in its own track — see the note on the grid */
+        +    '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
+        +      'text-overflow:ellipsis" title="What kind of test this is">'
+        +      testEsc(c.test_type || '\u2014') + '</span>'
         /* ⭐ the verdict, in its own column, so it is always in the same place on every row */
         +    '<span style="font-size:var(--fs-1);white-space:nowrap;font-weight:' + (l ? '700' : '400') + ';'
         +      'color:' + (col ? col[0] : 'var(--grey-2)') + '">'
         +      (l ? testEsc(l.status.toUpperCase()) : 'not run')
         +      '<span style="font-weight:400;color:var(--grey-2);margin-inline-start:5px">'
-        +      (l ? testEsc(testAgo(l.at)) : '') + '</span></span>'
+        +      (l ? testEsc(testAgo(l.at)) : '') + '</span>'
+        /**
+         * ⭐ AND WHAT WOULD MAKE IT GREEN, under the verdict rather than beside it — the panel has no width to
+         * spare, and this is the line a tester acts on.
+         * ⚠️ Guarded on the shared file having arrived: a column that cannot be computed is omitted, never
+         * faked. See testEnsureVerdict.
+         */
+        +      (typeof testVerdictLabel === 'function' && l && l.status !== 'pass'
+                ? '<span style="display:block;font-weight:400;font-size:var(--fs-1);color:var(--grey-2)" title="'
+                  + testEsc(testVerdict(c, l).why) + '">' + testEsc(testVerdictLabel(c, l)) + '</span>'
+                : '')
+        +      '</span>'
         /* ⚠️ THE SPEC MOVED, SO THE CASE IS SUSPECT — said on the row, not hidden behind a filter. A green
            case whose clause has changed is the most misleading thing a board can show. */
         + (CBTEST.stale[c.case_key]
