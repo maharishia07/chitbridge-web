@@ -3,7 +3,7 @@
  * ⭐⭐⭐ THE SCREEN THE PRODUCT IS SOLD ON. PO ↔ GRN ↔ invoice is the oldest control in purchasing, and an ERP can only run it when
  * ONE company holds all three documents. Here the order is a chit we sent, the receipt is what our own door wrote, and the invoice is
  * either a chit they sent or the figure their paper bill carried — so the match happens ACROSS PARTIES, which is the thing no ERP can
- * do. See C:\dev\catalogue\PURCHASE-DESPATCH-SPEC-2026-09-08.md §11.
+ * do. See catalogue\PURCHASE-DESPATCH-SPEC-2026-09-08.md §11.
  *
  * ── ⚠️ IT NAMES A DIFFERENCE, IT NEVER RESOLVES ONE ─────────────────────────────────────────────────────────────
  * What was ordered, what was counted and what was charged are three CLAIMS. This screen puts them side by side with the reason the

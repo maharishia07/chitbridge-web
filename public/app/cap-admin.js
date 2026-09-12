@@ -1596,7 +1596,7 @@ function iamMeHTML(e){
      * screen says the shop is shut and in the next line asks how visitors should enter it.
      *
      * ⚠️ DROPPED FROM THE DOM, NOT DISABLED — which also puts it beyond PROF_FIELDS, so the per-section Save
-     * cannot send an access mode for a storefront that does not exist. Registered in C:\dev\INVARIANTS.md.
+     * cannot send an access mode for a storefront that does not exist. Registered in INVARIANTS.md.
      */
     /* ⚠️ BUILT INLINE — opt() takes a flat value list, and there is no label/value variant. I wrote `opt2(...)`
        from memory and it does not exist anywhere: the sixth invented name today, and the only one caught
@@ -3064,7 +3064,7 @@ async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x
  *
  * ⚠️ A CONSUMER MUST NOT COPY THE VALUE. Read it with govDecl(label) and render what comes back. If a label is
  * renamed here the lookup returns null and the consumer shows "not declared" — loud, and better than a stale copy
- * that keeps rendering the old answer forever. Full audit: C:\dev\RECONCILE-declarations.md.
+ * that keeps rendering the old answer forever. Full audit: RECONCILE-declarations.md.
  */
 /**
  * The catalogue-visibility CAP, read from the entity rather than asserted. `UI._me` is the profile payload, so

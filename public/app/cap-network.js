@@ -28,7 +28,7 @@ var NET_CAPS = [
        fulfil       how do goods reach a customer from here?       → lateral transfer, drop-ship, back-order
        pricepolicy  what may it charge?                            → a BAND, not a price
        localise     what changes when it crosses a border?         → same pump, different product
-     See C:\dev\SPEC-global-distribution.md for the reasoning and what each would need underneath. */
+     See SPEC-global-distribution.md for the reasoning and what each would need underneath. */
   /* 🌍 GLOBAL — Athi, 2026-08-08: *"only the currency and the location, timestamp changes are the ones which
      make it global; if we make it as a separate tab that would be good."* Right, and they belong together: they
      are the three things that differ because a store is somewhere ELSE. Place folds in here rather than sitting

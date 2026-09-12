@@ -160,7 +160,7 @@ if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cb
 // callers ignore the response body. Offline, these are QUEUED (cb-offline.js) and replayed on reconnect — deduped by the
 // server Idempotency-Key (b109), so a replay can't double-apply. CREATES + id-returning + content-returning mutations
 // (createChit, sendMsg, dispute-raise, AI, auth, uploads) are deliberately NOT here — offline they fail gracefully and
-// the Phase-4.1 draft protects the typed input. See C:\dev\SPEC-offline-coverage.md.
+// the Phase-4.1 draft protects the typed input. See SPEC-offline-coverage.md.
 
 /**
  * ⭐ CBPrefs — ONE way to sync a person's own preferences to their identity row (b165 locale · b166 ui).

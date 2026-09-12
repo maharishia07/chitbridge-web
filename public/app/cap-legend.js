@@ -320,7 +320,7 @@ const CAP_CATALOGUE = [
     ]},
 ];
 
-/* ── LIFECYCLE tab — requirements traceability (BR→SR→FR→Test). Mirrors C:\dev\TRACEABILITY.md.
+/* ── LIFECYCLE tab — requirements traceability (BR→SR→FR→Test). Mirrors TRACEABILITY.md.
  *    st: ok = verified-live · built = built, runtime-unverified (human gate) · todo = backlog. ── */
 const TRACE_MATRIX = [
   { area:'Dispute (the USP)', br:'Two parties resolve a disagreement confidentially & per-party, no third party sees it.',
@@ -385,7 +385,7 @@ const SEC_POSTURE = [
 
 /* ── FOUNDATIONS — the SECOND axis: what the subject STANDS ON. Capabilities need only WORK; a foundation needs
  *    EVIDENCE, so each carries a PROOF. Ladder (security flavor): L1 exists · L2 clean mechanism · L3 enforced &
- *    isolated · L4 governed & provable · L5 audited/certified. Mirrors C:\dev\FOUNDATIONS-SCORECARD.md. ── */
+ *    isolated · L4 governed & provable · L5 audited/certified. Mirrors FOUNDATIONS-SCORECARD.md. ── */
 const FOUNDATION_CATALOGUE = [
   { name:'Multitenant isolation (RLS)', icon:'🔒', level:4, target:5,
     what:'App connects as cb_app (NOSUPERUSER NOBYPASSRLS); EVERY entity-data table has FORCE RLS + an rls_entity policy; every query runs on withEntity(app.current_entity); cross-entity writes ONLY via SECURITY DEFINER fns.',
@@ -633,7 +633,7 @@ function _realTabHtml(){
 }
 
 /* ── WORK PATTERNS tab — each pattern is a minted governed JOURNEY, framed by the higher objective it achieves.
- *    Mirrors C:\dev\SPEC-work-patterns.md + the rail map. Authored (like the other tabs); the live registry is
+ *    Mirrors SPEC-work-patterns.md + the rail map. Authored (like the other tabs); the live registry is
  *    WORK_PATTERNS in Core — keep in sync when patterns change. ── */
 function _workTabHtml(){
   const R='var(--accent,var(--blue))';

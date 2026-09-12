@@ -4,7 +4,7 @@
  * Athi, 2026-08-16: *"seed the small standard set first… bring the proper standard here."*
  *
  * ⭐ EVERY NODE IS REAL. Names and `gid` come from the **Google Product Taxonomy** (version 2021-09-21, the
- * full 5,595-row file is kept at C:\dev\REF-google-product-taxonomy-2021-09-21.txt). Nothing here was invented,
+ * full 5,595-row file is kept at REF-google-product-taxonomy-2021-09-21.txt). Nothing here was invented,
  * and no id was guessed — an invented classification code is worse than none, because it looks citable.
  *
  * ⚠️ THE SHAPE MIRRORS lib/starter-fields.js ON THE SERVER, which already does exactly this for COLUMNS
