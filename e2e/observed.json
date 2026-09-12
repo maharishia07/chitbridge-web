@@ -48,5 +48,68 @@
    }
   }
  },
- "_check_field": "⭐ `check` is the one-line CLAIM the case makes once somebody has watched the control. It replaces \"what does it do?\" in the title: a row that still asks a question it has already answered is a stale case, and a stale case is worse than a missing one."
+ "_check_field": "⭐ `check` is the one-line CLAIM the case makes once somebody has watched the control. It replaces \"what does it do?\" in the title: a row that still asks a question it has already answered is a stale case, and a stale case is worse than a missing one.",
+ "machine_pass": {
+  "_what": "A safe automated walk of Tally Test Shop on 2026-09-12: open each door, press every control that does not read as outward or destructive, wait ~1s, record what appeared, cancel any dialog.",
+  "_worth": "⚠️ IT PROVES A CONTROL RESPONDS, NOT THAT IT IS RIGHT. That is a real rung above \"not run\" and two rungs below a written expectation. The five controls in `controls` above were watched by a person reading each dialog; these 89 were not.",
+  "at": "2026-09-12",
+  "entity": "Tally Test Shop (his browser; the token never left it)",
+  "pressed": 89,
+  "opened_a_dialog": 19,
+  "changed_the_screen": 34,
+  "vanished_before_reached": 22,
+  "nothing_visible": 14,
+  "never_pressed": 25,
+  "what_it_found": {
+   "dialogs_worth_a_case": [
+    "counterOpen → \"🧾 Counter — bill at a counter, here or on the shop's own PC\" (the door to till.html)",
+    "selfBillOpen → \"🧾 Record a sale for yourself — pick what went out, check the total\"",
+    "openFolderPane → \"📊 Metrics — 📥 Task: the whole track, and whether the folders add up to it. DOES IT ADD UP? 15 total = 15 unfiled + 0\" ⭐ a screen that checks its own arithmetic in front of you",
+    "quickStatus → \"Change status · 1 chit · Open / Act / Close\" (says the scope before acting)",
+    "quickDispute → \"⚑ Raise dispute\" (six categories, 10-character reason)",
+    "repriority → \"Priority — …\""
+   ],
+   "silent_fourteen": {
+    "list": [
+     "setState",
+     "wlPrimary",
+     "loadIntake",
+     "prodAvailFilter",
+     "catsetSetSec",
+     "catsetBlueprint",
+     "selectCust",
+     "setAcFlt",
+     "setAcTypeF",
+     "selectActor",
+     "setAcMode",
+     "misSetBand",
+     "rgGo",
+     "_rdSelect"
+    ],
+    "verdict": "⭐ NOT A DEFECT, at least not for the one that was checked. These are filters and selectors, and the walk pressed each in the state it was ALREADY in — pressing \"Open\" while already on Open changes nothing, correctly. Proven for setState: pressed with a different value (Act) and the list filtered immediately (−398 characters). ⚠️ THE OTHER THIRTEEN WERE NOT CHECKED THAT WAY and are the honest remainder: each needs one press at a DIFFERENT value to settle it."
+   },
+   "never_pressed": {
+    "why": "⭐ REFUSED ON PURPOSE. Each of these sends, deletes, pays, assigns, archives or changes the environment. A machine pressing them on a live shop is not testing, it is vandalism with good intentions. They are the cases that need a person who means it.",
+    "list": [
+     "quickAssign",
+     "quickDelete",
+     "chitMarkPaid",
+     "markUnread",
+     "saveAvail",
+     "prodExposureReset",
+     "delProduct",
+     "saveNewProduct",
+     "selfBillSend",
+     "cbcatSeedAsk",
+     "rgSave",
+     "logout",
+     "setApiTarget",
+     "setStage",
+     "testModeToggle"
+    ]
+   }
+  },
+  "what_it_cost_me": "⚠️ THE WALK BROKE ITSELF THREE TIMES BEFORE IT RAN: it pressed \"use cloud API\" and repointed his app at Railway (restored); it pressed toggleNavGroup and COLLAPSED the rail, so Order, Drafts, Archive and Trash reported \"no rail button\" for the rest of the run (restored); and its results node was appended to <body>, which the app repaints, so every write went to a detached element nobody could read (moved to localStorage). ⭐ Each was the instrument, not the product — the same lesson as every other measurement today.",
+  "not_covered": "Order · Drafts · Archive · Trash were skipped after the rail collapsed. They share the chit-list renderer with Task, so most of their controls were already pressed there — but \"most\" is not \"all\", and this says so rather than rounding up."
+ }
 }
