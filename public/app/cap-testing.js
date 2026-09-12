@@ -406,6 +406,8 @@ function testKindTotal() {
  * a header that drifts from its columns is worse than no header, because the reader trusts it.
  */
 var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
+/* ⭐ the AREA row's tracks, read by the header and every row — see the note on TEST_ROW_COLS */
+var TEST_AREA_COLS = 'minmax(0,9em) minmax(0,1fr) 3.2em 3.4em 3.4em 3.8em';
 
 function testPaint() {
   var body = document.getElementById('cbtestbody');
@@ -676,11 +678,37 @@ function testPaint() {
       byG[c.module_key].push(c);
     });
     if (groups.length > 1) {
-      h += '<div style="display:flex;gap:5px;align-items:center;padding:4px 2px 7px">'
-        + '<button class="btn" style="padding:1px 8px;font-size:var(--fs-1)" onclick="testFoldAll(true)">Expand all</button>'
-        + '<button class="btn" style="padding:1px 8px;font-size:var(--fs-1)" onclick="testFoldAll(false)">Collapse all</button>'
-        + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + groups.length + ' areas · '
-        + shown.length + ' cases</span></div>';
+      /**
+       * ── ⭐ THE SAME SHAPE AS THE REPORT, BECAUSE IT IS THE SAME LIST ──────────────────────────────────────
+       *
+       * Athi, 2026-09-12: *"can you bring the similar style… so it looks one and the same."*
+       *
+       * ⚠️ THE TWO BUTTONS INHERITED app.html's .btn, which is a heavy dark pill built for a primary action on
+       * a full screen. Side by side they filled the panel and read as the most important thing on it — two
+       * controls that only fold a list, shouting over the list they fold.
+       *
+       * ⭐ Quiet, small, and the count sits beside them on ONE line rather than wrapping into the corner.
+       * ⚠️ Styled inline rather than by class: this panel is injected into app.html and .btn belongs to the
+       * app, so overriding the class here would change every other button that borrows it.
+       */
+      var qbtn = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border-radius:7px;cursor:pointer;'
+        + 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);color:var(--ink-2,#3a4048)';
+      h += '<div style="display:flex;gap:6px;align-items:center;padding:4px 2px 6px;flex-wrap:wrap">'
+        + '<button style="' + qbtn + '" onclick="testFoldAll(true)">Expand all</button>'
+        + '<button style="' + qbtn + '" onclick="testFoldAll(false)">Collapse all</button>'
+        + '<span style="font-size:var(--fs-1);color:var(--grey-2);white-space:nowrap">' + groups.length
+        + ' areas \u00b7 ' + shown.length + ' cases</span></div>';
+
+      /**
+       * ⭐ AND THE AREA LIST GETS THE REPORT'S HEADER — AREA · CASES · PASSED · FAILED · NOT RUN — from the same
+       * grid constant the rows use, so the two cannot drift apart.
+       */
+      h += '<div style="display:grid;grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;'
+        + 'padding:3px 6px 4px;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;'
+        + 'color:var(--grey-2,#545A61);font-weight:700;border-bottom:1px solid var(--line,#e7e3d8)">'
+        + '<span>Area</span><span></span>'
+        + '<span style="text-align:end">Cases</span><span style="text-align:end">Passed</span>'
+        + '<span style="text-align:end">Failed</span><span style="text-align:end">Not run</span></div>';
     }
 
     groups.forEach(function (gk) {
@@ -707,20 +735,42 @@ function testPaint() {
          * to have a column; a number that moves per row is a sentence wearing a column's clothes.
          * ⚠️ tabular-nums, or the digits jitter and the alignment is decorative rather than real.
          */
+        /**
+         * ⭐ A ZERO IS AN EM DASH, THE WAY THE REPORT DRAWS IT. Athi asked for the two to look the same, and
+         * this is the detail that decides it: a column of literal 0s reads as data and pulls the eye to
+         * nothing, while "—" holds the column open and says "none" without competing with the number beside
+         * it. ⚠️ It is NOT the hidden-zero fault from earlier — the cell is still there and still occupied.
+         */
         var num = function (v, colour) {
-          return '<span style="width:3.4em;text-align:end;font-variant-numeric:tabular-nums;'
-            + 'color:' + (v ? colour : 'var(--grey,#8a949c)') + (v ? ';font-weight:600' : '') + '">' + v + '</span>';
+          return '<span style="text-align:end;font-variant-numeric:tabular-nums;'
+            + (v ? 'font-weight:600;color:' + colour : 'color:var(--grey,#8a949c)') + '">'
+            + (v ? v : '\u2014') + '</span>';
         };
-        h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:flex;gap:6px;align-items:baseline;'
-          + 'cursor:pointer;padding:5px 6px;margin:3px 0 4px;border-radius:6px;background:var(--neutral-tint)">'
-          + '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
-          + '<b style="font-size:var(--fs-2)">' + testEsc(gk) + '</b>'
-          + '<span style="font-size:var(--fs-1);color:var(--grey-2);flex:1;min-width:0;overflow:hidden;'
+        /* ⭐ the journey position, as the Report shows it — 00 REG, 01 LOG. It is the order somebody walks the
+           product in, and without it the list reads as a filing cabinet. */
+        var seqOf = list.reduce(function (m, c) {
+          var q = (typeof c.seq === 'number') ? c.seq : 99; return q < m ? q : m; }, 99);
+        var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
+
+        h += '<div onclick="testFold(\'' + testEsc(gk) + '\')" style="display:grid;'
+          + 'grid-template-columns:' + TEST_AREA_COLS + ';gap:6px;align-items:baseline;'
+          + 'cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line-2,#efece4)">'
+          + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0">'
+          +   '<span style="color:var(--grey-2);font-size:var(--fs-1)">' + (open ? '\u25be' : '\u25b8') + '</span>'
+          +   (seq ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);'
+                   + 'color:var(--grey-2,#545A61)">' + seq + '</span>' : '')
+          /* ⭐ the key as a CHIP, so it reads as a code rather than as the first word of the name */
+          +   '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);font-weight:700;'
+          +     'background:var(--grey-2,#545A61);color:#fff;border-radius:4px;padding:1px 5px;'
+          +     'white-space:nowrap">' + testEsc(gk) + '</span>'
+          + '</span>'
+          + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;'
           + 'text-overflow:ellipsis;white-space:nowrap">' + testEsc(list[0].module_name || '') + '</span>'
-          + '<span style="font-size:var(--fs-1);display:flex;gap:4px;white-space:nowrap" '
-          + 'title="passed \u00b7 failed \u00b7 not run">'
-          + num(gn.pass, 'var(--ok-2)') + num(gn.bad, 'var(--disp)') + num(gn.todo, 'var(--ink-2,#3a4048)')
-          + '</span></div>';
+          + '<span style="text-align:end;font-weight:700;font-size:var(--fs-2);'
+          + 'font-variant-numeric:tabular-nums">' + list.length + '</span>'
+          + num(gn.pass, 'var(--ok-2)') + num(gn.bad, 'var(--disp)')
+          + num(gn.todo, 'var(--warn-2,#8A5A00)')
+          + '</div>';
       }
       if (!open) return;
 
