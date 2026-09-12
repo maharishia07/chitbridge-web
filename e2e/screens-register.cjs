@@ -107,6 +107,42 @@ ok('screens are reachable by nav key, or the code can never be shown on the scre
 }
 
 /**
+ * ── ⭐⭐⭐ ONE PLACEMENT, EVERYWHERE: ICON, SCREEN-ID, SCREEN NAME ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"POP067 — the name comes before the screen number?"*, then *"everywhere it has to be
+ * unique"*, then the rule itself: *"icon, screen-id, screen name."*
+ *
+ * ⚠️⚠️ FOUR STAMPS HAD DRIFTED INTO THREE ANSWERS — a screen read "📥 WRK003 Intake", a panel read
+ * "PNL004 🧪 Test lab" and a dialog read "📋 Register POP067". Each fix had solved its own surface and none
+ * of them looked sideways. Three placements is worse than one wrong one: a reader learns where to look on one
+ * screen and is wrong on the next.
+ *
+ * ⚠️ THIS IS THE CHECK THAT KEEPS IT ONE. Not that the placement is correct — a source check cannot see a
+ * rendered line — but that there is exactly ONE function deciding it, and that no stamp has quietly gone back
+ * to inserting for itself. That is the shape of the fault, so that is what is guarded.
+ */
+{
+  const app = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+  ok('there is exactly one function that places a code',
+     app.split('function placeCodeTag(').length - 1 === 1);
+  /* the four surfaces: screen heading, panel title, detail title, dialog title */
+  const calls = app.split('placeCodeTag(').length - 2;   /* minus its own definition */
+  ok('all four stamps go through it (' + calls + ')', calls === 4);
+  /**
+   * ⚠️ AND NONE OF THEM INSERTS ITS OWN TAG ANY MORE. `insertBefore(tag` outside the placer is how a fifth
+   * answer gets in — it is what each of the three wrong ones looked like before this.
+   */
+  /* ⚠️ counted OUTSIDE the placer, not against a magic total: three of these live inside placeCodeTag itself
+     (the split, the no-icon path, its catch) and counting them all just encodes today number. */
+  const fi = app.indexOf('function placeCodeTag(');
+  const fj = app.indexOf('function screenHeadEl(', fi);
+  const outside = app.slice(0, fi) + app.slice(fj);
+  const own = outside.split('insertBefore(tag').length - 1;
+  /* the one that remains is the loose line: a screen whose title cannot be identified at all */
+  ok('no stamp places its own tag outside the placer (' + own + ')', own <= 1);
+}
+
+/**
  * ── ⭐⭐ EVERY PANEL HAS A NAME, AND THE PRODUCT IS ASKED, NOT THE REGISTER ───────────────────────────────────
  *
  * Athi, 2026-09-12: *"now the same way each panel has to get the name."*

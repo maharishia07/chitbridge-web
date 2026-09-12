@@ -2364,6 +2364,48 @@ function codeChipDoor(tag, what){
   }catch(e){}
 }
 
+/**
+ * ── ⭐⭐⭐ ICON, CODE, NAME — IN ONE PLACE, FOR ALL FOUR STAMPS ───────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"POP067 — the name comes before the screen number?"* It did, and worse, the four stamps
+ * had drifted into three different answers:
+ *
+ *   a screen   "\ud83d\udce5 WRK003 Intake"     icon, code, name   \u2014 the rule
+ *   a panel    "PNL004 \ud83e\uddea Test lab"   code, icon, name   \u2014 code ahead of the icon
+ *   a dialog   "\ud83d\udccb Register POP067"   icon, name, code   \u2014 code last
+ *
+ * ⚠️⚠️ THREE PLACEMENTS IS WORSE THAN ONE WRONG ONE. A reader learns where to look on one surface and is
+ * wrong on the next, which is the same argument that made the header drag universal rather than per-panel.
+ * The earlier fixes each solved their own surface and none of them looked sideways.
+ *
+ * ⭐ Athi's rule, once: *"the icon, screen id, and screen name"*, and *"the screen id should be on the top
+ * left corner, that is how it has to be everywhere."*
+ *
+ * ⚠️ THE ICON IS NOT AN ELEMENT — every one of these writes it as the first characters of its own text, so
+ * there is nothing to insert between and the text node has to be SPLIT after the emoji run. Counted with
+ * charCodeAt rather than matched with a regular expression: that class has been mangled twice on its way into
+ * this file, the second time into one carrying a raw NUL byte that still ran.
+ */
+function placeCodeTag(host, tag){
+  try{
+    var t = host.firstChild;
+    while (t && t.nodeType !== 3) t = t.firstChild;   /* a crumb wraps its text in a span */
+    if (t && t.nodeValue) {
+      var v = t.nodeValue, i = 0;
+      while (i < v.length && v.charCodeAt(i) <= 32) i++;      /* any space before the icon */
+      var from = i;
+      while (i < v.length && v.charCodeAt(i) > 127) i++;      /* the icon run itself */
+      if (i > from) {
+        var j = i;
+        while (j < v.length && v.charCodeAt(j) <= 32) j++;    /* and the space after it */
+        /* ⚠️ only when a space follows: "\u20b9500" is not an icon with a name after it */
+        if (j > i) { var after = t.splitText(j); after.parentNode.insertBefore(tag, after); return; }
+      }
+    }
+    host.insertBefore(tag, host.firstChild);            /* no icon: the code simply goes first */
+  }catch(e){ try { host.insertBefore(tag, host.firstChild); } catch(_) {} }
+}
+
 function screenHeadEl(body, info){
   var lab = String(info.label || '').trim().toLowerCase();
   if (lab) {
@@ -2440,14 +2482,7 @@ function stampScreenHeading(){
      * uses, and where a heading has no icon the code simply goes first, which is the same order minus a part.
      */
     var t = loose ? null : head.firstChild;
-    while (t && t.nodeType !== 3) t = t.firstChild;      /* the crumb wraps its text in a span */
-    var lead = t && t.nodeValue && t.nodeValue.match(/^\s*([^\u0000-\u007F][^\u0000-\u007F\s]*)\s+/);
-    if (lead) {
-      var after = t.splitText(lead[0].length);           /* the icon stays put; the rest moves right */
-      after.parentNode.insertBefore(tag, after);
-    } else {
-      head.insertBefore(tag, head.firstChild);
-    }
+    if (loose) head.insertBefore(tag, head.firstChild); else placeCodeTag(head, tag);
   }catch(e){}
 }
 
@@ -2619,7 +2654,7 @@ function stampPanelCode(head, key){
       var d = k ? getComputedStyle(k).display : '';
       row = (d === 'flex' || d === 'grid') ? k : head;
     }
-    row.insertBefore(tag, row.firstChild);
+    placeCodeTag(row, tag);
   }catch(e){}
 }
 
@@ -2645,7 +2680,7 @@ function stampDetailTitle(){
       + 'font-weight:700;letter-spacing:.04em;color:var(--grey-2);background:var(--neutral-tint);'
       + 'border:1px solid var(--line);border-radius:5px;padding:1px 6px;user-select:all;'
       + 'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
-    dt.insertBefore(tag, dt.firstChild);
+    placeCodeTag(dt, tag);
   }catch(e){}
 }
 
@@ -13094,16 +13129,19 @@ function modalStamp(host){
     if (!box || box.querySelector('[data-testid="popup-code"]')) return;
     var el = document.createElement('span');
     el.setAttribute('data-testid', 'popup-code');
-    el.textContent = info.code + (info.ambiguous ? ' \u00b7' : '');
+    /* ⚠️ THE AMBIGUITY MARK SITS TIGHT AGAINST THE CODE. It used to trail the whole title, where a spaced
+       middle dot read as a separator. Now that the code comes BEFORE the name it has to read as part of the
+       code, or "POP067 · Register" looks like a stray character somebody left behind. */
+    el.textContent = info.code + (info.ambiguous ? '\u00b7' : '');
     el.title = info.ambiguous
       ? 'This code names ' + info.fn + '(), which opens more than one dialog — quote it with what you were doing'
       : 'The code for this dialog \u2014 quote it instead of describing it';
     /* \u26a0 muted, monospaced, selectable: it is a reference, and the whole point is that it gets quoted */
     el.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
       + 'color:var(--grey-2);background:var(--neutral-tint);border-radius:5px;padding:1px 6px;'
-      + 'user-select:all;margin-inline-start:8px;vertical-align:middle';
+      + 'user-select:all;margin-inline-end:7px;vertical-align:middle';
     var t = box.querySelector('.t') || box;
-    t.appendChild(el);
+    placeCodeTag(t, el);
   }catch(_){}
 }
 
