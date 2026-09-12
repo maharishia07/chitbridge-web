@@ -71,3 +71,34 @@ function testVerdictLabel(c, last) {
   if (v.kind === 'ok') return '';
   return (TEST_TODO[v.kind] || TEST_TODO.defect).icon + ' ' + v.kind;
 }
+
+/**
+ * ── ⭐⭐⭐ ONE COUNT, TWO SURFACES ────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"in the report cases passed shows the value, here it is all none — it has to be the
+ * same."* And then: *"always there are differences? I have already mentioned it has to be the same."*
+ *
+ * ⚠️⚠️ HE IS RIGHT, AND THE DISAGREEMENT WAS NEVER A DISPLAY BUG. The Report and the lab each walked the same
+ * two lists and counted them with their own code. Two implementations of one arithmetic will agree only for
+ * as long as nobody touches either — and the moment the lab's results failed to load, its counter reported
+ * "621 not run" with total confidence rather than reporting that it had no results at all.
+ *
+ * ⭐ So the counting lives here, beside the verdict, and both surfaces call it. A difference between the two
+ * is now impossible to introduce by editing one of them, which is the only kind of guarantee worth having.
+ *
+ * ⚠️ AND IT SAYS WHEN IT HAS NOTHING. `noResults` is true when not one case has a result, which is a
+ * different fact from "nothing has passed" — and telling them apart is exactly what would have surfaced this
+ * bug on the day it was written instead of weeks later.
+ */
+function testCounts(cases, last) {
+  const n = { total: 0, pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
+  (cases || []).forEach(function (c) {
+    n.total++;
+    const l = last && last[c.case_key];
+    if (!l) { n.todo++; return; }
+    if (n[l.status] === undefined) n[l.status] = 0;
+    n[l.status]++;
+  });
+  n.noResults = n.total > 0 && n.todo === n.total;
+  return n;
+}

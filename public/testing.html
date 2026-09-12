@@ -1616,9 +1616,19 @@ function shown(){
  * choices. So the header keeps only what nothing else says: how much of the board has any evidence at all.
  */
 function tally(){
+  /**
+   * ⭐ THE SHARED COUNT (app/test-verdict.js). Athi, 2026-09-12: *"always there are differences? I have
+   * already mentioned it has to be the same."*
+   * ⚠️ The Report and the lab each walked the same two lists with their own counter. Two implementations of
+   * one arithmetic agree only until somebody edits one — and the lab spent its whole life reporting
+   * "621 not run" with complete confidence, because its own counter could not tell "nothing passed" from
+   * "I have no results". One function now, so a difference cannot be introduced by editing either page.
+   */
+  var c = (typeof testCounts === 'function') ? testCounts(CASES, LAST) : null;
   var done = 0, bad = 0;
-  CASES.forEach(function(c){
-    var l = LAST[c.case_key];
+  if (c) { done = c.total - c.todo; bad = c.fail + c.blocked; }
+  else CASES.forEach(function(x){
+    var l = LAST[x.case_key];
     if (!l) return;
     done++;
     if (l.status === 'fail' || l.status === 'blocked') bad++;

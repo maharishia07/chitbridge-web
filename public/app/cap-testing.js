@@ -132,8 +132,27 @@ async function testLoad(force) {
     CBTEST.stale = {};
     ((st && st.stale) || []).forEach(function (x) { CBTEST.stale[x.case_key] = x; });
     CBTEST.cases = (a && a.cases) || [];
+    /**
+     * ── ⚠️⚠️⚠️ THE LAB HAS NEVER SHOWN A SINGLE RESULT ──────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-12: *"in the report cases passed shows the value, here it is all none."*
+     *
+     * ⚠️ `/api/testing/results` returns a COMPOUND — {results, count, history} — and core.js's unwrap()
+     * collapses a response with a single array in it down TO that array. So `b` is the array, `b.results` is
+     * undefined, and CBTEST.last stayed empty forever. Every case in this panel has read "not run" since the
+     * day it was built, on a board with 160 passes in it.
+     *
+     * ⚠️⚠️ AND unwrap() CARRIES A NOTE ABOUT DOING EXACTLY THIS to the catalogue overlay in August — "the
+     * picker read cat.candidates on what was actually a bare array, got undefined, and fell through with no
+     * error anywhere". Same collapse, same silence, a different endpoint four months later.
+     *
+     * ⭐ Read whichever shape arrives. ⚠️ NOT fixed by editing unwrap(): it is the app's single response
+     * envelope and every screen depends on how it behaves. Changing it to satisfy this panel would be a
+     * platform-wide change made for one caller.
+     */
     CBTEST.last = {};
-    ((b && b.results) || []).forEach(function (r) {
+    var rows = Array.isArray(b) ? b : ((b && b.results) || []);
+    rows.forEach(function (r) {
       /* ⭐ THE WORST RESULT WINS, not the newest. A case proved green by a unit test and red at the counter is
          not a green case, and showing the later of the two would let one hide the other. */
       var rank = { fail: 4, blocked: 3, skipped: 2, pass: 1 };
@@ -448,11 +467,20 @@ function testPaint() {
    * ⭐ So the panel counts the WHOLE board too, and leads with it — the same four figures as the Report, in
    * the same order, so the two surfaces can be compared instead of doubted.
    */
-  var all = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
-  CBTEST.cases.forEach(function (c) {
-    var l = CBTEST.last[c.case_key];
-    if (!l) all.todo++; else all[l.status]++;
-  });
+  /**
+   * ⭐ THE SHARED COUNT (app/test-verdict.js), not a second implementation. Two counters over the same two
+   * lists agree only until somebody edits one — and this panel spent its whole life reporting "621 not run"
+   * with complete confidence because its own counter could not tell "nothing passed" from "I have no results".
+   * ⚠️ Falls back to counting here if the shared file has not arrived, so a slow fetch costs the figures'
+   * accuracy for one paint rather than costing the panel.
+   */
+  var all = (typeof testCounts === 'function')
+    ? testCounts(CBTEST.cases, CBTEST.last)
+    : (function () {
+        var t = { pass: 0, fail: 0, blocked: 0, skipped: 0, todo: 0 };
+        CBTEST.cases.forEach(function (c) { var l = CBTEST.last[c.case_key]; if (!l) t.todo++; else t[l.status]++; });
+        return t;
+      })();
   var filtered = shown.length !== CBTEST.cases.length;
   var staleN = shown.filter(function (c) { return CBTEST.stale[c.case_key]; }).length;
 
