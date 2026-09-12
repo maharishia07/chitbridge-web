@@ -286,6 +286,10 @@
 
   .body{ padding:0 11px 11px; border-top:1px solid var(--line-2); }
   /* ⭐ the four project-manager facts, side by side and wrapping — a grid so the labels line up down the page */
+    /* ⭐ the door, drawn like the menu itself — one quiet line, the same separator the rail uses */
+  .where{font-size:12px;color:var(--grey-2);letter-spacing:.03em;margin:0 0 7px}
+  .swept{font-size:12px;margin:0 0 8px;padding:6px 9px;border-radius:7px;
+    background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17}
   .facts{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:1px;
           background:var(--line-2); border:1px solid var(--line-2); margin:9px 0 2px; }
   .facts > div{ background:var(--paper); padding:7px 9px; }
@@ -339,7 +343,17 @@
    * exactly that — instead of folding in on itself. Overflowing is visible and scrollable; compressing is
    * silent and unreadable.
    */
-  table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap; min-width:4.6em; }
+  /**
+   * ⚠️ 4.6em WAS THE LABEL'S WIDTH WITH NOTHING AROUND IT, so "CASES" rendered as "CASE" and "NOT RUN" ran
+   * to the table edge. A minimum that exactly fits the text leaves no room for the padding that separates one
+   * column from the next — which is what Athi is asking for: a character of air front and back.
+   * ⭐ ch is the right unit for that, because it IS the width of a character: 1ch each side, plus a floor wide
+   * enough for the longest heading these tables use.
+   */
+  table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap;
+        min-width:7.5ch; padding-inline:1ch; }
+  /* ⭐ the first column too — a key or a name pressed against the table edge reads as clipped even when it is not */
+  table.sum th:first-child, table.sum td:first-child{ padding-inline-start:1ch; }
   table.sum .area{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
   /* ⭐ the feature key is a code, so it keeps its own narrow track and never wraps */
   table.sum td .area{ white-space:nowrap; }
@@ -2953,6 +2967,123 @@ function folderTreeHTML(){
     + 'and only the layer view can tell them apart. Read the two together.</p>';
 }
 
+/**
+ * ── ⭐⭐⭐ THE MENU TREE — WHAT A TESTER ACTUALLY WALKS ───────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"add under each of the menu item in tree shape for manual testing, so each of the icon
+ * is tested properly."*
+ *
+ * ⭐⭐ THIS IS THE THIRD TREE AND THE FIRST ONE A NON-PROGRAMMER CAN USE. The layer tree groups by
+ * architecture and the folder tree by path; both are true and neither is visible to the person doing the
+ * testing. This one is built from `menu` — the door the case belongs to, written by the sweep that read the
+ * rail — so its shape IS the shape of the product on screen.
+ *
+ * ⭐ AND IT REGENERATES. The sweep reads the live rail and the live capability files: a door added tomorrow
+ * appears here without anybody deciding to add it, and a control REMOVED stops being emitted, which is what
+ * retires its case at the next load. Athi: *"the same has to be updated with retired if it is not going to
+ * be useful anymore."* ⚠️ Retiring is not deleting — the case and its whole result history stay on the
+ * record under status=retired, because evidence is never destroyed to tidy a count.
+ *
+ * ⚠️ A GENERATED CASE IS A QUESTION, NOT A CHECK, and the branch says so with a count rather than letting a
+ * screen of green ticks imply that somebody decided what each control SHOULD do.
+ */
+function menuTreeHTML(){
+  if (!CASES.length) return '<div class="note">The cases load with the board \u2014 press <b>Load cases</b>.</div>';
+
+  /* group › door, split off the path the sweep wrote; anything with no menu is stated, not hidden */
+  var tree = {}, gorder = [], off = 0;
+  CASES.forEach(function(c){
+    if (!c.menu) { off++; return; }
+    var bits = String(c.menu).split('\u203a');
+    var g = (bits[0] || '').trim() || 'Elsewhere';
+    var d = (bits[1] || '').trim() || g;
+    if (!tree[g]) { tree[g] = {}; gorder.push(g); }
+    (tree[g][d] = tree[g][d] || []).push(c);
+  });
+  if (!gorder.length) return '<div class="note">No case names a menu door yet. The sweep writes that field \u2014 '
+    + 'rebuild the board and load again.</div>';
+
+  /* what a branch has actually been RUN for — the same reading the other two trees use */
+  function evidence(list){
+    var run = 0, bad = 0, gen = 0;
+    list.forEach(function(c){
+      var l = LAST[c.case_key];
+      if (l) run++;
+      if (l && (l.status === 'fail' || l.status === 'blocked')) bad++;
+      if (c.generated) gen++;
+    });
+    return { run: run, bad: bad, gen: gen };
+  }
+
+  var h = '<div class="tree">';
+  var all = gorder.reduce(function(t, g){
+    return t + Object.keys(tree[g]).reduce(function(u, d){ return u + tree[g][d].length; }, 0); }, 0);
+  h += treeNode(0, '\u25c6', 'The product, as it is on screen', all,
+    '<span class="tof">' + gorder.length + ' menu group(s)</span>', '', true, '');
+
+  gorder.forEach(function(g){
+    var doors = Object.keys(tree[g]);
+    var flat = doors.reduce(function(a, d){ return a.concat(tree[g][d]); }, []);
+    var e = evidence(flat);
+    var gkey = 'menu:' + g;
+    var gopen = isOpenSection(gkey, doors.length);
+    var gtail = '<span class="tof">' + flat.length + ' case(s) \u00b7 ' + e.run + ' run'
+      + (e.bad ? ' \u00b7 <b class="bad">' + e.bad + ' red</b>' : '') + '</span>';
+    h += treeNode(1, gopen ? '\u2500' : '\u253c', g, doors.length, gtail, '', gopen, gkey);
+    if (!gopen) return;
+
+    doors.forEach(function(d){
+      var list = tree[g][d];
+      var de = evidence(list);
+      var dkey = 'menu:' + g + ':' + d;
+      var dopen = isOpenSection(dkey, list.length);
+      /**
+       * ⭐ THE DOOR CARRIES THE HONEST NUMBER: how many controls behind it, how many have ever been run, and
+       * how many of those cases were SWEPT rather than written. A door showing "18 controls · 0 run" is the
+       * finding; a door showing 18 green generated cases is not proof that the screen is right.
+       */
+      var dtail = '<span class="tof">' + de.run + ' of ' + list.length + ' run'
+        + (de.bad ? ' \u00b7 <b class="bad">' + de.bad + ' red</b>' : '')
+        + (de.gen ? ' \u00b7 ' + de.gen + ' swept' : '') + '</span>';
+      h += treeNode(2, dopen ? '\u2500' : '\u253c', d, list.length, dtail, '', dopen, dkey);
+      if (!dopen) return;
+
+      /* the controls themselves — the leaf a tester taps, with what it last did */
+      list.slice().sort(function(a, b){ return a.case_key < b.case_key ? -1 : 1; }).forEach(function(c){
+        var l = LAST[c.case_key];
+        var mark = !l ? '<span class="tof dim">not run</span>'
+          : (l.status === 'fail' || l.status === 'blocked')
+            ? '<span class="tof"><b class="bad">' + esc(l.status) + '</b></span>'
+            : '<span class="tof">' + esc(l.status) + '</span>';
+        h += treeNode(3, '\u00b7', c.title || c.case_key, null,
+          mark + (c.generated ? '<span class="ttier">swept</span>' : ''), '', false, '');
+      });
+    });
+  });
+
+  /**
+   * ⚠️ AND THE REST OF THE BOARD, SAID OUT LOUD. Most cases belong to no door — a journey walks several, an
+   * automated file walks none — and a tree that showed only the swept ones would read as the whole board.
+   */
+  if (off) h += treeNode(1, '\u253c', 'Not on the menu', off,
+    '<span class="tof">journey steps and automated files \u2014 they belong to no single door</span>', '', false, '');
+  h += '</div>';
+
+  /**
+   * ⭐⭐ WHAT HAPPENS WHEN A CONTROL GOES AWAY, said here because this is where a reader wonders about it.
+   * ⚠️ And it is a statement about a mechanism that already runs — not a plan. If this ever stops being
+   * true, this paragraph becomes the most misleading thing on the page.
+   */
+  h += '<div class="note" style="margin:14px 0"><b>This tree rebuilds itself.</b> It is swept from the '
+    + 'live rail and the live screens, so a door or a control added tomorrow appears here without anybody '
+    + 'adding it \u2014 and one that is <b>removed stops being swept</b>, which retires its case at the next '
+    + '<b>Load cases</b>. <i>Retired is not deleted:</i> the case and every result ever recorded against it '
+    + 'stay on the record and can be brought back by name. \u26a0 A load carrying less than 90% of what the '
+    + 'board already holds retires nothing at all and says so, because a half-written file must never be '
+    + 'read as a decision to remove six hundred cases.</div>';
+  return h;
+}
+
 function treeHTML(){
   if (!CONTENTS) return '<div class="note">The architecture loads with the cases \u2014 press <b>Load cases</b>.</div>';
 
@@ -3132,11 +3263,14 @@ async function paintSummary(){
     + '<button class="btn' + (SUMVIEW === 'table' ? ' pri' : '') + '" onclick="setSumView(\'table\')">Table</button>'
     + '<button class="btn' + (SUMVIEW === 'tree' ? ' pri' : '') + '" onclick="setSumView(\'tree\')">Tree \u00b7 by layer</button>'
     + '<button class="btn' + (SUMVIEW === 'folder' ? ' pri' : '') + '" onclick="setSumView(\'folder\')">Tree \u00b7 by folder</button>'
+    + '<button class="btn' + (SUMVIEW === 'menu' ? ' pri' : '') + '" onclick="setSumView(\'menu\')">Tree \u00b7 by menu</button>'
     + '<span class="fine">The table compares the layers. The layer tree shows what is inside each one. '
-    + 'The folder tree shows where the files actually are \u2014 the only one of the three that cannot leave anything out.</span>'
+    + 'The folder tree shows where the files actually are \u2014 the only one that cannot leave anything out. '
+    + 'The menu tree is the product as a <b>person</b> sees it: every door, and every control behind it.</span>'
     + '</div>';
   h += (SUMVIEW === 'tree' ? treeHTML()
       : SUMVIEW === 'folder' ? folderTreeHTML()
+      : SUMVIEW === 'menu' ? menuTreeHTML()
       : matrixHTML()) + maturityHTML() + engineHTML() + chartsHTML();
   /* ⚠️ "Coverage by area" lived here and was the Cases pivot's default cut, drawn twice. */
   h += '<div class="note" style="margin:18px 0">Counts by area, kind, status or who runs them are on the '
@@ -3279,6 +3413,16 @@ function paint(){
     kind:     { label: 'Kind',     of: function(c){ return [c.test_type || '—']; } },
     reaches:  { label: 'Reaches',  of: function(c){ return (c.areas || []).length ? c.areas : ['not placed']; } },
     priority: { label: 'Priority', of: function(c){ return [c.priority || '—']; } },
+    /**
+     * ⭐⭐ BY THE DOOR IT IS BEHIND. Athi: *"if we follow the menu path we will have a proper structure."*
+     * And he is right in a way the other six cuts are not — Area, Kind and Reaches are how the CODE is
+     * filed, and a person holding a phone has never seen any of them. The menu is the only grouping the
+     * tester can also see on the screen in front of them.
+     *
+     * ⚠️ "not on the menu" is not a gap. 622 of the 889 cases are journey steps and automated files, which
+     * belong to no door and never will; saying so is different from leaving them out.
+     */
+    menu:     { label: 'Menu',     of: function(c){ return [c.menu || 'not on the menu']; } },
     who:      { label: 'Run by',   of: function(c){ return [c.automated ? 'the machine' : 'a person']; } },
     status:   { label: 'Status',   of: function(c){
                  var l = LAST[c.case_key];
@@ -3666,6 +3810,18 @@ function caseHTML(c){
      * automated tests carry no claim in their header; a filename dressed up as a sentence in a row headed
      * "what it proves" would be read as evidence by exactly the person reading this line.
      */
+    /**
+     * ⭐ WHERE IN THE PRODUCT THIS IS — first line of the body, above everything else, because a tester who
+     * does not know which screen they are on cannot do anything else on this page.
+     */
+    if (c.menu) h += '<div class="where">' + esc(c.menu) + '</div>';
+    /**
+     * ⚠️⚠️ A SWEPT CASE IS A QUESTION, NOT A CHECK. The menu sweep read the rail and every capability file and
+     * wrote one case per control; not one of them carries an expectation a person decided on. Marked here so
+     * that a green on a generated case is read for what it is — "this control did something" — and never as
+     * "this control did the right thing".
+     */
+    if (c.generated) h += '<div class="swept">Swept from the menu \u2014 it names the control but carries no written expectation. Judge it against what the screen is FOR, and if you decide what it should do, write that into the case.</div>';
     if (c.areas || c.subjects || c.claim || c.run_by) {
       h += '<div class="facts">';
       if ((c.areas || []).length)

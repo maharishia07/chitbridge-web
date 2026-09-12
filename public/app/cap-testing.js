@@ -1200,6 +1200,11 @@ function testShortKey(k) {
 
 function testCaseBodyHTML(c) {
   var h = '<div style="border-top:1px solid var(--line-2,#efece4);padding:8px 9px;font-size:var(--fs-1);line-height:1.5">';
+  /* ⭐ the same two lines as the Report, in the same order and the same words — the two surfaces differ in
+     their shell, never in what they say about a case. */
+  if (c.menu) h += '<div style="font-size:var(--fs-0);color:var(--grey-2);letter-spacing:.03em;margin-bottom:6px">' + testEsc(c.menu) + '</div>';
+  if (c.generated) h += '<div style="font-size:var(--fs-0);margin-bottom:7px;padding:6px 8px;border-radius:7px;background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17">'
+    + 'Swept from the menu \u2014 it names the control but carries no written expectation. Judge it against what the screen is FOR, and if you decide what it should do, write that into the case.</div>';
   if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';
   if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + testEsc(c.data) + '</div>';
   (c.steps || []).forEach(function (s, i) {
