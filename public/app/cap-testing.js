@@ -709,7 +709,7 @@ function testPaint() {
     +   '<select onchange="testSize(this.value)" title="Size" style="flex:0 0 auto;font-size:var(--fs-1);'
     +     'padding:3px 4px;border-radius:7px;border:1px solid var(--line,#e7e3d8)">'
     +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
-           ['large', 'Large'], ['full', 'Full height']].map(function (o) {
+           ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
             return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
     +   '</select>'
     +   '<button title="Close" onclick="testModeSet(false)" style="' + ico + '">\u2715</button>'
@@ -1469,7 +1469,13 @@ var TEST_SIZES = {
   wide:   { w: 720, h: 460 },
   tall:   { w: 420, h: Math.max(360, Math.round(window.innerHeight * 0.82)) },
   large:  { w: 720, h: Math.max(360, Math.round(window.innerHeight * 0.82)) },
-  full:   { w: 460, h: Math.max(360, window.innerHeight - 40) },
+  /**
+   * ⭐ THE WHOLE WINDOW. Athi asked for a real full screen, and found the duplicate on the way: `full` used
+   * to be 460 × (height − 40) — a taller `tall`, forty pixels wider, sitting in the same menu under a name
+   * that promised something else. ⚠️ 8px of margin on every side is deliberate: a panel flush to the edge
+   * has no drag handle left, and the way out of full screen would be the one thing you could not grab.
+   */
+  full:   { w: Math.max(360, window.innerWidth - 16), h: Math.max(320, window.innerHeight - 16) },
 };
 function testSize(name) {
   var s = TEST_SIZES[name];
@@ -1482,6 +1488,8 @@ function testSize(name) {
   el.style.position = 'fixed'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.margin = '0';
   if (!el.style.left) el.style.left = Math.max(8, r.left) + 'px';
   if (!el.style.top) el.style.top = Math.max(8, r.top) + 'px';
+  /* ⭐ full screen starts at the corner; every other preset stays where the tester put the panel */
+  if (name === 'full') { el.style.left = '8px'; el.style.top = '8px'; }
   el.style.width = s.w + 'px';
   el.style.height = s.h + 'px';
   el.style.maxHeight = 'none';
