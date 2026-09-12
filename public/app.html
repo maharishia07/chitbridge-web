@@ -2409,6 +2409,49 @@ function placeCodeTag(host, tag){
   }catch(e){ try { host.insertBefore(tag, host.firstChild); } catch(_) {} }
 }
 
+/**
+ * ── ⭐⭐⭐ THE TEST-CASE CHIP, ON THE SCREEN ITSELF ───────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"if the test mode is on, then we bring an extra icon called Test Case in each screen."*
+ *
+ * ⚠️⚠️ ONLY WHILE TEST MODE IS ON, and that is his condition, not a nicety. A shopkeeper billing a customer
+ * must never see a testing control on their counter — it is noise at best and a thing to press by mistake
+ * at worst. Test mode is the switch that says a tester is here.
+ *
+ * ⭐ IT CARRIES THE COUNT, so the answer to "is this screen tested?" is on the screen rather than one click
+ * away: 🧪 3/5 is three passed of five written. ⚠️ No chip at all until the lab has read the board — "0"
+ * and "not counted yet" are different facts and only one of them is a finding.
+ */
+function stampTestChip(host, code, name){
+  try{
+    if (!code || !host || host.querySelector('[data-testid="screen-cases"]')) return;
+    if (typeof CBTEST === 'undefined' || !CBTEST.on) return;
+    var t = (typeof testScreenTally === 'function') ? testScreenTally(code) : null;
+    if (!t) return;
+    var tag = document.createElement('span');
+    tag.setAttribute('data-testid', 'screen-cases');
+    tag.textContent = '\ud83e\uddea ' + t.pass + '/' + t.total;
+    tag.title = t.total
+      ? (t.total + ' case(s) on this screen \u2014 ' + t.pass + ' passed, ' + t.fail + ' failed. Click to read them, or write one.')
+      : 'No case on this screen yet \u2014 click to write the first one.';
+    tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
+      + 'color:' + (t.fail ? 'var(--disp,#B3261E)' : 'var(--grey-2)') + ';'
+      + 'background:var(--neutral-tint);border:1px solid var(--line);border-radius:5px;padding:1px 6px;'
+      + 'margin-inline-end:7px;vertical-align:middle;cursor:pointer';
+    tag.addEventListener('click', function(ev){
+      ev.preventDefault(); ev.stopPropagation();
+      /* ⭐ a POPUP, not the whole board. Athi: *"so a person need not switch or see anywhere else to
+         move."* Opening the lab to read four cases about the screen behind it is a context switch
+         wearing a floating panel. */
+      if (typeof screenCasesPopup === 'function') screenCasesPopup(code, name || '');
+    });
+    /* ⚠️ AFTER the code chip, not before it: the screen id is the top-left thing and nothing displaces it. */
+    var codeTag = host.querySelector('[data-testid="screen-code"]');
+    if (codeTag && codeTag.parentNode === host) host.insertBefore(tag, codeTag.nextSibling);
+    else host.insertBefore(tag, host.firstChild);
+  }catch(e){}
+}
+
 function screenHeadEl(body, info){
   var lab = String(info.label || '').trim().toLowerCase();
   if (lab) {
@@ -2496,6 +2539,8 @@ function stampScreenHeading(){
      */
     var t = loose ? null : head.firstChild;
     if (loose) head.insertBefore(tag, head.firstChild); else placeCodeTag(head, tag);
+    /* ⭐ the count rides beside the code, from the one place that already knows both */
+    try { stampTestChip(tag.parentNode, info.code, info.label); } catch(_) {}
   }catch(e){}
 }
 

@@ -1856,6 +1856,17 @@ async function testScrLoad() {
     /* the latest word per case — the ledger is append-only, so this endpoint already collapses it */
     var rows = await api('testResults', {});
     CBTEST.scrRes = Array.isArray(rows) ? rows : ((rows && rows.results) || []);
+    /**
+     * ⭐⭐ AND WHAT CAME OUT OF TESTING IT. Athi, 2026-09-12: *"if there are issues, incident raised or
+     * requirement written."* Both already carry the screen code — that is what the code was for — so the
+     * map can show, on one line, everything that has ever been said about a screen.
+     * ⚠️ Every state, not the open ones: a screen with three incidents all resolved has a history worth
+     * seeing, and a count that hides them reads as a screen nothing has ever gone wrong on.
+     */
+    try { var inc = await api('testIncList', { query: { state: 'all' } });
+          CBTEST.scrInc = (inc && inc.incidents) || []; } catch (_) { CBTEST.scrInc = []; }
+    try { var rq = await api('testReqList', { query: { state: 'all' } });
+          CBTEST.scrReq = (rq && rq.requirements) || []; } catch (_) { CBTEST.scrReq = []; }
     CBTEST.scrErr = null;
   } catch (e) { CBTEST.scrErr = (e && e.message) || 'Could not read the results.'; }
   CBTEST.scrBusy = false; testPaint();
@@ -1864,7 +1875,12 @@ async function testScrLoad() {
 /* ⭐ one place that decides which screen a case belongs to, so the count and the row can never disagree */
 function testScrOf(c) {
   try {
-    if (!c || !c.menu || !window.CBSCREENS) return '';
+    if (!c) return '';
+    /* ⭐ the code the case carries wins: a menu path is words on a rail and words get reworded, whereas the
+       code is assigned once and never changes. The path stays as the fallback for the swept cases, which
+       predate the code being written onto them. */
+    if (c.screen_code) return String(c.screen_code);
+    if (!c.menu || !window.CBSCREENS) return '';
     return window.CBSCREENS.byPath[String(c.menu)] || '';
   } catch (_) { return ''; }
 }
@@ -1903,22 +1919,38 @@ function testCaseFormHTML() {
   var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">A case for '
+    + '<div style="font-size:var(--fs-2);margin-bottom:2px">New test case for '
     +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b></div>'
-    + '<input id="wcTitle" placeholder="What must be true? — e.g. a supplier with no catalogue says so" '
+    /* ⭐ what happens when they press it, BEFORE they fill anything in — a person deciding whether to start
+       should not have to press the button to find out what it does. */
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:7px">'
+    +   'The fourth part \u2014 what you actually see \u2014 is recorded each time you run it.</div>'
+    /**
+     * ── ⭐⭐⭐ ATHI'S FOUR PARTS, IN HIS WORDS ────────────────────────────────────────────────────────────
+     *
+     * 2026-09-12: *"what is the requirement, what is the operation, what is expected, 4th one is what are
+     * you seeing — if the result is the same it is pass, else it is an incident, if something further to be
+     * done then it is the requirement."*
+     *
+     * ⭐ THREE OF THE FOUR ARE THE CASE and are written once; the fourth happens on every run and belongs to
+     * the result. That is why the observation box lives on the row and not here.
+     *
+     * ⚠️ "What must be true" WAS THE REQUIREMENT ALL ALONG and did not say so, which is why he had to ask.
+     * A field whose name does not match the word the team uses makes everybody translate, every time.
+     */
+    + '<input id="wcTitle" placeholder="1 · The requirement — what must be true" '
     +   'style="' + inp + '">'
-    + '<input id="wcDo" placeholder="What you do — e.g. open a supplier who has published nothing" '
+    + '<input id="wcDo" placeholder="2 · The operation — what you do" '
     +   'style="' + inp + '">'
-    + '<input id="wcSee" placeholder="What you should see — e.g. \u2018your catalogue is empty\u2019, not a blank list" '
+    + '<input id="wcSee" placeholder="3 · Expected — what should happen" '
     +   'style="' + inp + '">'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
     +   '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
     +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
     +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
-    +   '<button onclick="testCaseSend()" style="' + btn + '">Write it</button>'
+    +   '<button onclick="testCaseSend()" style="' + btn + ';font-weight:700">Save</button>'
     +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
-    +   '<span style="font-size:var(--fs-1);color:var(--note)">It lands on the board straight away, and '
-    +     'you mark it Pass or Fail in the List.</span>'
+
     + '</div></div>';
 }
 
@@ -1938,7 +1970,8 @@ async function testCaseSend() {
   });
   var key = w.code + '-H' + String(n).padStart(2, '0');
   try {
-    await api('testCaseWrite', { body: { cases: [{
+    /* ⚠️ `add`: this is one case, not a rebuild of the board — see the note in importCases */
+    await api('testCaseWrite', { body: { mode: 'add', cases: [{
       case_key: key,
       module_key: w.code, module_name: w.code + ' \u00b7 ' + w.name,
       title: title,
@@ -1946,15 +1979,27 @@ async function testCaseSend() {
       test_type: 'screen',
       pre: 'Signed in, and on ' + w.code + ' ' + w.name + '.',
       steps: [[doIt, see]],
-      menu: (CBTEST.writeMenu || ''),
+      /**
+       * ⚠️ THIS SENT AN EMPTY STRING. `CBTEST.writeMenu` was never set by anything, so the case landed with
+       * no menu, mapped to no screen, and vanished from the very view that wrote it — written correctly,
+       * saved correctly, and invisible.
+       * ⭐ The register knows the path for a code; it is read from there rather than passed around.
+       */
+      menu: (((window.CBSCREENS && window.CBSCREENS.rows) || [])
+        .filter(function (r) { return r.code === w.code; })[0] || {}).path || '',
+      /* ⭐ and the code itself, so the case maps to its screen even if the menu path is ever reworded */
+      screen_code: w.code,
       note: 'Written by hand on ' + new Date().toISOString().slice(0, 10) + '.',
     }] } });
     CBTEST.writeFor = null;
     if (typeof toast === 'function') toast('Written \u2014 ' + key);
     /* ⚠️ re-read rather than push a row locally: the importer decides the key and the version, and a
        client-side guess at either is a copy that starts drifting on the first edit. */
-    if (typeof testLoad === 'function') await testLoad(); else location.reload();
+    /* ⚠️ FORCED. testLoad() serves the cases it already has, so the case just written did not appear and
+       it looked as though nothing had been saved. */
+    if (typeof testLoad === 'function') await testLoad(true); else location.reload();
     testPaint();
+    if (CBTEST.popupFor) { CBTEST.writeFor = { code: w.code, name: w.name }; screenCasesPaint(); }
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not write it.'); }
 }
 
@@ -1968,6 +2013,9 @@ function testScrHTML() {
   res.forEach(function (r) { if (r && r.case_key) last[r.case_key] = r.status; });
 
   var byCode = {}, offScreen = 0;
+  var incBy = {}, reqBy = {};
+  (CBTEST.scrInc || []).forEach(function (x) { if (x.screen_code) incBy[x.screen_code] = (incBy[x.screen_code] || 0) + 1; });
+  (CBTEST.scrReq || []).forEach(function (x) { if (x.screen_code) reqBy[x.screen_code] = (reqBy[x.screen_code] || 0) + 1; });
   cases.forEach(function (c) {
     var code = testScrOf(c);
     if (!code) { offScreen++; return; }
@@ -2005,7 +2053,8 @@ function testScrHTML() {
     var b = byCode[r.code] || { total: 0, pass: 0, fail: 0, notrun: 0 };
     return { at: (r.walk || (10000 + i)), code: r.code, name: r.screen, group: r.group, total: b.total, pass: b.pass,
              fail: b.fail, notrun: b.notrun, purpose: b.purpose || null,
-             real: b.real || 0, generic: b.generic || 0 };
+             real: b.real || 0, generic: b.generic || 0,
+             inc: incBy[r.code] || 0, req: reqBy[r.code] || 0 };
   });
   /**
    * ── ⭐⭐⭐ MENU ORDER IS THE DEFAULT, BECAUSE THAT IS HOW A PERSON WALKS THE PRODUCT ─────────────────────────
@@ -2067,6 +2116,8 @@ function testScrHTML() {
     + '<th style="text-align:end;padding:3px 6px">Passed</th>'
     + '<th style="text-align:end;padding:3px 6px">Failed</th>'
     + '<th style="text-align:end;padding:3px 6px">Not run</th>'
+    + '<th style="text-align:end;padding:3px 6px" title="Incidents recorded on this screen">Inc</th>'
+    + '<th style="text-align:end;padding:3px 6px" title="Requirements raised from this screen">Req</th>'
     + '<th style="text-align:end;padding:3px 6px"></th></tr>';
   h += list.filter(function (x) {
     return !q || (x.code + ' ' + x.name).toLowerCase().indexOf(q) >= 0;
@@ -2076,8 +2127,10 @@ function testScrHTML() {
         + (n ? ';font-weight:700' : ';color:var(--note)') + '">' + (n || '\u2014') + '</td>';
     };
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
-      + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code style="font-family:\'Space Mono\','
-      +   'ui-monospace,monospace;user-select:all">' + testEsc(x.code) + '</code></td>'
+      + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code onclick="testScrOpen(\'' + x.code
+      +   '\')" title="Show the cases on this screen" style="font-family:\'Space Mono\','
+      +   'ui-monospace,monospace;cursor:pointer;text-decoration:underline;text-underline-offset:2px">'
+      +   testEsc(x.code) + '</code></td>'
       + '<td style="padding:4px 6px">' + testEsc(x.name)
       /* ⭐ a screen with nothing on it says so in words, where the eye already is */
       +   (x.total ? '' : '<span style="color:var(--note);font-size:var(--fs-1)"> \u00b7 no case yet</span>')
@@ -2091,15 +2144,299 @@ function testScrHTML() {
       + num(x.pass, 'var(--ok,#1B7F4B)')
       + num(x.fail, 'var(--disp,#B3261E)')
       + num(x.notrun)
+      + num(x.inc, 'var(--disp,#B3261E)')
+      + num(x.req, 'var(--grey-2,#545A61)')
       /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
       + '<td style="padding:4px 6px;text-align:end"><button onclick="testCaseFor(\'' + x.code
       +   '\', ' + JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;')
       +   ')" title="Write a case for this screen" style="font:inherit;font-size:var(--fs-1);'
       +   'padding:1px 7px;border:1px solid var(--line,#e7e3d8);border-radius:7px;cursor:pointer;'
-      +   'background:var(--card,#fff)">\u2295</button></td>'
-      + '</tr>';
+      +   'background:var(--card,#fff);white-space:nowrap">\u002b case</button></td>'
+      + '</tr>'
+      /**
+       * ── ⭐⭐⭐ AND THE VERDICTS, ON THE SCREEN THEY BELONG TO ────────────────────────────────────────────
+       *
+       * Athi, 2026-09-12: *"if you provide a button for pass, fail etc, then we will know these many test
+       * cases have been written and passed."*
+       *
+       * ⭐ THIS IS WHAT CLOSES THE LOOP. Walk the product in menu order, open a screen, read its cases, write
+       * one if it is missing, and say what happened — without leaving the row. The counts above are the same
+       * numbers, so they move as you work.
+       *
+       * ⚠️ testMark() IS THE ONE THAT RECORDS, here as in the List. A second recorder would be a second set
+       * of rules about what a verdict carries — the note, the evidence, the run it belongs to — and the day
+       * they differ the ledger has two kinds of truth in it.
+       */
+      + (CBTEST.scrOpen === x.code ? testScrCasesHTML(x) : '');
   }).join('');
   return h + '</table>';
+}
+
+/* which screen is opened out — one at a time, because two open rows make the counts above hard to place */
+/**
+ * ── ⭐⭐⭐ WHAT A MISMATCH BECOMES ───────────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THE OBSERVATION IS THE EVIDENCE AND IT IS REQUIRED. An incident that says only "it failed" cannot be
+ * investigated by anyone but the person who filed it, and they are the one person who will not need to.
+ * The box on the row is where it comes from, so the report is written at the moment of seeing rather than
+ * reconstructed later.
+ *
+ * ⭐ BOTH CARRY THE SCREEN CODE AND THE CASE. That is the chain the whole register exists for: a screen, the
+ * case that tested it, and what came out — readable in either direction without anybody joining it by hand.
+ */
+async function testFromCase(key, kind) {
+  var box = document.getElementById('cbt_n_' + key);
+  var seen = box ? String(box.value || '').trim() : '';
+  var c = (CBTEST.cases || []).filter(function (x) { return x.case_key === key; })[0] || {};
+  var code = testScrOf(c) || null;
+  var st0 = (c.steps || [])[0];
+  var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
+  if (!seen) {
+    if (typeof toast === 'function') toast('Say what you are seeing first \u2014 that is the evidence.');
+    if (box) box.focus();
+    return;
+  }
+  try {
+    if (kind === 'inc') {
+      /* the verdict AND the incident: the ledger keeps the run honest, the incident carries the story */
+      await testMark(key, 'fail');
+      await api('testIncNew', { body: {
+        observed: seen + (exp ? '  \u2014 expected: ' + exp : ''),
+        affected: 'found by ' + key, severity: 'Sev-3',
+        screen_code: code, case_key: key,
+        build: (window.CBBUILD || null) } });
+      if (typeof toast === 'function') toast('Failed, and an incident is raised');
+      CBTEST.scrInc = null;
+    } else {
+      await api('testReqRaise', { body: {
+        observed: seen,
+        requirement: exp || ('What ' + (code || 'this screen') + ' should also do'),
+        case_key: key, screen_code: code } });
+      if (typeof toast === 'function') toast('Requirement raised \u2014 the case now cites it');
+      CBTEST.scrReq = null;
+    }
+    await testScrLoad();
+    /* ⚠️ the popup is a second frame on the same data and must not be left showing the old answer */
+    if (CBTEST.popupFor) screenCasesPaint();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not record that.'); }
+}
+
+/**
+ * ── ⭐⭐⭐ THE CASES FOR THE SCREEN YOU ARE STANDING ON ───────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"if the test mode is operational, can we bring this screen into the application itself
+ * so we don't need to switch? … an extra icon called Test Case on each screen — click it, write the
+ * narrative and update there itself, so we can see what test cases are written against that screen and how
+ * many closed."*
+ *
+ * ⭐⭐ AND IT NEEDED NO SECOND SCREEN, WHICH IS THE POINT. The By-screen view already lists a screen's cases
+ * with their verdicts and a box to write another; all that was missing was arriving at the right row. A
+ * separate in-page panel would have been a second place to write a case, a second place to mark one, and a
+ * second set of rules to forget — the fault this whole day has been about.
+ *
+ * ⚠️ It opens the LAB, which is a panel that floats over the screen you are on. So you do not switch: the
+ * screen stays behind it, and its code is still in the corner while you write about it.
+ */
+function testCasesForScreen(code) {
+  try {
+    CBTEST.view = 'scr';
+    try { localStorage.setItem('cb_test_view', 'scr'); } catch (_) {}
+    CBTEST.scrOpen = code || null;
+    if (!CBTEST.on) { testModeSet(true); } else { testPanelOpen(); }
+    if (!CBTEST.scrRes) testScrLoad(); else testPaint();
+  } catch (e) {}
+}
+
+/**
+ * ⭐ HOW MANY, AND HOW MANY HAVE PASSED — the number that goes on the chip. Athi: *"how many closed etc."*
+ * ⚠️ Returns null when the lab has not loaded its cases, so the chip can stay away rather than claim zero:
+ * "0 cases" and "not counted yet" are different facts and only one of them is a finding.
+ */
+function testScreenTally(code) {
+  try {
+    if (!CBTEST.cases || !CBTEST.cases.length) return null;
+    var t = { total: 0, pass: 0, fail: 0 };
+    CBTEST.cases.forEach(function (c) {
+      if (testScrOf(c) !== code) return;
+      t.total++;
+      var l = CBTEST.last[c.case_key];
+      if (l && l.status === 'pass') t.pass++; else if (l && l.status === 'fail') t.fail++;
+    });
+    return t;
+  } catch (_) { return null; }
+}
+
+function testScrOpen(code) {
+  CBTEST.scrOpen = (CBTEST.scrOpen === code) ? null : code;
+  testPaint();
+}
+
+/**
+ * ── ⭐⭐ ONE LIST, TWO FRAMES ───────────────────────────────────────────────────────────────────────────────
+ *
+ * The cases on a screen, with what should happen, a box for what IS happening, and the three outcomes. It is
+ * used by the By-screen table AND by the popup that opens from the screen itself.
+ *
+ * ⚠️⚠️ WRITTEN ONCE ON PURPOSE. A second copy for the popup would be a second place to mark a case and a
+ * second set of rules about what a verdict carries — and the day they drift, the ledger holds two kinds of
+ * truth. The frame differs; the list does not.
+ */
+function testCaseListHTML(code) {
+  var mine = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
+  if (!mine.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
+      + 'No case on this screen yet. Write the first one above.</div>';
+  }
+  return mine.map(function (c) {
+
+    var l = CBTEST.last[c.case_key];
+    /* the written expectation: the 'then' half of the first step, which is where the sweep and the hand-
+       written form both put it */
+    var st0 = (c.steps || [])[0];
+    var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
+    var col = l && l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
+            : l && l.status === 'fail' ? 'var(--disp,#B3261E)' : 'var(--note)';
+    return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;'
+      +   'border-top:1px solid var(--line-2,#efece4)">'
+      + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
+      /**
+       * ── ⭐⭐⭐ WHAT YOU SHOULD SEE, AND WHAT YOU ARE ACTUALLY SEEING ────────────────────────────────────
+       *
+       * Athi, 2026-09-12: *"one more column should be there I guess — what you should see; the 4th one is,
+       * instead, what are you observing?"*
+       *
+       * ⭐⭐ AND THE PAIR BELONGS IN TWO DIFFERENT PLACES, which is the whole reason it was missing. What you
+       * SHOULD see is written once, when the case is written, and never changes — it is the case. What you
+       * ARE seeing is different every run, and belongs to the RESULT. Putting both on the case would make a
+       * case that rewrites itself; putting both on the result would lose the expectation the moment nobody
+       * ran it.
+       *
+       * ⚠️ SO THE EXPECTATION IS PRINTED, NOT EDITABLE, and the observation is a box that starts empty every
+       * time. A tester reads one line and types the other, and the difference between them is the finding.
+       *
+       * ⚠️ The box is `cbt_n_<key>` — the SAME id testMark() already reads in the List. A second field with a
+       * second name would be a second place a note can hide.
+       */
+      + '<span style="flex:1 1 16em;min-width:0">'
+      +   '<div style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</div>'
+      +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '
+        + testEsc(exp) + '</div>' : '')
+      +   '<input id="cbt_n_' + testEsc(c.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
+      +     'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;'
+      +     'padding:3px 6px;border:1px solid var(--line,#e7e3d8);border-radius:6px;'
+      +     'background:var(--card,#fff)">'
+      + '</span>'
+      + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
+      +   (l ? testEsc(String(l.status).toUpperCase()) : 'not run') + '</span>'
+      /* ⚠ testMarkBtn wears class="btn", which the List lays out as a full-width block. Dropped into a flex
+         row it stretched to the whole width and the four verdicts stacked like paragraphs. They are boxed in
+         a track of their own rather than restyled: the List is where that class belongs and it is right there. */
+      + '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">'
+      /**
+       * ⭐⭐ THE THREE OUTCOMES, AND THEY ARE HIS: *"if the result is the same it is pass, else it is an
+       * incident, if something further to be done then it is the requirement."*
+       *
+       * ⚠️ SO "FAIL" IS NOT A BUTTON HERE. A mismatch is not a verdict to be filed and forgotten — it is an
+       * INCIDENT, with a severity and a clock and somebody waiting. Pressing it records the fail AND opens
+       * the incident carrying what you just typed, the screen code and the case, so the report is written
+       * where the finding happened rather than from memory afterwards.
+       *
+       * ⚠️ AND A REQUIREMENT IS NOT A FAILURE. "It works, and it should also do X" must not mark the case
+       * red — that is how a board ends up with failures nobody can reproduce. It raises the requirement and
+       * leaves the verdict alone.
+       *
+       * ⭐ Blocked and Skip are still in the List. They are ledger states, not outcomes of a comparison, and
+       * putting five buttons here would bury the three that answer the question.
+       */
+      + testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
+      + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'inc\')" '
+      +   'style="color:var(--disp);background:var(--disp-tint,#fbeceb)">Incident</button>'
+      + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'req\')" '
+      +   'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>'
+      + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+/* the table frame: the same list, inside a row that spans the columns */
+function testScrCasesHTML(x) {
+  return '<tr><td colspan="9" style="padding:2px 6px 10px 0;background:var(--neutral-tint,#f7f5ef)">'
+    + testCaseListHTML(x.code) + '</td></tr>';
+}
+
+/**
+ * ── ⭐⭐⭐ THE POPUP, SO NOBODY HAS TO GO ANYWHERE ────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"we bring it as a popup, so a person need not switch or see anywhere else to move."*
+ *
+ * ⚠️ THE LAB PANEL WAS THE WRONG ANSWER AND HE SAID SO IMMEDIATELY. Opening the whole board — its filters,
+ * its tallies, every area — to read four cases about the screen behind it is a context switch wearing a
+ * floating panel. This asks one question and shows one answer.
+ *
+ * ⭐ It is a `modal()`, so it gets a POP code like every other dialog in the product, is movable, and closes
+ * on Escape or the backdrop — none of which had to be built.
+ *
+ * ⚠️ THE BOARD MAY NOT BE LOADED, because a person can be on a screen having never opened the lab. It says
+ * "reading the board" and then draws, rather than showing an empty list that means "none written" to every
+ * reader who sees it.
+ */
+async function screenCasesPopup(code, name) {
+  if (typeof modal !== 'function') return;
+  var head = function (body) {
+    return '<div class="mhd"><div class="t">\ud83e\uddea Test cases \u00b7 ' + testEsc(code)
+      + ' ' + testEsc(name || '') + '</div></div><div class="mbody" style="padding:12px 14px">'
+      + body + '</div>';
+  };
+  modal(head('<div style="color:var(--note);font-size:var(--fs-2)">reading the board\u2026</div>'), true);
+  try {
+    if (!CBTEST.cases || !CBTEST.cases.length) await testLoad();
+  } catch (_) {}
+  CBTEST.writeFor = { code: code, name: name };
+  CBTEST.popupFor = code;
+  screenCasesPaint();
+}
+
+/* repainted in place after every verdict, so the popup shows what was just recorded */
+function screenCasesPaint() {
+  var code = CBTEST.popupFor;
+  if (!code) return;
+  var host = document.querySelector('#modalhost .modal .mbody');
+  if (!host) { CBTEST.popupFor = null; return; }
+  var t = testScreenTally(code) || { total: 0, pass: 0, fail: 0 };
+  /**
+   * ── ⭐⭐ THE SCREEN'S OWN REPORT, IN THE POPUP ────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-12: *"here we can see it as a report?"*
+   *
+   * ⭐ Everything ever said about this one screen, on one line: what it is for, how many cases exist, how
+   * they went, and what testing PRODUCED — the incidents recorded on it and the requirements raised from it.
+   * That is the chain the register was built for, read from the screen it is about.
+   *
+   * ⚠️ The incident and requirement counts are only shown once they have been READ. Printing 0 before the
+   * call returns says "none" about a screen that may have three, and a zero nobody can distinguish from an
+   * unknown is worse than a blank.
+   */
+  var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; }).length;
+  var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; }).length;
+  var known = !!(CBTEST.scrInc && CBTEST.scrReq);
+  var purpose = (((window.CBSCREENS && window.CBSCREENS.rows) || [])
+    .filter(function (r) { return r.code === code; })[0] || {}).screen || '';
+  host.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:0 0 8px;'
+    +   'padding-bottom:7px;border-bottom:1px solid var(--line,#e7e3d8)">'
+    +   '<b>' + t.total + '</b> case(s) written \u00b7 <b>' + t.pass + '</b> passed \u00b7 <b>' + t.fail
+    +   '</b> failed'
+    +   (known ? ' \u00b7 <b>' + inc + '</b> incident(s) \u00b7 <b>' + req + '</b> requirement(s)' : '')
+    +   (t.total ? '' : ' \u2014 nothing has been written for this screen yet')
+    + '</div>'
+    + testCaseFormHTML()
+    + testCaseListHTML(code);
+  /* ⚠️ read once, in the background: the popup must open now and gain the two counts a beat later, not
+     wait on two calls before it shows anything. */
+  if (!known && !CBTEST._popCounts) {
+    CBTEST._popCounts = 1;
+    testScrLoad().then(function () { CBTEST._popCounts = 0; if (CBTEST.popupFor) screenCasesPaint(); })
+      .catch(function () { CBTEST._popCounts = 0; });
+  }
 }
 
 function testViewToggleHTML() {
