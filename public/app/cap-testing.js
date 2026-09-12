@@ -77,15 +77,51 @@ function testUuid() {
  * panel away and leaves the run where it is, so coming back later continues the same sitting rather than
  * starting a new one.
  */
+/**
+ * ── ⭐⭐⭐ TEST MODE AND THE TEST LAB ARE TWO DIFFERENT THINGS ────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"let the test lab be a separate icon and test mode be a separate icon, like a toggle."*
+ *
+ * ⚠️ THEY WERE ONE BUTTON AND THAT CONFLATED TWO JOBS. Turning the mode on threw the whole board open over
+ * the screen, so a tester who only wanted the Test chip on each screen got the lab as well — and closing
+ * the lab turned the mode off, taking the chips with it. Neither is what either control is for.
+ *
+ *   TEST MODE   a state: every screen shows a Test chip, and can be documented where it stands
+ *   TEST LAB    a place: the whole board, its filters and its tallies, in a panel
+ *
+ * ⭐ Mode no longer opens the panel. Turning mode OFF still closes it, because the lab is testing furniture
+ * and mode off means there is no tester here.
+ */
 function testModeSet(on) {
   CBTEST.on = !!on;
   try { localStorage.setItem('cb_testmode', CBTEST.on ? '1' : ''); } catch (_) {}
-  if (CBTEST.on) {
-    testPanelOpen();
-    /* ⭐ the first tick explains itself. After that it never asks again — the ⓘ is there for when it is wanted. */
-    try { testGuide(false); } catch (_) {}
-  } else { testPanelClose(); }
+  if (!CBTEST.on) testPanelClose();
+  /**
+   * ⚠️⚠️ MODE ON HAS TO READ THE BOARD, and splitting it from the lab is what broke this. Opening the panel
+   * used to load the cases as a side effect; with the panel gone the chip had nothing to count, so it hid
+   * itself — test mode on, and not one screen showed a Test chip.
+   * ⭐ Quietly, and only once: the chip appears a beat later rather than the mode appearing to do nothing.
+   */
+  if (CBTEST.on && !(CBTEST.cases || []).length && !CBTEST._booting) {
+    CBTEST._booting = 1;
+    if (typeof testLoad === 'function') {
+      testLoad().then(function () {
+        CBTEST._booting = 0;
+        if (typeof renderApp === 'function') renderApp();
+      }).catch(function () { CBTEST._booting = 0; });
+    }
+  }
   if (typeof renderApp === 'function') renderApp();
+}
+
+/* the lab: a place you open and close, without touching whether a tester is here */
+function testLabOpen() {
+  if (!CBTEST.on) testModeSet(true);        /* the lab makes no sense with the chips off */
+  testPanelOpen();
+  try { testGuide(false); } catch (_) {}
+}
+function testLabToggle() {
+  if (document.getElementById('cbtesthost')) testPanelClose(); else testLabOpen();
 }
 /**
  * ── ⭐⭐⭐ THE DOOR IS THE SCREEN CODE ITSELF ──────────────────────────────────────────────────────────────
@@ -108,7 +144,7 @@ function incidentHere() {
     CBTEST.incForm = true;
     /* ⚠️ opening the panel is what LOADS the board — setting the view alone would show an empty list and
        teach the person that recording an incident does not work. */
-    if (!CBTEST.on) { testModeSet(true); } else { testPanelOpen(); }
+    testLabOpen();
     if (!CBTEST.incs) testIncLoad(); else testPaint();
     /* the box, not the top of the panel: they clicked to write something */
     setTimeout(function () {
@@ -766,7 +802,9 @@ function testPaint() {
     +     'onclick="testPopOut()" style="' + ico + '">↗</button>'
     /* ⭐ minimise sits WITH close, at the right, and is redrawn on every paint like everything else here */
     +   '<button title="Minimise" onclick="testMinimise()" style="' + ico + '">\u2013</button>'
-    +   '<button title="Close" onclick="testModeSet(false)" style="' + ico + '">\u2715</button>'
+    /* ⚠️ CLOSES THE PANEL, NOT THE MODE. Closing the lab used to turn test mode off, so the Test chips
+   vanished from every screen because somebody put the board away. */
+    +   '<button title="Close the lab" onclick="testPanelClose()" style="' + ico + '">\u2715</button>'
     + '</div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
     /* ⭐ FIRST, because "what kind of test" is the first question anybody asks of this list */
@@ -1909,60 +1947,120 @@ function testCaseFor(code, name) {
   testPaint();
   setTimeout(function () { try { document.getElementById("wcTitle").focus(); } catch (_) {} }, 120);
 }
-function testCaseCancel() { CBTEST.writeFor = null; testPaint(); }
+
+/**
+ * ── ⭐⭐⭐ ALL FOUR PARTS AND THE OUTCOME, IN ONE PLACE ───────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"the entire four column input screen — pass, incident, requirement — details to be
+ * gathered then and there."*
+ *
+ * ⚠️ IT WAS SPLIT ACROSS TWO STEPS AND THAT IS TWO VISITS. You wrote the case, then found it in the list,
+ * then typed what you saw, then pressed an outcome. A person standing on a broken screen with the evidence
+ * in front of them will not do four things; they will do one, or none.
+ *
+ *   1 requirement   what must be true      \u2500 the case, written once
+ *   2 operation     what you do            \u2500 the case
+ *   3 expected      what should happen     \u2500 the case
+ *   4 observed      what you are seeing    \u2500 this run
+ *
+ * ⭐ One press does both: the case is written AND the outcome recorded. Pass records a pass. Incident records
+ * the fail and raises the incident. Requirement raises the requirement and leaves the verdict alone, because
+ * "it works and should also do X" is not a failure.
+ *
+ * ⚠️ SAVE IS STILL THERE, for writing a case you intend to run later. Forcing a verdict at the moment of
+ * writing would make everybody press Pass to get out of the form.
+ */
+/**
+ * ⭐ THE CONTROLS ON ONE SCREEN, from the register. A control is keyed by the screen it belongs to and the
+ * words on it — "Rail › Task • Close it" — so the ones for a screen are the ones whose path names it.
+ * ⚠️ Matched on the screen's own PATH, not its name: two groups can hold a screen with the same words on it,
+ * and matching by name alone would offer a tester the other screen's buttons.
+ */
+function testCtlOptions(code) {
+  try {
+    var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
+    var me = rows.filter(function (r) { return r.code === code; })[0];
+    if (!me) return '';
+    var want = me.path + ' \u2022 ';                 /* 'Rail \u203a Task \u2022 ' */
+    return rows.filter(function (r) {
+      return r.group === 'Control' && String(r.path).indexOf('Control \u203a ' + want) === 0;
+    }).map(function (r) {
+      var label = String(r.screen).split(' \u2022 ').pop();
+      return '<option value="' + testEsc(r.code) + '">' + testEsc(r.code) + ' \u00b7 '
+        + testEsc(label) + '</option>';
+    }).join('');
+  } catch (_) { return ''; }
+}
 
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
   if (!w) return '';
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
     + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
-  var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
-    + '<div style="font-size:var(--fs-2);margin-bottom:2px">New test case for '
+    + '<div style="font-size:var(--fs-2);margin-bottom:6px">Document '
     +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b></div>'
-    /* ⭐ what happens when they press it, BEFORE they fill anything in — a person deciding whether to start
-       should not have to press the button to find out what it does. */
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:7px">'
-    +   'The fourth part \u2014 what you actually see \u2014 is recorded each time you run it.</div>'
+    + '<input id="wcTitle" placeholder="1 \u00b7 The requirement — what must be true" style="' + inp + '">'
+    + '<input id="wcDo" placeholder="2 \u00b7 The operation — what you do" style="' + inp + '">'
+    + '<input id="wcSee" placeholder="3 \u00b7 Expected — what should happen" style="' + inp + '">'
+    + '<input id="wcGot" placeholder="4 \u00b7 Observed — what you are actually seeing" style="' + inp + '">'
     /**
-     * ── ⭐⭐⭐ ATHI'S FOUR PARTS, IN HIS WORDS ────────────────────────────────────────────────────────────
+     * ── ⭐⭐ WHICH THING ON THE SCREEN ───────────────────────────────────────────────────────────────────
      *
-     * 2026-09-12: *"what is the requirement, what is the operation, what is expected, 4th one is what are
-     * you seeing — if the result is the same it is pass, else it is an incident, if something further to be
-     * done then it is the requirement."*
+     * Athi, 2026-09-12: *"we can add few more columns like action, icon, chip, so it is precise?"* and then
+     * *"tab"*.
      *
-     * ⭐ THREE OF THE FOUR ARE THE CASE and are written once; the fourth happens on every run and belongs to
-     * the result. That is why the observation box lives on the row and not here.
+     * ⭐⭐ ALL FOUR ARE THE SAME KIND OF THING AND THE REGISTER ALREADY NAMES THEM. An action, an icon, a chip
+     * and a tab are all CONTROLS — 426 of them carry a CTL code, each named by the screen it is on and the
+     * words on it. So this is not four new columns; it is one, and the list comes from the register.
      *
-     * ⚠️ "What must be true" WAS THE REQUIREMENT ALL ALONG and did not say so, which is why he had to ask.
-     * A field whose name does not match the word the team uses makes everybody translate, every time.
+     * ⚠️ FOUR SEPARATE COLUMNS WOULD HAVE BEEN WORSE THAN NONE. A tester would have to decide whether ⊕ is an
+     * icon or an action before they could write anything, and two people would answer differently — so the
+     * same control would be filed two ways and neither search would find both.
+     *
+     * ⚠️ Optional, and it says so: plenty of findings are about the screen as a whole.
      */
-    + '<input id="wcTitle" placeholder="1 · The requirement — what must be true" '
-    +   'style="' + inp + '">'
-    + '<input id="wcDo" placeholder="2 · The operation — what you do" '
-    +   'style="' + inp + '">'
-    + '<input id="wcSee" placeholder="3 · Expected — what should happen" '
-    +   'style="' + inp + '">'
-    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    + '<select id="wcCtl" style="' + inp + ';padding:5px">'
+    +   '<option value="">5 \u00b7 Which control? \u2014 optional, the screen as a whole if you leave it</option>'
+    +   testCtlOptions(w.code)
+    + '</select>'
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px">'
     +   '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
     +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
     +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
-    +   '<button onclick="testCaseSend()" style="' + btn + ';font-weight:700">Save</button>'
+    +   '<button onclick="testCaseSend(\'pass\')" style="' + btn
+    +     ';color:var(--ok-2,#1B7F4B);background:var(--ok-tint,#eaf5ee);font-weight:700">Pass</button>'
+    +   '<button onclick="testCaseSend(\'inc\')" style="' + btn
+    +     ';color:var(--disp,#B3261E);background:var(--disp-tint,#fbeceb)">Incident</button>'
+    +   '<button onclick="testCaseSend(\'req\')" style="' + btn + '">Requirement</button>'
+    +   '<span style="flex:1 1 auto"></span>'
+    +   '<button onclick="testCaseSend(\'\')" style="' + btn + '" title="Write it now, run it later">Save'
+    +     '</button>'
     +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
-
     + '</div></div>';
 }
+function testCaseCancel() { CBTEST.writeFor = null; if (CBTEST.popupFor) screenCasesPaint(); else testPaint(); }
 
-async function testCaseSend() {
+/**
+ * Writes the case and, when an outcome was pressed, records it in the same act.
+ *
+ * ⚠️ THE CASE IS WRITTEN FIRST AND SEPARATELY. If the outcome call fails, the case still exists — the tester
+ * has not lost the sentence they just wrote, and can press the outcome again from the list below.
+ */
+async function testCaseSend(outcome) {
   var w = CBTEST.writeFor; if (!w) return;
   var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
-  var title = g('wcTitle'), doIt = g('wcDo'), see = g('wcSee');
-  /* ⚠️ all three, and refused rather than defaulted: a case with no expectation cannot be failed, and one
-     nobody can fail is a note. The same rule the requirement box already enforces. */
+  var title = g('wcTitle'), doIt = g('wcDo'), see = g('wcSee'), got = g('wcGot');
   if (!title) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
   if (!doIt || !see) { if (typeof toast === 'function') toast('Say what you do, and what you should see.'); return; }
-  /* the next free hand-written number on this screen, read from what is already on the board */
+  /* ⚠️ an incident or a requirement without the observation is a report nobody can act on */
+  if ((outcome === 'inc' || outcome === 'req') && !got) {
+    if (typeof toast === 'function') toast('Say what you are actually seeing \u2014 that is the evidence.');
+    try { document.getElementById('wcGot').focus(); } catch (_) {}
+    return;
+  }
   var n = 1;
   (CBTEST.cases || []).forEach(function (c) {
     var m = String(c.case_key || '').match(new RegExp('^' + w.code + '-H(\\d+)$'));
@@ -1970,7 +2068,6 @@ async function testCaseSend() {
   });
   var key = w.code + '-H' + String(n).padStart(2, '0');
   try {
-    /* ⚠️ `add`: this is one case, not a rebuild of the board — see the note in importCases */
     await api('testCaseWrite', { body: { mode: 'add', cases: [{
       case_key: key,
       module_key: w.code, module_name: w.code + ' \u00b7 ' + w.name,
@@ -1979,28 +2076,32 @@ async function testCaseSend() {
       test_type: 'screen',
       pre: 'Signed in, and on ' + w.code + ' ' + w.name + '.',
       steps: [[doIt, see]],
-      /**
-       * ⚠️ THIS SENT AN EMPTY STRING. `CBTEST.writeMenu` was never set by anything, so the case landed with
-       * no menu, mapped to no screen, and vanished from the very view that wrote it — written correctly,
-       * saved correctly, and invisible.
-       * ⭐ The register knows the path for a code; it is read from there rather than passed around.
-       */
       menu: (((window.CBSCREENS && window.CBSCREENS.rows) || [])
         .filter(function (r) { return r.code === w.code; })[0] || {}).path || '',
-      /* ⭐ and the code itself, so the case maps to its screen even if the menu path is ever reworded */
       screen_code: w.code,
+      /* ⭐ the control this case is about, when it is about one — CTL157, not "the button near the top" */
+      control_code: g('wcCtl') || null,
       note: 'Written by hand on ' + new Date().toISOString().slice(0, 10) + '.',
     }] } });
     CBTEST.writeFor = null;
-    if (typeof toast === 'function') toast('Written \u2014 ' + key);
-    /* ⚠️ re-read rather than push a row locally: the importer decides the key and the version, and a
-       client-side guess at either is a copy that starts drifting on the first edit. */
-    /* ⚠️ FORCED. testLoad() serves the cases it already has, so the case just written did not appear and
-       it looked as though nothing had been saved. */
-    if (typeof testLoad === 'function') await testLoad(true); else location.reload();
-    testPaint();
-    if (CBTEST.popupFor) { CBTEST.writeFor = { code: w.code, name: w.name }; screenCasesPaint(); }
-  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not write it.'); }
+    if (typeof testLoad === 'function') await testLoad(true);
+
+    if (outcome) {
+      /* the observation rides on the same hidden field the list uses, so there is one path to a verdict */
+      var box = document.getElementById('cbt_n_' + key);
+      if (!box) {
+        box = document.createElement('input');
+        box.id = 'cbt_n_' + key; box.type = 'hidden';
+        document.body.appendChild(box);
+      }
+      box.value = got || (outcome === 'pass' ? 'As expected.' : '');
+      if (outcome === 'pass') await testMark(key, 'pass');
+      else await testFromCase(key, outcome);
+      try { if (box.type === 'hidden') box.remove(); } catch (_) {}
+    }
+    if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
+    if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not save it.'); }
 }
 
 function testScrHTML() {
@@ -2242,7 +2343,7 @@ function testCasesForScreen(code) {
     CBTEST.view = 'scr';
     try { localStorage.setItem('cb_test_view', 'scr'); } catch (_) {}
     CBTEST.scrOpen = code || null;
-    if (!CBTEST.on) { testModeSet(true); } else { testPanelOpen(); }
+    testLabOpen();
     if (!CBTEST.scrRes) testScrLoad(); else testPaint();
   } catch (e) {}
 }
@@ -2724,7 +2825,7 @@ function testPopOut() {
    * ⚠️ It CLOSES rather than minimises: minimised, it is still a thing to notice and re-open by accident. The
    * board is now the other window, and the avatar menu re-opens the panel whenever it is wanted back.
    */
-  try { testModeSet(false); } catch (_) {}
+  try { testPanelClose(); } catch (_) {}
 }
 
 function testSize(name) {
