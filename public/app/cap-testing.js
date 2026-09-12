@@ -2932,9 +2932,11 @@ function testBehindOf(code) {
    */
   var here = null;
   try { if (typeof navScreenKey === 'function') here = navScreenKey(); } catch (_) {}
+  var gen = window.CBGEN || 0;
   var routes = [], seen = {};
   (window.CBCALLS || []).forEach(function (c) {
     if (here && c.scr && c.scr !== here) return;
+    if (gen && c.gen && c.gen !== gen) return;   /* this visit, not every visit ever made */
     var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
     if (!m || m[1].toLowerCase() === 'testing') return;
     var f = 'chitbridge-api/routes/' + m[1].toLowerCase() + '.js';
@@ -2991,7 +2993,8 @@ function testBehindOf(code) {
     var w = Object.keys(stemSet).filter(function (x) { return x.length > 4 && k.indexOf(x) >= 0; })[0];
     if (w) named.push({ c: c, why: 'named after ' + w });
   });
-  return { files: files, routes: routes, mods: mods, linked: linked, named: named };
+  return { files: files, routes: routes, mods: mods, linked: linked, named: named,
+           booting: (window.CBGEN || 0) <= 1 };
 }
 
 /** the tab number counts only what is actually linked — a name match must not inflate it */
@@ -3059,6 +3062,12 @@ function testBehindHTML(code) {
   h += lab('Server code it called');
   h += b.routes.length ? b.routes.map(fileRow).join('')
     : quiet('No API call recorded yet. Use the screen behind this panel and it will appear.');
+  /* ⚠ said plainly rather than papered over: on the screen the tester LANDED on, the app’s own start-up
+     calls are mixed in with the screen’s, and no honest rule separates them */
+  if (b.booting && b.routes.length) {
+    h += quiet('⚠️ The app was still starting when this screen loaded, so its sign-in and set-up '
+      + 'calls are counted here too. Go to another screen and come back for a clean reading.');
+  }
 
   /* ── 3 · the modules that code leans on ── */
   if (b.mods.length) {

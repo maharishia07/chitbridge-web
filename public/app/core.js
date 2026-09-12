@@ -607,7 +607,21 @@ async function api(key, {params, query, body}={}){
          */
         var _scr = null;
         try { if (typeof navScreenKey === 'function') _scr = navScreenKey(); } catch (_) {}
+        /**
+         * ⭐⭐ AND WHICH VISIT. The name of the screen is not enough: leave the Catalogue, come back, and both
+         * visits pile into one log. The tester panel then reports the Catalogue as depending on ten routes,
+         * most of them the rail and the notification poll from ten minutes ago.
+         *
+         * ⚠️ VISIT 1 IS THE APP STARTING, and its calls cannot be separated from whatever screen the tester
+         * happened to land on — the boot and the first screen load are genuinely interleaved. The panel says
+         * so rather than quietly attributing sign-in to the Catalogue.
+         *
+         * ⚠ Counted HERE rather than at the router: `UI.nav` is assigned in a dozen places and a hook on one
+         * of them would be silently right most of the time, which is the worst kind of wrong.
+         */
+        if (window.CBNAV !== _scr) { window.CBNAV = _scr; window.CBGEN = (window.CBGEN || 0) + 1; }
         CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid, scr: _scr,
+          gen: window.CBGEN,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
