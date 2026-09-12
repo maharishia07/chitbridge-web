@@ -2306,13 +2306,7 @@ function stampScreenHeading(){
   try{
     var body = document.getElementById('mainbody');
     if (!body || body.querySelector('[data-testid="screen-code"]')) return;
-    /**
-     * ⚠️⚠️ THE SCREEN'S OWN CODE, NOT THE SUB-VIEW'S. This asked `screenInfo()`, which answers with the FINE
-     * screen — so with a chit open, every list heading in the app read "DTL001 📥 Task": the detail's code on
-     * the list's title. Two panes are on screen at once here, and a single answer cannot be right for both.
-     * ⭐ The list heading is the LIST. The detail pane stamps itself, below.
-     */
-    var info = screenInfo(true);
+    var info = screenInfo();
     if (!info) return;
     /* the first thing that reads as this screen's title: the crumb, a section head, or a real heading */
     var head = body.querySelector('.sec, h1, h2, b');
@@ -2350,46 +2344,13 @@ function stampScreenHeading(){
 }
 
 /** the register's row for wherever we are: code, icon and name, or null when this is not a registered screen */
-function screenInfo(navOnly){
+function screenInfo(){
   try {
+    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
     var U = (typeof UI !== 'undefined') ? UI : {};
     var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
-    if (navOnly) return reg[U.nav] || null;
-    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
     return reg[fine] || reg[U.nav] || null;
   } catch (_) { return null; }
-}
-
-/**
- * ── ⭐⭐⭐ THE DETAIL PANE NAMES ITSELF ───────────────────────────────────────────────────────────────────────
- *
- * Athi, 2026-09-12: *"it has to be on the top left corner for the detail page, so even if we define 100s of
- * detail screens each one can have its own name."*
- *
- * ⭐ THE POINT IS THE HUNDREDS. A detail view is not one screen — chit detail, its messages tab, the connector
- * cockpits, and whatever is built next — and each needs to be reportable on its own. So the pane stamps itself
- * from the register using `_fineScreen()`, and a new detail view gets a code by being registered, not by
- * anybody remembering to edit a screen.
- *
- * ⚠️ TOP-LEFT OF THE PANE, not of the app: the detail sits beside a list that has its own code, and putting
- * both in one place would be two codes with nothing saying which is which.
- */
-function stampDetailPane(){
-  try{
-    var pane = document.getElementById('detailpane');
-    if (!pane || pane.querySelector('[data-testid="detail-code"]')) return;
-    var info = screenInfo();
-    if (!info) return;
-    var tag = document.createElement('div');
-    tag.setAttribute('data-testid', 'detail-code');
-    tag.title = tx('The code for this detail screen — quote it instead of describing it');
-    tag.innerHTML = (info.icon ? '<span aria-hidden="true">' + esc(info.icon) + '</span> ' : '')
-      + '<span style="user-select:all;font-weight:700;letter-spacing:.04em">' + esc(info.code) + '</span>'
-      + '<span style="color:var(--grey-2);font-weight:400"> ' + esc(info.label || '') + '</span>';
-    tag.style.cssText = 'font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
-      + 'color:var(--grey-2);padding:4px 12px 0;display:flex;align-items:center;gap:5px';
-    pane.insertBefore(tag, pane.firstChild);
-  }catch(e){}
 }
 
 function screenCodeHTML(){
@@ -4753,7 +4714,7 @@ function _renderApp(){
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>${specCallsBar()}`;
   /* ⭐ stamped after every paint, from the shell — one place, so no screen can arrive without its code */
-  try { stampScreenHeading(); stampDetailPane(); } catch(_) {}
+  try { stampScreenHeading(); } catch(_) {}
   if(!_capLoading){
     /**
      * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
