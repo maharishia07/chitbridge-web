@@ -2260,15 +2260,47 @@ function screenCode(){
     return cbScreenCode(fine) || cbScreenCode(U.nav);
   } catch (_) { return null; }
 }
+/**
+ * ── ⭐⭐⭐ THE TOP-LEFT CORNER, ON EVERY SCREEN ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-12: *"it has to be well before Task — the icon, screen id, and screen name"* · *"the screen id
+ * should be on the top left corner, that is how it has to be everywhere."*
+ *
+ * ⚠️⚠️ AND THE FIRST PLACEMENT WAS WORSE THAN UGLY. It sat in `modeRibbon()` — the BUILD PREVIEW strip, beside
+ * the API URL and the Dev/UAT/Live switches. I described that as "the one strip on every screen", which is true
+ * for a developer and false for the person these codes exist for: an external tester on the live product never
+ * sees that ribbon. Athi could not find it on his own screen, in 11px grey, wedged between a URL and a row of
+ * dev chips — and he was looking for it.
+ *
+ * ⭐ ONE PLACE, THE APP'S OWN TOPBAR, top-left, immediately after the product name. Every screen, every build,
+ * every reader.
+ *
+ * ⚠️ ICON · CODE · NAME, in that order, and all three come from the register — the icon is the rail's own, so a
+ * screen cannot show one icon here and a different one on the menu.
+ * ⚠️ Only the CODE is `user-select:all`: it is the part that gets quoted, and selecting the whole phrase would
+ * put an emoji into somebody's bug report.
+ */
 function screenCodeHTML(){
-  var c = screenCode();
-  if (!c) return '';
-  /* ⚠️ SELECTABLE, because the whole point is to quote it — user-select:all makes one click take the lot.
-     ⭐ Muted and monospaced: it is a reference, not a heading, and it must not compete with the screen. */
-  return '<span title="' + tx('The code for this screen — quote it instead of describing where you are')
-    + '" style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);color:var(--grey-2);'
-    + 'background:var(--neutral-tint);border-radius:5px;padding:1px 6px;user-select:all;margin-inline-start:7px"'
-    + ' data-testid="screen-code">' + esc(c) + '</span>';
+  var info = null;
+  try {
+    var fine = (typeof _fineScreen === 'function') ? _fineScreen() : null;
+    var U = (typeof UI !== 'undefined') ? UI : {};
+    var reg = (window.CBSCREENS && window.CBSCREENS.byNav) || {};
+    info = reg[fine] || reg[U.nav] || null;
+  } catch (_) { info = null; }
+  if (!info) return '';
+  /* ⚠️ the topbar is dark in every theme, so this is light ink on a translucent white, not the muted grey that
+     was invisible on navy in the ribbon it came from */
+  return '<span data-testid="screen-code-wrap" style="display:inline-flex;align-items:center;gap:6px;'
+    + 'margin-inline-start:12px;padding-inline-start:12px;border-inline-start:1px solid rgba(255,255,255,.22)">'
+    +   (info.icon ? '<span aria-hidden="true" style="font-size:var(--fs-3)">' + esc(info.icon) + '</span>' : '')
+    +   '<span data-testid="screen-code" title="' + tx('The code for this screen — quote it instead of describing where you are')
+    +     '" style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-2);color:#e8f1f6;'
+    +     'background:rgba(255,255,255,.14);border-radius:5px;padding:2px 7px;user-select:all;font-weight:600;'
+    +     'letter-spacing:.04em">' + esc(info.code) + '</span>'
+    +   '<span style="font-size:var(--fs-2);color:#cfe0ea;font-weight:600;white-space:nowrap">'
+    +     esc(info.label || '') + '</span>'
+    + '</span>';
 }
 
 function _fineScreen(){ try{ var U=(typeof UI!=="undefined")?UI:{};
@@ -4462,7 +4494,7 @@ function _renderApp(){
   <div class="appwrap ${UI.vp==='mob'?'m':''}"><div class="shell">
     <div class="topbar">
       <button class="ham" data-testid="nav-drawer" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
-      <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
+      <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span>${screenCodeHTML()}</div>
       <button class="info" id="legendbtn" data-testid="icon-legend" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
       <!-- ⭐ 💬 DROPPED — Athi, 2026-08-15: *"if the message is duplicate, we can drop the icon … but messaging
            not required. If we have anything else like RAID, we can keep it as a RAID icon."*
@@ -14915,8 +14947,18 @@ function modeRibbon(){
   const st = STAGES[CFG.STAGE];
   const eff = CFG.API_BASE;                                  // what is ACTUALLY called
   const overridden = !st.mock && eff !== (st.base || '');
-  /* ⭐ the code rides with the viewport switches: the one strip that is on every screen, whatever is below it */
-  const vpsw = SESSION.token ? `${screenCodeHTML()}<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_cmdb')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-cmdb" onclick="cmdbOpenToggle()" title="${tx('The configuration register — every screen, and the code it is known by')}">${tx('🗂️ CMDB')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_testmode')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-test" onclick="testModeToggle()" title="${tx('The test lab — read a case, do it, say what happened, without leaving the screen you are on')}">${tx('🧪 Test lab')}</button></span>` : '';
+  /**
+   * ⚠️⚠️ THE CODE WAS HERE AND THAT WAS A REAL MISTAKE. This is `modeRibbon()` — the BUILD PREVIEW strip, which
+   * carries the API URL and the Dev/UAT/Live switches. I called it "the one strip that is on every screen",
+   * which is true for me and false for the person the codes exist for: an external tester on the live product
+   * does not see this ribbon at all.
+   *
+   * Athi, 2026-09-12, looking straight at it: *"where is the name in this screen, not able to find, i pressed
+   * couple of times refreshed?"* — it was there, in 11px grey, wedged between a URL and a row of dev chips.
+   *
+   * ⭐ It now lives in the TOPBAR, beside the product name, where every user of every build sees it.
+   */
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${UI.spec?'on':''}" data-testid="vp-spec" onclick="toggleSpec()" title="${tx('Overlay the spec on this screen — standards, mechanisms, and the API calls it makes')}">${tx('🧾 Spec')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_cmdb')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-cmdb" onclick="cmdbOpenToggle()" title="${tx('The configuration register — every screen, and the code it is known by')}">${tx('🗂️ CMDB')}</button></span><span class="sw" style="margin-inline-start:7px"><button class="${(function(){try{return localStorage.getItem('cb_testmode')==='1'?'on':''}catch(_){return ''}})()}" data-testid="vp-test" onclick="testModeToggle()" title="${tx('The test lab — read a case, do it, say what happened, without leaving the screen you are on')}">${tx('🧪 Test lab')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;

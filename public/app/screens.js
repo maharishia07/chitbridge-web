@@ -6,119 +6,177 @@ window.CBSCREENS = {
  "byNav": {
   "counter": {
    "code": "CTR001",
-   "path": "Counter › Counter"
+   "path": "Counter › Counter",
+   "icon": "🧾",
+   "label": "Counter"
   },
   "compose": {
    "code": "RAL001",
-   "path": "Rail › Compose"
+   "path": "Rail › Compose",
+   "icon": "✉️",
+   "label": "Compose"
   },
   "task": {
    "code": "RAL002",
-   "path": "Rail › Task"
+   "path": "Rail › Task",
+   "icon": "📥",
+   "label": "Task"
   },
   "order": {
    "code": "RAL003",
-   "path": "Rail › Order"
+   "path": "Rail › Order",
+   "icon": "📤",
+   "label": "Order"
   },
   "drafts": {
    "code": "RAL004",
-   "path": "Rail › Drafts"
+   "path": "Rail › Drafts",
+   "icon": "📝",
+   "label": "Drafts"
   },
   "archive": {
    "code": "RAL005",
-   "path": "Rail › Archive"
+   "path": "Rail › Archive",
+   "icon": "🗄️",
+   "label": "Archive"
   },
   "trash": {
    "code": "RAL006",
-   "path": "Rail › Trash"
+   "path": "Rail › Trash",
+   "icon": "🗑️",
+   "label": "Trash"
   },
   "messages": {
    "code": "WRK001",
-   "path": "Work › Messages"
+   "path": "Work › Messages",
+   "icon": "💬",
+   "label": "Messages"
   },
   "worklist": {
    "code": "WRK002",
-   "path": "Work › Everyone's work"
+   "path": "Work › Everyone's work",
+   "icon": "🧰",
+   "label": "Everyone's work"
   },
   "intake": {
    "code": "WRK003",
-   "path": "Work › Intake"
+   "path": "Work › Intake",
+   "icon": "📨",
+   "label": "Intake"
   },
   "disputes": {
    "code": "WRK004",
-   "path": "Work › Disputes"
+   "path": "Work › Disputes",
+   "icon": "⚖️",
+   "label": "Disputes"
   },
   "catalogue": {
    "code": "CAT001",
-   "path": "Catalogue › Catalogue"
+   "path": "Catalogue › Catalogue",
+   "icon": "🗂️",
+   "label": "Catalogue"
   },
   "selfbill": {
    "code": "CAT002",
-   "path": "Catalogue › Record a sale"
+   "path": "Catalogue › Record a sale",
+   "icon": "🧾",
+   "label": "Record a sale"
   },
   "categories": {
    "code": "CAT003",
-   "path": "Catalogue › Categories"
+   "path": "Catalogue › Categories",
+   "icon": "🏷️",
+   "label": "Categories"
   },
   "catsetup": {
    "code": "CAT004",
-   "path": "Catalogue › Catalogue setup"
+   "path": "Catalogue › Catalogue setup",
+   "icon": "⚙️",
+   "label": "Catalogue setup"
   },
   "customers": {
    "code": "BUS001",
-   "path": "Business › Customers"
+   "path": "Business › Customers",
+   "icon": "🛍️",
+   "label": "Customers"
   },
   "suppliers": {
    "code": "BUS002",
-   "path": "Business › Suppliers"
+   "path": "Business › Suppliers",
+   "icon": "🏭",
+   "label": "Suppliers"
   },
   "match": {
    "code": "BUS003",
-   "path": "Business › Match"
+   "path": "Business › Match",
+   "icon": "⚖️",
+   "label": "Match"
   },
   "network": {
    "code": "BUS004",
-   "path": "Business › Network"
+   "path": "Business › Network",
+   "icon": "🔗",
+   "label": "Network"
   },
   "coassists": {
    "code": "BUS005",
-   "path": "Business › Co-assists"
+   "path": "Business › Co-assists",
+   "icon": "🧑‍🤝‍🧑",
+   "label": "Co-assists"
   },
   "mis": {
    "code": "INS001",
-   "path": "Insight › MIS"
+   "path": "Insight › MIS",
+   "icon": "📊",
+   "label": "MIS"
   },
   "raida": {
    "code": "INS002",
-   "path": "Insight › Register"
+   "path": "Insight › Register",
+   "icon": "📋",
+   "label": "Register"
   },
   "traceability": {
    "code": "INS003",
-   "path": "Insight › Traceability"
+   "path": "Insight › Traceability",
+   "icon": "🧭",
+   "label": "Traceability"
   },
   "readiness": {
    "code": "INS004",
-   "path": "Insight › Trade ready"
+   "path": "Insight › Trade ready",
+   "icon": "🛡️",
+   "label": "Trade ready"
   },
   "chit-detail": {
    "code": "DTL001",
-   "path": "Detail › Chit detail"
+   "path": "Detail › Chit detail",
+   "icon": "📄",
+   "label": "Chit detail"
   },
   "chit-messages": {
    "code": "DTL002",
-   "path": "Detail › Chit messages"
+   "path": "Detail › Chit messages",
+   "icon": "💬",
+   "label": "Chit messages"
   },
   "connector-erp": {
    "code": "DTL003",
-   "path": "Detail › Connector cockpit (ERP)"
+   "path": "Detail › Connector cockpit (ERP)",
+   "icon": "🔌",
+   "label": "Connector cockpit (ERP)"
   },
   "connector-iot": {
    "code": "DTL004",
-   "path": "Detail › Connector cockpit (IoT)"
+   "path": "Detail › Connector cockpit (IoT)",
+   "icon": "📡",
+   "label": "Connector cockpit (IoT)"
   },
   "coassist-actor": {
    "code": "DTL005",
-   "path": "Detail › Co-assist cockpit"
+   "path": "Detail › Co-assist cockpit",
+   "icon": "👤",
+   "label": "Co-assist cockpit"
   }
  },
  "byPath": {
