@@ -401,6 +401,12 @@ function testKindTotal() {
   return CBTEST.cases.filter(function (c) { return !CBTEST.kind || c.test_type === CBTEST.kind; }).length;
 }
 
+/**
+ * ⭐ ONE DECLARATION OF THE CASE ROW'S TRACKS. The header and the rows both read it, so they cannot disagree —
+ * a header that drifts from its columns is worse than no header, because the reader trusts it.
+ */
+var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
+
 function testPaint() {
   var body = document.getElementById('cbtestbody');
   var head = document.getElementById('cbtesthead');
@@ -717,6 +723,26 @@ function testPaint() {
           + '</span></div>';
       }
       if (!open) return;
+
+      /**
+       * ── ⭐ THE COLUMN HEADER, AND IT HAS TO BE THE SAME GRID ──────────────────────────────────────────────
+       *
+       * Athi, 2026-09-12: *"including column header, the report is nice — here we need to have the same
+       * thing."*
+       *
+       * ⚠️ THE ALIGNMENT IS THE WHOLE POINT, so the header is built from the SAME grid-template as the rows
+       * and cannot drift from them. Two hand-tuned widths would agree today and separate the first time either
+       * changed — which is how the Report's case rows ended up sitting under the parent table's headings.
+       *
+       * ⚠️ The 13px inset is not arbitrary: each row is a CARD with a 1px border and a 3px status stripe, then
+       * 9px of padding. The header is not a card, so it has to add back what the card's edges contribute or it
+       * sits three pixels to the left of every column it names.
+       */
+      h += '<div style="display:grid;grid-template-columns:' + TEST_ROW_COLS + ';gap:7px;align-items:baseline;'
+        + 'padding:2px 9px 4px 13px;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;'
+        + 'color:var(--grey-2,#545A61);font-weight:700">'
+        + '<span>Case</span><span>What it proves</span><span>Kind</span><span>Status</span></div>';
+
       list.forEach(function (c) {
       var l = CBTEST.last[c.case_key];
       var col = l ? STAT[l.status] : null;
@@ -750,7 +776,7 @@ function testPaint() {
          * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
          */
         +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:grid;'
-        +    'grid-template-columns:minmax(0,11em) minmax(0,1fr) 5.5em auto;gap:7px;align-items:baseline;'
+        +    'grid-template-columns:' + TEST_ROW_COLS + ';gap:7px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
         +    '<span title="' + testEsc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
         +      'font-size:var(--fs-1);font-weight:700;'
