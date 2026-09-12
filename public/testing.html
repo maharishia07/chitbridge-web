@@ -212,7 +212,12 @@
    */
   .chead .ttl{ min-width:0; font-weight:600; line-height:1.35; font-size:var(--fs-2);
         overflow-wrap:anywhere; }
-  .chead .ttl.noclaim{ font-weight:400; font-style:italic; color:var(--grey-2); }
+  .chead .ttl.noclaim{ font-weight:400; color:var(--grey-2); }
+  /* ⭐ the action under the finding — a line to copy, not a thing to go and look up */
+  .chead .ttl.noclaim b{ font-family:ui-monospace,Menlo,monospace; font-weight:600; color:var(--ink-2); }
+  .fixit{ display:block; font-size:var(--fs-1); color:var(--grey); margin-top:2px; }
+  .fixit code{ font-family:ui-monospace,Menlo,monospace; background:var(--neutral-tint);
+        border-radius:4px; padding:1px 5px; }
   /* ⭐ the verdict lives in the badge track now, so it is in the same place on every row */
   .chead .badges{ display:flex; gap:6px; align-items:center; white-space:nowrap; }
   .chead .last{ font-size:var(--fs-1); font-weight:700; }
@@ -499,6 +504,11 @@
   .rep .tag.a{ background:#f3e2bd; color:var(--warn); }
   .rep .kv{ display:grid; grid-template-columns:auto 1fr; gap:5px 16px; font-size:var(--fs-2); }
   .rep .kv dt{ color:var(--grey-2); white-space:nowrap; }
+  /* ⭐ each block says what its rows ARE — a feature and a folder are not the same kind of row */
+  .rep h4.repgrp{ font-size:var(--fs-2); margin:14px 0 6px; font-weight:700; color:var(--ink); }
+  .rep h4.repgrp b{ font-family:ui-monospace,Menlo,monospace; color:var(--grey-2); font-weight:700; }
+  .rep h4.repgrp span{ display:block; font-weight:400; font-size:var(--fs-1); color:var(--grey-2);
+        margin-top:2px; max-width:var(--prose); }
   /* ⭐ our word → the standard's, one mapping per line */
   ul.names{ margin:8px 0 0; padding-inline-start:20px; font-size:var(--fs-1); color:var(--grey-2);
         line-height:1.8; max-width:var(--prose); }
@@ -1947,19 +1957,55 @@ async function paintReport(){
          * table has 1400px and six of its seven columns are single digits: the description was wrapping in a
          * narrow stack beside acres of white. A stacked line is a space decision, and the space changed.
          */
-        + '<div class="scroll"><table class="sum" style="margin:0"><tr><th>Feature</th><th>What it covers</th>'
-        + '<th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
-        + '<th class="num">Blocked</th><th class="num">Never run</th></tr>'
-        + (b.by_feature || []).map(function (f) {
-            return '<tr><td><span class="area">' + esc(f.module_key) + '</span></td>'
-              + '<td>' + (f.module_name ? esc(f.module_name) : '<span class="dim">not stated</span>') + '</td>'
-              + '<td class="num">' + f.total + '</td>'
-              + '<td class="num big">' + f.passed + '</td>'
-              + '<td class="num' + (Number(f.failed) ? ' bad' : ' dim') + '">' + f.failed + '</td>'
-              + '<td class="num' + (Number(f.blocked) ? ' warnn' : ' dim') + '">' + f.blocked + '</td>'
-              + '<td class="num' + (Number(f.untested) ? ' warnn' : ' dim') + '">' + f.untested
-              + (Number(f.high_untested) ? ' \u26a0' : '') + '</td></tr>'; }).join('')
-        + '</table></div>';
+        /**
+         * ── ⚠️⚠️ ONE COLUMN, TWO COMPLETELY DIFFERENT KINDS OF ROW ────────────────────────────────────────
+         *
+         * Athi, 2026-09-12: *"under API guards, /test and /tests are there — what is the difference? If there
+         * are significant differences then it has to be mentioned, else bring it together."*
+         *
+         * ⚠️ He found it by spotting a stray directory, and the stray was the smaller half. This table mixed
+         * 23 AUTHORED FEATURE CODES (ADO, CFD, CTR — 150 cases, grouped by what the PRODUCT DOES) with 5
+         * DIRECTORY PATHS (chitbridge-api/tests — 470 cases, grouped by WHERE THE FILES LIVE). Sorted
+         * together they interleave, so `chitbridge-api/tests` sat between CFD and CTR as though it were the
+         * same sort of thing. One is a feature; the other is a folder.
+         *
+         * ⭐ TWO BLOCKS, each headed with what its rows ARE — the same distinction the Summary tab already
+         * draws between its layer tree and its folder tree, for the same reason: a grouping by INTENTION and
+         * a grouping by LOCATION answer different questions and must not read as one list.
+         *
+         * ⭐ It also puts the never-run where it belongs. Nearly all of the 430 are in the folder block, which
+         * is a fact about automated files nobody has run — not about features nobody has tested.
+         */
+        + (function (rows) {
+            var row = function (f) {
+              return '<tr><td><span class="area">' + esc(f.module_key) + '</span></td>'
+                + '<td>' + (f.module_name ? esc(f.module_name) : '<span class="dim">not stated</span>') + '</td>'
+                + '<td class="num">' + f.total + '</td>'
+                + '<td class="num big">' + f.passed + '</td>'
+                + '<td class="num' + (Number(f.failed) ? ' bad' : ' dim') + '">' + f.failed + '</td>'
+                + '<td class="num' + (Number(f.blocked) ? ' warnn' : ' dim') + '">' + f.blocked + '</td>'
+                + '<td class="num' + (Number(f.untested) ? ' warnn' : ' dim') + '">' + f.untested
+                + (Number(f.high_untested) ? ' \u26a0' : '') + '</td></tr>';
+            };
+            var block = function (head, title, why, list) {
+              if (!list.length) return '';
+              var n = list.reduce(function (t, f) { return t + Number(f.total || 0); }, 0);
+              return '<h4 class="repgrp">' + esc(title) + ' <b>' + n + '</b>'
+                + '<span>' + esc(why) + '</span></h4>'
+                + '<div class="scroll"><table class="sum" style="margin:0 0 16px"><tr><th>' + esc(head)
+                + '</th><th>What it covers</th>'
+                + '<th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
+                + '<th class="num">Blocked</th><th class="num">Never run</th></tr>'
+                + list.map(row).join('') + '</table></div>';
+            };
+            var isDir = function (f) { return String(f.module_key).indexOf('/') > -1; };
+            return block('Feature', 'By feature',
+                     'what the product does \u2014 written by a person, walked by a person',
+                     rows.filter(function (f) { return !isDir(f); }))
+                 + block('Folder', 'By folder',
+                     'the automated files, grouped where they live \u2014 a place, not a feature',
+                     rows.filter(isDir));
+          })(b.by_feature || []);
     } else if (s.id === '3' || s.id === '4') {
       var items = b.items || [];
       inner = items.length
@@ -3307,10 +3353,31 @@ function caseHTML(c){
   var h = '<article class="case ' + st + '" id="c_' + esc(c.case_key) + '">'
     + '<div class="chead" onclick="toggle(\'' + esc(c.case_key) + '\')">'
     +   '<span class="key" title="' + esc(c.case_key) + '">' + esc(shortKey(c.case_key)) + '</span>'
-    /* ⚠️ 244 automated files state no claim. Echoing the filename back as a title fills the column with
-       nothing and hides the fact; saying so is a finding about the test. */
+    /**
+     * ── ⚠️⚠️ "NO CLAIM WRITTEN IN THE FILE" NAMED NEITHER THE FILE NOR THE CLAIM ──────────────────────────
+     *
+     * Athi, 2026-09-12: *"each of the cases says no claim written in the file — which file, what claim is not
+     * written? Can we refine it?"*
+     *
+     * ⚠️ IT WAS A COMPLAINT, NOT A FINDING. Echoing the filename back as a title would have been worse — it
+     * fills the column with nothing and hides the gap — so saying so was right; saying only so was not. A
+     * reader cannot act on it: the key column is shortened, so the file is not even fully visible on the row.
+     *
+     * ⭐ It names the file and the fix. The convention is one line at the top of the file — this shows the
+     * exact line that would satisfy it, for that file, so the action is a copy rather than a lookup.
+     */
     +   '<span class="ttl' + (c.automated && !c.claim ? ' noclaim' : '') + '">'
-    +     esc(c.automated && !c.claim ? 'no claim written in the file' : (c.title || '')) + '</span>'
+    +     (c.automated && !c.claim
+            ? (function (k) {
+                var base = String(k).split('/').pop();
+                return '<span title="' + esc('The board reads what a test proves from its own heading. '
+                    + base + ' has none, so this column has nothing to show. Add a first line: '
+                    + base + ' \u2014 what it proves.')
+                  + '">\u26a0 no heading in <b>' + esc(base) + '</b>'
+                  + '<span class="fixit">add a first line: <code>' + esc(base)
+                  + ' \u2014 what it proves</code></span></span>';
+              })(c.case_key)
+            : esc(c.title || '')) + '</span>'
     /**
      * ── ⚠️⚠️ THREE FACTS IN ONE UNLABELLED TRACK ──────────────────────────────────────────────────────────
      *
