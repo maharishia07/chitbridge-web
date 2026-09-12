@@ -2538,6 +2538,8 @@ function codeScreenKey(){
      * design 2 remembers how you last read a chit, and naming a screen is no reason to change what the app
      * remembers.
      */
+    /* ⚠️ ahead of the design-2 test and of _fineScreen(), both of which answer 'chit-detail' for this tab */
+    if (U.detail && U.dtab === 'input') return 'chit-input';
     if (U.chit2 && U.sel && U.chit2 === U.sel) return 'chit2-detail';
     if (U.nav === 'catalogue' && (U.prodMode === 'new' || U.prodMode === 'edit' || U.prodSel)) return 'catalogue-product';
     /* ⚠️ a list and the record open beside it are TWO screens on one page, and one code cannot be right

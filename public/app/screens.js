@@ -212,6 +212,12 @@ window.CBSCREENS = {
    "path": "Business › Required certificates",
    "icon": "📋",
    "label": "Required certificates"
+  },
+  "chit-input": {
+   "code": "DTL007",
+   "path": "Detail › Chit input",
+   "icon": "📩",
+   "label": "Chit input"
   }
  },
  "byPath": {
@@ -782,7 +788,8 @@ window.CBSCREENS = {
   "Business › Supplier detail": "BUS009",
   "Business › Customer detail": "BUS010",
   "Business › Find a product": "BUS011",
-  "Business › Required certificates": "BUS012"
+  "Business › Required certificates": "BUS012",
+  "Detail › Chit input": "DTL007"
  },
  "rows": [
   {
@@ -5894,6 +5901,15 @@ window.CBSCREENS = {
    "group": "Business",
    "screen": "Required certificates",
    "nav": "supplier-certs",
+   "cases": 0,
+   "since": "2026-09-12"
+  },
+  {
+   "code": "DTL007",
+   "path": "Detail › Chit input",
+   "group": "Detail",
+   "screen": "Chit input",
+   "nav": "chit-input",
    "cases": 0,
    "since": "2026-09-12"
   }
