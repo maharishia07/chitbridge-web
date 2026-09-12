@@ -2802,6 +2802,7 @@ function screenCasesFollow() {
     if (testFormDirty()) return;
     CBTEST.popupFor = t.code;
     CBTEST.writeFor = { code: t.code, name: t.name };
+    testAreaOpen(!!(testScreenTally(t.code) || {}).total);
     screenCasesPaint();
   } catch (e) {}
 }
@@ -2839,6 +2840,8 @@ async function screenCasesPopup(code, name) {
   } catch (_) {}
   CBTEST.popupFor = code;
   CBTEST.writeFor = { code: code, name: name };
+  /* ⭐ the one place the default belongs: opening it */
+  testAreaOpen(!!(testScreenTally(code) || {}).total);
   screenCasesPaint();
   /* ⚠️ the board may not be read yet — a person can be on a screen having never opened the lab */
   try {
@@ -2870,7 +2873,23 @@ function testAreaGet() {
 }
 function testArea(v) {
   try { localStorage.setItem('cb_case_area', v); } catch (_) {}
+  CBTEST.caseArea = v;
   screenCasesPaint();
+}
+
+/**
+ * ⚠️⚠️ THE DEFAULT IS DECIDED ONCE, WHEN THE PANEL OPENS — not re-derived on every repaint.
+ *
+ * Caught by the Playwright spec: write the first case on a screen and the form vanishes. `t.total` goes from
+ * 0 to 1, so a default of "cases when there are any" flipped the tab out from under the tester at the exact
+ * moment they were writing. That is the disappearing-form fault a third time, in a third disguise.
+ *
+ * ⭐ Opening the panel is a decision point; a repaint is not. A tester who is on Write stays on Write until
+ * they say otherwise.
+ */
+function testAreaOpen(hasCases) {
+  var saved = testAreaGet();
+  CBTEST.caseArea = saved || (hasCases ? 'cases' : 'write');
 }
 
 /* repainted in place after every verdict, so the panel shows what was just recorded */
@@ -2930,7 +2949,7 @@ function screenCasesPaint() {
   }
 
   /* ── the three areas ── */
-  var area = testAreaGet() || (t.total ? 'cases' : 'write');
+  var area = CBTEST.caseArea || testAreaGet() || (t.total ? 'cases' : 'write');
   if (area === 'raised' && !(inc + req)) area = t.total ? 'cases' : 'write';
   var tab = 'font:inherit;font-size:var(--fs-1);padding:4px 11px;border:0;cursor:pointer;';
   var on = 'background:var(--grey-2,#545A61);color:#fff';

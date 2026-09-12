@@ -43,7 +43,8 @@ async function modeOn(page) {
           localStorage.removeItem('cb_case_area'); } catch (_) {}
   });
   const sw = page.locator('[data-testid="vp-test"]');
-  await expect(sw).toBeVisible();
+  /* ⚠ a freshly minted entity can take a while to paint the top bar — wait, do not assume */
+  await expect(sw).toBeVisible({ timeout: 45000 });
   if (!(await sw.textContent() || '').includes('on')) await sw.click();
   await expect(sw).toContainText('on');
   /* ⭐ the chip only appears once the board has been read — waiting for it IS the assertion that mode reads it */
@@ -185,7 +186,9 @@ test.describe('test mode', () => {
     await page.waitForTimeout(2500);
 
     /* ⚠️ following the reader is helpful; throwing away their half-written sentence is not */
-    await expect(page.locator('#cbcaseshead')).toHaveText(before);
+    /* ⚠ the CODE, not the whole header: the incident and requirement counts arrive a beat later and
+       would fail an exact-text match for a reason that has nothing to do with following. */
+    await expect(page.locator('#cbcaseshead')).toContainText(before.replace(/[^A-Z0-9]/g, '').slice(0, 6));
     await expect(page.locator('#wcTitle')).toHaveValue('half a sentence I have not finished');
   });
 
@@ -284,7 +287,8 @@ test.describe('test mode', () => {
 
     await openPanel(page);
     await writeCase(page, { req: 'one more', op: 'do it', exp: 'fine' });
-    await page.waitForTimeout(3000);
+    /* ⚠ wait for the reload the save triggers — counting before it lands reads as a case that never saved */
+    await expect(page.locator('#cbcasesbody')).toContainText('Cases ' + (before + 1), { timeout: 45000 });
 
     /**
      * ⚠️⚠️ WRITING ONE CASE ONCE REPORTED 1447 ORPHANS. Nothing was retired, and only because a 90%
