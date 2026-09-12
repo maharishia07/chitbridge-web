@@ -243,6 +243,8 @@
   table.sum tr:last-child td{ border-bottom:0; }
   table.sum td.num, table.sum th.num{ text-align:end; width:1%; white-space:nowrap; }
   table.sum .area{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
+  /* ⭐ the feature key is a code, so it keeps its own narrow track and never wraps */
+  table.sum td .area{ white-space:nowrap; }
   table.sum .sub{ display:block; color:var(--grey-2); font-size:var(--fs-1); font-weight:400; }
   table.sum tr.clickable{ cursor:pointer; }
   table.sum tr.clickable:hover td{ background:var(--blue-tint); }
@@ -1028,9 +1030,13 @@ async function load(){
     }
     /* ⚠️ the summary is derived from the same two reads — refresh it here or it shows yesterday */
     await loadSummary();
-    if (VIEW === 'summary') { paintSummary(); return; }
+    /**
+     * ⚠️⚠️ THIS WAS THE BUG. It read `if (VIEW === 'summary') { paintSummary(); return; }` and otherwise fell
+     * through to paint(), so a load finishing while Athi was on Report drew the Cases pivot on top of it.
+     * ⭐ The filters are still filled first: they belong to the Cases view and must exist before it draws.
+     */
     fillFilters();
-    paint();
+    repaintCurrent();
   } catch (e) {
     document.getElementById('main').innerHTML = '<div class="say"><b>Could not read the board.</b>' + esc(e.message) + '</div>';
   }
@@ -1415,11 +1421,8 @@ function setView(v){
   document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
   document.getElementById('t_rel').className = (v === 'reliability') ? 'on' : '';
   document.getElementById('t_try').className = (v === 'try') ? 'on' : '';
-  if (v === 'summary') paintSummary();
-  else if (v === 'report') paintReport();
-  else if (v === 'reliability') paintReliability();
-  else if (v === 'try') paintTry();
-  else paint();
+  /* ⭐ one dispatch — see repaintCurrent */
+  repaintCurrent();
 }
 
 async function loadSummary(){
@@ -1816,12 +1819,19 @@ async function paintReport(){
         + '<div><b class="bad">' + t.failed + '</b><span>failed</span></div>'
         + '<div><b class="warnn">' + t.blocked + '</b><span>blocked</span></div>'
         + '<div><b class="warnn">' + t.untested + '</b><span>never run</span></div></div>'
-        + '<div class="scroll"><table class="sum" style="margin:0"><tr><th>Feature</th>'
+        /**
+         * ⭐ WHAT IT IS gets its own column. Athi, 2026-09-12: *"under ADO you are providing the context —
+         * possibly you can make it as a column as we have lot of space."*
+         * ⚠️ It was stacked under the key as a sub-line, which is what you do when a column is CRAMPED. This
+         * table has 1400px and six of its seven columns are single digits: the description was wrapping in a
+         * narrow stack beside acres of white. A stacked line is a space decision, and the space changed.
+         */
+        + '<div class="scroll"><table class="sum" style="margin:0"><tr><th>Feature</th><th>What it covers</th>'
         + '<th class="num">Cases</th><th class="num">Passed</th><th class="num">Failed</th>'
         + '<th class="num">Blocked</th><th class="num">Never run</th></tr>'
         + (b.by_feature || []).map(function (f) {
-            return '<tr><td><span class="area">' + esc(f.module_key) + '</span>'
-              + '<span class="sub">' + esc(f.module_name || '') + '</span></td>'
+            return '<tr><td><span class="area">' + esc(f.module_key) + '</span></td>'
+              + '<td>' + (f.module_name ? esc(f.module_name) : '<span class="dim">not stated</span>') + '</td>'
               + '<td class="num">' + f.total + '</td>'
               + '<td class="num big">' + f.passed + '</td>'
               + '<td class="num' + (Number(f.failed) ? ' bad' : ' dim') + '">' + f.failed + '</td>'
@@ -3025,8 +3035,20 @@ function isOpenSection(k, howMany){
  * This was written to stop a fold on Summary from drawing the Cases table over it, and it did — for Summary.
  * Report, Reliability and Try all fell through to the same else, so folding anything on those three still
  * painted Cases on top. The bug was never "summary repaints wrong"; it was "this function knows one tab".
- * ⭐ setView already holds the whole map. This defers to it rather than keeping a second, shorter copy that
- * was wrong the moment a fourth tab existed.
+ * ── ⚠️⚠️⚠️ AND THEN A THIRD TIME, 2026-09-12 ─────────────────────────────────────────────────────────────────
+ *
+ * Athi: *"says report, but showing cases — sometimes it shows report, sometimes cases, it jumps immediately."*
+ *
+ * ⚠️ A RACE, exactly as described. `load()` finishes reading the board asynchronously and then repaints — and
+ * ITS repaint knew only about the summary tab, so on Report, Reliability or Try it drew the CASES pivot over
+ * whatever you were reading. It "jumps immediately" because the load lands a beat after the tab does.
+ *
+ * ⚠️⚠️ AND THE COMMENT THAT STOOD HERE SAID *"setView already holds the whole map, this defers to it"*. It did
+ * not defer. It was a COPY, and there were three: setView, this, and the partial one inside load() that had
+ * been wrong from the start. A comment claiming a duplicate is not a duplicate is worse than the duplicate —
+ * it is the thing that stops the next person looking.
+ *
+ * ⭐ ONE function now. setView and load() both call it.
  */
 function repaintCurrent(){
   if (VIEW === 'summary') paintSummary();
