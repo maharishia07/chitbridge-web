@@ -135,12 +135,6 @@ window.CBSCREENS = {
    "icon": "📊",
    "label": "MIS"
   },
-  "raida": {
-   "code": "INS002",
-   "path": "Insight › Register",
-   "icon": "📋",
-   "label": "Register"
-  },
   "traceability": {
    "code": "INS003",
    "path": "Insight › Traceability",
@@ -218,7 +212,6 @@ window.CBSCREENS = {
   "Business › Network": "BUS004",
   "Business › Co-assists": "BUS005",
   "Insight › MIS": "INS001",
-  "Insight › Register": "INS002",
   "Insight › Traceability": "INS003",
   "Insight › Trade ready": "INS004",
   "Account › Profile": "ACC001",
@@ -951,15 +944,6 @@ window.CBSCREENS = {
    "screen": "MIS",
    "nav": "mis",
    "cases": 62,
-   "since": "2026-09-12"
-  },
-  {
-   "code": "INS002",
-   "path": "Insight › Register",
-   "group": "Insight",
-   "screen": "Register",
-   "nav": "raida",
-   "cases": 1,
    "since": "2026-09-12"
   },
   {
@@ -6280,6 +6264,13 @@ window.CBSCREENS = {
   "cb_wl_line": "PNL005"
  },
  "withdrawn": [
+  {
+   "code": "INS002",
+   "path": "Insight › Register",
+   "since": "2026-09-12",
+   "until": "2026-09-12",
+   "why": "it is a dialog, not a screen"
+  },
   {
    "code": "DTL002",
    "path": "Detail › Chit messages",

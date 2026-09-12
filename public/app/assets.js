@@ -2485,7 +2485,6 @@ window.CBASSETS = {
   "BUS004": "chitbridge-web/public/app/cap-network.js",
   "BUS005": "chitbridge-web/public/app/cap-workforce.js",
   "INS001": "chitbridge-web/public/app/cap-admin.js",
-  "INS002": "chitbridge-web/public/app/cap-raida.js",
   "INS003": "chitbridge-web/public/app/cap-traceability.js",
   "INS004": "chitbridge-web/public/app/cap-readiness.js",
   "ACC001": "chitbridge-web/public/app/cap-admin.js",
