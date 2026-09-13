@@ -2372,9 +2372,26 @@ function testTechHTML() {
       + '</div>';
     return h + '</div>';
   }
+  /**
+   * ⭐ THE TECHNIQUE NAMES ITSELF AND ITS STANDARD. "Here are eight cases" is a suggestion; "boundary value
+   * analysis, ISO/IEC/IEEE 29119-4, says you need eight" is a reason — and it is the sentence a tester can
+   * repeat to somebody who asks why they wrote them.
+   */
+  var NAMED = {
+    bounds: 'Boundary value analysis',
+    classes: 'Equivalence partitioning',
+    states: 'State transition testing',
+    decision: 'Decision table testing',
+    guess: 'Error guessing'
+  };
+  var src = (t.kind === 'guess')
+    ? 'ISO/IEC/IEEE 29119-4 names this technique but cannot supply the list \u2014 it is experience-based, so '
+      + 'these are ours, and every one has broken here at least once.'
+    : 'ISO/IEC/IEEE 29119-4:2021 \u00b7 specification-based test design.';
   h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:6px">'
-    + '<b>' + rows.length + '</b> case(s) this technique says you need. Take them one at a time \u2014 each one '
-    + 'fills the boxes above and you still press Save.</div>';
+    + '<b>' + (NAMED[t.kind] || 'This technique') + '</b> says you need <b>' + rows.length + '</b> case(s). '
+    + 'Take them one at a time \u2014 each fills the boxes above and you still press Save.'
+    + '<span style="display:block;color:var(--note)">' + src + '</span></div>';
   h += rows.map(function (d, i) {
     return '<div style="display:flex;gap:7px;align-items:baseline;padding:3px 0;'
       +   'border-top:1px solid var(--line-2,#efece4)">'
@@ -2950,6 +2967,34 @@ function testCaseOpen(key) {
 }
 
 /** everything this panel knows about one case, which turns out to be a good deal more than it was showing */
+/**
+ * ── ⭐⭐⭐ THE STANDARD, IN THE NARRATIVE ─────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"this tool is awesome, anyone can test and figure out the issues … bring the standard
+ * into narratives."*
+ *
+ * ⚠️⚠️ A CITATION IN A FIELD NOBODY SEES IS NOT A CITATION. The ASVS cases carry `cites` — standard, clause,
+ * chapter, level — and the panel showed none of it, so a tester read "verify that data-specific access is
+ * restricted" as somebody’s opinion. It is not; it is OWASP’s, at a numbered clause, and saying so is the
+ * difference between a checklist and an argument.
+ *
+ * ⭐ AND IT IS WHAT MAKES THE TOOL PORTABLE. Athi: *"if it runs against any platform, that will be really
+ * good."* A case that says only "check the price" means nothing anywhere else. A case that says "ASVS 5.0.0
+ * §8.2.2 · Authorization · level 1" is a case any product can be held to, by anybody who has never met this
+ * one.
+ */
+function testCiteHTML(c) {
+  var q = c && c.cites;
+  if (!q) return '';
+  var bits = [q.standard, q.clause ? '\u00a7' + q.clause : null, q.chapter,
+              q.level ? 'level ' + q.level : null].filter(Boolean);
+  return '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
+    + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
+    + 'Required by <b>' + testEsc(bits.join(' \u00b7 ')) + '</b>'
+    + '<span style="display:block;color:var(--note)">Not our opinion \u2014 a published clause. If the standard '
+    + 'moves, every case still citing this one is exactly the set to look at again.</span></div>';
+}
+
 function testCaseDetailHTML(c) {
   var l = (CBTEST.last || {})[c.case_key];
   var pad = 'padding:2px 0;font-size:var(--fs-1)';
@@ -2972,6 +3017,7 @@ function testCaseDetailHTML(c) {
   h += lab('Priority:', testEsc(c.priority || ''));
   h += lab('Control:', testEsc(c.control_code || ''));
   h += lab('Note:', testEsc(c.note || ''));
+  h += testCiteHTML(c);
 
   /* ⭐ the fourth box, kept with the case whether or not a verdict was ever given */
   if (c.observed) {
