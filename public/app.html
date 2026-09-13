@@ -10256,7 +10256,11 @@ function prodSearchServer(){
 async function loadCatalogue(force){
   /* ⚠️ ONE READ IN FLIGHT. Opening the catalogue fired this twice within 200ms (the render hook and the screen's own
      call — measured 2026-09-05: two /api/products back to back, ~1.9s each). A second caller joins the first. */
-  if (UI._prodReq && !force) return UI._prodReq;   /* 'fresh' (after a write) and true (Setup saves) both bypass */
+  if (UI._prodReq && !force) return UI._prodReq;
+  /* ⚠️ AND THE SAME SEQUENTIAL HOLE MIS HAD. An in-flight latch joins a caller to one still RUNNING; two
+     paints of one arrival are far enough apart that the first has finished. Measured: prodList twice per
+     visit. Four seconds covers the arrival and nothing a person would notice. */
+  if (!force && UI._prodAt && (Date.now() - UI._prodAt) < 4000 && Array.isArray(UI.prods) && UI.prods.length) return;   /* 'fresh' (after a write) and true (Setup saves) both bypass */
   UI._prodReq = _loadCatalogue(force).finally(function(){ UI._prodReq = null; });
   return UI._prodReq;
 }
@@ -10303,6 +10307,7 @@ async function _loadCatalogue(force){
      * Same shape as "500 products but only 12 rows": a number true about a slice, shown as the whole.
      */
     UI.prodCounts = (page && page.status_counts) || null;
+    UI._prodAt = Date.now();
     /**
      * ⚠️ NEVER JSON.stringify A CATALOGUE TO SEE IF IT CHANGED. This ran on every render pass and every twenty-second refresh —
      * twice over ten thousand products, tens of megabytes of string building, on a timer. A signature of ids and stamps answers
@@ -14164,7 +14169,7 @@ async function loadList(silent){
       ? api("rollup",{query:rollupQuery()}).catch(function(){ return null; }) : null;
     const _unreadP = (SESSION.role==="actor" && CFG.MODE!=='demo')
       ? api("unread").catch(function(){ return null; }) : null;
-    if(_rollupP){ try{ const rl=await _rollupP; UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; if(_left()) return; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
+    if(_rollupP){ try{ const rl=await _rollupP; UI._rollupAt=Date.now(); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; if(_left()) return; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
     if(_unreadP){ try{ const u=await _unreadP; const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); if(_left()) return; paintRowsOnly(); }catch(_){} }
   }catch(e){ UI.loading=false; if(!silent && !_left()){ const b=document.getElementById("rows"); if(b)b.innerHTML=scrErr(e, '', 'loadList()'); } }
 }
@@ -15768,8 +15773,17 @@ function setTaskScope(v){ UI.taskScope=v; UI.sel=null; UI.detail=null; UI.select
    someone concludes the list is broken. Both places now scope identically. */
 function rollupQuery(){ const rq={group_by:'state', direction:UI.folder==='order'?'sent':'received'}; if(UI.folder==='task'){ if(SESSION.role==='actor'){ if(UI.sub==='my')rq.assigned_to='me'; else rq.assignment='unassigned'; } else rq.assignment=taskScope(); } return rq; }
 // Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
-async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
-  try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0;
+/**
+ * ⚠️⚠️ TWO CALLERS, ONE ANSWER, TWICE ON EVERY VISIT. loadList fetches the rollup alongside the list, and this
+ * refreshes it on its own — both fire when Task opens, so the same counts are asked for twice, measured by the
+ * speed walk on 2026-09-13.
+ * ⭐ This one exists to refresh counts WITHOUT reloading the list, which is right and worth keeping. It just
+ * must not repeat a read the list load has only just made. Four seconds: long enough to cover one arrival,
+ * short enough that a person pressing something and expecting new counts gets them.
+ */
+async function refreshRollup(force){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
+  if(!force && UI._rollupAt && (Date.now()-UI._rollupAt) < 4000) return;
+  try{ const rl=await api("rollup",{query:rollupQuery()}); UI._rollupAt=Date.now(); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0;
     document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); });
     const _sa=document.getElementById("srchadv"); if(_sa)_sa.innerHTML=advBtnHtml(); }catch(_){ } }
 async function assignChit(id, actorId, pri, reason){
