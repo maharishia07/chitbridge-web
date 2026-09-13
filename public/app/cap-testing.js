@@ -1633,9 +1633,17 @@ var TUI = {
   /** ⭐ ONE selected/unselected pair for both, so a chip and a segment can never disagree about "chosen" */
   on:  'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)',
   off: 'background:var(--card,#fff);color:var(--grey-2,#545A61)',
-  /** the well a chip GROUP sits in, so a row of chips reads as one control and not as five loose ones */
+  /**
+   * the well a chip GROUP sits in, so a row of chips reads as one control and not as five loose ones.
+   * ⚠️ NOT YET USED anywhere — it is the container the Manager's header fold will want. Recorded here
+   * because the value is easy to get wrong twice: I already did once.
+   * ⚠️⚠️ IT MUST SIT AT THE PANEL'S OWN GROUND, NOT AT --card. Its whole job is to be the surface the
+   * chips are RAISED on, and TUI.off chips are --card — so a --card well makes every unselected chip
+   * inside it invisible, which is the exact fault the bordered chip existed to fix. The border groups;
+   * the ground must stay one step behind whatever it contains.
+   */
   well: 'display:inline-flex;flex-wrap:wrap;align-items:center;padding:3px 3px 0;border-radius:9px;'
-      + 'background:var(--card,#fff);border:1px solid var(--grey-4,#646A72)',
+      + 'background:var(--panel,#faf8f3);border:1px solid var(--grey-4,#646A72)',
 };
 
 /** ⭐ hover in ONE place so the chip rows cannot drift apart — the panel has no stylesheet and is not
