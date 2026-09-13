@@ -10278,9 +10278,15 @@ async function _loadCatalogue(force){
      * loaded rows would answer "5 not available" about a catalogue that has hundreds — the same fault as
      * the count above it. `?status=` has existed on this endpoint since it was paged; nothing called it.
      */
+    /**
+     * ⚠️ TWO VOCABULARIES FOR ONE IDEA. The chips say 'unavailable'; the API says 'not-available' (it is
+     * a NEGATION of a status, not a status, which is why it is spelt differently). Passed through raw the
+     * server answers 400 Bad status — caught by the spec, which is the only reason it is not shipping.
+     */
     const _av = UI._prodAvail || '';
-    const page = await api("prodList", { query: _av
-      ? { limit: PROD_PAGE, status: _av }
+    const _status = _av === 'unavailable' ? 'not-available' : _av;
+    const page = await api("prodList", { query: _status
+      ? { limit: PROD_PAGE, status: _status }
       : { limit: PROD_PAGE } });
     const items = (page && page.items) || (Array.isArray(page) ? page : []) || [];
     UI.prodTotal = (page && page.total != null) ? page.total : items.length;

@@ -80,7 +80,7 @@ test('[AVAIL-01] the count is the shop, and the chip reaches the shop', async ({
     .toBeLessThan(MORE);
   expect(seen.counts, 'the server tally was discarded').toBeTruthy();
 
-  const chip = page.locator('[data-testid="cat-availfilter-not-available"]');
+  const chip = page.locator('[data-testid="cat-availfilter-unavailable"]');
   await expect(chip, 'the chip is missing — it hides when the page holds none').toBeVisible({ timeout: 30000 });
   /* ⭐ the shop's number, not the page's */
   await expect(chip).toContainText(String(MORE));
