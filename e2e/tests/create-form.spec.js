@@ -99,7 +99,11 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
    * [[feedback-improvise-update-cases]] — a relocated assertion is moved, never deleted.
    */
   await expect(page.locator('#cbcasespanel')).not.toContainText('What else should I try?');
-  await expect(page.locator('#cbcasespanel button', { hasText: 'Techniques' })).toHaveCount(1);
+  /* ⚠️ SEVEN EQUAL TABS BECAME TWO SEGMENTS AND A SELECT — Create and Cases are what a tester does all day,
+     the other five are places you go to look. Techniques is now an option, so that is where it is asserted.
+     [[feedback-improvise-update-cases]] */
+  await expect(page.locator('#cbcasespanel select option', { hasText: 'Techniques' })).toHaveCount(1);
+  await expect(page.locator('#cbcasespanel button', { hasText: 'Create' }).first()).toBeVisible();
   await page.evaluate(() => testArea('tech'));
   const tech = page.locator('#cbcasespanel');
   await expect(tech).toContainText('What else should I test here?');

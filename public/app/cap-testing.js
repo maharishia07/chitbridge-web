@@ -892,7 +892,7 @@ function testPaint() {
    */
   var ico = 'flex:0 0 auto;width:30px;height:28px;display:inline-flex;align-items:center;'
     + 'justify-content:center;font:inherit;font-size:var(--fs-2);line-height:1;padding:0;cursor:pointer;'
-    + 'border:1px solid var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);'
+    + 'border:1px solid var(--grey-4,#646A72);border-radius:7px;background:var(--card,#fff);'
     + 'color:var(--ink-2,#3a4048)';
   var hd = ''
     + '<div style="display:flex;align-items:center;gap:6px">'
@@ -920,7 +920,7 @@ function testPaint() {
        on the test case and where we are looking at."* The corner still drags freely; this is for the times
        when you know what you want and do not want to aim at a 16-pixel triangle to get it. */
     +   '<select onchange="testSize(this.value)" title="Size" style="flex:0 0 auto;font-size:var(--fs-1);'
-    +     'padding:3px 4px;border-radius:7px;border:1px solid var(--line,#e7e3d8)">'
+    +     'padding:3px 4px;border-radius:7px;border:1px solid var(--grey-4,#646A72)">'
     +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
            ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
             return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
@@ -1235,7 +1235,7 @@ function testPaint() {
        * app, so overriding the class here would change every other button that borrows it.
        */
       var qbtn = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border-radius:7px;cursor:pointer;'
-        + 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);color:var(--ink-2,#3a4048)';
+        + 'border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);color:var(--ink-2,#3a4048)';
       h += '<div style="display:flex;gap:6px;align-items:center;padding:4px 2px 6px;flex-wrap:wrap">'
         + '<button style="' + qbtn + '" onclick="testFoldAll(true)">Expand all</button>'
         + '<button style="' + qbtn + '" onclick="testFoldAll(false)">Collapse all</button>'
@@ -1352,7 +1352,7 @@ function testPaint() {
            */
           +   '<button title="Add a case to ' + testEsc(gk) + '" '
           +     'onclick="event.stopPropagation();testAddOpen(\'' + testEsc(gk) + '\')" '
-          +     'style="flex:0 0 auto;border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);'
+          +     'style="flex:0 0 auto;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);'
           +     'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);'
           +     'line-height:1;padding:1px 6px;cursor:pointer">+</button>'
           + '</span>'
@@ -1600,6 +1600,26 @@ var TEST_BTN_SMALL = 'font:inherit;font-size:var(--fs-1);font-weight:700;padding
   + 'border-radius:8px;cursor:pointer;border:1px solid var(--grey-4,#646A72);'
   + 'background:var(--card,#fff);color:var(--ink,#20303b);white-space:nowrap';
 
+var TUI = {
+  /** a pressable chip: BORDERED, so it reads as an object and not as a run of text */
+  chip: function (pad) {
+    return 'font:inherit;font-size:var(--fs-1);padding:' + (pad || '2px 8px') + ';'
+      + 'border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;'
+      + 'margin-inline-end:4px;';
+  },
+  /** a SEGMENT of a joined control: no border of its own — the group carries one and the dividers split it */
+  seg: function (pad, size) {
+    return 'font:inherit;font-size:var(--' + (size || 'fs-1') + ');padding:' + (pad || '4px 11px') + ';'
+      + 'border:0;cursor:pointer;';
+  },
+  /** ⭐ ONE selected/unselected pair for both, so a chip and a segment can never disagree about "chosen" */
+  on:  'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)',
+  off: 'background:var(--card,#fff);color:var(--grey-2,#545A61)',
+  /** the well a chip GROUP sits in, so a row of chips reads as one control and not as five loose ones */
+  well: 'display:inline-flex;flex-wrap:wrap;align-items:center;padding:3px 3px 0;border-radius:9px;'
+      + 'background:var(--paper,#faf8f3);border:1px solid var(--grey-4,#646A72)',
+};
+
 /** ⭐ hover in ONE place so the chip rows cannot drift apart — the panel has no stylesheet and is not
     getting one. ⚠️ Never on a selected chip: it would wipe the --ink fill. And hover fires on neither touch
     nor keyboard, so the RESTING state must already say "button"; this is the bonus, never the signal. */
@@ -1674,12 +1694,11 @@ async function testReqPri(id, priority) {
  */
 function testReqFormHTML() {
   var open = CBTEST.reqForm;
-  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;background:var(--card,#fff);color:var(--grey-2,#545A61);';
+  var base = TUI.chip() + 'background:var(--card,#fff);color:var(--grey-2,#545A61);';
   if (!open) {
     return '<button onclick="testReqForm(1)" style="' + base + 'font-weight:700">+ Raise a requirement</button>';
   }
-  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid var(--line,#e7e3d8);'
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid var(--grey-4,#646A72);'
     + 'border-radius:7px;background:var(--card,#fff);color:var(--ink,#1a1a1a);margin-bottom:5px;box-sizing:border-box';
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:8px;margin-bottom:9px">'
     + '<input id="reqWhat" style="' + inp + '" placeholder="What must be true — e.g. a unit sold by weight must accept a fraction">'
@@ -1995,8 +2014,8 @@ async function testIncSev(id, severity) {
  */
 function testIncFormHTML() {
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
-    + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
-  var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
+    + 'var(--grey-4,#646A72);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--grey-4,#646A72);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
   if (!CBTEST.incForm) {
     return '<div style="margin:2px 0 8px"><button onclick="testIncForm(true)" style="' + btn + '">'
@@ -2969,11 +2988,9 @@ function testTechAreaHTML() {
 }
 function testTechHTML() {
   var t = (CBTEST.tech || {});
-  var tab = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;margin-top:4px;';
-  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
-  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
-  var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line,#e7e3d8);'
+  var tab = TUI.chip() + 'margin-top:4px;';
+  var on = TUI.on, off = TUI.off;
+  var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--grey-4,#646A72);'
     + 'border-radius:6px;background:var(--card,#fff)';
 
   /**
@@ -3296,14 +3313,13 @@ function testCaseFormHTML() {
   var kind = testWriteKindNow();
   var K = WKIND[kind];
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
-    + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
-  var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
+    + 'var(--grey-4,#646A72);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--grey-4,#646A72);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
 
   /* ── ⭐ THE TYPE, FIRST, BECAUSE EVERY LABEL BELOW DEPENDS ON IT ── */
-  var seg = 'font:inherit;font-size:var(--fs-2);padding:4px 13px;border:0;cursor:pointer;';
-  var segOn = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
-  var segOff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var seg = TUI.seg('4px 13px', 'fs-2');
+  var segOn = TUI.on, segOff = TUI.off;
   var chips = ['case', 'inc', 'req'].map(function (k) {
     return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" '
       + 'title="' + testEsc(WKIND[k].says) + '" style="' + seg
@@ -3331,7 +3347,7 @@ function testCaseFormHTML() {
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:4px">What are you recording on '
     +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b>?</div>'
-    + '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
+    + '<div style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:8px;'
     +   'overflow:hidden;margin-bottom:6px">' + chips + '</div>'
 
     /**
@@ -3663,10 +3679,8 @@ function testScrHTML() {
         + 'out of the per-screen numbers rather than out of sight.')
     + '</div>';
 
-  var sb = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
-  var son = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
-  var soff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var sb = TUI.chip();
+  var son = TUI.on, soff = TUI.off;
   var mode = testScrSortGet();
   h += '<div style="margin:2px 0 8px">'
     + '<button onclick="testScrSort(\'menu\')" title="The order the rail is in \u2014 walk the product" style="'
@@ -3717,7 +3731,7 @@ function testScrHTML() {
       + '<td style="padding:4px 6px;text-align:end"><button onclick="testCaseFor(\'' + x.code
       +   '\', ' + JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;')
       +   ')" title="Create a case, an incident or a requirement on this screen" style="font:inherit;font-size:var(--fs-1);'
-      +   'padding:1px 7px;border:1px solid var(--line,#e7e3d8);border-radius:7px;cursor:pointer;'
+      +   'padding:1px 7px;border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;'
       +   'background:var(--card,#fff);white-space:nowrap">\u002b case</button></td>'
       + '</tr>'
       /**
@@ -4084,10 +4098,8 @@ function testCaseListHTML(code) {
   var showShut = testScrShut('case');
   if (!CBTEST.closedCases) testFindLoadClosed();
 
-  var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
-  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
-  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var chip = TUI.chip('1px 8px');
+  var on = TUI.on, off = TUI.off;
   var h = '<div style="margin:8px 0 2px">'
     + [['todo', 'To do', nTodo], ['passed', 'Passed', nPass], ['all', 'All', all.length]]
       .map(function (x) {
@@ -4168,7 +4180,7 @@ function testCaseListHTML(code) {
         + testEsc(exp) + '</div>' : '')
       +   '<input id="cbt_n_' + testEsc(c.case_key) + '" placeholder="what you are seeing instead \u2014 leave '
       +     'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;'
-      +     'padding:3px 6px;border:1px solid var(--line,#e7e3d8);border-radius:6px;'
+      +     'padding:3px 6px;border:1px solid var(--grey-4,#646A72);border-radius:6px;'
       +     'background:var(--card,#fff)">'
       +   (isOpen ? testCaseDetailHTML(c) : '')
       + '</span>'
@@ -4196,7 +4208,7 @@ function testCaseListHTML(code) {
       + '<button class="btn" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',false)" '
       +   'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" '
       +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--grey-4,#646A72);background:none;'
-      +   'border:1px solid var(--line,#e7e3d8)">\u2713 Close</button>'
+      +   'border:1px solid var(--grey-4,#646A72)">\u2713 Close</button>'
       + '</span>'
       + '</div>';
   }).join('') + shutHTML;
@@ -4699,8 +4711,7 @@ function testBehindHTML(code) {
   var b = testBehindOf(code);
   var asset = function (p) { return rows.filter(function (r) { return r.path === p; })[0] || null; };
 
-  var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;'
-    + 'letter-spacing:.04em;text-transform:uppercase;margin:11px 0 4px">' + t + '</div>'; };
+  var lab = testLab;
   var quiet = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:2px 0">'
     + t + '</div>'; };
 
@@ -4802,8 +4813,7 @@ function testBehindHTML(code) {
 
     /* ⭐ THE LIST, WHICH IS THE POINT. A number says how you are doing; a list says what to do next. */
     if (todo.length) {
-      h += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
-        + 'color:var(--warn-2,#8a6100);margin:9px 0 3px">Never checked · ' + todo.length + '</div>';
+      h += testLab('Never checked \u00b7 ' + todo.length, 'var(--warn-2,#8a6100)');
       h += todo.map(function (x) {
         return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
           + 'border-top:1px solid var(--line,#e7e3d8)">'
@@ -5139,8 +5149,7 @@ function testDiagByScreen() {
              worst: worst, worstCalls: calls, last: last ? last.ms : null };
   }).sort(function (a, b) { return b.worst - a.worst; });
 
-  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
-    + 'text-transform:uppercase;margin:14px 0 3px">Every screen you have measured</div>';
+  var h = testLab('Every screen you have measured');
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
     + '<th style="text-align:start;padding:3px 6px 3px 0">Screen</th>'
@@ -5399,8 +5408,7 @@ function testDiagHTML() {
    */
   var past = hist.filter(function (x) { return x.gen !== gen; }).slice().reverse();
   if (past.length) {
-    h += '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
-      + 'text-transform:uppercase;margin:13px 0 3px">Earlier visits to this screen</div>'
+    h += testLab('Earlier visits to this screen')
       + '<div style="font-size:var(--fs-1);color:var(--grey-2)">'
       + past.map(function (p) {
           return '<span style="white-space:nowrap">' + new Date(p.at).toTimeString().slice(0, 5)
@@ -5651,6 +5659,11 @@ function testDiagCleared() {
  * ⚠️ THREE, NOT SEVEN. A fourth treatment invented for one block is how a screen ends up looking the way this
  * one did.
  */
+function testLab(t, colour) {
+  return '<div style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;text-transform:uppercase;'
+    + 'color:' + (colour || 'var(--grey-2,#545A61)') + ';margin:11px 0 4px">' + t + '</div>';
+}
+
 function testSec(title, hint, tip) {
   return '<div style="margin:13px 0 5px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8)">'
     + '<div style="font-size:var(--fs-2);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
@@ -5875,7 +5888,7 @@ try { setInterval(testTraceTick, 30000); } catch (_) {}
 function testTraceHTML() {
   var t = CBTEST.trace;
   if (!t) { testTraceLoad(); return ''; }
-  var btn = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:1px solid var(--line,#e7e3d8);'
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:1px solid var(--grey-4,#646A72);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff);margin-inline-end:4px';
   if (t.on) {
     var mins = Math.max(1, Math.round((t.seconds || 0) / 60));
@@ -6184,8 +6197,7 @@ function testRaisedHTML(code) {
   if (!inc.length && !req.length) return '';
   var wrap = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line,#e7e3d8)';
   var h = '<div style="' + wrap + '">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
-    +   'text-transform:uppercase;margin-bottom:5px">Raised on this screen</div>';
+    + testLab('Raised on this screen');
 
   var pill = function (t, fg, bg) {
     return '<span style="font-size:var(--fs-1);font-weight:700;color:' + fg + ';background:' + bg
@@ -6284,7 +6296,7 @@ function screenCasesPaint() {
 
   /* ── the header: what this is, and how it stands ── */
   if (head) {
-    var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;'
+    var ico = 'border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);cursor:pointer;'
       + 'border-radius:7px;width:24px;height:24px;font-size:var(--fs-1);line-height:1;padding:0;'
       + 'color:var(--grey-2,#545A61)';
     /**
@@ -6359,27 +6371,60 @@ function screenCasesPaint() {
        shown; a person who pressed "show closed" meant to be here. */
     if (t.total) area = 'cases';
   }
-  var tab = 'font:inherit;font-size:var(--fs-1);padding:4px 11px;border:0;cursor:pointer;';
-  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
-  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  /**
+   * ── ⭐⭐⭐ TWO SEGMENTS AND A SELECT, NOT SEVEN TABS ────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"if you look at Zoho or any other system — pure white screen, with very few labels
+   * and simple objective per screen, so the user will not be loaded with information."*
+   *
+   * ⚠️ SEVEN EQUAL SEGMENTS IS NOT A CHOICE, IT IS A MENU WEARING A CHOICE'S CLOTHES. They were not equal:
+   * two of them are what a tester does all day — write one down, work through the list — and the other five
+   * are places you go once to look at something. Drawn the same width and the same weight, the panel asked a
+   * seven-way question every time it opened, and the answer was one of two.
+   *
+   * ⭐ SO THE TWO ARE A CONTROL AND THE FIVE ARE A DROPDOWN. The dropdown is a real <select>: it collapses to
+   * one line, it names the place you are, it carries the counts, and on a phone it opens the platform's own
+   * picker instead of a seven-item strip wrapping to three rows.
+   * ⚠️ AND IT SHOWS WHERE YOU ARE. Land on Speed and neither segment is lit — the select says "Speed", which
+   * is the truth: the select is the control you are on. [[feedback-more-panes-not-denser]]
+   */
+  var tab = TUI.seg();
+  var on = TUI.on, off = TUI.off;
   var seg = function (id, label, n) {
     return '<button onclick="testArea(\'' + id + '\')" style="' + tab + (area === id ? on : off)
-      + (id === 'write' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
+      + (id === 'write' ? '' : ';border-inline-start:1px solid var(--grey-4,#646A72)') + '">'
       + label + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
   };
-  var tabs = '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
-    + 'overflow:hidden;margin:10px 0 4px">'
-    + seg('write', 'Create', null)
-    + seg('cases', 'Cases', t.total)
-    /* ⚠️ THE COUNT ON A TAB IS A PROMISE ABOUT HOW MUCH WORK IS BEHIND IT. "Raised 4" counted three closed
-       incidents and one live requirement as the same four, so a settled screen read like a burning one. */
-    + seg('inc', 'Incidents', known ? testScrOpenN(code, 'inc') : null)
-    + seg('req', 'Requirements', known ? testScrOpenN(code, 'req') : null)
-    + seg('tech', 'Techniques', null)
+  /* ⚠️ THE COUNT IS A PROMISE ABOUT HOW MUCH WORK IS BEHIND IT. "Raised 4" once counted three closed
+     incidents and one live requirement as the same four, so a settled screen read like a burning one. */
+  var MORE = [
+    ['inc', 'Incidents', known ? testScrOpenN(code, 'inc') : null],
+    ['req', 'Requirements', known ? testScrOpenN(code, 'req') : null],
+    ['tech', 'Techniques', null],
     /* ⚠️ the LABEL is Coverage; the id stays 'behind' because it is in localStorage on every machine that
        has used this panel — see the note above testCoverGrade */
-    + seg('behind', 'Coverage', testBehindCount(code))
-    + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
+    ['behind', 'Coverage', testBehindCount(code)],
+    ['diag', 'Speed', (window.CBCALLS || []).length || null],
+  ];
+  var inMore = MORE.some(function (m) { return m[0] === area; });
+  var tabs = '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0 4px">'
+    + '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:8px;'
+    +   'overflow:hidden">'
+    + seg('write', 'Create', null)
+    + seg('cases', 'Cases', t.total)
+    + '</span>'
+    + '<select onchange="testArea(this.value)" title="Everything else about this screen" '
+    +   'style="font:inherit;font-size:var(--fs-1);padding:4px 8px;cursor:pointer;'
+    +   'border:1px solid var(--grey-4,#646A72);border-radius:8px;'
+    +   'background:' + (inMore ? 'var(--ink,#0F2E3D);color:var(--card,#fff)'
+                                : 'var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+    /* ⚠️ a placeholder option, disabled, so the closed select reads as a menu and never as a chosen value */
+    + '<option value="" disabled' + (inMore ? '' : ' selected') + '>More …</option>'
+    + MORE.map(function (m) {
+        return '<option value="' + m[0] + '"' + (area === m[0] ? ' selected' : '') + '>'
+          + m[1] + (m[2] == null ? '' : ' · ' + m[2]) + '</option>';
+      }).join('')
+    + '</select>'
     + '</div>';
 
   var body = area === 'behind' ? testBehindHTML(code)
@@ -7066,7 +7111,7 @@ function testWorkRowHTML(x) {
    */
   if (x.inc && (x.status === 'failed' || x.status === 'todo')) {
     acts += '<select onchange="testIncSev(\'' + id + '\', this.value)" title="Re-grade it" '
-      + 'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--line,#e7e3d8);'
+      + 'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--grey-4,#646A72);'
       + 'border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">'
       + TEST_INC_SEV.map(function (v) {
           return '<option' + (v === x.sev ? ' selected' : '') + '>' + v + '</option>';
@@ -7161,10 +7206,8 @@ function testHandHTML() {
     return x.state === 'verify' && meId && String(x.byId || '') === String(meId);
   });
 
-  var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
-  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
-  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var chip = TUI.chip('1px 8px');
+  var on = TUI.on, off = TUI.off;
 
   var h = '';
   if (waiting.length) {
@@ -7357,7 +7400,7 @@ function testViewToggleHTML() {
   var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
   /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
-  return '<span style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:7px;overflow:hidden">'
+  return '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:7px;overflow:hidden">'
     /* ⭐ FIRST, because it is the one that answers "what is waiting for me" */
     + '<button data-testid="view-work" onclick="testSetView(\'work\')" title="Everything you have written, '
     +   'with its status and what happens next" style="' + base
@@ -7440,7 +7483,7 @@ function testMenuHTML(shown) {
     return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
       + '<b title="Journey steps and automated files belong to no single door and never appear here.">'
       + 'No door matches this filter.</b><br>'
-      + '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>';
+      + '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>';
   }
 
   var q = 'color:var(--grey-2,#545A61);font-size:var(--fs-1)';
