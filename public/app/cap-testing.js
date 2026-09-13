@@ -2926,7 +2926,7 @@ function testScrHTML() {
       /* ⭐ the door is ON THE ROW: the screen is named right there, so nothing has to be chosen twice */
       + '<td style="padding:4px 6px;text-align:end"><button onclick="testCaseFor(\'' + x.code
       +   '\', ' + JSON.stringify(String(x.name)).replace(/'/g, '&#39;').replace(/"/g, '&quot;')
-      +   ')" title="Write a case for this screen" style="font:inherit;font-size:var(--fs-1);'
+      +   ')" title="Create a case, an incident or a requirement on this screen" style="font:inherit;font-size:var(--fs-1);'
       +   'padding:1px 7px;border:1px solid var(--line,#e7e3d8);border-radius:7px;cursor:pointer;'
       +   'background:var(--card,#fff);white-space:nowrap">\u002b case</button></td>'
       + '</tr>'
@@ -3266,7 +3266,7 @@ function testCaseListHTML(code) {
   var all = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
   if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
-      + 'No case on this screen yet. Write the first one above.</div>';
+      + 'No case on this screen yet — Create is the first tab above.</div>';
   }
   var isPass = function (c) { var l = CBTEST.last[c.case_key]; return !!(l && l.status === 'pass'); };
   var nPass = all.filter(isPass).length;
@@ -4617,7 +4617,7 @@ function testArea(v) {
  * 0 to 1, so a default of "cases when there are any" flipped the tab out from under the tester at the exact
  * moment they were writing. That is the disappearing-form fault a third time, in a third disguise.
  *
- * ⭐ Opening the panel is a decision point; a repaint is not. A tester who is on Write stays on Write until
+ * ⭐ Opening the panel is a decision point; a repaint is not. A tester who is on Create stays on Create until
  * they say otherwise.
  */
 function testAreaOpen(hasCases) {
