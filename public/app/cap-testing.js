@@ -2221,6 +2221,11 @@ function testShotPasteBind() {
  */
 var TECHS = ['bounds', 'classes', 'states', 'decision', 'guess'];
 
+/** ⚠️ the fold is remembered for the session only: it is a preference about this minute, not about the person */
+function testTechFold() {
+  CBTEST.techOpen = !CBTEST.techOpen;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
 function testTech(kind) {
   CBTEST.tech = CBTEST.tech || {};
   CBTEST.tech.kind = (CBTEST.tech.kind === kind) ? null : kind;
@@ -2354,10 +2359,20 @@ function testTechHTML() {
   var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:6px;background:var(--card,#fff)';
 
+  /**
+   * ⚠️ FOLDED SHUT UNTIL IT IS ASKED FOR. Athi, 2026-09-13: *"I am not sure what those chips are doing while
+   * creating a case."* They were five unexplained buttons sitting directly under the four boxes he was filling
+   * in, so they read as part of the form. They are not: they are a way of thinking of MORE cases than the one
+   * in front of you — a different act. ⭐ And a control that has to be opened earns a line saying what it is.
+   */
+  var open = !!t.kind || !!CBTEST.techOpen;
   var h = '<div style="margin-top:8px;padding-top:7px;border-top:1px dashed var(--line,#e7e3d8)">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2)">'
-    + '<b>What else should I try?</b> \u00b7 the techniques from ISO/IEC/IEEE 29119-4 \u2014 give it the one '
-    + 'thing it cannot know and it derives the rest</div>'
+    + '<button onclick="testTechFold()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;'
+    +   'background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">'
+    +   (open ? '\u25be ' : '\u25b8 ')
+    +   '<b>What else should I try?</b> \u00b7 suggests further cases using the techniques in '
+    +   'ISO/IEC/IEEE 29119-4 \u2014 give it the one thing it cannot know and it derives the rest</button>';
+  if (!open) return h + '</div>';
     + [['bounds', 'A number range'], ['classes', 'Kinds of value'], ['states', 'A lifecycle'],
        ['decision', 'A rule with conditions'], ['guess', 'The usual suspects']]
       .map(function (x) {
@@ -2426,6 +2441,75 @@ function testTechHTML() {
   return h + '</div>';
 }
 
+/**
+ * ── ⭐⭐⭐ ONE FORM, AND IT SAYS WHICH OF THE THREE THINGS YOU ARE MAKING ───────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"we are using the same dialog box for creating requirement, observation or incident? So
+ * possibly those chips should be on top, based on the chip the information received can be changed, and
+ * finally a proper save or cancel button."* · *"when I click requirement, if there is a text that states you
+ * are writing a requirement, that would be good."* · *"rename Write to Create."*
+ *
+ * ⚠️⚠️ THE TYPE WAS BEING CHOSEN BY WHICHEVER BUTTON YOU PRESSED AT THE END. Four boxes, then a row of five
+ * equal buttons — Pass · Incident · Requirement · Save · Cancel — so a person filled the form in without
+ * knowing what they were filling it in FOR, and the labels could not help them because they had to suit all
+ * three at once. That is the wrong end of the form. Jira asks for the issue TYPE first and then shows the
+ * fields for it; Azure DevOps does the same. [[feedback-adopt-dont-reinvent]]
+ *
+ * ⭐ SO: the type is chosen at the top, it says in a sentence what it means and what will happen next, the
+ * four labels change with it, and the bottom has ONE primary button and Cancel.
+ *
+ * ⚠️ AND THE FOUR BOXES DO NOT MOVE OR CHANGE ORDER between the types. "What must be true · what you do ·
+ * what should happen · what you saw" is the same shape of thought whichever of the three it becomes, and a
+ * form that rearranges itself under somebody's hands is a form they have to re-read every time. Only the
+ * WORDS change, and which of the boxes is required.
+ */
+var WKIND = {
+  'case': {
+    label: 'Test case', verb: '+ Create case', chip: 'var(--grey-2,#545A61)',
+    says: 'A CHECK ANYONE CAN REPEAT. It goes on this screen’s board, and somebody else can run it later '
+      + 'and record what they got.',
+    t1: '1 · What must be true — the rule this case checks',
+    t2: '2 · What you do — the steps, in order',
+    t3: '3 · What should happen',
+    t4: '4 · What you saw — leave it empty if you have not run it yet',
+    grade: 'priority',
+  },
+  inc: {
+    label: 'Incident', verb: 'Raise incident', chip: 'var(--disp,#B3261E)',
+    says: 'SOMETHING IS WRONG NOW. The case is written, marked failed, and an incident is raised against it '
+      + '— everyone testing is told, and whoever fixes it has to send it back to you to retest.',
+    t1: '1 · What must be true — the rule that is being broken',
+    t2: '2 · What you do — how somebody else reproduces it',
+    t3: '3 · What should happen',
+    t4: '4 · What you are seeing instead — required: this is the evidence',
+    grade: 'severity',
+  },
+  req: {
+    label: 'Requirement', verb: 'Raise requirement', chip: 'var(--grey-2,#545A61)',
+    says: 'NOTHING IS BROKEN — IT DOES NOT DO THIS YET. It joins the backlog by priority, the case cites '
+      + 'it, and you are told when it is accepted or rejected.',
+    t1: '1 · What must be true — what you are asking for',
+    t2: '2 · What you do',
+    t3: '3 · What should happen once it does',
+    t4: '4 · What happens today — required, so the gap is on the record',
+    grade: 'priority',
+  },
+};
+
+/**
+ * ⭐ IEEE 1044 severity, each carrying its meaning in words — "Sev-2" alone means whatever the reader assumes,
+ * and the server says the same four things in SEV_MEANS. ⚠️ One list, phrased for a shopkeeper.
+ */
+var WSEV = [['Sev-1', 'the shop cannot trade'], ['Sev-2', 'a job cannot be finished'],
+            ['Sev-3', 'wrong, but there is a way round'], ['Sev-4', 'cosmetic']];
+
+function testWriteKind(k) {
+  if (!WKIND[k]) return;
+  CBTEST.writeKind = k;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
+function testWriteKindNow() { return WKIND[CBTEST.writeKind] ? CBTEST.writeKind : 'case'; }
+
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
   /**
@@ -2437,21 +2521,61 @@ function testCaseFormHTML() {
     if (!here) return '';
     return '<div style="margin:2px 0 9px"><button onclick="testCaseFor(\'' + here
       + '\', \'' + testEsc(codeName ? codeName(here) : '') + '\')" '
-      + 'style="font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
-      + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)">'
-      + '\u002b New test case</button></div>';
+      + 'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:5px 14px;border:1px solid '
+      + 'var(--line,#e7e3d8);border-radius:7px;cursor:pointer;background:var(--card,#fff)">'
+      + '+ Create</button>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px">'
+      + 'A test case, an incident or a requirement — you choose which at the top of the form.</div></div>';
   }
+
+  var kind = testWriteKindNow();
+  var K = WKIND[kind];
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
     + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
   var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
+
+  /* ── ⭐ THE TYPE, FIRST, BECAUSE EVERY LABEL BELOW DEPENDS ON IT ── */
+  var seg = 'font:inherit;font-size:var(--fs-2);padding:4px 13px;border:0;cursor:pointer;';
+  var segOn = 'background:var(--grey-2,#545A61);color:#fff';
+  var segOff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var chips = ['case', 'inc', 'req'].map(function (k) {
+    return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" style="' + seg
+      + (kind === k ? segOn : segOff)
+      + (k === 'case' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
+      + WKIND[k].label + '</button>';
+  }).join('');
+
+  /* ── how bad, or how soon: two different questions, and only one of them belongs to each type ── */
+  var grade = K.grade === 'severity'
+    ? '<span>How bad is it?</span>'
+      + '<select id="wcSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
+      + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
+      + WSEV.map(function (x) {
+          return '<option value="' + x[0] + '"' + (x[0] === 'Sev-3' ? ' selected' : '') + '>'
+            + x[0] + ' · ' + x[1] + '</option>';
+        }).join('')
+      + '</select>'
+    : '<span>How soon?</span>'
+      + '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
+      + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
+      + '<option>High</option><option selected>Medium</option><option>Low</option></select>';
+
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:9px;margin:2px 0 9px">'
-    + '<div style="font-size:var(--fs-2);margin-bottom:6px">Document '
-    +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b></div>'
-    + '<input id="wcTitle" placeholder="1 \u00b7 The requirement — what must be true" style="' + inp + '">'
-    + '<input id="wcDo" placeholder="2 \u00b7 The operation — what you do" style="' + inp + '">'
-    + '<input id="wcSee" placeholder="3 \u00b7 Expected — what should happen" style="' + inp + '">'
-    + '<input id="wcGot" placeholder="4 \u00b7 Observed — what you are actually seeing" style="' + inp + '">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:4px">What are you recording on '
+    +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b>?</div>'
+    + '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
+    +   'overflow:hidden;margin-bottom:6px">' + chips + '</div>'
+    /* ⭐ and what that choice MEANS, in a sentence — which is what Athi asked for, and it is also the only
+       place a first-time tester learns the difference between the three */
+    + '<div data-testid="wkind-says" style="font-size:var(--fs-1);color:var(--grey-2);'
+    +   'background:var(--paper,#faf8f3);border-radius:7px;padding:5px 8px;margin-bottom:7px">'
+    +   K.says + '</div>'
+
+    + '<input id="wcTitle" placeholder="' + K.t1 + '" style="' + inp + '">'
+    + '<input id="wcDo" placeholder="' + K.t2 + '" style="' + inp + '">'
+    + '<input id="wcSee" placeholder="' + K.t3 + '" style="' + inp + '">'
+    + '<input id="wcGot" placeholder="' + K.t4 + '" style="' + inp + '">'
     /**
      * ── ⭐⭐ WHICH THING ON THE SCREEN ───────────────────────────────────────────────────────────────────
      *
@@ -2469,29 +2593,18 @@ function testCaseFormHTML() {
      * ⚠️ Optional, and it says so: plenty of findings are about the screen as a whole.
      */
     + '<select id="wcCtl" style="' + inp + ';padding:5px">'
-    +   '<option value="">5 \u00b7 Which control? \u2014 optional, the screen as a whole if you leave it</option>'
+    +   '<option value="">5 · Which control? — optional, the screen as a whole if you leave it</option>'
     +   testCtlOptions(w.code)
     + '</select>'
-    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px">'
-    +   '<select id="wcPri" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
-    +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
-    +     '<option>High</option><option selected>Medium</option><option>Low</option></select>'
-    +   '<button onclick="testCaseSend(\'pass\')" style="' + btn
-    +     ';color:var(--ok-2,#1B7F4B);background:var(--ok-tint,#eaf5ee);font-weight:700">Pass</button>'
-    +   '<button onclick="testCaseSend(\'inc\')" style="' + btn
-    +     ';color:var(--disp,#B3261E);background:var(--disp-tint,#fbeceb)">Incident</button>'
-    +   '<button onclick="testCaseSend(\'req\')" style="' + btn + '">Requirement</button>'
-    +   '<span style="flex:1 1 auto"></span>'
-    +   '<button onclick="testCaseSend(\'\')" style="' + btn + '" title="Write it now, run it later">Save'
-    +     '</button>'
-    +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
-    + '</div>'
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;'
+    +   'font-size:var(--fs-1);color:var(--grey-2)">' + grade + '</div>'
+
     /* ⭐ the picture, and what is attached right now — said in words, because a thumbnail alone leaves a
        tester wondering whether it actually saved */
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;'
     +   'font-size:var(--fs-1);color:var(--grey-2)">'
     +   '<button onclick="testShotGrab()" style="' + btn + '" title="Capture this window and attach it">'
-    +     '\ud83d\udcf7 Screenshot</button>'
+    +     '📷 Screenshot</button>'
     +   (CBTEST.shot
       ? '<span style="display:inline-flex;gap:6px;align-items:center">'
         /* ⭐ the picture itself, small — the fastest possible answer to "is the right one attached?" */
@@ -2500,11 +2613,39 @@ function testCaseFormHTML() {
         + '<button onclick="testShotView(\'' + testEsc(CBTEST.shot.id) + '\')" style="' + btn
           + ';padding:1px 7px">view</button>'
         + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
-      : '<span>\u2026 or paste one here with Ctrl+V</span>')
+      : '<span>… or paste one here with Ctrl+V</span>')
     + '</div>'
-    + testTechHTML()
+
+    /**
+     * ── ⭐⭐⭐ AND THE BUTTONS AT THE BOTTOM ARE A DECISION ALREADY MADE ────────────────────────────────────
+     *
+     * ⚠️ ONE PRIMARY ACTION, and it says what it will do — "Raise incident", not "Incident". A row of five
+     * equal buttons is five questions asked at the moment a person has finished thinking.
+     * ⭐ "Create and mark passed" survives, for a test case only: writing down a check you have just performed
+     * successfully is a real and common act, and making somebody write it, then find it in the list, then tick
+     * it is three steps for one thought.
+     */
+    + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:9px;padding-top:8px;'
+    +   'border-top:1px solid var(--line-2,#efece4)">'
+    +   '<button data-testid="wsave" onclick="testCaseSend()" style="' + btn + ';font-weight:700;'
+    +     'font-size:var(--fs-2);padding:5px 15px;color:#fff;background:' + K.chip
+    +     ';border-color:' + K.chip + '">' + K.verb + '</button>'
+    +   (kind === 'case'
+      ? '<button onclick="testCaseSend(\'pass\')" style="' + btn
+        + ';color:var(--ok-2,#1B7F4B);background:var(--ok-tint,#eaf5ee)" '
+        + 'title="Write it down and record that you have just run it, and it passed">'
+        + '✓ Create and mark passed</button>'
+      : '')
+    +   '<span style="flex:1 1 auto"></span>'
+    +   '<button onclick="testCaseCancel()" style="' + btn + '">Cancel</button>'
+    + '</div>'
+    /* ⚠️ the technique helper is FOLDED, and only on a test case. Unfolded at the foot of the form it read as
+       part of it — Athi: *"I am not sure what those chips are doing while creating a case."* It is a way to
+       think of MORE cases, which is a different act from writing this one down. */
+    + (kind === 'case' ? testTechHTML() : '')
     + '</div>';
 }
+
 function testCaseCancel() { CBTEST.writeFor = null; if (CBTEST.popupFor) screenCasesPaint(); else testPaint(); }
 
 /**
@@ -2515,6 +2656,17 @@ function testCaseCancel() { CBTEST.writeFor = null; if (CBTEST.popupFor) screenC
  */
 async function testCaseSend(outcome) {
   var w = CBTEST.writeFor; if (!w) return;
+  /**
+   * ── ⭐⭐ THE TYPE IS ALREADY CHOSEN BY THE TIME ANYBODY REACHES THIS BUTTON ─────────────────────────────
+   *
+   * The chip at the top of the form is the decision; the button at the bottom only commits it. So an absent
+   * `outcome` no longer means "just save a case" — it means "do whatever the chip says", and the one caller
+   * that still passes a word ('pass') is the test-case shortcut that also records a run.
+   * ⚠️ THE OLD CALL SITES STILL WORK unchanged, which is why this reads the argument first: testDiagRaise and
+   * the two list-row buttons pass their outcome explicitly and must not start obeying a chip they never set.
+   */
+  var kind = (typeof testWriteKindNow === 'function') ? testWriteKindNow() : 'case';
+  if (outcome === undefined || outcome === null) outcome = (kind === 'case') ? '' : kind;
   var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
   var title = g('wcTitle'), doIt = g('wcDo'), see = g('wcSee'), got = g('wcGot');
   if (!title) { if (typeof toast === 'function') toast('Say what must be true.'); return; }
@@ -2589,6 +2741,7 @@ async function testCaseSend(outcome) {
      * reason it always did: the picture of the last finding must not ride onto the next one.
      */
     var heldShot = CBTEST.shot;
+    var heldSev = g('wcSev') || null;
     CBTEST.shot = null;
     testShotThumb(null);
     if (typeof testLoad === 'function') await testLoad(true);
@@ -2605,7 +2758,9 @@ async function testCaseSend(outcome) {
       }
       box.value = got || (outcome === 'pass' ? 'As expected.' : '');
       if (outcome === 'pass') await testMark(key, 'pass');
-      else await testFromCase(key, outcome, heldShot, got);
+      /* ⚠️ THE SEVERITY IS READ BEFORE THE FORM IS REPAINTED, and passed — it was hardcoded Sev-3 for
+         every incident ever raised this way, which made the one field a release gate reads a constant. */
+      else await testFromCase(key, outcome, heldShot, got, heldSev);
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
@@ -2824,7 +2979,7 @@ function testScrHTML() {
  * where the input IS the place a person typed. Passing a value through the document between two lines of
  * the same function was never anything but a shared mutable global with extra steps.
  */
-async function testFromCase(key, kind, shot, seenIn) {
+async function testFromCase(key, kind, shot, seenIn, sev) {
   var box = document.getElementById('cbt_n_' + key);
   var seen = (seenIn != null && String(seenIn).trim())
     ? String(seenIn).trim()
@@ -2846,7 +3001,10 @@ async function testFromCase(key, kind, shot, seenIn) {
         observed: seen + (exp ? '  \u2014 expected: ' + exp : ''),
         /* ⭐ the picture rides with the report, not in a folder somebody has to be told about */
         evidence_id: ((shot || CBTEST.shot) && (shot || CBTEST.shot).id) || null,
-        affected: 'found by ' + key, severity: 'Sev-3',
+        /* ⭐ what the person actually said, when they said it. ⚠️ Sev-3 remains the default in ONE place:
+           a caller with no opinion must not be able to file a Sev-1 by accident, nor a blank. */
+        affected: 'found by ' + key,
+        severity: (['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'].indexOf(String(sev)) >= 0) ? String(sev) : 'Sev-3',
         screen_code: code, case_key: key,
         build: (window.CBBUILD || null) } });
       if (typeof toast === 'function') toast('Failed, and an incident is raised');
@@ -4018,8 +4176,8 @@ function testDiagHTML() {
    * incident will read "the catalogue feels slow" — which is unactionable, and is what every slow-screen
    * report in every product says.
    *
-   * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Write with their finger over
-   * Incident or Requirement — which of the two it is remains their judgement, and so does the wording.
+   * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Create, with the type chip still
+   * theirs to set — whether this is an incident or a requirement is a judgement, and so is the wording.
    */
   h += testDiagClearBtn();
   h += '<div style="margin-top:9px">'
@@ -4029,8 +4187,8 @@ function testDiagHTML() {
     + '<button class="btn" onclick="testDumpSave()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px;'
     +   'margin-inline-start:6px">\u1f4be Snapshot</button>'
     + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
-    + '<b>Write this up</b> fills the four boxes with these numbers \u2014 you still choose incident or '
-    + 'requirement. <b>Snapshot</b> saves one file with every call of this visit (what was asked, what was '
+    + '<b>Write this up</b> fills the four boxes with these numbers \u2014 you still choose the type at the '
+    + 'top of the form. <b>Snapshot</b> saves one file with every call of this visit (what was asked, what was '
     + 'sent, what came back), every error the page threw, and where you were \u2014 to attach to the report.'
     + '</div></div>';
   return h;
@@ -4575,7 +4733,7 @@ function screenCasesPaint() {
    */
   /* ⚠ the technique inputs are in this list too: a repaint landing while somebody is typing a boundary
      would eat it exactly as it once ate the observation — same bug, new boxes */
-  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcCtl',
+  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcSev', 'wcCtl',
                 'tqField', 'tqLo', 'tqHi', 'tqClasses', 'tqStates', 'tqConds'];
   var typed = {};
   FIELDS.forEach(function (id) { var el = document.getElementById(id); if (el) typed[id] = el.value; });
@@ -4647,7 +4805,7 @@ function screenCasesPaint() {
   };
   var tabs = '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
     + 'overflow:hidden;margin:10px 0 4px">'
-    + seg('write', 'Write', null)
+    + seg('write', 'Create', null)
     + seg('cases', 'Cases', t.total)
     + seg('raised', 'Raised', known ? (inc + req) : null)
     + seg('behind', 'Behind', testBehindCount(code))
