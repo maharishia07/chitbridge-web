@@ -3364,6 +3364,52 @@ function testSlowerThanBefore(history, gen) {
   return out.sort(function (a, b) { return (b.now - b.was) - (a.now - a.was); });
 }
 
+/**
+ * ── ⭐⭐⭐ START AGAIN, AND SAY THAT YOU DID ──────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"we have to have a mechanism of clearing the earlier measure in the speed, so we know
+ * that we are doing a fresh measure — so we must introduce a button to clear the existing data, and show
+ * that the existing measures are cleared and take a fresh sample."*
+ *
+ * ⚠️⚠️ HE IS DESCRIBING THE FAULT AT THE HEART OF EVERY MEASUREMENT I HAVE TAKEN TODAY. The log holds the
+ * last forty calls of the session; the visit filter narrows it, the clock line says when the visit began —
+ * and none of that tells a person whether what they are looking at is the run they JUST did. I read a stale
+ * window three times this morning and drew a conclusion from it each time.
+ *
+ * ⭐ SO CLEARING IS AN EVENT WITH A TIME ON IT, not an absence. After it the area says what was thrown away
+ * and when, and keeps saying so until the first new call arrives — because an empty panel and a panel that
+ * has been emptied look identical, and only one of them means "go and do something".
+ *
+ * ⚠️ THE STORED VISITS GO TOO. Leaving them would let "slower than it has been" compare a fresh sample
+ * against history the tester believes they just deleted — a red warning sourced from data that is not on
+ * the screen is the worst thing this area could do.
+ */
+function testDiagClear() {
+  var code = CBTEST.popupFor;
+  var had = ((window.CBCALLS || []).length) || 0;
+  var hadVisits = 0;
+  try {
+    var all = testVisitsGet();
+    hadVisits = ((all[code] || []).length) || 0;
+    delete all[code];
+    localStorage.setItem(testVisitsKey(), JSON.stringify(all));
+  } catch (_) {}
+  /* ⚠ emptied IN PLACE: core.js holds this same array and a fresh one would leave it writing to the old */
+  try { if (window.CBCALLS) window.CBCALLS.length = 0; } catch (_) {}
+  CBTEST.openCall = null;
+  CBTEST._clearedAt = Date.now();
+  /**
+   * ⚠️ THE CLEAR BELONGS TO THE VISIT IT HAPPENED IN. Without this the banner outlives it: walk to another
+   * screen and back, and the reading is a NEW visit’s calls under a line still claiming to be measured from
+   * a clear two screens ago. A window label that is wrong is worse than no label — it is the same fault as
+   * the panel-open mark this area started the day with, and it would have shipped again.
+   */
+  CBTEST._clearedGen = window.CBGEN || 0;
+  CBTEST._clearedWhat = { calls: had, visits: hadVisits };
+  screenCasesPaint();
+  if (typeof toast === 'function') toast('Cleared \u2014 measuring from now.');
+}
+
 function testDiagHTML() {
   /* ⚠ the tester’s own tool is not part of what the screen cost — reading the board and saving a verdict
      are the measurement, and a measurement that counts itself is not one */
@@ -3371,6 +3417,17 @@ function testDiagHTML() {
     return !/^\/api\/testing/i.test(String(c.path || ''));
   });
   if (!all.length) {
+    if (testDiagCleared()) {
+      var w = CBTEST._clearedWhat || {};
+      return '<div style="margin:8px 0;padding:8px 10px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
+        + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.5">'
+        + '<b>Cleared at ' + new Date(CBTEST._clearedAt).toTimeString().slice(0, 8) + '.</b> '
+        + 'Threw away ' + (w.calls || 0) + ' recorded call(s)'
+        + (w.visits ? ' and ' + w.visits + ' earlier visit(s) to this screen' : '') + '.<br>'
+        + 'Nothing has been measured since. Use the screen behind this panel and the fresh sample '
+        + 'appears here.</div>'
+        + testDiagClearBtn();
+    }
     return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
       + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
       + 'appear here \u2014 the log starts when test mode goes on.</div>';
@@ -3431,7 +3488,12 @@ function testDiagHTML() {
     + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
     + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
     + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
-    + (clock ? '<br><span style="color:var(--note)">This reading is THIS visit only \u2014 everything since '
+    /* ⭐ after a clear the window is the CLEAR, not the arrival — and it must say so, or the reader trusts
+       a clock time that has nothing to do with what is in the table */
+    + (testDiagCleared()
+        ? '<br><span style="color:var(--note)">Measured from the <b>clear at '
+          + new Date(CBTEST._clearedAt).toTimeString().slice(0, 8) + '</b>, not from when you arrived.</span>'
+      : clock ? '<br><span style="color:var(--note)">This reading is THIS visit only \u2014 everything since '
         + 'you arrived on the screen at <b>' + clock + '</b>. Leaving and coming back starts a new one.</span>'
       : '')
     /* ⚠ named as unavailable rather than shown as zero: an empty column reads as "no time spent there" */
@@ -3533,6 +3595,7 @@ function testDiagHTML() {
    * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Write with their finger over
    * Incident or Requirement — which of the two it is remains their judgement, and so does the wording.
    */
+  h += testDiagClearBtn();
   h += '<div style="margin-top:9px">'
     + '<button class="btn" onclick="testDiagRaise()" style="font-size:var(--fs-2);padding:4px 10px">'
     + '\u270e Write this up</button>'
@@ -3689,6 +3752,20 @@ function testDumpSave() {
     setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 30000);
     if (typeof toast === 'function') toast('Snapshot saved \u2014 attach it to the incident.');
   } catch (e) { if (typeof toast === 'function') toast('Could not build the snapshot.'); }
+}
+
+/** true only while the clear still describes the window on screen — see the note where it is set */
+function testDiagCleared() {
+  return !!(CBTEST._clearedAt && CBTEST._clearedGen === (window.CBGEN || 0));
+}
+
+/** the control, in one place, because it appears both in the reading and in the emptied panel */
+function testDiagClearBtn() {
+  return '<div style="margin-top:9px"><button class="btn" onclick="testDiagClear()" '
+    + 'style="font-size:var(--fs-2);padding:4px 10px">\u27f2 Clear and measure again</button>'
+    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
+    + 'throws away every recorded call and this screen\u2019s earlier visits, so the next reading is only '
+    + 'what you do next</span></div>';
 }
 
 function testDiagByApi() {
