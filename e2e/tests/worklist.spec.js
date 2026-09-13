@@ -21,6 +21,18 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
+/**
+ * ⭐ THE PRODUCT ASKS ITS OWN QUESTIONS NOW (CAT001-H08: *"the toaster message comes from the browser — it has
+ * to be from the app"*), so a spec that stubs window.prompt would be testing a door that no longer exists.
+ * This types into the real dialog and presses the real button. [[feedback-probe-through-the-gate]]
+ */
+async function answer(page, text) {
+  const box = page.locator('#cbaskbox');
+  await box.waitFor({ state: 'visible', timeout: 20000 });
+  await box.fill(text);
+  await page.locator('[data-testid="ask-ok"]').click();
+  await page.locator('#cbaskbox').waitFor({ state: 'detached', timeout: 20000 });
+}
 test('[WORK-01] three journeys, one list, and every row can reach Closed', async ({ page }) => {
   test.setTimeout(420000);
   await mintEntity(page, { fresh: true, name: 'Work ' + Date.now().toString().slice(-6) });
@@ -77,16 +89,16 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
     .toEqual({ passed: 3, failed: 3, change: 3 });
 
   /* ── (b) the incident journey: failed → fixed → retest → closed ──────────────────────────────────────── */
-  await page.evaluate(() => { window.prompt = function () { return 'fixed in abc1234'; }; });
   await page.locator('#cbtestbody button').filter({ hasText: 'Mark it fixed' }).first().click();
+  await answer(page, 'fixed in abc1234');
   await expect.poll(async () => byStatus(await seen()).retest || 0, { timeout: 45000 }).toBe(1);
 
   /* ⭐ AND IT IS ADDRESSED TO THE PERSON WHO RAISED IT, not to the room */
   await expect(page.locator('[data-testid="work-yours"]')).toBeVisible({ timeout: 15000 });
   await expect(page.locator('[data-testid="work-yours"]')).toContainText('waiting for you to retest');
 
-  await page.evaluate(() => { window.prompt = function () { return 'Retested, it holds'; }; });
   await page.locator('#cbtestbody button').filter({ hasText: 'It holds' }).first().click();
+  await answer(page, 'Retested, it holds');
   await expect.poll(async () => byStatus(await seen()).closed || 0, { timeout: 45000 }).toBe(1);
 
   /* ── (c) the requirement journey: change asked → decided ─────────────────────────────────────────────── */

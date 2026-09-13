@@ -1481,7 +1481,8 @@ async function testReqLoad() {
 async function testReqSet(id, state) {
   var why = null;
   if (state === 'rejected') {
-    why = window.prompt('Why is this rejected? The next tester will read this instead of raising it again.');
+    why = await testAsk('Why is this rejected?',
+      'The next tester reads this instead of raising it again.', 'Reject it');
     if (why === null) return;                       /* cancelled — nothing is changed */
     if (!String(why).trim()) { if (typeof toast === 'function') toast('A rejection needs its reason.'); return; }
   }
@@ -1704,6 +1705,70 @@ function testScreenCode(menu) {
  * reports the filter, and every chip would then say the same number.
  */
 var TEST_INC_SEV = ['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'];
+/**
+ * ── ⭐⭐⭐ THE PRODUCT ASKS ITS OWN QUESTIONS ───────────────────────────────────────────────────────────────────
+ *
+ * Athi, CAT001-H08 (written with the tool's own Create button): *"when I close the case, the toaster message
+ * comes from the browser — it has to be from [the app]."*
+ *
+ * ⚠️⚠️ AND EVERY CLOSING REASON ON THIS BOARD WAS A `window.prompt`. Five of them. A grey Chrome strip pinned to
+ * the top of the window, in the browser's font, with the page URL above it — asking for the one sentence that
+ * ends up permanently on a finding. It cannot be styled, it cannot be themed, it cannot be translated by tx(),
+ * it gives one line for something people write a paragraph in, it is suppressible by the browser, and on a
+ * phone it covers the screen it is asking about.
+ *
+ * ⭐ AND THE APP ALREADY HAD THE ANSWER: `modal()`, which every other question in this product is asked
+ * through — themed, movable, RTL-correct, and at z-index 5000, which is above this panel's 4000.
+ * [[feedback-adopt-dont-reinvent]] and [[feedback-stay-in-the-construct]]: not a second way to ask, the one way.
+ *
+ * ⚠️ IT RETURNS A PROMISE, so it is a drop-in for `window.prompt` in the async callers — `var w = await
+ * testAsk(...)` reads the same as `var w = window.prompt(...)` and the flow below it does not change.
+ *
+ * ⚠️ AND IT RESOLVES ON EVERY WAY OUT, including the ✕ and the backdrop that belong to modal() and know nothing
+ * about us. A promise that never settles leaves the caller waiting forever with no error anywhere — the quiet
+ * kind of break. A short watcher settles it the moment the modal is gone. [[feedback-silence-is-the-bug]]
+ */
+function testAsk(question, hint, okLabel) {
+  return new Promise(function (resolve) {
+    if (typeof modal !== 'function') { resolve(window.prompt(question)); return; }
+    var done = false;
+    var finish = function (v) {
+      if (done) return; done = true;
+      clearInterval(CBTEST._askWatch); CBTEST._askWatch = null; CBTEST._askDone = null;
+      resolve(v);
+    };
+    CBTEST._askDone = finish;
+    var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
+      + 'var(--line,#e7e3d8);border-radius:8px;background:var(--card,#fff);box-sizing:border-box';
+    modal('<div class="mhead"><b>' + testEsc(question) + '</b></div>'
+      + '<div class="mbody">'
+      + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">'
+          + testEsc(hint) + '</div>' : '')
+      + '<textarea id="cbaskbox" rows="3" style="' + inp + '"></textarea></div>'
+      + '<div class="mfoot">'
+      + '<button class="pri" data-testid="ask-ok" onclick="testAskOk()">' + (okLabel || 'Save') + '</button> '
+      + '<button class="btn" data-testid="ask-cancel" onclick="testAskCancel()">Cancel</button>'
+      + '</div>');
+    setTimeout(function () { try { document.getElementById('cbaskbox').focus(); } catch (_) {} }, 60);
+    /* ⚠ the ✕ and the backdrop are modal()'s own and do not call us — watch for the box going away */
+    CBTEST._askWatch = setInterval(function () {
+      if (!document.getElementById('cbaskbox')) finish(null);
+    }, 250);
+  });
+}
+function testAskOk() {
+  var el = document.getElementById('cbaskbox');
+  var v = el ? String(el.value || '') : '';
+  var f = CBTEST._askDone;
+  try { if (typeof closeModal === 'function') closeModal(); } catch (_) {}
+  if (f) f(v);
+}
+function testAskCancel() {
+  var f = CBTEST._askDone;
+  try { if (typeof closeModal === 'function') closeModal(); } catch (_) {}
+  if (f) f(null);
+}
+
 function testIncFilterGet() {
   try { return localStorage.getItem('cb_test_incf') || 'open'; } catch (_) { return 'open'; }
 }
@@ -1748,7 +1813,8 @@ async function testIncLoad() {
 async function testIncSet(id, state) {
   var body = { state: state };
   if (state === 'resolved') {
-    var a = window.prompt('What fixed it? Paste the commit sha, or say why nothing needed changing.');
+    var a = await testAsk('What fixed it?',
+      'Paste the commit sha and it is cited into git \u2014 or say why nothing needed changing.', 'Mark it fixed');
     if (a === null) return;
     a = String(a).trim();
     if (!a) { if (typeof toast === 'function') toast('A resolution needs the commit, or a reason.'); return; }
@@ -1757,7 +1823,8 @@ async function testIncSet(id, state) {
     else body.why = a;
   }
   if (state === 'closed') {
-    var w = window.prompt('Why is this closed? The next person reads this instead of reopening it.');
+    var w = await testAsk('Why is this closed?',
+      'The next person reads this instead of reopening it.', 'Close it');
     if (w === null) return;
     if (!String(w).trim()) { if (typeof toast === 'function') toast('Closing needs its reason.'); return; }
     body.why = String(w).trim();
@@ -5088,7 +5155,7 @@ function testHandFilter(v) {
   testPaint();
 }
 
-function testHandClose(key, open) {
+async function testHandClose(key, open) {
   /**
    * ⚠️ CLOSING ASKS WHY; REOPENING DOES NOT. The account is of the DECISION to stop looking at something, and
    * bringing it back is not that decision — it undoes it, and the old reason is cleared with it.
@@ -5098,7 +5165,8 @@ function testHandClose(key, open) {
    */
   var why = null;
   if (!open) {
-    why = window.prompt('Closing this — why? The next tester will read this instead of raising it again.');
+    why = await testAsk('Closing this \u2014 why?',
+      'The next tester reads this instead of raising it again.', 'Close it');
     if (why === null) return;                     /* cancelled: nothing is closed */
     if (!String(why).trim()) { if (typeof toast === 'function') toast('A closure needs its reason.'); return; }
   }
@@ -5673,7 +5741,8 @@ async function testVerify(id, held) {
   var q = held
     ? 'Retested and it holds. What did you check? (this closes it)'
     : 'Still broken — what did you see? It goes back to the person who fixed it.';
-  var w = window.prompt(q);
+  var w = await testAsk(q, held ? 'This ends it and takes it off the board.'
+    : 'It goes back to the person who fixed it.', held ? 'Close it' : 'Send it back');
   if (w === null) return;
   w = String(w).trim();
   if (!w) { if (typeof toast === 'function') toast(held ? 'Closing needs its reason.' : 'Say what you saw.'); return; }
