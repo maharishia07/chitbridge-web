@@ -3396,6 +3396,75 @@ function testAreaOpen(hasCases) {
 }
 
 /* repainted in place after every verdict, so the panel shows what was just recorded */
+/**
+ * ── ⚠️⚠️⚠️ DELETED BY ACCIDENT, AND NOTHING NOTICED FOR A DAY ───────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"in the screen incident 2, but couldn’t click the link for incident and see what those
+ * are?"* — and the answer was not that the count was unclickable. `testRaisedHTML` DID NOT EXIST. Opening
+ * Raised threw ReferenceError, `screenCasesPaint` died mid-render, and the panel simply went on showing
+ * whatever it had been showing. A tab that silently does nothing.
+ *
+ * ⚠️⚠️ HOW IT WENT: the "three areas" patch (8542c0d) replaced a whole REGION of this file between two
+ * anchors — `s.slice(0, i) + block + s.slice(j)` — and this function was sitting inside that region. It was
+ * never edited, never mentioned in the commit, and never missed. Exactly the hazard already written down
+ * after a region replace ate a shop screen: [[feedback-anchor-replace-drops-code]]. ⭐ REPLACE ANCHORS, NOT
+ * RANGES — and when a range is genuinely the only way, list the functions inside it first and count them
+ * after.
+ *
+ * ⚠️⚠️ AND SIXTEEN PLAYWRIGHT SPECS PASSED OVER IT, because not one of them ever opened this area. A green
+ * suite is only a statement about what it visits. TM-22 now presses the tab.
+ */
+function testRaisedHTML(code) {
+  var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; });
+  var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; });
+  if (!inc.length && !req.length) return '';
+  var wrap = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line,#e7e3d8)';
+  var h = '<div style="' + wrap + '">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+    +   'text-transform:uppercase;margin-bottom:5px">Raised on this screen</div>';
+
+  var pill = function (t, fg, bg) {
+    return '<span style="font-size:var(--fs-1);font-weight:700;color:' + fg + ';background:' + bg
+      + ';border-radius:5px;padding:1px 6px;white-space:nowrap">' + testEsc(t) + '</span>';
+  };
+
+  /* ⚠️ newest first: the one you just raised is the one you are looking for */
+  h += inc.slice().reverse().map(function (x) {
+    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
+      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
+      +   pill(x.severity || 'Sev-3', 'var(--disp,#B3261E)', 'var(--disp-tint,#fbeceb)')
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
+      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
+      /* ⭐ the picture, if one was attached — one click from the report it belongs to */
+      +   (x.evidence_id ? '<a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(x.evidence_id)
+            + '" target="_blank" rel="noopener" style="font-size:var(--fs-1)">screenshot</a>' : '')
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
+      + (x.state === 'raised'
+        ? '<button class="btn" style="margin-top:4px;font-size:var(--fs-1)" onclick="testIncSet(\''
+          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>' : '')
+      + '</div>';
+  }).join('');
+
+  h += req.slice().reverse().map(function (x) {
+    return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
+      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
+      +   pill(x.priority || 'Medium', 'var(--grey-2,#545A61)', 'var(--neutral-tint)')
+      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.clause) + '</code>'
+      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
+      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
+      + '</div>'
+      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.requirement || '') + '</div>'
+      /* ⚠️ the evidence beside the rule, always — six months on it is the only thing that says it was real */
+      + (x.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">seen: '
+          + testEsc(x.observed) + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  return h + '</div>';
+}
+
 function screenCasesPaint() {
   var code = CBTEST.popupFor;
   if (!code) return;

@@ -603,4 +603,54 @@ test.describe('test mode', () => {
     await expect.poll(async () => page.evaluate(() => Object.keys(CBTEST.last || {}).length),
       { timeout: 30000 }).toBe(before + 1);
   });
+
+  /**
+   * ── ⚠️⚠️⚠️ THE TAB THAT DID NOTHING ─────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"in the screen incident 2, but couldn\u2019t click the link for incident and see what
+   * those are?"* \u2014 and the cause was not the count. `testRaisedHTML` had been deleted by a region replace
+   * the night before. Opening Raised threw ReferenceError, the paint died half-way, and the panel went on
+   * showing whatever it had been showing.
+   *
+   * ⚠️⚠️ SIXTEEN SPECS WERE GREEN OVER IT, because not one of them ever pressed this tab. That is the whole
+   * lesson: a green suite is a statement about what it VISITS, and every area of a panel is a place a spec
+   * has to actually go.
+   *
+   * ⭐ IT ASSERTS THE CONTENT, not that the click did not throw. A tab that renders empty because a filter is
+   * wrong looks identical to a working one from the outside.
+   */
+  test('[TM-22] every area of the panel renders \u2014 including Raised', async ({ page }) => {
+    test.setTimeout(240000);
+    await mintEntity(page, { fresh: true, name: 'TM twentytwo ' + Date.now().toString().slice(-6) });
+    await modeOn(page);
+    await page.locator('[data-testid="nav-catalogue"]').click();
+    await openPanel(page);
+    await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
+
+    /* something has to have been raised, or Raised is empty for an honest reason and proves nothing */
+    await writeCase(page, {
+      req: 'the Raised area shows what was raised here',
+      op: 'Raise an incident from this screen, then open Raised.',
+      exp: 'The incident is listed with its reference and its state.',
+      got: 'Checking that it is.',
+    }, 'inc');
+    await expect.poll(async () => page.evaluate(() => (CBTEST.scrInc || []).length),
+      { timeout: 40000 }).toBeGreaterThan(0);
+
+    const body = page.locator('#cbcasesbody');
+    for (const tab of ['Write', 'Cases', 'Raised', 'Behind', 'Speed']) {
+      await page.locator('#cbcasesbody button', { hasText: new RegExp('^' + tab) }).first().click();
+      await page.waitForTimeout(400);
+      /* ⚠️ a died-mid-render paint leaves the PREVIOUS tab selected \u2014 so the assertion is that this one is */
+      const on = await page.evaluate(() => CBTEST.caseArea);
+      expect(on, tab + ' did not become the open area \u2014 its render threw').toBeTruthy();
+      const text = (await body.textContent()) || '';
+      expect(text.length, tab + ' rendered nothing').toBeGreaterThan(60);
+    }
+
+    /* and Raised in particular says what was raised, by reference */
+    await page.locator('#cbcasesbody button', { hasText: /^Raised/ }).first().click();
+    await expect(body).toContainText('Raised on this screen');
+    await expect(body).toContainText(/INC-/);
+  });
 });
