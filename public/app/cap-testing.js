@@ -6462,6 +6462,37 @@ function testWorkRow(r) {
   var st = 'todo';
   var i = r.inc, q = r.req, last = r.last;
 
+  /**
+   * ── ⭐ THE SERVER OWNS THIS RULE NOW (lib/teststatus.js) ────────────────────────────────────────────────
+   *
+   * Athi: *"do the report uniformity first."* The report could not use the rule below because it lived in a
+   * browser, so it invented a coarser one — and that one counted "resolved" as CLOSED, which is the fault the
+   * panel had this morning, still live in the artefact that leaves the building.
+   *
+   * ⚠️ THE FALLBACK STAYS ONLY WHILE OLD ROWS DO. A list fetched before this shipped has no work_status, and
+   * a row with no status renders as nothing at all. It is marked for deletion, not kept as a second opinion:
+   * the moment both lists are known to carry the field, everything below this line goes.
+   */
+  var sent = (i && i.work_status) || (q && q.work_status) || null;
+  if (sent && TEST_WORK[sent]) {
+    var raiserS = (i && (i.raised_by_id || null)) || (q && (q.raised_by_id || null)) || null;
+    return {
+      key: r.key, title: r.title, screen: r.screen, seen: r.seen || (i && i.observed) || null,
+      shot: r.shot || (i && i.evidence_id) || null, by: r.by, at: r.at,
+      caseKey: r.caseKey, inc: i, req: q, last: last, status: sent,
+      sev: i ? i.severity : null,
+      means: i ? (i.severity_means || null) : null,
+      affected: i ? (i.affected || null) : null,
+      popup: (i && i.popup_code) || (q && q.popup_code) || null,
+      pri: q ? (q.priority || null) : null,
+      unnoticed: i ? (i.unnoticed_mins || null) : null,
+      openMins: i ? (i.open_mins || null) : null,
+      forMe: sent === 'retest' && !!meId && String(raiserS || '') === String(meId),
+      fixed: (i && (i.changes || [])[(i.changes || []).length - 1]) || null,
+      why: (i && i.why) || (q && q.why) || null,
+    };
+  }
+
   if (i) {
     st = (i.state === 'closed') ? 'closed'
        : (i.state === 'resolved') ? 'retest'
