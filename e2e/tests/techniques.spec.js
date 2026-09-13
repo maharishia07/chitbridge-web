@@ -63,6 +63,22 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
     const n = await panel.locator('table tr').count();
     expect(n, k + ': Try it produced no rows').toBeGreaterThan(2);
   }
+  /**
+   * ── ⭐ A NEW TAB STARTS CLEAN, WHICH IS WHAT HE REPORTED TWICE ──────────────────────────────────────
+   * Switching technique must leave neither the previous one's TABLE nor its BOXES. The table is kept
+   * across an INPUT change on purpose, so only the technique change may clear it — both are asserted.
+   */
+  await page.evaluate(() => testTech('bounds'));
+  await page.locator('#tqField').fill('quantity');
+  await page.locator('#tqLo').fill('1');
+  await page.locator('#tqHi').fill('999');
+  await page.locator('#cbcasespanel button', { hasText: 'Write the cases' }).click();
+  await expect(panel.locator('table')).toBeVisible({ timeout: 15000 });
+  await page.evaluate(() => testTech('states'));
+  await expect(panel.locator('table'), 'the previous technique table survived the tab change')
+    .toHaveCount(0);
+  await expect(page.locator('#tqField'), 'the previous field survived the tab change').toHaveValue('');
+
   /* ⚠ back to the number range: the assertions below are about ITS boxes, and guess has none */
   await page.evaluate(() => testTech('bounds'));
   await expect(page.locator('#tqLo')).toBeVisible({ timeout: 15000 });
