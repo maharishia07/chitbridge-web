@@ -1,0 +1,75 @@
+// [SHUT] CLOSING SOMETHING MUST CHANGE THE SCREEN YOU CLOSED IT ON.
+//
+// ── ⚠️⚠️⚠️ THE FAULT THIS FILE STANDS AGAINST ────────────────────────────────────────────────────────────────
+//
+// Athi, 2026-09-13: *"when I close a case in the Cases tab, the closed one should leave the queue or change the
+// status — it is still the same."*
+//
+// AND THE WRITE HAD WORKED EVERY TIME. The case was retired on the server, both lists were dropped and re-read,
+// and then `testPaint()` redrew `#cbtestbody` — the LAB. The Cases tab is in `#cbcasespanel`, the panel that
+// opens on a screen, and nothing redrew it. The row sat there unchanged, and the only honest conclusion a
+// person can draw is that the button does nothing.
+//
+// ⚠️⚠️ THREE REPORTS TODAY WERE THIS ONE FAULT IN DIFFERENT CLOTHES — the Findings row after a verdict, the
+// Incidents list after a resolve, and this. Fixed twice by hand before anyone noticed the shape. Now every
+// loader calls `testRepaint()`, which redraws whichever frame is open, because it is not a loader's business to
+// know where the person is standing. [[feedback-no-duplicate-functions]]
+//
+// ⚠️ AND THIS SPEC PRESSES THE BUTTON IN THE POPUP. Calling testHandClose() directly would pass on the broken
+// code — the data was always right. [[feedback-probe-through-the-gate]]
+//
+// Run: npx playwright test tests/close-repaints.spec.js --reporter=line
+const { test, expect } = require('@playwright/test');
+const { mintEntity } = require('../fixtures');
+const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
+
+test('[SHUT-01] a case closed in the Cases tab leaves the tab', async ({ page }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Shut ' + Date.now().toString().slice(-6) });
+  const token = await page.evaluate(() => SESSION.token);
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  /* two, so "the list emptied" cannot pass for "the row left" */
+  for (const n of ['01', '02']) {
+    await page.request.post(API + '/api/testing/cases/import', {
+      headers: H, data: { mode: 'add', cases: [{ case_key: 'CAT001-H' + n, module_key: 'CAT001',
+        title: 'hand written ' + n, priority: 'Medium', test_type: 'screen', screen_code: 'CAT001',
+        steps: [['do it', 'it works']] }] } });
+  }
+
+  const sw = page.locator('[data-testid="vp-test"]');
+  await expect(sw).toBeVisible({ timeout: 45000 });
+  if (!((await sw.textContent()) || '').includes('on')) await sw.click();
+  await page.locator('[data-testid="screen-cases"]').first().click();
+  await expect(page.locator('#cbcasespanel')).toBeVisible({ timeout: 30000 });
+  const modal = page.locator('#modalhost .modal');
+  if (await modal.count()) await page.locator('#modalhost .modal button').last().click();
+  await page.evaluate(() => testArea('cases'));
+  await expect(page.locator('#cbcasespanel')).toContainText('hand written 01', { timeout: 30000 });
+  await expect(page.locator('#cbcasespanel')).toContainText('hand written 02');
+
+  /* the real control, in the popup */
+  await page.locator('#cbcasespanel button').filter({ hasText: /^✓ Close$/ }).first().click();
+  const box = page.locator('#cbaskbox');
+  await box.waitFor({ state: 'visible', timeout: 20000 });
+  await box.fill('Not needed — covered by the documented case');
+  await page.locator('[data-testid="ask-ok"]').click();
+
+  /* ⭐ THE ASSERTION THAT MATTERS: the tab a person is looking at changes, without them touching anything */
+  await expect(page.locator('#cbcasespanel'), 'the closed case did not leave the tab')
+    .not.toContainText('hand written 01', { timeout: 30000 });
+  await expect(page.locator('#cbcasespanel'), 'and it took the other one with it')
+    .toContainText('hand written 02');
+
+  /* ⚠️ closed, not deleted: it is reachable from the same tab, on demand, with its reason */
+  await page.locator('#cbcasespanel button').filter({ hasText: /show 1 closed/ }).click();
+  await expect(page.locator('#cbcasespanel')).toContainText('hand written 01');
+  await expect(page.locator('#cbcasespanel')).toContainText('Not needed');
+
+  /* and the server agrees, which is the half a repaint cannot fake */
+  const all = await (await page.request.get(API + '/api/testing/cases?all=1&_=' + Date.now(),
+    { headers: H })).json();
+  const shut = (all.cases || []).filter((c) => c.case_key === 'CAT001-H01')[0];
+  expect(shut, 'the case vanished from the board entirely').toBeTruthy();
+  expect(shut.status, 'it left the tab without being retired — the repaint was a lie').toBe('retired');
+});

@@ -294,7 +294,7 @@ async function testLoad(force) {
   }
   /* ⚠ the board has been READ — which is not the same as it having anything in it */
   CBTEST._read = 1;
-  testPaint();
+  testRepaint();
 }
 
 /* ── the panel ────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -689,6 +689,27 @@ function testColDrag(e, i) {
   document.body.style.cursor = 'col-resize';
   document.addEventListener('mousemove', move);
   document.addEventListener('mouseup', up);
+}
+
+/**
+ * ── ⚠️⚠️⚠️ THERE ARE TWO FRAMES, AND A LOADER CANNOT KNOW WHICH ONE YOU ARE LOOKING AT ─────────────────────
+ *
+ * `testPaint()` draws the LAB (`#cbtestbody`). `screenCasesPaint()` draws the POPUP that opens on a screen
+ * (`#cbcasespanel`). They show the same data through different doors, and every loader in this file called
+ * the first one only.
+ *
+ * ⚠️⚠️ SO EVERY WRITE MADE FROM THE POPUP LANDED, RE-READ, AND CHANGED NOTHING ON SCREEN. Three separate
+ * reports today were this one fault wearing different clothes: the Findings row after a verdict, the
+ * Incidents list after a resolve, and — Athi, 2026-09-13 — *"when I close a case in the Cases tab, the
+ * closed one should leave the queue or change the status; it is still the same."* It always had.
+ *
+ * ⭐ A LOADER REPAINTS WHATEVER IS OPEN. It is not the loader’s business which frame the person is in, and
+ * making it guess is how the third instance of this shipped after the first two were fixed by hand.
+ * ⚠️ Cheap and safe: screenCasesPaint returns immediately when no popup is up.
+ */
+function testRepaint() {
+  try { testPaint(); } catch (_) {}
+  try { if (CBTEST.popupFor) screenCasesPaint(); } catch (_) {}
 }
 
 function testPaint() {
@@ -1468,10 +1489,10 @@ function testReqFilter(v) {
   testReqLoad();
 }
 async function testReqLoad() {
-  CBTEST.reqBusy = true; testPaint();
+  CBTEST.reqBusy = true; testRepaint();
   try { CBTEST.reqs = await api('testReqList', { query: { state: testReqFilterGet() } }); CBTEST.reqErr = null; }
   catch (e) { CBTEST.reqErr = (e && e.message) || 'Could not read them.'; }
-  CBTEST.reqBusy = false; testPaint();
+  CBTEST.reqBusy = false; testRepaint();
 }
 /**
  * ⚠️⚠️ REJECTING ASKS FOR THE REASON AND WILL NOT PROCEED WITHOUT ONE. The server refuses it too — but a refusal
@@ -1795,14 +1816,15 @@ async function testNewsRefresh(what) {
   try { if (CBTEST.scrInc || CBTEST.scrReq) jobs.push(testScrLoad()); } catch (_) {}
   try { if (what === 'case') { CBTEST.closedCases = null; jobs.push(testLoad(true)); } } catch (_) {}
   try { await Promise.all(jobs); } catch (_) {}
-  try { testPaint(); if (CBTEST.popupFor) screenCasesPaint(); } catch (_) {}
+  /* ⭐ the loaders above repaint as they finish; this is the one after the LAST of them lands */
+  testRepaint();
 }
 
 async function testIncLoad() {
-  CBTEST.incBusy = true; testPaint();
+  CBTEST.incBusy = true; testRepaint();
   try { CBTEST.incs = await api('testIncList', { query: { state: testIncFilterGet() } }); CBTEST.incErr = null; }
   catch (e) { CBTEST.incErr = (e && e.message) || 'Could not read them.'; }
-  CBTEST.incBusy = false; testPaint();
+  CBTEST.incBusy = false; testRepaint();
 }
 
 /**
@@ -2054,7 +2076,7 @@ function testScrSort(v) {
 }
 
 async function testScrLoad() {
-  CBTEST.scrBusy = true; testPaint();
+  CBTEST.scrBusy = true; testRepaint();
   try {
     /* the latest word per case — the ledger is append-only, so this endpoint already collapses it */
     var rows = await api('testResults', {});
@@ -2072,7 +2094,7 @@ async function testScrLoad() {
           CBTEST.scrReq = (rq && rq.requirements) || []; } catch (_) { CBTEST.scrReq = []; }
     CBTEST.scrErr = null;
   } catch (e) { CBTEST.scrErr = (e && e.message) || 'Could not read the results.'; }
-  CBTEST.scrBusy = false; testPaint();
+  CBTEST.scrBusy = false; testRepaint();
 }
 
 /* ⭐ one place that decides which screen a case belongs to, so the count and the row can never disagree */
@@ -5468,11 +5490,24 @@ async function testHandClose(key, open) {
     if (typeof toast === 'function') {
       toast(open ? 'Opened again.' : 'Closed \u2014 it is in Test lab \u203a Findings \u203a Closed.');
     }
-    /* ⚠ both lists: the case has moved BETWEEN them, so refreshing one leaves it in neither or in both */
-    CBTEST.closedCases = null;
-    return testLoad(true);
-  }).then(function () { testPaint(); })
-    .catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
+    /**
+     * ── ⚠️⚠️⚠️ IT REPAINTED THE LAB, AND THE BUTTON IS IN THE POPUP ──────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"when I close a case in the Cases tab, the closed one should leave the queue or
+     * change the status — it is still the same."*
+     *
+     * ⚠️⚠️ AND THE WRITE HAD WORKED EVERY TIME. The case was retired on the server, both lists were dropped
+     * and re-read — and then `testPaint()` redrew `#cbtestbody`, which is the LAB. The Cases tab is in
+     * `#cbcasespanel`, the panel that opens on a screen, and nothing redrew it. So the row a person had just
+     * closed sat there unchanged, and the only honest conclusion is that the button does nothing.
+     *
+     * ⭐ THIS IS THE THIRD TIME THE SAME SHAPE OF FAULT HAS BEEN FIXED TODAY (the Findings row after a
+     * verdict; the Incidents list after a resolve) and it is why `testNewsRefresh` exists: ONE function that
+     * re-reads whatever is loaded and repaints BOTH frames. Calling a painter directly is the bug.
+     * [[feedback-no-duplicate-functions]]
+     */
+    return testNewsRefresh('case');
+  }).catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
 }
 
 function testHandCases() {
