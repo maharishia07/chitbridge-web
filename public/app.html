@@ -6331,7 +6331,13 @@ function ccAddPicked(){
  */
 async function ccLoadOffers(){
   try {
-    var r = await api('defListLive');
+    /**
+     * ⚠ `defListLive` is an ALIAS PINNED TO kind=offer — a fourth way to ask the same question, and the one
+     * core.js's comment warned about when it said "copying it for categories and again for order models is
+     * how a list of aliases becomes a list of near-duplicates". It went the other way too: the alias stayed
+     * and outlived the loader that replaced it.
+     */
+    var r = { definitions: await cbDefsLive('offer') };
     CC.offers = ((r && r.definitions) || []).map(function(d){
       return defToOffer(d);
     });
@@ -9398,7 +9404,9 @@ async function prodOfferAsk(){
     + '<div style="font-size:var(--fs-2);color:var(--grey)">' + tx('reading your offers…') + '</div></div></div>'
     + '<div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button></div>', true);
   try {
-    const r = await api('defList', { query: { kind: 'offer', status: 'live' } });
+    /* ⭐ through the shared loader, so this joins the tick's one call and the cache the rest of the app
+       already keeps — it was a third, private fetch of a shelf two other places had just read */
+    const r = { definitions: await cbDefsLive('offer') };
     UI._prodOffers = ((r && r.definitions) || []).map(function(d){
       return { id: d.definition_id, name: d.name, rules: d.rules || {} };
     });
@@ -10652,9 +10660,10 @@ function ctOffersEnsure(then){
   if (UI._ctOffers === null) return null;   /* in flight — the callback above is queued */
   UI._ctOffers = null;
   var drain = function(list){ var q = UI._ctOffersThen || []; UI._ctOffersThen = []; q.forEach(function(fn){ try { fn(list); } catch (_) {} }); };
-  api('defList', { query: { kind: 'offer', status: 'live' } })
-    .then(function(r){
-      UI._ctOffers = ((r && r.definitions) || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
+  /* ⭐ same shelf, same loader — this one and the product page were fetching it twice within a second */
+  cbDefsLive('offer')
+    .then(function(defs){
+      UI._ctOffers = (defs || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
       drain(UI._ctOffers);
     })
     .catch(function(){ UI._ctOffers = []; drain(UI._ctOffers); });

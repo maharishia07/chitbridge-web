@@ -306,14 +306,77 @@ function catgSetOn(d, ids){
  */
 var _DEFS = {};            // kind → raw definitions, as last read
 var _defsReq = {};         // kind → in-flight promise
+/**
+ * ── ⭐⭐⭐ EVERY KIND ASKED FOR IN ONE TICK GOES IN ONE JOURNEY ───────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"batch the defList calls into one."*
+ *
+ * ⭐⭐ THE MEASUREMENT SAID WHERE TO CUT. With CB_TRIPS on, opening the Catalogue made SEVEN calls to this one
+ * route — category, pricing, tax, ordermodel, offer and two repeats — each costing about **65 ms inside the
+ * server** for **273–642 ms of wall time**, and ZERO database round trips. Roughly 2.7 seconds spent almost
+ * entirely on the wire for less than half a second of work. ⚠️ Without the split I would have gone looking at
+ * the SQL and saved nothing: the query was never the problem, the number of journeys was.
+ *
+ * ⭐ SO THE KINDS ARE COLLECTED FOR ONE TICK AND SENT TOGETHER. Nothing else changes: the callers still ask
+ * for one kind and still get one kind back, the per-kind cache is still the per-kind cache, and a caller that
+ * asks later still gets its own request. The batching lives entirely in here.
+ *
+ * ⚠️ A MICROTASK, NOT A TIMER. `Promise.resolve().then()` fires after the current synchronous run and before
+ * the browser paints, so a screen whose render path asks for five kinds in a row gets all five in one call
+ * with no delay a person could perceive. A setTimeout would add latency to the very thing being sped up.
+ *
+ * ⚠️ AND A KIND WITH NOTHING ON THE SHELF MUST BE CACHED AS EMPTY. The response only contains rows for kinds
+ * that HAVE definitions, so splitting it by row alone would leave the empty kinds looking unfetched — and
+ * every render would ask again forever. Each requested kind is seeded to [] before the split.
+ */
+var _defsQueue = [];       // kinds waiting for the next tick
+var _defsFlush = null;     // the promise that will carry them
+
+function cbDefsFlush(){
+  var kinds = _defsQueue.slice();
+  _defsQueue = [];
+  _defsFlush = null;
+  if (!kinds.length) return Promise.resolve({});
+  return api('defList', { query: { kind: kinds.join(','), status: 'live' } })
+    .then(function(r){
+      var by = {};
+      kinds.forEach(function(k){ by[k] = []; });
+      ((r && r.definitions) || []).forEach(function(d){
+        var k = d && d.kind;
+        if (by[k]) by[k].push(d);
+      });
+      return by;
+    });
+}
+
 function cbDefsLive(kind, force){
   if (!force && _DEFS[kind]) return Promise.resolve(_DEFS[kind]);
   if (!force && _defsReq[kind]) return _defsReq[kind];
   if (typeof api !== 'function') return Promise.resolve([]);
-  /* ⚠️ `query`, not a fourth hardcoded alias. `defListLive` is pinned to kind=offer; copying it for categories
-     and again for order models is how a list of aliases becomes a list of near-duplicates. */
-  _defsReq[kind] = api('defList', { query: { kind: kind, status: 'live' } })
-    .then(function(r){ _DEFS[kind] = (r && r.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
+
+  /**
+   * ⚠️⚠️ A FORCED REFRESH MUST NEVER JOIN A BATCH. `force` is what cap-definitions.js calls the moment a
+   * definition is made live, and its whole job is to return data newer than the change. A flush scheduled a
+   * microtask earlier was composed BEFORE that change — joining it would hand back the stale shelf while
+   * looking like a refresh, which is worse than not refreshing at all because the caller then repaints and
+   * believes it.
+   *
+   * ⭐ It is also the rare path — once, after an edit — so it costs one journey and saves the whole class of
+   * bug that "author a slab, make it live, and the dropdown still says none" belongs to.
+   */
+  if (force) {
+    _defsReq[kind] = api('defList', { query: { kind: kind, status: 'live' } })
+      .then(function(r){ _DEFS[kind] = (r && r.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
+      .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
+    return _defsReq[kind];
+  }
+
+  if (_defsQueue.indexOf(kind) < 0) _defsQueue.push(kind);
+  if (!_defsFlush) _defsFlush = Promise.resolve().then(cbDefsFlush);
+  var mine = _defsFlush;
+
+  _defsReq[kind] = mine
+    .then(function(by){ _DEFS[kind] = (by && by[kind]) || []; _defsReq[kind] = null; return _DEFS[kind]; })
     .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
   return _defsReq[kind];
 }
