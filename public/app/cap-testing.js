@@ -458,6 +458,27 @@ function testGuide(force) {
   return true;
 }
 
+/**
+ * ── ⭐⭐ THE PANELS RUN ONE SCALE LARGER THAN THE APP ──────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"can you bring the text size two levels up in Test Capture — the text size is too small.
+ * One or two levels and let's see how it looks."*
+ *
+ * ⚠️ THE OBVIOUS FIX WAS THE WRONG ONE. This file names `--fs-1` two hundred and fifty-four times and `--fs-2`
+ * sixty-six more; rewriting every one to `--fs-3`/`--fs-4` would be three hundred edits, would lose the meaning
+ * of the scale (fs-1 is "the quiet one", not "11px"), and would have to be undone by hand if he wanted it back
+ * a notch.
+ *
+ * ⭐ SO THE SCALE ITSELF IS REDEFINED, on the two panel roots only. Every `var(--fs-n)` inside them resolves to
+ * the larger value and nothing outside changes — the counter, the catalogue and the rail are untouched. One
+ * line to tune, one line to revert.
+ *
+ * ⚠️ SET AS CUSTOM PROPERTIES, not as a font-size on the container. A font-size would only reach the elements
+ * that inherit it, and almost everything in here names its own size explicitly — so half the panel would grow
+ * and half would not, which is worse than leaving it small.
+ */
+var TEST_SCALE = '--fs-1:13px;--fs-2:15px;--fs-3:17px;--fs-4:19px;--fs-5:23px;';
+
 function testPanelClose() {
   var el = document.getElementById('cbtesthost');
   if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -493,7 +514,8 @@ function testPanelOpen() {
   var host = document.createElement('div');
   host.id = 'cbtesthost';
   host.innerHTML =
-    '<div id="cbtestpanel" role="dialog" aria-label="Test panel" style="position:fixed;right:16px;bottom:16px;'
+    '<div id="cbtestpanel" role="dialog" aria-label="Test panel" style="' + TEST_SCALE
+    + 'position:fixed;right:16px;bottom:16px;'
     + 'width:min(420px,calc(100vw - 32px));max-height:min(70vh,620px);display:flex;flex-direction:column;'
     + 'background:var(--card,#fff);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
     + 'box-shadow:0 10px 34px rgba(0,0,0,.16);z-index:4000;overflow:hidden">'
@@ -4193,7 +4215,8 @@ async function screenCasesPopup(code, name) {
   var host = document.createElement('div');
   host.id = 'cbcaseshost';
   host.innerHTML =
-    '<div id="cbcasespanel" role="dialog" aria-label="Test cases for this screen" style="position:fixed;'
+    '<div id="cbcasespanel" role="dialog" aria-label="Test cases for this screen" style="' + TEST_SCALE
+    + 'position:fixed;'
     + 'inset-inline-end:16px;bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(72vh,660px);'
     + 'display:flex;flex-direction:column;background:var(--card,#fff);'
     + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16);'

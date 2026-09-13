@@ -5304,6 +5304,10 @@ function _renderApp(){
       const hadCs = CAP_LOADED["catsetup"];
       ensureCap("catsetup").then(function(){ if(!hadCs) bgRenderApp(); });
     }
+    /* ⚠️ THE BADGE LIVES IN THE TOP BAR, WHICH renderApp REBUILDS. Painted once after the count arrives it
+       survived until the next render and then vanished — the spec caught it. Repainted from the count we
+       already hold, on every render, costing nothing. */
+    try{ if(typeof testWaitingPaint==="function") testWaitingPaint(); }catch(_){}
     if(UI.nav==="mis" && typeof loadMIS==="function") loadMIS();
     if(UI.nav==="coassists") loadCoassists();
     if(UI.nav==="assistreview" && typeof loadGaps==="function") loadGaps();
