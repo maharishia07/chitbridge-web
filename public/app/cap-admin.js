@@ -677,8 +677,28 @@ function misOverview(m){
         '<div class="misnote"><b>' + m.parties + ' counterparties</b> · ' + m.captured + ' of ' + m.chits + ' chits captured from a channel · ' + m.suppliers + ' suppliers</div>');
 }
 
+/**
+ * ── ⚠️⚠️⚠️ SEVEN ENDPOINTS, FETCHED TWICE, EVERY TIME ─────────────────────────────────────────────────────────
+ *
+ * Measured by the speed walk on 2026-09-13: MIS made `inbox`, `sent`, `disputeQueue`, `actors`, `supList`,
+ * `misMsgs` and `misMetrics` TWICE on one visit — six seconds of round trips for a screen that had already
+ * finished loading once.
+ *
+ * ⚠️ AND NOTHING WAS WRONG WITH THIS FUNCTION. `renderApp()` calls it whenever the nav is `mis`, and renderApp
+ * runs more than once on arrival — the capability lands and `bgRenderApp()` paints again. Every screen that
+ * loads from renderApp has this shape; the catalogue had it, was measured, and got a latch (`UI._prodReq`) in
+ * September. This is the same latch, and the same reason.
+ *
+ * ⭐ ONE READ IN FLIGHT. A second caller joins the first rather than starting another; nobody has to know how
+ * many times the app decided to paint. [[feedback-no-duplicate-functions]]
+ */
 async function loadMIS(){
   if (!document.getElementById('mis_rail')) return;
+  if (UI._misReq) return UI._misReq;
+  UI._misReq = _loadMIS().finally(function(){ UI._misReq = null; });
+  return UI._misReq;
+}
+async function _loadMIS(){
   try{
     /* ⚠️ BOTH SIDES, NOT JUST inbox. "Whose clock" is unanswerable from received copies alone — everything would
        read as mine. Merged by id so a self-chit, which lands in both, is counted once. */

@@ -116,6 +116,26 @@ test('[SPEED-01] walk every screen and report what each one costs', async ({ pag
       return { code, name: (typeof codeName === 'function' && codeName(code)) || '', visits: v.length, worst, calls };
     });
     const log = (window.CBCALLS || []).filter((c) => !/^\/api\/testing/.test(c.path || ''));
+    /**
+     * ── ⭐⭐⭐ THE REPEAT IS THE FINDING, NOT THE MILLISECONDS ──────────────────────────────────────────────
+     *
+     * ⚠️ A route table grouped by /api/<first segment> reports "folders: 7 calls" and cannot be acted on:
+     * that is foldersList, folderChits, folderReconcile and folderGroupSum lumped together, and four
+     * different calls to four endpoints is not a fault. The SAME call made four times is one, every time.
+     *
+     * ⭐ So this groups by the endpoint KEY the log already carries, per SCREEN, and reports only where one
+     * key was asked more than once on one screen. That is the list somebody can act on.
+     */
+    const rep = {};
+    log.forEach((c) => {
+      const scr = c.scr || '?';
+      const key = c.key || ((c.m || '') + ' ' + String(c.path || '').split('?')[0]);
+      const k = scr + '|' + key;
+      rep[k] = rep[k] || { scr: scr, key: key, n: 0, ms: 0 };
+      rep[k].n++; rep[k].ms += (c.ms || 0);
+    });
+    const repeats = Object.keys(rep).map((k) => rep[k]).filter((r) => r.n > 1)
+      .sort((a, b) => b.n - a.n || b.ms - a.ms);
     const byApi = {};
     log.forEach((c) => {
       const m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
@@ -124,7 +144,8 @@ test('[SPEED-01] walk every screen and report what each one costs', async ({ pag
       byApi[k].n++; byApi[k].ms += c.ms || 0;
       byApi[k].srv += c.srv || 0; byApi[k].trips += c.trips || 0;
     });
-    return { rows, byApi, serverTimings: log.filter((c) => c.srv != null).length, logged: log.length };
+    return { rows, byApi, repeats: repeats,
+             serverTimings: log.filter((c) => c.srv != null).length, logged: log.length };
   });
 
   data.rows.sort((a, b) => b.worst - a.worst);
@@ -135,6 +156,17 @@ test('[SPEED-01] walk every screen and report what each one costs', async ({ pag
   console.log('  SCREEN                          CALLS    WORST ms');
   data.rows.forEach((r) => console.log('  ' + (r.code + ' ' + r.name).padEnd(32).slice(0, 32)
     + String(r.calls).padStart(5) + String(r.worst).padStart(12)));
+  /* ⭐ the actionable list, printed FIRST because it is the only part somebody can fix today */
+  if ((data.repeats || []).length) {
+    console.log('\n  THE SAME CALL, TWICE OR MORE, ON ONE SCREEN');
+    console.log('  SCREEN            CALL                          TIMES     TOTAL ms');
+    data.repeats.slice(0, 20).forEach((r) => console.log('  '
+      + String(r.scr).padEnd(18).slice(0, 18) + String(r.key).padEnd(30).slice(0, 30)
+      + String(r.n).padStart(5) + String(r.ms).padStart(13)));
+  } else {
+    console.log('\n  ✓ No call was made twice on any one screen.');
+  }
+
   console.log('\n  ROUTE                  CALLS   TOTAL ms   SERVER ms   DB TRIPS');
   api.forEach((a) => console.log('  /api/' + a.route.padEnd(18).slice(0, 18)
     + String(a.n).padStart(5) + String(a.ms).padStart(11) + String(a.srv).padStart(12)
