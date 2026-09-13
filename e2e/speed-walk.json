@@ -1,5 +1,5 @@
 {
- "at": "2026-09-13T11:20:10.616Z",
+ "at": "2026-09-13T11:28:05.301Z",
  "walked": [
   "drawer",
   "counter",
@@ -29,136 +29,136 @@
  ],
  "screens": [
   {
-   "code": "INS003",
-   "name": "Traceability",
-   "visits": 2,
-   "worst": 5604,
-   "calls": 10
-  },
-  {
    "code": "RAL003",
    "name": "Order",
    "visits": 1,
-   "worst": 5199,
-   "calls": 9
+   "worst": 5737,
+   "calls": 10
   },
   {
-   "code": "INS001",
-   "name": "MIS",
+   "code": "INS003",
+   "name": "Traceability",
    "visits": 2,
-   "worst": 4518,
-   "calls": 7
+   "worst": 5515,
+   "calls": 10
   },
   {
    "code": "RAL002",
    "name": "Task",
    "visits": 1,
-   "worst": 4361,
+   "worst": 4947,
+   "calls": 8
+  },
+  {
+   "code": "INS001",
+   "name": "MIS",
+   "visits": 2,
+   "worst": 4337,
    "calls": 7
   },
   {
    "code": "INS004",
    "name": "Trade ready",
    "visits": 2,
-   "worst": 1881,
+   "worst": 1802,
    "calls": 3
   },
   {
    "code": "CAT003",
    "name": "Categories",
    "visits": 1,
-   "worst": 1631,
+   "worst": 1567,
    "calls": 5
   },
   {
    "code": "BUS005",
    "name": "Co-assists",
    "visits": 1,
-   "worst": 931,
+   "worst": 867,
    "calls": 2
   },
   {
    "code": "RAL004",
    "name": "Drafts",
    "visits": 1,
-   "worst": 872,
+   "worst": 783,
    "calls": 2
   },
   {
    "code": "WRK002",
    "name": "Everyone's work",
    "visits": 1,
-   "worst": 720,
+   "worst": 670,
    "calls": 2
-  },
-  {
-   "code": "RAL006",
-   "name": "Trash",
-   "visits": 1,
-   "worst": 448,
-   "calls": 1
-  },
-  {
-   "code": "RAL005",
-   "name": "Archive",
-   "visits": 1,
-   "worst": 433,
-   "calls": 1
-  },
-  {
-   "code": "WRK001",
-   "name": "Messages",
-   "visits": 1,
-   "worst": 431,
-   "calls": 1
   },
   {
    "code": "BUS003",
    "name": "Match",
    "visits": 2,
-   "worst": 413,
+   "worst": 411,
    "calls": 1
   },
   {
    "code": "BUS004",
    "name": "Network",
    "visits": 1,
-   "worst": 413,
+   "worst": 411,
    "calls": 1
   },
   {
-   "code": "WRK003",
-   "name": "Intake",
+   "code": "WRK001",
+   "name": "Messages",
    "visits": 1,
-   "worst": 376,
+   "worst": 394,
    "calls": 1
   },
   {
-   "code": "CAT001",
-   "name": "Catalogue",
+   "code": "RAL005",
+   "name": "Archive",
    "visits": 1,
-   "worst": 370,
+   "worst": 392,
+   "calls": 1
+  },
+  {
+   "code": "RAL006",
+   "name": "Trash",
+   "visits": 1,
+   "worst": 383,
    "calls": 1
   },
   {
    "code": "BUS002",
    "name": "Suppliers",
    "visits": 1,
-   "worst": 368,
+   "worst": 339,
+   "calls": 1
+  },
+  {
+   "code": "WRK003",
+   "name": "Intake",
+   "visits": 1,
+   "worst": 334,
+   "calls": 1
+  },
+  {
+   "code": "CAT001",
+   "name": "Catalogue",
+   "visits": 1,
+   "worst": 332,
    "calls": 1
   },
   {
    "code": "CAT004",
    "name": "Catalogue setup",
    "visits": 1,
-   "worst": 365,
+   "worst": 320,
    "calls": 2
   },
   {
    "code": "BUS001",
    "name": "Customers",
    "visits": 1,
-   "worst": 298,
+   "worst": 267,
    "calls": 1
   }
  ],
@@ -166,91 +166,91 @@
   {
    "route": "chits",
    "n": 15,
-   "ms": 7142,
+   "ms": 6437,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "folders",
    "n": 5,
-   "ms": 2579,
+   "ms": 2478,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "governance",
    "n": 3,
-   "ms": 1881,
+   "ms": 1802,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "relationships",
    "n": 3,
-   "ms": 1090,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "definitions",
-   "n": 2,
-   "ms": 722,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "network",
-   "n": 1,
-   "ms": 572,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "products",
-   "n": 3,
-   "ms": 559,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "schemas",
-   "n": 1,
-   "ms": 528,
+   "ms": 1015,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "actors",
    "n": 2,
-   "ms": 489,
+   "ms": 780,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "definitions",
+   "n": 2,
+   "ms": 716,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "network",
+   "n": 1,
+   "ms": 520,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "schemas",
+   "n": 1,
+   "ms": 502,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "products",
+   "n": 3,
+   "ms": 484,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "assist",
    "n": 2,
-   "ms": 485,
+   "ms": 452,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "till",
    "n": 1,
-   "ms": 413,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "capture",
-   "n": 1,
-   "ms": 370,
+   "ms": 411,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "network-design",
    "n": 1,
-   "ms": 359,
+   "ms": 347,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "capture",
+   "n": 1,
+   "ms": 332,
    "srv": 0,
    "trips": 0
   }
