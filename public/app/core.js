@@ -533,7 +533,41 @@ function cbPushArrived(d){
   /* ⭐ a books answer is not a new chit: it repaints the Books block of the chit it names, and says nothing else (2026-09-07) */
   try{ if(typeof booksOnBell==='function' && d && (d.kind==='books'||d.note==='books')){ booksOnBell(d); return; } }catch(_){}
   try{ if(typeof booksOnBell==='function') booksOnBell(d); }catch(_){}
-  try{ if(typeof toast==='function'){ var who=d&&d.who?(' · '+d.who):''; toast((d&&d.kind==='capture')?(tx('New message')+who):(tx('New chit')+who)); } }catch(_){}
+  /**
+   * ── ⭐⭐⭐ THE REFERENCE SHELVES DROP WHEN THE SERVER SAYS THEY MOVED ─────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"anything static like profile info and so on, why do we read it again and again? Can’t
+   * we keep it in memory, and if there is a change can’t we push to refresh — this way you don’t need to read
+   * profile at all?"*
+   *
+   * ⚠️⚠️ THE PUSH WAS ALREADY BEING SENT AND THIS APP WAS IGNORING IT. `routes/definitions.js` has emitted
+   * `{kind:'shop'}` on every create and retire since the TV work — the counter and the shop screen listen and
+   * refresh at once. The main app, holding the SAME shelves in `_DEFS`, `_CATG` and `UI._ctOffers`, heard the
+   * event and did nothing with it. Half a push system is not a push system; it is a cache with a rumour.
+   *
+   * ⭐ SO THE ANSWER TO HIS QUESTION IS YES, AND THIS IS THE PIECE THAT MAKES IT SAFE. Caching harder without
+   * this is only caching staler — a shelf held longer is a shelf wrong for longer.
+   *
+   * ⚠️ THE CACHES ARE DROPPED, NOT REFETCHED. Nobody may be looking at the catalogue; refetching five shelves
+   * on every price change in another tab is the round trips back by a different door. The next reader asks,
+   * and by then it is one batched call.
+   */
+  try{
+    if(d && d.kind==='shop'){
+      if(typeof _DEFS!=='undefined') for(var k in _DEFS){ if(Object.prototype.hasOwnProperty.call(_DEFS,k)) delete _DEFS[k]; }
+      if(typeof _CATG!=='undefined') _CATG=null;
+      if(typeof UI!=='undefined'){ UI._ctOffers=undefined; UI._party=undefined; UI._prodOffers=null; }
+      /* only the screen actually showing them repaints — everything else picks it up when it is next opened */
+      if(typeof UI!=='undefined' && UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList();
+      return;
+    }
+  }catch(_){}
+  /**
+   * ⚠️ AND ONLY A CHIT SAYS "New chit". Every kind this function did not recognise fell through to this toast,
+   * so changing an offer announced a chit that did not exist — a notification that is WRONG is worse than one
+   * that is missing, because the reader goes looking.
+   */
+  try{ if(typeof toast==='function' && d && (!d.kind || d.kind==='chit' || d.kind==='capture')){ var who=d&&d.who?(' · '+d.who):''; toast((d&&d.kind==='capture')?(tx('New message')+who):(tx('New chit')+who)); } }catch(_){}
 }
 /**
  * ⭐ A REPAINT MUST NOT MOVE THE PAGE. Athi, 2026-09-04: "when I select or unselect, the screen jumps to the top —
