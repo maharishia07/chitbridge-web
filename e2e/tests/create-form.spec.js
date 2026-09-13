@@ -82,9 +82,15 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
   await expect(page.locator('[data-testid="wsave"]')).toHaveCount(1);
   await expect(page.locator('#cbcasespanel button', { hasText: /^Cancel$/ })).toHaveCount(1);
 
-  /* ⚠️ and the 29119-4 helper is FOLDED — five unexplained chips under the boxes read as part of the form */
-  await expect(page.locator('#tqField')).toHaveCount(0);
+  /**
+   * ⚠️ AND THE 29119-4 HELPER IS FOLDED, AND ONLY ON A TEST CASE. Five unexplained chips sitting under the four
+   * boxes read as part of the form — which is what Athi said about them. It is a way of thinking of MORE cases,
+   * so it has no business on an incident at all: the fault in front of you is not a technique exercise.
+   */
+  await expect(page.locator('#cbcasespanel')).not.toContainText('What else should I try?');
+  await page.locator('[data-testid="wkind-case"]').click();
   await expect(page.locator('#cbcasespanel')).toContainText('What else should I try?');
+  await expect(page.locator('#tqField'), 'the helper must be shut until it is asked for').toHaveCount(0);
 });
 
 test('[CREATE-02] the severity chosen is the severity filed', async ({ page }) => {
