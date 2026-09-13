@@ -2295,6 +2295,70 @@ async function paintReport(){
               + (x.note ? '<div style="margin-top:3px">' + esc(x.note) + '</div>' : '')
               + (x.evidence ? '<div class="sub">' + esc(x.evidence) + '</div>' : '') + '</div>'; }).join('')
         : '<span class="dim">None.</span>';
+    /**
+     * ── ⭐⭐⭐ 3b · RAISED BY PEOPLE — IT WAS RENDERING AS AN EMPTY BOX ────────────────────────────────────
+     *
+     * ⚠️⚠️ THE WHOLE RETEST LOOP WAS COMPUTED, SERIALISED, SHIPPED — AND DRAWN AS NOTHING. Every other
+     * section has a branch here; 3b never got one, so it fell to the `else` and rendered `esc(s.asks)`,
+     * and 3b has no `asks`. The result was `<div></div>` under a numbered clause wearing a green MEASURED
+     * tag — which does not read as "this failed to render", it reads as "we measured this and it is empty".
+     * A release meeting reading the document learned nothing about what is awaiting retest.
+     *
+     * ⭐ AND `awaiting_retest` IS THE FIGURE THIS SECTION EXISTS FOR: somebody says it is fixed and nobody
+     * has checked. It is first, and it is the only one that carries a warning colour when non-zero.
+     * `resolved` is the FIXER'S claim; `closed` is the RAISER'S verdict — the report got that wrong once
+     * before and shipped it. [[project-test-board]]
+     *
+     * ⚠️ The rows use the SAME FIELD ORDER as the board's own testWorkRowHTML — label · ref · screen ·
+     * what → by/at → next → the closing note. Same order, different density: this is a document, so it
+     * keeps the `next` sentence that the panel moved to a tooltip.
+     */
+    } else if (s.id === '3b') {
+      var warnIf = function (n) { return n ? ' class="warnn"' : ''; };
+      inner = '<div class="big-n">'
+        + '<div><b' + warnIf(b.awaiting_retest) + '>' + (b.awaiting_retest || 0) + '</b>'
+        +   '<span>awaiting retest</span></div>'
+        + '<div><b>' + (b.total || 0) + '</b><span>raised</span></div>'
+        + '<div><b>' + (b.open || 0) + '</b><span>still open</span></div>'
+        + '<div><b' + warnIf(b.closed_without_reason) + '>' + (b.closed_without_reason || 0) + '</b>'
+        +   '<span>closed, no reason</span></div></div>';
+
+      /* ⭐ the status ladder, in the board's own order and the board's own words */
+      if ((b.by_status || []).length) {
+        inner += '<dl class="kv" style="margin-bottom:12px">'
+          + b.by_status.map(function (x) {
+              var col = x.status === 'passed' ? 'var(--ok-2)'
+                      : x.status === 'failed' ? 'var(--disp)'
+                      : (x.status === 'retest' || x.status === 'blocked' || x.status === 'agreed')
+                        ? 'var(--warn-2)' : 'var(--grey-2)';
+              return '<dt style="color:' + col + ';font-weight:700">' + esc(x.label) + '</dt>'
+                + '<dd><b style="font-variant-numeric:tabular-nums">' + x.count + '</b>'
+                + (x.next ? ' <span class="sub">' + esc(x.next) + '</span>' : '') + '</dd>';
+            }).join('')
+          + '</dl>';
+      }
+
+      if (b.note) inner += '<div class="sub" style="margin-bottom:10px">' + esc(b.note) + '</div>';
+
+      inner += (b.items || []).length
+        ? b.items.map(function (x) {
+            return '<div class="inc">'
+              + '<span class="k2">' + esc(x.work_label || '') + '</span> '
+              + (x.ref ? '<b>' + esc(x.ref) + '</b> ' : '')
+              + (x.screen ? '<span class="sub">' + esc(x.screen) + '</span> ' : '')
+              + esc(x.what || '')
+              + '<div class="sub">'
+              +   (x.by ? esc(x.by) : 'unattributed')
+              +   (x.at ? ' · ' + esc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
+              +   (x.next ? ' · next: ' + esc(x.next) : '')
+              + '</div>'
+              + (x.closed_note
+                  ? '<div class="sub">closed: ' + esc(x.closed_note)
+                    + (x.closed_by ? ' — ' + esc(x.closed_by) : '') + '</div>'
+                  : '')
+              + '</div>';
+          }).join('')
+        : '<span class="dim">Nothing raised by a person in this period.</span>';
     } else if (s.id === '8') {
       inner = '<dl class="kv"><dt>Cases</dt><dd>' + b.cases + '</dd>'
         + '<dt>Features</dt><dd>' + b.features + '</dd></dl>'

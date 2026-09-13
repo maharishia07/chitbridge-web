@@ -683,7 +683,24 @@ var TEST_ROW_COLS = 'minmax(0,11em) minmax(0,1fr) 5.5em auto';
  * means these tracks no longer shrink when the panel's own font shrinks — correct: a column is a property of
  * the TABLE, not of the text that happens to sit in it.
  */
-var TEST_AREA_DEFAULT = 'minmax(4.5rem,8rem) minmax(5rem,1fr) 3.4rem 3.9rem 3.7rem 4.1rem';
+/**
+ * ⚠️⚠️ IT WAS AMPUTATING THE TWO COLUMNS THAT MATTER, SILENTLY. The old template's hard minimums summed to
+ * 24.6rem; add five 6px gaps and the padding and it needs ~436px. The panel's own DEFAULT width is 420px
+ * (see the root, `width:min(420px,…)`) and `#cbtestbody` is `overflow-x:hidden` — so ~36px was cut off with
+ * no scrollbar to reveal it, and the tracks that fell off the end were the LAST two: **Failed and Not run**.
+ * A coverage table that quietly drops its failure column is the worst failure this tool has.
+ *
+ * ⭐ THE FAULT WAS THE FLEXIBLE COLUMN HAVING A FLOOR. `Details` was `minmax(5rem,1fr)`, so when space ran
+ * short the grid took it out of the FIXED numeric tracks instead of out of the one column that is designed
+ * to give. `minmax(0,1fr)` lets it collapse first — which is right, because its content already carries
+ * `min-width:0; overflow:hidden; text-overflow:ellipsis` and degrades to a readable truncation, whereas a
+ * number does not degrade at all: it is either there or it is a lie.
+ * ⚠️ The Area track loses its floor for the same reason — its key chip is already ellipsised.
+ *
+ * New minimum: 3.6 + 0 + 3.4 + 3.9 + 3.7 + 4.1 = 18.7rem ≈ 299px, + 30px of gaps + 12px padding = 341px.
+ * Fits the 420px default with room, and still fits a 360px panel. [[feedback-silence-is-the-bug]]
+ */
+var TEST_AREA_DEFAULT = 'minmax(3.6rem,8rem) minmax(0,1fr) 3.4rem 3.9rem 3.7rem 4.1rem';
 
 /**
  * ── ⭐⭐ THE COLUMNS ARE ADJUSTABLE HERE TOO ─────────────────────────────────────────────────────────────────
