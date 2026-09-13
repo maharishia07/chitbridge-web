@@ -440,9 +440,26 @@
   /* ⚠️ shared is NOT a warning — it is the correct state for reference data, so it must not look like one */
   .tag.tier-shared{ background:var(--neutral-tint); color:var(--grey-2); }
   .tag.tier-unguarded{ background:var(--warn-tint,#FDF1DC); color:var(--warn-2,#8A5A00); font-weight:700; }
+  /**
+   * ── ⭐⭐ THE AREA NOTE IS A LIST, BECAUSE IT WAS ALWAYS A LIST ─────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"under database, big text is there, similarly for everything, engine and so on, can
+   * you simplify and make it bullet point?"*
+   *
+   * ⚠️ THE STRUCTURE WAS ALREADY IN THE STRING and was being thrown away at render. Every one of these notes
+   * separates its items with " · " and marks its warnings with ⚠ — the Database note has three RLS states
+   * and three caveats in it — and all of it was poured into ONE paragraph, where a reader has to re-find the
+   * boundaries the author already put there. Nothing needed rewriting; it needed not flattening.
+   * ⚠️ --grey-4, not --line, on the rule: 1.19:1 is not an edge.
+   */
   .areanote{ max-width:var(--prose); margin:2px 0 10px; padding:8px 11px; font-size:var(--fs-1);
         line-height:1.55; color:var(--ink-2); background:var(--paper);
-        border-inline-start:3px solid var(--line); border-radius:0 7px 7px 0; }
+        border-inline-start:3px solid var(--grey-4); border-radius:0 7px 7px 0; }
+  .areanote p{ margin:0; }
+  .areanote ul{ margin:6px 0 0; padding-inline-start:18px; }
+  .areanote li{ margin:3px 0; }
+  /* a warning bullet carries its meaning in the token, not only in the glyph */
+  .areanote li.warn{ color:var(--warn); }
   .areafoot{ max-width:var(--prose); margin:-12px 0 22px; font-size:var(--fs-1); line-height:1.55;
         color:var(--grey-2); }
 
@@ -480,6 +497,14 @@
   /* ⭐ the purpose WRAPS, and keeps the reading measure — it is a sentence, not a label */
   .tnote{ flex:1 1 100%; max-width:var(--prose); font-size:var(--fs-1); color:var(--grey-2);
         font-weight:400; line-height:1.55; margin-top:2px; }
+  /**
+   * ⚠️ AN AREA NOTE IS A BLOCK ON ITS OWN LINE, not a column beside the row. `.ttier` carries
+   * `margin-inline-start:auto` to push "THE PRODUCT" to the right edge, and the note wrapping after it was
+   * being read as a right-hand column with a hand-span of nothing to its left. `order` puts it after the
+   * tier chip in the wrap order but at the start of its own line, which is where a paragraph belongs.
+   */
+  .tnote-area{ order:9; }
+  .tnote-area .areanote{ margin:4px 0 2px; }
   /* ⭐ a grade as a POSITION, not a number to be averaged; hollow pips are the declared target */
   .pips{ display:inline-flex; gap:3px; align-items:center; }
   .pips i{ width:9px; height:9px; border-radius:50%; border:1.5px solid var(--line);
@@ -1126,9 +1151,9 @@ async function loadEngine(){
     ENGINE = r && r.engine ? r.engine : false;
     /* ⭐ what is inside every area, for the matrix to open into */
     CONTENTS = r && r.contents ? r.contents : null;
-    NOTES = (r && r.notes) || {}; FOOT = (r && r.foot) || '';
+    NOTES = (r && r.notes) || {};
     MATURITY = (r && r.maturity) || null;
-  } catch (e) { ENGINE = false; CONTENTS = null; NOTES = {}; FOOT = ''; MATURITY = null; }
+  } catch (e) { ENGINE = false; CONTENTS = null; NOTES = {}; MATURITY = null; }
 }
 
 /**
@@ -1615,7 +1640,10 @@ var CONTENTS = null;
  * them said what it excluded — which is how a row headed "connector" showed no Tally at all and still
  * looked right. A boundary a reader can see is one they can argue with.
  */
-var NOTES = {}, FOOT = '', MATURITY = null;
+/* ⚠️ FOOT lived here and is gone: nothing renders it any more, and a variable still being filled from the
+   wire with no consumer is how a deleted feature comes back. The server still sends "foot"; it is ignored
+   here now, and should be dropped from build-test-cases.cjs the next time test-cases.json is regenerated. */
+var NOTES = {}, MATURITY = null;
 
 var AREA_TIER = { engine: 1, middleware: 1, web: 1, bridge: 1, api: 2, database: 2, connector: 2 };
 var TIER_NAME = { 1: 'The architecture \u2014 engine, middleware, web', 2: 'What it rides on' };
@@ -2287,22 +2315,35 @@ async function paintReport(){
        * tester who ran one case five times has tested one case, and a leaderboard that says five is a
        * leaderboard that rewards pressing the button again.
        */
+      /**
+       * \u26a0\ufe0f\u26a0\ufe0f THIS CLAUSE SHIPPED WITH THREE CLASS NAMES THAT DO NOT EXIST. `tbl`, `n` and `muted` are in no
+       * stylesheet on this page \u2014 `.n` exists only as `table.steps td.n`, scoped to a different table. So the
+       * newest section of the report, the one answering "ten people testing on ten ids \u2014 do we get one report
+       * or one each", rendered as a RAW BROWSER TABLE: no rule, no padding, no tabular numerals, no
+       * right-aligned figures, and its note printed at full body weight, louder than the data it explains.
+       *
+       * \u2b50 An undefined CLASS fails exactly as silently as an undefined custom property, and this page has
+       * already been bitten twice by the latter. The real names are `sum` \u00b7 `num` \u00b7 `fine`.
+       * \u26a0\ufe0f AND IT WAS THE ONLY <table> ON THE PAGE OUTSIDE `.scroll`, so instead of overflowing it compressed
+       * \u2014 which is the failure this page documents at its own table rules. [[feedback-silence-is-the-bug]]
+       */
       var people = b.people || [];
       if (!people.length) {
-        inner = '<p class="muted">Nobody has recorded a result yet.</p>';
+        inner = '<span class="fine">Nobody has recorded a result yet.</span>';
       } else {
-        inner = '<table class="tbl"><tr><th>Tester</th><th class="n">Cases</th><th class="n">Passed</th>'
-          + '<th class="n">Failed</th><th class="n">Blocked</th><th>Last recorded</th></tr>'
+        inner = '<div class="scroll"><table class="sum">'
+          + '<tr><th>Tester</th><th class="num">Cases</th><th class="num">Passed</th>'
+          + '<th class="num">Failed</th><th class="num">Blocked</th><th>Last recorded</th></tr>'
           + people.map(function (p) {
             return '<tr><td>' + esc(p.tester) + '</td>'
-              + '<td class="n">' + p.recorded + '</td>'
-              + '<td class="n">' + (p.passed || '\u2014') + '</td>'
-              + '<td class="n">' + (p.failed || '\u2014') + '</td>'
-              + '<td class="n">' + (p.blocked || '\u2014') + '</td>'
+              + '<td class="num">' + p.recorded + '</td>'
+              + '<td class="num">' + (p.passed || '\u2014') + '</td>'
+              + '<td class="num">' + (p.failed || '\u2014') + '</td>'
+              + '<td class="num">' + (p.blocked || '\u2014') + '</td>'
               + '<td>' + (p.last_at ? new Date(p.last_at).toLocaleString() : '\u2014') + '</td></tr>';
           }).join('')
-          + '</table>'
-          + '<p class="muted">' + esc(b.note || '') + '</p>';
+          + '</table></div>'
+          + '<span class="fine">' + esc(b.note || '') + '</span>';
       }
     } else if (s.id === '2') {
       var t = b.totals || {};
@@ -2650,6 +2691,49 @@ function chartCard(title, ask, body, keys){
  * Filling them needs a run to carry an environment and a purpose, which is a migration (see §B of
  * BACKLOG-nonfunctional.md).
  */
+/**
+ * ── ⭐⭐ AN AREA NOTE, AS THE LIST IT ALREADY WAS ────────────────────────────────────────────────────────────
+ *
+ * Athi: *"under database, big text is there … can you simplify and make it bullet point?"*
+ *
+ * ⚠️ NOTHING IS REWRITTEN HERE, AND THAT IS DELIBERATE. These notes are the only description of each layer
+ * the product has, they are generated, and several of them carry facts that guard a number — the Database
+ * note explains that 17 UNGUARDED tables are a finding while 43 SHARED ones are a correct state, which is
+ * precisely the misreading that made 43 correct tables look like failures until 2026-09-12. Rewording them
+ * from here would be editing evidence. They are SPLIT on the boundaries their author already wrote.
+ *
+ *   " · "  separates items          -> one bullet each
+ *   " ⚠ "  starts a caveat          -> its own bullet, carrying --warn
+ *
+ * ⭐ A note with no separators stays one paragraph. Structure is revealed where it exists and never invented.
+ */
+function areaNoteHTML(txt) {
+  var raw = String(txt || '').trim();
+  if (!raw) return '';
+  /* ⚠ split on the middot only where it separates ITEMS — " · " with spaces — never inside "CGST · SGST" */
+  var parts = [];
+  raw.split(' · ').forEach(function (chunk) {
+    /**
+     * ⭐ AND ON THE AUTHOR'S OWN MARKERS. These notes mark a point worth reading with ⭐ and a caveat with ⚠,
+     * and the Bridge note has four ⭐ and two ⚠ in one paragraph — IDENTIFY, CROSS, PROTECT, THE KNOWN GAP.
+     * Those are a list by any reading; they were only prose because nothing split on them.
+     */
+    chunk.split(/\s(?=[⭐⚠]️?\s)/).forEach(function (bit) {
+      var t = bit.trim();
+      if (t) parts.push(t);
+    });
+  });
+  var lead = parts.shift();
+  var isWarn = function (t) { return /^⚠/.test(t); };
+  return '<div class="areanote"><p>' + esc(lead) + '</p>'
+    + (parts.length
+        ? '<ul>' + parts.map(function (t) {
+            return '<li' + (isWarn(t) ? ' class="warn"' : '') + '>' + esc(t) + '</li>';
+          }).join('') + '</ul>'
+        : '')
+    + '</div>';
+}
+
 function matrixHTML(){
   /* the columns, in the order he wrote them, plus the ones the board already holds */
   var COLS = [
@@ -2711,8 +2795,36 @@ function matrixHTML(){
      */
     + '<b>Done</b> means a result was ever recorded, not that it passed. '
     + '<b>n/a</b> = nobody <i>can</i> test it; <b>—</b> = nobody has. Click a number to open those cases.'
-    + '<span class="fine"> ⚠️ A test reaching two areas is counted in both, so rows do not sum to '
-    + CASES.length + '; support files are counted but left out of the percentage.</span></div>'
+    /**
+     * ── ⭐⭐ WHY THE ROWS DO NOT ADD UP, ALL THREE REASONS, ABOVE THE TABLE ────────────────────────────────
+     *
+     * ⚠️ IT NAMED TWO OF THREE. Double-counting and support files were stated; the third was not, and it is
+     * the largest: TEST TYPES WITH NO COLUMN. `colN` counts every kind, but COLS lists ten — so every case of
+     * a kind that has no column sits in the "Everything" bottom line and in NO row of the table, and nothing
+     * on the page said so. A reader checking the arithmetic finds a gap the caption does not explain and
+     * concludes the table is broken. Computed here rather than asserted, so it cannot go stale the day a
+     * column is added. [[feedback-silence-is-the-bug]]
+     *
+     * ⭐ This replaces the generated FOOT that used to sit UNDER the table — see the note at its render site.
+     * A reader meets this before they try the addition, not after they have decided it is wrong.
+     */
+    + (function () {
+        var known = {}; COLS.forEach(function (c) { known[c.k] = 1; });
+        var off = Object.keys(colN).filter(function (k) { return !known[k]; })
+          .map(function (k) { return { k: k, n: colN[k] }; })
+          .filter(function (x) { return x.n; })
+          .sort(function (x, y) { return y.n - x.n; });
+        var offN = off.reduce(function (a, x) { return a + x.n; }, 0);
+        return '<ul class="fine" style="margin:5px 0 0;padding-inline-start:18px">'
+          + '<li>A test reaching two layers is counted in both, so the rows do not sum to '
+          +   CASES.length + '.</li>'
+          + (unplaced ? '<li>' + unplaced + ' test(s) reach no layer this measurement can name — in the '
+              + 'bottom line, in no row.</li>' : '')
+          + (offN ? '<li>' + offN + ' test(s) are of a kind with no column here ('
+              + off.map(function (x) { return x.n + ' ' + esc(x.k); }).join(', ') + ').</li>' : '')
+          + '<li>Support files are counted, and left out of the percentage.</li>'
+          + '</ul></div>';
+      })()
     + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
   COLS.forEach(function(c){
     h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '"><span>'
@@ -2726,7 +2838,22 @@ function matrixHTML(){
 
   var lastTier = null;
   AREA_ORDER.forEach(function(a){
-    if (!rowAll[a]) return;
+    /**
+     * ── ⚠️⚠️ A LAYER WITH NO CASES USED TO VANISH, AND BRIDGE IS THE ONE IT KEPT HAPPENING TO ─────────────
+     *
+     * `if (!rowAll[a]) return;` dropped any area with zero testable cases — silently, with no row and no
+     * note. `bridge` is in AREA_ORDER, has a label, a description, a NOTES entry and declared contents, and
+     * ZERO cases, so the layer named in the product's own name disappeared from the architecture table.
+     * Athi asked *"where is the bridge coming?"* on 2026-09-12 and it was given a row; it went again the
+     * moment nobody wrote a case for it.
+     *
+     * ⭐⭐ THIS IS THE SHOW-IT-AT-ZERO RULE, WHICH THIS TABLE ALREADY ENFORCES ON COLUMNS. UAT, Preprod and
+     * Pen are printed at zero precisely so "we have none" cannot pass for "not applicable" — and the same
+     * argument is exactly as strong on the other axis. An absent row is read as "there is nothing here";
+     * a zero row is read as "nothing has been written for this", which is the truth and is actionable.
+     * ⚠️ The footnote's "these six rows" was six BECAUSE of this line. There are seven.
+     */
+    var emptyRow = !rowAll[a];
     /* ⭐ the break between the triad and what it rides on — an order is only a claim a reader can see */
     if (AREA_TIER[a] !== lastTier) {
       lastTier = AREA_TIER[a];
@@ -2756,6 +2883,22 @@ function matrixHTML(){
     h += '<td class="sep"></td>' + barCell(rowDone[a] || 0, rowAll[a]).replace('<td class="num"><b>', '<td class="num tot1"><b>');
     h += '</tr>';
     /**
+     * ⚠️ AND AN EMPTY ROW SAYS WHY IT IS EMPTY, in the row itself. A layer with declared contents and no
+     * cases is not "nothing here" — it is "nobody has written one", which is a finding and is actionable.
+     * Without this the zero row would simply look like a layer nobody needed.
+     */
+    if (emptyRow) {
+      var mk = (CONTENTS && CONTENTS[a]) ? CONTENTS[a].length : 0;
+      h += '<tr class="tier"><td colspan="' + (COLS.length + 6) + '" '
+        + 'style="background:var(--warn-tint);color:var(--warn);font-weight:400;text-transform:none;'
+        + 'letter-spacing:0">'
+        + '<span class="zeroflag">⚠</span> '
+        + (mk ? mk + ' ' + esc(BUILT_NOUN[a] || 'thing(s)') + ' are declared here and not one has a test case.'
+              : 'Nothing has been written for this layer.')
+        + ' This row is empty because nobody has written one — not because there is nothing here.'
+        + '</td></tr>';
+    }
+    /**
      * ⭐ THE ROW OPENS INTO ITS OWN CASES. Athi: *"this is an excellent view of the overall architecture, this
      * is what I want with expandable."* A number you can only click through to another tab is a number you
      * have to leave the picture to read.
@@ -2775,7 +2918,7 @@ function matrixHTML(){
      */
     if (mopen) {
       /* ⭐ the boundary first, then the list — it is the frame for the numbers, not a footnote to them */
-      var inner = NOTES[a] ? '<p class="areanote">' + esc(NOTES[a]) + '</p>' : '';
+      var inner = NOTES[a] ? areaNoteHTML(NOTES[a]) : '';
       if (!made || !made.length) {
         inner += '<div class="fine" style="padding:8px 2px">Nothing is listed for this area yet.</div>';
       } else {
@@ -2841,7 +2984,10 @@ function matrixHTML(){
   h += '</table></div>';
 
   /* ⭐ the one thing no row can ever reach, said once — six rows are the ARCHITECTURE, not an inventory */
-  if (FOOT) h += '<p class="areafoot">' + esc(FOOT) + '</p>';
+  /* ⚠️ THE GENERATED FOOTNOTE USED TO PRINT HERE, and it claimed "these six rows" when there are SEVEN —
+     six only because `if (!rowAll[a]) return;` was dropping Bridge, so it documented a bug as if it were a
+     fact. What it actually guarded (why the rows do not add up) is now three COMPUTED bullets above the
+     table, where a reader meets them before attempting the addition rather than after deciding it is broken. */
 
   /* ⚠️ what the table could not place, said out loud rather than absorbed into a row */
   if (unplaced) h += '<div style="color:var(--grey-2);font-size:var(--fs-1);margin:0 0 8px">⚠ ' + unplaced
@@ -3086,8 +3232,20 @@ function treeNode(depth, glyph, label, count, tail, note, open, key){
     + '<span class="tlabel">' + esc(label) + '</span>'
     + (count === null || count === undefined ? '' : '<span class="tcount">' + count + '</span>')
     + (leaf ? '<span class="tbadges">' + (tail || '') + '</span>' : (tail || ''))
-    + (note ? '<div class="tnote"' + (leaf ? '' : ' style="margin-inline-start:' + (pad + 4) + 'px"') + '>'
-        + esc(note) + '</div>' : '')
+    /**
+     * ⚠️ THE TREE DREW THESE NOTES ITSELF, so the matrix's fix did not reach it — the same walls of prose,
+     * a tab away. Athi, on this view: *"so much of text, bullet points please, also it can start a bit more
+     * left."* A LEAF note is a file's one-line purpose and stays a line; an AREA note is the long one and
+     * gets the same splitting the matrix now uses.
+     * ⚠️ And it starts one indent in, not level with the row's own text — a note pushed to the far right of
+     * a wide screen is a column of text with a hand-span of nothing to its left.
+     */
+    + (note
+        ? (leaf
+            ? '<div class="tnote">' + esc(note) + '</div>'
+            : '<div class="tnote tnote-area" style="margin-inline-start:' + (pad + 4) + 'px">'
+              + areaNoteHTML(note) + '</div>')
+        : '')
     + '</div>';
 }
 
@@ -3325,7 +3483,8 @@ function treeHTML(){
   });
 
   h += '</div>';
-  if (FOOT) h += '<p class="areafoot">' + esc(FOOT) + '</p>';
+  /* ⚠️ AND THE SAME NOTE PRINTED HERE, where it was worse: this tree draws all SEVEN areas, so "these six
+     rows" was not merely stale, it was false about the thing directly above it. */
   return h;
 }
 
