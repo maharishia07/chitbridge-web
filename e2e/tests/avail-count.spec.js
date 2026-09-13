@@ -1,0 +1,85 @@
+// [AVAIL] THE AVAILABILITY CHIPS COUNT THE SHOP, NOT THE PAGE.
+//
+// ── ⚠️⚠️⚠️ THE FAULT THIS FILE STANDS AGAINST ────────────────────────────────────────────────────────────────
+//
+// Athi, 2026-09-13 (CAT001): *"available count says 495, not available 5 — that is for the 500 you fetched
+// initially, out of 10,000 products. I guess the overall count is wrong here."*
+//
+// AND THE SERVER HAD ALWAYS SENT THE RIGHT ANSWER. `status_counts` is computed over EVERY row — the tally query
+// has no LIMIT and never had one — and rides on every response. The chips counted `UI.prods` instead, which is
+// the PAGE, so they described 500 rows and presented it as the shop.
+//
+// ⚠️⚠️ SAME SHAPE AS "500 products but only 12 rows are listed", earlier the same day: a number that is true
+// about a slice, rendered as though it were the whole. That is the failure mode of every paged screen, and it
+// never looks like a bug — it looks like a smaller shop.
+//
+// ⚠️ AND FIXING THE COUNT ALONE WOULD HAVE MADE IT WORSE: a chip reading 112 that filters to 5 is a worse lie
+// than one reading 5. So pressing it on a truncated catalogue is a SERVER query, which `?status=` has supported
+// since the endpoint was paged and nothing had ever called.
+//
+// Run: npx playwright test tests/avail-count.spec.js --reporter=line
+const { test, expect } = require('@playwright/test');
+const { mintEntity } = require('../fixtures');
+const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
+
+/* ⚠ more than one page, or there is no slice for the count to be true about */
+const PAGE = 500;
+const MORE = 40;
+
+test('[AVAIL-01] the count is the shop, and the chip reaches the shop', async ({ page }) => {
+  test.setTimeout(900000);
+  await mintEntity(page, { fresh: true, name: 'Avail ' + Date.now().toString().slice(-6) });
+  const token = await page.evaluate(() => SESSION.token);
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  /* one bulk write per 100, so this does not become a test of the import endpoint's patience */
+  const total = PAGE + MORE;
+  for (let start = 0; start < total; start += 100) {
+    const items = [];
+    for (let i = start; i < Math.min(start + 100, total); i++) {
+      /* ⭐ the unavailable ones are at the END, past the first page, which is the whole point: counting the
+         page would find NONE of them, and "0 not available" reads as a tidy shop rather than a wrong number */
+      const off = i >= PAGE;
+      items.push({ name: 'Item ' + i, price: 10, unit: 'NOS', status: off ? 'discontinued' : 'available' });
+    }
+    const r = await page.request.post(API + '/api/products/bulk', { headers: H, data: { items: items } });
+    expect(r.ok(), 'could not seed the catalogue').toBeTruthy();
+  }
+
+  await page.evaluate(() => { try { navTo('catalogue'); } catch (_) {} });
+  await expect.poll(async () => page.evaluate(() => (UI.prods || []).length), { timeout: 120000 }).toBe(PAGE);
+  await page.waitForTimeout(2500);
+
+  const seen = await page.evaluate(() => ({
+    loaded: (UI.prods || []).length,
+    total: UI.prodTotal,
+    truncated: UI.prodTruncated,
+    counts: UI.prodCounts,
+    /* what a person counting the loaded rows would get — the old answer */
+    offInPage: (UI.prods || []).filter(function (p) {
+      var d = (typeof pData === 'function' ? pData(p) : p) || {};
+      return (d.status || 'available') !== 'available';
+    }).length,
+  }));
+
+  expect(seen.loaded).toBe(PAGE);
+  expect(seen.total, 'the true total did not arrive').toBe(PAGE + MORE);
+  expect(seen.truncated, 'this shop should not fit in one page').toBeTruthy();
+  /* ⚠️ THE OLD ANSWER, STATED, so the spec fails loudly if anybody counts the page again */
+  expect(seen.offInPage, 'the seed must put every unavailable row past the first page').toBe(0);
+  expect(seen.counts, 'the server tally was discarded').toBeTruthy();
+
+  const chip = page.locator('[data-testid="cat-availfilter-not-available"]');
+  await expect(chip, 'the chip is missing — it hides when the page holds none').toBeVisible({ timeout: 30000 });
+  /* ⭐ the shop's number, not the page's */
+  await expect(chip).toContainText(String(MORE));
+
+  /* ── and pressing it reaches rows the page never held ── */
+  await chip.click();
+  await expect.poll(async () => page.evaluate(() => (UI.prods || []).length), { timeout: 60000 }).toBe(MORE);
+  const after = await page.evaluate(() => (UI.prods || []).every(function (p) {
+    var d = (typeof pData === 'function' ? pData(p) : p) || {};
+    return (d.status || 'available') !== 'available';
+  }));
+  expect(after, 'the filter returned rows that are available').toBeTruthy();
+});

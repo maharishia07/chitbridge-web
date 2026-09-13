@@ -9880,14 +9880,33 @@ function availChipHTML(d){
     + (age ? '<span style="font-size:var(--fs-1);color:var(--grey)"> · ' + esc(age) + '</span>' : '');
 }
 
-function prodAvailFilter(v){ UI._prodAvail = (UI._prodAvail === v) ? '' : v; renderApp(); }
+/**
+ * ⚠️⚠️ A CHIP THAT SAYS 112 AND FILTERS TO 5 IS WORSE THAN ONE THAT SAID 5. Once the count is the true one,
+ * the filter has to reach the same rows — so on a truncated catalogue it is a SERVER query (`?status=`),
+ * which the endpoint has supported since it was paged and nothing has ever called.
+ * ⭐ On a shop that fits in one page nothing changes: the rows are all here, and filtering them is instant.
+ */
+function prodAvailFilter(v){
+  UI._prodAvail = (UI._prodAvail === v) ? '' : v;
+  if (UI.prodTruncated) { loadCatalogue(true); return; }
+  renderApp();
+}
 
 function prodAvailChipsHTML(){
   const all = UI.prods || [];
   if (!all.length) return '';
   const statOf = function(p){ const d = pData(p) || {}; return d.status || 'available'; };
-  const nAvail = all.filter(function(p){ return statOf(p) === 'available'; }).length;
-  const nNot = all.length - nAvail;
+  /**
+   * ⭐ THE WHOLE SHOP WHEN THE SERVER HAS TOLD US, the page only when it has not. `status_counts` is over
+   * every row; counting the loaded rows was what made a 10,441-product shop report "495 / 5".
+   * ⚠️ AND THE TOTAL IS `UI.prodTotal`, not the sum of the counts: statusOf() folds absent, blank and
+   * unknown into `available`, so the buckets are complete by construction — but only the total is the
+   * number the shopkeeper would recognise, and if the two ever disagree the total is the honest one.
+   */
+  const C = UI.prodCounts;
+  const nAvail = C ? (C.available || 0)
+    : all.filter(function(p){ return statOf(p) === 'available'; }).length;
+  const nNot = C ? Math.max(0, (UI.prodTotal || 0) - nAvail) : (all.length - nAvail);
   /* ⚠️ Only offered when there is something to filter TO. A pair of chips reading "12 / 0" is a control that
      can only ever narrow to nothing. */
   if (!nNot) return '';
@@ -10254,10 +10273,30 @@ async function _loadCatalogue(force){
      * changes for them; a ten-thousand product shop stops shipping megabytes it will not draw. `truncated` says there is more,
      * and the screen says so out loud rather than showing a fifth of a catalogue as if it were all of it.
      */
-    const page = await api("prodList", { query: { limit: PROD_PAGE } });
+    /**
+     * ⚠️⚠️ THE STATUS FILTER IS A SERVER QUERY WHEN THE SHELF IS BIGGER THAN THE PAGE. Filtering the 500
+     * loaded rows would answer "5 not available" about a catalogue that has hundreds — the same fault as
+     * the count above it. `?status=` has existed on this endpoint since it was paged; nothing called it.
+     */
+    const _av = UI._prodAvail || '';
+    const page = await api("prodList", { query: _av
+      ? { limit: PROD_PAGE, status: _av }
+      : { limit: PROD_PAGE } });
     const items = (page && page.items) || (Array.isArray(page) ? page : []) || [];
     UI.prodTotal = (page && page.total != null) ? page.total : items.length;
     UI.prodTruncated = !!(page && page.truncated);
+    /**
+     * ── ⚠️⚠️⚠️ THE TALLY WAS ALWAYS TRUE AND ALWAYS DISCARDED ────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13 (CAT001): *"available count says 495, not available 5 — that is for the 500 you
+     * fetched initially, out of 10,000 products. I guess the overall count is wrong here."*
+     *
+     * ⚠️ AND THE SERVER HAS ALWAYS SENT THE RIGHT ANSWER. `status_counts` is computed over EVERY row (the
+     * tally query has no LIMIT and never had one) and the response carries it on every call. The chips
+     * counted `UI.prods` instead — the page — so they described 500 rows and presented it as the shop.
+     * Same shape as "500 products but only 12 rows": a number true about a slice, shown as the whole.
+     */
+    UI.prodCounts = (page && page.status_counts) || null;
     /**
      * ⚠️ NEVER JSON.stringify A CATALOGUE TO SEE IF IT CHANGED. This ran on every render pass and every twenty-second refresh —
      * twice over ten thousand products, tens of megabytes of string building, on a timer. A signature of ids and stamps answers
