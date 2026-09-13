@@ -432,7 +432,26 @@ function cbPushStart(){
     var base=(typeof CFG!=='undefined'&&CFG.API_BASE)||'';
     var es=new EventSource(base+'/api/events/stream?t='+encodeURIComponent(t.ticket));
     _push.es=es;
-    es.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,120*1000); } });
+    /**
+     * ── ⭐⭐⭐ WITH THE BELL UP, THE POLL IS A SAFETY NET AND NOT A CLOCK ────────────────────────────────
+     *
+     * Athi, 2026-09-13, reading the Speed table: *"every attempt, notification takes more time — are we
+     * really calling notification for every request, or every browsing of the data item in the catalogue?"*
+     *
+     * ⭐ MEASURED FIRST, AND HE IS HALF RIGHT. It is NOT per request and not per browse: it is a background
+     * clock. But it was still ticking every 120 s WITH THE PUSH STREAM CONNECTED — and the stream already
+     * calls loadNotifs() on every arrival (cbPushArrived). So a poll that exists to catch what push missed
+     * was running thirty times an hour to catch nothing, at 700–1000 ms a time.
+     *
+     * ⚠️ AND EACH ONE IS EXPENSIVE FOR A BADGE. /api/notifications is two round trips — a plain query for
+     * the dispute handler, then a withEntity transaction — over a DISTINCT ON join of state_log, chit_status
+     * and chit_header, returning up to thirty full rows, to keep ONE NUMBER current.
+     *
+     * ⭐ TEN MINUTES. Long enough that it costs nothing, short enough to catch a stream that has died
+     * without saying so — which is the only reason it exists. If the stream errors, onerror below puts it
+     * straight back to 20 s, so a real outage is still covered in one tick.
+     */
+    es.addEventListener('hello', function(){ _push.up=true; _push.backoff=5000; if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,600*1000); } });
     es.addEventListener('cb', function(ev){ var d={}; try{ d=JSON.parse(ev.data||'{}'); }catch(_){} cbPushArrived(d); });
     es.onerror=function(){ try{ es.close(); }catch(_){} _push.es=null; _push.up=false;
       if(typeof _autoRefreshTimer!=='undefined' && _autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,20*1000); }
@@ -442,7 +461,8 @@ function cbPushStart(){
 function cbPushStop(){ clearTimeout(_push.timer); if(_push.es){ try{ _push.es.close(); }catch(_){} } _push.es=null; _push.up=false; }
 /** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
 function cbPushArrived(d){
-  try{ if(typeof loadNotifs==='function') loadNotifs(); }catch(_){}
+  /* ⚠ forced: something genuinely arrived, so the badge must move even if one was fetched a second ago */
+  try{ if(typeof loadNotifs==='function') loadNotifs(true); }catch(_){}
   try{
     var listNav=['task','order','drafts','trash','archive','intake','messages'];
     if(typeof UI!=='undefined' && listNav.indexOf(UI.nav)>=0 && !(UI.detail||UI.mdetail) && typeof loadList==='function') loadList(true);

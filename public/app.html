@@ -13429,7 +13429,19 @@ async function loadReplyCount(){
     if (n !== UI.replyCount) { UI.replyCount = n; bgRenderApp(); }
   } catch (e) { /* a badge that cannot load is a badge that shows nothing, not an error on the screen */ }
 }
-async function loadNotifs(){ if(CFG.MODE==='demo') return;
+/**
+ * ⚠️ ASKED TWICE AT BOOT, A SECOND APART. `startAutoRefresh()` calls this, then starts the push stream, whose
+ * 'hello' handler calls it again — two 700 ms round trips for the same badge before the first screen is even
+ * read. Neither caller is wrong and neither should have to know about the other, so the guard lives here.
+ *
+ * ⭐ FOUR SECONDS, and it returns the badge as it stands rather than pretending it refreshed. A caller that
+ * genuinely needs the number now (a dismissal, an arrival) passes force.
+ */
+var _notifAt = 0;
+async function loadNotifs(force){ if(CFG.MODE==='demo') return;
+  var now = Date.now();
+  if (!force && now - _notifAt < 4000) return;
+  _notifAt = now;
   try{ const r=await api("notifications"); _notifs=(r&&r.notifications)||[]; UI.notifCount=(r&&r.count!=null)?r.count:_notifs.length;
     const d=document.getElementById('belldot'); if(d){ d.textContent=UI.notifCount||""; d.style.display=UI.notifCount?'':'none'; } }catch(_){}
 }
