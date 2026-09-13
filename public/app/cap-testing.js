@@ -464,6 +464,7 @@ function testPanelClose() {
 }
 
 function testPanelOpen() {
+  try { testWaitingLoad(); } catch (_) {}
   if (document.getElementById('cbtesthost')) { testPaint(); return; }
   testRunLoad();
   /**
@@ -1925,6 +1926,8 @@ async function testNewsRefresh(what) {
   try { if (CBTEST.scrInc || CBTEST.scrReq) jobs.push(testScrLoad()); } catch (_) {}
   try { if (what === 'case') { CBTEST.closedCases = null; jobs.push(testLoad(true)); } } catch (_) {}
   try { await Promise.all(jobs); } catch (_) {}
+  /* ⚠️ the badge is part of the board: refreshing one and not the other is how they start disagreeing */
+  try { testWaitingLoad(); } catch (_) {}
   /* ⭐ the loaders above repaint as they finish; this is the one after the LAST of them lands */
   testRepaint();
 }
@@ -6507,6 +6510,62 @@ function testHandCases() {
  * that is what the old rows carry; this is the answer for anything that must be RIGHT rather than readable —
  * whose turn it is to retest a fix. Missing on an old row, and a row we cannot attribute is never "mine".
  */
+/**
+ * ── ⭐⭐⭐ SOMEBODY ANSWERED WHAT YOU REPORTED, AND YOU WERE NOT LOOKING ─────────────────────────────────────────
+ *
+ * The retest loop shipped this morning and it has one hole, recorded in the backlog the same day: the SSE event
+ * only reaches a session that is OPEN. Fix something overnight and the person who reported it is told nothing —
+ * they find out when they next happen to open the lab and read the band, which is the right floor and is not a
+ * notification.
+ *
+ * ⚠️⚠️ AND THE BELL CANNOT CARRY IT. `/api/notifications` reads chits; putting findings on it means a second
+ * kind of thing in an endpoint that is already two round trips for one number, on a ten-minute poll. That is a
+ * bigger change than the gap deserves, and it would slow the thing everybody uses to serve the few who test.
+ *
+ * ⭐ THE CHEAP HONEST ANSWER: the count rides on the Test lab chip, which is on screen the moment the app
+ * loads. If two findings are waiting for your retest, the chip says 2 before you have opened anything.
+ *
+ * ⚠️ ONLY WHILE TEST MODE IS ON. A shopkeeper billing a customer must not pay a round trip for a tester's
+ * number — the same rule that keeps the Test chip off their counter. Test mode on IS the statement "I am
+ * testing", and it is the only condition under which this costs anything at all.
+ * ⚠️ ONE CALL, and the smallest one: `state=resolved` is the only shelf a retest can be waiting on.
+ */
+function testWaitingPaint() {
+  try {
+    var el = document.getElementById('cbwaitbadge');
+    if (!el) return;
+    var n = CBTEST.waiting || 0;
+    /* ⚠️ the ROW, not the pane: this runs from a push and must never repaint the app under somebody */
+    el.hidden = !n;
+    el.textContent = n ? String(n) : '';
+    var btn = el.parentNode;
+    if (btn) {
+      btn.title = n
+        ? (n + ' finding(s) you reported have been fixed and are waiting for you to retest.')
+        : 'The test lab — every case on the board, its filters and its tallies';
+    }
+  } catch (_) {}
+}
+
+/**
+ * ⚠️ COUNTED HERE, NOT ON THE SERVER, and deliberately: "is this mine to retest" is a comparison against the
+ * signed-in identity, and the endpoint already returns the raiser on every row. A dedicated server count would
+ * be a second rule about the same question — the thing today has been spent removing.
+ */
+async function testWaitingLoad() {
+  try {
+    if (localStorage.getItem('cb_testmode') !== '1') { CBTEST.waiting = 0; testWaitingPaint(); return; }
+    var meId = testMeId();
+    if (!meId) return;
+    var r = await api('testIncList', { query: { state: 'resolved' } });
+    var rows = (r && r.incidents) || [];
+    CBTEST.waiting = rows.filter(function (x) {
+      return String(x.raised_by_id || '') === String(meId);
+    }).length;
+    testWaitingPaint();
+  } catch (_) { /* a badge that cannot be counted simply does not appear */ }
+}
+
 function testMeId() {
   /* ⚠️ ONE OWNER: core.js answers this for the whole app (cbMeId). A second copy here would drift the day
      one of them learned about co-assist logins and the other did not. */

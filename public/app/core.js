@@ -710,6 +710,8 @@ function cbPushArrived(d){
          finding (lib/testnews.js), so what appears is what the server would answer through RLS — never what
          a message claimed. One refresh, and it only touches the lists that are actually loaded. */
       try{ if(lab && typeof testNewsRefresh==='function') testNewsRefresh(d.what); }catch(_){}
+      /* ⭐ the badge moves even with the lab SHUT — that is the whole point of it being on the chip */
+      try{ if(typeof testWaitingLoad==='function') testWaitingLoad(); }catch(_){}
       var what=d.what==='requirement'?tx('requirement'):(d.what==='case'?tx('case'):tx('incident'));
       var ref=d.ref?(' '+d.ref):''; var byWho=d.who?(' \u00b7 '+d.who):'';
       /* ⭐ MINE TO RETEST is a different sentence from somebody else raising something, and it says what to do */
