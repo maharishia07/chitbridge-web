@@ -4331,7 +4331,7 @@ function testDiagHTML() {
         + (w.visits ? ' and ' + w.visits + ' earlier visit(s) to this screen' : '') + '.<br>'
         + 'Nothing has been measured since. Use the screen behind this panel and the fresh sample '
         + 'appears here.</div>'
-        + testDiagClearBtn();
+        + testDiagBarHTML();
     }
     return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
       + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
@@ -4391,7 +4391,7 @@ function testDiagHTML() {
 
   /* ⭐ the reset sits ABOVE the numbers: a clear button found under a page of figures is found after
      you have already believed them */
-  var h = testDiagClearBtn();
+  var h = testDiagBarHTML();
   h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
     + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
     + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
@@ -4507,17 +4507,11 @@ function testDiagHTML() {
    * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Create, with the type chip still
    * theirs to set — whether this is an incident or a requirement is a judgement, and so is the wording.
    */
-  h += '<div style="margin-top:9px">'
-    + '<button class="btn" onclick="testDiagRaise()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px">'
-    + '\u270e Write this up</button>'
-    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
-    + '<button class="btn" onclick="testDumpSave()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px;'
-    +   'margin-inline-start:6px">\u1f4be Snapshot</button>'
-    + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
-    + '<b>Write this up</b> fills the four boxes with these numbers \u2014 you still choose the type at the '
-    + 'top of the form. <b>Snapshot</b> saves one file with every call of this visit (what was asked, what was '
-    + 'sent, what came back), every error the page threw, and where you were \u2014 to attach to the report.'
-    + '</div></div>';
+  /**
+   * \u26a0\ufe0f THESE TWO USED TO SIT HERE, AT THE FOOT OF THE READING. Athi, 2026-09-13: *"Write this up and Snapshot
+   * have to be on the top as a chip with clear instruction \u2014 these options are not going to change, so let
+   * them be on the top."* They are in `testDiagBarHTML()` now, with the two clears; see the note there.
+   */
   return h;
 }
 
@@ -4676,22 +4670,62 @@ function testDiagCleared() {
  * the top, so people know that this data can be cleared and can make a fresh start."* A reset button under a
  * page of figures is found after you have already believed them.
  */
-function testDiagClearBtn() {
-  var b = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;background:var(--card,#fff);color:var(--ink,#20303b);'
-    + 'margin-inline-end:5px';
-  return '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 8px;'
-    + 'padding-bottom:7px;border-bottom:1px solid var(--line-2,#efece4)">'
-    + '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' + b + '" '
-    +   'title="Throw away this screen\u2019s readings only">\u27f2 Clear this screen</button>'
-    + '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + b + '" '
-    +   'title="Throw away every screen\u2019s readings and start the whole measurement again">'
-    +   '\u27f2 Clear everything</button>'
-    + '<span style="font-size:var(--fs-1);color:var(--note);flex:1 1 12em;min-width:0">'
-    +   'Your readings only \u2014 they live in this browser, under your login. Clearing cannot touch anybody '
-    +   'else\u2019s.</span>'
+/**
+ * ── ⭐⭐⭐ THE FOUR THINGS YOU CAN DO HERE, AS CHIPS, AT THE TOP ────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"Clear this screen and Clear everything have to be a chip, not visible as an action icon.
+ * Also, at the bottom, Write this up and Snapshot — it has to be on the top as a chip with clear instruction,
+ * so people know it. These options are not going to change, so let them be on the top."*
+ *
+ * ⚠️⚠️ AND HE IS RIGHT ABOUT WHERE, NOT ONLY HOW. "Write this up" sat at the FOOT of the reading, which is the
+ * one place a person never looks until they have finished reading and decided to do nothing. The reason this
+ * area exists at all is to turn a slow screen into a filed finding, and the control that does it was below the
+ * fold. A reset button underneath the figures has the same problem in reverse: it is found after you have
+ * already believed them.
+ *
+ * ⭐ SO ALL FOUR SIT ABOVE THE NUMBERS, AND THEY NEVER MOVE. What you can do here does not depend on what the
+ * reading says, so the bar should not change as the reading does — a control that appears and disappears has
+ * to be re-learned every visit.
+ *
+ * ⚠️⚠️ BUT A CHIP IS WHAT A FILTER LOOKS LIKE IN THIS PANEL, and pressing a filter thinking it was an action is
+ * the exact fault reported this morning (the Incidents view: the wire carried no PATCH at all, only a GET).
+ * There is no filter row in the Speed area, so there is nothing to confuse them WITH — and to keep it that way
+ * the two destructive chips carry ⟲ and a warning tint, so they can never be read as a way of looking at data.
+ * See the note above TEST_CHIP.
+ */
+function testDiagBarHTML() {
+  var chip = 'font:inherit;font-size:var(--fs-1);padding:3px 11px;border:0;border-radius:11px;'
+    + 'cursor:pointer;margin-inline-end:5px;margin-bottom:4px;white-space:nowrap;';
+  var doer = 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)';
+  /* ⚠️ the two that THROW SOMETHING AWAY are tinted apart from the two that make something */
+  var undo = 'background:var(--warn-tint,#fdf6e6);color:var(--warn-2,#8a6100)';
+
+  return '<div style="margin:0 0 8px;padding-bottom:7px;border-bottom:1px solid var(--line-2,#efece4)">'
+    + '<div>'
+    +   '<button data-testid="diag-raise" onclick="testDiagRaise()" style="' + chip + doer + '" '
+    +     'title="Fill the Create form with these numbers">✎ Write this up</button>'
+    +   '<button data-testid="diag-snapshot" onclick="testDumpSave()" style="' + chip + doer + '" '
+    +     'title="Save one file with every call of this visit">💾 Snapshot</button>'
+    +   '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' + chip + undo + '" '
+    +     'title="Throw away this screen’s readings only">⟲ Clear this screen</button>'
+    +   '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + chip + undo + '" '
+    +     'title="Throw away every screen’s readings and start again">⟲ Clear everything</button>'
+    + '</div>'
+    /* ⭐ one line, saying what each does — Athi asked for "clear instruction", and a chip with only an icon
+       is a control you have to press to find out what it was */
+    + '<div style="font-size:var(--fs-1);color:var(--note);line-height:1.55;margin-top:2px">'
+    +   '<b>Write this up</b> puts these numbers into the Create form — you still choose whether it is an '
+    +   'incident or a requirement. <b>Snapshot</b> saves one file with every call of this visit (what was '
+    +   'asked, what was sent, what came back), every error the page threw, and where you were, to attach to '
+    +   'the report. <b>Clear</b> starts the measurement again — this screen, or all of them. '
+    +   'Your readings live in this browser under your login, so clearing cannot touch anybody else’s.'
+    + '</div>'
     + '</div>';
 }
+
+/* ⚠️ testDiagClearBtn() lived here and drew the two clears on their own. It is gone rather than left
+   unused: two functions that draw the same bar is how one of them quietly goes stale, and the next person
+   fixes the wrong one. [[feedback-no-duplicate-functions]] — see testDiagBarHTML above. */
 
 /**
  * ── ⭐⭐⭐ WHERE THE TIME ACTUALLY WENT ───────────────────────────────────────────────────────────────────────
