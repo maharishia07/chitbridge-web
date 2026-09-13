@@ -113,7 +113,7 @@
   h1{ font-size:var(--fs-4); margin:0; }
   .sub{ color:var(--grey-2); font-size:var(--fs-2); }
   .tally{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
-  .t{ font-size:var(--fs-1); padding:2px 8px; border-radius:99px; border:1px solid var(--line);
+  .t{ font-size:var(--fs-1); padding:2px 8px; border-radius:99px; border:1px solid var(--grey-4);
         background:var(--paper); white-space:nowrap; }
   /* ⭐ these three are controls now, so they say so — see tally() */
   .t[onclick]{ cursor:pointer; }
@@ -352,7 +352,7 @@
   .say b{ display:block; margin-bottom:5px; }
   /* ── the summary: coverage by area, and the sittings ── */
   .tabs{ display:flex; flex-wrap:wrap; gap:4px;   /* ⚠ five tabs need ~430px and a phone is 360 */ }
-  .tabs button{ font:inherit; font-size:var(--fs-2); padding:6px 13px; border:1px solid var(--line);
+  .tabs button{ font:inherit; font-size:var(--fs-2); padding:6px 13px; border:1px solid var(--grey-4);
         background:var(--card); color:var(--grey-2); border-radius:8px; cursor:pointer; min-height:32px; }
   .tabs button.on{ background:var(--blue); border-color:var(--blue); color:#fff; font-weight:600; }
   table.sum{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line);
@@ -411,7 +411,7 @@
 
   /* ── ⭐ the expansion line · chips say their own name and their own count, so they need no legend ── */
   .bar.chips{ gap:5px; padding-top:0; border-top:0; }
-  .chip{ font-size:var(--fs-1); border:1px solid var(--line); background:var(--card); color:var(--ink-2);
+  .chip{ font-size:var(--fs-1); border:1px solid var(--grey-4); background:var(--card); color:var(--ink-2);
          border-radius:99px; padding:2px 9px; cursor:pointer; font-weight:600; }
   .chip i{ font-style:normal; color:var(--grey-2); font-variant-numeric:tabular-nums; margin-inline-start:3px; }
   .chip:hover{ border-color:var(--grey-2); }
@@ -650,6 +650,19 @@
   .rep h2:first-of-type{ margin-top:6px; }
   .rep .num-s{ font-family:ui-monospace,Menlo,monospace; color:var(--grey-2); font-size:var(--fs-2);
         margin-inline-end:7px; }
+  /**
+   * ⭐ THE VERDICT BLOCK — the two questions, above clause 1, and it PRINTS.
+   * ⚠️ A rule and weight, not a tint: on paper backgrounds drop out, and this is the half of the document a
+   * person actually reads. Same reasoning as .sec.ask.
+   */
+  .rep .repverdict{ border-top:3px solid var(--ink); border-bottom:1px solid var(--line);
+        padding:14px 0 12px; margin:22px 0 4px; }
+  .rep .repverdict h3{ font-size:var(--fs-1); font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+        color:var(--grey-2); margin:0 0 6px; }
+  .rep .repverdict h3 ~ h3{ margin-top:16px; }
+  .rep .repverdict .big-n{ margin:0 0 2px; }
+  .rep .repverdict .caveat{ margin-top:10px; }
+  .rep .repverdict .fine{ margin-top:10px; max-width:var(--prose); }
   .rep .sec{ padding:12px 0 4px; margin:0 0 6px; }
   /**
    * ⚠️⚠️ BUT A MEASURED SECTION AND A JUDGEMENT SECTION MUST STILL NOT LOOK ALIKE — that was the whole point
@@ -699,6 +712,17 @@
     .rep .sec.ask{ background:transparent; border-inline-start-width:4px; }
     /* the two signature rules are the point of printing it at all */
     .rep .sign{ break-inside:avoid; }
+    /* ⭐ the verdict is the half a person actually reads — it must not break across a page */
+    .rep .repverdict{ break-inside:avoid; }
+    /**
+     * ⚠️⚠️ `.scroll` IS `overflow-x:auto`, AND PAPER DOES NOT SCROLL. On screen it is the one legitimate use
+     * of horizontal overflow; on paper it CLIPS at the page edge with no indication, so the very columns it
+     * exists to protect — Total, Done, Left, Complete — were being cut off the right of every printed matrix,
+     * silently, on the one surface this page is designed for. Visible and smaller beats cropped and confident.
+     */
+    .scroll{ overflow:visible !important; }
+    table.sum{ font-size:9pt; }
+    table.sum th, table.sum td{ padding-inline:4px; }
   }
 
   /* ── charts: inline SVG, theme tokens, no library ── */
@@ -741,7 +765,7 @@
         white-space:pre-wrap; word-break:break-word; line-height:1.55; }
   .try .out.bad{ background:var(--bad-tint); border-color:#eccbc9; color:var(--bad); }
   .try .eg{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
-  .try .eg button{ font:inherit; font-size:var(--fs-1); padding:3px 9px; border:1px solid var(--line);
+  .try .eg button{ font:inherit; font-size:var(--fs-1); padding:3px 9px; border:1px solid var(--grey-4);
         background:var(--paper); border-radius:99px; cursor:pointer; color:var(--ink-2);
         font-family:ui-monospace,Menlo,monospace; }
   .try .eg button:hover{ background:var(--blue-tint); border-color:var(--blue); }
@@ -2245,6 +2269,60 @@ async function paintReliability(){
   document.getElementById('main').innerHTML = h;
 }
 
+/**
+ * ── ⭐⭐⭐ HOW FAR HAS THIS GONE, AND CAN YOU TRUST IT ────────────────────────────────────────────────────────
+ *
+ * The two questions Athi says the report exists to answer, answered in figures, before clause 1.
+ *
+ * ⚠️ EVERY NUMBER IS LIFTED FROM A CLAUSE BELOW — §2 for the ratios, §3b for the retest queue, §6 for the
+ * caveats. Nothing is recomputed here. A summary that does its own arithmetic is a second opinion, and the
+ * day the two disagree the reader has no way to tell which is wrong.
+ *
+ * ⚠️ AND IT NEVER SAYS "TRUSTWORTHY". It lists what stands in the way of trusting it and lets the reader
+ * decide — because whether 1,275 unrun cases matters depends on which 1,275, and this document cannot know
+ * that. A generated verdict is the one thing a completion report must not carry. Same reasoning as §10.
+ */
+function reportVerdictHTML(r) {
+  var S = {};
+  (r.sections || []).forEach(function (x) { S[x.id] = x; });
+  var two = (S['2'] || {}).body || {};
+  var t = two.totals || {};
+  var b3 = (S['3b'] || {}).body || {};
+  var caveats = ((S['6'] || {}).caveats) || [];
+
+  var fig = function (n, word, tone) {
+    return '<div><b' + (tone ? ' class="' + tone + '"' : '') + '>' + n + '</b><span>' + word + '</span></div>';
+  };
+
+  /* ⚠ a zero holds its place and never a blank; and a zero is not a warning — see the conditional tones */
+  var stand = [
+    t.failed ? [t.failed, 'failing now', 'bad'] : null,
+    b3.awaiting_retest ? [b3.awaiting_retest, 'waiting for your retest', 'warnn'] : null,
+    t.untested ? [t.untested, 'never run', 'warnn'] : null,
+    t.blocked ? [t.blocked, 'blocked', 'warnn'] : null,
+  ].filter(Boolean);
+
+  return '<div class="repverdict">'
+    + '<h3>How far has the testing gone?</h3>'
+    + '<div class="big-n">'
+    +   fig((two.coverage_pct != null ? two.coverage_pct : 0) + '%', 'of cases have a result')
+    +   fig((two.pass_pct != null ? two.pass_pct : 0) + '%', 'of those passed', t.failed ? '' : 'big')
+    +   fig(t.total || 0, 'cases on the board')
+    + '</div>'
+    + '<h3>What stands in the way of trusting it?</h3>'
+    + (stand.length
+        ? '<div class="big-n">' + stand.map(function (x) { return fig(x[0], x[1], x[2]); }).join('') + '</div>'
+        : '<p class="fine">Nothing measured here does. Every case on the board has been run and none is '
+          + 'failing — which is evidence, not a guarantee: it says nothing about what no case covers.</p>')
+    + (caveats.length
+        ? '<ul class="caveat">' + caveats.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('')
+          + '</ul>'
+        : '')
+    + '<p class="fine">Every figure above is taken from the numbered clauses below, which are the evidence '
+      + 'for it. Nothing here is a judgement — that is section 6, and it needs a person.</p>'
+    + '</div>';
+}
+
 async function paintReport(){
   document.getElementById('main').innerHTML = '<div class="say">Building the report…</div>';
   var r;
@@ -2287,7 +2365,25 @@ async function paintReport(){
         + '<li><span>a case</span> is a <b>' + esc(r.names.case) + '</b></li>'
         + '<li><span>a sitting</span> is a <b>' + esc(r.names.run) + '</b></li>'
         + '<li><span>a failure</span> is an <b>' + esc(r.names.incident) + '</b></li>'
-        + '</ul>' : '');
+        + '</ul>' : '')
+    /**
+     * ── ⭐⭐⭐ THE TWO QUESTIONS, ANSWERED BEFORE CLAUSE 1 ──────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"report suppose to be simple and effective, give confidence to the people on how far
+     * the testing gone and can we trust the product."* And: *"I myself get tired of looking at it, someone
+     * reads, they will go mad."*
+     *
+     * ⚠️ TEN NUMBERED CLAUSES ANSWER NEITHER QUESTION UNTIL YOU HAVE READ ALL TEN. 29119-3 gives a document
+     * its skeleton, not its opening — and a reader who has to assemble the verdict from clauses 2, 3b and 6
+     * is a reader who forms it wrong, or gives up. The clauses stay, in full and in order; they are the
+     * EVIDENCE. This is the finding they add up to, stated first.
+     *
+     * ⚠️ IT INVENTS NOTHING. Every figure here is lifted from a clause below and can be checked against it —
+     * §2 for the two ratios, §3b for the retest queue, §6 for the caveats. A summary that computes its own
+     * numbers is a second opinion, and the two would drift.
+     * ⭐ It also prints, which is the whole point: it is the part a person reads on paper.
+     */
+    + reportVerdictHTML(r);
 
   r.sections.forEach(function (s) {
     var b = s.body || {};
@@ -2351,9 +2447,16 @@ async function paintReport(){
         + '<div><b>' + b.coverage_pct + '%</b><span>covered</span></div>'
         + '<div><b class="big">' + b.pass_pct + '%</b><span>of those, passed</span></div>'
         + '<div><b>' + t.total + '</b><span>cases</span></div>'
-        + '<div><b class="bad">' + t.failed + '</b><span>failed</span></div>'
-        + '<div><b class="warnn">' + t.blocked + '</b><span>blocked</span></div>'
-        + '<div><b class="warnn">' + t.untested + '</b><span>never run</span></div></div>'
+        /**
+         * ⚠️ THESE THREE WERE COLOURED UNCONDITIONALLY, so a perfectly clean board printed a RED ZERO and two
+         * amber ones. The table two clauses below already conditions its tones (`Number(f.failed) ? 'bad' :
+         * 'dim'`) — so the headline contradicted its own convention, and on paper, where the tints drop out,
+         * the reader got no signal at all. A zero is a fact, not an alarm. [[feedback-name-vs-behaviour]]
+         */
+        + '<div><b class="' + (t.failed ? 'bad' : 'dim') + '">' + t.failed + '</b><span>failed</span></div>'
+        + '<div><b class="' + (t.blocked ? 'warnn' : 'dim') + '">' + t.blocked + '</b><span>blocked</span></div>'
+        + '<div><b class="' + (t.untested ? 'warnn' : 'dim') + '">' + t.untested
+        +   '</b><span>never run</span></div></div>'
         /**
          * ⭐ WHAT IT IS gets its own column. Athi, 2026-09-12: *"under ADO you are providing the context —
          * possibly you can make it as a column as we have lot of space."*
