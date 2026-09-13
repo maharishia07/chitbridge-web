@@ -281,7 +281,7 @@ function cmdbControlHTML(q2) {
   A.forEach(function (x) {
     /* the stored name is "Rail › Compose • open the full original" — split it back for reading */
     var bits = String(x.screen).split('•');
-    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+    h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
       +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code></td>'
       + '<td style="padding:4px 6px">' + cmdbEsc((bits[1] || '').trim()) + '</td>'
@@ -311,7 +311,7 @@ function cmdbPopupHTML(q2) {
     + '<th style="text-align:start;padding:3px 0 3px 6px">In</th></tr>';
   A.forEach(function (x) {
     var meta = byFn[x.screen] || {};
-    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+    h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
       +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code>'
       +   (meta.ambiguous ? '<span title="opens more than one dialog" style="' + q2 + '"> ·</span>' : '') + '</td>'
@@ -346,7 +346,7 @@ function cmdbSoftwareHTML(q2) {
     + '<th style="text-align:start;padding:3px 6px">Stage</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">Draws</th></tr>';
   A.forEach(function (x) {
-    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+    h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
       +   'user-select:all;color:var(--ink)">' + cmdbEsc(x.code) + '</code></td>'
       + '<td style="padding:4px 6px">' + cmdbEsc(x.name)
@@ -434,7 +434,7 @@ function cmdbPaint() {
     +   'NOT coverage: the sweep counts a screen\u2019s controls against the file that owns them.">Cases</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">Drawn by</th></tr>';
   rows.forEach(function (r) {
-    h += '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+    h += '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-family:\'Space Mono\',ui-monospace,monospace;'
       +   'user-select:all;color:var(--ink)">' + cmdbEsc(r.code) + '</code></td>'
       + '<td style="padding:4px 6px;' + q2 + '">' + cmdbEsc(r.group) + '</td>'

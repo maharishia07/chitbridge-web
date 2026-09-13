@@ -84,5 +84,6 @@ test('[BAR-02] the bar is there before anything has been measured, and after', a
   for (const id of CHIPS) {
     await expect(page.locator('[data-testid="' + id + '"]'), id + ' vanished after a clear').toBeVisible();
   }
-  await expect(page.locator('#cbcasespanel')).toContainText('Cleared');
+  /* ⚠️ the banner says WHICH clear it is measuring from — the word alone would pass on a stale reading */
+  await expect(page.locator('#cbcasespanel')).toContainText('measured from the clear at');
 });
