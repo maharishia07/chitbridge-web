@@ -469,7 +469,7 @@ function testGuide(force) {
  * of the scale (fs-1 is "the quiet one", not "11px"), and would have to be undone by hand if he wanted it back
  * a notch.
  *
- * ⭐ SO THE SCALE ITSELF IS REDEFINED, on the two panel roots only. Every `var(--fs-n)` inside them resolves to
+ * ⭐ SO THE SCALE ITSELF IS REDEFINED, on the two panel roots only. Every size token inside them resolves to
  * the larger value and nothing outside changes — the counter, the catalogue and the rail are untouched. One
  * line to tune, one line to revert.
  *
@@ -4508,6 +4508,50 @@ function testCoverCase(code, ctl, label) {
   if (typeof toast === 'function') toast('Writing a case for ' + ctl + ' — say what it should do.');
 }
 
+/**
+ * ── ⭐⭐⭐ PASSED · FAILED · NOT RUN, AS TABS, EACH SAYING WHAT IT NEEDS ────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"under coverage many things state 'not run' — is it a problem, how do we include it as
+ * part of the execution, so you may have to state what is required to include them for the next run. The
+ * failure state, again, what is required to make it pass … can we provide it as a tab for these three areas,
+ * Pass, Fail and Not Run, each a distinct tab with numbers on top. Your one-line statement does not make sense
+ * and people may not know to click those."*
+ *
+ * ⚠️⚠️ AND "NOT RUN" WAS BEING REPORTED AS IF IT WERE A VERDICT. It is not. It is the ABSENCE of one, and the
+ * three states need different things from a person:
+ *   PASSED   nothing. It is the only one that asks for nothing.
+ *   FAILED   somebody must look. There is a real answer already recorded — which run said so, and when.
+ *   NOT RUN  it needs to be INCLUDED IN A RUN, and the reason it is not in one is knowable: an automated case
+ *            carries `automated` and a `run_by`; a manual one has to be performed by a person.
+ *
+ * ⭐ So each tab says what it would take, in that tab's own terms, instead of one line above all three that
+ * covers none of them.
+ */
+function testCovTab() { return CBTEST.covTab || 'notrun'; }
+function testCovSetTab(v) {
+  CBTEST.covTab = v;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
+
+/**
+ * ⚠️ WHY THIS ONE IS NOT IN A RUN, read from the case rather than guessed. A case that says it is automated and
+ * names a runner is waiting on that runner; one that does not is waiting on a person. Saying "add it to the
+ * suite" for a manual case would be advice nobody can follow.
+ */
+function testCovWhyNotRun(c) {
+  if (c.automated && c.run_by) {
+    return 'Automated, run by <code>' + testEsc(c.run_by) + '</code> — it is in a suite and that suite has '
+      + 'not run since the board was last read. Run it, or press <b>Passed</b> / <b>Failed</b> here after you '
+      + 'have watched it.';
+  }
+  if (c.automated) {
+    return '<b>Marked automated but no runner is named.</b> Nothing will ever pick it up — either name the '
+      + 'suite in <code>run_by</code>, or record it by hand here.';
+  }
+  return 'A manual case: somebody has to do it and say what happened. Open the screen, follow the steps, then '
+    + 'press <b>Passed</b> or <b>Failed</b> on this row.';
+}
+
 function testCoverGrade(nTests, nRun, nRed) {
   if (!nTests) {
     return ['Not covered', 'var(--disp,#b4453f)',
@@ -4770,37 +4814,93 @@ function testBehindHTML(code) {
 
   /* ── 4+5 · the linked cases, with their standing ── */
   var linked = b.linked;
-  var tally = { pass: 0, fail: 0, other: 0, none: 0 };
-  linked.forEach(function (x) {
-    var l = (CBTEST.last || {})[x.c.case_key];
-    if (!l) tally.none++; else if (l.status === 'pass') tally.pass++;
-    else if (l.status === 'fail') tally.fail++; else tally.other++;
-  });
+  /* ⚠ the old tally counted the same four things the tabs below count, and nothing read it any more: two
+     counters over one list is how the header and the list start disagreeing. Gone with its one-line summary. */
   /**
-   * ⭐⭐ FAILING FIRST, THEN NEVER RUN, THEN PASSING. Sorted by case key this list opens on whatever happens
-   * to start with "a" — and the one red line sits at row thirty-one. A tester looks at this area to find out
-   * whether the ground under the screen is solid; the answer belongs at the top.
+   * ── ⭐⭐⭐ THREE TABS, EACH SAYING WHAT IT NEEDS ────────────────────────────────────────────────────────────
+   *
+   * Athi: *"can we provide it as a tab for these three areas — Pass, Fail and Not Run — each a distinct tab
+   * with numbers on top. Your one-line statement does not make sense and people may not know to click those."*
+   *
+   * ⚠️ The one line said "12 passing · 3 failing · 33 not passing yet" and then listed all forty-eight
+   * together, sorted. Three counts a person cannot press, above a list that mixes the three things they mean.
    */
-  var rank = { fail: 0, blocked: 1, na: 2 };
-  linked = linked.slice().sort(function (p, q) {
-    var lp = (CBTEST.last || {})[p.c.case_key], lq = (CBTEST.last || {})[q.c.case_key];
-    var rp = lp ? (rank[lp.status] === undefined ? 4 : rank[lp.status]) : 3;
-    var rq = lq ? (rank[lq.status] === undefined ? 4 : rank[lq.status]) : 3;
-    return rp - rq || (p.c.case_key < q.c.case_key ? -1 : 1);
-  });
+  var bucket = function (x) {
+    var l = (CBTEST.last || {})[x.c.case_key];
+    if (!l) return 'notrun';
+    if (l.status === 'pass') return 'pass';
+    if (l.status === 'fail') return 'fail';
+    return 'other';
+  };
+  var buckets = { pass: [], fail: [], notrun: [], other: [] };
+  linked.forEach(function (x) { buckets[bucket(x)].push(x); });
 
-  h += lab('Tests underneath it \u00b7 ' + linked.length);
+  h += testSec('Every test that names this code · ' + linked.length);
   if (!linked.length) {
-    h += quiet('Nothing declares itself a test of that code. \u26a0\ufe0f That is a real coverage finding \u2014 '
-      + 'worth raising as a requirement from this very panel.');
+    h += testNotes(['Nothing declares itself a test of the code behind this screen. That is a real coverage '
+      + 'finding, and the button above raises it.'], 'warn');
   } else {
-    h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:0 0 4px">'
-      + '<b style="color:var(--ok-2,#1B7F4B)">' + tally.pass + '</b> passing \u00b7 '
-      + '<b' + (tally.fail ? ' style="color:var(--disp,#B3261E)"' : '') + '>' + tally.fail + '</b> failing \u00b7 '
-      + '<b>' + (tally.none + tally.other) + '</b> not passing yet</div>';
-    h += linked.slice(0, 40).map(function (c) { return caseRow(c, false); }).join('');
-    if (linked.length > 40) h += quiet('\u2026 and ' + (linked.length - 40) + ' more, further down the same order. The full board is in the Test lab.');
+    var tab = testCovTab();
+    /* ⚠ land on a tab that HAS something: opening on an empty Failed reads as "the tab is broken" */
+    if (!buckets[tab] || !buckets[tab].length) {
+      tab = buckets.fail.length ? 'fail' : buckets.notrun.length ? 'notrun'
+          : buckets.pass.length ? 'pass' : 'other';
+    }
+    var TABS = [['fail', 'Failed', 'var(--disp,#b4453f)'],
+                ['notrun', 'Not run', 'var(--warn-2,#8a6100)'],
+                ['pass', 'Passed', 'var(--ok-2,#1B7F4B)'],
+                ['other', 'Blocked', 'var(--grey-2,#545A61)']];
+    h += '<div style="display:flex;gap:5px;flex-wrap:wrap;margin:2px 0 7px">'
+      + TABS.filter(function (t) { return buckets[t[0]].length; }).map(function (t) {
+          var on = tab === t[0];
+          /* ⭐ THE NUMBER IS THE TAB, big, above the word — a count you can press, which is what was asked */
+          return '<button onclick="testCovSetTab(\'' + t[0] + '\')" style="font:inherit;cursor:pointer;'
+            + 'border:1px solid ' + (on ? t[2] : 'var(--line,#e7e3d8)') + ';border-radius:9px;'
+            + 'padding:5px 13px;line-height:1.15;text-align:center;'
+            + 'background:' + (on ? 'var(--card,#fff)' : 'transparent') + '">'
+            + '<b style="display:block;font-size:var(--fs-4);color:' + t[2] + '">'
+            + buckets[t[0]].length + '</b>'
+            + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + t[1] + '</span></button>';
+        }).join('')
+      + '</div>';
+
+    /**
+     * ⭐ AND WHAT EACH ONE NEEDS, in that tab's own terms. "Not run" is not a verdict, it is the ABSENCE of
+     * one, and it asks something completely different from "failed".
+     */
+    var SAYS = {
+      fail: ['These were run and they did not do what the case says. Each one is a real answer already '
+        + 'recorded — open the case to see which run said so, and when. <b>Nothing here is a guess.</b>',
+        'To make one pass: fix the product, then press <b>Passed</b> on the row (or re-run its suite). '
+        + 'If the CASE is wrong rather than the product, edit the case — do not pass it.'],
+      notrun: ['Not a verdict — the absence of one. Nobody has run these, so this screen is neither proven '
+        + 'nor disproven by them, and a green board elsewhere says nothing about them.',
+        'Each row below says what it would take to include it in the next run — it is different for an '
+        + 'automated case and a manual one.'],
+      pass: ['Run, and they did what the case says. Nothing is asked of you.',
+        '⚠️ A pass is about the LAST run, not for ever — these are re-run, not finished with.'],
+      other: ['Blocked or skipped: somebody tried and could not get to the end.',
+        'Read the reason on the row — a blocked case has one, and it is usually about something other than '
+        + 'the code this screen sits on.'],
+    };
+    h += testNotes(SAYS[tab] || [], tab === 'fail' ? 'bad' : tab === 'pass' ? 'ok' : 'warn');
+
+    var shown = buckets[tab] || [];
+    h += shown.slice(0, 40).map(function (x) {
+      var row = caseRow(x, false);
+      /* ⭐ the "how do I include it" line, per case, only where it is the question being asked */
+      if (tab === 'notrun') {
+        row += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:0 0 5px 2px">⤷ '
+          + testCovWhyNotRun(x.c || {}) + '</div>';
+      }
+      return row;
+    }).join('');
+    if (shown.length > 40) {
+      h += quiet('… and ' + (shown.length - 40) + ' more in this tab. The full board is in Test Manager.');
+    }
   }
+
+
 
   /* ── 5 · the weak rung, kept apart and marked ── */
   if (b.named.length) {
