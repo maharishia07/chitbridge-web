@@ -7440,11 +7440,36 @@ function actorCleanupModal(action, name, parts){
    IntersectionObserver auto-reveal + a "Show more" button fallback (never stuck) + total/end marker.
    For lists whose endpoint returns everything at once: lazyWrap(id, items, cardFn, emptyHtml). */
 const LAZY = {};
+/**
+ * ── ⚠️⚠️⚠️ A REPAINT MUST NOT TAKE BACK THE ROWS SOMEBODY ASKED FOR ───────────────────────────────────────────
+ *
+ * Athi, INC-260912-0XJN: *"it says 500 products but only 12 rows are listed."*
+ *
+ * ⚠️⚠️ AND THE COUNT WAS RIGHT. `shown` was reset to 50 on EVERY rebuild — and this list rebuilds constantly:
+ * the twenty-second refresh, the categories arriving, the tax slabs, the offers, every late loader calls
+ * paintProdList. So you press "Show 50 more" three times, reach row 200, a timer fires, and you are back at
+ * fifty while the header still says how many there really are. Measured on the deployed page: revealed 60,
+ * repainted, `LAZY.prodlist.shown` was 50 again.
+ *
+ * ⚠️ AND IT TOOK THE SCROLL WITH IT. paintProdList carefully restores scrollTop onto a box that just lost
+ * three quarters of its height, so the restore lands past the end and the list jumps. Two symptoms, one cause.
+ *
+ * ⭐ SO THE WINDOW IS KEPT, and it is kept HERE rather than at the one call site that complained — the same
+ * reset was under the chit history, the message thread and both dispute lists, none of which had been
+ * noticed. [[feedback-repaint-locally]]
+ *
+ * ⚠️ KEPT ONLY WHILE IT STILL FITS. If the list has shrunk below what was revealed — a filter narrowed it,
+ * rows were deleted — the window goes back to one chunk: showing "150 of 12" is a worse lie than collapsing.
+ * ⚠️ And never below `chunk`, so a list that grows never shows fewer rows than a fresh one would.
+ */
 function lazyWrap(id, items, cardFn, empty){ items = items || [];
-  if(LAZY[id] && LAZY[id]._io){ try{ LAZY[id]._io.disconnect(); }catch(_){} }
+  const kept = LAZY[id];
+  if(kept && kept._io){ try{ kept._io.disconnect(); }catch(_){} }
   if(!items.length) return empty || '';
   const chunk = 50;
-  LAZY[id] = { items, cardFn, chunk, shown: Math.min(chunk, items.length), total: items.length, _io:null };
+  var shown = Math.min(chunk, items.length);
+  if(kept && kept.shown > shown && kept.shown <= items.length) shown = kept.shown;
+  LAZY[id] = { items, cardFn, chunk, shown: shown, total: items.length, _io:null };
   setTimeout(function(){ lazyAttach(id); }, 0);
   return items.slice(0, LAZY[id].shown).map(cardFn).join("") + lazyBar(id); }
 function lazyBar(id){ const s=LAZY[id]; if(!s) return ''; const left=s.total-s.shown;
