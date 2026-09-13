@@ -3384,6 +3384,94 @@ function testSlowerThanBefore(history, gen) {
  * against history the tester believes they just deleted — a red warning sourced from data that is not on
  * the screen is the worst thing this area could do.
  */
+/**
+ * ── ⭐⭐⭐ WHICH SCREEN EATS THE TIME ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"the way speed works is, I move around every different screen and the speed makes a
+ * note of every call being done and which API uses more effort — that is the accumulated one. On the top it
+ * shows for that particular screen for that moment. So we know the overall performance and also which screen
+ * eats more time?"*
+ *
+ * ⭐ THE FIRST TWO HALVES WERE RIGHT AND THE THIRD WAS NOT. The by-API roll-up says which ROUTE is expensive
+ * and which screens asked for it; the reading at the top is this visit to this screen. But NOTHING ranked the
+ * screens against each other, so "which screen eats more time" could only be answered by walking to each one
+ * and reading its top line — and by then the earlier ones have fallen out of the forty-call log.
+ *
+ * ⚠️⚠️ AND THE VISIT WAS ONLY RECORDED IF SOMEBODY OPENED SPEED ON THAT SCREEN, because the save happened
+ * while drawing the area. So the one table meant to compare screens would only ever hold the screens you had
+ * already gone looking at — the ones you suspected — which is the opposite of what a survey is for.
+ *
+ * ⭐ So the visit is now stamped from the CHIP, which test mode puts on every screen. Walk the product once
+ * and the table is filled in behind you.
+ *
+ * ⚠️ WRITTEN ONLY WHEN THE FIGURES MOVE. This runs on every paint, and a localStorage write per paint would
+ * be a performance tool that costs performance.
+ */
+function testVisitTouch(code) {
+  try {
+    if (!CBTEST.on || !code) return;
+    var gen = window.CBGEN || 0;
+    if (!gen) return;
+    var mine = (window.CBCALLS || []).filter(function (c) {
+      return !/^\/api\/testing/i.test(String(c.path || '')) && (!c.gen || c.gen === gen);
+    });
+    if (!mine.length) return;
+    var sig = code + ':' + gen + ':' + mine.length + ':' + mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
+    if (CBTEST._visitSig === sig) return;
+    CBTEST._visitSig = sig;
+    testVisitSave(code, gen, mine);
+  } catch (_) {}
+}
+
+/**
+ * ⭐⭐ EVERY SCREEN VISITED IN TEST MODE, RANKED. Not the last forty calls — this is kept per screen and
+ * survives them falling out of the log, which is the whole reason a survey needs storage.
+ *
+ * ⚠️ BY THE WORST VISIT, NOT THE LAST. A screen that is usually quick and occasionally terrible is exactly
+ * the one worth finding, and the last reading hides it half the time.
+ */
+function testDiagByScreen() {
+  var all;
+  try { all = testVisitsGet(); } catch (_) { return ''; }
+  var codes = Object.keys(all || {});
+  if (codes.length < 2) return '';   /* one screen is not a comparison */
+  var rows = codes.map(function (c) {
+    var v = all[c] || [];
+    var worst = 0, last = null, calls = 0;
+    v.forEach(function (x) { if ((x.ms || 0) > worst) { worst = x.ms || 0; calls = x.n || 0; } });
+    last = v[v.length - 1] || null;
+    return { code: c, name: (typeof codeName === 'function' && codeName(c)) || '', visits: v.length,
+             worst: worst, worstCalls: calls, last: last ? last.ms : null };
+  }).sort(function (a, b) { return b.worst - a.worst; });
+
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+    + 'text-transform:uppercase;margin:14px 0 3px">Every screen you have measured</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:5px">'
+    + 'Kept per screen, so it survives the forty-call log. Worst visit first \u2014 a screen that is usually '
+    + 'quick and occasionally terrible is the one worth finding.</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">Screen</th>'
+    + '<th style="text-align:end;padding:3px 6px">Visits</th>'
+    + '<th style="text-align:end;padding:3px 6px">Worst</th>'
+    + '<th style="text-align:end;padding:3px 6px">Last</th></tr>';
+  h += rows.map(function (r) {
+    var hot = r.worst > 8000;
+    return '<tr style="border-top:1px solid var(--line-2,#efece4)'
+      + (r.code === CBTEST.popupFor ? ';background:var(--paper,#faf8f3)' : '') + '">'
+      + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1);color:var(--grey-2)">'
+      +   testEsc(r.code) + '</code> ' + testEsc(r.name)
+      +   (r.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--note)">' + r.worstCalls
+        + ' calls</span>' : '') + '</td>'
+      + '<td style="text-align:end;padding:4px 6px">' + r.visits + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:' + (hot ? '700' : '400')
+      +   ';color:' + (hot ? 'var(--disp,#B3261E)' : 'inherit') + '">' + r.worst + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;color:var(--grey-2)">'
+      +   (r.last == null ? '\u2014' : r.last) + '</td></tr>';
+  }).join('');
+  return h + '</table>';
+}
+
 function testDiagClear() {
   var code = CBTEST.popupFor;
   var had = ((window.CBCALLS || []).length) || 0;
@@ -3583,6 +3671,7 @@ function testDiagHTML() {
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
   h += testDiagByApi();
+  h += testDiagByScreen();
 
   /**
    * ── ⭐⭐ A MEASUREMENT NOBODY CAN RAISE IS A MEASUREMENT NOBODY RAISES ─────────────────────────────────
@@ -3597,10 +3686,10 @@ function testDiagHTML() {
    */
   h += testDiagClearBtn();
   h += '<div style="margin-top:9px">'
-    + '<button class="btn" onclick="testDiagRaise()" style="font-size:var(--fs-2);padding:4px 10px">'
+    + '<button class="btn" onclick="testDiagRaise()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px">'
     + '\u270e Write this up</button>'
     + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
-    + '<button class="btn" onclick="testDumpSave()" style="font-size:var(--fs-2);padding:4px 10px;'
+    + '<button class="btn" onclick="testDumpSave()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px;'
     +   'margin-inline-start:6px">\u1f4be Snapshot</button>'
     + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
     + '<b>Write this up</b> fills the four boxes with these numbers \u2014 you still choose incident or '
@@ -3762,7 +3851,7 @@ function testDiagCleared() {
 /** the control, in one place, because it appears both in the reading and in the emptied panel */
 function testDiagClearBtn() {
   return '<div style="margin-top:9px"><button class="btn" onclick="testDiagClear()" '
-    + 'style="font-size:var(--fs-2);padding:4px 10px">\u27f2 Clear and measure again</button>'
+    + 'style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px">\u27f2 Clear and measure again</button>'
     + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
     + 'throws away every recorded call and this screen\u2019s earlier visits, so the next reading is only '
     + 'what you do next</span></div>';

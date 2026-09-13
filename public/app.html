@@ -2559,6 +2559,9 @@ function stampScreenHeading(){
     if (loose) head.insertBefore(tag, head.firstChild); else placeCodeTag(head, tag);
     /* ⭐ the count rides beside the code, from the one place that already knows both */
     try { stampTestChip(tag.parentNode, info.code, info.label); } catch(_) {}
+    /* ⭐ the visit is recorded here, not while drawing the Speed area — otherwise the table that compares
+       screens only ever holds the screens somebody had already gone looking at */
+    try { if (typeof testVisitTouch === 'function') testVisitTouch(info.code); } catch(_) {}
     /**
      * ⚠️ A SCREEN THAT ASKS THE SERVER FOR NOTHING STILL COUNTS AS A VISIT. The visit number is normally
      * advanced by the call recorder, which is early enough to catch a screen’s own load. But leave the
