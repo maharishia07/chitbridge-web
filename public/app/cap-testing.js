@@ -1066,6 +1066,12 @@ function testPaint() {
       body.innerHTML = h;
       return;
     }
+    if (CBTEST.view === 'work') {
+      h += testWorkHTML();
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
     if (CBTEST.view === 'hand') {
       h += testHandHTML();
       h += '</div>';
@@ -1381,13 +1387,20 @@ function testPaint() {
  * repeatedly. Same rule as the folds beside it.
  */
 /* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
-var TEST_VIEWS = ['list', 'menu', 'req', 'inc', 'scr', 'hand'];
+var TEST_VIEWS = ['work', 'list', 'menu', 'req', 'inc', 'scr', 'hand'];
+/**
+ * ⭐⭐ THE PANEL OPENS ON THE WORKLIST. Athi, 2026-09-13: *"this is really confusing — what am I looking at,
+ * where do I find the existing one, where do I see the closed one?"* The first thing a tester should see is
+ * what is waiting for them, not a thousand documented cases grouped by module.
+ * ⚠️ A REMEMBERED CHOICE STILL WINS. Somebody who last used By-screen gets By-screen; this only changes what
+ * happens for a person who has never chosen — which is every new tester, and the only one who is lost.
+ */
 function testViewGet() {
-  try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'list'; }
-  catch (_) { return 'list'; }
+  try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'work'; }
+  catch (_) { return 'work'; }
 }
 function testSetView(v) {
-  if (TEST_VIEWS.indexOf(v) < 0) v = 'list';
+  if (TEST_VIEWS.indexOf(v) < 0) v = 'work';
   try { localStorage.setItem('cb_test_view', v); } catch (_) {}
   CBTEST.view = v;
   /* ⚠️ the requirements are read on ARRIVAL, not with the cases: a list nobody has opened should not be one
@@ -1395,6 +1408,9 @@ function testSetView(v) {
   if (v === 'req' && !CBTEST.reqs) testReqLoad();
   else if (v === 'inc' && !CBTEST.incs) testIncLoad();
   else if (v === 'scr' && !CBTEST.scrRes) testScrLoad();
+  /* ⚠️ the worklist is a JOIN of the cases, the results and both boards — it cannot paint truthfully until
+     the all-states copy is in, and a worklist that silently omits the incidents is worse than no worklist. */
+  else if (v === 'work' && !CBTEST.scrInc) { CBTEST.closedCases = null; testFindLoadClosed(); testScrLoad(); }
   else testPaint();
 }
 
@@ -5133,6 +5149,308 @@ function testFindSetWho(v) {
   testPaint();
 }
 
+/**
+ * ── ⭐⭐⭐ THE WORKLIST — ONE LIST, ONE STATUS PER ROW, AND WHAT TO DO ABOUT IT ─────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"assume I create 9 records, 3 are pass, 3 are incidents and 3 are requirements — we need to
+ * have a list and each one is expected to retest and close … this is really confusing: what am I looking at,
+ * where do I find the existing one, where do I see the closed one?"* and *"use an existing standard or tool
+ * which is there in the open source and reflect the same."*
+ *
+ * ⚠️⚠️ THE DATA WAS NEVER THE PROBLEM — THE SHELVING WAS. One finding lived in as many as three places at once:
+ * a case on the Cases board, a result in the ledger, and an incident on the Incidents board, each with its own
+ * filter row and its own words. Nothing anywhere answered the only question a tester actually has, which is
+ * "what is waiting for ME". So he wrote nine things down and could not find them.
+ *
+ * ── ⭐⭐ ADOPTED: THE TEST-RUN STATUS MODEL (TestRail · Xray · Kiwi TCMS all share it) ─────────────────────────
+ *
+ * Every one of those tools puts ONE list in front of a tester — the run — where each row is a case carrying its
+ * latest status, and defects hang off the row rather than living on a board of their own.
+ * ⭐⭐ AND `RETEST` IS A FIRST-CLASS STATUS IN TestRail, sitting between Failed and Passed. That is precisely the
+ * state Athi described and precisely the one we had no word for: somebody says it is fixed, and the person who
+ * reported it has not looked yet. [[feedback-adopt-dont-reinvent]]
+ *
+ * ⚠️ ONE STATUS IS OURS AND SAYS SO: `Change asked`. TestRail has no equivalent because a test tool assumes the
+ * requirement is settled and only the product can be wrong. Athi's case (c) is the opposite — the product does
+ * what it was told and the instruction was wrong — and folding that into "Failed" would count a design decision
+ * as a defect, which is the number every quality report is judged on.
+ *
+ * ⚠️ NOTHING NEW IS STORED FOR THIS. The status is DERIVED, on read, from three things that were already true:
+ * the case, its latest result, and the state of whatever it raised. A seventh stored copy is a seventh thing to
+ * drift; a derived one cannot disagree with the board it is drawn from.
+ */
+var TEST_WORK = {
+  todo:    { label: 'To do',        tell: 'run it',                    ink: 'var(--note,#8a8378)' },
+  passed:  { label: 'Passed',       tell: 'nothing — it works',        ink: 'var(--ok-2,#1B7F4B)' },
+  failed:  { label: 'Failed',       tell: 'waiting for a fix',         ink: 'var(--disp,#B3261E)' },
+  blocked: { label: 'Blocked',      tell: 'it could not be run',       ink: 'var(--warn-2,#8a6100)' },
+  retest:  { label: 'Retest',       tell: 'YOURS — look again',        ink: 'var(--warn-2,#8a6100)' },
+  change:  { label: 'Change asked', tell: 'waiting for a decision',    ink: 'var(--grey-2,#545A61)' },
+  closed:  { label: 'Closed',       tell: 'done',                      ink: 'var(--ok-2,#1B7F4B)' },
+};
+var TEST_WORK_ORDER = ['retest', 'todo', 'failed', 'change', 'blocked', 'passed', 'closed'];
+
+/**
+ * ⭐ ONE ROW PER THING A PERSON DID, and the join is made here rather than stored.
+ *
+ * ⚠️ AN INCIDENT OR A REQUIREMENT RAISED WITHOUT A CASE IS STILL A ROW. The box in the panel can raise one
+ * directly, and a worklist that only showed things with a case behind them would be a worklist that hides work.
+ */
+function testWork() {
+  var rows = [];
+  var inc = CBTEST.scrInc || [], req = CBTEST.scrReq || [];
+  var incBy = {}, reqBy = {}, used = {};
+  inc.forEach(function (x) { if (x.found_by_case) (incBy[x.found_by_case] = incBy[x.found_by_case] || []).push(x); });
+  req.forEach(function (q) { if (q.raised_from) (reqBy[q.raised_from] = reqBy[q.raised_from] || []).push(q); });
+
+  var cases = (CBTEST.cases || []).concat(CBTEST.closedCases || []);
+  cases.forEach(function (c) {
+    var key = c.case_key || '';
+    /* ⚠️ THE HAND-WRITTEN ONES ONLY. The board also holds 1,455 documented cases; putting them in the worklist
+       would bury the nine things a person wrote today under a thousand they have never touched. */
+    if (!/-H\d+$/.test(key)) return;
+    var last = (CBTEST.last || {})[key] || null;
+    var mine = (incBy[key] || []).concat([]);
+    var wants = (reqBy[key] || []).concat([]);
+    mine.forEach(function (x) { used[x.definition_id] = 1; });
+    wants.forEach(function (q) { used[q.definition_id] = 1; });
+    rows.push(testWorkRow({
+      key: key, title: c.title || '', screen: c.screen_code || c.module_key || '',
+      seen: c.observed || null, shot: c.evidence_id || null,
+      by: c.written_by || null, at: c.written_at || c.changed_at || null,
+      retired: c.status === 'retired', last: last, inc: mine[0] || null, req: wants[0] || null,
+      caseKey: key,
+    }));
+  });
+
+  /* the ones raised straight from the box, with no case behind them */
+  inc.forEach(function (x) {
+    if (used[x.definition_id]) return;
+    rows.push(testWorkRow({ key: x.ref || '', title: x.observed || '', screen: x.screen_code || '',
+      shot: x.evidence_id || null, by: x.raised_by || null, at: x.raised_at || null,
+      last: null, inc: x, req: null, caseKey: null }));
+  });
+  req.forEach(function (q) {
+    if (used[q.definition_id]) return;
+    rows.push(testWorkRow({ key: q.clause || '', title: q.requirement || '', screen: q.screen_code || '',
+      by: q.raised_by || null, at: q.raised_at || null,
+      last: null, inc: null, req: q, caseKey: null }));
+  });
+
+  /* ⭐ WHAT IS WAITING ON YOU COMES FIRST, then the rest by the order of the status strip, then newest. A
+     worklist sorted by date is a diary; sorted by what it is waiting for, it is a worklist. */
+  return rows.sort(function (a, b) {
+    var d = TEST_WORK_ORDER.indexOf(a.status) - TEST_WORK_ORDER.indexOf(b.status);
+    if (d) return d;
+    if (a.forMe !== b.forMe) return a.forMe ? -1 : 1;
+    return String(b.at || '') < String(a.at || '') ? -1 : 1;
+  });
+}
+
+/**
+ * ⚠️⚠️ THE ONE PLACE THE STATUS IS DECIDED. Two rules that disagree about what "closed" means is how a board
+ * starts lying, and there were three of them before this: one in testFindings, one in the Incidents view and
+ * one in the tally at the top of the panel.
+ */
+function testWorkRow(r) {
+  var meId = testMeId();
+  var st = 'todo';
+  var i = r.inc, q = r.req, last = r.last;
+
+  if (i) {
+    st = (i.state === 'closed') ? 'closed'
+       : (i.state === 'resolved') ? 'retest'
+       : 'failed';
+  } else if (q) {
+    st = (q.state === 'accepted' || q.state === 'rejected' || q.state === 'implemented') ? 'closed' : 'change';
+  } else if (r.retired) {
+    st = 'closed';
+  } else if (last && last.status === 'pass') {
+    st = 'passed';
+  } else if (last && last.status === 'blocked') {
+    st = 'blocked';
+  } else if (last && last.status === 'fail') {
+    /* ⚠️ FAILED WITH NOTHING RAISED IS STILL FAILED, and it is the row most likely to be forgotten: a red
+       verdict nobody turned into an incident is a fault that exists and is on nobody's list. */
+    st = 'failed';
+  } else if (r.retired) {
+    st = 'closed';
+  }
+
+  var raiser = (i && (i.raised_by_id || null)) || null;
+  return {
+    key: r.key, title: r.title, screen: r.screen, seen: r.seen || (i && i.observed) || null,
+    shot: r.shot || (i && i.evidence_id) || null, by: r.by, at: r.at,
+    caseKey: r.caseKey, inc: i, req: q, last: last, status: st,
+    sev: i ? i.severity : null,
+    /* ⭐ only the person who reported it is asked to retest — telling everyone gets it verified by nobody */
+    forMe: st === 'retest' && !!meId && String(raiser || '') === String(meId),
+    fixed: (i && (i.changes || [])[(i.changes || []).length - 1]) || null,
+    why: (i && i.why) || (q && q.why) || null,
+  };
+}
+
+function testWorkFilterGet() {
+  try { return localStorage.getItem('cb_work_filter') || 'live'; } catch (_) { return 'live'; }
+}
+function testWorkFilter(v) {
+  try { localStorage.setItem('cb_work_filter', v); } catch (_) {}
+  testPaint();
+}
+
+function testWorkHTML() {
+  var all = testWork();
+  var f = testWorkFilterGet();
+
+  if (!all.length) {
+    return '<div style="font-size:var(--fs-2);color:var(--grey-2);padding:12px 2px;line-height:1.6">'
+      + '<b>Nothing on your worklist yet.</b><br>'
+      + 'Open any screen with test mode on, press its code in the corner, and use <b>Create</b>. '
+      + 'Whatever you write — a test case, an incident or a requirement — lands here with a status, '
+      + 'and stays here until it is closed.</div>';
+  }
+
+  var n = {};
+  TEST_WORK_ORDER.forEach(function (k) { n[k] = 0; });
+  all.forEach(function (x) { n[x.status] = (n[x.status] || 0) + 1; });
+  var live = all.filter(function (x) { return x.status !== 'closed'; });
+  var mine = all.filter(function (x) { return x.forMe; });
+
+  var rows = f === 'live' ? live
+           : f === 'all' ? all
+           : f === 'mine' ? mine
+           : all.filter(function (x) { return x.status === f; });
+
+  var chip = TEST_CHIP;
+  var seg = function (id, label, count) {
+    return '<button data-testid="workf-' + id + '" onclick="testWorkFilter(\'' + id + '\')" style="' + chip
+      + (f === id ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">' + label
+      + (count == null ? '' : ' <b>' + count + '</b>') + '</button>';
+  };
+
+  /**
+   * ⭐ THE BAND FIRST, AND ONLY WHEN THERE IS ONE. "What is waiting for me" is the question a tester opens this
+   * panel to answer; a filter they have to think to apply is not an answer.
+   */
+  var h = '';
+  if (mine.length) {
+    h += '<div data-testid="work-yours" style="margin:2px 0 7px;padding:7px 9px;border-radius:8px;'
+      + 'border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);font-size:var(--fs-1)">'
+      + '<b>' + mine.length + ' waiting for you to retest.</b> Somebody says they fixed what you reported. '
+      + 'Look again, then say whether it holds — until you do, it is a claim and not a fix.'
+      + ' <button onclick="testWorkFilter(\'mine\')" style="' + chip
+      + 'background:var(--warn-2,#8a6100);color:#fff">Show them</button></div>';
+  }
+
+  h += '<div style="margin:4px 0 3px">'
+    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+    + seg('live', 'Still open', live.length)
+    + (mine.length ? seg('mine', 'Yours to retest', mine.length) : '')
+    + seg('closed', 'Closed', n.closed)
+    + seg('all', 'Everything', all.length)
+    + '</div>'
+    /* the seven statuses, as counts you can press — this is the "where do I see the closed one" answer */
+    + '<div style="margin:0 0 7px">'
+    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Status:</span>'
+    + TEST_WORK_ORDER.filter(function (k) { return n[k]; }).map(function (k) {
+        return seg(k, TEST_WORK[k].label, n[k]);
+      }).join('')
+    + '</div>';
+
+  if (!rows.length) {
+    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+      + (f === 'closed' ? 'Nothing has been closed yet.'
+       : f === 'live' ? 'Nothing open — everything you have written has been dealt with.'
+       : 'Nothing in this status. ' + all.length + ' altogether.') + '</div>';
+  }
+
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:0 0 6px">'
+    + '<b>' + rows.length + '</b> of ' + all.length + ' · what you have written on a screen, with its status '
+    + 'and what happens next. Every row ends in <b>Closed</b>.</div>';
+
+  h += rows.map(testWorkRowHTML).join('');
+  return h;
+}
+
+/** one row: what it is · where · its status · what to do · and the buttons that do it */
+function testWorkRowHTML(x) {
+  var W = TEST_WORK[x.status] || TEST_WORK.todo;
+  var act = 'display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px';
+  var b = function (label, onclick, colour, title) {
+    return '<button class="btn" style="' + act + (colour ? ';border-color:' + colour + ';color:' + colour : '')
+      + '" title="' + (title || '') + '" onclick="' + onclick + '">' + label + '</button> ';
+  };
+  var id = x.inc ? String(x.inc.definition_id) : (x.req ? String(x.req.definition_id) : '');
+
+  var acts = '';
+  if (x.status === 'retest') {
+    acts += b('✓ It holds — close', 'testVerify(\'' + id + '\',true)', 'var(--ok-2,#1B7F4B)',
+              'You have looked and it is fixed. This ends it.');
+    acts += b('✗ Still broken', 'testVerify(\'' + id + '\',false)', 'var(--disp,#B3261E)',
+              'Send it back to whoever fixed it');
+  } else if (x.status === 'failed' && x.inc) {
+    acts += b('Mark it fixed', 'testFindFixed(\'' + id + '\')', null,
+              'You believe it is fixed — the person who raised it is asked to retest');
+    acts += b('✓ Close it', 'testFindClose(\'inc\',\'' + id + '\',\'\',false)', 'var(--ok-2,#1B7F4B)',
+              'It is done and needs no retest');
+  } else if (x.status === 'failed' && x.caseKey) {
+    /* ⚠️ a red verdict with nothing raised is a fault on nobody's list — this is the row that fixes that */
+    acts += b('Raise an incident', 'testFromCase(\'' + x.caseKey + '\',\'inc\',null,\''
+      + testEsc(String(x.seen || 'It failed').replace(/'/g, ' ')) + '\')', 'var(--disp,#B3261E)',
+      'Turn this red verdict into something somebody owns');
+  } else if (x.status === 'change') {
+    acts += b('✓ Accept it', 'testReqSet(\'' + id + '\',\'accepted\')', 'var(--ok-2,#1B7F4B)',
+              'Agree it should be built');
+    acts += b('✗ Reject it', 'testReqSet(\'' + id + '\',\'rejected\')', 'var(--disp,#B3261E)',
+              'Say no, with the reason');
+  } else if (x.status === 'todo' && x.caseKey) {
+    acts += b('✓ It passed', 'testMark(\'' + x.caseKey + '\',\'pass\')', 'var(--ok-2,#1B7F4B)', 'Run it now');
+    acts += b('✗ It failed', 'testMark(\'' + x.caseKey + '\',\'fail\')', 'var(--disp,#B3261E)',
+              'Then raise an incident from the row');
+  } else if (x.status === 'passed' && x.caseKey) {
+    acts += b('Run it again', 'testMark(\'' + x.caseKey + '\',\'pass\')', null, 'Record another pass');
+  } else if (x.status === 'closed' && x.caseKey && !x.inc && !x.req) {
+    acts += b('Open again', 'testHandClose(\'' + x.caseKey + '\',true)', null, 'Put it back on the list');
+  }
+  if (x.screen) acts += b('Open ' + testEsc(x.screen), 'testHandOpen(\'' + testEsc(x.screen) + '\')', null,
+                          'Go to the screen it is about');
+  if (x.shot) acts += b('🖼 Screenshot', 'testShotView(\'' + testEsc(x.shot) + '\')', null, '');
+
+  var shut = x.status === 'closed';
+  return '<div data-testid="work-row" style="padding:8px 0;border-top:1px solid var(--line-2,#efece4)'
+    + (shut ? ';opacity:.6' : '')
+    + (x.forMe ? ';border-inline-start:3px solid var(--warn-2,#8a6100);padding-inline-start:7px' : '') + '">'
+    /* ⭐ THE STATUS FIRST AND IN ONE PLACE — the whole complaint was not knowing what he was looking at */
+    + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
+    +   '<span data-testid="work-status" style="font-size:var(--fs-1);font-weight:700;border-radius:5px;'
+    +     'padding:1px 8px;color:#fff;background:' + W.ink + '">' + W.label + '</span>'
+    +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
+    +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + testEsc(x.sev)
+        + '</span>' : '')
+    +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
+    + '</div>'
+    /* ⭐ AND WHAT HAPPENS NEXT, in words, on every row. "Failed" tells you the past; this tells you the job. */
+    + '<div style="font-size:var(--fs-1);margin-top:2px;color:'
+    +   (x.forMe ? 'var(--warn-2,#8a6100);font-weight:700' : 'var(--grey-2)') + '">'
+    +   'next: ' + (x.forMe ? 'YOURS — retest it and say whether it holds' : W.tell) + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">'
+    +   (x.screen ? '<b>' + testEsc(x.screen) + '</b> ' + testEsc(codeName(x.screen) || '') + ' · ' : '')
+    +   (x.by ? 'by ' + testEsc(x.by) : 'author not recorded')
+    +   (x.at ? ' · ' + testEsc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
+    +   (x.inc ? ' · incident <code>' + testEsc(x.inc.ref || '') + '</code>' : '')
+    +   (x.req ? ' · requirement <code>' + testEsc(x.req.clause || '') + '</code>' : '')
+    + '</div>'
+    + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
+    + (x.fixed ? '<div style="font-size:var(--fs-1);margin-top:3px;padding:4px 7px;'
+        + 'background:var(--warn-tint,#fdf6e6);border-radius:6px">fixed: '
+        + testEsc(x.fixed.subject || x.fixed.sha || '') + (x.fixed.by ? ' · ' + testEsc(x.fixed.by) : '')
+        + '</div>' : '')
+    + (shut && x.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">closed: '
+        + testEsc(x.why) + '</div>' : '')
+    + '<div style="margin-top:5px">' + acts + '</div>'
+    + '</div>';
+}
+
 function testHandHTML() {
   var all = testFindings();
   if (!all.length) {
@@ -5370,8 +5688,13 @@ function testViewToggleHTML() {
   /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   return '<span style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:7px;overflow:hidden">'
+    /* ⭐ FIRST, because it is the one that answers "what is waiting for me" */
+    + '<button data-testid="view-work" onclick="testSetView(\'work\')" title="Everything you have written, '
+    +   'with its status and what happens next" style="' + base
+    +   (CBTEST.view === 'work' ? on : off) + '">Worklist</button>'
     + '<button onclick="testSetView(\'list\')" title="Every case, grouped by area" '
-    +   'style="' + base + (menu || req ? off : on) + '">List</button>'
+    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
+    +   (menu || req || CBTEST.view === 'work' ? off : on) + '">List</button>'
     + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
     +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
     +   (menu && !req && !inc && !scr ? on : off) + '">Menu tree</button>'
