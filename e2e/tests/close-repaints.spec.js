@@ -68,8 +68,15 @@ test('[SHUT-01] a case closed in the Cases tab leaves the tab', async ({ page })
   await expect(page.locator('#cbcasespanel'), 'and it took the other one with it')
     .toContainText('hand written 02');
 
-  /* ⚠️ closed, not deleted: it is reachable from the same tab, on demand, with its reason */
-  await page.locator('#cbcasespanel button').filter({ hasText: /show 1 closed/ }).click();
+  /**
+   * ⚠️ closed, not deleted: it is reachable from the same tab, on demand, with its reason.
+   * ⚠️ WAITED FOR, NOT CLICKED BLIND. The chip only appears once `?all=1` has come back, and that is a second
+   * round trip after the close — this flaked once on a slow Railway wake. A click with no wait in front of it
+   * is a race that passes on a fast day.
+   */
+  const shutChip = page.locator('#cbcasespanel button').filter({ hasText: /show 1 closed/ });
+  await shutChip.waitFor({ state: 'visible', timeout: 45000 });
+  await shutChip.click();
   await expect(page.locator('#cbcasespanel')).toContainText('hand written 01');
   await expect(page.locator('#cbcasespanel')).toContainText('Not needed');
 
