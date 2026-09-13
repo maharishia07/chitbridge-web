@@ -2616,7 +2616,13 @@ function testTechUseSeen() {
 function testTechGo() {
   var t = CBTEST.tech || (CBTEST.tech = {});
   t.rows = testTechDerive();
+  /**
+   * ⚠️⚠️ THE RESULT REMEMBERS ITS OWN TECHNIQUE. The header used to read the LIVE kind while the rows were
+   * stored, so a screenshot Athi sent showed "ERROR GUESSING · 11 CASE(S)" above eleven lifecycle rows. The
+   * rows were right and the title was lying — the worse way round, because the title is what gets believed.
+   */
   t.from = {
+    kind: t.kind,
     field: testTechVal('tqField', 'the field'),
     lo: testTechVal('tqLo', ''), hi: testTechVal('tqHi', ''),
     classes: testTechVal('tqClasses', ''), states: testTechVal('tqStates', ''),
@@ -3176,7 +3182,7 @@ function testTechHTML() {
   var range = (F.lo !== undefined && F.lo !== '' && F.hi !== '')
     ? (', ' + testEsc(F.lo) + ' to ' + testEsc(F.hi))
     : (F.classes || F.states || F.conds ? (', ' + testEsc(F.classes || F.states || F.conds)) : '');
-  h += testSec((NAMED[t.kind] || 'This technique') + ' \u00b7 ' + rows.length + ' case(s)',
+  h += testSec((NAMED[F.kind || t.kind] || 'This technique') + ' \u00b7 ' + rows.length + ' case(s)',
     'for <b>' + testEsc(F.field || 'the field') + '</b>' + range + ' \u00b7 ' + src);
 
   /**
