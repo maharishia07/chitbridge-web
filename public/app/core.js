@@ -620,7 +620,20 @@ async function api(key, {params, query, body}={}){
          * of them would be silently right most of the time, which is the worst kind of wrong.
          */
         if (window.CBNAV !== _scr) { window.CBNAV = _scr; window.CBGEN = (window.CBGEN || 0) + 1; }
+        /**
+         * ⭐ WHAT THE SERVER SAID IT COST. `X-DB-Ms` is the time inside the request and `X-DB-Trips` the
+         * number of database round trips it made; the difference between that and the total measured here
+         * is the network. Both are null unless CB_TRIPS=1 on the API — and the panel says so rather than
+         * drawing an empty column and letting it read as "no time spent there".
+         */
+        var _srv = null, _trips = null;
+        try {
+          var _h = res.headers;
+          _srv = _h && _h.get('X-DB-Ms') != null ? Number(_h.get('X-DB-Ms')) : null;
+          _trips = _h && _h.get('X-DB-Trips') != null ? Number(_h.get('X-DB-Trips')) : null;
+        } catch (_) {}
         CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid, scr: _scr,
+          srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips),
           gen: window.CBGEN,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });

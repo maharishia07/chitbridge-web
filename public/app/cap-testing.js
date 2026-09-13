@@ -2297,6 +2297,21 @@ async function testCaseSend(outcome) {
    * ⚠️ And the screenshot is dropped with it: the picture of the last finding must not ride onto the next
    * one, which would attach evidence of the wrong thing and look deliberate.
    */
+    /**
+     * ── ⚠️⚠️⚠️ THE PICTURE WAS BEING THROWN AWAY BEFORE IT COULD BE ATTACHED ──────────────────────────
+     *
+     * Athi, 2026-09-13: *"I created an item through write a testcase called screenshot, it got saved and I
+     * could see that, but I can’t open again to see what the issue is? what is the screenshot says?"*
+     *
+     * ⚠️⚠️ `CBTEST.shot` was cleared HERE, and `testFromCase()` reads it BELOW to put `evidence_id` on the
+     * incident. So every incident raised this way was filed with evidence_id null, while the image itself
+     * had uploaded perfectly and sat in storage attached to nothing. The upload succeeded, the toast said
+     * so, and the evidence was gone — the quiet kind of loss, which is the worst kind.
+     *
+     * ⭐ HELD until the outcome has been filed, then dropped. The clearing still has to happen, and for the
+     * reason it always did: the picture of the last finding must not ride onto the next one.
+     */
+    var heldShot = CBTEST.shot;
     CBTEST.shot = null;
     testShotThumb(null);
     if (typeof testLoad === 'function') await testLoad(true);
@@ -2311,7 +2326,7 @@ async function testCaseSend(outcome) {
       }
       box.value = got || (outcome === 'pass' ? 'As expected.' : '');
       if (outcome === 'pass') await testMark(key, 'pass');
-      else await testFromCase(key, outcome);
+      else await testFromCase(key, outcome, heldShot);
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
@@ -2512,7 +2527,8 @@ function testScrHTML() {
  * ⭐ BOTH CARRY THE SCREEN CODE AND THE CASE. That is the chain the whole register exists for: a screen, the
  * case that tested it, and what came out — readable in either direction without anybody joining it by hand.
  */
-async function testFromCase(key, kind) {
+/** ⚠️ `shot` is passed IN, not read from CBTEST: the writer clears it before this runs, and has to */
+async function testFromCase(key, kind, shot) {
   var box = document.getElementById('cbt_n_' + key);
   var seen = box ? String(box.value || '').trim() : '';
   var c = (CBTEST.cases || []).filter(function (x) { return x.case_key === key; })[0] || {};
@@ -2531,7 +2547,7 @@ async function testFromCase(key, kind) {
       await api('testIncNew', { body: {
         observed: seen + (exp ? '  \u2014 expected: ' + exp : ''),
         /* ⭐ the picture rides with the report, not in a folder somebody has to be told about */
-        evidence_id: (CBTEST.shot && CBTEST.shot.id) || null,
+        evidence_id: ((shot || CBTEST.shot) && (shot || CBTEST.shot).id) || null,
         affected: 'found by ' + key, severity: 'Sev-3',
         screen_code: code, case_key: key,
         build: (window.CBBUILD || null) } });
@@ -2654,6 +2670,98 @@ function testRetest(key) {
  * much still work. Passed collapses to one quiet line with a Re-test if you want it back, and the filter
  * says how many are in each pile so nothing is hidden without a number.
  */
+/**
+ * ── ⭐⭐⭐ A CASE HAS TO BE OPENABLE ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13, having written one and attached a picture to it: *"it got saved and I could see that,
+ * but I can’t open again to see what the issue is? what is the screenshot says etc? how to do that?"*
+ *
+ * ⚠️⚠️ HE COULD NOT, BECAUSE THERE WAS NO WAY TO. The row showed a title, one line of "should see", a box to
+ * type in and three buttons. Everything else the case knows — what you do, the pre-conditions, the note, WHO
+ * recorded the last verdict and what they wrote, the incident it raised, the screenshot — existed and had
+ * nowhere to appear. The lab has had a detail view since the beginning; this panel never got one, and this
+ * panel is where the testing actually happens.
+ *
+ * ⭐ IT IS BUILT FROM WHAT IS ALREADY LOADED — the case, `CBTEST.last`, `CBTEST.scrInc`, `CBTEST.scrReq` —
+ * so opening a row costs nothing and works with the network down.
+ */
+function testCaseOpen(key) {
+  CBTEST.openCase = (CBTEST.openCase === key ? null : key);
+  screenCasesPaint();
+}
+
+/** everything this panel knows about one case, which turns out to be a good deal more than it was showing */
+function testCaseDetailHTML(c) {
+  var l = (CBTEST.last || {})[c.case_key];
+  var pad = 'padding:2px 0;font-size:var(--fs-1)';
+  var lab = function (t, v) { return v ? '<div style="' + pad + '"><span style="color:var(--note)">'
+    + t + '</span> ' + v + '</div>' : ''; };
+
+  var h = '<div style="margin:4px 0 2px;padding:7px 9px;background:var(--paper,#faf8f3);'
+    + 'border:1px solid var(--line-2,#efece4);border-radius:8px">';
+
+  /* the case as written: every step, not only the first */
+  (c.steps || []).forEach(function (st, i) {
+    h += '<div style="display:flex;gap:6px;' + pad + '">'
+      + '<span style="color:var(--note);min-width:12px">' + (i + 1) + '</span>'
+      + '<span style="flex:1">' + testEsc(Array.isArray(st) ? (st[0] || '') : String(st))
+      +   '<span style="display:block;color:var(--grey-2)">\u2192 '
+      +     testEsc(Array.isArray(st) ? (st[1] || '') : '') + '</span></span></div>';
+  });
+  h += lab('Before you start:', testEsc(c.pre || ''));
+  h += lab('Use:', testEsc(c.data || ''));
+  h += lab('Priority:', testEsc(c.priority || ''));
+  h += lab('Control:', testEsc(c.control_code || ''));
+  h += lab('Note:', testEsc(c.note || ''));
+
+  /* ── the last verdict, in the words of whoever gave it ── */
+  if (l) {
+    var col = l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
+      : (l.status === 'fail' || l.status === 'blocked') ? 'var(--disp,#B3261E)' : 'var(--note)';
+    h += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--line-2,#efece4)">'
+      + '<b style="font-size:var(--fs-1);color:' + col + '">' + testEsc(String(l.status).toUpperCase())
+      + '</b> <span style="font-size:var(--fs-1);color:var(--note)">'
+      + testEsc(l.tester_name || 'someone') + (l.at ? ' \u00b7 ' + testEsc(String(l.at).slice(0, 16)
+          .replace('T', ' ')) : '') + '</span>'
+      + (l.note ? '<div style="' + pad + '">' + testEsc(l.note) + '</div>' : '')
+      + (l.evidence ? '<div style="' + pad + ';color:var(--grey-2);word-break:break-word">'
+          + testEsc(l.evidence) + '</div>' : '')
+      + '</div>';
+  }
+
+  /**
+   * ── ⭐⭐ AND THE PICTURE, WHICH IS THE PART HE ASKED FOR BY NAME ────────────────────────────────────
+   *
+   * ⚠️ The screenshot is attached to the INCIDENT, not to the case — an incident is a thing that happened
+   * once and a case is a rule that stands, so evidence belongs to the event. But the tester who wants it is
+   * standing on the case, so the case has to reach across and find it.
+   *
+   * ⚠️ NOT AN `<img src>`: the attachment endpoint needs an Authorization header and a plain link carries
+   * none — that is the "404, then unauthorised" this already cost once. testShotView() fetches it with the
+   * token and opens the blob.
+   */
+  var raised = (CBTEST.scrInc || []).concat(CBTEST.scrReq || [])
+    .filter(function (x) { return x.case_key === c.case_key; });
+  raised.forEach(function (x) {
+    h += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--line-2,#efece4)">'
+      + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref || x.clause || '')
+      + '</code> <span style="font-size:var(--fs-1)">' + testEsc(x.state || '') + '</span>'
+      + (x.observed ? '<div style="' + pad + '">' + testEsc(x.observed) + '</div>' : '')
+      + (x.requirement ? '<div style="' + pad + '">' + testEsc(x.requirement) + '</div>' : '')
+      + (x.evidence_id
+        ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
+          + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'"
+          + testEsc(x.evidence_id) + "'" + ')">\u1f5bc\ufe0f Screenshot</button>'
+        : '<div style="' + pad + ';color:var(--note)">No screenshot was attached to this one.</div>')
+      + '</div>';
+  });
+  if (!l && !raised.length) {
+    h += '<div style="' + pad + ';color:var(--note);margin-top:4px">Not run yet, and nothing raised '
+      + 'against it.</div>';
+  }
+  return h + '</div>';
+}
+
 function testCaseListHTML(code) {
   var all = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
   if (!all.length) {
@@ -2701,14 +2809,23 @@ function testCaseListHTML(code) {
         + '<span style="font-size:var(--fs-1);flex:1 1 12em;min-width:0;overflow:hidden;'
         +   'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || '') + '</span>'
         + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">PASS</span>'
+        + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testCaseOpen(\''
+        +   testEsc(c.case_key) + '\')">Open</button>'
         + '<button class="btn" style="font-size:var(--fs-1);padding:0 7px" onclick="testRetest(\''
         +   testEsc(c.case_key) + '\')">Re-test</button>'
+        + (CBTEST.openCase === c.case_key
+            ? '<div style="flex:1 1 100%">' + testCaseDetailHTML(c) + '</div>' : '')
         + '</div>';
     }
 
+    /* ⭐ the key is the handle: it is already the thing a tester points at when they talk about a case */
+    var isOpen = CBTEST.openCase === c.case_key;
     return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;'
       +   'border-top:1px solid var(--line-2,#efece4)">'
-      + '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
+      + '<button onclick="testCaseOpen(\'' + testEsc(c.case_key) + '\')" title="Open it" '
+      +   'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;'
+      +   'padding:0;cursor:pointer;text-align:start">'
+      +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + testEsc(c.case_key) + '</code></button>'
       + '<span style="flex:1 1 16em;min-width:0">'
       +   '<div style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</div>'
       +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '
@@ -2717,6 +2834,7 @@ function testCaseListHTML(code) {
       +     'empty if it matched" style="width:100%;font:inherit;font-size:var(--fs-1);margin-top:3px;'
       +     'padding:3px 6px;border:1px solid var(--line,#e7e3d8);border-radius:6px;'
       +     'background:var(--card,#fff)">'
+      +   (isOpen ? testCaseDetailHTML(c) : '')
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
       +   (l ? testEsc(String(l.status).toUpperCase()) : 'not run') + '</span>'
@@ -3127,6 +3245,93 @@ function testBehindHTML(code) {
 function testDiagMark() { CBTEST._diagFrom = (window.CBCALLS || []).length ? (CBCALLS[0].rid || null) : null;
   CBTEST._diagAt = Date.now(); }
 
+/**
+ * ── ⭐⭐⭐ WHEN DID THIS READING START, AND IS IT GETTING WORSE? ──────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"is it for this read? when I click a catalogue item? or is it the measure previously
+ * taken — if it is for the current access, can you write down the time when it started so people know it is
+ * for the current read? I am not able to understand that."*
+ *
+ * ⚠️⚠️ A NUMBER WITH NO WINDOW IS NOT A MEASUREMENT. "24 API calls" is unreadable until you know 24 since
+ * WHEN, and a reader who cannot tell will — rightly — not trust any of it. The window now carries a clock
+ * time and says what opened it.
+ *
+ * ⭐⭐ AND THE SECOND HALF OF THE QUESTION IS THE BETTER ONE: *"if we make a note of the longest time taken
+ * and compare it with the next read for a few consecutive reads, and if the same call takes more time, then
+ * we have to raise an incident to optimise the call."* That is a REGRESSION TEST for speed, and it is the
+ * thing a one-off reading can never be. Every visit is now kept, so the fourth visit can be held against the
+ * first three.
+ *
+ * ⚠️ KEPT PER SHOP AND ONLY IN THIS BROWSER — [[feedback-shop-scoped-local-store]]. It is a working note for
+ * a tester, not a monitoring history, and it must never be quoted as one.
+ */
+var VISITS_KEY = 'cb_speed_visits';
+function testVisitsKey() {
+  try { return (typeof uk === 'function') ? uk(VISITS_KEY) : VISITS_KEY; } catch (_) { return VISITS_KEY; }
+}
+function testVisitsGet() {
+  try { return JSON.parse(localStorage.getItem(testVisitsKey()) || '{}') || {}; } catch (_) { return {}; }
+}
+
+/**
+ * ⚠️ THE VISIT IN PROGRESS IS UPDATED, NOT APPENDED. This runs on every paint of the Speed area, and a
+ * tester who opens it three times during one visit must not turn that visit into three. The generation is
+ * the identity of a visit, so it is the key.
+ */
+function testVisitSave(code, gen, mine) {
+  if (!code || !gen) return;
+  try {
+    var all = testVisitsGet();
+    var list = all[code] || [];
+    var worst = {};
+    mine.forEach(function (c) {
+      var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
+      if (!worst[k] || (c.ms || 0) > worst[k]) worst[k] = (c.ms || 0);
+    });
+    var row = {
+      gen: gen,
+      at: (list.filter(function (x) { return x.gen === gen; })[0] || {}).at || Date.now(),
+      n: mine.length,
+      ms: mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0),
+      worst: worst,
+    };
+    list = list.filter(function (x) { return x.gen !== gen; });
+    list.push(row);
+    /* eight is enough to see a trend and small enough that nobody has to think about the storage */
+    all[code] = list.slice(-8);
+    localStorage.setItem(testVisitsKey(), JSON.stringify(all));
+    return all[code];
+  } catch (_) { return null; }
+}
+
+/**
+ * ⭐⭐ THE CALL THAT IS GETTING SLOWER, WHICH IS THE ONE WORTH RAISING.
+ *
+ * ⚠️ AGAINST THE BEST EARLIER VISIT, not the previous one. One slow visit — a cold cache, a laptop waking
+ * up, somebody else on the wifi — would otherwise make the NEXT visit look like an improvement and hide a
+ * real regression behind it. The best time this call has ever managed is the honest thing to fail against.
+ *
+ * ⚠️ AND IT NEEDS BOTH A RATIO AND AN ABSOLUTE. 40 ms becoming 90 ms is a doubling and is nothing; the floor
+ * stops the panel crying about noise, which is the fastest way to make a tester stop reading it.
+ */
+function testSlowerThanBefore(history, gen) {
+  var now = (history || []).filter(function (x) { return x.gen === gen; })[0];
+  var past = (history || []).filter(function (x) { return x.gen !== gen; });
+  if (!now || past.length < 2) return [];
+  var out = [];
+  Object.keys(now.worst || {}).forEach(function (k) {
+    var best = null;
+    past.forEach(function (p) {
+      var v = (p.worst || {})[k];
+      if (v != null && (best === null || v < best)) best = v;
+    });
+    if (best === null || best < 40) return;
+    var mine = now.worst[k];
+    if (mine >= best * 2 && mine - best >= 300) out.push({ key: k, was: best, now: mine });
+  });
+  return out.sort(function (a, b) { return (b.now - b.was) - (a.now - a.was); });
+}
+
 function testDiagHTML() {
   /* ⚠ the tester’s own tool is not part of what the screen cost — reading the board and saving a verdict
      are the measurement, and a measurement that counts itself is not one */
@@ -3179,10 +3384,31 @@ function testDiagHTML() {
   var verdict = mine.length >= 6 ? 'That is a lot of round trips for one screen.'
             : mine.length >= 3 ? 'Three or more round trips \u2014 worth asking whether they can be one.'
             : 'Few enough round trips.';
+  /* ⭐ the window, in words and on a clock, because a count with no window is not a measurement */
+  var hist = testVisitSave(CBTEST.popupFor, gen, mine) || [];
+  var thisVisit = hist.filter(function (x) { return x.gen === gen; })[0];
+  var began = thisVisit && thisVisit.at ? new Date(thisVisit.at) : null;
+  var clock = began ? began.toTimeString().slice(0, 8) : null;
+
+  /* the split the server makes possible: time in the database, and time getting there and back */
+  var srvKnown = mine.filter(function (c) { return c.srv != null; });
+  var srvMs = srvKnown.reduce(function (a, c) { return a + (c.srv || 0); }, 0);
+  var dbTrips = mine.reduce(function (a, c) { return a + (c.trips || 0); }, 0);
+
   var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
     + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
     + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
     + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
+    + (clock ? '<br><span style="color:var(--note)">This reading is THIS visit only \u2014 everything since '
+        + 'you arrived on the screen at <b>' + clock + '</b>. Leaving and coming back starts a new one.</span>'
+      : '')
+    /* ⚠ named as unavailable rather than shown as zero: an empty column reads as "no time spent there" */
+    + (srvKnown.length
+        ? '<br>Of that, <b>' + srvMs + ' ms</b> was inside the server'
+          + (dbTrips ? ' across <b>' + dbTrips + '</b> database round trip(s)' : '')
+          + ' \u2014 the remaining <b>' + Math.max(0, total - srvMs) + ' ms</b> is the network.'
+        : '<br><span style="color:var(--note)">The server is not reporting its own time. Set CB_TRIPS=1 on '
+          + 'the API to split this into database, code and network.</span>')
     + '<br>' + verdict
     + (rep.length ? '<br>\u26a0\ufe0f <b>The same call, repeated:</b> ' + testEsc(rep.join(' \u00b7 '))
         + ' \u2014 that is the thing to fix, not the milliseconds.' : '')
@@ -3197,6 +3423,8 @@ function testDiagHTML() {
     + '<th style="text-align:start;padding:3px 6px 3px 0">Call</th>'
     + '<th style="text-align:start;padding:3px 6px">Path</th>'
     + '<th style="text-align:end;padding:3px 6px">ms</th>'
+    + (srvKnown.length ? '<th style="text-align:end;padding:3px 6px" title="time inside the server, and '
+        + 'the database round trips it made">server</th>' : '')
     + '<th style="text-align:end;padding:3px 6px">Status</th></tr>';
   h += mine.map(function (c) {
     var ok = (c.status || 0) < 400;
@@ -3207,6 +3435,10 @@ function testDiagHTML() {
       +   testEsc(c.m + ' ' + (c.path || '')) + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:' + ((c.ms || 0) > 1500 ? '700' : '400')
       +   ';color:' + ((c.ms || 0) > 1500 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + (c.ms || 0) + '</td>'
+      + (srvKnown.length
+        ? '<td style="text-align:end;padding:4px 6px;color:var(--grey-2);font-size:var(--fs-1)">'
+          + (c.srv == null ? '\u2014' : c.srv + (c.trips ? ' / ' + c.trips + ' trip' : '')) + '</td>'
+        : '')
       + '<td style="text-align:end;padding:4px 6px;color:'
       +   (ok ? 'var(--ok-2,#1B7F4B)' : 'var(--disp,#B3261E)') + '">' + (c.status || '\u2014') + '</td>'
       + '</tr>';
@@ -3216,6 +3448,36 @@ function testDiagHTML() {
     + '<div style="font-size:var(--fs-1);color:var(--note);padding:7px 0 0">'
     + 'Quote a call\u2019s id when reporting it: ' + testEsc((mine[0] && mine[0].rid) || '\u2014')
     + ' \u2014 the server logged the same one.</div>';
+
+  /**
+   * ── ⭐⭐ THE SAME SCREEN, READ AGAIN AND AGAIN ─────────────────────────────────────────────────────────
+   *
+   * One reading tells you what happened once. Four readings of the same screen tell you whether the product
+   * is getting slower, which is the only version of this a person can act on.
+   */
+  var past = hist.filter(function (x) { return x.gen !== gen; }).slice().reverse();
+  if (past.length) {
+    h += '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+      + 'text-transform:uppercase;margin:13px 0 3px">Earlier visits to this screen</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-2)">'
+      + past.map(function (p) {
+          return '<span style="white-space:nowrap">' + new Date(p.at).toTimeString().slice(0, 5)
+            + ' \u00b7 <b>' + p.ms + ' ms</b> (' + p.n + ')</span>';
+        }).join(' &nbsp; ')
+      + '</div>';
+  }
+
+  var slower = testSlowerThanBefore(hist, gen);
+  if (slower.length) {
+    h += '<div style="margin-top:8px;padding:7px 9px;border-inline-start:3px solid var(--disp,#B3261E);'
+      + 'background:var(--disp-tint,#fbeceb);border-radius:0 8px 8px 0;font-size:var(--fs-1)">'
+      + '<b>Slower than it has been:</b><br>'
+      + slower.map(function (x) {
+          return testEsc(x.key) + ' \u2014 <b>' + x.now + ' ms</b> now, best was ' + x.was + ' ms';
+        }).join('<br>')
+      + '<br><span style="color:var(--grey-2)">Measured against the BEST earlier visit, not the last one: '
+      + 'one slow visit would otherwise hide the next regression behind it. Worth raising.</span></div>';
+  }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
   h += testDiagByApi();
