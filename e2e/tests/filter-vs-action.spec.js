@@ -77,6 +77,10 @@ test('[FILTER-02] pressing the ACTION does change it, and the row leaves the que
   await expect.poll(async () => (await states(page, H))[0], { timeout: 45000 }).toBe('resolved');
 
   /* ── and now the raiser's half: it holds, so it closes and leaves ── */
+  /* ⚠️ IT HAS LEFT THE "OPEN" SHELF, which is right and is also why this view alone is not enough: you have to
+     know to look under Resolved. The Worklist exists for exactly that — a Retest shelf you cannot miss. */
+  await page.locator('[data-testid="incf-resolved"]').click();
+  await page.waitForTimeout(2500);
   await page.evaluate(() => { window.prompt = function () { return 'Retested and the total is right'; }; });
   const close = page.locator('[data-testid="inc-act-closed"]');
   await expect(close).toBeVisible({ timeout: 30000 });
