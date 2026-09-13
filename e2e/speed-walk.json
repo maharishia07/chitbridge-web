@@ -1,5 +1,5 @@
 {
- "at": "2026-09-13T11:10:45.266Z",
+ "at": "2026-09-13T11:16:01.806Z",
  "walked": [
   "drawer",
   "counter",
@@ -32,103 +32,117 @@
    "code": "INS003",
    "name": "Traceability",
    "visits": 2,
-   "worst": 7025,
+   "worst": 7372,
    "calls": 17
   },
   {
    "code": "RAL003",
    "name": "Order",
    "visits": 1,
-   "worst": 4717,
+   "worst": 4887,
    "calls": 8
   },
   {
    "code": "RAL002",
    "name": "Task",
    "visits": 1,
-   "worst": 3940,
+   "worst": 4101,
    "calls": 6
   },
   {
    "code": "INS001",
    "name": "MIS",
    "visits": 2,
-   "worst": 3733,
+   "worst": 3757,
    "calls": 7
   },
   {
    "code": "INS004",
    "name": "Trade ready",
    "visits": 2,
-   "worst": 1809,
+   "worst": 1831,
    "calls": 3
   },
   {
    "code": "CAT003",
    "name": "Categories",
    "visits": 1,
-   "worst": 1585,
+   "worst": 1578,
    "calls": 5
   },
   {
    "code": "BUS005",
    "name": "Co-assists",
    "visits": 1,
-   "worst": 864,
+   "worst": 929,
    "calls": 2
   },
   {
    "code": "RAL004",
    "name": "Drafts",
    "visits": 1,
-   "worst": 773,
+   "worst": 849,
    "calls": 2
   },
   {
    "code": "WRK002",
    "name": "Everyone's work",
    "visits": 1,
-   "worst": 653,
+   "worst": 664,
    "calls": 2
+  },
+  {
+   "code": "WRK001",
+   "name": "Messages",
+   "visits": 1,
+   "worst": 526,
+   "calls": 1
+  },
+  {
+   "code": "BUS002",
+   "name": "Suppliers",
+   "visits": 1,
+   "worst": 406,
+   "calls": 1
   },
   {
    "code": "BUS003",
    "name": "Match",
    "visits": 2,
-   "worst": 418,
+   "worst": 398,
    "calls": 1
   },
   {
    "code": "BUS004",
    "name": "Network",
    "visits": 1,
-   "worst": 418,
-   "calls": 1
-  },
-  {
-   "code": "RAL006",
-   "name": "Trash",
-   "visits": 1,
-   "worst": 390,
+   "worst": 398,
    "calls": 1
   },
   {
    "code": "RAL005",
    "name": "Archive",
    "visits": 1,
-   "worst": 389,
+   "worst": 394,
    "calls": 1
   },
   {
-   "code": "WRK001",
-   "name": "Messages",
+   "code": "RAL006",
+   "name": "Trash",
    "visits": 1,
-   "worst": 387,
+   "worst": 392,
    "calls": 1
   },
   {
    "code": "CAT001",
    "name": "Catalogue",
+   "visits": 1,
+   "worst": 358,
+   "calls": 1
+  },
+  {
+   "code": "BUS001",
+   "name": "Customers",
    "visits": 1,
    "worst": 356,
    "calls": 1
@@ -137,120 +151,106 @@
    "code": "WRK003",
    "name": "Intake",
    "visits": 1,
-   "worst": 345,
-   "calls": 1
-  },
-  {
-   "code": "BUS002",
-   "name": "Suppliers",
-   "visits": 1,
-   "worst": 339,
+   "worst": 351,
    "calls": 1
   },
   {
    "code": "CAT004",
    "name": "Catalogue setup",
    "visits": 1,
-   "worst": 318,
+   "worst": 317,
    "calls": 2
-  },
-  {
-   "code": "BUS001",
-   "name": "Customers",
-   "visits": 1,
-   "worst": 272,
-   "calls": 1
   }
  ],
  "routes": [
   {
    "route": "chits",
    "n": 11,
-   "ms": 3986,
+   "ms": 4670,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "folders",
    "n": 7,
-   "ms": 3229,
+   "ms": 2884,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "governance",
    "n": 3,
-   "ms": 1809,
+   "ms": 1831,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "relationships",
    "n": 4,
-   "ms": 1210,
+   "ms": 1291,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "actors",
    "n": 3,
-   "ms": 1042,
+   "ms": 1200,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "products",
    "n": 3,
-   "ms": 902,
+   "ms": 871,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "network",
    "n": 1,
-   "ms": 519,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "schemas",
-   "n": 1,
-   "ms": 519,
+   "ms": 593,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "assist",
    "n": 2,
-   "ms": 433,
+   "ms": 532,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "schemas",
+   "n": 1,
+   "ms": 511,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "till",
    "n": 1,
-   "ms": 418,
+   "ms": 398,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "capture",
    "n": 1,
-   "ms": 356,
-   "srv": 0,
-   "trips": 0
-  },
-  {
-   "route": "network-design",
-   "n": 1,
-   "ms": 345,
+   "ms": 358,
    "srv": 0,
    "trips": 0
   },
   {
    "route": "definitions",
    "n": 2,
-   "ms": 321,
+   "ms": 337,
+   "srv": 0,
+   "trips": 0
+  },
+  {
+   "route": "network-design",
+   "n": 1,
+   "ms": 336,
    "srv": 0,
    "trips": 0
   }

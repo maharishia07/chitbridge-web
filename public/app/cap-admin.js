@@ -280,7 +280,7 @@ function misBand(){ return UI.misBand || 'overview'; }
 function misSetBand(k){ UI.misBand = k; renderApp(); _capShowDetail();
   if (UI._mis){ const h=document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(k, UI._mis); } else { loadMIS(); } }
 function misPeriod(){ return UI.misPeriod || 'all'; }
-function misSetPeriod(p){ UI.misPeriod = p; renderApp(); loadMIS(); }   // a new window DOES need the data re-bucketed
+function misSetPeriod(p){ UI.misPeriod = p; renderApp(); loadMIS(true); }   /* ⚠ FORCED: a new window is a new question */   // a new window DOES need the data re-bucketed
 
 function misScreen(){
   var m = UI._mis;
@@ -692,9 +692,18 @@ function misOverview(m){
  * ⭐ ONE READ IN FLIGHT. A second caller joins the first rather than starting another; nobody has to know how
  * many times the app decided to paint. [[feedback-no-duplicate-functions]]
  */
-async function loadMIS(){
+async function loadMIS(force){
   if (!document.getElementById('mis_rail')) return;
   if (UI._misReq) return UI._misReq;
+  /**
+   * ⚠️⚠️ A LATCH ALONE DID NOT FIX IT, AND THE RE-MEASUREMENT SAID SO. An in-flight latch joins a SECOND
+   * caller to a FIRST that is still running; renderApp's two passes are far enough apart that the first had
+   * already finished, so the second started cleanly and the seven calls went out again.
+   * ⭐ So the model is also FRESH for ten seconds. Ten is chosen against what it is protecting: two paints of
+   * one arrival, which are a second apart at worst. A person who waits ten seconds and expects new numbers
+   * gets them; the twenty-second auto-refresh is untouched, and every deliberate re-read passes `force`.
+   */
+  if (!force && UI._mis && UI._misAt && (Date.now() - UI._misAt) < 10000) return;
   UI._misReq = _loadMIS().finally(function(){ UI._misReq = null; });
   return UI._misReq;
 }
@@ -801,6 +810,8 @@ async function _loadMIS(){
     }).sort(function(a, b){ return b.ageMs - a.ageMs; });
 
     const openDisp = dq.total_open != null ? dq.total_open : (((dq.my_disputes || []).length) + ((dq.other_disputes || []).length));
+    /* ⚠ stamped so the freshness guard above has something to measure against */
+    UI._misAt = Date.now();
     UI._mis = {
       chits: inWindow.length, committed: committed, forecast: forecast, dead: dead,
       open: byState.open, in_progress: byState.act, closed: byState.close,
