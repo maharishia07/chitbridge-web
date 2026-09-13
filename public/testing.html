@@ -2310,11 +2310,26 @@ function reportVerdictHTML(r) {
     return '<div><b' + (tone ? ' class="' + tone + '"' : '') + '>' + n + '</b><span>' + word + '</span></div>';
   };
 
-  /* ⚠ a zero holds its place and never a blank; and a zero is not a warning — see the conditional tones */
+  /**
+   * ⚠️⚠️ "NEVER RUN" WAS ONE NUMBER FOR TWO DIFFERENT JOBS, and that is why the board looked as though it
+   * could never complete. Athi: *"most of the not passed cases … can you run those and update as completed
+   * or not required, otherwise it will be empty always and will never be completed?"*
+   *
+   *   NOT YET RUN     a case with a written expectation, waiting for somebody to RUN it.
+   *   NO EXPECTATION  swept from the menu: it names a control and says nothing about what should happen.
+   *                   It cannot honestly report pass or fail as written — it is a prompt to WRITE one.
+   *
+   * ⚠️ NEITHER IS HIDDEN. 835 controls with no real case is a genuine coverage finding, and burying it in
+   * the denominator to make a percentage look better would be the opposite fault to the one this report
+   * exists to prevent. They are SEPARATED, so the board asks for the two different actions it needs.
+   * ⚠️ Falls back to the single figure when the server has not been redeployed with the split.
+   */
   var stand = [
     t.failed ? [t.failed, 'failing now', 'bad'] : null,
     b3.awaiting_retest ? [b3.awaiting_retest, 'waiting for your retest', 'warnn'] : null,
-    t.untested ? [t.untested, 'never run', 'warnn'] : null,
+    (t.untested_written != null ? t.untested_written : t.untested)
+      ? [(t.untested_written != null ? t.untested_written : t.untested), 'written, not yet run', 'warnn'] : null,
+    t.untested_swept ? [t.untested_swept, 'no expectation written yet', 'dim'] : null,
     t.blocked ? [t.blocked, 'blocked', 'warnn'] : null,
   ].filter(Boolean);
 
@@ -2457,6 +2472,38 @@ async function paintReport(){
           + '</table></div>'
           + '<span class="fine">' + esc(b.note || '') + '</span>';
       }
+    /**
+     * ── ⭐⭐⭐ 2b · TYPES OF TESTING PERFORMED ──────────────────────────────────────────────────────────────
+     *
+     * Athi: *"is there any way of stating about performance fine tuning and how good the system is? and what
+     * actions have been taken care of, in simple terms"* · *"security and so on?"* · *"as a heading, type of
+     * testing performed."*
+     *
+     * ⚠️ THE REPORT COULD NOT ANSWER "IS IT SECURE" OR "IS IT FAST". Every total it carried mixed a security
+     * probe with a spelling check. The board has typed every case since b219, so the answer was a GROUP BY.
+     * ⚠️ Kinds with NO cases still get a row — same rule as the empty columns on the matrix. Leaving one out
+     * lets "we have none" pass for "not applicable", and those are opposite claims. Penetration is shown at
+     * zero on purpose.
+     */
+    } else if (s.id === '2b') {
+      var K = b.kinds || [];
+      inner = '<div class="scroll"><table class="sum">'
+        + '<tr><th>Kind</th><th>What it proves</th><th class="num">Cases</th><th class="num">Run</th>'
+        +   '<th class="num">Passed</th><th class="num">Failing</th></tr>'
+        + K.map(function (k) {
+            var none = !k.total;
+            return '<tr' + (none ? ' class="unplaced"' : '') + '>'
+              + '<td><b>' + esc(k.kind) + '</b>' + (none ? ' <i class="zeroflag">0</i>' : '') + '</td>'
+              + '<td class="fine">' + esc(k.says || '') + '</td>'
+              + '<td class="num">' + (k.total || '<span class="dim">—</span>') + '</td>'
+              + '<td class="num">' + (k.run || '<span class="dim">—</span>') + '</td>'
+              + '<td class="num">' + (k.passed ? '<span class="big">' + k.passed + '</span>'
+                                               : '<span class="dim">—</span>') + '</td>'
+              + '<td class="num">' + (k.failed ? '<span class="bad">' + k.failed + '</span>'
+                                               : '<span class="dim">—</span>') + '</td></tr>';
+          }).join('')
+        + '</table></div>'
+        + (b.note ? '<span class="fine">' + esc(b.note) + '</span>' : '');
     } else if (s.id === '2') {
       var t = b.totals || {};
       inner = '<div class="big-n">'
