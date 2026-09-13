@@ -89,7 +89,10 @@ async function openPanel(page) {
 async function writeCase(page, { req, op, exp, got }, outcome) {
   /* the panel opens on CASES when a screen has any, so writing starts by asking for Create — as a tester does */
   if (!(await page.locator('#wcTitle').count())) {
-    await page.locator('#cbcasesbody button', { hasText: /^\+ Create$/ }).first().click();
+    /* the SEGMENT (labelled "Create") is the way into the area; "+ Create" is a button INSIDE it */
+    await page.locator('#cbcasesbody button').filter({ hasText: /^Create$/ }).first().click();
+    const plus = page.locator('#cbcasesbody button').filter({ hasText: /^\+ Create$/ }).first();
+    if (await plus.count()) await plus.click();
     await expect(page.locator('#wcTitle')).toBeVisible({ timeout: 15000 });
   }
   /* ⭐ the TYPE first — it decides the four labels below it and the verb on the save button */
@@ -276,7 +279,7 @@ test.describe('test mode', () => {
 
     await page.locator('#cbcasespanel button', { hasText: /^Cancel$/ }).first().click();
     await expect(page.locator('#wcTitle')).toHaveCount(0);
-    await page.locator('#cbcasesbody button', { hasText: /^\+ Create$/ }).first().click();
+    await page.locator('#cbcasesbody button').filter({ hasText: /^\+ Create$/ }).first().click();
     await expect(page.locator('#wcTitle')).toBeVisible();
   });
 
@@ -487,6 +490,10 @@ test.describe('test mode', () => {
     await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
 
     await page.evaluate(() => testArea('behind'));
+    /* ⚠ the file-level detail is the SECOND half of Coverage and is folded shut by design — the area now
+       leads with the control to-do list, because "which files name this code" is a developer's question.
+       Open it the way a tester does. */
+    await page.evaluate(() => { if (!CBTEST.behindTech) testBehindTech(); });
     const body = page.locator('#cbcasesbody');
 
     /* the EXACT rung: the register knows which capability draws the Catalogue */
@@ -529,7 +536,7 @@ test.describe('test mode', () => {
     const paths = await page.evaluate(() => (window.CBCALLS || [])
       .filter((c) => /^\/api\/testing/.test(c.path || '')).length);
     expect(paths, 'the fixture never called /api/testing — this test proves nothing').toBeGreaterThan(0);
-    await page.locator('#cbcasesbody button', { hasText: /^Speed/ }).first().click();
+    await page.locator('[data-testid="area-more"]').selectOption('diag');
     await expect(page.locator('#cbcasesbody')).not.toContainText('/api/testing');
   });
 
@@ -630,6 +637,13 @@ test.describe('test mode', () => {
     await expect(page.locator('#cbtestpanel')).toBeVisible({ timeout: 30000 });
     await dismissModal(page);
 
+    /**
+     * ⚠️ THE BOARD OPENS ON THE WORKLIST NOW — "what is waiting for me" is the question a tester opens this
+     * panel to answer, and that became the default view today. Its rows are worklist rows; the case rows with
+     * the verdict buttons are the LIST view. modeOn() clears the remembered view, so this must ask for it.
+     */
+    await page.locator('[data-testid="view-list"]').click();
+
     /* the verdict buttons live inside an OPENED case, so a case is opened the way a tester opens one */
     const row = page.locator('#cbtestpanel [onclick^="testOpen("]').first();
     await expect(row).toBeVisible({ timeout: 30000 });
@@ -695,7 +709,7 @@ test.describe('test mode', () => {
     for (const [tab, how] of AREAS) {
       if (how === 'seg') {
         await page.locator('#cbcasesbody button')
-          .filter({ hasText: tab === 'write' ? /^\+ Create$/ : /^Cases/ }).first().click();
+          .filter({ hasText: tab === 'write' ? /^Create$/ : /^Cases/ }).first().click();
       } else {
         await page.locator('[data-testid="area-more"]').selectOption(tab);
       }
@@ -709,7 +723,15 @@ test.describe('test mode', () => {
 
     /* and the Incidents area in particular says what was raised, by reference */
     await page.locator('[data-testid="area-more"]').selectOption('inc');
-    await expect(body).toContainText('Raised on this screen');
+    /**
+     * ⚠️ "Raised on this screen" IS IN DEAD CODE. That heading lives in testRaisedHTML(), which has ZERO
+     * callers — the live Incidents area is testScrRaisedHTML(code,'inc') and heads itself with the open
+     * count. So this assertion was passing, then failing, on text no reader has ever seen. What the area is
+     * actually FOR is that a raised finding is listed with its reference and its state, which is what the
+     * next line already checks and what the case's own expectation says.
+     * ⚠️ testRaisedHTML is flagged for deletion — it still carries two faults documented as fixed elsewhere.
+     */
+    await expect(body).toContainText(/\d+ open/);
     await expect(body).toContainText(/INC-/);
   });
 });
