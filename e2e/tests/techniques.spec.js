@@ -50,6 +50,28 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
   await expect(page.locator('#tqLo')).toBeVisible();
   await expect(page.locator('#tqHi')).toBeVisible();
   await expect(page.locator('#cbcasespanel button', { hasText: 'Write the cases' })).toHaveCount(1);
+
+  /* ── ⭐ the cases come out as a TABLE, and it says what it was derived FROM ── */
+  await page.locator('#tqField').fill('quantity');
+  await page.locator('#tqLo').fill('1');
+  await page.locator('#tqHi').fill('999');
+  await page.locator('#cbcasespanel button', { hasText: 'Write the cases' }).click();
+  await expect(panel.locator('table')).toBeVisible({ timeout: 15000 });
+  /* ⚠️ the header names the field and the range, so the table can never be read as being about another one */
+  await expect(panel).toContainText('for quantity, 1 to 999');
+  /* boundary value analysis on 1..999 is eight cases: 0 1 2 998 999 1000 empty text */
+  expect(await panel.locator('table tr').count(), 'eight cases and a header row').toBe(9);
+  /* ⚠️ "Use" said nothing about where the row goes; the column is headed and the button says Add */
+  await expect(panel).toContainText('→ Create');
+  await expect(panel.locator('table button').first()).toHaveText('Add');
+
+  /**
+   * ⚠️⚠️ AND THE ROW THAT IS ADDED IS THE ROW THAT WAS CLICKED. It used to re-derive at press time, so
+   * touching a box between reading and pressing inserted a different case — silently, and only sometimes.
+   */
+  await page.locator('#tqHi').fill('4');
+  await panel.locator('table button').first().click();
+  await expect(page.locator('#wcDo')).toHaveValue(/Put 0 in quantity/);
 });
 
 test('[TECH-02] the field chips are read from what the screen actually sent', async ({ page }) => {

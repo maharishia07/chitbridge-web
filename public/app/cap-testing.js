@@ -2928,10 +2928,10 @@ function testTechHTML() {
     /* ⚠️ THE ONE THING IT CANNOT KNOW. It can see that a field is a number; only a person knows the shop
        allows 1 to 999. Asking for exactly that, and nothing else, is the whole design of this helper. */
     h += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Earliest / lowest allowed</label>'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">' + (_isDate ? 'Earliest allowed' : 'Lowest allowed') + '</label>'
       + '<input id="tqLo" type="' + (_isDate ? 'date' : 'text') + '" '
       +   'placeholder="' + (_isDate ? '' : 'e.g. 1') + '" style="' + big + '"></div>'
-      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Latest / highest allowed</label>'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">' + (_isDate ? 'Latest allowed' : 'Highest allowed') + '</label>'
       + '<input id="tqHi" type="' + (_isDate ? 'date' : 'text') + '" '
       +   'placeholder="' + (_isDate ? '' : 'e.g. 999') + '" style="' + big + '"></div>'
       + '</div>';
