@@ -2174,6 +2174,219 @@ function testShotPasteBind() {
   } catch (e) {}
 }
 
+/**
+ * ── ⭐⭐⭐ WHAT ELSE SHOULD I TRY? ────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"build the 29119-4 test techniques into the write form."*
+ *
+ * ⚠️⚠️ EVERYTHING BUILT THIS WEEK IMPROVED HOW A FINDING IS RECORDED. Not one line of it helped a person
+ * decide WHAT TO TRY — and a tester who thinks of three cases writes three, however good the form is. This
+ * is the other half, and it is the oldest solved problem in testing: ISO/IEC/IEEE 29119-4:2021 lists the
+ * techniques for deriving cases from a specification, and most of them are mechanical enough to do FOR you.
+ *
+ * ⭐ IT ASKS FOR THE ONE THING IT CANNOT KNOW and derives the rest. Give it the bounds of a field and it
+ * gives back the six values that matter; give it the states and it gives back every transition, including
+ * the ones that must be refused. Nothing here is a guess: each technique is a rule from the standard applied
+ * to numbers the tester supplied.
+ *
+ * ⚠️ AND IT WRITES NOTHING BY ITSELF. It fills the two boxes for ONE case at a time and the tester still
+ * presses Save. A button that silently minted eleven cases would fill the board with rows nobody had read,
+ * which is the opposite of what a prompt is for.
+ *
+ * ⚠️ THE OFF-BY-ONE IS THE POINT. Boundary analysis is worth having precisely because "min-1, min, min+1"
+ * is what people skip when they are sure. So the derived list SAYS which side of the line each value is on,
+ * rather than leaving the tester to work it out again.
+ */
+var TECHS = ['bounds', 'classes', 'states', 'decision', 'guess'];
+
+function testTech(kind) {
+  CBTEST.tech = CBTEST.tech || {};
+  CBTEST.tech.kind = (CBTEST.tech.kind === kind) ? null : kind;
+  screenCasesPaint();
+}
+function testTechGo() { screenCasesPaint(); }
+
+/** the value of one of the helper inputs, or a default */
+function testTechVal(id, dflt) {
+  var el = document.getElementById(id);
+  var v = el ? String(el.value || '').trim() : '';
+  return v === '' ? (dflt === undefined ? '' : dflt) : v;
+}
+
+/**
+ * ⭐ THE DERIVATION. Each branch is one technique from 29119-4, applied to what the tester typed.
+ * ⚠️ Returns {do, see} pairs — the same two boxes the form already has, so nothing new has to be learned.
+ */
+function testTechDerive() {
+  var t = (CBTEST.tech || {});
+  var field = testTechVal('tqField', 'the field');
+  var out = [];
+
+  if (t.kind === 'bounds') {
+    var lo = Number(testTechVal('tqLo', ''));
+    var hi = Number(testTechVal('tqHi', ''));
+    if (isNaN(lo) || isNaN(hi)) return [];
+    /* 29119-4 boundary value analysis: the value each side of every boundary, and the boundary itself */
+    out = [
+      [lo - 1, 'refused \u2014 it is below the lowest allowed'],
+      [lo, 'accepted \u2014 it is the lowest allowed'],
+      [lo + 1, 'accepted \u2014 just inside'],
+      [hi - 1, 'accepted \u2014 just inside'],
+      [hi, 'accepted \u2014 it is the highest allowed'],
+      [hi + 1, 'refused \u2014 it is above the highest allowed'],
+    ].map(function (p) {
+      return { do: 'Put ' + p[0] + ' in ' + field + ' and save.', see: 'It is ' + p[1] + '.' };
+    });
+    /* ⚠ the two everybody forgets, and they are not boundaries — they are the absence of a value */
+    out.push({ do: 'Leave ' + field + ' empty and save.',
+               see: 'Either refused with a reason, or a stated default \u2014 never a silent zero.' });
+    out.push({ do: 'Put text in ' + field + ' and save.',
+               see: 'Refused before it reaches the server.' });
+  }
+
+  if (t.kind === 'classes') {
+    var cs = testTechVal('tqClasses', '').split(',').map(function (x) { return x.trim(); })
+      .filter(Boolean);
+    /* equivalence partitioning: ONE value from each class, because the class behaves as one */
+    out = cs.map(function (c) {
+      return { do: 'Use ' + (/^[aeiou]/i.test(c) ? 'an ' : 'a ') + c + ' in ' + field + '.',
+               see: 'It behaves as every other ' + c + ' does \u2014 one from the class stands for all of it.' };
+    });
+  }
+
+  if (t.kind === 'states') {
+    var st = testTechVal('tqStates', '').split(',').map(function (x) { return x.trim(); })
+      .filter(Boolean);
+    /**
+     * ⭐⭐ STATE TRANSITION, AND THE INVALID ONES ARE THE POINT. Walking the happy path proves the allowed
+     * moves work; it says nothing about whether the forbidden ones are refused, and a lifecycle that can be
+     * jumped is how a chit gets paid before it is sent.
+     */
+    st.forEach(function (a, i) {
+      var b = st[i + 1];
+      if (b) out.push({ do: 'Move it from ' + a + ' to ' + b + '.', see: 'Allowed.' });
+    });
+    st.forEach(function (a, i) {
+      st.forEach(function (b, j) {
+        if (j <= i + 1 || j === i) return;      /* forward by more than one step = a skipped state */
+        out.push({ do: 'Try to move it straight from ' + a + ' to ' + b + ', skipping '
+          + st.slice(i + 1, j).join(' and ') + '.', see: 'Refused \u2014 the step cannot be skipped.' });
+      });
+    });
+    if (st.length > 1) {
+      out.push({ do: 'Try to move it BACK from ' + st[st.length - 1] + ' to ' + st[0] + '.',
+        see: 'Refused, or recorded as a reversal with a reason \u2014 never a silent rewind.' });
+    }
+  }
+
+  if (t.kind === 'decision') {
+    var cond = testTechVal('tqConds', '').split(',').map(function (x) { return x.trim(); })
+      .filter(Boolean).slice(0, 3);
+    /* a decision table: every combination, because a rule that reads two conditions has four answers */
+    var n = Math.pow(2, cond.length);
+    for (var i = 0; i < n; i++) {
+      var says = cond.map(function (c, k) {
+        return ((i >> k) & 1) ? c : 'NOT ' + c;
+      }).join(' and ');
+      out.push({ do: 'Set it up so that ' + says + '.', see: 'The rule gives its answer for this combination.' });
+    }
+  }
+
+  if (t.kind === 'guess') {
+    /**
+     * ⚠️ 29119-4 CALLS THIS "ERROR GUESSING" AND IT IS EXPERIENCE-BASED, not derived — which means this list
+     * is OURS, not the standard’s, and it says so. Every entry is something that has actually broken in this
+     * product at least once.
+     */
+    out = [
+      ['Paste 2,000 characters into ' + field + '.', 'Refused or truncated with a word about it, never a 500.'],
+      ['Type a name with an emoji and an accent.', 'Stored and shown back exactly as typed.'],
+      ['Press the save button twice, fast.', 'ONE record. Not two.'],
+      ['Turn the network off, then save.', 'Queued or refused clearly \u2014 never a success message.'],
+      ['Save, then press the browser Back button, then save again.', 'No duplicate, no lost edit.'],
+      ['Open the same record in two tabs and save both.', 'The second is refused or merged, never silently '
+        + 'overwriting the first.'],
+    ].map(function (p) { return { do: p[0], see: p[1] }; });
+  }
+  return out;
+}
+
+/** put one derived case into the two boxes — the tester still reads it and still presses Save */
+function testTechUse(i) {
+  var d = testTechDerive()[i];
+  if (!d) return;
+  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+  put('wcDo', d.do);
+  put('wcSee', d.see);
+  var t = document.getElementById('wcTitle');
+  if (t && !String(t.value || '').trim()) t.value = d.see.replace(/^It is /, '').replace(/\.$/, '');
+  try { document.getElementById('wcTitle').focus(); } catch (_) {}
+}
+
+function testTechHTML() {
+  var t = (CBTEST.tech || {});
+  var tab = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;margin-top:4px;';
+  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+  var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:6px;background:var(--card,#fff)';
+
+  var h = '<div style="margin-top:8px;padding-top:7px;border-top:1px dashed var(--line,#e7e3d8)">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2)">'
+    + '<b>What else should I try?</b> \u00b7 the techniques from ISO/IEC/IEEE 29119-4 \u2014 give it the one '
+    + 'thing it cannot know and it derives the rest</div>'
+    + [['bounds', 'A number range'], ['classes', 'Kinds of value'], ['states', 'A lifecycle'],
+       ['decision', 'A rule with conditions'], ['guess', 'The usual suspects']]
+      .map(function (x) {
+        return '<button onclick="testTech(\'' + x[0] + '\')" style="' + tab
+          + (t.kind === x[0] ? on : off) + '">' + x[1] + '</button>';
+      }).join('');
+  if (!t.kind) return h + '</div>';
+
+  /* ⚠ the inputs are remembered across repaints like every other field — see FIELDS in screenCasesPaint */
+  h += '<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+    + '<input id="tqField" placeholder="which field?" style="' + inp + ';width:11em">';
+  if (t.kind === 'bounds') {
+    h += '<input id="tqLo" placeholder="lowest allowed" style="' + inp + ';width:8em">'
+      + '<input id="tqHi" placeholder="highest allowed" style="' + inp + ';width:8em">';
+  }
+  if (t.kind === 'classes') {
+    h += '<input id="tqClasses" placeholder="the kinds, comma separated \u2014 e.g. GST-registered, '
+      + 'unregistered, overseas" style="' + inp + ';flex:1 1 18em">';
+  }
+  if (t.kind === 'states') {
+    h += '<input id="tqStates" placeholder="the states in order \u2014 e.g. draft, sent, accepted, delivered, '
+      + 'paid" style="' + inp + ';flex:1 1 18em">';
+  }
+  if (t.kind === 'decision') {
+    h += '<input id="tqConds" placeholder="up to 3 conditions, comma separated \u2014 e.g. over 500, '
+      + 'customer is a member" style="' + inp + ';flex:1 1 18em">';
+  }
+  h += '<button onclick="testTechGo()" style="' + tab + on + ';margin-top:0">Show</button></div>';
+
+  var rows = testTechDerive();
+  if (!rows.length) {
+    h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+      + 'Fill the boxes above and press Show. Nothing is invented \u2014 every line comes from what you type.'
+      + '</div>';
+    return h + '</div>';
+  }
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:6px">'
+    + '<b>' + rows.length + '</b> case(s) this technique says you need. Take them one at a time \u2014 each one '
+    + 'fills the boxes above and you still press Save.</div>';
+  h += rows.map(function (d, i) {
+    return '<div style="display:flex;gap:7px;align-items:baseline;padding:3px 0;'
+      +   'border-top:1px solid var(--line-2,#efece4)">'
+      + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-1)">' + testEsc(d.do)
+      +   '<span style="display:block;color:var(--grey-2)">\u2192 ' + testEsc(d.see) + '</span></span>'
+      + '<button onclick="testTechUse(' + i + ')" style="' + tab + off + ';margin-top:0;flex:0 0 auto">'
+      +   'Use</button>'
+      + '</div>';
+  }).join('');
+  return h + '</div>';
+}
+
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
   /**
@@ -2249,7 +2462,9 @@ function testCaseFormHTML() {
           + ';padding:1px 7px">view</button>'
         + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
       : '<span>\u2026 or paste one here with Ctrl+V</span>')
-    + '</div></div>';
+    + '</div>'
+    + testTechHTML()
+    + '</div>';
 }
 function testCaseCancel() { CBTEST.writeFor = null; if (CBTEST.popupFor) screenCasesPaint(); else testPaint(); }
 
@@ -4223,7 +4438,10 @@ function screenCasesPaint() {
    * the counts arriving a beat later, the panel following you — so a careful sentence is lost to a background
    * fetch finishing, which is the kind of fault people blame themselves for.
    */
-  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcCtl'];
+  /* ⚠ the technique inputs are in this list too: a repaint landing while somebody is typing a boundary
+     would eat it exactly as it once ate the observation — same bug, new boxes */
+  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcCtl',
+                'tqField', 'tqLo', 'tqHi', 'tqClasses', 'tqStates', 'tqConds'];
   var typed = {};
   FIELDS.forEach(function (id) { var el = document.getElementById(id); if (el) typed[id] = el.value; });
   var focused = document.activeElement;
