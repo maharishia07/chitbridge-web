@@ -71,9 +71,30 @@ for (const [file, src] of sources) {
   }
 }
 
+/**
+ * ── ⚠️⚠️ AN onclick IS NOT A PAINT ────────────────────────────────────────────────────────────────────────
+ *
+ * This measures "reads reachable from one screen PAINT". A handler attribute is the opposite of that: it runs
+ * only when a person presses something, and the read it makes is one they asked for.
+ *
+ * It reported `loadActorProfile: 1 → 2` as a REGRESSION. The second read was `changePin`, reached via
+ * `saveActorPin` — which appears exactly once in that function, inside `onclick="saveActorPin()"` in an HTML
+ * string. Painting the profile costs one read; pressing "Change PIN" costs the other, correctly.
+ *
+ * ⚠️ A FALSE ALARM IN A BUDGET GUARD IS WORSE THAN A QUIET ONE. It either sends somebody optimising a screen
+ * that is already fine, or it teaches them to skim the reds — and this guard exists precisely because the
+ * profile silently grew to five reads and nobody noticed.
+ *
+ * ⭐ Handler bodies are BLANKED, not stripped, so byte offsets and reported line numbers are unchanged.
+ * Same treatment as the comment-blanking in token-check.cjs and modal-safe-repaint.cjs.
+ */
+const stripHandlers = (body) => body
+  .replace(/\bon[a-z]+\s*=\s*"[^"]*"/gi, (h) => h.replace(/[^\n]/g, ' '))
+  .replace(/\bon[a-z]+\s*=\s*'[^']*'/gi, (h) => h.replace(/[^\n]/g, ' '));
+
 /** Every `api('key'…)` site in a body, by key. */
-const apiCalls = (body) => [...body.matchAll(/\bapi\(\s*['"]([A-Za-z][\w.]*)['"]/g)].map((x) => x[1]);
-const namedCalls = (body) => [...body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((x) => x[1]);
+const apiCalls = (body) => [...stripHandlers(body).matchAll(/\bapi\(\s*['"]([A-Za-z][\w.]*)['"]/g)].map((x) => x[1]);
+const namedCalls = (body) => [...stripHandlers(body).matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)].map((x) => x[1]);
 
 /** Transitive, cycle-safe, depth-limited. Returns Map<apiKey, viaFunctionName>. */
 function reads(entry) {
