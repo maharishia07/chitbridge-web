@@ -5163,6 +5163,27 @@ function testDiagHTML() {
     'Each call is roughly 1.4–2.4 s to the database and back, so the <b>count</b> matters more than the '
       + 'milliseconds.'], 'note');
 
+  /**
+   * ── ⭐⭐ WHAT THE RESPONSE ENVELOPE THREW AWAY ────────────────────────────────────────────────────────
+   *
+   * unwrap() carries only a named list of sibling keys off a compound response and drops the rest, silently.
+   * It has eaten three fields in one day and each looked like a different bug. It now writes down what it
+   * refused, and this is where a tester sees it — beside the calls, where they are already looking for a
+   * fault. ⚠️ Reported, not warned: plenty of endpoints return siblings nobody needs, and a warning on every
+   * call is noise that teaches people to ignore it.
+   */
+  try {
+    var drop = window.CBDROP || {};
+    var dk = Object.keys(drop).filter(function (k) { return (drop[k] || []).length; });
+    if (dk.length) {
+      h += testSec('Dropped by the response envelope',
+        'these arrived from the server and did not survive unwrap() — harmless unless something needed them');
+      h += testNotes(dk.slice(0, 12).map(function (k) {
+        return '<code>' + testEsc(k) + '</code> — ' + testEsc(drop[k].join(', '));
+      }), 'warn');
+    }
+  } catch (_) {}
+
   h += testSec('Every call, slowest first');
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'

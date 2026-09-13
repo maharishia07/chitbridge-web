@@ -8,7 +8,35 @@ function fill(path, params){ return path.replace(/:(\w+)/g, (_, k) => encodeURIC
 
 // Single response envelope. Accepts a real {ok,data,error} envelope, or normalises the legacy
 // wrappers ({chits,…}, {entity}, {messages,…}, …) so feature code uses `data` directly.
-function unwrap(j){
+/**
+ * ── ⭐⭐⭐ THE DOOR NOW SAYS WHAT IT REFUSED ────────────────────────────────────────────────────────────────
+ *
+ * This envelope has silently eaten three fields in one day — `truncated`, `status_counts`, and the
+ * `counts`/`open` the incident boards read — and each one looked like a completely different bug:
+ * a search that found nothing, a shop that reported 500 products, a filter chip with no number.
+ *
+ * ⚠️⚠️ THE FAILURE IS ALWAYS SILENT AND ALWAYS FLATTERING. The value reads `undefined`, the screen shows a
+ * smaller and tidier answer, and nothing anywhere says a field was dropped. Four warnings in capitals are
+ * already written above this line and every one of them was read past — by me, twice, today.
+ *
+ * ⭐ SO IT REPORTS. `importCases` on the server has done this since it lost its fifth field: a named-list
+ * copier that cannot say what it threw away will keep throwing things away. The same fix, on the client.
+ * [[feedback-silence-is-the-bug]]
+ *
+ * ⚠️ IT DOES NOT WARN, AND THAT IS DELIBERATE. Plenty of endpoints return siblings nobody needs; a console
+ * warning per call would be noise that trains people to ignore it. It ACCUMULATES, and the tester’s Speed
+ * area shows the list — visible to somebody who is looking for a fault, invisible to everybody else.
+ */
+var CBDROP = {};
+function cbDropNote(key, keys){
+  try{
+    if(!keys || !keys.length) return;
+    var k = key || '?';
+    var seen = CBDROP[k] || (CBDROP[k] = []);
+    keys.forEach(function(f){ if(seen.indexOf(f) < 0) seen.push(f); });
+  }catch(_){}
+}
+function unwrap(j, _key){
   if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
   if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
   /**
@@ -71,7 +99,11 @@ function unwrap(j){
    * smaller, tidier number, and nothing anywhere says a field was dropped. A named allow-list on a shared
    * envelope needs a REPORT, the way importCases got one — that is in the backlog now.
    */
-  for(const mk of ["total","page","limit","truncated","count","offset","status_counts","open","counts"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
+  var SIBS = ["total","page","limit","truncated","count","offset","status_counts","open","counts"];
+  for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
+  /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
+  try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}
+  return a; }
   /**
    * ⚠️⚠️ `included` IS A SIBLING OF `entity`, AND THIS LINE WAS EATING IT — the fourth instance of the exact bug
    * the comments above describe, and the most expensive one, because nothing looked wrong.
@@ -945,7 +977,7 @@ async function apiOnce(key, {params, query, body}={}){
      * response body sitting around in a tab that is merely open. The body is also capped, because the point is
      * to see the SHAPE of the answer, not to build a network log.
      */
-    const _out = unwrap(res.status===204?null:await res.json());
+    const _out = unwrap(res.status===204?null:await res.json(), key);
     try {
       /**
        * ⭐ TEST MODE RECORDS TOO. Athi, 2026-09-13: *"how the API is responding, how many round trips it
