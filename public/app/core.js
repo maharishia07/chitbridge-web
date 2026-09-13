@@ -581,6 +581,25 @@ function cbPushStart(){
       if(!SESSION.token) return; clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); };
   }).catch(function(){ clearTimeout(_push.timer); _push.timer=setTimeout(cbPushStart, _push.backoff); _push.backoff=Math.min(_push.backoff*2, 60000); });
 }
+/**
+ * ── ⭐⭐ WHICH IDENTITY AM I, AS AN ID ────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ NAMES ARE FOR READING, IDS ARE FOR DECIDING. "Is this finding mine to retest?" and "did I just do this
+ * myself?" are both answered by comparing against the server’s `identity.identity_id`, and a display name
+ * cannot answer either — two people called Athi would both be told to go and verify one fix.
+ *
+ * ⚠️ THREE SOURCES BECAUSE THE PROFILE IS LAZY. `UI._me` is the loaded profile and the right answer when it
+ * is there; before it loads, the JWT already carries the same id — `SESSION.actorId` for a co-assist login,
+ * and for an entity login `SESSION.entityId`, which setSession derives from `identity_id` itself.
+ * ⚠️ ORDER MATTERS: for a CO-ASSIST, entityId is the parent entity and not this person, so actorId comes
+ * first. Falling through to entityId there would tell every co-assist that the entity’s findings were theirs.
+ */
+function cbMeId(){
+  try{ if(typeof UI!=='undefined' && UI && UI._me && UI._me.identity_id) return String(UI._me.identity_id); }catch(_){}
+  try{ if(typeof SESSION!=='undefined' && SESSION){ if(SESSION.actorId) return String(SESSION.actorId);
+         if(SESSION.entityId) return String(SESSION.entityId); } }catch(_){}
+  return '';
+}
 function cbPushStop(){ clearTimeout(_push.timer); if(_push.es){ try{ _push.es.close(); }catch(_){} } _push.es=null; _push.up=false; }
 /** something arrived: refresh only what it touches — the bell badge, and the list on screen if it is a list screen */
 function cbPushArrived(d){
@@ -619,6 +638,44 @@ function cbPushArrived(d){
       if(typeof UI!=='undefined'){ UI._ctOffers=undefined; UI._party=undefined; UI._prodOffers=null; }
       /* only the screen actually showing them repaints — everything else picks it up when it is next opened */
       if(typeof UI!=='undefined' && UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList();
+      return;
+    }
+  }catch(_){}
+  /**
+   * ── ⭐⭐⭐ SOMEBODY FOUND SOMETHING, OR ANSWERED WHAT YOU FOUND ───────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"do we have a mechanism of getting the notification when someone raises an incident or
+   * a case?"* and *"a message back stating that this issue has been fixed — that feedback loop is not there."*
+   *
+   * ⭐ TWO DIRECTIONS ON ONE EVENT. Outbound: a finding was raised, and the other testers should not spend the
+   * afternoon finding it again. Inbound: something YOU raised has moved, and `for` names you — that one is
+   * spoken out loud even with the lab shut, because it is the only message on this pipe that asks you to act.
+   *
+   * ⚠️ NEVER YOUR OWN. events.emit reaches every connection of the entity including the tab that just pressed
+   * the button; telling somebody what they have this second done is how a notification stops being read.
+   *
+   * ⚠️ AND THE EVENT CARRIES NO FINDING — see lib/testnews.js. The board REREADS through the ordinary
+   * RLS-guarded endpoint, so what a person sees is what the server would answer, not what a message claimed.
+   */
+  try{
+    if(d && d.kind==='test'){
+      var meId=cbMeId();
+      if(d.by && meId && String(d.by)===String(meId)) return;
+      var lab=(typeof CBTEST!=='undefined' && CBTEST.on);
+      /* ⚠️ THE BOARD REREADS, IT DOES NOT PATCH ITSELF FROM THE MESSAGE. The event deliberately carries no
+         finding (lib/testnews.js), so what appears is what the server would answer through RLS — never what
+         a message claimed. One refresh, and it only touches the lists that are actually loaded. */
+      try{ if(lab && typeof testNewsRefresh==='function') testNewsRefresh(d.what); }catch(_){}
+      var what=d.what==='requirement'?tx('requirement'):(d.what==='case'?tx('case'):tx('incident'));
+      var ref=d.ref?(' '+d.ref):''; var byWho=d.who?(' \u00b7 '+d.who):'';
+      /* ⭐ MINE TO RETEST is a different sentence from somebody else raising something, and it says what to do */
+      if(d['for'] && meId && String(d['for'])===String(meId)){
+        if(typeof toast==='function') toast(tx('Your')+' '+what+ref+' \u2192 '+(d.state||'')+' \u2014 '+tx('retest it')+byWho);
+        return;
+      }
+      if(lab && typeof toast==='function'){
+        toast((d.state==='raised'?tx('New'):tx('Updated'))+' '+what+ref+byWho);
+      }
       return;
     }
   }catch(_){}

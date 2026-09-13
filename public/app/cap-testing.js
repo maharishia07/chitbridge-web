@@ -1438,7 +1438,7 @@ async function testReqSet(id, state) {
   try {
     await api('testReqSet', { params: { id: id }, body: { state: state, why: why } });
     if (typeof toast === 'function') toast('Marked ' + state);
-    testReqLoad();
+    testNewsRefresh('requirement');
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
 }
 async function testReqPri(id, priority) {
@@ -1657,6 +1657,28 @@ function testIncFilter(v) {
   try { localStorage.setItem('cb_test_incf', v); } catch (_) {}
   testIncLoad();
 }
+/**
+ * ── ⚠️⚠️ THE BOARD IS THREE LISTS OF THE SAME FINDINGS, AND THEY WERE DRIFTING ────────────────────────────
+ *
+ * `CBTEST.incs` is the Incidents view (filtered to what that view asks for). `CBTEST.scrInc` is EVERY
+ * incident in every state, and it is what By-screen and Findings read. Marking something resolved refreshed
+ * the first and not the second — so the Findings row a person had just acted on went on showing the state
+ * it had before they touched it, and the natural conclusion is that the button did not work.
+ *
+ * ⭐ SO EVERY VERDICT CALLS ONE FUNCTION, and it refreshes what is actually loaded — nothing else. A view
+ * nobody has opened is not fetched here; it reads when it opens, as it always did.
+ */
+async function testNewsRefresh(what) {
+  var jobs = [];
+  try { if (CBTEST.incs && (!what || what === 'incident')) jobs.push(testIncLoad()); } catch (_) {}
+  try { if (CBTEST.reqs && (!what || what === 'requirement')) jobs.push(testReqLoad()); } catch (_) {}
+  /* ⚠️ the all-states copy is what Findings and By-screen read; without it a verdict is invisible there */
+  try { if (CBTEST.scrInc || CBTEST.scrReq) jobs.push(testScrLoad()); } catch (_) {}
+  try { if (what === 'case') { CBTEST.closedCases = null; jobs.push(testLoad(true)); } } catch (_) {}
+  try { await Promise.all(jobs); } catch (_) {}
+  try { testPaint(); if (CBTEST.popupFor) screenCasesPaint(); } catch (_) {}
+}
+
 async function testIncLoad() {
   CBTEST.incBusy = true; testPaint();
   try { CBTEST.incs = await api('testIncList', { query: { state: testIncFilterGet() } }); CBTEST.incErr = null; }
@@ -1689,7 +1711,7 @@ async function testIncSet(id, state) {
   try {
     await api('testIncSet', { params: { id: id }, body: body });
     if (typeof toast === 'function') toast('Marked ' + state);
-    testIncLoad();
+    testNewsRefresh('incident');
   } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
 }
 async function testIncSev(id, severity) {
@@ -4766,7 +4788,7 @@ function testFindings() {
       seen: q.observed || null, shot: q.evidence_id || null,
       by: q.raised_by || q.written_by || null, at: q.raised_at || q.created_at || null,
       state: (q.state === 'accepted' || q.state === 'rejected') ? 'closed' : 'open',
-      stateWord: q.state || null, closedNote: q.why || null,
+      stateWord: q.state || null, closedNote: q.why || null, byId: q.raised_by_id || null,
     });
   });
   (CBTEST.scrInc || []).forEach(function (x) {
@@ -4776,8 +4798,27 @@ function testFindings() {
       seen: null, shot: x.evidence_id || null,
       by: x.raised_by || null, at: x.raised_at || x.created_at || null,
       sev: x.severity || null,
-      state: (x.state === 'resolved' || x.state === 'closed') ? 'closed' : 'open',
+      /**
+       * ── ⭐⭐⭐ THREE STATES, NOT TWO ─────────────────────────────────────────────────────────────────
+       *
+       * Athi, 2026-09-13: *"a message back stating that this issue has been fixed — that feedback loop is
+       * not there … so I can retest and confirm that this has been resolved and close it."*
+       *
+       * ⚠️⚠️ AND THIS LINE WAS THE LOOP’S MISSING HALF, sitting here in plain sight: `resolved` was folded
+       * into `closed`, so the moment a fixer said "done" the finding went grey, dropped out of Open, and
+       * nobody — least of all the person who reported it — was ever asked to look. A board that greys a
+       * fix the instant it is CLAIMED is a board that cannot tell a fix from a claim.
+       *
+       * ⭐ `resolved` = the fixer believes it is done. `closed` = the raiser has looked and agrees. They are
+       * different facts and they now render as different states, which is the whole verification loop.
+       */
+      state: x.state === 'closed' ? 'closed' : (x.state === 'resolved' ? 'verify' : 'open'),
       stateWord: x.state || null, closedNote: x.why || null,
+      /* ⚠️ by ID, not by name: "is this mine to retest?" cannot be answered by matching display names, and
+         two people with one name would both be told to go and verify it */
+      byId: x.raised_by_id || null,
+      /* what was actually done about it — the first thing a person about to retest wants to read */
+      fixedBy: (x.changes || []).length ? x.changes[x.changes.length - 1] : null,
     });
   });
   /* ⭐ newest first: the reason to open this page is "what did I just find" */
@@ -4843,6 +4884,17 @@ function testHandCases() {
  * which is what did WE find. RLS already keeps it to this shop; within the shop, testing is a shared act.
  * ⭐ "Mine" is a filter on top, for the afternoon when you want your own list back.
  */
+/**
+ * ⚠️ THE NAME IS FOR READING, THE ID IS FOR DECIDING. `testHandHTML` matches "mine" on SESSION.name because
+ * that is what the old rows carry; this is the answer for anything that must be RIGHT rather than readable —
+ * whose turn it is to retest a fix. Missing on an old row, and a row we cannot attribute is never "mine".
+ */
+function testMeId() {
+  /* ⚠️ ONE OWNER: core.js answers this for the whole app (cbMeId). A second copy here would drift the day
+     one of them learned about co-assist logins and the other did not. */
+  try { return (typeof cbMeId === 'function' ? cbMeId() : '') || ''; } catch (_) { return ''; }
+}
+
 function testFindWho() {
   try { return localStorage.getItem('cb_find_who') || 'all'; } catch (_) { return 'all'; }
 }
@@ -4862,23 +4914,54 @@ function testHandHTML() {
   var f = testHandFilterGet();
   var who = testFindWho();
   var me = (typeof SESSION !== 'undefined' && (SESSION.name || SESSION.handle)) || '';
-  var mine = function (x) { return me && String(x.by || '') === String(me); };
+  var meId = testMeId();
+  /* ⚠️ EITHER, BECAUSE THE ROWS ARE NOT ALL THE SAME AGE. Older findings carry only the name they were
+     written under; newer ones carry the id. Matching on one alone hides half of somebody's own work. */
+  var mine = function (x) {
+    return (meId && String(x.byId || '') === String(meId)) || (me && String(x.by || '') === String(me));
+  };
 
   var pool = all;
   if (who === 'mine') pool = pool.filter(mine);
   var nOpen = pool.filter(function (x) { return x.state === 'open'; }).length;
-  var nShut = pool.length - nOpen;
+  var nVer = pool.filter(function (x) { return x.state === 'verify'; }).length;
+  var nShut = pool.length - nOpen - nVer;
   var rows = f === 'closed' ? pool.filter(function (x) { return x.state === 'closed'; })
+           : f === 'verify' ? pool.filter(function (x) { return x.state === 'verify'; })
            : f === 'all' ? pool
            : pool.filter(function (x) { return x.state === 'open'; });
+
+  /**
+   * ── ⭐⭐⭐ "WAITING FOR YOU" GOES ABOVE EVERYTHING ─────────────────────────────────────────────────────
+   *
+   * ⚠️ A FIX NOBODY VERIFIES IS A FIX NOBODY HAS. The one row that must never be scrolled past is the one
+   * where somebody has answered YOUR report and is waiting on your word — so it is not a filter you have to
+   * think to apply, it is a line at the top that says how many and puts you in front of them.
+   * ⚠️ Only when there are some: a permanent empty banner is furniture, and furniture stops being read.
+   */
+  var waiting = all.filter(function (x) {
+    return x.state === 'verify' && meId && String(x.byId || '') === String(meId);
+  });
 
   var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
   var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
 
-  var h = '<div style="margin:6px 0 2px">'
-    + [['open', 'Open', nOpen], ['closed', 'Closed', nShut], ['all', 'All', pool.length]]
+  var h = '';
+  if (waiting.length) {
+    h += '<div style="margin:6px 0 4px;padding:7px 9px;border-radius:8px;border:1px solid var(--ok-2,#1B7F4B);'
+      + 'background:var(--ok-tint,#eaf5ee);font-size:var(--fs-1)">'
+      + '<b>' + waiting.length + ' fixed — waiting for your retest.</b> '
+      + 'Somebody answered what you reported. Open the screen, look, then say whether it holds — until you do, '
+      + 'it is a claim and not a fix.'
+      + ' <button onclick="testHandFilter(\'verify\')" style="font:inherit;font-size:var(--fs-1);'
+      + 'margin-inline-start:6px;padding:1px 8px;border-radius:7px;cursor:pointer;border:1px solid '
+      + 'var(--ok-2,#1B7F4B);background:var(--ok-2,#1B7F4B);color:#fff">Show them</button></div>';
+  }
+
+  h += '<div style="margin:6px 0 2px">'
+    + [['open', 'Open', nOpen], ['verify', 'To retest', nVer], ['closed', 'Closed', nShut], ['all', 'All', pool.length]]
       .map(function (x) {
         return '<button onclick="testHandFilter(\'' + x[0] + '\')" style="' + chip
           + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
@@ -4897,7 +4980,11 @@ function testHandHTML() {
 
   if (!rows.length) {
     return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0">'
-      + (f === 'closed' ? 'Nothing has been closed yet.' : 'Nothing open \u2014 everything found has been dealt with.') + '</div>';
+      + (f === 'closed' ? 'Nothing has been closed yet.'
+       /* \u26a0\ufe0f AN EMPTY "TO RETEST" IS GOOD NEWS AND MUST READ AS IT. "Nothing open" here would be a lie: there
+          may be plenty open, just nothing anybody has claimed to have fixed. */
+       : f === 'verify' ? 'Nothing is waiting to be retested \u2014 every fix claimed so far has been checked.'
+       : 'Nothing open \u2014 everything found has been dealt with.') + '</div>';
   }
 
   var KIND = { 'case': ['Case', 'var(--grey-2,#545A61)', 'var(--neutral-tint)'],
@@ -4907,8 +4994,13 @@ function testHandHTML() {
   h += rows.map(function (x) {
     var k = KIND[x.kind] || ['?', 'var(--note)', 'var(--neutral-tint)'];
     var shut = x.state === 'closed';
+    /* ⚠️ a resolved incident is NOT faded and NOT filed: it is the loudest row on the board until somebody
+       has actually looked at it again */
+    var ver = x.state === 'verify';
+    var forMe = ver && meId && String(x.byId || '') === String(meId);
     return '<div style="padding:8px 0;border-top:1px solid var(--line-2,#efece4)'
-      + (shut ? ';opacity:.62' : '') + '">'
+      + (shut ? ';opacity:.62' : '')
+      + (forMe ? ';border-inline-start:3px solid var(--ok-2,#1B7F4B);padding-inline-start:7px' : '') + '">'
       /* the kind first: a requirement and an incident read differently and must never be skimmed as one */
       + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
       +   '<span style="font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 7px;color:'
@@ -4918,8 +5010,10 @@ function testHandHTML() {
       +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
       +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
       +   '<span style="font-size:var(--fs-1);font-weight:700;color:'
-      +     (shut ? 'var(--ok-2,#1B7F4B)' : 'var(--note)') + '">'
+      +     (shut ? 'var(--ok-2,#1B7F4B)' : ver ? 'var(--warn-2,#8a6100)' : 'var(--note)') + '">'
       +     testEsc((x.stateWord || (shut ? 'closed' : 'open')).toUpperCase()) + '</span>'
+      +   (forMe ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2,#1B7F4B)">'
+        + '· yours to retest</span>' : '')
       + '</div>'
       /* where, who and when — the three things a finding is useless without */
       + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px">'
@@ -4932,6 +5026,10 @@ function testHandHTML() {
       + (x.exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">should see: ' + testEsc(x.exp)
           + '</div>' : '')
       + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
+      /* ⭐ the answer travels with the question: what was changed, by whom, so a retest starts informed */
+      + (ver ? '<div style="font-size:var(--fs-1);margin-top:3px;padding:4px 7px;background:var(--warn-tint,#fdf6e6);'
+          + 'border-radius:6px">fixed: ' + testEsc((x.fixedBy && (x.fixedBy.subject || x.fixedBy.sha)) || x.closedNote
+            || 'no account given') + (x.fixedBy && x.fixedBy.by ? ' · ' + testEsc(x.fixedBy.by) : '') + '</div>' : '')
       /* the account of the closure, which is the whole point of asking for one */
       + (shut && x.closedNote
           ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px;padding:4px 7px;'
@@ -4949,15 +5047,55 @@ function testHandHTML() {
       +   (x.shot ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px" onclick="testShotView(' + "'" + testEsc(x.shot) + "'" + ')">'
         + '\u1f5bc\ufe0f Screenshot</button> ' : '')
-      +   '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
+      /**
+       * ⚠️⚠️ A RETEST HAS TWO ANSWERS AND BOTH MUST BE ONE CLICK. Give a person only "Close" and a fix that
+       * did not work gets closed anyway, because reopening means finding the other view and typing a state
+       * name. The cheap button is the one that gets pressed, so make BOTH cheap.
+       */
+      +   (ver ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+        + 'padding:2px 9px;border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
+        + 'onclick="testVerify(\'' + testEsc(String(x.id || '')) + '\',true)">\u2713 Retested \u2014 it holds</button> '
+        + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+        + 'padding:2px 9px;border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" '
+        + 'onclick="testVerify(\'' + testEsc(String(x.id || '')) + '\',false)">\u2717 Still broken</button>'
+      : '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
       +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || '')) + '\',\''
       +     testEsc(String(x.key || '')) + '\',' + (shut ? 'true' : 'false') + ')">'
-      +     (shut ? 'Open again' : '\u2713 Close') + '</button>'
+      +     (shut ? 'Open again' : '\u2713 Close') + '</button>')
       + '</div>'
       + '</div>';
   }).join('');
   return h;
 }
+/**
+ * ── ⭐⭐⭐ THE RAISER’S VERDICT, WHICH IS THE ONLY THING THAT CLOSES AN INCIDENT ────────────────────────────
+ *
+ * Athi, 2026-09-13: *"I test it, I create an incident, you fix it and then update the message back that it has
+ * been fixed, so I can retest and confirm that this has been resolved and close it."*
+ *
+ * ⭐ TWO OUTCOMES, AND THEY ARE NOT SYMMETRICAL. "It holds" CLOSES the incident — an ending, so it is asked
+ * for a word, exactly as every other closure on this board is. "Still broken" sends it back to `raised`, and
+ * that word is not optional: a fix that is rejected with no account is a fix somebody will make twice.
+ *
+ * ⚠️ THE SERVER APPENDS, IT DOES NOT OVERWRITE. Both verdicts land in the incident’s history with who and
+ * when, so "resolved on Tuesday, still broken on Wednesday, closed on Friday" is readable a year later —
+ * which is the record an argument about whether something was ever fixed actually turns on.
+ */
+async function testVerify(id, held) {
+  var q = held
+    ? 'Retested and it holds. What did you check? (this closes it)'
+    : 'Still broken — what did you see? It goes back to the person who fixed it.';
+  var w = window.prompt(q);
+  if (w === null) return;
+  w = String(w).trim();
+  if (!w) { if (typeof toast === 'function') toast(held ? 'Closing needs its reason.' : 'Say what you saw.'); return; }
+  try {
+    await api('testIncSet', { params: { id: id }, body: { state: held ? 'closed' : 'raised', why: w } });
+    if (typeof toast === 'function') toast(held ? 'Closed — you verified it.' : 'Sent back — still broken.');
+    await testNewsRefresh('incident');
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not set that.'); }
+}
+
 /** take me back to the screen this was written on, with its panel open */
 function testHandOpen(code) {
   try {
