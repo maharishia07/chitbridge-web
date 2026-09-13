@@ -782,6 +782,54 @@ function testColDrag(e, i) {
  * making it guess is how the third instance of this shipped after the first two were fixed by hand.
  * ⚠️ Cheap and safe: screenCasesPaint returns immediately when no popup is up.
  */
+/**
+ * ── ⭐⭐ READ IT ALL AGAIN, BECAUSE SOMETIMES YOU HAVE TO ──────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"we need a refresh button on the top for the Test Capture screen itself, so just by
+ * refreshing we can get the new data which is not refreshed for some reason."*
+ *
+ * ⭐ AND HE IS RIGHT TO WANT ONE EVEN THOUGH THE AUTOMATIC PATH IS NOW FIXED. Three faults today were the
+ * board not repainting after a write, and each was invisible: the data was correct, the screen was not, and
+ * nothing said which. An explicit re-read is the one control that tells a person the difference between
+ * "the tool is stuck" and "that really is what the server holds" — without it they cannot tell, and they
+ * are right not to trust it.
+ *
+ * ⚠️ IT DROPS EVERY CACHE, INCLUDING THE ONES THIS VIEW IS NOT SHOWING. A refresh that quietly leaves one
+ * list stale is worse than none: the person has now RULED OUT staleness and will look for the fault
+ * somewhere it is not.
+ * ⚠️ It does NOT touch the call log. That is a measurement, not a cache — re-reading the board must not
+ * throw away the reading, and Clear is the control that does.
+ */
+async function testRefreshAll() {
+  CBTEST.refreshing = true; testRepaint();
+  CBTEST.closedCases = null;
+  CBTEST.trace = null;
+  try {
+    await Promise.all([
+      (typeof testLoad === 'function') ? testLoad(true) : null,
+      (typeof testScrLoad === 'function') ? testScrLoad() : null,
+      (CBTEST.incs && typeof testIncLoad === 'function') ? testIncLoad() : null,
+      (CBTEST.reqs && typeof testReqLoad === 'function') ? testReqLoad() : null,
+    ]);
+  } catch (_) {}
+  CBTEST.refreshing = false;
+  CBTEST.readAt = Date.now();
+  testRepaint();
+  if (typeof toast === 'function') toast('Read again from the server.');
+}
+
+/** ⚠️ the time is shown because a refresh button with no timestamp answers "is this current?" with a shrug */
+function testReadAt() {
+  if (CBTEST.refreshing) return 'reading\u2026';
+  if (!CBTEST.readAt) return '';
+  return 'read ' + new Date(CBTEST.readAt).toTimeString().slice(0, 5);
+}
+function testRefreshBtn(ico) {
+  return '<button data-testid="test-refresh" title="Read everything again from the server" '
+    + 'onclick="testRefreshAll()" style="' + ico + '"' + (CBTEST.refreshing ? ' disabled' : '')
+    + '>\u21bb</button>';
+}
+
 function testRepaint() {
   try { testPaint(); } catch (_) {}
   try { if (CBTEST.popupFor) screenCasesPaint(); } catch (_) {}
@@ -5531,20 +5579,29 @@ function screenCasesPaint() {
         + '</' + (live ? 'button' : 'span') + '>';
     };
     head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
-      + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
       /**
-       * ⚠️ TWO IDENTITIES ON ONE LINE, AND THEY RAN TOGETHER. Athi: *"immediately it shows the area which
-       * one you are operating on — possibly we have to give some space or hyphen, some differentiator."*
-       * `Test Capture CAT001 · Catalogue` reads as one four-part name. It is TWO things: the tool (PNL007),
-       * and the screen it is pointed at. So there is a divider, real space, and the tool goes quiet once you
-       * know where you are — the screen is the part that changes.
+       * ── ⚠️⚠️ TWO IDENTITIES ON ONE LINE: WHERE YOU ARE, THEN WHAT YOU ARE DOING THERE ────────────────────
+       *
+       * Athi, twice. First: *"immediately it shows the area which one you are operating on — possibly we
+       * have to give some space or hyphen, some differentiator."* "Test Capture CAT001 · Catalogue" read as
+       * one four-part name; it is TWO things, so there is a divider and real space between them.
+       *
+       * Then: *"screen name is coming after Test Capture, it has to be before that as per standard."* Right,
+       * and it is the ordinary breadcrumb rule — broad to narrow, context before action. "Catalogue › Test
+       * Capture", the way a browser tab reads "Page — App" and never the reverse. The screen is the part
+       * that CHANGES and the part somebody is looking for; the tool is the same whichever screen you opened
+       * it from, so it goes second, and goes quiet.
        */
-      +   testToolTag(TEST_SURFACE.capture, 'Panel \u203a Test cases for this screen') + '</b>'
-      +   '<span aria-hidden="true" style="color:var(--line,#e7e3d8);padding:0 4px">\u2502</span>'
-      +   '<span style="font-size:var(--fs-2);white-space:nowrap;overflow:hidden;'
-      +     'text-overflow:ellipsis" title="the screen this is about">'
-      +     testScreenLabel(code, name) + '</span>'
+      + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
+      +   testScreenLabel(code, name) + '</b>'
+      +   '<span aria-hidden="true" style="color:var(--line,#e7e3d8);padding:0 3px">›</span>'
+      +   '<span style="font-size:var(--fs-2);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
+      +     'text-overflow:ellipsis" title="the tool you are in">'
+      +     testToolTag(TEST_SURFACE.capture, 'Panel › Test cases for this screen') + '</span>'
       + '<span style="flex:1 1 auto"></span>'
+      + '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">'
+      +   testReadAt() + '</span>'
+      + testRefreshBtn(ico)
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
       + '</div>'
       + '<div style="display:flex;gap:16px;margin-top:6px">'
