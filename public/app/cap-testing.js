@@ -107,7 +107,7 @@ function testToolCode(path) {
 function testToolTag(name, path) {
   var c = testToolCode(path);
   return '\ud83e\uddea '
-    + (c ? '<code style="font-size:var(--fs-1);font-weight:700;color:var(--note)">' + c + '</code> ' : '')
+    + (c ? '<code style="font-size:var(--fs-1);font-weight:700;color:var(--grey-4,#646A72)">' + c + '</code> ' : '')
     + name;
 }
 
@@ -517,7 +517,7 @@ function testPanelOpen() {
     '<div id="cbtestpanel" role="dialog" aria-label="Test panel" style="' + TEST_SCALE
     + 'position:fixed;right:16px;bottom:16px;'
     + 'width:min(420px,calc(100vw - 32px));max-height:min(70vh,620px);display:flex;flex-direction:column;'
-    + 'background:var(--card,#fff);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
+    + 'background:var(--card,#fff);color:var(--ink,#20303b);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
     + 'box-shadow:0 10px 34px rgba(0,0,0,.16);z-index:4000;overflow:hidden">'
     /**
      * ⚠️ THE HEADER IS ITS OWN ELEMENT, and that is what makes minimise mean anything. makeMovable collapses
@@ -934,7 +934,7 @@ function testPaint() {
     + '<div style="display:flex;align-items:center;gap:6px">'
     +   '<b style="font-size:var(--fs-3);white-space:nowrap">'
     +     testToolTag(TEST_SURFACE.manager, 'Panel \u203a Test lab') + '</b>'
-    +   '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">everything, '
+    +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);white-space:nowrap">everything, '
     +     'collected</span>'
     +   '<span style="flex:1 1 auto;min-width:8px"></span>'
     +   '<button title="Add a case for something you just found" onclick="testAddOpen()" '
@@ -1492,7 +1492,7 @@ function testPaint() {
          * would be a category error dressed as a hint.
          */
         +      (c.menu && testScreenName(c.menu)
-        ? '<span style="color:var(--note);font-weight:400"> \u00b7 ' + testEsc(testScreenName(c.menu))
+        ? '<span style="color:var(--grey-4,#646A72);font-weight:400"> \u00b7 ' + testEsc(testScreenName(c.menu))
           + '</span>' : '')
         +      '</span>'
 
@@ -1617,6 +1617,38 @@ function testSetView(v) {
  * ⚠️ The words themselves cannot all change — "resolved" IS the state, in the filter and in the action alike.
  * Which is exactly why the LOOK has to carry the difference.
  */
+/**
+ * ── ⭐⭐⭐ THREE BUTTON WEIGHTS, AND ONLY THREE ────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"the options are not looking like an option to try — it does not give a feel that I can
+ * press the button … the entire box looks a grey of text."* A designer measured it: on a --card panel, a
+ * --card button with a --line border is **1.15:1** in light. It is not faint, it is INVISIBLE AS AN OBJECT.
+ *
+ * ⚠️⚠️ AND --grey-4 IS THE ONLY BORDER TOKEN THAT WORKS. Between --line (1.15:1) and --grey-4 (5.5 light,
+ * 7.5 dark) the palette has nothing, and in DARK every tint sits within 1.04–1.13 of --card — so a fill
+ * separates nothing there. Borders and text colour carry it, or nothing does.
+ *
+ * ⚠️ THREE, and the file does not get a fourth. Two filled buttons in one flow means no primary: the
+ * Techniques tab had a green "Fill it in" and an inked "Write the cases" side by side, and green already
+ * meant PASS three inches below. An example is not a pass.
+ */
+var TEST_BTN_PRIMARY = 'font:inherit;font-size:var(--fs-2);font-weight:700;padding:7px 16px;'
+  + 'border-radius:9px;cursor:pointer;border:1px solid var(--ink,#0F2E3D);'
+  + 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
+var TEST_BTN_SECOND = 'font:inherit;font-size:var(--fs-2);font-weight:700;padding:6px 14px;'
+  + 'border-radius:9px;cursor:pointer;border:1px solid var(--grey-4,#646A72);'
+  + 'background:var(--card,#fff);color:var(--ink,#20303b)';
+var TEST_BTN_SMALL = 'font:inherit;font-size:var(--fs-1);font-weight:700;padding:4px 11px;'
+  + 'border-radius:8px;cursor:pointer;border:1px solid var(--grey-4,#646A72);'
+  + 'background:var(--card,#fff);color:var(--ink,#20303b);white-space:nowrap';
+
+/** ⭐ hover in ONE place so the chip rows cannot drift apart — the panel has no stylesheet and is not
+    getting one. ⚠️ Never on a selected chip: it would wipe the --ink fill. And hover fires on neither touch
+    nor keyboard, so the RESTING state must already say "button"; this is the bonus, never the signal. */
+function testHov(on, off) {
+  return ' onmouseenter="this.style.background=' + String.fromCharCode(39) + on + String.fromCharCode(39) + '"'
+       + ' onmouseleave="this.style.background=' + String.fromCharCode(39) + off + String.fromCharCode(39) + '"';
+}
 var TEST_CHIP = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:0;border-radius:11px;'
   + 'cursor:pointer;margin-inline-end:4px;';
 var TEST_CHIP_ON = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
@@ -1628,7 +1660,7 @@ var TEST_ACT = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px s
 function testActRow(acts) {
   if (!acts) return '';
   return '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px">'
-    + '<span style="font-size:var(--fs-1);color:var(--note)">Mark:</span>' + acts + '</div>';
+    + '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">Mark:</span>' + acts + '</div>';
 }
 
 var TEST_REQ_STATES = ['raised', 'accepted', 'implemented', 'rejected'];
@@ -1690,10 +1722,10 @@ function testReqFormHTML() {
   if (!open) {
     return '<button onclick="testReqForm(1)" style="' + base + 'font-weight:700">+ Raise a requirement</button>';
   }
-  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--line,#e7e3d8);'
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;background:var(--card,#fff);color:var(--ink,#1a1a1a);margin-bottom:5px;box-sizing:border-box';
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:8px;margin-bottom:9px">'
-    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:4px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:4px">'
     +   'What must the product do — and what did you see that says it does not?</div>'
     + '<input id="reqWhat" style="' + inp + '" placeholder="What must be true — e.g. a unit sold by weight must accept a fraction">'
     + '<input id="reqSeen" style="' + inp + '" placeholder="What you saw — e.g. typed 0.5 kg and the line disappeared">'
@@ -1704,7 +1736,7 @@ function testReqFormHTML() {
     +     testEsc(CBTEST.focusCase || '') + '">'
     /* ⚠️ SHOWN, NOT SILENT. Capturing where somebody is standing without telling them is the kind of quiet
        cleverness that makes people distrust a tool — it says what it will record, before they press Raise. */
-    + '</div><div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+    + '</div><div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:5px">'
     +   (typeof screenCode === 'function' && screenCode()
         ? 'Recorded against <b>' + testEsc(screenCode()) + '</b>'
         : 'No screen code here — this one will be recorded without it')
@@ -1753,7 +1785,7 @@ async function testReqSend() {
 function testReqHTML() {
   var d = CBTEST.reqs, f = testReqFilterGet();
   /* ⚠️ Accepted and Rejected appear in BOTH rows here too — quiet chips above, inked verbs on the row */
-  var chips = '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+  var chips = '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-inline-end:5px">Show:</span>'
     + [['open', 'Not actioned'], ['raised', 'Raised'], ['accepted', 'Accepted'],
        ['implemented', 'Implemented'], ['rejected', 'Rejected'], ['all', 'Everything']]
     .map(function (x) {
@@ -1765,19 +1797,19 @@ function testReqHTML() {
     }).join('');
 
   var h = testReqFormHTML() + '<div style="margin:6px 0 8px">' + chips + '</div>';
-  if (CBTEST.reqBusy) return h + '<div style="color:var(--note);font-size:var(--fs-1)">reading…</div>';
+  if (CBTEST.reqBusy) return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading…</div>';
   if (CBTEST.reqErr) return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.reqErr) + '</div>';
   var list = (d && d.requirements) || [];
   if (!list.length) {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS. "Nothing raised yet" and "nothing left to action" are different
        facts and only one of them is good news. */
-    return h + '<div style="color:var(--note);font-size:var(--fs-1);padding:8px 0">'
+    return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
       + (d && d.total ? 'Nothing in this state — ' + d.total + ' captured altogether.'
                       : 'Nothing raised yet. Raise one from a case when a test finds something the product should do.')
       + '</div>';
   }
 
-  var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--note,#8a8378)' };
+  var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--grey-4,#646A72)' };
   /**
    * ── ⭐⭐⭐ ONE ROW, THREE SURFACES ─────────────────────────────────────────────────────────────────────
    *
@@ -1892,7 +1924,7 @@ function testAsk(question, hint, okLabel) {
     };
     CBTEST._askDone = finish;
     var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
-      + 'var(--line,#e7e3d8);border-radius:8px;background:var(--card,#fff);box-sizing:border-box';
+      + 'var(--grey-4,#646A72);border-radius:8px;background:var(--card,#fff);box-sizing:border-box';
     modal('<div class="mhead"><b>' + testEsc(question) + '</b></div>'
       + '<div class="mbody">'
       + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:6px">'
@@ -2008,7 +2040,7 @@ async function testIncSev(id, severity) {
  * things a person will not think to write and an investigator cannot work without.
  */
 function testIncFormHTML() {
-  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
     + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
   var btn = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
@@ -2032,7 +2064,7 @@ function testIncFormHTML() {
     +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' + sevs + '</select>'
     +   '<button onclick="testIncSend()" style="' + btn + '">Record</button>'
     +   '<button onclick="testIncForm(false)" style="' + btn + '">Cancel</button>'
-    +   '<span style="font-size:var(--fs-1);color:var(--note)">Recorded against '
+    +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">Recorded against '
     +     (sc ? '<code>' + testEsc(sc) + '</code>' : 'no screen') + ' \u00b7 now</span>'
     + '</div></div>';
 }
@@ -2073,7 +2105,7 @@ async function testIncSend() {
 function testIncHTML() {
   var d = CBTEST.incs, f = testIncFilterGet();
   /* ⚠️ these NARROW WHAT YOU SEE and change nothing — see the note above TEST_CHIP for what that cost */
-  var chips = '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+  var chips = '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-inline-end:5px">Show:</span>'
     + [['open', 'Open'], ['raised', 'Raised'], ['investigating', 'Being looked at'],
        ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'Everything']]
     .map(function (x) {
@@ -2090,26 +2122,26 @@ function testIncHTML() {
   if (d && d.open_by_severity) {
     var bits = TEST_INC_SEV.filter(function (k) { return d.open_by_severity[k]; })
       .map(function (k) { return '<b>' + d.open_by_severity[k] + '</b> ' + k; });
-    gate = '<div style="font-size:var(--fs-1);color:var(--note);margin:2px 0 6px">'
+    gate = '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin:2px 0 6px">'
       + (bits.length ? 'Open: ' + bits.join(' \u00b7 ') : 'Nothing open.') + '</div>';
   }
 
   var h = testIncFormHTML() + gate + '<div style="margin:6px 0 8px">' + chips + '</div>';
-  if (CBTEST.incBusy) return h + '<div style="color:var(--note);font-size:var(--fs-1)">reading\u2026</div>';
+  if (CBTEST.incBusy) return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading\u2026</div>';
   if (CBTEST.incErr) {
     return h + '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.incErr) + '</div>';
   }
   var list = (d && d.incidents) || [];
   if (!list.length) {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS: "none recorded" and "none left open" are different facts. */
-    return h + '<div style="color:var(--note);font-size:var(--fs-1);padding:8px 0">'
+    return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
       + (d && d.total ? 'Nothing in this state \u2014 ' + d.total + ' recorded altogether.'
                       : 'Nothing recorded yet. Record one the moment something stops working.')
       + '</div>';
   }
 
   var SEV = { 'Sev-1': 'var(--disp,#B3261E)', 'Sev-2': 'var(--disp,#B3261E)',
-              'Sev-3': 'var(--grey-2,#545A61)', 'Sev-4': 'var(--note,#8a8378)' };
+              'Sev-3': 'var(--grey-2,#545A61)', 'Sev-4': 'var(--grey-4,#646A72)' };
   h += list.map(function (q) {
     /**
      * ⭐ VERBS, AND THEY SAY WHAT THEY WILL DO. "Resolved" beside a filter that also says "Resolved" is a
@@ -2158,16 +2190,16 @@ function testIncHTML() {
       + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
       +   '<b style="color:' + (SEV[q.severity] || SEV['Sev-3']) + ';font-size:var(--fs-1)" title="'
       +     testEsc(q.severity_means || '') + '">' + testEsc(q.severity) + '</b>'
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.ref) + '</code>'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(q.ref) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;'
       +     'padding:1px 6px">' + testEsc(q.state) + '</span>'
       +   code(q.screen_code) + code(q.popup_code)
-      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.affected)
+      +   (q.affected ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(q.affected)
             + '</span>' : '')
       + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(q.observed) + '</div>'
       /* ⭐ THE SEVERITY IN WORDS, not only its number: "Sev-2" means whatever the reader assumes. */
-      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:2px">'
       +   testEsc(q.severity_means || '') + (clock ? ' \u00b7 ' + clock : '') + '</div>'
       /* ⭐ THE CHANGE THAT FIXED IT, as a citation into git — never a copy of the commit message. */
       + ((q.changes || []).length ? '<div style="font-size:var(--fs-1);margin-top:2px">fixed by '
@@ -2175,7 +2207,7 @@ function testIncHTML() {
               + (c.repo ? ' in ' + testEsc(c.repo) : ''); }).join(' \u00b7 ') + '</div>' : '')
       + (q.why ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">because: '
           + testEsc(q.why) + '</div>' : '')
-      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">'
       +   testEsc(q.raised_by || 'someone')
       +   (q.happened_at ? ' \u00b7 ' + testEsc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
       + '</div>'
@@ -3055,7 +3087,7 @@ function testTechHTML() {
 
   var EG = TEST_TECH_EG[t.kind] || {};
   var big = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
-    + 'var(--line,#e7e3d8);border-radius:8px;background:var(--card,#fff);color:var(--ink,#20303b);'
+    + 'var(--grey-4,#646A72);border-radius:8px;background:var(--card,#fff);color:var(--ink,#20303b);'
     + 'box-sizing:border-box';
   var lbl = 'display:block;font-size:var(--fs-1);font-weight:700;color:var(--grey-2,#545A61);margin:9px 0 3px';
 
@@ -3073,10 +3105,11 @@ function testTechHTML() {
      * a definition and composing an input from nothing, which is what four of these five asked for.
      */
     + '<div style="margin-top:6px">'
+    /* ⚠️ SECONDARY, and no longer green. It sat as a filled --ok-2 button three inches above a filled --ink
+       "Write the cases": two filled buttons in one flow means no primary. And green already means PASS on this
+       board — an example is not a pass. [[feedback-name-vs-behaviour]] */
     +   '<button data-testid="tech-try" onclick="testTechTry(\'' + t.kind + '\')" '
-    +     'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 12px;border-radius:7px;'
-    +     'cursor:pointer;border:1px solid var(--ok-2,#1B7F4B);background:var(--ok-2,#1B7F4B);'
-    +     'color:var(--card,#fff)">▶ Fill it in and show me</button>'
+    +     'style="' + TEST_BTN_SECOND + '">▶ Fill it in and show me</button>'
     + '</div></div>';
 
   /**
@@ -3098,7 +3131,7 @@ function testTechHTML() {
                   : 'var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)') + '">'
         + testEsc(f.key) + ' <span style="opacity:.7">' + testEsc(f.kind) + '</span></button>';
     };
-    h += '<label style="' + lbl + '">Which field? · <span style="font-weight:400;color:var(--note)">'
+    h += '<label style="' + lbl + '">Which field? · <span style="font-weight:400;color:var(--grey-4,#646A72)">'
       + 'read from what this screen just sent to the server</span></label>'
       + '<div>' + fit.map(function (f) { return fchip(f, true); }).join('')
       + rest.map(function (f) { return fchip(f, false); }).join('') + '</div>';
@@ -3130,7 +3163,7 @@ function testTechHTML() {
         + 'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);'
         + 'color:var(--grey-2,#545A61);margin-inline-end:6px">Use what it has sent</button>'
         + testEsc(sv.join(', '))
-        + '<span style="display:block;color:var(--note)">'
+        + '<span style="display:block;color:var(--grey-4,#646A72)">'
         + '⚠️ These are the values this screen has actually put on the wire — which is not the '
         + 'same as the only ones it accepts. The kinds nobody has sent are the ones nobody has tried.'
         + '</span></div>';
@@ -3144,15 +3177,14 @@ function testTechHTML() {
     h += '<label style="' + lbl + '">Up to three conditions, comma separated</label>'
       + '<input id="tqConds" placeholder="e.g. over 500, customer is a member" style="' + big + '">';
   }
+  /* ⭐ THE one filled button on this tab — see TEST_BTN_PRIMARY */
   h += '<div style="margin-top:9px"><button onclick="testTechGo()" '
-    + 'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:6px 16px;border-radius:8px;'
-    + 'cursor:pointer;border:1px solid var(--ink,#0F2E3D);background:var(--ink,#0F2E3D);'
-    + 'color:var(--card,#fff)">Write the cases</button></div>';
+    + 'style="' + TEST_BTN_PRIMARY + '">Write the cases</button></div>';
 
 
   var rows = testTechRows();
   if (!rows.length) {
-    h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:7px">'
+    h += '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:7px">'
       + 'Fill the boxes above and press <b>Write the cases</b>. Nothing is invented \u2014 every line comes '
       + 'from what you type.'
       + '</div>';
@@ -3203,18 +3235,18 @@ function testTechHTML() {
     +   '<th style="' + th + '">It should</th>'
     +   '<th style="' + th + ';text-align:end">\u2192 Create</th></tr>'
     + rows.map(function (d, i) {
-        return '<tr><td style="' + td + ';color:var(--note)">' + (i + 1) + '</td>'
+        return '<tr><td style="' + td + ';color:var(--grey-4,#646A72)">' + (i + 1) + '</td>'
           + '<td style="' + td + '">' + testEsc(d.do) + '</td>'
           + '<td style="' + td + ';color:var(--grey-2)">' + testEsc(d.see) + '</td>'
           + '<td style="' + td + ';text-align:end">'
+          /* ⚠️ THE PAYOFF OF THE WHOLE FLOW WAS THE FAINTEST CONTROL ON SCREEN: a --card button with a
+             --line border, on a --card row — 1.15:1 in light. Every table action takes TEST_BTN_SMALL. */
           + '<button onclick="testTechUse(' + i + ')" '
           + 'title="Fill the Create form with this case, ready to save" '
-          + 'style="font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;cursor:pointer;'
-          + 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);'
-          + 'color:var(--ink,#20303b);white-space:nowrap">Add</button></td></tr>';
+          + 'style="' + TEST_BTN_SMALL + '">Add</button></td></tr>';
       }).join('')
     + '</table></div>';
-  h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:5px">'
     + '<b>Add</b> fills the Create form with that row \u2014 you still choose the type and press Save. '
     + 'Nothing here is written to the board on its own.</div>';
   return h + '</div>';
@@ -3369,7 +3401,7 @@ function testCaseFormHTML() {
 
   var kind = testWriteKindNow();
   var K = WKIND[kind];
-  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid '
+  var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
     + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff);margin-bottom:5px';
   var btn = 'font:inherit;font-size:var(--fs-1);padding:4px 12px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;background:var(--card,#fff)';
@@ -3639,7 +3671,7 @@ async function testCaseSend(outcome) {
 }
 
 function testScrHTML() {
-  if (CBTEST.scrBusy) return '<div style="color:var(--note);font-size:var(--fs-1)">reading…</div>';
+  if (CBTEST.scrBusy) return '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1)">reading…</div>';
   if (CBTEST.scrErr) {
     return '<div style="color:var(--disp);font-size:var(--fs-1)">' + testEsc(CBTEST.scrErr) + '</div>';
   }
@@ -3677,7 +3709,7 @@ function testScrHTML() {
     return r.group !== 'Control' && r.group !== 'Popup';
   });
   if (!rows.length) {
-    return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--note)">The register did not load, so '
+    return '<div style="padding:10px 0;font-size:var(--fs-2);color:var(--grey-4,#646A72)">The register did not load, so '
       + 'there is nothing to map against.</div>';
   }
   var q = String(CBTEST.q || '').toLowerCase();
@@ -3759,7 +3791,7 @@ function testScrHTML() {
   }).map(function (x) {
     var num = function (n, colour) {
       return '<td style="text-align:end;padding:4px 6px' + (colour ? ';color:' + colour : '')
-        + (n ? ';font-weight:700' : ';color:var(--note)') + '">' + (n || '\u2014') + '</td>';
+        + (n ? ';font-weight:700' : ';color:var(--grey-4,#646A72)') + '">' + (n || '\u2014') + '</td>';
     };
     return '<tr style="border-top:1px solid var(--line,#e7e3d8)">'
       + '<td style="padding:4px 6px 4px 0;white-space:nowrap"><code onclick="testScrOpen(\'' + x.code
@@ -3768,7 +3800,7 @@ function testScrHTML() {
       +   testEsc(x.code) + '</code></td>'
       + '<td style="padding:4px 6px">' + testEsc(x.name)
       /* ⭐ a screen with nothing on it says so in words, where the eye already is */
-      +   (x.total ? '' : '<span style="color:var(--note);font-size:var(--fs-1)"> \u00b7 no case yet</span>')
+      +   (x.total ? '' : '<span style="color:var(--grey-4,#646A72);font-size:var(--fs-1)"> \u00b7 no case yet</span>')
       +   (x.total && !x.real
         ? '<span style="color:var(--disp,#B3261E);font-size:var(--fs-1)"> \u00b7 generic only</span>' : '')
       /* ⭐ WHAT IT DOES, under the name — the sentence a tester needs before deciding what to evidence */
@@ -4032,14 +4064,14 @@ function testCiteHTML(c) {
   return '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
     + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
     + 'Required by <b>' + testEsc(bits.join(' \u00b7 ')) + '</b>'
-    + '<span style="display:block;color:var(--note)">Not our opinion \u2014 a published clause. If the standard '
+    + '<span style="display:block;color:var(--grey-4,#646A72)">Not our opinion \u2014 a published clause. If the standard '
     + 'moves, every case still citing this one is exactly the set to look at again.</span></div>';
 }
 
 function testCaseDetailHTML(c) {
   var l = (CBTEST.last || {})[c.case_key];
   var pad = 'padding:2px 0;font-size:var(--fs-1)';
-  var lab = function (t, v) { return v ? '<div style="' + pad + '"><span style="color:var(--note)">'
+  var lab = function (t, v) { return v ? '<div style="' + pad + '"><span style="color:var(--grey-4,#646A72)">'
     + t + '</span> ' + v + '</div>' : ''; };
 
   var h = '<div style="margin:4px 0 2px;padding:7px 9px;background:var(--paper,#faf8f3);'
@@ -4048,7 +4080,7 @@ function testCaseDetailHTML(c) {
   /* the case as written: every step, not only the first */
   (c.steps || []).forEach(function (st, i) {
     h += '<div style="display:flex;gap:6px;' + pad + '">'
-      + '<span style="color:var(--note);min-width:12px">' + (i + 1) + '</span>'
+      + '<span style="color:var(--grey-4,#646A72);min-width:12px">' + (i + 1) + '</span>'
       + '<span style="flex:1">' + testEsc(Array.isArray(st) ? (st[0] || '') : String(st))
       +   '<span style="display:block;color:var(--grey-2)">\u2192 '
       +     testEsc(Array.isArray(st) ? (st[1] || '') : '') + '</span></span></div>';
@@ -4064,7 +4096,7 @@ function testCaseDetailHTML(c) {
   if (c.observed) {
     h += '<div style="margin-top:5px;padding:5px 7px;background:var(--card,#fff);'
       + 'border:1px solid var(--line,#efece4);border-radius:7px">'
-      + '<div style="font-size:var(--fs-1);color:var(--note)">What was being seen when this was '
+      + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">What was being seen when this was '
       + 'written</div><div style="font-size:var(--fs-2)">' + testEsc(c.observed) + '</div></div>';
   }
   /* ⚠️ the picture is fetched with the token, never an <img src> — the endpoint needs an Authorization
@@ -4078,10 +4110,10 @@ function testCaseDetailHTML(c) {
   /* ── the last verdict, in the words of whoever gave it ── */
   if (l) {
     var col = l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
-      : (l.status === 'fail' || l.status === 'blocked') ? 'var(--disp,#B3261E)' : 'var(--note)';
+      : (l.status === 'fail' || l.status === 'blocked') ? 'var(--disp,#B3261E)' : 'var(--grey-4,#646A72)';
     h += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--line,#efece4)">'
       + '<b style="font-size:var(--fs-1);color:' + col + '">' + testEsc(String(l.status).toUpperCase())
-      + '</b> <span style="font-size:var(--fs-1);color:var(--note)">'
+      + '</b> <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
       + testEsc(l.tester_name || 'someone') + (l.at ? ' \u00b7 ' + testEsc(String(l.at).slice(0, 16)
           .replace('T', ' ')) : '') + '</span>'
       + (l.note ? '<div style="' + pad + '">' + testEsc(l.note) + '</div>' : '')
@@ -4105,7 +4137,7 @@ function testCaseDetailHTML(c) {
     .filter(function (x) { return x.case_key === c.case_key; });
   raised.forEach(function (x) {
     h += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--line,#efece4)">'
-      + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref || x.clause || '')
+      + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.ref || x.clause || '')
       + '</code> <span style="font-size:var(--fs-1)">' + testEsc(x.state || '') + '</span>'
       + (x.observed ? '<div style="' + pad + '">' + testEsc(x.observed) + '</div>' : '')
       + (x.requirement ? '<div style="' + pad + '">' + testEsc(x.requirement) + '</div>' : '')
@@ -4113,11 +4145,11 @@ function testCaseDetailHTML(c) {
         ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
           + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'"
           + testEsc(x.evidence_id) + "'" + ')">\u1f5bc\ufe0f Screenshot</button>'
-        : '<div style="' + pad + ';color:var(--note)">No screenshot was attached to this one.</div>')
+        : '<div style="' + pad + ';color:var(--grey-4,#646A72)">No screenshot was attached to this one.</div>')
       + '</div>';
   });
   if (!l && !raised.length && !c.observed && !c.evidence_id) {
-    h += '<div style="' + pad + ';color:var(--note);margin-top:4px">Not run yet, and nothing raised '
+    h += '<div style="' + pad + ';color:var(--grey-4,#646A72);margin-top:4px">Not run yet, and nothing raised '
       + 'against it.</div>';
   }
   return h + '</div>';
@@ -4126,7 +4158,7 @@ function testCaseDetailHTML(c) {
 function testCaseListHTML(code) {
   var all = (CBTEST.cases || []).filter(function (c) { return testScrOf(c) === code; });
   if (!all.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0 2px">'
       + 'No case on this screen yet — Create is the first tab above.</div>';
   }
   var isPass = function (c) { var l = CBTEST.last[c.case_key]; return !!(l && l.status === 'pass'); };
@@ -4170,10 +4202,10 @@ function testCaseListHTML(code) {
      somebody runs again for nothing. */
   var shutHTML = (showShut && shutAll.length)
     ? '<div style="margin-top:9px;padding-top:7px;border-top:1px solid var(--line,#e7e3d8);opacity:.62">'
-      + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:3px">Closed on this screen</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:3px">Closed on this screen</div>'
       + shutAll.map(function (c) {
           return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
-            + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(c.case_key) + '</code> '
+            + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(c.case_key) + '</code> '
             + '<span style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</span>'
             + (c.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
                 + testEsc(c.closed_note) + (c.closed_by ? ' · ' + testEsc(c.closed_by) : '') + '</div>' : '')
@@ -4185,7 +4217,7 @@ function testCaseListHTML(code) {
     : '';
 
   if (!mine.length) {
-    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
+    return h + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0 2px">'
       + (f === 'todo' ? 'Nothing left to test on this screen.' : 'None in this pile.') + '</div>' + shutHTML;
   }
 
@@ -4194,7 +4226,7 @@ function testCaseListHTML(code) {
     var st0 = (c.steps || [])[0];
     var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
     var col = l && l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
-            : l && l.status === 'fail' ? 'var(--disp,#B3261E)' : 'var(--note)';
+            : l && l.status === 'fail' ? 'var(--disp,#B3261E)' : 'var(--grey-4,#646A72)';
     var done = isPass(c) && !((CBTEST.retest || {})[c.case_key]);
 
     /* ⭐ a passed case: one line, out of the way, and openable again on purpose */
@@ -4263,7 +4295,7 @@ function testCaseListHTML(code) {
        */
       + '<button class="btn" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',false)" '
       +   'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" '
-      +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--note);background:none;'
+      +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--grey-4,#646A72);background:none;'
       +   'border:1px solid var(--line,#e7e3d8)">\u2713 Close</button>'
       + '</span>'
       + '</div>';
@@ -4362,7 +4394,7 @@ async function screenCasesPopup(code, name) {
     '<div id="cbcasespanel" role="dialog" aria-label="Test cases for this screen" style="' + TEST_SCALE
     + 'position:fixed;'
     + 'inset-inline-end:16px;bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(72vh,660px);'
-    + 'display:flex;flex-direction:column;background:var(--card,#fff);'
+    + 'display:flex;flex-direction:column;background:var(--card,#fff);color:var(--ink,#20303b);'
     + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16);'
     /* ⚠️ under the modal layer on purpose: a real dialog must still be able to open over this */
     + 'z-index:3900;overflow:hidden">'
@@ -4617,12 +4649,12 @@ function testCtlCases(code) {
 /** the worst thing known about a case, in the board's own words */
 function testCaseMark(c) {
   var l = (CBTEST.last || {})[c.case_key];
-  if (c.status === 'retired') return ['closed', 'var(--note)'];
-  if (!l) return ['not run', 'var(--note)'];
+  if (c.status === 'retired') return ['closed', 'var(--grey-4,#646A72)'];
+  if (!l) return ['not run', 'var(--grey-4,#646A72)'];
   if (l.status === 'fail') return ['failed', 'var(--disp,#b4453f)'];
   if (l.status === 'blocked') return ['blocked', 'var(--warn-2,#8a6100)'];
   if (l.status === 'pass') return ['passed', 'var(--ok-2,#1B7F4B)'];
-  return [String(l.status), 'var(--note)'];
+  return [String(l.status), 'var(--grey-4,#646A72)'];
 }
 
 /**
@@ -4765,7 +4797,7 @@ function testBehindHTML(code) {
 
   var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;'
     + 'letter-spacing:.04em;text-transform:uppercase;margin:11px 0 4px">' + t + '</div>'; };
-  var quiet = function (t) { return '<div style="font-size:var(--fs-1);color:var(--note);padding:2px 0">'
+  var quiet = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:2px 0">'
     + t + '</div>'; };
 
   var fileRow = function (p) {
@@ -4774,7 +4806,7 @@ function testBehindHTML(code) {
       +   'white-space:nowrap">'
       + (a ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(a.code) + '</code> ' : '')
       + testEsc(p)
-      + (a && a.stage ? ' <span style="font-size:var(--fs-1);color:var(--note)">\u00b7 ' + testEsc(a.stage)
+      + (a && a.stage ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">\u00b7 ' + testEsc(a.stage)
           + '</span>' : '')
       + '</div>';
   };
@@ -4784,17 +4816,17 @@ function testBehindHTML(code) {
     var c = x.c, l = (CBTEST.last || {})[c.case_key];
     var st = l ? String(l.status) : '';
     var col = st === 'pass' ? 'var(--ok-2,#1B7F4B)' : st === 'fail' ? 'var(--disp,#B3261E)'
-            : st ? 'var(--warn-2,#8a6d00)' : 'var(--note)';
+            : st ? 'var(--warn-2,#8a6d00)' : 'var(--grey-4,#646A72)';
     return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
       +   'border-top:1px solid var(--line,#efece4)">'
       + '<span style="flex:1 1 auto;min-width:0">'
       +   '<span style="font-size:var(--fs-2);display:block;overflow:hidden;text-overflow:ellipsis;'
       +     'white-space:nowrap">' + (warn ? '\u26a0\ufe0f ' : '') + testEsc(c.title || c.case_key) + '</span>'
-      +   '<span style="font-size:var(--fs-1);color:var(--note);display:block;overflow:hidden;'
+      +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);display:block;overflow:hidden;'
       +     'text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.case_key)
       +     (c.test_type ? ' \u00b7 ' + testEsc(c.test_type) : '')
       +     ((c.areas || []).length ? ' \u00b7 ' + testEsc(c.areas.join(', ')) : '') + '</span>'
-      +   '<span style="font-size:var(--fs-1);color:var(--note);display:block">\u2937 '
+      +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);display:block">\u2937 '
       +     testEsc(x.why) + '</span>'
       + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;flex:0 0 auto;color:' + col + '">'
@@ -4872,7 +4904,7 @@ function testBehindHTML(code) {
       h += todo.map(function (x) {
         return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
           + 'border-top:1px solid var(--line,#e7e3d8)">'
-          + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.code) + '</code>'
+          + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.code) + '</code>'
           + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(x.label) + '</span>'
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
           + 'onclick="testCoverCase(\'' + testEsc(code) + '\',\'' + testEsc(x.code) + '\',\''
@@ -4896,7 +4928,7 @@ function testBehindHTML(code) {
             var m = testCaseMark(c);
             return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
               + 'border-top:1px solid var(--line,#e7e3d8)">'
-              + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.code) + '</code>'
+              + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.code) + '</code>'
               + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(c.title || '')
               + '</span>'
               + '<span style="font-size:var(--fs-1);font-weight:700;color:' + m[1] + '">' + m[0] + '</span>'
@@ -5230,7 +5262,7 @@ function testDiagByScreen() {
 
   var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
     + 'text-transform:uppercase;margin:14px 0 3px">Every screen you have measured</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:5px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:5px">'
     + 'Kept per screen, so it survives the forty-call log. Worst visit first \u2014 a screen that is usually '
     + 'quick and occasionally terrible is the one worth finding.</div>';
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
@@ -5245,7 +5277,7 @@ function testDiagByScreen() {
       + (r.code === CBTEST.popupFor ? ';background:var(--paper,#faf8f3)' : '') + '">'
       + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1);color:var(--grey-2)">'
       +   testEsc(r.code) + '</code> ' + testEsc(r.name)
-      +   (r.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--note)">' + r.worstCalls
+      +   (r.worstCalls ? ' <span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + r.worstCalls
         + ' calls</span>' : '') + '</td>'
       + '<td style="text-align:end;padding:4px 6px">' + r.visits + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:' + (hot ? '700' : '400')
@@ -5325,7 +5357,7 @@ function testDiagHTML() {
         + 'appears here.</div>'
         + testDiagBarHTML();
     }
-    return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">'
       + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
       + 'appear here \u2014 the log starts when test mode goes on.</div>';
   }
@@ -5491,7 +5523,7 @@ function testDiagHTML() {
   }).join('');
   /* ⚠ the correlation id is the thing that joins this to the server's own line — quoted, never invented */
   h += '</table>'
-    + '<div style="font-size:var(--fs-1);color:var(--note);padding:7px 0 0">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:7px 0 0">'
     + 'Quote a call\u2019s id when reporting it: ' + testEsc((mine[0] && mine[0].rid) || '\u2014')
     + ' \u2014 the server logged the same one.</div>';
 
@@ -5604,7 +5636,7 @@ function testCallDetailHTML(c) {
   var pre = 'margin:3px 0 0;padding:6px 8px;background:var(--paper,#faf8f3);'
     + 'border:1px solid var(--line,#efece4);border-radius:7px;font-size:var(--fs-1);'
     + 'white-space:pre-wrap;word-break:break-all;max-height:11em;overflow:auto';
-  var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+  var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:5px">'
     + t + '</div>'; };
 
   var h = '<div style="padding:6px 2px 9px">';
@@ -5626,7 +5658,7 @@ function testCallDetailHTML(c) {
         + (c.srv != null ? '  \u00b7  ' + c.srv + ' ms in the server' : '')
         + (c.trips != null ? '  \u00b7  ' + c.trips + ' database trip(s)' : '')
         + (c.at ? '  \u00b7  ' + new Date(c.at).toTimeString().slice(0, 8) : '')) + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:4px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:4px">'
     + 'The server logged the same id \u2014 quote it and the two records join up.</div>';
   return h + '</div>';
 }
@@ -5758,7 +5790,7 @@ function testSec(title, hint) {
   return '<div style="margin:13px 0 5px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
     +   'color:var(--grey-2,#545A61)">' + title + '</div>'
-    + (hint ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:1px">' + hint + '</div>' : '')
+    + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:1px">' + hint + '</div>' : '')
     + '</div>';
 }
 
@@ -5944,7 +5976,7 @@ function testTraceChip() {
     + 'cursor:pointer;margin-inline-start:4px;margin-bottom:4px;white-space:nowrap;';
   var flat = 'font:inherit;font-size:var(--fs-1);padding:3px 9px;border:0;border-radius:11px;'
     + 'margin-inline-start:4px;white-space:nowrap;background:var(--neutral-tint,#f2efe6);'
-    + 'color:var(--note,#8a8378)';
+    + 'color:var(--grey-4,#646A72)';
 
   /* ⚠ the reading state has a chip too, in the same slot, so nothing moves when the answer lands */
   if (!t) { testTraceLoad(); return '<span style="' + flat + '">\u23f1 Server timings\u2026</span>'; }
@@ -5999,14 +6031,14 @@ function testTraceHTML() {
         return '<button onclick="testTraceSet(' + m + ')" style="' + btn + ';margin-top:5px">'
           + m + ' min</button>';
       }).join('')
-    + '<span style="color:var(--note)">it stops by itself, and only your own calls are timed</span></div>';
+    + '<span style="color:var(--grey-4,#646A72)">it stops by itself, and only your own calls are timed</span></div>';
 }
 
 function testDiagLayersHTML(mine) {
   var seen = mine.filter(function (c) { return c.rt && !c.rt.blocked; });
   var blocked = mine.some(function (c) { return c.rt && c.rt.blocked; });
   if (!seen.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--note);margin-top:10px">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:10px">'
       + (blocked
         ? '\u26a0\ufe0f The browser will not show the layers to this page. The API must send '
           + '<code>Timing-Allow-Origin</code> for this origin \u2014 without it DNS, connection, encryption and '
@@ -6029,7 +6061,7 @@ function testDiagLayersHTML(mine) {
   var row = function (label, ms, note, colour) {
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)">' + label
-      +   '<span style="display:block;font-size:var(--fs-1);color:var(--note)">' + note + '</span></td>'
+      +   '<span style="display:block;font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + note + '</span></td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:700'
       +   (colour ? ';color:' + colour : '') + '">' + ms + ' ms</td></tr>';
   };
@@ -6097,7 +6129,7 @@ function testDiagByApi() {
   };
 
   var h = ''
-    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:5px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:5px">'
     + '\u26a0\ufe0f The last ' + all.length + ' calls in THIS browser tab, nothing more. Not a monitor, and not '
     + 'evidence about the product as a whole.</div>';
 
@@ -6116,7 +6148,7 @@ function testDiagByApi() {
       +   (code ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(code) + '</code> ' : '')
       +   '/api/' + testEsc(g.route)
       +   (g.bad ? ' <b style="color:var(--disp,#B3261E);font-size:var(--fs-1)">' + g.bad + ' failed</b>' : '')
-      +   '<span style="display:block;font-size:var(--fs-1);color:var(--note)">'
+      +   '<span style="display:block;font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
       +     (who.length ? 'asked by ' + testEsc(who.map(function (k) {
             return scrName(k) + ' \u00d7' + g.screens[k]; }).join(', '))
           : 'no screen recorded')
@@ -6270,7 +6302,7 @@ function testScrRaisedHTML(code, kind) {
   var word = kind === 'inc' ? 'incident' : 'requirement';
 
   if (!all.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">'
       + 'No ' + word + ' on this screen. '
       + (kind === 'inc'
         ? 'Raise one from Create the moment something does not work.'
@@ -6291,7 +6323,7 @@ function testScrRaisedHTML(code, kind) {
     + '</div>';
 
   if (!rows.length) {
-    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0">'
+    return h + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0">'
       + 'Nothing open — every ' + word + ' on this screen has been dealt with.</div>';
   }
   return h + rows.map(testWorkRowHTML).join('');
@@ -6316,7 +6348,7 @@ function testRaisedHTML(code) {
     return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
       + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
       +   pill(x.severity || 'Sev-3', 'var(--disp,#B3261E)', 'var(--danger-tint,#fbeceb)')
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.ref) + '</code>'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.ref) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
       +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
       /* ⭐ the picture, if one was attached — one click from the report it belongs to */
@@ -6336,7 +6368,7 @@ function testRaisedHTML(code) {
       + (x.state === 'raised' || x.state === 'investigating'
         ? '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px" onclick="testIncSet(\''
           + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>'
-          + ' <button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px;color:var(--note)" onclick="testIncSet(\''
+          + ' <button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px;color:var(--grey-4,#646A72)" onclick="testIncSet(\''
           + testEsc(x.definition_id) + '\',\'closed\')">Not a fault</button>' : '')
       + '</div>';
   }).join('');
@@ -6345,7 +6377,7 @@ function testRaisedHTML(code) {
     return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
       + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
       +   pill(x.priority || 'Medium', 'var(--grey-2,#545A61)', 'var(--neutral-tint)')
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.clause) + '</code>'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.clause) + '</code>'
       +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
       +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
       + '</div>'
@@ -6360,7 +6392,7 @@ function testRaisedHTML(code) {
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
           +   'onclick="testReqSet(\'' + testEsc(x.definition_id) + '\',\'accepted\')">Accept</button> '
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px;'
-          +   'color:var(--note)" onclick="testReqSet(' + "'" + testEsc(x.definition_id) + "','rejected'"
+          +   'color:var(--grey-4,#646A72)" onclick="testReqSet(' + "'" + testEsc(x.definition_id) + "','rejected'"
           +   ')">Reject</button></div>'
         : '')
       + '</div>';
@@ -6455,7 +6487,7 @@ function screenCasesPaint() {
       + '<span style="font-size:var(--fs-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" '
       +   'title="the screen this is pointed at — it changes as you move">'
       +   testScreenLabel(code, name) + '</span>'
-      + '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">'
+      + '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);white-space:nowrap">'
       +   testReadAt() + '</span>'
       + testRefreshBtn(ico)
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
@@ -6878,7 +6910,7 @@ function testFindSetWho(v) {
  * drift; a derived one cannot disagree with the board it is drawn from.
  */
 var TEST_WORK = {
-  todo:    { label: 'To do',        tell: 'run it',                    ink: 'var(--note,#8a8378)' },
+  todo:    { label: 'To do',        tell: 'run it',                    ink: 'var(--grey-4,#646A72)' },
   passed:  { label: 'Passed',       tell: 'nothing — it works',        ink: 'var(--ok-2,#1B7F4B)' },
   failed:  { label: 'Failed',       tell: 'waiting for a fix',         ink: 'var(--disp,#B3261E)' },
   blocked: { label: 'Blocked',      tell: 'it could not be run',       ink: 'var(--warn-2,#8a6100)' },
@@ -7104,7 +7136,7 @@ function testWorkHTML() {
   }
 
   h += '<div style="margin:4px 0 3px">'
-    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+    + '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-inline-end:5px">Show:</span>'
     + seg('live', 'Still open', live.length)
     + (mine.length ? seg('mine', 'Yours to retest', mine.length) : '')
     + seg('closed', 'Closed', n.closed)
@@ -7112,7 +7144,7 @@ function testWorkHTML() {
     + '</div>'
     /* the seven statuses, as counts you can press — this is the "where do I see the closed one" answer */
     + '<div style="margin:0 0 7px">'
-    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Status:</span>'
+    + '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-inline-end:5px">Status:</span>'
     /* ⚠️ Closed is not repeated here — it is a shelf on the row above, and the same word twice on one
        screen is the fault this whole afternoon was about */
     + TEST_WORK_ORDER.filter(function (k) { return n[k] && k !== 'closed'; }).map(function (k) {
@@ -7121,7 +7153,7 @@ function testWorkHTML() {
     + '</div>';
 
   if (!rows.length) {
-    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+    return h + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">'
       + (f === 'closed' ? 'Nothing has been closed yet.'
        : f === 'live' ? 'Nothing open — everything you have written has been dealt with.'
        : 'Nothing in this status. ' + all.length + ' altogether.') + '</div>';
@@ -7206,12 +7238,12 @@ function testWorkRowHTML(x) {
     + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
     +   '<span data-testid="work-status" style="font-size:var(--fs-1);font-weight:700;border-radius:5px;'
     +     'padding:1px 8px;color:#fff;background:' + W.ink + '">' + W.label + '</span>'
-    +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
+    +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.key) + '</code>' : '')
     +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)" title="'
         + testEsc(x.means || '') + '">' + testEsc(x.sev) + '</span>' : '')
-    +   (x.pri ? '<span style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.pri)
+    +   (x.pri ? '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.pri)
         + '</span>' : '')
-    +   (x.popup ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.popup)
+    +   (x.popup ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.popup)
         + '</code>' : '')
     +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
     + '</div>'
@@ -7230,7 +7262,7 @@ function testWorkRowHTML(x) {
     /* ⭐ THE SEVERITY IN WORDS AND THE TWO CLOCKS — shown only when they say something. "0 min unnoticed"
        is noise on a row somebody recorded while it was happening; an hour unnoticed IS the story. */
     + ((x.means || x.unnoticed || x.openMins)
-      ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:1px">'
+      ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:1px">'
         + [x.means, x.unnoticed ? (x.unnoticed + ' min before anybody knew') : null,
            x.openMins ? (x.openMins + ' min to resolve') : null]
           .filter(Boolean).map(testEsc).join(' \u00b7 ') + '</div>'
@@ -7249,7 +7281,7 @@ function testWorkRowHTML(x) {
 function testHandHTML() {
   var all = testFindings();
   if (!all.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--note);padding:10px 0">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:10px 0">'
       + 'Nothing found by hand yet. Turn on test mode, open any screen, and use the Test chip \u2014 every case, '
       + 'requirement and incident written there lands here.</div>';
   }
@@ -7322,7 +7354,7 @@ function testHandHTML() {
     + 'requirements and incidents together. Each one closes with a reason.</div>';
 
   if (!rows.length) {
-    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0">'
+    return h + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0">'
       + (f === 'closed' ? 'Nothing has been closed yet.'
        /* \u26a0\ufe0f AN EMPTY "TO RETEST" IS GOOD NEWS AND MUST READ AS IT. "Nothing open" here would be a lie: there
           may be plenty open, just nothing anybody has claimed to have fixed. */
@@ -7335,7 +7367,7 @@ function testHandHTML() {
                inc: ['Incident', 'var(--disp,#B3261E)', 'var(--danger-tint,#fbeceb)'] };
 
   h += rows.map(function (x) {
-    var k = KIND[x.kind] || ['?', 'var(--note)', 'var(--neutral-tint)'];
+    var k = KIND[x.kind] || ['?', 'var(--grey-4,#646A72)', 'var(--neutral-tint)'];
     var shut = x.state === 'closed';
     /* ⚠️ a resolved incident is NOT faded and NOT filed: it is the loudest row on the board until somebody
        has actually looked at it again */
@@ -7350,10 +7382,10 @@ function testHandHTML() {
       +     k[1] + ';background:' + k[2] + '">' + k[0] + '</span>'
       +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + testEsc(x.sev)
         + '</span>' : '')
-      +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
+      +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.key) + '</code>' : '')
       +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
       +   '<span style="font-size:var(--fs-1);font-weight:700;color:'
-      +     (shut ? 'var(--ok-2,#1B7F4B)' : ver ? 'var(--warn-2,#8a6100)' : 'var(--note)') + '">'
+      +     (shut ? 'var(--ok-2,#1B7F4B)' : ver ? 'var(--warn-2,#8a6100)' : 'var(--grey-4,#646A72)') + '">'
       +     testEsc((x.stateWord || (shut ? 'closed' : 'open')).toUpperCase()) + '</span>'
       +   (forMe ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-2,#1B7F4B)">'
         + '· yours to retest</span>' : '')
@@ -7378,8 +7410,8 @@ function testHandHTML() {
           ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px;padding:4px 7px;'
             + 'background:var(--paper,#faf8f3);border-radius:6px">closed: ' + testEsc(x.closedNote)
             + (x.closedBy ? ' \u00b7 ' + testEsc(x.closedBy) : '') + '</div>'
-        : shut ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">closed, no reason recorded</div>' : '')
-      + (x.last ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
+        : shut ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:3px">closed, no reason recorded</div>' : '')
+      + (x.last ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:2px">'
           + testEsc(String(x.last.status).toUpperCase()) + ' by ' + testEsc(x.last.tester_name || 'someone')
           + '</div>' : '')
       /* ── the actions ── */
