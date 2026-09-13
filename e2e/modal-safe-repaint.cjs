@@ -50,7 +50,17 @@ for (const rel of files) {
       else if (src[i] === '}') { d--; if (!d) { end = i; break; } }
     }
     if (end < 0) continue;
-    const body = src.slice(open, end);
+    /**
+     * ⚠️⚠️ COMMENT BODIES ARE BLANKED BEFORE SCANNING, AND THIS BIT IMMEDIATELY. Fixing the last offender
+     * (cap-match.js) meant writing a comment explaining WHY it is now `bgRenderApp()` — and that comment
+     * names `renderApp()`, so the guard flagged the comment describing its own fix. A guard that fails on
+     * the note explaining the fix teaches people to delete the note.
+     * ⭐ Blanked, not stripped, so every byte offset — and therefore every reported line number — is
+     * unchanged. Same treatment, same day, as e2e/token-check.cjs. [[feedback-silence-is-the-bug]]
+     */
+    const body = src.slice(open, end)
+      .replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '))
+      .replace(/\/\/[^\n]*/g, (c) => c.replace(/[^\n]/g, ' '));
 
     /* ⚠️ `[^g]` so `bgRenderApp()` does not match as `renderApp()` — the fix would flag itself. */
     for (const hit of body.matchAll(/([^g])\brenderApp\s*\(\)/g)) {

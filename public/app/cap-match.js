@@ -38,7 +38,14 @@ async function matchLoad(force) {
     MATCH.rows = (r && r.orders) || [];
   } catch (e) { MATCH.rows = []; MATCH.error = (e && e.message) || String(e); }
   MATCH.busy = false;
-  if (UI.nav === 'match') renderApp();
+  /**
+   * ⚠️ WAS renderApp(), AND IT WOULD HAVE EATEN SOMEBODY'S TYPING. A loader resolves whenever the network
+   * does — which may be while a person is halfway through a modal — and renderApp() repaints the shell
+   * underneath them. bgRenderApp() paints identically when nothing is open and YIELDS when something is.
+   * ⭐ The rule already had a guard (e2e/modal-safe-repaint.cjs, 81 loaders across 54 files); this was the
+   * one file still failing it. [[feedback-loader-never-repaints-open-form]]
+   */
+  if (UI.nav === 'match') bgRenderApp();
 }
 
 function matchScreen() {
