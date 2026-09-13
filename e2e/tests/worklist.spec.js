@@ -101,8 +101,20 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
   await answer(page, 'Retested, it holds');
   await expect.poll(async () => byStatus(await seen()).closed || 0, { timeout: 45000 }).toBe(1);
 
-  /* ── (c) the requirement journey: change asked → decided ─────────────────────────────────────────────── */
+  /**
+   * ── (c) the requirement journey: change asked → AGREED → built ──────────────────────────────────────────
+   *
+   * ⚠️⚠️ THIS ASSERTION USED TO EXPECT `closed`, AND IT WAS WRONG. Agreeing that a thing should be built is a
+   * DECISION; the thing still does not exist. Filing it under Closed reports a product that does what it was
+   * asked when nobody has written the code — and the row that most needs chasing is the one that has vanished
+   * from the list. The spec caught its own staleness when the model was corrected.
+   */
   await page.locator('#cbtestbody button').filter({ hasText: 'Accept it' }).first().click();
+  await expect.poll(async () => byStatus(await seen()).agreed || 0, { timeout: 45000 }).toBe(1);
+  expect(byStatus(await seen()).closed || 0, 'accepted is not closed').toBe(1);
+
+  /* and it is only done when it is BUILT */
+  await page.locator('#cbtestbody button').filter({ hasText: 'It is built' }).first().click();
   await expect.poll(async () => byStatus(await seen()).closed || 0, { timeout: 45000 }).toBe(2);
 
   /* ── "where do I see the closed one" ─────────────────────────────────────────────────────────────────── */

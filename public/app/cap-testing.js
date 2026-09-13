@@ -1922,6 +1922,9 @@ function testIncFormHTML() {
     +   'style="' + inp + '"></textarea>'
     + '<input id="incWho" placeholder="Who is affected? \u2014 the shop, one till, just me" style="' + inp + '">'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+    /* ⚠️ BOTH DOORS ASK. An incident raised from the Manager and one raised from Capture must carry the same
+       fields, or the report has two shapes of incident in it and the clock works for half of them. */
+    +   testWhenHTML()
     +   '<select id="incSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
     +     'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">' + sevs + '</select>'
     +   '<button onclick="testIncSend()" style="' + btn + '">Record</button>'
@@ -1952,6 +1955,8 @@ async function testIncSend() {
   try {
     await api('testIncNew', { body: {
       observed: what, affected: who, severity: sev,
+      /* ⭐ the other half of the clock — see testWhenHTML */
+      happened_at: testWhenAt(),
       screen_code: testHereScreen(),
       popup_code: (typeof modalCode === 'function') ? modalCode() : null,
       build: (window.CBBUILD || null),
@@ -2716,6 +2721,47 @@ var WKIND = {
 var WSEV = [['Sev-1', 'the shop cannot trade'], ['Sev-2', 'a job cannot be finished'],
             ['Sev-3', 'wrong, but there is a way round'], ['Sev-4', 'cosmetic']];
 
+/**
+ * ── ⭐⭐⭐ WHEN DID IT HAPPEN — THE HALF OF THE CLOCK NOBODY WAS EVER ASKED FOR ─────────────────────────────
+ *
+ * Athi, 2026-09-13: *"we kept the observation time somewhere — I guess it is in the speed test? Now I
+ * couldn’t find it. It would have lost in translation."*
+ *
+ * ⚠️⚠️ IT WAS NEVER LOST. IT WAS NEVER COLLECTED. The server has accepted `happened_at` since the incident
+ * work went in, defaults it to now, refuses a future time, and computes TWO durations from it —
+ * `unnoticed_mins` (how long the shop was broken before anybody knew) and `open_mins` (how long it then took
+ * to fix). Both are reported. Both are on the row. And **no form in this product has ever sent the field**,
+ * so `happened` always equalled `raised`, `unnoticed_mins` was always zero, and the line that prints it was
+ * unreachable code.
+ *
+ * ⚠️⚠️ WHICH IS THE WORST SHAPE OF ALL: a number that is always zero does not look broken, it looks like good
+ * news. "0 min before anybody knew" reads as a shop that catches everything instantly. [[feedback-silence-is-the-bug]]
+ *
+ * ⭐ ASKED AS AN OFFSET, NOT AS A TIMESTAMP. Nobody types "2026-09-13T16:04" about the till going down at
+ * four o’clock; they know it was "about an hour ago". One tap, and the client does the arithmetic — the
+ * server still refuses anything in the future, so a wrong device clock cannot produce a negative delay.
+ * ⚠️ ONLY ON AN INCIDENT. A test case and a requirement did not "happen" at a time.
+ */
+var TEST_WHEN = [[0, 'Just now'], [5, '5 minutes ago'], [15, '15 minutes ago'], [30, 'Half an hour ago'],
+                 [60, 'An hour ago'], [120, 'Two hours ago'], [240, 'This morning'], [1440, 'Yesterday']];
+function testWhenHTML() {
+  return '<span>When did it happen?</span>'
+    + '<select id="wcWhen" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
+    + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
+    + TEST_WHEN.map(function (x) {
+        return '<option value="' + x[0] + '">' + x[1] + '</option>';
+      }).join('')
+    + '</select>';
+}
+/** ⚠️ an ISO stamp the server can parse; the server clamps anything in the future back to now */
+function testWhenAt() {
+  try {
+    var v = Number((document.getElementById('wcWhen') || {}).value || 0);
+    if (!(v > 0)) return null;
+    return new Date(Date.now() - (v * 60000)).toISOString();
+  } catch (_) { return null; }
+}
+
 function testWriteKind(k) {
   if (!WKIND[k]) return;
   CBTEST.writeKind = k;
@@ -2780,7 +2826,8 @@ function testCaseFormHTML() {
 
   /* ── how bad, or how soon: two different questions, and only one of them belongs to each type ── */
   var grade = K.grade === 'severity'
-    ? '<span>How bad is it?</span>'
+    /* ⭐ beside the severity, because they are the same question asked twice: how bad, and how long */
+    ? testWhenHTML() + '<span style="display:inline-block;width:10px"></span><span>How bad is it?</span>'
       + '<select id="wcSev" style="font:inherit;font-size:var(--fs-1);padding:3px 6px;border:1px solid '
       + 'var(--line,#e7e3d8);border-radius:7px;background:var(--card,#fff)">'
       + WSEV.map(function (x) {
@@ -2990,6 +3037,8 @@ async function testCaseSend(outcome) {
      */
     var heldShot = CBTEST.shot;
     var heldSev = g('wcSev') || null;
+    /* ⚠️ read BEFORE the form is repainted, exactly like the severity and the screenshot */
+    var heldWhen = testWhenAt();
     CBTEST.shot = null;
     testShotThumb(null);
     if (typeof testLoad === 'function') await testLoad(true);
@@ -3008,7 +3057,7 @@ async function testCaseSend(outcome) {
       if (outcome === 'pass') await testMark(key, 'pass');
       /* ⚠️ THE SEVERITY IS READ BEFORE THE FORM IS REPAINTED, and passed — it was hardcoded Sev-3 for
          every incident ever raised this way, which made the one field a release gate reads a constant. */
-      else await testFromCase(key, outcome, heldShot, got, heldSev);
+      else await testFromCase(key, outcome, heldShot, got, heldSev, heldWhen);
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
@@ -3227,7 +3276,7 @@ function testScrHTML() {
  * where the input IS the place a person typed. Passing a value through the document between two lines of
  * the same function was never anything but a shared mutable global with extra steps.
  */
-async function testFromCase(key, kind, shot, seenIn, sev) {
+async function testFromCase(key, kind, shot, seenIn, sev, when) {
   var box = document.getElementById('cbt_n_' + key);
   var seen = (seenIn != null && String(seenIn).trim())
     ? String(seenIn).trim()
@@ -3252,6 +3301,9 @@ async function testFromCase(key, kind, shot, seenIn, sev) {
         /* ⭐ what the person actually said, when they said it. ⚠️ Sev-3 remains the default in ONE place:
            a caller with no opinion must not be able to file a Sev-1 by accident, nor a blank. */
         affected: 'found by ' + key,
+        /* ⭐ WHEN it happened, not when it was typed up. The gap between the two is the one number this
+           board exists to make visible, and it was always zero because nothing ever sent this. */
+        happened_at: when || null,
         severity: (['Sev-1', 'Sev-2', 'Sev-3', 'Sev-4'].indexOf(String(sev)) >= 0) ? String(sev) : 'Sev-3',
         screen_code: code, case_key: key,
         build: (window.CBBUILD || null) } });
@@ -5229,7 +5281,7 @@ function screenCasesPaint() {
    */
   /* ⚠ the technique inputs are in this list too: a repaint landing while somebody is typing a boundary
      would eat it exactly as it once ate the observation — same bug, new boxes */
-  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcSev', 'wcCtl',
+  var FIELDS = ['wcTitle', 'wcDo', 'wcSee', 'wcGot', 'wcPri', 'wcSev', 'wcWhen', 'wcCtl',
                 'tqField', 'tqLo', 'tqHi', 'tqClasses', 'tqStates', 'tqConds'];
   var typed = {};
   FIELDS.forEach(function (id) { var el = document.getElementById(id); if (el) typed[id] = el.value; });
