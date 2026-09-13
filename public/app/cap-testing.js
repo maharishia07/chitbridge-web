@@ -5728,10 +5728,15 @@ function testDiagBarHTML() {
     +     'title="Fill the Create form with these numbers">✎ Write this up</button>'
     +   '<button data-testid="diag-snapshot" onclick="testDumpSave()" style="' + chip + doer + '" '
     +     'title="Save one file with every call of this visit">💾 Snapshot</button>'
+    /* ⚠️ THE ONE FACT THAT WAS NOT ALREADY ON A CHIP rides on the two destructive ones, because it is the
+       question a person asks before pressing them: whose readings am I throwing away? They are this
+       browser's, under this login. It was the fourth bullet; it is not lost, it moved to where it is asked. */
     +   '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' + chip + undo + '" '
-    +     'title="Throw away this screen’s readings only">⟲ Clear this screen</button>'
+    +     'title="Throw away this screen’s readings only. They live in this browser under your login, so '
+    +     'clearing cannot touch anybody else’s.">⟲ Clear this screen</button>'
     +   '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + chip + undo + '" '
-    +     'title="Throw away every screen’s readings and start again">⟲ Clear everything</button>'
+    +     'title="Throw away every screen’s readings and start again. They live in this browser under your '
+    +     'login, so clearing cannot touch anybody else’s.">⟲ Clear everything</button>'
     /* ⭐ pushed to the end of the row: it is a SETTING, not one of the four things you do here — and it is
        in the same slot whether it is off, on, or still being read */
     +   '<span style="float:inline-end">' + testTraceChip() + '</span>'
@@ -6407,6 +6412,7 @@ function screenCasesPaint() {
     ['diag', 'Speed', (window.CBCALLS || []).length || null],
   ];
   var inMore = MORE.some(function (m) { return m[0] === area; });
+  var optS = 'background:var(--card,#fff);color:var(--ink,#20303b)';
   var tabs = '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0 4px">'
     + '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:8px;'
     +   'overflow:hidden">'
@@ -6419,9 +6425,12 @@ function screenCasesPaint() {
     +   'background:' + (inMore ? 'var(--ink,#0F2E3D);color:var(--card,#fff)'
                                 : 'var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
     /* ⚠️ a placeholder option, disabled, so the closed select reads as a menu and never as a chosen value */
-    + '<option value="" disabled' + (inMore ? '' : ' selected') + '>More …</option>'
+    /* ⚠️⚠️ AND EVERY OPTION PAINTS ITS OWN GROUND. When the select is inked the options inherit white text,
+       and the dropdown that opens is then white on white in Chrome — invisible, and only when something is
+       selected, which is the state a person is in most of the time. [[feedback-silence-is-the-bug]] */
+    + '<option value="" disabled' + (inMore ? '' : ' selected') + ' style="' + optS + '">More …</option>'
     + MORE.map(function (m) {
-        return '<option value="' + m[0] + '"' + (area === m[0] ? ' selected' : '') + '>'
+        return '<option value="' + m[0] + '"' + (area === m[0] ? ' selected' : '') + ' style="' + optS + '">'
           + m[1] + (m[2] == null ? '' : ' · ' + m[2]) + '</option>';
       }).join('')
     + '</select>'

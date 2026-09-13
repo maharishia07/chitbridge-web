@@ -560,15 +560,31 @@
        font-style:italic; }
   .scroll{ overflow-x:auto; }
 
-  /* ── the completion report ── */
-  .rep h2{ font-size:var(--fs-4); margin:26px 0 4px; letter-spacing:-.01em; }
+  /**
+   * ── ⭐⭐⭐ THE COMPLETION REPORT IS A DOCUMENT, AND IS NOW DRAWN AS ONE ────────────────────────────────
+   *
+   * ⚠️ EVERY SECTION SAT IN ITS OWN ROUNDED CARD. That is how an APPLICATION groups things a person is going
+   * to operate — and nobody operates this. It is read start to finish, by somebody who was not in the room,
+   * often on paper. Eleven cards down one column read as eleven panels, so the reader looks for the controls
+   * that are not there and never finds the through-line, which is the only thing a report has.
+   *
+   * ⭐ SO: a numbered heading over a 2px rule, and the section is just what follows it. That is what a
+   * numbered clause looks like in every standard this report cites, ISO/IEC/IEEE 29119-3 included.
+   */
+  .rep h2{ font-size:var(--fs-4); margin:30px 0 0; letter-spacing:-.01em;
+        border-bottom:2px solid var(--ink); padding-bottom:5px; }
   .rep h2:first-of-type{ margin-top:6px; }
   .rep .num-s{ font-family:ui-monospace,Menlo,monospace; color:var(--grey-2); font-size:var(--fs-2);
         margin-inline-end:7px; }
-  .rep .sec{ background:var(--card); border:1px solid var(--line); border-radius:11px;
-        padding:14px 17px; margin:0 0 14px; }
-  /* ⭐ THE WHOLE POINT OF THE STYLING: a measured section and a judgement section must not look alike. */
-  .rep .sec.ask{ background:var(--warn-tint); border-color:#e8d7ae; }
+  .rep .sec{ padding:12px 0 4px; margin:0 0 6px; }
+  /**
+   * ⚠️⚠️ BUT A MEASURED SECTION AND A JUDGEMENT SECTION MUST STILL NOT LOOK ALIKE — that was the whole point
+   * of the card, and it is load-bearing: a reader who takes a question for a finding quotes an opinion as a
+   * number. It survives the flattening as a RULE DOWN THE SIDE plus the tint, which is what a document does
+   * with an aside. The MEASURED / ASKED tag says it in words either way.
+   */
+  .rep .sec.ask{ background:var(--warn-tint); border-inline-start:3px solid var(--warn);
+        border-radius:0 8px 8px 0; padding:12px 15px; margin:0 0 14px; }
   .rep .tag{ display:inline-block; font-size:var(--fs-1); font-weight:700; letter-spacing:.07em;
         text-transform:uppercase; border-radius:5px; padding:2px 8px; margin-bottom:9px; }
   .rep .tag.m{ background:var(--ok-tint); color:var(--ok); }
@@ -604,6 +620,11 @@
     main{ padding:0; max-width:none; }
     .rep .sec{ break-inside:avoid; box-shadow:none; }
     .rep h2{ break-after:avoid; }
+    /* ⚠️ a tint does not survive a mono printer or a "background graphics off" default — on paper the aside
+       is carried by the rule, which does print, and by its own ASKED tag */
+    .rep .sec.ask{ background:transparent; border-inline-start-width:4px; }
+    /* the two signature rules are the point of printing it at all */
+    .rep .sign{ break-inside:avoid; }
   }
 
   /* ── charts: inline SVG, theme tokens, no library ── */

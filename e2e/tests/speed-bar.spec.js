@@ -49,18 +49,27 @@ test('[BAR-01] all four are chips, at the top, with the instruction', async ({ p
   expect(bar, 'the bar did not render').toBeTruthy();
   expect(bar.y - body.y, 'the bar is not near the top of the panel').toBeLessThan(150);
 
-  /* ⚠️ a chip with only an icon is a control you have to press to find out what it was */
+  /**
+   * ⚠️ A CHIP WITH ONLY AN ICON IS A CONTROL YOU HAVE TO PRESS TO FIND OUT WHAT IT WAS — so each of the four
+   * still says what it does. It said so TWICE: once as its own title=, and again as four bullets printed
+   * underneath, which is what the cut list removed. The words survived; the copy of them did not, and the
+   * assertion follows them onto the chips. [[feedback-improvise-update-cases]]
+   */
+  await expect(page.locator('[data-testid="diag-raise"]'))
+    .toHaveAttribute('title', /Create form/);
+  await expect(page.locator('[data-testid="diag-snapshot"]'))
+    .toHaveAttribute('title', /every call of this visit/);
+  await expect(page.locator('[data-testid="diag-clear-screen"]'))
+    .toHaveAttribute('title', /Throw away/);
+  /* ⭐ and the answer to "is it user-id dependent?" is still reachable, on the button that asks it */
+  await expect(page.locator('[data-testid="diag-clear-all"]'),
+    'whose readings am I throwing away? must be answerable at the destructive control')
+    .toHaveAttribute('title', /cannot touch anybody else/);
+
+  /* ⚠️ AND THE PANEL NO LONGER SAYS IT OUT LOUD. This is the cut itself, asserted — without it the bullets
+     could come back and every line above would still pass. */
   const panel = page.locator('#cbcasespanel');
-  /* ⚠️ the instruction is BULLETS in a tinted box now, not a paragraph — the words survived the redesign
-     and the assertion follows them rather than being deleted with the layout */
-  const notes = panel.locator('ul li');
-  await expect(panel).toContainText('puts these numbers into the Create form');
-  await expect(panel).toContainText('saves one file with every call of this visit');
-  await expect(panel).toContainText('starts the measurement again');
-  /* ⭐ and the answer to "is it user-id dependent?" is on the screen, not only in my head */
-  await expect(panel).toContainText('cannot touch anybody else');
-  /* ⭐ and they are bullets, which is what was asked for — a paragraph would still pass every line above */
-  expect(await notes.count(), 'the instruction is not a bullet list').toBeGreaterThanOrEqual(4);
+  await expect(panel, 'the instruction bullets are back').not.toContainText('puts these numbers into');
 });
 
 test('[BAR-02] the bar is there before anything has been measured, and after', async ({ page }) => {
