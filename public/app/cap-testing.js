@@ -4385,9 +4385,33 @@ function screenCasesPaint() {
  * ⚠️ AND EVERY CLOSURE CARRIES ITS REASON. Six months on, "closed" with no account of itself is
  * indistinguishable from somebody tidying up.
  */
+/**
+ * ⚠️⚠️ THE CLOSED ONES HAVE TO BE FETCHED SEPARATELY, and forgetting it would have left the Closed filter
+ * permanently empty while looking like it worked. `CBTEST.cases` is deliberately LIVE ONLY — the main board
+ * must not offer retired cases to run — so a case closed a moment ago simply disappears from it. Caught by
+ * closing one and watching it vanish rather than move.
+ *
+ * ⭐ A SECOND, NARROW READ: only the retired hand-written ones, and only when this view is open. The main
+ * board pays nothing for a list it never shows.
+ */
+function testFindLoadClosed() {
+  if (CBTEST._closedReq) return;
+  CBTEST._closedReq = 1;
+  api('testCasesAll').then(function (r) {
+    CBTEST._closedReq = 0;
+    CBTEST.closedCases = ((r && r.cases) || []).filter(function (c) {
+      return c.status === 'retired' && /-H\d+$/.test(String(c.case_key || ''));
+    });
+    testPaint();
+  }).catch(function () { CBTEST._closedReq = 0; CBTEST.closedCases = CBTEST.closedCases || []; });
+}
+
 function testFindings() {
   var out = [];
-  (CBTEST.cases || []).forEach(function (c) {
+  if (!CBTEST.closedCases) testFindLoadClosed();
+  /* live first, then the closed — one shape, so the renderer never asks which list a row came from */
+  var caseRows = (CBTEST.cases || []).concat(CBTEST.closedCases || []);
+  caseRows.forEach(function (c) {
     if (!/-H\d+$/.test(String(c.case_key || ''))) return;
     var st0 = (c.steps || [])[0];
     out.push({
@@ -4464,6 +4488,8 @@ function testHandClose(key, open) {
     /* ⚠ reload rather than patch the row: the closed ones are a different query, and guessing what the
        server now holds is how a list and its source drift apart */
     if (typeof toast === 'function') toast(open ? 'Opened again.' : 'Closed.');
+    /* ⚠ both lists: the case has moved BETWEEN them, so refreshing one leaves it in neither or in both */
+    CBTEST.closedCases = null;
     return testLoad(true);
   }).then(function () { testPaint(); })
     .catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
