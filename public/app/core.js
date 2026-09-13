@@ -691,7 +691,68 @@ function cbVisitTick(nav) {
   } catch (_) {}
 })();
 
-async function api(key, {params, query, body}={}){
+/**
+ * ── ⭐⭐⭐ TWO IDENTICAL READS IN THE AIR AT ONCE ARE ONE READ ────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13, after the definitions batching: *"are we good? now the read reduced? optimised?"* — the
+ * honest answer was no, and the measurement said why. One cold boot of the Catalogue, with CB_TRIPS on:
+ *
+ *     prodList  ×3  {limit:500}   1,847 ms   — FIVE HUNDRED PRODUCTS, FETCHED THREE TIMES
+ *
+ * The same question, the same answer, three journeys. Three different screens each ask for the shelf as they
+ * come up, none of them knows about the others, and none of them should have to.
+ *
+ * ⭐⭐ SO THE DEDUPE BELONGS HERE, NOT IN THE CALLERS. Every fix in the callers is a fix for one pair of them;
+ * this one is a fix for every pair that will ever exist, including the ones added next year. `defList` needed
+ * a batcher because its callers ask DIFFERENT questions; `prodList` needs only this, because they ask the
+ * same one.
+ *
+ * ⚠️⚠️ IN FLIGHT ONLY — THIS IS NOT A CACHE. The entry is dropped the moment the answer lands, so the next
+ * caller asks the server again and gets today’s truth. A response cache here would silently change what
+ * every screen in the product means by "read", and staleness bugs of that kind are unfindable.
+ *
+ * ⚠️⚠️ READS ONLY. Two POSTs are two intentions even when they look alike — collapsing them would lose a
+ * write. Mutations keep the double-fire lock below, which REFUSES the second rather than joining it.
+ *
+ * ⚠️⚠️ AND EVERY JOINER GETS ITS OWN COPY. Today two calls return two separate object graphs, and callers do
+ * things like `UI.prods = r.products` and then edit rows in place. Handing them one shared object would be a
+ * new class of bug — one screen’s edit appearing in another — that only shows up when two screens happen to
+ * load together, which is the hardest kind to reproduce. A clone costs microseconds against a 600 ms trip.
+ */
+var _apiInflight = {};
+
+/** an independent copy, so a joiner can never share mutable state with the caller it joined */
+function _apiCopy(v) {
+  if (v === null || typeof v !== 'object') return v;
+  try { if (typeof structuredClone === 'function') return structuredClone(v); } catch (_) {}
+  try { return JSON.parse(JSON.stringify(v)); } catch (_) {}
+  /* ⚠ uncloneable (a Blob, a stream): hand back the original rather than fail the call, and never dedupe it
+     again — said here because a silent share is exactly what this guard exists to prevent */
+  return v;
+}
+
+function api(key, opts) {
+  var o = opts || {};
+  var ep = EP[key];
+  if (!ep || ep.m !== 'GET') return apiOnce(key, opts);
+
+  var dk;
+  try {
+    dk = key + '|' + JSON.stringify(o.params || null) + '|' + JSON.stringify(o.query || null);
+  } catch (_) { return apiOnce(key, opts); }   /* unserialisable options: never guess, just call */
+
+  var live = _apiInflight[dk];
+  if (live) return live.then(_apiCopy);
+
+  var p = apiOnce(key, opts);
+  _apiInflight[dk] = p;
+  /* ⚠ cleared on failure too, or one dead request poisons that read for the life of the tab */
+  var done = function () { if (_apiInflight[dk] === p) delete _apiInflight[dk]; };
+  p.then(done, done);
+  return p;
+}
+
+async function apiOnce(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', ep.m + ' ' + key);
   // Double-fire guard: block a repeat of the SAME in-flight mutation (same endpoint+params). GETs are free.
