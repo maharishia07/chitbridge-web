@@ -481,8 +481,9 @@ function testPanelOpen() {
     '<div id="cbtestpanel" role="dialog" aria-label="Test panel" style="' + TEST_SCALE
     + 'position:fixed;right:16px;bottom:16px;'
     + 'width:min(420px,calc(100vw - 32px));max-height:min(70vh,620px);display:flex;flex-direction:column;'
-    + 'background:var(--card,#fff);color:var(--ink,#20303b);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
-    + 'box-shadow:0 10px 34px rgba(0,0,0,.16);z-index:4000;overflow:hidden">'
+    + 'background:var(--panel,#faf8f3);color:var(--on-panel,#20303b);'
+    + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;'
+    + 'box-shadow:var(--shadow);z-index:4000;overflow:hidden">'
     /**
      * ⚠️ THE HEADER IS ITS OWN ELEMENT, and that is what makes minimise mean anything. makeMovable collapses
      * every child EXCEPT the one classed `mhd`, so with a single child the panel would minimise to an empty
@@ -493,7 +494,7 @@ function testPanelOpen() {
     /* ⚠️ the 30px left inset was room for the drag grip; the grip is gone now that the whole header drags,
        and the extra space read as a wonky margin. */
     + '<div id="cbtesthead" class="mhd" style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);'
-    +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0;margin:0"></div>'
+    +   'background:var(--panel,#faf8f3);border-radius:12px 12px 0 0;margin:0"></div>'
     /* ⚠⚠ A SCROLL CONTAINER, NOT A FLEX COLUMN. It was both, and that is why nothing scrolled: a flex
        parent SIZES its child to fit, so the list never overflowed and there was nothing for overflow:auto to
        scroll. Athi found it in a minute — "I couldn't roll inside the panel". */
@@ -1617,7 +1618,7 @@ var TUI = {
   off: 'background:var(--card,#fff);color:var(--grey-2,#545A61)',
   /** the well a chip GROUP sits in, so a row of chips reads as one control and not as five loose ones */
   well: 'display:inline-flex;flex-wrap:wrap;align-items:center;padding:3px 3px 0;border-radius:9px;'
-      + 'background:var(--paper,#faf8f3);border:1px solid var(--grey-4,#646A72)',
+      + 'background:var(--card,#fff);border:1px solid var(--grey-4,#646A72)',
 };
 
 /** ⭐ hover in ONE place so the chip rows cannot drift apart — the panel has no stylesheet and is not
@@ -4307,11 +4308,11 @@ async function screenCasesPopup(code, name) {
     + 'position:fixed;'
     + 'inset-inline-end:16px;bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(72vh,660px);'
     + 'display:flex;flex-direction:column;background:var(--card,#fff);color:var(--ink,#20303b);'
-    + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.16);'
+    + 'border:1px solid var(--line,#e7e3d8);border-radius:12px;box-shadow:var(--shadow);'
     /* ⚠️ under the modal layer on purpose: a real dialog must still be able to open over this */
     + 'z-index:3900;overflow:hidden">'
     + '<div id="cbcaseshead" class="mhd" style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);'
-    +   'background:var(--paper,#faf8f3);border-radius:12px 12px 0 0"></div>'
+    +   'background:var(--panel,#faf8f3);border-radius:12px 12px 0 0"></div>'
     + '<div id="cbcasesbody" style="overflow:auto;padding:0 11px 11px"></div>'
     + '</div>';
   document.body.appendChild(host);

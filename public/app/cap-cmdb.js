@@ -122,7 +122,7 @@ function cmdbOpen() {
     '<div id="cbcmdbpanel" role="dialog" aria-label="Configuration register" style="position:fixed;right:16px;'
     + 'bottom:16px;width:min(560px,calc(100vw - 32px));max-height:min(70vh,640px);display:flex;'
     + 'flex-direction:column;background:var(--card,#fff);border:1px solid var(--line,#e7e3d8);border-radius:12px;'
-    + 'box-shadow:0 10px 34px rgba(0,0,0,.16);z-index:4000;overflow:hidden">'
+    + 'box-shadow:var(--shadow);z-index:4000;overflow:hidden">'
     /* ⚠️ its own element and classed `mhd`, so minimise leaves something to restore from — the same shape the
        test panel needs for the same reason. */
     + '<div id="cbcmdbhead" class="mhd" style="padding:9px 11px;border-bottom:1px solid var(--line,#e7e3d8);'

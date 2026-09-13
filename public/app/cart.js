@@ -2826,7 +2826,7 @@
       /* the split: list on the left, the money block on the right when the screen has the room (≥ 900 px of its own width) */
       '.cbcat-split{container-type:inline-size}.cbcat-split-in{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}',
       '.cbcat-side{position:sticky;top:8px}.cbcat-side:empty{display:none}.cbcart-side-empty{font-size:var(--fs-2);color:var(--grey-2);padding:10px 12px;border:1px dashed var(--line);border-radius:9px}',
-      '.cbcart-float{position:fixed;right:28px;top:100px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(15,46,61,.18);padding:6px 8px 8px}',
+      '.cbcart-float{position:fixed;right:28px;top:100px;width:320px;max-width:calc(100vw - 32px);z-index:60;background:var(--panel);color:var(--on-panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px 8px 8px}',
       '.cbcart-float-hd{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);padding:2px 4px 6px;cursor:move}',
       '.cbcart-float-x{border:0;background:none;font-size:var(--fs-3);color:var(--grey-2);cursor:pointer;padding:0 6px;line-height:1}',
       '.cbcart-float-min{width:auto;padding:0;border:0;background:none;box-shadow:none}.cbcart-float-pill{border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:999px;padding:7px 12px;font-size:var(--fs-2);cursor:pointer;box-shadow:0 6px 18px rgba(15,46,61,.14)}',

@@ -110,6 +110,7 @@
      *   SURFACE          TEXT ON IT        USE IT FOR
      *   --bg             --on-bg           the page ground
      *   --card           --on-card         a raised thing: card, row, chip, input
+     *   --panel          --on-panel        a FLOATING tool: a movable panel, the floating cart
      *   --sel            --on-sel          the row/chip the reader has selected
      *   --chrome         --chrome-ink      the nav rail and topbar — dark in EVERY theme, by design
      *   --accent         --on-accent       primary buttons, active pills, links
@@ -122,6 +123,32 @@
      * backlogged. ⚠️ A theme overriding a surface MUST override its partner in the same edit.
      */
     --bg:var(--paper);        --on-bg:var(--ink);
+    /**
+     * ⭐⭐⭐ A FLOATING TOOL IS A PIECE OF PAGE, LIFTED — NOT ANOTHER CARD.
+     *
+     * Athi, 2026-09-13: *"do we not giving color context to the panel where rail and other panels are
+     * there?"* We were not. Every movable panel and the floating cart painted themselves `--card` — the
+     * same ground as the cards they hover over — so a floating tool read as one more card, and the drop
+     * shadow was doing all the work of saying "this is on top".
+     *
+     * ⭐ THE REAL PAYOFF IS ONE LEVEL DOWN, and it is bigger than the panel's own edge. The test panels
+     * paint ~30 interior fills as `--card` — every input, select, chip, sticky sub-header and row. On a
+     * card ground those thirty controls are white-on-white. Moving the panel to `--paper` makes all
+     * thirty raised, in one line. That is Athi's "a grey of text" complaint, restated a level down.
+     *
+     * ⚠️⚠️ DEFINED HERE AND IN NO THEME TABLE — and that is STRUCTURAL, not a preference. THEME_BASE
+     * captures the union of every key any theme declares. `--panel` is in no table, so it resolves live
+     * against whatever `--paper` a theme (or a theme PREVIEW) has set. The moment ONE theme declares
+     * `--panel`, the key joins that union, THEME_BASE pins it to cream's value, and every other theme's
+     * preview swatch renders a cream panel. One override, fifteen wrong previews. `--bg` above is safe
+     * for exactly this reason. Leave both alone.
+     *
+     * ⚠️ NOT `.modal`. The app's standard input `.inp` is `background:var(--paper)` — a recessed WELL —
+     * and it is used ~211 times, mostly in dialogs. A paper modal turns every form field into an
+     * unfilled outline. A modal does not need a ground step anyway: `.mover` lays a scrim over the whole
+     * page, which removes it from consideration far harder than any tone could.
+     */
+    --panel:var(--paper);     --on-panel:var(--ink);
     --on-card:var(--ink);     --on-sel:var(--ink);
     --accent:var(--blue);     --on-accent:#ffffff;
     --danger:var(--disp);     --on-danger:#ffffff;

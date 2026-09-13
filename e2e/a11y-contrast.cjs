@@ -164,6 +164,16 @@ Object.keys(THEMES).forEach((key) => {
   check(key, 'ink on card', ratio(v('--ink'), card), TEXT);
   check(key, 'ink on paper', ratio(v('--ink'), paper), TEXT);
 
+  /**
+   * ⚠️ A DUPLICATE OF THE LINE ABOVE — TODAY. `--panel` is `var(--paper)` and `--on-panel` is `var(--ink)`,
+   * so this measures the same two colours. That is the point of it. The paired-surface rule says a theme
+   * overriding a surface must override its partner in the same edit, and the day somebody gives a theme its
+   * own `--panel` and forgets `--on-panel`, this is the line that fails instead of the panel going quietly
+   * unreadable in one theme nobody happened to open. A guard that is trivially true now is how a rule stays
+   * true later. [[feedback-silence-is-the-bug]]
+   */
+  check(key, 'on-panel on panel', ratio(v('--on-panel'), v('--panel')), TEXT);
+
   /* ⚠️ Muted text is measured on EVERY row state, not just the card. The bug this catches by construction: a
      selected-row ground that quietly eats the secondary text on the one row the reader is looking at. */
   GREYS.forEach((g) => {
