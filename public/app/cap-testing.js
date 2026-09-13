@@ -2556,6 +2556,8 @@ async function testCaseSend(outcome) {
 
     if (outcome) {
       /* the observation rides on the same hidden field the list uses, so there is one path to a verdict */
+      /* ⚠ still set for the PASS path, which reads the note from the page the same way — but the incident
+         and requirement paths no longer depend on this surviving a repaint */
       var box = document.getElementById('cbt_n_' + key);
       if (!box) {
         box = document.createElement('input');
@@ -2564,7 +2566,7 @@ async function testCaseSend(outcome) {
       }
       box.value = got || (outcome === 'pass' ? 'As expected.' : '');
       if (outcome === 'pass') await testMark(key, 'pass');
-      else await testFromCase(key, outcome, heldShot);
+      else await testFromCase(key, outcome, heldShot, got);
       try { if (box.type === 'hidden') box.remove(); } catch (_) {}
     }
     if (typeof toast === 'function') toast(outcome ? ('Recorded \u2014 ' + key) : ('Written \u2014 ' + key));
@@ -2766,9 +2768,28 @@ function testScrHTML() {
  * case that tested it, and what came out — readable in either direction without anybody joining it by hand.
  */
 /** ⚠️ `shot` is passed IN, not read from CBTEST: the writer clears it before this runs, and has to */
-async function testFromCase(key, kind, shot) {
+/**
+ * ── ⚠️⚠️⚠️ THE OBSERVATION USED TO TRAVEL THROUGH THE PAGE, AND THE PAGE KEPT LOSING IT ────────────────────
+ *
+ * Athi, 2026-09-13: *"I couldn’t raise as an incident, two times I raised it."* Both write-ups saved
+ * perfectly — CAT001-H04 and CAT001-H05, with observations and screenshots. Only the incident failed, and
+ * it failed SILENTLY into a toast that said "say what you are seeing first" when he plainly had.
+ *
+ * ⚠️⚠️ THE REASON IS A RACE. `testCaseSend` wrote the observation into an input on the page and this function
+ * read it back out. Between the two, a repaint can land — `screenCasesPaint` kicks `testScrLoad()` when the
+ * counts are not known yet and repaints when it answers — and a repaint rebuilds that input EMPTY. So the
+ * value was written to an element that no longer existed by the time it was read, and the guard that exists
+ * to stop an incident with no evidence fired on an incident that had it.
+ *
+ * ⭐ SO IT IS AN ARGUMENT NOW. The DOM read stays only as the fallback for the buttons on the Cases list,
+ * where the input IS the place a person typed. Passing a value through the document between two lines of
+ * the same function was never anything but a shared mutable global with extra steps.
+ */
+async function testFromCase(key, kind, shot, seenIn) {
   var box = document.getElementById('cbt_n_' + key);
-  var seen = box ? String(box.value || '').trim() : '';
+  var seen = (seenIn != null && String(seenIn).trim())
+    ? String(seenIn).trim()
+    : (box ? String(box.value || '').trim() : '');
   var c = (CBTEST.cases || []).filter(function (x) { return x.case_key === key; })[0] || {};
   var code = testScrOf(c) || null;
   var st0 = (c.steps || [])[0];
@@ -3079,6 +3100,14 @@ function testCaseListHTML(code) {
       +   'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;'
       +   'padding:0;cursor:pointer;text-align:start">'
       +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + testEsc(c.case_key) + '</code></button>'
+      /**
+       * \u2b50 THE PICTURE IS ANNOUNCED ON THE ROW, not only inside it. Athi, 2026-09-13: *"I attached the
+       * screenshot, but it is not appearing in the cases tab?"* \u2014 it WAS attached and it WAS saved; it sat two
+       * clicks away behind a caret, which for the most valuable thing on a finding is the same as absent.
+       */
+      + (c.evidence_id ? '<button title="See the screenshot" onclick="testShotView(\'' + testEsc(c.evidence_id)
+          + '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">'
+          + '\ud83d\uddbc\ufe0f</button>' : '')
       + '<span style="flex:1 1 16em;min-width:0">'
       +   '<div style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</div>'
       +   (exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">should see: '

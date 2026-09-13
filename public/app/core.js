@@ -39,7 +39,27 @@ function unwrap(j){
    * ⚠️ IF YOU ADD AN ENDPOINT THAT RETURNS AN ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE.
    */
   if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j || "searched" in j) return j; // auth / structured / compound -> whole, untouched
-  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; for(const mk of ["total","page","limit"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
+  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; /**
+   * ── ⚠️⚠️⚠️ `truncated` JOINS THIS LIST, AND IT IS THE FIFTH INSTANCE OF THE BUG DESCRIBED ABOVE ────────
+   *
+   * Athi, 2026-09-13: *"when I search cycle from the catalogue in the webapp it is not showing — I guess the
+   * search works only within the data what has been browsed? I could see Cycle Candle from the counter."*
+   * He was exactly right, and the cause is this line.
+   *
+   * ⚠️⚠️ THE SHOP HAS 10,441 PRODUCTS AND THE SCREEN LOADS 500. That is deliberate and fine — the code for
+   * it is already written: `/api/products` returns `truncated`, `prodSearchServer()` exists to search the
+   * whole shelf, and the input calls it with `if(UI.prodTruncated)`. Every piece was in place.
+   *
+   * ⭐ AND THIS LINE THREW THE FLAG AWAY. It carries `total`, `page` and `limit` off a compound response and
+   * silently drops everything else — so `page.truncated` was undefined, `UI.prodTruncated` stayed false, the
+   * server search never fired, and the box searched the 500 rows it happened to be holding. Nine thousand
+   * products could not be found by typing their name, and nothing anywhere said so.
+   *
+   * ⚠️ THE COMMENT ABOVE ALREADY WARNED ABOUT THIS IN CAPITALS — "IF YOU ADD AN ENDPOINT THAT RETURNS AN
+   * ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE" — after it had disabled the catalogue overlay, the
+   * "which item?" sheet, supplier availability and the /me bundle. A warning is not a guard.
+   */
+  for(const mk of ["total","page","limit","truncated","count","offset"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
   /**
    * ⚠️⚠️ `included` IS A SIBLING OF `entity`, AND THIS LINE WAS EATING IT — the fourth instance of the exact bug
    * the comments above describe, and the most expensive one, because nothing looked wrong.
