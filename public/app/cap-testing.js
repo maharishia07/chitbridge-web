@@ -1066,6 +1066,12 @@ function testPaint() {
       body.innerHTML = h;
       return;
     }
+    if (CBTEST.view === 'hand') {
+      h += testHandHTML();
+      h += '</div>';
+      body.innerHTML = h;
+      return;
+    }
     if (CBTEST.view === 'req') {
       h += testReqHTML();
       h += '</div>';
@@ -1375,7 +1381,7 @@ function testPaint() {
  * repeatedly. Same rule as the folds beside it.
  */
 /* ⚠️ read ONCE at first use — a paint that read localStorage per row would touch it hundreds of times */
-var TEST_VIEWS = ['list', 'menu', 'req', 'inc', 'scr'];
+var TEST_VIEWS = ['list', 'menu', 'req', 'inc', 'scr', 'hand'];
 function testViewGet() {
   try { var v = localStorage.getItem('cb_test_view'); return TEST_VIEWS.indexOf(v) >= 0 ? v : 'list'; }
   catch (_) { return 'list'; }
@@ -3670,6 +3676,7 @@ function testDiagHTML() {
   }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
+  h += testTraceHTML();
   h += testDiagLayersHTML(mine);
   h += testDiagByApi();
   h += testDiagByScreen();
@@ -3883,6 +3890,66 @@ function testDiagClearBtn() {
  * `Timing-Allow-Origin` — a zero would read as "no time spent there", the same trap the server timings were
  * in this morning.
  */
+/**
+ * ── ⭐⭐⭐ TURN THE SERVER TIMINGS ON, FOR MYSELF, FOR TEN MINUTES ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"can we bring an icon for CB_TRIPS mode on/off and set the limit as say 10 mins, 15
+ * mins, after that it will be off? So we can enable for any user id and we don't need to worry about which
+ * id I should use to test."*
+ *
+ * ⭐ WITHOUT THIS, MEASURING A NEW TEST ID MEANS EDITING A RAILWAY VARIABLE AND WAITING FOR A REDEPLOY — for
+ * a reading that takes a minute. And an env list only ever grows, because nobody goes back to remove an id.
+ *
+ * ⚠️ IT ASKS FOR ITSELF AND NOTHING ELSE. The server takes the entity from the token; this cannot be pointed
+ * at another shop, and no field here would let it.
+ *
+ * ⚠️ AND IT SHOWS THE TIME LEFT, because a diagnostic that is quietly still on is the thing this replaces.
+ */
+function testTraceLoad() {
+  if (CBTEST._traceReq) return;
+  CBTEST._traceReq = 1;
+  api('testTraceGet').then(function (r) {
+    CBTEST._traceReq = 0;
+    CBTEST.trace = r || { on: false };
+    if (CBTEST.popupFor) screenCasesPaint();
+  }).catch(function () { CBTEST._traceReq = 0; });
+}
+
+function testTraceSet(minutes) {
+  var body = minutes ? { minutes: minutes } : { off: true };
+  api('testTraceSet', { body: body }).then(function (r) {
+    CBTEST.trace = r || { on: false };
+    if (typeof toast === 'function') {
+      toast(r && r.on ? ('Tracing your calls for ' + (r.minutes || 10) + ' minutes.')
+                      : 'Tracing off.');
+    }
+    if (CBTEST.popupFor) screenCasesPaint();
+  }).catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
+}
+
+function testTraceHTML() {
+  var t = CBTEST.trace;
+  if (!t) { testTraceLoad(); return ''; }
+  var btn = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;background:var(--card,#fff);margin-inline-end:4px';
+  if (t.on) {
+    var mins = Math.max(1, Math.round((t.seconds || 0) / 60));
+    return '<div style="margin-top:9px;padding:7px 9px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
+      + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1)">'
+      + '<b>\u1f50e Tracing your calls</b> \u00b7 about ' + mins + ' minute(s) left, then it stops by itself.'
+      + ' <button onclick="testTraceSet(0)" style="' + btn + ';margin-inline-start:6px">Stop now</button>'
+      + '</div>';
+  }
+  return '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-2)">'
+    + '\u1f50e <b>Server timings are off for you.</b> Turn them on and each call will show what it spent '
+    + 'inside the server and how many database trips it made:<br>'
+    + [10, 15, 30].map(function (m) {
+        return '<button onclick="testTraceSet(' + m + ')" style="' + btn + ';margin-top:5px">'
+          + m + ' min</button>';
+      }).join('')
+    + '<span style="color:var(--note)">it stops by itself, and only your own calls are timed</span></div>';
+}
+
 function testDiagLayersHTML(mine) {
   var seen = mine.filter(function (c) { return c.rt && !c.rt.blocked; });
   var blocked = mine.some(function (c) { return c.rt && c.rt.blocked; });
@@ -4261,6 +4328,103 @@ function screenCasesPaint() {
       .catch(function () { CBTEST._popCounts = 0; });
   }
 }
+/**
+ * ── ⭐⭐⭐ WHAT I WROTE, WHERE DID IT GO ──────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"I created a couple of cases for checking the screenshot — now where do I look at those
+ * writes? I have not created an incident or a requirement, I just updated the Write, and after that I forgot
+ * where I have written. In the test lab I couldn’t find all the writes I created."*
+ *
+ * ⚠️⚠️ NOTHING WAS LOST — all seven were on the board, and that is exactly the problem. They were seven rows
+ * among ONE THOUSAND FOUR HUNDRED AND FIFTY-FIVE, and the lab had been left on the Requirements view, which
+ * shows none of them. A tool that keeps your work perfectly and cannot show it to you has not kept it.
+ *
+ * ⭐ FOUND BY THE KEY, NOT BY THE TYPE. The panel mints every hand-written case as `<SCREEN>-H01`, `-H02`,
+ * and has since the first one. ⚠️ Two of his seven carry `test_type: null` because they were written before
+ * `'screen'` was added to the server's list of types — so a type filter would have found five of seven and
+ * looked like it worked. The key pattern finds all of them, including everything written before today.
+ *
+ * ⚠️ NEWEST FIRST. The reason somebody opens this view is "where did the thing I just wrote go".
+ */
+function testHandCases() {
+  return (CBTEST.cases || [])
+    .filter(function (c) { return /-H\d+$/.test(String(c.case_key || '')); })
+    .sort(function (a, b) { return String(b.case_key) < String(a.case_key) ? -1 : 1; });
+}
+
+function testHandHTML() {
+  var rows = testHandCases();
+  if (!rows.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);padding:10px 0">'
+      + 'Nothing written by hand yet. Turn on test mode, open any screen, and use the Test chip \u2014 what you '
+      + 'write there lands here.</div>';
+  }
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:6px 0 8px">'
+    + '<b>' + rows.length + '</b> case(s) written by hand on a screen, newest first. '
+    + 'Everything typed into the Test chip is here, whether or not it became an incident or a '
+    + 'requirement.</div>';
+
+  h += rows.map(function (c) {
+    var l = (CBTEST.last || {})[c.case_key];
+    var st = l ? String(l.status) : '';
+    var col = st === 'pass' ? 'var(--ok-2,#1B7F4B)' : (st === 'fail' || st === 'blocked')
+      ? 'var(--disp,#B3261E)' : 'var(--note)';
+    var scr = c.screen_code || c.module_key || '';
+    var st0 = (c.steps || [])[0];
+    var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
+    var doIt = Array.isArray(st0) ? String(st0[0] || '') : '';
+    return '<div style="padding:7px 0;border-top:1px solid var(--line-2,#efece4)">'
+      + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+      +   '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
+      +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(c.title || '') + '</b>'
+      +   '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
+      +     (l ? testEsc(st.toUpperCase()) : 'not run') + '</span>'
+      + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px">'
+      /**
+       * ⭐ WHO, WHERE AND WHEN, ON THE ROW ITSELF. Athi: *"the test lab should bring all the findings with
+       * screen detail, which user id or the user name, what has been written, what is the screenshot."*
+       * ⚠️ A case written before the author was recorded says "author not recorded" — not a blank, and
+       * certainly not the name of whoever is looking at it now.
+       */
+      +   (scr ? '<b>' + testEsc(scr) + '</b> ' + testEsc(codeName(scr) || '') + ' · ' : '')
+      +   (c.written_by ? 'by ' + testEsc(c.written_by) : 'author not recorded')
+      +   (c.written_at ? ' · ' + testEsc(String(c.written_at).slice(0, 16).replace('T', ' ')) : '')
+      +   '<br>'
+      +   (doIt ? 'do: ' + testEsc(doIt) + '<br>' : '')
+      +   (exp ? 'should see: ' + testEsc(exp) : '')
+      + '</div>'
+      + (c.observed ? '<div style="font-size:var(--fs-1);margin-top:2px">seen: '
+          + testEsc(c.observed) + '</div>' : '')
+      /* the verdict is a different act by possibly a different person, so it names its own tester */
+      + (l ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
+          + testEsc(String(l.status).toUpperCase()) + ' by ' + testEsc(l.tester_name || 'someone')
+          + (l.at ? ' · ' + testEsc(String(l.at).slice(0, 16).replace('T', ' ')) : '')
+          + (l.note ? ' — ' + testEsc(l.note) : '') + '</div>' : '')
+      /* ⭐ the way back to where it was written — the whole complaint was not being able to get there */
+      + (scr ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
+          + 'font-size:var(--fs-1);padding:2px 9px" onclick="testHandOpen(' + "'" + testEsc(scr) + "'"
+          + ')">Open ' + testEsc(scr) + '</button>' : '')
+      + (c.evidence_id ? ' <button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
+          + 'font-size:var(--fs-1);padding:2px 9px" onclick="testShotView(' + "'" + testEsc(c.evidence_id)
+          + "'" + ')">\u1f5bc\ufe0f Screenshot</button>' : '')
+      + '</div>';
+  }).join('');
+  return h;
+}
+
+/** take me back to the screen this was written on, with its panel open */
+function testHandOpen(code) {
+  try {
+    var row = ((window.CBSCREENS && CBSCREENS.rows) || []).filter(function (r) { return r.code === code; })[0];
+    if (row && row.nav && typeof go === 'function') {
+      var el = document.querySelector('[data-testid="nav-' + row.nav + '"]');
+      if (el) el.click();
+    }
+    screenCasesPopup(code, codeName(code) || '');
+  } catch (_) { screenCasesPopup(code, ''); }
+}
+
 function testViewToggleHTML() {
   var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc',
       scr = CBTEST.view === 'scr';
@@ -4279,6 +4443,9 @@ function testViewToggleHTML() {
     + '<button onclick="testSetView(\'inc\')" title="Incidents \u2014 what a person experienced, and what was '
     +   'done about it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
     +   (inc ? on : off) + '">Incidents</button>'
+    + '<button onclick="testSetView(\'hand\')" title="Everything written by hand on a screen" '
+    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
+    +   (CBTEST.view === 'hand' ? on : off) + '">Written</button>'
     + '<button onclick="testSetView(\'scr\')" title="Every screen, and what the lab knows about it" '
     +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (scr ? on : off)
     +   '">By screen</button>'

@@ -1962,6 +1962,8 @@ const EP = {
   testCaseWrite:   {m:"POST",  p:"/api/testing/cases/import",     ok:"y"},
   /* ⭐ a screenshot, stored in cb_attachment with no chit — read back through /api/attachments/:id,
      which is already entity-scoped and refuses to render anything but an image. */
+  testTraceGet:    {m:"GET",  p:"/api/testing/trace",            ok:"y"},   // is the server timing MY calls?
+  testTraceSet:    {m:"POST", p:"/api/testing/trace",            ok:"y"},   // {minutes} | {off:true} — self only
   testShot:        {m:"POST",  p:"/api/testing/evidence",         ok:"y"},
   testIncNew:      {m:"POST",  p:"/api/testing/incidents",        ok:"y"},
   testIncList:     {m:"GET",   p:"/api/testing/incidents",        ok:"y"},   // ?state=open — raised or being looked at
