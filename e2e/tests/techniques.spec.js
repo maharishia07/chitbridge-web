@@ -51,6 +51,22 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
   await expect(page.locator('#tqHi')).toBeVisible();
   await expect(page.locator('#cbcasespanel button', { hasText: 'Write the cases' })).toHaveCount(1);
 
+  /**
+   * ── ⭐ "TRY IT" MUST DO IT, NOT DESCRIBE IT ──────────────────────────────────────────────────────────
+   * Athi: *"when I say try it, you provide the values yourself."* One press must leave finished rows on
+   * screen — that is the whole difference between a definition and an example.
+   */
+  for (const k of ['classes', 'states', 'decision', 'guess']) {
+    await page.evaluate((kk) => testTech(kk), k);
+    await page.locator('[data-testid="tech-try"]').click();
+    await expect(panel.locator('table'), k + ': Try it left no cases').toBeVisible({ timeout: 15000 });
+    const n = await panel.locator('table tr').count();
+    expect(n, k + ': Try it produced no rows').toBeGreaterThan(2);
+  }
+  /* ⚠ back to the number range: the assertions below are about ITS boxes, and guess has none */
+  await page.evaluate(() => testTech('bounds'));
+  await expect(page.locator('#tqLo')).toBeVisible({ timeout: 15000 });
+
   /* ── ⭐ the cases come out as a TABLE, and it says what it was derived FROM ── */
   await page.locator('#tqField').fill('quantity');
   await page.locator('#tqLo').fill('1');
