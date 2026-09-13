@@ -54,17 +54,56 @@ test('[SPEED-01] walk every screen and report what each one costs', async ({ pag
     .map((el) => el.getAttribute('data-testid').replace(/^nav-/, '')));
   expect(navs.length, 'no rail items found — the walk would prove nothing').toBeGreaterThan(3);
 
+  /**
+   * ⚠️⚠️ A DOOR THAT IS NOT VISIBLE MUST NOT END THE WALK. Some rail items live inside a collapsed group, so
+   * `count()` finds them in the DOM and `click()` then waits thirty seconds for something that will never be
+   * shown — and the whole measurement is lost because of one screen. A walk that reports twenty screens and
+   * says which two it could not reach is worth far more than one that reports nothing.
+   * ⭐ Two tries: open the drawer (narrow layouts keep the rail behind it) and then skip, recording the skip.
+   */
+  /**
+   * ── ⚠️⚠️⚠️ THE RAIL LIVES BEHIND A DRAWER, AND THE DRAWER REBUILDS THE PAGE ─────────────────────────────────
+   *
+   * `nav-drawer` sets `UI.drawer` and calls renderApp(), so every element handle taken before the click is
+   * stale after it — and `navTo` closes the drawer again on arrival. A loop that opened it once and then
+   * clicked twenty items reached exactly one screen and reported that one screen's cost as the walk. Which is
+   * the same fault this whole day has been about: a measurement of a slice, presented as the whole.
+   *
+   * ⭐ SO THE DRAWER IS RE-OPENED FOR EVERY DOOR and the locator re-queried after it.
+   * ⚠️ AND THERE IS A FALLBACK TO `navTo()`, which is what the rail item calls anyway. Normally a spec must
+   * drive the CONTROL and not the function behind it — but the thing being measured here is what a SCREEN
+   * costs to load, not whether its rail item is clickable, and a screen that cannot be reached contributes
+   * nothing at all. The fallback is recorded per screen so the report says which is which.
+   */
   const walked = [];
+  const missed = [];
+  const viaFn = [];
   for (const nav of navs) {
     if (SKIP.has(nav)) continue;
-    const el = page.locator('[data-testid="nav-' + nav + '"]');
-    if (!(await el.count())) continue;
-    await el.click();
+    let ok = false;
+    if (await page.locator('[data-testid="nav-drawer"]').count()) {
+      await page.locator('[data-testid="nav-drawer"]').first().click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(200);
+    }
+    const el = page.locator('[data-testid="nav-' + nav + '"]').first();
+    if (await el.count()) {
+      ok = await el.click({ timeout: 4000 }).then(() => true).catch(() => false);
+    }
+    if (!ok) {
+      ok = await page.evaluate((n) => {
+        try { if (typeof navTo === 'function') { navTo(n); return true; } } catch (_) {}
+        return false;
+      }, nav);
+      if (ok) viaFn.push(nav);
+    }
+    if (!ok) { missed.push(nav); continue; }
     /* ⚠ settle by the CHIP, not a fixed sleep: the chip is stamped once the screen has drawn and the register
        knows which screen it is, which is also the moment the visit is recorded */
     await page.waitForTimeout(2500);
     walked.push(nav);
   }
+  if (viaFn.length) console.log('  · reached through navTo(), not the rail item: ' + viaFn.join(', '));
+  if (missed.length) console.log('  ⚠ could not reach at all: ' + missed.join(', '));
 
   const data = await page.evaluate(() => {
     let visits = {};
