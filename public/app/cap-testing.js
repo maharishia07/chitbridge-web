@@ -3126,6 +3126,23 @@ function testCaseListHTML(code) {
       +   'style="color:var(--disp);background:var(--disp-tint,#fbeceb)">Incident</button>'
       + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'req\')" '
       +   'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>'
+      /**
+       * ── ⭐⭐ AND THE WAY OUT, WHICH WAS ONLY IN THE LAB ─────────────────────────────────────────────────
+       *
+       * Athi, 2026-09-13: *"in this screen I do not have a way of closing the ticket. Say by mistake I raised
+       * it, then I need to close; or I am checking the observation again, then I need to close it."*
+       *
+       * ⚠️ Closing existed — in the Test lab, on a view he was not looking at. A person writes a case where
+       * they are standing and finishes with it where they are standing; making them go somewhere else to say
+       * "done" is how a list grows for ever, which is the complaint he raised an hour before this one.
+       *
+       * ⚠️ SMALL AND LAST. Pass, Incident and Requirement are what a tester does most; Close is what they do
+       * once. Giving it the same weight would put a destructive action beside the three constructive ones.
+       */
+      + '<button class="btn" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',false)" '
+      +   'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" '
+      +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--note);background:none;'
+      +   'border:1px solid var(--line,#e7e3d8)">\u2713 Close</button>'
       + '</span>'
       + '</div>';
   }).join('');
@@ -4428,9 +4445,20 @@ function testRaisedHTML(code) {
             + '" target="_blank" rel="noopener" style="font-size:var(--fs-1)">screenshot</a>' : '')
       + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
-      + (x.state === 'raised'
+      /**
+       * ── ⚠️⚠️ TWO WAYS OUT, BECAUSE THEY MEAN OPPOSITE THINGS ──────────────────────────────────────────
+       *
+       * Athi: *"say by mistake I raised it, then I need to close."* Marking that RESOLVED would put it in the
+       * report as a fault that was found and fixed — a number somebody will quote. It was never a fault.
+       *
+       * ⭐ Resolved = it was real and it is dealt with. Not a fault = it should not have been raised. Both
+       * ask why, and the report can then tell them apart instead of counting them together.
+       */
+      + (x.state === 'raised' || x.state === 'investigating'
         ? '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px" onclick="testIncSet(\''
-          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>' : '')
+          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>'
+          + ' <button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px;color:var(--note)" onclick="testIncSet(\''
+          + testEsc(x.definition_id) + '\',\'closed\')">Not a fault</button>' : '')
       + '</div>';
   }).join('');
 
@@ -4446,6 +4474,16 @@ function testRaisedHTML(code) {
       /* ⚠️ the evidence beside the rule, always — six months on it is the only thing that says it was real */
       + (x.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">seen: '
           + testEsc(x.observed) + '</div>' : '')
+      /* ⚠️ a requirement had NO action on this panel — it could be raised here and only ever closed
+         somewhere else. Accept and Reject are its own verbs; "close" would flatten the difference. */
+      + (x.state !== 'accepted' && x.state !== 'rejected'
+        ? '<div style="margin-top:5px">'
+          + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
+          +   'onclick="testReqSet(\'' + testEsc(x.definition_id) + '\',\'accepted\')">Accept</button> '
+          + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px;'
+          +   'color:var(--note)" onclick="testReqSet(' + "'" + testEsc(x.definition_id) + "','rejected'"
+          +   ')">Reject</button></div>'
+        : '')
       + '</div>';
   }).join('');
 
@@ -4734,7 +4772,10 @@ function testHandClose(key, open) {
   api('testCaseClose', { body: { case_key: key, open: !!open, why: why } }).then(function (r) {
     /* ⚠ reload rather than patch the row: the closed ones are a different query, and guessing what the
        server now holds is how a list and its source drift apart */
-    if (typeof toast === 'function') toast(open ? 'Opened again.' : 'Closed.');
+    /* ⚠ a thing that disappears without a word is the complaint this feature answers, not a new one */
+    if (typeof toast === 'function') {
+      toast(open ? 'Opened again.' : 'Closed \u2014 it is in Test lab \u203a Findings \u203a Closed.');
+    }
     /* ⚠ both lists: the case has moved BETWEEN them, so refreshing one leaves it in neither or in both */
     CBTEST.closedCases = null;
     return testLoad(true);
