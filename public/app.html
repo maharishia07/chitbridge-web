@@ -9881,7 +9881,35 @@ function catgChipsHTML(d){
   /* UNKNOWN ≠ RETIRED. A category made a moment ago (Categories screen, the API, a co-assist) is not in this cache yet;
      calling it 'retired' was wrong (CAT-05 caught it). One forced re-read per unknown id, then the verdict. */
   if(loaded && typeof cbCatgLive==='function'){ UI._catgAsked=UI._catgAsked||{}; const unknown=cids.filter(function(c){ return !_CATG.some(function(x){ return x.id===c; }) && !UI._catgAsked[c]; });
-    if(unknown.length){ unknown.forEach(function(c){ UI._catgAsked[c]=1; }); cbCatgLive(true).then(function(){ if(UI.nav==='catalogue'){ if(typeof paintProdList==='function') paintProdList(); if(typeof prodRepaintSection==='function'){ prodRepaintSection('categories'); } const oc=document.querySelector('[data-testid="prod-outcome-categories"]'); if(oc && typeof prodOutcomeHTML==='function' && UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('categories', UI._prodSheetD)||''; } }); } }
+    /**
+     * ── ⚠️⚠️⚠️ THIS IS WHY category WAS FETCHED THREE TIMES ON A COLD BOOT ──────────────────────────────
+     *
+     * Athi, 2026-09-13: *"find out why category is fetched 3 times on cold boot."* Here it is.
+     *
+     * `catgChipsHTML` runs ONCE PER PRODUCT ROW. Every product citing a category id that is not on the live
+     * shelf fired its own `cbCatgLive(true)` — and `true` means FORCED, which by design goes straight past
+     * the cache, past the in-flight guard and past the new batching, because a forced read exists precisely
+     * to fetch something newer than whatever is held. So THREE products citing three DIFFERENT unknown ids
+     * made three concurrent full reads of the same shelf. Measured: 57–62 ms apart, ~570 ms each, all in
+     * the air together — which is exactly the signature that made no sense until the caller was found.
+     *
+     * ⚠️ `UI._catgAsked` DEDUPED THE WRONG THING. It is keyed by category ID, so it stops the same id being
+     * asked twice and does nothing at all about the same SHELF being read N times. The ids are usually
+     * retired categories, which a live-only read can never resolve — so the fetch was not only repeated, it
+     * was repeatedly unable to succeed.
+     *
+     * ⭐ ONE REFRESH ANSWERS FOR EVERY UNKNOWN ID IN THE PAINT. The re-read is a whole-shelf refresh, not a
+     * lookup of one id, so a second one while the first is in flight can only return the same answer.
+     */
+    if(unknown.length){ unknown.forEach(function(c){ UI._catgAsked[c]=1; });
+      if(!UI._catgRefetch){
+        UI._catgRefetch = cbCatgLive(true)
+          .then(function(){ if(UI.nav==='catalogue'){ if(typeof paintProdList==='function') paintProdList(); if(typeof prodRepaintSection==='function'){ prodRepaintSection('categories'); } const oc=document.querySelector('[data-testid="prod-outcome-categories"]'); if(oc && typeof prodOutcomeHTML==='function' && UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('categories', UI._prodSheetD)||''; } })
+          /* ⚠ cleared either way, or one failed read stops the shelf ever being refreshed again */
+          .catch(function(){})
+          .then(function(){ UI._catgRefetch=null; });
+      }
+    } }
   if(!loaded && typeof cbCatgLive==='function'){ cbCatgLive().then(function(){ if(UI.nav==='catalogue' && typeof paintProdList==='function') paintProdList(); }); }
   return cids.map(function(cid,i){
     const live=loaded?_CATG.filter(function(x){return x.id===cid;})[0]:null;
