@@ -59,6 +59,12 @@ test('[TECH-02] the field chips are read from what the screen actually sent', as
   const sw = page.locator('[data-testid="vp-test"]');
   await expect(sw).toBeVisible({ timeout: 45000 });
   if (!((await sw.textContent()) || '').includes('on')) await sw.click();
+  /* ⚠ cap-testing.js is a LAZY capability: turning the mode on is not enough, the panel has to be opened or
+     none of its functions exist yet. The first run of this failed on exactly that. */
+  await page.locator('[data-testid="screen-cases"]').first().click();
+  await expect(page.locator('#cbcasespanel')).toBeVisible({ timeout: 30000 });
+  const modal = page.locator('#modalhost .modal');
+  if (await modal.count()) await page.locator('#modalhost .modal button').last().click();
 
   /**
    * ⚠️ THE READER IS THE ASSERTION, NOT THE CHIPS. Which fields appear depends on what the screen the tester
