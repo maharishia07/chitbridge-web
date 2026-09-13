@@ -547,6 +547,31 @@ function testEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
     return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; });
 }
+/**
+ * ── ⚠️⚠️⚠️ A VALUE GOING INTO onclick="fn('HERE')" IS IN TWO NESTED LANGUAGES ──────────────────────────────
+ *
+ * testEsc is an HTML escaper and is CORRECT for text. It is not sufficient here, and the reason is exact:
+ * the HTML parser decodes character references in an attribute value BEFORE the JavaScript parser ever sees
+ * it. So `&quot;` becomes `"` — harmless inside a JS single-quoted string — but testEsc does not touch `'`
+ * at all, and a bare `'` closes the string and everything after it is script.
+ *
+ * A case key is not ours: /cases/import takes `case_key` as `String(c.case_key || c.id || '').trim()` with
+ * no shape check, so its text comes from whoever posted it.
+ *
+ *   key = "a');alert(1)//"   ->  onclick="testMark('a');alert(1)//','pass')"   ← executes
+ *
+ * ⭐ TWO LAYERS, INNERMOST FIRST. Escape for the JS string (backslash, then quote), then escape the result
+ * for the HTML attribute. Order matters: HTML-escaping first would turn a quote into `&#39;` that the parser
+ * hands back to JS as a live quote.
+ *   key = "a');alert(1)//"   ->  a\');alert(1)//   ->  onclick="testMark('a\');alert(1)//','pass')"  ← inert
+ *   key = "x\"><img onerror=…>" -> HTML layer turns < > into entities, so the tag cannot be closed either.
+ *
+ * ⚠️ USE THIS FOR EVERY DYNAMIC VALUE INSIDE A HANDLER. testEsc stays right for element TEXT.
+ * [[feedback-check-after-the-wire]]
+ */
+function testJs(s) {
+  return testEsc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
 function testAgo(iso) {
   if (!iso) return '';
   var s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
@@ -1293,7 +1318,7 @@ function testPaint() {
           var q = (typeof c.seq === 'number') ? c.seq : 99; return q < m ? q : m; }, 99);
         var seq = seqOf < 99 ? ('0' + seqOf).slice(-2) : '';
 
-        h += '<div data-arearow="1" onclick="testFold(\'' + testEsc(gk) + '\')" style="display:grid;'
+        h += '<div data-arearow="1" onclick="testFold(\'' + testJs(gk) + '\')" style="display:grid;'
           + 'grid-template-columns:' + testAreaCols() + ';gap:6px;align-items:baseline;'
           + 'cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
           + '<span style="display:flex;gap:5px;align-items:baseline;min-width:0;overflow:hidden">'
@@ -1323,7 +1348,7 @@ function testPaint() {
            * already fixed once on the Report's drill-down numbers.
            */
           +   '<button title="Add a case to ' + testEsc(gk) + '" '
-          +     'onclick="event.stopPropagation();testAddOpen(\'' + testEsc(gk) + '\')" '
+          +     'onclick="event.stopPropagation();testAddOpen(\'' + testJs(gk) + '\')" '
           +     'style="flex:0 0 auto;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);'
           +     'color:var(--grey-2,#545A61);border-radius:5px;font:inherit;font-size:var(--fs-1);'
           +     'line-height:1;padding:1px 6px;cursor:pointer">+</button>'
@@ -1387,7 +1412,7 @@ function testPaint() {
          * full page. Same information, and the ones that earn the space here are the KIND (a green unit test
          * and a green acceptance test are not the same evidence) and WHAT WOULD MAKE IT GREEN.
          */
-        +  '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:grid;'
+        +  '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:grid;'
         +    'grid-template-columns:' + TEST_ROW_COLS + ';gap:7px;align-items:baseline;'
         +    'padding:7px 9px;cursor:pointer">'
         +    '<span title="' + testEsc(c.case_key) + '" style="font-family:ui-monospace,Menlo,monospace;'
@@ -3025,7 +3050,7 @@ function testTechHTML() {
     var fit = fields.filter(function (f) { return testTechFor(f.kind) === t.kind; });
     var rest = fields.filter(function (f) { return testTechFor(f.kind) !== t.kind; });
     var fchip = function (f, strong) {
-      return '<button onclick="testTechPick(\'' + testEsc(f.key) + '\')" '
+      return '<button onclick="testTechPick(\'' + testJs(f.key) + '\')" '
         + 'title="' + testEsc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) + '" '
         + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:11px;cursor:pointer;'
         + 'margin-inline-end:4px;margin-bottom:4px;border:0;background:'
@@ -3284,7 +3309,7 @@ function testCaseFormHTML() {
     var here = CBTEST.popupFor;
     if (!here) return '';
     return '<div style="margin:2px 0 9px"><button onclick="testCaseFor(\'' + here
-      + '\', \'' + testEsc(codeName ? codeName(here) : '') + '\')" '
+      + '\', \'' + testJs(codeName ? codeName(here) : '') + '\')" '
       + 'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:5px 14px;border:1px solid '
       + 'var(--line,#e7e3d8);border-radius:7px;cursor:pointer;background:var(--card,#fff)">'
       + '+ Create</button></div>';
@@ -3385,7 +3410,7 @@ function testCaseFormHTML() {
         /* ⭐ the picture itself, small — the fastest possible answer to "is the right one attached?" */
         + (CBTEST._thumb ? '<img src="' + CBTEST._thumb + '" alt="" style="height:26px;width:auto;'
             + 'border:1px solid var(--line,#e7e3d8);border-radius:4px;vertical-align:middle">' : '')
-        + '<button onclick="testShotView(\'' + testEsc(CBTEST.shot.id) + '\')" style="' + btn
+        + '<button onclick="testShotView(\'' + testJs(CBTEST.shot.id) + '\')" style="' + btn
           + ';padding:1px 7px">view</button>'
         + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
       : '')
@@ -3997,7 +4022,7 @@ function testCaseDetailHTML(c) {
      header and a plain link carries none, which is the "404, then unauthorised" this already cost once */
   if (c.evidence_id) {
     h += '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;'
-      + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'" + testEsc(c.evidence_id)
+      + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'" + testJs(c.evidence_id)
       + "'" + ')">\u1f5bc\ufe0f Screenshot</button>';
   }
 
@@ -4102,7 +4127,7 @@ function testCaseListHTML(code) {
             + (c.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
                 + testEsc(c.closed_note) + (c.closed_by ? ' · ' + testEsc(c.closed_by) : '') + '</div>' : '')
             + ' <button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
-            + 'padding:1px 8px" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',true)">Open again'
+            + 'padding:1px 8px" onclick="testHandClose(\'' + testJs(c.case_key) + '\',true)">Open again'
             + '</button></div>';
         }).join('')
       + '</div>'
@@ -4142,7 +4167,7 @@ function testCaseListHTML(code) {
     var isOpen = CBTEST.openCase === c.case_key;
     return '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0;'
       +   'border-top:1px solid var(--line,#efece4)">'
-      + '<button onclick="testCaseOpen(\'' + testEsc(c.case_key) + '\')" title="Open it" '
+      + '<button onclick="testCaseOpen(\'' + testJs(c.case_key) + '\')" title="Open it" '
       +   'style="font:inherit;font-size:var(--fs-1);color:var(--grey-2);background:none;border:0;'
       +   'padding:0;cursor:pointer;text-align:start">'
       +   (isOpen ? '\u25be ' : '\u25b8 ') + '<code>' + testEsc(c.case_key) + '</code></button>'
@@ -4151,7 +4176,7 @@ function testCaseListHTML(code) {
        * screenshot, but it is not appearing in the cases tab?"* \u2014 it WAS attached and it WAS saved; it sat two
        * clicks away behind a caret, which for the most valuable thing on a finding is the same as absent.
        */
-      + (c.evidence_id ? '<button title="See the screenshot" onclick="testShotView(\'' + testEsc(c.evidence_id)
+      + (c.evidence_id ? '<button title="See the screenshot" onclick="testShotView(\'' + testJs(c.evidence_id)
           + '\')" style="font-size:var(--fs-1);background:none;border:0;cursor:pointer;padding:0">'
           + '\ud83d\uddbc\ufe0f</button>' : '')
       + '<span style="flex:1 1 16em;min-width:0">'
@@ -4168,9 +4193,9 @@ function testCaseListHTML(code) {
       +   (l ? testEsc(String(l.status).toUpperCase()) : 'not run') + '</span>'
       + '<span style="display:flex;gap:4px;flex:0 0 auto;align-items:center">'
       + testMarkBtn(c.case_key, 'pass', 'Pass', 'var(--ok-2)', 'var(--ok-tint)')
-      + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'inc\')" '
+      + '<button class="btn" onclick="testFromCase(\'' + testJs(c.case_key) + '\',\'inc\')" '
       +   'style="color:var(--disp);background:var(--danger-tint,#fbeceb)">Incident</button>'
-      + '<button class="btn" onclick="testFromCase(\'' + testEsc(c.case_key) + '\',\'req\')" '
+      + '<button class="btn" onclick="testFromCase(\'' + testJs(c.case_key) + '\',\'req\')" '
       +   'style="color:var(--grey-2);background:var(--neutral-tint)">Requirement</button>'
       /**
        * ── ⭐⭐ AND THE WAY OUT, WHICH WAS ONLY IN THE LAB ─────────────────────────────────────────────────
@@ -4185,7 +4210,7 @@ function testCaseListHTML(code) {
        * ⚠️ SMALL AND LAST. Pass, Incident and Requirement are what a tester does most; Close is what they do
        * once. Giving it the same weight would put a destructive action beside the three constructive ones.
        */
-      + '<button class="btn" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',false)" '
+      + '<button class="btn" onclick="testHandClose(\'' + testJs(c.case_key) + '\',false)" '
       +   'title="Close this case \u2014 it moves to Test lab \u203a Findings \u203a Closed" '
       +   'style="font-size:var(--fs-1);padding:2px 8px;color:var(--grey-4,#646A72);background:none;'
       +   'border:1px solid var(--grey-4,#646A72)">\u2713 Close</button>'
@@ -4800,7 +4825,7 @@ function testBehindHTML(code) {
           + '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.code) + '</code>'
           + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(x.label) + '</span>'
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
-          + 'onclick="testCoverCase(\'' + testEsc(code) + '\',\'' + testEsc(x.code) + '\',\''
+          + 'onclick="testCoverCase(\'' + testJs(code) + '\',\'' + testJs(x.code) + '\',\''
           + testEsc(String(x.label).replace(/'/g, ' ')) + '\')">Write a case</button>'
           + '</div>';
       }).join('');
@@ -4849,7 +4874,7 @@ function testBehindHTML(code) {
     h += testNotes([_g[2]], _nRed || !_nT ? 'bad' : (_nRun && _nRun * 2 >= _nT ? 'ok' : 'warn'));
     h += '<div style="margin-top:7px">'
       + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
-      + 'onclick="testCoverRaise(\'' + testEsc(code) + '\')">✎ Raise this as a coverage gap</button>'
+      + 'onclick="testCoverRaise(\'' + testJs(code) + '\')">✎ Raise this as a coverage gap</button>'
       + '</div>';
 
   /* ── the file-level detail, inside the same fold ── */
@@ -5356,7 +5381,7 @@ function testDiagHTML() {
     var ok = (c.status || 0) < 400;
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
       + '<td style="padding:4px 6px 4px 0">'
-      +   '<button onclick="testCallOpen(' + "'" + testEsc(c.rid || '') + "'" + ')" '
+      +   '<button onclick="testCallOpen(' + "'" + testJs(c.rid || '') + "'" + ')" '
       +     'title="See the real call" style="font:inherit;font-size:var(--fs-1);background:none;'
       +     'border:0;padding:0;cursor:pointer;color:var(--grey-2);text-decoration:underline;'
       +     'text-underline-offset:2px"><code>' + testEsc(c.key) + '</code></button></td>'
@@ -6236,9 +6261,9 @@ function testRaisedHTML(code) {
       + (x.state !== 'accepted' && x.state !== 'rejected'
         ? '<div style="margin-top:5px">'
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
-          +   'onclick="testReqSet(\'' + testEsc(x.definition_id) + '\',\'accepted\')">Accept</button> '
+          +   'onclick="testReqSet(\'' + testJs(x.definition_id) + '\',\'accepted\')">Accept</button> '
           + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px;'
-          +   'color:var(--grey-4,#646A72)" onclick="testReqSet(' + "'" + testEsc(x.definition_id) + "','rejected'"
+          +   'color:var(--grey-4,#646A72)" onclick="testReqSet(' + "'" + testJs(x.definition_id) + "','rejected'"
           +   ')">Reject</button></div>'
         : '')
       + '</div>';
@@ -7068,7 +7093,7 @@ function testWorkRowHTML(x) {
               'It is done and needs no retest');
   } else if (x.status === 'failed' && x.caseKey) {
     /* ⚠️ a red verdict with nothing raised is a fault on nobody's list — this is the row that fixes that */
-    acts += b('Raise an incident', 'testFromCase(\'' + x.caseKey + '\',\'inc\',null,\''
+    acts += b('Raise an incident', 'testFromCase(\'' + testJs(x.caseKey) + '\',\'inc\',null,\''
       + testEsc(String(x.seen || 'It failed').replace(/'/g, ' ')) + '\')', 'var(--disp,#B3261E)',
       'Turn this red verdict into something somebody owns');
   } else if (x.status === 'change') {
@@ -7082,15 +7107,15 @@ function testWorkRowHTML(x) {
     acts += b('✗ Reject it', 'testReqSet(\'' + id + '\',\'rejected\')', 'var(--disp,#B3261E)',
               'Changed our mind, with the reason');
   } else if (x.status === 'todo' && x.caseKey) {
-    acts += b('✓ It passed', 'testMark(\'' + x.caseKey + '\',\'pass\')', 'var(--ok-2,#1B7F4B)', 'Run it now');
-    acts += b('✗ It failed', 'testMark(\'' + x.caseKey + '\',\'fail\')', 'var(--disp,#B3261E)',
+    acts += b('✓ It passed', 'testMark(\'' + testJs(x.caseKey) + '\',\'pass\')', 'var(--ok-2,#1B7F4B)', 'Run it now');
+    acts += b('✗ It failed', 'testMark(\'' + testJs(x.caseKey) + '\',\'fail\')', 'var(--disp,#B3261E)',
               'Then raise an incident from the row');
   } else if (x.status === 'passed' && x.caseKey) {
-    acts += b('Run it again', 'testMark(\'' + x.caseKey + '\',\'pass\')', null, 'Record another pass');
+    acts += b('Run it again', 'testMark(\'' + testJs(x.caseKey) + '\',\'pass\')', null, 'Record another pass');
   } else if (x.status === 'closed' && x.caseKey && !x.inc && !x.req) {
-    acts += b('Open again', 'testHandClose(\'' + x.caseKey + '\',true)', null, 'Put it back on the list');
+    acts += b('Open again', 'testHandClose(\'' + testJs(x.caseKey) + '\',true)', null, 'Put it back on the list');
   }
-  if (x.screen) acts += b('Open ' + testEsc(x.screen), 'testHandOpen(\'' + testEsc(x.screen) + '\')', null,
+  if (x.screen) acts += b('Open ' + testEsc(x.screen), 'testHandOpen(\'' + testJs(x.screen) + '\')', null,
                           'Go to the screen it is about');
   /**
    * ⭐ RE-GRADING IS A JUDGEMENT AND BELONGS WITH THE OTHER ACTIONS. What looked like one awkward screen
@@ -7106,7 +7131,7 @@ function testWorkRowHTML(x) {
           return '<option' + (v === x.sev ? ' selected' : '') + '>' + v + '</option>';
         }).join('') + '</select> ';
   }
-  if (x.shot) acts += b('🖼 Screenshot', 'testShotView(\'' + testEsc(x.shot) + '\')', null, '');
+  if (x.shot) acts += b('🖼 Screenshot', 'testShotView(\'' + testJs(x.shot) + '\')', null, '');
 
   var shut = x.status === 'closed';
   return '<div data-testid="work-row" style="padding:8px 0;border-top:1px solid var(--line,#efece4)'
@@ -7291,10 +7316,10 @@ function testHandHTML() {
       /* ── the actions ── */
       + '<div style="margin-top:5px">'
       +   (x.screen ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
-        + 'padding:2px 9px" onclick="testHandOpen(' + "'" + testEsc(x.screen) + "'" + ')">Open '
+        + 'padding:2px 9px" onclick="testHandOpen(' + "'" + testJs(x.screen) + "'" + ')">Open '
         + testEsc(x.screen) + '</button> ' : '')
       +   (x.shot ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
-        + 'padding:2px 9px" onclick="testShotView(' + "'" + testEsc(x.shot) + "'" + ')">'
+        + 'padding:2px 9px" onclick="testShotView(' + "'" + testJs(x.shot) + "'" + ')">'
         + '\u1f5bc\ufe0f Screenshot</button> ' : '')
       /**
        * ⚠️⚠️ A RETEST HAS TWO ANSWERS AND BOTH MUST BE ONE CLICK. Give a person only "Close" and a fix that
@@ -7303,37 +7328,37 @@ function testHandHTML() {
        */
       +   (ver ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px;border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
-        + 'onclick="testVerify(\'' + testEsc(String(x.id || '')) + '\',true)">\u2713 Retested \u2014 it holds</button> '
+        + 'onclick="testVerify(\'' + testJs(String(x.id || '')) + '\',true)">\u2713 Retested \u2014 it holds</button> '
         + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px;border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" '
-        + 'onclick="testVerify(\'' + testEsc(String(x.id || '')) + '\',false)">\u2717 Still broken</button>'
+        + 'onclick="testVerify(\'' + testJs(String(x.id || '')) + '\',false)">\u2717 Still broken</button>'
       /**
        * ⚠️ THE WORD ON THE BUTTON IS A PROMISE ABOUT THE STATE IT WILL WRITE. A requirement is DECIDED, not
        * closed, and the two decisions are different facts — so it gets both and neither is called "Close".
        */
       : shut ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
-        + 'padding:2px 9px" onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || ''))
-        + '\',\'' + testEsc(String(x.key || '')) + '\',true)">Open again</button>'
+        + 'padding:2px 9px" onclick="testFindClose(\'' + x.kind + '\',\'' + testJs(String(x.id || ''))
+        + '\',\'' + testJs(String(x.key || '')) + '\',true)">Open again</button>'
       : x.kind === 'req'
       ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
-        + 'onclick="testReqSet(\'' + testEsc(String(x.id || '')) + '\',\'accepted\')">'
+        + 'onclick="testReqSet(\'' + testJs(String(x.id || '')) + '\',\'accepted\')">'
         + '\u2713 Accept it</button> '
         + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" '
-        + 'onclick="testReqSet(\'' + testEsc(String(x.id || '')) + '\',\'rejected\')">'
+        + 'onclick="testReqSet(\'' + testJs(String(x.id || '')) + '\',\'rejected\')">'
         + '\u2717 Reject it</button>'
       : x.kind === 'inc'
       ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
         + 'title="You have looked and it is done. This ends it and takes it off the board." '
-        + 'onclick="testFindClose(\'inc\',\'' + testEsc(String(x.id || '')) + '\',\'\',false)">'
+        + 'onclick="testFindClose(\'inc\',\'' + testJs(String(x.id || '')) + '\',\'\',false)">'
         + '\u2713 Close it</button> '
         + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
         + 'title="You believe it is fixed \u2014 the person who raised it is asked to retest" '
-        + 'onclick="testFindFixed(\'' + testEsc(String(x.id || '')) + '\')">Mark it fixed</button>'
+        + 'onclick="testFindFixed(\'' + testJs(String(x.id || '')) + '\')">Mark it fixed</button>'
       : '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
-      +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || '')) + '\',\''
+      +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testJs(String(x.id || '')) + '\',\''
       +     testEsc(String(x.key || '')) + '\',false)">\u2713 Close</button>')
       + '</div>'
       + '</div>';
@@ -7624,7 +7649,7 @@ function testMenuHTML(shown) {
      * stored under this panel’s own key — see testFoldGet. Two surfaces sharing a fold STATE would mean
      * collapsing a door here silently collapsed it on a board somebody else is reading.
      */
-    h += '<div onclick="testFold(\'' + testEsc(gkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
+    h += '<div onclick="testFold(\'' + testJs(gkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:5px 6px;border-bottom:1px solid var(--line,#efece4)">'
       + '<span style="' + q + '">' + (gopen ? '\u25be' : '\u25b8') + '</span>'
       + '<b style="font-size:var(--fs-2)">' + testEsc(g.name) + '</b>'
       + '<span style="' + q + '">' + g.doors.length + ' door(s)</span>'
@@ -7637,7 +7662,7 @@ function testMenuHTML(shown) {
     g.doors.forEach(function (d) {
       var dkey = 'menu:' + g.name + ':' + d.name;
       var dopen = testSectionOpen(dkey, d.cases.length);
-      h += '<div onclick="testFold(\'' + testEsc(dkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">'
+      h += '<div onclick="testFold(\'' + testJs(dkey) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:4px 6px 4px 18px">'
         + '<span style="' + q + '">' + (dopen ? '\u25be' : '\u25b8') + '</span>'
         /* ⭐ THE SCREEN CODE, so a row of metrics can be quoted as 'CAT004 is 0 of 39'. Athi, 2026-09-12:
            *"so can you give the metrics by screen name as well?"* — the figures were already here; what was
@@ -7667,7 +7692,7 @@ function testMenuHTML(shown) {
          */
         h += '<div style="border-inline-start:2px solid ' + (l ? (l.status === 'fail' || l.status === 'blocked'
               ? 'var(--disp)' : 'var(--ok-2)') : 'var(--line,#e7e3d8)') + ';margin-inline-start:26px">'
-          + '<div onclick="testOpen(\'' + testEsc(c.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
+          + '<div onclick="testOpen(\'' + testJs(c.case_key) + '\')" style="display:flex;gap:6px;align-items:baseline;cursor:pointer;padding:3px 6px">'
           +   '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + testEsc(c.title || c.case_key) + '</span>'
           +   '<span style="flex:1 1 auto"></span>'
           +   (c.generated ? '<span style="' + q + '">swept ·</span>' : '')
@@ -7737,7 +7762,7 @@ function testCaseBodyHTML(c) {
   return h;
 }
 function testMarkBtn(key, status, label, fg, bg) {
-  return '<button class="btn" onclick="testMark(\'' + testEsc(key) + '\',\'' + status + '\')" '
+  return '<button class="btn" onclick="testMark(\'' + testJs(key) + '\',\'' + status + '\')" '
     + 'style="font-size:var(--fs-2);padding:4px 10px;font-weight:700;color:' + fg + ';background:' + bg + ';border-color:' + bg + '">'
     + label + '</button>';
 }

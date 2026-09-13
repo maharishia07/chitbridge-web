@@ -2341,10 +2341,22 @@ function reportVerdictHTML(r) {
     +   fig(t.total || 0, 'cases on the board')
     + '</div>'
     + '<h3>What stands in the way of trusting it?</h3>'
+    /**
+     * ⚠️⚠️⚠️ THE SAME FAULT I FIXED THREE TIMES TONIGHT, LEFT IN THE LOUDEST PLACE. With no cases and no
+     * results `stand` is empty, and the else branch used to print "Every case on the board has been run and
+     * none is failing" — at the top of the document, above clause 1, on the part a person reads on paper.
+     * An untested board announcing itself as clean is precisely what the §6 caveats and §10 no_sign were
+     * added to stop, and this line sits above both of them.
+     * ⭐ REPORT_NO_EVIDENCE was already set seven lines before this function is called; it simply was not
+     * read. [[feedback-silence-is-the-bug]]
+     */
     + (stand.length
         ? '<div class="big-n">' + stand.map(function (x) { return fig(x[0], x[1], x[2]); }).join('') + '</div>'
-        : '<p class="fine">Nothing measured here does. Every case on the board has been run and none is '
-          + 'failing — which is evidence, not a guarantee: it says nothing about what no case covers.</p>')
+        : REPORT_NO_EVIDENCE
+          ? '<p class="fine"><b>Everything below is zero because nothing has been run</b> — not because '
+            + 'it was tested and found clean. This report records what is intended, never what was observed.</p>'
+          : '<p class="fine">Nothing measured here does. Every case on the board has been run and none is '
+            + 'failing — which is evidence, not a guarantee: it says nothing about what no case covers.</p>')
     + (caveats.length
         ? '<ul class="caveat">' + caveats.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('')
           + '</ul>'
@@ -2416,7 +2428,10 @@ async function paintReport(){
      */
     + reportVerdictHTML(r);
 
-  r.sections.forEach(function (s) {
+  /* ⚠️ THE ONE UNGUARDED READ ON THIS PATH. Everything above uses `|| {}` / `|| []`; this did not, so an
+     envelope without `sections` throws AFTER #main was set to "Building the report…" — and the try/catch
+     above wraps only the await. The page would sit on that string for ever, saying it is working. */
+  (r.sections || []).forEach(function (s) {
     var b = s.body || {};
     var inner;
 
@@ -2943,7 +2958,18 @@ function matrixHTML(){
   });
 
   var pct = function(done, all){ return all ? Math.round((done / all) * 100) : 0; };
+  /**
+   * ⚠️⚠️ `all` ARRIVES undefined FOR A ZERO ROW, AND TWO CELLS LIED ABOUT IT. Removing `if (!rowAll[a]) return;`
+   * so an empty layer shows itself was right; passing `rowAll[a]` on unchanged was the other half. With
+   * `all === undefined`: `'<b>' + all` printed the literal **undefined**, and `(all - done)` was NaN — falsy —
+   * so Left printed `—` where the truth is 0. The Bridge row read
+   * "Built 8 · Total undefined · Done 0 · Left — · 0%" in the document that leaves the building.
+   * ⭐ pct() was already safe; only the two raw uses were not. A zero holds its place as a ZERO here, not as
+   * an em dash: `—` means "nobody has", and 0 of 0 is a fact. [[feedback-silence-is-the-bug]]
+   */
   var barCell = function(done, all){
+    done = Number(done) || 0;
+    all = Number(all) || 0;
     var q = pct(done, all);
     return '<td class="num"><b>' + all + '</b></td>'
       + '<td class="num">' + (done ? '<span class="big">' + done + '</span>' : '<span class="dim">0</span>') + '</td>'
