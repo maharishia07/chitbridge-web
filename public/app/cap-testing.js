@@ -5203,13 +5203,24 @@ function testWork() {
   inc.forEach(function (x) { if (x.found_by_case) (incBy[x.found_by_case] = incBy[x.found_by_case] || []).push(x); });
   req.forEach(function (q) { if (q.raised_from) (reqBy[q.raised_from] = reqBy[q.raised_from] || []).push(q); });
 
+  /**
+   * ⚠️⚠️ TWO PLACES HOLD "THE LATEST WORD PER CASE" AND ONLY ONE OF THEM IS ALWAYS LOADED. `CBTEST.last` is
+   * built by testLoad, which runs when the board is read; `CBTEST.scrRes` is fetched by testScrLoad, which the
+   * worklist FORCES on arrival. Reading only the first showed three passed cases as "To do" — a worklist that
+   * tells a tester to run something they have already run, which is the fastest way to make it ignored.
+   * ⭐ Whichever is there; `CBTEST.last` wins because it applies the worst-result rule.
+   */
+  var lastOf = {};
+  (CBTEST.scrRes || []).forEach(function (r) { if (r && r.case_key) lastOf[r.case_key] = r; });
+  Object.keys(CBTEST.last || {}).forEach(function (k) { lastOf[k] = CBTEST.last[k]; });
+
   var cases = (CBTEST.cases || []).concat(CBTEST.closedCases || []);
   cases.forEach(function (c) {
     var key = c.case_key || '';
     /* ⚠️ THE HAND-WRITTEN ONES ONLY. The board also holds 1,455 documented cases; putting them in the worklist
        would bury the nine things a person wrote today under a thousand they have never touched. */
     if (!/-H\d+$/.test(key)) return;
-    var last = (CBTEST.last || {})[key] || null;
+    var last = lastOf[key] || null;
     var mine = (incBy[key] || []).concat([]);
     var wants = (reqBy[key] || []).concat([]);
     mine.forEach(function (x) { used[x.definition_id] = 1; });
