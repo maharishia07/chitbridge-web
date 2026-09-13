@@ -133,3 +133,59 @@ test('[RETEST-02] the news actually reaches the other tab, and carries no findin
      fault, and the day it disagrees with the board nobody can say which is right. */
   expect(JSON.stringify(ev)).not.toContain('The bell should ring');
 });
+
+test('[RETEST-03] the raiser is shown the band, and the two verdicts, in the lab', async ({ page }) => {
+  test.setTimeout(300000);
+  await mintEntity(page, { fresh: true, name: 'Band ' + Date.now().toString().slice(-6) });
+  const token = await page.evaluate(() => SESSION.token);
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  /* raise it, then have it "fixed" — which is the state the whole surface exists for */
+  const r = await page.request.post(API + '/api/testing/incidents', {
+    headers: H, data: { observed: 'Cycle is not found in the catalogue search', severity: 'Sev-2',
+                        screen_code: 'CAT001' } });
+  expect(r.ok(), 'could not raise the incident').toBeTruthy();
+  const id = (await r.json()).definition_id;
+  const fix = await page.request.patch(API + '/api/testing/incidents/' + id, {
+    headers: H, data: { state: 'resolved', change: { sha: 'abc1234', repo: 'chitbridge-web' } } });
+  expect(fix.ok(), 'could not resolve it').toBeTruthy();
+
+  /* the mode switch, then the lab — the two doors a person actually goes through */
+  const sw = page.locator('[data-testid="vp-test"]');
+  await expect(sw).toBeVisible({ timeout: 45000 });
+  if (!((await sw.textContent()) || '').includes('on')) await sw.click();
+  await expect(sw).toContainText('on');
+  await page.locator('[data-testid="vp-lab"]').click();
+  await expect(page.locator('#cbtestpanel')).toBeVisible({ timeout: 30000 });
+  const modal = page.locator('#modalhost .modal');
+  if (await modal.count()) await page.locator('#modalhost .modal button').last().click();
+
+  /* ⚠ the all-states copy is what Findings reads, and only By-screen has ever fetched it */
+  await page.evaluate(() => testScrLoad());
+  await expect.poll(async () => page.evaluate(() => (CBTEST.scrInc || []).length), { timeout: 30000 })
+    .toBeGreaterThan(0);
+
+  const shown = await page.evaluate(() => {
+    CBTEST.view = 'hand';
+    /* ⚠ 'open' and 'to retest' are DIFFERENT shelves by design — a claimed fix is not open work and
+       not settled work. So the row itself is read from the shelf it is actually on. */
+    try { localStorage.setItem('cb_hand_filter', 'verify'); } catch (_) {}
+    const html = testHandHTML();
+    const inc = testFindings().filter((x) => x.kind === 'inc')[0] || {};
+    return { html: html, state: inc.state, byId: inc.byId, me: cbMeId() };
+  });
+
+  /* ⚠️ THE STATE IS THE WHOLE FAULT: if this reads 'closed', the fix has been rendered as a settled fact */
+  expect(shown.state, 'a resolved incident must read as "to retest", not as closed').toBe('verify');
+  expect(shown.byId, 'the row does not know who raised it, so nobody can be told').toBeTruthy();
+  expect(String(shown.byId)).toBe(String(shown.me));
+
+  /* ⭐ and it is not a filter somebody has to think to apply — it is a line above everything */
+  expect(shown.html).toContain('waiting for your retest');
+  expect(shown.html).toContain('yours to retest');
+  /* both verdicts, both one click — give a person only "Close" and a fix that did not work gets closed anyway */
+  expect(shown.html).toContain('Retested');
+  expect(shown.html).toContain('Still broken');
+  /* the account of what was done travels with the question */
+  expect(shown.html).toContain('abc1234');
+});
