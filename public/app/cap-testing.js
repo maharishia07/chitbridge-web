@@ -5333,8 +5333,11 @@ function testWorkHTML() {
            : all.filter(function (x) { return x.status === f; });
 
   var chip = TEST_CHIP;
-  var seg = function (id, label, count) {
-    return '<button data-testid="workf-' + id + '" onclick="testWorkFilter(\'' + id + '\')" style="' + chip
+  /* ⚠️ the two rows must be separately addressable: "Closed" is a shelf on the first row and a status on the
+     second, and one id for both is a control nothing outside the page can name unambiguously. */
+  var seg = function (id, label, count, row) {
+    return '<button data-testid="' + (row || 'workf') + '-' + id + '" '
+      + 'onclick="testWorkFilter(\'' + id + '\')" style="' + chip
       + (f === id ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">' + label
       + (count == null ? '' : ' <b>' + count + '</b>') + '</button>';
   };
@@ -5363,8 +5366,10 @@ function testWorkHTML() {
     /* the seven statuses, as counts you can press — this is the "where do I see the closed one" answer */
     + '<div style="margin:0 0 7px">'
     + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Status:</span>'
-    + TEST_WORK_ORDER.filter(function (k) { return n[k]; }).map(function (k) {
-        return seg(k, TEST_WORK[k].label, n[k]);
+    /* ⚠️ Closed is not repeated here — it is a shelf on the row above, and the same word twice on one
+       screen is the fault this whole afternoon was about */
+    + TEST_WORK_ORDER.filter(function (k) { return n[k] && k !== 'closed'; }).map(function (k) {
+        return seg(k, TEST_WORK[k].label, n[k], 'workst');
       }).join('')
     + '</div>';
 

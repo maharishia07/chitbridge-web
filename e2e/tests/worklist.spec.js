@@ -36,13 +36,13 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
   /* (a) three that pass */
   for (const k of ['CAT001-H01', 'CAT001-H02', 'CAT001-H03']) {
     await page.request.post(API + '/api/testing/results', { headers: H,
-      data: { results: [{ case_key: k, status: 'pass', run_kind: 'manual', layer: 'ui' }] } });
+      data: { results: [{ case_key: k, status: 'pass', run_kind: 'manual', layer: 'web' }] } });
   }
   /* (b) three that raise an incident */
   const incIds = [];
   for (const k of ['CAT001-H04', 'CAT001-H05', 'CAT001-H06']) {
     await page.request.post(API + '/api/testing/results', { headers: H,
-      data: { results: [{ case_key: k, status: 'fail', run_kind: 'manual', layer: 'ui' }] } });
+      data: { results: [{ case_key: k, status: 'fail', run_kind: 'manual', layer: 'web' }] } });
     const r = await page.request.post(API + '/api/testing/incidents', { headers: H,
       data: { observed: 'it is wrong on ' + k, severity: 'Sev-2', screen_code: 'CAT001', case_key: k } });
     incIds.push((await r.json()).definition_id);
@@ -102,7 +102,7 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
   expect(await page.locator('[data-testid="work-row"]').count(), 'still-open should be the other seven').toBe(7);
 
   /* ⚠️ and a passed row is not "done with" — it is passed, and it says so rather than vanishing */
-  await page.locator('[data-testid="workf-passed"]').click();
+  await page.locator('[data-testid="workst-passed"]').click();
   await page.waitForTimeout(1500);
   expect(await page.locator('[data-testid="work-row"]').count()).toBe(3);
 });
