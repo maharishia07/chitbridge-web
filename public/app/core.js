@@ -477,6 +477,84 @@ function _scrollKeyOf(el){
   return sel+'@'+idx;
 }
 function _scrollFind(key){ try{ var at=key.lastIndexOf('@'); if(key[0]==='#'||key[0]==='['||at<0) return document.querySelector(key); return document.querySelectorAll(key.slice(0,at))[Number(key.slice(at+1))]||null; }catch(_){ return null; } }
+/**
+ * ── ⭐⭐⭐ THE ERRORS THE PAGE THREW, KEPT ────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ A ReferenceError in a paint function is the exact fault that hid the Raised tab for a day: the screen
+ * shows something plausible and the only trace is in a console nobody has open. A tester is not going to
+ * press F12. So the page keeps its own last twenty, and they ride along on an incident.
+ *
+ * ⚠️ ALWAYS ON, unlike the call log — twenty short strings cost nothing, and the whole value is having them
+ * ALREADY when something goes wrong. A recorder you have to switch on before the bug is a recorder that
+ * misses the bug.
+ */
+(function () {
+  if (window.CBERRS) return;
+  window.CBERRS = [];
+  var keep = function (what, where) {
+    try {
+      window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400),
+        where: String(where || '').slice(0, 200) });
+      window.CBERRS.length = Math.min(window.CBERRS.length, 20);
+    } catch (_) {}
+  };
+  window.addEventListener('error', function (e) {
+    keep((e && e.message) || 'error', ((e && e.filename) || '') + ':' + ((e && e.lineno) || ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    keep((r && (r.message || r)) || 'rejected', 'promise');
+  });
+  /* ⚠ console.error is WRAPPED, never replaced: swallowing what the page logs would be worse than not
+     keeping it, and anything that breaks here must leave the original alone */
+  try {
+    var ce = console.error;
+    console.error = function () {
+      try { keep(Array.prototype.map.call(arguments, String).join(' '), 'console'); } catch (_) {}
+      return ce.apply(console, arguments);
+    };
+  } catch (_) {}
+})();
+
+/**
+ * ── ⭐⭐⭐ THE ERRORS THE PAGE THREW, KEPT ────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ A ReferenceError in a paint function is the exact fault that hid the Raised tab for a day: the screen
+ * shows something plausible and the only trace is in a console nobody has open. A tester is not going to
+ * press F12. So the page keeps its own last twenty, and they ride along on an incident.
+ *
+ * ⚠️ ALWAYS ON, unlike the call log — twenty short strings cost nothing, and the whole value is having them
+ * ALREADY when something goes wrong. A recorder you have to switch on before the bug is a recorder that
+ * misses the bug.
+ */
+(function () {
+  if (window.CBERRS) return;
+  window.CBERRS = [];
+  var keep = function (what, where) {
+    try {
+      window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400),
+        where: String(where || '').slice(0, 200) });
+      window.CBERRS.length = Math.min(window.CBERRS.length, 20);
+    } catch (_) {}
+  };
+  window.addEventListener('error', function (e) {
+    keep((e && e.message) || 'error', ((e && e.filename) || '') + ':' + ((e && e.lineno) || ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    var r = e && e.reason;
+    keep((r && (r.message || r)) || 'rejected', 'promise');
+  });
+  /* ⚠ console.error is WRAPPED, never replaced: swallowing what the page logs would be worse than not
+     keeping it, and anything that breaks here must leave the original alone */
+  try {
+    var ce = console.error;
+    console.error = function () {
+      try { keep(Array.prototype.map.call(arguments, String).join(' '), 'console'); } catch (_) {}
+      return ce.apply(console, arguments);
+    };
+  } catch (_) {}
+})();
+
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', ep.m + ' ' + key);
@@ -636,6 +714,64 @@ async function api(key, {params, query, body}={}){
           srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips),
           gen: window.CBGEN,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
+          /**
+           * ── ⭐⭐ WHAT WENT OUT, NOT ONLY WHAT CAME BACK ──────────────────────────────────────────────
+           *
+           * Athi, 2026-09-13: *"are we documenting the parameter which it has gone with? if so, can we
+           * make it a hyperlink, the real call statement can be seen… as I am not a techie, I am asking
+           * all these questions."*
+           *
+           * ⚠️ ONLY THE ANSWER WAS KEPT. The query string was in the path, but the BODY of a POST — the
+           * thing that actually says what was asked for — was never recorded. So a failed write could be
+           * seen to have failed and never be reproduced, which is the half that matters.
+           *
+           * ⚠️⚠️ AND IT IS REDACTED ON THE WAY IN. This log is attached to incidents and shown on screen,
+           * so a password, a PIN, an OTP or a token must never enter it. Redacted HERE rather than at the
+           * point of display, because a value that is never stored cannot leak from somewhere I forgot to
+           * look. [[project-ai-security-hardening]]
+           */
+          sent: (function () {
+            try {
+              if (body === undefined || body === null) return null;
+              var SECRET = /(pass|pin|otp|token|secret|auth|key|card|cvv)/i;
+              var clean = JSON.parse(JSON.stringify(body), function (k, v) {
+                return SECRET.test(k) ? '[redacted]' : v;
+              });
+              return JSON.stringify(clean).slice(0, 1200);
+            } catch (_) { return null; }
+          })(),
+          q: (function () { try { return query ? JSON.parse(JSON.stringify(query)) : null; }
+            catch (_) { return null; } })(),
+          at: Date.now(),
+          /**
+           * ── ⭐⭐ WHAT WENT OUT, NOT ONLY WHAT CAME BACK ──────────────────────────────────────────────
+           *
+           * Athi, 2026-09-13: *"are we documenting the parameter which it has gone with? if so, can we
+           * make it a hyperlink, the real call statement can be seen… as I am not a techie, I am asking
+           * all these questions."*
+           *
+           * ⚠️ ONLY THE ANSWER WAS KEPT. The query string was in the path, but the BODY of a POST — the
+           * thing that actually says what was asked for — was never recorded. So a failed write could be
+           * seen to have failed and never be reproduced, which is the half that matters.
+           *
+           * ⚠️⚠️ AND IT IS REDACTED ON THE WAY IN. This log is attached to incidents and shown on screen,
+           * so a password, a PIN, an OTP or a token must never enter it. Redacted HERE rather than at the
+           * point of display, because a value that is never stored cannot leak from somewhere I forgot to
+           * look. [[project-ai-security-hardening]]
+           */
+          sent: (function () {
+            try {
+              if (body === undefined || body === null) return null;
+              var SECRET = /(pass|pin|otp|token|secret|auth|key|card|cvv)/i;
+              var clean = JSON.parse(JSON.stringify(body), function (k, v) {
+                return SECRET.test(k) ? '[redacted]' : v;
+              });
+              return JSON.stringify(clean).slice(0, 1200);
+            } catch (_) { return null; }
+          })(),
+          q: (function () { try { return query ? JSON.parse(JSON.stringify(query)) : null; }
+            catch (_) { return null; } })(),
+          at: Date.now(),
           body: JSON.stringify(_out === undefined ? null : _out).slice(0, 1200) });
         CBCALLS.length = Math.min(CBCALLS.length, 40);
         /* ⚠ AND SAY SO. Recording without repainting is what made the spec panel look dead — the rows were

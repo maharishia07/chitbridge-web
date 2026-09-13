@@ -3429,7 +3429,11 @@ function testDiagHTML() {
   h += mine.map(function (c) {
     var ok = (c.status || 0) < 400;
     return '<tr style="border-top:1px solid var(--line-2,#efece4)">'
-      + '<td style="padding:4px 6px 4px 0"><code style="font-size:var(--fs-1)">' + testEsc(c.key) + '</code></td>'
+      + '<td style="padding:4px 6px 4px 0">'
+      +   '<button onclick="testCallOpen(' + "'" + testEsc(c.rid || '') + "'" + ')" '
+      +     'title="See the real call" style="font:inherit;font-size:var(--fs-1);background:none;'
+      +     'border:0;padding:0;cursor:pointer;color:var(--grey-2);text-decoration:underline;'
+      +     'text-underline-offset:2px"><code>' + testEsc(c.key) + '</code></button></td>'
       + '<td style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey-2);max-width:16em;'
       +   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + testEsc(c.path || '') + '">'
       +   testEsc(c.m + ' ' + (c.path || '')) + '</td>'
@@ -3441,7 +3445,11 @@ function testDiagHTML() {
         : '')
       + '<td style="text-align:end;padding:4px 6px;color:'
       +   (ok ? 'var(--ok-2,#1B7F4B)' : 'var(--disp,#B3261E)') + '">' + (c.status || '\u2014') + '</td>'
-      + '</tr>';
+      + '</tr>'
+      /* ⭐ the detail lands UNDER its own row, spanning the table, so the reading keeps its place */
+      + (CBTEST.openCall && CBTEST.openCall === c.rid
+        ? '<tr><td colspan="' + (srvKnown.length ? 5 : 4) + '">' + testCallDetailHTML(c) + '</td></tr>'
+        : '');
   }).join('');
   /* ⚠ the correlation id is the thing that joins this to the server's own line — quoted, never invented */
   h += '</table>'
@@ -3497,8 +3505,13 @@ function testDiagHTML() {
     + '<button class="btn" onclick="testDiagRaise()" style="font-size:var(--fs-2);padding:4px 10px">'
     + '\u270e Write this up</button>'
     + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
-    + 'fills the four boxes with these numbers \u2014 you still choose incident or requirement'
-    + '</span></div>';
+    + '<button class="btn" onclick="testDumpSave()" style="font-size:var(--fs-2);padding:4px 10px;'
+    +   'margin-inline-start:6px">\u1f4be Snapshot</button>'
+    + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+    + '<b>Write this up</b> fills the four boxes with these numbers \u2014 you still choose incident or '
+    + 'requirement. <b>Snapshot</b> saves one file with every call of this visit (what was asked, what was '
+    + 'sent, what came back), every error the page threw, and where you were \u2014 to attach to the report.'
+    + '</div></div>';
   return h;
 }
 
@@ -3528,6 +3541,124 @@ function testDiagHTML() {
  * ⭐ The route is named by its ASSET CODE (API007) as well as its path, so a finding here can be carried
  * straight into the register, the CMDB panel, and the Behind area — one identity for one file, everywhere.
  */
+/**
+ * ── ⭐⭐⭐ THE REAL CALL, WITHOUT OPENING THE BROWSER’S TOOLS ─────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"assume the trace tool in the browser itself can showcase, then we have to open that?
+ * as I am not a techie, I am asking all these questions, but you know better. Give the best."*
+ *
+ * ⭐⭐ THE BEST IS NOT TO SEND HIM TO DEVTOOLS. The Network tab has everything and it is the wrong answer:
+ * it is a different window, it only shows what happened AFTER it was opened, and none of it can be attached
+ * to an incident. Everything needed is already in `CBCALLS` — what was sent, what came back, the status,
+ * the correlation id, the server’s own time. A row that opens is a trace tool that a shopkeeper can use.
+ *
+ * ⚠️ THE RESPONSE IS CAPPED AT 1200 CHARACTERS and says so where it is cut. A pane that quietly truncates
+ * teaches you to believe a short answer was the whole answer.
+ */
+function testCallOpen(rid) {
+  CBTEST.openCall = (CBTEST.openCall === rid ? null : rid);
+  screenCasesPaint();
+}
+
+function testCallDetailHTML(c) {
+  var pre = 'margin:3px 0 0;padding:6px 8px;background:var(--paper,#faf8f3);'
+    + 'border:1px solid var(--line-2,#efece4);border-radius:7px;font-size:var(--fs-1);'
+    + 'white-space:pre-wrap;word-break:break-all;max-height:11em;overflow:auto';
+  var lab = function (t) { return '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+    + t + '</div>'; };
+
+  var h = '<div style="padding:6px 2px 9px">';
+  h += lab('Asked for') + '<div style="' + pre + '">' + testEsc(c.m + ' ' + (c.path || '')) + '</div>';
+  if (c.q && Object.keys(c.q).length) {
+    h += lab('Parameters') + '<div style="' + pre + '">' + testEsc(JSON.stringify(c.q, null, 1)) + '</div>';
+  }
+  if (c.sent) {
+    h += lab('Sent (secrets removed)') + '<div style="' + pre + '">' + testEsc(c.sent) + '</div>';
+  }
+  if (c.body) {
+    h += lab('Came back' + (c.body.length >= 1200 ? ' \u2014 first 1200 characters only' : ''))
+      + '<div style="' + pre + '">' + testEsc(c.body) + '</div>';
+  }
+  h += lab('Identity')
+    + '<div style="' + pre + '">' + testEsc('id ' + (c.rid || '\u2014')
+        + '  \u00b7  status ' + (c.status || '\u2014')
+        + '  \u00b7  ' + (c.ms || 0) + ' ms total'
+        + (c.srv != null ? '  \u00b7  ' + c.srv + ' ms in the server' : '')
+        + (c.trips != null ? '  \u00b7  ' + c.trips + ' database trip(s)' : '')
+        + (c.at ? '  \u00b7  ' + new Date(c.at).toTimeString().slice(0, 8) : '')) + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:4px">'
+    + 'The server logged the same id \u2014 quote it and the two records join up.</div>';
+  return h + '</div>';
+}
+
+/**
+ * ── ⭐⭐⭐ THE THING A TANDEM WOULD HAVE CALLED A DUMP ────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"I have seen in Tandem machines, when a failure happens or when I want to take a
+ * snapshot of the issue, it takes the memory dump, and I can just play the memory dump to see where the
+ * issue is. Are we having such a facility?"*
+ *
+ * ⚠️ NOT A MEMORY DUMP, AND CALLING IT ONE WOULD BE A LIE. A browser cannot hand over its heap, and even if
+ * it could, nothing here could replay it. What a Tandem dump actually GAVE you was everything the machine
+ * knew at the moment it fell over, in one file, without asking the operator to have been watching. That
+ * part is entirely buildable and this is it:
+ *
+ *   every call of this visit — asked for, sent, came back, status, timings, correlation id
+ *   every error the page threw, including the ones nobody had a console open for
+ *   where and when — screen, route, build, browser, viewport, the clock
+ *   what the app thought it was showing — the current record and selection, not the whole heap
+ *
+ * ⭐ ONE FILE, ATTACHED TO THE INCIDENT. "Playing it back" is opening it: it is JSON, every line is a fact
+ * with a time against it, and it can be read six months later by someone who was not there.
+ *
+ * ⚠️ WHAT IT IS NOT: a session replay. Watching the tester’s clicks back as a film needs a recorder running
+ * all the time, and that is a different order of cost and of consent. Written up rather than half-built.
+ */
+function testDumpBuild() {
+  var gen = window.CBGEN || 0;
+  var all = (window.CBCALLS || []).filter(function (c) {
+    return !/^\/api\/testing/i.test(String(c.path || ''));
+  });
+  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
+  var env = (typeof testEnv === 'function') ? testEnv() : {};
+  var ui = {};
+  try {
+    ui = { nav: (typeof UI !== 'undefined' ? UI.nav : null),
+           selected: (typeof UI !== 'undefined' ? (UI.sel || null) : null),
+           state: (typeof UI !== 'undefined' ? (UI.state || null) : null),
+           rows: (typeof UI !== 'undefined' && UI.rows ? UI.rows.length : null) };
+  } catch (_) {}
+  return {
+    what: 'ChitBridge failure snapshot \u2014 everything the page knew at this moment',
+    taken_at: new Date().toISOString(),
+    screen: CBTEST.popupFor || null,
+    where: env,
+    visit: gen,
+    app: ui,
+    errors: (window.CBERRS || []).slice(0, 20),
+    calls: mine.map(function (c) {
+      return { at: c.at ? new Date(c.at).toISOString() : null, key: c.key, method: c.m, path: c.path,
+        params: c.q || null, sent: c.sent || null, status: c.status, ms: c.ms,
+        server_ms: c.srv, db_trips: c.trips, correlation_id: c.rid, came_back: c.body || null };
+    }),
+  };
+}
+
+/** ⚠️ a download, not a new tab: a tab of JSON is something to squint at, a file is something to attach */
+function testDumpSave() {
+  try {
+    var blob = new Blob([JSON.stringify(testDumpBuild(), null, 1)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'snapshot-' + (CBTEST.popupFor || 'screen') + '-'
+      + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '') + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 30000);
+    if (typeof toast === 'function') toast('Snapshot saved \u2014 attach it to the incident.');
+  } catch (e) { if (typeof toast === 'function') toast('Could not build the snapshot.'); }
+}
+
 function testDiagByApi() {
   var all = (window.CBCALLS || []).filter(function (c) {
     return !/^\/api\/testing/i.test(String(c.path || ''));
