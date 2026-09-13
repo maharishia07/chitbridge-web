@@ -901,6 +901,41 @@ async function apiOnce(key, {params, query, body}={}){
          * is the network. Both are null unless CB_TRIPS=1 on the API — and the panel says so rather than
          * drawing an empty column and letting it read as "no time spent there".
          */
+        /**
+         * ── ⭐⭐ THE LAYERS, FROM THE BROWSER ITSELF ─────────────────────────────────────────────────────
+         *
+         * `performance.getEntriesByName(url)` carries the whole shape of one request. Read here rather than
+         * computed: nothing in this codebase could time a TLS handshake, and the browser already did.
+         *
+         * ⚠️ `requestStart === 0` MEANS NOT PERMITTED, NOT INSTANT. Cross-origin, every field is zeroed
+         * unless the server sent `Timing-Allow-Origin`. Recording those zeros as measurements would put a
+         * confident "0 ms of encryption" on the screen. So the absence is carried as `blocked` and the panel
+         * says why.
+         *
+         * ⭐ AND THE HANDSHAKE IS PAID ONCE. DNS, TCP and TLS are zero on every call after the first, because
+         * the connection is reused — which is the answer to "is encryption making us slow": it is not, after
+         * the first call of the session, and the panel says so rather than leaving someone to chase it.
+         */
+        var _rt = null;
+        try {
+          var _es = performance.getEntriesByName(url);
+          var _e = (_es && _es.length) ? _es[_es.length - 1] : null;
+          if (_e && _e.responseEnd) {
+            if (!_e.requestStart) { _rt = { blocked: true }; }
+            else {
+              var _tlsAt = _e.secureConnectionStart || 0;
+              _rt = {
+                dns: Math.max(0, Math.round(_e.domainLookupEnd - _e.domainLookupStart)),
+                tcp: Math.max(0, Math.round((_tlsAt > 0 ? _tlsAt : _e.connectEnd) - _e.connectStart)),
+                tls: _tlsAt > 0 ? Math.max(0, Math.round(_e.connectEnd - _tlsAt)) : 0,
+                wait: Math.max(0, Math.round(_e.responseStart - _e.requestStart)),
+                down: Math.max(0, Math.round(_e.responseEnd - _e.responseStart)),
+                bytes: _e.transferSize || 0,
+                raw: _e.decodedBodySize || 0,
+              };
+            }
+          }
+        } catch (_) {}
         var _srv = null, _trips = null;
         try {
           var _h = res.headers;
@@ -908,7 +943,7 @@ async function apiOnce(key, {params, query, body}={}){
           _trips = _h && _h.get('X-DB-Trips') != null ? Number(_h.get('X-DB-Trips')) : null;
         } catch (_) {}
         CBCALLS.unshift({ key, m: ep.m, path: pathQ, status: res.status, rid: _rid, scr: _scr,
-          srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips),
+          srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips), rt: _rt,
           gen: window.CBGEN,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
           /**

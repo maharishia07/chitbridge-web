@@ -3670,6 +3670,7 @@ function testDiagHTML() {
   }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
+  h += testDiagLayersHTML(mine);
   h += testDiagByApi();
   h += testDiagByScreen();
 
@@ -3855,6 +3856,90 @@ function testDiagClearBtn() {
     + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
     + 'throws away every recorded call and this screen\u2019s earlier visits, so the next reading is only '
     + 'what you do next</span></div>';
+}
+
+/**
+ * ── ⭐⭐⭐ WHERE THE TIME ACTUALLY WENT ───────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"do we know why it takes more time — for example network speed, wifi speed, encryption
+ * and so on? All the layers?"*
+ *
+ * Every figure here is READ, not derived from a guess. The browser times each request; the server reports its
+ * own share; the difference between them is the wire, and that subtraction is the only arithmetic in it.
+ *
+ *   FINDING THE ADDRESS   DNS. Once per session, then cached.
+ *   OPENING THE LINE      TCP. Once per connection.
+ *   AGREEING THE KEYS     the TLS handshake — THIS is what "encryption" costs, and it is also once per
+ *                         connection. Encrypting the bytes themselves is not measurable here and is not the
+ *                         cost people imagine it is.
+ *   WAITING               first byte back, minus what the server says it spent. This is the distance.
+ *   RECEIVING             the download, and how many bytes it was.
+ *
+ * ⚠️⚠️ THE FIRST CALL PAYS FOR THE CONNECTION AND THE REST RIDE ON IT. Reading a per-call average of DNS or
+ * TLS would suggest every request pays a handshake, which would send somebody optimising the one thing here
+ * that is already free. The setup is shown as a ONE-OFF TOTAL and labelled as such.
+ *
+ * ⚠️ AND IT SAYS WHEN IT CANNOT SEE. Cross-origin these fields are zeroed unless the API sends
+ * `Timing-Allow-Origin` — a zero would read as "no time spent there", the same trap the server timings were
+ * in this morning.
+ */
+function testDiagLayersHTML(mine) {
+  var seen = mine.filter(function (c) { return c.rt && !c.rt.blocked; });
+  var blocked = mine.some(function (c) { return c.rt && c.rt.blocked; });
+  if (!seen.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);margin-top:10px">'
+      + (blocked
+        ? '\u26a0\ufe0f The browser will not show the layers to this page. The API must send '
+          + '<code>Timing-Allow-Origin</code> for this origin \u2014 without it DNS, connection, encryption and '
+          + 'download all read zero, which is not the same as free.'
+        : 'No per-layer timing recorded for this visit yet.') + '</div>';
+  }
+
+  var sum = function (f) { return seen.reduce(function (a, c) { return a + (c.rt[f] || 0); }, 0); };
+  var setup = sum('dns') + sum('tcp') + sum('tls');
+  var wait = sum('wait');
+  var down = sum('down');
+  var srv = seen.reduce(function (a, c) { return a + (c.srv || 0); }, 0);
+  var net = Math.max(0, wait - srv);
+  var bytes = sum('bytes');
+  var raw = sum('raw');
+
+  /* ⚠ the handshake is counted once per connection, so it is reported as a total and never as an average */
+  var firstTls = sum('tls'), firstDns = sum('dns'), firstTcp = sum('tcp');
+
+  var row = function (label, ms, note, colour) {
+    return '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+      + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)">' + label
+      +   '<span style="display:block;font-size:var(--fs-1);color:var(--note)">' + note + '</span></td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:700'
+      +   (colour ? ';color:' + colour : '') + '">' + ms + ' ms</td></tr>';
+  };
+
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+    + 'text-transform:uppercase;margin:14px 0 3px">Where the time went</div>'
+    + '<table style="width:100%;border-collapse:collapse">'
+    + row('Finding the address', firstDns, 'DNS \u00b7 once per session, then cached', null)
+    + row('Opening the line', firstTcp, 'TCP \u00b7 once per connection', null)
+    + row('Agreeing the keys', firstTls, 'the TLS handshake \u2014 this is what encryption costs, and it is '
+        + 'paid once per connection, not per call', null)
+    + row('Waiting \u00b7 the server', srv, 'what the API says it spent inside itself',
+        srv > net ? 'var(--disp,#B3261E)' : null)
+    + row('Waiting \u00b7 the distance', net, 'first byte back, less the server\u2019s own time \u2014 the wire, the '
+        + 'wifi and everything between', net > srv ? 'var(--disp,#B3261E)' : null)
+    + row('Receiving', down, bytes ? (Math.round(bytes / 1024) + ' KB over the wire'
+        + (raw > bytes ? ', ' + Math.round(raw / 1024) + ' KB after unzipping' : '')) : 'the download', null)
+    + '</table>';
+
+  /* ⭐ the reading in a sentence, because a table of five numbers still needs somebody to draw the conclusion */
+  var verdict = (setup > srv + net + down) ? 'Most of it was setting up the connection \u2014 that is a first-call '
+        + 'cost and the calls after it ride free.'
+    : (net > srv * 1.5) ? 'Most of it is DISTANCE, not work. Fewer round trips will help; a faster query will '
+        + 'barely show.'
+    : (srv > net * 1.5) ? 'Most of it is the SERVER thinking. Batching will barely help here \u2014 look at the '
+        + 'query.'
+    : 'Server time and network time are close, so neither one alone explains it.';
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:5px">' + verdict + '</div>';
+  return h;
 }
 
 function testDiagByApi() {
