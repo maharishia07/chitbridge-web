@@ -3442,7 +3442,7 @@ function testRaisedHTML(code) {
       + '</div>'
       + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
       + (x.state === 'raised'
-        ? '<button class="btn" style="margin-top:4px;font-size:var(--fs-1)" onclick="testIncSet(\''
+        ? '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px" onclick="testIncSet(\''
           + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>' : '')
       + '</div>';
   }).join('');
