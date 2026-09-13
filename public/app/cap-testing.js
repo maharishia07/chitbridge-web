@@ -82,6 +82,33 @@
  */
 var TEST_SURFACE = { capture: 'Test Capture', manager: 'Test Manager', report: 'Test Report' };
 
+/**
+ * ── ⭐⭐ THE TOOL HAS A SCREEN ID TOO, AND IT ALREADY HAD ONE ──────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"Test Capture screen — for that we need a screen id?"*
+ *
+ * ⭐ IT HAS HAD ONE SINCE THE REGISTER WAS SWEPT. `PNL007` is the panel that opens on a screen and `PNL004`
+ * is the board; they were minted with the rest and the tools simply never wore them. So an incident about
+ * the testing tool itself can be filed against a code, exactly like an incident about the catalogue — which
+ * is the whole point of a register that does not stop at the product.
+ *
+ * ⚠️⚠️ AND THE REGISTER KEEPS THE NAME IT MINTED UNDER, not the name on screen. Renaming "Test lab" to
+ * "Test Manager" in screens.cjs was tried and reverted inside a minute: the code is keyed by the PATH, so
+ * it did not rename PNL004, it WITHDREW it and minted PNL009 — and every case citing PNL004 would have
+ * pointed at a withdrawn code, silently. What a person sees lives here; what a case cites lives there.
+ */
+function testToolCode(path) {
+  try {
+    var m = (window.CBSCREENS && CBSCREENS.byPath) || {};
+    return m[path] || '';
+  } catch (_) { return ''; }
+}
+function testToolTag(name, path) {
+  var c = testToolCode(path);
+  return '\ud83e\uddea ' + name
+    + (c ? ' <code style="font-size:var(--fs-1);font-weight:400;color:var(--note)">' + c + '</code>' : '');
+}
+
 /** ⭐ ONE WAY TO SAY WHICH SCREEN, EVERYWHERE: the ID first, because that is the part that travels. */
 function testScreenLabel(code, name) {
   var n = name || (typeof codeName === 'function' ? (codeName(code) || '') : '');
@@ -832,7 +859,8 @@ function testPaint() {
     + 'color:var(--ink-2,#3a4048)';
   var hd = ''
     + '<div style="display:flex;align-items:center;gap:6px">'
-    +   '<b style="font-size:var(--fs-3);white-space:nowrap">🧪 ' + TEST_SURFACE.manager + '</b>'
+    +   '<b style="font-size:var(--fs-3);white-space:nowrap">'
+    +     testToolTag(TEST_SURFACE.manager, 'Panel \u203a Test lab') + '</b>'
     +   '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">everything, '
     +     'collected</span>'
     +   '<span style="flex:1 1 auto;min-width:8px"></span>'
@@ -4573,7 +4601,8 @@ function testDiagHTML() {
   }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
-  h += testTraceHTML();
+  /* ⚠️ the trace control moved into the bar at the top (testTraceChip) — it was rendering here, in the
+     middle of the numbers, at three different heights depending on what it had loaded. */
   h += testDiagLayersHTML(mine);
   h += testDiagByApi();
   h += testDiagByScreen();
@@ -4793,6 +4822,9 @@ function testDiagBarHTML() {
     +     'title="Throw away this screen’s readings only">⟲ Clear this screen</button>'
     +   '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + chip + undo + '" '
     +     'title="Throw away every screen’s readings and start again">⟲ Clear everything</button>'
+    /* ⭐ pushed to the end of the row: it is a SETTING, not one of the four things you do here — and it is
+       in the same slot whether it is off, on, or still being read */
+    +   '<span style="float:inline-end">' + testTraceChip() + '</span>'
     + '</div>'
     /* ⭐ one line, saying what each does — Athi asked for "clear instruction", and a chip with only an icon
        is a control you have to press to find out what it was */
@@ -4855,7 +4887,13 @@ function testTraceLoad() {
   CBTEST._traceReq = 1;
   api('testTraceGet').then(function (r) {
     CBTEST._traceReq = 0;
+    /**
+     * ⚠️ THE SERVER SENDS SECONDS REMAINING, WHICH IS TRUE FOR ONE INSTANT. Held as a duration it stops
+     * being true the moment it is held, and the chip would go on saying "10 minutes left" an hour later.
+     * ⭐ Turned into a DEADLINE here, once, and every reader subtracts from the clock instead.
+     */
     CBTEST.trace = r || { on: false };
+    if (CBTEST.trace.on) CBTEST.trace.until = Date.now() + ((CBTEST.trace.seconds || 0) * 1000);
     if (CBTEST.popupFor) screenCasesPaint();
   }).catch(function () { CBTEST._traceReq = 0; });
 }
@@ -4864,6 +4902,10 @@ function testTraceSet(minutes) {
   var body = minutes ? { minutes: minutes } : { off: true };
   api('testTraceSet', { body: body }).then(function (r) {
     CBTEST.trace = r || { on: false };
+    if (CBTEST.trace.on) {
+      CBTEST.trace.until = Date.now()
+        + (((CBTEST.trace.seconds != null) ? CBTEST.trace.seconds : (CBTEST.trace.minutes || 10) * 60) * 1000);
+    }
     if (typeof toast === 'function') {
       toast(r && r.on ? ('Tracing your calls for ' + (r.minutes || 10) + ' minutes.')
                       : 'Tracing off.');
@@ -4871,6 +4913,74 @@ function testTraceSet(minutes) {
     if (CBTEST.popupFor) screenCasesPaint();
   }).catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
 }
+
+/**
+ * ── ⭐⭐⭐ ONE CHIP, ALWAYS IN THE SAME PLACE, COLOURED WHEN IT IS ON ───────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"it was gone and then reappearing when I clear the data and measure. Can we keep it as
+ * a stable one on the top right corner? Also if it is enabled, colour it so we know which one is enabled and
+ * how long remains."*
+ *
+ * ⚠️⚠️ AND IT WAS WORSE THAN MOVING — IT WAS ABSENT ON THE FIRST PAINT. `testTraceHTML` returned an empty
+ * string while the state was still being read, then a paragraph once it arrived, then a different paragraph
+ * once tracing was on. Three heights in three seconds, in the middle of a page of numbers. A control that
+ * moves is a control you have to hunt for; a control that is sometimes not there at all is one you stop
+ * believing in.
+ *
+ * ⭐ SO IT IS A CHIP IN THE BAR, at the end, in the same place whatever the state — including WHILE IT IS
+ * BEING READ, which is the state that used to render nothing. Off: quiet, with the three durations beside
+ * it. On: green, counting down, with Stop.
+ *
+ * ⚠️ THE COUNTDOWN IS COMPUTED FROM A DEADLINE, and ticks by rewriting ONE element rather than repainting
+ * the area — a repaint every thirty seconds would fight anybody typing in the form behind it, which is the
+ * fault this file has already had twice. [[feedback-repaint-locally]]
+ */
+function testTraceLeft() {
+  var t = CBTEST.trace;
+  if (!t || !t.on || !t.until) return 0;
+  return Math.max(0, Math.round((t.until - Date.now()) / 60000));
+}
+
+function testTraceChip() {
+  var t = CBTEST.trace;
+  var chip = 'font:inherit;font-size:var(--fs-1);padding:3px 11px;border:0;border-radius:11px;'
+    + 'cursor:pointer;margin-inline-start:4px;margin-bottom:4px;white-space:nowrap;';
+  var flat = 'font:inherit;font-size:var(--fs-1);padding:3px 9px;border:0;border-radius:11px;'
+    + 'margin-inline-start:4px;white-space:nowrap;background:var(--neutral-tint,#f2efe6);'
+    + 'color:var(--note,#8a8378)';
+
+  /* ⚠ the reading state has a chip too, in the same slot, so nothing moves when the answer lands */
+  if (!t) { testTraceLoad(); return '<span style="' + flat + '">\u23f1 Server timings\u2026</span>'; }
+
+  if (t.on) {
+    var left = testTraceLeft();
+    return '<span data-testid="trace-on" id="cbtracechip" style="' + flat
+      + ';background:var(--ok-2,#1B7F4B);color:#fff;font-weight:700" '
+      + 'title="Every call is reporting what it spent inside the server, and how many database trips it '
+      + 'made. Only your own calls.">\u23f1 Timings ON \u00b7 ' + left + ' min left</span>'
+      + '<button data-testid="trace-off" onclick="testTraceSet(0)" style="' + chip
+      + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)" '
+      + 'title="Stop timing now">Stop</button>';
+  }
+
+  return '<span data-testid="trace-off-now" style="' + flat + '" '
+    + 'title="Turn them on and each call shows what it spent inside the server and how many database '
+    + 'trips it made. It stops by itself, and only your own calls are timed.">\u23f1 Timings off</span>'
+    + [10, 15, 30].map(function (m) {
+        return '<button data-testid="trace-' + m + '" onclick="testTraceSet(' + m + ')" style="' + chip
+          + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)">' + m + ' min</button>';
+      }).join('');
+}
+
+/** ⚠️ rewrites the one element; never repaints, so it cannot eat what somebody is typing */
+function testTraceTick() {
+  try {
+    var el = document.getElementById('cbtracechip');
+    if (!el) return;
+    el.textContent = '\u23f1 Timings ON \u00b7 ' + testTraceLeft() + ' min left';
+  } catch (_) {}
+}
+try { setInterval(testTraceTick, 30000); } catch (_) {}
 
 function testTraceHTML() {
   var t = CBTEST.trace;
@@ -5327,9 +5437,18 @@ function screenCasesPaint() {
     };
     head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
       + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-      +   '\ud83e\uddea ' + TEST_SURFACE.capture + '</b>'
+      /**
+       * ⚠️ TWO IDENTITIES ON ONE LINE, AND THEY RAN TOGETHER. Athi: *"immediately it shows the area which
+       * one you are operating on — possibly we have to give some space or hyphen, some differentiator."*
+       * `Test Capture CAT001 · Catalogue` reads as one four-part name. It is TWO things: the tool (PNL007),
+       * and the screen it is pointed at. So there is a divider, real space, and the tool goes quiet once you
+       * know where you are — the screen is the part that changes.
+       */
+      +   testToolTag(TEST_SURFACE.capture, 'Panel \u203a Test cases for this screen') + '</b>'
+      +   '<span aria-hidden="true" style="color:var(--line,#e7e3d8);padding:0 4px">\u2502</span>'
       +   '<span style="font-size:var(--fs-2);white-space:nowrap;overflow:hidden;'
-      +     'text-overflow:ellipsis">' + testScreenLabel(code, name) + '</span>'
+      +     'text-overflow:ellipsis" title="the screen this is about">'
+      +     testScreenLabel(code, name) + '</span>'
       + '<span style="flex:1 1 auto"></span>'
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
       + '</div>'

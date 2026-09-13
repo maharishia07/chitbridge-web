@@ -793,7 +793,8 @@ window.CBSCREENS = {
   "Control › Inside a screen › Testing • Looking at it": "CTL434",
   "Control › Inside a screen › Testing • Re-grade it": "CTL435",
   "Control › Inside a screen › Testing • Record": "CTL436",
-  "Panel › Test cases for this screen": "PNL007"
+  "Panel › Test cases for this screen": "PNL007",
+  "Popup › testAsk": "POP085"
  },
  "rows": [
   {
@@ -7098,6 +7099,17 @@ window.CBSCREENS = {
    "since": "2026-09-12",
    "reached_from": null,
    "walk": 573
+  },
+  {
+   "code": "POP085",
+   "path": "Popup › testAsk",
+   "group": "Popup",
+   "screen": "testAsk",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-13",
+   "reached_from": null,
+   "walk": 574
   }
  ],
  "byFn": {
@@ -7520,6 +7532,11 @@ window.CBSCREENS = {
    "code": "POP084",
    "file": "cap-worklist.js",
    "ambiguous": true
+  },
+  "testAsk": {
+   "code": "POP085",
+   "file": "cap-testing.js",
+   "ambiguous": false
   }
  },
  "byPanel": {
@@ -7641,6 +7658,20 @@ window.CBSCREENS = {
    "path": "Panel › casespanel",
    "since": "2026-09-12",
    "until": "2026-09-12",
+   "why": "no longer in the product"
+  },
+  {
+   "code": "PNL008",
+   "path": "Panel › Test Capture",
+   "since": "2026-09-13",
+   "until": "2026-09-13",
+   "why": "no longer in the product"
+  },
+  {
+   "code": "PNL009",
+   "path": "Panel › Test Manager",
+   "since": "2026-09-13",
+   "until": "2026-09-13",
    "why": "no longer in the product"
   }
  ]
