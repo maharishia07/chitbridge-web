@@ -103,10 +103,12 @@ function testToolCode(path) {
     return m[path] || '';
   } catch (_) { return ''; }
 }
+/** \u2b50 ID FIRST, exactly like a screen \u2014 PNL007 Test Capture, CAT001 \u00b7 Catalogue. One rule, both kinds of thing. */
 function testToolTag(name, path) {
   var c = testToolCode(path);
-  return '\ud83e\uddea ' + name
-    + (c ? ' <code style="font-size:var(--fs-1);font-weight:400;color:var(--note)">' + c + '</code>' : '');
+  return '\ud83e\uddea '
+    + (c ? '<code style="font-size:var(--fs-1);font-weight:700;color:var(--note)">' + c + '</code> ' : '')
+    + name;
 }
 
 /** ⭐ ONE WAY TO SAY WHICH SCREEN, EVERYWHERE: the ID first, because that is the part that travels. */
@@ -5661,25 +5663,29 @@ function screenCasesPaint() {
     };
     head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
       /**
-       * ── ⚠️⚠️ TWO IDENTITIES ON ONE LINE: WHERE YOU ARE, THEN WHAT YOU ARE DOING THERE ────────────────────
+       * ── ⚠️⚠️⚠️ TWO IDENTITIES, OPPOSITE ENDS: THE FIXED ONE LEFT, THE CHANGING ONE RIGHT ─────────────────
        *
-       * Athi, twice. First: *"immediately it shows the area which one you are operating on — possibly we
-       * have to give some space or hyphen, some differentiator."* "Test Capture CAT001 · Catalogue" read as
-       * one four-part name; it is TWO things, so there is a divider and real space between them.
+       * Athi, three times, and I got it wrong twice. First: *"immediately it shows the area which one you are
+       * operating on — possibly we have to give some space or hyphen, some differentiator."* I added a
+       * divider. Then: *"screen name is coming after Test Capture, it has to be before that as per standard."*
+       * I read that as a breadcrumb and swapped the order. Then, with a picture: *"it has to be PNL007 Test
+       * Capture, then lot of space middle, CAT001 Catalogue — this CAT001 Catalogue keeps changing according
+       * to the screen we trace, but the screen Test Capture remains the same."*
        *
-       * Then: *"screen name is coming after Test Capture, it has to be before that as per standard."* Right,
-       * and it is the ordinary breadcrumb rule — broad to narrow, context before action. "Catalogue › Test
-       * Capture", the way a browser tab reads "Page — App" and never the reverse. The screen is the part
-       * that CHANGES and the part somebody is looking for; the tool is the same whichever screen you opened
-       * it from, so it goes second, and goes quiet.
+       * ⭐ WHICH IS NOT A BREADCRUMB AT ALL, AND HE IS RIGHT. A breadcrumb says how you got here; this line
+       * says two different KINDS of thing. `PNL007 Test Capture` is what this panel IS — the same on every
+       * screen, so it anchors the left edge and the eye stops checking it. `CAT001 · Catalogue` is what it is
+       * POINTED AT — it changes every time, so it sits apart, at the other end, where a changing value belongs.
+       * Space is the separator; a divider glyph between them was making them look like one path.
+       *
+       * ⚠️ ID FIRST ON BOTH, because that is the half that travels into a report unchanged.
        */
       + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-      +   testScreenLabel(code, name) + '</b>'
-      +   '<span aria-hidden="true" style="color:var(--line,#e7e3d8);padding:0 3px">›</span>'
-      +   '<span style="font-size:var(--fs-2);color:var(--grey-2);white-space:nowrap;overflow:hidden;'
-      +     'text-overflow:ellipsis" title="the tool you are in">'
-      +     testToolTag(TEST_SURFACE.capture, 'Panel › Test cases for this screen') + '</span>'
-      + '<span style="flex:1 1 auto"></span>'
+      +   testToolTag(TEST_SURFACE.capture, 'Panel › Test cases for this screen') + '</b>'
+      + '<span style="flex:1 1 auto;min-width:18px"></span>'
+      + '<span style="font-size:var(--fs-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" '
+      +   'title="the screen this is pointed at — it changes as you move">'
+      +   testScreenLabel(code, name) + '</span>'
       + '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">'
       +   testReadAt() + '</span>'
       + testRefreshBtn(ico)

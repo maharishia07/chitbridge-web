@@ -37,9 +37,12 @@ test('[AVAIL-01] the count is the shop, and the chip reaches the shop', async ({
   for (let start = 0; start < total; start += 100) {
     const items = [];
     for (let i = start; i < Math.min(start + 100, total); i++) {
-      /* ⭐ the unavailable ones are at the END, past the first page, which is the whole point: counting the
-         page would find NONE of them, and "0 not available" reads as a tidy shop rather than a wrong number */
-      const off = i >= PAGE;
+      /**
+       * ⭐ the unavailable ones are the OLDEST, so they fall past the first page — the list is
+       * ORDER BY created_at DESC, newest first. The spec caught me seeding them last and finding all forty
+       * on page one, which is the same slice-versus-whole confusion the product had.
+       */
+      const off = i < MORE;
       items.push({ name: 'Item ' + i, price: 10, unit: 'NOS', status: off ? 'discontinued' : 'available' });
     }
     const r = await page.request.post(API + '/api/products/bulk', { headers: H, data: { items: items } });
