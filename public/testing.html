@@ -580,9 +580,25 @@
   table.mtx td.num .dim{ font-size:var(--fs-2); }
   /* ⭐ the area and what it means on ONE line — the description was a second line on every row, which doubled
      the height of the table to repeat what a tooltip already says */
-  table.mtx td.areacell{ white-space:nowrap; }
-  table.mtx .areacell .area{ font-size:var(--fs-2); font-weight:700; }
-  table.mtx .areacell .what{ font-size:var(--fs-1); color:var(--grey-2); margin-inline-start:7px; font-weight:400; }
+  /**
+   * ── ⭐⭐ THE NAME AND WHAT IT IS ARE TWO LINES, NOT ONE RUN-ON ─────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"can you bring after - or : to the next line, make it distinct, so the entire panel
+   * comes within a single page, no scrolling."*
+   *
+   * ⚠️ `white-space:nowrap` ON A CELL CONTAINING A SENTENCE. "Engine  The rules themselves — money, tax,
+   * offers, numerals, document numbers. Provable with no database and no screen." was forced onto ONE
+   * unbreakable line, so the first column claimed ~1000px and pushed ten numeric columns off the right edge
+   * behind a horizontal scrollbar. The fix is not a wider table — it is letting the sentence wrap.
+   *
+   * ⭐ The name keeps nowrap (it is a label and must not break); the description becomes a BLOCK on the next
+   * line and wraps inside a bounded column. The table then fits without scrolling, which is what was asked
+   * for — the width was never the numbers' fault.
+   */
+  table.mtx td.areacell{ white-space:normal; max-width:26em; }
+  table.mtx .areacell .area{ font-size:var(--fs-2); font-weight:700; white-space:nowrap; }
+  table.mtx .areacell .what{ display:block; font-size:var(--fs-1); color:var(--grey-2);
+        font-weight:400; line-height:1.45; margin-top:2px; }
   /* ⭐ the one figure a person outside this desk asks for, in the header, where it cannot be confused with */
   /*    the filtered numbers beside the filters — because there are no other numbers up there any more */
   .tally .pcwrap{ display:inline-flex; align-items:center; gap:5px; }
