@@ -81,6 +81,23 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
     .toBeGreaterThan(0);
   await page.evaluate(() => testPaint());
 
+  /**
+   * ── ⭐ THE BOARD OFFERS TWO SEGMENTS AND A DROPDOWN, NOT SEVEN EQUAL TABS ─────────────────────────────
+   * Worklist and List are what a tester opens this panel for; the other five are places you go to look at
+   * one thing. Seven equal segments asked a seven-way question whose answer was one of two.
+   * ⚠️ And the select must SAY WHERE YOU ARE — landing in one of the five with neither segment lit and a
+   * dropdown still reading "More …" would be a panel that has lost track of itself.
+   */
+  await expect(page.locator('[data-testid="view-work"]')).toBeVisible();
+  await expect(page.locator('[data-testid="view-list"]')).toBeVisible();
+  const more = page.locator('[data-testid="view-more"]');
+  await expect(more).toBeVisible();
+  await expect(more.locator('option'), 'five places to look, plus the placeholder').toHaveCount(6);
+  await page.evaluate(() => testSetView('inc'));
+  await expect(more, 'the dropdown must name the view you are in').toHaveValue('inc');
+  await page.evaluate(() => testSetView('work'));
+  await expect(more, 'back on a segment, the dropdown returns to its placeholder').toHaveValue('');
+
   /* ⭐ ALL NINE ARE ON ONE LIST, and each carries one status — the whole of the complaint */
   const seen = () => page.evaluate(() => testWork().map((x) => [x.key, x.status]));
   await expect.poll(async () => (await seen()).length, { timeout: 45000 }).toBe(9);

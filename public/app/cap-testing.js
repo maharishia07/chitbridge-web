@@ -7402,38 +7402,63 @@ function testHandOpen(code) {
   } catch (_) { screenCasesPopup(code, ''); }
 }
 
+/**
+ * ── ⭐⭐⭐ THE MANAGER GETS WHAT CAPTURE GOT: TWO SEGMENTS AND A SELECT ────────────────────────────────────
+ *
+ * ⚠️ SEVEN EQUAL SEGMENTS, AND THEY WERE NEVER EQUAL. Worklist answers "what is waiting for me" and List is
+ * the board itself — those are the two a tester opens this panel for. Menu tree, Requirements, Incidents,
+ * Findings and By screen are places you go to look at one thing, occasionally. Drawn at one width and one
+ * weight, the strip asked a seven-way question every time the panel opened, and the answer was one of two.
+ *
+ * ⚠️⚠️ THIS WAS ALSO THE SEVENTH COPY OF THE CHIP TRIO, and the TUI hoist missed it — because it spelt the
+ * base differently (`padding:2px 8px;border:0`) from the six that matched. That is precisely the drift the
+ * hoist exists to stop, so it makes the case better than the six did. It reads TUI now.
+ * [[feedback-no-duplicate-functions]]
+ *
+ * ⚠️ AND THE DIVIDERS WERE --line — 1.19:1 on --card, so a seven-segment control read as one wide button
+ * with faint scratches in it.
+ */
+var TEST_VIEW_MORE = [
+  ['menu', 'Menu tree', 'The product as a menu \u2014 every door, and every control behind it'],
+  ['req', 'Requirements', 'Requirements raised while testing \u2014 what is not actioned yet'],
+  ['inc', 'Incidents', 'Incidents \u2014 what a person experienced, and what was done about it'],
+  ['hand', 'Findings', 'Every case, requirement and incident a person raised on a screen'],
+  ['scr', 'By screen', 'Every screen, and what the lab knows about it'],
+];
 function testViewToggleHTML() {
-  var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc',
-      scr = CBTEST.view === 'scr';
-  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
-  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
-  /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
-  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
-  return '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:7px;overflow:hidden">'
+  var v = CBTEST.view;
+  var inMore = TEST_VIEW_MORE.some(function (m) { return m[0] === v; });
+  var seg = TUI.seg('2px 8px');
+  var optS = 'background:var(--card,#fff);color:var(--ink,#20303b)';
+  /* ⚠️ List is "on" only when nothing else is — it is the fallback view, not a value of its own */
+  var listOn = !inMore && v !== 'work';
+  return '<span style="display:inline-flex;gap:7px;align-items:center;flex-wrap:wrap">'
+    + '<span style="display:inline-flex;border:1px solid var(--grey-4,#646A72);border-radius:7px;'
+    +   'overflow:hidden">'
     /* ⭐ FIRST, because it is the one that answers "what is waiting for me" */
     + '<button data-testid="view-work" onclick="testSetView(\'work\')" title="Everything you have written, '
-    +   'with its status and what happens next" style="' + base
-    +   (CBTEST.view === 'work' ? on : off) + '">Worklist</button>'
-    + '<button onclick="testSetView(\'list\')" title="Every case, grouped by area" '
-    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (menu || req || CBTEST.view === 'work' ? off : on) + '">List</button>'
-    + '<button onclick="testSetView(\'menu\')" title="The product as a menu \u2014 every door, and every '
-    +   'control behind it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (menu && !req && !inc && !scr ? on : off) + '">Menu tree</button>'
-    + '<button onclick="testSetView(\'req\')" title="Requirements raised while testing — what is not actioned yet" '
-    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (req ? on : off) + '">Requirements</button>'
-    + '<button onclick="testSetView(\'inc\')" title="Incidents \u2014 what a person experienced, and what was '
-    +   'done about it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (inc ? on : off) + '">Incidents</button>'
-    + '<button onclick="testSetView(\'hand\')" title="Every case, requirement and incident a person raised on a screen" '
-    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (CBTEST.view === 'hand' ? on : off) + '">Findings</button>'
-    + '<button onclick="testSetView(\'scr\')" title="Every screen, and what the lab knows about it" '
-    +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (scr ? on : off)
-    +   '">By screen</button>'
+    +   'with its status and what happens next" style="' + seg + (v === 'work' ? TUI.on : TUI.off)
+    +   '">Worklist</button>'
+    + '<button data-testid="view-list" onclick="testSetView(\'list\')" title="Every case, grouped by area" '
+    +   'style="' + seg + 'border-inline-start:1px solid var(--grey-4,#646A72);'
+    +   (listOn ? TUI.on : TUI.off) + '">List</button>'
+    + '</span>'
+    /* ⚠️ every option paints its own ground: when the select is inked the options inherit white text and the
+       dropdown opens white-on-white in Chrome — invisible, and only once something is chosen */
+    + '<select data-testid="view-more" onchange="testSetView(this.value)" '
+    +   'title="Everything else the board can show" '
+    +   'style="font:inherit;font-size:var(--fs-1);padding:3px 8px;cursor:pointer;'
+    +   'border:1px solid var(--grey-4,#646A72);border-radius:7px;'
+    +   'background:' + (inMore ? 'var(--ink,#0F2E3D);color:var(--card,#fff)'
+                                : 'var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+    + '<option value="" disabled' + (inMore ? '' : ' selected') + ' style="' + optS + '">More \u2026</option>'
+    + TEST_VIEW_MORE.map(function (m) {
+        return '<option value="' + m[0] + '"' + (v === m[0] ? ' selected' : '') + ' style="' + optS + '" '
+          + 'title="' + testEsc(m[2]) + '">' + m[1] + '</option>';
+      }).join('')
+    + '</select>'
     + '</span>';
 }
-
 function testFoldGet() {
   try { return JSON.parse(localStorage.getItem('cb_test_fold_panel') || '{}'); } catch (_) { return {}; }
 }
