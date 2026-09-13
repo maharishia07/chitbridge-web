@@ -396,14 +396,6 @@ function testGuide(force) {
   try { localStorage.setItem('cb_testguide', '1'); } catch (_) {}
   if (typeof modal !== 'function') return false;
 
-  var step = function (nn, title, body) {
-    return '<div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:13px">'
-      + '<span style="flex:0 0 25px;height:25px;border-radius:50%;background:var(--blue);color:#fff;'
-      +   'font-size:var(--fs-1);font-weight:700;line-height:25px;text-align:center">' + nn + '</span>'
-      + '<div style="flex:1;min-width:0"><b style="font-size:var(--fs-3)">' + title + '</b>'
-      + '<div style="color:var(--grey-2);font-size:var(--fs-2);line-height:1.55;margin-top:2px">' + body
-      + '</div></div></div>';
-  };
   var verdict = function (name, fg, bg, body) {
     return '<div style="border-inline-start:3px solid ' + fg + ';background:var(--card);'
       + 'border:1px solid var(--line);border-inline-start-width:3px;border-radius:9px;padding:9px 12px;'
@@ -418,41 +410,13 @@ function testGuide(force) {
     + '<div class="s">' + tx('Read a case, do it, say what happened — without leaving the screen you are on.')
     + '</div></div>'
     + '<div class="mbody" style="line-height:1.6">'
-    + step(1, tx('The panel follows you'),
-        tx('It opens at the bottom right and stays with you on every screen. Drag it by the ⠿, minimise it '
-         + 'with –, or pick a Size. Where you leave it is where it comes back.'))
-    + step(2, tx('Load the cases, once'),
-        tx('If the panel says there are none, press Load the test cases. Pressing it again later is harmless.'))
-    + step(3, tx('Say who you are'),
-        tx('Type your name in the Tester box. Leave it blank and the record still shows which login tested — '
-         + 'the name is only so a shared login can tell two people apart.'))
-    + step(4, tx('Pick a Focus'),
-        tx('It lists each area with how many cases nobody has run. ⚠ marks the important ones. Pick one and '
-         + 'the panel counts it down for you.'))
-    + step(5, tx('Work through them'),
-        tx('Each case tells you what must be true before you start, what to do, and what you should see. '
-         + 'Then tap a verdict.'))
-    + step(6, tx('Found something with no case? Press +'),
-        tx('The moment you find it is the moment you can still describe it. An hour later it is “something '
-         + 'was wrong with the supplier screen”.'))
-    + '<div style="font-size:var(--fs-1);font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
-    +   'color:var(--grey-2);margin:18px 0 9px">' + tx('The four verdicts') + '</div>'
-    + verdict(tx('Pass'), 'var(--ok-2)', 'var(--ok-tint)',
-        tx('It did what the case says. The case closes and you move on.'))
-    + verdict(tx('Fail'), 'var(--disp)', 'var(--danger-tint, #FBECEB)',
-        '<b>' + tx('Write what you saw in the note box.') + '</b> '
-        + tx('That sentence is the whole value of the run — a status on its own tells nobody anything. '
-           + 'Both numbers help: the one shown and the one you expected.'))
+    + verdict(tx('Pass'), 'var(--ok-2)', 'var(--ok-tint)', tx('It did what the case says.'))
+    + verdict(tx('Fail'), 'var(--disp)', 'var(--danger-tint, #FBECEB)', tx('It did not. Say what you saw.'))
     + verdict(tx('Blocked'), 'var(--warn-2)', 'var(--warn-tint)',
-        tx('You could not get to it because something earlier is broken. ') + '<b>'
-        + tx('This is not a fail.') + '</b> '
-        + tx('It says nothing about the case itself, and counting it as one makes a red board nobody can act on.'))
-    + verdict(tx('Skip'), 'var(--grey-2)', 'var(--neutral-tint)',
-        tx('Deliberately not this time — not applicable, or out of scope for this sitting.'))
-    + '<div style="margin-top:15px;padding:10px 13px;border-radius:9px;background:var(--ok-tint);'
-    +   'color:var(--ok-2);font-size:var(--fs-2);line-height:1.55"><b>' + tx('You cannot break anything.')
-    +   '</b> ' + tx('Nothing is ever overwritten — testing a case again writes a new line, and the older one '
-    +   'stays readable. A wrong verdict is fixed by marking it again.') + '</div>'
+        tx('Something earlier stopped you. Not a fail.'))
+    + verdict(tx('Skip'), 'var(--grey-2)', 'var(--neutral-tint)', tx('Not this time.'))
+    + '<div style="margin-top:13px;font-size:var(--fs-1);color:var(--grey-4,#646A72)">'
+    +   tx('Marking again writes a new line; nothing is overwritten.') + '</div>'
     + '</div>'
     + '<div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Start testing') + '</button></div>');
   return true;
@@ -1046,10 +1010,6 @@ function testPaint() {
           return '<div style="flex:1 1 100%;font-size:var(--fs-1);color:var(--blue,#3F66A6);margin-top:3px">'
             + '<b>' + shown.length + '</b> of ' + CBTEST.cases.length + ' \u00b7 filtered by '
             + testEsc(on.join(' \u00b7 '))
-            + (CBTEST.areaAuto && CBTEST.area
-                ? ' <span style="color:var(--grey-2,#545A61)">\u2014 the panel opened here, on the screen you '
-                  + 'were looking at. Clear it to see every case.</span>'
-                : '')
             + '</div>';
         })()
     /**
@@ -1193,11 +1153,9 @@ function testPaint() {
       +  '<div style="margin-bottom:9px">No test cases on this board yet.</div>'
       +  '<button class="btn pri" onclick="testSeed()" style="font-size:var(--fs-2);padding:6px 14px">'
       +  (CBTEST.seeding ? 'Loading…' : 'Load the test cases') + '</button>'
-      +  '<div style="margin-top:9px;font-size:var(--fs-1)">The documented cases — the counter, the bill, the queue, '
-      +  'suppliers, the offer lab. Or press <b>+</b> to write your own.</div></div>';
+      +  '</div>';
   } else if (!shown.length) {
-    h += '<div style="padding:12px;font-size:var(--fs-2);color:var(--grey-2,var(--grey-2))">Nothing in this area yet — '
-      +  'press <b>+</b> to add the first case for it.</div>';
+    h += '<div style="padding:12px;font-size:var(--fs-2);color:var(--grey-2,var(--grey-2))">Nothing here.</div>';
   } else {
     /**
      * ── ⭐⭐⭐ GROUPED AND FOLDABLE HERE TOO ───────────────────────────────────────────────────────────────
@@ -1685,8 +1643,7 @@ async function testReqLoad() {
 async function testReqSet(id, state) {
   var why = null;
   if (state === 'rejected') {
-    why = await testAsk('Why is this rejected?',
-      'The next tester reads this instead of raising it again.', 'Reject it');
+    why = await testAsk('Why is this rejected?', '', 'Reject it');
     if (why === null) return;                       /* cancelled — nothing is changed */
     if (!String(why).trim()) { if (typeof toast === 'function') toast('A rejection needs its reason.'); return; }
   }
@@ -1725,8 +1682,6 @@ function testReqFormHTML() {
   var inp = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;background:var(--card,#fff);color:var(--ink,#1a1a1a);margin-bottom:5px;box-sizing:border-box';
   return '<div style="border:1px solid var(--line,#e7e3d8);border-radius:9px;padding:8px;margin-bottom:9px">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:4px">'
-    +   'What must the product do — and what did you see that says it does not?</div>'
     + '<input id="reqWhat" style="' + inp + '" placeholder="What must be true — e.g. a unit sold by weight must accept a fraction">'
     + '<input id="reqSeen" style="' + inp + '" placeholder="What you saw — e.g. typed 0.5 kg and the line disappeared">'
     + '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
@@ -1805,7 +1760,7 @@ function testReqHTML() {
        facts and only one of them is good news. */
     return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
       + (d && d.total ? 'Nothing in this state — ' + d.total + ' captured altogether.'
-                      : 'Nothing raised yet. Raise one from a case when a test finds something the product should do.')
+                      : 'Nothing raised yet.')
       + '</div>';
   }
 
@@ -2002,7 +1957,7 @@ async function testIncSet(id, state) {
   var body = { state: state };
   if (state === 'resolved') {
     var a = await testAsk('What fixed it?',
-      'Paste the commit sha and it is cited into git \u2014 or say why nothing needed changing.', 'Mark it fixed');
+      'Commit sha, or why nothing changed.', 'Mark it fixed');
     if (a === null) return;
     a = String(a).trim();
     if (!a) { if (typeof toast === 'function') toast('A resolution needs the commit, or a reason.'); return; }
@@ -2011,8 +1966,7 @@ async function testIncSet(id, state) {
     else body.why = a;
   }
   if (state === 'closed') {
-    var w = await testAsk('Why is this closed?',
-      'The next person reads this instead of reopening it.', 'Close it');
+    var w = await testAsk('Why is this closed?', '', 'Close it');
     if (w === null) return;
     if (!String(w).trim()) { if (typeof toast === 'function') toast('Closing needs its reason.'); return; }
     body.why = String(w).trim();
@@ -2136,7 +2090,7 @@ function testIncHTML() {
     /* ⚠️ AN EMPTY LIST SAYS WHICH EMPTY IT IS: "none recorded" and "none left open" are different facts. */
     return h + '<div style="color:var(--grey-4,#646A72);font-size:var(--fs-1);padding:8px 0">'
       + (d && d.total ? 'Nothing in this state \u2014 ' + d.total + ' recorded altogether.'
-                      : 'Nothing recorded yet. Record one the moment something stops working.')
+                      : 'Nothing recorded yet.')
       + '</div>';
   }
 
@@ -2997,34 +2951,11 @@ function testTechFor(kind) {
  * and a tester recognises it, and then sees what to do with their own.
  */
 var TEST_TECH_EG = {
-  bounds: { what: 'A number, or a date, with a lowest and a highest it is allowed to be.',
-    eg: '<b>A number range:</b> a <b>quantity</b> may be anything from <b>1</b> to <b>999</b>. Give it those '
-      + 'two numbers and it writes the eight cases that matter — 0, 1, 2, 998, 999, 1000, empty, and text.',
-    why: 'Boundary value analysis. Faults cluster at the edges, because that is where the comparison is '
-      + 'written and where < gets typed for ≤.' },
-  classes: { what: 'A field whose values fall into KINDS the product is supposed to treat differently.',
-    eg: '<b>Kinds of value:</b> a <b>customer</b> is one of three kinds — <b>GST-registered</b>, '
-      + '<b>unregistered</b>, <b>overseas</b> — and tax behaves differently for each. Name the kinds and it '
-      + 'writes one case per kind, plus the value that belongs to none of them.',
-    why: 'Equivalence partitioning. Every value inside a kind behaves the same, so testing five of them proves '
-      + 'the same thing five times. It tells you how FEW cases you need, which is the harder question.' },
-  states: { what: 'Something that MOVES THROUGH named stages, in an order.',
-    eg: '<b>A lifecycle:</b> a <b>chit</b> goes <b>draft → sent → accepted → delivered → paid</b>. Name the '
-      + 'stages in order and it writes the moves that must work — and, more usefully, the ones that must be '
-      + 'refused, like paid going back to draft.',
-    why: 'State transition testing. The bugs are almost never in the forward path; they are in the move nobody '
-      + 'thought to forbid.' },
-  decision: { what: 'One rule whose answer depends on two or three things being true at once.',
-    eg: '<b>A rule with conditions:</b> a <b>discount</b> applies when the order is <b>over 500</b> AND the '
-      + '<b>customer is a member</b>. Name the conditions and it writes all four combinations — including the '
-      + 'one where both are true.',
-    why: 'Decision table testing. People test the conditions one at a time and ship the combination, which is '
-      + 'where the discount gets applied twice.' },
-  guess: { what: 'No rule to describe — just the values that break most products, whatever the field is.',
-    eg: '<b>The usual suspects:</b> take a <b>name</b> and try empty, one space, a very long value, a leading '
-      + 'zero, an apostrophe, an emoji, and the same value twice.',
-    why: 'Error guessing. 29119-4 keeps it because it keeps finding things, and it is the only one that '
-      + 'depends on having been burnt before.' },
+  bounds: { what: 'A number, or a date, with a lowest and a highest it is allowed to be.' },
+  classes: { what: 'A field whose values fall into KINDS the product is supposed to treat differently.' },
+  states: { what: 'Something that MOVES THROUGH named stages, in an order.' },
+  decision: { what: 'One rule whose answer depends on two or three things being true at once.' },
+  guess: { what: 'No rule to describe — just the values that break most products, whatever the field is.' },
 };
 
 
@@ -3034,14 +2965,7 @@ function testTechAreaHTML() {
    * understand."* A paragraph explaining a tool is a paragraph nobody finishes; the same content as three
    * short lines, in the panel's own section treatment, is read.
    */
-  return testSec('What else should I test here?')
-    + testNotes([
-        'You tell it the one thing it cannot know — a range, a set of kinds, a lifecycle.',
-        'It writes the cases the techniques in <b>ISO/IEC/IEEE 29119-4</b> say you need. Nothing is invented: '
-          + 'every line comes from what you typed.',
-        'Press <b>Add</b> on any row and it lands in Create, ready to save.',
-      ], 'note')
-    + testTechHTML();
+  return testSec('What else should I test here?') + testTechHTML();
 }
 function testTechHTML() {
   var t = (CBTEST.tech || {});
@@ -3070,47 +2994,28 @@ function testTechHTML() {
     + [['bounds', 'A number range'], ['classes', 'Kinds of value'], ['states', 'A lifecycle'],
        ['decision', 'A rule with conditions'], ['guess', 'The usual suspects']]
       .map(function (x) {
-        return '<button onclick="testTech(\'' + x[0] + '\')" style="' + tab
+        /* ⭐ the definition rides on the chip that offers it — see the cut list, rule 3 */
+        return '<button onclick="testTech(\'' + x[0] + '\')" '
+          + 'title="' + testEsc((TEST_TECH_EG[x[0]] || {}).what || '') + '" style="' + tab
           + (t.kind === x[0] ? on : off) + '">' + x[1] + '</button>';
       }).join('');
-  if (!t.kind) {
-    /* ⭐ before a technique is chosen, say what each one is FOR — five bare chips taught nobody anything */
-    return h
-      + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:7px;line-height:1.6">'
-      + Object.keys(TEST_TECH_EG).map(function (k) {
-          var L = { bounds: 'A number range', classes: 'Kinds of value', states: 'A lifecycle',
-                    decision: 'A rule with conditions', guess: 'The usual suspects' }[k];
-          return '<div style="margin:2px 0"><b>' + L + '</b> — ' + TEST_TECH_EG[k].what + '</div>';
-        }).join('')
-      + '</div></div>';
-  }
+  if (!t.kind) return h + '</div>';
 
-  var EG = TEST_TECH_EG[t.kind] || {};
   var big = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
     + 'var(--grey-4,#646A72);border-radius:8px;background:var(--card,#fff);color:var(--ink,#20303b);'
     + 'box-sizing:border-box';
   var lbl = 'display:block;font-size:var(--fs-1);font-weight:700;color:var(--grey-2,#545A61);margin:9px 0 3px';
 
   /**
-   * ⭐ TRY THIS, IN THIS PRODUCT'S OWN WORDS. Athi: *"give some example as a 'try this', so people understand
-   * what we are saying here."* A form that only says what it wants is a form you have to already understand.
+   * ⭐ THE BUTTON, AND NOTHING ELSE. Athi: *"when I say try it, you provide the values yourself."* The worked
+   * example used to be printed above the button that performs it — the same act twice, and the second one is
+   * the one a person can actually use. The prose is gone; the demonstration stayed.
    */
-  h += '<div style="margin-top:8px;padding:8px 10px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
-    + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.6">'
-    + '<b>Try this:</b> ' + EG.eg + '<br>'
-    + '<span style="color:var(--grey-2)">' + EG.why + '</span>'
-    /**
-     * ⭐ THE BUTTON THAT DOES IT — see testTechTry. Athi: *"when I say try it, you provide the values
-     * yourself."* Reading eight finished rows and then editing them is a far shorter path than understanding
-     * a definition and composing an input from nothing, which is what four of these five asked for.
-     */
-    + '<div style="margin-top:6px">'
-    /* ⚠️ SECONDARY, and no longer green. It sat as a filled --ok-2 button three inches above a filled --ink
-       "Write the cases": two filled buttons in one flow means no primary. And green already means PASS on this
-       board — an example is not a pass. [[feedback-name-vs-behaviour]] */
-    +   '<button data-testid="tech-try" onclick="testTechTry(\'' + t.kind + '\')" '
-    +     'style="' + TEST_BTN_SECOND + '">▶ Fill it in and show me</button>'
-    + '</div></div>';
+  h += '<div style="margin-top:8px">'
+    + '<button data-testid="tech-try" onclick="testTechTry(\'' + t.kind + '\')" '
+    +   'title="Fill every box on this tab with a worked example from this product" '
+    +   'style="' + TEST_BTN_SECOND + '">▶ Fill it in and show me</button>'
+    + '</div>';
 
   /**
    * ⭐⭐ THE FIELDS THIS SCREEN ACTUALLY SENT, as chips. Read from the call log, so they are this product's
@@ -3159,14 +3064,13 @@ function testTechHTML() {
     var sv = (CBTEST.tech || {}).seenVals;
     if (sv && sv.length) {
       h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">'
-        + '<button onclick="testTechUseSeen()" style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
+        + '<button onclick="testTechUseSeen()" title="These are the values this screen has actually put on '
+        + 'the wire — not the only ones it accepts. The kinds nobody has sent are the ones nobody has tried." '
+        + 'style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);'
-        + 'color:var(--grey-2,#545A61);margin-inline-end:6px">Use what it has sent</button>'
+        + 'color:var(--grey-2,#545A61);margin-inline-end:6px">⚠ Use what it has sent</button>'
         + testEsc(sv.join(', '))
-        + '<span style="display:block;color:var(--grey-4,#646A72)">'
-        + '⚠️ These are the values this screen has actually put on the wire — which is not the '
-        + 'same as the only ones it accepts. The kinds nobody has sent are the ones nobody has tried.'
-        + '</span></div>';
+        + '</div>';
     }
   }
   if (t.kind === 'states') {
@@ -3184,10 +3088,6 @@ function testTechHTML() {
 
   var rows = testTechRows();
   if (!rows.length) {
-    h += '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:7px">'
-      + 'Fill the boxes above and press <b>Write the cases</b>. Nothing is invented \u2014 every line comes '
-      + 'from what you type.'
-      + '</div>';
     return h + '</div>';
   }
   /**
@@ -3203,8 +3103,7 @@ function testTechHTML() {
     guess: 'Error guessing'
   };
   var src = (t.kind === 'guess')
-    ? 'ISO/IEC/IEEE 29119-4 names this technique but cannot supply the list \u2014 it is experience-based, so '
-      + 'these are ours, and every one has broken here at least once.'
+    ? 'ISO/IEC/IEEE 29119-4 \u00b7 experience-based'
     : 'ISO/IEC/IEEE 29119-4:2021 \u00b7 specification-based test design.';
   /**
    * ⭐ IT SAYS WHAT IT WAS DERIVED FROM. One line, and the table can never again be read as being about the
@@ -3246,9 +3145,6 @@ function testTechHTML() {
           + 'style="' + TEST_BTN_SMALL + '">Add</button></td></tr>';
       }).join('')
     + '</table></div>';
-  h += '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:5px">'
-    + '<b>Add</b> fills the Create form with that row \u2014 you still choose the type and press Save. '
-    + 'Nothing here is written to the board on its own.</div>';
   return h + '</div>';
 }
 
@@ -3394,9 +3290,7 @@ function testCaseFormHTML() {
       + '\', \'' + testEsc(codeName ? codeName(here) : '') + '\')" '
       + 'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:5px 14px;border:1px solid '
       + 'var(--line,#e7e3d8);border-radius:7px;cursor:pointer;background:var(--card,#fff)">'
-      + '+ Create</button>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px">'
-      + 'A test case, an incident or a requirement — you choose which at the top of the form.</div></div>';
+      + '+ Create</button></div>';
   }
 
   var kind = testWriteKindNow();
@@ -3411,7 +3305,8 @@ function testCaseFormHTML() {
   var segOn = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
   var segOff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var chips = ['case', 'inc', 'req'].map(function (k) {
-    return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" style="' + seg
+    return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" '
+      + 'title="' + testEsc(WKIND[k].says) + '" style="' + seg
       + (kind === k ? segOn : segOff)
       + (k === 'case' ? '' : ';border-inline-start:1px solid var(--line,#e7e3d8)') + '">'
       + WKIND[k].label + '</button>';
@@ -3438,11 +3333,6 @@ function testCaseFormHTML() {
     +   '<code>' + testEsc(w.code) + '</code> <b>' + testEsc(w.name) + '</b>?</div>'
     + '<div style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:8px;'
     +   'overflow:hidden;margin-bottom:6px">' + chips + '</div>'
-    /* ⭐ and what that choice MEANS, in a sentence — which is what Athi asked for, and it is also the only
-       place a first-time tester learns the difference between the three */
-    + '<div data-testid="wkind-says" style="font-size:var(--fs-1);color:var(--grey-2);'
-    +   'background:var(--paper,#faf8f3);border-radius:7px;padding:5px 8px;margin-bottom:7px">'
-    +   K.says + '</div>'
 
     /**
      * ── ⭐⭐ FOUR BOXES THAT TAKE AS MUCH AS A PERSON HAS TO SAY ─────────────────────────────────────────
@@ -3481,7 +3371,7 @@ function testCaseFormHTML() {
      * ⚠️ Optional, and it says so: plenty of findings are about the screen as a whole.
      */
     + '<select id="wcCtl" style="' + inp + ';padding:5px">'
-    +   '<option value="">5 · Which control? — optional, the screen as a whole if you leave it</option>'
+    +   '<option value="">Which control? (optional)</option>'
     +   testCtlOptions(w.code)
     + '</select>'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;'
@@ -3491,7 +3381,8 @@ function testCaseFormHTML() {
        tester wondering whether it actually saved */
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px;'
     +   'font-size:var(--fs-1);color:var(--grey-2)">'
-    +   '<button onclick="testShotGrab()" style="' + btn + '" title="Capture this window and attach it">'
+    +   '<button onclick="testShotGrab()" style="' + btn + '" '
+    +     'title="Capture this window and attach it — or paste one here with Ctrl+V">'
     +     '📷 Screenshot</button>'
     +   (CBTEST.shot
       ? '<span style="display:inline-flex;gap:6px;align-items:center">'
@@ -3501,7 +3392,7 @@ function testCaseFormHTML() {
         + '<button onclick="testShotView(\'' + testEsc(CBTEST.shot.id) + '\')" style="' + btn
           + ';padding:1px 7px">view</button>'
         + '<button onclick="testShotDrop()" style="' + btn + ';padding:1px 7px">remove</button></span>'
-      : '<span>… or paste one here with Ctrl+V</span>')
+      : '')
     + '</div>'
 
     /**
@@ -3754,13 +3645,22 @@ function testScrHTML() {
   var withFail = list.filter(function (x) { return x.fail; }).length;
   /* ⚠️ named but not tested: the row exists, the thinking has not happened */
   var onlyGeneric = list.filter(function (x) { return x.total && !x.real; }).length;
+  /* ⭐ four counts as four chips: the sentence they used to wear said nothing the numbers did not */
+  var scrChip = function (v, word, tip) {
+    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+      + 'padding:2px 9px;margin:0 5px 4px 0;border-radius:11px;background:var(--paper,#faf8f3);'
+      + 'border:1px solid var(--grey-4,#646A72);color:var(--grey-2,#545A61)"><b>' + v + '</b> ' + word
+      + '</span>';
+  };
   var h = testCaseFormHTML()
-    + '<div style="padding:7px 0 8px;font-size:var(--fs-1);color:var(--grey-2,#545A61);line-height:1.5">'
-    + '<b>' + list.length + '</b> screens \u00b7 <b>' + naked + '</b> with no case at all \u00b7 <b>'
-    + withFail + '</b> with a failure \u00b7 <b>' + onlyGeneric + '</b> covered ONLY by the standard '
-    + 'screen check, which names a screen rather than testing it.'
-    + '<br>\u26a0\ufe0f <b>' + offScreen + '</b> case(s) are on no screen — guards, engines and the harness. '
-    + 'They are counted here and left out of the per-screen numbers rather than out of sight.'
+    + '<div style="padding:7px 0 6px">'
+    + scrChip(list.length, 'screens', 'Every screen the register names')
+    + scrChip(naked, 'no case', 'No case has been written against this screen at all')
+    + scrChip(withFail, 'failing', 'At least one case on this screen failed the last time it ran')
+    + scrChip(onlyGeneric, 'generic only', 'Covered only by the standard screen check, which names a screen '
+        + 'rather than testing it')
+    + scrChip('\u26a0 ' + offScreen, 'off-screen', 'Guards, engines and the harness. Counted here and left '
+        + 'out of the per-screen numbers rather than out of sight.')
     + '</div>';
 
   var sb = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
@@ -4063,9 +3963,9 @@ function testCiteHTML(c) {
               q.level ? 'level ' + q.level : null].filter(Boolean);
   return '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
     + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
-    + 'Required by <b>' + testEsc(bits.join(' \u00b7 ')) + '</b>'
-    + '<span style="display:block;color:var(--grey-4,#646A72)">Not our opinion \u2014 a published clause. If the standard '
-    + 'moves, every case still citing this one is exactly the set to look at again.</span></div>';
+    + '<span title="Not our opinion — a published clause. If the standard moves, every case still citing '
+    + 'this one is exactly the set to look at again.">Required by <b>'
+    + testEsc(bits.join(' \u00b7 ')) + '</b></span></div>';
 }
 
 function testCaseDetailHTML(c) {
@@ -4715,42 +4615,46 @@ function testCovSetTab(v) {
  * suite" for a manual case would be advice nobody can follow.
  */
 function testCovWhyNotRun(c) {
+  var pill = function (txt, tip, warn) {
+    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+      + 'padding:1px 8px;border-radius:10px;border:1px solid '
+      + (warn ? 'var(--warn-2,#8a6100);color:var(--warn-2,#8a6100)' : 'var(--grey-4,#646A72);color:var(--grey-2,#545A61)')
+      + ';background:var(--paper,#faf8f3)">' + txt + '</span>';
+  };
   if (c.automated && c.run_by) {
-    return 'Automated, run by <code>' + testEsc(c.run_by) + '</code> — it is in a suite and that suite has '
-      + 'not run since the board was last read. Run it, or press <b>Passed</b> / <b>Failed</b> here after you '
-      + 'have watched it.';
+    return pill('automated \u00b7 ' + testEsc(c.run_by),
+      'It is in a suite and that suite has not run since the board was last read. Run it, or press Passed / '
+      + 'Failed here after you have watched it.');
   }
   if (c.automated) {
-    return '<b>Marked automated but no runner is named.</b> Nothing will ever pick it up — either name the '
-      + 'suite in <code>run_by</code>, or record it by hand here.';
+    return pill('\u26a0 no runner',
+      'Marked automated but no runner is named — nothing will ever pick it up. Name the suite in run_by, or '
+      + 'record it by hand here.', true);
   }
-  return 'A manual case: somebody has to do it and say what happened. Open the screen, follow the steps, then '
-    + 'press <b>Passed</b> or <b>Failed</b> on this row.';
+  return pill('by hand',
+    'Somebody has to do it and say what happened. Open the screen, follow the steps, then press Passed or '
+    + 'Failed on this row.');
 }
 
 function testCoverGrade(nTests, nRun, nRed) {
+  /* ⭐ [2] IS NOW A TOOLTIP, not a paragraph: the label plus the figure row already carries the reading */
   if (!nTests) {
     return ['Not covered', 'var(--disp,#b4453f)',
-      'Nothing here declares itself a test of the code behind this screen. That is not the same as the '
-      + 'screen being untested — a case you wrote by hand still counts — but nothing AUTOMATED guards it.'];
+      'Nothing declares itself a test of the code behind this screen. A case you wrote by hand still counts, '
+      + 'but nothing automated guards it.'];
   }
   if (nRed) {
     return ['Covered, and red', 'var(--disp,#b4453f)',
-      nRed + ' of the ' + nTests + ' test(s) under this screen failed the last time they ran. Everything else '
-      + 'on this tab matters less than that.'];
+      nRed + ' of ' + nTests + ' failed the last time they ran.'];
   }
   if (!nRun) {
     return ['Written, never run', 'var(--warn-2,#8a6100)',
-      nTests + ' test(s) name this code and not one of them has been run, so the green you see elsewhere is '
-      + 'about a different screen.'];
+      nTests + ' name this code and not one has been run.'];
   }
   if (nRun * 2 < nTests) {
-    return ['Thinly covered', 'var(--warn-2,#8a6100)',
-      'Only ' + nRun + ' of ' + nTests + ' have actually been run — fewer than half. A test that has never '
-      + 'run has never told anybody anything.'];
+    return ['Thinly covered', 'var(--warn-2,#8a6100)', nRun + ' of ' + nTests + ' have been run.'];
   }
-  return ['Covered', 'var(--ok-2,#1B7F4B)',
-    nRun + ' of ' + nTests + ' have been run and none of them failed.'];
+  return ['Covered', 'var(--ok-2,#1B7F4B)', nRun + ' of ' + nTests + ' run, none failed.'];
 }
 
 /**
@@ -4867,8 +4771,8 @@ function testBehindHTML(code) {
   var todo = ctls.filter(function (x) { return !(byCtl[x.code] || []).length; });
   var done = ctls.filter(function (x) { return (byCtl[x.code] || []).length; });
 
-  h += testSec('What on this screen has been checked?',
-    'every control the register knows about, and whether anybody has written a case for it');
+  h += testSec('What on this screen has been checked?', '',
+    'Every control the register knows about, and whether anybody has written a case for it');
 
   if (!ctls.length) {
     /**
@@ -4876,9 +4780,8 @@ function testBehindHTML(code) {
      * could print. The register does not name a control on every screen; where it names none, this says so and
      * stands on the code view below instead of inventing a score.
      */
-    h += testNotes(['The register does not name any control on this screen, so there is nothing to count '
-      + 'against. That is a gap in the register, not a statement about the screen — what is known about the '
-      + 'code underneath is below.'], 'warn');
+    h += testNotes(['<span title="That is a gap in the register, not a statement about the screen. What is '
+      + 'known about the code underneath is below.">\u26a0 No control registered here</span>'], 'warn');
   } else {
     var pct = Math.round((done.length / ctls.length) * 100);
     var grade = !done.length ? ['Nothing here is checked', 'var(--disp,#b4453f)']
@@ -4912,7 +4815,6 @@ function testBehindHTML(code) {
           + '</div>';
       }).join('');
     } else {
-      h += testNotes(['Every control on this screen has a case against it.'], 'ok');
     }
 
     /* ⚠️ and the ones that ARE checked, folded: they are the good news, and good news does not need the room */
@@ -4963,18 +4865,16 @@ function testBehindHTML(code) {
   /* ── the file-level detail, inside the same fold ── */
   h += lab('Draws this screen');
   h += b.files.length ? b.files.map(fileRow).join('')
-    : quiet('The register does not say which file draws this screen \u2014 that is a gap in the register, '
-      + 'not an answer about this screen.');
+    : quiet('Not in the register.');
 
   /* ── 2 · what it called ── */
   h += lab('Server code it called');
   h += b.routes.length ? b.routes.map(fileRow).join('')
-    : quiet('No API call recorded yet. Use the screen behind this panel and it will appear.');
+    : quiet('None yet.');
   /* ⚠ said plainly rather than papered over: on the screen the tester LANDED on, the app’s own start-up
      calls are mixed in with the screen’s, and no honest rule separates them */
   if (b.booting && b.routes.length) {
-    h += quiet('⚠️ The app was still starting when this screen loaded, so its sign-in and set-up '
-      + 'calls are counted here too. Go to another screen and come back for a clean reading.');
+    h += quiet(TEST_BOOTING_WARN);
   }
 
   /* ── 3 · the modules that code leans on ── */
@@ -5040,27 +4940,6 @@ function testBehindHTML(code) {
         }).join('')
       + '</div>';
 
-    /**
-     * ⭐ AND WHAT EACH ONE NEEDS, in that tab's own terms. "Not run" is not a verdict, it is the ABSENCE of
-     * one, and it asks something completely different from "failed".
-     */
-    var SAYS = {
-      fail: ['These were run and they did not do what the case says. Each one is a real answer already '
-        + 'recorded — open the case to see which run said so, and when. <b>Nothing here is a guess.</b>',
-        'To make one pass: fix the product, then press <b>Passed</b> on the row (or re-run its suite). '
-        + 'If the CASE is wrong rather than the product, edit the case — do not pass it.'],
-      notrun: ['Not a verdict — the absence of one. Nobody has run these, so this screen is neither proven '
-        + 'nor disproven by them, and a green board elsewhere says nothing about them.',
-        'Each row below says what it would take to include it in the next run — it is different for an '
-        + 'automated case and a manual one.'],
-      pass: ['Run, and they did what the case says. Nothing is asked of you.',
-        '⚠️ A pass is about the LAST run, not for ever — these are re-run, not finished with.'],
-      other: ['Blocked or skipped: somebody tried and could not get to the end.',
-        'Read the reason on the row — a blocked case has one, and it is usually about something other than '
-        + 'the code this screen sits on.'],
-    };
-    h += testNotes(SAYS[tab] || [], tab === 'fail' ? 'bad' : tab === 'pass' ? 'ok' : 'warn');
-
     var shown = buckets[tab] || [];
     h += shown.slice(0, 40).map(function (x) {
       var row = caseRow(x, false);
@@ -5080,9 +4959,9 @@ function testBehindHTML(code) {
 
   /* ── 5 · the weak rung, kept apart and marked ── */
   if (b.named.length) {
-    h += lab('Named after that code \u00b7 ' + b.named.length);
-    h += quiet('\u26a0\ufe0f Matched on the WORD in the file name, not on a declared link. Read these as leads. '
-      + 'They are counted nowhere above.');
+    h += lab('Named after that code \u00b7 ' + b.named.length + ' <span title="Matched on the WORD in the '
+      + 'file name, not on a declared link. Read these as leads \u2014 they are counted nowhere above."'
+      + ' style="font-weight:400;color:var(--warn-2,#8a6100)">(\u26a0 leads)</span>');
     h += b.named.slice(0, 25).map(function (c) { return caseRow(c, true); }).join('');
     if (b.named.length > 25) h += quiet('\u2026 and ' + (b.named.length - 25) + ' more.');
   }
@@ -5261,10 +5140,7 @@ function testDiagByScreen() {
   }).sort(function (a, b) { return b.worst - a.worst; });
 
   var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
-    + 'text-transform:uppercase;margin:14px 0 3px">Every screen you have measured</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:5px">'
-    + 'Kept per screen, so it survives the forty-call log. Worst visit first \u2014 a screen that is usually '
-    + 'quick and occasionally terrible is the one worth finding.</div>';
+    + 'text-transform:uppercase;margin:14px 0 3px">Every screen you have measured</div>';
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
     + '<th style="text-align:start;padding:3px 6px 3px 0">Screen</th>'
@@ -5357,9 +5233,7 @@ function testDiagHTML() {
         + 'appears here.</div>'
         + testDiagBarHTML();
     }
-    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">'
-      + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
-      + 'appear here \u2014 the log starts when test mode goes on.</div>';
+    return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">None yet.</div>';
   }
   /**
    * ── ⚠️⚠️⚠️ IT WAS MEASURING EVERYTHING EXCEPT THE THING YOU WANT MEASURED ─────────────────────────────
@@ -5399,9 +5273,6 @@ function testDiagHTML() {
     if (seenN[k] > 1) rep.push(k + ' \u00d7' + seenN[k]);
   });
 
-  var verdict = mine.length >= 6 ? 'That is a lot of round trips for one screen.'
-            : mine.length >= 3 ? 'Three or more round trips \u2014 worth asking whether they can be one.'
-            : 'Few enough round trips.';
   /* ⭐ the window, in words and on a clock, because a count with no window is not a measurement */
   var hist = testVisitSave(CBTEST.popupFor, gen, mine) || [];
   var thisVisit = hist.filter(function (x) { return x.gen === gen; })[0];
@@ -5422,8 +5293,7 @@ function testDiagHTML() {
     testDiagCleared()
       ? 'measured from the clear at <b>' + new Date(CBTEST._clearedAt).toTimeString().slice(0, 8)
         + '</b>, not from when you arrived'
-      : (clock ? 'everything since you arrived at <b>' + clock + '</b> — leaving and coming back starts a new one'
-               : 'everything since you arrived on this screen'));
+      : (clock ? 'since <b>' + clock + '</b>' : 'since you arrived'));
   h += testFigures([
     [mine.length, 'API calls'],
     [total + ' ms', 'in total'],
@@ -5452,8 +5322,7 @@ function testDiagHTML() {
 
   var caveats = [];
   if ((window.CBGEN || 0) <= 1) {
-    caveats.push('The app was still starting, so its sign-in and set-up calls are counted here too. '
-      + 'Go to another screen and come back for a clean reading.');
+    caveats.push(TEST_BOOTING_WARN);
   }
   if (!srvKnown.length) {
     caveats.push('The server is not reporting its own time, so this cannot be split into database, code and '
@@ -5461,9 +5330,6 @@ function testDiagHTML() {
   }
   h += testNotes(caveats, 'warn');
 
-  h += testNotes([verdict,
-    'Each call is roughly 1.4–2.4 s to the database and back, so the <b>count</b> matters more than the '
-      + 'milliseconds.'], 'note');
 
   /**
    * ── ⭐⭐ WHAT THE RESPONSE ENVELOPE THREW AWAY ────────────────────────────────────────────────────────
@@ -5478,8 +5344,8 @@ function testDiagHTML() {
     var drop = window.CBDROP || {};
     var dk = Object.keys(drop).filter(function (k) { return (drop[k] || []).length; });
     if (dk.length) {
-      h += testSec('Dropped by the response envelope',
-        'these arrived from the server and did not survive unwrap() — harmless unless something needed them');
+      h += testSec('Dropped by the response envelope', '',
+        'These arrived from the server and did not survive unwrap() — harmless unless something needed them');
       h += testNotes(dk.slice(0, 12).map(function (k) {
         return '<code>' + testEsc(k) + '</code> — ' + testEsc(drop[k].join(', '));
       }), 'warn');
@@ -5490,7 +5356,8 @@ function testDiagHTML() {
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
-    + '<th style="text-align:start;padding:3px 6px 3px 0">Call</th>'
+    + '<th style="text-align:start;padding:3px 6px 3px 0" title="Quote a call\u2019s id when reporting it '
+    +   '\u2014 the server logged the same one">Call</th>'
     + '<th style="text-align:start;padding:3px 6px">Path</th>'
     + '<th style="text-align:end;padding:3px 6px">ms</th>'
     + (srvKnown.length ? '<th style="text-align:end;padding:3px 6px" title="time inside the server, and '
@@ -5522,10 +5389,7 @@ function testDiagHTML() {
         : '');
   }).join('');
   /* ⚠ the correlation id is the thing that joins this to the server's own line — quoted, never invented */
-  h += '</table>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:7px 0 0">'
-    + 'Quote a call\u2019s id when reporting it: ' + testEsc((mine[0] && mine[0].rid) || '\u2014')
-    + ' \u2014 the server logged the same one.</div>';
+  h += '</table>';
 
   /**
    * ── ⭐⭐ THE SAME SCREEN, READ AGAIN AND AGAIN ─────────────────────────────────────────────────────────
@@ -5553,18 +5417,19 @@ function testDiagHTML() {
       + slower.map(function (x) {
           return testEsc(x.key) + ' \u2014 <b>' + x.now + ' ms</b> now, best was ' + x.was + ' ms';
         }).join('<br>')
-      + '<br><span style="color:var(--grey-2)">Measured against the BEST earlier visit, not the last one: '
-      + 'one slow visit would otherwise hide the next regression behind it. Worth raising.</span></div>';
+      + '<br><span style="color:var(--grey-2)" title="Not the last one: one slow visit would otherwise hide '
+      + 'the next regression behind it.">vs best earlier visit</span></div>';
   }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
   /* ⚠️ the trace control moved into the bar at the top (testTraceChip) — it was rendering here, in the
      middle of the numbers, at three different heights depending on what it had loaded. */
-  h += testSec('Where the time went', 'read from the browser and the server \u2014 nothing here is estimated');
+  /* ⭐ the first tip is LOAD-BEARING — it stops these numbers being read as estimates */
+  h += testSec('Where the time went', '', 'Read from the browser and the server \u2014 nothing here is estimated');
   h += testDiagLayersHTML(mine);
-  h += testSec('By call', 'which route is expensive everywhere, not just on this screen');
+  h += testSec('By call \u00b7 all screens');
   h += testDiagByApi();
-  h += testSec('By screen', 'every screen you have measured, worst first');
+  h += testSec('By screen');
   h += testDiagByScreen();
 
 
@@ -5786,10 +5651,11 @@ function testDiagCleared() {
  * ⚠️ THREE, NOT SEVEN. A fourth treatment invented for one block is how a screen ends up looking the way this
  * one did.
  */
-function testSec(title, hint) {
+function testSec(title, hint, tip) {
   return '<div style="margin:13px 0 5px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8)">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
-    +   'color:var(--grey-2,#545A61)">' + title + '</div>'
+    + '<div style="font-size:var(--fs-2);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
+    +   'color:var(--ink,#20303b)"' + (tip ? ' title="' + testEsc(tip) + '"' : '') + '>' + title
+    +   (tip ? ' <span style="color:var(--grey-4,#646A72);font-weight:400">\u24d8</span>' : '') + '</div>'
     + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-top:1px">' + hint + '</div>' : '')
     + '</div>';
 }
@@ -5817,8 +5683,14 @@ var TEST_TONE = {
   bad:  ['var(--disp,#B3261E)', 'var(--danger-tint,#fbeceb)', 'var(--ink,#20303b)'],
   warn: ['var(--warn-2,#8a6100)', 'var(--warn-tint,#fdf6e6)', 'var(--ink,#20303b)'],
   ok:   ['var(--ok-2,#1B7F4B)', 'var(--ok-tint,#eaf4ee)', 'var(--ink,#20303b)'],
-  note: ['var(--line,#e7e3d8)', 'var(--paper,#faf8f3)', 'var(--grey-2,#545A61)'],
+  /* ⚠️ WAS --line ON --paper: 1.19:1 light, 1.06:1 dark — an accent bar nobody could see */
+  note: ['var(--grey-4,#646A72)', 'var(--paper,#faf8f3)', 'var(--grey-2,#545A61)'],
 };
+
+/** the one boot caveat, said once and shown as a glyph — it was written out in full at two sites */
+var TEST_BOOTING_WARN = '<span title="The app was still starting, so its sign-in and set-up calls are '
+  + 'counted here too. Go to another screen and come back for a clean reading.">'
+  + '\u26a0 includes start-up calls</span>';
 function testNotes(list, tone) {
   var rows = (list || []).filter(Boolean);
   if (!rows.length) return '';
@@ -5851,19 +5723,8 @@ function testDiagBarHTML() {
        in the same slot whether it is off, on, or still being read */
     +   '<span style="float:inline-end">' + testTraceChip() + '</span>'
     + '</div>'
-    /* ⭐ one line, saying what each does — Athi asked for "clear instruction", and a chip with only an icon
-       is a control you have to press to find out what it was */
-    /**
-     * ⭐ ONE BULLET PER CHIP, IN THE SAME ORDER AS THE CHIPS. Athi: *"write-up, snapshot messages should be
-     * as bullet points and possibly in a box." A four-sentence paragraph describing four buttons makes the
-     * reader match sentence to button themselves; one line each and the matching is already done.
-     */
-    + testNotes([
-        '<b>\u270e Write this up</b> puts these numbers into the Create form \u2014 you still choose whether it is an incident or a requirement.',
-        '<b>\ud83d\udcbe Snapshot</b> saves one file with every call of this visit (what was asked, what was sent, what came back), every error the page threw, and where you were \u2014 to attach to it.',
-        '<b>\u27f2 Clear</b> starts the measurement again \u2014 this screen, or all of them.',
-        'Your readings live in this browser under your login, so clearing cannot touch anybody else\u2019s.',
-      ], 'note')
+    /* ⚠️ THE FOUR BULLETS THAT USED TO SIT HERE were the four chips' own title= attributes, printed again
+       underneath them. Every chip above carries its sentence; nothing was lost by deleting the copy. */
     + '</div>';
 }
 
@@ -6020,18 +5881,18 @@ function testTraceHTML() {
     var mins = Math.max(1, Math.round((t.seconds || 0) / 60));
     return '<div style="margin-top:9px;padding:7px 9px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
       + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1)">'
-      + '<b>\u1f50e Tracing your calls</b> \u00b7 about ' + mins + ' minute(s) left, then it stops by itself.'
-      + ' <button onclick="testTraceSet(0)" style="' + btn + ';margin-inline-start:6px">Stop now</button>'
+      + '<b title="It stops by itself">\u23f1 tracing \u00b7 ~' + mins + ' min</b>'
+      + ' <button onclick="testTraceSet(0)" style="' + btn + ';margin-inline-start:6px">Stop</button>'
       + '</div>';
   }
   return '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-2)">'
-    + '\u1f50e <b>Server timings are off for you.</b> Turn them on and each call will show what it spent '
-    + 'inside the server and how many database trips it made:<br>'
+    + '<b title="Turn them on and each call shows what it spent inside the server and how many database '
+    + 'trips it made. It stops by itself, and only your own calls are timed.">\u23f1 Timings off</b> '
     + [10, 15, 30].map(function (m) {
         return '<button onclick="testTraceSet(' + m + ')" style="' + btn + ';margin-top:5px">'
           + m + ' min</button>';
       }).join('')
-    + '<span style="color:var(--grey-4,#646A72)">it stops by itself, and only your own calls are timed</span></div>';
+    + '</div>';
 }
 
 function testDiagLayersHTML(mine) {
@@ -6060,8 +5921,9 @@ function testDiagLayersHTML(mine) {
 
   var row = function (label, ms, note, colour) {
     return '<tr style="border-top:1px solid var(--line,#efece4)">'
-      + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)">' + label
-      +   '<span style="display:block;font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + note + '</span></td>'
+      + '<td style="padding:4px 6px 4px 0;font-size:var(--fs-2)" title="' + testEsc(note || '') + '">' + label
+      +   (note ? ' <span style="color:var(--grey-4,#646A72)">\u24d8</span>' : '')
+      + '</td>'
       + '<td style="text-align:end;padding:4px 6px;font-weight:700'
       +   (colour ? ';color:' + colour : '') + '">' + ms + ' ms</td></tr>';
   };
@@ -6080,15 +5942,6 @@ function testDiagLayersHTML(mine) {
         + (raw > bytes ? ', ' + Math.round(raw / 1024) + ' KB after unzipping' : '')) : 'the download', null)
     + '</table>';
 
-  /* ⭐ the reading in a sentence, because a table of five numbers still needs somebody to draw the conclusion */
-  var verdict = (setup > srv + net + down) ? 'Most of it was setting up the connection \u2014 that is a first-call '
-        + 'cost and the calls after it ride free.'
-    : (net > srv * 1.5) ? 'Most of it is DISTANCE, not work. Fewer round trips will help; a faster query will '
-        + 'barely show.'
-    : (srv > net * 1.5) ? 'Most of it is the SERVER thinking. Batching will barely help here \u2014 look at the '
-        + 'query.'
-    : 'Server time and network time are close, so neither one alone explains it.';
-  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:5px">' + verdict + '</div>';
   return h;
 }
 
@@ -6129,9 +5982,9 @@ function testDiagByApi() {
   };
 
   var h = ''
-    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:5px">'
-    + '\u26a0\ufe0f The last ' + all.length + ' calls in THIS browser tab, nothing more. Not a monitor, and not '
-    + 'evidence about the product as a whole.</div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);margin-bottom:5px" '
+    + 'title="Nothing more. Not a monitor, and not evidence about the product as a whole.">'
+    + 'last ' + all.length + ' calls \u00b7 this tab</div>';
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
@@ -6303,11 +6156,7 @@ function testScrRaisedHTML(code, kind) {
 
   if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:8px 0">'
-      + 'No ' + word + ' on this screen. '
-      + (kind === 'inc'
-        ? 'Raise one from Create the moment something does not work.'
-        : 'Raise one from Create when the product does what it was told and the instruction was wrong.')
-      + '</div>';
+      + 'No ' + word + ' here.</div>';
   }
 
   var showShut = testScrShut(kind);
@@ -6758,8 +6607,7 @@ async function testHandClose(key, open) {
    */
   var why = null;
   if (!open) {
-    why = await testAsk('Closing this \u2014 why?',
-      'The next tester reads this instead of raising it again.', 'Close it');
+    why = await testAsk('Closing this \u2014 why?', '', 'Close it');
     if (why === null) return;                     /* cancelled: nothing is closed */
     if (!String(why).trim()) { if (typeof toast === 'function') toast('A closure needs its reason.'); return; }
   }
@@ -7093,11 +6941,8 @@ function testWorkHTML() {
   var f = testWorkFilterGet();
 
   if (!all.length) {
-    return '<div style="font-size:var(--fs-2);color:var(--grey-2);padding:12px 2px;line-height:1.6">'
-      + '<b>Nothing on your worklist yet.</b><br>'
-      + 'Open any screen with test mode on, press its code in the corner, and use <b>Create</b>. '
-      + 'Whatever you write — a test case, an incident or a requirement — lands here with a status, '
-      + 'and stays here until it is closed.</div>';
+    return '<div style="font-size:var(--fs-2);color:var(--grey-2);padding:12px 2px">'
+      + 'Nothing on your worklist yet.</div>';
   }
 
   var n = {};
@@ -7129,8 +6974,8 @@ function testWorkHTML() {
   if (mine.length) {
     h += '<div data-testid="work-yours" style="margin:2px 0 7px;padding:7px 9px;border-radius:8px;'
       + 'border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);font-size:var(--fs-1)">'
-      + '<b>' + mine.length + ' waiting for you to retest.</b> Somebody says they fixed what you reported. '
-      + 'Look again, then say whether it holds — until you do, it is a claim and not a fix.'
+      + '<b title="Somebody says they fixed what you reported. Look again, then say whether it holds — '
+      + 'until you do, it is a claim and not a fix.">' + mine.length + ' waiting for you to retest</b>'
       + ' <button onclick="testWorkFilter(\'mine\')" style="' + chip
       + 'background:var(--warn-2,#8a6100);color:#fff">Show them</button></div>';
   }
@@ -7160,8 +7005,7 @@ function testWorkHTML() {
   }
 
   h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:0 0 6px">'
-    + '<b>' + rows.length + '</b> of ' + all.length + ' · what you have written on a screen, with its status '
-    + 'and what happens next. Every row ends in <b>Closed</b>.</div>';
+    + '<b>' + rows.length + '</b> of ' + all.length + '</div>';
 
   h += rows.map(testWorkRowHTML).join('');
   return h;
@@ -7282,8 +7126,7 @@ function testHandHTML() {
   var all = testFindings();
   if (!all.length) {
     return '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:10px 0">'
-      + 'Nothing found by hand yet. Turn on test mode, open any screen, and use the Test chip \u2014 every case, '
-      + 'requirement and incident written there lands here.</div>';
+      + 'Nothing yet.</div>';
   }
 
   var f = testHandFilterGet();
@@ -7327,9 +7170,9 @@ function testHandHTML() {
   if (waiting.length) {
     h += '<div style="margin:6px 0 4px;padding:7px 9px;border-radius:8px;border:1px solid var(--ok-2,#1B7F4B);'
       + 'background:var(--ok-tint,#eaf5ee);font-size:var(--fs-1)">'
-      + '<b>' + waiting.length + ' fixed — waiting for your retest.</b> '
-      + 'Somebody answered what you reported. Open the screen, look, then say whether it holds — until you do, '
-      + 'it is a claim and not a fix.'
+      + '<b title="Somebody answered what you reported. Open the screen, look, then say whether it holds — '
+      + 'until you do, it is a claim and not a fix.">' + waiting.length
+      + ' fixed \u00b7 waiting for your retest</b>'
       + ' <button onclick="testHandFilter(\'verify\')" style="font:inherit;font-size:var(--fs-1);'
       + 'margin-inline-start:6px;padding:1px 8px;border-radius:7px;cursor:pointer;border:1px solid '
       + 'var(--ok-2,#1B7F4B);background:var(--ok-2,#1B7F4B);color:#fff">Show them</button></div>';
@@ -7350,8 +7193,7 @@ function testHandHTML() {
     + '</div>';
 
   h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:2px 0 8px">'
-    + '<b>' + rows.length + '</b> finding(s) raised by a person on a screen, newest first \u2014 cases, '
-    + 'requirements and incidents together. Each one closes with a reason.</div>';
+    + '<b>' + rows.length + '</b></div>';
 
   if (!rows.length) {
     return h + '<div style="font-size:var(--fs-1);color:var(--grey-4,#646A72);padding:6px 0">'
@@ -7587,14 +7429,17 @@ function testMenuHTML(shown) {
     var anyMenu = CBTEST.cases.some(function (c) { return !!c.menu; });
     if (!anyMenu) {
       return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
-        + '<b>This board is older than the menu sweep.</b><br>'
-        + '<span style="color:var(--grey-2,#545A61)">None of its ' + CBTEST.cases.length + ' cases names a door yet, so there is no tree to draw. The 266 swept cases \u2014 one per control behind every door \u2014 are in the documented set, waiting to be read in.</span><br>'
-        + '<button class="btn pri" onclick="testSeed()" style="margin-top:9px;font-size:var(--fs-2);padding:6px 14px">Load cases</button>'
-        + '<div style="margin-top:6px;color:var(--grey-2,#545A61);font-size:var(--fs-1)">Safe to press: it is an upsert, and every result already recorded stays exactly where it is.</div></div>';
+        + '<b>No door on this board yet.</b>'
+        /* ⚠️ the reassurance stays on the button face, not only in the tip: nobody presses an unfamiliar
+           button on a board holding real results without knowing it cannot lose them */
+        + '<div><button class="btn pri" onclick="testSeed()" '
+        +   'title="It is an upsert \u2014 every result already recorded stays exactly where it is" '
+        +   'style="margin-top:9px;font-size:var(--fs-2);padding:6px 14px">Load cases \u00b7 safe</button></div>'
+        + '</div>';
     }
     return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
-      + '<b>No door matches this filter.</b><br>'
-      + '<span style="color:var(--grey-2,#545A61)">The board does hold swept cases \u2014 they are just not in view. Journey steps and automated files belong to no single door and never appear here.</span><br>'
+      + '<b title="Journey steps and automated files belong to no single door and never appear here.">'
+      + 'No door matches this filter.</b><br>'
       + '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>';
   }
 
@@ -7670,13 +7515,10 @@ function testMenuHTML(shown) {
   });
 
   /**
-   * ⭐⭐ WHAT RETIREMENT MEANS — the SAME sentence the Report prints, from the shared file. Athi: *"the same
-   * has to be updated with retired if it is not going to be useful anymore."* ⚠️ Two wordings of one
-   * mechanism is how a reader ends up believing whichever one is wrong.
+   * ⚠️ THE RETIREMENT NOTE USED TO PRINT HERE TOO. It is document content, and it is kept in the Report
+   * (testing.html), which is the surface a person reads without being able to press anything. The panel
+   * offers controls; the document explains. [[feedback-artifact-audience]]
    */
-  h += '<div style="margin:10px 4px 4px;padding:7px 9px;border-radius:7px;background:var(--paper,#faf8f3);'
-    + 'border:1px solid var(--line,#efece4);' + q + '"><b>This tree rebuilds itself.</b> '
-    + (typeof TEST_MENU_RETIRED_NOTE === 'string' ? TEST_MENU_RETIRED_NOTE : '') + '</div>';
   return h;
 }
 
@@ -7689,8 +7531,11 @@ function testCaseBodyHTML(c) {
   if (c.menu) h += '<div style="font-size:var(--fs-1);color:var(--grey-2);letter-spacing:.03em;margin-bottom:6px">'
     + testScreenCode(c.menu) + '<b>' + testEsc(testScreenName(c.menu) || c.menu) + '</b>'
     + (testScreenName(c.menu) ? ' \u00b7 ' + testEsc(c.menu) : '') + '</div>';
-  if (c.generated) h += '<div style="font-size:var(--fs-1);margin-bottom:7px;padding:6px 8px;border-radius:7px;background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17">'
-    + 'Swept from the menu \u2014 it names the control but carries no written expectation. Judge it against what the screen is FOR, and if you decide what it should do, write that into the case.</div>';
+  if (c.generated) h += '<div style="margin-bottom:7px"><span title="It names the control but carries no '
+    + 'written expectation. Judge it against what the screen is FOR, and if you decide what it should do, '
+    + 'write that into the case." style="display:inline-block;font-size:var(--fs-1);padding:1px 8px;'
+    + 'border-radius:10px;background:#fff8ea;border:1px solid #f0e3c4;color:#7a5c17">'
+    + 'swept \u00b7 no expectation</span></div>';
   if (c.pre) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Before:</b> ' + testEsc(c.pre) + '</div>';
   if (c.data) h += '<div style="color:var(--grey-2,var(--grey-2));margin-bottom:5px"><b>Use:</b> ' + testEsc(c.data) + '</div>';
   (c.steps || []).forEach(function (s, i) {
@@ -7993,8 +7838,7 @@ async function testMark(key, status) {
   /* ⭐ asked here as well as refused at the server, so the tester is told by the box they must fill and not
      by a red toast after a round trip — the same shape as the observation an incident already demands */
   if (status === 'blocked' && !note) {
-    if (typeof toast === 'function') toast('Say what blocked it — a blocked case with no reason reads the '
-      + 'same as one nobody reached.');
+    if (typeof toast === 'function') toast('What blocked it?');
     try { if (nb) nb.focus(); } catch (_) {}
     return;
   }
@@ -8109,8 +7953,7 @@ function testAddHTML() {
     +   ';margin-bottom:8px">'
     +   (chosen
         ? 'Adding to <b>' + testEsc(suggested) + '</b>' + (named ? ' \u00b7 ' + testEsc(named) : '')
-        : '\u26a0 No area chosen \u2014 <b>' + testEsc(suggested) + '</b> is a suggestion. '
-          + 'Press + on an area row to be sure, or edit it below.')
+        : '<span title="Press + on an area row to be sure, or edit it below.">\u26a0 suggested</span>')
     + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Area</label>'
     + '<input type="text" id="cbt_a_mod" value="' + testEsc(suggested) + '" '
@@ -8127,13 +7970,12 @@ function testAddHTML() {
     + '<label style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2))">Why this case exists</label>'
     + '<input type="text" id="cbt_a_note" placeholder="What went wrong, in your words" '
     +   'style="width:100%;margin-bottom:9px;padding:5px 7px;font-size:var(--fs-2)">'
-    /* ⚠️ SAID BEFORE THEY SAVE, not after. The document in the repository is where the wording is reviewed, and a
-       case written here is real but is not yet in it — so it is not in the printed script either. */
-    + '<div style="font-size:var(--fs-1);color:var(--grey-2,var(--grey-2));line-height:1.5;margin-bottom:9px">'
-    +   'This becomes a real case on the board straight away. To get it into the printed script as well, add it to '
-    +   '<code>TEST-CASES-V2.js</code> — the document stays where the wording is reviewed.</div>'
     + '<div style="display:flex;gap:6px">'
-    +   '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)">Add the case</button>'
+    /* ⚠️ said on the button, before they press it: a case written here is real but is not yet in the
+       document in the repository, so it is not in the printed script either */
+    +   '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)" '
+    +     'title="It becomes a real case on the board straight away. To get it into the printed script as '
+    +     'well, add it to TEST-CASES-V2.js.">Add the case</button>'
     +   '<button class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>'
     + '</div></div>';
 }

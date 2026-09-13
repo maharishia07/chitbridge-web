@@ -32,17 +32,22 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
   await page.evaluate(() => { CBTEST.tech = {}; testArea('tech'); });
 
   const panel = page.locator('#cbcasespanel');
-  /* ⚠️ before a technique is chosen, five bare chips taught nobody anything — each now says what it is FOR */
-  await expect(panel).toContainText('A number, or a date, with a lowest and a highest');
-  await expect(panel).toContainText('values fall into KINDS the product is supposed to treat differently');
-  await expect(panel).toContainText('MOVES THROUGH named stages');
+  /**
+   * ⚠️ WHAT EACH TECHNIQUE IS FOR NOW RIDES ON THE CHIP THAT CHOOSES IT. It used to print as five lines of
+   * prose above the five chips, and the ▶ button below already DEMONSTRATED the same thing — the cut list
+   * kept the demonstration and moved the definition onto the control. The fact is still asserted, on the
+   * surface that now carries it. [[feedback-improvise-update-cases]]
+   */
+  await expect(page.locator('#cbcasespanel button', { hasText: 'A number range' }))
+    .toHaveAttribute('title', /a lowest and a highest/);
+  await expect(page.locator('#cbcasespanel button', { hasText: 'Kinds of value' }))
+    .toHaveAttribute('title', /fall into KINDS/);
+  await expect(page.locator('#cbcasespanel button', { hasText: 'A lifecycle' }))
+    .toHaveAttribute('title', /MOVES THROUGH named stages/);
 
-  /* ── choose one, and it shows its working ── */
+  /* ── choose one, and the button that shows its working is there ── */
   await page.locator('#cbcasespanel button', { hasText: 'A number range' }).click();
-  await expect(panel).toContainText('Try this:');
-  await expect(panel).toContainText('quantity');
-  /* ⭐ and it names the standard's own reason, which is the sentence a tester can repeat to a sceptic */
-  await expect(panel).toContainText('Boundary value analysis');
+  await expect(page.locator('[data-testid="tech-try"]')).toBeVisible();
 
   /* the inputs are prominent and labelled, not a row of narrow boxes with placeholder-only hints */
   await expect(panel).toContainText('Lowest allowed');
@@ -50,6 +55,12 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
   await expect(page.locator('#tqLo')).toBeVisible();
   await expect(page.locator('#tqHi')).toBeVisible();
   await expect(page.locator('#cbcasespanel button', { hasText: 'Write the cases' })).toHaveCount(1);
+
+  /* ⭐ AND IT STILL NAMES THE STANDARD'S OWN REASON once there are rows — the sentence a tester repeats to
+     a sceptic. This used to be satisfied by the prose block; it is asserted where it actually lives now. */
+  await page.locator('[data-testid="tech-try"]').click();
+  await expect(panel).toContainText('Boundary value analysis');
+  await expect(panel, 'the worked example is performed, not printed').toContainText('quantity');
 
   /**
    * ── ⭐ "TRY IT" MUST DO IT, NOT DESCRIBE IT ──────────────────────────────────────────────────────────

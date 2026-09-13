@@ -458,12 +458,7 @@
   /* ⭐ the journey position, shown so the ordering is legible rather than merely applied */
   /* ⭐ the core group, readable at a glance and comparable down a column */
   /* ── ⭐ folding ── */
-  /* ⭐ the question this tab answers — same place, same voice, on every tab */
-  .lens{ font-size:var(--fs-2); color:var(--ink-2); background:var(--card); border:1px solid var(--line);
-        border-inline-start:3px solid var(--blue); border-radius:4px; padding:7px 11px; margin:0 0 12px;
-        line-height:1.5; }
-  .lens b{ color:var(--ink); }
-  .lens i{ font-style:normal; color:var(--grey-2); }
+  /* ⚠️ .lens is gone: the question each tab answers now rides on the tab's own title= */
   /* ── ⭐ the Cases tab as one table: a row per area, expandable in place ── */
   table.areas td{ vertical-align:middle; }
   /**
@@ -697,15 +692,19 @@
          learning our words. ⚠️ Only where it genuinely corresponds: the Summary is OURS, because 29119-3's
          Test Status Report is written DURING execution against a plan and we have no plan. -->
     <button id="t_cases" class="on" onclick="setView('cases')"
-      title="Test Case Specification (ISO/IEC/IEEE 29119-3)">Cases</button>
+      title="What should be true. Every case, in the order somebody would walk the product. This tab cannot
+tell you whether any of it ran. — Test Case Specification (ISO/IEC/IEEE 29119-3)">Cases</button>
     <button id="t_sum" onclick="setView('summary')"
-      title="Coverage and the execution log — ours, not a named document of the standard">Summary</button>
+      title="What has been run, and how far along. Done means a result exists — not that it passed. — ours,
+not a named document of the standard">Summary</button>
     <button id="t_rep" onclick="setView('report')"
-      title="Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
+      title="The same numbers as a document you could hand somebody. Counts are measured; the judgements
+carry a question, never a generated answer. — Test Completion Report (ISO/IEC/IEEE 29119-3)">Report</button>
     <button id="t_rel" onclick="setView('reliability')"
-      title="How often each test has run, and how often it changed its answer">Reliability</button>
+      title="Whether a test can be believed. Not pass or fail — how often each one changed its answer.">Reliability</button>
     <button id="t_try" onclick="setView('try')"
-      title="Run a pure engine function on your own input, here, with no server">Try it</button>
+      title="The engines themselves, on your own input, with no server in between to blame. Nothing here is
+recorded.">Try it</button>
     <span class="tsize"><button onclick="textSize(-1)" title="Smaller text" aria-label="Smaller text">A−</button><button onclick="textSize(1)" title="Bigger text" aria-label="Bigger text">A+</button></span>
   </div>
 </div>
@@ -723,7 +722,6 @@
   ⭐ So each tab states the QUESTION IT ANSWERS, in the same place, in the same voice. The data is one table
   of results; what changes is what you are asking it.
 -->
-<div class="lens" id="lens"></div>
 <!--
   ── ⭐⭐⭐ TWO BOXES, NOT FIVE ────────────────────────────────────────────────────────────────────────────────
 
@@ -840,7 +838,6 @@
     <option value="who">Run by</option>
     <option value="status" selected>Status</option>
   </select>
-  <span class="foldnote">the same cases, cut a different way</span>
 </div>
 
 <!--
@@ -1702,18 +1699,8 @@ var VIEW = 'cases', COVER = [], RUNS = [];
  * ⭐ WHAT EACH TAB IS ASKING. Same results table underneath all five — the lens is the difference, and a reader
  * who cannot see the lens reasonably assumes the tabs disagree.
  */
-var LENS = {
-  cases: '<b>What should be true.</b> Every case, in the order somebody would walk the product — '
-       + 'register, sign in, find your way, set up, sell. <i>This tab cannot tell you whether any of it ran.</i>',
-  summary: '<b>What has been run, and how far along.</b> The same cases, counted by area and by kind. '
-         + '<i>Done means a result exists — not that it passed.</i>',
-  report: '<b>The same numbers as a document you could hand somebody.</b> ISO/IEC/IEEE 29119-3. '
-        + '<i>Counts are measured; the judgements carry a question, never a generated answer.</i>',
-  reliability: '<b>Whether a test can be believed.</b> Not pass or fail — how often each one <i>changed its '
-             + 'answer</i>. A test that flips proves nothing, however green it looks today.',
-  'try': '<b>The engines themselves, on your own input.</b> The same files the counter runs, with no server '
-       + 'in between to blame. <i>Nothing here is recorded — it is for seeing, not for scoring.</i>',
-};
+/* ⚠️ LENS HELD FIVE BLURBS AND IS GONE. A reader handed this document reads one tab; a paragraph describing
+   the tab they just pressed is the purest operating chrome there is. Each one is now that tab's title=. */
 
 /**
  * ⭐ ONE MULTIPLIER ON THE ROOT MOVES EVERYTHING — prose, tables, tree, chart labels — because the whole page
@@ -1739,8 +1726,6 @@ applyTextSize();
 
 function setView(v){
   VIEW = v;
-  var lens = document.getElementById('lens');
-  if (lens) lens.innerHTML = LENS[v] || '';
   document.getElementById('t_cases').className = (v === 'cases') ? 'on' : '';
   document.getElementById('t_sum').className = (v === 'summary') ? 'on' : '';
   /* the case filters mean nothing on either of the other two views */
@@ -2002,9 +1987,8 @@ function tryCardDoc(){
 }
 
 function paintTry(){
-  var h = '<div class="why-note"><b>Run the real engine on your own input.</b> These are the same '
-    + 'files the counter runs \u2014 pure, no server, no database, nothing stored. A guard proves a function '
-    + 'against the inputs somebody thought of; this is for the input you actually have.</div>';
+  var h = '<div class="why-note"><b>Run the real engine on your own input.</b> '
+    + 'Nothing is recorded.</div>';
   h += tryCardMoney() + tryCardNums() + tryCardDoc();
   document.getElementById('main').innerHTML = h;
   /* ⭐ run all three straight away — a page of empty boxes teaches nothing; a page of worked answers does */
@@ -2019,11 +2003,8 @@ async function paintReliability(){
 
   var t = r.totals || {};
   var h = '<div class="why-note">'
-    + '<b>Failures are not the headline here \u2014 changes of answer are.</b> A test that went '
-    + 'pass\u00b7pass\u00b7fail\u00b7fail\u00b7fail broke once and stayed broken: that is a defect, and its failure count '
-    + 'describes it fairly. A test that went pass\u00b7fail\u00b7pass\u00b7fail\u00b7pass failed the same number of times and '
-    + 'is something else entirely \u2014 nothing about the product changed between those runs, so the TEST is what is '
-    + 'not mature. The worst are listed first.</div>';
+    + '<b>Failures are not the headline here \u2014 changes of answer are.</b> A test that flips proves '
+    + 'nothing. The worst are listed first.</div>';
 
   h += '<div class="big-n" style="margin-bottom:18px">'
     + '<div><b>' + (t.tracked || 0) + '</b><span>tests with a history</span></div>'
@@ -2779,8 +2760,7 @@ function engineHTML(){
   var o = ENGINE.other || {};
   h += '<div class="fine" style="margin:8px 0 16px">The rest of <code>lib/</code> is declared too, and is '
     + 'deliberately NOT called a rule: ' + (o.engine_adjacent || 0) + ' engine-adjacent · '
-    + (o.adoption || 0) + ' adoption layers · ' + (o.infrastructure || 0) + ' infrastructure. '
-    + '⚠️ Adding a rule means adding it to a bucket in the manifest — one edit, guarded, where the rule lives.</div>';
+    + (o.adoption || 0) + ' adoption layers · ' + (o.infrastructure || 0) + ' infrastructure.</div>';
   return h;
 }
 
@@ -2940,7 +2920,7 @@ function treeNode(depth, glyph, label, count, tail, note, open, key){
  * which is why both are here.
  */
 function folderTreeHTML(){
-  if (!CONTENTS) return '<div class="note">The architecture loads with the cases \u2014 press <b>Load cases</b>.</div>';
+  if (!CONTENTS) return '<div class="note">Press <b>Load cases</b>.</div>';
 
   /* every entry the board knows, filed under its real path */
   var root = { kids: {}, items: [] };
@@ -3019,7 +2999,7 @@ function folderTreeHTML(){
  * screen of green ticks imply that somebody decided what each control SHOULD do.
  */
 function menuTreeHTML(){
-  if (!CASES.length) return '<div class="note">The cases load with the board \u2014 press <b>Load cases</b>.</div>';
+  if (!CASES.length) return '<div class="note">Press <b>Load cases</b>.</div>';
 
   /**
    * ⭐ THE SHAPE IS SHARED (app/test-menu-tree.js), THE DRAWING IS NOT. The lab draws the same groups and
@@ -3027,7 +3007,8 @@ function menuTreeHTML(){
    * ⚠️ Falls back to saying so rather than to a second copy — a missing shared file costs this tab, never
    * the page, and never a silently different answer from the one the lab is showing.
    */
-  if (typeof testMenuTree !== 'function') return '<div class="note">The menu\u2019s shape lives in app/test-menu-tree.js and it has not loaded. Reload the page.</div>';
+  if (typeof testMenuTree !== 'function') return '<div class="note" title="Its shape lives in '
+    + 'app/test-menu-tree.js">Not loaded \u2014 reload the page.</div>';
   var T = testMenuTree(CASES, LAST);
   /**
    * ⚠️ THE SAME DISTINCTION AS THE LAB, and drawn from the same fact: is it the DATA that has no doors, or
@@ -3102,7 +3083,7 @@ function menuTreeHTML(){
 }
 
 function treeHTML(){
-  if (!CONTENTS) return '<div class="note">The architecture loads with the cases \u2014 press <b>Load cases</b>.</div>';
+  if (!CONTENTS) return '<div class="note">Press <b>Load cases</b>.</div>';
 
   var h = '<div class="tree">';
   var total = AREA_ORDER.reduce(function(t, a){ return t + ((CONTENTS[a] || []).length); }, 0);
@@ -3277,22 +3258,24 @@ async function paintSummary(){
    */
   /* ⭐ table or tree — the same data, two questions: a table compares, a tree contains */
   var h = '<div class="sumswitch">'
-    + '<button class="btn' + (SUMVIEW === 'table' ? ' pri' : '') + '" onclick="setSumView(\'table\')">Table</button>'
-    + '<button class="btn' + (SUMVIEW === 'tree' ? ' pri' : '') + '" onclick="setSumView(\'tree\')">Tree \u00b7 by layer</button>'
-    + '<button class="btn' + (SUMVIEW === 'folder' ? ' pri' : '') + '" onclick="setSumView(\'folder\')">Tree \u00b7 by folder</button>'
-    + '<button class="btn' + (SUMVIEW === 'menu' ? ' pri' : '') + '" onclick="setSumView(\'menu\')">Tree \u00b7 by menu</button>'
-    + '<span class="fine">The table compares the layers. The layer tree shows what is inside each one. '
-    + 'The folder tree shows where the files actually are \u2014 the only one that cannot leave anything out. '
-    + 'The menu tree is the product as a <b>person</b> sees it: every door, and every control behind it.</span>'
+    /* ⭐ one clause on each button it describes, rather than four sentences beside the four of them */
+    + '<button class="btn' + (SUMVIEW === 'table' ? ' pri' : '') + '" onclick="setSumView(\'table\')" '
+    +   'title="Compares the layers">Table</button>'
+    + '<button class="btn' + (SUMVIEW === 'tree' ? ' pri' : '') + '" onclick="setSumView(\'tree\')" '
+    +   'title="What is inside each layer">Tree \u00b7 by layer</button>'
+    + '<button class="btn' + (SUMVIEW === 'folder' ? ' pri' : '') + '" onclick="setSumView(\'folder\')" '
+    +   'title="Where the files actually are \u2014 the only one that cannot leave anything out">'
+    +   'Tree \u00b7 by folder</button>'
+    + '<button class="btn' + (SUMVIEW === 'menu' ? ' pri' : '') + '" onclick="setSumView(\'menu\')" '
+    +   'title="The product as a person sees it: every door, and every control behind it">'
+    +   'Tree \u00b7 by menu</button>'
     + '</div>';
   h += (SUMVIEW === 'tree' ? treeHTML()
       : SUMVIEW === 'folder' ? folderTreeHTML()
       : SUMVIEW === 'menu' ? menuTreeHTML()
       : matrixHTML()) + maturityHTML() + engineHTML() + chartsHTML();
-  /* ⚠️ "Coverage by area" lived here and was the Cases pivot's default cut, drawn twice. */
-  h += '<div class="note" style="margin:18px 0">Counts by area, kind, status or who runs them are on the '
-    + '<b>Cases</b> tab — choose what the rows and columns are. <i>A summary that repeats the list is the '
-    + 'list again.</i></div>';
+  /* ⚠️ "Coverage by area" lived here and was the Cases pivot's default cut, drawn twice. A line pointing
+     at another tab followed it, and that is navigation, not report content. */
 
   h += '<h2 style="font-size:var(--fs-3);margin:4px 0 9px">Sittings</h2>'
     + '<div style="color:var(--grey-2);font-size:var(--fs-1);margin-bottom:10px;line-height:1.5">'
@@ -3377,7 +3360,7 @@ function paint(){
     byMod[c.module_key].push(c); });
 
   if (!list.length) { document.getElementById('main').innerHTML =
-    '<div class="say"><b>Nothing matches.</b>Clear the search or choose a different filter.</div>'; return; }
+    '<div class="say"><b>Nothing matches.</b></div>'; return; }
 
   /**
    * ── ⭐⭐⭐ SECTIONS FOLD, SO THE WHOLE BOARD FITS ON ONE SCREEN ─────────────────────────────────────────────

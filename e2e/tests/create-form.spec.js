@@ -51,8 +51,11 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
   for (const k of ['case', 'inc', 'req']) {
     await expect(page.locator('[data-testid="wkind-' + k + '"]')).toBeVisible();
   }
-  const says = page.locator('[data-testid="wkind-says"]');
-  await expect(says).toContainText('A CHECK ANYONE CAN REPEAT');
+  /* ⭐ WHAT EACH TYPE MEANS RIDES ON ITS OWN CHIP. It used to print as a sentence under the three of them,
+     describing a choice the reader had just made — the cut list moved it to the control. The fact is still
+     asserted, on the surface that now carries it. [[feedback-improvise-update-cases]] */
+  const says = page.locator('[data-testid="wkind-case"]');
+  await expect(says).toHaveAttribute('title', /A CHECK ANYONE CAN REPEAT/);
   await expect(page.locator('[data-testid="wsave"]')).toContainText('Create case');
   /* a test case is graded by how soon, not by how bad */
   await expect(page.locator('#wcPri')).toBeVisible();
@@ -60,8 +63,10 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
 
   /* ── 2 · ⭐ THE SENTENCE AND THE LABELS FOLLOW THE CHIP ── */
   await page.locator('[data-testid="wkind-inc"]').click();
-  await expect(says).toContainText('SOMETHING IS WRONG NOW');
-  await expect(says).toContainText('retest');
+  const incChip = page.locator('[data-testid="wkind-inc"]');
+  await expect(incChip).toHaveAttribute('title', /SOMETHING IS WRONG NOW/);
+  await expect(incChip, 'the retest obligation is the one non-obvious fact about an incident')
+    .toHaveAttribute('title', /retest/);
   await expect(page.locator('[data-testid="wsave"]')).toContainText('Raise incident');
   await expect(page.locator('#wcSev')).toBeVisible();
   await expect(page.locator('#wcPri')).toHaveCount(0);
@@ -69,7 +74,8 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
   expect(await page.locator('#wcGot').getAttribute('placeholder')).toContain('required');
 
   await page.locator('[data-testid="wkind-req"]').click();
-  await expect(says).toContainText('NOTHING IS BROKEN');
+  await expect(page.locator('[data-testid="wkind-req"]'))
+    .toHaveAttribute('title', /NOTHING IS BROKEN/);
   await expect(page.locator('[data-testid="wsave"]')).toContainText('Raise requirement');
   await expect(page.locator('#wcPri')).toBeVisible();
 
