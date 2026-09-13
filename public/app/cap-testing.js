@@ -2686,15 +2686,42 @@ function testTechDerive() {
 }
 
 /** put one derived case into the two boxes — the tester still reads it and still presses Save */
+/**
+ * ── ⚠️⚠️⚠️ IT WROTE INTO BOXES THAT WERE NOT ON THE SCREEN ────────────────────────────────────────────────────
+ *
+ * `wcDo` and `wcSee` belong to the CREATE tab. Pressing Add from the Techniques tab called
+ * `document.getElementById('wcDo')`, got null, and did nothing at all — no error, no toast, no movement. Since
+ * Techniques became its own tab (an hour ago, at Athi's request) this button has been inert, and the only sign
+ * of it was that nothing happened. [[feedback-silence-is-the-bug]]
+ *
+ * ⭐ SO IT TAKES YOU THERE. Switch to Create, open the form if it is not open, THEN fill it — the same order
+ * `testDiagRaise` uses to carry a speed reading into the form, which is the pattern that already worked.
+ * ⚠️ Fill AFTER the repaint, or screenCasesPaint restores the empty values over the top of these.
+ */
 function testTechUse(i) {
   var d = testTechRows()[i];
   if (!d) return;
-  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+  var code = CBTEST.popupFor || '';
+  if (!CBTEST.writeFor && code) CBTEST.writeFor = { code: code, name: codeName(code) || '' };
+  CBTEST.caseArea = 'write';
+  try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+
+  var put = function (id, v) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = v;
+    try { if (el.tagName === 'TEXTAREA') testGrow(el); } catch (_) {}
+  };
   put('wcDo', d.do);
   put('wcSee', d.see);
   var t = document.getElementById('wcTitle');
-  if (t && !String(t.value || '').trim()) t.value = d.see.replace(/^It is /, '').replace(/\.$/, '');
+  if (t && !String(t.value || '').trim()) {
+    t.value = d.see.replace(/^It is /, '').replace(/\.$/, '');
+    try { testGrow(t); } catch (_) {}
+  }
   try { document.getElementById('wcTitle').focus(); } catch (_) {}
+  if (typeof toast === 'function') toast('Added to Create — choose the type and save.');
 }
 
 /**
