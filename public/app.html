@@ -10194,7 +10194,15 @@ function prodSearchServer(){
     UI._prodSrchBusy = true; paintProdList();
     try{
       var page = await api("prodList", { query: qq ? { q: qq, limit: PROD_PAGE } : { limit: PROD_PAGE } });
-      UI.prodHits = (page && page.items) || [];
+      /**
+       * ⚠⚠ THE SECOND HALF OF THE SAME BUG. api() runs the response through unwrap(), which collapses
+       * {items,total,truncated,…} TO THE ARRAY — so  here was always undefined and every server
+       * search set the hits to []. Measured 2026-09-13: the server returned 96 matches for "cycle" and this
+       * line threw all 96 away.
+       * ⭐  twenty lines below already handles BOTH shapes; this one never learned. Two
+       * readers of one response, one of them right, is how a fix stops half way.
+       */
+      UI.prodHits = (page && page.items) || (Array.isArray(page) ? page : []) || [];
       UI.prodHitsFor = qq;
       UI.prodHitsTotal = (page && page.total != null) ? page.total : UI.prodHits.length;
     }catch(_){ UI.prodHits = []; UI.prodHitsFor = qq; }
