@@ -11909,6 +11909,17 @@ function prodShopHandle(){
 }
 /** The catalogue's own gate (b114 catalogue_visibility) — a private catalogue has no storefront, whatever the product says. */
 function prodShopVisibility(){ const me=UI._me; return (me && me.catalogue_visibility) || 'private'; }
+/**
+ * ⭐ ONE CLICK, AND ONLY THEN. Sets the src the markup was holding in `data-src`, hides the placeholder and
+ * shows the frame. ⚠️ Idempotent — pressing it twice must not reload the shop, which is the very cost this
+ * exists to avoid.
+ */
+function prodShopPreview(){
+  var f=document.getElementById('prodShopFrame'), h=document.getElementById('prodShopHold');
+  if(!f) return;
+  if(!f.getAttribute('src')) f.setAttribute('src', f.getAttribute('data-src')||'');
+  f.style.display=''; if(h) h.style.display='none';
+}
 function prodStorefrontTab(d){
   const uid=prodShopHandle(); if(uid===null) return `<div class="sec">${tx('Storefront')}</div><div style="padding:6px 12px;color:var(--grey)">${tx('Loading…')}</div>`;
   const id=UI.prodSel||d.item_id||d.id||'';
@@ -11920,7 +11931,28 @@ function prodStorefrontTab(d){
   const st=d.status||'available';
   return `<div class="sec">${tx('Storefront')}</div>`+coherence
     + `<div style="padding:6px 12px;font-size:var(--fs-2)">${prodShopVisibility()!=='public'?'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not public yet — the catalogue visibility is {v}; below is a preview of what a customer would see. Profile › Visibility › Public puts it live.', { v: tx(prodShopVisibility()) })):st==='available'?esc(tx('This product is on your storefront.')):'<span style="color:var(--warn-3)">● </span>'+esc(txf('Not shown — its status is {s}. Set it back on Status.', { s: tx(st) }))} <a href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-testid="prod-storefront-link" style="color:var(--blue);font-weight:600">${esc(location.host+url)} ↗</a></div>`
-    + `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" src="${esc(one)}" title="${esc(tx('Storefront'))}" loading="lazy" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff"></iframe></div>`
+    /**
+     * ── ⚠️⚠️⚠️ THIS TAB WAS BOOTING THE WHOLE SHOP APP, PER PRODUCT ──────────────────────────────────────
+     *
+     * Athi, 2026-09-13 (CAT001-H06): *"when I browse every item and click the storefront, it takes time to
+     * build the storefront."*
+     *
+     * ⚠️⚠️ IT IS NOT SLOW RENDERING, IT IS A SECOND APPLICATION STARTING. The iframe loaded `shop.html`
+     * eagerly — measured 2026-09-13: a 91 KB document, and inside it the shop boots its own scripts and
+     * makes its own catalogue, offers and tax calls, none of which the parent page can even see. Every
+     * product you opened paid for it, including the ninety you were only checking the price of.
+     *
+     * ⚠️ `loading="lazy"` DID NOTHING HERE. It defers frames BELOW the fold; this one is in view the moment
+     * the tab opens, which is exactly when it is least wanted.
+     *
+     * ⭐ SO IT LOADS WHEN ASKED. The frame is drawn empty with the phone’s outline and one button. A person
+     * who wants the preview clicks once; a person browsing prices never pays for it at all.
+     */
+    + `<div style="display:flex;justify-content:center;padding:6px 12px"><iframe data-testid="prod-storefront-frame" id="prodShopFrame" data-src="${esc(one)}" title="${esc(tx('Storefront'))}" style="width:390px;max-width:100%;height:520px;border:1px solid var(--line);border-radius:18px;background:#fff;display:none"></iframe>`
+    + `<div id="prodShopHold" style="width:390px;max-width:100%;height:520px;border:1px dashed var(--line);border-radius:18px;background:var(--paper,#faf8f3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:0 22px">`
+      + `<div style="font-size:var(--fs-1);color:var(--grey-2);line-height:1.5">${esc(tx('The preview opens this product in the real shop page \u2014 a second app, so it is not loaded until you ask.'))}</div>`
+      + `<button class="btn" onclick="prodShopPreview()" data-testid="prod-storefront-show" style="display:inline-block;width:auto">${esc(tx('Show the phone preview'))}</button>`
+      + `</div></div>`
     + `<div style="padding:6px 12px;font-size:var(--fs-1);color:var(--grey)">${tx('This product on a phone, from the same page a customer opens — cover, price, offers in effect, order model.')}</div>`;
 }
 function prodBomTab(d){
