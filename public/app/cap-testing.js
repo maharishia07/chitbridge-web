@@ -3444,6 +3444,21 @@ function testCaseListHTML(code) {
            : f === 'all' ? all
            : all.filter(function (c) { return !isPass(c); });
 
+  /**
+   * ── ⭐⭐ THE CLOSED ONES ARE HERE, AND ONLY WHEN ASKED FOR ─────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"how do we see the closed ones? We don't need to read all at the same time; only the
+   * not-closed ones are visible, so the closed ones we have to see on demand."*
+   *
+   * ⚠️⚠️ AND A RETIRED CASE WAS NOT HIDDEN, IT WAS UNREACHABLE. `CBTEST.cases` never contains them — they come
+   * back only from `?all=1`, which only the Findings view had ever asked for. So a case somebody closed on this
+   * screen could not be read on this screen, at all, by anybody. Hidden and gone are different things, and only
+   * one of them is a decision. [[feedback-silence-is-the-bug]]
+   */
+  var shutAll = (CBTEST.closedCases || []).filter(function (c) { return testScrOf(c) === code; });
+  var showShut = testScrShut('case');
+  if (!CBTEST.closedCases) testFindLoadClosed();
+
   var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
   var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
@@ -3454,11 +3469,31 @@ function testCaseListHTML(code) {
         return '<button onclick="testCaseFilter(\'' + x[0] + '\')" style="' + chip
           + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
       }).join('')
+    + (shutAll.length ? '<button onclick="testScrShutToggle(\'case\')" style="' + chip + off + '">'
+        + (showShut ? 'hide ' : 'show ') + shutAll.length + ' closed</button>' : '')
     + '</div>';
+
+  /* ⚠️ drawn UNDER the live ones and faded, never mixed in: a closed case that reads like a live one is a case
+     somebody runs again for nothing. */
+  var shutHTML = (showShut && shutAll.length)
+    ? '<div style="margin-top:9px;padding-top:7px;border-top:1px solid var(--line,#e7e3d8);opacity:.62">'
+      + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:3px">Closed on this screen</div>'
+      + shutAll.map(function (c) {
+          return '<div style="padding:5px 0;border-top:1px solid var(--line-2,#efece4)">'
+            + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(c.case_key) + '</code> '
+            + '<span style="font-size:var(--fs-2)">' + testEsc(c.title || '') + '</span>'
+            + (c.closed_note ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">closed: '
+                + testEsc(c.closed_note) + (c.closed_by ? ' · ' + testEsc(c.closed_by) : '') + '</div>' : '')
+            + ' <button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+            + 'padding:1px 8px" onclick="testHandClose(\'' + testEsc(c.case_key) + '\',true)">Open again'
+            + '</button></div>';
+        }).join('')
+      + '</div>'
+    : '';
 
   if (!mine.length) {
     return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0 2px">'
-      + (f === 'todo' ? 'Nothing left to test on this screen.' : 'None in this pile.') + '</div>';
+      + (f === 'todo' ? 'Nothing left to test on this screen.' : 'None in this pile.') + '</div>' + shutHTML;
   }
 
   return h + mine.map(function (c) {
@@ -3539,7 +3574,7 @@ function testCaseListHTML(code) {
       +   'border:1px solid var(--line,#e7e3d8)">\u2713 Close</button>'
       + '</span>'
       + '</div>';
-  }).join('');
+  }).join('') + shutHTML;
 }
 /* the table frame: the same list, inside a row that spans the columns */
 function testScrCasesHTML(x) {
@@ -3816,6 +3851,11 @@ function testBehindCount(code) {
   return n || null;
 }
 
+/** ⚠️ session-only: whether a person wants the paths this minute is not a preference about the person */
+function testBehindTech() {
+  CBTEST.behindTech = !CBTEST.behindTech;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
 function testBehindHTML(code) {
   var A = (window.CBASSETS || {});
   var rows = A.rows || [];
@@ -3864,6 +3904,46 @@ function testBehindHTML(code) {
   var h = '';
 
   /* ── 1 · what draws it ── */
+  /**
+   * ── ⭐⭐⭐ SAY WHAT THIS TAB IS, BEFORE SHOWING ANY OF IT ───────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"the next one, Behind 48 — I really don't have a clue about it and I can't make any
+   * sense out of this text. You may have to explain me; if something technical then the user doesn't want to
+   * see, otherwise interpret it."*
+   *
+   * ⚠️⚠️ AND HE IS RIGHT: IT OPENED ON FILE PATHS. `cap-catalogue.js`, `routes/products.js` — true, useful to
+   * me, meaningless to the person holding the screen. Worse, it opened on them, so the answer he actually
+   * wanted — is the ground under this screen tested, and is it green? — sat three sections down.
+   *
+   * ⭐ SO IT LEADS WITH THE SENTENCE, and the technical detail goes behind a fold. Nothing is removed: the file
+   * list is exactly how you find out WHY a screen is untested. It is now something you open rather than
+   * something you must read past. [[feedback-write-for-the-shopkeeper]]
+   */
+  var _nT = (b.linked || []).length, _nRun = 0, _nRed = 0;
+  (b.linked || []).forEach(function (x) {
+    var l = (CBTEST.last || {})[x.c.case_key];
+    if (l) { _nRun++; if (l.status === 'fail') _nRed++; }
+  });
+  h += '<div style="font-size:var(--fs-2);line-height:1.6;padding:2px 0 8px;color:var(--grey-2)">'
+    + '<b>What is underneath this screen, and whether it has been tested.</b><br>'
+    + (_nT
+      ? ('It is drawn by <b>' + b.files.length + '</b> part(s) of the app and answered by <b>'
+        + b.routes.length + '</b> part(s) of the server. <b>' + _nT + '</b> test(s) cover that code — <b>'
+        + _nRun + '</b> of them have actually been run'
+        + (_nRed ? ', and <b style="color:var(--disp,#B3261E)">' + _nRed + '</b> failed' : '') + '.')
+      : 'Nothing here declares itself a test of the code behind this screen. That is a real gap, and it is '
+        + 'worth recording from the Create tab.')
+    + '</div>';
+
+  /* ⚠️ FOLDED, NOT DELETED. A tester asking "why does the register not know what draws this screen?" needs
+     exactly these paths, and answering a complaint about noise by deleting the evidence is not an answer. */
+  var _tech = !!CBTEST.behindTech;
+  h += '<button onclick="testBehindTech()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;'
+    + 'background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">'
+    + (_tech ? '▾ ' : '▸ ')
+    + 'The technical detail — which files draw it, which server code answered it</button>';
+
+  if (_tech) {
   h += lab('Draws this screen');
   h += b.files.length ? b.files.map(fileRow).join('')
     : quiet('The register does not say which file draws this screen \u2014 that is a gap in the register, '
@@ -3889,6 +3969,8 @@ function testBehindHTML(code) {
       +   'word-break:break-word">' + b.mods.slice(0, 18).map(testEsc).join(' \u00b7 ')
       +   (b.mods.length > 18 ? ' \u00b7 \u2026and ' + (b.mods.length - 18) + ' more' : '') + '</div>';
   }
+
+  }   /* ── end of the technical fold ── */
 
   /* ── 4+5 · the linked cases, with their standing ── */
   var linked = b.linked;
@@ -4812,6 +4894,96 @@ function testAreaOpen(hasCases) {
  * ⚠️⚠️ AND SIXTEEN PLAYWRIGHT SPECS PASSED OVER IT, because not one of them ever opened this area. A green
  * suite is only a statement about what it visits. TM-22 now presses the tab.
  */
+/**
+ * ── ⭐⭐⭐ THREE TABS ON A SCREEN: CASES · INCIDENTS · REQUIREMENTS ─────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"this is the list we wanted to see for all the cases, incidents, requirements created —
+ * can we make it three tabs? How do we see the closed ones? We don't need to read all at the same time; only
+ * the not-closed ones are visible, so the closed ones we have to see on demand."*
+ *
+ * ⚠️⚠️ THE OLD "RAISED" TAB PUT TWO DIFFERENT THINGS IN ONE PILE and then showed every state at once, so the
+ * screen with three incidents all closed and one requirement outstanding read the same as the screen with four
+ * live faults. A count you cannot act on is a number, not a signal.
+ *
+ * ⭐ ADOPTED, THE SAME MODEL AS THE WORKLIST: one row renderer, one status vocabulary, one set of verbs — so a
+ * finding looks and behaves identically whether you meet it on its screen or on the board.
+ * [[feedback-adopt-dont-reinvent]] and [[feedback-no-duplicate-functions]] — this could easily have become a
+ * fourth way of drawing the same row.
+ *
+ * ⚠️ OPEN BY DEFAULT, CLOSED ON DEMAND, and the tab count is the OPEN count for the same reason: the number on
+ * a tab is a promise about how much work is behind it.
+ */
+function testScrOpenN(code, kind) {
+  return testScrRows(code, kind).filter(function (x) { return x.status !== 'closed'; }).length;
+}
+
+/** the screen's rows, in the worklist's own shape so they render and behave identically */
+function testScrRows(code, kind) {
+  var out = [];
+  if (kind === 'inc') {
+    (CBTEST.scrInc || []).forEach(function (x) {
+      if (x.screen_code !== code) return;
+      out.push(testWorkRow({ key: x.ref || '', title: x.observed || '', screen: code,
+        shot: x.evidence_id || null, by: x.raised_by || null, at: x.raised_at || null,
+        last: null, inc: x, req: null, caseKey: x.found_by_case || null }));
+    });
+  } else if (kind === 'req') {
+    (CBTEST.scrReq || []).forEach(function (q) {
+      if (q.screen_code !== code) return;
+      out.push(testWorkRow({ key: q.clause || '', title: q.requirement || '', screen: code,
+        seen: q.observed || null, by: q.raised_by || null, at: q.raised_at || null,
+        last: null, inc: null, req: q, caseKey: q.raised_from || null }));
+    });
+  }
+  /* ⭐ what is waiting on somebody first, then newest — the worklist's order, for the same reason */
+  return out.sort(function (a, b) {
+    var d = TEST_WORK_ORDER.indexOf(a.status) - TEST_WORK_ORDER.indexOf(b.status);
+    if (d) return d;
+    return String(b.at || '') < String(a.at || '') ? -1 : 1;
+  });
+}
+
+function testScrShut(kind) { return !!(CBTEST._scrShut && CBTEST._scrShut[kind]); }
+function testScrShutToggle(kind) {
+  CBTEST._scrShut = CBTEST._scrShut || {};
+  CBTEST._scrShut[kind] = !CBTEST._scrShut[kind];
+  screenCasesPaint();
+}
+
+function testScrRaisedHTML(code, kind) {
+  var all = testScrRows(code, kind);
+  var open = all.filter(function (x) { return x.status !== 'closed'; });
+  var shut = all.length - open.length;
+  var word = kind === 'inc' ? 'incident' : 'requirement';
+
+  if (!all.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">'
+      + 'No ' + word + ' on this screen. '
+      + (kind === 'inc'
+        ? 'Raise one from Create the moment something does not work.'
+        : 'Raise one from Create when the product does what it was told and the instruction was wrong.')
+      + '</div>';
+  }
+
+  var showShut = testScrShut(kind);
+  var rows = showShut ? all : open;
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:4px 0 6px">'
+    + '<b>' + open.length + '</b> open'
+    /* ⚠️ the closed ones are not fetched again — they are already here; what changes is whether they are DRAWN.
+       "On demand" is about the reader's attention, not about the network. */
+    + (shut ? ' · <button onclick="testScrShutToggle(\'' + kind + '\')" style="font:inherit;'
+        + 'font-size:var(--fs-1);border:0;background:none;padding:0;cursor:pointer;color:var(--grey-2);'
+        + 'text-decoration:underline;text-underline-offset:2px">'
+        + (showShut ? 'hide the ' + shut + ' closed' : 'show ' + shut + ' closed') + '</button>' : '')
+    + '</div>';
+
+  if (!rows.length) {
+    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0">'
+      + 'Nothing open — every ' + word + ' on this screen has been dealt with.</div>';
+  }
+  return h + rows.map(testWorkRowHTML).join('');
+}
+
 function testRaisedHTML(code) {
   var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; });
   var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; });
@@ -4955,14 +5127,20 @@ function screenCasesPaint() {
       +   stat(t.total, 'written', null, 'cases')
       +   stat(t.pass, 'passed', t.pass ? 'var(--ok-2,#1B7F4B)' : null, 'cases')
       +   stat(t.fail, 'failed', t.fail ? 'var(--disp,#B3261E)' : null, 'cases')
-      +   (known ? stat(inc, 'incidents', inc ? 'var(--disp,#B3261E)' : null, 'raised') : '')
-      +   (known ? stat(req, 'requirements', null, 'raised') : '')
+      +   (known ? stat(inc, 'incidents', inc ? 'var(--disp,#B3261E)' : null, 'inc') : '')
+      +   (known ? stat(req, 'requirements', null, 'req') : '')
       + '</div>';
   }
 
   /* ── the three areas ── */
   var area = CBTEST.caseArea || testAreaGet() || (t.total ? 'cases' : 'write');
-  if (area === 'raised' && !(inc + req)) area = t.total ? 'cases' : 'write';
+  if (area === 'raised') area = (known && testScrOpenN(code, 'inc')) ? 'inc'
+    : (known && testScrOpenN(code, 'req')) ? 'req' : (t.total ? 'cases' : 'write');
+  if ((area === 'inc' || area === 'req') && known && !testScrOpenN(code, area) && !testScrShut(area)) {
+    /* ⚠️ landing on an empty tab reads as a broken tab — but only when nothing is open AND nothing is being
+       shown; a person who pressed "show closed" meant to be here. */
+    if (t.total) area = 'cases';
+  }
   var tab = 'font:inherit;font-size:var(--fs-1);padding:4px 11px;border:0;cursor:pointer;';
   var on = 'background:var(--grey-2,#545A61);color:#fff';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
@@ -4975,7 +5153,10 @@ function screenCasesPaint() {
     + 'overflow:hidden;margin:10px 0 4px">'
     + seg('write', 'Create', null)
     + seg('cases', 'Cases', t.total)
-    + seg('raised', 'Raised', known ? (inc + req) : null)
+    /* ⚠️ THE COUNT ON A TAB IS A PROMISE ABOUT HOW MUCH WORK IS BEHIND IT. "Raised 4" counted three closed
+       incidents and one live requirement as the same four, so a settled screen read like a burning one. */
+    + seg('inc', 'Incidents', known ? testScrOpenN(code, 'inc') : null)
+    + seg('req', 'Requirements', known ? testScrOpenN(code, 'req') : null)
     + seg('behind', 'Behind', testBehindCount(code))
     + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
     + '</div>';
@@ -4983,9 +5164,10 @@ function screenCasesPaint() {
   var body = area === 'behind' ? testBehindHTML(code)
            : area === 'diag' ? testDiagHTML()
            : area === 'write' ? testCaseFormHTML()
-           : area === 'raised' ? (testRaisedHTML(code)
-             || '<div style="font-size:var(--fs-1);color:var(--note);padding:8px 0">Nothing has been raised '
-               + 'on this screen.</div>')
+           : area === 'inc' ? testScrRaisedHTML(code, 'inc')
+           : area === 'req' ? testScrRaisedHTML(code, 'req')
+           /* ⚠️ anyone who last used the old merged tab lands on Incidents rather than on nothing */
+           : area === 'raised' ? testScrRaisedHTML(code, 'inc')
            : testCaseListHTML(code);
   host.innerHTML = tabs + body;
 

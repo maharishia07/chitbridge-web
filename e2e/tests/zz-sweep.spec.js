@@ -35,9 +35,16 @@ const FIXED = {
     + 'check the Speed tab again.',
 };
 
+/* ⚠️⚠️ THE SAVED SESSION IS SOMEBODY ELSE. The `authed` project starts every spec signed in as the pooled test
+   entity, so the first run of this swept an empty board and reported "not on the board" for all eight —
+   truthfully, about the wrong shop. Signing in as a REAL account means starting from nothing. */
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test('[SWEEP] clear the probes, hand back what is fixed', async ({ page }) => {
   test.setTimeout(600000);
   /* the ordinary sign-in screen (#/login), with the dev OTP this environment already runs on */
+  await page.goto(APP + '/app.html#/login');
+  await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (_) {} });
   await page.goto(APP + '/app.html#/login');
   await page.locator('#l_id').waitFor({ state: 'visible', timeout: 45000 });
   await page.locator('#l_id').fill(WHO);
