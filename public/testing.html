@@ -1033,6 +1033,13 @@ var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbrid
 function sess(){ try { return JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) { return null; } }
 
 var CASES = [], LAST = {}, OPEN = {}, RUN = null, STALE = {};
+/**
+ * ⚠️ TRUE WHEN THE BOARD HAS NOTHING TO STAND ON — no cases at all, or cases and not one result. It changes
+ * what the word "None." is allowed to mean: on a worked board it is good news, on an unworked one it means
+ * nobody looked, and printing the good-news wording there is how an untested product reads as a clean one.
+ * Set from the server's own §10 in paintReport, never re-derived from figures here.
+ */
+var REPORT_NO_EVIDENCE = false;
 
 /* ── the run this sitting belongs to ─────────────────────────────────────────────────────────────────────────
  * ⭐ IT SURVIVES A RELOAD. A run is a sitting, and a sitting includes closing the tab to go and look at
@@ -2216,6 +2223,13 @@ async function paintReport(){
   try { r = await call('/api/testing/report'); }
   catch (e) { say('Could not build the report: ' + e.message, true); return; }
 
+  /**
+   * ⚠️ DERIVED FROM THE SERVER'S OWN §10, not re-computed here from figures that happen to be to hand. The
+   * server is the side that knows whether a single result exists anywhere on the board; two places deciding
+   * "is there evidence" is two places that can disagree, and the disagreement would be invisible.
+   */
+  REPORT_NO_EVIDENCE = !!((r.sections || []).filter(function (s) { return s.id === '10'; })[0] || {}).no_sign;
+
   var sec = function (s, inner) {
     var ask = s.source !== 'measured';
     return '<h2><span class="num-s">' + esc(s.id) + '</span>' + esc(s.title) + '</h2>'
@@ -2365,7 +2379,16 @@ async function paintReport(){
               + new Date(x.at).toLocaleString() + '</span>'
               + (x.note ? '<div style="margin-top:3px">' + esc(x.note) + '</div>' : '')
               + (x.evidence ? '<div class="sub">' + esc(x.evidence) + '</div>' : '') + '</div>'; }).join('')
-        : '<span class="dim">None.</span>';
+        /**
+         * ⚠️⚠️ "None." SAID TWO OPPOSITE THINGS IN THE SAME SIX CHARACTERS. On a board that has been worked,
+         * it means "we looked and found no incidents" — good news. On a board where nothing has been run it
+         * means "nobody has looked", which is not news at all, and printing the good-news wording there is
+         * how an untested product reads as a clean one. Same rule as the empty COLUMNS three clauses down:
+         * different kinds of nothing must not share a word. [[feedback-silence-is-the-bug]]
+         */
+        : (REPORT_NO_EVIDENCE
+            ? '<span class="warnn">Not known — nothing has been run.</span>'
+            : '<span class="dim">None.</span>');
     /**
      * ── ⭐⭐⭐ 3b · RAISED BY PEOPLE — IT WAS RENDERING AS AN EMPTY BOX ────────────────────────────────────
      *
@@ -2435,8 +2458,17 @@ async function paintReport(){
         + '<dt>Features</dt><dd>' + b.features + '</dd></dl>'
         + '<div class="sub" style="margin-top:7px">' + esc(b.note || '') + '</div>';
     } else if (s.id === '10') {
+      /**
+       * ⚠️⚠️⚠️ THE SIGNATURE RULES ARE WITHHELD WHEN THERE IS NO EVIDENCE. An empty board used to print two
+       * ruled lines under a document of zeros — an object that does not merely fail to warn, it INVITES the
+       * signature. The server decides (`no_sign`), because it is the side that knows whether a single result
+       * exists; the page must not re-derive that from figures it happens to have.
+       * ⚠️ The CLAUSE still prints. "We have declared nothing and run nothing" is a legitimate and useful
+       * report — it just must not be signable. [[feedback-silence-is-the-bug]]
+       */
       inner = '<div>' + esc(s.asks) + '</div>'
-        + '<div class="sign"><div>Name and role</div><div>Date</div></div>';
+        + (s.no_sign ? ''
+            : '<div class="sign"><div>Name and role</div><div>Date</div></div>');
     } else {
       inner = '<div>' + esc(s.asks || '') + '</div>'
         + ((s.caveats || []).length
