@@ -488,45 +488,24 @@ function _scrollFind(key){ try{ var at=key.lastIndexOf('@'); if(key[0]==='#'||ke
  * ALREADY when something goes wrong. A recorder you have to switch on before the bug is a recorder that
  * misses the bug.
  */
-(function () {
-  if (window.CBERRS) return;
-  window.CBERRS = [];
-  var keep = function (what, where) {
-    try {
-      window.CBERRS.unshift({ at: Date.now(), what: String(what || '').slice(0, 400),
-        where: String(where || '').slice(0, 200) });
-      window.CBERRS.length = Math.min(window.CBERRS.length, 20);
-    } catch (_) {}
-  };
-  window.addEventListener('error', function (e) {
-    keep((e && e.message) || 'error', ((e && e.filename) || '') + ':' + ((e && e.lineno) || ''));
-  });
-  window.addEventListener('unhandledrejection', function (e) {
-    var r = e && e.reason;
-    keep((r && (r.message || r)) || 'rejected', 'promise');
-  });
-  /* ⚠ console.error is WRAPPED, never replaced: swallowing what the page logs would be worse than not
-     keeping it, and anything that breaks here must leave the original alone */
-  try {
-    var ce = console.error;
-    console.error = function () {
-      try { keep(Array.prototype.map.call(arguments, String).join(' '), 'console'); } catch (_) {}
-      return ce.apply(console, arguments);
-    };
-  } catch (_) {}
-})();
-
 /**
- * ── ⭐⭐⭐ THE ERRORS THE PAGE THREW, KEPT ────────────────────────────────────────────────────────────────────
+ * ── ⚠️⚠️ ONE OWNER FOR THE VISIT COUNTER ────────────────────────────────────────────────────────────────────
  *
- * ⚠️ A ReferenceError in a paint function is the exact fault that hid the Raised tab for a day: the screen
- * shows something plausible and the only trace is in a console nobody has open. A tester is not going to
- * press F12. So the page keeps its own last twenty, and they ride along on an incident.
+ * `guard-static` caught this the same night I wrote it: *"CBNAV is assigned by app.html AND core.js —
+ * whichever loads last wins."* Two files writing one global is the shape that has bitten this codebase
+ * twice, and the fact that here it is two writes of the same VALUE rather than two definitions of a
+ * function does not make it a different shape — it makes it the same shape not biting yet.
  *
- * ⚠️ ALWAYS ON, unlike the call log — twenty short strings cost nothing, and the whole value is having them
- * ALREADY when something goes wrong. A recorder you have to switch on before the bug is a recorder that
- * misses the bug.
+ * ⭐ So the rule lives in ONE function and both callers call it. The recorder calls it because it fires
+ * before a screen’s own load; the screen stamper calls it because a screen that asks the server for
+ * nothing still counts as a visit. Whichever notices first advances it, and the other sees it has happened.
  */
+function cbVisitTick(nav) {
+  if (nav == null) return window.CBGEN || 0;
+  if (window.CBNAV !== nav) { window.CBNAV = nav; window.CBGEN = (window.CBGEN || 0) + 1; }
+  return window.CBGEN;
+}
+
 (function () {
   if (window.CBERRS) return;
   window.CBERRS = [];
@@ -697,7 +676,7 @@ async function api(key, {params, query, body}={}){
          * ⚠ Counted HERE rather than at the router: `UI.nav` is assigned in a dozen places and a hook on one
          * of them would be silently right most of the time, which is the worst kind of wrong.
          */
-        if (window.CBNAV !== _scr) { window.CBNAV = _scr; window.CBGEN = (window.CBGEN || 0) + 1; }
+        cbVisitTick(_scr);
         /**
          * ⭐ WHAT THE SERVER SAID IT COST. `X-DB-Ms` is the time inside the request and `X-DB-Trips` the
          * number of database round trips it made; the difference between that and the total measured here
@@ -714,35 +693,6 @@ async function api(key, {params, query, body}={}){
           srv: (isNaN(_srv) ? null : _srv), trips: (isNaN(_trips) ? null : _trips),
           gen: window.CBGEN,
           ms: Math.round((typeof performance!=='undefined'?performance.now():Date.now()) - _t0),
-          /**
-           * ── ⭐⭐ WHAT WENT OUT, NOT ONLY WHAT CAME BACK ──────────────────────────────────────────────
-           *
-           * Athi, 2026-09-13: *"are we documenting the parameter which it has gone with? if so, can we
-           * make it a hyperlink, the real call statement can be seen… as I am not a techie, I am asking
-           * all these questions."*
-           *
-           * ⚠️ ONLY THE ANSWER WAS KEPT. The query string was in the path, but the BODY of a POST — the
-           * thing that actually says what was asked for — was never recorded. So a failed write could be
-           * seen to have failed and never be reproduced, which is the half that matters.
-           *
-           * ⚠️⚠️ AND IT IS REDACTED ON THE WAY IN. This log is attached to incidents and shown on screen,
-           * so a password, a PIN, an OTP or a token must never enter it. Redacted HERE rather than at the
-           * point of display, because a value that is never stored cannot leak from somewhere I forgot to
-           * look. [[project-ai-security-hardening]]
-           */
-          sent: (function () {
-            try {
-              if (body === undefined || body === null) return null;
-              var SECRET = /(pass|pin|otp|token|secret|auth|key|card|cvv)/i;
-              var clean = JSON.parse(JSON.stringify(body), function (k, v) {
-                return SECRET.test(k) ? '[redacted]' : v;
-              });
-              return JSON.stringify(clean).slice(0, 1200);
-            } catch (_) { return null; }
-          })(),
-          q: (function () { try { return query ? JSON.parse(JSON.stringify(query)) : null; }
-            catch (_) { return null; } })(),
-          at: Date.now(),
           /**
            * ── ⭐⭐ WHAT WENT OUT, NOT ONLY WHAT CAME BACK ──────────────────────────────────────────────
            *

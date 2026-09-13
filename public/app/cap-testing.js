@@ -2285,6 +2285,23 @@ async function testCaseSend(outcome) {
       screen_code: w.code,
       /* ⭐ the control this case is about, when it is about one — CTL157, not "the button near the top" */
       control_code: g('wcCtl') || null,
+      /**
+       * ── ⚠️⚠️⚠️ THE FOURTH BOX AND THE PICTURE WERE BEING THROWN AWAY ON SAVE ────────────────────────
+       *
+       * Athi, 2026-09-13: *"I wrote 4 lines of information, line 1, 2, 3 and 4 and an attachment. I could
+       * see only 3 lines of information here, and the attachment is not visible. If that also comes, then
+       * we are perfectly recording an observation."*
+       *
+       * ⚠️ THE OBSERVATION ONLY HAD A HOME IF YOU CHOSE AN OUTCOME. Press Incident and it became the
+       * incident’s `observed`; press Save and it went nowhere, along with the screenshot — which had
+       * uploaded, said so, and then belonged to nothing. He is right that the four boxes are the unit: what
+       * must be true, what you do, what you should see, what you are seeing. Three of them survived.
+       *
+       * ⭐ SO THE CASE CARRIES THEM. An observation without a verdict is still a thing somebody wrote down
+       * on purpose, and the next person to open that case needs it more than anybody.
+       */
+      observed: got || null,
+      evidence_id: (CBTEST.shot && CBTEST.shot.id) || null,
       note: 'Written by hand on ' + new Date().toISOString().slice(0, 10) + '.',
     }] } });
   /**
@@ -2714,6 +2731,21 @@ function testCaseDetailHTML(c) {
   h += lab('Control:', testEsc(c.control_code || ''));
   h += lab('Note:', testEsc(c.note || ''));
 
+  /* ⭐ the fourth box, kept with the case whether or not a verdict was ever given */
+  if (c.observed) {
+    h += '<div style="margin-top:5px;padding:5px 7px;background:var(--card,#fff);'
+      + 'border:1px solid var(--line-2,#efece4);border-radius:7px">'
+      + '<div style="font-size:var(--fs-1);color:var(--note)">What was being seen when this was '
+      + 'written</div><div style="font-size:var(--fs-2)">' + testEsc(c.observed) + '</div></div>';
+  }
+  /* ⚠️ the picture is fetched with the token, never an <img src> — the endpoint needs an Authorization
+     header and a plain link carries none, which is the "404, then unauthorised" this already cost once */
+  if (c.evidence_id) {
+    h += '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;'
+      + 'font-size:var(--fs-1);padding:3px 10px" onclick="testShotView(' + "'" + testEsc(c.evidence_id)
+      + "'" + ')">\u1f5bc\ufe0f Screenshot</button>';
+  }
+
   /* ── the last verdict, in the words of whoever gave it ── */
   if (l) {
     var col = l.status === 'pass' ? 'var(--ok-2,#1B7F4B)'
@@ -2755,7 +2787,7 @@ function testCaseDetailHTML(c) {
         : '<div style="' + pad + ';color:var(--note)">No screenshot was attached to this one.</div>')
       + '</div>';
   });
-  if (!l && !raised.length) {
+  if (!l && !raised.length && !c.observed && !c.evidence_id) {
     h += '<div style="' + pad + ';color:var(--note);margin-top:4px">Not run yet, and nothing raised '
       + 'against it.</div>';
   }
