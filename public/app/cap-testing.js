@@ -3138,12 +3138,21 @@ function testDiagHTML() {
       + 'No API call has been recorded yet. Do something on the screen behind this panel and it will '
       + 'appear here \u2014 the log starts when test mode goes on.</div>';
   }
-  /* CBCALLS is newest-first; take everything above the mark, which is where the panel opened */
-  var mine = [];
-  for (var i = 0; i < all.length; i++) {
-    if (CBTEST._diagFrom && all[i].rid === CBTEST._diagFrom) break;
-    mine.push(all[i]);
-  }
+  /**
+   * ── ⚠️⚠️⚠️ IT WAS MEASURING EVERYTHING EXCEPT THE THING YOU WANT MEASURED ─────────────────────────────
+   *
+   * The mark was dropped when the PANEL opened, and the panel opens after the screen has already loaded. So
+   * every call the screen made to draw itself sat below the mark and was excluded, and the reading on
+   * opening was "1 API call \u00b7 Few enough round trips" — of a screen that had just made nine.
+   *
+   * ⚠️ WRONG IN THE FLATTERING DIRECTION, for the third time in this tool. A diagnostic that reports every
+   * screen as cheap is worse than no diagnostic: it is an argument against looking.
+   *
+   * ⭐ THE VISIT IS THE RIGHT WINDOW, and it is the one the Behind area already uses — the calls made since
+   * the tester arrived on this screen, which is exactly what "what this screen cost" means.
+   */
+  var gen = window.CBGEN || 0;
+  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
   if (!mine.length) mine = all.slice(0, 1);
 
   var total = mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
@@ -3151,14 +3160,35 @@ function testDiagHTML() {
   var bad = mine.filter(function (c) { return (c.status || 0) >= 400; });
 
   /* ⭐ the reading in words first: a table of numbers is a thing to interpret, a sentence is a thing to act on */
+  /**
+   * ── ⭐⭐ THE SAME CALL, OVER AND OVER, IS THE FINDING ───────────────────────────────────────────────────
+   *
+   * Nine rows in a table is a thing to read. "defList ×5" is a thing to FIX, and it is the fault this
+   * codebase actually has — measured on the Catalogue 2026-09-12: nine calls, 4419 ms, five of them the same
+   * list fetched five times. A person scanning a table misses that; a sentence cannot be missed.
+   */
+  var seenN = {}, rep = [];
+  mine.forEach(function (c) {
+    var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
+    seenN[k] = (seenN[k] || 0) + 1;
+  });
+  Object.keys(seenN).forEach(function (k) {
+    if (seenN[k] > 1) rep.push(k + ' \u00d7' + seenN[k]);
+  });
+
   var verdict = mine.length >= 6 ? 'That is a lot of round trips for one screen.'
             : mine.length >= 3 ? 'Three or more round trips \u2014 worth asking whether they can be one.'
             : 'Few enough round trips.';
   var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
-    + '<b>' + mine.length + '</b> API call(s) since this panel opened \u00b7 <b>' + total + ' ms</b> in total'
+    + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
     + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
     + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
     + '<br>' + verdict
+    + (rep.length ? '<br>\u26a0\ufe0f <b>The same call, repeated:</b> ' + testEsc(rep.join(' \u00b7 '))
+        + ' \u2014 that is the thing to fix, not the milliseconds.' : '')
+    /* ⚠ the landing screen carries the app’s start-up, and no honest rule separates the two */
+    + ((window.CBGEN || 0) <= 1 ? '<br>\u26a0\ufe0f The app was still starting, so its sign-in '
+        + 'and set-up calls are counted here too. Go to another screen and come back for a clean reading.' : '')
     + '<br>\u26a0\ufe0f Each call is roughly 1.4\u20132.4 s to the database and back, so the COUNT matters '
     + 'more than the milliseconds.</div>';
 
@@ -3186,7 +3216,159 @@ function testDiagHTML() {
     + '<div style="font-size:var(--fs-1);color:var(--note);padding:7px 0 0">'
     + 'Quote a call\u2019s id when reporting it: ' + testEsc((mine[0] && mine[0].rid) || '\u2014')
     + ' \u2014 the server logged the same one.</div>';
+
+  /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
+  h += testDiagByApi();
+
+  /**
+   * ── ⭐⭐ A MEASUREMENT NOBODY CAN RAISE IS A MEASUREMENT NOBODY RAISES ─────────────────────────────────
+   *
+   * I filed the Catalogue’s nine calls as INC-260912-J89Q by reading these numbers off the screen and
+   * typing them into the form by hand. A tester will not do that, and if they do they will round it, and the
+   * incident will read "the catalogue feels slow" — which is unactionable, and is what every slow-screen
+   * report in every product says.
+   *
+   * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Write with their finger over
+   * Incident or Requirement — which of the two it is remains their judgement, and so does the wording.
+   */
+  h += '<div style="margin-top:9px">'
+    + '<button class="btn" onclick="testDiagRaise()" style="font-size:var(--fs-2);padding:4px 10px">'
+    + '\u270e Write this up</button>'
+    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
+    + 'fills the four boxes with these numbers \u2014 you still choose incident or requirement'
+    + '</span></div>';
   return h;
+}
+
+/**
+ * ⭐ THE SAME NUMBERS THE AREA JUST SHOWED, IN THE TESTER’S FOUR BOXES. Recomputed rather than scraped out
+ * of the HTML: a reading that can drift from the table above it is worse than no button.
+ *
+ * ⚠️ The expectation is deliberately a ROUND, ARGUABLE number — "two or three calls" — not the measurement
+ * turned into a rule. A requirement that says "fewer than 9" is just the bug written down as the target.
+ */
+/**
+ * ── ⭐⭐⭐ WHICH API COST WHAT, AND WHO ASKED FOR IT ─────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"do we have an HTML link to see which API has taken this much? or which product line
+ * etc."*
+ *
+ * ⭐⭐ THE TABLE ABOVE ANSWERS "what did THIS screen cost". This answers the other question, which is the one
+ * you act on: across everything done in this session, WHICH ROUTE is expensive, and WHICH SCREENS are the
+ * ones paying for it. A route that is slow but called once is a curiosity; a route that is slow and called
+ * from four screens is the next piece of work.
+ *
+ * ⚠️⚠️ IT IS THIS SESSION ONLY, AND IT SAYS SO. `CBCALLS` holds the last forty calls in this browser tab. It
+ * is not a monitor and must never be read as one — "the slowest API in the product" is a claim this data
+ * cannot support, and the moment somebody quotes it as though it could, the number does harm. A real answer
+ * needs the SERVER to keep its own timings; that is written up in the backlog, not faked here.
+ *
+ * ⭐ The route is named by its ASSET CODE (API007) as well as its path, so a finding here can be carried
+ * straight into the register, the CMDB panel, and the Behind area — one identity for one file, everywhere.
+ */
+function testDiagByApi() {
+  var all = (window.CBCALLS || []).filter(function (c) {
+    return !/^\/api\/testing/i.test(String(c.path || ''));
+  });
+  if (!all.length) return '';
+
+  var rows = ((window.CBASSETS || {}).rows) || [];
+  var byRoute = {};
+  all.forEach(function (c) {
+    var m = String(c.path || '').match(/^\/api\/([a-z0-9-]+)/i);
+    var r = m ? m[1].toLowerCase() : 'other';
+    var g = byRoute[r] || (byRoute[r] = { route: r, n: 0, ms: 0, worst: 0, bad: 0, screens: {} });
+    g.n++;
+    g.ms += (c.ms || 0);
+    if ((c.ms || 0) > g.worst) g.worst = (c.ms || 0);
+    if ((c.status || 0) >= 400) g.bad++;
+    if (c.scr) g.screens[c.scr] = (g.screens[c.scr] || 0) + 1;
+  });
+
+  /* ⭐ by TOTAL time, not by the worst single call: forty fast calls cost more than one slow one, and it is
+     the total a person feels */
+  var list = Object.keys(byRoute).map(function (k) { return byRoute[k]; })
+    .sort(function (a, b) { return b.ms - a.ms; });
+
+  var codeOf = function (r) {
+    var a = rows.filter(function (x) {
+      return x.type === 'API' && x.path === 'chitbridge-api/routes/' + r + '.js';
+    })[0];
+    return a ? a.code : '';
+  };
+  /* the nav key a call was stamped with, said the way a person names the screen */
+  var scrName = function (k) {
+    var n = ((window.CBSCREENS || {}).byNav || {})[k];
+    return n ? (n.code + ' ' + n.label) : k;
+  };
+
+  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);font-weight:700;letter-spacing:.04em;'
+    + 'text-transform:uppercase;margin:14px 0 3px">Across this session, by API</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--note);margin-bottom:5px">'
+    + '\u26a0\ufe0f The last ' + all.length + ' calls in THIS browser tab, nothing more. Not a monitor, and not '
+    + 'evidence about the product as a whole.</div>';
+
+  h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
+    + '<tr style="color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
+    + '<th style="text-align:start;padding:3px 6px 3px 0">API</th>'
+    + '<th style="text-align:end;padding:3px 6px">Calls</th>'
+    + '<th style="text-align:end;padding:3px 6px">Total ms</th>'
+    + '<th style="text-align:end;padding:3px 6px">Worst</th></tr>';
+
+  h += list.map(function (g) {
+    var who = Object.keys(g.screens).sort(function (a, b) { return g.screens[b] - g.screens[a]; });
+    var code = codeOf(g.route);
+    return '<tr style="border-top:1px solid var(--line-2,#efece4)">'
+      + '<td style="padding:4px 6px 4px 0">'
+      +   (code ? '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(code) + '</code> ' : '')
+      +   '/api/' + testEsc(g.route)
+      +   (g.bad ? ' <b style="color:var(--disp,#B3261E);font-size:var(--fs-1)">' + g.bad + ' failed</b>' : '')
+      +   '<span style="display:block;font-size:var(--fs-1);color:var(--note)">'
+      +     (who.length ? 'asked by ' + testEsc(who.map(function (k) {
+            return scrName(k) + ' \u00d7' + g.screens[k]; }).join(', '))
+          : 'no screen recorded')
+      +   '</span></td>'
+      + '<td style="text-align:end;padding:4px 6px">' + g.n + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;font-weight:' + (g.ms > 3000 ? '700' : '400')
+      +   ';color:' + (g.ms > 3000 ? 'var(--disp,#B3261E)' : 'inherit') + '">' + g.ms + '</td>'
+      + '<td style="text-align:end;padding:4px 6px;color:var(--grey-2)">' + g.worst + '</td>'
+      + '</tr>';
+  }).join('');
+  return h + '</table>';
+}
+
+function testDiagRaise() {
+  var all = (window.CBCALLS || []).filter(function (c) {
+    return !/^\/api\/testing/i.test(String(c.path || ''));
+  });
+  var gen = window.CBGEN || 0;
+  var mine = gen ? all.filter(function (c) { return !c.gen || c.gen === gen; }) : all.slice();
+  if (!mine.length) { if (typeof toast === "function") toast("Nothing measured yet."); return; }
+
+  var total = mine.reduce(function (a, c) { return a + (c.ms || 0); }, 0);
+  var seenN = {};
+  mine.forEach(function (c) {
+    var k = c.key || (c.m + ' ' + String(c.path || '').split('?')[0]);
+    seenN[k] = (seenN[k] || 0) + 1;
+  });
+  var rep = Object.keys(seenN).filter(function (k) { return seenN[k] > 1; })
+    .map(function (k) { return k + ' \u00d7' + seenN[k]; });
+  var code = CBTEST.popupFor || '';
+  var name = (CBTEST.writeFor && CBTEST.writeFor.name) || codeName(code) || 'this screen';
+
+  CBTEST.caseArea = 'write';
+  try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
+  screenCasesPaint();
+
+  /* ⚠ after the paint, or the repaint restores the empty values over these */
+  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
+  put('wcTitle', 'Opening ' + code + ' ' + name + ' should not cost more than two or three server calls.');
+  put('wcDo', 'Open ' + name + ' from the rail, with test mode on, and read the Speed area.');
+  put('wcSee', 'Two or three round trips, each fetched once.');
+  put('wcGot', mine.length + ' calls, ' + total + ' ms in total'
+    + (rep.length ? ' \u2014 the same call repeated: ' + rep.join(', ') : '')
+    + '. Correlation id ' + ((mine[0] && mine[0].rid) || '\u2014') + '.');
+  try { document.getElementById('wcTitle').focus(); } catch (_) {}
 }
 
 function testAreaGet() {
@@ -3248,11 +3430,29 @@ function screenCasesPaint() {
     var ico = 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);cursor:pointer;'
       + 'border-radius:7px;width:24px;height:24px;font-size:var(--fs-1);line-height:1;padding:0;'
       + 'color:var(--grey-2,#545A61)';
-    /* ⭐ a figure and its word, not a sentence to parse — the same shape the lab uses above its list */
-    var stat = function (n, word, colour) {
-      return '<span style="display:inline-flex;flex-direction:column;line-height:1.05">'
-        + '<b style="font-size:var(--fs-2)' + (colour ? ';color:' + colour : '') + '">' + n + '</b>'
-        + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + word + '</span></span>';
+    /**
+     * ── ⭐⭐ A COUNT THAT CANNOT BE OPENED IS A DEAD NUMBER ────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"in the screen incident 2, but couldn’t click the link for incident and see what
+     * those are?"* — and he is right twice over, because this is the SECOND time the same complaint has
+     * been made about the same figures. The first time I answered it by adding a "Raised" area; the number
+     * that made him ask stayed a plain piece of text sitting above it.
+     *
+     * ⭐ A figure a person reads and wants to act on IS the control. Every one of these now opens the area
+     * that holds it — written and passed and failed to the cases, incidents and requirements to Raised.
+     *
+     * ⚠ A ZERO IS NOT A DOOR. Nothing to see is not worth a cursor that promises there is.
+     */
+    var stat = function (n, word, colour, area) {
+      var live = n && area;
+      return '<' + (live ? 'button' : 'span') + (live ? ' onclick="testArea(' + "'" + area + "'" + ')"' : '')
+        + ' style="display:inline-flex;flex-direction:column;line-height:1.05;text-align:start;'
+        + (live ? 'cursor:pointer;background:none;border:0;padding:0;font:inherit' : '') + '"'
+        + (live ? ' title="Open them"' : '') + '>'
+        + '<b style="font-size:var(--fs-2)' + (colour ? ';color:' + colour : '')
+        + (live ? ';text-decoration:underline;text-underline-offset:2px' : '') + '">' + n + '</b>'
+        + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + word + '</span>'
+        + '</' + (live ? 'button' : 'span') + '>';
     };
     head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
       + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
@@ -3261,11 +3461,11 @@ function screenCasesPaint() {
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
       + '</div>'
       + '<div style="display:flex;gap:16px;margin-top:6px">'
-      +   stat(t.total, 'written')
-      +   stat(t.pass, 'passed', t.pass ? 'var(--ok-2,#1B7F4B)' : null)
-      +   stat(t.fail, 'failed', t.fail ? 'var(--disp,#B3261E)' : null)
-      +   (known ? stat(inc, 'incidents', inc ? 'var(--disp,#B3261E)' : null) : '')
-      +   (known ? stat(req, 'requirements') : '')
+      +   stat(t.total, 'written', null, 'cases')
+      +   stat(t.pass, 'passed', t.pass ? 'var(--ok-2,#1B7F4B)' : null, 'cases')
+      +   stat(t.fail, 'failed', t.fail ? 'var(--disp,#B3261E)' : null, 'cases')
+      +   (known ? stat(inc, 'incidents', inc ? 'var(--disp,#B3261E)' : null, 'raised') : '')
+      +   (known ? stat(req, 'requirements', null, 'raised') : '')
       + '</div>';
   }
 
