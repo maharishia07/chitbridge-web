@@ -2492,8 +2492,26 @@ var TECHS = ['bounds', 'classes', 'states', 'decision', 'guess'];
 
 /** ⚠️ the fold is remembered for the session only: it is a preference about this minute, not about the person */
 /** ⭐ a chip fills the box rather than replacing it: the name is a suggestion, and it stays editable */
+/**
+ * ⭐ THE FIELD REMEMBERS ITS KIND, so the boxes below can suit it. Athi: *"if you are selecting a date
+ * field, a date picker has to come."* Right — and typing 2026-09-13 by hand into a box labelled "e.g. 1"
+ * is the kind of small friction that stops a technique being used at all.
+ */
+function testTechKind() {
+  var f = null;
+  try { f = String((document.getElementById('tqField') || {}).value || '').trim(); } catch (_) {}
+  if (!f) f = ((CBTEST.tech || {}).field) || '';
+  if (!f) return '';
+  var hit = testTechFields().filter(function (x) { return x.key === f; })[0];
+  return hit ? hit.kind : '';
+}
+
 function testTechPick(k) {
   try { var el = document.getElementById('tqField'); if (el) { el.value = k; el.focus(); } } catch (_) {}
+  /* ⚠️ remembered, and the panel repainted, or the boxes below cannot change to suit the kind */
+  CBTEST.tech = CBTEST.tech || {};
+  CBTEST.tech.field = k;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
 }
 function testTechFold() {
   CBTEST.techOpen = !CBTEST.techOpen;
@@ -2504,7 +2522,34 @@ function testTech(kind) {
   CBTEST.tech.kind = (CBTEST.tech.kind === kind) ? null : kind;
   screenCasesPaint();
 }
-function testTechGo() { screenCasesPaint(); }
+/**
+ * ── ⚠️⚠️⚠️ THE TABLE WAS DERIVED LIVE, SO IT COULD DISAGREE WITH THE BOXES ABOVE IT ────────────────────────
+ *
+ * Athi sent a screenshot: the field box read `valid_from`, and the eight cases underneath it all said
+ * `version_no` with bounds nobody could see. Both were "right" — the rows were derived from what the boxes
+ * held at the previous paint, and the boxes had moved on. A table that quietly describes a different input
+ * from the one on screen is worse than an empty one.
+ *
+ * ⚠️⚠️ AND `testTechUse(i)` RE-DERIVED BEFORE INSERTING. So pressing Add on row 3 after touching a box put a
+ * DIFFERENT case into the form from the one that was clicked — silently, and only sometimes.
+ *
+ * ⭐ SO THE RESULT IS TAKEN ONCE, WITH THE INPUTS IT WAS TAKEN FROM, and everything reads that. Change a box
+ * and the old table is still there, still true, and still says out loud which field and range it is about.
+ */
+function testTechGo() {
+  var t = CBTEST.tech || (CBTEST.tech = {});
+  t.rows = testTechDerive();
+  t.from = {
+    field: testTechVal('tqField', 'the field'),
+    lo: testTechVal('tqLo', ''), hi: testTechVal('tqHi', ''),
+    classes: testTechVal('tqClasses', ''), states: testTechVal('tqStates', ''),
+    conds: testTechVal('tqConds', ''),
+  };
+  screenCasesPaint();
+}
+
+/** ⚠️ the row that was CLICKED, never a fresh derivation — see the note on testTechGo */
+function testTechRows() { return ((CBTEST.tech || {}).rows) || []; }
 
 /** the value of one of the helper inputs, or a default */
 function testTechVal(id, dflt) {
@@ -2523,9 +2568,38 @@ function testTechDerive() {
   var out = [];
 
   if (t.kind === 'bounds') {
-    var lo = Number(testTechVal('tqLo', ''));
-    var hi = Number(testTechVal('tqHi', ''));
-    if (isNaN(lo) || isNaN(hi)) return [];
+    var loRaw = testTechVal('tqLo', ''), hiRaw = testTechVal('tqHi', '');
+    /**
+     * ⭐ A DATE HAS BOUNDARIES TOO, AND THEY ARE DAYS, NOT INTEGERS. `Number('2026-09-13')` is NaN, so a date
+     * range derived nothing at all and the tab looked broken for exactly the field Athi picked to try it.
+     * ⚠️ Arithmetic in UTC on the date part only: adding a day to a local Date crosses a DST boundary twice a
+     * year and produces the same date back, which would put two identical rows in a table of eight.
+     */
+    var isDay = /^\d{4}-\d{2}-\d{2}$/.test(loRaw) && /^\d{4}-\d{2}-\d{2}$/.test(hiRaw);
+    if (isDay) {
+      var day = function (d, n) {
+        var ms = Date.parse(d + 'T00:00:00Z') + (n * 86400000);
+        return new Date(ms).toISOString().slice(0, 10);
+      };
+      out = [
+        [day(loRaw, -1), 'refused — it is before the earliest allowed'],
+        [loRaw, 'accepted — it is the earliest allowed'],
+        [day(loRaw, 1), 'accepted — just inside'],
+        [day(hiRaw, -1), 'accepted — just inside'],
+        [hiRaw, 'accepted — it is the latest allowed'],
+        [day(hiRaw, 1), 'refused — it is after the latest allowed'],
+      ].map(function (p) {
+        return { do: 'Put ' + p[0] + ' in ' + field + ' and save.', see: 'It is ' + p[1] + '.' };
+      });
+      out.push({ do: 'Leave ' + field + ' empty and save.',
+                 see: 'Either refused with a reason, or a stated default — never today by accident.' });
+      out.push({ do: 'Put 2026-02-30 in ' + field + ' and save.',
+                 see: 'Refused — it is not a date, and February has never had thirty days.' });
+      return out;
+    }
+    var lo = Number(loRaw);
+    var hi = Number(hiRaw);
+    if (isNaN(lo) || isNaN(hi) || loRaw === '' || hiRaw === '') return [];
     /* 29119-4 boundary value analysis: the value each side of every boundary, and the boundary itself */
     out = [
       [lo - 1, 'refused \u2014 it is below the lowest allowed'],
@@ -2613,7 +2687,7 @@ function testTechDerive() {
 
 /** put one derived case into the two boxes — the tester still reads it and still presses Save */
 function testTechUse(i) {
-  var d = testTechDerive()[i];
+  var d = testTechRows()[i];
   if (!d) return;
   var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; };
   put('wcDo', d.do);
@@ -2750,12 +2824,18 @@ var TEST_TECH_EG = {
 };
 
 function testTechAreaHTML() {
-  return '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--grey-2);padding:4px 0 2px">'
-    + '<b>What else should I test here?</b><br>'
-    + 'Tell it the one thing it cannot know — the range a number must fall in, the kinds of '
-    + 'value that behave differently, the states a thing moves through — and it writes out the cases '
-    + 'that the techniques in ISO/IEC/IEEE 29119-4 say you need. Nothing is invented: every line comes '
-    + 'from what you type. Use one and it lands in Create, ready to save.</div>'
+  /**
+   * ⚠️ THIS WAS FIVE LINES OF PROSE. Athi: *"it is just a series of text, not much of meaning, difficult to
+   * understand."* A paragraph explaining a tool is a paragraph nobody finishes; the same content as three
+   * short lines, in the panel's own section treatment, is read.
+   */
+  return testSec('What else should I test here?')
+    + testNotes([
+        'You tell it the one thing it cannot know — a range, a set of kinds, a lifecycle.',
+        'It writes the cases the techniques in <b>ISO/IEC/IEEE 29119-4</b> say you need. Nothing is invented: '
+          + 'every line comes from what you typed.',
+        'Press <b>Add</b> on any row and it lands in Create, ready to save.',
+      ], 'note')
     + testTechHTML();
 }
 function testTechHTML() {
@@ -2844,13 +2924,16 @@ function testTechHTML() {
   h += '<input id="tqField" placeholder="the field you are testing" style="' + big + '">';
 
   if (t.kind === 'bounds') {
+    var _isDate = testTechKind() === 'date';
     /* ⚠️ THE ONE THING IT CANNOT KNOW. It can see that a field is a number; only a person knows the shop
        allows 1 to 999. Asking for exactly that, and nothing else, is the whole design of this helper. */
     h += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Lowest allowed</label>'
-      + '<input id="tqLo" placeholder="e.g. 1" style="' + big + '"></div>'
-      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Highest allowed</label>'
-      + '<input id="tqHi" placeholder="e.g. 999" style="' + big + '"></div>'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Earliest / lowest allowed</label>'
+      + '<input id="tqLo" type="' + (_isDate ? 'date' : 'text') + '" '
+      +   'placeholder="' + (_isDate ? '' : 'e.g. 1') + '" style="' + big + '"></div>'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Latest / highest allowed</label>'
+      + '<input id="tqHi" type="' + (_isDate ? 'date' : 'text') + '" '
+      +   'placeholder="' + (_isDate ? '' : 'e.g. 999') + '" style="' + big + '"></div>'
       + '</div>';
   }
   if (t.kind === 'classes') {
@@ -2871,10 +2954,11 @@ function testTechHTML() {
     + 'color:var(--card,#fff)">Write the cases</button></div>';
 
 
-  var rows = testTechDerive();
+  var rows = testTechRows();
   if (!rows.length) {
-    h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
-      + 'Fill the boxes above and press Show. Nothing is invented \u2014 every line comes from what you type.'
+    h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:7px">'
+      + 'Fill the boxes above and press <b>Write the cases</b>. Nothing is invented \u2014 every line comes '
+      + 'from what you type.'
       + '</div>';
     return h + '</div>';
   }
@@ -2894,19 +2978,49 @@ function testTechHTML() {
     ? 'ISO/IEC/IEEE 29119-4 names this technique but cannot supply the list \u2014 it is experience-based, so '
       + 'these are ours, and every one has broken here at least once.'
     : 'ISO/IEC/IEEE 29119-4:2021 \u00b7 specification-based test design.';
-  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:6px">'
-    + '<b>' + (NAMED[t.kind] || 'This technique') + '</b> says you need <b>' + rows.length + '</b> case(s). '
-    + 'Take them one at a time \u2014 each fills the boxes above and you still press Save.'
-    + '<span style="display:block;color:var(--note)">' + src + '</span></div>';
-  h += rows.map(function (d, i) {
-    return '<div style="display:flex;gap:7px;align-items:baseline;padding:3px 0;'
-      +   'border-top:1px solid var(--line,#efece4)">'
-      + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-1)">' + testEsc(d.do)
-      +   '<span style="display:block;color:var(--grey-2)">\u2192 ' + testEsc(d.see) + '</span></span>'
-      + '<button onclick="testTechUse(' + i + ')" style="' + tab + off + ';margin-top:0;flex:0 0 auto">'
-      +   'Use</button>'
-      + '</div>';
-  }).join('');
+  /**
+   * ⭐ IT SAYS WHAT IT WAS DERIVED FROM. One line, and the table can never again be read as being about the
+   * field currently in the box. [[feedback-silence-is-the-bug]]
+   */
+  var F = (t.from || {});
+  var range = (F.lo !== undefined && F.lo !== '' && F.hi !== '')
+    ? (', ' + testEsc(F.lo) + ' to ' + testEsc(F.hi))
+    : (F.classes || F.states || F.conds ? (', ' + testEsc(F.classes || F.states || F.conds)) : '');
+  h += testSec((NAMED[t.kind] || 'This technique') + ' \u00b7 ' + rows.length + ' case(s)',
+    'for <b>' + testEsc(F.field || 'the field') + '</b>' + range + ' \u00b7 ' + src);
+
+  /**
+   * ⭐⭐ A TABLE, BECAUSE IT IS TABULAR. Athi: *"the test below can be in a tabular format — not sure what is
+   * the purpose of Use."* Two facts per row and an action on each is a table, and running them together as
+   * sentences made eight of them read as one paragraph.
+   * ⭐ AND THE COLUMN IS LABELLED. "Use" said nothing; the header now says where the row goes, so the button
+   * does not have to be pressed to find out what it does.
+   */
+  var th = 'text-align:start;font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;'
+    + 'text-transform:uppercase;color:var(--grey-2,#545A61);padding:4px 8px 4px 0;'
+    + 'border-bottom:1px solid var(--line,#e7e3d8)';
+  var td = 'font-size:var(--fs-2);padding:6px 8px 6px 0;vertical-align:top;'
+    + 'border-bottom:1px solid var(--line,#e7e3d8)';
+  h += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:4px">'
+    + '<tr><th style="' + th + ';width:2em">#</th>'
+    +   '<th style="' + th + '">Do this</th>'
+    +   '<th style="' + th + '">It should</th>'
+    +   '<th style="' + th + ';text-align:end">\u2192 Create</th></tr>'
+    + rows.map(function (d, i) {
+        return '<tr><td style="' + td + ';color:var(--note)">' + (i + 1) + '</td>'
+          + '<td style="' + td + '">' + testEsc(d.do) + '</td>'
+          + '<td style="' + td + ';color:var(--grey-2)">' + testEsc(d.see) + '</td>'
+          + '<td style="' + td + ';text-align:end">'
+          + '<button onclick="testTechUse(' + i + ')" '
+          + 'title="Fill the Create form with this case, ready to save" '
+          + 'style="font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;cursor:pointer;'
+          + 'border:1px solid var(--line,#e7e3d8);background:var(--card,#fff);'
+          + 'color:var(--ink,#20303b);white-space:nowrap">Add</button></td></tr>';
+      }).join('')
+    + '</table></div>';
+  h += '<div style="font-size:var(--fs-1);color:var(--note);margin-top:5px">'
+    + '<b>Add</b> fills the Create form with that row \u2014 you still choose the type and press Save. '
+    + 'Nothing here is written to the board on its own.</div>';
   return h + '</div>';
 }
 
