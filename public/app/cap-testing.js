@@ -1355,7 +1355,7 @@ function testPaint() {
            */
           +   '<span title="' + testEsc(gk) + '" style="font-family:ui-monospace,Menlo,monospace;'
           +     'font-size:var(--fs-1);font-weight:700;min-width:0;'
-          +     'background:var(--grey-2,#545A61);color:#fff;border-radius:4px;padding:1px 5px;'
+          +     'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-radius:4px;padding:1px 5px;'
           +     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + testEsc(gk) + '</span>'
           + '</span>'
           + '<span style="font-size:var(--fs-2);min-width:0;overflow:hidden;display:flex;gap:6px;'
@@ -1594,7 +1594,7 @@ function testSetView(v) {
  */
 var TEST_CHIP = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:0;border-radius:11px;'
   + 'cursor:pointer;margin-inline-end:4px;';
-var TEST_CHIP_ON = 'background:var(--grey-2,#545A61);color:#fff';
+var TEST_CHIP_ON = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
 var TEST_CHIP_OFF = 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)';
 var TEST_ACT = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid '
   + 'var(--grey-2,#545A61);border-radius:7px;cursor:pointer;margin-inline-end:5px;'
@@ -2647,7 +2647,7 @@ function testTechHTML() {
   var t = (CBTEST.tech || {});
   var tab = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;margin-top:4px;';
-  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var inp = 'font:inherit;font-size:var(--fs-1);padding:2px 6px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:6px;background:var(--card,#fff)';
@@ -2891,7 +2891,7 @@ function testCaseFormHTML() {
 
   /* ── ⭐ THE TYPE, FIRST, BECAUSE EVERY LABEL BELOW DEPENDS ON IT ── */
   var seg = 'font:inherit;font-size:var(--fs-2);padding:4px 13px;border:0;cursor:pointer;';
-  var segOn = 'background:var(--grey-2,#545A61);color:#fff';
+  var segOn = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
   var segOff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var chips = ['case', 'inc', 'req'].map(function (k) {
     return '<button data-testid="wkind-' + k + '" onclick="testWriteKind(\'' + k + '\')" style="' + seg
@@ -3248,7 +3248,7 @@ function testScrHTML() {
 
   var sb = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
-  var son = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var son = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
   var soff = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var mode = testScrSortGet();
   h += '<div style="margin:2px 0 8px">'
@@ -3669,7 +3669,7 @@ function testCaseListHTML(code) {
 
   var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
-  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var h = '<div style="margin:8px 0 2px">'
     + [['todo', 'To do', nTodo], ['passed', 'Passed', nPass], ['all', 'All', all.length]]
@@ -4060,6 +4060,78 @@ function testBehindCount(code) {
 }
 
 /** ⚠️ session-only: whether a person wants the paths this minute is not a preference about the person */
+/**
+ * ── ⭐⭐⭐ WHAT THIS TAB IS FOR, IN ONE SENTENCE ────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"the Behind tab — not sure what it is? Can you provide me some information and make it
+ * usable?"*
+ *
+ * ⚠️⚠️ "BEHIND" WAS MY WORD AND IT NAMED THE MECHANISM, NOT THE QUESTION. It is literally what is behind the
+ * screen — which is true, and useless to somebody deciding what to test next. The question this answers is the
+ * one every test tool in the industry has a word for: **COVERAGE**. Is the code under this screen tested, how
+ * much of it, and is any of it red? [[feedback-adopt-dont-reinvent]]
+ *
+ * ⚠️ THE TAB ID STAYS 'behind'. It is in localStorage under cb_case_area on every machine that has used this
+ * panel, and renaming a stored value to tidy a label silently resets a remembered preference — the same rule
+ * that kept PNL004 when "Test lab" became "Test Manager".
+ *
+ * ⭐ AND A VERDICT, NOT JUST FIGURES. "12 of 48 run" is arithmetic; "thinly covered — most of the code under
+ * this screen has never been tested" is a judgement somebody can act on, and it is the sentence a tester would
+ * have had to work out for themselves every time. ⚠️ The thresholds are stated out loud below rather than
+ * hidden in a colour, because a judgement whose rule is invisible cannot be argued with — and it should be.
+ */
+function testCoverGrade(nTests, nRun, nRed) {
+  if (!nTests) {
+    return ['Not covered', 'var(--disp,#b4453f)',
+      'Nothing here declares itself a test of the code behind this screen. That is not the same as the '
+      + 'screen being untested — a case you wrote by hand still counts — but nothing AUTOMATED guards it.'];
+  }
+  if (nRed) {
+    return ['Covered, and red', 'var(--disp,#b4453f)',
+      nRed + ' of the ' + nTests + ' test(s) under this screen failed the last time they ran. Everything else '
+      + 'on this tab matters less than that.'];
+  }
+  if (!nRun) {
+    return ['Written, never run', 'var(--warn-2,#8a6100)',
+      nTests + ' test(s) name this code and not one of them has been run, so the green you see elsewhere is '
+      + 'about a different screen.'];
+  }
+  if (nRun * 2 < nTests) {
+    return ['Thinly covered', 'var(--warn-2,#8a6100)',
+      'Only ' + nRun + ' of ' + nTests + ' have actually been run — fewer than half. A test that has never '
+      + 'run has never told anybody anything.'];
+  }
+  return ['Covered', 'var(--ok-2,#1B7F4B)',
+    nRun + ' of ' + nTests + ' have been run and none of them failed.'];
+}
+
+/**
+ * ⭐ AND THE GAP IS A THING YOU CAN RAISE, from here, in one press. The old copy said an untested screen was
+ * "worth raising as a requirement from this very panel" and gave no way to do it — advice with no control
+ * beside it is advice nobody takes. The four boxes are filled the same way the Speed area fills them.
+ */
+function testCoverRaise(code) {
+  var name = codeName(code) || 'this screen';
+  var b = testBehindOf(code);
+  var n = (b.linked || []).length;
+  CBTEST.writeKind = 'req';
+  CBTEST.caseArea = 'write';
+  try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
+  if (!CBTEST.writeFor) CBTEST.writeFor = { code: code, name: name };
+  screenCasesPaint();
+  /* ⚠ after the paint, or the repaint restores the empty values over these */
+  var put = function (id, v) { var el = document.getElementById(id); if (el) el.value = v; if (el) testGrow(el); };
+  put('wcTitle', 'The code behind ' + code + ' ' + name + ' must be covered by automated tests.');
+  put('wcDo', 'Open ' + code + ' ' + name + ' with test mode on and read the Coverage tab.');
+  put('wcSee', 'Every file that draws or serves this screen is named by at least one automated test.');
+  put('wcGot', n
+    ? (n + ' test(s) name this code, but the files it actually uses are '
+      + (b.files || []).concat(b.routes || []).join(', ') + '.')
+    : ('Nothing declares itself a test of ' + ((b.files || []).concat(b.routes || []).join(', ')
+      || 'the code behind this screen') + '.'));
+  try { document.getElementById('wcTitle').focus(); } catch (_) {}
+}
+
 function testBehindTech() {
   CBTEST.behindTech = !CBTEST.behindTech;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
@@ -4132,15 +4204,26 @@ function testBehindHTML(code) {
     var l = (CBTEST.last || {})[x.c.case_key];
     if (l) { _nRun++; if (l.status === 'fail') _nRed++; }
   });
-  h += '<div style="font-size:var(--fs-2);line-height:1.6;padding:2px 0 8px;color:var(--grey-2)">'
-    + '<b>What is underneath this screen, and whether it has been tested.</b><br>'
-    + (_nT
-      ? ('It is drawn by <b>' + b.files.length + '</b> part(s) of the app and answered by <b>'
-        + b.routes.length + '</b> part(s) of the server. <b>' + _nT + '</b> test(s) cover that code — <b>'
-        + _nRun + '</b> of them have actually been run'
-        + (_nRed ? ', and <b style="color:var(--disp,#B3261E)">' + _nRed + '</b> failed' : '') + '.')
-      : 'Nothing here declares itself a test of the code behind this screen. That is a real gap, and it is '
-        + 'worth recording from the Create tab.')
+  var _g = testCoverGrade(_nT, _nRun, _nRed);
+
+  /* ⭐ THE VERDICT FIRST, in the same three treatments the Speed tab uses — figures, notes, sections. */
+  h += testSec('Is the code behind this screen tested?',
+    'the files that draw it, the server code it called, and every automated test that names them');
+  h += '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0 2px">'
+    + '<b style="font-size:var(--fs-3);color:' + _g[1] + '">' + _g[0] + '</b></div>';
+  h += testFigures([
+    [_nT || null, 'tests name this code'],
+    [_nRun || null, 'have been run'],
+    [_nRed || null, 'failed', 'var(--disp,#b4453f)'],
+    [b.files.length || null, 'files draw it'],
+    [b.routes.length || null, 'server routes answered'],
+  ]);
+  h += testNotes([_g[2]], _nRed || !_nT ? 'bad' : (_nRun && _nRun * 2 >= _nT ? 'ok' : 'warn'));
+
+  /* ⭐ and the gap is a thing you can raise, from here, rather than advice with no control beside it */
+  h += '<div style="margin-top:7px">'
+    + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
+    + 'onclick="testCoverRaise(\'' + testEsc(code) + '\')">\u270e Raise this as a coverage gap</button>'
     + '</div>';
 
   /* ⚠️ FOLDED, NOT DELETED. A tester asking "why does the register not know what draws this screen?" needs
@@ -5621,7 +5704,7 @@ function screenCasesPaint() {
     if (t.total) area = 'cases';
   }
   var tab = 'font:inherit;font-size:var(--fs-1);padding:4px 11px;border:0;cursor:pointer;';
-  var on = 'background:var(--grey-2,#545A61);color:#fff';
+  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   var seg = function (id, label, n) {
     return '<button onclick="testArea(\'' + id + '\')" style="' + tab + (area === id ? on : off)
@@ -5637,7 +5720,9 @@ function screenCasesPaint() {
     + seg('inc', 'Incidents', known ? testScrOpenN(code, 'inc') : null)
     + seg('req', 'Requirements', known ? testScrOpenN(code, 'req') : null)
     + seg('tech', 'Techniques', null)
-    + seg('behind', 'Behind', testBehindCount(code))
+    /* ⚠️ the LABEL is Coverage; the id stays 'behind' because it is in localStorage on every machine that
+       has used this panel — see the note above testCoverGrade */
+    + seg('behind', 'Coverage', testBehindCount(code))
     + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
     + '</div>';
 
@@ -6341,7 +6426,7 @@ function testHandHTML() {
 
   var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
     + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
-  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff);border-color:var(--ink,#0F2E3D)';
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
 
   var h = '';
@@ -6533,7 +6618,7 @@ function testViewToggleHTML() {
   var menu = CBTEST.view === 'menu', req = CBTEST.view === 'req', inc = CBTEST.view === 'inc',
       scr = CBTEST.view === 'scr';
   var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:0;cursor:pointer;';
-  var on = 'background:var(--grey-2,#545A61);color:#fff';
+  var on = 'background:var(--ink,#0F2E3D);color:var(--card,#fff)';
   /* ⚠️ List is "on" only when neither of the others is — three segments, one filled */
   var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
   return '<span style="display:inline-flex;border:1px solid var(--line,#e7e3d8);border-radius:7px;overflow:hidden">'
