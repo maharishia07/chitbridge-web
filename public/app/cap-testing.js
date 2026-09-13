@@ -987,6 +987,44 @@ function testPaint() {
         })()
     + '</div>'
     /**
+     * ── ⭐⭐⭐ WHAT TO LOOK FOR, BEFORE HOW WE ARE DOING ────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"I want this panel optimised, and to give a crisp picture for the user what to look
+     * for."*
+     *
+     * ⚠️ THE PANEL LED WITH A NUMBER THAT ASKS FOR NOTHING. "1499 cases" is context; the figure a tester
+     * opens this board to find is the one with their name on it, and it was not in the header at all — the
+     * "waiting for you" band lived INSIDE the Worklist view, so on any other view it did not exist.
+     *
+     * ⭐ SO THE ACTIONABLE COUNTS COME FIRST, AND ONLY WHEN THEY ARE NON-ZERO. A band that is always there
+     * is furniture; one that appears only when something is waiting is a signal. Nothing is added to a clean
+     * board.
+     * ⚠️ AND THE FOUR FIGURES BELOW ARE NOT REORDERED. Their order matches the Report's exactly — cases ·
+     * passed · failed · not run — and that agreement is what lets someone hold the two surfaces side by
+     * side. This is an extra line above them, never a resequencing of them.
+     */
+    + (function () {
+        var W = (typeof testWork === 'function') ? testWork() : [];
+        var forMe = W.filter(function (x) { return x.forMe; }).length;
+        var bits = [];
+        if (forMe) {
+          bits.push('<button data-testid="hdr-forme" onclick="testSetView(\'work\');testWorkFilter(\'mine\')" '
+            + 'title="Somebody says they fixed what you reported. Until you look, it is a claim and not a fix." '
+            + 'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 10px;border-radius:11px;'
+            + 'cursor:pointer;border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);'
+            + 'color:var(--warn-2,#8a6100);margin-inline-end:6px">⚠ ' + forMe
+            + ' for you to retest</button>');
+        }
+        if (all.fail) {
+          bits.push('<button data-testid="hdr-failed" onclick="testSetView(\'work\');testWorkFilter(\'failed\')" '
+            + 'title="Cases whose last run did not do what the case says" '
+            + 'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 10px;border-radius:11px;'
+            + 'cursor:pointer;border:1px solid var(--disp,#B3261E);background:var(--danger-tint,#fbeceb);'
+            + 'color:var(--disp,#B3261E)">' + all.fail + ' failing</button>');
+        }
+        return bits.length ? '<div style="margin-top:8px">' + bits.join('') + '</div>' : '';
+      })()
+    /**
      * ⭐ THE SAME FOUR FIGURES AS THE REPORT, IN THE SAME ORDER. Athi, 2026-09-12: *"can we show the same
      * level of summary on the first landing page — cases, passed, failed, not run."*
      * ⚠️ Whole board FIRST, because that is the question "how are we doing" actually asks. The filtered slice
