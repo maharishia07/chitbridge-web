@@ -9902,7 +9902,36 @@ function catgChipsHTML(d){
      * lookup of one id, so a second one while the first is in flight can only return the same answer.
      */
     if(unknown.length){ unknown.forEach(function(c){ UI._catgAsked[c]=1; });
-      if(!UI._catgRefetch){
+      /**
+       * ⚠️⚠️ AND ONCE A SESSION, NOT ONCE A PAINT. The ids that land here are overwhelmingly RETIRED
+       * categories — a product keeps citing one after it is retired, on purpose, because the citation
+       * survives the shelf. The shelf is read `status=live`. So a retired id can NEVER be found by this
+       * refresh, and re-reading on the next paint that meets another retired id is a journey that is
+       * guaranteed to fail before it is made.
+       *
+       * ⭐ ONE refresh settles the question for good: it returns the live shelf as it stands, so anything
+       * still missing after it is retired, and saying so needs no further reading.
+       *
+       * ⚠️ A category created AFTER that one refresh would be judged retired — except that creating one goes
+       * through cbCatgCreate/cap-categories, both of which already call cbCatgLive(true) themselves. The
+       * deliberate act refreshes the shelf; the paint no longer has to guess on its behalf.
+       */
+      /**
+       * ⚠️⚠️ AND NOT AT ALL IF THE SHELF IS SECONDS OLD. This is the last of the three cold-boot reads.
+       * The unknown ids were found by comparing against a shelf that had JUST been fetched — so fetching it
+       * again cannot produce a different answer. It was a journey guaranteed to fail before it was made,
+       * and on a 500-item catalogue it fired during the first paint every single time.
+       *
+       * ⭐ THIRTY SECONDS. Long enough to cover a whole first render; short enough that a tab left open all
+       * morning still checks once when it meets an id it has never seen.
+       *
+       * ⚠️ THIS CHECK IS HERE AND NOT IN cbDefsLive, deliberately. cap-categories calls cbCatgLive(true)
+       * within a second of creating a category, and that refresh MUST go — a freshness rule inside the
+       * loader would swallow the one forced read that is always right.
+       */
+      var fresh = (typeof _CATG_AT !== 'undefined') && _CATG_AT && (Date.now() - _CATG_AT < 30000);
+      if(!fresh && !UI._catgRefetch && !UI._catgRefetched){
+        UI._catgRefetched = true;
         UI._catgRefetch = cbCatgLive(true)
           .then(function(){ if(UI.nav==='catalogue'){ if(typeof paintProdList==='function') paintProdList(); if(typeof prodRepaintSection==='function'){ prodRepaintSection('categories'); } const oc=document.querySelector('[data-testid="prod-outcome-categories"]'); if(oc && typeof prodOutcomeHTML==='function' && UI._prodSheetD) oc.innerHTML=prodOutcomeHTML('categories', UI._prodSheetD)||''; } })
           /* ⚠ cleared either way, or one failed read stops the shelf ever being refreshed again */

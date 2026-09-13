@@ -421,6 +421,7 @@ function cbDefsLive(kind, force){
 function cbDefsCached(kind){ return _DEFS[kind] || null; }
 
 var _CATG = null;          // [{id,name}] — the live shelf, as last read
+var _CATG_AT = 0;          // when it was last read — see catgChipsHTML
 var _catgReq = null;       // in-flight promise, so a form opening twice does not fetch twice
 /**
  * ── ⭐⭐ CREATING A CATEGORY, BESIDE THE CACHE IT UPDATES ───────────────────────────────────────────────────────
@@ -466,6 +467,8 @@ function cbCatgLive(force){
   _catgReq = cbDefsLive('category', force)
     .then(function(defs){
       _CATG = (defs || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
+      /* ⭐ WHEN it was read, so a caller can tell whether re-reading it could possibly say anything new */
+      _CATG_AT = Date.now();
       _catgReq = null; return _CATG;
     })
     /**
