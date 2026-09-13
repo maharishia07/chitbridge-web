@@ -4396,6 +4396,92 @@ function testBehindCount(code) {
  * have had to work out for themselves every time. ⚠️ The thresholds are stated out loud below rather than
  * hidden in a colour, because a judgement whose rule is invisible cannot be argued with — and it should be.
  */
+/**
+ * ── ⭐⭐⭐ COVERAGE, ASKED THE WAY A TESTER ASKS IT ─────────────────────────────────────────────────────────────
+ *
+ * Athi, twice: *"I still don't understand coverage."* And he was right not to, because the tab answered a
+ * question he had not asked. It said how many AUTOMATED TESTS NAME THE CODE behind the screen — which is a
+ * developer's question, answered in file paths, and useless to somebody standing on the screen itself.
+ *
+ * ⭐⭐ THE QUESTION A PERSON HOLDING A SCREEN ACTUALLY HAS IS: **what on here has been checked, and what has
+ * not?** And we can answer it exactly, because the register already names every control on every screen — 426
+ * of them, each with a CTL code — and every case written here can cite the one it is about.
+ *
+ * ⭐ SO COVERAGE IS A TO-DO LIST, NOT A STATISTIC. "11 of 14 controls on this screen have no case against
+ * them", and then the eleven, each with a button that opens Create with that control already chosen. A number
+ * tells you how you are doing; a list tells you what to do next, and only one of those gets acted on.
+ *
+ * ⚠️ THE CODE-LEVEL VIEW IS NOT DELETED, it is the second half and it is folded. "Which files does this lean
+ * on and are they tested" is a real question — it is just a different one, and it was standing in front.
+ *
+ * ⚠️⚠️ AND IT SAYS WHEN IT CANNOT ANSWER. Not every screen has controls in the register; on those, counting
+ * controls would report "0 of 0 checked", which reads as perfect coverage and is the most dangerous sentence
+ * this tab could print. It says the register does not know, and falls back to the code view.
+ * [[feedback-silence-is-the-bug]]
+ */
+function testScrControls(code) {
+  try {
+    var rows = (window.CBSCREENS && CBSCREENS.rows) || [];
+    var me = rows.filter(function (r) { return r.code === code; })[0];
+    if (!me) return [];
+    var want = 'Control › ' + me.path + ' • ';
+    return rows.filter(function (r) {
+      return r.group === 'Control' && String(r.path).indexOf(want) === 0;
+    }).map(function (r) {
+      return { code: r.code, label: String(r.screen).split(' • ').pop() };
+    });
+  } catch (_) { return []; }
+}
+
+/** every case written on this screen, keyed by the control it names — '' for the ones about the screen itself */
+function testCtlCases(code) {
+  var by = {};
+  (CBTEST.cases || []).concat(CBTEST.closedCases || []).forEach(function (c) {
+    if (testScrOf(c) !== code) return;
+    var k = c.control_code || '';
+    (by[k] = by[k] || []).push(c);
+  });
+  return by;
+}
+
+/** the worst thing known about a case, in the board's own words */
+function testCaseMark(c) {
+  var l = (CBTEST.last || {})[c.case_key];
+  if (c.status === 'retired') return ['closed', 'var(--note)'];
+  if (!l) return ['not run', 'var(--note)'];
+  if (l.status === 'fail') return ['failed', 'var(--disp,#b4453f)'];
+  if (l.status === 'blocked') return ['blocked', 'var(--warn-2,#8a6100)'];
+  if (l.status === 'pass') return ['passed', 'var(--ok-2,#1B7F4B)'];
+  return [String(l.status), 'var(--note)'];
+}
+
+/**
+ * ⭐ WRITE A CASE FOR ONE CONTROL, from the list, with the control already chosen. The old tab said an untested
+ * screen was "worth raising as a requirement" and gave no way to do it; advice with no control beside it is
+ * advice nobody takes.
+ */
+function testCoverCase(code, ctl, label) {
+  var name = codeName(code) || 'this screen';
+  if (!CBTEST.writeFor) CBTEST.writeFor = { code: code, name: name };
+  CBTEST.writeKind = 'case';
+  CBTEST.caseArea = 'write';
+  try { localStorage.setItem('cb_case_area', 'write'); } catch (_) {}
+  screenCasesPaint();
+  var put = function (id, v) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.value = v;
+    try { if (el.tagName === 'TEXTAREA') testGrow(el); } catch (_) {}
+  };
+  put('wcTitle', label + ' on ' + code + ' ' + name + ' must do what it says.');
+  put('wcDo', 'Press ' + label + ' on ' + code + ' ' + name + '.');
+  put('wcSee', '');
+  /* ⚠ the select is set AFTER the paint, like every other prefill — a repaint restores the empty value */
+  try { var sel = document.getElementById('wcCtl'); if (sel) sel.value = ctl; } catch (_) {}
+  try { document.getElementById('wcSee').focus(); } catch (_) {}
+  if (typeof toast === 'function') toast('Writing a case for ' + ctl + ' — say what it should do.');
+}
+
 function testCoverGrade(nTests, nRun, nRed) {
   if (!nTests) {
     return ['Not covered', 'var(--disp,#b4453f)',
@@ -4448,6 +4534,11 @@ function testCoverRaise(code) {
   try { document.getElementById('wcTitle').focus(); } catch (_) {}
 }
 
+/** ⚠️ session-only, like the technical fold: whether somebody wants the good news this minute */
+function testCoverDone() {
+  CBTEST.coverDone = !CBTEST.coverDone;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+}
 function testBehindTech() {
   CBTEST.behindTech = !CBTEST.behindTech;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
@@ -4520,37 +4611,110 @@ function testBehindHTML(code) {
     var l = (CBTEST.last || {})[x.c.case_key];
     if (l) { _nRun++; if (l.status === 'fail') _nRed++; }
   });
+
+  /* ── ⭐⭐⭐ WHAT ON THIS SCREEN HAS BEEN CHECKED — see the note above testScrControls ── */
+  var ctls = testScrControls(code);
+  var byCtl = testCtlCases(code);
+  var here = (CBTEST.cases || []).concat(CBTEST.closedCases || [])
+    .filter(function (c) { return testScrOf(c) === code; });
+  var red = here.filter(function (c) { return testCaseMark(c)[0] === 'failed'; }).length;
+  var todo = ctls.filter(function (x) { return !(byCtl[x.code] || []).length; });
+  var done = ctls.filter(function (x) { return (byCtl[x.code] || []).length; });
+
+  h += testSec('What on this screen has been checked?',
+    'every control the register knows about, and whether anybody has written a case for it');
+
+  if (!ctls.length) {
+    /**
+     * ⚠️⚠️ "0 OF 0 CHECKED" WOULD READ AS PERFECT COVERAGE, and it is the most dangerous sentence this tab
+     * could print. The register does not name a control on every screen; where it names none, this says so and
+     * stands on the code view below instead of inventing a score.
+     */
+    h += testNotes(['The register does not name any control on this screen, so there is nothing to count '
+      + 'against. That is a gap in the register, not a statement about the screen — what is known about the '
+      + 'code underneath is below.'], 'warn');
+  } else {
+    var pct = Math.round((done.length / ctls.length) * 100);
+    var grade = !done.length ? ['Nothing here is checked', 'var(--disp,#b4453f)']
+      : red ? ['Checked, and something is red', 'var(--disp,#b4453f)']
+      : pct >= 80 ? ['Well covered', 'var(--ok-2,#1B7F4B)']
+      : pct >= 40 ? ['Half covered', 'var(--warn-2,#8a6100)']
+      : ['Barely covered', 'var(--warn-2,#8a6100)'];
+    h += '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0 2px">'
+      + '<b style="font-size:var(--fs-3);color:' + grade[1] + '">' + grade[0] + '</b>'
+      + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + pct + '% of the controls</span></div>';
+    h += testFigures([
+      [ctls.length, 'controls here'],
+      [done.length || null, 'have a case', 'var(--ok-2,#1B7F4B)'],
+      [todo.length || null, 'never checked', 'var(--warn-2,#8a6100)'],
+      [here.length || null, 'cases written here'],
+      [red || null, 'failing', 'var(--disp,#b4453f)'],
+    ]);
+
+    /* ⭐ THE LIST, WHICH IS THE POINT. A number says how you are doing; a list says what to do next. */
+    if (todo.length) {
+      h += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
+        + 'color:var(--warn-2,#8a6100);margin:9px 0 3px">Never checked · ' + todo.length + '</div>';
+      h += todo.map(function (x) {
+        return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
+          + 'border-top:1px solid var(--line,#e7e3d8)">'
+          + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.code) + '</code>'
+          + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(x.label) + '</span>'
+          + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
+          + 'onclick="testCoverCase(\'' + testEsc(code) + '\',\'' + testEsc(x.code) + '\',\''
+          + testEsc(String(x.label).replace(/'/g, ' ')) + '\')">Write a case</button>'
+          + '</div>';
+      }).join('');
+    } else {
+      h += testNotes(['Every control on this screen has a case against it.'], 'ok');
+    }
+
+    /* ⚠️ and the ones that ARE checked, folded: they are the good news, and good news does not need the room */
+    if (done.length) {
+      var openDone = !!CBTEST.coverDone;
+      h += '<button onclick="testCoverDone()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;'
+        + 'margin-top:9px;background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">'
+        + (openDone ? '▾ ' : '▸ ') + '<b>' + done.length + ' already checked</b> · and what the '
+        + 'last run said</button>';
+      if (openDone) {
+        h += done.map(function (x) {
+          return (byCtl[x.code] || []).map(function (c) {
+            var m = testCaseMark(c);
+            return '<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;'
+              + 'border-top:1px solid var(--line,#e7e3d8)">'
+              + '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.code) + '</code>'
+              + '<span style="flex:1 1 auto;min-width:0;font-size:var(--fs-2)">' + testEsc(c.title || '')
+              + '</span>'
+              + '<span style="font-size:var(--fs-1);font-weight:700;color:' + m[1] + '">' + m[0] + '</span>'
+              + '</div>';
+          }).join('');
+        }).join('');
+      }
+    }
+  }
+
   var _g = testCoverGrade(_nT, _nRun, _nRed);
 
-  /* ⭐ THE VERDICT FIRST, in the same three treatments the Speed tab uses — figures, notes, sections. */
-  h += testSec('Is the code behind this screen tested?',
-    'the files that draw it, the server code it called, and every automated test that names them');
-  h += '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:4px 0 2px">'
-    + '<b style="font-size:var(--fs-3);color:' + _g[1] + '">' + _g[0] + '</b></div>';
-  h += testFigures([
-    [_nT || null, 'tests name this code'],
-    [_nRun || null, 'have been run'],
-    [_nRed || null, 'failed', 'var(--disp,#b4453f)'],
-    [b.files.length || null, 'files draw it'],
-    [b.routes.length || null, 'server routes answered'],
-  ]);
-  h += testNotes([_g[2]], _nRed || !_nT ? 'bad' : (_nRun && _nRun * 2 >= _nT ? 'ok' : 'warn'));
-
-  /* ⭐ and the gap is a thing you can raise, from here, rather than advice with no control beside it */
-  h += '<div style="margin-top:7px">'
-    + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
-    + 'onclick="testCoverRaise(\'' + testEsc(code) + '\')">\u270e Raise this as a coverage gap</button>'
-    + '</div>';
-
-  /* ⚠️ FOLDED, NOT DELETED. A tester asking "why does the register not know what draws this screen?" needs
-     exactly these paths, and answering a complaint about noise by deleting the evidence is not an answer. */
+  /**
+   * ── THE CODE UNDERNEATH — a real question, and a DIFFERENT one ──────────────────────────────────────────
+   * ⚠️ This is what the tab used to open with, and it is why nobody understood it: "how many automated tests
+   * name these files" is a developer's question answered in file paths. It is second now, and folded.
+   */
   var _tech = !!CBTEST.behindTech;
   h += '<button onclick="testBehindTech()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;'
+    + 'margin-top:13px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8);display:block;width:100%;'
     + 'background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">'
-    + (_tech ? '▾ ' : '▸ ')
-    + 'The technical detail — which files draw it, which server code answered it</button>';
-
+    + (_tech ? '▾ ' : '▸ ') + '<b>The code underneath</b> · ' + _g[0].toLowerCase() + ' — '
+    + _nT + ' automated test(s) name it, ' + _nRun + ' have run'
+    + (_nRed ? ', ' + _nRed + ' failed' : '') + '</button>';
   if (_tech) {
+    h += testNotes([_g[2]], _nRed || !_nT ? 'bad' : (_nRun && _nRun * 2 >= _nT ? 'ok' : 'warn'));
+    h += '<div style="margin-top:7px">'
+      + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
+      + 'onclick="testCoverRaise(\'' + testEsc(code) + '\')">✎ Raise this as a coverage gap</button>'
+      + '</div>';
+
+  /* ── the file-level detail, inside the same fold ── */
   h += lab('Draws this screen');
   h += b.files.length ? b.files.map(fileRow).join('')
     : quiet('The register does not say which file draws this screen \u2014 that is a gap in the register, '
@@ -4577,7 +4741,6 @@ function testBehindHTML(code) {
       +   (b.mods.length > 18 ? ' \u00b7 \u2026and ' + (b.mods.length - 18) + ' more' : '') + '</div>';
   }
 
-  }   /* ── end of the technical fold ── */
 
   /* ── 4+5 · the linked cases, with their standing ── */
   var linked = b.linked;
@@ -4621,6 +4784,7 @@ function testBehindHTML(code) {
     h += b.named.slice(0, 25).map(function (c) { return caseRow(c, true); }).join('');
     if (b.named.length > 25) h += quiet('\u2026 and ' + (b.named.length - 25) + ' more.');
   }
+  }   /* ── end of the code-underneath fold: the automated tests are part of it ── */
   return h;
 }
 
