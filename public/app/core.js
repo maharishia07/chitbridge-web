@@ -235,14 +235,43 @@ function catgIdsOf(d){
  * product in "Dried Fruits". The engine matches ids exactly and stays pure, so the LINE carries its categories AND
  * their ancestors (rules.parent, up the tree). One helper for compose, the product preview and the storefront cart.
  */
+/* ⚠ module-scoped: the guard is about the one READ in flight, not about any one caller */
+var _catgKick = false;
 function catgWithAncestors(ids){
   var out = (ids || []).map(String).filter(Boolean), seen = {};
   out.forEach(function (id) { seen[id] = true; });
   var cats = (typeof cbDefsCached === 'function') ? cbDefsCached('category') : null;
   if (cats === null) {
-    /* not read yet — start the one read and re-sync the basket when it lands, so a parent-category offer is not
-       missed on the first paint (the tour caught this: the line had its category but not its ancestors) */
-    if (typeof cbDefsLive === 'function') cbDefsLive('category').then(function(){ try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {} try { if (typeof prodRepaintSection === 'function') { prodRepaintSection('offers'); prodRepaintSection('pricing'); } } catch (_) {} }).catch(function(){});
+    /**
+     * ── ⚠️⚠️⚠️ THIS RAN 1,600 TIMES IN ONE PAINT ─────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-13, reading the Speed table: *"why do you need to fetch category for every attempt, again
+     * 3 times?"* — the answer turned out to be far worse than three. Traced live: this function is called
+     * ONCE PER PRODUCT PER OFFER from `offersForProduct` → `prodDeals`, so on a 500-item shelf it ran over
+     * sixteen hundred times in a single paint, and every one of them:
+     *
+     *   · called `cbDefsLive` again
+     *   · attached ANOTHER `.then` that repaints the basket total and two whole product sections
+     *
+     * ⚠⚠ SO THE MOMENT THE CATEGORY SHELF LANDED, SIXTEEN HUNDRED REPAINTS WERE QUEUED. The cache absorbed
+     * nearly all the fetches — which is exactly why this never looked like a bug — but the repaint storm was
+     * real, and it is the kind of cost that shows up as "the catalogue feels slow" and never as an error.
+     *
+     * ⭐ THE READ IS A ONE-TIME EVENT, SO IT IS KICKED ONCE. A flag, not a cache check: `cbDefsCached` stays
+     * null for the whole time the request is in flight, which is precisely the window in which every one of
+     * those calls arrives.
+     */
+    if (!_catgKick && typeof cbDefsLive === 'function') {
+      _catgKick = true;
+      cbDefsLive('category')
+        .then(function(){
+          try { if (typeof ccRenderTotal === 'function') ccRenderTotal(); } catch (_) {}
+          try { if (typeof prodRepaintSection === 'function') { prodRepaintSection('offers'); prodRepaintSection('pricing'); } } catch (_) {}
+        })
+        /* ⚠ cleared either way: a failed read must not leave the shelf permanently un-askable */
+        .catch(function(){})
+        .then(function(){ _catgKick = false; });
+    }
     return out;
   }
   if (!cats.length) return out;
@@ -332,11 +361,16 @@ var _defsReq = {};         // kind → in-flight promise
 var _defsQueue = [];       // kinds waiting for the next tick
 var _defsFlush = null;     // the promise that will carry them
 
+/**
+ * ⚠️ THE WINDOW STAYS OPEN UNTIL THE ANSWER LANDS. Clearing `_defsFlush` at the START of the flush meant a
+ * caller arriving one tick later — while the request was still in the air — opened a SECOND batch for a kind
+ * already being fetched. On a screen that paints in several passes that is how one shelf gets asked for two
+ * and three times, which is the shape Athi spotted in the table.
+ */
 function cbDefsFlush(){
   var kinds = _defsQueue.slice();
   _defsQueue = [];
-  _defsFlush = null;
-  if (!kinds.length) return Promise.resolve({});
+  if (!kinds.length) { _defsFlush = null; return Promise.resolve({}); }
   return api('defList', { query: { kind: kinds.join(','), status: 'live' } })
     .then(function(r){
       var by = {};
@@ -346,7 +380,10 @@ function cbDefsFlush(){
         if (by[k]) by[k].push(d);
       });
       return by;
-    });
+    })
+    /* whether it answered or failed, the window is closed and the next asker opens a new one */
+    .then(function(by){ _defsFlush = null; return by; },
+          function(e){ _defsFlush = null; throw e; });
 }
 
 function cbDefsLive(kind, force){
