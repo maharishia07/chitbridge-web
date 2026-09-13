@@ -3656,9 +3656,42 @@ function meTake(){
  * business must ask for the business; swapping the source here cannot change which subject it gets, which is
  * the one thing that would have made this a silent bug rather than a saving.
  */
-function meNow(){
-  if (typeof UI !== 'undefined' && UI && UI._me) return Promise.resolve(UI._me);
-  return meTake();
+/**
+ * ── ⭐⭐⭐ ONE /me, NOT THREE ────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"fix the me x3 call."* Measured on a cold boot of the Catalogue, one visit:
+ *
+ *     me  null                              905 ms
+ *     me  {include:readiness,channels,vault}   2,545 ms  (2,161 ms of it inside the server)
+ *     me  {_t:…}                           1,449 ms
+ *
+ * Three questions about the SAME entity, 4.9 seconds between them.
+ *
+ * ⚠️⚠️ AND meNow() WAS ALREADY MEANT TO PREVENT THIS. It reads `UI._me` if it is there — but `UI._me` is only
+ * set AFTER an answer lands, so every caller arriving during the flight found it empty and went again.
+ * `meTake()` is consume-once by design, so the second asker got no warm promise either. The cache was real
+ * and the window in which it was empty was exactly the window in which everybody asked.
+ *
+ * ⭐ SO THE LATCH IS ON THE REQUEST, NOT ONLY ON THE ANSWER — the same lesson as the definitions batcher an
+ * hour ago, in a second place, which is what says it is the shape and not the instance.
+ *
+ * ⚠️ THE SHAPE IS UNCHANGED. `unwrap()` hands back `j.entity` for /me, and `capabilities` rides INSIDE entity
+ * (routes/entities.js says so in as many words, because sibling keys are dropped). So a caller that wanted
+ * capabilities and a caller that wanted `user_id` were always asking one question, and can share one answer.
+ */
+var _meReq = null;
+function meNow(force){
+  if (!force && typeof UI !== 'undefined' && UI && UI._me) return Promise.resolve(UI._me);
+  if (!force && _meReq) return _meReq;
+  var p = force ? api('me', { query: { include: 'readiness,channels,vault' } }) : meTake();
+  _meReq = Promise.resolve(p).then(function (r) {
+    var e = (r && r.entity) || r;
+    if (e && typeof UI !== 'undefined' && UI) UI._me = Object.assign({}, UI._me || {}, e);
+    _meReq = null;
+    return (typeof UI !== 'undefined' && UI && UI._me) || e;
+  /* ⚠ cleared on failure too, or one dead read leaves every later caller waiting on a promise that is gone */
+  }, function (err) { _meReq = null; throw err; });
+  return _meReq;
 }
 
 function setSession(s){ SESSION={...SESSION,...s};
@@ -5020,7 +5053,13 @@ function _renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) bgRenderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[];
+    /**
+     * ⚠️ THE `_t` CACHE-BUSTER WAS DOING NOTHING. `api()` already sends `cache:"no-store"` on every request,
+     * so the timestamp bought no freshness — it only made this URL unique, which defeated the one thing that
+     * could have collapsed it into the read happening beside it. A cache-buster against a cache that is
+     * already off costs a whole round trip and buys nothing.
+     */
+    meNow().then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[];
       // THE BUSINESS'S OWN CURRENCY. /me has always returned currency_code; the client dropped it, so
       // SESSION.currency was NEVER set — cap-catalogue.js read it, fell back to 'INR', and every business on earth
       // saw "Price (INR)". Now that a price is STAMPED with the entity's currency on write, showing the wrong one
@@ -11844,7 +11883,13 @@ async function prodExposureReset(){
 function prodShopHandle(){
   const me = UI._me; if(me && (me.user_id||me.bridge_id)) return me.user_id||me.bridge_id;
   /* the LIGHT read: /entities/me without includes (readiness alone costs 6 s across the continent — Athi, 2026-09-04: "very slow, always reading") */
-  if(!UI._meReq){ UI._meReq = api('me').then(function(r){ const e=(r&&r.entity)||r; if(e) UI._me=Object.assign({}, UI._me||{}, e); }).catch(function(){}).finally(function(){ UI._meReq=null; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); prodRepaintSection('invoice'); } }); }
+  /**
+   * ⭐ THROUGH meNow(), WHICH IS THE POINT OF meNow(). `UI._meReq` was a FOURTH private ask-once latch for one
+   * endpoint — the very thing the comment above meNow complains about, added after it was written. The
+   * shared reader already caches into `UI._me`, so all this has to do is repaint when the answer arrives.
+   */
+  if(!UI._meRepaint){ UI._meRepaint = true;
+    meNow().catch(function(){}).then(function(){ UI._meRepaint=false; if(typeof prodRepaintSection==='function'){ prodRepaintSection('storefront'); prodRepaintSection('invoice'); } }); }
   return null;
 }
 /** The catalogue's own gate (b114 catalogue_visibility) — a private catalogue has no storefront, whatever the product says. */
