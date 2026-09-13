@@ -11568,10 +11568,28 @@ function prodOutcomeHTML(k, d){
           + (d.redundant_by?' '+grey('· '+esc(tx('replaced by')+' '+String(d.redundant_by))):'');
       }
       case 'history': {
+        /**
+         * ── ⭐⭐⭐ THE SUMMARY COMES WITH THE ROW NOW ───────────────────────────────────────────────────
+         *
+         * Athi, CAT001-H07: *"prodVersions ×5"*. This line was the cause — the collapsed summary needs the
+         * current version, so it fetched the WHOLE history of every product opened: 459–895 ms each, ~70%
+         * inside the server, for one line of text.
+         *
+         * ⭐ `/api/products` now carries `version_no`, `version_at` and `changed_by_name` on each row, via a
+         * LATERAL that uses b146’s `WHERE valid_to IS NULL` index. The summary costs nothing, and the FULL
+         * history is still fetched — but only by whoever expands the row.
+         *
+         * ⚠️ THE LOADED HISTORY STILL WINS when it is there. After an edit cuts a new version the client
+         * drops its cache and re-reads; preferring the row would then show the version before the edit.
+         */
         const id0=UI.prodSel||''; const hist=UI._prodHist&&UI._prodHist[id0];
-        if(hist===undefined){ prodHistoryEnsure(id0); return grey(tx('reading…')); }
-        if(!Array.isArray(hist)||!hist.length) return none(tx('No versions yet'));
-        const last=hist[0]; const by=' · '+esc(tx('by')+' '+prodWhoName(last));
+        const last=(Array.isArray(hist)&&hist.length) ? hist[0]
+          : (d.version_no!=null
+              ? { version_no:d.version_no, valid_from:d.version_at, changed_by_name:d.changed_by_name }
+              : null);
+        if(!last){ if(hist===undefined) prodHistoryEnsure(id0); return grey(tx('reading…')); }
+        if(Array.isArray(hist)&&!hist.length) return none(tx('No versions yet'));
+        const by=' · '+esc(tx('by')+' '+prodWhoName(last));
         const src=(d._source&&d._source.channel)?' · '+esc(tx('via')+' '+d._source.channel):(d.adopted_from||d.source_key?' · '+esc(tx('adopted')):'');
         return `<b>v${esc(String(last.version_no))}</b> ${grey('· '+esc(tx('changed')+' '+fmtDateTime(last.valid_from))+by+src)}`;
       }
@@ -12195,6 +12213,12 @@ function prodLifecycleTab(d, id){ const grey=function(x){ return '<span style="c
     ['retired', tx('Retired'), tx('no longer sold; new orders stop resolving to it, old chits are untouched')],
     ['redundant', tx('Redundant'), tx('replaced by another item')],
   ];
+  /**
+   * ⚠️ LIFECYCLE STILL WANTS THE OLDEST VERSION for "Since", and the row only carries the CURRENT one — so
+   * this asks, and it is the one row that has to. ⭐ It is also the right place to ask from: an expanded
+   * Lifecycle row is somebody looking, which is exactly when a read is worth making.
+   */
+  if(UI._prodHist===undefined||!UI._prodHist||UI._prodHist[id]===undefined) prodHistoryEnsure(id);
   const hist=UI._prodHist&&UI._prodHist[id]; const first=(Array.isArray(hist)&&hist.length)?hist[hist.length-1]:null; const last=(Array.isArray(hist)&&hist.length)?hist[0]:null;
   return `<div class="sec">${tx('Lifecycle')}</div>`
     + `<table class="cbcat-sheet" data-testid="prod-lifecycle" style="margin:0 12px"><tbody>`
