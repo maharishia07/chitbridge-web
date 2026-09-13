@@ -33,9 +33,9 @@ test('[TECH-01] every technique says what it is for, with a worked example', asy
 
   const panel = page.locator('#cbcasespanel');
   /* ⚠️ before a technique is chosen, five bare chips taught nobody anything — each now says what it is FOR */
-  await expect(panel).toContainText('A number that has a lowest and a highest allowed value');
-  await expect(panel).toContainText('Kinds of value that the product is supposed to treat differently');
-  await expect(panel).toContainText('Something that moves through named stages');
+  await expect(panel).toContainText('A number, or a date, with a lowest and a highest');
+  await expect(panel).toContainText('values fall into KINDS the product is supposed to treat differently');
+  await expect(panel).toContainText('MOVES THROUGH named stages');
 
   /* ── choose one, and it shows its working ── */
   await page.locator('#cbcasespanel button', { hasText: 'A number range' }).click();

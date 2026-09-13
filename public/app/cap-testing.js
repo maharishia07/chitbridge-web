@@ -2575,7 +2575,21 @@ function testTechFold() {
 function testTech(kind) {
   CBTEST.tech = CBTEST.tech || {};
   var next = (CBTEST.tech.kind === kind) ? null : kind;
-  if (next !== CBTEST.tech.kind) { CBTEST.tech.rows = null; CBTEST.tech.from = null; }
+  if (next !== CBTEST.tech.kind) {
+    CBTEST.tech.rows = null; CBTEST.tech.from = null;
+    /**
+     * ⚠️⚠️ AND THE BOXES TOO. Athi, on seeing the first half fixed: *"when you move the tab, previous tab
+     * value stays."* Right — screenCasesPaint deliberately carries typed values across a repaint (FIELDS),
+     * which is correct WITHIN a technique and wrong ACROSS one: "quantity" is a sensible field for a number
+     * range and nonsense as the subject of a lifecycle.
+     * ⭐ Cleared in the DOM BEFORE the repaint, because the repaint captures what is there and puts it back —
+     * clearing the variables afterwards would be undone by the restore.
+     */
+    ['tqField', 'tqLo', 'tqHi', 'tqClasses', 'tqStates', 'tqConds'].forEach(function (id) {
+      try { var el = document.getElementById(id); if (el) el.value = ''; } catch (_) {}
+    });
+    CBTEST.tech.field = null; CBTEST.tech.seenVals = null;
+  }
   CBTEST.tech.kind = next;
   screenCasesPaint();
 }
