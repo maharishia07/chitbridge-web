@@ -6424,7 +6424,10 @@ function screenCasesPaint() {
     + seg('write', 'Create', null)
     + seg('cases', 'Cases', t.total)
     + '</span>'
-    + '<select onchange="testArea(this.value)" title="Everything else about this screen" '
+    /* ⭐ a stable hook, as the Manager's own More select has — a spec keyed to the VERB on a segment breaks
+       every time the copy is edited, and this copy is still being edited */
+    + '<select data-testid="area-more" onchange="testArea(this.value)" '
+    +   'title="Everything else about this screen" '
     +   'style="font:inherit;font-size:var(--fs-1);padding:4px 8px;cursor:pointer;'
     +   'border:1px solid var(--grey-4,#646A72);border-radius:8px;'
     +   'background:' + (inMore ? 'var(--ink,#0F2E3D);color:var(--card,#fff)'

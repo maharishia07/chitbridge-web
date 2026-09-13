@@ -30,7 +30,20 @@ async function api(path, { method = 'GET', token, body } = {}) {
 async function freshEntity() {
   const stamp = Date.now() + '' + Math.floor(Math.random() * 1e5);
   const email = 'iam-' + stamp + '@test-cb.com';
-  const user_id = 'iamtest' + stamp;
+  /**
+   * ⚠️⚠️ THIS SPEC COULD NEVER PASS, AND THE PRODUCT WAS RIGHT TO REFUSE IT. `'iamtest' + stamp` is 7 + 13
+   * (Date.now) + up to 5 (random) = 25 characters, against MAX_ROOT = 20 in lib/handle.js. Every run got:
+   *
+   *   USER_ID_INVALID · A User ID is at most 20 characters, and "iamtest1789324188198268" is 25
+   *
+   * ⭐ THE CAP IS DELIBERATE AND IS NOT THE BUG: staff sign in as `name@youruserid` and suppliers are
+   * numbered under it, so it has to stay typeable. Shortening the FIXTURE is the fix; raising the cap to
+   * make a test pass would be changing the product to fit the test. [[project-user-id-rule]]
+   *
+   * ⚠️ Base36 keeps it unique and short — Date.now() is ~8 chars in base36, not 13. 3 + 8 + 3 = 14 < 20.
+   * `stamp` stays long for the email and the display name, where length costs nothing.
+   */
+  const user_id = 'iam' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const reg = await api('/api/entities/register', {
     method: 'POST', body: { email, display_name: 'IAM Test ' + stamp, user_id },
   });

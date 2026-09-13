@@ -69,20 +69,66 @@ async function openPanel(page) {
   await expect(page.locator('#cbcasespanel')).toBeVisible();
 }
 
+/**
+ * ── ⚠️⚠️ THIS HELPER WENT STALE THE DAY THE FORM WAS REDESIGNED, AND TOOK 11 SPECS WITH IT ─────────────────
+ *
+ * `3d243f2` (2026-09-13) rebuilt the Create form around Athi's *"we are using the same dialog box for
+ * creating requirement, observation or incident? So possibly those chips should be on top"*: the TYPE is now
+ * chosen first, from three chips, and there is ONE save button whose verb follows the chip — "+ Create case",
+ * "Raise incident", "Raise requirement". The old `Write` / `Pass` / `Fail` / `Save` buttons this helper clicks
+ * stopped existing that morning, and nothing updated the spec. Every testmode case that writes anything has
+ * been failing since, on a product that was working.
+ *
+ * ⚠️ A STALE CASE IS WORSE THAN A MISSING ONE: 11 reds that look like product defects and are not.
+ * [[feedback-improvise-update-cases]]
+ *
+ * ⭐ AND IT NOW DRIVES data-testid, NOT BUTTON TEXT. The verb is deliberately different per type and Athi is
+ * still editing this copy; a helper keyed to the wording breaks again on the next rename. `wkind-*` and
+ * `wsave` are the contract. [[feedback-probe-through-the-gate]]
+ */
 async function writeCase(page, { req, op, exp, got }, outcome) {
-  /* ⭐ the panel opens on CASES when a screen has any, so writing starts by asking for the Write area —
-     which is what a tester does too. */
+  /* the panel opens on CASES when a screen has any, so writing starts by asking for Create — as a tester does */
   if (!(await page.locator('#wcTitle').count())) {
-    await page.locator('#cbcasesbody button', { hasText: /^Write$/ }).first().click();
-    await expect(page.locator('#wcTitle')).toBeVisible();
+    await page.locator('#cbcasesbody button', { hasText: /^\+ Create$/ }).first().click();
+    await expect(page.locator('#wcTitle')).toBeVisible({ timeout: 15000 });
   }
+  /* ⭐ the TYPE first — it decides the four labels below it and the verb on the save button */
+  const kind = outcome === 'inc' ? 'inc' : outcome === 'req' ? 'req' : 'case';
+  await page.locator('[data-testid="wkind-' + kind + '"]').click();
+
   await page.fill('#wcTitle', req);
   await page.fill('#wcDo', op);
   await page.fill('#wcSee', exp);
   if (got) await page.fill('#wcGot', got);
-  const label = outcome === 'inc' ? 'Incident' : outcome === 'req' ? 'Requirement'
-              : outcome === 'pass' ? 'Pass' : 'Save';
-  await page.locator('#cbcasespanel button', { hasText: new RegExp('^' + label + '$') }).first().click();
+  await page.locator('[data-testid="wsave"]').click();
+
+  /**
+   * ⚠️ SAVING AND PASSING ARE TWO ACTS NOW, and that is the product being right rather than the test being
+   * awkward: writing down what should be true is not the same as saying you observed it. The old form
+   * conflated them in one "Pass" button. A verdict is recorded on the case's own row.
+   */
+  if (outcome === 'pass' || outcome === 'fail') {
+    /**
+     * ⚠️ AND SAVING DOES NOT LEAVE YOU ON THE LIST. testCaseSend() repaints but does not change the area, so
+     * the panel is still showing Create and the row — with its verdict buttons — is not on screen at all.
+     * The old one-button form hid this: "Pass" WAS the save. Two acts now means two places.
+     */
+    const cases = page.locator('#cbcasesbody button').filter({ hasText: /^Cases/ }).first();
+    if (await cases.count()) await cases.click();
+
+    const label = outcome === 'pass' ? 'Pass' : 'Fail';
+    const btn = page.locator('#cbcasespanel button').filter({ hasText: new RegExp('^' + label + '$') }).first();
+    await btn.waitFor({ state: 'visible', timeout: 20000 });
+    await btn.click();
+    /**
+     * ⚠️ WAIT ON THE COUNT CHIP, NOT ON THE ROW. My first attempt asserted the row's own verdict word and
+     * failed on a product that had worked perfectly: the default filter is "to do", so the moment a case
+     * passes it leaves the visible list and the panel correctly says "Nothing left to test on this screen".
+     * The chip is the thing that stays put.
+     */
+    await expect(page.locator('#cbcasesbody')).toContainText(/(Passed|Failed)\s*[1-9]/,
+      { timeout: 20000 });
+  }
 }
 
 test.describe('test mode', () => {
@@ -202,14 +248,14 @@ test.describe('test mode', () => {
     await openPanel(page);
 
     await expect(page.locator('#cbcasesbody')).toContainText('Cases 0');
-    await page.locator('#cbcasespanel button', { hasText: /^Save$/ }).first().click();
+    await page.locator('[data-testid="wsave"]').click();
     await page.waitForTimeout(1500);
     /* ⚠ nothing was written — asserted on the COUNT, not on a prefix of the panel text, which now carries
        counts that arrive a beat later and would fail for a reason unrelated to the refusal */
     await expect(page.locator('#cbcasesbody')).toContainText('Cases 0');
 
     await page.fill('#wcTitle', 'only the requirement');
-    await page.locator('#cbcasespanel button', { hasText: /^Save$/ }).first().click();
+    await page.locator('[data-testid="wsave"]').click();
     await page.waitForTimeout(1200);
     await expect(page.locator('#wcTitle')).toHaveValue('only the requirement');  // still unsaved, still there
   });
@@ -230,7 +276,7 @@ test.describe('test mode', () => {
 
     await page.locator('#cbcasespanel button', { hasText: /^Cancel$/ }).first().click();
     await expect(page.locator('#wcTitle')).toHaveCount(0);
-    await page.locator('#cbcasespanel button', { hasText: /New test case/ }).first().click();
+    await page.locator('#cbcasesbody button', { hasText: /^\+ Create$/ }).first().click();
     await expect(page.locator('#wcTitle')).toBeVisible();
   });
 
@@ -440,7 +486,7 @@ test.describe('test mode', () => {
     await openPanel(page);
     await expect(page.locator('#cbcaseshead')).toContainText('CAT', { timeout: 20000 });
 
-    await page.locator('#cbcasesbody button', { hasText: /^Behind/ }).first().click();
+    await page.evaluate(() => testArea('behind'));
     const body = page.locator('#cbcasesbody');
 
     /* the EXACT rung: the register knows which capability draws the Catalogue */
@@ -638,8 +684,21 @@ test.describe('test mode', () => {
       { timeout: 40000 }).toBeGreaterThan(0);
 
     const body = page.locator('#cbcasesbody');
-    for (const tab of ['Write', 'Cases', 'Raised', 'Behind', 'Speed']) {
-      await page.locator('#cbcasesbody button', { hasText: new RegExp('^' + tab) }).first().click();
+    /**
+     * ⚠️ THE FIVE TABS ARE NOW TWO SEGMENTS AND A DROPDOWN — seven equal buttons was a menu wearing a
+     * choice's clothes. `write`/`cases` are pressed; the rest are chosen. Walking the area IDs rather than
+     * the labels also survives the next copy edit, and "Raised" is two areas now (inc · req), which is the
+     * distinction that let a settled screen read like a burning one.
+     */
+    const AREAS = [['write', 'seg'], ['cases', 'seg'], ['inc', 'more'], ['req', 'more'],
+                   ['behind', 'more'], ['diag', 'more']];
+    for (const [tab, how] of AREAS) {
+      if (how === 'seg') {
+        await page.locator('#cbcasesbody button')
+          .filter({ hasText: tab === 'write' ? /^\+ Create$/ : /^Cases/ }).first().click();
+      } else {
+        await page.locator('[data-testid="area-more"]').selectOption(tab);
+      }
       await page.waitForTimeout(400);
       /* ⚠️ a died-mid-render paint leaves the PREVIOUS tab selected \u2014 so the assertion is that this one is */
       const on = await page.evaluate(() => CBTEST.caseArea);
@@ -648,8 +707,8 @@ test.describe('test mode', () => {
       expect(text.length, tab + ' rendered nothing').toBeGreaterThan(60);
     }
 
-    /* and Raised in particular says what was raised, by reference */
-    await page.locator('#cbcasesbody button', { hasText: /^Raised/ }).first().click();
+    /* and the Incidents area in particular says what was raised, by reference */
+    await page.locator('[data-testid="area-more"]').selectOption('inc');
     await expect(body).toContainText('Raised on this screen');
     await expect(body).toContainText(/INC-/);
   });
