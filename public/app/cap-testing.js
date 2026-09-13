@@ -41,6 +41,54 @@
  */
 'use strict';
 
+/**
+ * ── ⭐⭐⭐ BENCH · LAB · REPORT — THREE SURFACES, ONE BOARD ─────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"how do we call the current test screen? Suggest a name and keep it — and also the test
+ * lab and report. We have to see how we reuse the content, UI/UX, so we don’t need to repeat the work three
+ * times. Possibly unification should help."*
+ *
+ * ⚠️⚠️ AND THE ABSENCE OF NAMES WAS ITSELF THE PROBLEM. Three faults today were one fault: a write landed,
+ * the data was re-read, and the wrong frame was repainted — because nothing in the code or the conversation
+ * distinguished the two places a person can be standing. You cannot keep two things straight that have no
+ * names, and I fixed the same bug twice before noticing it was the same bug.
+ *
+ * ── THE NAMES, AND WHY THESE ────────────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ FIRST TRY WAS "BENCH · LAB · REPORT" and Athi refused it, rightly: *"these are tools, so can we talk in
+ * terms of tools?"* A bench is a metaphor — it reads well and it teaches nobody, because it matches nothing
+ * a tester has used before. These three are the three tools every test suite in the industry ships, so they
+ * take the industry’s words and a person who has used TestRail, Xray or Usersnap already knows what each
+ * one is. [[feedback-adopt-dont-reinvent]]
+ *
+ * ⭐ TEST CAPTURE — the panel that opens ON a screen (#cbcasespanel). "Capture" is what the in-context tools
+ *   call themselves (Usersnap, Marker.io, BugHerd): you are standing on the thing, and it captures what you
+ *   see — the screen ID, the control, the build, the screenshot — without you typing any of it.
+ *
+ * ⭐ TEST MANAGER — the board (#cbtestpanel). "Test management" is the category name TestRail, Xray, Kiwi
+ *   TCMS and Zephyr all file themselves under: every case, every run, every finding, in one place.
+ *
+ * ⭐ TEST REPORT — what leaves the building. ISO/IEC/IEEE 29119-3 names this one for us.
+ *
+ * ⚠️ AND A SCREEN IS ALWAYS "ID · NAME", IN THAT ORDER, EVERYWHERE. `CAT001 · Catalogue`. The ID is what a
+ * report, an incident and a conversation can all carry unchanged; the name is what a person recognises. Put
+ * the name first and people quote the name, and then two screens called "Products" are one screen.
+ *
+ * ⚠️ ONE BOARD UNDERNEATH ALL THREE, and that is the whole of the unification: a case is a `definition`, a
+ * result is a row in the ledger, a finding has ONE status derived in ONE place (testWorkRow), and ONE row
+ * renderer draws it (testWorkRowHTML) wherever it appears. The Bench filters that board to a screen; the Lab
+ * shows all of it; the Report prints it. Three views, never three implementations.
+ * [[feedback-no-duplicate-functions]]
+ */
+var TEST_SURFACE = { capture: 'Test Capture', manager: 'Test Manager', report: 'Test Report' };
+
+/** ⭐ ONE WAY TO SAY WHICH SCREEN, EVERYWHERE: the ID first, because that is the part that travels. */
+function testScreenLabel(code, name) {
+  var n = name || (typeof codeName === 'function' ? (codeName(code) || '') : '');
+  return '<code style="font-weight:700">' + testEsc(code || '?') + '</code>'
+    + (n ? ' <span style="font-weight:400">\u00b7 ' + testEsc(n) + '</span>' : '');
+}
+
 var CBTEST = { on: false, cases: [], last: {}, area: '', kind: '', open: null, run: null, busy: false, adding: false, stale: {}, cover: [], suggest: null };
 
 /* ── WHICH CASES BELONG TO THE SCREEN YOU ARE ON ──────────────────────────────────────────────────────────────
@@ -784,7 +832,9 @@ function testPaint() {
     + 'color:var(--ink-2,#3a4048)';
   var hd = ''
     + '<div style="display:flex;align-items:center;gap:6px">'
-    +   '<b style="font-size:var(--fs-3);white-space:nowrap">🧪 Test lab</b>'
+    +   '<b style="font-size:var(--fs-3);white-space:nowrap">🧪 ' + TEST_SURFACE.manager + '</b>'
+    +   '<span style="font-size:var(--fs-1);color:var(--note);white-space:nowrap">everything, '
+    +     'collected</span>'
     +   '<span style="flex:1 1 auto;min-width:8px"></span>'
     +   '<button title="Add a case for something you just found" onclick="testAddOpen()" '
     +     'style="' + ico + ';font-size:var(--fs-3)">+</button>'
@@ -1627,46 +1677,27 @@ function testReqHTML() {
   }
 
   var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--note,#8a8378)' };
+  /**
+   * ── ⭐⭐⭐ ONE ROW, THREE SURFACES ─────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-13: *"we have to see how we reuse the content, UI/UX, so we don’t need to repeat the
+   * work three times. Possibly unification should help."*
+   *
+   * ⚠️⚠️ THIS FUNCTION HELD EIGHTY LINES OF MARKUP FOR A ROW THE WORKLIST ALREADY DREW, and the two had
+   * already drifted: the Lab said "resolved" where the Bench said "Retest", the Lab had no "next:" line at
+   * all, and the two verdict buttons only existed on one of them. Every improvement had to be made twice
+   * and in practice was made once. [[feedback-no-duplicate-functions]]
+   *
+   * ⭐ The row now comes from testWorkRowHTML, which carries the severity in words, both clocks and the
+   * re-grade select — everything this row used to draw for itself — as optional parts.
+   */
+  /* ⭐ the same row as the Bench and the worklist — see the note in testIncHTML */
   h += list.map(function (q) {
-    var ract = function (state, label, title) {
-      return '<button data-testid="req-act-' + state + '" title="' + title + '" '
-        + 'onclick="testReqSet(\'' + q.definition_id + '\',\'' + state + '\')" style="' + TEST_ACT
-        + '">' + label + '</button>';
-    };
-    var acts = '';
-    if (q.state === 'raised') {
-      acts = ract('accepted', 'Accept it', 'Agree it should be built \u2014 the person who raised it is told')
-           + ract('rejected', 'Reject it', 'Say no, with the reason \u2014 the person who raised it is told');
-    } else if (q.state === 'accepted') {
-      acts = ract('implemented', 'It is built', 'It exists now')
-           + ract('rejected', 'Reject it', 'Say no, with the reason');
-    }
-    return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
-      + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
-      +   '<b style="color:' + (PRI[q.priority] || PRI.Medium) + ';font-size:var(--fs-1)">' + testEsc(q.priority) + '</b>'
-      +   '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(q.clause) + '</code>'
-      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint,#f2efe6);border-radius:5px;padding:1px 6px">'
-      +     testEsc(q.state) + '</span>'
-      +   (q.screen_code ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
-            + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">'
-            + testEsc(q.screen_code) + '</code>' : '')
-      +   (q.popup_code ? '<code style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-1);'
-            + 'background:var(--neutral-tint);border-radius:5px;padding:0 5px;user-select:all">'
-            + testEsc(q.popup_code) + '</code>' : '')
-      +   (q.raised_from ? '<span style="font-size:var(--fs-1);color:var(--note)">from '
-            + testEsc(q.raised_from) + '</span>' : '')
-      + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(q.requirement) + '</div>'
-      /* ⚠️ THE EVIDENCE IS SHOWN BESIDE THE RULE, ALWAYS. Six months on, "what was seen" is the only thing that
-         says whether the requirement was ever real. */
-      + (q.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-top:2px">seen: '
-          + testEsc(q.observed) + '</div>' : '')
-      + (q.why ? '<div style="font-size:var(--fs-1);color:var(--disp,#B3261E);margin-top:2px">because: '
-          + testEsc(q.why) + '</div>' : '')
-      + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">'
-      +   testEsc(q.raised_by || 'someone') + (q.raised_at ? ' · ' + testEsc(String(q.raised_at).slice(0, 10)) : '')
-      +   (acts ? '<span style="margin-inline-start:9px">' + acts + '</span>' : '')
-      + '</div></div>';
+    return testWorkRowHTML(testWorkRow({
+      key: q.clause || '', title: q.requirement || '', screen: q.screen_code || '',
+      seen: q.observed || null, by: q.raised_by || null, at: q.raised_at || null,
+      last: null, inc: null, req: q, caseKey: q.raised_from || null,
+    }));
   }).join('');
   return h;
 }
@@ -5244,7 +5275,9 @@ function screenCasesPaint() {
     };
     head.innerHTML = '<div style="display:flex;align-items:center;gap:7px">'
       + '<b style="font-size:var(--fs-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'
-      +   '\ud83e\uddea ' + testEsc(code) + ' ' + testEsc(name) + '</b>'
+      +   '\ud83e\uddea ' + TEST_SURFACE.capture + '</b>'
+      +   '<span style="font-size:var(--fs-2);white-space:nowrap;overflow:hidden;'
+      +     'text-overflow:ellipsis">' + testScreenLabel(code, name) + '</span>'
       + '<span style="flex:1 1 auto"></span>'
       + '<button title="Close" onclick="screenCasesClose()" style="' + ico + '">\u2715</button>'
       + '</div>'
@@ -5614,9 +5647,16 @@ var TEST_WORK = {
   blocked: { label: 'Blocked',      tell: 'it could not be run',       ink: 'var(--warn-2,#8a6100)' },
   retest:  { label: 'Retest',       tell: 'YOURS — look again',        ink: 'var(--warn-2,#8a6100)' },
   change:  { label: 'Change asked', tell: 'waiting for a decision',    ink: 'var(--grey-2,#545A61)' },
+  /**
+   * ⚠️⚠️ ACCEPTED IS NOT DONE, AND FOLDING IT INTO CLOSED WAS A LIE THE WORKLIST TOLD. Somebody agreeing
+   * that a thing should be built is a DECISION; the thing still does not exist. A board that files it under
+   * Closed reports a product that does what it was asked, when nobody has written the code — and the row
+   * that most needs chasing is the one that has vanished from the list.
+   */
+  agreed:  { label: 'Agreed',       tell: 'waiting to be built',       ink: 'var(--grey-2,#545A61)' },
   closed:  { label: 'Closed',       tell: 'done',                      ink: 'var(--ok-2,#1B7F4B)' },
 };
-var TEST_WORK_ORDER = ['retest', 'todo', 'failed', 'change', 'blocked', 'passed', 'closed'];
+var TEST_WORK_ORDER = ['retest', 'todo', 'failed', 'change', 'agreed', 'blocked', 'passed', 'closed'];
 
 /**
  * ⭐ ONE ROW PER THING A PERSON DID, and the join is made here rather than stored.
@@ -5701,7 +5741,8 @@ function testWorkRow(r) {
        : (i.state === 'resolved') ? 'retest'
        : 'failed';
   } else if (q) {
-    st = (q.state === 'accepted' || q.state === 'rejected' || q.state === 'implemented') ? 'closed' : 'change';
+    st = (q.state === 'rejected' || q.state === 'implemented') ? 'closed'
+       : (q.state === 'accepted') ? 'agreed' : 'change';
   } else if (r.retired) {
     st = 'closed';
   } else if (last && last.status === 'pass') {
@@ -5722,6 +5763,16 @@ function testWorkRow(r) {
     shot: r.shot || (i && i.evidence_id) || null, by: r.by, at: r.at,
     caseKey: r.caseKey, inc: i, req: q, last: last, status: st,
     sev: i ? i.severity : null,
+    /* ⭐ everything the Lab’s own incident row used to draw itself, carried here so there is only one row.
+       Each is optional and renders only when present, which is what lets one renderer serve three surfaces. */
+    means: i ? (i.severity_means || null) : null,
+    affected: i ? (i.affected || null) : null,
+    popup: (i && i.popup_code) || (q && q.popup_code) || null,
+    pri: q ? (q.priority || null) : null,
+    /* ⚠️ TWO CLOCKS, and neither is stored: how long before anybody noticed, and how long it then took.
+       A stored duration stops being true the moment the row changes and still prints a number. */
+    unnoticed: i ? (i.unnoticed_mins || null) : null,
+    openMins: i ? (i.open_mins || null) : null,
     /* ⭐ only the person who reported it is asked to retest — telling everyone gets it verified by nobody */
     forMe: st === 'retest' && !!meId && String(raiser || '') === String(meId),
     fixed: (i && (i.changes || [])[(i.changes || []).length - 1]) || null,
@@ -5844,9 +5895,14 @@ function testWorkRowHTML(x) {
       'Turn this red verdict into something somebody owns');
   } else if (x.status === 'change') {
     acts += b('✓ Accept it', 'testReqSet(\'' + id + '\',\'accepted\')', 'var(--ok-2,#1B7F4B)',
-              'Agree it should be built');
+              'Agree it should be built \u2014 it then waits to be built, it is not closed');
     acts += b('✗ Reject it', 'testReqSet(\'' + id + '\',\'rejected\')', 'var(--disp,#B3261E)',
               'Say no, with the reason');
+  } else if (x.status === 'agreed') {
+    acts += b('It is built', 'testReqSet(\'' + id + '\',\'implemented\')', 'var(--ok-2,#1B7F4B)',
+              'The product does this now');
+    acts += b('✗ Reject it', 'testReqSet(\'' + id + '\',\'rejected\')', 'var(--disp,#B3261E)',
+              'Changed our mind, with the reason');
   } else if (x.status === 'todo' && x.caseKey) {
     acts += b('✓ It passed', 'testMark(\'' + x.caseKey + '\',\'pass\')', 'var(--ok-2,#1B7F4B)', 'Run it now');
     acts += b('✗ It failed', 'testMark(\'' + x.caseKey + '\',\'fail\')', 'var(--disp,#B3261E)',
@@ -5858,6 +5914,20 @@ function testWorkRowHTML(x) {
   }
   if (x.screen) acts += b('Open ' + testEsc(x.screen), 'testHandOpen(\'' + testEsc(x.screen) + '\')', null,
                           'Go to the screen it is about');
+  /**
+   * ⭐ RE-GRADING IS A JUDGEMENT AND BELONGS WITH THE OTHER ACTIONS. What looked like one awkward screen
+   * turns out to be the till, and the first person to file it is the least informed person who will ever
+   * look at it. ⚠️ Only while it is still open: on a closed row it would rewrite history for no purpose —
+   * the severity somebody worked to is part of what happened.
+   */
+  if (x.inc && (x.status === 'failed' || x.status === 'todo')) {
+    acts += '<select onchange="testIncSev(\'' + id + '\', this.value)" title="Re-grade it" '
+      + 'style="font:inherit;font-size:var(--fs-1);padding:2px 5px;border:1px solid var(--line,#e7e3d8);'
+      + 'border-radius:7px;background:var(--card,#fff);margin-inline-end:5px">'
+      + TEST_INC_SEV.map(function (v) {
+          return '<option' + (v === x.sev ? ' selected' : '') + '>' + v + '</option>';
+        }).join('') + '</select> ';
+  }
   if (x.shot) acts += b('🖼 Screenshot', 'testShotView(\'' + testEsc(x.shot) + '\')', null, '');
 
   var shut = x.status === 'closed';
@@ -5869,8 +5939,12 @@ function testWorkRowHTML(x) {
     +   '<span data-testid="work-status" style="font-size:var(--fs-1);font-weight:700;border-radius:5px;'
     +     'padding:1px 8px;color:#fff;background:' + W.ink + '">' + W.label + '</span>'
     +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
-    +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + testEsc(x.sev)
+    +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)" title="'
+        + testEsc(x.means || '') + '">' + testEsc(x.sev) + '</span>' : '')
+    +   (x.pri ? '<span style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.pri)
         + '</span>' : '')
+    +   (x.popup ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.popup)
+        + '</code>' : '')
     +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
     + '</div>'
     /* ⭐ AND WHAT HAPPENS NEXT, in words, on every row. "Failed" tells you the past; this tells you the job. */
@@ -5883,7 +5957,16 @@ function testWorkRowHTML(x) {
     +   (x.at ? ' · ' + testEsc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
     +   (x.inc ? ' · incident <code>' + testEsc(x.inc.ref || '') + '</code>' : '')
     +   (x.req ? ' · requirement <code>' + testEsc(x.req.clause || '') + '</code>' : '')
+    +   (x.affected ? ' · ' + testEsc(x.affected) : '')
     + '</div>'
+    /* ⭐ THE SEVERITY IN WORDS AND THE TWO CLOCKS — shown only when they say something. "0 min unnoticed"
+       is noise on a row somebody recorded while it was happening; an hour unnoticed IS the story. */
+    + ((x.means || x.unnoticed || x.openMins)
+      ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:1px">'
+        + [x.means, x.unnoticed ? (x.unnoticed + ' min before anybody knew') : null,
+           x.openMins ? (x.openMins + ' min to resolve') : null]
+          .filter(Boolean).map(testEsc).join(' \u00b7 ') + '</div>'
+      : '')
     + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
     + (x.fixed ? '<div style="font-size:var(--fs-1);margin-top:3px;padding:4px 7px;'
         + 'background:var(--warn-tint,#fdf6e6);border-radius:6px">fixed: '
