@@ -13756,6 +13756,18 @@ function mapApiChit(c){
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
     /* ⭐ b195 — SOMEBODY HAS ASKED ME TO CANCEL THIS. Absent until the migration runs, and absent forever on
        the sender's own copy: the route stamps every participant EXCEPT the one who withdrew. */
+    /**
+     * ⭐⭐⭐ THE MESSAGE COUNT, WHICH THE SERVER HAS BEEN SENDING AND THIS MAPPER HAS BEEN DROPPING.
+     *
+     * Athi, 2026-09-13: *"I kept moving from one chit to another, and it reads messages also when I move from
+     * one chit to another — why do we need the message to be read for every task when we switch?"*
+     *
+     * ⚠️⚠️ The list query already computes `message_count` and `last_message_at` per row — two correlated
+     * subqueries, paid on every list read — and not one line of this client ever looked at them. So the app
+     * paid for the count twice: once in the list it threw away, and again as a FULL THREAD FETCH on every
+     * chit opened, whether or not anybody pressed Messages. The sixth field dropped at a door today.
+     */
+    msgN: Number(c.message_count || 0), msgAt: c.last_message_at || null,
     cancelReq:c.cancel_requested_at||null, cancelBy:c.cancel_requested_by||null, cancelWhy:c.cancel_reason||null,
     /* ⭐ b197 — the RETURN leg, on the SENDER'S copy: they answered. The opposite question to cancelReq,
        which is why it is a second pair and not the same one read differently. */
@@ -14508,7 +14520,15 @@ async function openChit(id, silent){
   const rowBase=UI.rows.find(c=>c.id===id);
   if(rowBase){ UI.detail={...rowBase, items:[], atts:[], msgs:[], log:[], _loading:true}; paintDetail(); }
   else { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
-  try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
+  /**
+   * ⚠️⚠️ THE THREAD IS NOT FETCHED HERE ANY MORE. It was read in parallel on EVERY chit opened, and used for
+   * exactly two things: a badge number the list already carries, and a tab most people never press. Walking
+   * a folder of twenty chits meant twenty full thread reads nobody asked for.
+   *
+   * ⭐ It loads when the Messages tab is opened — see msgEnsure(). Which is also the only moment the content
+   * is worth anything.
+   */
+  try{ const chitP=api("chit",{params:{id}}); const msgP=Promise.resolve(null);
         // only disputed records pay for the dispute roster fetch (drives the banner + per-party status)
         const dispP=(rowBase && (rowBase.dispute || rowBase.dispResolved>0)) ? api("disputes",{params:{id}}).catch(()=>null) : null;
         const r=await chitP;
@@ -14553,7 +14573,9 @@ async function openChit(id, silent){
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
             business_json:(h.business_json||(base&&base.business_json)||null)};
-          try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
+          /* ⚠ msgs starts EMPTY and _msgsLoaded stays false, so the badge falls back to the count the
+             list carried. msgEnsure() fills it the moment somebody opens the tab. */
+          UI.detail.msgs=[];
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
@@ -15029,7 +15051,25 @@ function detailInner(){
    ${chitSpendStrip(c)}${(typeof disputeBanner==='function')?disputeBanner(c):''}${cancelBanner(c)}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" data-testid="dtab-${k}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
-function setDtab(t){UI.dtab=t;paintDetail();}
+/**
+ * ⭐ THE THREAD, WHEN SOMEBODY ACTUALLY WANTS IT. Once per chit; the flag is on the record, so switching tabs
+ * back and forth does not re-read it, and opening another chit starts clean because it is a different record.
+ *
+ * ⚠️ The badge is repainted after it lands: the server total is unfiltered, so a customer’s number can drop
+ * once the scope filter applies — better a number that corrects itself in front of you than one that is
+ * quietly wrong.
+ */
+function msgEnsure(){
+  var c = UI.detail; if (!c || !c.id || c._msgsLoaded || c._msgsLoading) return;
+  c._msgsLoading = true;
+  api('messages', { params: { id: c.id } }).then(function(m){
+    var d = UI.detail; if (!d || d.id !== c.id) return;   /* they moved on: do not paint over the new record */
+    d.msgs = (m || []).map(mapApiMsg);   /* the same mapper openChit used — one shape, one place */
+    d._msgsLoaded = true; d._msgsLoading = false;
+    paintDetail();
+  }).catch(function(){ var d = UI.detail; if (d && d.id === c.id) d._msgsLoading = false; });
+}
+function setDtab(t){UI.dtab=t; if(t==='messages') msgEnsure(); paintDetail();}
 // (a) The query-chit detail as the ASSISTANCE PAGE: reply on the chit (message) + publish the Q&A to the KB, in one act.
 function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||c.subject||'';
   modal('<div class="mhd"><div class="t">🧠 Answer &amp; publish</div><div class="s">reply to the asker + add it to the knowledge base</div></div>'
@@ -15049,7 +15089,29 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
     closeModal(); toast("Answered + published ✓ — now close the query when done"); openChit(id);
   }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
 function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
-function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SESSION.role==="customer"?m.scope==="external":true)).length; }
+/**
+ * ── ⭐⭐ A SHARED FACT, NOT A PERSONAL MARKER ──────────────────────────────────────────────────────────────
+ *
+ * Athi asked the right follow-up: *"if multiple people are reading the same chit then the marker idea won’t
+ * work?"* — and it dissolves the problem rather than blocking it. HOW MANY MESSAGES A CHIT HAS is a fact
+ * about the CHIT: ten people reading it all get the same number, and none of them changes it. A read marker
+ * would be per-person and would indeed need somewhere per-person to live — but that is a different feature
+ * ("what have I seen"), and this badge never claimed to be it.
+ *
+ * ⚠️ AND IT STAYS FRESH WITHOUT POLLING. If somebody posts while you are looking, the bell pushes
+ * ({kind:'chit'}) and the list refreshes — which is where the count comes from. Re-reading the whole thread
+ * on every chit you opened was never what kept it current; it just looked like it did.
+ *
+ * ⚠️ THE LOADED THREAD STILL WINS when it is there, because it is filtered by scope — a customer must not be
+ * shown a count that includes internal notes they cannot read. The server’s number is the unfiltered total,
+ * so it is the FALLBACK, used only before the thread has been opened.
+ */
+function msgCount(c){
+  if (c && c._msgsLoaded) {
+    return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SESSION.role==="customer"?m.scope==="external":true)).length;
+  }
+  return Number((c && c.msgN) || 0);
+}
 function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
    // per-dispute thread select
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
