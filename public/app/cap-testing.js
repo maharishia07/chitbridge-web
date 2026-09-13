@@ -2491,6 +2491,10 @@ function testShotPasteBind() {
 var TECHS = ['bounds', 'classes', 'states', 'decision', 'guess'];
 
 /** ⚠️ the fold is remembered for the session only: it is a preference about this minute, not about the person */
+/** ⭐ a chip fills the box rather than replacing it: the name is a suggestion, and it stays editable */
+function testTechPick(k) {
+  try { var el = document.getElementById('tqField'); if (el) { el.value = k; el.focus(); } } catch (_) {}
+}
 function testTechFold() {
   CBTEST.techOpen = !CBTEST.techOpen;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
@@ -2636,6 +2640,115 @@ function testTechUse(i) {
  * cases" is a suggestion; "boundary value analysis says you need eight" is a reason a tester can repeat to
  * somebody who asks why they wrote them. [[feedback-adopt-dont-reinvent]]
  */
+/**
+ * ── ⭐⭐⭐ THE FIELDS ARE NOT ASKED FOR — THEY ARE READ OFF THE WIRE ────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"what field, where does it come from? From the current API? Can we figure this out and
+ * show these are the fields that have to be checked for this reason — or can we diagnose ourselves and provide
+ * possible issues?"*
+ *
+ * ⚠️⚠️ AND A BLANK BOX LABELLED "which field?" IS THE WHOLE PROBLEM. It asks the tester to already know the
+ * product's field names, which is the one thing a person testing a screen for the first time does not have.
+ * So the technique helper was only usable by somebody who did not need it.
+ *
+ * ⭐ THE CALL LOG ALREADY HOLDS THE ANSWER. Every request this screen made is in `CBCALLS` with its BODY
+ * (`sent`, redacted at capture) and its response (`body`). Those bodies are literally the fields this screen
+ * puts on the wire — not a guess, not a schema somebody maintains by hand, but what it actually sent a moment
+ * ago. Read them, and the question "which field?" answers itself with a row of chips.
+ *
+ * ⚠️ AND THE KIND IS INFERRED FROM THE VALUE, NOT FROM THE NAME. `quantity: "3"` is a number whatever it is
+ * called, and `status: "available"` is one of a short list. Guessing from names would call `order_no` numeric
+ * and `date_added` a date and be wrong about both on this product.
+ *
+ * ⚠️ WHAT IT WILL NOT DO IS INVENT THE BOUNDS. It can see that `price` is a number; it cannot know the shop
+ * allows 1 to 99,999. That is the one thing only a person knows, and asking for exactly that — and nothing
+ * else — is the whole design of this helper.
+ */
+function testTechFields() {
+  var here = null;
+  try { if (typeof navScreenKey === 'function') here = navScreenKey(); } catch (_) {}
+  var gen = window.CBGEN || 0;
+  var seen = {}, out = [];
+
+  var kindOf = function (v) {
+    if (typeof v === 'boolean') return 'yes/no';
+    if (typeof v === 'number') return 'number';
+    if (typeof v !== 'string') return null;
+    if (!v) return null;
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) return 'date';
+    if (/^-?\d+(\.\d+)?$/.test(v)) return 'number';
+    if (v.length <= 24 && !/\s{2}/.test(v)) return 'short text';
+    return 'text';
+  };
+  var take = function (obj, from, depth) {
+    if (!obj || typeof obj !== 'object' || depth > 2) return;
+    (Array.isArray(obj) ? obj.slice(0, 2) : [obj]).forEach(function (o) {
+      if (!o || typeof o !== 'object') return;
+      Object.keys(o).forEach(function (k) {
+        var v = o[k];
+        if (v && typeof v === 'object') { take(v, from, depth + 1); return; }
+        var kind = kindOf(v);
+        if (!kind) return;
+        /* ⚠ ids and stamps are not fields a tester exercises — they are plumbing, and offering them as
+           candidates buries the four that matter under thirty that do not */
+        if (/^(id|_id|.*_id|entity_id|created_at|updated_at|rid|version)$/i.test(k)) return;
+        if (String(v) === '[redacted]') return;
+        if (seen[k]) return;
+        seen[k] = 1;
+        out.push({ key: k, kind: kind, sample: String(v).slice(0, 24), from: from });
+      });
+    });
+  };
+
+  (window.CBCALLS || []).forEach(function (c) {
+    if (here && c.scr && c.scr !== here) return;
+    if (gen && c.gen && c.gen !== gen) return;
+    if (/^\/api\/testing/i.test(String(c.path || ''))) return;
+    /* the REQUEST first: what a person typed is what a person can vary */
+    try { if (c.sent) take(JSON.parse(c.sent), 'sent', 0); } catch (_) {}
+    try { if (c.body) take(JSON.parse(c.body), 'came back', 0); } catch (_) {}
+  });
+  return out.slice(0, 24);
+}
+
+/** ⭐ which technique a field is a candidate for, said in words rather than left to be worked out */
+function testTechFor(kind) {
+  if (kind === 'number' || kind === 'date') return 'bounds';
+  if (kind === 'short text') return 'classes';
+  if (kind === 'yes/no') return 'decision';
+  return 'guess';
+}
+
+/**
+ * ⭐ A WORKED EXAMPLE PER TECHNIQUE, using this product's own words. Athi: *"give some example as a 'try this',
+ * so people understand what we are saying here."* ⚠️ Real examples, not lorem: "over 500, customer is a member"
+ * is a rule this shop actually has, and a tester recognises it and then sees what to do with their own.
+ */
+var TEST_TECH_EG = {
+  bounds: { what: 'A number that has a lowest and a highest allowed value.',
+    eg: 'Field <b>quantity</b>, lowest <b>1</b>, highest <b>999</b> — it writes the eight cases that matter: '
+      + '0, 1, 2, 998, 999, 1000, empty, and text.',
+    why: 'Boundary value analysis. Faults cluster at the edges, because that is where the comparison is '
+      + 'written and where < gets typed for ≤.' },
+  classes: { what: 'Kinds of value that the product is supposed to treat differently.',
+    eg: 'Field <b>customer</b>, kinds <b>GST-registered, unregistered, overseas</b> — one case each, because '
+      + 'every value inside a kind behaves the same and testing five of them proves the same thing five times.',
+    why: 'Equivalence partitioning. It tells you how FEW cases you need, which is the harder question.' },
+  states: { what: 'Something that moves through named stages.',
+    eg: 'Field <b>chit</b>, states <b>draft, sent, accepted, delivered, paid</b> — it writes the legal moves '
+      + 'and, more usefully, the ones that must be refused: paid going back to draft.',
+    why: 'State transition testing. The bugs are almost never in the forward path.' },
+  decision: { what: 'A rule with two or three conditions in it.',
+    eg: 'Conditions <b>over 500, customer is a member</b> — it writes all four combinations, so the case '
+      + 'where BOTH are true and the discount applies twice is not the one nobody tried.',
+    why: 'Decision table testing. People test the conditions one at a time and ship the combination.' },
+  guess: { what: 'The values that break most products, whatever the field is.',
+    eg: 'Field <b>name</b> — empty, one space, a very long value, a leading zero, an apostrophe, an emoji, '
+      + 'and the same value twice.',
+    why: 'Error guessing. 29119-4 keeps it because it keeps finding things, and it is the only one that '
+      + 'depends on having been burnt before.' },
+};
+
 function testTechAreaHTML() {
   return '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--grey-2);padding:4px 0 2px">'
     + '<b>What else should I test here?</b><br>'
@@ -2675,28 +2788,88 @@ function testTechHTML() {
         return '<button onclick="testTech(\'' + x[0] + '\')" style="' + tab
           + (t.kind === x[0] ? on : off) + '">' + x[1] + '</button>';
       }).join('');
-  if (!t.kind) return h + '</div>';
+  if (!t.kind) {
+    /* ⭐ before a technique is chosen, say what each one is FOR — five bare chips taught nobody anything */
+    return h
+      + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:7px;line-height:1.6">'
+      + Object.keys(TEST_TECH_EG).map(function (k) {
+          var L = { bounds: 'A number range', classes: 'Kinds of value', states: 'A lifecycle',
+                    decision: 'A rule with conditions', guess: 'The usual suspects' }[k];
+          return '<div style="margin:2px 0"><b>' + L + '</b> — ' + TEST_TECH_EG[k].what + '</div>';
+        }).join('')
+      + '</div></div>';
+  }
 
-  /* ⚠ the inputs are remembered across repaints like every other field — see FIELDS in screenCasesPaint */
-  h += '<div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
-    + '<input id="tqField" placeholder="which field?" style="' + inp + ';width:11em">';
+  var EG = TEST_TECH_EG[t.kind] || {};
+  var big = 'width:100%;font:inherit;font-size:var(--fs-2);padding:7px 9px;border:1px solid '
+    + 'var(--line,#e7e3d8);border-radius:8px;background:var(--card,#fff);color:var(--ink,#20303b);'
+    + 'box-sizing:border-box';
+  var lbl = 'display:block;font-size:var(--fs-1);font-weight:700;color:var(--grey-2,#545A61);margin:9px 0 3px';
+
+  /**
+   * ⭐ TRY THIS, IN THIS PRODUCT'S OWN WORDS. Athi: *"give some example as a 'try this', so people understand
+   * what we are saying here."* A form that only says what it wants is a form you have to already understand.
+   */
+  h += '<div style="margin-top:8px;padding:8px 10px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
+    + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.6">'
+    + '<b>Try this:</b> ' + EG.eg + '<br>'
+    + '<span style="color:var(--grey-2)">' + EG.why + '</span></div>';
+
+  /**
+   * ⭐⭐ THE FIELDS THIS SCREEN ACTUALLY SENT, as chips. Read from the call log, so they are this product's
+   * real field names with a real sample value beside each — see testTechFields.
+   * ⚠️ Only the ones whose KIND suits this technique are offered first; the rest are still there, because an
+   * inference from one sample value is a suggestion and must not become a gate.
+   */
+  var fields = testTechFields();
+  if (fields.length) {
+    var fit = fields.filter(function (f) { return testTechFor(f.kind) === t.kind; });
+    var rest = fields.filter(function (f) { return testTechFor(f.kind) !== t.kind; });
+    var fchip = function (f, strong) {
+      return '<button onclick="testTechPick(\'' + testEsc(f.key) + '\')" '
+        + 'title="' + testEsc(f.kind + ' · e.g. ' + f.sample + ' · ' + f.from) + '" '
+        + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:11px;cursor:pointer;'
+        + 'margin-inline-end:4px;margin-bottom:4px;border:0;background:'
+        + (strong ? 'var(--ok-tint,#eaf4ee);color:var(--ok-2,#1B7F4B);font-weight:700'
+                  : 'var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)') + '">'
+        + testEsc(f.key) + ' <span style="opacity:.7">' + testEsc(f.kind) + '</span></button>';
+    };
+    h += '<label style="' + lbl + '">Which field? · <span style="font-weight:400;color:var(--note)">'
+      + 'read from what this screen just sent to the server</span></label>'
+      + '<div>' + fit.map(function (f) { return fchip(f, true); }).join('')
+      + rest.map(function (f) { return fchip(f, false); }).join('') + '</div>';
+  } else {
+    h += '<label style="' + lbl + '">Which field?</label>';
+  }
+  h += '<input id="tqField" placeholder="the field you are testing" style="' + big + '">';
+
   if (t.kind === 'bounds') {
-    h += '<input id="tqLo" placeholder="lowest allowed" style="' + inp + ';width:8em">'
-      + '<input id="tqHi" placeholder="highest allowed" style="' + inp + ';width:8em">';
+    /* ⚠️ THE ONE THING IT CANNOT KNOW. It can see that a field is a number; only a person knows the shop
+       allows 1 to 999. Asking for exactly that, and nothing else, is the whole design of this helper. */
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Lowest allowed</label>'
+      + '<input id="tqLo" placeholder="e.g. 1" style="' + big + '"></div>'
+      + '<div style="flex:1 1 9em"><label style="' + lbl + '">Highest allowed</label>'
+      + '<input id="tqHi" placeholder="e.g. 999" style="' + big + '"></div>'
+      + '</div>';
   }
   if (t.kind === 'classes') {
-    h += '<input id="tqClasses" placeholder="the kinds, comma separated \u2014 e.g. GST-registered, '
-      + 'unregistered, overseas" style="' + inp + ';flex:1 1 18em">';
+    h += '<label style="' + lbl + '">The kinds, comma separated</label>'
+      + '<input id="tqClasses" placeholder="e.g. GST-registered, unregistered, overseas" style="' + big + '">';
   }
   if (t.kind === 'states') {
-    h += '<input id="tqStates" placeholder="the states in order \u2014 e.g. draft, sent, accepted, delivered, '
-      + 'paid" style="' + inp + ';flex:1 1 18em">';
+    h += '<label style="' + lbl + '">The states, in order</label>'
+      + '<input id="tqStates" placeholder="e.g. draft, sent, accepted, delivered, paid" style="' + big + '">';
   }
   if (t.kind === 'decision') {
-    h += '<input id="tqConds" placeholder="up to 3 conditions, comma separated \u2014 e.g. over 500, '
-      + 'customer is a member" style="' + inp + ';flex:1 1 18em">';
+    h += '<label style="' + lbl + '">Up to three conditions, comma separated</label>'
+      + '<input id="tqConds" placeholder="e.g. over 500, customer is a member" style="' + big + '">';
   }
-  h += '<button onclick="testTechGo()" style="' + tab + on + ';margin-top:0">Show</button></div>';
+  h += '<div style="margin-top:9px"><button onclick="testTechGo()" '
+    + 'style="font:inherit;font-size:var(--fs-2);font-weight:700;padding:6px 16px;border-radius:8px;'
+    + 'cursor:pointer;border:1px solid var(--ink,#0F2E3D);background:var(--ink,#0F2E3D);'
+    + 'color:var(--card,#fff)">Write the cases</button></div>';
+
 
   var rows = testTechDerive();
   if (!rows.length) {
