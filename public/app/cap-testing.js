@@ -2483,6 +2483,32 @@ function testTechUse(i) {
   try { document.getElementById('wcTitle').focus(); } catch (_) {}
 }
 
+/**
+ * ── ⭐⭐⭐ THE TECHNIQUES, AS THEIR OWN TAB ───────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"somewhere I have seen the other test types, now I couldn’t see those — if we want, create
+ * another tab for those, like Speed, so we know what we are looking for, the boundary condition etc. Which is
+ * gone now, couldn’t see where it is."*
+ *
+ * ⚠️⚠️ AND HE IS RIGHT THAT I HID IT. An hour earlier he said *"I am not sure what those chips are doing while
+ * creating a case"*, and I folded them shut at the foot of the Create form — which fixed the confusion by
+ * making the feature disappear. Both complaints are true at once, and a fold was the wrong answer to the first
+ * one: the problem was never that it took up room, it was that it was in the WRONG PLACE. Thinking of more
+ * cases is not part of writing one down; it is its own job, so it gets its own door, beside Speed.
+ *
+ * ⭐ ISO/IEC/IEEE 29119-4 is the standard the five techniques come from, and the tab says so — "here are eight
+ * cases" is a suggestion; "boundary value analysis says you need eight" is a reason a tester can repeat to
+ * somebody who asks why they wrote them. [[feedback-adopt-dont-reinvent]]
+ */
+function testTechAreaHTML() {
+  return '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--grey-2);padding:4px 0 2px">'
+    + '<b>What else should I test here?</b><br>'
+    + 'Tell it the one thing it cannot know — the range a number must fall in, the kinds of '
+    + 'value that behave differently, the states a thing moves through — and it writes out the cases '
+    + 'that the techniques in ISO/IEC/IEEE 29119-4 say you need. Nothing is invented: every line comes '
+    + 'from what you type. Use one and it lands in Create, ready to save.</div>'
+    + testTechHTML();
+}
 function testTechHTML() {
   var t = (CBTEST.tech || {});
   var tab = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
@@ -2498,14 +2524,15 @@ function testTechHTML() {
    * in, so they read as part of the form. They are not: they are a way of thinking of MORE cases than the one
    * in front of you — a different act. ⭐ And a control that has to be opened earns a line saying what it is.
    */
-  var open = !!t.kind || !!CBTEST.techOpen;
+  /**
+   * \u26a0\ufe0f\u26a0\ufe0f THE FOLD THAT USED TO BE HERE BROKE THE CHIPS, AND SILENTLY. It ended with
+   * `if (!open) return h + '</div>';` and the next line began `+ [[...]].map(...)` \u2014 which is not a syntax
+   * error, it is a valid expression statement (unary plus on an array), so `node --check` passed, no console
+   * spoke, and the five buttons were simply never in the output. A fold and an early return dropped into the
+   * middle of one long concatenation is exactly how that happens. [[feedback-anchor-replace-drops-code]]
+   * \u2b50 Gone entirely now: this lives on its own tab, so there is nothing left to fold it away from.
+   */
   var h = '<div style="margin-top:8px;padding-top:7px;border-top:1px dashed var(--line,#e7e3d8)">'
-    + '<button onclick="testTechFold()" style="font:inherit;font-size:var(--fs-1);border:0;padding:0;'
-    +   'background:none;cursor:pointer;color:var(--grey-2,#545A61);text-align:start">'
-    +   (open ? '\u25be ' : '\u25b8 ')
-    +   '<b>What else should I try?</b> \u00b7 suggests further cases using the techniques in '
-    +   'ISO/IEC/IEEE 29119-4 \u2014 give it the one thing it cannot know and it derives the rest</button>';
-  if (!open) return h + '</div>';
     + [['bounds', 'A number range'], ['classes', 'Kinds of value'], ['states', 'A lifecycle'],
        ['decision', 'A rule with conditions'], ['guess', 'The usual suspects']]
       .map(function (x) {
@@ -2810,7 +2837,7 @@ function testCaseFormHTML() {
     /* ⚠️ the technique helper is FOLDED, and only on a test case. Unfolded at the foot of the form it read as
        part of it — Athi: *"I am not sure what those chips are doing while creating a case."* It is a way to
        think of MORE cases, which is a different act from writing this one down. */
-    + (kind === 'case' ? testTechHTML() : '')
+
     + '</div>';
 }
 
@@ -4215,15 +4242,37 @@ function testDiagByScreen() {
   return h + '</table>';
 }
 
-function testDiagClear() {
+/**
+ * ── ⚠️⚠️ "IS CLEAR NOT CLEARING EVERY SCREEN YOU HAVE MEASURED?" ──────────────────────────────────────────
+ *
+ * Athi, 2026-09-13, and no, it was not — and the button did not say so. It emptied the call log (which is
+ * every screen) but deleted the saved visits of THIS SCREEN ONLY, so the by-screen roll-up kept every other
+ * screen’s history. "Clear and measure again" then meant two different things in one press, and the roll-up
+ * underneath went on quoting numbers from before the clear.
+ *
+ * ⭐ TWO BUTTONS, EACH SAYING WHICH IT IS. `scope` is ‘screen’ or ‘all’, and the toast repeats the choice
+ * back — a destructive action that leaves you guessing what it destroyed gets pressed once and never again.
+ *
+ * ⭐ AND IT IS ALREADY YOURS ALONE, which was the other question. `CBCALLS` lives in this tab’s memory and
+ * dies with it; the saved visits go through `uk()`, which keys localStorage by `SESSION.actorId` (or the
+ * entity when there is no co-assist) — and localStorage is per browser besides. Two people testing cannot
+ * reach each other’s readings, and clearing yours cannot touch theirs.
+ */
+function testDiagClear(scope) {
   var code = CBTEST.popupFor;
+  var everything = scope === 'all';
   var had = ((window.CBCALLS || []).length) || 0;
   var hadVisits = 0;
   try {
     var all = testVisitsGet();
-    hadVisits = ((all[code] || []).length) || 0;
-    delete all[code];
-    localStorage.setItem(testVisitsKey(), JSON.stringify(all));
+    if (everything) {
+      Object.keys(all).forEach(function (k) { hadVisits += ((all[k] || []).length) || 0; });
+      localStorage.setItem(testVisitsKey(), '{}');
+    } else {
+      hadVisits = ((all[code] || []).length) || 0;
+      delete all[code];
+      localStorage.setItem(testVisitsKey(), JSON.stringify(all));
+    }
   } catch (_) {}
   /* ⚠ emptied IN PLACE: core.js holds this same array and a fresh one would leave it writing to the old */
   try { if (window.CBCALLS) window.CBCALLS.length = 0; } catch (_) {}
@@ -4236,9 +4285,12 @@ function testDiagClear() {
    * the panel-open mark this area started the day with, and it would have shipped again.
    */
   CBTEST._clearedGen = window.CBGEN || 0;
-  CBTEST._clearedWhat = { calls: had, visits: hadVisits };
+  CBTEST._clearedWhat = { calls: had, visits: hadVisits, all: everything };
   screenCasesPaint();
-  if (typeof toast === 'function') toast('Cleared \u2014 measuring from now.');
+  if (typeof toast === 'function') {
+    toast(everything ? 'Cleared every screen \u2014 measuring from now.'
+      : 'Cleared this screen \u2014 measuring from now.');
+  }
 }
 
 function testDiagHTML() {
@@ -4315,7 +4367,10 @@ function testDiagHTML() {
   var srvMs = srvKnown.reduce(function (a, c) { return a + (c.srv || 0); }, 0);
   var dbTrips = mine.reduce(function (a, c) { return a + (c.trips || 0); }, 0);
 
-  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
+  /* ⭐ the reset sits ABOVE the numbers: a clear button found under a page of figures is found after
+     you have already believed them */
+  var h = testDiagClearBtn();
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
     + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
     + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
     + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
@@ -4418,6 +4473,7 @@ function testDiagHTML() {
   h += testDiagByApi();
   h += testDiagByScreen();
 
+
   /**
    * ── ⭐⭐ A MEASUREMENT NOBODY CAN RAISE IS A MEASUREMENT NOBODY RAISES ─────────────────────────────────
    *
@@ -4429,7 +4485,6 @@ function testDiagHTML() {
    * ⚠️ IT FILES NOTHING. It fills the four boxes and leaves the tester on Create, with the type chip still
    * theirs to set — whether this is an incident or a requirement is a judgement, and so is the wording.
    */
-  h += testDiagClearBtn();
   h += '<div style="margin-top:9px">'
     + '<button class="btn" onclick="testDiagRaise()" style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px">'
     + '\u270e Write this up</button>'
@@ -4594,12 +4649,26 @@ function testDiagCleared() {
 }
 
 /** the control, in one place, because it appears both in the reading and in the emptied panel */
+/**
+ * ⭐⭐ AT THE TOP, BECAUSE IT IS A STATEMENT ABOUT THE NUMBERS BELOW IT. Athi: *"the other two chips can be on
+ * the top, so people know that this data can be cleared and can make a fresh start."* A reset button under a
+ * page of figures is found after you have already believed them.
+ */
 function testDiagClearBtn() {
-  return '<div style="margin-top:9px"><button class="btn" onclick="testDiagClear()" '
-    + 'style="display:inline-block;width:auto;font-size:var(--fs-2);padding:4px 10px">\u27f2 Clear and measure again</button>'
-    + '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-start:8px">'
-    + 'throws away every recorded call and this screen\u2019s earlier visits, so the next reading is only '
-    + 'what you do next</span></div>';
+  var b = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;background:var(--card,#fff);color:var(--ink,#20303b);'
+    + 'margin-inline-end:5px';
+  return '<div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:0 0 8px;'
+    + 'padding-bottom:7px;border-bottom:1px solid var(--line-2,#efece4)">'
+    + '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' + b + '" '
+    +   'title="Throw away this screen\u2019s readings only">\u27f2 Clear this screen</button>'
+    + '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + b + '" '
+    +   'title="Throw away every screen\u2019s readings and start the whole measurement again">'
+    +   '\u27f2 Clear everything</button>'
+    + '<span style="font-size:var(--fs-1);color:var(--note);flex:1 1 12em;min-width:0">'
+    +   'Your readings only \u2014 they live in this browser, under your login. Clearing cannot touch anybody '
+    +   'else\u2019s.</span>'
+    + '</div>';
 }
 
 /**
@@ -5157,6 +5226,7 @@ function screenCasesPaint() {
        incidents and one live requirement as the same four, so a settled screen read like a burning one. */
     + seg('inc', 'Incidents', known ? testScrOpenN(code, 'inc') : null)
     + seg('req', 'Requirements', known ? testScrOpenN(code, 'req') : null)
+    + seg('tech', 'Techniques', null)
     + seg('behind', 'Behind', testBehindCount(code))
     + seg('diag', 'Speed', (window.CBCALLS || []).length || null)
     + '</div>';
@@ -5164,6 +5234,7 @@ function screenCasesPaint() {
   var body = area === 'behind' ? testBehindHTML(code)
            : area === 'diag' ? testDiagHTML()
            : area === 'write' ? testCaseFormHTML()
+           : area === 'tech' ? testTechAreaHTML()
            : area === 'inc' ? testScrRaisedHTML(code, 'inc')
            : area === 'req' ? testScrRaisedHTML(code, 'req')
            /* ⚠️ anyone who last used the old merged tab lands on Incidents rather than on nothing */
