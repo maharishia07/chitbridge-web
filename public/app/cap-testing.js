@@ -4346,73 +4346,258 @@ function screenCasesPaint() {
  *
  * ⚠️ NEWEST FIRST. The reason somebody opens this view is "where did the thing I just wrote go".
  */
+/**
+ * ── ⭐⭐⭐ CLOSING WHAT HAS BEEN DEALT WITH ───────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"if that observation can be closed, there is no way of closing it? Which means the list
+ * will grow for ever."*
+ *
+ * ⭐ CLOSED IS RETIRED, NOT DELETED. Every verdict recorded against the case survives it, so closing says
+ * "stop asking me this" and never "this never happened" — and it can be opened again, because a fault that
+ * comes back must keep its history rather than start a second one under a new key.
+ *
+ * ⚠️ THE CLOSED ONES STAY REACHABLE. A list that can only hide is how the same observation gets written for
+ * the third time by somebody who could not see the first two.
+ */
+/**
+ * ── ⭐⭐⭐ ONE LIST OF EVERYTHING A PERSON FOUND ──────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"manual test cases alone, we have to keep it separate so it is easier to manage — just
+ * all the cases, requirements, incidents have to be seen, and there should be a way of closing it with the
+ * details. Possibly you can finish that loop."*
+ *
+ * ⚠️⚠️ THE LAB HAD THEM IN THREE PLACES AND THE PERSON HAS ONE QUESTION. A tester who spent an afternoon on a
+ * screen wrote some cases, raised a requirement and filed an incident — three views, three filters, three
+ * ways of being closed, and no page that answers "what did I find, and what is still open?". The 1,455
+ * automated cases sat in the same list as their eight hand-written ones, which is what made the lab feel
+ * unmanageable rather than large.
+ *
+ * ⭐ SO THIS VIEW IS EXACTLY WHAT A PERSON RAISED, and nothing a machine generated. Three kinds, one shape:
+ *
+ *   CASE          written on a screen — a rule that should hold        closed = retired
+ *   REQUIREMENT   something further has to be done                     accepted · rejected
+ *   INCIDENT      it did something else and here is what               resolved · closed
+ *
+ * ⚠️ THE THREE KEEP THEIR OWN VERBS. Flattening them into one "Close" would erase the difference between a
+ * requirement that was REJECTED and an incident that was FIXED — the same word for two opposite outcomes.
+ * They share a row and a reason, not a vocabulary.
+ *
+ * ⚠️ AND EVERY CLOSURE CARRIES ITS REASON. Six months on, "closed" with no account of itself is
+ * indistinguishable from somebody tidying up.
+ */
+function testFindings() {
+  var out = [];
+  (CBTEST.cases || []).forEach(function (c) {
+    if (!/-H\d+$/.test(String(c.case_key || ''))) return;
+    var st0 = (c.steps || [])[0];
+    out.push({
+      kind: 'case', id: c.case_key, key: c.case_key,
+      screen: c.screen_code || c.module_key || '',
+      title: c.title || '',
+      doIt: Array.isArray(st0) ? (st0[0] || '') : '',
+      exp: Array.isArray(st0) ? (st0[1] || '') : '',
+      seen: c.observed || null,
+      shot: c.evidence_id || null,
+      by: c.written_by || null, at: c.written_at || null,
+      state: c.status === 'retired' ? 'closed' : 'open',
+      closedNote: c.closed_note || null, closedBy: c.closed_by || null, closedAt: c.closed_at || null,
+      last: (CBTEST.last || {})[c.case_key] || null,
+    });
+  });
+  (CBTEST.scrReq || []).forEach(function (q) {
+    out.push({
+      kind: 'req', id: q.definition_id, key: q.clause || q.ref || '',
+      screen: q.screen_code || '', title: q.requirement || '',
+      seen: q.observed || null, shot: q.evidence_id || null,
+      by: q.raised_by || q.written_by || null, at: q.raised_at || q.created_at || null,
+      state: (q.state === 'accepted' || q.state === 'rejected') ? 'closed' : 'open',
+      stateWord: q.state || null, closedNote: q.why || null,
+    });
+  });
+  (CBTEST.scrInc || []).forEach(function (x) {
+    out.push({
+      kind: 'inc', id: x.definition_id, key: x.ref || '',
+      screen: x.screen_code || '', title: x.observed || '',
+      seen: null, shot: x.evidence_id || null,
+      by: x.raised_by || null, at: x.raised_at || x.created_at || null,
+      sev: x.severity || null,
+      state: (x.state === 'resolved' || x.state === 'closed') ? 'closed' : 'open',
+      stateWord: x.state || null, closedNote: x.why || null,
+    });
+  });
+  /* ⭐ newest first: the reason to open this page is "what did I just find" */
+  return out.sort(function (a, b) { return String(b.at || '') < String(a.at || '') ? -1 : 1; });
+}
+
+/** ⚠️ the three kinds keep their own verbs — see the note above on why one "Close" would be a lie */
+function testFindClose(kind, id, key, reopen) {
+  try {
+    if (kind === 'case') return testHandClose(key, reopen);
+    if (kind === 'req') return testReqSet(id, reopen ? 'raised' : 'accepted');
+    if (kind === 'inc') return testIncSet(id, reopen ? 'raised' : 'resolved');
+  } catch (_) {}
+}
+
+function testHandFilterGet() {
+  try { return localStorage.getItem('cb_hand_filter') || 'open'; } catch (_) { return 'open'; }
+}
+function testHandFilter(v) {
+  try { localStorage.setItem('cb_hand_filter', v); } catch (_) {}
+  testPaint();
+}
+
+function testHandClose(key, open) {
+  /**
+   * ⚠️ CLOSING ASKS WHY; REOPENING DOES NOT. The account is of the DECISION to stop looking at something, and
+   * bringing it back is not that decision — it undoes it, and the old reason is cleared with it.
+   *
+   * ⭐ The wording says who the reason is FOR. "Why are you closing this?" gets "done"; naming the next
+   * reader gets a sentence they can use.
+   */
+  var why = null;
+  if (!open) {
+    why = window.prompt('Closing this — why? The next tester will read this instead of raising it again.');
+    if (why === null) return;                     /* cancelled: nothing is closed */
+    if (!String(why).trim()) { if (typeof toast === 'function') toast('A closure needs its reason.'); return; }
+  }
+  api('testCaseClose', { body: { case_key: key, open: !!open, why: why } }).then(function (r) {
+    /* ⚠ reload rather than patch the row: the closed ones are a different query, and guessing what the
+       server now holds is how a list and its source drift apart */
+    if (typeof toast === 'function') toast(open ? 'Opened again.' : 'Closed.');
+    return testLoad(true);
+  }).then(function () { testPaint(); })
+    .catch(function (e) { if (typeof toast === 'function') toast((e && e.message) || 'Could not change it.'); });
+}
+
 function testHandCases() {
   return (CBTEST.cases || [])
     .filter(function (c) { return /-H\d+$/.test(String(c.case_key || '')); })
     .sort(function (a, b) { return String(b.case_key) < String(a.case_key) ? -1 : 1; });
 }
 
-function testHandHTML() {
-  var rows = testHandCases();
-  if (!rows.length) {
-    return '<div style="font-size:var(--fs-1);color:var(--note);padding:10px 0">'
-      + 'Nothing written by hand yet. Turn on test mode, open any screen, and use the Test chip \u2014 what you '
-      + 'write there lands here.</div>';
-  }
-  var h = '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:6px 0 8px">'
-    + '<b>' + rows.length + '</b> case(s) written by hand on a screen, newest first. '
-    + 'Everything typed into the Test chip is here, whether or not it became an incident or a '
-    + 'requirement.</div>';
+/**
+ * ── ⭐⭐⭐ WHAT WE FOUND, AND WHAT IS STILL OPEN ──────────────────────────────────────────────────────────────
+ *
+ * ⚠️ EVERYBODY’S, NOT JUST YOURS. Athi asked *"irrespective of the user?"* — yes, and that has to be the
+ * default. A test board that shows you only your own findings cannot answer the question a team actually has,
+ * which is what did WE find. RLS already keeps it to this shop; within the shop, testing is a shared act.
+ * ⭐ "Mine" is a filter on top, for the afternoon when you want your own list back.
+ */
+function testFindWho() {
+  try { return localStorage.getItem('cb_find_who') || 'all'; } catch (_) { return 'all'; }
+}
+function testFindSetWho(v) {
+  try { localStorage.setItem('cb_find_who', v); } catch (_) {}
+  testPaint();
+}
 
-  h += rows.map(function (c) {
-    var l = (CBTEST.last || {})[c.case_key];
-    var st = l ? String(l.status) : '';
-    var col = st === 'pass' ? 'var(--ok-2,#1B7F4B)' : (st === 'fail' || st === 'blocked')
-      ? 'var(--disp,#B3261E)' : 'var(--note)';
-    var scr = c.screen_code || c.module_key || '';
-    var st0 = (c.steps || [])[0];
-    var exp = Array.isArray(st0) ? String(st0[1] || '') : '';
-    var doIt = Array.isArray(st0) ? String(st0[0] || '') : '';
-    return '<div style="padding:7px 0;border-top:1px solid var(--line-2,#efece4)">'
-      + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
-      +   '<code style="font-size:var(--fs-1);color:var(--grey-2)">' + testEsc(c.case_key) + '</code>'
-      +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(c.title || '') + '</b>'
-      +   '<span style="font-size:var(--fs-1);font-weight:700;color:' + col + '">'
-      +     (l ? testEsc(st.toUpperCase()) : 'not run') + '</span>'
+function testHandHTML() {
+  var all = testFindings();
+  if (!all.length) {
+    return '<div style="font-size:var(--fs-1);color:var(--note);padding:10px 0">'
+      + 'Nothing found by hand yet. Turn on test mode, open any screen, and use the Test chip \u2014 every case, '
+      + 'requirement and incident written there lands here.</div>';
+  }
+
+  var f = testHandFilterGet();
+  var who = testFindWho();
+  var me = (typeof SESSION !== 'undefined' && (SESSION.name || SESSION.handle)) || '';
+  var mine = function (x) { return me && String(x.by || '') === String(me); };
+
+  var pool = all;
+  if (who === 'mine') pool = pool.filter(mine);
+  var nOpen = pool.filter(function (x) { return x.state === 'open'; }).length;
+  var nShut = pool.length - nOpen;
+  var rows = f === 'closed' ? pool.filter(function (x) { return x.state === 'closed'; })
+           : f === 'all' ? pool
+           : pool.filter(function (x) { return x.state === 'open'; });
+
+  var chip = 'font:inherit;font-size:var(--fs-1);padding:1px 8px;border:1px solid var(--line,#e7e3d8);'
+    + 'border-radius:7px;cursor:pointer;margin-inline-end:4px;';
+  var on = 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)';
+  var off = 'background:var(--card,#fff);color:var(--grey-2,#545A61)';
+
+  var h = '<div style="margin:6px 0 2px">'
+    + [['open', 'Open', nOpen], ['closed', 'Closed', nShut], ['all', 'All', pool.length]]
+      .map(function (x) {
+        return '<button onclick="testHandFilter(\'' + x[0] + '\')" style="' + chip
+          + (f === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+      }).join('')
+    + '<span style="display:inline-block;width:14px"></span>'
+    + [['all', 'Everyone', all.length], ['mine', 'Mine', all.filter(mine).length]]
+      .map(function (x) {
+        return '<button onclick="testFindSetWho(\'' + x[0] + '\')" style="' + chip
+          + (who === x[0] ? on : off) + '">' + x[1] + ' <b>' + x[2] + '</b></button>';
+      }).join('')
+    + '</div>';
+
+  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:2px 0 8px">'
+    + '<b>' + rows.length + '</b> finding(s) raised by a person on a screen, newest first \u2014 cases, '
+    + 'requirements and incidents together. Each one closes with a reason.</div>';
+
+  if (!rows.length) {
+    return h + '<div style="font-size:var(--fs-1);color:var(--note);padding:6px 0">'
+      + (f === 'closed' ? 'Nothing has been closed yet.' : 'Nothing open \u2014 everything found has been dealt with.') + '</div>';
+  }
+
+  var KIND = { 'case': ['Case', 'var(--grey-2,#545A61)', 'var(--neutral-tint)'],
+               req: ['Requirement', 'var(--grey-2,#545A61)', 'var(--neutral-tint)'],
+               inc: ['Incident', 'var(--disp,#B3261E)', 'var(--disp-tint,#fbeceb)'] };
+
+  h += rows.map(function (x) {
+    var k = KIND[x.kind] || ['?', 'var(--note)', 'var(--neutral-tint)'];
+    var shut = x.state === 'closed';
+    return '<div style="padding:8px 0;border-top:1px solid var(--line-2,#efece4)'
+      + (shut ? ';opacity:.62' : '') + '">'
+      /* the kind first: a requirement and an incident read differently and must never be skimmed as one */
+      + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
+      +   '<span style="font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 7px;color:'
+      +     k[1] + ';background:' + k[2] + '">' + k[0] + '</span>'
+      +   (x.sev ? '<span style="font-size:var(--fs-1);color:var(--disp,#B3261E)">' + testEsc(x.sev)
+        + '</span>' : '')
+      +   (x.key ? '<code style="font-size:var(--fs-1);color:var(--note)">' + testEsc(x.key) + '</code>' : '')
+      +   '<b style="font-size:var(--fs-2);flex:1 1 14em;min-width:0">' + testEsc(x.title) + '</b>'
+      +   '<span style="font-size:var(--fs-1);font-weight:700;color:'
+      +     (shut ? 'var(--ok-2,#1B7F4B)' : 'var(--note)') + '">'
+      +     testEsc((x.stateWord || (shut ? 'closed' : 'open')).toUpperCase()) + '</span>'
       + '</div>'
+      /* where, who and when — the three things a finding is useless without */
       + '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px">'
-      /**
-       * ⭐ WHO, WHERE AND WHEN, ON THE ROW ITSELF. Athi: *"the test lab should bring all the findings with
-       * screen detail, which user id or the user name, what has been written, what is the screenshot."*
-       * ⚠️ A case written before the author was recorded says "author not recorded" — not a blank, and
-       * certainly not the name of whoever is looking at it now.
-       */
-      +   (scr ? '<b>' + testEsc(scr) + '</b> ' + testEsc(codeName(scr) || '') + ' · ' : '')
-      +   (c.written_by ? 'by ' + testEsc(c.written_by) : 'author not recorded')
-      +   (c.written_at ? ' · ' + testEsc(String(c.written_at).slice(0, 16).replace('T', ' ')) : '')
-      +   '<br>'
-      +   (doIt ? 'do: ' + testEsc(doIt) + '<br>' : '')
-      +   (exp ? 'should see: ' + testEsc(exp) : '')
+      +   (x.screen ? '<b>' + testEsc(x.screen) + '</b> ' + testEsc(codeName(x.screen) || '') + ' \u00b7 ' : '')
+      +   (x.by ? 'by ' + testEsc(x.by) : 'author not recorded')
+      +   (x.at ? ' \u00b7 ' + testEsc(String(x.at).slice(0, 16).replace('T', ' ')) : '')
       + '</div>'
-      + (c.observed ? '<div style="font-size:var(--fs-1);margin-top:2px">seen: '
-          + testEsc(c.observed) + '</div>' : '')
-      /* the verdict is a different act by possibly a different person, so it names its own tester */
-      + (l ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
-          + testEsc(String(l.status).toUpperCase()) + ' by ' + testEsc(l.tester_name || 'someone')
-          + (l.at ? ' · ' + testEsc(String(l.at).slice(0, 16).replace('T', ' ')) : '')
-          + (l.note ? ' — ' + testEsc(l.note) : '') + '</div>' : '')
-      /* ⭐ the way back to where it was written — the whole complaint was not being able to get there */
-      + (scr ? '<button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
-          + 'font-size:var(--fs-1);padding:2px 9px" onclick="testHandOpen(' + "'" + testEsc(scr) + "'"
-          + ')">Open ' + testEsc(scr) + '</button>' : '')
-      + (c.evidence_id ? ' <button class="btn" style="display:inline-block;width:auto;margin-top:4px;'
-          + 'font-size:var(--fs-1);padding:2px 9px" onclick="testShotView(' + "'" + testEsc(c.evidence_id)
-          + "'" + ')">\u1f5bc\ufe0f Screenshot</button>' : '')
+      + (x.doIt ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">do: ' + testEsc(x.doIt)
+          + '</div>' : '')
+      + (x.exp ? '<div style="font-size:var(--fs-1);color:var(--grey-2)">should see: ' + testEsc(x.exp)
+          + '</div>' : '')
+      + (x.seen ? '<div style="font-size:var(--fs-1);margin-top:1px">seen: ' + testEsc(x.seen) + '</div>' : '')
+      /* the account of the closure, which is the whole point of asking for one */
+      + (shut && x.closedNote
+          ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px;padding:4px 7px;'
+            + 'background:var(--paper,#faf8f3);border-radius:6px">closed: ' + testEsc(x.closedNote)
+            + (x.closedBy ? ' \u00b7 ' + testEsc(x.closedBy) : '') + '</div>'
+        : shut ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">closed, no reason recorded</div>' : '')
+      + (x.last ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:2px">'
+          + testEsc(String(x.last.status).toUpperCase()) + ' by ' + testEsc(x.last.tester_name || 'someone')
+          + '</div>' : '')
+      /* ── the actions ── */
+      + '<div style="margin-top:5px">'
+      +   (x.screen ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+        + 'padding:2px 9px" onclick="testHandOpen(' + "'" + testEsc(x.screen) + "'" + ')">Open '
+        + testEsc(x.screen) + '</button> ' : '')
+      +   (x.shot ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+        + 'padding:2px 9px" onclick="testShotView(' + "'" + testEsc(x.shot) + "'" + ')">'
+        + '\u1f5bc\ufe0f Screenshot</button> ' : '')
+      +   '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
+      +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || '')) + '\',\''
+      +     testEsc(String(x.key || '')) + '\',' + (shut ? 'true' : 'false') + ')">'
+      +     (shut ? 'Open again' : '\u2713 Close') + '</button>'
+      + '</div>'
       + '</div>';
   }).join('');
   return h;
 }
-
 /** take me back to the screen this was written on, with its panel open */
 function testHandOpen(code) {
   try {
@@ -4443,9 +4628,9 @@ function testViewToggleHTML() {
     + '<button onclick="testSetView(\'inc\')" title="Incidents \u2014 what a person experienced, and what was '
     +   'done about it" style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
     +   (inc ? on : off) + '">Incidents</button>'
-    + '<button onclick="testSetView(\'hand\')" title="Everything written by hand on a screen" '
+    + '<button onclick="testSetView(\'hand\')" title="Every case, requirement and incident a person raised on a screen" '
     +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);'
-    +   (CBTEST.view === 'hand' ? on : off) + '">Written</button>'
+    +   (CBTEST.view === 'hand' ? on : off) + '">Findings</button>'
     + '<button onclick="testSetView(\'scr\')" title="Every screen, and what the lab knows about it" '
     +   'style="' + base + 'border-inline-start:1px solid var(--line,#e7e3d8);' + (scr ? on : off)
     +   '">By screen</button>'

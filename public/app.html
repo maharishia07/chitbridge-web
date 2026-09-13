@@ -1935,6 +1935,7 @@ const EP = {
   defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
   /* ⭐ THE TEST BOARD (b219). Cases are `definition`s of kind 'testcase', so nothing here is a new kind of
      record — only the RESULT ledger is new, because results accumulate and a definition does not. */
+  testCasesAll:    {m:"GET",  p:"/api/testing/cases?all=1",       ok:"y"},   // including the closed
   testCases:       {m:"GET",   p:"/api/testing/cases",           ok:"y"},
   testCaseAdd:     {m:"POST",  p:"/api/testing/cases/import",    ok:"y"},   // upsert by case key → a NEW VERSION on an edit
   testSeed:        {m:"POST",  p:"/api/testing/cases/seed",      ok:"y"},   // ⭐ the button: load the documented cases, no terminal   // upsert by case key → a NEW VERSION on an edit
@@ -1962,6 +1963,7 @@ const EP = {
   testCaseWrite:   {m:"POST",  p:"/api/testing/cases/import",     ok:"y"},
   /* ⭐ a screenshot, stored in cb_attachment with no chit — read back through /api/attachments/:id,
      which is already entity-scoped and refuses to render anything but an image. */
+  testCaseClose:   {m:"POST", p:"/api/testing/cases/close",       ok:"y"},   // {case_key, open?} — retire, or bring back
   testTraceGet:    {m:"GET",  p:"/api/testing/trace",            ok:"y"},   // is the server timing MY calls?
   testTraceSet:    {m:"POST", p:"/api/testing/trace",            ok:"y"},   // {minutes} | {off:true} — self only
   testShot:        {m:"POST",  p:"/api/testing/evidence",         ok:"y"},
