@@ -85,5 +85,11 @@ test('[BAR-02] the bar is there before anything has been measured, and after', a
     await expect(page.locator('[data-testid="' + id + '"]'), id + ' vanished after a clear').toBeVisible();
   }
   /* ⚠️ the banner says WHICH clear it is measuring from — the word alone would pass on a stale reading */
-  await expect(page.locator('#cbcasespanel')).toContainText('measured from the clear at');
+  /**
+   * ⚠️ TWO SENTENCES SAY IT, AND WHICH ONE DEPENDS ON WHETHER ANYTHING HAS BEEN MEASURED SINCE. With calls
+   * recorded the figures header says "measured from the clear at"; with none, the empty state says "Cleared
+   * at 19:30:53. Threw away N recorded call(s)". Asserting one of them made this spec depend on how fast the
+   * page happened to make a call after the click.
+   */
+  await expect(page.locator('#cbcasespanel')).toContainText(/Cleared at|measured from the clear/);
 });
