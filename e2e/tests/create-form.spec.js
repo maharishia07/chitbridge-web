@@ -74,7 +74,7 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
   await expect(page.locator('#wcPri')).toBeVisible();
 
   /* ── 3 · the boxes never move: four, in order, whichever type is chosen ── */
-  const order = await page.evaluate(() => Array.from(document.querySelectorAll('#cbcasespanel input[id^="wc"]'))
+  const order = await page.evaluate(() => Array.from(document.querySelectorAll('#cbcasespanel textarea[id^="wc"]'))
     .map((el) => el.id));
   expect(order.slice(0, 4)).toEqual(['wcTitle', 'wcDo', 'wcSee', 'wcGot']);
 

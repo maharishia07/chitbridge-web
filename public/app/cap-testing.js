@@ -2643,6 +2643,25 @@ function testWriteKind(k) {
 }
 function testWriteKindNow() { return WKIND[CBTEST.writeKind] ? CBTEST.writeKind : 'case'; }
 
+/** one box, two rows deep, growing with what is typed into it and draggable beyond that */
+function testBox(id, ph, inp) {
+  return '<textarea id="' + id + '" rows="2" oninput="testGrow(this)" placeholder="' + ph + '" '
+    + 'style="' + inp + ';resize:vertical;min-height:2.6em;line-height:1.45;overflow-y:auto"></textarea>';
+}
+/**
+ * ⚠️ height must be cleared BEFORE scrollHeight is read, or the box can only ever grow: scrollHeight of an
+ * element already stretched to fit its content is that stretched height, so deleting a line would leave the
+ * gap behind for ever.
+ */
+function testGrow(el) {
+  if (!el) return;
+  try {
+    var cap = Math.round((window.innerHeight || 700) * 0.4);
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight + 2, cap) + 'px';
+  } catch (_) {}
+}
+
 function testCaseFormHTML() {
   var w = CBTEST.writeFor;
   /**
@@ -2705,10 +2724,26 @@ function testCaseFormHTML() {
     +   'background:var(--paper,#faf8f3);border-radius:7px;padding:5px 8px;margin-bottom:7px">'
     +   K.says + '</div>'
 
-    + '<input id="wcTitle" placeholder="' + K.t1 + '" style="' + inp + '">'
-    + '<input id="wcDo" placeholder="' + K.t2 + '" style="' + inp + '">'
-    + '<input id="wcSee" placeholder="' + K.t3 + '" style="' + inp + '">'
-    + '<input id="wcGot" placeholder="' + K.t4 + '" style="' + inp + '">'
+    /**
+     * ── ⭐⭐ FOUR BOXES THAT TAKE AS MUCH AS A PERSON HAS TO SAY ─────────────────────────────────────────
+     *
+     * Athi, 2026-09-13: *"the boxes to receive information are not good — can you make it a text box,
+     * scrollable, extendable?"*
+     *
+     * ⚠️⚠️ THEY WERE SINGLE-LINE `<input>`s, and the fourth one is the OBSERVATION — the field an incident is
+     * useless without, and the one people write three sentences in. A one-line box does not refuse the text,
+     * it HIDES it: you type past the edge and everything you wrote scrolls out of sight, so you cannot read
+     * back what you are about to file. The evidence was being taken through a letterbox.
+     *
+     * ⭐ TWO ROWS TO START, GROWING AS YOU TYPE, and `resize:vertical` so it can be dragged bigger still —
+     * three ways to get the room, none of which has to be discovered before you can write.
+     * ⚠️ It stops growing at 40% of the window: a box that eats the panel takes the type chip, the screenshot
+     * and the Create button off screen, and then you cannot file what you have written.
+     */
+    + testBox('wcTitle', K.t1, inp)
+    + testBox('wcDo', K.t2, inp)
+    + testBox('wcSee', K.t3, inp)
+    + testBox('wcGot', K.t4, inp)
     /**
      * ── ⭐⭐ WHICH THING ON THE SCREEN ───────────────────────────────────────────────────────────────────
      *
@@ -4957,6 +4992,9 @@ function screenCasesPaint() {
   Object.keys(typed).forEach(function (id) {
     var el = document.getElementById(id);
     if (el && typed[id] != null && typed[id] !== '') el.value = typed[id];
+    /* ⚠️ a restored paragraph in a two-row box is a paragraph you cannot see — the height is part of the
+       value as far as the person typing is concerned */
+    if (el && el.tagName === 'TEXTAREA') testGrow(el);
   });
   if (focusId) {
     var back = document.getElementById(focusId);
