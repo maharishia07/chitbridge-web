@@ -83,14 +83,28 @@ test('[CREATE-01] the type is chosen first, and the form says what it means', as
   await expect(page.locator('#cbcasespanel button', { hasText: /^Cancel$/ })).toHaveCount(1);
 
   /**
-   * ⚠️ AND THE 29119-4 HELPER IS FOLDED, AND ONLY ON A TEST CASE. Five unexplained chips sitting under the four
-   * boxes read as part of the form — which is what Athi said about them. It is a way of thinking of MORE cases,
-   * so it has no business on an incident at all: the fault in front of you is not a technique exercise.
+   * ── ⭐ THE 29119-4 HELPER IS NOT IN THIS FORM AT ALL, AND THAT IS THE POINT ─────────────────────────────
+   *
+   * ⚠️⚠️ THIS ASSERTION HAS MOVED, NOT GONE. It first said the helper was folded at the foot of the form —
+   * Athi, *"I am not sure what those chips are doing while creating a case"* — and an hour later, *"somewhere
+   * I have seen the other test types, now I couldn't see those."* Both were true: folding it fixed the
+   * confusion by making the feature disappear. The problem was never that it took room, it was that it was in
+   * the wrong place. It now has its own tab, so the assertion follows it there.
+   * [[feedback-improvise-update-cases]] — a relocated assertion is moved, never deleted.
    */
   await expect(page.locator('#cbcasespanel')).not.toContainText('What else should I try?');
-  await page.locator('[data-testid="wkind-case"]').click();
-  await expect(page.locator('#cbcasespanel')).toContainText('What else should I try?');
-  await expect(page.locator('#tqField'), 'the helper must be shut until it is asked for').toHaveCount(0);
+  await expect(page.locator('#cbcasespanel button', { hasText: 'Techniques' })).toHaveCount(1);
+  await page.evaluate(() => testArea('tech'));
+  const tech = page.locator('#cbcasespanel');
+  await expect(tech).toContainText('What else should I test here?');
+  /* ⚠️ THE FIVE CHIPS MUST ACTUALLY BE IN THE OUTPUT. The fold that used to be here ended in an early return
+     followed by `+ [[...]].map(...)` — a valid expression statement, so nothing failed and the buttons were
+     simply absent. Naming them one by one is the only assertion that would have caught that. */
+  for (const w of ['A number range', 'Kinds of value', 'A lifecycle', 'A rule with conditions',
+                   'The usual suspects']) {
+    await expect(tech, 'the ' + w + ' technique is missing').toContainText(w);
+  }
+  await expect(page.locator('#tqField'), 'no technique is chosen until one is pressed').toHaveCount(0);
 });
 
 test('[CREATE-02] the severity chosen is the severity filed', async ({ page }) => {
