@@ -59,7 +59,19 @@ function unwrap(j){
    * ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE" — after it had disabled the catalogue overlay, the
    * "which item?" sheet, supplier availability and the /me bundle. A warning is not a guard.
    */
-  for(const mk of ["total","page","limit","truncated","count","offset"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
+  /**
+   * ⚠️⚠️⚠️ THIS LIST HAS NOW EATEN THREE FIELDS, AND EACH ONE LOOKED LIKE A DIFFERENT BUG.
+   *   · "truncated" — so the catalogue search never asked the server and answered "no such product"
+   *     about 96 products that exist (2026-09-13, morning).
+   *   · "status_counts" — so the availability chips counted the 500 loaded rows and reported "495 / 5"
+   *     for a shop of 10,441 (2026-09-13, evening). Athi found both.
+   *   · and "counts"/"open", which the incident and requirement boards read for their filter chips.
+   *
+   * ⚠️ THE FAILURE IS ALWAYS SILENT AND ALWAYS FLATTERING: the value reads undefined, the screen shows a
+   * smaller, tidier number, and nothing anywhere says a field was dropped. A named allow-list on a shared
+   * envelope needs a REPORT, the way importCases got one — that is in the backlog now.
+   */
+  for(const mk of ["total","page","limit","truncated","count","offset","status_counts","open","counts"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
   /**
    * ⚠️⚠️ `included` IS A SIBLING OF `entity`, AND THIS LINE WAS EATING IT — the fourth instance of the exact bug
    * the comments above describe, and the most expensive one, because nothing looked wrong.

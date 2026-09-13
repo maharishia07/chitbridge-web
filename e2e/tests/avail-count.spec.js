@@ -68,8 +68,16 @@ test('[AVAIL-01] the count is the shop, and the chip reaches the shop', async ({
   expect(seen.loaded).toBe(PAGE);
   expect(seen.total, 'the true total did not arrive').toBe(PAGE + MORE);
   expect(seen.truncated, 'this shop should not fit in one page').toBeTruthy();
-  /* ⚠️ THE OLD ANSWER, STATED, so the spec fails loudly if anybody counts the page again */
-  expect(seen.offInPage, 'the seed must put every unavailable row past the first page').toBe(0);
+  /**
+   * ⚠️ THE OLD ANSWER, STATED, so the spec fails loudly if anybody counts the page again.
+   *
+   * ⚠️ AND IT IS "FEWER", NOT "NONE". A bulk insert stamps its rows within the same instant, so the order
+   * inside one batch is arbitrary and a couple of the oldest forty land on page one anyway. Demanding zero
+   * made this spec fail on a detail of Postgres tie-breaking rather than on the thing it is about — which is
+   * only ever that counting the PAGE gives a smaller answer than the shop has.
+   */
+  expect(seen.offInPage, 'the page must NOT hold all of them, or there is nothing to get wrong')
+    .toBeLessThan(MORE);
   expect(seen.counts, 'the server tally was discarded').toBeTruthy();
 
   const chip = page.locator('[data-testid="cat-availfilter-not-available"]');
