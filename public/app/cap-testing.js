@@ -2559,9 +2559,24 @@ function testTechFold() {
   CBTEST.techOpen = !CBTEST.techOpen;
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
 }
+/**
+ * ── ⚠️⚠️⚠️ A DERIVATION BELONGS TO ONE TECHNIQUE ─────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"all examples are the same — Kinds of value description, nowhere matches the example
+ * given below."* And it did not: the table is TAKEN ONCE and kept (deliberately, so it cannot disagree with
+ * the boxes above it) — but switching technique left the previous one's rows sitting under the new one's
+ * description. So "Kinds of value" was explained above a boundary-value table, and the two had nothing to do
+ * with each other.
+ *
+ * ⭐ CHANGING THE TECHNIQUE CLEARS THE RESULT. Changing an INPUT does not — that is still a live table with a
+ * header saying what it came from. But a different technique is a different question, and its answer cannot
+ * be a leftover.
+ */
 function testTech(kind) {
   CBTEST.tech = CBTEST.tech || {};
-  CBTEST.tech.kind = (CBTEST.tech.kind === kind) ? null : kind;
+  var next = (CBTEST.tech.kind === kind) ? null : kind;
+  if (next !== CBTEST.tech.kind) { CBTEST.tech.rows = null; CBTEST.tech.from = null; }
+  CBTEST.tech.kind = next;
   screenCasesPaint();
 }
 /**
@@ -2918,34 +2933,48 @@ function testTechFor(kind) {
 }
 
 /**
- * ⭐ A WORKED EXAMPLE PER TECHNIQUE, using this product's own words. Athi: *"give some example as a 'try this',
- * so people understand what we are saying here."* ⚠️ Real examples, not lorem: "over 500, customer is a member"
- * is a rule this shop actually has, and a tester recognises it and then sees what to do with their own.
+ * ⭐ A WORKED EXAMPLE PER TECHNIQUE, AND EACH ONE ECHOES ITS OWN TAB. Athi, 2026-09-13: *"can we make it more
+ * relatable to the tab, or the name it expresses for each tab?"*
+ *
+ * ⚠️ THE TAB NAMES ARE ABSTRACT AND THE EXAMPLES WERE NOT ANCHORED TO THEM. "Kinds of value" followed by a
+ * sentence about a customer asks the reader to make the connection themselves — and if they could already do
+ * that, they would not need the tab. Every example now opens by USING the tab's own words on a real thing in
+ * this product: a range, kinds, stages, conditions, the usual suspects.
+ *
+ * ⚠️ Real nouns from this shop, not lorem: a chit really does move draft → sent → accepted → delivered → paid,
+ * and a tester recognises it, and then sees what to do with their own.
  */
 var TEST_TECH_EG = {
-  bounds: { what: 'A number that has a lowest and a highest allowed value.',
-    eg: 'Field <b>quantity</b>, lowest <b>1</b>, highest <b>999</b> — it writes the eight cases that matter: '
-      + '0, 1, 2, 998, 999, 1000, empty, and text.',
+  bounds: { what: 'A number, or a date, with a lowest and a highest it is allowed to be.',
+    eg: '<b>A number range:</b> a <b>quantity</b> may be anything from <b>1</b> to <b>999</b>. Give it those '
+      + 'two numbers and it writes the eight cases that matter — 0, 1, 2, 998, 999, 1000, empty, and text.',
     why: 'Boundary value analysis. Faults cluster at the edges, because that is where the comparison is '
       + 'written and where < gets typed for ≤.' },
-  classes: { what: 'Kinds of value that the product is supposed to treat differently.',
-    eg: 'Field <b>customer</b>, kinds <b>GST-registered, unregistered, overseas</b> — one case each, because '
-      + 'every value inside a kind behaves the same and testing five of them proves the same thing five times.',
-    why: 'Equivalence partitioning. It tells you how FEW cases you need, which is the harder question.' },
-  states: { what: 'Something that moves through named stages.',
-    eg: 'Field <b>chit</b>, states <b>draft, sent, accepted, delivered, paid</b> — it writes the legal moves '
-      + 'and, more usefully, the ones that must be refused: paid going back to draft.',
-    why: 'State transition testing. The bugs are almost never in the forward path.' },
-  decision: { what: 'A rule with two or three conditions in it.',
-    eg: 'Conditions <b>over 500, customer is a member</b> — it writes all four combinations, so the case '
-      + 'where BOTH are true and the discount applies twice is not the one nobody tried.',
-    why: 'Decision table testing. People test the conditions one at a time and ship the combination.' },
-  guess: { what: 'The values that break most products, whatever the field is.',
-    eg: 'Field <b>name</b> — empty, one space, a very long value, a leading zero, an apostrophe, an emoji, '
-      + 'and the same value twice.',
+  classes: { what: 'A field whose values fall into KINDS the product is supposed to treat differently.',
+    eg: '<b>Kinds of value:</b> a <b>customer</b> is one of three kinds — <b>GST-registered</b>, '
+      + '<b>unregistered</b>, <b>overseas</b> — and tax behaves differently for each. Name the kinds and it '
+      + 'writes one case per kind, plus the value that belongs to none of them.',
+    why: 'Equivalence partitioning. Every value inside a kind behaves the same, so testing five of them proves '
+      + 'the same thing five times. It tells you how FEW cases you need, which is the harder question.' },
+  states: { what: 'Something that MOVES THROUGH named stages, in an order.',
+    eg: '<b>A lifecycle:</b> a <b>chit</b> goes <b>draft → sent → accepted → delivered → paid</b>. Name the '
+      + 'stages in order and it writes the moves that must work — and, more usefully, the ones that must be '
+      + 'refused, like paid going back to draft.',
+    why: 'State transition testing. The bugs are almost never in the forward path; they are in the move nobody '
+      + 'thought to forbid.' },
+  decision: { what: 'One rule whose answer depends on two or three things being true at once.',
+    eg: '<b>A rule with conditions:</b> a <b>discount</b> applies when the order is <b>over 500</b> AND the '
+      + '<b>customer is a member</b>. Name the conditions and it writes all four combinations — including the '
+      + 'one where both are true.',
+    why: 'Decision table testing. People test the conditions one at a time and ship the combination, which is '
+      + 'where the discount gets applied twice.' },
+  guess: { what: 'No rule to describe — just the values that break most products, whatever the field is.',
+    eg: '<b>The usual suspects:</b> take a <b>name</b> and try empty, one space, a very long value, a leading '
+      + 'zero, an apostrophe, an emoji, and the same value twice.',
     why: 'Error guessing. 29119-4 keeps it because it keeps finding things, and it is the only one that '
       + 'depends on having been burnt before.' },
 };
+
 
 function testTechAreaHTML() {
   /**
