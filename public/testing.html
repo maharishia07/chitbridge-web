@@ -598,9 +598,25 @@
    * The width that frees is what pays for the larger type, which is the actual request: a table you can read.
    */
   table.mtx{ font-size:var(--fs-2); }
-  table.mtx th.num{ height:7.5em; vertical-align:bottom; padding:5px 3px 7px; }
-  table.mtx th.num span{ writing-mode:vertical-rl; transform:rotate(180deg); display:inline-block;
-        text-transform:none; letter-spacing:.02em; font-size:var(--fs-2); font-weight:600; color:var(--ink-2); }
+  /**
+   * ── ⭐⭐ THE HEADINGS ARE UPRIGHT, AND THE TABLE GOT NARROWER, NOT WIDER ────────────────────────────────
+   *
+   * Athi: *"so the entire panel comes within single page no scrolling."*
+   *
+   * ⚠️ ROTATION WAS BUYING NOTHING. It was introduced because "Integration" and "Performance" are wider than
+   * the two-digit number underneath — but `table.sum th.num` already sets `min-width:7.5ch`, so EVERY numeric
+   * column is at least that wide whether the heading turns or not. Rotation only buys width for labels longer
+   * than 7.5 characters, which is three of fourteen. What it cost: 7.5em of header (~109px, ~158px at A+),
+   * text that reads about half as fast, and headings a reader has to turn the paper to read — on a document
+   * whose whole purpose is to be printed.
+   *
+   * ⭐ SHORTEN THE THREE LONG LABELS AND THE ROTATION PAYS FOR NOTHING AT ALL. The longest honest label left
+   * is "Security" at 8ch, already inside the 7.5ch floor, so no column grows and ~80px of vertical header
+   * comes back. The full word stays in the heading's title=.
+   */
+  table.mtx th.num{ vertical-align:bottom; padding:6px 4px 7px; }
+  table.mtx th.num span{ display:inline-block;
+        text-transform:none; letter-spacing:.02em; font-size:var(--fs-1); font-weight:600; color:var(--ink-2); }
   table.mtx td.num{ padding:6px 4px; font-size:var(--fs-3); font-variant-numeric:tabular-nums; }
   table.mtx td.num .dim{ font-size:var(--fs-2); }
   /* ⭐ the area and what it means on ONE line — the description was a second line on every row, which doubled
@@ -2841,12 +2857,14 @@ function matrixHTML(){
   /* the columns, in the order he wrote them, plus the ones the board already holds */
   var COLS = [
     { k: 'unit',        label: 'Unit' },
-    { k: 'integration', label: 'Integration' },
+    /* ⭐ SHORT ENOUGH TO SIT UPRIGHT. The 7.5ch column floor means these cost no width at all; the full
+       word is in the heading's title=, which is where a name a reader might not know belongs. */
+    { k: 'integration', label: 'Integ', full: 'Integration' },
     { k: 'acceptance',  label: 'Manual' },
     { k: 'uat',         label: 'UAT',      empty: 'No customer has run a case yet. A manual case becomes UAT when a shopkeeper runs it before adopting — the case does not change, the runner does.' },
     { k: 'preprod',     label: 'Preprod',  empty: 'There is no pre-production environment. Everything is local or live, which is why "system" here means the real thing.' },
     { k: 'penetration', label: 'Pen',      empty: 'There is no penetration testing. scripts/penetration.js is MARKET penetration and is not one.' },
-    { k: 'performance', label: 'Performance' },
+    { k: 'performance', label: 'Perf', full: 'Performance' },
     { k: 'security',    label: 'Security' },
     { k: 'system',      label: 'System' },
     { k: 'static',      label: 'Static' },
@@ -2930,7 +2948,9 @@ function matrixHTML(){
       })()
     + '<div class="scroll"><table class="sum mtx"><tr><th>Area</th>';
   COLS.forEach(function(c){
-    h += '<th class="num" title="' + esc(c.empty ? c.empty : (LEVEL_SAYS[c.k] || '')) + '"><span>'
+    /* ⚠ an abbreviated heading must carry its full word — the tooltip already exists, so it leads with it */
+    h += '<th class="num" title="' + esc((c.full ? c.full + ' — ' : '')
+        + (c.empty ? c.empty : (LEVEL_SAYS[c.k] || ''))) + '"><span>'
       + c.label + (c.empty ? ' <i class="zeroflag">0</i>' : '') + '</span></th>';
   });
   /* ⭐ Athi: *"add the rules count"* — what the area CONTAINS, beside how much of it is tested. Nine rules
