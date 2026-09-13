@@ -98,6 +98,31 @@ test('[WORK-01] three journeys, one list, and every row can reach Closed', async
   await page.evaluate(() => testSetView('work'));
   await expect(more, 'back on a segment, the dropdown returns to its placeholder').toHaveValue('');
 
+  /**
+   * ── ⭐ THE HEADER IS TWO LINES, NOT SEVENTEEN CONTROLS ────────────────────────────────────────────────
+   * Fifteen of the seventeen were set once a session — who I am, which run, what size — and they ate ~40%
+   * of a 420px panel before the tester saw one row of work. They live behind the ⚙ now.
+   * ⚠️ The assertion that matters is the LAST one: Setup and the add-case form are two body views and
+   * exactly one may be open, or the branch order silently decides which the reader gets.
+   */
+  const gear = page.locator('[data-testid="test-setup"]');
+  await expect(gear).toBeVisible();
+  await expect(page.locator('#cbtestpanel input[placeholder]'),
+    'the who-input belongs in Setup, not in the header').toHaveCount(0);
+
+  await gear.click();
+  const who = page.locator('#cbtestpanel input[type="text"]').first();
+  await expect(who, 'Setup did not open, or does not carry the tester name').toBeVisible({ timeout: 15000 });
+  await expect(page.locator('#cbtestpanel select')).not.toHaveCount(0);
+
+  /* ⚠️ two body views, never both */
+  await page.evaluate(() => { testAddOpen(); });
+  expect(await page.evaluate(() => !!CBTEST.setup),
+    'opening the add-case form must close Setup').toBeFalsy();
+  await page.evaluate(() => { CBTEST.adding = false; testSetupToggle(); testSetupToggle(); testPaint(); });
+  await expect(page.locator('[data-testid="view-work"]'),
+    'closing Setup must give the board back').toBeVisible({ timeout: 15000 });
+
   /* ⭐ ALL NINE ARE ON ONE LIST, and each carries one status — the whole of the complaint */
   const seen = () => page.evaluate(() => testWork().map((x) => [x.key, x.status]));
   await expect.poll(async () => (await seen()).length, { timeout: 45000 }).toBe(9);

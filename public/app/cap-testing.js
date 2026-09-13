@@ -912,113 +912,68 @@ function testPaint() {
     + 'justify-content:center;font:inherit;font-size:var(--fs-2);line-height:1;padding:0;cursor:pointer;'
     + 'border:1px solid var(--grey-4,#646A72);border-radius:7px;background:var(--card,#fff);'
     + 'color:var(--ink-2,#3a4048)';
+  /**
+   * ── ⭐⭐⭐ TWO LINES, NOT SEVENTEEN CONTROLS ────────────────────────────────────────────────────────────
+   *
+   * Athi: *"pure white screen, with very few labels and simple objective per screen, so the user will not be
+   * loaded with information."*
+   *
+   * ⚠️⚠️ THE HEADER WAS SEVENTEEN CONTROLS IN A 420px PANEL. Row one held eight (+, report, guide, reload,
+   * Size, pop-out, minimise, close) and row two held nine (kind, area, two segments, a select, Clear filters,
+   * Focus, run-kind, who). At the panel's own default width that wrapped to five or six rows and ate 200-240px
+   * — roughly 40% of the panel — before the tester saw one row of work. FIFTEEN of the seventeen are set once
+   * a session: who I am, which run, what size.
+   *
+   * ⭐ BAND 1 IS IDENTITY: what this panel is, what it is filtered to, and four icons.
+   * ⭐ BAND 2 IS THE ONE QUESTION: which view, and clear.
+   * ⭐ EVERYTHING SET-ONCE IS BEHIND THE ⚙, in the body — reusing the CBTEST.adding mechanism rather than
+   * inventing a second disclosure. Capture solved this exact problem and the Manager never got the fix.
+   */
   var hd = ''
+    /* ── BAND 1 · identity ── */
     + '<div style="display:flex;align-items:center;gap:6px">'
     +   '<b style="font-size:var(--fs-3);white-space:nowrap">'
     +     testToolTag(TEST_SURFACE.manager, 'Panel \u203a Test lab') + '</b>'
-    +   '<span style="font-size:var(--fs-1);color:var(--grey-4,#646A72);white-space:nowrap">everything, '
-    +     'collected</span>'
+    /**
+     * ⭐ THE CHANGING IDENTITY SITS AT THE FAR END, the fixed one anchors the start, and space is the
+     * separator — Capture's rule, verbatim. And it is now the ONLY place the area filter is named, which
+     * makes it load-bearing rather than decorative: with the selects behind the ⚙, this line and the blue
+     * filtered row are the whole statement that a filter is on.
+     */
     +   '<span style="flex:1 1 auto;min-width:8px"></span>'
-    +   '<button title="Add a case for something you just found" onclick="testAddOpen()" '
-    +     'style="' + ico + ';font-size:var(--fs-3)">+</button>'
-    /**
-     * ⭐⭐ THE REPORT, FROM THE LAB. Athi, 2026-09-11: *"where is the report in the test lab?"* — it was only
-     * on the full board, which is the one place a tester is not.
-     *
-     * ⚠ IT OPENS A TAB RATHER THAN RENDERING HERE, and that is the right trade rather than a shortcut. A
-     * completion report is a wide document that gets PRINTED and filed; squeezing ten sections into a 420px
-     * panel would make it unreadable in the one place it has to be legible — on paper, to somebody who was
-     * not here.
-     */
-    +   '<button title="Test Completion Report (ISO/IEC/IEEE 29119-3)" '
-    +     'onclick="testReport()" style="' + ico + '">\u2637</button>'
-    +   '<button title="How to use this" onclick="testGuide(true)" style="' + ico + '">\u24d8</button>'
+    +   '<span title="What this board is filtered to \u2014 change it in Setup" '
+    +     'style="font-size:var(--fs-1);color:' + (CBTEST.area || CBTEST.kind
+              ? 'var(--blue,#3F66A6)' : 'var(--grey-4,#646A72)')
+    +     ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:14em">'
+    +     testEsc([CBTEST.kind, CBTEST.area].filter(Boolean).join(' \u00b7 ') || 'All areas') + '</span>'
+    +   '<button data-testid="test-setup" title="Setup \u2014 who is testing, which run, focus, size" '
+    +     'onclick="testSetupToggle()" style="' + ico
+    +     (CBTEST.setup ? ';background:var(--ink,#0F2E3D);color:var(--card,#fff);'
+                        + 'border-color:var(--ink,#0F2E3D)' : '') + '">\u2699</button>'
     +   '<button title="Read the cases again" onclick="testLoad(true)" style="' + ico + '">\u21bb</button>'
-    /* ⭐ WIDER · TALLER, as sizes rather than as a drag. Athi: *"keep it wider or lengthier etc, this depends
-       on the test case and where we are looking at."* The corner still drags freely; this is for the times
-       when you know what you want and do not want to aim at a 16-pixel triangle to get it. */
-    +   '<select onchange="testSize(this.value)" title="Size" style="flex:0 0 auto;font-size:var(--fs-1);'
-    +     'padding:3px 4px;border-radius:7px;border:1px solid var(--grey-4,#646A72)">'
-    +     [['', 'Size'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
-           ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
-            return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
-    +   '</select>'
-    /**
-     * ⭐⭐⭐ OUT OF THE WAY OF THE THING BEING TESTED. Athi, 2026-09-12: *"when we test it, it has to be away from
-     * the current screen, so one side test scripts and another side i can test it, it should be openable in
-     * another window?"*
-     *
-     * ⭐ IT IS THIS APP, BOOTED WITH THE LAB OPEN AND ITS OWN SHELL HIDDEN (`?lab=only`) — not a second host.
-     * The lab stands on api(), toast(), esc(), tx() and modal(); a page of its own would be a second copy of
-     * every one of them, and two copies of a screen is how they start disagreeing.
-     * [[feedback-adopt-dont-reinvent]] · [[feedback-no-duplicate-functions]]
-     * ⚠️ A FLOATING PANEL CAN NEVER SOLVE THIS: whatever it is not covering, it is still in front of, and a
-     * tester dragging it aside ten times an hour is the tax this removes.
-     * ⚠️ A named target, so pressing it twice raises the window already open instead of stacking a second one.
-     */
-    +   '<button title="Open the board in its own window — the app on one screen, the scripts on the other" '
-    +     'onclick="testPopOut()" style="' + ico + '">↗</button>'
-    /* ⭐ minimise sits WITH close, at the right, and is redrawn on every paint like everything else here */
     +   '<button title="Minimise" onclick="testMinimise()" style="' + ico + '">\u2013</button>'
     /* ⚠️ CLOSES THE PANEL, NOT THE MODE. Closing the lab used to turn test mode off, so the Test chips
-   vanished from every screen because somebody put the board away. */
+       vanished from every screen because somebody put the board away. */
     +   '<button title="Close the lab" onclick="testPanelClose()" style="' + ico + '">\u2715</button>'
     + '</div>'
+    /* ── BAND 2 · the one question: which view, and clear ── */
     + '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px;align-items:center">'
-    /* ⭐ FIRST, because "what kind of test" is the first question anybody asks of this list */
-    +   '<select onchange="testSetKindFilter(this.value)" title="What kind of test"'
-    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
-    +     (function () {
-            var n = testKindCounts();
-            var tot = Object.keys(n).reduce(function (a, k) { return a + n[k]; }, 0);
-            return '<option value=""' + (CBTEST.kind ? '' : ' selected') + '>Every kind · ' + tot + '</option>'
-              + TEST_KINDS.map(function (k) {
-                  /* ⚠️ an empty category we KNOW should exist is still offered — "Penetration · 0" states a
-                     fact, while leaving it out lets the absence read as "not applicable" */
-                  if (!n[k] && k !== 'penetration') return '';
-                  return '<option value="' + k + '"' + (CBTEST.kind === k ? ' selected' : '') + '>'
-                    + testEsc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (n[k] || 0) + '</option>';
-                }).join('');
-          })()
-    +   '</select>'
-    +   '<select onchange="testSetArea(this.value)" style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
-    +     '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas · ' + testKindTotal() + '</option>'
-    +     testAreas().map(function (a) {
-            return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
-                 + testEsc(a.key + ' · ' + a.name) + ' · ' + a.n + '</option>'; }).join('')
-    +   '</select>'
-    /**
-     * ── ⭐⭐ THE SAME TWO CONTROLS AS THE REPORT, BECAUSE IT IS THE SAME CONFUSION ─────────────────────────
-     *
-     * Athi, 2026-09-12: *"in lab also we need to showcase filter and clear."*
-     *
-     * ⭐ A permanent Clear, in a fixed place — he settled that on the Report an hour ago and the reasoning
-     * carries: a control that only APPEARS is one you must notice before you can use it, and not noticing is
-     * the whole problem. ⚠️ Here it matters more, because the lab filters ITSELF on open.
-     */
-    /**
-     * ⭐ LIST or TREE, as two quiet buttons showing which one you are in. ⚠️ Not a dropdown: with exactly two
-     * choices a dropdown hides the one you are not in and costs a click to discover — and Athi settled the
-     * same question on the Report (*"no, give a clear filter button"*): you cannot hover over something to
-     * find out that hovering does anything.
-     */
     +   testViewToggleHTML()
     +   '<button onclick="testClearFilters()" ' + (CBTEST.kind || CBTEST.area ? '' : 'disabled ')
-    +     'title="Clear the kind and area filters — show every case" '
+    +     'title="Clear the kind and area filters \u2014 show every case" '
     +     'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;border-radius:7px;cursor:pointer;'
     +     'border:1px solid ' + (CBTEST.kind || CBTEST.area ? 'var(--blue,#3F66A6);color:var(--blue,#3F66A6)'
-                                                           : 'var(--line,#e7e3d8);color:var(--grey-2,#545A61);opacity:.55')
+                                                           : 'var(--grey-4,#646A72);color:var(--grey-2,#545A61);opacity:.55')
     +     ';background:var(--card,#fff)">Clear filters</button>'
     /**
      * ── ⚠️⚠️ THE PANEL FILTERS ITSELF ON OPEN, AND NEVER SAID SO ──────────────────────────────────────────
      *
      * `CBTEST.area` is set before the first paint from the run's focus, or GUESSED from the screen you were
-     * on. That is the right behaviour — testing what is in front of you is the natural thing — but a filter
-     * applied on your behalf and never mentioned is indistinguishable from a board that has lost your cases:
-     * the count is smaller than the Report's and nothing on screen explains the difference.
+     * on. That is right behaviour — testing what is in front of you is the natural thing — but a filter
+     * applied on your behalf and never mentioned is indistinguishable from a board that has lost your cases.
      *
-     * ⭐ So it says what is on, and — the part that matters — WHO CHOSE IT. "the panel opened here" is the
-     * sentence that was missing, and it is the only one that explains a filter nobody remembers setting.
+     * ⚠️ MORE load-bearing since the fold, not less: the kind and area SELECTS are behind the ⚙ now, so this
+     * row and Band 1's right-hand slot are the only visible statement that a filter is on at all.
      */
     +   (function () {
           var on = [];
@@ -1030,46 +985,6 @@ function testPaint() {
             + testEsc(on.join(' \u00b7 '))
             + '</div>';
         })()
-    /**
-     * ⭐⭐⭐ FOCUS. Athi: *"can we force an area to test? This area testing not done yet?"*
-     *
-     * ⚠️ IT PINS, IT DOES NOT LOCK — and that is deliberate, not a shortcut. A panel that refuses to show
-     * anything but one module is a panel somebody closes, and then nothing is tested at all: you have lost
-     * the only thing you actually had, which was their willingness. What this does instead is make the gap
-     * impossible to miss and count it down, which is the only pressure that works on someone doing you a
-     * favour.
-     */
-    +   '<select onchange="testSetFocus(this.value)" title="Focus — the area this sitting is meant to cover"'
-    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:190px">'
-    +     '<option value="">Focus: anywhere</option>'
-    +     CBTEST.cover.map(function (a) {
-            var left = a.untested;
-            return '<option value="' + testEsc(a.module_key) + '"'
-              + ((CBTEST.run.focus === a.module_key) ? ' selected' : '') + '>'
-              + testEsc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
-              + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
-    +   '</select>'
-    /**
-     * ⚠️⚠️ THIS SAID "manual · t0 · t1 · t2 · t3 · unit · regression" AND NOTHING ELSE.
-     *
-     * Athi: *"I spent time to understand what each dropdown is"* — and, on the ladder itself, *"T1, T2 are the
-     * test yardsticks for YOU."* They are: how much of the suite Claude runs before shipping and who authorises
-     * it. Seven bare tokens, four of them somebody else's working vocabulary, on the panel a tester lands on.
-     * ⭐ Each option now says what it is, and the internal four say whose they are.
-     */
-    +   '<select onchange="testSetKind(this.value)" title="Who is doing this run, and how much of it"'
-    +     ' style="font-size:var(--fs-2);padding:3px 5px;max-width:200px">'
-    +     [['manual', 'Me, by hand'], ['unit', 'An automated run'], ['regression', 'A full regression'],
-           ['t0', 'T0 · Claude, quick check'], ['t1', 'T1 · Claude, one spec'],
-           ['t2', 'T2 · Claude, one surface'], ['t3', 'T3 · Claude, everything']].map(function (k) {
-            return '<option value="' + k[0] + '"' + (CBTEST.run.kind === k[0] ? ' selected' : '') + '>'
-              + testEsc(k[1]) + '</option>'; }).join('')
-    +   '</select>'
-    /* ⚠️ ASKED FOR, NOT ASSUMED. Left blank the row still records the login that wrote it — which is the
-       truth either way; this only adds a name when a login is shared. */
-    +   '<input type="text" placeholder="' + (testEsc(testDefaultWho())) + '" value="' + testEsc(testWho()) + '"'
-    +     ' onchange="testSetWho(this.value)" title="Who is testing — kept on this device"'
-    +     ' style="font-size:var(--fs-2);padding:3px 5px;flex:1;min-width:90px">'
     + '</div>'
     /**
      * ⭐ THE SAME FOUR FIGURES AS THE REPORT, IN THE SAME ORDER. Athi, 2026-09-12: *"can we show the same
@@ -1142,6 +1057,7 @@ function testPaint() {
   /* ⚠️ THE HEAD IS WRITTEN SEPARATELY so that minimising can hide the body and keep this. */
   head.innerHTML = hd;
 
+  if (CBTEST.setup) { body.innerHTML = testSetupHTML(); return; }
   if (CBTEST.adding) { body.innerHTML = testAddHTML(); return; }
 
   /* ── the list ── */
@@ -7485,6 +7401,114 @@ function testViewToggleHTML() {
     + '</select>'
     + '</span>';
 }
+function testSetupToggle() {
+  CBTEST.setup = !CBTEST.setup;
+  /* ⚠ the two body views are mutually exclusive: opening one must close the other, or the branch order
+     silently decides which of the two the reader gets */
+  if (CBTEST.setup) CBTEST.adding = false;
+  testPaint();
+}
+
+/**
+ * ⭐ EVERY CONTROL THAT WAS IN THE HEADER AND IS NOT USED EVERY MINUTE. Grouped by the question it answers,
+ * with the group name doing the labelling — so each control still needs no sentence of its own.
+ */
+function testSetupHTML() {
+  var sel = 'font:inherit;font-size:var(--fs-2);padding:5px 7px;border:1px solid var(--grey-4,#646A72);'
+    + 'border-radius:7px;background:var(--card,#fff);color:var(--ink,#20303b);max-width:100%';
+  var row = function (label, control) {
+    return '<div style="margin-bottom:11px">' + testLab(label) + control + '</div>';
+  };
+
+  var h = '<div style="flex:1;overflow:auto;padding:11px 12px;min-height:0">';
+
+  /* ── what this sitting is ── */
+  h += testSec('This sitting');
+  h += row('Who is testing',
+    '<input type="text" placeholder="' + testEsc(testDefaultWho()) + '" value="' + testEsc(testWho()) + '"'
+    + ' onchange="testSetWho(this.value)" style="' + sel + ';width:100%;box-sizing:border-box">');
+  h += row('How it is being run',
+    '<select onchange="testSetKind(this.value)" style="' + sel + '">'
+    + [['manual', 'Me, by hand'], ['unit', 'An automated run'], ['regression', 'A full regression'],
+       ['t0', 'T0 \u00b7 Claude, quick check'], ['t1', 'T1 \u00b7 Claude, one spec'],
+       ['t2', 'T2 \u00b7 Claude, one surface'], ['t3', 'T3 \u00b7 Claude, everything']].map(function (k) {
+        return '<option value="' + k[0] + '"' + (CBTEST.run.kind === k[0] ? ' selected' : '') + '>'
+          + testEsc(k[1]) + '</option>'; }).join('')
+    + '</select>');
+  /* ⭐ FOCUS PINS, IT DOES NOT LOCK. A panel that refuses to show anything but one module is a panel somebody
+     closes — and then nothing is tested at all. It makes the gap impossible to miss and counts it down. */
+  h += row('Focus \u2014 the area this sitting should cover',
+    '<select onchange="testSetFocus(this.value)" style="' + sel + '">'
+    + '<option value="">Anywhere</option>'
+    + CBTEST.cover.map(function (a) {
+        var left = a.untested;
+        return '<option value="' + testEsc(a.module_key) + '"'
+          + ((CBTEST.run.focus === a.module_key) ? ' selected' : '') + '>'
+          + testEsc(a.module_key) + (left ? ' \u00b7 ' + left + ' left' : ' \u00b7 done')
+          + (a.high_untested ? ' \u26a0' : '') + '</option>'; }).join('')
+    + '</select>');
+
+  /* ── what the board is showing ── */
+  h += testSec('What the board shows');
+  h += row('Kind of test',
+    '<select onchange="testSetKindFilter(this.value)" style="' + sel + '">'
+    + (function () {
+        var c = testKindCounts();
+        var tot = Object.keys(c).reduce(function (a, k) { return a + c[k]; }, 0);
+        return '<option value=""' + (CBTEST.kind ? '' : ' selected') + '>Every kind \u00b7 ' + tot + '</option>'
+          + TEST_KINDS.map(function (k) {
+              /* ⚠️ an empty category we KNOW should exist is still offered — "Penetration · 0" states a fact,
+                 while leaving it out lets the absence read as "not applicable" */
+              if (!c[k] && k !== 'penetration') return '';
+              return '<option value="' + k + '"' + (CBTEST.kind === k ? ' selected' : '') + '>'
+                + testEsc(TEST_KIND_LABEL[k]) + ' \u00b7 ' + (c[k] || 0) + '</option>';
+            }).join('');
+      })()
+    + '</select>');
+  h += row('Area',
+    '<select onchange="testSetArea(this.value)" style="' + sel + '">'
+    + '<option value=""' + (CBTEST.area ? '' : ' selected') + '>All areas \u00b7 ' + testKindTotal() + '</option>'
+    + testAreas().map(function (a) {
+        return '<option value="' + testEsc(a.key) + '"' + (CBTEST.area === a.key ? ' selected' : '') + '>'
+             + testEsc(a.key + ' \u00b7 ' + a.name) + ' \u00b7 ' + a.n + '</option>'; }).join('')
+    + '</select>');
+
+  /* ── the panel itself ── */
+  h += testSec('This panel');
+  /* ⭐ the corner still drags freely; this is for the times when you know what you want and do not want to
+     aim at a 16-pixel triangle to get it */
+  h += row('Size',
+    '<select onchange="testSize(this.value)" style="' + sel + '">'
+    + [['', 'Size\u2026'], ['normal', 'Normal'], ['wide', 'Wide'], ['tall', 'Tall'],
+       ['large', 'Large'], ['full', 'Full screen']].map(function (o) {
+        return '<option value="' + o[0] + '">' + o[1] + '</option>'; }).join('')
+    + '</select>');
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px">'
+    /**
+     * ⚠️ IT OPENS A TAB RATHER THAN RENDERING HERE. A completion report is a wide document that gets PRINTED
+     * and filed; squeezing ten clauses into a 420px panel makes it unreadable in the one place it has to be
+     * legible — on paper, to somebody who was not here.
+     */
+    + '<button onclick="testReport()" title="Test Completion Report (ISO/IEC/IEEE 29119-3)" '
+    +   'style="' + TEST_BTN_SMALL + '">\u2637 Report</button>'
+    /**
+     * ⚠️ A FLOATING PANEL CAN NEVER SOLVE "get out of the way": whatever it is not covering, it is still in
+     * front of. This is the app booted with the lab open and its own shell hidden — a named target, so
+     * pressing twice raises the window already open instead of stacking a second one.
+     */
+    + '<button onclick="testPopOut()" title="Open the board in its own window \u2014 the app on one screen, '
+    +   'the scripts on the other" style="' + TEST_BTN_SMALL + '">\u2197 Own window</button>'
+    + '<button onclick="testAddOpen()" title="Add a case for something you just found" '
+    +   'style="' + TEST_BTN_SMALL + '">+ Case</button>'
+    + '<button onclick="testGuide(true)" title="How to use this" '
+    +   'style="' + TEST_BTN_SMALL + '">\u24d8 Guide</button>'
+    + '</div>';
+
+  h += '<div style="margin-top:16px">'
+    + '<button onclick="testSetupToggle()" style="' + TEST_BTN_PRIMARY + '">Done</button></div>';
+  return h + '</div>';
+}
+
 function testFoldGet() {
   try { return JSON.parse(localStorage.getItem('cb_test_fold_panel') || '{}'); } catch (_) { return {}; }
 }
@@ -8035,7 +8059,12 @@ function testReport() {
  */
 function testAddOpen(area) {
   CBTEST.adding = true;
-  CBTEST.addTo = area || '';          /* ⭐ '' means "you pressed the header +", which is a different intent */
+  /* ⚠️ THE TWO BODY VIEWS ARE MUTUALLY EXCLUSIVE AND BOTH DIRECTIONS MUST SAY SO. testSetupToggle clears
+     `adding`; without the mirror here, opening the add-case form from inside Setup left both flags true and
+     the BRANCH ORDER in testPaint silently decided which one the reader got — a state that looks like a
+     working panel and is a coin toss. [[feedback-action-state-discipline]] */
+  CBTEST.setup = false;
+  CBTEST.addTo = area || '';          /* ⭐ '' means "you pressed +", which is a different intent */
   testPaint();
 }
 function testAddClose() { CBTEST.adding = false; CBTEST.addTo = ''; testPaint(); }
