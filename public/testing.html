@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Test lab · Chit &amp; Bridge</title>
+<title>Test Report · Chit &amp; Bridge</title>
 <!--
   THE TEST BOARD — the test cases as a thing you can tap, not a PDF you cannot write on.
 
@@ -30,12 +30,43 @@
     --font-ui:Inter,system-ui,-apple-system,sans-serif;
     --prose:78ch;   /* ⭐ the READING measure — belongs to prose, not to the page (see main, below) */
     --ink:#20303b; --ink-2:#3a4048; --grey:#8a949c; --grey-2:#545A61;
+    /**
+     * ⚠️⚠️ --grey-4 IS THE PRESSABLE EDGE, AND THIS PAGE HAD NO SUCH TOKEN. Every button, select and input
+     * here drew its border in --line, which measures 1.19:1 against --card — three times under WCAG
+     * 1.4.11's 3:1 for a control boundary. That is Athi's own complaint, measured: *"it does not give a feel
+     * that I can press the button… the entire box looks a grey of text."* The panel was fixed weeks-worth of
+     * work ago; this surface never was.
+     * ⭐ The value is the app's own --grey-4 (app.html), named here so the two surfaces can be checked
+     * against each other rather than drifting apart quietly.
+     * ⚠️ CONTROLS ONLY. --line stays on card edges, row rules and section separators: those separate rather
+     * than invite, and 1.4.11 does not ask decoration for 3:1.
+     */
+    --grey-4:#646A72;
     --line:#e7e3d8; --line-2:#efece4; --paper:#faf8f3; --card:#fff;
     --blue:#3F66A6; --blue-tint:#E9F0FA;
     --ok:#2c7a43; --ok-tint:#e6f4ea;
     --bad:#b4453f; --bad-tint:#fbeceb;
     --warn:#8a5a1e; --warn-tint:#fbf3e3;
     --neutral-tint:#EEF1F5;
+    /**
+     * ── ⭐⭐ THE APP'S NAMES FOR THE SAME THREE MEANINGS ─────────────────────────────────────────────────
+     *
+     * This page grew its own palette: --ok / --bad / --warn. The app calls the same three --ok-2 / --disp /
+     * --warn-2. The VALUES are near-identical, which makes the split worse rather than better: nothing warns
+     * you when they drift, and --bad #b4453f vs --disp #b4453f is already one edit from disagreeing.
+     *
+     * ⭐ ALIASES, NOT A RENAME — the values are unchanged, so nothing moves on screen, and the ~60 existing
+     * --ok/--bad/--warn call sites do not all have to migrate in one commit. New code writes the app's names
+     * and the two surfaces are now checkable against each other.
+     *
+     * ⚠️ I NEEDED THIS IMMEDIATELY AND FOUND OUT THE HARD WAY: the §3b renderer above was written in the
+     * app's vocabulary and referenced three tokens this page had never defined. An undefined custom property
+     * is invalid at computed-value time — a `color` falls back to inherited, an SVG `fill` falls back to
+     * BLACK — and neither says a word. The same trap is recorded at the chart palette below, where --flat
+     * painted the largest slice of every chart black. [[feedback-silence-is-the-bug]]
+     */
+    --disp:var(--bad); --ok-2:var(--ok); --warn-2:var(--warn);
+    --danger-tint:var(--bad-tint);
     /**
      * ── ⚠️⚠️ 11px FOR THE TEXT THAT CARRIES THE MEANING ──────────────────────────────────────────────────
      *
@@ -137,12 +168,14 @@
   .bar{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px;
         border-bottom:1px solid var(--line); background:var(--card); }
   .bar label{ font-size:var(--ui); color:var(--grey-2); text-transform:uppercase; letter-spacing:.06em; }
-  select, input[type=text]{ font:inherit; font-size:var(--ui); padding:5px 7px; border:1px solid var(--line);
+  select, input[type=text]{ font:inherit; font-size:var(--ui); padding:5px 7px; border:1px solid var(--grey-4);
         border-radius:7px; background:#fff; color:var(--ink); min-height:32px; }
   input[type=text]{ min-width:120px; flex:1 1 140px; }
-  .btn{ font:inherit; font-size:var(--ui); padding:6px 11px; border:1px solid var(--line); border-radius:8px;
+  .btn{ font:inherit; font-size:var(--ui); padding:6px 11px; border:1px solid var(--grey-4); border-radius:8px;
         background:var(--card); color:var(--ink); cursor:pointer; white-space:nowrap; min-height:32px; }
   .btn.pri{ background:var(--blue); color:#fff; border-color:var(--blue); }
+  /* ⚠️ THE REPORT HAD NO PRESSABLE-EDGE TOKEN. --line is 1.19:1 on --card; this is the app's own value
+     (app.html --grey-4), named here so the two surfaces can be checked against each other. */
   .btn:focus-visible, select:focus-visible, input:focus-visible{ outline:2px solid var(--blue); outline-offset:1px; }
 
 /**
@@ -171,7 +204,7 @@
   html{ font-size:100%; }
   .tsize{ display:inline-flex; gap:0; margin-inline-start:auto; align-items:center; }
   .tsize button{ font:inherit; font-size:var(--ui); line-height:1; padding:5px 9px; cursor:pointer;
-        border:1px solid var(--line); background:var(--card); color:var(--ink-2); min-height:30px; }
+        border:1px solid var(--grey-4); background:var(--card); color:var(--ink-2); min-height:30px; }
   .tsize button:first-child{ border-radius:7px 0 0 7px; }
   .tsize button:last-child{ border-radius:0 7px 7px 0; border-inline-start:0; }
   .tsize button:hover{ background:var(--neutral-tint); }
@@ -588,8 +621,8 @@
   .rep .tag{ display:inline-block; font-size:var(--fs-1); font-weight:700; letter-spacing:.07em;
         text-transform:uppercase; border-radius:5px; padding:2px 8px; margin-bottom:9px; }
   .rep .tag.m{ background:var(--ok-tint); color:var(--ok); }
-  .rep .tag.a{ background:#f3e2bd; color:var(--warn); }
-  .rep .kv{ display:grid; grid-template-columns:auto 1fr; gap:5px 16px; font-size:var(--fs-2); }
+  .rep .tag.a{ background:var(--warn-tint); color:var(--warn); }
+  .rep .kv{ display:grid; grid-template-columns:auto minmax(0,1fr); gap:5px 16px; font-size:var(--fs-2); }
   .rep .kv dt{ color:var(--grey-2); white-space:nowrap; }
   /* ⭐ each block says what its rows ARE — a feature and a folder are not the same kind of row */
   .rep h4.repgrp{ font-size:var(--fs-2); margin:14px 0 6px; font-weight:700; color:var(--ink); }
@@ -611,7 +644,7 @@
   .rep .inc .k2{ font-family:ui-monospace,Menlo,monospace; font-weight:700; font-size:var(--fs-1); }
   .rep .caveat{ margin-top:9px; font-size:var(--fs-2); line-height:1.55; }
   .rep .caveat li{ margin-bottom:4px; }
-  .rep .sign{ display:grid; grid-template-columns:1fr 1fr; gap:26px; margin-top:18px; }
+  .rep .sign{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:26px; margin-top:18px; }
   .rep .sign div{ border-top:1px solid var(--ink); padding-top:5px; font-size:var(--fs-1); color:var(--grey-2); }
   /* ⚠️ a report is printed and filed. Everything that is a CONTROL must not be on the paper. */
   @media print{
@@ -695,7 +728,7 @@
 <div class="frozen">
 <header>
   <div class="htop">
-    <h1>Test lab</h1>
+    <h1>Test Report</h1>
     <span class="sub" id="who">…</span>
     <span class="sub" style="opacity:.75">· cases, results and the completion report — ISO/IEC/IEEE 29119-3</span>
   </div>
@@ -1745,14 +1778,28 @@ function textSize(step){
 }
 applyTextSize();
 
+/**
+ * ⭐ ONE SPELLING OF A VERDICT. The board says "Failed"; this page used to say "FAIL". The words are part of
+ * the shared vocabulary (teststatus.LABEL) and a document that shouts them reads as a different system.
+ */
+function sentence(w) {
+  var t = String(w || '').trim();
+  if (!t) return '\u2014';
+  var LONG = { pass: 'Passed', fail: 'Failed', blocked: 'Blocked', skip: 'Skipped', skipped: 'Skipped' };
+  if (LONG[t.toLowerCase()]) return LONG[t.toLowerCase()];
+  return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+}
+
 function setView(v){
   VIEW = v;
   document.getElementById('t_cases').className = (v === 'cases') ? 'on' : '';
   document.getElementById('t_sum').className = (v === 'summary') ? 'on' : '';
-  /* the case filters mean nothing on either of the other two views */
-  /* the case filters mean nothing on the summary — hide them rather than leave them inert */
+  /* the case filters mean nothing off the Cases tab — hidden rather than left inert */
   var bars = document.querySelectorAll('.bar');
   for (var i = 1; i < bars.length; i++) bars[i].className = (v === 'cases') ? 'bar' : 'bar hide';
+  /* ⭐ the case tally counts CASES — on the three document tabs it describes a tab you are not on */
+  var tally = document.getElementById('tally');
+  if (tally) tally.style.display = (v === 'cases' || v === 'summary') ? '' : 'none';
   document.getElementById('t_rep').className = (v === 'report') ? 'on' : '';
   document.getElementById('t_rel').className = (v === 'reliability') ? 'on' : '';
   document.getElementById('t_try').className = (v === 'try') ? 'on' : '';
@@ -2105,7 +2152,7 @@ async function paintReliability(){
       + '<td class="num' + (c.failed ? ' bad' : ' dim') + '">' + c.failed + '</td>'
       /* \u2b50 the number that decides the order, and the one people will not expect to be here */
       + '<td class="num' + (c.flips >= 2 ? ' bad' : ' dim') + '">' + c.flips + '</td>'
-      + '<td><span class="' + lastCls + '">' + esc((c.last_status || '').toUpperCase()) + '</span>'
+      + '<td><span class="' + lastCls + '">' + esc(sentence(c.last_status)) + '</span>'
       +   '<span class="sub">' + ago(c.last_seen) + '</span></td>'
       /**
        * ⭐⭐ THE ACTION, BESIDE THE JUDGEMENT. Athi, 2026-09-12: *"status — red every time, not able to
@@ -2289,7 +2336,7 @@ async function paintReport(){
       inner = items.length
         ? items.map(function (x) {
             return '<div class="inc"><span class="k2">' + esc(x.case_key) + '</span> '
-              + '<span class="' + (x.status === 'fail' ? 'bad' : 'warnn') + '">' + esc(x.status.toUpperCase())
+              + '<span class="' + (x.status === 'fail' ? 'bad' : 'warnn') + '">' + esc(sentence(x.status))
               + '</span> <span class="dim">' + esc(x.tester_name || '') + ' \u00b7 '
               + new Date(x.at).toLocaleString() + '</span>'
               + (x.note ? '<div style="margin-top:3px">' + esc(x.note) + '</div>' : '')
@@ -3414,7 +3461,7 @@ async function openRun(id){
       var cls = x.status === 'pass' ? 'big' : (x.status === 'fail' ? 'bad' : (x.status === 'blocked' ? 'warnn' : 'dim'));
       h += '<tr><td><span class="area">' + esc(x.case_key) + '</span>'
         +   '<span class="sub">' + esc(x.run_kind || '') + (x.layer ? ' \u00b7 ' + esc(x.layer) : '') + '</span></td>'
-        + '<td><span class="' + cls + '">' + esc(x.status.toUpperCase()) + '</span></td>'
+        + '<td><span class="' + cls + '">' + esc(sentence(x.status)) + '</span></td>'
         + '<td class="dim">' + esc(x.tester_name || '') + '</td>'
         + '<td>' + esc(x.note || '') 
         +   (x.evidence ? '<span class="sub">' + esc(x.evidence) + '</span>' : '') + '</td></tr>';

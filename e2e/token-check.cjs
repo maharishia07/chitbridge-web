@@ -75,9 +75,60 @@ FILES.forEach((f) => {
   }
 });
 
+/**
+ * ── ⭐⭐ THE STANDALONE PAGES GET THEIR OWN PASS ───────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THIS GUARD MISSED A REAL FAULT AND I WROTE THE FAULT. testing.html is not part of the app: it carries
+ * its OWN :root palette, so it was in neither list — not in FILES (which is app.html + app/*.js) and not in
+ * the definition scan. I then wrote a new section of the Report in the APP's vocabulary (--disp, --ok-2,
+ * --warn-2), three tokens that page had never defined, and every guard in the chain passed.
+ *
+ * ⚠️ An undefined custom property is invalid at computed-value time and says NOTHING: a `color` silently
+ * falls back to inherited, and an SVG `fill` falls back to BLACK. This page has already been bitten once —
+ * see the note at its chart palette, where --flat painted the largest slice of every chart black.
+ *
+ * ⭐ So each standalone page is checked against ITS OWN :root, in the same shape as the app pass above.
+ * [[feedback-silence-is-the-bug]]
+ */
+/**
+ * ⚠️ A TOKEN NAMED INSIDE A COMMENT IS NOT A REFERENCE — and this bit immediately. The very first run
+ * reported `--flat` at testing.html, which is not a use at all: it is the note recording that --flat was
+ * REMOVED because, being undefined, it painted the largest slice of every chart black. A guard that fails on
+ * the comment describing an old fix teaches people to delete the comment.
+ * ⭐ Comment BODIES are blanked, not stripped, so every byte offset — and therefore every reported line
+ * number — stays exactly where it was.
+ */
+const maskComments = (s) => s
+  .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+  .replace(/<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, ' '));
+
+const SOLO = ['testing.html'];
+SOLO.forEach((f) => {
+  const raw = fs.readFileSync(path.join(WEB, f), 'utf8');
+  const src = maskComments(raw);
+  const css = src.slice(0, src.indexOf('</style>'));
+  const own = new Set();
+  let d; const dre = /(--[a-z0-9-]+)\s*:/gi;
+  while ((d = dre.exec(css))) {
+    const before = css.slice(Math.max(0, d.index - 5), d.index);
+    if (/var\(\s*$/.test(before)) continue;   /* a fallback inside var(), not a definition */
+    own.add(d[1]);
+  }
+  const re = /var\(\s*(--[a-z0-9-]+)\s*([,)])/g;
+  let m;
+  while ((m = re.exec(src))) {
+    const tok = m[1], hasFallback = m[2] === ',';
+    if (own.has(tok) || hasFallback) continue;
+    /* ⚠ only real uses: a token named inside a comment is not a reference */
+    const line = src.slice(0, m.index).split('\n').length;
+    (bare[tok] = bare[tok] || []).push(f + ':' + line);
+  }
+});
+
 const names = Object.keys(bare);
 console.log('\n══ TOKEN CHECK ══');
-console.log('  ' + defined.size + ' tokens defined · ' + names.length + ' referenced bare and never defined\n');
+console.log('  ' + defined.size + ' tokens defined · ' + names.length + ' referenced bare and never defined');
+console.log('  scanned: ' + FILES.length + ' app file(s) + ' + SOLO.length + ' standalone page(s)\n');
 names.forEach((t) => console.log('  ✗ ' + t.padEnd(24) + bare[t].length + '×   ' + bare[t].slice(0, 3).join('  ')));
 if (!names.length) console.log('  ✓ every bare var(--x) resolves to a defined token');
 console.log('');
