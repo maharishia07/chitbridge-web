@@ -92,3 +92,44 @@ test('[RETEST-01] a fix is a claim until the person who raised it says otherwise
   const whys = (four.history || []).filter((h) => h.why).length;
   expect(whys, 'the two verdicts must each carry their reason').toBeGreaterThanOrEqual(2);
 });
+
+test('[RETEST-02] the news actually reaches the other tab, and carries no finding', async ({ page }) => {
+  test.setTimeout(240000);
+  await mintEntity(page, { fresh: true, name: 'News ' + Date.now().toString().slice(-6) });
+  const token = await page.evaluate(() => SESSION.token);
+  const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
+
+  /**
+   * ⚠️⚠️ THE STATE MACHINE PASSING PROVES NOTHING ABOUT THE WIRE. lib/trips emitted nothing for six days with
+   * every test of trips itself green, because the fault was in the plumbing around it. So this listens where
+   * the app listens: cbPushArrived is a top-level function declaration in a classic script, which makes it a
+   * property of window and therefore wrappable — the same door the real SSE stream comes through.
+   */
+  await page.evaluate(() => {
+    window.__news = [];
+    const orig = window.cbPushArrived;
+    window.cbPushArrived = function (d) { try { window.__news.push(d); } catch (_) {} return orig.apply(this, arguments); };
+  });
+  /* the stream is opened on sign-in; give it a moment to be up before anything is said down it */
+  await page.waitForTimeout(3000);
+
+  const r = await page.request.post(API + '/api/testing/incidents', {
+    headers: H, data: { observed: 'The bell should ring for this', severity: 'Sev-3', screen_code: 'CAT001' },
+  });
+  expect(r.ok(), 'could not raise the incident').toBeTruthy();
+  const ref = (await r.json()).ref;
+
+  await expect.poll(
+    async () => (await page.evaluate(() => window.__news || [])).filter((d) => d && d.kind === 'test').length,
+    { message: 'nothing came down the pipe — the emit is not wired, or the stream is not up', timeout: 30000 },
+  ).toBeGreaterThan(0);
+
+  const ev = (await page.evaluate(() => window.__news)).filter((d) => d.kind === 'test')[0];
+  expect(ev.what).toBe('incident');
+  expect(ev.state).toBe('raised');
+  expect(ev.ref).toBe(ref);
+  expect(ev.by, 'the actor must be named by id, or a tab cannot skip its own action').toBeTruthy();
+  /* ⚠️ AND NOT THE FINDING ITSELF. An event carrying the observation is a second source of truth about a
+     fault, and the day it disagrees with the board nobody can say which is right. */
+  expect(JSON.stringify(ev)).not.toContain('The bell should ring');
+});
