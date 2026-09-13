@@ -1409,6 +1409,40 @@ function testSetView(v) {
  * inside each, and can show everything ever captured — the audience is developers and testers, so it says the
  * state, the priority, who raised it and from which case, without softening any of it.
  */
+/**
+ * ── ⚠️⚠️⚠️ A FILTER AND AN ACTION MUST NEVER LOOK ALIKE, AND MUST NEVER SHARE A WORD ──────────────────────
+ *
+ * Athi, 2026-09-13: *"when I update as resolved, it is not getting reflected?"* and *"the status is not
+ * changing when I close it — it has to change the status, and the closed one should leave the queue."*
+ *
+ * ⚠️⚠️ AND HE WAS PRESSING THE FILTER. Driving it from outside settled it in one run: the wire carried NO
+ * PATCH at all, only `GET /incidents?state=resolved`. The row of chips at the top of the Incidents view reads
+ * Open · Raised · Being looked at · RESOLVED · CLOSED · Everything — and the action on the row said RESOLVED
+ * too, in the SAME `base` style string, forty pixels below. Pressing the top one showed an empty list
+ * ("nothing in this state"), which reads exactly like "I marked it and nothing happened".
+ *
+ * ⭐ THE FIX IS NOT A BIGGER BUTTON, IT IS TWO DIFFERENT KINDS OF THING LOOKING DIFFERENT. A filter narrows
+ * what you SEE; an action changes what IS. So: the filters are quiet, unbordered, prefixed "Show:", and the
+ * actions are bordered, inked, on their own line, prefixed "Mark:" and phrased as verbs. Same information,
+ * and now nobody can press one meaning the other.
+ *
+ * ⚠️ The words themselves cannot all change — "resolved" IS the state, in the filter and in the action alike.
+ * Which is exactly why the LOOK has to carry the difference.
+ */
+var TEST_CHIP = 'font:inherit;font-size:var(--fs-1);padding:2px 9px;border:0;border-radius:11px;'
+  + 'cursor:pointer;margin-inline-end:4px;';
+var TEST_CHIP_ON = 'background:var(--grey-2,#545A61);color:#fff';
+var TEST_CHIP_OFF = 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)';
+var TEST_ACT = 'font:inherit;font-size:var(--fs-1);padding:3px 10px;border:1px solid '
+  + 'var(--grey-2,#545A61);border-radius:7px;cursor:pointer;margin-inline-end:5px;'
+  + 'background:var(--card,#fff);color:var(--ink,#20303b);font-weight:700';
+/** ⭐ the actions never float loose in a metadata line again: they are a row, and they are labelled */
+function testActRow(acts) {
+  if (!acts) return '';
+  return '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:5px">'
+    + '<span style="font-size:var(--fs-1);color:var(--note)">Mark:</span>' + acts + '</div>';
+}
+
 var TEST_REQ_STATES = ['raised', 'accepted', 'implemented', 'rejected'];
 function testReqFilterGet() {
   try { var v = localStorage.getItem('cb_test_reqf'); return v || 'open'; } catch (_) { return 'open'; }
@@ -1529,16 +1563,15 @@ async function testReqSend() {
 
 function testReqHTML() {
   var d = CBTEST.reqs, f = testReqFilterGet();
-  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
-  var chips = [['open', 'Not actioned'], ['raised', 'Raised'], ['accepted', 'Accepted'],
-               ['implemented', 'Implemented'], ['rejected', 'Rejected'], ['all', 'Everything']]
+  /* ⚠️ Accepted and Rejected appear in BOTH rows here too — quiet chips above, inked verbs on the row */
+  var chips = '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+    + [['open', 'Not actioned'], ['raised', 'Raised'], ['accepted', 'Accepted'],
+       ['implemented', 'Implemented'], ['rejected', 'Rejected'], ['all', 'Everything']]
     .map(function (x) {
       var on = f === x[0];
       var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
-      return '<button onclick="testReqFilter(\'' + x[0] + '\')" style="' + base
-        + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
-              : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+      return '<button data-testid="reqf-' + x[0] + '" onclick="testReqFilter(\'' + x[0] + '\')" '
+        + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
         + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
     }).join('');
 
@@ -1557,13 +1590,18 @@ function testReqHTML() {
 
   var PRI = { High: 'var(--disp,#B3261E)', Medium: 'var(--grey-2,#545A61)', Low: 'var(--note,#8a8378)' };
   h += list.map(function (q) {
+    var ract = function (state, label, title) {
+      return '<button data-testid="req-act-' + state + '" title="' + title + '" '
+        + 'onclick="testReqSet(\'' + q.definition_id + '\',\'' + state + '\')" style="' + TEST_ACT
+        + '">' + label + '</button>';
+    };
     var acts = '';
     if (q.state === 'raised') {
-      acts = '<button onclick="testReqSet(\'' + q.definition_id + '\',\'accepted\')" style="' + base + '">Accept</button>'
-           + '<button onclick="testReqSet(\'' + q.definition_id + '\',\'rejected\')" style="' + base + '">Reject</button>';
+      acts = ract('accepted', 'Accept it', 'Agree it should be built \u2014 the person who raised it is told')
+           + ract('rejected', 'Reject it', 'Say no, with the reason \u2014 the person who raised it is told');
     } else if (q.state === 'accepted') {
-      acts = '<button onclick="testReqSet(\'' + q.definition_id + '\',\'implemented\')" style="' + base + '">Implemented</button>'
-           + '<button onclick="testReqSet(\'' + q.definition_id + '\',\'rejected\')" style="' + base + '">Reject</button>';
+      acts = ract('implemented', 'It is built', 'It exists now')
+           + ract('rejected', 'Reject it', 'Say no, with the reason');
     }
     return '<div style="border-bottom:1px solid var(--line,#e7e3d8);padding:7px 0">'
       + '<div style="display:flex;align-items:baseline;gap:7px;flex-wrap:wrap">'
@@ -1790,16 +1828,15 @@ async function testIncSend() {
 
 function testIncHTML() {
   var d = CBTEST.incs, f = testIncFilterGet();
-  var base = 'font:inherit;font-size:var(--fs-1);padding:2px 8px;border:1px solid var(--line,#e7e3d8);'
-    + 'border-radius:7px;cursor:pointer;margin-inline-end:5px;';
-  var chips = [['open', 'Open'], ['raised', 'Raised'], ['investigating', 'Being looked at'],
-               ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'Everything']]
+  /* ⚠️ these NARROW WHAT YOU SEE and change nothing — see the note above TEST_CHIP for what that cost */
+  var chips = '<span style="font-size:var(--fs-1);color:var(--note);margin-inline-end:5px">Show:</span>'
+    + [['open', 'Open'], ['raised', 'Raised'], ['investigating', 'Being looked at'],
+       ['resolved', 'Resolved'], ['closed', 'Closed'], ['all', 'Everything']]
     .map(function (x) {
       var on = f === x[0];
       var n = d && d.counts ? (x[0] === 'open' ? d.open : (x[0] === 'all' ? d.total : d.counts[x[0]])) : null;
-      return '<button onclick="testIncFilter(\'' + x[0] + '\')" style="' + base
-        + (on ? 'background:var(--grey-2,#545A61);color:#fff;border-color:var(--grey-2,#545A61)'
-              : 'background:var(--card,#fff);color:var(--grey-2,#545A61)') + '">'
+      return '<button data-testid="incf-' + x[0] + '" onclick="testIncFilter(\'' + x[0] + '\')" '
+        + 'style="' + TEST_CHIP + (on ? TEST_CHIP_ON : TEST_CHIP_OFF) + '">'
         + testEsc(x[1]) + (n == null ? '' : ' <b>' + n + '</b>') + '</button>';
     }).join('');
 
@@ -1830,14 +1867,24 @@ function testIncHTML() {
   var SEV = { 'Sev-1': 'var(--disp,#B3261E)', 'Sev-2': 'var(--disp,#B3261E)',
               'Sev-3': 'var(--grey-2,#545A61)', 'Sev-4': 'var(--note,#8a8378)' };
   h += list.map(function (q) {
+    /**
+     * ⭐ VERBS, AND THEY SAY WHAT THEY WILL DO. "Resolved" beside a filter that also says "Resolved" is a
+     * word, not an instruction. "Mark it fixed" cannot be read as a way of looking at the list.
+     */
+    var act = function (state, label, title) {
+      return '<button data-testid="inc-act-' + state + '" title="' + title + '" '
+        + 'onclick="testIncSet(\'' + q.definition_id + '\',\'' + state + '\')" style="' + TEST_ACT
+        + '">' + label + '</button>';
+    };
     var acts = '';
     if (q.state === 'raised') {
-      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'investigating\')" style="' + base + '">Looking at it</button>'
-           + '<button onclick="testIncSet(\'' + q.definition_id + '\',\'resolved\')" style="' + base + '">Resolved</button>';
+      acts = act('investigating', 'I am looking at it', 'Say somebody has picked this up')
+           + act('resolved', 'Mark it fixed', 'You believe it is fixed \u2014 the person who raised it is asked to retest');
     } else if (q.state === 'investigating') {
-      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'resolved\')" style="' + base + '">Resolved</button>';
+      acts = act('resolved', 'Mark it fixed', 'You believe it is fixed \u2014 the person who raised it is asked to retest');
     } else if (q.state === 'resolved') {
-      acts = '<button onclick="testIncSet(\'' + q.definition_id + '\',\'closed\')" style="' + base + '">Close</button>';
+      acts = act('closed', '\u2713 Retested \u2014 close it', 'You have looked and it holds. This ends it.')
+           + act('raised', '\u2717 Still broken', 'Send it back to whoever fixed it');
     }
     /**
      * ⭐ SEVERITY CAN BE RE-GRADED WHILE THE INCIDENT IS STILL OPEN, and only then. What looked like one
@@ -1887,8 +1934,11 @@ function testIncHTML() {
       + '<div style="font-size:var(--fs-1);color:var(--note);margin-top:3px">'
       +   testEsc(q.raised_by || 'someone')
       +   (q.happened_at ? ' \u00b7 ' + testEsc(String(q.happened_at).replace('T', ' ').slice(0, 16)) : '')
-      +   (acts ? '<span style="margin-inline-start:9px">' + acts + '</span>' : '')
-      + '</div></div>';
+      + '</div>'
+      /* ⚠️ ON ITS OWN LINE. Buried at the end of a grey "who and when" line, an action reads as more
+         metadata — and the thing that looked like a button was the filter at the top of the page. */
+      + testActRow(acts)
+      + '</div>';
   }).join('');
   return h;
 }
@@ -4983,14 +5033,36 @@ function testFindings() {
   return out.sort(function (a, b) { return String(b.at || '') < String(a.at || '') ? -1 : 1; });
 }
 
-/** ⚠️ the three kinds keep their own verbs — see the note above on why one "Close" would be a lie */
+/**
+ * ── ⚠️⚠️⚠️ "CLOSE" HAS TO CLOSE ─────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"the status is not changing when I close it — it has to change the status, and the
+ * closed one should leave the queue."*
+ *
+ * ⚠️⚠️ AND THE BUTTON SAID "Close" AND SENT `resolved`. On somebody else’s finding that is defensible — you
+ * fixed it, they verify it. On YOUR OWN finding it is nonsense: it put the row on the "waiting for your
+ * retest" shelf and asked you to verify a decision you had just taken. The state did not read `closed`, the
+ * row did not leave, and the person was right to call it broken.
+ *
+ * ⭐ SO EACH KIND USES ITS OWN CLOSING STATE, WHICH IS WHAT THE WORD ON THE BUTTON NOW SAYS:
+ *   a case        → retired. It is not a live check any more.
+ *   an incident   → `closed`, with a reason. Ended, and out of the queue.
+ *   a requirement → `accepted` or `rejected`. A backlog item is not “closed”, it is DECIDED, and the two
+ *                   decisions are not the same fact — so it gets two buttons and no "Close" at all.
+ *
+ * ⭐ Marking something FIXED (`resolved`) is still there and is still the right thing when you are fixing
+ * somebody else’s report — it is a separate button, phrased as what it does, and it hands them the retest.
+ */
 function testFindClose(kind, id, key, reopen) {
   try {
     if (kind === 'case') return testHandClose(key, reopen);
     if (kind === 'req') return testReqSet(id, reopen ? 'raised' : 'accepted');
-    if (kind === 'inc') return testIncSet(id, reopen ? 'raised' : 'resolved');
+    if (kind === 'inc') return testIncSet(id, reopen ? 'raised' : 'closed');
   } catch (_) {}
 }
+
+/** ⭐ the fixer’s half of the loop, from the same row: it goes to the raiser, not to the archive. */
+function testFindFixed(id) { try { return testIncSet(id, 'resolved'); } catch (_) {} }
 
 function testHandFilterGet() {
   try { return localStorage.getItem('cb_hand_filter') || 'open'; } catch (_) { return 'open'; }
@@ -5216,10 +5288,34 @@ function testHandHTML() {
         + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
         + 'padding:2px 9px;border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" '
         + 'onclick="testVerify(\'' + testEsc(String(x.id || '')) + '\',false)">\u2717 Still broken</button>'
+      /**
+       * ⚠️ THE WORD ON THE BUTTON IS A PROMISE ABOUT THE STATE IT WILL WRITE. A requirement is DECIDED, not
+       * closed, and the two decisions are different facts — so it gets both and neither is called "Close".
+       */
+      : shut ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);'
+        + 'padding:2px 9px" onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || ''))
+        + '\',\'' + testEsc(String(x.key || '')) + '\',true)">Open again</button>'
+      : x.kind === 'req'
+      ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
+        + 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
+        + 'onclick="testReqSet(\'' + testEsc(String(x.id || '')) + '\',\'accepted\')">'
+        + '\u2713 Accept it</button> '
+        + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
+        + 'border-color:var(--disp,#B3261E);color:var(--disp,#B3261E)" '
+        + 'onclick="testReqSet(\'' + testEsc(String(x.id || '')) + '\',\'rejected\')">'
+        + '\u2717 Reject it</button>'
+      : x.kind === 'inc'
+      ? '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px;'
+        + 'border-color:var(--ok-2,#1B7F4B);color:var(--ok-2,#1B7F4B)" '
+        + 'title="You have looked and it is done. This ends it and takes it off the board." '
+        + 'onclick="testFindClose(\'inc\',\'' + testEsc(String(x.id || '')) + '\',\'\',false)">'
+        + '\u2713 Close it</button> '
+        + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
+        + 'title="You believe it is fixed \u2014 the person who raised it is asked to retest" '
+        + 'onclick="testFindFixed(\'' + testEsc(String(x.id || '')) + '\')">Mark it fixed</button>'
       : '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:2px 9px" '
       +     'onclick="testFindClose(\'' + x.kind + '\',\'' + testEsc(String(x.id || '')) + '\',\''
-      +     testEsc(String(x.key || '')) + '\',' + (shut ? 'true' : 'false') + ')">'
-      +     (shut ? 'Open again' : '\u2713 Close') + '</button>')
+      +     testEsc(String(x.key || '')) + '\',false)">\u2713 Close</button>')
       + '</div>'
       + '</div>';
   }).join('');
