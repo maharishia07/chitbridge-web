@@ -1295,7 +1295,15 @@ async function importResults(input){
 
 async function load(){
   var s = sess();
-  document.getElementById('who').textContent = s ? ((s.entity || s.name || 'your business') + ' · signed in') : 'not signed in';
+  /**
+   * ⚠️ "Tally Test Shop · signed in" READ AS THE REPORT'S SUBJECT, not as who was holding the keyboard.
+   * Athi: *"is it as per the user? again, it has to be overall?"* It IS overall — every query behind this
+   * page is scoped `WHERE entity_id = $1` and never by actor — but a business name sitting directly beside
+   * the title is read as "this is that business's slice", which is the one thing it must not be taken for.
+   * ⭐ "signed in as X" can only be identity. The document states its own scope separately, in its first
+   * clause line ("scope: the whole board").
+   */
+  document.getElementById('who').textContent = s ? ('signed in as ' + (s.entity || s.name || 'your business')) : 'not signed in';
   try {
     /* two calls, not one per case — see the round-trip note in routes/testing.js */
     var a = await call('/api/testing/cases');
