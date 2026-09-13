@@ -29,14 +29,6 @@ test('[SHUT-01] a case closed in the Cases tab leaves the tab', async ({ page })
   const token = await page.evaluate(() => SESSION.token);
   const H = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' };
 
-  /* two, so "the list emptied" cannot pass for "the row left" */
-  for (const n of ['01', '02']) {
-    await page.request.post(API + '/api/testing/cases/import', {
-      headers: H, data: { mode: 'add', cases: [{ case_key: 'CAT001-H' + n, module_key: 'CAT001',
-        title: 'hand written ' + n, priority: 'Medium', test_type: 'screen', screen_code: 'CAT001',
-        steps: [['do it', 'it works']] }] } });
-  }
-
   const sw = page.locator('[data-testid="vp-test"]');
   await expect(sw).toBeVisible({ timeout: 45000 });
   if (!((await sw.textContent()) || '').includes('on')) await sw.click();
@@ -44,6 +36,21 @@ test('[SHUT-01] a case closed in the Cases tab leaves the tab', async ({ page })
   await expect(page.locator('#cbcasespanel')).toBeVisible({ timeout: 30000 });
   const modal = page.locator('#modalhost .modal');
   if (await modal.count()) await page.locator('#modalhost .modal button').last().click();
+
+  /* ⚠ the popup opens on the screen the tester is STANDING on, whichever that is — so the cases are seeded
+     against that code rather than a guessed one, which is what a person writing here would produce anyway */
+  const code = await page.evaluate(() => CBTEST.popupFor);
+  expect(code, 'the popup did not say which screen it is about').toBeTruthy();
+
+  /* two, so "the list emptied" cannot pass for "the row left" */
+  for (const n of ['01', '02']) {
+    const r = await page.request.post(API + '/api/testing/cases/import', {
+      headers: H, data: { mode: 'add', cases: [{ case_key: code + '-H' + n, module_key: code,
+        title: 'hand written ' + n, priority: 'Medium', test_type: 'screen', screen_code: code,
+        steps: [['do it', 'it works']] }] } });
+    expect(r.ok(), 'could not seed a case').toBeTruthy();
+  }
+  await page.evaluate(() => testLoad(true));
   await page.evaluate(() => testArea('cases'));
   await expect(page.locator('#cbcasespanel')).toContainText('hand written 01', { timeout: 30000 });
   await expect(page.locator('#cbcasespanel')).toContainText('hand written 02');
@@ -69,7 +76,7 @@ test('[SHUT-01] a case closed in the Cases tab leaves the tab', async ({ page })
   /* and the server agrees, which is the half a repaint cannot fake */
   const all = await (await page.request.get(API + '/api/testing/cases?all=1&_=' + Date.now(),
     { headers: H })).json();
-  const shut = (all.cases || []).filter((c) => c.case_key === 'CAT001-H01')[0];
+  const shut = (all.cases || []).filter((c) => c.case_key === code + '-H01')[0];
   expect(shut, 'the case vanished from the board entirely').toBeTruthy();
   expect(shut.status, 'it left the tab without being retired — the repaint was a lie').toBe('retired');
 });
