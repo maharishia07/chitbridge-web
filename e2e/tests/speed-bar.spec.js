@@ -51,11 +51,16 @@ test('[BAR-01] all four are chips, at the top, with the instruction', async ({ p
 
   /* ⚠️ a chip with only an icon is a control you have to press to find out what it was */
   const panel = page.locator('#cbcasespanel');
+  /* ⚠️ the instruction is BULLETS in a tinted box now, not a paragraph — the words survived the redesign
+     and the assertion follows them rather than being deleted with the layout */
+  const notes = panel.locator('ul li');
   await expect(panel).toContainText('puts these numbers into the Create form');
   await expect(panel).toContainText('saves one file with every call of this visit');
   await expect(panel).toContainText('starts the measurement again');
   /* ⭐ and the answer to "is it user-id dependent?" is on the screen, not only in my head */
   await expect(panel).toContainText('cannot touch anybody else');
+  /* ⭐ and they are bullets, which is what was asked for — a paragraph would still pass every line above */
+  expect(await notes.count(), 'the instruction is not a bullet list').toBeGreaterThanOrEqual(4);
 });
 
 test('[BAR-02] the bar is there before anything has been measured, and after', async ({ page }) => {

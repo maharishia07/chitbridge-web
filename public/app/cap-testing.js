@@ -4503,33 +4503,56 @@ function testDiagHTML() {
   /* ⭐ the reset sits ABOVE the numbers: a clear button found under a page of figures is found after
      you have already believed them */
   var h = testDiagBarHTML();
-  h += '<div style="font-size:var(--fs-1);color:var(--grey-2);padding:8px 0 6px;line-height:1.5">'
-    + '<b>' + mine.length + '</b> API call(s) on this visit to the screen \u00b7 <b>' + total + ' ms</b> in total'
-    + (slow.key ? ' \u00b7 slowest <b>' + (slow.ms || 0) + ' ms</b> (' + testEsc(slow.key) + ')' : '')
-    + (bad.length ? ' \u00b7 <b style="color:var(--disp,#B3261E)">' + bad.length + ' failed</b>' : '')
-    /* ⭐ after a clear the window is the CLEAR, not the arrival — and it must say so, or the reader trusts
-       a clock time that has nothing to do with what is in the table */
-    + (testDiagCleared()
-        ? '<br><span style="color:var(--note)">Measured from the <b>clear at '
-          + new Date(CBTEST._clearedAt).toTimeString().slice(0, 8) + '</b>, not from when you arrived.</span>'
-      : clock ? '<br><span style="color:var(--note)">This reading is THIS visit only \u2014 everything since '
-        + 'you arrived on the screen at <b>' + clock + '</b>. Leaving and coming back starts a new one.</span>'
-      : '')
-    /* ⚠ named as unavailable rather than shown as zero: an empty column reads as "no time spent there" */
-    + (srvKnown.length
-        ? '<br>Of that, <b>' + srvMs + ' ms</b> was inside the server'
-          + (dbTrips ? ' across <b>' + dbTrips + '</b> database round trip(s)' : '')
-          + ' \u2014 the remaining <b>' + Math.max(0, total - srvMs) + ' ms</b> is the network.'
-        : '<br><span style="color:var(--note)">The server is not reporting its own time. Set CB_TRIPS=1 on '
-          + 'the API to split this into database, code and network.</span>')
-    + '<br>' + verdict
-    + (rep.length ? '<br>\u26a0\ufe0f <b>The same call, repeated:</b> ' + testEsc(rep.join(' \u00b7 '))
-        + ' \u2014 that is the thing to fix, not the milliseconds.' : '')
-    /* ⚠ the landing screen carries the app’s start-up, and no honest rule separates the two */
-    + ((window.CBGEN || 0) <= 1 ? '<br>\u26a0\ufe0f The app was still starting, so its sign-in '
-        + 'and set-up calls are counted here too. Go to another screen and come back for a clean reading.' : '')
-    + '<br>\u26a0\ufe0f Each call is roughly 1.4\u20132.4 s to the database and back, so the COUNT matters '
-    + 'more than the milliseconds.</div>';
+
+  /* ── FIGURES: what the reading IS ─────────────────────────────────────────────────────────────────────── */
+  h += testSec('This visit to the screen',
+    testDiagCleared()
+      ? 'measured from the clear at <b>' + new Date(CBTEST._clearedAt).toTimeString().slice(0, 8)
+        + '</b>, not from when you arrived'
+      : (clock ? 'everything since you arrived at <b>' + clock + '</b> — leaving and coming back starts a new one'
+               : 'everything since you arrived on this screen'));
+  h += testFigures([
+    [mine.length, 'API calls'],
+    [total + ' ms', 'in total'],
+    [slow.key ? ((slow.ms || 0) + ' ms') : null, 'slowest · ' + testEsc(slow.key || '')],
+    [bad.length || null, 'failed', 'var(--disp,#B3261E)'],
+    [srvKnown.length ? (srvMs + ' ms') : null, 'inside the server'],
+    [srvKnown.length ? (Math.max(0, total - srvMs) + ' ms') : null, 'on the network'],
+    [dbTrips || null, 'database trips'],
+  ]);
+
+  /**
+   * ── NOTES: what it MEANS, and what to do about it ─────────────────────────────────────────────────────
+   *
+   * ⚠️ ORDERED BY WHAT IT ASKS OF THE READER, not by where the code happened to compute it. A finding they
+   * can act on comes before a caveat about the reading, which comes before the standing fact about round
+   * trips — and the standing fact is last because it is true on every screen and so tells you nothing about
+   * this one.
+   */
+  var findings = [];
+  if (rep.length) {
+    findings.push('<b>The same call, repeated:</b> ' + testEsc(rep.join(' · '))
+      + ' — that is the thing to fix, not the milliseconds.');
+  }
+  if (bad.length) findings.push('<b>' + bad.length + ' call(s) failed.</b> A failed call is not a slow call.');
+  h += testNotes(findings, 'bad');
+
+  var caveats = [];
+  if ((window.CBGEN || 0) <= 1) {
+    caveats.push('The app was still starting, so its sign-in and set-up calls are counted here too. '
+      + 'Go to another screen and come back for a clean reading.');
+  }
+  if (!srvKnown.length) {
+    caveats.push('The server is not reporting its own time, so this cannot be split into database, code and '
+      + 'network. Turn on <b>Timings</b> at the top right.');
+  }
+  h += testNotes(caveats, 'warn');
+
+  h += testNotes([verdict,
+    'Each call is roughly 1.4–2.4 s to the database and back, so the <b>count</b> matters more than the '
+      + 'milliseconds.'], 'note');
+
+  h += testSec('Every call, slowest first');
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
@@ -4603,8 +4626,11 @@ function testDiagHTML() {
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
   /* ⚠️ the trace control moved into the bar at the top (testTraceChip) — it was rendering here, in the
      middle of the numbers, at three different heights depending on what it had loaded. */
+  h += testSec('Where the time went', 'read from the browser and the server \u2014 nothing here is estimated');
   h += testDiagLayersHTML(mine);
+  h += testSec('By call', 'which route is expensive everywhere, not just on this screen');
   h += testDiagByApi();
+  h += testSec('By screen', 'every screen you have measured, worst first');
   h += testDiagByScreen();
 
 
@@ -4805,6 +4831,71 @@ function testDiagCleared() {
  * the two destructive chips carry ⟲ and a warning tint, so they can never be read as a way of looking at data.
  * See the note above TEST_CHIP.
  */
+/**
+ * ── ⭐⭐⭐ THREE KINDS OF THING, THREE LOOKS ────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"just for the speed alone you have to work with the designer — information, summary all
+ * looks the same, it has to be properly distinguished. Example: write-up, snapshot messages should be as
+ * bullet points and possibly in a box with different colour coding. Next, summary. Like that."*
+ *
+ * ⚠️⚠️ AND HE IS DESCRIBING A REAL FAULT, NOT A PREFERENCE. Every line in this area was the same 11px grey
+ * sentence joined to the next by `<br>`: the count of calls, the explanation of what a call costs, a warning
+ * that the app was still booting, and the one finding worth acting on all rendered identically. A reader has
+ * to parse each sentence to discover which kind it is, and after four of them they stop and skim — so the one
+ * red line is the one that gets skimmed past. [[feedback-more-panes-not-denser]]
+ *
+ * ⭐ SO THERE ARE EXACTLY THREE TREATMENTS, AND EVERY BLOCK PICKS ONE:
+ *   FIGURES  a row of big numbers with a word under each — what the reading IS.
+ *   NOTES    bullets in a tinted box, tone-coloured — what it MEANS and what to do.
+ *   SECTION  a small capitalised rule — where one kind of thing ends and the next begins.
+ *
+ * ⚠️ THREE, NOT SEVEN. A fourth treatment invented for one block is how a screen ends up looking the way this
+ * one did.
+ */
+function testSec(title, hint) {
+  return '<div style="margin:13px 0 5px;padding-top:9px;border-top:1px solid var(--line,#e7e3d8)">'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
+    +   'color:var(--grey-2,#545A61)">' + title + '</div>'
+    + (hint ? '<div style="font-size:var(--fs-1);color:var(--note);margin-top:1px">' + hint + '</div>' : '')
+    + '</div>';
+}
+
+/** ⭐ the reading itself, as figures — a number you can read at arm's length, and the word under it */
+function testFigures(items) {
+  var live = items.filter(function (x) { return x && x[0] != null; });
+  if (!live.length) return '';
+  return '<div style="display:flex;gap:18px;flex-wrap:wrap;padding:8px 0 4px">'
+    + live.map(function (x) {
+        return '<div style="display:flex;flex-direction:column;line-height:1.1">'
+          + '<b style="font-size:var(--fs-4);' + (x[2] ? 'color:' + x[2] : '') + '">' + x[0] + '</b>'
+          + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + x[1] + '</span>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+/**
+ * ⭐ WHAT IT MEANS, AS BULLETS IN A BOX — and the tone carries the urgency so it does not have to be read for.
+ * ⚠️ Tone is a TOKEN pair, never a hardcoded colour: guard-static fails a themed ground with fixed ink on it,
+ * and it is right to — one half moving with the theme and the other not is invisible until somebody switches.
+ */
+var TEST_TONE = {
+  bad:  ['var(--disp,#B3261E)', 'var(--disp-tint,#fbeceb)', 'var(--ink,#20303b)'],
+  warn: ['var(--warn-2,#8a6100)', 'var(--warn-tint,#fdf6e6)', 'var(--ink,#20303b)'],
+  ok:   ['var(--ok-2,#1B7F4B)', 'var(--ok-tint,#eaf4ee)', 'var(--ink,#20303b)'],
+  note: ['var(--line,#e7e3d8)', 'var(--paper,#faf8f3)', 'var(--grey-2,#545A61)'],
+};
+function testNotes(list, tone) {
+  var rows = (list || []).filter(Boolean);
+  if (!rows.length) return '';
+  var t = TEST_TONE[tone] || TEST_TONE.note;
+  return '<ul style="margin:6px 0 0;padding:7px 9px 7px 26px;list-style:disc;'
+    + 'border-inline-start:3px solid ' + t[0] + ';background:' + t[1] + ';color:' + t[2] + ';'
+    + 'border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.6">'
+    + rows.map(function (r) { return '<li style="margin:1px 0">' + r + '</li>'; }).join('')
+    + '</ul>';
+}
+
 function testDiagBarHTML() {
   var chip = 'font:inherit;font-size:var(--fs-1);padding:3px 11px;border:0;border-radius:11px;'
     + 'cursor:pointer;margin-inline-end:5px;margin-bottom:4px;white-space:nowrap;';
@@ -4828,13 +4919,17 @@ function testDiagBarHTML() {
     + '</div>'
     /* ⭐ one line, saying what each does — Athi asked for "clear instruction", and a chip with only an icon
        is a control you have to press to find out what it was */
-    + '<div style="font-size:var(--fs-1);color:var(--note);line-height:1.55;margin-top:2px">'
-    +   '<b>Write this up</b> puts these numbers into the Create form — you still choose whether it is an '
-    +   'incident or a requirement. <b>Snapshot</b> saves one file with every call of this visit (what was '
-    +   'asked, what was sent, what came back), every error the page threw, and where you were, to attach to '
-    +   'the report. <b>Clear</b> starts the measurement again — this screen, or all of them. '
-    +   'Your readings live in this browser under your login, so clearing cannot touch anybody else’s.'
-    + '</div>'
+    /**
+     * ⭐ ONE BULLET PER CHIP, IN THE SAME ORDER AS THE CHIPS. Athi: *"write-up, snapshot messages should be
+     * as bullet points and possibly in a box." A four-sentence paragraph describing four buttons makes the
+     * reader match sentence to button themselves; one line each and the matching is already done.
+     */
+    + testNotes([
+        '<b>\u270e Write this up</b> puts these numbers into the Create form \u2014 you still choose whether it is an incident or a requirement.',
+        '<b>\ud83d\udcbe Snapshot</b> saves one file with every call of this visit (what was asked, what was sent, what came back), every error the page threw, and where you were \u2014 to attach to it.',
+        '<b>\u27f2 Clear</b> starts the measurement again \u2014 this screen, or all of them.',
+        'Your readings live in this browser under your login, so clearing cannot touch anybody else\u2019s.',
+      ], 'note')
     + '</div>';
 }
 
