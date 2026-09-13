@@ -2536,6 +2536,23 @@ function testTechPick(k) {
   /* ⚠️ remembered, and the panel repainted, or the boxes below cannot change to suit the kind */
   CBTEST.tech = CBTEST.tech || {};
   CBTEST.tech.field = k;
+  /**
+   * ── ⭐⭐ THE VALUES IT HAS ACTUALLY SEEN, CARRIED IN ────────────────────────────────────────────────────
+   *
+   * Athi: *"if there are chances you can trace the code and show these are the vulnerabilities and you have
+   * to test these areas with these conditions."* We cannot read the source and find vulnerabilities — that
+   * would be a claim this tool cannot back. But we CAN say what values this screen has actually put on the
+   * wire, and for a short-text field those values ARE the equivalence classes, observed rather than invented.
+   *
+   * ⚠️ AND THE HONEST HALF IS WHAT IS MISSING. Seeing "available" and "discontinued" does not mean those are
+   * the only two the product accepts — it means they are the only two anybody has EXERCISED. That is the
+   * more useful statement, and it is the one printed beside the box.
+   */
+  try {
+    var f = testTechFields().filter(function (x) { return x.key === k; })[0];
+    if (f && f.vals && f.vals.length > 1) CBTEST.tech.seenVals = f.vals.slice(0, 6);
+    else CBTEST.tech.seenVals = null;
+  } catch (_) { CBTEST.tech.seenVals = null; }
   if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
 }
 function testTechFold() {
@@ -2561,6 +2578,12 @@ function testTech(kind) {
  * ⭐ SO THE RESULT IS TAKEN ONCE, WITH THE INPUTS IT WAS TAKEN FROM, and everything reads that. Change a box
  * and the old table is still there, still true, and still says out loud which field and range it is about.
  */
+/** ⭐ fills the classes box with what the field has actually been sent as — observed, not invented */
+function testTechUseSeen() {
+  var sv = (CBTEST.tech || {}).seenVals; if (!sv || !sv.length) return;
+  var el = document.getElementById('tqClasses');
+  if (el) { el.value = sv.join(', '); el.focus(); }
+}
 function testTechGo() {
   var t = CBTEST.tech || (CBTEST.tech = {});
   t.rows = testTechDerive();
@@ -2790,6 +2813,40 @@ function testTechUse(i) {
  * allows 1 to 99,999. That is the one thing only a person knows, and asking for exactly that — and nothing
  * else — is the whole design of this helper.
  */
+/**
+ * ── ⭐⭐⭐ "TRY IT" HAS TO DO IT, NOT DESCRIBE IT ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-13: *"Techniques — I was trying hard to understand. The first one is OK, but not the others.
+ * When I say try it, you provide the values yourself, for this situation this is how the values are set and
+ * these are the conditions to be created — that will give an idea for the users."*
+ *
+ * ⚠️⚠️ AND THE FIRST ONE WAS ONLY "OK" BY ACCIDENT. A number range is guessable: everyone can imagine 1 to
+ * 999. Nobody can guess what a "decision table condition" is supposed to look like from a sentence about it,
+ * so four of the five techniques were prose about an empty form.
+ *
+ * ⭐ SO THE EXAMPLE IS A BUTTON. It fills the boxes with real values and writes the cases, so the FIRST thing
+ * a person sees is eight finished rows they can read — and then they change the values to their own. Reading
+ * an output and editing it is a far shorter path than understanding a definition and composing an input.
+ */
+var TEST_TECH_TRY = {
+  bounds:   { field: 'quantity', lo: '1', hi: '999' },
+  classes:  { field: 'customer', classes: 'GST-registered, unregistered, overseas' },
+  states:   { field: 'chit', states: 'draft, sent, accepted, delivered, paid' },
+  decision: { field: 'discount', conds: 'over 500, customer is a member' },
+  guess:    { field: 'name' },
+};
+function testTechTry(kind) {
+  var eg = TEST_TECH_TRY[kind]; if (!eg) return;
+  CBTEST.tech = CBTEST.tech || {};
+  CBTEST.tech.kind = kind;
+  if (CBTEST.popupFor) screenCasesPaint(); else testPaint();
+  /* ⚠ after the paint: the inputs for this technique only exist once it is the chosen one */
+  var put = function (id, v) { var el = document.getElementById(id); if (el && v != null) el.value = v; };
+  put('tqField', eg.field); put('tqLo', eg.lo); put('tqHi', eg.hi);
+  put('tqClasses', eg.classes); put('tqStates', eg.states); put('tqConds', eg.conds);
+  testTechGo();
+  if (typeof toast === 'function') toast('Filled with an example — change the values to yours.');
+}
 function testTechFields() {
   var here = null;
   try { if (typeof navScreenKey === 'function') here = navScreenKey(); } catch (_) {}
@@ -2819,9 +2876,24 @@ function testTechFields() {
            candidates buries the four that matter under thirty that do not */
         if (/^(id|_id|.*_id|entity_id|created_at|updated_at|rid|version)$/i.test(k)) return;
         if (String(v) === '[redacted]') return;
-        if (seen[k]) return;
-        seen[k] = 1;
-        out.push({ key: k, kind: kind, sample: String(v).slice(0, 24), from: from });
+        /**
+         * ⭐⭐ EVERY DISTINCT VALUE SEEN, not just the first. Athi: *"when I say try it, you provide the values
+         * yourself — for this situation this is how the values are set and these are the conditions to be
+         * created."* For a short-text field, the values that have actually crossed the wire ARE the equivalence
+         * classes — observed rather than invented — so they can be filled in for him.
+         * ⚠️ Six at most and short ones only: a list of forty product names is not a set of classes.
+         */
+        var hit = seen[k];
+        if (hit) {
+          if (hit.vals.length < 6 && String(v).length <= 24 && hit.vals.indexOf(String(v)) < 0) {
+            hit.vals.push(String(v));
+          }
+          return;
+        }
+        var rec = { key: k, kind: kind, sample: String(v).slice(0, 24), from: from,
+                    vals: (String(v).length <= 24 ? [String(v)] : []) };
+        seen[k] = rec;
+        out.push(rec);
       });
     });
   };
@@ -2945,7 +3017,18 @@ function testTechHTML() {
   h += '<div style="margin-top:8px;padding:8px 10px;border-inline-start:3px solid var(--ok-2,#1B7F4B);'
     + 'background:var(--ok-tint,#eaf4ee);border-radius:0 8px 8px 0;font-size:var(--fs-1);line-height:1.6">'
     + '<b>Try this:</b> ' + EG.eg + '<br>'
-    + '<span style="color:var(--grey-2)">' + EG.why + '</span></div>';
+    + '<span style="color:var(--grey-2)">' + EG.why + '</span>'
+    /**
+     * ⭐ THE BUTTON THAT DOES IT — see testTechTry. Athi: *"when I say try it, you provide the values
+     * yourself."* Reading eight finished rows and then editing them is a far shorter path than understanding
+     * a definition and composing an input from nothing, which is what four of these five asked for.
+     */
+    + '<div style="margin-top:6px">'
+    +   '<button data-testid="tech-try" onclick="testTechTry(\'' + t.kind + '\')" '
+    +     'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 12px;border-radius:7px;'
+    +     'cursor:pointer;border:1px solid var(--ok-2,#1B7F4B);background:var(--ok-2,#1B7F4B);'
+    +     'color:var(--card,#fff)">▶ Fill it in and show me</button>'
+    + '</div></div>';
 
   /**
    * ⭐⭐ THE FIELDS THIS SCREEN ACTUALLY SENT, as chips. Read from the call log, so they are this product's
@@ -2991,6 +3074,18 @@ function testTechHTML() {
   if (t.kind === 'classes') {
     h += '<label style="' + lbl + '">The kinds, comma separated</label>'
       + '<input id="tqClasses" placeholder="e.g. GST-registered, unregistered, overseas" style="' + big + '">';
+    var sv = (CBTEST.tech || {}).seenVals;
+    if (sv && sv.length) {
+      h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">'
+        + '<button onclick="testTechUseSeen()" style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
+        + 'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);'
+        + 'color:var(--grey-2,#545A61);margin-inline-end:6px">Use what it has sent</button>'
+        + testEsc(sv.join(', '))
+        + '<span style="display:block;color:var(--note)">'
+        + '⚠️ These are the values this screen has actually put on the wire — which is not the '
+        + 'same as the only ones it accepts. The kinds nobody has sent are the ones nobody has tried.'
+        + '</span></div>';
+    }
   }
   if (t.kind === 'states') {
     h += '<label style="' + lbl + '">The states, in order</label>'
