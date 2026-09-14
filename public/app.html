@@ -8424,7 +8424,7 @@ function platformScreen(){
        * and it has been half-built since. Found by e2e/list-controls.cjs on its first run, which is the entire
        * argument for that file. [[feedback-silence-is-the-bug]]
        */
-      +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'
+      +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="UI.platSort=null;loadPlatform()">'
         +'<option value="">'+esc(tx('newest first'))+'</option>'+presets+'</select>'
       +'</div>'
     /* ⭐ 'left hand top level shows the overall MIS' — but folded. Six breakdowns open above a table would
@@ -8870,6 +8870,17 @@ function platFirstFilterHTML(ap){
  * ⚠️ It resets to page 1 by going through loadPlatform() with no argument — 2,243 rows and 266 rows do not
  * have the same page 4.
  */
+/**
+ * ⭐ CLICK ONCE TO SORT, AGAIN TO REVERSE — the behaviour of every table anyone has used.
+ * ⚠️ It clears the preset dropdown, because two controls both claiming to decide the order is how a screen
+ * comes to show one thing and say another.
+ */
+function platSortBy(key){
+  var c = UI.platSort || {};
+  UI.platSort = { sort: key, dir: (c.sort === key && c.dir === 'desc') ? 'asc' : 'desc' };
+  var p = document.getElementById('pl_sort'); if (p) p.value = '';
+  loadPlatform();
+}
 function platSetPopulation(k){ UI.platPop = String(k || ''); loadPlatform(); }
 
 /**
@@ -9020,11 +9031,32 @@ function platScopeTableHTML(){
       + 'white-space:nowrap;font-size:var(--fs-1)"><span style="display:inline-block;width:7px;height:7px;'
       + 'border-radius:50%;background:' + tone + ';margin-inline-end:6px"></span>' + esc(word) + '</td>';
   };
-  var th = function(t, hint){
-    return '<th title="' + esc(hint || '') + '" style="text-align:left;padding:7px 9px;font-size:var(--fs-1);'
-      + 'color:var(--grey);font-weight:600;text-transform:uppercase;letter-spacing:.03em;'
-      + 'border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)">'
-      + esc(tx(t)) + '</th>';
+  /**
+   * ── ⭐⭐ CLICK A HEADING TO SORT BY IT ─────────────────────────────────────────────────────────────────────
+   *
+   * Athi: *"also, we can do the sort as per column."* The preset dropdown answers "most recent, oldest,
+   * gone quiet"; a column heading answers "by this, now" — and with seventeen columns that is the faster
+   * question to ask.
+   *
+   * ⚠️ ONLY THE COLUMNS THE SERVER WILL ACTUALLY ORDER BY. `SORTS` in routes/entities.js is a whitelist,
+   * because ORDER BY cannot take a bind parameter. A heading that looked clickable and silently did nothing
+   * would be worse than one that plainly is not — so the rest render exactly as before, unclickable.
+   * [[feedback-silence-is-the-bug]]
+   */
+  var cur = UI.platSort || {};
+  var th = function(t, hint, sortKey){
+    var base = 'text-align:left;padding:7px 9px;font-size:var(--fs-1);color:var(--grey);font-weight:600;'
+      + 'text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;'
+      + 'position:sticky;top:0;background:var(--card)';
+    if (!sortKey || !((((UI.plat||{}).controls)||{}).sortable || []).includes(sortKey)) {
+      return '<th title="' + esc(hint || '') + '" style="' + base + '">' + esc(tx(t)) + '</th>';
+    }
+    var on = cur.sort === sortKey;
+    var arrow = on ? (cur.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return '<th title="' + esc((hint ? hint + ' · ' : '') + tx('click to sort')) + '" '
+      + 'data-testid="plat-sort-' + sortKey + '" onclick="platSortBy(\'' + sortKey + '\')" '
+      + 'style="' + base + ';cursor:pointer;' + (on ? 'color:var(--ink)' : '') + '">'
+      + esc(tx(t)) + arrow + '</th>';
   };
 
   var body = rows.map(function(r){
@@ -9033,10 +9065,13 @@ function platScopeTableHTML(){
     var sells = { goods: 'things', services: 'work', both: 'both', none: 'nothing', unknown: '—' }[r.supplies] || '—';
     return '<tr class="' + (r.identity_id === UI.platSel ? 'sel' : '') + '"'
       + ' onclick="selectPlat(\'' + esc(r.identity_id) + '\')" style="cursor:pointer">'
+      /* ⭐ TWO FACTS, TWO COLUMNS. Athi: *"we can split the user id and the names in two columns."* They were
+         stacked, which reads fine for one row and cannot be SORTED or SCANNED down — and a handle is what you
+         actually search by. */
       + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-weight:600;'
-      + 'font-size:var(--fs-2);white-space:nowrap">' + esc(r.display_name || r.user_id || '—')
-      + '<div class="mono" style="font-size:var(--fs-1);color:var(--grey);font-weight:400">'
-      + esc(r.user_id || '—') + '</div></td>'
+      + 'font-size:var(--fs-2);white-space:nowrap">' + esc(r.display_name || '—') + '</td>'
+      + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);'
+      + 'font-size:var(--fs-1);color:var(--grey);white-space:nowrap">' + esc(r.user_id || '—') + '</td>'
       /* ⭐ SECOND COLUMN. Athi, earlier today: *"each shops last status."* It sits beside the name because it
          is the question the name is looked up to answer, not something to scroll thirteen columns for. */
       /* ⭐ WHOSE NETWORK. Athi: *"the root to be shown with the owner of the network"* and *"for other shops
@@ -9050,13 +9085,14 @@ function platScopeTableHTML(){
             + esc(pos === 'root'   ? tx('Heads a network. It pays; its branches are billed to it.')
                 : pos === 'branch' ? tx('A branch. Its plan belongs to its root.')
                 :                    tx('On its own — not in a network at all.')) + '">'
-            + esc(tx(pos))
-            /* ⭐ the owner rides underneath, the way the handle rides under the name in the first column —
-               so the column means ONE thing and the second fact is still there. */
-            + (pos === 'branch'
-                ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.network_root) + '</div>'
-                : '')
-            + '</td>'; })()
+            + esc(tx(pos)) + '</td>'
+            /* ⭐ AND WHOSE, IN ITS OWN COLUMN. Same reason as the name and the handle: stacked, it could not be
+               sorted or read down the page. A root is its own network's head, so it names itself. */
+            + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+            + 'white-space:nowrap;color:var(--grey)">'
+            + esc(pos === 'branch' ? (r.network_root || '—')
+                : pos === 'root'   ? (r.display_name || '—')
+                :                    '—') + '</td>'; })()
       + (function(){ var st = platStanding(r.standing);
           return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
             + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
@@ -9090,16 +9126,23 @@ function platScopeTableHTML(){
 
   var foot = platPagerHTML();
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
-    + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
-    + '<thead><tr>' + th('Entity') + th('Network', tx('none · root · branch — and for a branch, whose'))
-    + th('Standing', tx('Is this shop actually using the product?'))
+    + '<table style="border-collapse:collapse;width:100%;min-width:1240px">'
+    + '<thead><tr>'
+    + th('Name', tx('What the business calls itself'), 'name')
+    + th('User ID', tx('How they sign in — and what you search by'), 'handle')
+    + th('Network', tx('none · root · branch'))
+    + th('Of', tx('Whose network it is under'))
+    + th('Standing', tx('Is this shop actually using the product?'), 'standing')
     + th('Found', tx('Can it be found in search?'))
     + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
     + th('Work', tx('Can it be sent a chit?')) + th('Pays', tx('Is it a billing tenant?'))
     + th('Sells', tx('What does it deal in?'))
-    + th('Type', tx('What kind of row is it?')) + th('Plan', tx('Which commercial tier it sits on'))
-    + th('People', tx('Staff signed on to it')) + th('Branches', tx('Nodes beneath it on the network'))
-    + th('Bridge id', tx('Its address on the rail')) + th('Last seen', tx('When it last signed in'))
+    + th('Type', tx('What kind of row is it?'), 'kind')
+    + th('Plan', tx('Which commercial tier it sits on'), 'plan')
+    + th('People', tx('Staff signed on to it'), 'seats')
+    + th('Branches', tx('Nodes beneath it on the network'), 'branches')
+    + th('Bridge id', tx('Its address on the rail'))
+    + th('Last seen', tx('When it last signed in'), 'last_seen')
     + '</tr></thead><tbody>' + body + '</tbody></table></div>' + foot
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:var(--sp-2);line-height:1.5">'
     + '<b style="color:var(--warn-2)">*</b> ' + tx('declared, not enforced yet — the supplier and customer add '
@@ -9241,8 +9284,12 @@ function platQuery(){
      work and would say the same thing twice, and the two would then have to be kept agreeing. */
   if(UI.platPop && UI.platPop !== (((UI.plat||{}).controls||{}).applied||{}).live_population)
     q.population = UI.platPop;
-  var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
-  if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
+  /* ⭐ a clicked column beats the preset, and choosing a preset clears the click — one order, one source. */
+  if(UI.platSort && UI.platSort.sort){ q.sort=UI.platSort.sort; q.dir=UI.platSort.dir; }
+  else {
+    var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
+    if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
+  }
   q.limit = PLAT_PER_PAGE;
   q.offset = ((UI.platPage || 1) - 1) * PLAT_PER_PAGE;
   return q;
