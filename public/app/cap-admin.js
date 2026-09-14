@@ -5086,7 +5086,123 @@ async function bizSave(group, val){
     loadSettings();
   }
 }
+/**
+ * ── ⭐⭐⭐ WHERE WORK GOES — the screen, so nobody writes SQL ────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"it has to be very simple, we should not raise a SQL, it should be configurable"* —
+ * *"because we should be able to give this model to anyone who wants to run a simple helpdesk service."*
+ *
+ * ⭐ THAT SECOND SENTENCE DECIDED WHERE IT LIVES. Not the operator's Platform screen: every entity routes its
+ * OWN work, so a shop running a helpdesk points faults at one person and requests at another, exactly as CBINC
+ * does. Settings › Work already asks *"how tasks reach people"* — this is the answer to that question.
+ *
+ * ⭐ ONE ROW PER KIND, THREE ANSWERS: which folder, which person, which team. Saved the moment it is chosen —
+ * there is no Save button, because a routing rule is one dropdown and a form that needs confirming for one
+ * dropdown is a form that gets abandoned half-set.
+ *
+ * ⚠️ AND EVERY LIST COMES FROM THE SERVER WITH THE ROWS. Populating three dropdowns from three other calls is
+ * three chances to offer a folder that was deleted this morning.
+ */
+var _WROUTE = null;
+
+async function workRoutingLoad(force){
+  if (_WROUTE && !force) return _WROUTE;
+  try { _WROUTE = await api('workRouting', {}); }
+  catch (e) { _WROUTE = { error: String((e && e.message) || e) }; }
+  return _WROUTE;
+}
+
+function workRoutingHTML(){
+  var d = _WROUTE;
+  if (!d) return '<div style="color:var(--grey);font-size:var(--fs-2)">'
+    + '<span class="spin"></span> ' + tx('reading where work goes…') + '</div>';
+  if (d.error) {
+    /* ⚠️ said plainly, with the remedy. "Could not load" on its own sends somebody to ask me. */
+    return '<div style="background:var(--warn-tint);border:1px solid var(--warn-2);border-radius:var(--r-md);'
+      + 'padding:9px 11px;font-size:var(--fs-1);line-height:1.5"><b>' + esc(tx('Not set up yet')) + '</b><div>'
+      + esc(d.error) + '</div></div>';
+  }
+  var sel = function(id, kind, field, cur, list, none){
+    return '<select class="inp" data-testid="wr-' + field + '-' + kind + '" '
+      + 'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)" '
+      + 'onchange="workRoutingSet(\'' + kind + '\',\'' + field + '\',this.value)">'
+      + '<option value="">' + esc(tx(none)) + '</option>'
+      + list.map(function(o){
+          return '<option value="' + esc(o[0]) + '"' + (String(cur || '') === String(o[0]) ? ' selected' : '')
+            + '>' + esc(o[1]) + '</option>'; }).join('')
+      + '</select>';
+  };
+  var folders = (d.folders || []).map(function(f){ return [f.folder_id, f.name]; });
+  var people  = (d.people  || []).map(function(p){ return [p.identity_id, p.display_name]; });
+  var teams   = (d.teams   || []).map(function(t){ return [t.identity_id, t.display_name]; });
+
+  var rows = (d.kinds || []).map(function(k){
+    return '<tr>'
+      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft);white-space:nowrap">'
+      + '<b style="font-weight:650">' + esc(tx(k.label)) + '</b>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(tx(k.hint)) + '</div></td>'
+      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
+      + sel('', k.kind, 'folder', k.folder_id, folders, 'no folder') + '</td>'
+      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
+      + sel('', k.kind, 'person', k.assignee_actor_id, people, 'nobody in particular') + '</td>'
+      + '<td style="padding:7px 9px;border-bottom:1px solid var(--line-soft)">'
+      + (teams.length ? sel('', k.kind, 'team', k.route_to_entity_id, teams, 'keep it here')
+         /* ⚠️ absent rather than empty: an enabled dropdown with one option teaches nothing, and a disabled one
+            with no explanation reads as broken. */
+         : '<span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(tx('no teams yet')) + '</span>')
+      + '</td></tr>';
+  }).join('');
+
+  var th = function(t){ return '<th style="text-align:left;padding:6px 9px;font-size:var(--fs-1);color:var(--grey);'
+    + 'font-weight:600;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line)">'
+    + esc(tx(t)) + '</th>'; };
+
+  return '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:9px">'
+    + esc(tx('When work of each kind arrives, this is where it lands and whose it becomes. '
+           + 'Leave a row blank and it stays here, unassigned.')) + '</div>'
+    + '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:560px">'
+    + '<thead><tr>' + th('Kind of work') + th('Folder') + th('Person') + th('Team') + '</tr></thead>'
+    + '<tbody>' + rows + '</tbody></table></div>'
+    + '<div id="wr_say" style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;min-height:17px"></div>'
+    + (teams.length ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">'
+       + esc(tx('A team is a branch of your own network — build one in Network design and it appears here. '
+              + 'Work can only be routed inside your own network.')) + '</div>');
+}
+
+/** ⭐ saved on change, and it SAYS so — a silent save is one people repeat because they cannot tell. */
+async function workRoutingSet(kind, field, value){
+  var say = document.getElementById('wr_say');
+  var cur = ((_WROUTE && _WROUTE.kinds) || []).find(function(k){ return k.kind === kind; }) || {};
+  var body = { kind: kind,
+    folder_id: field === 'folder' ? value : (cur.folder_id || ''),
+    assignee_actor_id: field === 'person' ? value : (cur.assignee_actor_id || ''),
+    route_to_entity_id: field === 'team' ? value : (cur.route_to_entity_id || '') };
+  if (say) say.textContent = tx('Saving…');
+  try {
+    await api('workRoutingSet', { body: body });
+    /* keep the local copy in step, or the next change on the same row would send the stale two fields back */
+    if (field === 'folder') cur.folder_id = value || null;
+    if (field === 'person') cur.assignee_actor_id = value || null;
+    if (field === 'team')   cur.route_to_entity_id = value || null;
+    if (say) say.textContent = tx('Saved.');
+  } catch (e) {
+    if (say) say.textContent = '';
+    toast(String((e && e.message) || tx('Could not save it')), true);
+    /* ⚠️ put the control back to what the SERVER has: a dropdown showing a value that was refused is a lie the
+       reader will act on. */
+    await workRoutingLoad(true);
+    if (typeof loadSettings === 'function') loadSettings();
+  }
+}
+
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
+  /* fetched when the Work section is actually opened, and the pane repainted in place when it arrives -
+     not the whole screen, which would throw away anything half-typed in the fields below it. */
+  if (setSec() === 'work' && !_WROUTE) {
+    workRoutingLoad().then(function(){
+      var p = document.getElementById('wr_pane'); if (p) p.innerHTML = workRoutingHTML();
+    });
+  }
   { const k = setSec();
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
@@ -5122,6 +5238,16 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       <div class="kv" style="margin-bottom:9px"><b>${tx('Supplies')}</b> · ${esc((UI._me && UI._me.supplies) || 'goods')}
         <a href="#" onclick="navTo('profile');profSetSec('identity');UI._iamOpen=Object.assign(UI._iamOpen||{},{profile:true});return false"
            style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">${tx('Change in Business')} <span class=arw>→</span></a></div>
+      ${/**
+         * WHERE WORK GOES - the answer to this section's own question, which it had never actually
+         * answered. Athi, 2026-09-14: *"we should not raise a SQL, it should be configurable."*
+         * Loaded on demand and repainted when it lands: reading it up front would make every Settings
+         * visit pay for a screen most of them are not opening. [[feedback-on-demand-loading]]
+         */''}
+      <div style="border-top:1px solid var(--line);margin:13px 0 11px;padding-top:11px">
+        <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
+        <div id="wr_pane">${workRoutingHTML()}</div>
+      </div>
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>

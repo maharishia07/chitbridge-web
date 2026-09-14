@@ -1811,6 +1811,9 @@ const EP = {
   /* ⭐ the operator adds a population from the Platform strip. Root-gated server-side; there is deliberately
      no PUT and no DELETE — the code is stamped on every entity that joins it. */
   platPopulationAdd:{m:"POST", p:"/api/entities/populations",               ok:"✓"},
+  /* ⭐ per-entity, NOT operator-only: anyone running a helpdesk routes their own kinds of work. */
+  workRouting:      {m:"GET",  p:"/api/entities/routing",                   ok:"✓"},
+  workRoutingSet:   {m:"PUT",  p:"/api/entities/routing",                   ok:"✓"},
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},
   custGroupNames:  {m:"GET",  p:"/api/relationships/customers/groups",    ok:"✓"},  // the seller's NAMED groups (decision 2, 2026-09-06)
@@ -5284,7 +5287,7 @@ function _renderApp(){
             }
             return out;
           })()}
-          <button data-testid="av-support" onclick="supportOpen()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">🛟 ${esc(tx('Get help'))}</button>
+          <button data-testid="av-support" onclick="supportOpen()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">🛟 ${esc(tx('Support'))}</button>
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
@@ -7488,74 +7491,161 @@ function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel){
  * operator, the same folder. One mechanism, two doors; if they diverged, one of them would quietly stop working
  * and nobody would notice until a shop said "I reported that weeks ago".
  */
-var SUPPORT_URGENCY = [
-  ['Sev-1', 'I cannot work',      'Nothing else matters until this is fixed'],
-  ['Sev-2', 'It is slowing me down', 'There is a way round it, but it costs me time'],
-  ['Sev-3', 'Minor',              'Worth telling you, not urgent'],
+/**
+ * ── ⭐⭐⭐ SUPPORT ─ ONE TABLE, ONE BOX PER KIND OF WORK ──────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"instead of get help, if we keep it as support and 4 boxes like Get Help, New
+ * Requirement, Event and so on, all can come under its folder or to the relevant entity if we setup the
+ * network"* — and the reason it is built this way: *"we should be able to give this model to anyone who
+ * wants to run a simple helpdesk service."*
+ *
+ * ⭐ SO THE BOXES ARE DATA. Everything a kind needs — its words, its fields, its choice list, the endpoint it
+ * posts to — is one row here. Nothing about a kind is written anywhere else in this file, which is what makes
+ * a third or fourth box a row rather than a change.
+ *
+ * ⭐⭐ AND WHERE IT LANDS IS NOT DECIDED HERE AT ALL. `kind` is the only thing sent onwards; Settings › Work
+ * decides the folder, the person and the team it becomes, per entity (b250/b251, lib/workroute.js). That
+ * split is the whole helpdesk model: the box says WHAT, the routing says WHO.
+ *
+ * ⚠️ A NEW KIND COSTS THREE THINGS, and all three or none — a box with no route files nothing, and a route
+ * with no box can never be raised:
+ *   1. a row here,  2. the kind in ROUTABLE (routes/entities.js),  3. an endpoint that mints it.
+ */
+const SUPPORT_BOXES = [
+  { kind: 'incident', icon: '🛠️', label: 'Get help',
+    hint: 'Something is broken, or not doing what it should',
+    ep: 'testIncNew', send: 'Send it',
+    fields: [{ id: 'observed', label: 'What went wrong?',
+               ph: 'What you were doing, and what happened instead' }],
+    choice: { name: 'sev', key: 'severity', label: 'How much is it holding you up?', dflt: 'Sev-3',
+      opts: [['Sev-1', 'I cannot work', 'Nothing else matters until this is fixed'],
+             ['Sev-2', 'It is slowing me down', 'There is a way round it, but it costs me time'],
+             ['Sev-3', 'Minor', 'Worth telling you, not urgent']] } },
+
+  { kind: 'spec', icon: '💡', label: 'New requirement',
+    hint: 'You want something added, or done differently',
+    ep: 'testReqRaise', send: 'Raise it',
+    /* ⚠️ BOTH, because the server refuses one without the other: a requirement with no evidence is a wish,
+       and evidence with no requirement is a note. Asking here is cheaper than a refusal after typing. */
+    fields: [{ id: 'requirement', label: 'What must it do?',
+               ph: 'Say what should be true when this is done' },
+             { id: 'observed', label: 'What happens today?',
+               ph: 'What you saw that made you ask for it' }],
+    choice: { name: 'pri', key: 'priority', label: 'How soon do you need it?', dflt: 'Medium',
+      opts: [['High', 'Soon', 'It is holding up work we are doing now'],
+             ['Medium', 'In good time', 'We can carry on without it'],
+             ['Low', 'One day', 'Worth having, no hurry']] } },
 ];
+
+function supportBox(kind){ return SUPPORT_BOXES.filter(function(b){ return b.kind === kind; })[0] || null; }
+
+/** ⭐ WHERE THEY WERE, CAPTURED RATHER THAN ASKED FOR — the answer is already on the page, and "which screen?"
+    is a question only we care about. ⚠️ The server only accepts AAA999, so anything else is simply absent. */
+function supportWhere(){
+  var info = (typeof screenInfo === 'function') ? screenInfo() : null;
+  UI._supCode = info && /^[A-Z]{3}[0-9]{3}$/.test(String(info.code || '')) ? info.code : null;
+  return info;
+}
 
 function supportOpen(){
   UI.avMenu = false;
-  var info = (typeof screenInfo === 'function') ? screenInfo() : null;
-  /* ⭐ WHERE THEY WERE, CAPTURED RATHER THAN ASKED FOR. "Which screen?" is a question only we care about, and
-     the answer is already on the page. ⚠️ The server only accepts AAA999, so anything else is simply absent. */
-  var code = info && /^[A-Z]{3}[0-9]{3}$/.test(String(info.code || '')) ? info.code : null;
-
-  modal('<div class="mhd"><div class="t">' + esc(tx('Get help')) + '</div>'
-    + '<div class="s">' + esc(tx('Tell us what went wrong. It reaches us straight away, and you keep a copy.'))
-    + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '') + '</span>' : '')
+  var info = supportWhere();
+  modal('<div class="mhd"><div class="t">' + esc(tx('Support')) + '</div>'
+    + '<div class="s">' + esc(tx('Tell us what you need. It reaches the right queue, and you keep a copy.'))
+    + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '')
+              + '</span>' : '')
     + '</div></div>'
     + '<div class="mbody">'
-    + '<label class="fl">' + esc(tx('What went wrong?')) + '</label>'
-    + '<textarea class="inp" id="sup_what" data-testid="support-what" rows="4" '
-    + 'placeholder="' + esc(tx('What you were doing, and what happened instead')) + '"></textarea>'
-    + '<label class="fl" style="margin-top:11px">' + esc(tx('How much is it holding you up?')) + '</label>'
-    + SUPPORT_URGENCY.map(function(u, i){
-        return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;cursor:pointer">'
-          + '<input type="radio" name="sup_sev" value="' + u[0] + '"' + (i === 2 ? ' checked' : '')
-          + ' data-testid="support-sev-' + u[0] + '" style="margin-top:3px">'
-          + '<span><b style="font-weight:650">' + esc(tx(u[1])) + '</b>'
-          + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(tx(u[2]))
-          + '</div></span></label>';
+    /* ⭐ a grid that reflows to one column on a phone rather than a fixed pair of columns */
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px">'
+    + SUPPORT_BOXES.map(function(b){
+        return '<button data-testid="support-box-' + b.kind + '" onclick="supportForm(\'' + b.kind + '\')" '
+          + 'style="text-align:start;border:1px solid var(--line);background:var(--card);border-radius:var(--r-md);'
+          + 'padding:13px;cursor:pointer;display:block;width:100%">'
+          + '<div style="font-size:21px;line-height:1.1;margin-bottom:5px">' + b.icon + '</div>'
+          + '<div style="font-weight:650;font-size:var(--fs-3);color:var(--disp)">' + esc(tx(b.label)) + '</div>'
+          + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45;margin-top:2px">'
+          + esc(tx(b.hint)) + '</div></button>';
       }).join('')
-    + '</div>'
-    + '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">' + esc(tx('Cancel'))
-    + '</button><button class="pri" data-testid="support-send" onclick="supportSend()">'
-    + esc(tx('Send it')) + '</button></div>');
+    + '</div></div>'
+    + '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">'
+    + esc(tx('Cancel')) + '</button></div>');
+}
 
-  UI._supCode = code;
-  setTimeout(function(){ try{ var t = document.getElementById('sup_what'); if (t) t.focus(); }catch(_){ } }, 60);
+/** ⭐ ONE FORM, DRAWN FROM THE ROW — a second modal per kind is a second place for the wording to drift. */
+function supportForm(kind){
+  var b = supportBox(kind); if (!b) return;
+  var info = supportWhere();
+  UI._supKind = kind;
+  modal('<div class="mhd"><div class="t">' + esc(tx(b.label)) + '</div>'
+    + '<div class="s">' + esc(tx(b.hint))
+    + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '')
+              + '</span>' : '')
+    + '</div></div>'
+    + '<div class="mbody">'
+    + b.fields.map(function(f, i){
+        return '<label class="fl"' + (i ? ' style="margin-top:11px"' : '') + '>' + esc(tx(f.label)) + '</label>'
+          + '<textarea class="inp" id="sup_' + f.id + '" data-testid="support-' + f.id + '" rows="3" '
+          + 'placeholder="' + esc(tx(f.ph)) + '"></textarea>';
+      }).join('')
+    + (b.choice ? '<label class="fl" style="margin-top:11px">' + esc(tx(b.choice.label)) + '</label>'
+        + b.choice.opts.map(function(u){
+            return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;cursor:pointer">'
+              + '<input type="radio" name="sup_' + b.choice.name + '" value="' + esc(u[0]) + '"'
+              + (u[0] === b.choice.dflt ? ' checked' : '')
+              + ' data-testid="support-' + b.choice.name + '-' + u[0] + '" style="margin-top:3px">'
+              + '<span><b style="font-weight:650">' + esc(tx(u[1])) + '</b>'
+              + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(tx(u[2]))
+              + '</div></span></label>';
+          }).join('') : '')
+    + '</div>'
+    /* ⭐ BACK, not Cancel, on a form reached from the hub — the way out of a wrong box is the other boxes. */
+    + '<div class="mfoot"><button data-testid="support-back" onclick="supportOpen()">' + esc(tx('Back'))
+    + '</button><button class="pri" data-testid="support-send" onclick="supportSend()">'
+    + esc(tx(b.send)) + '</button></div>');
+
+  setTimeout(function(){ try{ var t = document.getElementById('sup_' + b.fields[0].id); if (t) t.focus(); }
+                         catch(_){ } }, 60);
 }
 
 async function supportSend(){
-  var t = document.getElementById('sup_what');
-  var what = ((t && t.value) || '').trim();
-  /* ⚠️ refused rather than defaulted, and it says what is missing. An empty report is a row somebody has to
-     chase the sender about, which costs them the time they were trying to save. */
-  if (!what) { if (t) t.focus(); toast(tx('Say what went wrong, in your own words.'), true); return; }
-  var sev = (document.querySelector('input[name="sup_sev"]:checked') || {}).value || 'Sev-3';
+  var b = supportBox(UI._supKind); if (!b) return;
+  var body = {}, first = null;
+  for (var i = 0; i < b.fields.length; i++) {
+    var f = b.fields[i], el = document.getElementById('sup_' + f.id);
+    var v = ((el && el.value) || '').trim();
+    /* ⚠️ refused rather than defaulted, and it says which field — an empty report is a row somebody has to
+       chase the sender about, which costs them the time they were trying to save. */
+    if (!v) { if (el) el.focus(); toast(tx('Please answer') + ': ' + tx(f.label), true); return; }
+    body[f.id] = v; if (!first) first = v;
+  }
+  if (b.choice) {
+    body[b.choice.key] = (document.querySelector('input[name="sup_' + b.choice.name + '"]:checked') || {}).value
+      || b.choice.dflt;
+  }
+  if (UI._supCode) body.screen_code = UI._supCode;
+
   var btn = document.querySelector('[data-testid="support-send"]');
   if (btn) { btn.disabled = true; btn.textContent = tx('Sending…'); }
   try{
-    /* ⭐ THE SAME ENDPOINT THE TEST LAB USES. One mechanism, two doors. */
-    var r = await api('testIncNew', { body: { observed: what, severity: sev, screen_code: UI._supCode || undefined } });
+    /* ⭐ THE SAME ENDPOINTS THE TEST LAB USES. One mechanism, two doors. */
+    var r = await api(b.ep, { body: body });
     closeModal();
     /**
-     * ⭐ AND THE RECEIPT SAYS WHETHER IT REACHED US. `support.copied` is the ticket; without it the report is
-     * saved on their own board and nobody has been told — which looks identical to success from here, and is
-     * exactly the silence this codebase keeps producing. [[feedback-silence-is-the-bug]]
+     * ⭐ AND THE RECEIPT SAYS WHETHER IT REACHED ANYONE. `support.copied` is the ticket; without it the report
+     * is saved on their own board and nobody has been told — which looks identical to success from here, and
+     * is exactly the silence this codebase keeps producing. [[feedback-silence-is-the-bug]]
      */
-    var ref = r && (r.ref || r.definition_id);
+    var ref = r && (r.ref || r.clause || r.definition_id);
     var got = r && r.support && r.support.copied;
     toast(got ? (tx('Sent') + (ref ? ' · ' + ref : '') + ' — ' + tx('we have it, and you keep a copy'))
               : (tx('Saved') + (ref ? ' · ' + ref : '') + ' — ⚠️ '
-                 + tx('we could not be notified yet; it is on your record and will not be lost')), !got);
+                 + tx('nobody has been notified yet; it is on your record and will not be lost')), !got);
   }catch(e){
-    if (btn) { btn.disabled = false; btn.textContent = tx('Send it'); }
+    if (btn) { btn.disabled = false; btn.textContent = tx(b.send); }
     toast(String((e && e.message) || tx('Could not send it')), true);
   }
 }
-
 function promptAsk(title, opts, onOk, extra){
   opts = opts || {}; extra = extra || {};
   const ph = opts.placeholder||'', val = opts.value||'', ok = opts.okLabel||'Save', hint = opts.hint||'';
