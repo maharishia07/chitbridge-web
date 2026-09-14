@@ -8390,7 +8390,11 @@ function platformScreen(){
       +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(p),ap.position)).join(''))+'</select>'
       /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
          control rather than more values in the kind list. */
-      +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any visibility'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
+      +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any catalogue'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
+      /* ⭐ TWO VISIBILITIES, TWO CONTROLS (b234). 'may you see my products' and 'may you find me' are
+         different questions and the data does not line them up — one dropdown for both would force a
+         choice the model does not make. */
+      +'<select '+sel+' id="pl_evis" data-testid="plat-entity-visibility" onchange="loadPlatform()">'+opt('',tx('any entity'),ap.entity_visibility)+((f.entity_visibility||[]).map(v=>opt(v,tx(v),ap.entity_visibility)).join(''))+'</select>'
       +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'+presets+'</select>'
     +'</div>'
     +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+platCountHTML()+'</div></div>'
@@ -8437,6 +8441,7 @@ function platRowHTML(r){
            if(!ap.vertical) out+='<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>';
            /* ⚠️ A GLYPH, NOT A FOURTH WORD. Three words per row was already the fault Athi spotted; a
               padlock costs no width and title= carries the word for anyone who needs it. */
+           if(r.entity_visibility==='internal') out+='<span title="'+tx('ours — cannot be found or named as a counterparty')+'" style="font-size:var(--fs-1);font-weight:600;color:var(--gold-d);background:var(--gold-soft);border-radius:999px;padding:1px 7px">'+tx('internal')+'</span>';
            if(!ap.visibility){ var V={private:['🔒','private'],network:['🔗','network to network'],public:['🌐','public']}[r.visibility]||['','']; 
              if(V[0]) out+='<span title="'+tx('catalogue')+': '+tx(V[1])+'" style="font-size:var(--fs-1);opacity:.75">'+V[0]+'</span>'; }
            return out?('<span style="margin-inline-start:auto;display:flex;gap:4px;align-items:center">'+out+'</span>'):''; })()
@@ -8506,7 +8511,8 @@ function platDetailHTML(){
         +platKv(tx('Email'),mono(r.email)))
     + platGrp(tx('Standing'),
         platKv(tx('Plan'),esc(r.plan||'—'))
-        +platKv(tx('Catalogue'),esc(r.visibility||'—'))
+        +platKv(tx('Catalogue seen by'),esc(r.visibility||'—'))
+        +platKv(tx('Entity found by'),esc(r.entity_visibility||'—'))
         +platKv(tx('Joined'),esc(r.joined||'—'))
         +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')))
     + platGrp(tx('Size'),
@@ -8560,6 +8566,7 @@ function platSummaryHTML(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 6px 2px">'+tx('businesses only — actors and shoppers excluded')+'</div>'
     + platGrp(tx('By vertical'), pairs(d.by_vertical))
     + platGrp(tx('By plan'), pairs(d.by_plan))
+    + platGrp(tx('By entity visibility'), pairs(d.by_entity_visibility))
     + platGrp(tx('By catalogue visibility'), pairs(d.by_visibility))
     + platGrp(tx('Position on the network'), pairs(d.by_position))
     /**
@@ -8591,6 +8598,7 @@ async function loadPlatform(){
   if(g('pl_plan')) q.plan=g('pl_plan');
   if(g('pl_pos'))  q.position=g('pl_pos');
   if(g('pl_vis'))  q.visibility=g('pl_vis');
+  if(g('pl_evis')) q.entity_visibility=g('pl_evis');
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
