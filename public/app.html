@@ -8575,6 +8575,10 @@ function platScopeHTML(r){
 }
 function platDetailHTML(){
   var d=UI.plat||{}, r=(d.rows||[]).find(function(x){return x.identity_id===UI.platSel;});
+  /* ⭐ the scope table is a VIEW, not a fallback: it holds the pane even when a row is picked, so the
+     operator always has a way back out of it. Selecting a row still highlights it, ready for Shape. */
+  if(UI.platView==='scope') return '<div class="dh"><div class="dt">'+tx('Entity scope')+'</div>'
+    +'<div class="ds">'+platViewToggleHTML()+'</div></div><div class="db">'+platScopeTableHTML()+'</div>';
   if(!r) return platSummaryHTML();
   var mono=function(v){return '<span class="mono" style="font-size:var(--fs-1)">'+esc(v||'')+'</span>';};
   var life=platLifeTone(r.quiet_days);
@@ -8611,6 +8615,122 @@ function platDetailHTML(){
 }
 
 /** the report itself — shown whenever no row is selected, so the screen is never blank */
+/**
+ * ── ⭐⭐ THE SCOPE TABLE — every entity on one line, one column per rule ────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"possibly we can keep it as a column for each of the item like task… so we don't need to
+ * squeeze. all can be in one line based on the column."*
+ *
+ * The per-entity card answers "what may THIS one do". It cannot answer "who can be found but publishes
+ * nothing" without opening ninety cards. A column per rule answers both — you read across for one shop and
+ * down for the pattern, which is the whole reason a table beats a card.
+ *
+ * ⚠️ IT RENDERS THE ROWS ALREADY LOADED, not a second fetch. Same filters, same sort, same "100 of 2,788"
+ * ceiling — so the table can never disagree with the list beside it. A view that quietly queried differently
+ * would be two answers to one question.
+ *
+ * ⚠️ A TABLE IS THE ONE THING ALLOWED TO SCROLL SIDEWAYS. Seven columns will not fit a phone, and squeezing
+ * them would make every cell unreadable to save a gesture nobody minds.
+ */
+/**
+ * ── ⭐ TWO VIEWS OF THE SAME LOADED ROWS ──────────────────────────────────────────────────────────────────────
+ *
+ * Shape is the platform in outline — how many, of what kind, on which plan. Scope is the rules, one line per
+ * entity. Athi wanted the scope table without a second menu item, so the two share one pane and one toggle.
+ *
+ * ⚠️ NEITHER RE-FETCHES. Both render UI.plat.rows — same filters, same sort, same "100 of 2,788" ceiling — so
+ * the two views can never disagree. A toggle that quietly queried differently would be two answers to one
+ * question, and the operator would have no way to tell which of them was stale.
+ *
+ * ⚠️ SCOPE IS STICKY: it wins over a selected row (see platDetailHTML). Otherwise clicking any row would drop
+ * you into a card with no way back to the table, because the back button only exists on a phone.
+ */
+function platViewToggleHTML(){
+  var v = UI.platView === 'scope' ? 'scope' : 'report';
+  var b = function(k, label){
+    var on = v === k;
+    return '<button data-testid="plat-view-' + k + '" onclick="platSetView(\'' + k + '\')" '
+      + 'style="font:inherit;font-size:var(--fs-1);padding:2px 10px;border-radius:7px;cursor:pointer;'
+      + 'margin-inline-end:5px;border:1px solid var(--line);'
+      + (on ? 'background:var(--ink);color:var(--card);border-color:var(--ink)'
+            : 'background:var(--card);color:var(--grey-2)') + '">' + esc(tx(label)) + '</button>';
+  };
+  return b('report', 'Shape') + b('scope', 'Scope')
+    + '<span style="color:var(--grey);font-size:var(--fs-1)"> '
+    + esc(v === 'scope' ? tx('pick a row, then press Shape for that entity')
+                        : tx('select a row for one entity')) + '</span>';
+}
+function platSetView(v){ UI.platView = (v === 'scope' ? 'scope' : 'report'); paintPlatList(); paintPlatDetail(); }
+function platScopeTableHTML(){
+  var d = UI.plat || {}, rows = d.rows || [];
+  if (d.denied) return emptyState('🔒', tx('Operator only'), tx('Sign in as the platform root.'));
+  if (!rows.length) return emptyState('🛰️', tx('Nothing to show'), tx('No entity matches these filters.'));
+
+  var ok = 'var(--ok)', no = 'var(--danger)', maybe = 'var(--warn)', dim = 'var(--grey-4)';
+  /* ⚠️ a dot AND a word. Colour alone fails anyone who cannot separate red from green, and this table is all
+     colour otherwise. The word is the answer; the dot only makes the pattern visible down the column. */
+  var cell = function(tone, word, why){
+    return '<td title="' + esc(why || '') + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);'
+      + 'white-space:nowrap;font-size:var(--fs-1)"><span style="display:inline-block;width:7px;height:7px;'
+      + 'border-radius:50%;background:' + tone + ';margin-inline-end:6px"></span>' + esc(word) + '</td>';
+  };
+  var th = function(t, hint){
+    return '<th title="' + esc(hint || '') + '" style="text-align:left;padding:7px 9px;font-size:var(--fs-1);'
+      + 'color:var(--grey);font-weight:600;text-transform:uppercase;letter-spacing:.03em;'
+      + 'border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)">'
+      + esc(tx(t)) + '</th>';
+  };
+
+  var body = rows.map(function(r){
+    var ev = r.entity_visibility || 'public', cv = r.visibility || 'private';
+    var branch = (r.depth || 0) > 1;
+    var sells = { goods: 'things', services: 'work', both: 'both', none: 'nothing', unknown: '—' }[r.supplies] || '—';
+    return '<tr class="' + (r.identity_id === UI.platSel ? 'sel' : '') + '"'
+      + ' onclick="selectPlat(\'' + esc(r.identity_id) + '\')" style="cursor:pointer">'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-weight:600;'
+      + 'font-size:var(--fs-2);white-space:nowrap">' + esc(r.display_name || r.user_id || '—')
+      + '<div class="mono" style="font-size:var(--fs-1);color:var(--grey);font-weight:400">'
+      + esc(r.user_id || '—') + '</div></td>'
+      + (ev === 'internal' ? cell(no, tx('no'), tx('Internal — ours, not on the market'))
+         : ev === 'private' ? cell(maybe, tx('by ID'), tx('Not in search; reachable if you know the handle'))
+         : ev === 'network' ? cell(maybe, tx('network'), tx('Its own group only'))
+         : cell(ok, tx('anyone'), tx('In search for every shop')))
+      + (ev === 'internal' ? cell(no, tx('no*'), tx('Should never be a party — declared, NOT enforced yet'))
+         : cell(ok, tx('yes'), tx('Any shop holding its ID can add it (D-056, no consent)')))
+      + (cv === 'public' ? cell(ok, tx('anyone'), tx('Open storefront'))
+         : cv === 'network' ? cell(maybe, tx('network'), tx('Members see them as public; others see nothing'))
+         : cell(no, tx('no'), tx('The list is for billing, not selling')))
+      + cell(ok, tx('yes'), tx('A chit reaches it whatever the price list says'))
+      + (branch ? cell(dim, tx('no'), tx('Branch at depth ') + r.depth + tx(' — billed to its root'))
+                : cell(ok, tx('yes'), tx('Root or standalone: holds its own plan')))
+      + cell(r.supplies === 'unknown' ? dim : ok, tx(sells), tx('What the business deals in'))
+      /* ⭐ the rest of what the row already knows. Athi: "we can scroll… bring most of the information here,
+         then will see how to fold." Not one of these costs a query — they are all in the loaded row, so the
+         table is wider and no slower. */
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey-2)">' + esc(r.entity_kind || '—') + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey-2)">' + esc(r.plan || '—') + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.seats || 0) + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.branches || 0) + '</td>'
+      + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.bridge_id || '—') + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.last_seen || tx('never')) + '</td>'
+      + '</tr>';
+  }).join('');
+
+  return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
+    + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
+    + '<thead><tr>' + th('Entity') + th('Found', tx('Can it be found in search?'))
+    + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
+    + th('Work', tx('Can it be sent a chit?')) + th('Pays', tx('Is it a billing tenant?'))
+    + th('Sells', tx('What does it deal in?'))
+    + th('Type', tx('What kind of row is it?')) + th('Plan', tx('Which commercial tier it sits on'))
+    + th('People', tx('Staff signed on to it')) + th('Branches', tx('Nodes beneath it on the network'))
+    + th('Bridge id', tx('Its address on the rail')) + th('Last seen', tx('When it last signed in'))
+    + '</tr></thead><tbody>' + body + '</tbody></table></div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:var(--sp-2);line-height:1.5">'
+    + '<b style="color:var(--warn-2)">*</b> ' + tx('declared, not enforced yet — the supplier and customer add '
+    + 'paths accept any handle by design (D-056, D-065). Everything else in this table is a live rule.')
+    + '</div>';
+}
 function platSummaryHTML(){
   var d=UI.plat||{};
   if(d.denied) return emptyState('🔒',tx('Operator only'),tx('Sign in as the platform root to see the report.'));
@@ -8645,7 +8765,7 @@ function platSummaryHTML(){
       +'<b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1)">'+esc(x)+'</b>'
       +'<span style="font-weight:700;font-variant-numeric:tabular-nums">'+obj[x]+'</span></div>'; }).join(''); };
   return '<div class="dh"><div class="dt">'+tx('Platform report')+'</div>'
-    +'<div class="ds">'+esc((d.at||'').slice(0,16).replace('T',' '))+' · '+tx('select a row for one entity')+'</div></div>'
+    +'<div class="ds">'+platViewToggleHTML()+'</div></div>'
     +'<div class="db">'
     + platGrp(tx('By type'), bars)
     /* ⚠️ THESE COUNT ENTITIES ONLY — not the actors and shoppers in 'By type' above. Two denominators on
