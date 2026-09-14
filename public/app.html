@@ -9018,12 +9018,24 @@ function platStandingFilterHTML(ap){
     + '</select>';
 }
 
-function platScopeTableHTML(){
-  var d = UI.plat || {}, rows = d.rows || [];
-  if (d.denied) return emptyState('🔒', tx('Operator only'), tx('Sign in as the platform root.'));
-  if (!rows.length) return emptyState('🛰️', tx('Nothing to show'), tx('No entity matches these filters.'));
-
+/**
+ * ── ⭐⭐⭐ ONE LIST OF COLUMNS — the header and the body both come from it ───────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"we can also create a column selection so we can select few columns as required."*
+ *
+ * ⚠️⚠️ AND IT CLOSES A BUG THAT BIT TWICE TODAY. The header row and the body row were two separate sequences
+ * of string concatenation, so adding a column meant editing both — and twice I edited one. The first time the
+ * whole page stopped parsing; the second, seventeen headings sat over sixteen cells. A column that exists in
+ * one place cannot disagree with itself. [[feedback-no-duplicate-functions]]
+ *
+ * Each entry: { key, label, hint, sort, cell(r, k) } — `sort` only where routes/entities.js will honour it.
+ */
+function platColumns(){
   var ok = 'var(--ok)', no = 'var(--danger)', maybe = 'var(--warn)', dim = 'var(--grey-4)';
+  var td = function(inner, style){
+    return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+      + 'white-space:nowrap;' + (style || '') + '">' + inner + '</td>';
+  };
   /* ⚠️ a dot AND a word. Colour alone fails anyone who cannot separate red from green, and this table is all
      colour otherwise. The word is the answer; the dot only makes the pattern visible down the column. */
   var cell = function(tone, word, why){
@@ -9031,119 +9043,190 @@ function platScopeTableHTML(){
       + 'white-space:nowrap;font-size:var(--fs-1)"><span style="display:inline-block;width:7px;height:7px;'
       + 'border-radius:50%;background:' + tone + ';margin-inline-end:6px"></span>' + esc(word) + '</td>';
   };
-  /**
-   * ── ⭐⭐ CLICK A HEADING TO SORT BY IT ─────────────────────────────────────────────────────────────────────
-   *
-   * Athi: *"also, we can do the sort as per column."* The preset dropdown answers "most recent, oldest,
-   * gone quiet"; a column heading answers "by this, now" — and with seventeen columns that is the faster
-   * question to ask.
-   *
-   * ⚠️ ONLY THE COLUMNS THE SERVER WILL ACTUALLY ORDER BY. `SORTS` in routes/entities.js is a whitelist,
-   * because ORDER BY cannot take a bind parameter. A heading that looked clickable and silently did nothing
-   * would be worse than one that plainly is not — so the rest render exactly as before, unclickable.
-   * [[feedback-silence-is-the-bug]]
-   */
+  var ev = function(r){ return r.entity_visibility || 'public'; };
+  var cv = function(r){ return r.visibility || 'private'; };
+  var posOf = function(r){ return r.network_root ? 'branch' : ((r.depth === 1) ? 'root' : 'none'); };
+
+  return [
+    { key: 'name', label: 'Name', hint: 'What the business calls itself', sort: 'name',
+      cell: function(r){ return td(esc(r.display_name || '—'), 'font-weight:600;font-size:var(--fs-2)'); } },
+    { key: 'handle', label: 'User ID', hint: 'How they sign in — and what you search by', sort: 'handle',
+      cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
+        + 'var(--line-soft);font-size:var(--fs-1);color:var(--grey);white-space:nowrap">'
+        + esc(r.user_id || '—') + '</td>'; } },
+    { key: 'network', label: 'Network', hint: 'none · root · branch',
+      cell: function(r){ var p = posOf(r);
+        var tone = p === 'branch' ? 'var(--purple)' : p === 'root' ? 'var(--ink)' : 'var(--grey-4)';
+        return '<td title="' + esc(p === 'root' ? tx('Heads a network. It pays; its branches are billed to it.')
+            : p === 'branch' ? tx('A branch. Its plan belongs to its root.')
+            : tx('On its own — not in a network at all.'))
+          + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+          + 'white-space:nowrap;color:' + tone + '">' + esc(tx(p)) + '</td>'; } },
+    { key: 'of', label: 'Of', hint: 'Whose network it is under',
+      cell: function(r){ var p = posOf(r);
+        return td(esc(p === 'branch' ? (r.network_root || '—') : p === 'root' ? (r.display_name || '—') : '—'),
+          'color:var(--grey)'); } },
+    { key: 'standing', label: 'Standing', hint: 'Is this shop actually using the product?', sort: 'standing',
+      cell: function(r){ var st = platStanding(r.standing);
+        return '<td title="' + esc(st ? tx('Signed in, chits sent and products listed decide this')
+                                      : tx('Not computed yet — run migration b242'))
+          + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+          + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
+          + '">' + (st ? '● ' + esc(st.word) : '—') + '</td>'; } },
+    { key: 'found', label: 'Found', hint: 'Can it be found in search?',
+      cell: function(r){ var v = ev(r);
+        return v === 'internal' ? cell(no, tx('no'), tx('Internal — ours, not on the market'))
+          : v === 'private' ? cell(maybe, tx('by ID'), tx('Not in search; reachable if you know the handle'))
+          : v === 'network' ? cell(maybe, tx('network'), tx('Its own group only'))
+          : cell(ok, tx('anyone'), tx('In search for every shop')); } },
+    { key: 'add', label: 'Add', hint: 'Can it be named as a supplier or customer?',
+      cell: function(r){ return ev(r) === 'internal'
+        ? cell(no, tx('no*'), tx('Should never be a party — declared, NOT enforced yet'))
+        : cell(ok, tx('yes'), tx('Any shop holding its ID can add it (D-056, no consent)')); } },
+    { key: 'products', label: 'Products', hint: 'Can its price list be seen?',
+      cell: function(r){ var v = cv(r);
+        return v === 'public' ? cell(ok, tx('anyone'), tx('Open storefront'))
+          : v === 'network' ? cell(maybe, tx('network'), tx('Members see them as public; others see nothing'))
+          : cell(no, tx('no'), tx('The list is for billing, not selling')); } },
+    { key: 'work', label: 'Work', hint: 'Can it be sent a chit?',
+      cell: function(){ return cell(ok, tx('yes'), tx('A chit reaches it whatever the price list says')); } },
+    { key: 'pays', label: 'Pays', hint: 'Is it a billing tenant?',
+      cell: function(r){ return (r.depth || 0) > 1
+        ? cell(dim, tx('no'), tx('Branch at depth ') + r.depth + tx(' — billed to its root'))
+        : cell(ok, tx('yes'), tx('Root or standalone: holds its own plan')); } },
+    { key: 'sells', label: 'Sells', hint: 'What does it deal in?',
+      cell: function(r){
+        var w = { goods: 'things', services: 'work', both: 'both', none: 'nothing', unknown: '—' }[r.supplies] || '—';
+        return cell(r.supplies === 'unknown' ? dim : ok, tx(w), tx('What the business deals in')); } },
+    { key: 'type', label: 'Type', hint: 'What kind of row is it?', sort: 'kind',
+      cell: function(r){ return td(esc(r.entity_kind || '—'), 'color:var(--grey-2)'); } },
+    { key: 'plan', label: 'Plan', hint: 'Which commercial tier it sits on', sort: 'plan',
+      cell: function(r){ return td(esc(r.plan || '—'), 'color:var(--grey-2)'); } },
+    { key: 'people', label: 'People', hint: 'Staff signed on to it', sort: 'seats',
+      cell: function(r){ return td(String(r.seats || 0), 'text-align:right;font-variant-numeric:tabular-nums'); } },
+    { key: 'branches', label: 'Branches', hint: 'Nodes beneath it on the network', sort: 'branches',
+      cell: function(r){ return td(String(r.branches || 0), 'text-align:right;font-variant-numeric:tabular-nums'); } },
+    { key: 'bridge', label: 'Bridge id', hint: 'Its address on the rail',
+      cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
+        + 'var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">'
+        + esc(r.bridge_id || '—') + '</td>'; } },
+    { key: 'seen', label: 'Last seen', hint: 'When it last signed in', sort: 'last_seen',
+      cell: function(r){ return td(esc(platDay(r.last_seen) || tx('never')), 'color:var(--grey)'); } },
+  ];
+}
+
+/**
+ * ⭐ WHICH COLUMNS ARE SHOWN. Seventeen is the whole truth and too much to read at once; the default is the
+ * nine an operator opens the screen for, and the rest are one tick away.
+ * ⚠️ `name` is not optional. A table you cannot identify a row in is a wall of facts about nobody.
+ */
+var PLAT_COLS_DEFAULT = ['name', 'handle', 'network', 'standing', 'sells', 'type', 'plan', 'people', 'seen'];
+function platCols(){
+  if (UI.platCols) return UI.platCols;
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(uk('cb_platcols')) || 'null'); } catch (_) {}
+  var all = platColumns().map(function(c){ return c.key; });
+  /* ⚠️ filtered against the CURRENT list: a saved set naming a column that has since been renamed would
+     otherwise render an empty header forever, and nobody would know why. */
+  UI.platCols = (Array.isArray(saved) && saved.length)
+    ? saved.filter(function(k){ return all.indexOf(k) >= 0; })
+    : PLAT_COLS_DEFAULT.slice();
+  if (UI.platCols.indexOf('name') < 0) UI.platCols.unshift('name');
+  return UI.platCols;
+}
+function platToggleCol(key){
+  if (key === 'name') return;                       /* the one that cannot be turned off */
+  var set = platCols().slice(), i = set.indexOf(key);
+  if (i >= 0) set.splice(i, 1); else {
+    /* ⭐ inserted in the canonical order, not appended — a chooser that reorders the table as you tick is
+       disorienting, and nobody asked for reordering. */
+    var all = platColumns().map(function(c){ return c.key; });
+    set.push(key);
+    set.sort(function(a, b){ return all.indexOf(a) - all.indexOf(b); });
+  }
+  UI.platCols = set;
+  try { localStorage.setItem(uk('cb_platcols'), JSON.stringify(set)); } catch (_) {}
+  paintPlatList();
+}
+function platColMenuHTML(){
+  if (!UI.platColMenu) return '';
+  var on = platCols();
+  return '<div data-testid="plat-colmenu" onclick="event.stopPropagation()" '
+    + 'style="position:absolute;z-index:40;margin-top:4px;background:var(--card);border:1px solid var(--line);'
+    + 'border-radius:var(--r-md);padding:9px 11px;box-shadow:0 8px 24px rgba(0,0,0,.28);max-height:320px;'
+    + 'overflow:auto;min-width:190px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">'
+    + esc(tx('Show these columns')) + '</div>'
+    + platColumns().map(function(c){
+        var checked = on.indexOf(c.key) >= 0, fixed = c.key === 'name';
+        return '<label style="display:flex;gap:7px;align-items:center;padding:3px 0;font-size:var(--fs-2);'
+          + (fixed ? 'opacity:.55' : 'cursor:pointer') + '">'
+          + '<input type="checkbox" data-testid="plat-col-' + c.key + '" ' + (checked ? 'checked ' : '')
+          + (fixed ? 'disabled ' : 'onchange="platToggleCol(\'' + c.key + '\')" ')
+          + 'style="margin:0">' + esc(tx(c.label)) + '</label>';
+      }).join('')
+    + '</div>';
+}
+function platToggleColMenu(){ UI.platColMenu = !UI.platColMenu; paintPlatList(); }
+/* ⚠️ a panel that only closes by pressing the same button again is one people leave open and then report as
+   "it covers the table". Every other menu here closes on an outside click; so does this. */
+document.addEventListener('click', function(){ if (UI.platColMenu) { UI.platColMenu = false; paintPlatList(); } });
+
+/**
+ * ── ⭐⭐ THE TABLE — every entity on one line, one column per question ─────────────────────────────────────────
+ *
+ * ⚠️ IT RENDERS THE ROWS ALREADY LOADED, not a second fetch. Same filters, same sort, same page — so it can
+ * never disagree with the count above it.
+ *
+ * ⚠️ A TABLE IS THE ONE THING ALLOWED TO SCROLL SIDEWAYS. Seventeen columns will not fit a phone, and
+ * squeezing them would make every cell unreadable to save a gesture nobody minds.
+ */
+function platScopeTableHTML(){
+  var d = UI.plat || {}, rows = d.rows || [];
+  if (d.denied) return emptyState('🔒', tx('Operator only'), tx('Sign in as the platform root.'));
+  if (!rows.length) return emptyState('🛰️', tx('Nothing to show'), tx('No entity matches these filters.'));
+
+  var shown = platCols();
+  var defs = platColumns().filter(function(c){ return shown.indexOf(c.key) >= 0; });
   var cur = UI.platSort || {};
-  var th = function(t, hint, sortKey){
+  var sortable = (((d.controls) || {}).sortable) || [];
+
+  var th = function(c){
     var base = 'text-align:left;padding:7px 9px;font-size:var(--fs-1);color:var(--grey);font-weight:600;'
       + 'text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;'
       + 'position:sticky;top:0;background:var(--card)';
-    if (!sortKey || !((((UI.plat||{}).controls)||{}).sortable || []).includes(sortKey)) {
-      return '<th title="' + esc(hint || '') + '" style="' + base + '">' + esc(tx(t)) + '</th>';
+    /* ⚠️ ONLY the columns the server will actually ORDER BY — `SORTS` in routes/entities.js is a whitelist,
+       because ORDER BY cannot take a bind parameter. A heading that looked clickable and silently did nothing
+       would be worse than one that plainly is not. */
+    if (!c.sort || sortable.indexOf(c.sort) < 0) {
+      return '<th title="' + esc(tx(c.hint || '')) + '" style="' + base + '">' + esc(tx(c.label)) + '</th>';
     }
-    var on = cur.sort === sortKey;
-    var arrow = on ? (cur.dir === 'asc' ? ' ▲' : ' ▼') : '';
-    return '<th title="' + esc((hint ? hint + ' · ' : '') + tx('click to sort')) + '" '
-      + 'data-testid="plat-sort-' + sortKey + '" onclick="platSortBy(\'' + sortKey + '\')" '
+    var on = cur.sort === c.sort;
+    return '<th title="' + esc(tx(c.hint || '') + ' · ' + tx('click to sort')) + '" '
+      + 'data-testid="plat-sort-' + c.sort + '" onclick="platSortBy(\'' + c.sort + '\')" '
       + 'style="' + base + ';cursor:pointer;' + (on ? 'color:var(--ink)' : '') + '">'
-      + esc(tx(t)) + arrow + '</th>';
+      + esc(tx(c.label)) + (on ? (cur.dir === 'asc' ? ' ▲' : ' ▼') : '') + '</th>';
   };
 
   var body = rows.map(function(r){
-    var ev = r.entity_visibility || 'public', cv = r.visibility || 'private';
-    var branch = (r.depth || 0) > 1;
-    var sells = { goods: 'things', services: 'work', both: 'both', none: 'nothing', unknown: '—' }[r.supplies] || '—';
     return '<tr class="' + (r.identity_id === UI.platSel ? 'sel' : '') + '"'
       + ' onclick="selectPlat(\'' + esc(r.identity_id) + '\')" style="cursor:pointer">'
-      /* ⭐ TWO FACTS, TWO COLUMNS. Athi: *"we can split the user id and the names in two columns."* They were
-         stacked, which reads fine for one row and cannot be SORTED or SCANNED down — and a handle is what you
-         actually search by. */
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-weight:600;'
-      + 'font-size:var(--fs-2);white-space:nowrap">' + esc(r.display_name || '—') + '</td>'
-      + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);'
-      + 'font-size:var(--fs-1);color:var(--grey);white-space:nowrap">' + esc(r.user_id || '—') + '</td>'
-      /* ⭐ SECOND COLUMN. Athi, earlier today: *"each shops last status."* It sits beside the name because it
-         is the question the name is looked up to answer, not something to scroll thirteen columns for. */
-      /* ⭐ WHOSE NETWORK. Athi: *"the root to be shown with the owner of the network"* and *"for other shops
-         root is none, they are root themselves."* A branch names its root; everyone else is their own. */
-      + (function(){
-          var own = !r.network_root;
-          var pos  = own ? ((r.depth === 1) ? 'root' : 'none') : 'branch';
-          var tone = pos === 'branch' ? 'var(--purple)' : pos === 'root' ? 'var(--ink)' : 'var(--grey-4)';
-          return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
-            + 'white-space:nowrap;color:' + tone + '" title="'
-            + esc(pos === 'root'   ? tx('Heads a network. It pays; its branches are billed to it.')
-                : pos === 'branch' ? tx('A branch. Its plan belongs to its root.')
-                :                    tx('On its own — not in a network at all.')) + '">'
-            + esc(tx(pos)) + '</td>'
-            /* ⭐ AND WHOSE, IN ITS OWN COLUMN. Same reason as the name and the handle: stacked, it could not be
-               sorted or read down the page. A root is its own network's head, so it names itself. */
-            + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
-            + 'white-space:nowrap;color:var(--grey)">'
-            + esc(pos === 'branch' ? (r.network_root || '—')
-                : pos === 'root'   ? (r.display_name || '—')
-                :                    '—') + '</td>'; })()
-      + (function(){ var st = platStanding(r.standing);
-          return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
-            + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
-            + '" title="' + esc(st ? tx('Signed in, chits sent and products listed decide this')
-                                   : tx('Not computed yet — run migration b242')) + '">'
-            + (st ? '● ' + esc(st.word) : '—') + '</td>'; })()
-      + (ev === 'internal' ? cell(no, tx('no'), tx('Internal — ours, not on the market'))
-         : ev === 'private' ? cell(maybe, tx('by ID'), tx('Not in search; reachable if you know the handle'))
-         : ev === 'network' ? cell(maybe, tx('network'), tx('Its own group only'))
-         : cell(ok, tx('anyone'), tx('In search for every shop')))
-      + (ev === 'internal' ? cell(no, tx('no*'), tx('Should never be a party — declared, NOT enforced yet'))
-         : cell(ok, tx('yes'), tx('Any shop holding its ID can add it (D-056, no consent)')))
-      + (cv === 'public' ? cell(ok, tx('anyone'), tx('Open storefront'))
-         : cv === 'network' ? cell(maybe, tx('network'), tx('Members see them as public; others see nothing'))
-         : cell(no, tx('no'), tx('The list is for billing, not selling')))
-      + cell(ok, tx('yes'), tx('A chit reaches it whatever the price list says'))
-      + (branch ? cell(dim, tx('no'), tx('Branch at depth ') + r.depth + tx(' — billed to its root'))
-                : cell(ok, tx('yes'), tx('Root or standalone: holds its own plan')))
-      + cell(r.supplies === 'unknown' ? dim : ok, tx(sells), tx('What the business deals in'))
-      /* ⭐ the rest of what the row already knows. Athi: "we can scroll… bring most of the information here,
-         then will see how to fold." Not one of these costs a query — they are all in the loaded row, so the
-         table is wider and no slower. */
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey-2)">' + esc(r.entity_kind || '—') + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey-2)">' + esc(r.plan || '—') + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.seats || 0) + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.branches || 0) + '</td>'
-      + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.bridge_id || '—') + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(platDay(r.last_seen) || tx('never')) + '</td>'
+      /* ⭐ header and body from the SAME list, in the same order — they cannot disagree about how many
+         columns there are, which they twice did when each was its own sequence of concatenation. */
+      + defs.map(function(c){ return c.cell(r); }).join('')
       + '</tr>';
   }).join('');
 
   var foot = platPagerHTML();
-  return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
-    + '<table style="border-collapse:collapse;width:100%;min-width:1240px">'
-    + '<thead><tr>'
-    + th('Name', tx('What the business calls itself'), 'name')
-    + th('User ID', tx('How they sign in — and what you search by'), 'handle')
-    + th('Network', tx('none · root · branch'))
-    + th('Of', tx('Whose network it is under'))
-    + th('Standing', tx('Is this shop actually using the product?'), 'standing')
-    + th('Found', tx('Can it be found in search?'))
-    + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
-    + th('Work', tx('Can it be sent a chit?')) + th('Pays', tx('Is it a billing tenant?'))
-    + th('Sells', tx('What does it deal in?'))
-    + th('Type', tx('What kind of row is it?'), 'kind')
-    + th('Plan', tx('Which commercial tier it sits on'), 'plan')
-    + th('People', tx('Staff signed on to it'), 'seats')
-    + th('Branches', tx('Nodes beneath it on the network'), 'branches')
-    + th('Bridge id', tx('Its address on the rail'))
-    + th('Last seen', tx('When it last signed in'), 'last_seen')
-    + '</tr></thead><tbody>' + body + '</tbody></table></div>' + foot
+  return '<div style="display:flex;justify-content:flex-end;position:relative;margin-bottom:5px">'
+    + '<button data-testid="plat-cols" onclick="event.stopPropagation();platToggleColMenu()" '
+    + 'style="font:inherit;font-size:var(--fs-1);padding:3px 10px;cursor:pointer;border:1px solid var(--line);'
+    + 'background:var(--card);color:var(--grey-2);border-radius:var(--r-sm)">'
+    + esc(tx('⚙ columns')) + ' <span style="color:var(--grey-4)">' + defs.length + '/'
+    + platColumns().length + '</span></button>' + platColMenuHTML() + '</div>'
+    + '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
+    + '<table style="border-collapse:collapse;width:100%;min-width:' + Math.max(520, defs.length * 92) + 'px">'
+    + '<thead><tr>' + defs.map(th).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>' + foot
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:var(--sp-2);line-height:1.5">'
     + '<b style="color:var(--warn-2)">*</b> ' + tx('declared, not enforced yet — the supplier and customer add '
     + 'paths accept any handle by design (D-056, D-065). Everything else in this table is a live rule.')
