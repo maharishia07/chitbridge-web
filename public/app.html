@@ -8362,19 +8362,6 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
  */
 var PLAT_SELLS={ goods:"sells things", service:"sells work", both:"work and parts",
                  none:"sells nothing", unknown:"not asked" };
-/**
- * ⭐ THE COMBINATIONS ATHI ASKED FOR, IN HIS OWN WORDS ────────────────────────────────────────────────────────
- *
- *   *"we want to see all the individual shops — network is None"*        → standalone
- *   *"shops, both individual and network — network: none or root"*       → billable (the ones that PAY)
- *   *"show all the network shops and its branches — network not eq None"*→ networked
- *
- * plus the two single levels. ⚠️ 'billable' and 'networked' overlap on roots BY DESIGN — they are different
- * questions ("who pays" and "who is in a network") and a root is honestly the answer to both.
- */
-var PLAT_POS={ standalone:"on its own", root:"a network head", branch:"inside a network",
-               networked:"in a network (head or branch)", billable:"pays its own bill",
-               };
 function platformScreen(){
   const d=UI.plat||{}, c=d.controls||{}, f=c.filters||{}, ap=c.applied||{};
   const h=d.headline||{};
@@ -8423,11 +8410,8 @@ function platformScreen(){
       /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
          one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
          not reach them from the screen. */
-      +'<select '+sel+' id="pl_sup" data-testid="plat-supplies" onchange="loadPlatform()">'+opt('',tx('sells anything'),ap.supplies)+((f.supplies||[]).map(v=>opt(v,tx(PLAT_SELLS[v]||v),ap.supplies)).join(''))+'</select>'
-      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+opt('*',tx('every kind'),ap.kind)+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
       /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
          computed from the ltree, not stored, so the server names the values in controls.positions. */
-      +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(PLAT_POS[p]||p),ap.position)).join(''))+'</select>'
       /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
          control rather than more values in the kind list. */
       +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any catalogue'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
@@ -8827,64 +8811,78 @@ function setPlatTab(t){ UI.platTab = t; paintPlatDetail(); }
  * entities is `entity_kind`. They are one question to an operator — "what sort of thing am I looking at?" —
  * and splitting them into two controls to match our column layout would be us showing our schema.
  */
-/**
- * ⚠️⚠️ THE FIRST VERSION OF THIS LIST DOUBLE-COUNTED. I offered "Network entities" beside Goods and Services as
- * if they were alternatives. Athi: *"root network will provide either service or goods, so the root entity
- * should be part of the other claim … the 10 network shops to be grouped under the previous group based on
- * what they choose."*
- *
- * ⭐ A NETWORK ROOT IS A BUSINESS. It sells something and it PAYS, so it belongs in goods/services/both with
- * every other shop. Picking "Network entities" silently threw away what the shop sold, and the categories
- * could never sum to the total — which is the only test a classification has to pass.
- *
- * ⭐ WHAT IS LEFT OVER IS THE BRANCHES. Athi's 50: they trade, but their plan belongs to their root, so they
- * are not a paying entity and must not be counted beside one. THAT is what "Network shops" means here.
- *
- * The server computes the same ladder (CLASS_SQL) and returns by_class, so the screen and the database cannot
- * disagree about which box a shop is in.
- */
-var PLAT_CLASS = [['',         'All'],
-                  ['goods',    'Goods'],
-                  ['services', 'Services'],
-                  ['both',     'Goods and Services'],
-                  ['network',  'Network shops'],
-                  /* ⚠️ 2,241 of the 2,259 'goods' were e2e fixtures. Athi ticked Public + Goods, expected
-                     Tally Test Shop and alpha timers, and got a hundred rows of noise — they were not
-                     missing, they were row 1,400 of a list that stops at 100. A fixture is not a paying
-                     entity, so it is a rung of its own and Goods finally means what it says. */
-                  ['test',     'Test fixtures'],
-                  ['internal', 'Internal'],
-                  ['unset',    'Not answered']];
 function platFirstFilterHTML(ap){
-  var evs = String(ap.entity_visibility||'').split(',').filter(Boolean);
-  var cls = ap.class || '';
-  var tick = function(v, label){
-    return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);'
-      + 'color:var(--grey-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer">'
-      + '<input type="checkbox" data-testid="plat-ev-'+v+'" id="pl_ev_'+v+'" '
-      + (evs.indexOf(v)>=0?'checked ':'') + 'onchange="loadPlatform()" style="margin:0;cursor:pointer">'
-      + esc(tx(label))+'</label>';
+  var sel = 'class="inp" style="flex:1;min-width:132px;padding:5px 7px;font-size:var(--fs-1);'
+    + 'border-radius:var(--r-sm)"';
+  var dd = function(id, testid, cur, opts){
+    return '<select ' + sel + ' id="' + id + '" data-testid="' + testid + '" onchange="loadPlatform()">'
+      + opts.map(function(o){
+          return '<option value="' + esc(o[0]) + '"' + (String(cur||'') === o[0] ? ' selected' : '') + '>'
+            + esc(tx(o[1])) + '</option>'; }).join('') + '</select>';
   };
+  /**
+   * ── ⭐⭐⭐ THE MASTER SWITCH ─────────────────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-14: *"if we have a check item on the top to say ignore test entity, or show all test
+   * entities, that would be helpful … we should know to omit as a whole, irrespective of what they are doing.
+   * this will help us to eliminate every issue we are facing now."*
+   *
+   * ⚠️ IT IS NOT A FILTER AND MUST NOT SIT WITH THEM. 2,243 of 2,509 rows are fixtures. They buried Tally Test
+   * Shop at row 1,400, made "2,498 sell goods" the headline fact about the platform, and filled every page with
+   * names nobody recognised. Filtering them one axis at a time never worked because they are not a KIND of
+   * shop — they are not shops. So it is a switch, above the filters, OFF by default.
+   */
+  var t = '<label style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-1);'
+    + 'color:' + (ap.include_test ? 'var(--warn-2)' : 'var(--grey-2)') + ';border:1px solid '
+    + (ap.include_test ? 'var(--warn-2)' : 'var(--line)') + ';border-radius:999px;padding:3px 11px;'
+    + 'cursor:pointer;font-weight:' + (ap.include_test ? '700' : '400') + '">'
+    + '<input type="checkbox" id="pl_test" data-testid="plat-show-test" '
+    + (ap.include_test ? 'checked ' : '') + 'onchange="loadPlatform()" style="margin:0;cursor:pointer">'
+    + esc(tx('Show test entities')) + '</label>';
+
+  /**
+   * ── ⭐⭐ FIVE FILTERS THAT STACK, AGREED WITH ATHI 2026-09-14 ────────────────────────────────────────────────
+   *
+   * He asked for them level by level, and for them *"not to cross over"*. They do not: you can say
+   * "external · services · network head · active" and every word narrows something different.
+   *
+   *   1 ownership  ours or the market's          entity_visibility
+   *   2 sells      what the business deals in    supplies
+   *   3 shape      how it is arranged            the ltree
+   *   4 standing   whether it is being used      b242
+   *
+   * ⚠️ THE CLASS DROPDOWN THAT USED TO BE HERE IS GONE. It was a PARTITION — every row in exactly one box,
+   * summing to 2,509 — which is the right shape for a breakdown and the wrong shape for a filter. It forced
+   * you to pick one axis and throw the others away, which is what made Tally Test Shop unreachable. The
+   * partition still exists, under Platform totals, where a partition belongs.
+   */
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
-    + tick('internal','Internal') + tick('public','Public')
-    + '<select class="inp" id="pl_class" data-testid="plat-class" onchange="loadPlatform()" '
-    + 'style="flex:1;min-width:150px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
-    + PLAT_CLASS.map(function(c){
-        return '<option value="'+esc(c[0])+'"'+(cls===c[0]?' selected':'')+'>'+esc(tx(c[1]))+'</option>'; }).join('')
-    + '</select>'
-    /* ⭐ named by the SERVER (controls.standings), so it is empty until b242 is run rather than offering
-       values the database will not honour. A filter that silently matches everything is worse than no
-       filter — you believe you narrowed. */
-    + (function(){ var st = (((UI.plat||{}).controls)||{}).standings || [];
-        if(!st.length) return '';
-        return '<select class="inp" id="pl_standing" data-testid="plat-standing" onchange="loadPlatform()" '
-          + 'style="flex:1;min-width:140px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
-          + '<option value="">'+esc(tx('any standing'))+'</option>'
-          + st.map(function(v){
-              return '<option value="'+esc(v.slice(0,1))+'"'+(ap.standing===v.slice(0,1)?' selected':'')+'>'
-                + esc(tx(v.replace(/^[a-z] · /,''))) + '</option>'; }).join('')
-          + '</select>'; })()
+    + t
+    + dd('pl_own', 'plat-ownership', ap.ownership,
+        [['', 'All'], ['internal', 'Internal — ours'], ['external', 'External — the market']])
+    + dd('pl_sup', 'plat-supplies', ap.supplies,
+        [['', 'Sells: all'], ['goods', 'Goods'], ['services', 'Service'], ['both', 'Both'],
+         ['none', 'No sale, no service'], ['unknown', 'Not answered']])
+    + dd('pl_pos', 'plat-position', ap.position,
+        [['', 'Shape: all'], ['standalone', 'On its own'], ['root', 'Network head'],
+         ['branch', 'Branch only'], ['networked', 'Network & branches'],
+         ['billable', 'Pays its own bill']])
+    + platStandingFilterHTML(ap)
     + '</div>';
+}
+
+/* ⭐ named by the SERVER (controls.standings), so it is absent until b242 is run rather than offering values
+   the database will not honour. A filter that silently matches everything is worse than no filter. */
+function platStandingFilterHTML(ap){
+  var st = (((UI.plat||{}).controls)||{}).standings || [];
+  if(!st.length) return '';
+  return '<select class="inp" id="pl_standing" data-testid="plat-standing" onchange="loadPlatform()" '
+    + 'style="flex:1;min-width:132px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
+    + '<option value="">' + esc(tx('Standing: all')) + '</option>'
+    + st.map(function(v){
+        return '<option value="' + esc(v.slice(0,1)) + '"' + (ap.standing===v.slice(0,1)?' selected':'') + '>'
+          + esc(tx(v.replace(/^[a-z] · /,''))) + '</option>'; }).join('')
+    + '</select>';
 }
 
 function platScopeTableHTML(){
@@ -9110,18 +9108,17 @@ function platQuery(){
   var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
   var q={};
   if(g('pl_q'))    q.q=g('pl_q');
-  if(g('pl_kind')) q.kind=g('pl_kind');
   if(g('pl_vert')) q.vertical=g('pl_vert');
   if(g('pl_plan')) q.plan=g('pl_plan');
   if(g('pl_pos'))  q.position=g('pl_pos');
   if(g('pl_vis'))  q.visibility=g('pl_vis');
   if(g('pl_sup'))  q.supplies=g('pl_sup');
   if(g('pl_standing')) q.standing=g('pl_standing');
-  if(g('pl_class'))    q.class=g('pl_class');
-  /* ⭐ the two ticks. Neither ticked means NO filter — every faceted filter in the world behaves this way. */
-  var ck=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
-  var evs=[]; if(ck('pl_ev_internal')) evs.push('internal'); if(ck('pl_ev_public')) evs.push('public');
-  if(evs.length) q.entity_visibility=evs.join(',');
+  if(g('pl_own'))      q.ownership=g('pl_own');
+  /* ⚠️ SENT ONLY WHEN TICKED. The server's default is "no fixtures"; sending include_test=false would work
+     but says the same thing twice, and the two would have to be kept agreeing. */
+  var tb=document.getElementById('pl_test');
+  if(tb && tb.checked) q.include_test='true';
   var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   q.limit = PLAT_PER_PAGE;
