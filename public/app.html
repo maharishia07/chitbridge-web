@@ -7593,16 +7593,30 @@ function supportOpen(){
     /* ⭐ ONE GROUP PER DESK, and the shop's own name on the second — "Inside Tally Test" is the difference
        between a box that reaches us and a box that does not, said in the only place it cannot be missed. */
     + ['platform', 'here'].map(function(desk){
-        var mine = (window.UI && UI._me && (UI._me.display_name || UI._me.name)) || tx('your own business');
-        return '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:600;text-transform:uppercase;'
-          + 'letter-spacing:.03em;margin:' + (desk === 'here' ? '15px' : '0') + ' 0 7px">'
-          + esc(desk === 'platform' ? tx('About Chit & Bridge') : (tx('Inside') + ' ' + mine)) + '</div>'
+        return '<div id="sup_h_' + desk + '" style="font-size:var(--fs-1);color:var(--grey);font-weight:600;'
+          + 'text-transform:uppercase;letter-spacing:.03em;margin:' + (desk === 'here' ? '15px' : '0')
+          + ' 0 7px">' + esc(supportDeskName(desk)) + '</div>'
           + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px">'
           + supportBoxesFor(desk) + '</div>';
       }).join('')
     + '</div>'
     + '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">'
     + esc(tx('Cancel')) + '</button></div>');
+
+  /* ⚠️ and REPAINT when the name lands. Support opens from the avatar on the first screen, so it can be the
+     first caller of meNow() — reading the empty cache and stopping there makes the fallback the answer. */
+  if (!(window.UI && UI._me) && typeof meNow === 'function') {
+    meNow().then(function(){
+      var h = document.getElementById('sup_h_here'); if (h) h.textContent = supportDeskName('here');
+    }).catch(function(){ });
+  }
+}
+
+/* ⭐ one place the two desks are named, because the hub heading and the form both say it */
+function supportDeskName(desk){
+  if (desk === 'platform') return tx('About Chit & Bridge');
+  var me = (window.UI && UI._me) || {};
+  return tx('Inside') + ' ' + (me.display_name || me.name || tx('your own business'));
 }
 
 function supportBoxesFor(desk){
