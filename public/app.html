@@ -2777,6 +2777,24 @@ function stampPanelCode(head, key){
     var reg = (window.CBSCREENS && window.CBSCREENS.byPanel) || {};
     var code = reg[String(key || '')];
     if (!code) return;
+    /**
+     * ── ⚠️⚠️ ONE SCREEN, ONE CODE, ONE STAMP ────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-14, looking at the Platform screen: *"the right and left screen shares the same name which
+     * is not suppose to be"* — and then, asked which way he wanted it: *"keep it once, it is one screen."*
+     *
+     * The guard above is per-HEAD, so a two-pane screen stamped BOTH: BUS013 over the list and BUS013 again
+     * over the detail. Two labels for one thing read as two things, and the whole point of the code is to be
+     * quoted instead of described — *"the one on the left"* is exactly the description it exists to replace.
+     *
+     * ⭐ So the check is now per-CODE across the document. Whichever pane paints first carries it, which in DOM
+     * order is the list — the pane that is the screen. A modal with its own code is unaffected: different code,
+     * different stamp.
+     */
+    var already = document.querySelectorAll('[data-testid="panel-code"]');
+    for (var i = 0; i < already.length; i++) {
+      if (already[i].textContent === code && document.contains(already[i])) return;
+    }
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'panel-code');
     tag.textContent = code;
