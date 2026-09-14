@@ -8728,7 +8728,7 @@ function platBytes(n){
  */
 function platTile(label, val, hint){
   var known = val !== null && val !== undefined;
-  return '<div title="'+esc(hint||'')+'" style="flex:1;min-width:92px;background:var(--wash);'
+  return '<div title="'+esc(hint||'')+'" style="min-width:0;background:var(--wash);'
     + 'border:1px solid var(--line-soft);border-radius:var(--r-md);padding:7px 10px">'
     + '<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-4);line-height:1.15;'
     + 'font-variant-numeric:tabular-nums;color:'+(known?'var(--ink)':'var(--grey-4)')+'">'
@@ -8737,7 +8737,7 @@ function platTile(label, val, hint){
        'CUSTOMER' cannot — it reads as a different word from CUSTOMERS. So the label wraps rather than
        overflowing, and the tile's min-width is set wide enough that the longest of them fits on one line. */
     + '<div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em;'
-    + 'margin-top:1px;line-height:1.25;overflow-wrap:anywhere">'+esc(tx(label))+'</div></div>';
+    + 'margin-top:1px;line-height:1.25;white-space:nowrap">'+esc(tx(label))+'</div></div>';
 }
 
 /** ⭐ the right panel's top level — the MIS for the one entity that is selected */
@@ -8745,7 +8745,7 @@ function platEntityMisHTML(r){
   var c = r.counts;   /* ⚠️ null, not {}, when the counting surface is not in this database yet */
   var no = tx('Not counted yet — run migration b241, the counting surface.');
   var of = function(k){ return c ? (c[k] == null ? 0 : c[k]) : null; };
-  return '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:var(--sp-3) var(--sp-3) 0">'
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px;\npadding:var(--sp-3) var(--sp-3) 0">'
     + platTile('people',    r.seats == null ? null : r.seats,       tx('Staff signed on, not counting anyone erased'))
     + platTile('suppliers', r.suppliers == null ? null : r.suppliers, tx('Businesses they buy from'))
     + platTile('customers', of('customers'), c ? tx('Businesses and walk-ins they sell to') : no)
