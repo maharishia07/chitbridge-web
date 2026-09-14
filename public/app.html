@@ -8428,7 +8428,7 @@ function platformScreen(){
 
   const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
   const divider='<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  return '<div class="panel '+(((UI.vp==='mob')&&UI.mdetail)?'showdetail':'')+'" id="panel" style="--lw:'+UI.lw+'px;--lh:'+UI.lh+'px">'+list+divider+detail+'</div>';
+  return '<div class="panel '+(((UI.vp==='mob')&&UI.mdetail)?'showdetail':'')+'" id="panel" style="--lw:'+platListWidth()+'px;--lh:'+UI.lh+'px">'+list+divider+detail+'</div>';
 }
 
 /** ⭐ one hue per KIND, so the column reads without being read. Grey is the honest default for anything that
@@ -8662,7 +8662,24 @@ function platViewToggleHTML(){
     + esc(v === 'scope' ? tx('pick a row, then press Shape for that entity')
                         : tx('select a row for one entity')) + '</span>';
 }
-function platSetView(v){ UI.platView = (v === 'scope' ? 'scope' : 'report'); paintPlatList(); paintPlatDetail(); }
+/**
+ * ⭐ THE SCOPE TABLE NEEDS THE ROOM, AND THE LIST BESIDE IT IS REPEATING ITSELF.
+ *
+ * Thirteen columns want ~1,230px. Athi has the divider dragged wide for the Shape view, which left four
+ * columns showing — and every one of those rows is already named in the table's first column, so the list
+ * was spending 60% of the screen saying it twice.
+ *
+ * ⚠️ UI.lw IS NOT TOUCHED. It is his saved drag preference; a view must not quietly rewrite it, or Shape
+ * comes back narrow tomorrow and he never agreed to that. This caps the width for the duration of the
+ * view only, and 380px still fits the filter strip three selects to a row.
+ */
+function platListWidth(){ return UI.platView === 'scope' ? Math.min(UI.lw, 380) : UI.lw; }
+function platSetView(v){
+  UI.platView = (v === 'scope' ? 'scope' : 'report');
+  var p = document.getElementById('panel');
+  if (p) p.style.setProperty('--lw', platListWidth() + 'px');
+  paintPlatList(); paintPlatDetail();
+}
 function platScopeTableHTML(){
   var d = UI.plat || {}, rows = d.rows || [];
   if (d.denied) return emptyState('🔒', tx('Operator only'), tx('Sign in as the platform root.'));
