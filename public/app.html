@@ -2777,24 +2777,6 @@ function stampPanelCode(head, key){
     var reg = (window.CBSCREENS && window.CBSCREENS.byPanel) || {};
     var code = reg[String(key || '')];
     if (!code) return;
-    /**
-     * ── ⚠️⚠️ ONE SCREEN, ONE CODE, ONE STAMP ────────────────────────────────────────────────────────────────
-     *
-     * Athi, 2026-09-14, looking at the Platform screen: *"the right and left screen shares the same name which
-     * is not suppose to be"* — and then, asked which way he wanted it: *"keep it once, it is one screen."*
-     *
-     * The guard above is per-HEAD, so a two-pane screen stamped BOTH: BUS013 over the list and BUS013 again
-     * over the detail. Two labels for one thing read as two things, and the whole point of the code is to be
-     * quoted instead of described — *"the one on the left"* is exactly the description it exists to replace.
-     *
-     * ⭐ So the check is now per-CODE across the document. Whichever pane paints first carries it, which in DOM
-     * order is the list — the pane that is the screen. A modal with its own code is unaffected: different code,
-     * different stamp.
-     */
-    var already = document.querySelectorAll('[data-testid="panel-code"]');
-    for (var i = 0; i < already.length; i++) {
-      if (already[i].textContent === code && document.contains(already[i])) return;
-    }
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'panel-code');
     tag.textContent = code;
@@ -2866,6 +2848,23 @@ function stampDetailTitle(){
     if (!dt || dt.querySelector('[data-testid="detail-code"]')) return;
     var info = screenInfo();
     if (!info) return;
+    /**
+     * ── ⚠️⚠️ ONE SCREEN, ONE CODE ───────────────────────────────────────────────────────────────────────────
+     *
+     * Athi, 2026-09-14, on the Platform screen: *"the right and left screen shares the same name which is not
+     * suppose to be"* — and, asked which way he wanted it: *"keep it once, it is one screen."*
+     *
+     * ⭐ THIS FUNCTION EXISTS FOR THE CASE WHERE THE DETAIL REALLY IS ITS OWN SCREEN — Design 2 has its own
+     * code, and stamping it is right. But where the detail carries the SAME code as the list, two labels for
+     * one thing read as two things, and the code exists precisely so it can be quoted instead of described:
+     * *"the one on the left"* is the description it is meant to replace.
+     *
+     * ⚠️ So it is skipped only when the identical code is ALREADY on screen — not "when there is a list". The
+     * door it carries (click to record an incident here) is not lost: the list's chip has the same door, so
+     * the screen still has exactly one of each.
+     */
+    var shown = document.querySelector('[data-testid="screen-code"]');
+    if (shown && shown.textContent === info.code) return;
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'detail-code');
     tag.textContent = info.code;
