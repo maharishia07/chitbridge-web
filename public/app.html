@@ -9048,13 +9048,13 @@ function platColumns(){
   var posOf = function(r){ return r.network_root ? 'branch' : ((r.depth === 1) ? 'root' : 'none'); };
 
   return [
-    { key: 'name', label: 'Name', hint: 'What the business calls itself', sort: 'name',
+    { key: 'name', w: 190, label: 'Name', hint: 'What the business calls itself', sort: 'name',
       cell: function(r){ return td(esc(r.display_name || '—'), 'font-weight:600;font-size:var(--fs-2)'); } },
-    { key: 'handle', label: 'User ID', hint: 'How they sign in — and what you search by', sort: 'handle',
+    { key: 'handle', w: 150, label: 'User ID', hint: 'How they sign in — and what you search by', sort: 'handle',
       cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
         + 'var(--line-soft);font-size:var(--fs-1);color:var(--grey);white-space:nowrap">'
         + esc(r.user_id || '—') + '</td>'; } },
-    { key: 'network', label: 'Network', hint: 'none · root · branch',
+    { key: 'network', w: 92, label: 'Network', hint: 'none · root · branch',
       cell: function(r){ var p = posOf(r);
         var tone = p === 'branch' ? 'var(--purple)' : p === 'root' ? 'var(--ink)' : 'var(--grey-4)';
         return '<td title="' + esc(p === 'root' ? tx('Heads a network. It pays; its branches are billed to it.')
@@ -9062,55 +9062,55 @@ function platColumns(){
             : tx('On its own — not in a network at all.'))
           + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
           + 'white-space:nowrap;color:' + tone + '">' + esc(tx(p)) + '</td>'; } },
-    { key: 'of', label: 'Of', hint: 'Whose network it is under',
+    { key: 'of', w: 140, label: 'Of', hint: 'Whose network it is under',
       cell: function(r){ var p = posOf(r);
         return td(esc(p === 'branch' ? (r.network_root || '—') : p === 'root' ? (r.display_name || '—') : '—'),
           'color:var(--grey)'); } },
-    { key: 'standing', label: 'Standing', hint: 'Is this shop actually using the product?', sort: 'standing',
+    { key: 'standing', w: 170, label: 'Standing', hint: 'Is this shop actually using the product?', sort: 'standing',
       cell: function(r){ var st = platStanding(r.standing);
         return '<td title="' + esc(st ? tx('Signed in, chits sent and products listed decide this')
                                       : tx('Not computed yet — run migration b242'))
           + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
           + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
           + '">' + (st ? '● ' + esc(st.word) : '—') + '</td>'; } },
-    { key: 'found', label: 'Found', hint: 'Can it be found in search?',
+    { key: 'found', w: 92, label: 'Found', hint: 'Can it be found in search?',
       cell: function(r){ var v = ev(r);
         return v === 'internal' ? cell(no, tx('no'), tx('Internal — ours, not on the market'))
           : v === 'private' ? cell(maybe, tx('by ID'), tx('Not in search; reachable if you know the handle'))
           : v === 'network' ? cell(maybe, tx('network'), tx('Its own group only'))
           : cell(ok, tx('anyone'), tx('In search for every shop')); } },
-    { key: 'add', label: 'Add', hint: 'Can it be named as a supplier or customer?',
+    { key: 'add', w: 80, label: 'Add', hint: 'Can it be named as a supplier or customer?',
       cell: function(r){ return ev(r) === 'internal'
         ? cell(no, tx('no*'), tx('Should never be a party — declared, NOT enforced yet'))
         : cell(ok, tx('yes'), tx('Any shop holding its ID can add it (D-056, no consent)')); } },
-    { key: 'products', label: 'Products', hint: 'Can its price list be seen?',
+    { key: 'products', w: 108, label: 'Products', hint: 'Can its price list be seen?',
       cell: function(r){ var v = cv(r);
         return v === 'public' ? cell(ok, tx('anyone'), tx('Open storefront'))
           : v === 'network' ? cell(maybe, tx('network'), tx('Members see them as public; others see nothing'))
           : cell(no, tx('no'), tx('The list is for billing, not selling')); } },
-    { key: 'work', label: 'Work', hint: 'Can it be sent a chit?',
+    { key: 'work', w: 76, label: 'Work', hint: 'Can it be sent a chit?',
       cell: function(){ return cell(ok, tx('yes'), tx('A chit reaches it whatever the price list says')); } },
-    { key: 'pays', label: 'Pays', hint: 'Is it a billing tenant?',
+    { key: 'pays', w: 76, label: 'Pays', hint: 'Is it a billing tenant?',
       cell: function(r){ return (r.depth || 0) > 1
         ? cell(dim, tx('no'), tx('Branch at depth ') + r.depth + tx(' — billed to its root'))
         : cell(ok, tx('yes'), tx('Root or standalone: holds its own plan')); } },
-    { key: 'sells', label: 'Sells', hint: 'What does it deal in?',
+    { key: 'sells', w: 92, label: 'Sells', hint: 'What does it deal in?',
       cell: function(r){
         var w = { goods: 'things', services: 'work', both: 'both', none: 'nothing', unknown: '—' }[r.supplies] || '—';
         return cell(r.supplies === 'unknown' ? dim : ok, tx(w), tx('What the business deals in')); } },
-    { key: 'type', label: 'Type', hint: 'What kind of row is it?', sort: 'kind',
+    { key: 'type', w: 96, label: 'Type', hint: 'What kind of row is it?', sort: 'kind',
       cell: function(r){ return td(esc(r.entity_kind || '—'), 'color:var(--grey-2)'); } },
-    { key: 'plan', label: 'Plan', hint: 'Which commercial tier it sits on', sort: 'plan',
+    { key: 'plan', w: 84, label: 'Plan', hint: 'Which commercial tier it sits on', sort: 'plan',
       cell: function(r){ return td(esc(r.plan || '—'), 'color:var(--grey-2)'); } },
-    { key: 'people', label: 'People', hint: 'Staff signed on to it', sort: 'seats',
+    { key: 'people', w: 84, label: 'People', hint: 'Staff signed on to it', sort: 'seats',
       cell: function(r){ return td(String(r.seats || 0), 'text-align:right;font-variant-numeric:tabular-nums'); } },
-    { key: 'branches', label: 'Branches', hint: 'Nodes beneath it on the network', sort: 'branches',
+    { key: 'branches', w: 92, label: 'Branches', hint: 'Nodes beneath it on the network', sort: 'branches',
       cell: function(r){ return td(String(r.branches || 0), 'text-align:right;font-variant-numeric:tabular-nums'); } },
-    { key: 'bridge', label: 'Bridge id', hint: 'Its address on the rail',
+    { key: 'bridge', w: 128, label: 'Bridge id', hint: 'Its address on the rail',
       cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
         + 'var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">'
         + esc(r.bridge_id || '—') + '</td>'; } },
-    { key: 'seen', label: 'Last seen', hint: 'When it last signed in', sort: 'last_seen',
+    { key: 'seen', w: 108, label: 'Last seen', hint: 'When it last signed in', sort: 'last_seen',
       cell: function(r){ return td(esc(platDay(r.last_seen) || tx('never')), 'color:var(--grey)'); } },
   ];
 }
@@ -9165,8 +9165,53 @@ function platColMenuHTML(){
           + (fixed ? 'disabled ' : 'onchange="platToggleCol(\'' + c.key + '\')" ')
           + 'style="margin:0">' + esc(tx(c.label)) + '</label>';
       }).join('')
+    + '<div style="border-top:1px solid var(--line-soft);margin-top:7px;padding-top:7px">'
+    + '<button onclick="event.stopPropagation();platResetCols()" data-testid="plat-cols-reset" '
+    + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;cursor:pointer;border:1px solid var(--line);'
+    + 'background:var(--card);color:var(--grey-2);border-radius:var(--r-sm)">'
+    + esc(tx('Reset columns and widths')) + '</button></div>'
     + '</div>';
 }
+/** the width in force for a column: what was dragged, else the column's own default. */
+function platColW(c){
+  if (!UI.platColW) {
+    try { UI.platColW = JSON.parse(localStorage.getItem(uk('cb_platcolw')) || '{}') || {}; }
+    catch (_) { UI.platColW = {}; }
+  }
+  return Number(UI.platColW[c.key]) || c.w || 110;
+}
+var _platRz = null;
+function platColResizeStart(e, key){
+  e.preventDefault(); e.stopPropagation();
+  var col = document.querySelector('#pl_table col[data-col="' + key + '"]');
+  _platRz = { key: key, x: e.clientX, w: col ? col.offsetWidth || parseInt(col.style.width, 10) : 110, col: col };
+  document.addEventListener('mousemove', platColResizeMove);
+  document.addEventListener('mouseup', platColResizeEnd);
+  document.body.style.userSelect = 'none';
+}
+/* ⚠️ it writes to the <col> directly and does NOT repaint. A full repaint per mousemove would rebuild every
+   row of a hundred and the drag would stutter — and worse, the grip would be replaced under the pointer. */
+function platColResizeMove(e){
+  if (!_platRz) return;
+  var w = Math.max(56, _platRz.w + (e.clientX - _platRz.x));
+  UI.platColW = UI.platColW || {};
+  UI.platColW[_platRz.key] = w;
+  if (_platRz.col) _platRz.col.style.width = w + 'px';
+}
+function platColResizeEnd(){
+  document.removeEventListener('mousemove', platColResizeMove);
+  document.removeEventListener('mouseup', platColResizeEnd);
+  document.body.style.userSelect = '';
+  if (_platRz) { try { localStorage.setItem(uk('cb_platcolw'), JSON.stringify(UI.platColW || {})); } catch (_) {} }
+  _platRz = null;
+}
+/** ⭐ and a way back: widths are a preference, and a preference you cannot undo is a trap. */
+function platResetCols(){
+  UI.platColW = {}; UI.platCols = null;
+  try { localStorage.removeItem(uk('cb_platcolw')); localStorage.removeItem(uk('cb_platcols')); } catch (_) {}
+  paintPlatList();
+}
+
 function platToggleColMenu(){ UI.platColMenu = !UI.platColMenu; paintPlatList(); }
 /* ⚠️ a panel that only closes by pressing the same button again is one people leave open and then report as
    "it covers the table". Every other menu here closes on an outside click; so does this. */
@@ -9191,6 +9236,24 @@ function platScopeTableHTML(){
   var cur = UI.platSort || {};
   var sortable = (((d.controls) || {}).sortable) || [];
 
+  /**
+   * ── ⭐ DRAG THE EDGE OF A HEADING TO WIDEN IT ─────────────────────────────────────────────────────────────
+   *
+   * Athi: *"we have to have adjustable column headers and usual stuff, all cannot be explained."* Right — a
+   * data table is a thing people already know how to use, and the cost of every missing habit is a sentence
+   * he has to write.
+   *
+   * ⚠️ SAME SHAPE AND NAMING AS THE TASK LIST'S colResizeStart/Move/End, deliberately, so the two read as
+   * siblings — but a different mechanism, because that list is a CSS grid driven by --coltpl and this is a
+   * real <table>. Pretending they were the same would have meant bending one of them out of shape.
+   * [[feedback-adopt-dont-reinvent]]
+   */
+  var grip = function(c){
+    return '<span class="colrz" onmousedown="platColResizeStart(event,\'' + c.key + '\')" '
+      + 'onclick="event.stopPropagation()" title="' + esc(tx('Drag to resize')) + '" '
+      + 'style="position:absolute;top:0;inset-inline-end:0;width:7px;height:100%;cursor:col-resize;'
+      + 'user-select:none"></span>';
+  };
   var th = function(c){
     var base = 'text-align:left;padding:7px 9px;font-size:var(--fs-1);color:var(--grey);font-weight:600;'
       + 'text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;'
@@ -9199,13 +9262,14 @@ function platScopeTableHTML(){
        because ORDER BY cannot take a bind parameter. A heading that looked clickable and silently did nothing
        would be worse than one that plainly is not. */
     if (!c.sort || sortable.indexOf(c.sort) < 0) {
-      return '<th title="' + esc(tx(c.hint || '')) + '" style="' + base + '">' + esc(tx(c.label)) + '</th>';
+      return '<th title="' + esc(tx(c.hint || '')) + '" style="' + base + ';position:sticky">'
+        + esc(tx(c.label)) + grip(c) + '</th>';
     }
     var on = cur.sort === c.sort;
     return '<th title="' + esc(tx(c.hint || '') + ' · ' + tx('click to sort')) + '" '
       + 'data-testid="plat-sort-' + c.sort + '" onclick="platSortBy(\'' + c.sort + '\')" '
       + 'style="' + base + ';cursor:pointer;' + (on ? 'color:var(--ink)' : '') + '">'
-      + esc(tx(c.label)) + (on ? (cur.dir === 'asc' ? ' ▲' : ' ▼') : '') + '</th>';
+      + esc(tx(c.label)) + (on ? (cur.dir === 'asc' ? ' ▲' : ' ▼') : '') + grip(c) + '</th>';
   };
 
   var body = rows.map(function(r){
@@ -9225,7 +9289,12 @@ function platScopeTableHTML(){
     + esc(tx('⚙ columns')) + ' <span style="color:var(--grey-4)">' + defs.length + '/'
     + platColumns().length + '</span></button>' + platColMenuHTML() + '</div>'
     + '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
-    + '<table style="border-collapse:collapse;width:100%;min-width:' + Math.max(520, defs.length * 92) + 'px">'
+    /* ⚠️ table-layout:fixed and a <col> per column. With auto layout a dragged width is only a SUGGESTION —
+       the browser re-balances on content and the column springs back, which reads as the drag not working. */
+    + '<table id="pl_table" style="border-collapse:collapse;table-layout:fixed;width:100%;min-width:'
+    + defs.reduce(function(a, c){ return a + platColW(c); }, 0) + 'px">'
+    + '<colgroup>' + defs.map(function(c){
+        return '<col data-col="' + c.key + '" style="width:' + platColW(c) + 'px">'; }).join('') + '</colgroup>'
     + '<thead><tr>' + defs.map(th).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>' + foot
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:var(--sp-2);line-height:1.5">'
     + '<b style="color:var(--warn-2)">*</b> ' + tx('declared, not enforced yet — the supplier and customer add '

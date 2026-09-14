@@ -24,6 +24,8 @@
  *             "100 of 2,259" is reporting a number it cannot reach.
  *   count     a line that says how many matched, not how many fitted.
  *
+ * ⭐ AND IF IT RENDERS A <table>, four more — see TABLE_CONTROLS below.
+ *
  * ── ⚠️⚠️ WHY THIS IS A RATCHET AND NOT A PASS/FAIL ──────────────────────────────────────────────────────────────
  *
  * Turned on as a flat rule it would fail a dozen screens at once, and a guard that is red on arrival gets
@@ -57,6 +59,25 @@ const CONTROLS = {
 };
 
 /**
+ * ── ⭐⭐ AND WHAT A TABLE OWES ON TOP ────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"we have to have adjustable column headers and usual stuff, all cannot be explained."*
+ *
+ * ⭐ HE IS RIGHT THAT IT CANNOT BE EXPLAINED, AND THAT IS THE POINT OF WRITING IT DOWN ONCE. A data table is a
+ * thing people already know how to use, and every habit it is missing costs him a sentence. These four are the
+ * habits: sort by a heading, choose which columns, drag a heading wider, and get back to the default.
+ *
+ * ⚠️ ONLY SCREENS THAT ACTUALLY RENDER A <table>. A card list owes none of this, and holding it to "you must
+ * offer column widths" would be noise — which is how a guard teaches people to ignore it.
+ */
+const TABLE_CONTROLS = {
+  'sort by heading': (b) => /SortBy\(|onclick="[a-zA-Z]*[Ss]ortBy/.test(b),
+  'column chooser':  (b) => /ToggleColMenu|colChooser|ColMenuHTML/.test(b),
+  'resizable':       (b) => /ColResizeStart|colResizeStart|col-resize/.test(b),
+  'reset to default':(b) => /ResetCols|resetCols/.test(b),
+};
+
+/**
  * ── THE DEBT, AS IT STOOD WHEN THE WATCHER WAS WRITTEN ─────────────────────────────────────────────────────────
  * screen → the controls it is ALLOWED to be missing. Shrink these; never grow them.
  * ⚠️ Adding a name here is a decision to ship a panel Athi will have to ask about. Do it only with him.
@@ -70,14 +91,18 @@ const BASELINE = {
   catalogueScreen:         ['filters', 'sort', 'paging', 'count'],
   catalogueSetupHubScreen: ['search', 'filters', 'sort', 'paging', 'count'],
   categoriesScreen:        ['filters', 'sort', 'paging', 'count'],
-  coassistsScreen:         ['filters', 'sort', 'paging', 'count'],
-  customersScreen:         ['search', 'filters', 'sort', 'paging', 'count'],
+  coassistsScreen:         ['sort', 'paging', 'count'],
+  customersScreen:         ['search', 'sort', 'paging', 'count'],
   disputesScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
   intakeScreen:            ['search', 'filters', 'sort', 'paging', 'count'],
-  misScreen:               ['search', 'filters', 'sort', 'paging', 'count'],
+  /* ⚠️ NEWLY VISIBLE, not newly broken: these two render a <table> and the guard could not see inside a
+     helper until 2026-09-14. The four table habits were always missing. */
+  misScreen:               ['search', 'filters', 'sort', 'paging',
+                            'sort by heading', 'column chooser', 'resizable', 'reset to default'],
   networkScreen:           ['search', 'filters', 'sort', 'paging', 'count'],
   settingsScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
-  suppliersScreen:         ['filters', 'sort', 'paging', 'count'],
+  suppliersScreen:         ['filters', 'sort', 'paging',
+                            'sort by heading', 'column chooser', 'resizable', 'reset to default'],
   /* ⭐ platformScreen is deliberately ABSENT — it has all five, and leaving it out is what holds it there. */
 };
 
@@ -99,8 +124,69 @@ function blank(src) {
   return out;
 }
 
+/**
+ * ── ⚠️⚠️ A SCREEN IS NOT ONLY ITS OWN BODY ──────────────────────────────────────────────────────────────────────
+ *
+ * This guard checked the *Screen() function and nothing else, and it was WRONG in a way that made it agree with
+ * broken screens: platformScreen() renders its table by calling platScopeTableHTML(), so the <table>, every
+ * heading and every control lived in a function the guard never opened. Removing the resize handler changed
+ * nothing it could see.
+ *
+ * ⭐ SO THE BODY IS THE SCREEN PLUS THE HELPERS IT CALLS, one level deep and same-file only. One level is
+ * enough in practice (a screen calls its renderer; the renderer does the work) and stops well short of
+ * inlining the entire file, which would make every rule pass on the strength of some unrelated code.
+ */
+function fnBodies(safe) {
+  const map = new Map();
+  const re = /function\s+([A-Za-z0-9_$]+)\s*\(/g;
+  let m;
+  while ((m = re.exec(safe))) {
+    let i = safe.indexOf('{', m.index);
+    if (i < 0) continue;
+    let depth = 0, j = i;
+    for (; j < safe.length; j++) {
+      if (safe[j] === '{') depth++;
+      else if (safe[j] === '}' && --depth === 0) break;
+    }
+    if (!map.has(m[1])) map.set(m[1], safe.slice(i, j + 1));
+  }
+  return map;
+}
+
+/**
+ * ⭐ TWO LEVELS, AND THE SECOND ONE EARNED ITS PLACE. A screen calls its renderer (one) and the renderer calls
+ * the thing that draws the controls (two) — platformScreen → platScopeTableHTML → platColMenuHTML is exactly
+ * that shape, and at depth 1 the guard could not see the column menu at all.
+ *
+ * ⚠️ IT STOPS AT TWO ON PURPOSE. Every level inlines more code, and a rule that passes because of something
+ * unrelated three calls away is a guard agreeing with itself. Two is the shape this codebase actually uses.
+ *
+ * ⚠️ VISITED SET, not a depth counter alone: two helpers that call each other would otherwise append forever.
+ */
+const HELPER_DEPTH = 2;
+function withHelpers(body, all) {
+  let out = body;
+  const seen = new Set();
+  let frontier = [body];
+  for (let d = 0; d < HELPER_DEPTH; d++) {
+    const next = [];
+    for (const b of frontier) {
+      for (const m of b.matchAll(/\b([A-Za-z0-9_$]+)\s*\(/g)) {
+        const name = m[1];
+        if (seen.has(name) || !all.has(name)) continue;
+        seen.add(name);
+        out += '\n' + all.get(name);
+        next.push(all.get(name));
+      }
+    }
+    frontier = next;
+  }
+  return out;
+}
+
 function screens(src, file) {
   const safe = blank(src), found = [];
+  const helpers = fnBodies(safe);
   const re = /function\s+([A-Za-z0-9_$]*Screen)\s*\(/g;
   let m;
   while ((m = re.exec(safe))) {
@@ -119,7 +205,7 @@ function screens(src, file) {
      * green for the exact fault it exists to catch. blank() keeps string contents — the markup lives in
      * strings — and erases every comment. [[feedback-silence-is-the-bug]]
      */
-    const body = safe.slice(i, j + 1);
+    const body = withHelpers(safe.slice(i, j + 1), helpers);
     /* ⭐ only screens that actually render a LIST. A detail-only or form-only screen has no list to control,
        and holding it to "you must offer sorting" would be noise that teaches people to ignore this file. */
     if (!/class="list"|class="rows"|id="[a-z_]*rows"/.test(body)) continue;
@@ -134,6 +220,9 @@ for (const f of FILES) all.push(...screens(fs.readFileSync(f, 'utf8'), f));
 const gaps = {};
 for (const s of all) {
   const missing = Object.keys(CONTROLS).filter((k) => !CONTROLS[k](s.body));
+  if (/<table|<thead|<tbody/.test(s.body)) {
+    for (const k of Object.keys(TABLE_CONTROLS)) if (!TABLE_CONTROLS[k](s.body)) missing.push(k);
+  }
   if (missing.length) gaps[s.name] = missing;
 }
 
@@ -148,6 +237,10 @@ if (process.argv.includes('--baseline')) {
 console.log('\n══ LIST CONTROLS — search · filters · sort · paging · count ══\n');
 
 let fails = 0, debt = 0;
+/* ⚠️ a table is detected by what it RENDERS, not by what it is called: a screen that merely mentions tables in
+   a comment owes nothing, and blank() has already removed the comments anyway. */
+const isTable = (b) => /<table|<thead|<tbody/.test(b);
+
 for (const s of all.sort((a, b) => a.name.localeCompare(b.name))) {
   const missing = gaps[s.name] || [];
   const allowed = BASELINE[s.name] || [];
