@@ -8406,7 +8406,9 @@ function platformScreen(){
          different questions and the data does not line them up — one dropdown for both would force a
          choice the model does not make. */
       +'<select '+sel+' id="pl_evis" data-testid="plat-entity-visibility" onchange="loadPlatform()">'+opt('',tx('any entity'),ap.entity_visibility)+((f.entity_visibility||[]).map(v=>opt(v,tx(v),ap.entity_visibility)).join(''))+'</select>'
-+'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    +'</div>'
+    /* the access filter stands alone on the first row; everything narrower sits on the second */
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
       /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
          one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
          not reach them from the screen. */
@@ -8712,7 +8714,7 @@ function platScopeTableHTML(){
       + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.seats || 0) + '</td>'
       + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.branches || 0) + '</td>'
       + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.bridge_id || '—') + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.last_seen || tx('never')) + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.last_seen ? String(r.last_seen).slice(0, 10) : tx('never')) + '</td>'
       + '</tr>';
   }).join('');
 
