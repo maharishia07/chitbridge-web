@@ -8362,8 +8362,19 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
  */
 var PLAT_SELLS={ goods:"sells things", service:"sells work", both:"work and parts",
                  none:"sells nothing", unknown:"not asked" };
-var PLAT_POS={ billable:"billable tenants", root:"root · pays", branch:"branch · billed to its root",
-               standalone:"standalone · pays" };
+/**
+ * ⭐ THE COMBINATIONS ATHI ASKED FOR, IN HIS OWN WORDS ────────────────────────────────────────────────────────
+ *
+ *   *"we want to see all the individual shops — network is None"*        → standalone
+ *   *"shops, both individual and network — network: none or root"*       → billable (the ones that PAY)
+ *   *"show all the network shops and its branches — network not eq None"*→ networked
+ *
+ * plus the two single levels. ⚠️ 'billable' and 'networked' overlap on roots BY DESIGN — they are different
+ * questions ("who pays" and "who is in a network") and a root is honestly the answer to both.
+ */
+var PLAT_POS={ standalone:"on its own", root:"a network head", branch:"inside a network",
+               networked:"in a network (head or branch)", billable:"pays its own bill",
+               };
 function platformScreen(){
   const d=UI.plat||{}, c=d.controls||{}, f=c.filters||{}, ap=c.applied||{};
   const h=d.headline||{};
@@ -8912,13 +8923,20 @@ function platScopeTableHTML(){
          root is none, they are root themselves."* A branch names its root; everyone else is their own. */
       + (function(){
           var own = !r.network_root;
+          var pos  = own ? ((r.depth === 1) ? 'root' : 'none') : 'branch';
+          var tone = pos === 'branch' ? 'var(--purple)' : pos === 'root' ? 'var(--ink)' : 'var(--grey-4)';
           return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
-            + 'white-space:nowrap;color:' + (own ? 'var(--grey-4)' : 'var(--purple)') + '" title="'
-            + esc(own ? (r.depth === 1 ? tx('Heads its own network') : tx('Not in a network at all'))
-                      : tx('A branch. Its plan belongs to this root.')) + '">'
-            /* ⭐ Athi: *"network column become root or none, either is fine."* Two words rather than one,
-               because they are different facts: a root HAS a network under it, a standalone has none. */
-            + esc(own ? (r.depth === 1 ? tx('root') : tx('none')) : r.network_root) + '</td>'; })()
+            + 'white-space:nowrap;color:' + tone + '" title="'
+            + esc(pos === 'root'   ? tx('Heads a network. It pays; its branches are billed to it.')
+                : pos === 'branch' ? tx('A branch. Its plan belongs to its root.')
+                :                    tx('On its own — not in a network at all.')) + '">'
+            + esc(tx(pos))
+            /* ⭐ the owner rides underneath, the way the handle rides under the name in the first column —
+               so the column means ONE thing and the second fact is still there. */
+            + (pos === 'branch'
+                ? '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(r.network_root) + '</div>'
+                : '')
+            + '</td>'; })()
       + (function(){ var st = platStanding(r.standing);
           return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
             + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
@@ -8953,7 +8971,7 @@ function platScopeTableHTML(){
   var foot = platPagerHTML();
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
     + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
-    + '<thead><tr>' + th('Entity') + th('Network', tx('Whose network is it under?'))
+    + '<thead><tr>' + th('Entity') + th('Network', tx('none · root · branch — and for a branch, whose'))
     + th('Standing', tx('Is this shop actually using the product?'))
     + th('Found', tx('Can it be found in search?'))
     + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
