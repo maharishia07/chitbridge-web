@@ -7644,11 +7644,26 @@ function supportOpen(){
  */
 function supportThem(){
   var S = (typeof SESSION !== 'undefined' && SESSION) || {}, U = (typeof UI !== 'undefined' && UI) || {};
-  /* a customer signed in to a shop's storefront IS in that shop's session */
+  /* a customer signed in to a shop's storefront IS in that shop's session, whatever screen they are on */
   if (S.role === 'customer' && S.bridgeId) return { bridge_id: S.bridgeId, name: S.name || tx('this shop') };
-  /* browsing a store from Network design, and from the Suppliers screen */
-  if (U._brSel && U._brSel.bridge_id) return { bridge_id: U._brSel.bridge_id, name: U._brSel.name || tx('them') };
-  var sup = U.supDet && U.supDet.supplier;
+
+  /**
+   * ⚠⚠ WHAT YOU ARE LOOKING AT NOW — NOT WHAT YOU LOOKED AT AN HOUR AGO.
+   *
+   * `UI.supDet` survives leaving the Suppliers screen and `UI._brSel` survives leaving Network design; neither
+   * is cleared on navigation. They were checked BEFORE the open chit, so: open Suppliers → Acme → go to Task
+   * → open a chit from Zenith → Report a problem, and Zenith's complaint was addressed to ACME and delivered
+   * into Acme's queue. The note and the send agreed with each other, so nothing looked wrong.
+   *
+   * ⭐ SO THE SCREEN DECIDES. Each source is only consulted while its own screen is the one in front of the
+   * reader — a counterparty is a fact about WHERE YOU ARE, and a stale one is not a smaller version of the
+   * right answer, it is a different company. [[feedback-name-vs-behaviour]]
+   */
+  var nav = U.nav;
+  if (nav === 'network' && U._brSel && U._brSel.bridge_id) {
+    return { bridge_id: U._brSel.bridge_id, name: U._brSel.name || tx('them') };
+  }
+  var sup = (nav === 'suppliers') && U.supDet && U.supDet.supplier;
   if (sup && sup.bridge_id) return { bridge_id: sup.bridge_id, name: sup.display_name || sup.user_id || tx('them') };
   /**
    * ⚠️ AND AN OPEN CHIT, THROUGH chitIsSelf — NOT a second rule for who "they" are. recipTo() already
@@ -7751,10 +7766,24 @@ function supportForm(id){
  */
 async function supportNoteLoad(b){
   var th = b.to === 'them' ? supportThem() : null;
-  var paint = function(h){ var el = document.getElementById('sup_note'); if (el) el.innerHTML = h; };
+  /**
+   * ⚠⚠ WHICH FORM ASKED. `sup_note` is the same id on every support form and the Send button is a fresh
+   * element each time, so a slow answer for one box painted itself onto the next one: open "Report a problem"
+   * (slow), press Back, open "Get help", and the late reply announced *"This goes to Acme"* on the platform
+   * form — and if it had been ok:false it disabled that form's Send with no way back.
+   *
+   * ⭐ A TOKEN PER FORM, checked before every paint. The one guarantee this feature rests on is that the note
+   * and the send cannot differ; ordinary clicking broke it. [[feedback-check-after-the-wire]]
+   */
+  var mine = (UI._supSeq = (UI._supSeq || 0) + 1);
+  var paint = function(h){
+    if (mine !== UI._supSeq) return;   /* a newer form is open — this answer is about a box that is gone */
+    var el = document.getElementById('sup_note'); if (el) el.innerHTML = h;
+  };
   try {
     var r = await api('workRoutePreview', { query: {
       kind: b.kind, audience: b.to, to_bridge_id: th ? th.bridge_id : undefined } });
+    if (mine !== UI._supSeq) return;
     paint(supportNoteHTML(r));
     /* ⚠️ and the send is HELD while it cannot land. A button that works and then fails is the thing he does
        not trust; one that is plainly off, with the reason beside it, is a fact. */

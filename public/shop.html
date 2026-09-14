@@ -752,14 +752,24 @@ function supSendCode(){
   if(!(_sup.what||'').trim()){ _sup.err='Say what went wrong, in your own words.'; supRender(); return; }
   if(!(_sup.contact||'').trim()){ _sup.err='We need a phone or email so the shop can reply.'; supRender(); return; }
   _sup.busy=true; _sup.err=null; _sup.msg=null; supRender();
-  /* ⭐ THE ORDER FLOW’S OWN START — same row, same code, same fifteen minutes. */
-  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/start',
+  /**
+   * ⭐ THE ORDER FLOW'S OWN LADDER — but /support/start, not /order/start.
+   *
+   * ⚠⚠ /order/start 403s a CLOSED shop with *"not accepting orders"*, and this panel has just promised a
+   * buyer that a closed shop still takes the report. So the one case that was carefully allowed dead-ended at
+   * the first button, answering a complaint with a sentence about orders. Same identity, same code, same
+   * fifteen minutes; only the closed-shop check differs.
+   */
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/support/start',
         {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_sup.contact})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ _sup.busy=false;
+    /* ⚠️ EVERY callback checks _sup, the catch included. supClose() nulls it, and clicking the backdrop while
+       a request is in flight threw TypeError here — then threw again inside the catch that was meant to
+       recover. A panel somebody has closed is not a panel to paint. */
+    .then(function(res){ if(!_sup)return; _sup.busy=false;
       if(res.status!==200){ _sup.err=(res.j&&res.j.message)||'Could not send the code.'; supRender(); return; }
       _sup.step='otp'; _sup.dev_otp=res.j&&res.j.dev_otp; _sup.msg='Code sent.'; supRender(); })
-    .catch(function(e){ _sup.busy=false; _sup.err=e.message; supRender(); });
+    .catch(function(e){ if(!_sup)return; _sup.busy=false; _sup.err=e.message; supRender(); });
 }
 
 function supSubmit(){
@@ -771,21 +781,27 @@ function supSubmit(){
          body:JSON.stringify({identifier:_sup.contact,otp:_sup.otp,observed:_sup.what,severity:_sup.sev})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
     .then(function(res){
+      /* ⚠⚠ AND HERE IT MATTERS MOST: the ticket has ALREADY been raised by the time this runs. Throwing on a
+         closed panel left the buyer with no confirmation for something that did reach the shop. */
+      if(!_sup)return;
       if(res.status!==200){ _sup.busy=false; _sup.err=(res.j&&res.j.message)||'Could not send it.'; supRender(); return; }
       /* ⭐ AND IT SAYS WHO HAS IT. ‘Sent’ on its own is the same silence as nothing at all. */
-      var to=(res.j&&res.j.to)||'the shop';
+      var to=(res.j&&res.j.to)||'the shop', sent=_sup.contact;
+      /* ⚠️ the form is finished with. Leaving it alive with busy:true means a stray supRender() would paint a
+         spinner over the receipt. */
+      _sup=null;
       supHost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;'
         + 'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">'
         + '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:22px;text-align:center">'
         + '<div style="font-size:34px;line-height:1">✓</div>'
         + '<div class="sg" style="font-size:17px;font-weight:800;margin:8px 0 4px">'+esc(to)+' has it</div>'
         + '<div style="font-size:13px;color:#6a707a;line-height:1.5">It is in their work queue. They can reply on '
-        + esc(_sup.contact)+'.</div>'
+        + esc(sent)+'.</div>'
         + '<button data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;'
         + 'border-radius:10px;padding:12px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Done</button>'
         + '</div></div>';
     })
-    .catch(function(e){ _sup.busy=false; _sup.err=e.message; supRender(); });
+    .catch(function(e){ if(!_sup)return; _sup.busy=false; _sup.err=e.message; supRender(); });
 }
 
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──

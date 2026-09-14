@@ -5204,6 +5204,9 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     });
   }
   { const k = setSec();
+    /* ⚠️ scoped: everything from 'Task assignment' down is stored and not yet read by anything. 'Where work
+       goes' above it IS read — lib/workroute resolves every ticket through it. */
+    const notYetWork = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin:15px 0 11px">⏳ The settings <b>below</b> are saved but <b>not yet active</b> — assignment, limits and breaks don\'t change behaviour yet. <i>Where work goes</i>, above, is live.</div>';
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "business") out = businessSettingsHTML(s);
@@ -5224,7 +5227,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       } else out = standardsSettingsHTML();
     }
     else if (k === "work") out = _misHead('Work', '')
-      + `<div style="${_CARD}">${notYet}
+      + `<div style="${_CARD}">
       ${/**
          * ⭐⭐ THE SAME CONTROL, NOT A SECOND ONE. Athi, 2026-08-20: *"in the settings, we have to include to
          * change the type, either goods or service, in the settings so the type of work it takes care of."*
@@ -5248,6 +5251,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
         <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">${tx('Where work goes')}</div>
         <div id="wr_pane">${workRoutingHTML()}</div>
       </div>
+      ${notYetWork}
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
