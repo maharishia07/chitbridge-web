@@ -591,11 +591,15 @@ function render(data){
   });
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
-  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>' + supLinkHtml();
+  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
   var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
   if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml()
                                                              : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
-  el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
+  el('app').innerHTML = head + regionBar() + finHtml + prodHtml
+    + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
+    /* ⚠️ OUTSIDE the ternary. An empty shop still has customers, and the emptier it is the more likely the
+       person reading this is the one with a problem. */
+    + supLinkHtml()
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
@@ -1121,7 +1125,12 @@ function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; 
   // load the region layers first (for the spin-the-globe switcher), then the shop
   fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
     fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+(_PREVIEW?'?preview=1':''), _PREVIEW && _ownerToken() ? { headers: { Authorization: 'Bearer ' + _ownerToken() } } : undefined).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
-      .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
+      .then(function(res){ if(res.status!==200){
+        /* ⚠️ the door stays open: the catalogue may be private or gone, but the shop is still there and a
+           buyer with a problem about last week's order has nowhere else to go. supLinkHtml() has no name to
+           show yet; /support/preview supplies it the moment the panel opens. */
+        el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'
+          + (BRIDGE ? supLinkHtml() : ''); return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
       .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
   });
 })();
