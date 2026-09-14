@@ -8637,8 +8637,12 @@ function platTabBodyHTML(r, mono){
         +platKv(tx('Pays'),r.depth>1?tx('no — billed to its root'):tx('yes — holds its own plan'))
         +platKv(tx('Network path'),r.path?mono(r.path):'—'));
 
+  var st = platStanding(r.standing);
   return platGrp(tx('Standing'),
-        platKv(tx('Plan'),esc(r.plan||'—'))
+        platKv(tx('Using it?'), st
+          ? '<b style="color:'+st.tone+'">● '+esc(st.word)+'</b>'
+          : '<span style="color:var(--grey-4)">'+tx('not computed — run b242')+'</span>')
+        +platKv(tx('Plan'),esc(r.plan||'—'))
         +platKv(tx('Sells'),esc(tx(PLAT_SELLS[r.supplies]||r.supplies||'—')))
         +platKv(tx('Catalogue seen by'),esc(r.visibility||'—'))
         +platKv(tx('Entity found by'),esc(r.entity_visibility||'—'))
@@ -8683,6 +8687,29 @@ function platTabBodyHTML(r, mono){
  * totals when nothing is selected teaches you that the right side means "everything", and then it silently
  * starts meaning "this one" the moment you click. One meaning per panel.
  */
+/**
+ * ── ⭐⭐ STANDING — the one column that says whether the product WORKS for this shop ───────────────────────────
+ *
+ * Every other column is an account fact: who they are, when they joined, how many staff. A shop with 58
+ * products, 20 people and no chits is the most urgent row on the platform and looked identical to a thriving
+ * one. b242 computes the ladder; this only reads it.
+ *
+ * ⚠️ THE 'a · ' PREFIXES ARE A SORT KEY, NOT A LABEL. They exist so a plain ORDER BY reads worst-first. They
+ * are stripped here — nobody should be shown our sort mechanism.
+ *
+ * ⭐ THE COLOUR SCALE IS THE SAME ONE THE REST OF THIS SCREEN USES for life: warm means stale, always. A second
+ * palette on one screen is how a red comes to mean two things.
+ */
+function platStanding(v){
+  if(!v) return null;
+  var word = String(v).replace(/^[a-z] · /, '');
+  var tone = /never signed in|never used/.test(word) ? 'var(--danger)'
+           : /lapsed/.test(word)                     ? 'var(--warn-2)'
+           : /drifting/.test(word)                   ? 'var(--warn)'
+           : /quiet/.test(word)                      ? 'var(--grey-2)'
+           :                                           'var(--ok)';
+  return { word: word, tone: tone };
+}
 function platDay(v){ return v ? String(v).slice(0, 10) : null; }
 function platBytes(n){
   if(n==null) return null;
@@ -8783,7 +8810,20 @@ function platFirstFilterHTML(ap){
     + 'style="flex:1;min-width:150px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
     + PLAT_CLASS.map(function(c){
         return '<option value="'+esc(c[0])+'"'+(cls===c[0]?' selected':'')+'>'+esc(tx(c[1]))+'</option>'; }).join('')
-    + '</select></div>';
+    + '</select>'
+    /* ⭐ named by the SERVER (controls.standings), so it is empty until b242 is run rather than offering
+       values the database will not honour. A filter that silently matches everything is worse than no
+       filter — you believe you narrowed. */
+    + (function(){ var st = (((UI.plat||{}).controls)||{}).standings || [];
+        if(!st.length) return '';
+        return '<select class="inp" id="pl_standing" data-testid="plat-standing" onchange="loadPlatform()" '
+          + 'style="flex:1;min-width:140px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
+          + '<option value="">'+esc(tx('any standing'))+'</option>'
+          + st.map(function(v){
+              return '<option value="'+esc(v.slice(0,1))+'"'+(ap.standing===v.slice(0,1)?' selected':'')+'>'
+                + esc(tx(v.replace(/^[a-z] · /,''))) + '</option>'; }).join('')
+          + '</select>'; })()
+    + '</div>';
 }
 
 function platScopeTableHTML(){
@@ -8816,6 +8856,14 @@ function platScopeTableHTML(){
       + 'font-size:var(--fs-2);white-space:nowrap">' + esc(r.display_name || r.user_id || '—')
       + '<div class="mono" style="font-size:var(--fs-1);color:var(--grey);font-weight:400">'
       + esc(r.user_id || '—') + '</div></td>'
+      /* ⭐ SECOND COLUMN. Athi, earlier today: *"each shops last status."* It sits beside the name because it
+         is the question the name is looked up to answer, not something to scroll thirteen columns for. */
+      + (function(){ var st = platStanding(r.standing);
+          return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+            + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
+            + '" title="' + esc(st ? tx('Signed in, chits sent and products listed decide this')
+                                   : tx('Not computed yet — run migration b242')) + '">'
+            + (st ? '● ' + esc(st.word) : '—') + '</td>'; })()
       + (ev === 'internal' ? cell(no, tx('no'), tx('Internal — ours, not on the market'))
          : ev === 'private' ? cell(maybe, tx('by ID'), tx('Not in search; reachable if you know the handle'))
          : ev === 'network' ? cell(maybe, tx('network'), tx('Its own group only'))
@@ -8843,7 +8891,8 @@ function platScopeTableHTML(){
 
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
     + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
-    + '<thead><tr>' + th('Entity') + th('Found', tx('Can it be found in search?'))
+    + '<thead><tr>' + th('Entity') + th('Standing', tx('Is this shop actually using the product?'))
+    + th('Found', tx('Can it be found in search?'))
     + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
     + th('Work', tx('Can it be sent a chit?')) + th('Pays', tx('Is it a billing tenant?'))
     + th('Sells', tx('What does it deal in?'))
@@ -8930,6 +8979,7 @@ async function loadPlatform(){
   if(g('pl_pos'))  q.position=g('pl_pos');
   if(g('pl_vis'))  q.visibility=g('pl_vis');
   if(g('pl_sup'))  q.supplies=g('pl_sup');
+  if(g('pl_standing')) q.standing=g('pl_standing');
   /* ⭐ the two ticks. Neither ticked means NO filter — every faceted filter in the world behaves this way, so
      it needs no label explaining it. Both ticked still hides network and private, which is the point. */
   var ck=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
