@@ -7510,10 +7510,24 @@ function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel){
  * ⚠️ A NEW KIND COSTS THREE THINGS, and all three or none — a box with no route files nothing, and a route
  * with no box can never be raised:
  *   1. a row here,  2. the kind in ROUTABLE (routes/entities.js),  3. an endpoint that mints it.
+ *
+ * ── ⭐⭐⭐ AND `to` IS THE ANSWER TO "WHOSE PROBLEM IS IT" ──────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"how do we differentiate between raising an incident to the platform and raising an
+ * incident to the entity?"* — we did not, and that was the hole. Every ticket went to CBINC, so the routing
+ * screen a shop had just been given decided nothing about its own work.
+ *
+ * ⭐ THE RAISER IS THE ONLY ONE WHO KNOWS WHICH, so the BOX asks rather than a setting guessing. Same kind,
+ * same form, same mechanism — a different desk:
+ *   `to:'platform'`  the rail is broken, or should do something it does not. It reaches us.
+ *   `to:'here'`      my own business has a fault, or someone wants something of me. It never leaves my entity.
+ *
+ * ⚠️ AND THE HUB GROUPS BY IT, because two boxes that say "Get help" and land in different companies are a
+ * trap if the only thing telling them apart is the wording inside them.
  */
 const SUPPORT_BOXES = [
-  { kind: 'incident', icon: '🛠️', label: 'Get help',
-    hint: 'Something is broken, or not doing what it should',
+  { kind: 'incident', to: 'platform', icon: '🛠️', label: 'Get help',
+    hint: 'Something in Chit & Bridge is broken, or not doing what it should',
     ep: 'testIncNew', send: 'Send it',
     fields: [{ id: 'observed', label: 'What went wrong?',
                ph: 'What you were doing, and what happened instead' }],
@@ -7522,8 +7536,8 @@ const SUPPORT_BOXES = [
              ['Sev-2', 'It is slowing me down', 'There is a way round it, but it costs me time'],
              ['Sev-3', 'Minor', 'Worth telling you, not urgent']] } },
 
-  { kind: 'spec', icon: '💡', label: 'New requirement',
-    hint: 'You want something added, or done differently',
+  { kind: 'spec', to: 'platform', icon: '💡', label: 'New requirement',
+    hint: 'You want Chit & Bridge to do something it does not',
     ep: 'testReqRaise', send: 'Raise it',
     /* ⚠️ BOTH, because the server refuses one without the other: a requirement with no evidence is a wish,
        and evidence with no requirement is a note. Asking here is cheaper than a refusal after typing. */
@@ -7537,7 +7551,27 @@ const SUPPORT_BOXES = [
              ['Low', 'One day', 'Worth having, no hurry']] } },
 ];
 
-function supportBox(kind){ return SUPPORT_BOXES.filter(function(b){ return b.kind === kind; })[0] || null; }
+/**
+ * ⭐⭐ THE SAME TWO KINDS, ADDRESSED INWARD — built FROM the rows above rather than written again, because two
+ * hand-kept copies of the same form are two places for the wording, the fields and the defaults to drift.
+ * Only the label, the hint and the desk differ; everything else is the row it came from.
+ * [[feedback-no-duplicate-functions]]
+ */
+['incident', 'spec'].forEach(function(k){
+  var o = SUPPORT_BOXES.filter(function(b){ return b.kind === k && b.to === 'platform'; })[0];
+  SUPPORT_BOXES.push(Object.assign({}, o, { to: 'here',
+    icon: k === 'incident' ? '📋' : '📥',
+    label: k === 'incident' ? 'Log a fault' : 'Log a request',
+    hint:  k === 'incident' ? 'Something in your own business went wrong'
+                            : 'Somebody wants something from you',
+    send:  'Log it' }));
+});
+
+/* ⚠️ keyed by kind AND desk: there are two incident boxes now, and picking the first would send half of them
+   to the wrong company. [[feedback-name-vs-behaviour]] */
+function supportBox(id){
+  return SUPPORT_BOXES.filter(function(b){ return b.kind + '@' + b.to === id; })[0] || null;
+}
 
 /** ⭐ WHERE THEY WERE, CAPTURED RATHER THAN ASKED FOR — the answer is already on the page, and "which screen?"
     is a question only we care about. ⚠️ The server only accepts AAA999, so anything else is simply absent. */
@@ -7551,34 +7585,51 @@ function supportOpen(){
   UI.avMenu = false;
   var info = supportWhere();
   modal('<div class="mhd"><div class="t">' + esc(tx('Support')) + '</div>'
-    + '<div class="s">' + esc(tx('Tell us what you need. It reaches the right queue, and you keep a copy.'))
+    + '<div class="s">' + esc(tx('Pick where it belongs. Each one becomes a task in the right queue.'))
     + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '')
               + '</span>' : '')
     + '</div></div>'
     + '<div class="mbody">'
-    /* ⭐ a grid that reflows to one column on a phone rather than a fixed pair of columns */
-    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px">'
-    + SUPPORT_BOXES.map(function(b){
-        return '<button data-testid="support-box-' + b.kind + '" onclick="supportForm(\'' + b.kind + '\')" '
+    /* ⭐ ONE GROUP PER DESK, and the shop's own name on the second — "Inside Tally Test" is the difference
+       between a box that reaches us and a box that does not, said in the only place it cannot be missed. */
+    + ['platform', 'here'].map(function(desk){
+        var mine = (window.UI && UI._me && (UI._me.display_name || UI._me.name)) || tx('your own business');
+        return '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:600;text-transform:uppercase;'
+          + 'letter-spacing:.03em;margin:' + (desk === 'here' ? '15px' : '0') + ' 0 7px">'
+          + esc(desk === 'platform' ? tx('About Chit & Bridge') : (tx('Inside') + ' ' + mine)) + '</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px">'
+          + supportBoxesFor(desk) + '</div>';
+      }).join('')
+    + '</div>'
+    + '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">'
+    + esc(tx('Cancel')) + '</button></div>');
+}
+
+function supportBoxesFor(desk){
+  /* ⭐ a grid that reflows to one column on a phone rather than a fixed pair of columns (the caller's) */
+  return SUPPORT_BOXES.filter(function(b){ return b.to === desk; }).map(function(b){
+        var id = b.kind + '@' + b.to;
+        return '<button data-testid="support-box-' + id + '" onclick="supportForm(\'' + id + '\')" '
           + 'style="text-align:start;border:1px solid var(--line);background:var(--card);border-radius:var(--r-md);'
           + 'padding:13px;cursor:pointer;display:block;width:100%">'
           + '<div style="font-size:21px;line-height:1.1;margin-bottom:5px">' + b.icon + '</div>'
           + '<div style="font-weight:650;font-size:var(--fs-3);color:var(--disp)">' + esc(tx(b.label)) + '</div>'
           + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45;margin-top:2px">'
           + esc(tx(b.hint)) + '</div></button>';
-      }).join('')
-    + '</div></div>'
-    + '<div class="mfoot"><button data-testid="support-cancel" onclick="closeModal()">'
-    + esc(tx('Cancel')) + '</button></div>');
+      }).join('');
 }
 
 /** ⭐ ONE FORM, DRAWN FROM THE ROW — a second modal per kind is a second place for the wording to drift. */
-function supportForm(kind){
-  var b = supportBox(kind); if (!b) return;
+function supportForm(id){
+  var b = supportBox(id); if (!b) return;
   var info = supportWhere();
-  UI._supKind = kind;
+  UI._supKind = id;
   modal('<div class="mhd"><div class="t">' + esc(tx(b.label)) + '</div>'
     + '<div class="s">' + esc(tx(b.hint))
+    /* ⭐ WHERE IT IS GOING, ON THE FORM ITSELF — not only in the heading above it, which is off screen by
+       the time somebody has typed three lines. */
+    + ' <span style="color:var(--grey)">· ' + esc(b.to === 'platform' ? tx('goes to Chit & Bridge')
+                                                 : tx('stays with you')) + '</span>'
     + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '')
               + '</span>' : '')
     + '</div></div>'
@@ -7624,6 +7675,8 @@ async function supportSend(){
       || b.choice.dflt;
   }
   if (UI._supCode) body.screen_code = UI._supCode;
+  /* ⭐ the one field that decides which company answers it (lib/raiseticket.js) */
+  body.audience = b.to;
 
   var btn = document.querySelector('[data-testid="support-send"]');
   if (btn) { btn.disabled = true; btn.textContent = tx('Sending…'); }
@@ -7638,7 +7691,11 @@ async function supportSend(){
      */
     var ref = r && (r.ref || r.clause || r.definition_id);
     var got = r && r.support && r.support.copied;
-    toast(got ? (tx('Sent') + (ref ? ' · ' + ref : '') + ' — ' + tx('we have it, and you keep a copy'))
+    /* ⚠️ "we have it" would be a lie for a fault logged against your own business — nobody here was told,
+       and nobody was meant to be. [[feedback-write-for-the-shopkeeper]] */
+    var mine = b.to === 'here';
+    toast(got ? (tx(mine ? 'Logged' : 'Sent') + (ref ? ' · ' + ref : '') + ' — '
+                 + tx(mine ? 'it is on your own desk' : 'we have it, and you keep a copy'))
               : (tx('Saved') + (ref ? ' · ' + ref : '') + ' — ⚠️ '
                  + tx('nobody has been notified yet; it is on your record and will not be lost')), !got);
   }catch(e){
