@@ -8392,7 +8392,7 @@ function platformScreen(){
       +stat(h.active_30d,'active 30d','var(--ok)')
       +stat(((d.by_kind||[]).find(function(x){return x.k==='test';})||{}).n,'test fixtures','var(--grey-2)')
     +'</div>'
-    +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" onkeydown="if(event.key===\'Enter\')loadPlatform()" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
+    +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" oninput="platSearchSoon()" onkeydown="if(event.key===\'Enter\'){platSearchNow()}" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
       /**
        * ⭐ ENTITY ACCESS FIRST. Athi, 2026-09-14: *"the first level filter can filter based on entity access
@@ -8422,6 +8422,16 @@ function platformScreen(){
       +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any catalogue'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
       +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
       +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
+      /**
+       * ⚠️⚠️ THE SORT WAS COMPUTED AND THROWN AWAY. `presets` is built above from controls.presets, and this
+       * select — the thing that uses it — was never written. platQuery() has been reading `pl_sort` off an
+       * element that does not exist, so every list has come back in the server's default order and the screen
+       * offered no way to change it. Athi asked for this on 2026-09-14 ("most recent, most oldest, whatever")
+       * and it has been half-built since. Found by e2e/list-controls.cjs on its first run, which is the entire
+       * argument for that file. [[feedback-silence-is-the-bug]]
+       */
+      +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'
+        +'<option value="">'+esc(tx('newest first'))+'</option>'+presets+'</select>'
       +'</div>'
     /* ⭐ 'left hand top level shows the overall MIS' — but folded. Six breakdowns open above a table would
        push the first row off the screen, and the number people actually read is already in the stats. */
@@ -8432,7 +8442,7 @@ function platformScreen(){
     /* ⭐ THE TABLE IS THE LIST NOW. platRowsHTML() drew the same entities in a narrow card and the scope
        table drew them again beside it; Athi: *"what is the difference between left and right panel?"* —
        there was none. One list, one place. */
-    +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platScopeTableHTML())+'</div></div>';
+    +'<div class="rows" id="pl_rows" onscroll="pgScroll(\'platform\')">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platScopeTableHTML())+'</div></div>';
 
   const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
   const divider='<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
@@ -8513,8 +8523,9 @@ function platCountHTML(){
   return '<b style="color:var(--warn-2)">'+n+' '+tx('of')+' '+m+'</b> — '
     +tx('narrow the filters or search to see the rest');
 }
-function paintPlatList(){ var b=document.getElementById('pl_rows'); if(b)b.innerHTML=platScopeTableHTML();
-  var c=document.getElementById('pl_count'); if(c)c.innerHTML=platCountHTML(); }
+/* ⭐ ONE REPAINTER. paintPlatKeepScroll() below is the whole of it; this name stays because twenty call
+   sites use it and a rename would be churn with no reader. */
+function paintPlatList(){ paintPlatKeepScroll(); }
 function selectPlat(id){ UI.platSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintPlatList(); paintPlatDetail(); }
 function paintPlatDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=platDetailHTML(); } }
 
@@ -8930,6 +8941,7 @@ function platScopeTableHTML(){
       + '</tr>';
   }).join('');
 
+  var foot = (typeof pgFooter === 'function') ? pgFooter('platform') : '';
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
     + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
     + '<thead><tr>' + th('Entity') + th('Network', tx('Whose network is it under?'))
@@ -8941,7 +8953,7 @@ function platScopeTableHTML(){
     + th('Type', tx('What kind of row is it?')) + th('Plan', tx('Which commercial tier it sits on'))
     + th('People', tx('Staff signed on to it')) + th('Branches', tx('Nodes beneath it on the network'))
     + th('Bridge id', tx('Its address on the rail')) + th('Last seen', tx('When it last signed in'))
-    + '</tr></thead><tbody>' + body + '</tbody></table></div>'
+    + '</tr></thead><tbody>' + body + '</tbody></table></div>' + foot
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:var(--sp-2);line-height:1.5">'
     + '<b style="color:var(--warn-2)">*</b> ' + tx('declared, not enforced yet — the supplier and customer add '
     + 'paths accept any handle by design (D-056, D-065). Everything else in this table is a live rule.')
@@ -9004,15 +9016,14 @@ function platSummaryHTML(){
     +'</div>';
 }
 
-async function loadPlatform(){
-  UI._platLoading=true;
-  var rb=document.getElementById('pl_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+/**
+ * ── ⭐⭐ ONE PLACE THAT BUILDS THE QUERY ─────────────────────────────────────────────────────────────────────────
+ *
+ * Page 1 and page 2 must ask the SAME question or the list splices two different answers together and nobody
+ * can tell. So the filters are read once, here, and both callers use it.
+ */
+function platQuery(){
   var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
-  /* the dropdown carries a PRESET key; the preset carries the field and direction the server understands */
-  var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
-  /* ⚠️ api(key, opts) — the query is an OBJECT on opts, not a third argument. My first version passed a
-     hand-built query string as arg 3, which api() ignores in silence: every filter and sort would have been
-     dropped and the list would have looked like it was working. Caught by reading the signature. */
   var q={};
   if(g('pl_q'))    q.q=g('pl_q');
   if(g('pl_kind')) q.kind=g('pl_kind');
@@ -9022,19 +9033,81 @@ async function loadPlatform(){
   if(g('pl_vis'))  q.visibility=g('pl_vis');
   if(g('pl_sup'))  q.supplies=g('pl_sup');
   if(g('pl_standing')) q.standing=g('pl_standing');
-  /* ⭐ the two ticks. Neither ticked means NO filter — every faceted filter in the world behaves this way, so
-     it needs no label explaining it. Both ticked still hides network and private, which is the point. */
+  if(g('pl_class'))    q.class=g('pl_class');
+  /* ⭐ the two ticks. Neither ticked means NO filter — every faceted filter in the world behaves this way. */
   var ck=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
   var evs=[]; if(ck('pl_ev_internal')) evs.push('internal'); if(ck('pl_ev_public')) evs.push('public');
   if(evs.length) q.entity_visibility=evs.join(',');
-  /* ⭐ ONE PARAM. The class used to be composed here out of kind and supplies, which is how it came to
-     double-count: a network root has BOTH and the client had to pick one to send. The ladder is now a single
-     ordered CASE on the server, so the client sends the answer and never the ingredients. */
-  if(g('pl_class')) q.class=g('pl_class');
+  var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
+  return q;
+}
+
+/**
+ * ── ⭐ THE LIST SCROLLS INSTEAD OF STOPPING AT 100 ──────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"it has to be lazy loaded"* — after ticking Public + Goods and being shown a hundred e2e
+ * fixtures while the shop he wanted sat at row 1,400. The screen already KNEW there were 2,259: it printed the
+ * number and had no way to reach it.
+ *
+ * ⭐ It registers with the same PG helper the Task list uses — pgInit/pgNext/pgScroll/pgFooter. Nothing about
+ * paging is decided here. [[feedback-adopt-dont-reinvent]]
+ *
+ * ⚠️⚠️ pgNext SWALLOWS ERRORS — `catch(_){}`. A 403 would have produced an empty list and no message, which is
+ * the failure this screen was specifically built to avoid. So fetch catches it itself, records the denial, and
+ * returns an empty page so paging stops cleanly. [[feedback-silence-is-the-bug]]
+ */
+pgInit('platform', {
+  el: function(){ return document.getElementById('pl_rows'); },
+  limit: 100,
+  count: function(){ return (((UI.plat||{}).rows)||[]).length; },
+  repaint: function(){ paintPlatKeepScroll(); },
+  fetch: async function(page, limit){
+    var q = platQuery(); q.limit = limit; q.offset = (page - 1) * limit;
+    try {
+      var r = await api('platMis', { query: q });
+      UI._platMeta = r || {};
+      var rows = (r && r.rows) || [];
+      rows.total = (r && r.matched != null) ? r.matched : rows.length;
+      return rows;
+    } catch(e) {
+      /* ⚠️ a 403 is an ANSWER, not an error. Anyone who is not the operator gets a plain statement — never an
+         empty list, which reads as "there is nothing on this platform". */
+      if(/403|not the platform root/i.test(String((e&&e.message)||''))) UI._platMeta={denied:true};
+      else UI._platMeta={error:String((e&&e.message)||e||'unknown')};
+      var none=[]; none.total=0; return none;
+    }
+  },
+  store: function(rows, first){
+    var meta = UI._platMeta || {};
+    if(first) UI.plat = Object.assign({}, meta, { rows: rows.slice() });
+    else      UI.plat.rows = (UI.plat.rows||[]).concat(rows);
+  },
+});
+
+/* ⚠️ the table is re-rendered whole, so the scroll position has to be put back by hand or every loaded page
+   throws the reader to the top — which reads as the list having reset. */
+function paintPlatKeepScroll(){
+  var b=document.getElementById('pl_rows'); if(!b) return;
+  var st=b.scrollTop; b.innerHTML=platScopeTableHTML(); b.scrollTop=st;
+  var c=document.getElementById('pl_count'); if(c) c.innerHTML=platCountHTML();
+}
+
+/* ⭐ SEARCH AS YOU TYPE. It used to need Enter, with nothing on screen saying so — Athi typed a name, saw the
+   list not move, and reported search broken. It was not broken; it was silent, which is worse.
+   ⚠️ Debounced: a keystroke per request would put 2,500-row counts behind every letter. */
+var _platSearchT=null;
+function platSearchSoon(){ clearTimeout(_platSearchT); _platSearchT=setTimeout(platSearchNow, 320); }
+function platSearchNow(){ clearTimeout(_platSearchT); loadPlatform(); }
+
+async function loadPlatform(){
+  UI._platLoading=true;
+  var rb=document.getElementById('pl_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
-    var r=await api('platMis', { query: q });
-    UI.plat=r||{}; UI._platLoading=false; paintPlatList(); paintPlatDetail();
+    /* ⭐ page 1 through the same pager every later page uses, so they cannot ask different questions */
+    await pgFirst('platform');
+    UI._platLoading=false; paintPlatList(); paintPlatDetail();
+    return;
   }catch(e){
     UI._platLoading=false;
     /* ⚠️ a 403 is an ANSWER, not an error. Anyone who is not the operator gets a plain statement — never an
