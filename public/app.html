@@ -8860,7 +8860,8 @@ function platFirstFilterHTML(ap){
    */
   var live = ((ap.live_population) || 'real');
   var pop  = ap.population || live;
-  var all  = (d.populations && d.populations.length) ? d.populations.slice() : [live, 'test'];
+  var pd   = UI.plat || {};   /* ⚠️ this function takes only `ap`; the row data lives on UI.plat */
+  var all  = (pd.populations && pd.populations.length) ? pd.populations.slice() : [live, 'test'];
   all.sort(function(a, b){ return (a === live ? -1 : b === live ? 1 : (a < b ? -1 : 1)); });
 
   var seg = function(k, i){
@@ -9195,7 +9196,8 @@ function platQuery(){
   if(g('pl_own'))      q.ownership=g('pl_own');
   /* ⚠️ SENT ONLY WHEN IT IS 'test'. The server's default is the real population; sending population=real would
      work and would say the same thing twice, and the two would then have to be kept agreeing. */
-  if(UI.platPop === 'test') q.population='test';
+  if(UI.platPop && UI.platPop !== (((UI.plat||{}).controls||{}).applied||{}).live_population)
+    q.population = UI.platPop;
   var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   q.limit = PLAT_PER_PAGE;
