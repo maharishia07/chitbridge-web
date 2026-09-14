@@ -3583,6 +3583,9 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
  * screen: a preference that is stored and unenforced looks identical to one that works.
  */
 var SET_SECS = [
+  /* ⭐ FIRST, because it is the most basic thing anyone can say about their shop, and because two of the
+     four columns it writes decide whether anybody can find them at all. See ACCESS-MATRIX.md. */
+  { key:'business',   name:'Your business', q:'What you do, and who can see it' },
   { key:'work',       name:'Work',        q:'How tasks reach people' },
   { key:'policy',     name:'Policy',      q:'Rules on your records' },
   { key:'channels',   name:'Channels',    q:'Where work arrives from' },
@@ -4971,11 +4974,111 @@ async function intKeyRevoke(jti){
   try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; _KEY_SHOWN = ''; if (typeof toast === 'function') toast(tx('Key revoked')); loadSettings(); }
   catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not revoke'), true); }
 }
+/**
+ * ── ⭐⭐⭐ TWO QUESTIONS, IN WORDS A SHOPKEEPER ALREADY USES ────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"this is what the user is going to see, he won't understand public, private etc. so we
+ * have to provide a very easy way of doing things, please follow standard or borrow from other systems."*
+ *
+ * So nothing on this screen says public, private, internal, entity or catalogue. It asks what the shop DOES,
+ * and stores the setting. Google Business asks *"do customers visit you?"* rather than *"set location type"*;
+ * Xero asks *"do you sell this?"* rather than *"set item classification"*. Same move.
+ *
+ * ⚠️ FOUR OPTIONS, NOT TWO CHECKBOXES. Xero's ☐ buy ☐ sell works because those are independent facts. Goods
+ * vs services is ONE question with four answers, and "neither" cannot be said by leaving both boxes empty —
+ * an empty pair reads as "did not answer", which must stay different from "supplies nothing". Same trap as
+ * `plan` defaulting to free before b230.
+ *
+ * ⚠️ AND THREE THINGS ARE DELIBERATELY ABSENT:
+ *   · "only my network"  — set when the network is DRAWN (network-design.js mints each node with its
+ *                          visibility) and the operator can cap it. Never the shop's to answer.
+ *   · root or branch     — follows from the network they were invited into. "Am I a billing root?" has no
+ *                          good answer from a branch manager.
+ *   · internal           — not a choice a shop can make. It is what WE are.
+ */
+var BIZ_DOES = [
+  ['goods',    'I sell products',              'A shop, a wholesaler, a trader.'],
+  ['services', 'I do jobs for customers',      'A garage, a helpdesk, an accountant \u2014 the work is quoted, not listed.'],
+  ['both',     'Both',                         'Jobs and the parts that go with them.'],
+  ['none',     'Neither \u2014 I only buy for my own use', 'Nothing is sold on. Stock is consumed.'],
+];
+var BIZ_LIST = [
+  ['public',  'Show it to customers',            'Anyone on the rail can see what you sell and order from it.'],
+  ['private', 'Keep it internal \u2014 I bill from it', 'Your list stays yours. You can still be found, and still be sent work.'],
+];
+
+function bizChoice(group, val, cur, rows){
+  return rows.map(function(r){
+    var on = String(cur) === r[0];
+    return '<label data-testid="biz-' + group + '-' + r[0] + '" style="display:flex;gap:10px;align-items:flex-start;'
+      + 'padding:11px 13px;border-bottom:1px solid var(--line-soft);cursor:pointer;'
+      + (on ? 'background:var(--wash)' : '') + '">'
+      + '<input type="radio" name="biz_' + group + '" value="' + esc(r[0]) + '"' + (on ? ' checked' : '')
+      + ' onchange="bizSave(\'' + group + '\', this.value)" style="margin-top:3px;flex:none">'
+      + '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' + esc(tx(r[1])) + '</span>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(tx(r[2])) + '</div></span></label>';
+  }).join('');
+}
+
+function businessSettingsHTML(s){
+  var me = (s && s.entity) || UI._me || {};
+  /* ⚠️ unknown is never OFFERED. It is what the column holds until somebody answers, and showing it as a
+     choice would invite people to pick "I have not decided", which is not a fact about a business. */
+  var does = me.supplies && me.supplies !== 'unknown' ? me.supplies : '';
+  var list = me.catalogue_visibility === 'public' ? 'public'
+           : me.catalogue_visibility === 'private' ? 'private' : '';
+  var card = function(title, sub, inner, note){
+    return '<div style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;'
+      + 'margin-bottom:var(--sp-4);background:var(--card)">'
+      + '<div style="padding:12px 13px 9px"><div style="font-weight:700;font-size:var(--fs-3);'
+      + 'font-family:\'Space Grotesk\'">' + esc(tx(title)) + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(tx(sub)) + '</div></div>'
+      + inner + (note || '') + '</div>';
+  };
+  /* ⭐ the network row is SHOWN, never editable, and only when it applies — so a shop in a group can see why
+     its list behaves differently without being offered a switch that is not theirs to throw. */
+  var netNote = (me.catalogue_visibility === 'network')
+    ? '<div style="padding:10px 13px;background:var(--blue-tint);font-size:var(--fs-1);line-height:1.5">'
+      + '<b>' + tx('Your group decides this one.') + '</b> '
+      + tx('Your list is shared with the shops in your group. That was set when your group was built, and it is not changed here.')
+      + '</div>'
+    : '';
+  return '<div style="max-width:560px">'
+    + card('What do you do?', 'This is how other businesses understand you.',
+           bizChoice('does', does, does, BIZ_DOES))
+    + card('Your price list', 'Your products and what they cost.',
+           netNote ? '' : bizChoice('list', list, list, BIZ_LIST), netNote)
+    + '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div></div>';
+}
+
+/** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */
+async function bizSave(group, val){
+  var said = document.getElementById('biz_said');
+  if (said) said.textContent = tx('Saving…');
+  var body = group === 'does' ? { supplies: val } : { catalogue_visibility: val };
+  try {
+    /* ⚠️ 'saveProfile', not a name I invented. My first version called api('profileUpdate') — no such
+       endpoint, so every save would have thrown 'no endpoint profileUpdate' and the catch below would have
+       shown that to a shopkeeper. Caught by grepping EP before trusting the name. */
+    await api('saveProfile', { body: body });
+    if (UI._me) { if (group === 'does') UI._me.supplies = val; else UI._me.catalogue_visibility = val; }
+    if (UI._set && UI._set.s && UI._set.s.entity) {
+      if (group === 'does') UI._set.s.entity.supplies = val; else UI._set.s.entity.catalogue_visibility = val;
+    }
+    if (said) said.textContent = tx('Saved.');
+    toast(tx('Saved'));
+  } catch (e) {
+    /* ⚠️ the reason, not a shrug. A refused save that says nothing leaves the radio looking chosen. */
+    if (said) said.textContent = tx('Not saved') + ' — ' + String((e && e.message) || e);
+    loadSettings();
+  }
+}
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
-    if (k === "locale") out = localeSettingsHTML();
+    if (k === "business") out = businessSettingsHTML(s);
+    else if (k === "locale") out = localeSettingsHTML();
     else if (k === "integrations") out = integrationsSettingsHTML();
     else if (k === "appearance") out = appearanceSettingsHTML();
     else if (k === "standards") {
