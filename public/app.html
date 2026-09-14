@@ -8642,8 +8642,8 @@ function platTabBodyHTML(r, mono){
         +platKv(tx('Sells'),esc(tx(PLAT_SELLS[r.supplies]||r.supplies||'—')))
         +platKv(tx('Catalogue seen by'),esc(r.visibility||'—'))
         +platKv(tx('Entity found by'),esc(r.entity_visibility||'—'))
-        +platKv(tx('Joined'),esc(r.joined||'—'))
-        +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')));
+        +platKv(tx('Joined'),esc(platDay(r.joined)||'—'))
+        +platKv(tx('Last seen'),esc(platDay(r.last_seen)||tx('never'))));
 }
 
 /** the report itself — shown whenever no row is selected, so the screen is never blank */
@@ -8683,6 +8683,7 @@ function platTabBodyHTML(r, mono){
  * totals when nothing is selected teaches you that the right side means "everything", and then it silently
  * starts meaning "this one" the moment you click. One meaning per panel.
  */
+function platDay(v){ return v ? String(v).slice(0, 10) : null; }
 function platBytes(n){
   if(n==null) return null;
   n=Number(n); if(!isFinite(n)) return null;
@@ -8833,7 +8834,7 @@ function platScopeTableHTML(){
       + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.seats || 0) + '</td>'
       + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums">' + (r.branches || 0) + '</td>'
       + '<td class="mono" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.bridge_id || '—') + '</td>'
-      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(r.last_seen ? String(r.last_seen).slice(0, 10) : tx('never')) + '</td>'
+      + '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">' + esc(platDay(r.last_seen) || tx('never')) + '</td>'
       + '</tr>';
   }).join('');
 
