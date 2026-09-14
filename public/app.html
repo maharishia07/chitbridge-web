@@ -1813,6 +1813,8 @@ const EP = {
   platPopulationAdd:{m:"POST", p:"/api/entities/populations",               ok:"✓"},
   /* ⭐ per-entity, NOT operator-only: anyone running a helpdesk routes their own kinds of work. */
   workRouting:      {m:"GET",  p:"/api/entities/routing",                   ok:"✓"},
+  /* ⭐ where WOULD it go — the send’s own resolver, asked not to write */
+  workRoutePreview: {m:"GET",  p:"/api/entities/routing/preview",           ok:"✓"},
   workRoutingSet:   {m:"PUT",  p:"/api/entities/routing",                   ok:"✓"},
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},
@@ -7565,6 +7567,23 @@ const SUPPORT_BOXES = [
     hint:  k === 'incident' ? 'Something in your own business went wrong'
                             : 'Somebody wants something from you',
     send:  'Log it' }));
+
+  /**
+   * ── ⭐⭐⭐ AND THE THIRD DESK, WHICH IS THE ONE THAT MAKES THIS A PRODUCT ─────────────────────
+   *
+   * Athi, 2026-09-14: *"a is an entity and b is an entity, a is calling b and accessing its catalogue and
+   * wants to raise an incident with b, how this will route to b?"*
+   *
+   * ⭐ IT ROUTES BY B'S OWN ROW. entity_work_routing is read under the RECIPIENT's id, so A needs to know
+   * nothing about how B is organised — A addresses B, and B's folder, B's person, B's team answer it. The
+   * same helpdesk resolves for everyone because it is the same table, read as whoever it was sent to.
+   */
+  SUPPORT_BOXES.push(Object.assign({}, o, { to: 'them',
+    icon: k === 'incident' ? '📣' : '🙋',
+    label: k === 'incident' ? 'Report a problem' : 'Ask for something',
+    hint:  k === 'incident' ? 'Something they sold or did has gone wrong'
+                            : 'You want something they do not offer yet',
+    send:  'Send it' }));
 });
 
 /* ⚠️ keyed by kind AND desk: there are two incident boxes now, and picking the first would send half of them
@@ -7592,9 +7611,10 @@ function supportOpen(){
     + '<div class="mbody">'
     /* ⭐ ONE GROUP PER DESK, and the shop's own name on the second — "Inside Tally Test" is the difference
        between a box that reaches us and a box that does not, said in the only place it cannot be missed. */
-    + ['platform', 'here'].map(function(desk){
+    + ['platform', 'here', 'them'].filter(function(d){ return d !== 'them' || supportThem(); })
+      .map(function(desk, i){
         return '<div id="sup_h_' + desk + '" style="font-size:var(--fs-1);color:var(--grey);font-weight:600;'
-          + 'text-transform:uppercase;letter-spacing:.03em;margin:' + (desk === 'here' ? '15px' : '0')
+          + 'text-transform:uppercase;letter-spacing:.03em;margin:' + (i ? '15px' : '0')
           + ' 0 7px">' + esc(supportDeskName(desk)) + '</div>'
           + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:9px">'
           + supportBoxesFor(desk) + '</div>';
@@ -7612,11 +7632,53 @@ function supportOpen(){
   }
 }
 
-/* ⭐ one place the two desks are named, because the hub heading and the form both say it */
+/**
+ * ⭐⭐ WHO THE OTHER PARTY IS — READ FROM WHERE A ALREADY IS, never asked for and never typed.
+ *
+ * A box that says "who is this about?" is a box somebody fills in wrong, and a bridge id a caller types is a
+ * way to post a chit into a stranger's Task. The context already holds the answer: a customer signed in to a
+ * shop's storefront IS in that shop's session. [[feedback-stay-in-the-construct]]
+ *
+ * ⚠️ RETURNS null WHEN THERE IS NO COUNTERPARTY, and the hub then shows no third group at all — boxes that
+ * cannot work are worse than absent ones, because the reader spends the typing before finding out.
+ */
+function supportThem(){
+  var S = (typeof SESSION !== 'undefined' && SESSION) || {}, U = (typeof UI !== 'undefined' && UI) || {};
+  /* a customer signed in to a shop's storefront IS in that shop's session */
+  if (S.role === 'customer' && S.bridgeId) return { bridge_id: S.bridgeId, name: S.name || tx('this shop') };
+  /* browsing a store from Network design, and from the Suppliers screen */
+  if (U._brSel && U._brSel.bridge_id) return { bridge_id: U._brSel.bridge_id, name: U._brSel.name || tx('them') };
+  var sup = U.supDet && U.supDet.supplier;
+  if (sup && sup.bridge_id) return { bridge_id: sup.bridge_id, name: sup.display_name || sup.user_id || tx('them') };
+  /**
+   * ⚠️ AND AN OPEN CHIT, THROUGH chitIsSelf — NOT a second rule for who "they" are. recipTo() already
+   * answers this for every other consumer, and a private copy of "not me" drifts the first time a role is
+   * added. [[feedback-shared-opponent-logic]] Here we need the bridge id rather than the name, so we reuse the
+   * PREDICATE and not the formatter.
+   */
+  var d = U.detail;
+  if (d && d.recips && typeof chitIsSelf === 'function') {
+    var them = d.recips.filter(function(r){
+      return r && r.bridge_id && r.entity_id && !chitIsSelf(r.entity_id, r.display_name); })[0];
+    if (them) return { bridge_id: them.bridge_id, name: them.display_name || tx('them') };
+  }
+  return null;
+}
+
+/* ⭐ one place the three desks are named, because the hub heading and the form both say it */
 function supportDeskName(desk){
   if (desk === 'platform') return tx('About Chit & Bridge');
+  if (desk === 'them') { var th = supportThem(); return tx('With') + ' ' + ((th && th.name) || tx('them')); }
   var me = (window.UI && UI._me) || {};
   return tx('Inside') + ' ' + (me.display_name || me.name || tx('your own business'));
+}
+
+/* ⭐ said on the FORM as well as the heading — the heading is off screen by the time somebody has typed
+   three lines, and "who is going to read this" is the question they are asking as they type. */
+function supportGoesTo(desk){
+  if (desk === 'platform') return tx('goes to Chit & Bridge');
+  if (desk === 'them') { var th = supportThem(); return tx('goes to') + ' ' + ((th && th.name) || tx('them')); }
+  return tx('stays with you');
 }
 
 function supportBoxesFor(desk){
@@ -7642,8 +7704,7 @@ function supportForm(id){
     + '<div class="s">' + esc(tx(b.hint))
     /* ⭐ WHERE IT IS GOING, ON THE FORM ITSELF — not only in the heading above it, which is off screen by
        the time somebody has typed three lines. */
-    + ' <span style="color:var(--grey)">· ' + esc(b.to === 'platform' ? tx('goes to Chit & Bridge')
-                                                 : tx('stays with you')) + '</span>'
+    + ' <span style="color:var(--grey)">· ' + esc(supportGoesTo(b.to)) + '</span>'
     + (info ? ' <span style="color:var(--grey)">· ' + esc(tx('from')) + ' ' + esc(info.label || '')
               + '</span>' : '')
     + '</div></div>'
@@ -7663,6 +7724,7 @@ function supportForm(id){
               + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(tx(u[2]))
               + '</div></span></label>';
           }).join('') : '')
+    + '<div id="sup_note" style="margin-top:13px">' + supportNoteHTML(null) + '</div>'
     + '</div>'
     /* ⭐ BACK, not Cancel, on a form reached from the hub — the way out of a wrong box is the other boxes. */
     + '<div class="mfoot"><button data-testid="support-back" onclick="supportOpen()">' + esc(tx('Back'))
@@ -7671,6 +7733,65 @@ function supportForm(id){
 
   setTimeout(function(){ try{ var t = document.getElementById('sup_' + b.fields[0].id); if (t) t.focus(); }
                          catch(_){ } }, 60);
+  supportNoteLoad(b);
+}
+
+/**
+ * ── ⭐⭐⭐ THE NOTE — WHO WILL GET THIS, ANSWERED BEFORE A WORD IS TYPED ─────────────────────────
+ *
+ * Athi, 2026-09-14: *"can we bring a note, you are raising incident to so and so in the incident box, for some
+ * reason if it is not going to work, we know it right away, before raising, still i am not confident."*
+ *
+ * ⭐ AND IT IS THE SERVER’S ANSWER, NOT THE SCREEN’S GUESS. The client knows which box was pressed; it does
+ * NOT know whether that entity routes faults to a team, which folder they land in, or whether the shop still
+ * exists. Composing a comforting sentence out of what the client happens to hold is how a screen becomes
+ * confidently wrong. /routing/preview runs the send’s own resolver. [[feedback-check-after-the-wire]]
+ *
+ * ⚠️ AND IT SAYS SO WHEN IT WILL NOT WORK, before the typing rather than after. That is the whole request.
+ */
+async function supportNoteLoad(b){
+  var th = b.to === 'them' ? supportThem() : null;
+  var paint = function(h){ var el = document.getElementById('sup_note'); if (el) el.innerHTML = h; };
+  try {
+    var r = await api('workRoutePreview', { query: {
+      kind: b.kind, audience: b.to, to_bridge_id: th ? th.bridge_id : undefined } });
+    paint(supportNoteHTML(r));
+    /* ⚠️ and the send is HELD while it cannot land. A button that works and then fails is the thing he does
+       not trust; one that is plainly off, with the reason beside it, is a fact. */
+    var btn = document.querySelector('[data-testid="support-send"]');
+    if (btn && r && r.ok === false) { btn.disabled = true; btn.style.opacity = '.5'; }
+  } catch (e) {
+    /* ⚠️ a failed PREVIEW must not block a real report — it is a convenience, and losing the words is not. */
+    paint(supportNoteHTML({ ok: null, why: String((e && e.message) || e) }));
+  }
+}
+
+function supportNoteHTML(r){
+  var box = function(bg, bd, h){ return '<div style="background:' + bg + ';border:1px solid ' + bd + ';'
+    + 'border-radius:var(--r-md);padding:9px 11px;font-size:var(--fs-1);line-height:1.55">' + h + '</div>'; };
+
+  if (!r) return box('var(--card)', 'var(--line)',
+    '<span class="spin"></span> ' + esc(tx('checking where this will go…')));
+
+  /* ⭐ unknown is its OWN state, said plainly — not dressed as a yes and not dressed as a no. */
+  if (r.ok === null) return box('var(--card)', 'var(--line)',
+    '<b>' + esc(tx('Could not check where this will go')) + '</b><div style="color:var(--grey)">'
+    + esc(tx('You can still send it — it will be recorded either way.')) + '</div>');
+
+  if (r.ok === false) return box('var(--warn-tint)', 'var(--warn-2)',
+    '<b>' + esc(tx('This will not reach anyone yet')) + '</b><div>' + esc(r.why || '') + '</div>');
+
+  /* ⭐ WHO, then WHERE, then WHY — the order a person reads it in. */
+  var who = r.is_self ? tx('your own Task list')
+          : (r.to_name || tx('them')) + (r.to_bridge_id ? ' · ' + r.to_bridge_id : '');
+  var where = r.folder ? (tx('filed in') + ' ' + r.folder)
+            : r.folder_will_be_created ? (tx('a folder called') + ' ' + r.folder_will_be_created
+                                          + ' ' + tx('will be made for it'))
+            : tx('not filed anywhere in particular');
+  return box('var(--ok-tint)', 'var(--ok-2)',
+    '<b>' + esc(tx('This goes to') + ' ' + who) + '</b>'
+    + '<div>' + esc(where) + (r.assignee ? ' · ' + esc(tx('for') + ' ' + r.assignee) : '') + '</div>'
+    + (r.why ? '<div style="color:var(--grey)">' + esc(r.why) + '</div>' : ''));
 }
 
 async function supportSend(){
@@ -7691,6 +7812,13 @@ async function supportSend(){
   if (UI._supCode) body.screen_code = UI._supCode;
   /* ⭐ the one field that decides which company answers it (lib/raiseticket.js) */
   body.audience = b.to;
+  if (b.to === 'them') {
+    var th = supportThem();
+    /* ⚠️ refused rather than sent to nobody: the session can end between opening the hub and pressing send,
+       and a ticket with no destination is recorded, answered by no one, and looks sent. */
+    if (!th) { toast(tx('That shop is no longer open in this session.'), true); return; }
+    body.to_bridge_id = th.bridge_id;
+  }
 
   var btn = document.querySelector('[data-testid="support-send"]');
   if (btn) { btn.disabled = true; btn.textContent = tx('Sending…'); }
@@ -7707,9 +7835,11 @@ async function supportSend(){
     var got = r && r.support && r.support.copied;
     /* ⚠️ "we have it" would be a lie for a fault logged against your own business — nobody here was told,
        and nobody was meant to be. [[feedback-write-for-the-shopkeeper]] */
-    var mine = b.to === 'here';
-    toast(got ? (tx(mine ? 'Logged' : 'Sent') + (ref ? ' · ' + ref : '') + ' — '
-                 + tx(mine ? 'it is on your own desk' : 'we have it, and you keep a copy'))
+    var th = b.to === 'them' ? supportThem() : null;
+    var landed = b.to === 'here' ? tx('it is on your own desk')
+               : th              ? (tx('it is with') + ' ' + th.name + ', ' + tx('and you keep a copy'))
+                                 : tx('we have it, and you keep a copy');
+    toast(got ? (tx(b.to === 'here' ? 'Logged' : 'Sent') + (ref ? ' · ' + ref : '') + ' — ' + landed)
               : (tx('Saved') + (ref ? ' · ' + ref : '') + ' — ⚠️ '
                  + tx('nobody has been notified yet; it is on your record and will not be lost')), !got);
   }catch(e){
