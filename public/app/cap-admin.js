@@ -5012,7 +5012,11 @@ function bizChoice(group, val, cur, rows){
     var on = String(cur) === r[0];
     return '<label data-testid="biz-' + group + '-' + r[0] + '" style="display:flex;gap:10px;align-items:flex-start;'
       + 'padding:11px 13px;border-bottom:1px solid var(--line-soft);cursor:pointer;'
-      + (on ? 'background:var(--wash)' : '') + '">'
+      /* ⚠️ THE CHOSEN ROW NEEDS MORE THAN A TINT. --wash against --card is nearly invisible in a dark theme
+         — on Athi's screenshot the radio dot was carrying the selection on its own. A left bar in --blue is
+         a border, not a background, so it survives every one of the fifteen themes at full strength. */
+      + (on ? 'background:var(--wash);box-shadow:inset 3px 0 0 var(--blue)' : 'box-shadow:inset 3px 0 0 transparent')
+      + '">'
       + '<input type="radio" name="biz_' + group + '" value="' + esc(r[0]) + '"' + (on ? ' checked' : '')
       + ' onchange="bizSave(\'' + group + '\', this.value)" style="margin-top:3px;flex:none">'
       + '<span style="flex:1"><span style="font-weight:650;font-size:var(--fs-2)">' + esc(tx(r[1])) + '</span>'
@@ -5048,6 +5052,15 @@ function businessSettingsHTML(s){
            bizChoice('does', does, does, BIZ_DOES))
     + card('Your price list', 'Your products and what they cost.',
            netNote ? '' : bizChoice('list', list, list, BIZ_LIST), netNote)
+    /* ⚠️⚠️ A PRESELECTED RADIO ASSERTS AN ANSWER NOBODY GAVE. 'goods' is this column's long-standing DEFAULT
+       (b238), so a legacy row shows 'I sell products' chosen whether the shop said so or not — and from here
+       it is indistinguishable from a real answer. The radio cannot be un-chosen honestly, so the screen SAYS
+       so instead, once, quietly. New registrations read 'unknown' and show nothing selected, which is why
+       this line only appears for the older rows. */
+    + ((me.supplies === 'goods' && !me._supplies_confirmed)
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:-8px 0 var(--sp-4)">'
+          + tx('If that is not right, change it — it was filled in for you, not chosen by you.') + '</div>'
+        : '')
     + '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div></div>';
 }
 
