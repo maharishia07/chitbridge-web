@@ -8514,6 +8514,65 @@ function platKv(l,v){ return '<div class="kv" style="display:flex;gap:8px;paddin
   +'<b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'+l+'</b>'
   +'<span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>'; }
 
+/**
+ * ── ⭐⭐ ENTITY SCOPE — what THIS entity may actually do ────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"can we bring it as a separate item in the platform tab, entity scope?"*
+ *
+ * The rest of the detail pane says what an entity IS. This says what it MAY DO — the access matrix applied to
+ * one row, read from that row's live columns instead of from a document. ACCESS-MATRIX.md is the argument;
+ * this is the answer for one shop.
+ *
+ * ── ⚠️⚠️ AND EVERY LINE SAYS WHETHER IT IS ENFORCED ───────────────────────────────────────────────────────────
+ *
+ * Four of these are live rules. Two are still only declarations — the supplier and customer ADD paths accept
+ * any handle by design (D-056 "no consent", D-065 "auto-added"), which is right for shops and wrong for us.
+ * A panel that showed all six the same way would be describing a product we have not finished, and somebody
+ * would rely on it. So the unenforced ones say so, in the row, where it cannot be missed.
+ */
+function platScopeHTML(r){
+  var ev = r.entity_visibility || 'public', cv = r.visibility || 'private';
+  var isBranch = (r.depth || 0) > 1;
+  var ok = 'var(--ok)', no = 'var(--danger)', maybe = 'var(--warn)', dim = 'var(--grey-2)';
+
+  /* [icon colour, what it may do, the reason, enforced?] */
+  var rows = [];
+
+  rows.push(ev === 'internal' ? [no, tx('Cannot be found'), tx('Internal — ours. It is not on the market.'), true]
+    : ev === 'private'  ? [maybe, tx('Found only by exact ID'), tx('Not in search. Reachable if you already know the handle.'), true]
+    : ev === 'network'  ? [maybe, tx('Found inside its network'), tx('Its own group only.'), false]
+    :                     [ok, tx('Found by anyone'), tx('Appears in search for every shop on the rail.'), true]);
+
+  rows.push(ev === 'internal'
+    ? [no, tx('Cannot be named as a supplier or customer'), tx('Never a party to trade.'), false]
+    : [ok, tx('Can be named as a supplier or customer'), tx('Any shop holding its ID can add it — no consent needed (D-056).'), true]);
+
+  rows.push(cv === 'public' ? [ok, tx('Products visible to anyone'), tx('Open storefront.'), true]
+    : cv === 'network' ? [maybe, tx('Products visible to its network'), tx('A member sees them as public; everyone else sees nothing.'), true]
+    :                    [no, tx('Products not visible'), tx('Its list is for billing, not for selling.'), true]);
+
+  rows.push([ok, tx('Can be sent work'), tx('A chit reaches it whatever its price list says — that is why finding and publishing are separate.'), true]);
+
+  rows.push(isBranch
+    ? [dim, tx('Does not pay'), tx('A branch at depth ') + (r.depth || '?') + tx(' — its plan belongs to its root.'), false]
+    : [ok, tx('Pays — a billing tenant'), tx('Root or standalone: it holds its own plan.'), false]);
+
+  var sells = { goods: 'sells things', services: 'sells work', both: 'work and parts',
+                none: 'sells nothing', unknown: 'nobody has asked' }[r.supplies] || r.supplies;
+  rows.push([r.supplies === 'unknown' ? dim : ok, tx(sells), tx('What the business deals in.'),
+             r.supplies !== 'unknown']);
+
+  return rows.map(function(x){
+    return '<div style="display:flex;gap:9px;padding:9px 13px;border-bottom:1px dashed var(--line-soft);'
+      + 'font-size:var(--fs-2);align-items:flex-start">'
+      + '<span style="flex:none;width:8px;height:8px;border-radius:50%;background:' + x[0] + ';margin-top:6px"></span>'
+      + '<span style="flex:1"><b style="font-weight:650">' + esc(x[1]) + '</b>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;line-height:1.45">' + esc(x[2])
+      /* ⚠️ the honest half: a rule nobody applies is a rule that will be relied on and is not there */
+      + (x[3] ? '' : ' <b style="color:var(--warn-2)">' + tx('— declared, not enforced yet') + '</b>')
+      + '</div></span></div>';
+  }).join('');
+}
 function platDetailHTML(){
   var d=UI.plat||{}, r=(d.rows||[]).find(function(x){return x.identity_id===UI.platSel;});
   if(!r) return platSummaryHTML();
@@ -8529,6 +8588,7 @@ function platDetailHTML(){
     +'<div class="db">'
     /* ⭐ all four identifiers together. There is no separate "username" — user_id IS it, and cb_entity's
        username column is null for every one of its 340 rows, so showing it would add a permanent blank. */
+    + platGrp(tx('What this entity may do'), platScopeHTML(r))
     + platGrp(tx('Identifiers'),
         platKv(tx('Name'),esc(r.display_name||'—'))
         +platKv('User ID',mono(r.user_id))
