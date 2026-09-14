@@ -8701,13 +8701,16 @@ function platBytes(n){
  */
 function platTile(label, val, hint){
   var known = val !== null && val !== undefined;
-  return '<div title="'+esc(hint||'')+'" style="flex:1;min-width:74px;background:var(--wash);'
+  return '<div title="'+esc(hint||'')+'" style="flex:1;min-width:92px;background:var(--wash);'
     + 'border:1px solid var(--line-soft);border-radius:var(--r-md);padding:7px 10px">'
     + '<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-4);line-height:1.15;'
     + 'font-variant-numeric:tabular-nums;color:'+(known?'var(--ink)':'var(--grey-4)')+'">'
     + esc(known?String(val):'—')+'</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em;'
-    + 'margin-top:1px">'+esc(tx(label))+'</div></div>';
+    /* ⚠️ THE VALUE MAY BE CLIPPED, THE LABEL MAY NOT. '10441' can be read half-hidden and guessed at;
+       'CUSTOMER' cannot — it reads as a different word from CUSTOMERS. So the label wraps rather than
+       overflowing, and the tile's min-width is set wide enough that the longest of them fits on one line. */
+    + '<div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em;'
+    + 'margin-top:1px;line-height:1.25;overflow-wrap:anywhere">'+esc(tx(label))+'</div></div>';
 }
 
 /** ⭐ the right panel's top level — the MIS for the one entity that is selected */
