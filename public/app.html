@@ -8817,6 +8817,11 @@ var PLAT_CLASS = [['',         'All'],
                   ['services', 'Services'],
                   ['both',     'Goods and Services'],
                   ['network',  'Network shops'],
+                  /* ⚠️ 2,241 of the 2,259 'goods' were e2e fixtures. Athi ticked Public + Goods, expected
+                     Tally Test Shop and alpha timers, and got a hundred rows of noise — they were not
+                     missing, they were row 1,400 of a list that stops at 100. A fixture is not a paying
+                     entity, so it is a rung of its own and Goods finally means what it says. */
+                  ['test',     'Test fixtures'],
                   ['internal', 'Internal'],
                   ['unset',    'Not answered']];
 function platFirstFilterHTML(ap){
