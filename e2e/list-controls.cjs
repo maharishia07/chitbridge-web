@@ -20,8 +20,8 @@
  *             broken" happens: the box accepts typing and the list does not move, with nothing saying why.
  *   filters   at least one <select> — a list you cannot narrow is a list you scroll.
  *   sort      a sort control. "most recent, most oldest, whatever" — Athi, 2026-09-14.
- *   paging    onscroll on the rows container. A list that stops at its limit and says "100 of 2,259" is
- *             reporting a number it cannot reach.
+ *   paging    page numbers, or an onscroll that loads more. A list that stops at its limit and says
+ *             "100 of 2,259" is reporting a number it cannot reach.
  *   count     a line that says how many matched, not how many fitted.
  *
  * ── ⚠️⚠️ WHY THIS IS A RATCHET AND NOT A PASS/FAIL ──────────────────────────────────────────────────────────────
@@ -49,7 +49,10 @@ const CONTROLS = {
                   && /oninput=/.test(b),
   filters: (b) => /<select/.test(b),
   sort:    (b) => /pl_sort|sortPresetSelect|data-testid="[a-z-]*sort|onchange="[a-zA-Z]*[Ss]ort/.test(b),
-  paging:  (b) => /onscroll=/.test(b),
+  /* ⚠️ EITHER SHAPE COUNTS. Athi asked for page numbers on the Platform screen, not an endless scroll:
+     *'give the page numbers so the next page can be moved.'* A detector that only knows about onscroll would
+     have failed the screen for doing the better thing. What matters is that the list can REACH its total. */
+  paging:  (b) => /onscroll=|PagerHTML|data-testid="[a-z-]*page-/.test(b),
   count:   (b) => /CountHTML|listtotal|pgTotalText|of\s*'\s*\+/.test(b),
 };
 

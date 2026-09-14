@@ -8442,7 +8442,7 @@ function platformScreen(){
     /* ⭐ THE TABLE IS THE LIST NOW. platRowsHTML() drew the same entities in a narrow card and the scope
        table drew them again beside it; Athi: *"what is the difference between left and right panel?"* —
        there was none. One list, one place. */
-    +'<div class="rows" id="pl_rows" onscroll="pgScroll(\'platform\')">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platScopeTableHTML())+'</div></div>';
+    +'<div class="rows" id="pl_rows" onscroll="platOnScroll()">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platScopeTableHTML())+'</div></div>';
 
   const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
   const divider='<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
@@ -8941,7 +8941,7 @@ function platScopeTableHTML(){
       + '</tr>';
   }).join('');
 
-  var foot = (typeof pgFooter === 'function') ? pgFooter('platform') : '';
+  var foot = platPagerHTML();
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
     + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
     + '<thead><tr>' + th('Entity') + th('Network', tx('Whose network is it under?'))
@@ -9022,6 +9022,63 @@ function platSummaryHTML(){
  * Page 1 and page 2 must ask the SAME question or the list splices two different answers together and nobody
  * can tell. So the filters are read once, here, and both callers use it.
  */
+/**
+ * ── ⭐⭐ PAGE NUMBERS, NOT AN INFINITE SCROLL ───────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"give the page numbers so the next page can be moved."*
+ *
+ * ⭐ HE IS RIGHT FOR THIS SCREEN, and I had reached for the wrong pattern. Infinite scroll suits a feed you
+ * read forward through. This is an operator scanning 2,509 rows for one shop: he needs to know WHERE HE IS,
+ * to go back to where he was, and to jump. A list that only grows downward can do none of the three, and
+ * "100 of 406" with no way to reach 406 was the complaint that started this.
+ *
+ * ⚠️ SO PAGING REPLACES THE SCROLL RATHER THAN JOINING IT. Both at once is two mental models of the same list —
+ * you scroll, it appends, and then a page number means something different from what it meant a moment ago.
+ * [[feedback-stay-in-the-construct]]
+ *
+ * ⚠️ ANY CHANGE TO A FILTER RESETS TO PAGE 1. Staying on page 4 of a result set that just became 12 rows long
+ * shows an empty list under a count that says 12 — which reads as a broken screen, not as a stale page.
+ */
+var PLAT_PER_PAGE = 100;
+function platPages(){
+  var d = UI.plat || {}, m = d.matched;
+  return (m == null) ? 1 : Math.max(1, Math.ceil(m / PLAT_PER_PAGE));
+}
+function platPagerHTML(){
+  var d = UI.plat || {}, total = platPages(), cur = Math.min(UI.platPage || 1, total);
+  if (total <= 1) return '';
+  var btn = function(label, page, on, disabled){
+    var style = 'font:inherit;font-size:var(--fs-1);min-width:30px;padding:3px 8px;border-radius:7px;'
+      + 'border:1px solid var(--line);margin-inline-end:4px;'
+      + (disabled ? 'color:var(--grey-4);background:var(--card);cursor:default'
+        : on ? 'background:var(--ink);color:var(--card);border-color:var(--ink);cursor:pointer;font-weight:700'
+             : 'background:var(--card);color:var(--grey-2);cursor:pointer');
+    return '<button ' + (disabled ? 'disabled ' : '') + 'data-testid="plat-page-' + page + '" '
+      + (disabled ? '' : 'onclick="platGoPage(' + page + ')" ') + 'style="' + style + '">' + esc(label) + '</button>';
+  };
+  /* ⭐ a WINDOW of five around the current page, with the first and last always reachable. 26 pages of buttons
+     is a wall; "1 … 12 13 14 … 26" is a position. */
+  var nums = [], from = Math.max(1, cur - 2), to = Math.min(total, cur + 2);
+  if (from > 1) { nums.push(btn('1', 1, cur === 1)); if (from > 2) nums.push('<span style="color:var(--grey-4);margin-inline-end:4px">…</span>'); }
+  for (var p = from; p <= to; p++) nums.push(btn(String(p), p, p === cur));
+  if (to < total) { if (to < total - 1) nums.push('<span style="color:var(--grey-4);margin-inline-end:4px">…</span>'); nums.push(btn(String(total), total, cur === total)); }
+
+  var first = (cur - 1) * PLAT_PER_PAGE + 1;
+  var last  = Math.min(cur * PLAT_PER_PAGE, d.matched || 0);
+  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 2px 2px">'
+    + btn('‹ ' + tx('Prev'), cur - 1, false, cur <= 1)
+    + nums.join('')
+    + btn(tx('Next') + ' ›', cur + 1, false, cur >= total)
+    + '<span style="color:var(--grey);font-size:var(--fs-1);margin-inline-start:4px">'
+    + esc(tx('showing') + ' ' + first + '–' + last + ' ' + tx('of') + ' ' + (d.matched || 0)) + '</span></div>';
+}
+function platGoPage(n){
+  var total = platPages();
+  UI.platPage = Math.max(1, Math.min(n, total));
+  loadPlatform(true);            /* true = keep the page; anything else resets it */
+  var b = document.getElementById('pl_rows'); if (b) b.scrollTop = 0;
+}
+
 function platQuery(){
   var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
   var q={};
@@ -9040,6 +9097,8 @@ function platQuery(){
   if(evs.length) q.entity_visibility=evs.join(',');
   var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
+  q.limit = PLAT_PER_PAGE;
+  q.offset = ((UI.platPage || 1) - 1) * PLAT_PER_PAGE;
   return q;
 }
 
@@ -9057,35 +9116,18 @@ function platQuery(){
  * the failure this screen was specifically built to avoid. So fetch catches it itself, records the denial, and
  * returns an empty page so paging stops cleanly. [[feedback-silence-is-the-bug]]
  */
-pgInit('platform', {
-  el: function(){ return document.getElementById('pl_rows'); },
-  limit: 100,
-  count: function(){ return (((UI.plat||{}).rows)||[]).length; },
-  repaint: function(){ paintPlatKeepScroll(); },
-  fetch: async function(page, limit){
-    var q = platQuery(); q.limit = limit; q.offset = (page - 1) * limit;
-    try {
-      var r = await api('platMis', { query: q });
-      UI._platMeta = r || {};
-      var rows = (r && r.rows) || [];
-      rows.total = (r && r.matched != null) ? r.matched : rows.length;
-      return rows;
-    } catch(e) {
-      /* ⚠️ a 403 is an ANSWER, not an error. Anyone who is not the operator gets a plain statement — never an
-         empty list, which reads as "there is nothing on this platform". */
-      if(/403|not the platform root/i.test(String((e&&e.message)||''))) UI._platMeta={denied:true};
-      else UI._platMeta={error:String((e&&e.message)||e||'unknown')};
-      var none=[]; none.total=0; return none;
-    }
-  },
-  store: function(rows, first){
-    var meta = UI._platMeta || {};
-    if(first) UI.plat = Object.assign({}, meta, { rows: rows.slice() });
-    else      UI.plat.rows = (UI.plat.rows||[]).concat(rows);
-  },
-});
 
-/* ⚠️ the table is re-rendered whole, so the scroll position has to be put back by hand or every loaded page
+/**
+ * ⭐ THE SCROLL HANDLER STAYS, AND DOES NOTHING BUT REMEMBER WHERE YOU WERE.
+ *
+ * ⚠️ Not a loader. With page numbers on screen, appending on scroll would mean the list grows under the reader
+ * while the pager still says "page 3 of 5" — two answers to "where am I". The handler exists so a repaint
+ * (a selection, a live-search keystroke) does not throw the reader back to the top.
+ */
+var _platScrollTop = 0;
+function platOnScroll(){ var b=document.getElementById('pl_rows'); if(b) _platScrollTop=b.scrollTop; }
+
+/* ⚠️ the table is re-rendered whole, so the scroll position has to be put back by hand or every repaint
    throws the reader to the top — which reads as the list having reset. */
 function paintPlatKeepScroll(){
   var b=document.getElementById('pl_rows'); if(!b) return;
@@ -9100,12 +9142,14 @@ var _platSearchT=null;
 function platSearchSoon(){ clearTimeout(_platSearchT); _platSearchT=setTimeout(platSearchNow, 320); }
 function platSearchNow(){ clearTimeout(_platSearchT); loadPlatform(); }
 
-async function loadPlatform(){
+async function loadPlatform(keepPage){
+  /* ⚠️ every caller that is a FILTER change passes nothing, and lands on page 1. Only platGoPage keeps it. */
+  if(!keepPage) UI.platPage = 1;
   UI._platLoading=true;
   var rb=document.getElementById('pl_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
-    /* ⭐ page 1 through the same pager every later page uses, so they cannot ask different questions */
-    await pgFirst('platform');
+    var r = await api('platMis', { query: platQuery() });
+    UI.plat = r || {};
     UI._platLoading=false; paintPlatList(); paintPlatDetail();
     return;
   }catch(e){
