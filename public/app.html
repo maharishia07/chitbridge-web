@@ -8832,13 +8832,18 @@ function platFirstFilterHTML(ap){
    * names nobody recognised. Filtering them one axis at a time never worked because they are not a KIND of
    * shop — they are not shops. So it is a switch, above the filters, OFF by default.
    */
-  var t = '<label style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-1);'
-    + 'color:' + (ap.include_test ? 'var(--warn-2)' : 'var(--grey-2)') + ';border:1px solid '
-    + (ap.include_test ? 'var(--warn-2)' : 'var(--line)') + ';border-radius:999px;padding:3px 11px;'
-    + 'cursor:pointer;font-weight:' + (ap.include_test ? '700' : '400') + '">'
-    + '<input type="checkbox" id="pl_test" data-testid="plat-show-test" '
-    + (ap.include_test ? 'checked ' : '') + 'onchange="loadPlatform()" style="margin:0;cursor:pointer">'
-    + esc(tx('Show test entities')) + '</label>';
+  var pop = (ap.population === 'test') ? 'test' : 'real';
+  var seg = function(k, label, tone){
+    var on = pop === k;
+    return '<button data-testid="plat-pop-' + k + '" onclick="platSetPopulation(\'' + k + '\')" '
+      + 'style="font:inherit;font-size:var(--fs-1);padding:3px 11px;cursor:pointer;border:1px solid '
+      + (on ? tone : 'var(--line)') + ';background:' + (on ? tone : 'var(--card)') + ';color:'
+      + (on ? 'var(--card)' : 'var(--grey-2)') + ';font-weight:' + (on ? '700' : '400') + ';'
+      + (k === 'real' ? 'border-radius:999px 0 0 999px' : 'border-radius:0 999px 999px 0;margin-inline-start:-1px')
+      + '">' + esc(tx(label)) + '</button>';
+  };
+  var t = '<span style="display:inline-flex;margin-inline-end:4px">'
+    + seg('real', 'Real', 'var(--ok)') + seg('test', 'Test', 'var(--warn-2)') + '</span>';
 
   /**
    * ── ⭐⭐ FIVE FILTERS THAT STACK, AGREED WITH ATHI 2026-09-14 ────────────────────────────────────────────────
@@ -8873,6 +8878,14 @@ function platFirstFilterHTML(ap){
 
 /* ⭐ named by the SERVER (controls.standings), so it is absent until b242 is run rather than offering values
    the database will not honour. A filter that silently matches everything is worse than no filter. */
+/**
+ * ⭐ ONE POPULATION AT A TIME. Athi: *"never been together."* Real is the default; Test is a whole different
+ * screen's worth of rows that happens to share a layout.
+ * ⚠️ It resets to page 1 by going through loadPlatform() with no argument — 2,243 rows and 266 rows do not
+ * have the same page 4.
+ */
+function platSetPopulation(k){ UI.platPop = (k === 'test') ? 'test' : 'real'; loadPlatform(); }
+
 function platStandingFilterHTML(ap){
   var st = (((UI.plat||{}).controls)||{}).standings || [];
   if(!st.length) return '';
@@ -9115,10 +9128,9 @@ function platQuery(){
   if(g('pl_sup'))  q.supplies=g('pl_sup');
   if(g('pl_standing')) q.standing=g('pl_standing');
   if(g('pl_own'))      q.ownership=g('pl_own');
-  /* ⚠️ SENT ONLY WHEN TICKED. The server's default is "no fixtures"; sending include_test=false would work
-     but says the same thing twice, and the two would have to be kept agreeing. */
-  var tb=document.getElementById('pl_test');
-  if(tb && tb.checked) q.include_test='true';
+  /* ⚠️ SENT ONLY WHEN IT IS 'test'. The server's default is the real population; sending population=real would
+     work and would say the same thing twice, and the two would then have to be kept agreeing. */
+  if(UI.platPop === 'test') q.population='test';
   var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   q.limit = PLAT_PER_PAGE;
