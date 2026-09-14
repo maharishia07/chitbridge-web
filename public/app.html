@@ -8429,6 +8429,7 @@ function platRowHTML(r){
 function platRowsHTML(){
   var d=UI.plat||{};
   if(d.denied) return emptyState('🔒',tx('Operator only'),tx('The platform report is available to the operator entity only.'));
+  if(d.error) return emptyState('⚠️',tx('The report did not load'),esc(d.error));
   var r=d.rows||[];
   if(!r.length) return emptyState('🛰️',tx('Nothing matches'),tx('No entity matches this search and these filters.'));
   return r.map(platRowHTML).join('');
@@ -8481,6 +8482,11 @@ function platDetailHTML(){
 function platSummaryHTML(){
   var d=UI.plat||{};
   if(d.denied) return emptyState('🔒',tx('Operator only'),tx('Sign in as the platform root to see the report.'));
+  /* ⚠️ THE LOAD FAILED AND SAID NOTHING — Athi, 2026-09-14: *"the panel is there, but nothing is loaded"*.
+     A bare 'Loading…' that never resolves is indistinguishable from a screen that is working and empty, which
+     is the same failure this codebase keeps producing. The reason now goes ON THE SCREEN.
+     [[feedback-silence-is-the-bug]] */
+  if(d.error) return emptyState('⚠️',tx('The report did not load'),esc(d.error)+'<br><br><span style="font-size:var(--fs-1);color:var(--grey)">'+tx('Signed in as the platform root? The report is operator-only.')+'</span>');
   if(!d.by_kind) return emptyState('🛰️',tx('Platform report'),tx('Loading…'));
   var total=(d.by_kind||[]).reduce(function(a,x){return a+x.n;},0);
   /* ⭐ a bar per kind, in that kind's own hue — the same colour it wears in the list, so the report and the
@@ -8539,6 +8545,8 @@ async function loadPlatform(){
     if(/403|not the platform root/i.test(String((e&&e.message)||''))){
       UI.plat={denied:true}; paintPlatList(); paintPlatDetail(); return;
     }
+    UI.plat={error:String((e&&e.message)||e||'unknown')};
+    paintPlatList(); paintPlatDetail();
     var rb2=document.getElementById('pl_rows'); if(rb2)rb2.innerHTML=scrErr(e,'platform','loadPlatform()');
   }
 }
