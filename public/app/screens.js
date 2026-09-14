@@ -195,6 +195,12 @@ window.CBSCREENS = {
    "icon": "💬",
    "label": "Chit messages"
   },
+  "platform-entity": {
+   "code": "BUS014",
+   "path": "Business › Platform entity",
+   "icon": "🛰️",
+   "label": "Platform entity"
+  },
   "supplier-detail": {
    "code": "BUS009",
    "path": "Business › Supplier detail",

@@ -2663,6 +2663,10 @@ function codeScreenKey(){
     if (U.nav === 'catalogue' && (U.prodMode === 'new' || U.prodMode === 'edit' || U.prodSel)) return 'catalogue-product';
     /* ⚠️ a list and the record open beside it are TWO screens on one page, and one code cannot be right
        for both — the same split the chit list and the chit detail already make. */
+    /* ⭐ the Platform detail is its own screen. Athi, 2026-09-14: *"I couldn't find a right side screen name;
+       it will be easier to refer when we have screen name — I said we have to have different name."* Supplier
+       and Customer detail already work this way; Platform was the odd one out. */
+    if (U.nav === 'platform' && U.platSel) return 'platform-entity';
     if (U.nav === 'suppliers' && U.supSel) return 'supplier-detail';
     if (U.nav === 'customers' && U.custSel) return 'customer-detail';
     /* ⚠️ a tab still wins over the bare nav when no record is open */
@@ -2849,22 +2853,22 @@ function stampDetailTitle(){
     var info = screenInfo();
     if (!info) return;
     /**
-     * ── ⚠️⚠️ ONE SCREEN, ONE CODE ───────────────────────────────────────────────────────────────────────────
+     * ── ⚠️⚠️ I READ THIS BACKWARDS FIRST, AND IT IS WORTH RECORDING WHY ──────────────────────────────────────
      *
-     * Athi, 2026-09-14, on the Platform screen: *"the right and left screen shares the same name which is not
-     * suppose to be"* — and, asked which way he wanted it: *"keep it once, it is one screen."*
+     * Athi said *"the right and left screen shares the same name which is not suppose to be"*, and when I
+     * offered "once, or a code of its own" he answered *"keep it once, it is one screen"* — so I SUPPRESSED
+     * the second stamp. Then: *"I couldn't find a right side screen name; it will be easier to refer when we
+     * have screen name — I SAID we have to have different name."*
      *
-     * ⭐ THIS FUNCTION EXISTS FOR THE CASE WHERE THE DETAIL REALLY IS ITS OWN SCREEN — Design 2 has its own
-     * code, and stamping it is right. But where the detail carries the SAME code as the list, two labels for
-     * one thing read as two things, and the code exists precisely so it can be quoted instead of described:
-     * *"the one on the left"* is the description it is meant to replace.
+     * ⭐ He was never asking for fewer labels. He was asking for the right pane to be REFERABLE — which is the
+     * entire purpose of these codes, and the thing suppression removed. "Once" meant one code per pane, not
+     * one code per screen.
      *
-     * ⚠️ So it is skipped only when the identical code is ALREADY on screen — not "when there is a list". The
-     * door it carries (click to record an incident here) is not lost: the list's chip has the same door, so
-     * the screen still has exactly one of each.
+     * ⚠️ The fix is not here. It is that the pane had no identity of its own: codeScreenKey() now answers
+     * 'platform-entity' when a row is selected, and screens.js gives it BUS014 — the same shape supplier-detail
+     * and customer-detail already used. So this function stamps what it always did, and the code it stamps is
+     * now a different one.
      */
-    var shown = document.querySelector('[data-testid="screen-code"]');
-    if (shown && shown.textContent === info.code) return;
     var tag = document.createElement('span');
     tag.setAttribute('data-testid', 'detail-code');
     tag.textContent = info.code;
@@ -9049,14 +9053,17 @@ function platStandingFilterHTML(ap){
  */
 function platColumns(){
   var ok = 'var(--ok)', no = 'var(--danger)', maybe = 'var(--warn)', dim = 'var(--grey-4)';
+  /* ⭐ the column rule. See platColumns()'s header note — a guide between columns, not a grid. */
+  var RULE = 'border-inline-start:1px solid var(--line-soft);';
   var td = function(inner, style){
-    return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+    return '<td style="' + RULE + 'padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
       + 'white-space:nowrap;' + (style || '') + '">' + inner + '</td>';
   };
   /* ⚠️ a dot AND a word. Colour alone fails anyone who cannot separate red from green, and this table is all
      colour otherwise. The word is the answer; the dot only makes the pattern visible down the column. */
   var cell = function(tone, word, why){
-    return '<td title="' + esc(why || '') + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);'
+    return '<td title="' + esc(why || '') + '" style="' + RULE
+      + 'padding:6px 9px;border-bottom:1px solid var(--line-soft);'
       + 'white-space:nowrap;font-size:var(--fs-1)"><span style="display:inline-block;width:7px;height:7px;'
       + 'border-radius:50%;background:' + tone + ';margin-inline-end:6px"></span>' + esc(word) + '</td>';
   };
@@ -9068,7 +9075,7 @@ function platColumns(){
     { key: 'name', w: 190, label: 'Name', hint: 'What the business calls itself', sort: 'name',
       cell: function(r){ return td(esc(r.display_name || '—'), 'font-weight:600;font-size:var(--fs-2)'); } },
     { key: 'handle', w: 150, label: 'User ID', hint: 'How they sign in — and what you search by', sort: 'handle',
-      cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
+      cell: function(r){ return '<td class="mono" style="' + RULE + 'padding:6px 9px;border-bottom:1px solid '
         + 'var(--line-soft);font-size:var(--fs-1);color:var(--grey);white-space:nowrap">'
         + esc(r.user_id || '—') + '</td>'; } },
     { key: 'network', w: 92, label: 'Network', hint: 'none · root · branch',
@@ -9077,7 +9084,7 @@ function platColumns(){
         return '<td title="' + esc(p === 'root' ? tx('Heads a network. It pays; its branches are billed to it.')
             : p === 'branch' ? tx('A branch. Its plan belongs to its root.')
             : tx('On its own — not in a network at all.'))
-          + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+          + '" style="' + RULE + 'padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
           + 'white-space:nowrap;color:' + tone + '">' + esc(tx(p)) + '</td>'; } },
     { key: 'of', w: 140, label: 'Of', hint: 'Whose network it is under',
       cell: function(r){ var p = posOf(r);
@@ -9087,7 +9094,7 @@ function platColumns(){
       cell: function(r){ var st = platStanding(r.standing);
         return '<td title="' + esc(st ? tx('Signed in, chits sent and products listed decide this')
                                       : tx('Not computed yet — run migration b242'))
-          + '" style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+          + '" style="' + RULE + 'padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
           + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
           + '">' + (st ? '● ' + esc(st.word) : '—') + '</td>'; } },
     { key: 'found', w: 92, label: 'Found', hint: 'Can it be found in search?',
@@ -9124,7 +9131,7 @@ function platColumns(){
     { key: 'branches', w: 92, label: 'Branches', hint: 'Nodes beneath it on the network', sort: 'branches',
       cell: function(r){ return td(String(r.branches || 0), 'text-align:right;font-variant-numeric:tabular-nums'); } },
     { key: 'bridge', w: 128, label: 'Bridge id', hint: 'Its address on the rail',
-      cell: function(r){ return '<td class="mono" style="padding:6px 9px;border-bottom:1px solid '
+      cell: function(r){ return '<td class="mono" style="' + RULE + 'padding:6px 9px;border-bottom:1px solid '
         + 'var(--line-soft);font-size:var(--fs-1);white-space:nowrap;color:var(--grey)">'
         + esc(r.bridge_id || '—') + '</td>'; } },
     { key: 'seen', w: 108, label: 'Last seen', hint: 'When it last signed in', sort: 'last_seen',
@@ -9272,9 +9279,9 @@ function platScopeTableHTML(){
       + 'user-select:none"></span>';
   };
   var th = function(c){
-    var base = 'text-align:left;padding:7px 9px;font-size:var(--fs-1);color:var(--grey);font-weight:600;'
-      + 'text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;'
-      + 'position:sticky;top:0;background:var(--card)';
+    var base = 'border-inline-start:1px solid var(--line-soft);text-align:left;padding:7px 9px;font-size:var(--fs-1);color:var(--grey);'
+      + 'font-weight:600;text-transform:uppercase;letter-spacing:.03em;'
+      + 'border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)';
     /* ⚠️ ONLY the columns the server will actually ORDER BY — `SORTS` in routes/entities.js is a whitelist,
        because ORDER BY cannot take a bind parameter. A heading that looked clickable and silently did nothing
        would be worse than one that plainly is not. */
