@@ -591,9 +591,10 @@ function render(data){
   });
   var prods=(data.items||[]);
   var prodHtml = productListHtml(data, cur);
-  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>';
+  var enq = '<div class="enq">Order with your phone or email — no account needed.</div>' + supLinkHtml();
   var previewBar = (data.preview && data.preview.visibility !== 'public') ? '<div class="msg" style="background:#fff7e6;border:1px solid #f1d28a;color:#7a5a00;border-radius:9px;padding:8px 10px;margin:0 0 8px;font-size:13px">👁️ Preview — your catalogue is <b>'+esc(data.preview.visibility||'private')+'</b>, customers cannot see this yet. Profile › Visibility › Public puts it live.</div>' : '';
-  if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
+  if(_ONLY){ el('app').innerHTML = previewBar + (prods.length ? productCrumb(prods[0], data) + prodHtml + supLinkHtml()
+                                                             : '<div class="msg">Not on the storefront — hidden, or another shop.</div>'); return; }
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b>. Prices are set by the shop; design &amp; colour, where shown, are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
@@ -627,6 +628,162 @@ function sfLoginVerify(){
     .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } render(_SHOPDATA); })
     .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
 }
+/**
+ * ── ⭐⭐⭐ REPORTING A PROBLEM TO THE SHOP, FROM A PAGE WITH NOBODY SIGNED IN ───────────────────────
+ *
+ * Athi, 2026-09-14: *"wire the shop.html buyer case too"* — the third desk, from the one surface where the
+ * person raising has no account.
+ *
+ * ⭐⭐ IT IS THE ORDER FLOW'S OWN LADDER, REUSED. A shopper here already becomes a real identity by asking for
+ * a code: /order/start makes the row and sends it, and the verified person is then the SENDER of a chit to the
+ * shop. A ticket is the same shape as an order — a chit from the buyer to the shop — so it borrows the same
+ * start, the same code, the same words. A second anonymous-sender mechanism beside this one would be two ideas
+ * of who a shopper is.
+ *
+ * ⚠️ AND THE URGENCY WORDS COME FROM THE SERVER, not from a copy kept here. The app has its own support form;
+ * three sentences written twice is two wordings, and the shop sorting its own queue gets both.
+ */
+var _sup = null;
+
+function supLinkHtml(){
+  var s=(_SHOPDATA&&_SHOPDATA.shop)||{};
+  return '<div style="text-align:center;margin:10px 0 2px;font-size:12.5px;color:#6a707a">'
+    + 'Something wrong with an order? '
+    + '<a href="#" data-testid="shop-support" onclick="supOpen();return false" '
+    + 'style="color:#c0392b;font-weight:600">Report a problem to '+esc(s.display_name||'the shop')+'</a></div>';
+}
+
+function supHost(){ var h=el('suphost'); if(!h){ h=document.createElement('div'); h.id='suphost'; document.body.appendChild(h); } return h; }
+function supClose(){ var h=el('suphost'); if(h) h.innerHTML=''; _sup=null; }
+
+function supOpen(){
+  _sup={ step:'say', what:'', sev:'Sev-3', contact:'', otp:'', busy:false, err:null, msg:null, urgency:null, to:null };
+  supRender();
+  /* ⭐ asked BEFORE anything is typed — who gets this, and whether it will arrive. Athi: *"if it is not going
+     to work, we know it right away, before raising."* */
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/support/preview')
+    .then(function(r){return r.json();})
+    .then(function(j){ if(!_sup)return;
+      if(j&&j.ok===false){ _sup.err=j.why||'This will not reach anyone.'; _sup.dead=true; }
+      else { _sup.to=j.to_name; _sup.accepting=j.accepting!==false; _sup.urgency=j.urgency||null; }
+      supRender(); })
+    /* ⚠️ a failed CHECK must not block a real report — it is a convenience, and losing the words is not. */
+    .catch(function(){ if(_sup){ _sup.urgency=null; supRender(); } });
+}
+
+function supSet(k,v){ if(_sup) _sup[k]=v; }
+
+function supNoteHtml(){
+  if(!_sup) return '';
+  if(_sup.dead) return '<div style="background:#fdeceb;border:1px solid #f0bdb8;border-radius:10px;padding:9px 12px;'
+    + 'font-size:12.5px;color:#8a2c25;margin-bottom:10px"><b>This will not reach anyone</b><div>'+esc(_sup.err||'')+'</div></div>';
+  if(!_sup.to) return '<div style="background:#f6f5f1;border:1px solid #e7e3d8;border-radius:10px;padding:9px 12px;'
+    + 'font-size:12.5px;color:#6a707a;margin-bottom:10px">Checking where this will go…</div>';
+  /* ⚠️ ‘closed’ is SAID, not used to refuse. A complaint about an order already placed must not hit a dead
+     end — but promising a quick answer from a shop that is shut would be the other kind of lie. */
+  return '<div style="background:'+(_sup.accepting?'#eef7f0':'#FBF6E9')+';border:1px solid '
+    + (_sup.accepting?'#c6e3cf':'#efe3c4')+';border-radius:10px;padding:9px 12px;font-size:12.5px;'
+    + 'color:'+(_sup.accepting?'#2e5d3c':'#6b5a36')+';margin-bottom:10px">'
+    + '<b>This goes to '+esc(_sup.to)+'</b><div>'
+    + (_sup.accepting ? 'It lands in their work queue, and you keep a copy.'
+                      : 'This shop is marked closed — it will be recorded, but do not expect a quick reply.')
+    + '</div></div>';
+}
+
+function supRender(){
+  if(!_sup){ supClose(); return; }
+  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;font-size:14px;box-sizing:border-box"';
+  var body;
+  if(_sup.step==='say'){
+    /* ⚠️ the urgency words are the SERVER’s; with none, the question is simply not asked rather than asked
+       with wording invented here that the shop has never seen. */
+    body='<label style="font-size:12px;color:#6a707a;display:block;margin-bottom:4px">What went wrong?</label>'
+      + '<textarea id="sup_what" data-testid="shop-support-what" rows="4" '
+      + 'placeholder="What you ordered, and what happened instead" oninput="supSet(&#39;what&#39;,this.value)" '+fld+'>'
+      + esc(_sup.what||'')+'</textarea>'
+      + (_sup.urgency ? '<div style="font-size:12px;color:#6a707a;margin:11px 0 4px">How much is it holding you up?</div>'
+          + _sup.urgency.map(function(u){
+              return '<label style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;cursor:pointer;font-size:13px">'
+                + '<input type="radio" name="sup_sev" value="'+esc(u[0])+'"'+(u[0]===_sup.sev?' checked':'')
+                + ' data-testid="shop-sev-'+esc(u[0])+'" onchange="supSet(&#39;sev&#39;,this.value)" style="margin-top:3px">'
+                + '<span><b>'+esc(u[1])+'</b><div style="color:#6a707a;font-size:11.5px">'+esc(u[2])+'</div></span></label>';
+            }).join('') : '')
+      + '<label style="font-size:12px;color:#6a707a;display:block;margin:11px 0 4px">Your phone or email</label>'
+      + '<input id="sup_contact" data-testid="shop-support-contact" placeholder="so the shop can reply" '
+      + 'value="'+esc(_sup.contact||'')+'" oninput="supSet(&#39;contact&#39;,this.value)" '+fld+'>';
+  } else {
+    body='<div style="font-size:13px;color:#6a707a;margin-bottom:8px">We sent a 6-digit code to '
+      + esc(_sup.contact)+'.</div>'
+      + '<input id="sup_otp" data-testid="shop-support-otp" inputmode="numeric" maxlength="6" '
+      + 'placeholder="6-digit code" value="'+esc(_sup.otp||'')+'" oninput="supSet(&#39;otp&#39;,this.value)" '+fld+'>'
+      + (_sup.dev_otp?'<div style="font-size:11.5px;color:#6a707a;margin-top:6px">Code: <b>'+esc(_sup.dev_otp)+'</b></div>':'');
+  }
+  var act=_sup.step==='say'
+    ? '<button data-testid="shop-support-code" onclick="supSendCode()"'+(_sup.dead?' disabled':'')
+      + ' style="width:100%;border:0;border-radius:10px;padding:12px;background:'+(_sup.dead?'#c9ccd1':'#c0392b')
+      + ';color:#fff;font-weight:700;font-size:14px;cursor:'+(_sup.dead?'not-allowed':'pointer')+'">Send me a code</button>'
+    : '<button data-testid="shop-support-send" onclick="supSubmit()" style="width:100%;border:0;border-radius:10px;'
+      + 'padding:12px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send it</button>';
+
+  supHost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;'
+    + 'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">'
+    + '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:18px;max-height:92vh;overflow:auto">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+    + '<b class="sg" style="font-size:16px;flex:1">📣 Report a problem</b>'
+    + '<button onclick="supClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
+    + supNoteHtml()
+    + (_sup.err&&!_sup.dead?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_sup.err)+'</div>':'')
+    + (_sup.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_sup.msg)+'</div>':'')
+    + body
+    + '<div style="margin-top:14px">'+(_sup.busy
+        ? '<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;'
+          + 'font-weight:700;font-size:14px">⏳ Sending…</button>' : act)+'</div>'
+    + '</div></div>';
+}
+
+function supSendCode(){
+  if(!_sup||_sup.busy) return;
+  /* ⚠️ refused rather than defaulted, and it says WHICH field — an empty report is a row the shop has to chase
+     the sender about, which costs them the time they were trying to save. */
+  if(!(_sup.what||'').trim()){ _sup.err='Say what went wrong, in your own words.'; supRender(); return; }
+  if(!(_sup.contact||'').trim()){ _sup.err='We need a phone or email so the shop can reply.'; supRender(); return; }
+  _sup.busy=true; _sup.err=null; _sup.msg=null; supRender();
+  /* ⭐ THE ORDER FLOW’S OWN START — same row, same code, same fifteen minutes. */
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/start',
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_sup.contact})})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
+    .then(function(res){ _sup.busy=false;
+      if(res.status!==200){ _sup.err=(res.j&&res.j.message)||'Could not send the code.'; supRender(); return; }
+      _sup.step='otp'; _sup.dev_otp=res.j&&res.j.dev_otp; _sup.msg='Code sent.'; supRender(); })
+    .catch(function(e){ _sup.busy=false; _sup.err=e.message; supRender(); });
+}
+
+function supSubmit(){
+  if(!_sup||_sup.busy) return;
+  if((_sup.otp||'').trim().length!==6){ _sup.err='Enter the 6-digit code.'; supRender(); return; }
+  _sup.busy=true; _sup.err=null; supRender();
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/support',
+        {method:'POST',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({identifier:_sup.contact,otp:_sup.otp,observed:_sup.what,severity:_sup.sev})})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
+    .then(function(res){
+      if(res.status!==200){ _sup.busy=false; _sup.err=(res.j&&res.j.message)||'Could not send it.'; supRender(); return; }
+      /* ⭐ AND IT SAYS WHO HAS IT. ‘Sent’ on its own is the same silence as nothing at all. */
+      var to=(res.j&&res.j.to)||'the shop';
+      supHost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;'
+        + 'align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)supClose()">'
+        + '<div style="background:#fff;width:100%;max-width:430px;border-radius:16px;padding:22px;text-align:center">'
+        + '<div style="font-size:34px;line-height:1">✓</div>'
+        + '<div class="sg" style="font-size:17px;font-weight:800;margin:8px 0 4px">'+esc(to)+' has it</div>'
+        + '<div style="font-size:13px;color:#6a707a;line-height:1.5">It is in their work queue. They can reply on '
+        + esc(_sup.contact)+'.</div>'
+        + '<button data-testid="shop-support-done" onclick="supClose()" style="margin-top:16px;width:100%;border:0;'
+        + 'border-radius:10px;padding:12px;background:#c0392b;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Done</button>'
+        + '</div></div>';
+    })
+    .catch(function(e){ _sup.busy=false; _sup.err=e.message; supRender(); });
+}
+
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
 function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; _read={};
