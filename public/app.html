@@ -1811,6 +1811,10 @@ const EP = {
   /* ⭐ the operator adds a population from the Platform strip. Root-gated server-side; there is deliberately
      no PUT and no DELETE — the code is stamped on every entity that joins it. */
   platPopulationAdd:{m:"POST", p:"/api/entities/populations",               ok:"✓"},
+  /* ⭐ who answers support raised by a whole population (b252) — root only, and the reason the migration
+     can say "no SQL after this one". */
+  platPopulations:  {m:"GET",  p:"/api/entities/populations",               ok:"✓"},
+  platPopDesk:      {m:"PUT",  p:"/api/entities/populations/:code/desk",    ok:"✓"},
   /* ⭐ per-entity, NOT operator-only: anyone running a helpdesk routes their own kinds of work. */
   workRouting:      {m:"GET",  p:"/api/entities/routing",                   ok:"✓"},
   /* ⭐ where WOULD it go — the send’s own resolver, asked not to write */
@@ -9436,12 +9440,99 @@ function platPopBarHTML(ap){
         return '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(nice(k)) + '</option>';
       }).join('')
     + '</select>'
+    + platDeskHTML(cur, live)
     + '<button data-testid="plat-pop-add" onclick="platAddPopulation()" title="'
     + esc(tx('Add a population — a sealed set of books that can never trade with another')) + '" '
     + 'style="flex:none;font:inherit;font-size:var(--fs-1);padding:4px 10px;cursor:pointer;'
     + 'border:1px solid var(--line);background:var(--card);color:var(--grey-2);'
     + 'border-radius:var(--r-sm)">+</button>'
     + '</div>';
+}
+
+/**
+ * ── ⭐⭐⭐ WHO ANSWERS SUPPORT FOR THE POPULATION YOU ARE LOOKING AT ─────────────────────────
+ *
+ * Athi, 2026-09-14: *"we should not write sql for all those."* b252 added the column; a review then found that
+ * NOTHING could write it — no route, no control — so the migration's own instructions pointed at a screen that
+ * did not exist and every test finding kept landing on the live desk. A column only hand-written SQL can set is
+ * precisely the thing that migration claims to remove.
+ *
+ * ⭐ IT SITS ON THE POPULATION STRIP, beside the name of the world you are already looking at, because “who
+ * answers support here” is a fact about THAT world and belongs where that world is named.
+ *
+ * ⚠️ OPERATOR ONLY, and absent — not disabled — for everyone else and for the live population, whose desk is
+ * the deployment root and is not a choice. A disabled control with no explanation reads as broken.
+ */
+function platDeskHTML(cur, live){
+  var P = (UI.plat || {});
+  /* the screen 403s for anyone who is not the operator, so reaching this at all IS the gate */
+  if (P.denied || P.error) return '';
+  /* ⚠️ on demand, and repainted when it lands — reading it up front would make every Platform visit pay
+     for a list most of them never look at. [[feedback-on-demand-loading]] */
+  if (!UI._pops) { platPopsLoad(); return ''; }
+  /* the live desk is the deployment root (lib/platformroot) and naming it here would imply it could be moved */
+  if (cur === live) return '';
+  var rows = UI._pops.populations || [];
+  var row  = rows.filter(function(r){ return r.code === cur; })[0];
+  /* ⚠️ b252 not run: the server answers the populations without the column, and a control that can only fail
+     is worse than none. It says so rather than sitting there inert. */
+  if (!row || row.desk_entity_id === undefined) {
+    return '<span data-testid="plat-desk-absent" style="font-size:var(--fs-1);color:var(--grey-4)" title="'
+      + esc(tx('Run migration b252 to choose who answers support for this population')) + '">'
+      + esc(tx('support: the live desk')) + '</span>';
+  }
+  /* only entities IN this population can be its desk — the b252 trigger refuses anything else, so offering
+     anything else would be a control that only ever fails. */
+  var cands = (UI._pops.desk_candidates || []).filter(function(c){ return c.population === cur; });
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(tx('support →')) + '</span>'
+    + '<select class="inp" data-testid="plat-desk" onchange="platSetDesk(this.value)" '
+    + 'style="flex:none;width:auto;min-width:132px;padding:4px 7px;font-size:var(--fs-1);'
+    + 'border-radius:var(--r-sm)" title="'
+    + esc(tx('Who answers support raised by entities in this population')) + '">'
+    + '<option value="">' + esc(tx('the live desk')) + '</option>'
+    + cands.map(function(c){
+        return '<option value="' + esc(c.identity_id) + '"'
+          + (String(row.desk_entity_id || '') === String(c.identity_id) ? ' selected' : '') + '>'
+          + esc(c.display_name) + '</option>'; }).join('')
+    + '</select>'
+    + (cands.length ? '' : '<span style="font-size:var(--fs-1);color:var(--grey-4)">'
+        + esc(tx('— no business in this population yet')) + '</span>');
+}
+
+/**
+ * ⚠️ LOADED ONCE, AND THE STRIP REPAINTED WHEN IT LANDS. Reading it up front would make every Platform visit
+ * pay for a list most of them never look at; reading it and NOT repainting would make the fallback the answer,
+ * which is the other half of on-demand loading and the half that gets forgotten.
+ * [[feedback-on-demand-loading]] [[feedback-loader-never-repaints-open-form]]
+ */
+var _popsBusy = false;
+async function platPopsLoad(){
+  if (UI._pops || _popsBusy) return;
+  _popsBusy = true;
+  try { UI._pops = await api('platPopulations', {}); }
+  catch (e) { UI._pops = { populations: [], desk_candidates: [], why: String((e && e.message) || e) }; }
+  _popsBusy = false;
+  /* the same shape every other caller passes — `controls.applied`, not a second idea of it */
+  var b = document.getElementById('pl_popbar');
+  if (b) b.innerHTML = platPopBarHTML((((UI.plat || {}).controls || {}).applied) || {});
+}
+
+/** ⭐ saved on change and it SAYS so — a silent save is one people repeat because they cannot tell. */
+async function platSetDesk(v){
+  var cur = ((UI.plat || {}).population) || 'test';
+  try {
+    await api('platPopDesk', { params: { code: cur }, body: { desk_entity_id: v || '' } });
+    /* keep the local row in step so the next repaint does not show the old answer */
+    var row = ((UI._pops || {}).populations || []).filter(function(r){ return r.code === cur; })[0];
+    if (row) row.desk_entity_id = v || null;
+    toast(v ? tx('Support for this population now goes to that business.')
+            : tx('Support for this population goes to the live desk again.'));
+  } catch (e) {
+    toast(String((e && e.message) || tx('Could not set it')), true);
+    /* ⚠️ put the control back to what the SERVER has: a dropdown showing a value that was refused is a lie
+       the reader will act on. */
+    loadPlatform();
+  }
 }
 
 function platStandingFilterHTML(ap){
