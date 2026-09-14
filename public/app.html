@@ -8379,12 +8379,18 @@ function platformScreen(){
     +'</div>'
     +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" onkeydown="if(event.key===\'Enter\')loadPlatform()" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
+      /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
+         one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
+         not reach them from the screen. */
+      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+opt('*',tx('every kind'),ap.kind)+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
       +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
       +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
+      /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
+         computed from the ltree, not stored, so the server names the values in controls.positions. */
+      +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(p),ap.position)).join(''))+'</select>'
       +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'+presets+'</select>'
     +'</div>'
-    +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+((d.rows||[]).length)+' '+tx('shown')+'</div></div>'
+    +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+platCountHTML()+'</div></div>'
     +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platRowsHTML())+'</div></div>';
 
   const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
@@ -8447,8 +8453,20 @@ function platRowsHTML(){
   if(!r.length) return emptyState('🛰️',tx('Nothing matches'),tx('No entity matches this search and these filters.'));
   return r.map(platRowHTML).join('');
 }
+/**
+ * ⚠️⚠️ '100 shown' WAS TRUE AND USELESS. Athi: *"we cant miss any, how many entity rows, that many has to
+ * be here."* The list caps at 100; with 2,788 identities, 'every kind' returned a hundred and read as a
+ * complete answer. A round number looks deliberate, which makes a silent subset worse than an empty one.
+ * ⭐ It now says how many MATCHED, and warns in its own words when the page is not the whole of it.
+ */
+function platCountHTML(){
+  var d=UI.plat||{}, n=(d.rows||[]).length, m=d.matched;
+  if(m==null||m<=n) return n+' '+tx('shown');
+  return '<b style="color:var(--warn-2)">'+n+' '+tx('of')+' '+m+'</b> — '
+    +tx('narrow the filters or search to see the rest');
+}
 function paintPlatList(){ var b=document.getElementById('pl_rows'); if(b)b.innerHTML=platRowsHTML();
-  var c=document.getElementById('pl_count'); if(c)c.textContent=(((UI.plat||{}).rows)||[]).length+' '+tx('shown'); }
+  var c=document.getElementById('pl_count'); if(c)c.innerHTML=platCountHTML(); }
 function selectPlat(id){ UI.platSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintPlatList(); paintPlatDetail(); }
 function paintPlatDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=platDetailHTML(); } }
 
@@ -8562,6 +8580,7 @@ async function loadPlatform(){
   if(g('pl_kind')) q.kind=g('pl_kind');
   if(g('pl_vert')) q.vertical=g('pl_vert');
   if(g('pl_plan')) q.plan=g('pl_plan');
+  if(g('pl_pos'))  q.position=g('pl_pos');
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
