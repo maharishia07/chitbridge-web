@@ -8745,7 +8745,8 @@ function platEntityMisHTML(r){
   var c = r.counts;   /* ⚠️ null, not {}, when the counting surface is not in this database yet */
   var no = tx('Not counted yet — run migration b241, the counting surface.');
   var of = function(k){ return c ? (c[k] == null ? 0 : c[k]) : null; };
-  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px;\npadding:var(--sp-3) var(--sp-3) 0">'
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));'
+    + 'gap:6px;padding:var(--sp-3) var(--sp-3) 0">'
     + platTile('people',    r.seats == null ? null : r.seats,       tx('Staff signed on, not counting anyone erased'))
     + platTile('suppliers', r.suppliers == null ? null : r.suppliers, tx('Businesses they buy from'))
     + platTile('customers', of('customers'), c ? tx('Businesses and walk-ins they sell to') : no)
