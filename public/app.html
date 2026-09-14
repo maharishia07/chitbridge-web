@@ -1808,6 +1808,9 @@ const EP = {
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},
   platMis:         {m:"GET",  p:"/api/entities/mis",                       ok:"✓"},
+  /* ⭐ the operator adds a population from the Platform strip. Root-gated server-side; there is deliberately
+     no PUT and no DELETE — the code is stamped on every entity that joins it. */
+  platPopulationAdd:{m:"POST", p:"/api/entities/populations",               ok:"✓"},
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},
   custGroupNames:  {m:"GET",  p:"/api/relationships/customers/groups",    ok:"✓"},  // the seller's NAMED groups (decision 2, 2026-09-06)
@@ -8842,18 +8845,45 @@ function platFirstFilterHTML(ap){
    * names nobody recognised. Filtering them one axis at a time never worked because they are not a KIND of
    * shop — they are not shops. So it is a switch, above the filters, OFF by default.
    */
-  var pop = (ap.population === 'test') ? 'test' : 'real';
-  var seg = function(k, label, tone){
-    var on = pop === k;
-    return '<button data-testid="plat-pop-' + k + '" onclick="platSetPopulation(\'' + k + '\')" '
+  /**
+   * ── ⭐ ONE BUTTON PER POPULATION, NAMED BY THE SERVER ──────────────────────────────────────────────────────
+   *
+   * Athi, 2026-09-14: *"yes we need classification, especially the sandbox, so having an option to create
+   * multiple would be really good. And we should be able to create through cbincroot?"*
+   *
+   * ⚠️ IT USED TO BE TWO BUTTONS WRITTEN HERE — which is the same hard-coding b249 removed from the schema,
+   * left behind in the screen. Adding a population would have needed a front-end release. The list comes from
+   * ops.population now, so it needs a row.
+   *
+   * ⭐ THE LIVE ONE IS ALWAYS FIRST AND ALWAYS GREEN. Everything else is a sealed world beside it, in warning
+   * amber, because the whole point of the button is knowing which set of books you are looking at.
+   */
+  var live = ((ap.live_population) || 'real');
+  var pop  = ap.population || live;
+  var all  = (d.populations && d.populations.length) ? d.populations.slice() : [live, 'test'];
+  all.sort(function(a, b){ return (a === live ? -1 : b === live ? 1 : (a < b ? -1 : 1)); });
+
+  var seg = function(k, i){
+    var on = pop === k, isLive = k === live, tone = isLive ? 'var(--ok)' : 'var(--warn-2)';
+    var edge = all.length === 1 ? 'border-radius:999px'
+      : i === 0 ? 'border-radius:999px 0 0 999px'
+      : i === all.length - 1 ? 'border-radius:0 999px 999px 0;margin-inline-start:-1px'
+      : 'margin-inline-start:-1px';
+    return '<button data-testid="plat-pop-' + esc(k) + '" onclick="platSetPopulation(\'' + esc(k) + '\')" '
       + 'style="font:inherit;font-size:var(--fs-1);padding:3px 11px;cursor:pointer;border:1px solid '
       + (on ? tone : 'var(--line)') + ';background:' + (on ? tone : 'var(--card)') + ';color:'
-      + (on ? 'var(--card)' : 'var(--grey-2)') + ';font-weight:' + (on ? '700' : '400') + ';'
-      + (k === 'real' ? 'border-radius:999px 0 0 999px' : 'border-radius:0 999px 999px 0;margin-inline-start:-1px')
-      + '">' + esc(tx(label)) + '</button>';
+      + (on ? 'var(--card)' : 'var(--grey-2)') + ';font-weight:' + (on ? '700' : '400') + ';' + edge
+      + '">' + esc(tx(k === live ? 'Live' : k.charAt(0).toUpperCase() + k.slice(1))) + '</button>';
   };
   var t = '<span style="display:inline-flex;margin-inline-end:4px">'
-    + seg('real', 'Real', 'var(--ok)') + seg('test', 'Test', 'var(--warn-2)') + '</span>';
+    + all.map(seg).join('')
+    /* ⚠️ a population is a SEALED WORLD — nothing in it can ever trade with anything outside it — so adding
+       one is a governance act, not a convenience. The control says so before it asks for a name. */
+    + '<button data-testid="plat-pop-add" onclick="platAddPopulation()" title="'
+    + esc(tx('Add a population — a sealed set of books that can never trade with another')) + '" '
+    + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;cursor:pointer;border:1px solid var(--line);'
+    + 'background:var(--card);color:var(--grey-2);border-radius:0 999px 999px 0;margin-inline-start:-1px">+</button>'
+    + '</span>';
 
   /**
    * ── ⭐⭐ FIVE FILTERS THAT STACK, AGREED WITH ATHI 2026-09-14 ────────────────────────────────────────────────
@@ -8894,7 +8924,32 @@ function platFirstFilterHTML(ap){
  * ⚠️ It resets to page 1 by going through loadPlatform() with no argument — 2,243 rows and 266 rows do not
  * have the same page 4.
  */
-function platSetPopulation(k){ UI.platPop = (k === 'test') ? 'test' : 'real'; loadPlatform(); }
+function platSetPopulation(k){ UI.platPop = String(k || ''); loadPlatform(); }
+
+/**
+ * ⭐ ADDING ONE IS RARE, DELIBERATE, AND OPERATOR-ONLY — so it asks in plain words and says what it costs.
+ * ⚠️ It cannot be undone from here on purpose: the code is stamped on every entity that joins the population,
+ * so there is no rename and no delete. Better to say that now than to offer a tidy-up that cannot exist.
+ */
+async function platAddPopulation(){
+  var label = prompt(tx('Name the population (e.g. Sandbox, Training, UAT).\n\n')
+    + tx('⚠️ Nothing in it will ever be able to trade with anything outside it, and it cannot be renamed or '
+       + 'removed afterwards.'));
+  if(!label) return;
+  var code = String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
+  if(!/^[a-z][a-z0-9_]{1,23}$/.test(code)){ toast(tx('That name cannot be turned into a code — try letters and digits.')); return; }
+  var note = prompt(tx('What is it for? One sentence — it is what the next person reads before using it.'));
+  if(!note) return;
+  try{
+    await api('platPopulationAdd', { body: { code: code, label: String(label).trim(), note: note } });
+    toast(tx('Added') + ' · ' + code);
+    UI.platPop = code;
+    renderApp();            /* the strip is built in platformScreen, so the new button needs a full paint */
+    await loadPlatform();
+  }catch(e){
+    toast(String((e && e.message) || tx('Could not add it')));
+  }
+}
 
 function platStandingFilterHTML(ap){
   var st = (((UI.plat||{}).controls)||{}).standings || [];
