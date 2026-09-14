@@ -6201,76 +6201,26 @@ function testScrRaisedHTML(code, kind) {
   return h + rows.map(testWorkRowHTML).join('');
 }
 
-function testRaisedHTML(code) {
-  var inc = (CBTEST.scrInc || []).filter(function (x) { return x.screen_code === code; });
-  var req = (CBTEST.scrReq || []).filter(function (x) { return x.screen_code === code; });
-  if (!inc.length && !req.length) return '';
-  var wrap = 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line,#e7e3d8)';
-  var h = '<div style="' + wrap + '">'
-    + testLab('Raised on this screen');
-
-  var pill = function (t, fg, bg) {
-    return '<span style="font-size:var(--fs-1);font-weight:700;color:' + fg + ';background:' + bg
-      + ';border-radius:5px;padding:1px 6px;white-space:nowrap">' + testEsc(t) + '</span>';
-  };
-
-  /* ⚠️ newest first: the one you just raised is the one you are looking for */
-  h += inc.slice().reverse().map(function (x) {
-    return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
-      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
-      +   pill(x.severity || 'Sev-3', 'var(--disp,#B3261E)', 'var(--danger-tint,#fbeceb)')
-      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.ref) + '</code>'
-      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
-      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
-      /* ⭐ the picture, if one was attached — one click from the report it belongs to */
-      +   (x.evidence_id ? '<a href="' + (CFG.API || '') + '/api/attachments/' + testEsc(x.evidence_id)
-            + '" target="_blank" rel="noopener" style="font-size:var(--fs-1)">screenshot</a>' : '')
-      + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.observed || '') + '</div>'
-      /**
-       * ── ⚠️⚠️ TWO WAYS OUT, BECAUSE THEY MEAN OPPOSITE THINGS ──────────────────────────────────────────
-       *
-       * Athi: *"say by mistake I raised it, then I need to close."* Marking that RESOLVED would put it in the
-       * report as a fault that was found and fixed — a number somebody will quote. It was never a fault.
-       *
-       * ⭐ Resolved = it was real and it is dealt with. Not a fault = it should not have been raised. Both
-       * ask why, and the report can then tell them apart instead of counting them together.
-       */
-      + (x.state === 'raised' || x.state === 'investigating'
-        ? '<button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px" onclick="testIncSet(\''
-          + testEsc(x.definition_id) + '\',\'resolved\')">Resolved</button>'
-          + ' <button class="btn" style="display:inline-block;width:auto;margin-top:5px;font-size:var(--fs-1);padding:3px 10px;color:var(--grey-4,#646A72)" onclick="testIncSet(\''
-          + testEsc(x.definition_id) + '\',\'closed\')">Not a fault</button>' : '')
-      + '</div>';
-  }).join('');
-
-  h += req.slice().reverse().map(function (x) {
-    return '<div style="padding:5px 0;border-top:1px solid var(--line,#efece4)">'
-      + '<div style="display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">'
-      +   pill(x.priority || 'Medium', 'var(--grey-2,#545A61)', 'var(--neutral-tint)')
-      +   '<code style="font-size:var(--fs-1);color:var(--grey-4,#646A72)">' + testEsc(x.clause) + '</code>'
-      +   '<span style="font-size:var(--fs-1);background:var(--neutral-tint);border-radius:5px;'
-      +     'padding:1px 6px">' + testEsc(x.state) + '</span>'
-      + '</div>'
-      + '<div style="font-size:var(--fs-2);margin-top:2px">' + testEsc(x.requirement || '') + '</div>'
-      /* ⚠️ the evidence beside the rule, always — six months on it is the only thing that says it was real */
-      + (x.observed ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:1px">seen: '
-          + testEsc(x.observed) + '</div>' : '')
-      /* ⚠️ a requirement had NO action on this panel — it could be raised here and only ever closed
-         somewhere else. Accept and Reject are its own verbs; "close" would flatten the difference. */
-      + (x.state !== 'accepted' && x.state !== 'rejected'
-        ? '<div style="margin-top:5px">'
-          + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px" '
-          +   'onclick="testReqSet(\'' + testJs(x.definition_id) + '\',\'accepted\')">Accept</button> '
-          + '<button class="btn" style="display:inline-block;width:auto;font-size:var(--fs-1);padding:3px 10px;'
-          +   'color:var(--grey-4,#646A72)" onclick="testReqSet(' + "'" + testJs(x.definition_id) + "','rejected'"
-          +   ')">Reject</button></div>'
-        : '')
-      + '</div>';
-  }).join('');
-
-  return h + '</div>';
-}
+/**
+ * ── ⚠️⚠️ testRaisedHTML() WAS HERE AND IS GONE — 2026-09-14, deliberately this time ─────────────────────────
+ *
+ * It drew a combined "Raised on this screen" list back when Raised was ONE tab. That tab became two —
+ * Incidents and Requirements — and both, plus the legacy `raised` area kept for anyone whose localStorage
+ * still holds it, are drawn by testScrRaisedHTML(code, kind) above. This one had no callers left.
+ *
+ * ⚠️ IT WAS NOT HARMLESS. It still carried two faults this file documents as FIXED elsewhere: a reference to
+ * `CFG.API`, which does not exist, and an unauthenticated <a href> straight to /api/attachments/:id. Dead
+ * code is where a fixed bug goes to wait for someone to copy it.
+ *
+ * ⚠️ AND IT WAS BEING TESTED. TM-22 asserted "Raised on this screen" — text only this function produced — so
+ * the assertion was green for weeks against something no reader could reach. A test passing against dead
+ * code is worse than no test: it reports coverage of a path that does not run.
+ *
+ * ⭐ Checked before deleting, not after: the only mentions left in the tree were comments, this file's own
+ * history, and that spec. All three area branches (inc · req · raised) go to testScrRaisedHTML.
+ * The accidental-deletion note above still stands — it is about the region-replace hazard, not about this
+ * function, and that lesson outlives the code. [[feedback-anchor-replace-drops-code]]
+ */
 
 function screenCasesPaint() {
   var code = CBTEST.popupFor;
