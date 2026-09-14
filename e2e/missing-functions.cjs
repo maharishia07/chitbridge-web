@@ -62,7 +62,7 @@ const ASSIGN = [
  * these, so `map(`, `filter(`, `t(` and every local helper are out of scope by construction rather than by a
  * list of exceptions that would need maintaining.
  */
-const FAMILIES = /^(test|cat|catset|wl|cart|till|prod|chit|sup|nav|screen|stamp|code|modal|toast|api|cb|spec|gov|offer|promo|rpl|assist|shot|inc|req)[A-Z]/;
+const FAMILIES = /^(test|cat|catset|wl|cart|till|prod|chit|sup|nav|screen|stamp|code|modal|toast|api|cb|spec|gov|offer|promo|rpl|assist|shot|inc|req|plat)[A-Z]/;
 
 /**
  * what the page genuinely provides from somewhere this scan cannot see, plus the keywords that look like calls.

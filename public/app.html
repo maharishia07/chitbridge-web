@@ -8405,7 +8405,7 @@ function platformScreen(){
       /* ⭐ TWO VISIBILITIES, TWO CONTROLS (b234). 'may you see my products' and 'may you find me' are
          different questions and the data does not line them up — one dropdown for both would force a
          choice the model does not make. */
-      +'<select '+sel+' id="pl_evis" data-testid="plat-entity-visibility" onchange="loadPlatform()">'+opt('',tx('any entity'),ap.entity_visibility)+((f.entity_visibility||[]).map(v=>opt(v,tx(v),ap.entity_visibility)).join(''))+'</select>'
+      +platFirstFilterHTML(ap)
     +'</div>'
     /* the access filter stands alone on the first row; everything narrower sits on the second */
     +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'
@@ -8423,12 +8423,20 @@ function platformScreen(){
       +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
       +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
       +'</div>'
+    /* ⭐ 'left hand top level shows the overall MIS' — but folded. Six breakdowns open above a table would
+       push the first row off the screen, and the number people actually read is already in the stats. */
+    +'<details style="margin-top:var(--sp-2)"><summary style="cursor:pointer;font-size:var(--fs-1);'
+      +'color:var(--grey-2);font-weight:600;list-style:revert">'+tx('Platform totals')+'</summary>'
+      +'<div style="margin-top:6px">'+platSummaryHTML()+'</div></details>'
     +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+platCountHTML()+'</div></div>'
-    +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platRowsHTML())+'</div></div>';
+    /* ⭐ THE TABLE IS THE LIST NOW. platRowsHTML() drew the same entities in a narrow card and the scope
+       table drew them again beside it; Athi: *"what is the difference between left and right panel?"* —
+       there was none. One list, one place. */
+    +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platScopeTableHTML())+'</div></div>';
 
   const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
   const divider='<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  return '<div class="panel '+(((UI.vp==='mob')&&UI.mdetail)?'showdetail':'')+'" id="panel" style="--lw:'+platListWidth()+'px;--lh:'+UI.lh+'px">'+list+divider+detail+'</div>';
+  return '<div class="panel '+(((UI.vp==='mob')&&UI.mdetail)?'showdetail':'')+'" id="panel" style="--lw:'+UI.platLw+'px;--lh:'+UI.lh+'px">'+list+divider+detail+'</div>';
 }
 
 /** ⭐ one hue per KIND, so the column reads without being read. Grey is the honest default for anything that
@@ -8505,7 +8513,7 @@ function platCountHTML(){
   return '<b style="color:var(--warn-2)">'+n+' '+tx('of')+' '+m+'</b> — '
     +tx('narrow the filters or search to see the rest');
 }
-function paintPlatList(){ var b=document.getElementById('pl_rows'); if(b)b.innerHTML=platRowsHTML();
+function paintPlatList(){ var b=document.getElementById('pl_rows'); if(b)b.innerHTML=platScopeTableHTML();
   var c=document.getElementById('pl_count'); if(c)c.innerHTML=platCountHTML(); }
 function selectPlat(id){ UI.platSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintPlatList(); paintPlatDetail(); }
 function paintPlatDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=platDetailHTML(); } }
@@ -8577,11 +8585,12 @@ function platScopeHTML(r){
 }
 function platDetailHTML(){
   var d=UI.plat||{}, r=(d.rows||[]).find(function(x){return x.identity_id===UI.platSel;});
-  /* ⭐ the scope table is a VIEW, not a fallback: it holds the pane even when a row is picked, so the
-     operator always has a way back out of it. Selecting a row still highlights it, ready for Shape. */
-  if(UI.platView==='scope') return '<div class="dh"><div class="dt">'+tx('Entity scope')+'</div>'
-    +'<div class="ds">'+platViewToggleHTML()+'</div></div><div class="db">'+platScopeTableHTML()+'</div>';
-  if(!r) return platSummaryHTML();
+  if(d.denied) return emptyState('🔒',tx('Operator only'),tx('Sign in as the platform root.'));
+  /* ⚠️ A MESSAGE, NOT THE REPORT. Athi: *"right level to show the value of the first selected entity, or give
+     a message that select your entity to see the details."* The platform totals live on the left now; if this
+     pane also showed them it would mean two different things depending on a click nobody can see. */
+  if(!r) return emptyState('👈',tx('Select an entity'),
+    tx('Pick a row on the left to see its people, customers, catalogue and storage.'));
   var mono=function(v){return '<span class="mono" style="font-size:var(--fs-1)">'+esc(v||'')+'</span>';};
   var life=platLifeTone(r.quiet_days);
   return '<div class="dh"><button class="dback" onclick="backToList()">‹ '+tx('Platform')+'</button>'
@@ -8591,29 +8600,50 @@ function platDetailHTML(){
       +'<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>'
       +'<span style="font-size:var(--fs-1);color:'+life[0]+';font-weight:600">● '+esc(life[1])+'</span>'
     +'</div></div>'
+    /* ⭐ 'the right hand top level to show the MIS related to the selection' — above the tabs, so it is the
+       first thing read and stays put whichever tab is open. */
+    + platEntityMisHTML(r)
     +'<div class="db">'
-    /* ⭐ all four identifiers together. There is no separate "username" — user_id IS it, and cb_entity's
-       username column is null for every one of its 340 rows, so showing it would add a permanent blank. */
-    + platGrp(tx('What this entity may do'), platScopeHTML(r))
-    + platGrp(tx('Identifiers'),
+    + platTabsHTML() + platTabBodyHTML(r, mono)
+    +'</div>';
+}
+
+/** ⭐ one tab, one question. Everything here reads the loaded row — selecting a shop costs no round trip. */
+function platTabBodyHTML(r, mono){
+  var t = UI.platTab || 'overview';
+
+  if(t==='scope')    return platGrp(tx('What this entity may do'), platScopeHTML(r));
+
+  if(t==='identity') return platGrp(tx('Identifiers'),
         platKv(tx('Name'),esc(r.display_name||'—'))
         +platKv('User ID',mono(r.user_id))
         +platKv('Bridge id',mono(r.bridge_id))
         +platKv('UUID',mono(r.identity_id))
         +platKv(tx('Email'),mono(r.email)))
-    + platGrp(tx('Standing'),
+    /* ⭐ THE FOLDER IS DERIVED, NOT STORED. Athi: *"the directory name allocated for that entity, space used,
+       everything to be derived from the tables."* lib/storage-object.js names every object
+       <entity_id>/<yyyy>/<mm>/<attachment_id>, so the entity's folder IS its uuid — one naming function, and
+       nothing here can drift from where the bytes actually went. */
+    + platGrp(tx('Storage'),
+        platKv(tx('Folder'),mono(r.identity_id+'/'))
+        +platKv(tx('Naming'),'<span class="mono" style="font-size:var(--fs-1);color:var(--grey)">'
+          +esc('<entity>/<yyyy>/<mm>/<file>')+'</span>')
+        +platKv(tx('Files'),r.counts?String(r.counts.files||0):'—')
+        +platKv(tx('Space used'),r.counts?esc(platBytes(r.counts.bytes||0)):'—'));
+
+  if(t==='network')  return platGrp(tx('Position'),
+        platKv(tx('Branches'),(r.branches||0)+'')
+        +platKv(tx('Depth'),r.depth?String(r.depth):tx('standalone'))
+        +platKv(tx('Pays'),r.depth>1?tx('no — billed to its root'):tx('yes — holds its own plan'))
+        +platKv(tx('Network path'),r.path?mono(r.path):'—'));
+
+  return platGrp(tx('Standing'),
         platKv(tx('Plan'),esc(r.plan||'—'))
+        +platKv(tx('Sells'),esc(tx(PLAT_SELLS[r.supplies]||r.supplies||'—')))
         +platKv(tx('Catalogue seen by'),esc(r.visibility||'—'))
         +platKv(tx('Entity found by'),esc(r.entity_visibility||'—'))
-        +platKv(tx('Sells'),esc(tx(PLAT_SELLS[r.supplies]||r.supplies||'—')))
         +platKv(tx('Joined'),esc(r.joined||'—'))
-        +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')))
-    + platGrp(tx('Size'),
-        platKv(tx('People'),(r.seats||0)+'')
-        +platKv(tx('Suppliers'),(r.suppliers||0)+'')
-        +platKv(tx('Branches'),(r.branches||0)+(r.depth?(' · '+tx('depth')+' '+r.depth):''))
-        +platKv(tx('Network path'),r.path?mono(r.path):'—'))
-    +'</div>';
+        +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')));
 }
 
 /** the report itself — shown whenever no row is selected, so the screen is never blank */
@@ -8635,51 +8665,123 @@ function platDetailHTML(){
  * them would make every cell unreadable to save a gesture nobody minds.
  */
 /**
- * ── ⭐ TWO VIEWS OF THE SAME LOADED ROWS ──────────────────────────────────────────────────────────────────────
+ * ── ⭐⭐ THE TWO PANELS ANSWER TWO DIFFERENT QUESTIONS ─────────────────────────────────────────────────────────
  *
- * Shape is the platform in outline — how many, of what kind, on which plan. Scope is the rules, one line per
- * entity. Athi wanted the scope table without a second menu item, so the two share one pane and one toggle.
+ * Athi, 2026-09-14: *"what is the difference between left and right panel? the right panel should come to left,
+ * and on selection of any of the row the right panel should show in different tabs with more information — that
+ * is the way we have other panels. left hand top level shows the overall MIS, and the right hand top level to
+ * show the MIS related to the selection."*
  *
- * ⚠️ NEITHER RE-FETCHES. Both render UI.plat.rows — same filters, same sort, same "100 of 2,788" ceiling — so
- * the two views can never disagree. A toggle that quietly queried differently would be two answers to one
- * question, and the operator would have no way to tell which of them was stale.
+ * He was right that there was no difference. The left listed the entities and the right listed them again in a
+ * wider table — two lists, one question, and nothing on the screen said which to read.
  *
- * ⚠️ SCOPE IS STICKY: it wins over a selected row (see platDetailHTML). Otherwise clicking any row would drop
- * you into a card with no way back to the table, because the back button only exists on a phone.
+ *     LEFT   the platform:  overall MIS, the filters, and every entity as one line
+ *     RIGHT  one entity:    its own MIS, then tabs — and nothing at all until a row is picked
+ *
+ * ⚠️ THE RIGHT PANEL NO LONGER FALLS BACK TO THE REPORT. Athi: *"right level to show the value of the first
+ * selected entity, or give a message that select your entity to see the details."* A panel that shows platform
+ * totals when nothing is selected teaches you that the right side means "everything", and then it silently
+ * starts meaning "this one" the moment you click. One meaning per panel.
  */
-function platViewToggleHTML(){
-  var v = UI.platView === 'scope' ? 'scope' : 'report';
-  var b = function(k, label){
-    var on = v === k;
-    return '<button data-testid="plat-view-' + k + '" onclick="platSetView(\'' + k + '\')" '
-      + 'style="font:inherit;font-size:var(--fs-1);padding:2px 10px;border-radius:7px;cursor:pointer;'
-      + 'margin-inline-end:5px;border:1px solid var(--line);'
-      + (on ? 'background:var(--ink);color:var(--card);border-color:var(--ink)'
-            : 'background:var(--card);color:var(--grey-2)') + '">' + esc(tx(label)) + '</button>';
-  };
-  return b('report', 'Shape') + b('scope', 'Scope')
-    + '<span style="color:var(--grey);font-size:var(--fs-1)"> '
-    + esc(v === 'scope' ? tx('pick a row, then press Shape for that entity')
-                        : tx('select a row for one entity')) + '</span>';
+function platBytes(n){
+  if(n==null) return null;
+  n=Number(n); if(!isFinite(n)) return null;
+  if(n<1024) return n+' B';
+  var u=['KB','MB','GB','TB'], i=-1;
+  do{ n/=1024; i++; } while(n>=1024 && i<u.length-1);
+  return (n<10?n.toFixed(1):Math.round(n))+' '+u[i];
 }
+
 /**
- * ⭐ THE SCOPE TABLE NEEDS THE ROOM, AND THE LIST BESIDE IT IS REPEATING ITSELF.
- *
- * Thirteen columns want ~1,230px. Athi has the divider dragged wide for the Shape view, which left four
- * columns showing — and every one of those rows is already named in the table's first column, so the list
- * was spending 60% of the screen saying it twice.
- *
- * ⚠️ UI.lw IS NOT TOUCHED. It is his saved drag preference; a view must not quietly rewrite it, or Shape
- * comes back narrow tomorrow and he never agreed to that. This caps the width for the duration of the
- * view only, and 380px still fits the filter strip three selects to a row.
+ * ⚠️⚠️ null IS NOT ZERO, AND THE TILE MUST NOT BLUR THEM. A shop with no customers and a shop we have not been
+ * able to count are different facts, and only one of them is about the shop. b241 has to be run before the
+ * RLS-forced counts exist at all; until then those tiles say '—' and explain themselves on hover, because a 0
+ * would read as an answer. [[feedback-silence-is-the-bug]]
  */
-function platListWidth(){ return UI.platView === 'scope' ? Math.min(UI.lw, 380) : UI.lw; }
-function platSetView(v){
-  UI.platView = (v === 'scope' ? 'scope' : 'report');
-  var p = document.getElementById('panel');
-  if (p) p.style.setProperty('--lw', platListWidth() + 'px');
-  paintPlatList(); paintPlatDetail();
+function platTile(label, val, hint){
+  var known = val !== null && val !== undefined;
+  return '<div title="'+esc(hint||'')+'" style="flex:1;min-width:74px;background:var(--wash);'
+    + 'border:1px solid var(--line-soft);border-radius:var(--r-md);padding:7px 10px">'
+    + '<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-4);line-height:1.15;'
+    + 'font-variant-numeric:tabular-nums;color:'+(known?'var(--ink)':'var(--grey-4)')+'">'
+    + esc(known?String(val):'—')+'</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em;'
+    + 'margin-top:1px">'+esc(tx(label))+'</div></div>';
 }
+
+/** ⭐ the right panel's top level — the MIS for the one entity that is selected */
+function platEntityMisHTML(r){
+  var c = r.counts;   /* ⚠️ null, not {}, when the counting surface is not in this database yet */
+  var no = tx('Not counted yet — run migration b241, the counting surface.');
+  var of = function(k){ return c ? (c[k] == null ? 0 : c[k]) : null; };
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;padding:var(--sp-3) var(--sp-3) 0">'
+    + platTile('people',    r.seats == null ? null : r.seats,       tx('Staff signed on, not counting anyone erased'))
+    + platTile('suppliers', r.suppliers == null ? null : r.suppliers, tx('Businesses they buy from'))
+    + platTile('customers', of('customers'), c ? tx('Businesses and walk-ins they sell to') : no)
+    + platTile('products',  of('items'),     c ? tx('Live catalogue items — retired ones excluded') : no)
+    + platTile('chits',     of('chits'),     c ? tx('Chits they have sent') : no)
+    + platTile('files',     of('files'),     c ? tx('Attachments they are holding') : no)
+    + platTile('space',     c ? platBytes(of('bytes')) : null,
+        c ? tx('Bytes uploaded. The object store’s own billing is the authority on what is paid for.') : no)
+    + platTile('branches',  r.branches == null ? null : r.branches, tx('Nodes beneath it on the network'))
+    + '</div>';
+}
+
+/**
+ * ⭐ THE HOUSE TAB STRIP — `.dtabs` + a setter that repaints the detail, exactly as the chit detail does
+ * (setDtab). Athi: *"that is the way we have other panels."* Borrowing it means this screen inherits the
+ * styling, the mobile wrap and the keyboard behaviour without any of them being re-decided here.
+ * [[feedback-adopt-dont-reinvent]]
+ */
+var PLAT_TABS = [['overview','Overview'],['scope','Scope'],['identity','Identity'],['network','Network']];
+function platTabsHTML(){
+  var cur = UI.platTab || 'overview';
+  return '<div class="dtabs" data-testid="plat-tabs">' + PLAT_TABS.map(function(t){
+    return '<button class="'+(cur===t[0]?'on':'')+'" data-testid="plat-tab-'+t[0]+'" '
+      + 'onclick="setPlatTab(\''+t[0]+'\')">'+esc(tx(t[1]))+'</button>';
+  }).join('') + '</div>';
+}
+function setPlatTab(t){ UI.platTab = t; paintPlatDetail(); }
+
+/**
+ * ⭐ FIRST-LEVEL FILTERS — two ticks and one list.
+ *
+ * Athi: *"on the filter we have to see internal, public — is the only two filter which we can operate as a
+ * check box. but the dropdown we can ask other options like All, Goods, Services, Goods and Services, Network
+ * entities — this will give a higher level classification."*
+ *
+ * ⭐ TICKING NOTHING MEANS EVERYTHING. That is how every faceted filter in the world behaves (a shop's size
+ * facet, a tracker's status facet), so nobody has to be told. Ticking one narrows to it; ticking both shows
+ * both and still hides `network` and `private`, which is the point of having the ticks at all.
+ *
+ * ⚠️ THE DROPDOWN CROSSES TWO FIELDS ON PURPOSE. Goods/Services/Goods and Services are `supplies`; Network
+ * entities is `entity_kind`. They are one question to an operator — "what sort of thing am I looking at?" —
+ * and splitting them into two controls to match our column layout would be us showing our schema.
+ */
+var PLAT_CLASS = [['',        'All'],
+                  ['goods',   'Goods'],
+                  ['services','Services'],
+                  ['both',    'Goods and Services'],
+                  ['network', 'Network entities']];
+function platFirstFilterHTML(ap){
+  var evs = String(ap.entity_visibility||'').split(',').filter(Boolean);
+  var cls = ap.kind === 'network' ? 'network' : (ap.supplies || '');
+  var tick = function(v, label){
+    return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);'
+      + 'color:var(--grey-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer">'
+      + '<input type="checkbox" data-testid="plat-ev-'+v+'" id="pl_ev_'+v+'" '
+      + (evs.indexOf(v)>=0?'checked ':'') + 'onchange="loadPlatform()" style="margin:0;cursor:pointer">'
+      + esc(tx(label))+'</label>';
+  };
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+    + tick('internal','Internal') + tick('public','Public')
+    + '<select class="inp" id="pl_class" data-testid="plat-class" onchange="loadPlatform()" '
+    + 'style="flex:1;min-width:150px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
+    + PLAT_CLASS.map(function(c){
+        return '<option value="'+esc(c[0])+'"'+(cls===c[0]?' selected':'')+'>'+esc(tx(c[1]))+'</option>'; }).join('')
+    + '</select></div>';
+}
+
 function platScopeTableHTML(){
   var d = UI.plat || {}, rows = d.rows || [];
   if (d.denied) return emptyState('🔒', tx('Operator only'), tx('Sign in as the platform root.'));
@@ -8783,9 +8885,7 @@ function platSummaryHTML(){
     return k.map(function(x){ return '<div style="display:flex;gap:8px;padding:8px 13px;border-bottom:1px dashed var(--line-soft);font-size:var(--fs-2)">'
       +'<b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1)">'+esc(x)+'</b>'
       +'<span style="font-weight:700;font-variant-numeric:tabular-nums">'+obj[x]+'</span></div>'; }).join(''); };
-  return '<div class="dh"><div class="dt">'+tx('Platform report')+'</div>'
-    +'<div class="ds">'+platViewToggleHTML()+'</div></div>'
-    +'<div class="db">'
+  return '<div class="db">'
     + platGrp(tx('By type'), bars)
     /* ⚠️ THESE COUNT ENTITIES ONLY — not the actors and shoppers in 'By type' above. Two denominators on
        one screen with no label is how a report gets quoted wrong. */
@@ -8825,8 +8925,17 @@ async function loadPlatform(){
   if(g('pl_plan')) q.plan=g('pl_plan');
   if(g('pl_pos'))  q.position=g('pl_pos');
   if(g('pl_vis'))  q.visibility=g('pl_vis');
-  if(g('pl_evis')) q.entity_visibility=g('pl_evis');
   if(g('pl_sup'))  q.supplies=g('pl_sup');
+  /* ⭐ the two ticks. Neither ticked means NO filter — every faceted filter in the world behaves this way, so
+     it needs no label explaining it. Both ticked still hides network and private, which is the point. */
+  var ck=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
+  var evs=[]; if(ck('pl_ev_internal')) evs.push('internal'); if(ck('pl_ev_public')) evs.push('public');
+  if(evs.length) q.entity_visibility=evs.join(',');
+  /* ⚠️ the class list crosses two fields: Network entities is a KIND, the rest are what a business SELLS.
+     It is one question to an operator, so it is one control — and it is composed here, not on the server. */
+  var cl=g('pl_class');
+  if(cl==='network') q.kind='network';
+  else if(cl)        q.supplies=cl;
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
@@ -16666,7 +16775,7 @@ function applyPrefs(){
   try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;
   /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
      kind of pane and must not share a number; 320 is the menu default MIS and Profile already use. */
-  UI.misLw=parseInt(lsGet('cb_misLw',320),10)||320; UI.catsetLw=parseInt(lsGet('cb_catsetLw',320),10)||320;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem(uk('cb_lhfold'))==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
+  UI.platLw=parseInt(lsGet('cb_platLw',1180),10)||1180;UI.misLw=parseInt(lsGet('cb_misLw',320),10)||320; UI.catsetLw=parseInt(lsGet('cb_catsetLw',320),10)||320;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem(uk('cb_lhfold'))==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 /**
  * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
  *
@@ -16736,6 +16845,9 @@ let DRAG=false;
  * A chit list is DATA and earns width; a fixed menu never does.
  */
 function lwKey(){
+  /* ⭐ the Platform list is a thirteen-column table, not a row list — it needs a different width from every
+     other screen, and must not drag theirs with it. */
+  if (UI.nav === 'platform') return 'platLw';
   if (UI.nav === 'catsetup') return 'catsetLw';
   if (UI.nav === 'mis' || UI.nav === 'profile' || UI.nav === 'settings') return 'misLw';
   return 'lw';
