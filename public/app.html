@@ -8632,7 +8632,13 @@ function platTabBodyHTML(r, mono){
         +platKv(tx('Space used'),r.counts?esc(platBytes(r.counts.bytes||0)):'—'));
 
   if(t==='network')  return platGrp(tx('Position'),
-        platKv(tx('Branches'),(r.branches||0)+'')
+        platKv(tx('Under'), r.network_root
+          ? '<b>'+esc(r.network_root)+'</b>'+(r.network_root_bridge
+              ? ' <span class="mono" style="font-size:var(--fs-1);color:var(--grey)">'
+                +esc(r.network_root_bridge)+'</span>' : '')
+          : '<span style="color:var(--grey)">'
+            +(r.depth===1?tx('root — it heads this network'):tx('none — not in a network'))+'</span>')
+        +platKv(tx('Branches'),(r.branches||0)+'')
         +platKv(tx('Depth'),r.depth?String(r.depth):tx('standalone'))
         +platKv(tx('Pays'),r.depth>1?tx('no — billed to its root'):tx('yes — holds its own plan'))
         +platKv(tx('Network path'),r.path?mono(r.path):'—'));
@@ -8790,14 +8796,32 @@ function setPlatTab(t){ UI.platTab = t; paintPlatDetail(); }
  * entities is `entity_kind`. They are one question to an operator — "what sort of thing am I looking at?" —
  * and splitting them into two controls to match our column layout would be us showing our schema.
  */
-var PLAT_CLASS = [['',        'All'],
-                  ['goods',   'Goods'],
-                  ['services','Services'],
-                  ['both',    'Goods and Services'],
-                  ['network', 'Network entities']];
+/**
+ * ⚠️⚠️ THE FIRST VERSION OF THIS LIST DOUBLE-COUNTED. I offered "Network entities" beside Goods and Services as
+ * if they were alternatives. Athi: *"root network will provide either service or goods, so the root entity
+ * should be part of the other claim … the 10 network shops to be grouped under the previous group based on
+ * what they choose."*
+ *
+ * ⭐ A NETWORK ROOT IS A BUSINESS. It sells something and it PAYS, so it belongs in goods/services/both with
+ * every other shop. Picking "Network entities" silently threw away what the shop sold, and the categories
+ * could never sum to the total — which is the only test a classification has to pass.
+ *
+ * ⭐ WHAT IS LEFT OVER IS THE BRANCHES. Athi's 50: they trade, but their plan belongs to their root, so they
+ * are not a paying entity and must not be counted beside one. THAT is what "Network shops" means here.
+ *
+ * The server computes the same ladder (CLASS_SQL) and returns by_class, so the screen and the database cannot
+ * disagree about which box a shop is in.
+ */
+var PLAT_CLASS = [['',         'All'],
+                  ['goods',    'Goods'],
+                  ['services', 'Services'],
+                  ['both',     'Goods and Services'],
+                  ['network',  'Network shops'],
+                  ['internal', 'Internal'],
+                  ['unset',    'Not answered']];
 function platFirstFilterHTML(ap){
   var evs = String(ap.entity_visibility||'').split(',').filter(Boolean);
-  var cls = ap.kind === 'network' ? 'network' : (ap.supplies || '');
+  var cls = ap.class || '';
   var tick = function(v, label){
     return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);'
       + 'color:var(--grey-2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer">'
@@ -8859,6 +8883,17 @@ function platScopeTableHTML(){
       + esc(r.user_id || '—') + '</div></td>'
       /* ⭐ SECOND COLUMN. Athi, earlier today: *"each shops last status."* It sits beside the name because it
          is the question the name is looked up to answer, not something to scroll thirteen columns for. */
+      /* ⭐ WHOSE NETWORK. Athi: *"the root to be shown with the owner of the network"* and *"for other shops
+         root is none, they are root themselves."* A branch names its root; everyone else is their own. */
+      + (function(){
+          var own = !r.network_root;
+          return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
+            + 'white-space:nowrap;color:' + (own ? 'var(--grey-4)' : 'var(--purple)') + '" title="'
+            + esc(own ? (r.depth === 1 ? tx('Heads its own network') : tx('Not in a network at all'))
+                      : tx('A branch. Its plan belongs to this root.')) + '">'
+            /* ⭐ Athi: *"network column become root or none, either is fine."* Two words rather than one,
+               because they are different facts: a root HAS a network under it, a standalone has none. */
+            + esc(own ? (r.depth === 1 ? tx('root') : tx('none')) : r.network_root) + '</td>'; })()
       + (function(){ var st = platStanding(r.standing);
           return '<td style="padding:6px 9px;border-bottom:1px solid var(--line-soft);font-size:var(--fs-1);'
             + 'white-space:nowrap' + (st ? ';color:' + st.tone + ';font-weight:600' : ';color:var(--grey-4)')
@@ -8892,7 +8927,8 @@ function platScopeTableHTML(){
 
   return '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
     + '<table style="border-collapse:collapse;width:100%;min-width:1040px">'
-    + '<thead><tr>' + th('Entity') + th('Standing', tx('Is this shop actually using the product?'))
+    + '<thead><tr>' + th('Entity') + th('Network', tx('Whose network is it under?'))
+    + th('Standing', tx('Is this shop actually using the product?'))
     + th('Found', tx('Can it be found in search?'))
     + th('Add', tx('Can it be named as a supplier or customer?')) + th('Products', tx('Can its price list be seen?'))
     + th('Work', tx('Can it be sent a chit?')) + th('Pays', tx('Is it a billing tenant?'))
@@ -8986,11 +9022,10 @@ async function loadPlatform(){
   var ck=function(id){ var e=document.getElementById(id); return !!(e&&e.checked); };
   var evs=[]; if(ck('pl_ev_internal')) evs.push('internal'); if(ck('pl_ev_public')) evs.push('public');
   if(evs.length) q.entity_visibility=evs.join(',');
-  /* ⚠️ the class list crosses two fields: Network entities is a KIND, the rest are what a business SELLS.
-     It is one question to an operator, so it is one control — and it is composed here, not on the server. */
-  var cl=g('pl_class');
-  if(cl==='network') q.kind='network';
-  else if(cl)        q.supplies=cl;
+  /* ⭐ ONE PARAM. The class used to be composed here out of kind and supplies, which is how it came to
+     double-count: a network root has BOTH and the client had to pick one to send. The ladder is now a single
+     ordered CASE on the server, so the client sends the answer and never the ingredients. */
+  if(g('pl_class')) q.class=g('pl_class');
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
