@@ -8349,6 +8349,14 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
  * and Suppliers. Athi asked for presentation, not a new shape; a screen that arranges itself differently is a
  * screen people have to learn twice.
  */
+/**
+ * ⭐ WHAT EACH POSITION MEANS FOR MONEY, not what it is called in the tree. Athi: *"only the root node will
+ * pay money"* — and "root" on its own does not say that. lib/plans.js: the network top node holds the plan,
+ * quotas count across its subtree, children inherit. So a branch is never billed; its root is.
+ * ⚠️ Position is the BILLING axis, not a third visibility. See VISIBILITY-MATRIX.md §4b.
+ */
+var PLAT_POS={ billable:"billable tenants", root:"root · pays", branch:"branch · billed to its root",
+               standalone:"standalone · pays" };
 function platformScreen(){
   const d=UI.plat||{}, c=d.controls||{}, f=c.filters||{}, ap=c.applied||{};
   const h=d.headline||{};
@@ -8379,24 +8387,32 @@ function platformScreen(){
     +'</div>'
     +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" onkeydown="if(event.key===\'Enter\')loadPlatform()" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
-         one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
-         not reach them from the screen. */
-      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+opt('*',tx('every kind'),ap.kind)+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
-      +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
-      +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
-      /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
-         computed from the ltree, not stored, so the server names the values in controls.positions. */
-      +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(p),ap.position)).join(''))+'</select>'
-      /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
-         control rather than more values in the kind list. */
-      +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any catalogue'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
+      /**
+       * ⭐ ENTITY ACCESS FIRST. Athi, 2026-09-14: *"the first level filter can filter based on entity access
+       * level."* Who may reach this entity at all is the OUTERMOST question — what it is, who pays for it and
+       * what it publishes only matter for something you can reach in the first place.
+       *
+       * Then: kind (what it is) · position (⚠️ WHO PAYS — the billing axis, not a third visibility) ·
+       * catalogue (what it publishes) · vertical · plan. See VISIBILITY-MATRIX.md §4b.
+       */
       /* ⭐ TWO VISIBILITIES, TWO CONTROLS (b234). 'may you see my products' and 'may you find me' are
          different questions and the data does not line them up — one dropdown for both would force a
          choice the model does not make. */
       +'<select '+sel+' id="pl_evis" data-testid="plat-entity-visibility" onchange="loadPlatform()">'+opt('',tx('any entity'),ap.entity_visibility)+((f.entity_visibility||[]).map(v=>opt(v,tx(v),ap.entity_visibility)).join(''))+'</select>'
-      +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'+presets+'</select>'
-    +'</div>'
++'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
+         one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
+         not reach them from the screen. */
+      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+opt('*',tx('every kind'),ap.kind)+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
+      /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
+         computed from the ltree, not stored, so the server names the values in controls.positions. */
+      +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(PLAT_POS[p]||p),ap.position)).join(''))+'</select>'
+      /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
+         control rather than more values in the kind list. */
+      +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any catalogue'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
+      +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
+      +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
+      +'</div>'
     +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+platCountHTML()+'</div></div>'
     +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platRowsHTML())+'</div></div>';
 
