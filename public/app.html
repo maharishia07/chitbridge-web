@@ -8385,6 +8385,7 @@ function platformScreen(){
       +'<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🛰️ '+tx('Platform')+'</span>'
       +'<span style="font-size:var(--fs-1);color:var(--grey);border:1px solid var(--line);border-radius:999px;padding:1px 8px">'+tx('operator')+'</span>'
     +'</div>'
+    +'<div id="pl_popbar">'+platPopBarHTML(ap)+'</div>'
     +'<div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3)">'
       /* ⚠️⚠️ '2788 ON THE RAIL' COUNTED 2,239 TEST FIXTURES AS REACH. A headline that flatters is worse
          than no headline: it is the number somebody quotes. Customers lead; the fixtures are shown, in
@@ -8845,46 +8846,6 @@ function platFirstFilterHTML(ap){
    * names nobody recognised. Filtering them one axis at a time never worked because they are not a KIND of
    * shop — they are not shops. So it is a switch, above the filters, OFF by default.
    */
-  /**
-   * ── ⭐ ONE BUTTON PER POPULATION, NAMED BY THE SERVER ──────────────────────────────────────────────────────
-   *
-   * Athi, 2026-09-14: *"yes we need classification, especially the sandbox, so having an option to create
-   * multiple would be really good. And we should be able to create through cbincroot?"*
-   *
-   * ⚠️ IT USED TO BE TWO BUTTONS WRITTEN HERE — which is the same hard-coding b249 removed from the schema,
-   * left behind in the screen. Adding a population would have needed a front-end release. The list comes from
-   * ops.population now, so it needs a row.
-   *
-   * ⭐ THE LIVE ONE IS ALWAYS FIRST AND ALWAYS GREEN. Everything else is a sealed world beside it, in warning
-   * amber, because the whole point of the button is knowing which set of books you are looking at.
-   */
-  var live = ((ap.live_population) || 'real');
-  var pop  = ap.population || live;
-  var pd   = UI.plat || {};   /* ⚠️ this function takes only `ap`; the row data lives on UI.plat */
-  var all  = (pd.populations && pd.populations.length) ? pd.populations.slice() : [live, 'test'];
-  all.sort(function(a, b){ return (a === live ? -1 : b === live ? 1 : (a < b ? -1 : 1)); });
-
-  var seg = function(k, i){
-    var on = pop === k, isLive = k === live, tone = isLive ? 'var(--ok)' : 'var(--warn-2)';
-    var edge = all.length === 1 ? 'border-radius:999px'
-      : i === 0 ? 'border-radius:999px 0 0 999px'
-      : i === all.length - 1 ? 'border-radius:0 999px 999px 0;margin-inline-start:-1px'
-      : 'margin-inline-start:-1px';
-    return '<button data-testid="plat-pop-' + esc(k) + '" onclick="platSetPopulation(\'' + esc(k) + '\')" '
-      + 'style="font:inherit;font-size:var(--fs-1);padding:3px 11px;cursor:pointer;border:1px solid '
-      + (on ? tone : 'var(--line)') + ';background:' + (on ? tone : 'var(--card)') + ';color:'
-      + (on ? 'var(--card)' : 'var(--grey-2)') + ';font-weight:' + (on ? '700' : '400') + ';' + edge
-      + '">' + esc(tx(k === live ? 'Live' : k.charAt(0).toUpperCase() + k.slice(1))) + '</button>';
-  };
-  var t = '<span style="display:inline-flex;margin-inline-end:4px">'
-    + all.map(seg).join('')
-    /* ⚠️ a population is a SEALED WORLD — nothing in it can ever trade with anything outside it — so adding
-       one is a governance act, not a convenience. The control says so before it asks for a name. */
-    + '<button data-testid="plat-pop-add" onclick="platAddPopulation()" title="'
-    + esc(tx('Add a population — a sealed set of books that can never trade with another')) + '" '
-    + 'style="font:inherit;font-size:var(--fs-1);padding:3px 9px;cursor:pointer;border:1px solid var(--line);'
-    + 'background:var(--card);color:var(--grey-2);border-radius:0 999px 999px 0;margin-inline-start:-1px">+</button>'
-    + '</span>';
 
   /**
    * ── ⭐⭐ FIVE FILTERS THAT STACK, AGREED WITH ATHI 2026-09-14 ────────────────────────────────────────────────
@@ -8903,7 +8864,6 @@ function platFirstFilterHTML(ap){
    * partition still exists, under Platform totals, where a partition belongs.
    */
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
-    + t
     + dd('pl_own', 'plat-ownership', ap.ownership,
         [['', 'All'], ['internal', 'Internal — ours'], ['external', 'External — the market']])
     + dd('pl_sup', 'plat-supplies', ap.supplies,
@@ -8932,24 +8892,98 @@ function platSetPopulation(k){ UI.platPop = String(k || ''); loadPlatform(); }
  * ⚠️ It cannot be undone from here on purpose: the code is stamped on every entity that joins the population,
  * so there is no rename and no delete. Better to say that now than to offer a tidy-up that cannot exist.
  */
-async function platAddPopulation(){
-  var label = prompt(tx('Name the population (e.g. Sandbox, Training, UAT).\n\n')
-    + tx('⚠️ Nothing in it will ever be able to trade with anything outside it, and it cannot be renamed or '
-       + 'removed afterwards.'));
-  if(!label) return;
-  var code = String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
-  if(!/^[a-z][a-z0-9_]{1,23}$/.test(code)){ toast(tx('That name cannot be turned into a code — try letters and digits.')); return; }
-  var note = prompt(tx('What is it for? One sentence — it is what the next person reads before using it.'));
-  if(!note) return;
-  try{
-    await api('platPopulationAdd', { body: { code: code, label: String(label).trim(), note: note } });
-    toast(tx('Added') + ' · ' + code);
-    UI.platPop = code;
-    renderApp();            /* the strip is built in platformScreen, so the new button needs a full paint */
-    await loadPlatform();
-  }catch(e){
-    toast(String((e && e.message) || tx('Could not add it')));
-  }
+/**
+ * ⚠️⚠️ NOT window.prompt(). Athi: *"+ icon creates a toaster in the browser, it has to be system message."*
+ *
+ * A native prompt is the browser's dialog, not the product's: it is unstyled, unthemed, cannot be translated
+ * through tx(), and on some hosts is suppressed entirely — so the button would do nothing at all and say
+ * nothing about why. promptAsk() is the one the rest of this app uses. [[feedback-adopt-dont-reinvent]]
+ *
+ * ⭐ TWO QUESTIONS, ASKED ONE AT A TIME, because the second is the one people skip. A population nobody can
+ * describe is one nobody can decide to use — and the note is what the next person reads.
+ */
+function platAddPopulation(){
+  promptAsk(tx('Add a population'), {
+    label: tx('Name it'), placeholder: tx('Sandbox, Training, UAT…'), okLabel: tx('Next'), maxlength: 24,
+    hint: '<b style="color:var(--warn-2)">' + tx('Nothing in it will ever be able to trade with anything '
+        + 'outside it.') + '</b> ' + tx('It cannot be renamed or removed afterwards, because the name is '
+        + 'stamped on every entity that joins.'),
+  }, function(label){
+    var code = String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 24);
+    if(!/^[a-z][a-z0-9_]{1,23}$/.test(code)){
+      toast(tx('That name cannot be turned into a code — try letters and digits.'), true); return;
+    }
+    promptAsk(tx('What is ') + label + tx(' for?'), {
+      label: tx('One sentence'), okLabel: tx('Add'), maxlength: 200,
+      hint: tx('It is what the next person reads before deciding to use it.'),
+    }, async function(note){
+      try{
+        await api('platPopulationAdd', { body: { code: code, label: String(label).trim(), note: note } });
+        toast(tx('Added') + ' · ' + code);
+        UI.platPop = code;
+        renderApp();                 /* the bar is built by platformScreen, so a new option needs a full paint */
+        await loadPlatform();
+      }catch(e){
+        toast(String((e && e.message) || tx('Could not add it')), true);
+      }
+    });
+  });
+}
+
+/**
+ * ── ⭐⭐ WHICH SET OF BOOKS AM I LOOKING AT? ───────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"when I click between live and test, the green marker is not switching. Possibly we have
+ * to bring a dropdown box… and the header to be prominently saying, you are using Live, Test, Sandbox A."*
+ *
+ * ⚠️ platSetPopulation repainted the ROWS and the DETAIL but not the strip the buttons live in — so the list
+ * changed underneath a marker still pointing at the world you had left. Same fault as paintPlatList drawing
+ * the old rows this morning: the renderer and the repainter naming different things. The bar has its own
+ * element now and paintPlatList refreshes it, so the control and the list cannot disagree.
+ *
+ * ⭐ AND A SEGMENTED CONTROL WAS THE WRONG SHAPE ANYWAY — it works for two and breaks for five, which is the
+ * whole point of b249. A select holds any number and is the standard control for "which one of these".
+ *
+ * ⭐⭐ THE BANNER IS THE SAFETY FEATURE. Every number on this screen — 24 customers, 42 chits, 17 MB — means
+ * something completely different depending on the population, and nothing else on the page said which. An
+ * operator reading test figures as live ones is the exact mistake this whole day was spent preventing, and it
+ * would be made silently.
+ */
+function platPopBarHTML(ap){
+  ap = ap || {};
+  var live = ap.live_population || 'real';
+  var cur  = ap.population || live;
+  var all  = ((UI.plat || {}).populations || [live, 'test']).slice();
+  all.sort(function(a, b){ return (a === live ? -1 : b === live ? 1 : (a < b ? -1 : 1)); });
+  var isLive = cur === live;
+  var nice = function(k){ return k === live ? tx('Live') : k.charAt(0).toUpperCase() + k.slice(1); };
+  var tone = isLive ? 'var(--ok)' : 'var(--warn-2)';
+  var n = (UI.plat || {}).matched;
+
+  return '<div data-testid="plat-popbar" style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;'
+    + 'border:1px solid ' + tone + ';border-inline-start-width:4px;border-radius:var(--r-md);'
+    + 'padding:7px 11px;margin-bottom:var(--sp-2);background:var(--wash)">'
+    + '<span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.05em">'
+    + esc(tx('You are looking at')) + '</span>'
+    + '<b class="mono" style="font-size:var(--fs-3);color:' + tone + '">' + esc(nice(cur)) + '</b>'
+    + (n == null ? '' : '<span style="font-size:var(--fs-1);color:var(--grey)">· ' + n + ' '
+        + esc(tx(n === 1 ? 'entity' : 'entities')) + '</span>')
+    /* ⚠️ said only when it is NOT the live books. On live it is noise; anywhere else it is the one thing
+       worth repeating. */
+    + (isLive ? '' : '<span style="font-size:var(--fs-1);color:var(--warn-2);font-weight:600">— '
+        + esc(tx('not real trade; nothing here can reach the live books')) + '</span>')
+    + '<span style="flex:1"></span>'
+    + '<select class="inp" id="pl_pop" data-testid="plat-population" onchange="platSetPopulation(this.value)" '
+    + 'style="min-width:132px;padding:4px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)">'
+    + all.map(function(k){
+        return '<option value="' + esc(k) + '"' + (k === cur ? ' selected' : '') + '>' + esc(nice(k)) + '</option>';
+      }).join('')
+    + '</select>'
+    + '<button data-testid="plat-pop-add" onclick="platAddPopulation()" title="'
+    + esc(tx('Add a population — a sealed set of books that can never trade with another')) + '" '
+    + 'style="font:inherit;font-size:var(--fs-1);padding:4px 10px;cursor:pointer;border:1px solid var(--line);'
+    + 'background:var(--card);color:var(--grey-2);border-radius:var(--r-sm)">+</button>'
+    + '</div>';
 }
 
 function platStandingFilterHTML(ap){
@@ -9236,6 +9270,10 @@ function paintPlatKeepScroll(){
   var b=document.getElementById('pl_rows'); if(!b) return;
   var st=b.scrollTop; b.innerHTML=platScopeTableHTML(); b.scrollTop=st;
   var c=document.getElementById('pl_count'); if(c) c.innerHTML=platCountHTML();
+  /* ⚠️ THE BUG ATHI FOUND: the bar is rendered by platformScreen and was never repainted, so the marker kept
+     pointing at the population you had just left. Whatever draws the list must redraw what NAMES the list. */
+  var pb=document.getElementById('pl_popbar');
+  if(pb) pb.innerHTML=platPopBarHTML((((UI.plat||{}).controls)||{}).applied||{});
 }
 
 /* ⭐ SEARCH AS YOU TYPE. It used to need Enter, with nothing on screen saying so — Athi typed a name, saw the
