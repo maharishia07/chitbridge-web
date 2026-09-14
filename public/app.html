@@ -8355,6 +8355,13 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
  * quotas count across its subtree, children inherit. So a branch is never billed; its root is.
  * ⚠️ Position is the BILLING axis, not a third visibility. See VISIBILITY-MATRIX.md §4b.
  */
+/**
+ * ⭐ WHAT THEY SELL, in words a shopkeeper uses. Athi, 2026-09-14: *"pure service is helpdesk, incident
+ * management, testlab etc, both is bike service, car service."*
+ * ⚠️ NOT the same as whether the price list is published: a garage sells BOTH and publishes NEITHER.
+ */
+var PLAT_SELLS={ goods:"sells things", service:"sells work", both:"work and parts",
+                 none:"sells nothing", unknown:"not asked" };
 var PLAT_POS={ billable:"billable tenants", root:"root · pays", branch:"branch · billed to its root",
                standalone:"standalone · pays" };
 function platformScreen(){
@@ -8403,6 +8410,7 @@ function platformScreen(){
       /* ⭐ 'every kind' first — the operator's most common question is 'show me everything', and it was the
          one thing this filter could not do. Athi found Beta Fresh and Gamma Exports in the data and could
          not reach them from the screen. */
+      +'<select '+sel+' id="pl_sup" data-testid="plat-supplies" onchange="loadPlatform()">'+opt('',tx('sells anything'),ap.supplies)+((f.supplies||[]).map(v=>opt(v,tx(PLAT_SELLS[v]||v),ap.supplies)).join(''))+'</select>'
       +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+opt('*',tx('every kind'),ap.kind)+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
       /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
          computed from the ltree, not stored, so the server names the values in controls.positions. */
@@ -8457,6 +8465,8 @@ function platRowHTML(r){
            if(!ap.vertical) out+='<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>';
            /* ⚠️ A GLYPH, NOT A FOURTH WORD. Three words per row was already the fault Athi spotted; a
               padlock costs no width and title= carries the word for anyone who needs it. */
+           if(!ap.supplies && r.supplies && r.supplies!=='unknown')
+             out+='<span title="'+tx('sells')+'" style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(tx(PLAT_SELLS[r.supplies]||r.supplies))+'</span>';
            if(r.entity_visibility==='internal') out+='<span title="'+tx('ours — cannot be found or named as a counterparty')+'" style="font-size:var(--fs-1);font-weight:600;color:var(--gold-d);background:var(--gold-soft);border-radius:999px;padding:1px 7px">'+tx('internal')+'</span>';
            if(!ap.visibility){ var V={private:['🔒','private'],network:['🔗','network to network'],public:['🌐','public']}[r.visibility]||['','']; 
              if(V[0]) out+='<span title="'+tx('catalogue')+': '+tx(V[1])+'" style="font-size:var(--fs-1);opacity:.75">'+V[0]+'</span>'; }
@@ -8529,6 +8539,7 @@ function platDetailHTML(){
         platKv(tx('Plan'),esc(r.plan||'—'))
         +platKv(tx('Catalogue seen by'),esc(r.visibility||'—'))
         +platKv(tx('Entity found by'),esc(r.entity_visibility||'—'))
+        +platKv(tx('Sells'),esc(tx(PLAT_SELLS[r.supplies]||r.supplies||'—')))
         +platKv(tx('Joined'),esc(r.joined||'—'))
         +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')))
     + platGrp(tx('Size'),
@@ -8582,6 +8593,7 @@ function platSummaryHTML(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 6px 2px">'+tx('businesses only — actors and shoppers excluded')+'</div>'
     + platGrp(tx('By vertical'), pairs(d.by_vertical))
     + platGrp(tx('By plan'), pairs(d.by_plan))
+    + platGrp(tx('What they sell'), pairs(d.by_supplies))
     + platGrp(tx('By entity visibility'), pairs(d.by_entity_visibility))
     + platGrp(tx('By catalogue visibility'), pairs(d.by_visibility))
     + platGrp(tx('Position on the network'), pairs(d.by_position))
@@ -8615,6 +8627,7 @@ async function loadPlatform(){
   if(g('pl_pos'))  q.position=g('pl_pos');
   if(g('pl_vis'))  q.visibility=g('pl_vis');
   if(g('pl_evis')) q.entity_visibility=g('pl_evis');
+  if(g('pl_sup'))  q.supplies=g('pl_sup');
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
