@@ -99,6 +99,12 @@ window.CBSCREENS = {
    "icon": "⚙️",
    "label": "Catalogue setup"
   },
+  "platform": {
+   "code": "BUS013",
+   "path": "Business › Platform",
+   "icon": "🛰️",
+   "label": "Platform"
+  },
   "customers": {
    "code": "BUS001",
    "path": "Business › Customers",
@@ -961,6 +967,17 @@ window.CBSCREENS = {
    "since": "2026-09-12",
    "reached_from": null,
    "walk": 20
+  },
+  {
+   "code": "BUS013",
+   "path": "Business › Platform",
+   "group": "Business",
+   "screen": "Platform",
+   "nav": "platform",
+   "cases": 0,
+   "since": "2026-09-14",
+   "reached_from": null,
+   "walk": 21
   },
   {
    "code": "BUS001",

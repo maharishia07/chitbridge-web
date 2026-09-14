@@ -1807,6 +1807,7 @@ const EP = {
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},
+  platMis:         {m:"GET",  p:"/api/entities/mis",                       ok:"✓"},
   custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
   custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},
   custGroupNames:  {m:"GET",  p:"/api/relationships/customers/groups",    ok:"✓"},  // the seller's NAMED groups (decision 2, 2026-09-06)
@@ -5317,6 +5318,7 @@ function _renderApp(){
       });
     }
     if(UI.nav==="customers") loadCustomers();
+    if(UI.nav==="platform") loadPlatform();
     if(UI.nav==="catalogue") loadCatalogue();
     /**
      * ⚠️ RE-RENDER ONLY ON THE FIRST ARRIVAL, AND THE REASON IS A FROZEN TAB.
@@ -8323,6 +8325,224 @@ function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp
 function custDate(x){ try{ return CBLocale.date(x); }catch(_){ return ''; } }
 function custContact(c){ var em=(c&&c.email)||''; var at=em.lastIndexOf('@'); var local=at>=0?em.slice(0,at):em; if(local.indexOf('=')>=0) return local.replace('=','@'); return local||(c&&c.display_name)||''; }
 function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive:'var(--warn-2)'}[s]||'var(--grey-2)', bg={new:'var(--blue-tint)',regular:'var(--ok-tint)',inactive:'var(--warn-tint)'}[s]||'var(--card)'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
+
+/**
+ * ── ⭐⭐ THE PLATFORM REPORT — WHO IS ON THIS RAIL, AND IN WHAT STATE ─────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"how do i see it as a MIS?"* · *"entity type, vertical and possible information"* ·
+ * *"the layout has to be same but presentation and the color combination and the style… give some visual
+ * effect."*
+ *
+ * ── ⭐⭐⭐ COLOUR CARRIES MEANING HERE, IT IS NOT DECORATION ──────────────────────────────────────────────────
+ *
+ * Two scales, and they answer two different questions, so they never share a hue:
+ *
+ *   WHAT IS IT   entity kind → a tinted pill.  customer=blue · network=purple · internal=gold ·
+ *                test/shopper/actor=grey · supplier=ok. A glance down the column sorts the list without reading.
+ *   HOW ALIVE    days since last seen → ok / warn / danger / grey. The ONLY place those three appear, so a
+ *                warm colour on this screen always means the same thing.
+ *
+ * ⚠️ EVERY VALUE IS AN EXISTING TOKEN. THEME_BASE captures the union of every key any theme declares, so a new
+ * token would break all fifteen theme previews at once. Nothing below invents one. [[project-accessibility-themes]]
+ *
+ * ⚠️ AND THE LAYOUT IS THE HOUSE LAYOUT, deliberately — panel · list · divider · detail, the same as Customers
+ * and Suppliers. Athi asked for presentation, not a new shape; a screen that arranges itself differently is a
+ * screen people have to learn twice.
+ */
+function platformScreen(){
+  const d=UI.plat||{}, c=d.controls||{}, f=c.filters||{}, ap=c.applied||{};
+  const h=d.headline||{};
+  const opt=(v,l,cur)=>'<option value="'+esc(v)+'"'+(String(cur)===String(v)?' selected':'')+'>'+esc(l)+'</option>';
+
+  /* ⭐ the numbers are the hero: big figure, small quiet label under it — read at a glance, not parsed */
+  const stat=(v,l,tone)=>'<div style="flex:1;min-width:78px;background:var(--wash);border:1px solid var(--line-soft);'
+    +'border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3)">'
+    +'<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-5);line-height:1.1;color:'+(tone||'var(--ink)')+'">'+(v==null?'—':v)+'</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em;margin-top:2px">'+tx(l)+'</div></div>';
+
+  const presets=(c.presets||[]).map(p=>'<option value="'+esc(p.key)+'"'
+    +((ap.sort===p.sort&&ap.dir===p.dir)?' selected':'')+'>'+esc(tx(p.label))+'</option>').join('');
+  const sel='class="inp" style="flex:1;min-width:92px;padding:5px 7px;font-size:var(--fs-1);border-radius:var(--r-sm)"';
+
+  const list='<div class="list"><div class="lh">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--sp-2)">'
+      +'<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🛰️ '+tx('Platform')+'</span>'
+      +'<span style="font-size:var(--fs-1);color:var(--grey);border:1px solid var(--line);border-radius:999px;padding:1px 8px">'+tx('operator')+'</span>'
+    +'</div>'
+    +'<div style="display:flex;gap:var(--sp-2);margin-bottom:var(--sp-3)">'
+      +stat(h.identities,'on the rail')+stat(h.customers,'customers','var(--blue)')+stat(h.active_30d,'active 30d','var(--ok)')
+    +'</div>'
+    +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" onkeydown="if(event.key===\'Enter\')loadPlatform()" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<select '+sel+' id="pl_kind" data-testid="plat-kind" onchange="loadPlatform()">'+(f.kind||['customer']).map(k=>opt(k,tx(k),ap.kind)).join('')+'</select>'
+      +'<select '+sel+' id="pl_vert" data-testid="plat-vertical" onchange="loadPlatform()">'+opt('',tx('any vertical'),ap.vertical)+(f.vertical||[]).map(v=>opt(v,v,ap.vertical)).join('')+'</select>'
+      +'<select '+sel+' id="pl_plan" data-testid="plat-plan" onchange="loadPlatform()">'+opt('',tx('any plan'),ap.plan)+(f.plan||[]).map(p=>opt(p,p,ap.plan)).join('')+'</select>'
+      +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'+presets+'</select>'
+    +'</div>'
+    +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+((d.rows||[]).length)+' '+tx('shown')+'</div></div>'
+    +'<div class="rows" id="pl_rows">'+(UI._platLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':platRowsHTML())+'</div></div>';
+
+  const detail='<div class="detail" id="detailpane">'+platDetailHTML()+'</div>';
+  const divider='<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  return '<div class="panel '+(((UI.vp==='mob')&&UI.mdetail)?'showdetail':'')+'" id="panel" style="--lw:'+UI.lw+'px;--lh:'+UI.lh+'px">'+list+divider+detail+'</div>';
+}
+
+/** ⭐ one hue per KIND, so the column reads without being read. Grey is the honest default for anything that
+ *  is not a business — test, shopper, actor. */
+function platKindTone(k){
+  return ({customer:['var(--blue)','var(--blue-tint)'], network:['var(--purple)','var(--purple-tint)'],
+           internal:['var(--gold-d)','var(--gold-soft)'], supplier:['var(--ok)','var(--ok-tint)']})[k]
+      || ['var(--grey-2)','var(--soft)'];
+}
+/** ⭐ and one scale for LIFE — the only place ok/warn/danger appear on this screen, so warm always means stale */
+function platLifeTone(q){
+  if(q==null) return ['var(--grey-4)', tx('never seen')];
+  if(q<=7)    return ['var(--ok)',     q===0?tx('today'):(q+'d')];
+  if(q<=30)   return ['var(--warn)',   q+'d'];
+  return            ['var(--danger)',  q+'d'];
+}
+function platPill(txt,k){ var t=platKindTone(k);
+  return '<span style="font-size:var(--fs-1);font-weight:600;color:'+t[0]+';background:'+t[1]+';border-radius:999px;padding:1px 8px;white-space:nowrap">'+esc(txt)+'</span>'; }
+
+function platRowHTML(r){
+  var sel=r.identity_id===UI.platSel, life=platLifeTone(r.quiet_days);
+  return '<div class="row '+(sel?'sel':'')+'" data-testid="plat-row-'+esc(r.user_id||r.identity_id)+'" onclick="selectPlat(\''+esc(r.identity_id)+'\')">'
+    +'<div class="main2">'
+      /* line 1 · WHO, and how alive — the dot gets a soft ring so it reads as a state, not a bullet */
+      +'<div class="l1">'
+        +'<span title="'+tx('last seen')+' '+esc(life[1])+'" style="flex:none;width:9px;height:9px;border-radius:50%;background:'+life[0]+';box-shadow:0 0 0 3px color-mix(in srgb,'+life[0]+' 18%,transparent);display:inline-block;margin-inline-end:9px"></span>'
+        +'<span class="code" style="font-weight:650">'+esc(r.display_name||r.user_id||'—')+'</span>'
+        +'<span style="margin-inline-start:auto;display:flex;gap:4px;align-items:center">'
+          +platPill(r.entity_kind||'?',r.entity_kind)
+          +'<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>'
+        +'</span>'
+      +'</div>'
+      /* line 2 · the identifiers, monospaced and quiet, plus the size of the operation */
+      +'<div class="l2" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+        +'<span class="mono">'+esc(r.user_id||'—')+'</span>'
+        +'<span style="color:var(--line-strong)">|</span><span class="mono" style="color:var(--grey-2)">'+esc(r.bridge_id||'—')+'</span>'
+        +'<span style="margin-inline-start:auto;color:var(--grey);font-size:var(--fs-1)">'
+          +(r.seats||0)+' '+tx('people')+(r.branches?(' · '+r.branches+' '+tx('br')):'')+' · '+esc(r.plan||'')+'</span>'
+      +'</div>'
+    +'</div><div class="rowgo" aria-hidden="true">›</div></div>';
+}
+function platRowsHTML(){
+  var d=UI.plat||{};
+  if(d.denied) return emptyState('🔒',tx('Operator only'),tx('The platform report is available to the operator entity only.'));
+  var r=d.rows||[];
+  if(!r.length) return emptyState('🛰️',tx('Nothing matches'),tx('No entity matches this search and these filters.'));
+  return r.map(platRowHTML).join('');
+}
+function paintPlatList(){ var b=document.getElementById('pl_rows'); if(b)b.innerHTML=platRowsHTML();
+  var c=document.getElementById('pl_count'); if(c)c.textContent=(((UI.plat||{}).rows)||[]).length+' '+tx('shown'); }
+function selectPlat(id){ UI.platSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintPlatList(); paintPlatDetail(); }
+function paintPlatDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=platDetailHTML(); } }
+
+function platGrp(t,inner){ return '<div class="sec">'+t+'</div>'
+  +'<div class="itab" style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--sp-3);background:var(--card);box-shadow:var(--shadow)">'+inner+'</div>'; }
+function platKv(l,v){ return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line-soft);font-size:var(--fs-2)">'
+  +'<b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'+l+'</b>'
+  +'<span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>'; }
+
+function platDetailHTML(){
+  var d=UI.plat||{}, r=(d.rows||[]).find(function(x){return x.identity_id===UI.platSel;});
+  if(!r) return platSummaryHTML();
+  var mono=function(v){return '<span class="mono" style="font-size:var(--fs-1)">'+esc(v||'')+'</span>';};
+  var life=platLifeTone(r.quiet_days);
+  return '<div class="dh"><button class="dback" onclick="backToList()">‹ '+tx('Platform')+'</button>'
+    +'<div class="dt">'+esc(r.display_name||r.user_id||'—')+'</div>'
+    +'<div class="ds" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">'
+      +platPill(r.entity_kind||'?',r.entity_kind)
+      +'<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>'
+      +'<span style="font-size:var(--fs-1);color:'+life[0]+';font-weight:600">● '+esc(life[1])+'</span>'
+    +'</div></div>'
+    +'<div class="db">'
+    /* ⭐ all four identifiers together. There is no separate "username" — user_id IS it, and cb_entity's
+       username column is null for every one of its 340 rows, so showing it would add a permanent blank. */
+    + platGrp(tx('Identifiers'),
+        platKv(tx('Name'),esc(r.display_name||'—'))
+        +platKv('User ID',mono(r.user_id))
+        +platKv('Bridge id',mono(r.bridge_id))
+        +platKv('UUID',mono(r.identity_id))
+        +platKv(tx('Email'),mono(r.email)))
+    + platGrp(tx('Standing'),
+        platKv(tx('Plan'),esc(r.plan||'—'))
+        +platKv(tx('Joined'),esc(r.joined||'—'))
+        +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')))
+    + platGrp(tx('Size'),
+        platKv(tx('People'),(r.seats||0)+'')
+        +platKv(tx('Suppliers'),(r.suppliers||0)+'')
+        +platKv(tx('Branches'),(r.branches||0)+(r.depth?(' · '+tx('depth')+' '+r.depth):''))
+        +platKv(tx('Network path'),r.path?mono(r.path):'—'))
+    +'</div>';
+}
+
+/** the report itself — shown whenever no row is selected, so the screen is never blank */
+function platSummaryHTML(){
+  var d=UI.plat||{};
+  if(d.denied) return emptyState('🔒',tx('Operator only'),tx('Sign in as the platform root to see the report.'));
+  if(!d.by_kind) return emptyState('🛰️',tx('Platform report'),tx('Loading…'));
+  var total=(d.by_kind||[]).reduce(function(a,x){return a+x.n;},0);
+  /* ⭐ a bar per kind, in that kind's own hue — the same colour it wears in the list, so the report and the
+     rows teach each other. Rounded track, 6px, no gridlines: the number is beside it, the bar is for shape. */
+  var bars=(d.by_kind||[]).map(function(x){ var t=platKindTone(x.k), pct=total?Math.max(2,Math.round(100*x.n/total)):0;
+    return '<div style="display:flex;align-items:center;gap:9px;padding:6px 13px;font-size:var(--fs-2)">'
+      +'<span style="min-width:88px;color:var(--grey-2);font-size:var(--fs-1);font-weight:600">'+esc(x.k)+'</span>'
+      +'<span style="flex:1;height:6px;border-radius:999px;background:var(--soft);overflow:hidden"><span style="display:block;height:100%;width:'+pct+'%;background:'+t[0]+';border-radius:999px"></span></span>'
+      +'<b style="min-width:46px;text-align:right;font-variant-numeric:tabular-nums">'+x.n+'</b></div>'; }).join('');
+  var pairs=function(obj){ var k=Object.keys(obj||{}); if(!k.length) return '<div style="padding:9px 13px;color:var(--grey);font-size:var(--fs-1)">—</div>';
+    return k.map(function(x){ return '<div style="display:flex;gap:8px;padding:8px 13px;border-bottom:1px dashed var(--line-soft);font-size:var(--fs-2)">'
+      +'<b style="min-width:120px;color:var(--grey);font-weight:600;font-size:var(--fs-1)">'+esc(x)+'</b>'
+      +'<span style="font-weight:700;font-variant-numeric:tabular-nums">'+obj[x]+'</span></div>'; }).join(''); };
+  return '<div class="dh"><div class="dt">'+tx('Platform report')+'</div>'
+    +'<div class="ds">'+esc((d.at||'').slice(0,16).replace('T',' '))+' · '+tx('select a row for one entity')+'</div></div>'
+    +'<div class="db">'
+    + platGrp(tx('By type'), bars)
+    + platGrp(tx('By vertical'), pairs(d.by_vertical))
+    + platGrp(tx('By plan'), pairs(d.by_plan))
+    + platGrp(tx('Position on the network'), pairs(d.by_position))
+    /**
+     * ⚠️⚠️ WHAT THE REPORT CANNOT SEE, ON THE SCREEN AND NOT IN A COMMENT. Catalogue size, chit volume and
+     * governance stamps live in RLS-forced tables that read as ZERO ROWS from the API's connection — not as an
+     * error. Omitting them silently would make this report quietly wrong in exactly the way three of my own
+     * findings were wrong on the day it was written. It says so where the numbers are read.
+     */
+    + (d.blind ? '<div class="sec">'+tx('Not in this report')+'</div>'
+        +'<div style="border:1px solid var(--warn-tint);background:var(--warn-tint);border-radius:var(--r-lg);padding:11px 13px;font-size:var(--fs-1);line-height:1.55">'
+        +'<b style="color:var(--warn-2)">'+tx('Catalogue size, chit volume and governance stamps are absent, not nil.')+'</b>'
+        +'<div style="color:var(--grey-2);margin-top:3px">'+esc(d.blind.why||'')+'</div></div>' : '')
+    +'</div>';
+}
+
+async function loadPlatform(){
+  UI._platLoading=true;
+  var rb=document.getElementById('pl_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  /* the dropdown carries a PRESET key; the preset carries the field and direction the server understands */
+  var pk=g('pl_sort'), pr=(((UI.plat||{}).controls||{}).presets||[]).find(function(p){return p.key===pk;})||{};
+  /* ⚠️ api(key, opts) — the query is an OBJECT on opts, not a third argument. My first version passed a
+     hand-built query string as arg 3, which api() ignores in silence: every filter and sort would have been
+     dropped and the list would have looked like it was working. Caught by reading the signature. */
+  var q={};
+  if(g('pl_q'))    q.q=g('pl_q');
+  if(g('pl_kind')) q.kind=g('pl_kind');
+  if(g('pl_vert')) q.vertical=g('pl_vert');
+  if(g('pl_plan')) q.plan=g('pl_plan');
+  if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
+  try{
+    var r=await api('platMis', { query: q });
+    UI.plat=r||{}; UI._platLoading=false; paintPlatList(); paintPlatDetail();
+  }catch(e){
+    UI._platLoading=false;
+    /* ⚠️ a 403 is an ANSWER, not an error. Anyone who is not the operator gets a plain statement — never an
+       empty list, which reads as "there is nothing on this platform". */
+    if(/403|not the platform root/i.test(String((e&&e.message)||''))){
+      UI.plat={denied:true}; paintPlatList(); paintPlatDetail(); return;
+    }
+    var rb2=document.getElementById('pl_rows'); if(rb2)rb2.innerHTML=scrErr(e,'platform','loadPlatform()');
+  }
+}
+
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
@@ -12925,6 +13145,7 @@ function mainBody(){
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="supplies") return capScreen("suppliesScreen");
   if(UI.nav==="customers") return customersScreen();
+  if(UI.nav==="platform") return platformScreen();
   /**
    * ⚠️⚠️ NOT AN ENTRY POINT — A DETAIL SCREEN. Athi, 2026-09-02: *"we have catalogue setup and set up your
    * catalogue, we tried different options, but need to fix one flow… the current catalogue setup panel is good."*
