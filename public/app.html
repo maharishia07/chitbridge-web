@@ -8388,6 +8388,9 @@ function platformScreen(){
       /* ⭐ root · branch · standalone — Athi: 'filter on root node, segregate from network nodes'. It is
          computed from the ltree, not stored, so the server names the values in controls.positions. */
       +'<select '+sel+' id="pl_pos" data-testid="plat-position" onchange="loadPlatform()">'+opt('',tx('anywhere'),ap.position)+((c.positions||[]).map(p=>opt(p,tx(p),ap.position)).join(''))+'</select>'
+      /* ⭐ the SECOND classification — private · network · public. Orthogonal to kind, so it is its own
+         control rather than more values in the kind list. */
+      +'<select '+sel+' id="pl_vis" data-testid="plat-visibility" onchange="loadPlatform()">'+opt('',tx('any visibility'),ap.visibility)+((f.visibility||[]).map(v=>opt(v,tx(v),ap.visibility)).join(''))+'</select>'
       +'<select '+sel+' id="pl_sort" data-testid="plat-sort" onchange="loadPlatform()">'+presets+'</select>'
     +'</div>'
     +'<div style="margin-top:var(--sp-2);font-size:var(--fs-1);color:var(--grey)" id="pl_count">'+platCountHTML()+'</div></div>'
@@ -8432,6 +8435,10 @@ function platRowHTML(r){
         +(function(){ var ap=(((UI.plat||{}).controls||{}).applied)||{}, out='';
            if(!ap.kind || String(ap.kind).indexOf(',')>=0) out+=platPill(r.entity_kind||'?',r.entity_kind);
            if(!ap.vertical) out+='<span style="font-size:var(--fs-1);color:var(--grey-2);background:var(--soft);border-radius:999px;padding:1px 8px">'+esc(r.vertical||'—')+'</span>';
+           /* ⚠️ A GLYPH, NOT A FOURTH WORD. Three words per row was already the fault Athi spotted; a
+              padlock costs no width and title= carries the word for anyone who needs it. */
+           if(!ap.visibility){ var V={private:['🔒','private'],network:['🔗','network to network'],public:['🌐','public']}[r.visibility]||['','']; 
+             if(V[0]) out+='<span title="'+tx('catalogue')+': '+tx(V[1])+'" style="font-size:var(--fs-1);opacity:.75">'+V[0]+'</span>'; }
            return out?('<span style="margin-inline-start:auto;display:flex;gap:4px;align-items:center">'+out+'</span>'):''; })()
       +'</div>'
       /* line 2 · the identifiers, monospaced and quiet, plus the size of the operation */
@@ -8499,6 +8506,7 @@ function platDetailHTML(){
         +platKv(tx('Email'),mono(r.email)))
     + platGrp(tx('Standing'),
         platKv(tx('Plan'),esc(r.plan||'—'))
+        +platKv(tx('Catalogue'),esc(r.visibility||'—'))
         +platKv(tx('Joined'),esc(r.joined||'—'))
         +platKv(tx('Last seen'),r.last_seen?esc(r.last_seen):tx('never')))
     + platGrp(tx('Size'),
@@ -8552,6 +8560,7 @@ function platSummaryHTML(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:-4px 0 6px 2px">'+tx('businesses only — actors and shoppers excluded')+'</div>'
     + platGrp(tx('By vertical'), pairs(d.by_vertical))
     + platGrp(tx('By plan'), pairs(d.by_plan))
+    + platGrp(tx('By catalogue visibility'), pairs(d.by_visibility))
     + platGrp(tx('Position on the network'), pairs(d.by_position))
     /**
      * ⚠️⚠️ WHAT THE REPORT CANNOT SEE, ON THE SCREEN AND NOT IN A COMMENT. Catalogue size, chit volume and
@@ -8581,6 +8590,7 @@ async function loadPlatform(){
   if(g('pl_vert')) q.vertical=g('pl_vert');
   if(g('pl_plan')) q.plan=g('pl_plan');
   if(g('pl_pos'))  q.position=g('pl_pos');
+  if(g('pl_vis'))  q.visibility=g('pl_vis');
   if(pr.sort){ q.sort=pr.sort; q.dir=pr.dir; }
   try{
     var r=await api('platMis', { query: q });
