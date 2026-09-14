@@ -7791,7 +7791,13 @@ function supportNoteHTML(r){
   return box('var(--ok-tint)', 'var(--ok-2)',
     '<b>' + esc(tx('This goes to') + ' ' + who) + '</b>'
     + '<div>' + esc(where) + (r.assignee ? ' · ' + esc(tx('for') + ' ' + r.assignee) : '') + '</div>'
-    + (r.why ? '<div style="color:var(--grey)">' + esc(r.why) + '</div>' : ''));
+    /* ⭐ WHICH DESK, and on whose authority — "routed by kind" alone cannot tell a test run from a live one,
+       and telling them apart is the entire point of the populations (b252). ⚠️ When no desk is named for this
+       population the server says so in these words, and that sentence is the only warning anybody gets that
+       findings are landing in somebody else's queue. [[feedback-silence-is-the-bug]] */
+    + ([r.desk_why, r.why].filter(Boolean).length
+        ? '<div style="color:var(--grey)">' + esc([r.desk_why, r.why].filter(Boolean).join(' · ')) + '</div>'
+        : ''));
 }
 
 async function supportSend(){
