@@ -8519,9 +8519,18 @@ function platRowsHTML(){
  */
 function platCountHTML(){
   var d=UI.plat||{}, n=(d.rows||[]).length, m=d.matched;
-  if(m==null||m<=n) return n+' '+tx('shown');
-  return '<b style="color:var(--warn-2)">'+n+' '+tx('of')+' '+m+'</b> — '
-    +tx('narrow the filters or search to see the rest');
+  if(m==null||m<=n) return n+' '+tx(n===1?'entity':'entities');
+  /**
+   * ⚠️⚠️ THIS LINE WAS TELLING HIM SOMETHING FALSE. It read *"100 of 2509 — narrow the filters or search to
+   * see the rest"*, which was true and useful while the list stopped dead at 100. The moment page numbers
+   * landed underneath it, the rest WAS reachable and the warning was advice to do something unnecessary —
+   * in amber, which reads as a problem.
+   *
+   * ⭐ And the pager already says "showing 101–200 of 2509". So this states the size of the answer and stops;
+   * saying the same thing twice, once wrongly, is worse than saying it once. [[feedback-text-budget]]
+   */
+  return m+' '+tx(m===1?'entity':'entities')
+    +' <span style="color:var(--grey-4)">· '+tx('page')+' '+(UI.platPage||1)+' '+tx('of')+' '+platPages()+'</span>';
 }
 /* ⭐ ONE REPAINTER. paintPlatKeepScroll() below is the whole of it; this name stays because twenty call
    sites use it and a rename would be churn with no reader. */
