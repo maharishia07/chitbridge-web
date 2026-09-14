@@ -8388,7 +8388,17 @@ function platformScreen(){
          grey, so nobody has to wonder where the other 2,779 went. */
       +stat(h.customers,'customers','var(--blue)')
       +stat(h.active_30d,'active 30d','var(--ok)')
-      +stat(((d.by_kind||[]).find(function(x){return x.k==='test';})||{}).n,'test fixtures','var(--grey-2)')
+      /**
+       * ⚠️⚠️ THIS TILE WENT TO ZERO THE MOMENT b246 RAN, and said nothing about it. It counted
+       * `by_kind` where k==='test' — and b246 emptied that kind, moving 2,243 fixtures to `customer` + is_test.
+       * A tile whose number quietly becomes 0 because the thing it counts stopped existing is worse than one
+       * that errors: it reads as an answer.
+       * ⭐ It now names the population you are NOT looking at, which is the honest thing for it to say and the
+       * number you actually want beside "how many real shops are there".
+       */
+      +stat(d.other_population,
+            (((d.controls||{}).applied||{}).population==='test') ? 'real entities' : 'test entities',
+            'var(--grey-2)')
     +'</div>'
     +'<input class="inp" id="pl_q" data-testid="plat-search" placeholder="'+tx('Search name, handle or bridge id')+'" value="'+esc(ap.q||'')+'" autocomplete="off" oninput="platSearchSoon()" onkeydown="if(event.key===\'Enter\'){platSearchNow()}" style="width:100%;margin-bottom:var(--sp-2);border-radius:var(--r-sm)">'
     +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
