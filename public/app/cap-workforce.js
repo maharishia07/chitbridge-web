@@ -168,7 +168,7 @@ function coassistsScreen(){
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'var(--card)'};color:${acFlt()===f?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'var(--card)'};color:${on?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
-        <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span></div>
+        <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span>${acSortSelect()}</div>
     </div>
     <div class="rows" id="ac_rows">${(UI._acLoading&&(UI.acTypeF||'all')!=='ai')?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
   </div>`;
@@ -394,9 +394,36 @@ function awRender(){
 function acRefilter(){ UI.acSel=null; UI.acDet=null; UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; var mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); if(UI.vp!=='mob'){ var f=(typeof acVisible==='function'?acVisible()[0]:null); if(f) selectActor(f.id, true); } }   // UNIFORM: any filter change resets the detail + lands on the first record header (desktop)
 function setAcTypeF(t){ UI.acTypeF=t; acRefilter(); }   // filter by actor TYPE
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
+/**
+ * ── ⭐⭐ THE ORDER OF THE CO-ASSISTS ────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ ON SHIFT FIRST IS THE DEFAULT, not A–Z, and that is the one decision on this screen. The question a
+ * shopkeeper opens this list with is 'who can take this now' — an alphabetical list answers a question nobody
+ * asked and buries the answer to the one they did. Busiest first is the same question from the other end: who
+ * to stop giving work to.
+ */
+var AC_SORTS = {
+  shift: { label: 'On shift first', cmp: function(a,b){ return _acShiftRank(a)-_acShiftRank(b) || String(acLbl(a)).localeCompare(String(acLbl(b))); } },
+  az:    { label: 'Name A–Z',      cmp: function(a,b){ return String(acLbl(a)).localeCompare(String(acLbl(b))); } },
+  za:    { label: 'Name Z–A',      cmp: function(a,b){ return String(acLbl(b)).localeCompare(String(acLbl(a))); } },
+  load:  { label: 'Busiest first', cmp: function(a,b){ return (Number(b.load)||0)-(Number(a.load)||0); } },
+};
+function _acShiftRank(x){ return x.shift==='on_shift' ? 0 : x.shift==='on_break' ? 1 : 2; }
+function acSortKey(){ return AC_SORTS[UI.acSort] ? UI.acSort : 'shift'; }
+function acSortSelect(){
+  return '<select class="inp" data-testid="coassist-sort" title="' + esc(tx('Sort order')) + '" style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="setAcSort(this.value)">'
+    + Object.keys(AC_SORTS).map(function(k){ return '<option value="'+k+'"'+(acSortKey()===k?' selected':'')+'>'+esc(tx(AC_SORTS[k].label))+'</option>'; }).join('')
+    + '</select>';
+}
+function setAcSort(v){ UI.acSort=v; try{ if(LAZY) delete LAZY['ac']; }catch(_){} paintAcList(); }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
-  const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
+  const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q));
+  /* ⚠️ a COPY. The filters above already return a new array, so today this slice changes nothing — it is here
+     for the day somebody adds an "all" fast path that hands back UI.acts itself, at which point sorting in
+     place would reorder the screen's own array under everything else reading it. e2e/list-order carries that
+     as a LATENT guard and says so, rather than counting it as proven. [[feedback-repaint-locally]] */
+  var _s=AC_SORTS[acSortKey()]; return _s ? a.slice().sort(_s.cmp) : a; }
 function _ago(ts){ return timeAgo(ts); }   // shared: helpers.js timeAgo
 // IoT/ERP list row — health + last-active + device count (NOT the human hat/shift/invite/tasks row)
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
@@ -431,7 +458,8 @@ function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const
       tx('A Pi on the rail in one drop.') + ' <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">' + tx('see how it works') + ' <span class=arw>→</span></a>',
       { label: tx('+ New co-assist'), onclick: 'openActorWiz()' }); return emptyState('🧑‍🤝‍🧑','No co-assists','People, devices and AI that work alongside you.',{label:'+ New co-assist',onclick:'openActorWiz()'}); }
   const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
-  return r.map(acRowHTML).join(''); }
+  /* ⭐ lazyWrap draws 50 and reveals the rest — a shop with a fleet of sensors has hundreds of these. */
+  return lazyWrap('ac', r, acRowHTML); }
 function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acCount(); }
 function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
 function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;

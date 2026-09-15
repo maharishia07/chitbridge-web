@@ -87,6 +87,47 @@ async function cbcatCounts(){
  * renders as two roots rather than looping forever. Cycles should be impossible (see cbcatWouldCycle) — this is
  * the belt to that braces, because a UI that freezes teaches nothing about the data that froze it.
  */
+/**
+ * ── ⭐⭐ SORTING A TREE MEANS SORTING SIBLINGS, NEVER THE LIST ───────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"we need to have a sort mechanism based on field like we have it in the task."*
+ *
+ * ⚠️⚠️ AND ON THIS SCREEN THE OBVIOUS IMPLEMENTATION IS A BUG. `CBCAT_UI.list` is FLAT with a `depth` for
+ * indenting, so `list.sort(byName)` compiles, runs, and silently detaches every child from its parent —
+ * "Spices" indented under whatever happened to land above it. The order is a rendering of the hierarchy, not
+ * an arrangement of rows.
+ *
+ * ⭐ So a sort changes the comparator the WALK uses on each set of siblings, and the walk still emits parent
+ * before child. Every option below therefore keeps the tree; what changes is the order within one shelf.
+ *
+ * ⚠️ RETIRED IS ALWAYS LAST, in every order. It is not a tie-break, it is a fact about the shelf: a retired
+ * category still classifies products and must stay reachable, but it is never what somebody is looking for.
+ */
+var CBCAT_SORTS = {
+  az:   { label: 'Name A–Z',      cmp: function(a,b){ return a.name.localeCompare(b.name); } },
+  za:   { label: 'Name Z–A',      cmp: function(a,b){ return b.name.localeCompare(a.name); } },
+  most: { label: 'Most products', cmp: function(a,b){ return cbcatCount(b.id) - cbcatCount(a.id); } },
+};
+function cbcatCount(id){ return (CBCAT_UI.counts && CBCAT_UI.counts.by[id]) || 0; }
+function cbcatSortKey(){ return CBCAT_SORTS[CBCAT_UI.sort] ? CBCAT_UI.sort : 'az'; }
+function cbcatCmp(){
+  var inner = CBCAT_SORTS[cbcatSortKey()].cmp;
+  return function(a,b){
+    if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
+    return inner(a,b);
+  };
+}
+function cbcatSortSelect(){
+  return '<select class="inp" data-testid="catg-sort" title="' + esc(tx('Sort order — always within each parent, so the tree survives')) + '"'
+    + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="cbcatSetSort(this.value)">'
+    + Object.keys(CBCAT_SORTS).map(function(k){
+        return '<option value="' + k + '"' + (cbcatSortKey() === k ? ' selected' : '') + '>' + esc(tx(CBCAT_SORTS[k].label)) + '</option>'; }).join('')
+    + '</select>';
+}
+/* ⚠️ cbcatOrder REWRITES CBCAT_UI.list and every row's depth, so the reveal count must go back to the top —
+   50 rows of a newly ordered tree are 50 different rows. */
+function cbcatSetSort(v){ CBCAT_UI.sort = v; cbcatOrder(); try{ if(LAZY) delete LAZY['cbcat']; }catch(_){} cbcatPaintList(); }
+
 function cbcatOrder(){
   var all = CBCAT_UI.list || [];
   var byParent = {}, seen = {};
@@ -94,10 +135,7 @@ function cbcatOrder(){
   var ids = {}; all.forEach(function(c){ ids[c.id] = 1; });
   /* A parent that no longer exists is a root, so its children stay reachable. */
   all.forEach(function(c){ if (c.parent && !ids[c.parent]) { (byParent._root = byParent._root || []).push(c); } });
-  var cmp = function(a,b){
-    if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
-    return a.name.localeCompare(b.name);
-  };
+  var cmp = cbcatCmp();
   var out = [];
   (function walk(key, depth){
     (byParent[key] || []).sort(cmp).forEach(function(c){
@@ -525,7 +563,8 @@ function cbcatRowsHTML(){
           tx('A category is how a shelf gets sorted. Attach products to it from the Catalogue.'),
           { label: tx('+ New category'), onclick: 'cbcatNew()' });
   }
-  return rows.map(function(c){
+  /* ⭐ lazyWrap draws 50 and reveals the rest — a shop with a deep scheme can carry hundreds of shelves. */
+  return lazyWrap('cbcat', rows, function(c){
     var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
     var ret = c.status === 'retired';
     return '<div class="row' + (c.id === CBCAT_UI.sel ? ' sel' : '') + '" data-testid="catg-row-' + esc(c.id) + '"'
@@ -542,7 +581,7 @@ function cbcatRowsHTML(){
       + cbcatTaxChipHTML(c.id)
       + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
       + '</div>';
-  }).join('');
+  });
 }
 function cbcatDetailHTML(){
   if (CBCAT_UI.mode === 'edit') {
@@ -808,9 +847,18 @@ function cbcatOffersHereHTML(cid){
   return '<div class="cbcat-stat" data-testid="catg-offers-here"><span class="v">' + here.length + '</span><span class="k">offer' + (here.length === 1 ? '' : 's')
     + ' appl' + (here.length === 1 ? 'ies' : 'y') + ' here — ' + here.map(function(o){ var cs = cbcatOfferCats(o.rules); var viaId = cs.indexOf(String(cid)) >= 0 ? null : cs.filter(function (c) { return anc.indexOf(c) >= 0; })[0]; var viaP = viaId ? (cbcatById(viaId) || {}).name : null; var sc = (reach.filter(function (y) { return y.id === o.id; })[0] || {}); return esc(o.name) + (sc.terms ? ' <b>' + esc(sc.terms) + '</b> <span style="color:var(--grey)">' + esc(tx(sc.scope || '')) + '</span>' : '') + timeWord(o) + (viaP ? ' <span style="color:var(--grey)">(' + esc(tx('via') + ' ' + viaP) + ')</span>' : ''); }).join(' · ') + '</span></div>';
 }
+/**
+ * ⭐ HOW MANY SHELVES THERE ARE — its own function, because it is its own fact.
+ * ⚠️ When a search has narrowed the list, say what it narrowed FROM. "4 categories" with 40 on the shelf reads
+ * as a shop that has lost 36 of them. [[feedback-silence-is-the-bug]]
+ */
+function cbcatCountHTML(){
+  var n = cbcatVisible().length, all = (CBCAT_UI.list || []).length;
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies')
+    + (n !== all ? ' <span style="color:var(--grey-4)">' + tx('of') + ' ' + all + '</span>' : '') + '</span>';
+}
 function cbcatStatsHTML(){
-  var n = cbcatVisible().length;
-  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies') + '</span>'
+  return cbcatCountHTML()
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
@@ -921,6 +969,7 @@ function categoriesScreen(){
        rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.
        The uncategorised button was invisible on the first look for exactly that reason. */
     + '<div id="cbcat_stats" style="margin-top:8px;display:flex;align-items:center;gap:8px">' + cbcatStatsHTML() + '</div>'
+    + '<div style="margin-top:8px">' + cbcatSortSelect() + '</div>'
     + '</div><div class="rows" id="cbcat_rows">' + cbcatRowsHTML() + '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + cbcatDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
