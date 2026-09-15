@@ -87,22 +87,30 @@ const BASELINE = {
      *"almost every panel is missing this information"*, and it is not a licence: every line here is a panel he
      will eventually have to ask about. Shrink them. `settingsScreen` and `catalogueSetupHubScreen` are the two
      most likely to be legitimate exemptions (a settings page is a form, not a list) — check before fixing. */
+  /* ⭐ TIGHTENED 2026-09-15. Five screens had quietly EARNED a control and the baseline still forgave it — so
+     each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
+     prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
   capScreen:               ['search', 'filters', 'sort', 'paging', 'count'],
   catalogueScreen:         ['filters', 'sort', 'paging', 'count'],
-  catalogueSetupHubScreen: ['search', 'filters', 'sort', 'paging', 'count'],
-  categoriesScreen:        ['filters', 'sort', 'paging', 'count'],
-  coassistsScreen:         ['sort', 'paging', 'count'],
+  catalogueSetupHubScreen: ['search', 'filters', 'sort', 'paging'],
+  categoriesScreen:        ['sort', 'paging', 'count'],
+  coassistsScreen:         ['sort', 'paging'],
   customersScreen:         ['search', 'sort', 'paging', 'count'],
   disputesScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
-  intakeScreen:            ['search', 'filters', 'sort', 'paging', 'count'],
-  /* ⚠️ NEWLY VISIBLE, not newly broken: these two render a <table> and the guard could not see inside a
-     helper until 2026-09-14. The four table habits were always missing. */
-  misScreen:               ['search', 'filters', 'sort', 'paging',
-                            'sort by heading', 'column chooser', 'resizable', 'reset to default'],
-  networkScreen:           ['search', 'filters', 'sort', 'paging', 'count'],
+  intakeScreen:            ['search', 'sort', 'paging', 'count'],
+  /**
+   * ⚠️⚠️ THESE TWO OWED THE FOUR TABLE HABITS FOR A DAY AND NEVER SHOULD HAVE. The guard was expanding helpers
+   * twice — three calls deep — and finding a <table> inside `viewSupplierPassport` (a read-only credentials
+   * view), `misTax`/`misFriction` (summary bands of a handful of rows) and `_aiMd` (the MARKDOWN RENDERER for
+   * an AI answer). None is a list anybody sorts. Eight of the 55 recorded gaps were the watcher misreading its
+   * own rule, and I was one commit from building a column chooser onto a passport to satisfy it.
+   *
+   * ⭐ THE DEBT THAT IS LEFT IS REAL: search, filters, sort, paging, count. Those they genuinely owe.
+   */
+  misScreen:               ['search', 'filters', 'sort', 'paging'],
+  networkScreen:           ['search', 'filters', 'sort', 'paging'],
   settingsScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
-  suppliersScreen:         ['filters', 'sort', 'paging',
-                            'sort by heading', 'column chooser', 'resizable', 'reset to default'],
+  suppliersScreen:         ['filters', 'sort', 'paging'],
   /* ⭐ platformScreen is deliberately ABSENT — it has all five, and leaving it out is what holds it there. */
 };
 
@@ -164,11 +172,11 @@ function fnBodies(safe) {
  * ⚠️ VISITED SET, not a depth counter alone: two helpers that call each other would otherwise append forever.
  */
 const HELPER_DEPTH = 2;
-function withHelpers(body, all) {
+function withHelpers(body, all, depth) {
   let out = body;
   const seen = new Set();
   let frontier = [body];
-  for (let d = 0; d < HELPER_DEPTH; d++) {
+  for (let d = 0; d < (depth === undefined ? HELPER_DEPTH : depth); d++) {
     const next = [];
     for (const b of frontier) {
       for (const m of b.matchAll(/\b([A-Za-z0-9_$]+)\s*\(/g)) {
@@ -205,11 +213,32 @@ function screens(src, file) {
      * green for the exact fault it exists to catch. blank() keeps string contents — the markup lives in
      * strings — and erases every comment. [[feedback-silence-is-the-bug]]
      */
-    const body = withHelpers(safe.slice(i, j + 1), helpers);
+    const raw = safe.slice(i, j + 1);
+    const body = withHelpers(raw, helpers);
+    /**
+     * ⚠️⚠️ THE TABLE HABITS ARE ASKED OF THE SCREEN'S *LIST*, AND ONLY ONE HOP OUT.
+     *
+     * `body` expands TWICE, which reaches three calls deep — and at three calls deep this guard was demanding a
+     * column chooser and draggable widths of:
+     *
+     *   · `viewSupplierPassport`  a read-only credentials view (suppliersScreen)
+     *   · `misTax` / `misFriction`  small summary bands of a handful of rows (misScreen)
+     *   · `_aiMd`                 the MARKDOWN RENDERER for an AI answer (misScreen)
+     *
+     * None of those is a list of records anybody sorts. Athi asked for the four habits on the entity table —
+     * *"adjustable column headers and usual stuff"* — and platformScreen → platScopeTableHTML is that shape, at
+     * ONE hop. A guard that demands the right thing of the wrong element is one people learn to ignore, and
+     * then it is reporting nothing. [[feedback-silence-is-the-bug]]
+     *
+     * ⚠️ The other five controls still look two hops out: search and paging legitimately live in a helper's
+     * helper, and nothing is lost by finding them there.
+     */
+    const listBody = withHelpers(raw, helpers, 1);
     /* ⭐ only screens that actually render a LIST. A detail-only or form-only screen has no list to control,
        and holding it to "you must offer sorting" would be noise that teaches people to ignore this file. */
     if (!/class="list"|class="rows"|id="[a-z_]*rows"/.test(body)) continue;
-    found.push({ name: m[1], file: path.basename(file), line: src.slice(0, m.index).split('\n').length, body });
+    found.push({ name: m[1], file: path.basename(file), line: src.slice(0, m.index).split('\n').length,
+                 body, listBody });
   }
   return found;
 }
@@ -220,7 +249,9 @@ for (const f of FILES) all.push(...screens(fs.readFileSync(f, 'utf8'), f));
 const gaps = {};
 for (const s of all) {
   const missing = Object.keys(CONTROLS).filter((k) => !CONTROLS[k](s.body));
-  if (/<table|<thead|<tbody/.test(s.body)) {
+  /* ⚠️ the table test reads `listBody` — the screen and ONE hop — so a passport, a summary band or a markdown
+     renderer three calls away cannot conjure a demand for a column chooser. See the note beside listBody. */
+  if (/<table|<thead|<tbody/.test(s.listBody)) {
     for (const k of Object.keys(TABLE_CONTROLS)) if (!TABLE_CONTROLS[k](s.body)) missing.push(k);
   }
   if (missing.length) gaps[s.name] = missing;
