@@ -1593,7 +1593,9 @@ function _netAvailScreen(){
     + '<div style="font-size:var(--fs-5);font-weight:800">🔎 Where is it?</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:4px;line-height:1.6">Ask every store in your network '
     + 'what it has. The answer carries the quantity, the system it came from and when it was last true.</div>'
-    + '<input value="' + esc(UI._avQ || '') + '" oninput="netAvailSearch(this.value)" placeholder="a product name or code — e.g. impeller, IMP-90"'
+    /* ⚠️ THIS BOX IS THE SCREEN'S SEARCH and it had no testid — so nothing could drive it and e2e/list-controls
+       could not see it either, recording a gap against a control that has worked since August. */
+    + '<input data-testid="net-avail-search" value="' + esc(UI._avQ || '') + '" oninput="netAvailSearch(this.value)" placeholder="a product name or code — e.g. impeller, IMP-90"'
     + ' style="width:100%;margin-top:13px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-3);box-sizing:border-box">'
     + '<div id="netAvailBody">' + _netAvailBody() + '</div>'
     + '</div>';

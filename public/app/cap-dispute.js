@@ -243,23 +243,98 @@ async function sendDisputeMsg(chitId, disputeId){
 /* ── Disputes screen (the opt-in queue, BR-D4): every disputed record, split raised-by-you / against-you,
  *    each card reusing the shared roster renderers. Loaded lazily; the nav is capability-gated. */
 function disputesScreen(){ return '<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:var(--fs-3);margin-bottom:3px;display:flex;align-items:center;gap:9px">' + tx('⚖️ Disputes') + '<button onclick="openAssist(\'disputes\')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">' + txf('Explore {q} to know more about this screen.', { q: '<b onclick="openAssist(\'disputes\')" style="cursor:pointer;color:var(--blue)">?</b>' }) + '</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>'; }
+/**
+ * ── ⭐⭐ THE DISPUTE QUEUE — the one list where "how long has this been open" is the question ────────────────────
+ *
+ * ⚠️⚠️ THE TWO SECTIONS ARE A MODE, NOT A FILTER, and they stay. "Raised by you" and "Against you" are two
+ * different jobs — one you are pursuing, one you are answering — and collapsing them into a dropdown would make
+ * a person choose a side before seeing that they have work on both. The controls sit ABOVE both and narrow
+ * both, so a search for "damaged" shows what you raised and what was raised against you, still separated.
+ *
+ * ⚠️ OLDEST FIRST IS THE DEFAULT, and it is the server's own order — deliberately, because it is the opposite
+ * of every other list here. Everywhere else the newest thing is the interesting one; in a dispute queue the
+ * OLDEST open item is the one rotting, and putting it at the bottom is how it stays there.
+ */
+var _DISP = { mine: [], other: [], loaded: false };
+
+function dispCtl(){
+  var all = _DISP.mine.concat(_DISP.other);
+  var cats = [];
+  all.forEach(function(d){ if (d.category && cats.indexOf(d.category) < 0) cats.push(d.category); });
+  cats.sort();
+  return listCtl('disputes', {
+    rows: function(){ return _DISP.mine.concat(_DISP.other); },
+    text: function(d){ return [d.auto_subject, d.purpose, d.category, d.reason, d.raised_by_display_name,
+                               d.scope, d.resolution_note].filter(Boolean).join(' '); },
+    noun: tx('dispute'), plural: tx('disputes'),
+    filters: [
+      /* ⭐ OPEN FIRST, because a resolved dispute is a record and an open one is work. */
+      { key: 'status', label: tx('Status'), all: tx('Open and resolved'),
+        options: [{ v: 'open', label: tx('Still open') }, { v: 'resolved', label: tx('Resolved') }],
+        match: function(d, v){ return v === 'open' ? d.status === 'open' : d.status !== 'open'; } },
+    ].concat(cats.length > 1 ? [{ key: 'category', label: tx('Kind'), all: tx('Every kind'),
+        options: cats.map(function(c){ return { v: c, label: cap(c) }; }),
+        match: function(d, v){ return d.category === v; } }] : []),
+    sorts: [
+      { key: 'old', label: tx('Oldest first'),
+        cmp: function(a, b){ return Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0); } },
+      { key: 'new', label: tx('Newest first'),
+        cmp: function(a, b){ return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0); } },
+      { key: 'kind', label: tx('By kind'),
+        cmp: function(a, b){ return String(a.category || '').localeCompare(String(b.category || '')); } },
+    ],
+    repaint: function(){ paintDisputes(); },
+  });
+}
+
+/** one dispute, as a card. canResolve = the "raised by you" side (raiser-only resolve, BR-D3). */
+function dispCardHTML(d, canResolve){
+  var parties=disputeParties(d);
+  var roster=parties.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">'+parties.map(function(p){ return '<span class="optchip '+(p.dispute_status==='resolved'?'on':'brk')+'">'+nm(p.display_name,'party')+' · '+(p.dispute_status==='resolved'?'✓ resolved':'open')+'</span>'; }).join('')+'</div>':'';
+  var btns=disputeResolveBtns(parties, d.chit_id, d.dispute_id, canResolve && d.status==='open', 'composebtn');
+  var resolveRow=btns?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>':'';
+  return '<div class="card" data-testid="disp-card" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px">'
+    +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(d.auto_subject||d.purpose||'chit')+'</b><span class="optchip '+(d.status==='open'?'brk':'on')+'">'+esc(d.status)+'</span></div>'
+    +'<div style="font-size:var(--fs-2);color:var(--ink);margin:5px 0"><b>'+esc(cap(d.category||''))+'</b> — '+esc(d.reason||'')+'</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
+    +roster+resolveRow+'</div>';
+}
+
+/**
+ * ⭐ PAINT, SEPARATE FROM LOAD. Every control repaints; none of them refetches. Asking the server again because
+ * somebody typed a letter is how a search box becomes slow enough to feel broken.
+ * [[feedback-loader-never-repaints-open-form]]
+ */
+function paintDisputes(){
+  var host=document.getElementById("disprows"); if(!host) return;
+  dispCtl();
+  var matched=listCtlView('disputes').matched;
+  var inSet={}; matched.forEach(function(d){ inSet[d.dispute_id]=1; });
+  var mine=_DISP.mine.filter(function(d){ return inSet[d.dispute_id]; });
+  var other=_DISP.other.filter(function(d){ return inSet[d.dispute_id]; });
+  /* ⚠️ the sections keep the ENGINE's order, not the server's — filter() above preserves _DISP order, so each
+     section is re-ordered here to match whatever sort is chosen. */
+  var pos={}; matched.forEach(function(d,i){ pos[d.dispute_id]=i; });
+  var byOrder=function(a,b){ return pos[a.dispute_id]-pos[b.dispute_id]; };
+  mine.sort(byOrder); other.sort(byOrder);
+  var none='<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>';
+  host.innerHTML = menuAssist('disputes')
+    + '<div style="margin:2px 0 4px;font-size:var(--fs-1);color:var(--grey)" id="disp_count">' + listCtlCountHTML('disputes') + '</div>'
+    + listCtlToolbarHTML('disputes')
+    + '<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:12px 0 4px">' + tx('Raised by you') + ' (' + mine.length + ')</div>'
+    + lazyWrap('dm', mine, function(d){ return dispCardHTML(d, true); }, none)
+    + '<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:14px 0 4px">' + tx('Against you / awaiting') + ' (' + other.length + ')</div>'
+    + lazyWrap('do', other, function(d){ return dispCardHTML(d, false); }, none);
+}
+
 async function loadDisputes(){
   var host=document.getElementById("disprows"); if(!host)return;
-  try{ var q=await api("disputeQueue"); var mine=q.my_disputes||[], other=q.other_disputes||[];
-    // card(): one dispute; canResolve = the "raised by you" side (raiser-only resolve, BR-D3).
-    var card=function(d,canResolve){
-      var parties=disputeParties(d);
-      var roster=parties.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">'+parties.map(function(p){ return '<span class="optchip '+(p.dispute_status==='resolved'?'on':'brk')+'">'+nm(p.display_name,'party')+' · '+(p.dispute_status==='resolved'?'✓ resolved':'open')+'</span>'; }).join('')+'</div>':'';
-      var btns=disputeResolveBtns(parties, d.chit_id, d.dispute_id, canResolve && d.status==='open', 'composebtn');
-      var resolveRow=btns?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>':'';
-      return '<div class="card" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px">'
-        +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(d.auto_subject||d.purpose||'chit')+'</b><span class="optchip '+(d.status==='open'?'brk':'on')+'">'+esc(d.status)+'</span></div>'
-        +'<div style="font-size:var(--fs-2);color:var(--ink);margin:5px 0"><b>'+esc(cap(d.category||''))+'</b> — '+esc(d.reason||'')+'</div>'
-        +'<div style="font-size:var(--fs-1);color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
-        +roster+resolveRow+'</div>';
-    };
-    host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>')
-      +'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>');
+  try{
+    var q=await api("disputeQueue");
+    _DISP.mine=q.my_disputes||[]; _DISP.other=q.other_disputes||[]; _DISP.loaded=true;
+    /* ⚠️ a fresh read is a fresh list: whatever was revealed of the old one means nothing about this one */
+    try{ if(LAZY){ delete LAZY['dm']; delete LAZY['do']; } }catch(_){}
+    paintDisputes();
   }catch(e){ host.innerHTML=scrErr(e, tx('disputes'), 'loadDisputes()'); }
 }
 

@@ -36,6 +36,24 @@
  *
  * The number can only go down. Every run prints what is still outstanding, so the debt is visible rather than
  * remembered. When a line reaches zero gaps, delete it — the guard then holds that screen to all five forever.
+ *
+ * ── ⭐⭐⭐ AND AS OF 2026-09-15 BASELINE IS EMPTY. 55 → 47 → 0. ──────────────────────────────────────────────────
+ *
+ * Every list screen now has all five, so the rule is no longer a ratchet with exceptions — it is simply the
+ * rule. **Do not add a name back without Athi.** A line here is a decision to ship a panel he will have to ask
+ * about, and the whole point of reaching zero is that the next one is caught before it ships, not after he
+ * finds it.
+ *
+ * ⚠️⚠️ AND "0 GAPS" MEANS NOTHING UNLESS REMOVING A CONTROL FAILS THE RUN, which was checked by removing one
+ * from four screens: customers' sorts, customers' filters, the catalogue's sort control, intake's filters and
+ * disputes' lazy rows. The first attempt reported all of them SILENT — because the breaks were too weak, not
+ * because the guard was. Two of them genuinely were silent and are fixed (see `filters` below). All five fire.
+ *
+ * ⚠️ THREE TIMES THIS FILE HAS BEEN WRONG ABOUT WHAT IT IS READING, and each time it invented debt rather than
+ * missing it: the four table habits demanded of a passport and a markdown renderer; the five controls demanded
+ * of fixed rails and a loading spinner; and a screen read as only its own body when half this app paints
+ * through a loader. A guard that cries wolf is on its way to being ignored, which is the same end state as no
+ * guard at all. [[feedback-silence-is-the-bug]]
  */
 const fs = require('fs');
 const path = require('path');
@@ -61,7 +79,26 @@ const CONTROLS = {
   search:  (b) => /listCtlToolbarHTML\(/.test(b)
                   || (/placeholder="[^"]*[Ss]earch|id="[a-z]{2}_q"|data-testid="[a-z-]*search/.test(b)
                       && /oninput=/.test(b)),
-  filters: (b) => /<select/.test(b) || /\bfilters\s*:\s*\[\s*\{/.test(b),
+  /**
+   * ── ⚠️⚠️ THE ONE DETECTOR THAT COULD NOT BITE, AND HOW FAR IT IS SAFE TO FIX TODAY ────────────────────────────
+   *
+   * `<select>` ANYWHERE in the screen and its helpers satisfied this — including one in the DETAIL pane. So
+   * deleting the customers filters entirely still passed, on the strength of the group picker on a customer
+   * card; deleting intake's passed on the channel dropdown in its "record a message" form. Found by removing
+   * them and watching the guard stay green, with BASELINE empty and nothing else left to catch it.
+   *
+   * ⭐ THE PART THAT NEEDS NO DECISION: a screen that uses `app/list-ctl.js` has DECLARED what its list may be
+   * narrowed by, so for those screens the declaration is the answer and a stray `<select>` elsewhere is not.
+   * That closes the hole on customers, suppliers, intake and disputes, and changes no verdict — all four
+   * declare filters today. Both breaks now fire.
+   *
+   * ⚠️ THE PART THAT IS ATHI'S CALL, AND IS IN THE BACKLOG: for a screen NOT on the engine, `<select>` anywhere
+   * still counts. Tightening that would record a NEW gap against `categoriesScreen`, which has a search but no
+   * filter — and this file's own rule is that adding a name to BASELINE is a decision to take with him.
+   */
+  filters: (b) => (/listCtlToolbarHTML\(/.test(b)
+                    ? /\bfilters\s*:\s*\[\s*\{/.test(b)
+                    : (/<select/.test(b) || /\bfilters\s*:\s*\[\s*\{/.test(b))),
   sort:    (b) => /pl_sort|sortPresetSelect|data-testid="[a-z-]*sort|onchange="[a-zA-Z]*[Ss]ort/.test(b)
                   || /\bsorts\s*:\s*\[\s*\{/.test(b),
   /* ⚠️ EITHER SHAPE COUNTS. Athi asked for page numbers on the Platform screen, not an endless scroll:
@@ -137,6 +174,23 @@ const NOT_A_LIST = {
     'a fixed rail of MIS_BANDS — its own comment reads "FIVE FIXED ROWS"',
   catalogueSetupHubScreen:
     'a fixed rail of CATSET_SECS — its own comment reads "a fixed menu of seven and never needs more"',
+  /**
+   * ⚠️ NOT A FIXED RAIL — A DESIGN SURFACE, which is a second reason to be exempt and worth naming separately.
+   * The network screen has two modes and neither is a record list:
+   *
+   *   DESIGN  a tree of nodes the owner DRAWS — branches, depots, partners — plus the outstanding plan
+   *           ("NEW …", "CHANGE …", *"Nothing above has happened yet"*). Its order IS the structure, so sorting
+   *           it would not reorder rows, it would misstate the business. Filtering or paging it would hide part
+   *           of a diagram whose whole point is to be seen entire.
+   *   FIND    *"Where is it?"* — a QUERY across the network, grouped by product. The box IS the search; the
+   *           rows are one answer to one question, bounded by the network, not a list that accumulates.
+   *
+   * ⭐ THE HONEST RESIDUE IS IN THE BACKLOG, not hidden here: a chain with 200 nodes would want to FIND a node
+   * in its own design. That is a feature somebody should ask for, not one of the five standard controls, and
+   * pretending this exemption covers it would be the rationalisation this category is most at risk of.
+   */
+  networkScreen:
+    'a DESIGN SURFACE and a query result — its order is the structure, and hiding part of a diagram misstates it',
 };
 
 const BASELINE = {
@@ -147,7 +201,6 @@ const BASELINE = {
   /* ⭐ TIGHTENED 2026-09-15. Five screens had quietly EARNED a control and the baseline still forgave it — so
      each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
      prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
-  disputesScreen:          ['search', 'filters', 'sort', 'count'],
   /**
    * ⚠️⚠️ THESE TWO OWED THE FOUR TABLE HABITS FOR A DAY AND NEVER SHOULD HAVE. The guard was expanding helpers
    * twice — three calls deep — and finding a <table> inside `viewSupplierPassport` (a read-only credentials
@@ -157,7 +210,6 @@ const BASELINE = {
    *
    * ⭐ THE DEBT THAT IS LEFT IS REAL: search, filters, sort, paging, count. Those they genuinely owe.
    */
-  networkScreen:           ['search', 'filters', 'sort', 'paging'],
   /* ⭐ platformScreen is deliberately ABSENT — it has all five, and leaving it out is what holds it there. */
 };
 
@@ -232,7 +284,13 @@ function withPainters(body, all, src) {
   for (const [name, fnBody] of all) {
     for (const id of ids) {
       if (fnBody.includes('getElementById("' + id + '")') || fnBody.includes("getElementById('" + id + "')")) {
-        out += '\n' + fnBody;
+        /**
+         * ⚠️ AND THE PAINTER'S OWN HELPERS COME WITH IT — one hop, the same courtesy the screen gets.
+         * `paintDisputes` fills `#disprows` and calls `dispCtl()`, which is where that screen says what a
+         * dispute may be narrowed and ordered by. Stopping at the painter found the search and the count and
+         * missed the filters and the sort, which is half an answer and reads exactly like a real gap.
+         */
+        out += '\n' + withHelpers(fnBody, all, 1);
         break;
       }
     }
@@ -389,12 +447,19 @@ for (const s of all.sort((a, b) => a.name.localeCompare(b.name))) {
       console.log('       somewhere else.');
       continue;
     }
-    /* ⭐ a rail that has grown a search box has probably stopped being a rail — say so, but do not fail on it:
-       somebody may legitimately want to filter a long settings menu without it becoming a list of records. */
-    const has = Object.keys(CONTROLS).filter((k) => CONTROLS[k](s.body));
-    if (has.includes('search') || has.includes('paging')) {
-      console.log('  ⭐ ' + s.name + ' is exempt as a menu, yet now offers ' + has.join(', ')
-        + ' — is it still not a list? Re-read NOT_A_LIST.');
+    /**
+     * ⭐ PAGING IS THE TELL, AND IT IS THE ONLY ONE WORTH A NOTE. A menu or a design surface may perfectly well
+     * gain a search — the network screen's "Where is it?" box is a real one and always was, and settings would
+     * be entitled to a filter. But NOTHING pages except a list of records that grows, so an exempt screen that
+     * starts paging has stopped being what its exemption says it is.
+     *
+     * ⚠️ The first version of this noted `search` too, and immediately printed a permanent note about a screen
+     * whose search is deliberate and documented — which is how output stops being read. A warning that is
+     * always on is not a warning. [[feedback-silence-is-the-bug]]
+     */
+    if (CONTROLS.paging(s.body)) {
+      console.log('  ⭐ ' + s.name + ' is exempt as "' + NOT_A_LIST[s.name] + '", yet it now PAGES.');
+      console.log('       Only a growing list of records needs that. Re-read NOT_A_LIST — it may have become one.');
     }
     exempt++;
     continue;
