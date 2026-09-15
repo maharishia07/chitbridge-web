@@ -8285,7 +8285,7 @@ function suppliersScreen(){
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
-    <div class="rows" id="sup_rows" ${listCtlScrollAttr('suppliers')} style="${(UI.supFind||UI.supReq)?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    <div class="rows" id="sup_rows" style="${(UI.supFind||UI.supReq)?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
     ${UI.supReq?`<div class="rows" id="sup_req">${supReqHTML()}</div>`:''}
     <div id="supfind_host">${supFindHTML()}</div>
     <div id="supslide_host">${supSlideHTML()}</div>
@@ -8400,7 +8400,6 @@ function supCtl(){
   });
 }
 /* ⭐ ONE ANSWER to "which suppliers am I looking at" — the engine's, not a second filter written out again. */
-function supVisible(){ supCtl(); return listCtlView('suppliers').shown; }
 function supCount(){ supCtl(); return listCtlView('suppliers').matched.length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
@@ -8520,7 +8519,7 @@ function supOwnRowHTML(){
       <span class="optchip" style="background:var(--ok-tint,var(--card));color:var(--ok-3);border-color:var(--ok-3)">${esc(tx('ours'))}</span></div>
     <div class="l2">${esc(n ? txf('{n} items in your catalogue', { n: n }) : tx('your catalogue is empty'))}</div></div></div>`;
 }
-function supRowsHTML(){ const rows=supVisible();
+function supRowsHTML(){ supCtl(); const rows=listCtlView('suppliers').matched;
   /* ⚠️ OUR OWN SHELF BELONGS ON THE TRADE TAB ONLY. It is the catalogue you SELL from; under "things we buy to
      use" it would be an odd first row and, worse, an invitation to put stock where supplies go. */
   const own = supKind()==='resale' ? supOwnRowHTML() : '';
@@ -8536,7 +8535,9 @@ function supRowsHTML(){ const rows=supVisible();
      Rail · Work · Suppliers and has no Catalogue entry, so without this row an employee cannot open the
      catalogue at all — which is exactly what he hit. The API already allows it (entityOf resolves an actor to
      its parent business); only the screen was missing. */
-  return own + rows.map(supRowHTML).join(''); }
+  /* ⭐ lazyWrap draws 50 and reveals the rest at its own sentinel. The own-stock row sits OUTSIDE it: it is
+     not one of the suppliers, it is the door to your own shelf, and it must not scroll away with them. */
+  return own + listCtlRowsHTML('suppliers', supRowHTML, ''); }
 function supSlideHTML(){
   const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===UI.supSel; });
   if(!x || !UI.supPanel) return '';
@@ -10154,7 +10155,7 @@ function customersScreen(){
     <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID or email')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
     ${listCtlToolbarHTML('customers')}
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${listCtlCountHTML('customers')}</div></div>
-    <div class="rows" id="cu_rows" ${listCtlScrollAttr('customers')}>${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
+    <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
   const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
   const divider=`<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
   const showDetail=(UI.vp==='mob')&&UI.mdetail;
@@ -10164,12 +10165,13 @@ function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_c
   return '<div class="row '+(sel?'sel':'')+'" data-testid="cust-row-'+esc(c.customer_identity_id)+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
 function custRowsHTML(){
   custCtl();
-  var v=listCtlView('customers');
   /* ⚠️ "No customers yet" and "nothing matches ravi" are different sentences, and showing the first when the
      second is true tells a shopkeeper their customers are gone. listCtlEmptyHTML picks. */
-  if(!v.shown.length) return listCtlEmptyHTML('customers','🛍️',tx('No customers yet'),
+  var empty=listCtlEmptyHTML('customers','🛍️',tx('No customers yet'),
     tx('When someone orders from your storefront they appear here — your CRM.'));
-  return v.shown.map(custRowHTML).join('');
+  /* ⭐ lazyWrap draws 50 and reveals the rest at its own sentinel — the one lazy renderer this app has had
+     since August, doing this job for the catalogue and the message thread. */
+  return listCtlRowsHTML('customers', custRowHTML, empty);
 }
 /* ⚠️ the count is innerHTML, not textContent — it carries the greyed "of 812", and textContent would print the
    markup. It said `812 customer(s)` before, which is the drawn number and the matched number conflated. */

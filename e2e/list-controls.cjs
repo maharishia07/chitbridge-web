@@ -67,7 +67,15 @@ const CONTROLS = {
   /* ⚠️ EITHER SHAPE COUNTS. Athi asked for page numbers on the Platform screen, not an endless scroll:
      *'give the page numbers so the next page can be moved.'* A detector that only knows about onscroll would
      have failed the screen for doing the better thing. What matters is that the list can REACH its total. */
-  paging:  (b) => /onscroll=|PagerHTML|data-testid="[a-z-]*page-|listCtlScrollAttr\(/.test(b),
+  /**
+   * ⚠️⚠️ AND `lazyWrap` IS THE THIRD SHAPE, which this file did not know — so it was recording a gap against
+   * the catalogue and the disputes list, both of which have had a working lazy renderer since August.
+   * `lazyWrap(id, items, cardFn)` draws 50, reveals the rest on an IntersectionObserver AND on a *"↓ Show 50
+   * more"* button, and prints *"50 of 812"* and *"812 total · end of list"* in its own sentinel. It reaches the
+   * total, which is the whole question. ⭐ Found while building `app/list-ctl.js` — I wrote a second lazy
+   * renderer before noticing the first, and this detector is the other half of undoing that.
+   */
+  paging:  (b) => /onscroll=|PagerHTML|data-testid="[a-z-]*page-|lazyWrap\(|listCtlRowsHTML\(/.test(b),
   count:   (b) => /CountHTML|listtotal|pgTotalText|of\s*'\s*\+/.test(b),
 };
 
@@ -139,10 +147,10 @@ const BASELINE = {
   /* ⭐ TIGHTENED 2026-09-15. Five screens had quietly EARNED a control and the baseline still forgave it — so
      each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
      prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
-  catalogueScreen:         ['filters', 'sort', 'paging', 'count'],
+  catalogueScreen:         ['sort'],
   categoriesScreen:        ['sort', 'paging', 'count'],
   coassistsScreen:         ['sort', 'paging'],
-  disputesScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
+  disputesScreen:          ['search', 'filters', 'sort', 'count'],
   intakeScreen:            ['search', 'sort', 'paging', 'count'],
   /**
    * ⚠️⚠️ THESE TWO OWED THE FOUR TABLE HABITS FOR A DAY AND NEVER SHOULD HAVE. The guard was expanding helpers
@@ -205,6 +213,38 @@ function fnBodies(safe) {
 }
 
 /**
+ * ── ⭐⭐⭐ A SCREEN IS ALSO WHATEVER PAINTS INTO IT ────────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ THE THIRD TIME THIS FILE HAS BEEN WRONG ABOUT WHAT IT IS READING, and this one was invisible because the
+ * screen it misjudged is a single line. `disputesScreen()` renders `<div id="disprows">loading…</div>` and
+ * NOTHING else — every row, both counts and two `lazyWrap` calls live in `loadDisputes()`, which the call graph
+ * never reaches because the screen does not call it. The screen just leaves a hole, and something else fills it.
+ *
+ * ⭐ THAT IS NOT A QUIRK OF DISPUTES, IT IS HOW THIS APP PAINTS. `paintCustList` → `#cu_rows`,
+ * `paintSupList` → `#sup_rows`, `paintProdList` → `#ct_rows`, `loadDisputes` → `#disprows`. So: take every id
+ * the screen renders, and fold in any same-file function that writes into one of them. The list a person sees
+ * is the union of the two, and reading only half of it records debt against controls that are already there.
+ *
+ * ⚠️ IT IS DELIBERATELY NARROW — only ids the screen ITSELF renders, only functions in the same file, and only
+ * `getElementById` of that exact id. It is not a licence to inline the file: a guard that passes because of
+ * something unrelated elsewhere is a guard agreeing with itself.
+ */
+function withPainters(body, all, src) {
+  let out = body;
+  const ids = new Set([...body.matchAll(/id="([A-Za-z0-9_-]+)"/g)].map((m) => m[1]));
+  if (!ids.size) return out;
+  for (const [name, fnBody] of all) {
+    for (const id of ids) {
+      if (fnBody.includes('getElementById("' + id + '")') || fnBody.includes("getElementById('" + id + "')")) {
+        out += '\n' + fnBody;
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * ⭐ TWO LEVELS, AND THE SECOND ONE EARNED ITS PLACE. A screen calls its renderer (one) and the renderer calls
  * the thing that draws the controls (two) — platformScreen → platScopeTableHTML → platColMenuHTML is exactly
  * that shape, and at depth 1 the guard could not see the column menu at all.
@@ -257,7 +297,8 @@ function screens(src, file) {
      * strings — and erases every comment. [[feedback-silence-is-the-bug]]
      */
     const raw = safe.slice(i, j + 1);
-    const body = withHelpers(raw, helpers);
+    /* ⭐ the screen, the helpers it calls, AND whatever paints into the holes it leaves — see withPainters */
+    const body = withPainters(withHelpers(raw, helpers), helpers, safe);
     /**
      * ⚠️⚠️ THE TABLE HABITS ARE ASKED OF THE SCREEN'S *LIST*, AND ONLY ONE HOP OUT.
      *
