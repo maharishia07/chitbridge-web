@@ -656,7 +656,11 @@ function catsetBody(k){
       + 'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.'
       + '<div class="catset-std">⚠️ A price with no source is not wrong, it is just unattributable — and a '
       + 'market-referenced price without a reading date is a rumour. That is the same rule the availability '
-      + 'engine applies to a stock figure: a number without a timestamp is not an answer.</div>', '')
+      + 'engine applies to a stock figure: a number without a timestamp is not an answer.</div>',
+      /* ⭐ THE SAME RULE, MADE PLAYABLE. The lab is the conversion engine as a page — a rate carries its source
+         and its date, a quantity is valued at a market price, and the weakest link in the chain is named above
+         the total. It belongs HERE because "where and when a price came from" is this card's subject. */
+      '<a class="composebtn" data-testid="catset-conversion-lab" href="conversion-lab.html" target="_blank" rel="noopener" title="What is a quantity worth, and what is this basket in another currency — the same engine as the server, with every step shown" style="text-decoration:none">💱 ' + tx('Conversion lab') + '</a>')
     + catsetRegistry(['pricing', 'priceorigin'])
     + catsetCard('Your pricing structures', catsetDefListHTML('pricing', 'pricing structure'), '');
   }
