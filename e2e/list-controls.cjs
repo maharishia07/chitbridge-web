@@ -82,6 +82,42 @@ const TABLE_CONTROLS = {
  * screen → the controls it is ALLOWED to be missing. Shrink these; never grow them.
  * ⚠️ Adding a name here is a decision to ship a panel Athi will have to ask about. Do it only with him.
  */
+/**
+ * ── ⭐⭐⭐ NOT EVERY `<div class="rows">` IS A LIST ────────────────────────────────────────────────────────────────
+ *
+ * ⚠️⚠️ 18 OF THE 47 RECORDED GAPS WERE THIS FILE MISREADING ITS OWN RULE — for the second time. The earlier
+ * miss was the four table habits demanded of a passport and a markdown renderer; this is the same mistake one
+ * level up. The detector asks "does it render `class="rows"`", and four screens do while holding no records:
+ *
+ *   · `capScreen`               is the lazy-load DISPATCHER. When the real screen is loaded it delegates; when it
+ *                               is not, it returns a SPINNER — and that placeholder is what carries the markup.
+ *                               The guard was demanding paging of a loading message.
+ *   · `settingsScreen`          a fixed rail built from `SET_SECS`, with sub-rows for the 7 governance layers.
+ *   · `misScreen`               a fixed rail of `MIS_BANDS`; its own code says "FIVE FIXED ROWS".
+ *   · `catalogueSetupHubScreen` its own code says "a fixed menu of seven and never needs more".
+ *
+ * ⭐ THE DIFFERENCE THAT MATTERS: a LIST holds records the shop can grow without limit, so it will one day be
+ * longer than the screen and Athi will have to ask for search. A RAIL is a menu whose length is decided here, in
+ * code. Paging a menu of five is not a missing control, it is a category error — and 18 phantom gaps buried the
+ * 29 real ones, which is how a watcher stops being read.
+ *
+ * ── ⚠️ AND AN EXEMPTION LIST IS THE EASIEST THING IN THIS FILE TO ABUSE ────────────────────────────────────────
+ *
+ * So it is checked, every run, and each check can FAIL the guard — see the block below the loop. A name here
+ * that is not a screen any more, a name that is also in BASELINE, or a rail that has grown a <table> all stop
+ * the run. An exemption nobody re-tests is just a deletion with extra steps. [[feedback-silence-is-the-bug]]
+ */
+const NOT_A_LIST = {
+  capScreen:
+    'the lazy-load dispatcher — its "rows" is the LOADING SPINNER shown until the real screen arrives',
+  settingsScreen:
+    'a fixed rail of SET_SECS (plus the 7 governance layers as sub-rows) — a menu, not records',
+  misScreen:
+    'a fixed rail of MIS_BANDS — its own comment reads "FIVE FIXED ROWS"',
+  catalogueSetupHubScreen:
+    'a fixed rail of CATSET_SECS — its own comment reads "a fixed menu of seven and never needs more"',
+};
+
 const BASELINE = {
   /* ⚠️ THIS IS THE DEBT, MEASURED 2026-09-14 — 12 of 13 list screens. It is the quantified version of Athi's
      *"almost every panel is missing this information"*, and it is not a licence: every line here is a panel he
@@ -90,9 +126,7 @@ const BASELINE = {
   /* ⭐ TIGHTENED 2026-09-15. Five screens had quietly EARNED a control and the baseline still forgave it — so
      each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
      prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
-  capScreen:               ['search', 'filters', 'sort', 'paging', 'count'],
   catalogueScreen:         ['filters', 'sort', 'paging', 'count'],
-  catalogueSetupHubScreen: ['search', 'filters', 'sort', 'paging'],
   categoriesScreen:        ['sort', 'paging', 'count'],
   coassistsScreen:         ['sort', 'paging'],
   customersScreen:         ['search', 'sort', 'paging', 'count'],
@@ -107,9 +141,7 @@ const BASELINE = {
    *
    * ⭐ THE DEBT THAT IS LEFT IS REAL: search, filters, sort, paging, count. Those they genuinely owe.
    */
-  misScreen:               ['search', 'filters', 'sort', 'paging'],
   networkScreen:           ['search', 'filters', 'sort', 'paging'],
-  settingsScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
   suppliersScreen:         ['filters', 'sort', 'paging'],
   /* ⭐ platformScreen is deliberately ABSENT — it has all five, and leaving it out is what holds it there. */
 };
@@ -267,12 +299,58 @@ if (process.argv.includes('--baseline')) {
 
 console.log('\n══ LIST CONTROLS — search · filters · sort · paging · count ══\n');
 
-let fails = 0, debt = 0;
+let fails = 0, debt = 0, exempt = 0;
+
+/**
+ * ── ⚠️⚠️ THE EXEMPTION LIST IS AUDITED BEFORE ANYTHING ELSE IS JUDGED ──────────────────────────────────────────
+ *
+ * Both of these are silent rot, and both are how a list like this turns into a place to put inconvenient
+ * screens. A name that no longer matches a screen forgives nothing and nobody notices; a name in both lists
+ * gives one screen two different answers, and which one wins is an accident of the code below.
+ */
+for (const name of Object.keys(NOT_A_LIST)) {
+  if (!all.some((s) => s.name === name)) {
+    fails++;
+    console.log('  ✗ NOT_A_LIST names ' + name + ', which is not a screen this guard can find.');
+    console.log('       It was renamed or deleted. Remove the line — a stale exemption forgives nothing and');
+    console.log('       hides the fact that nobody has re-read this list.');
+  }
+  if (BASELINE[name]) {
+    fails++;
+    console.log('  ✗ ' + name + ' is in BOTH NOT_A_LIST and BASELINE.');
+    console.log('       Those say different things — "it owes nothing" and "it owes these, later". Pick one.');
+  }
+}
+
 /* ⚠️ a table is detected by what it RENDERS, not by what it is called: a screen that merely mentions tables in
    a comment owes nothing, and blank() has already removed the comments anyway. */
 const isTable = (b) => /<table|<thead|<tbody/.test(b);
 
 for (const s of all.sort((a, b) => a.name.localeCompare(b.name))) {
+  /**
+   * ⚠️ AN EXEMPT SCREEN IS NOT SKIPPED, IT IS CHECKED DIFFERENTLY. It owes none of the five, because a menu of
+   * five fixed rows owes nothing — but it must still BE a menu, and the moment it grows a data table it is not
+   * one any more. That is a failure, not a note: the exemption would then be hiding a real list.
+   */
+  if (NOT_A_LIST[s.name]) {
+    if (isTable(s.listBody)) {
+      fails++;
+      console.log('  ✗ ' + s.name + '  (' + s.file + ':' + s.line + ')  is exempt as "' + NOT_A_LIST[s.name] + '"');
+      console.log('       — but it now renders a <table>. A rail does not. Either it has become a real list, in');
+      console.log('       which case remove it from NOT_A_LIST and give it the controls, or the table belongs');
+      console.log('       somewhere else.');
+      continue;
+    }
+    /* ⭐ a rail that has grown a search box has probably stopped being a rail — say so, but do not fail on it:
+       somebody may legitimately want to filter a long settings menu without it becoming a list of records. */
+    const has = Object.keys(CONTROLS).filter((k) => CONTROLS[k](s.body));
+    if (has.includes('search') || has.includes('paging')) {
+      console.log('  ⭐ ' + s.name + ' is exempt as a menu, yet now offers ' + has.join(', ')
+        + ' — is it still not a list? Re-read NOT_A_LIST.');
+    }
+    exempt++;
+    continue;
+  }
   const missing = gaps[s.name] || [];
   const allowed = BASELINE[s.name] || [];
   const regressed = allowed.filter((k) => !missing.includes(k));   /* it had it, per baseline, and lost it */
@@ -292,5 +370,13 @@ for (const s of all.sort((a, b) => a.name.localeCompare(b.name))) {
   }
 }
 
-console.log('\n  ' + all.length + ' list screen(s) · ' + fails + ' with unagreed gaps · ' + debt + ' recorded gap(s) outstanding\n');
+/* ⭐ the exempt count is PRINTED, not hidden. An exemption nobody sees is one nobody revisits, and the whole
+   reason this category exists is that 18 invisible phantom gaps were burying 29 real ones. */
+console.log('\n  ' + (all.length - exempt) + ' list screen(s) · ' + exempt + ' fixed rail(s), not lists · '
+  + fails + ' with unagreed gaps · ' + debt + ' recorded gap(s) outstanding');
+if (exempt) {
+  console.log('\n  Not lists, and why:');
+  for (const [n, why] of Object.entries(NOT_A_LIST).sort()) console.log('    · ' + n.padEnd(24) + why);
+}
+console.log('');
 process.exit(fails ? 1 : 0);
