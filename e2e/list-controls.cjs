@@ -147,7 +147,6 @@ const BASELINE = {
   /* ⭐ TIGHTENED 2026-09-15. Five screens had quietly EARNED a control and the baseline still forgave it — so
      each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
      prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
-  catalogueScreen:         ['sort'],
   categoriesScreen:        ['sort', 'paging', 'count'],
   coassistsScreen:         ['sort', 'paging'],
   disputesScreen:          ['search', 'filters', 'sort', 'count'],

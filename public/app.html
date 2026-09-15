@@ -11179,6 +11179,7 @@ function catalogueScreen(){
       <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodCountLabel()}</span>
+        ${prodSortSelect()}
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer">☑ Select</button>
         <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
@@ -11241,23 +11242,79 @@ function prodVisible(ctx){
     if(av){ const st=d.status||'available'; if(av==='available' ? st!=='available' : st==='available') return false; }
     return true;
   });
-  if(!q) return list;
+  if(!q) return prodSorted(list);
   /* ⚠️ A TRUNCATED CATALOGUE CANNOT BE SEARCHED IN THE BROWSER — the rows are not here. The server's answer stands in, and
      paintProdList says so; searching what happens to be loaded would answer "no such product" about products that exist. */
   if(UI.prodTruncated && !ctx){
-    if(UI.prodHitsFor === q) return (UI.prodHits||[]).filter(p=>{
+    if(UI.prodHitsFor === q) return prodSorted((UI.prodHits||[]).filter(p=>{
       const d=pData(p);
       if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
       return true;
-    });
-    return list;                                   /* the answer is on its way; the shelf stands until it lands */
+    }));
+    return prodSorted(list);                       /* the answer is on its way; the shelf stands until it lands */
   }
   /* ⭐ THE COUNTER'S SEARCH, THE SAME FILE (app/search.js): "ac co" reaches Aachi Coriander here too, and a code with a hyphen in it
      finds its product. No limit — this list renders its rows lazily and the count under the box must be the true one. */
-  if(typeof CBSearch!=='undefined') return CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity });
+  if(typeof CBSearch!=='undefined') return prodSorted(CBSearch.search(list, q, { text:prodSearchText, stamp:prodTextStamp(), name:(p)=>pName(pData(p)), barcode:'', limit:Infinity }));
   const lq=q.toLowerCase();
-  return list.filter(p=>prodSearchText(p).toLowerCase().includes(lq));
+  return prodSorted(list.filter(p=>prodSearchText(p).toLowerCase().includes(lq)));
 }
+
+/**
+ * ── ⭐⭐ THE ONE CONTROL THIS SCREEN ACTUALLY OWED ───────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-09-14: *"we need to have a sort mechanism based on field like we have it in the task."* The
+ * catalogue had search, two chip filters, a true count and lazy rows — and no way to order the shelf.
+ *
+ * ⚠️⚠️ THE DEFAULT IS "AS FOUND", AND IT IS NOT LAZINESS. With a search running, `CBSearch` returns rows RANKED
+ * BY RELEVANCE — typing "ac co" puts Aachi Coriander first for a reason. Sorting that by name would throw the
+ * best answer into the middle of the alphabet, so the default leaves the engine's order alone and a chosen sort
+ * is the reader saying they would rather have the shelf ordered than ranked.
+ *
+ * ⚠️⚠️ AN UNPRICED PRODUCT SORTS LAST IN BOTH DIRECTIONS, never as zero — and my first cut got this wrong in
+ * the most predictable way available. I wrote the guard as "cbAmount returns null for a price that cannot be
+ * read". **It returns 0.** So "Price low → high" opened with four unpriced products, which is the one place a
+ * shopkeeper is looking for a real number. Found by running it, not by reading it.
+ *
+ * ⭐ THAT IS THE IDIOM `lib/money.js` EXISTS TO END, quoted in its own header: *"the prevailing idiom in the
+ * front end is `+d.price || 0`, which turns an unreadable price into a FREE PRODUCT rather than an error."*
+ * So the test is on the RAW value — absent is absent — and a genuine zero still sorts as the cheapest thing on
+ * the shelf, because a free product really is.
+ */
+var PROD_SORTS = {
+  '':      { label: 'Sorted: as found' },
+  'az':    { label: 'Name A–Z',        cmp: (a,b)=>String(pName(pData(a))).localeCompare(String(pName(pData(b)))) },
+  'za':    { label: 'Name Z–A',        cmp: (a,b)=>String(pName(pData(b))).localeCompare(String(pName(pData(a)))) },
+  'plow':  { label: 'Price low → high', cmp: (a,b)=>_prodP(a)-_prodP(b) },
+  'phigh': { label: 'Price high → low', cmp: (a,b)=>_prodP(b,true)-_prodP(a,true) },
+  'new':   { label: 'Recently changed', cmp: (a,b)=>Date.parse(b.updated_at||b.created_at||0)-Date.parse(a.updated_at||a.created_at||0) },
+};
+/** ⚠️ ABSENT is decided on the RAW value, because cbAmount turns an unreadable price into 0 — see the note above */
+function _prodPrice(p){
+  var raw=pData(p).price;
+  if(raw==null||raw==='') return null;
+  var v=cbAmount(raw);
+  return (v==null||!isFinite(v)) ? null : v;
+}
+/** ⚠️ unpriced is Infinity either way round, so it lands at the BOTTOM of both price orders, never at the top */
+function _prodP(p, desc){ var v=_prodPrice(p); return v==null ? (desc?-Infinity:Infinity) : v; }
+function prodSortKey(){ return PROD_SORTS[UI.prodSort||''] ? (UI.prodSort||'') : ''; }
+function prodSorted(list){
+  var s=PROD_SORTS[prodSortKey()];
+  /* ⚠️ a COPY. `list` is UI.prods itself when nothing is filtered, and reordering the screen's own array is how
+     a list silently changes under everything else reading it. [[feedback-repaint-locally]] */
+  return (s && s.cmp) ? list.slice().sort(s.cmp) : list;
+}
+function prodSortSelect(){
+  return '<select class="inp" data-testid="cat-sort" title="'+esc(tx('Sort order'))+'" style="width:auto;padding:3px 6px;font-size:var(--fs-1)" onchange="setProdSort(this.value)">'
+    + Object.keys(PROD_SORTS).map(function(k){
+        return '<option value="'+k+'"'+(prodSortKey()===k?' selected':'')+'>'+esc(tx(PROD_SORTS[k].label))+'</option>'; }).join('')
+    + '</select>';
+}
+/* ⚠️ the reveal count goes back to the top: a re-ordered shelf showing 200 rows would be 200 rows of a DIFFERENT
+   order, which reads as the list having jumped rather than been sorted. */
+function setProdSort(v){ UI.prodSort=v; try{ if(LAZY) delete LAZY['prodlist']; }catch(_){}
+  paintProdList(); }
 /* ── select mode + bulk categorise ───────────────────────────────────────────────────────────────────────────── */
 function prodPickMode(on){
   UI.prodPick=!!on;
