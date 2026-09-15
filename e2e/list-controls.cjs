@@ -148,7 +148,6 @@ const BASELINE = {
      each could have lost it again without a word. A ratchet nobody tightens is a list of excuses. The guard
      prints "now HAS x — remove it from BASELINE" for exactly this; it had been printing it for five. */
   disputesScreen:          ['search', 'filters', 'sort', 'count'],
-  intakeScreen:            ['search', 'sort', 'paging', 'count'],
   /**
    * ⚠️⚠️ THESE TWO OWED THE FOUR TABLE HABITS FOR A DAY AND NEVER SHOULD HAVE. The guard was expanding helpers
    * twice — three calls deep — and finding a <table> inside `viewSupplierPassport` (a read-only credentials

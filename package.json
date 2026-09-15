@@ -21,7 +21,7 @@
     "check:calls": "node e2e/missing-functions.cjs",
     "check:markup": "node e2e/markup-balance.cjs",
     "check:controls": "node e2e/list-controls.cjs",
-    "check:order": "node e2e/list-order.cjs"
+    "check:order": "node e2e/list-behaviour.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",

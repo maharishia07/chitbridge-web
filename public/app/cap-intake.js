@@ -75,6 +75,50 @@ function intakeSimHTML(){
     + '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">' + tx('Add to the queue') + '</button></div>'
     + '</div>';
 }
+/**
+ * ── ⭐⭐ WHAT THE INTAKE QUEUE OFFERS, DECLARED ONCE ─────────────────────────────────────────────────────────────
+ *
+ * ⚠️ THIS IS THE LIST MOST CERTAIN TO GET LONG, and it had none of the five. Nothing here arrives because
+ * somebody pressed a button — messages land from WhatsApp, email and the web, and they keep landing. A queue
+ * that can only be scrolled is a queue that gets abandoned.
+ *
+ * ⚠️ NEWEST FIRST IS THE DEFAULT, and it is the order the queue already came in. What arrived while you were
+ * away is the reason you opened this screen.
+ *
+ * ⭐ "STILL TO READ" IS THE FILTER THAT MATTERS. A capture with no draft on it is one nobody has looked at —
+ * that is the working queue, and everything else is history. Channel comes second because on a busy day
+ * WhatsApp and email are two different jobs. [[feedback-write-for-the-shopkeeper]]
+ */
+function intakeCtl(){
+  var drafted = function(c){ return !!(c.structured || (_INTAKE.working[c.id] || {}).structured); };
+  /* ⚠️ the channels offered are the ones PRESENT — a shop with no SMS should not be offered an SMS filter that
+     can only ever empty its own list. And with one channel there is nothing to choose between, so none is drawn. */
+  var chans = [];
+  (_INTAKE.list || []).forEach(function(c){ if (c.channel && chans.indexOf(c.channel) < 0) chans.push(c.channel); });
+  chans.sort();
+  return listCtl('intake', {
+    rows: function(){ return _INTAKE.list || []; },
+    /* ⚠️ THE RAW TEXT IS SEARCHED, because that is what a person remembers — "the one about bolts" */
+    text: function(c){ return [c.sender_name, c.sender_ref, c.channel, c.raw_text].filter(Boolean).join(' '); },
+    noun: tx('message'), plural: tx('messages'),
+    filters: [
+      { key: 'state', label: tx('Read yet'), all: tx('Read or not'),
+        options: [{ v: 'todo', label: tx('Still to read') }, { v: 'done', label: tx('Already drafted') }],
+        match: function(c, v){ return v === 'todo' ? !drafted(c) : drafted(c); } },
+    ].concat(chans.length > 1 ? [{ key: 'channel', label: tx('Channel'), all: tx('Every channel'),
+        options: chans.map(function(k){ return { v: k, label: k }; }),
+        match: function(c, v){ return c.channel === v; } }] : []),
+    sorts: [
+      { key: 'new', label: tx('Newest first'),
+        cmp: function(a, b){ return Date.parse(b.created_at || 0) - Date.parse(a.created_at || 0); } },
+      { key: 'old', label: tx('Oldest first'),
+        cmp: function(a, b){ return Date.parse(a.created_at || 0) - Date.parse(b.created_at || 0); } },
+      { key: 'who', label: tx('Sender A–Z'),
+        cmp: function(a, b){ return String(a.sender_name || a.sender_ref || '').localeCompare(String(b.sender_name || b.sender_ref || '')); } },
+    ],
+    repaint: function(){ paintIntake(); },
+  });
+}
 function intakeBodyHTML(){
   if(_INTAKE.busy && !_INTAKE.list) return intakeSimHTML()+'<div class="loadwrap"><span class="spin"></span> reading the queue…</div>';
   /* b104 is applied in production, but an environment without it answers 503 — say which it is, because "no
@@ -82,7 +126,12 @@ function intakeBodyHTML(){
   if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
   if(_INTAKE.err) return intakeSimHTML()+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
-  var L=_INTAKE.list||[];
+  intakeCtl();
+  var L = listCtlView('intake').matched;
+  /* ⭐ THE CONTROLS ARE DRAWN EVEN WHEN NOTHING MATCHES. A search that empties the queue must not also remove
+     the box you would use to undo it — that is a dead end wearing an empty state. */
+  var bar = '<div style="margin-bottom:4px;font-size:var(--fs-1);color:var(--grey)" id="intake_count">'
+    + listCtlCountHTML('intake') + '</div>' + listCtlToolbarHTML('intake') + '<div style="height:10px"></div>';
   /**
    * ⚠️⚠️ THIS WORE `class="empty"` AND USED NONE OF IT. Every measurement — padding, alignment, the icon's
    * font-size, both text colours — was re-specified inline, so the class was decoration on a private
@@ -92,10 +141,10 @@ function intakeBodyHTML(){
    * ⚠️ NO ACTION OFFERED, DELIBERATELY. Nothing arrives here because someone pressed a button — a message lands
    * from WhatsApp or email or the web. The next step belongs to the sender, so there is none to put here.
    */
-  if(!L.length) return intakeSimHTML()
-    + emptyState('📥', tx('Nothing waiting'),
+  if(!L.length) return intakeSimHTML() + bar
+    + listCtlEmptyHTML('intake', '📥', tx('Nothing waiting'),
         tx('Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.'));
-  return intakeSimHTML() + L.map(intakeCardHTML).join('');
+  return intakeSimHTML() + bar + listCtlRowsHTML('intake', intakeCardHTML, '');
 }
 function intakeCardHTML(c){
   var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
