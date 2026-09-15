@@ -1657,6 +1657,10 @@ body.lab-only #cbtestpanel{
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
+<!-- ⭐ THE FIVE LIST CONTROLS, WRITTEN ONCE — search · filters · sort · count · lazy rows, for a list the browser
+     already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
+     screen as well as the first. NOT lazy-loaded: the screens that need it are the ordinary ones. -->
+<script src="/app/list-ctl.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
 <!-- ⚠️ DATA, NOT BEHAVIOUR — the per-trade starter categories (real Google Product Taxonomy nodes). Loaded
@@ -8258,6 +8262,7 @@ const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(
 /* SUPPLIERS — two-sided master/detail (Stage A). Same .panel/.list/.divider/.detail skeleton as task/order,
    so it inherits the draggable divider (startDrag/UI.lw) and the mobile collapse (.appwrap.m + UI.mdetail). */
 function suppliersScreen(){
+  supCtl();
   const list = `<div class="list">
     <div class="lh">
       <!-- ⭐ Athi, 2026-08-16: *"find product on the top, same place as supplier?"* — the two are peers, not a
@@ -8275,12 +8280,12 @@ function suppliersScreen(){
       ${(UI.supFind||UI.supReq)?'':`${supKindTabsHTML()}<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="${supKind()==='own_use'?tx('Add — shop name, or their User ID'):tx('Add supplier — type a name, User ID or email')}" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
-      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-inline-start:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">${tx('A–Z')}</button></span></div>`}
+      ${listCtlToolbarHTML('suppliers')}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${listCtlCountHTML('suppliers')}</span></div>`}
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
-    <div class="rows" id="sup_rows" style="${(UI.supFind||UI.supReq)?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    <div class="rows" id="sup_rows" ${listCtlScrollAttr('suppliers')} style="${(UI.supFind||UI.supReq)?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
     ${UI.supReq?`<div class="rows" id="sup_req">${supReqHTML()}</div>`:''}
     <div id="supfind_host">${supFindHTML()}</div>
     <div id="supslide_host">${supSlideHTML()}</div>
@@ -8290,8 +8295,6 @@ function suppliersScreen(){
   const showDetail = (UI.vp==='mob') && UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function supPrefFirst(){ return UI.supPrefFirst!==false; }   // default: preferred first
-function setSupSort(v){ UI.supPrefFirst=v; paintSupList(); }
 function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
 /**
  * ⭐⭐ TWO TABS, ONE LIST (Athi, 2026-09-10): *"we have already the supplier menu — add the business here and,
@@ -8342,15 +8345,63 @@ function setSupKind(k){
      else redraws underneath it. It also calls paintSupList(), which is why that is not repeated here. */
   paintSupSlide(); paintSupDetail();
 }
-function supVisible(){
-  let s=(UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); });
-  const q=(UI.supQ||'').trim().toLowerCase();
-  if(q) s=s.filter(x=>((x.nickname||'')+' '+(x.display_name||'')+' '+(x.category||'')+' '+(x.bridge_id||'')).toLowerCase().includes(q));
-  if(supPrefFirst()) s.sort((a,b)=>(b.preferred?1:0)-(a.preferred?1:0));
-  else s.sort((a,b)=>String(supName(a)).localeCompare(String(supName(b))));
-  return s;
+/**
+ * ── ⭐⭐ WHAT THE SUPPLIER LIST OFFERS, DECLARED ONCE ────────────────────────────────────────────────────────────
+ *
+ * This screen had a search box, a count and a two-button ★ Preferred / A–Z toggle, all written out by hand — so
+ * it owed filters, a real sort and lazy rows, and the sort it DID have was invisible to the watcher because it
+ * was two onclicks rather than a control. `app/list-ctl.js` is now the one place all of that lives.
+ *
+ * ⚠️ THE KIND IS NOT A FILTER AND MUST NOT BECOME ONE. Trade vs Other is a MODE, decided by tabs, because the
+ * tab a supplier sits in decides what a delivery from them does — goods from a Trade supplier are offered to the
+ * catalogue and goods from an Other supplier never are. So `rows` returns one kind, and every count, filter and
+ * sort below is about the tab you are on. Folding it into the filter row would make it one careless click to
+ * put floor cleaner on a storefront.
+ *
+ * ⚠️ THE CATEGORY OPTIONS ARE READ FROM THE DATA, not declared. A shop's supplier categories are its own words;
+ * a fixed list would be this codebase deciding what a Tirupur weaver may call their suppliers.
+ */
+function supCtl(){
+  var mine=(UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); });
+  var cats=[]; mine.forEach(function(x){ if(x.category && cats.indexOf(x.category)<0) cats.push(x.category); });
+  cats.sort();
+  return listCtl('suppliers', {
+    rows: function(){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); }); },
+    text: function(x){ return [x.nickname,x.display_name,x.category,x.bridge_id,x.user_id].filter(Boolean).join(' '); },
+    noun: tx('supplier'), plural: tx('suppliers'),
+    filters: [
+      { key:'pref', label: tx('Preferred'), all: tx('Preferred or not'),
+        options:[{v:'yes',label:tx('★ Preferred only')},{v:'no',label:tx('Not preferred')}],
+        match: function(x,v){ return v==='yes' ? !!x.preferred : !x.preferred; } },
+      /* ⭐ "can I actually order from them?" is the question this answers, and it is three different states —
+         a catalogue to call, on the rail with nothing on it, and not on ChitBridge at all. */
+      { key:'reach', label: tx('How you order'), all: tx('However you order'),
+        options:[{v:'cat',label:tx('📕 Has a catalogue')},{v:'nocat',label:tx('On ChitBridge, no catalogue')},
+                 {v:'off',label:tx('🧾 Not on ChitBridge')}],
+        match: function(x,v){ return v==='off' ? x.on_rail===false
+          : v==='cat' ? (x.on_rail!==false && !!x.has_catalogue)
+          : (x.on_rail!==false && !x.has_catalogue); } },
+    ].concat(cats.length ? [{ key:'category', label: tx('Category'), all: tx('Every category'),
+        options: cats.map(function(c){ return {v:c,label:c}; }),
+        match: function(x,v){ return x.category===v; } }] : []),
+    sorts: [
+      /* ⚠️ THE DEFAULT IS WHAT THE TOGGLE DEFAULTED TO — preferred first. A screen that reorders itself the day
+         a control appears makes everybody who knew it wrong about it. */
+      { key:'pref', label: tx('★ Preferred first'),
+        cmp: function(a,b){ return (b.preferred?1:0)-(a.preferred?1:0)
+          || String(supName(a)).localeCompare(String(supName(b))); } },
+      { key:'az', label: tx('A–Z'), cmp: function(a,b){ return String(supName(a)).localeCompare(String(supName(b))); } },
+      { key:'za', label: tx('Z–A'), cmp: function(a,b){ return String(supName(b)).localeCompare(String(supName(a))); } },
+      { key:'cat', label: tx('By category'),
+        cmp: function(a,b){ return String(a.category||'~').localeCompare(String(b.category||'~'))
+          || String(supName(a)).localeCompare(String(supName(b))); } },
+    ],
+    repaint: function(){ paintSupList(); },
+  });
 }
-function supCount(){ return supVisible().length; }
+/* ⭐ ONE ANSWER to "which suppliers am I looking at" — the engine's, not a second filter written out again. */
+function supVisible(){ supCtl(); return listCtlView('suppliers').shown; }
+function supCount(){ supCtl(); return listCtlView('suppliers').matched.length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
   /**
@@ -8473,6 +8524,10 @@ function supRowsHTML(){ const rows=supVisible();
   /* ⚠️ OUR OWN SHELF BELONGS ON THE TRADE TAB ONLY. It is the catalogue you SELL from; under "things we buy to
      use" it would be an odd first row and, worse, an invitation to put stock where supplies go. */
   const own = supKind()==='resale' ? supOwnRowHTML() : '';
+  /* ⚠️ AND WHICH EMPTY IT IS. A search that matches nothing must not read as "no suppliers yet" — that
+     tells a shopkeeper their suppliers are gone. listCtlEmptyHTML tells the two apart. */
+  var _v=listCtlView('suppliers');
+  if(!rows.length && _v.all.length) return own + listCtlEmptyHTML('suppliers','🏭','','');
   if(!rows.length) return own + (supKind()==='own_use'
     ? emptyState('🧴', tx('No other suppliers yet'), tx('The shops you buy from to RUN the business — packing, cleaning, stationery, repairs. What arrives from them is never offered to your storefront.'), {label:tx('+ Add one'),onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"})
     : emptyState('🏭','No suppliers yet','Add one by their User ID or email — or just their name, if they are not on ChitBridge.',{label:'+ Add a supplier',onclick:"var i=document.getElementById('sp_add');if(i)i.focus()"}));
@@ -8759,8 +8814,7 @@ function supOpenPanel(id){ UI.supSel=id; UI.supPanel=true; paintSupSlide(); }
 function supClosePanel(){ UI.supPanel=false; paintSupSlide(); }
 function paintSupSlide(){ const h=document.getElementById('supslide_host'); if(h) h.innerHTML=supSlideHTML(); paintSupList(); }
 /* "1 supplier(s)" — the parenthesised plural is a shrug where the code already knows the number. */
-function supCountText(){ const n=supCount(); return n+(n===1?' supplier':' suppliers'); }
-function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCountText();
+function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.innerHTML=listCtlCountHTML('suppliers');
   /* ⚠️ the tab counts live in .lh, which this does not redraw — without this, adding a supplier leaves "Trade 4"
      next to five rows until something else forces a full render (feedback-repaint-locally). */
   const t=document.getElementById('sp_kindtabs'); if(t)t.outerHTML=supKindTabsHTML(); }
@@ -10049,13 +10103,58 @@ async function loadPlatform(keepPage){
   }
 }
 
+/**
+ * ── ⭐⭐ WHAT THIS LIST OFFERS, DECLARED ONCE ────────────────────────────────────────────────────────────────────
+ *
+ * The CRM is the list most likely to get long — every storefront order adds to it and nothing ever removes one —
+ * and it had none of the five controls. `app/list-ctl.js` holds the machinery; this says what a CUSTOMER is
+ * searched by, narrowed by and sorted by, which is the only part that is about customers.
+ *
+ * ⚠️ THE DEFAULT SORT IS THE SERVER'S OWN (`ORDER BY cl.last_txn_at DESC NULLS LAST`). A list that reorders
+ * itself the moment a control appears makes everybody who knew the screen wrong about it.
+ *
+ * ⚠️ Safe to call from both the screen and the repainter: the config is replaced, the search and the sort are
+ * kept. A search that vanished on every repaint would be worse than no search.
+ */
+function custCtl(){
+  return listCtl('customers', {
+    rows: function(){ return UI.custs||[]; },
+    /* searched by everything a shopkeeper would type: the name, the contact, the id, the group */
+    text: function(c){ return [c.display_name, custContact(c), c.phone, c.user_id, c.bridge_id, c.email, c.segment]
+      .filter(Boolean).join(' '); },
+    noun: tx('customer'), plural: tx('customers'),
+    filters: [
+      { key:'segment', label: tx('Group'), all: tx('Every group'),
+        options: [{v:'new',label:tx('New')},{v:'regular',label:tx('Regular')},
+                  {v:'high_value',label:tx('High value')},{v:'inactive',label:tx('Inactive')}],
+        match: function(c,v){ return c.segment===v; } },
+      /* ⭐ "added but never ordered" is a real question — they are the ones an offer is FOR, and they are
+         invisible in a list sorted by last order because they sit at the bottom with no date at all. */
+      { key:'ordered', label: tx('Ordered'), all: tx('Ordered or not'),
+        options: [{v:'yes',label:tx('Has ordered')},{v:'no',label:tx('Never ordered')}],
+        match: function(c,v){ return v==='yes' ? (c.txn_count||0)>0 : !(c.txn_count||0); } },
+    ],
+    sorts: [
+      { key:'recent', label: tx('Recent order first'),
+        cmp: function(a,b){ return (b.last_txn_at?Date.parse(b.last_txn_at):-Infinity) - (a.last_txn_at?Date.parse(a.last_txn_at):-Infinity); } },
+      { key:'orders', label: tx('Most orders'), cmp: function(a,b){ return (b.txn_count||0)-(a.txn_count||0); } },
+      { key:'name',   label: tx('Name A–Z'),
+        cmp: function(a,b){ return String(a.display_name||custContact(a)).localeCompare(String(b.display_name||custContact(b))); } },
+      { key:'joined', label: tx('Newest customer'),
+        cmp: function(a,b){ return (b.customer_since?Date.parse(b.customer_since):0) - (a.customer_since?Date.parse(a.customer_since):0); } },
+    ],
+    repaint: function(){ paintCustList(); },
+  });
+}
 function customersScreen(){
+  custCtl();
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from you (storefront, Suppliers, a bill), or added here. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
     <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID or email')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
-    <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
-    <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
+    ${listCtlToolbarHTML('customers')}
+    <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${listCtlCountHTML('customers')}</div></div>
+    <div class="rows" id="cu_rows" ${listCtlScrollAttr('customers')}>${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
   const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
   const divider=`<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
   const showDetail=(UI.vp==='mob')&&UI.mdetail;
@@ -10063,8 +10162,18 @@ function customersScreen(){
 }
 function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_count||0);
   return '<div class="row '+(sel?'sel':'')+'" data-testid="cust-row-'+esc(c.customer_identity_id)+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
-function custRowsHTML(){ var r=UI.custs||[]; if(!r.length) return emptyState('🛍️','No customers yet','When someone orders from your storefront they appear here — your CRM.'); return r.map(custRowHTML).join(''); }
-function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.innerHTML=custRowsHTML(); var c=document.getElementById('cu_count'); if(c)c.textContent=(UI.custs||[]).length+' customer(s)'; }
+function custRowsHTML(){
+  custCtl();
+  var v=listCtlView('customers');
+  /* ⚠️ "No customers yet" and "nothing matches ravi" are different sentences, and showing the first when the
+     second is true tells a shopkeeper their customers are gone. listCtlEmptyHTML picks. */
+  if(!v.shown.length) return listCtlEmptyHTML('customers','🛍️',tx('No customers yet'),
+    tx('When someone orders from your storefront they appear here — your CRM.'));
+  return v.shown.map(custRowHTML).join('');
+}
+/* ⚠️ the count is innerHTML, not textContent — it carries the greyed "of 812", and textContent would print the
+   markup. It said `812 customer(s)` before, which is the drawn number and the matched number conflated. */
+function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.innerHTML=custRowsHTML(); var c=document.getElementById('cu_count'); if(c)c.innerHTML=listCtlCountHTML('customers'); }
 function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=custDetailHTML(); }
   /* ⭐ the balance is fetched AFTER the pane exists, so the box it writes into is already on the screen */
   if(UI.custSel) custRewardsLoad(UI.custSel); }

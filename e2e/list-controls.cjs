@@ -44,17 +44,30 @@ const ROOT = path.join(__dirname, '..', 'public');
 const FILES = [path.join(ROOT, 'app.html')].concat(
   fs.readdirSync(path.join(ROOT, 'app')).filter((f) => f.endsWith('.js')).map((f) => path.join(ROOT, 'app', f)));
 
-/* ── what a screen must offer, and how to see it in the source ────────────────────────────────────────────── */
+/**
+ * ── what a screen must offer, and how to see it in the source ──────────────────────────────────────────────────
+ *
+ * ⭐ A HELPER NAME IS A LEGITIMATE DETECTOR, and this file has always worked that way — `PagerHTML`, `CountHTML`
+ * and `sortPresetSelect` are all somebody else's function. `app/list-ctl.js` is the newest of them: it holds the
+ * five controls for a list the browser already has, so a screen that calls it has them.
+ *
+ * ⚠️ AND THE CONFIG IS WHAT IS CHECKED, NOT THE CALL, for the two that are optional. `listCtlToolbarHTML` always
+ * draws a search box, so calling it proves search. It draws filters and sorts only if it was GIVEN some — so
+ * those look for `filters: [{` and `sorts: [{` in the screen's own declaration, which is where a screen says
+ * what a customer may be narrowed and ordered by. An empty `filters: []` matches neither, on purpose.
+ */
 const CONTROLS = {
   /* ⚠️ oninput, not onkeydown. The Platform search accepted Enter and nothing else for a day. */
-  search:  (b) => /placeholder="[^"]*[Ss]earch|id="[a-z]{2}_q"|data-testid="[a-z-]*search/.test(b)
-                  && /oninput=/.test(b),
-  filters: (b) => /<select/.test(b),
-  sort:    (b) => /pl_sort|sortPresetSelect|data-testid="[a-z-]*sort|onchange="[a-zA-Z]*[Ss]ort/.test(b),
+  search:  (b) => /listCtlToolbarHTML\(/.test(b)
+                  || (/placeholder="[^"]*[Ss]earch|id="[a-z]{2}_q"|data-testid="[a-z-]*search/.test(b)
+                      && /oninput=/.test(b)),
+  filters: (b) => /<select/.test(b) || /\bfilters\s*:\s*\[\s*\{/.test(b),
+  sort:    (b) => /pl_sort|sortPresetSelect|data-testid="[a-z-]*sort|onchange="[a-zA-Z]*[Ss]ort/.test(b)
+                  || /\bsorts\s*:\s*\[\s*\{/.test(b),
   /* ⚠️ EITHER SHAPE COUNTS. Athi asked for page numbers on the Platform screen, not an endless scroll:
      *'give the page numbers so the next page can be moved.'* A detector that only knows about onscroll would
      have failed the screen for doing the better thing. What matters is that the list can REACH its total. */
-  paging:  (b) => /onscroll=|PagerHTML|data-testid="[a-z-]*page-/.test(b),
+  paging:  (b) => /onscroll=|PagerHTML|data-testid="[a-z-]*page-|listCtlScrollAttr\(/.test(b),
   count:   (b) => /CountHTML|listtotal|pgTotalText|of\s*'\s*\+/.test(b),
 };
 
@@ -129,7 +142,6 @@ const BASELINE = {
   catalogueScreen:         ['filters', 'sort', 'paging', 'count'],
   categoriesScreen:        ['sort', 'paging', 'count'],
   coassistsScreen:         ['sort', 'paging'],
-  customersScreen:         ['search', 'sort', 'paging', 'count'],
   disputesScreen:          ['search', 'filters', 'sort', 'paging', 'count'],
   intakeScreen:            ['search', 'sort', 'paging', 'count'],
   /**
@@ -142,7 +154,6 @@ const BASELINE = {
    * ⭐ THE DEBT THAT IS LEFT IS REAL: search, filters, sort, paging, count. Those they genuinely owe.
    */
   networkScreen:           ['search', 'filters', 'sort', 'paging'],
-  suppliersScreen:         ['filters', 'sort', 'paging'],
   /* ⭐ platformScreen is deliberately ABSENT — it has all five, and leaving it out is what holds it there. */
 };
 
