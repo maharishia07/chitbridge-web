@@ -4751,6 +4751,7 @@ var INT_TABS = [
   { key: 'streams',    n: 'Who owns what',   q: 'one owner per stream' },
   { key: 'books',      n: 'In the books',    q: 'did it land, and what is late' },
   { key: 'store',      n: 'The store',       q: 'what your own books say about you' },
+  { key: 'counters',   n: 'Counters',        q: 'every till on your shop \u2014 where it is, when it last spoke' },
   { key: 'keys',       n: 'Keys & services', q: 'what other systems sign in with' },
 ];
 function intOpen(){ return UI.intOpen !== undefined ? UI.intOpen : lsGet('cb_int_open', ''); }
@@ -4941,17 +4942,166 @@ async function intRecRetry(id){
   try { await api('chitBooks', { params: { id: id } }); toast(tx('Asked again — the connector books it within a minute.')); _INT_REC = undefined; loadSettings(); }
   catch (e) { toast(tx('Could not ask') + ': ' + (e && e.message || e)); }
 }
+
+/**
+ * ── ⭐⭐⭐ COUNTERS — WHERE THIS SHOP IS OPEN, AND HOW MANY TIMES ─────────────────────────────────────────────
+ *
+ * Athi, 2026-09-16, with one PC pushing bills and another silent: *"can we build IP level information for every
+ * counter app, installed, browsed, is it possible to connect with bridge id, in how many places the store is
+ * opened and to close the duplicates?"*
+ *
+ * ⚠️⚠️ "NEVER REACHED CHITBRIDGE" IS THE LOUDEST ROW HERE, AND IT IS A DIFFERENT FAULT FROM EVERY OTHER ONE. A
+ * counter we have never heard from is not being refused by us — nothing from it is arriving, which points at the
+ * network in front of it rather than at anything on this side. That single distinction is the difference between
+ * hunting a permissions problem for an afternoon and telephoning an office firewall.
+ *
+ * ⚠️ A KEY IS A COUNTER. Minting another does not replace the last, it adds a second — and each one keeps its OWN
+ * copy of the bills on its machine (the counter's tillStore() is named after the key), so a pairing nobody uses is
+ * a place sales can go unnoticed. This page exists so that is visible before it becomes a mystery.
+ */
+function intCountersHTML(){
+  if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_KEYS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
+  var tills = ((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; });
+  var bridge = (typeof S !== 'undefined' && S && S.bridgeId) || '';
+  if (!tills.length) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Counters') + '</div>'
+    + '<div style="color:var(--grey)">' + tx('No counter has been paired to this shop yet.') + '</div></div>';
+
+  var live = tills.filter(function(k){ return _keySeenAt(k) && (Date.now() - _keySeenAt(k)) < 900000; });
+  var never = tills.filter(function(k){ return !_keySeenAt(k); });
+  /* ⭐ two counters reporting the same address are one PC paired twice — much the commonest duplicate */
+  var byIp = {};
+  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
+  var dupIps = Object.keys(byIp).filter(function(ip){ return byIp[ip].length > 1; });
+
+  var rows = tills.slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); }).map(function(k){
+    var at = _keySeenAt(k), ip = (k.seen && k.seen.ip) || null, d = k.diag || null;
+    var state = !at ? { c: 'warn', t: tx('never reached ChitBridge') }
+              : (Date.now() - at) < 900000 ? { c: 'ok', t: tx('open now') }
+              : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(k.seen.at) };
+    var armed = (_CLOSE_ARMED === k.jti);
+    return '<div data-testid="int-counter-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:baseline;padding:8px 0;border-top:1px solid var(--line)">'
+      + '<span style="flex:1"><b>' + esc(k.name || 'counter') + '</b>'
+      + (ip && byIp[ip].length > 1 ? ' <span style="color:var(--warn);font-size:var(--fs-1)">' + tx('same PC as another counter') + '</span>' : '')
+      + '<div style="color:var(--grey);font-size:var(--fs-1)">'
+        + esc(bridge || tx('no bridge id')) + ' · …' + esc(k.last4 || '')
+        + ' · ' + tx('paired') + ' ' + esc(String(k.created_at || '').slice(0, 10))
+        + (ip ? ' · ' + esc(ip) : '')
+        + ((k.seen && k.seen.agent) ? ' · ' + esc(_agentName(k.seen.agent)) : '')
+      + '</div>'
+      /* ⭐ what the counter itself last said — it can see things this side never will */
+      + (d && d.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)" data-testid="int-counter-said-' + esc(k.jti) + '">🩺 ' + esc(d.verdict) + '</div>' : '')
+      + '</span>'
+      + '<span style="color:var(--' + state.c + ');font-size:var(--fs-1);white-space:nowrap">' + esc(state.t) + '</span>'
+      /* ⚠️ two presses, and the second one SAYS WHAT IT COSTS — closing strands whatever that PC has not sent */
+      + '<button class="warn" data-testid="int-counter-close-' + esc(k.jti) + '" onclick="intCounterClose(\'' + esc(k.jti) + '\')">'
+      + (armed ? tx('Really close — unsent bills stay on that PC') : tx('Close')) + '</button>'
+      + '</div>';
+  }).join('');
+
+  var note = '';
+  if (never.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-unreached">'
+    + esc(never.length + ' ' + tx('counter(s) have never reached ChitBridge. They are not being refused — nothing from them has arrived at all, so look at the network or firewall on those PCs rather than at permissions here.')) + '</div>';
+  if (dupIps.length) note += '<div style="color:var(--warn);font-size:var(--fs-2);margin-top:10px" data-testid="int-counter-dups">'
+    + esc(tx('The same PC is paired more than once. Each pairing keeps its own copy of the bills on that machine and only the one in use is sent from.'))
+    + ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' + tx('Close the unused duplicates') + '</button></div>';
+
+  return '<div style="' + _CARD + '">'
+    + '<div class="sec" style="margin:0 0 6px">' + tx('Counters') + ' · ' + tills.length
+    + (live.length ? ' · ' + live.length + ' ' + tx('open now') : '') + '</div>'
+    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
+    + tx('Every counter paired to this shop. A counter IS a key — minting another adds one, it does not replace the last.') + '</div>'
+    + rows + note + '</div>';
+}
+function _keySeenAt(k){ return (k && k.seen && k.seen.at) ? new Date(k.seen.at).getTime() : 0; }
+function _keyAgo(iso){
+  if (!iso) return '';
+  var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 90) return tx('just now');
+  if (s < 5400) return Math.round(s / 60) + ' min ago';
+  if (s < 172800) return Math.round(s / 3600) + ' h ago';
+  return Math.round(s / 86400) + ' days ago';
+}
+/** ⭐ a user-agent is unreadable; the shop only needs to recognise WHICH MACHINE this was */
+function _agentName(ua){
+  var u = String(ua || '');
+  var os = /Windows/.test(u) ? 'Windows' : /Android/.test(u) ? 'Android' : /iPhone|iPad/.test(u) ? 'iPhone/iPad'
+         : /Mac OS X/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : '';
+  var br = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox'
+         : /Safari\//.test(u) ? 'Safari' : '';
+  return [os, br].filter(Boolean).join(' · ') || tx('unknown');
+}
+var _CLOSE_ARMED = null;
+/**
+ * ⚠️⚠️ CLOSING A COUNTER REVOKES ITS KEY EVERYWHERE, AND ANYTHING IT HAD NOT SENT IS STRANDED ON THAT PC. The
+ * bills are not destroyed — they sit in that machine's own copy — but nothing can send them once the key is gone.
+ * So the second press says that, in those words, instead of asking "are you sure?" about a cost it never names.
+ */
+async function intCounterClose(jti){
+  if (_CLOSE_ARMED !== jti) { _CLOSE_ARMED = jti; loadSettings(); return; }
+  _CLOSE_ARMED = null;
+  try { await api('keysRevoke', { params: { jti: jti } }); _KEYS = undefined; if (typeof toast === 'function') toast(tx('Counter closed')); loadSettings(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not close it'), true); }
+}
+/**
+ * ⭐ CLOSE THE UNUSED DUPLICATES — where one PC holds several pairings, keep the one that spoke most recently and
+ * close the rest.
+ * ⚠️⚠️ NEVER A COUNTER THAT HAS NEVER REPORTED. We cannot tell whether it is idle or simply unable to reach us,
+ * and closing the one that cannot call for help is the worst guess available — it is also exactly the counter
+ * somebody is most likely to be trying to fix.
+ */
+async function intCounterCloseDups(){
+  var tills = (((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; }));
+  var byIp = {};
+  tills.forEach(function(k){ var ip = k.seen && k.seen.ip; if (ip) (byIp[ip] = byIp[ip] || []).push(k); });
+  var kill = [];
+  Object.keys(byIp).forEach(function(ip){
+    byIp[ip].slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); })
+      .slice(1).forEach(function(k){ if (_keySeenAt(k)) kill.push(k); });
+  });
+  if (!kill.length) { if (typeof toast === 'function') toast(tx('There are no duplicates that can be closed safely.')); return; }
+  if (_CLOSE_ARMED !== 'dups') { _CLOSE_ARMED = 'dups'; if (typeof toast === 'function')
+    toast(tx('Press again to close') + ' ' + kill.length + ' ' + tx('duplicate counter(s). The newest on each PC is kept.')); return; }
+  _CLOSE_ARMED = null;
+  for (var i = 0; i < kill.length; i++) { try { await api('keysRevoke', { params: { jti: kill[i].jti } }); } catch (_) {} }
+  _KEYS = undefined; loadSettings();
+}
 function integrationsSettingsHTML(){
   if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   var keys = (_KEYS && _KEYS.keys) || [];
   var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
-  var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
+  /**
+   * ⭐⭐ WHEN EACH KEY LAST SPOKE, AND FROM WHERE. Athi, 2026-09-16, with one counter pushing bills and another
+   * silent: *"can we trace the ip for each counter app and see what the restrictions are?"* The list named every
+   * key and said nothing about whether any of them was alive.
+   * ⚠️⚠️ "NEVER REACHED" IS THE LOUD ANSWER, NOT A BLANK. A counter that has never arrived here is not being
+   * refused by us — it is not getting here, which points at the network in front of it. That distinction is the
+   * difference between hunting a permissions bug and telephoning an office firewall, so it is said in words.
+   */
+  var _keyAgo = function(iso){
+    if (!iso) return null;
+    var s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 90) return tx('just now');
+    if (s < 5400) return Math.round(s / 60) + ' min ago';
+    if (s < 172800) return Math.round(s / 3600) + ' h ago';
+    return Math.round(s / 86400) + ' days ago';
+  };
+  var _keySeen = function(k){
+    var sn = k && k.seen;
+    if (!sn || !sn.at) return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--warn)">'
+      + tx('never reached ChitBridge') + '</span>';
+    var quiet = (Date.now() - new Date(sn.at).getTime()) > 86400000;
+    return '<span data-testid="int-key-seen-' + esc(k.jti) + '" style="color:var(--' + (quiet ? 'warn' : 'ok') + ')">'
+      + esc(_keyAgo(sn.at)) + (sn.ip ? ' · ' + esc(sn.ip) : '') + '</span>';
+  };
+  var rows = keys.length ? keys.map(function(k){ return '<div class="row" data-testid="int-key-' + esc(k.jti) + '" style="display:flex;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)"><b style="flex:1">' + esc(k.name) + '</b><span style="color:var(--grey);font-size:var(--fs-1)">' + esc((k.scopes||[]).join(', ')) + ' · …' + esc(k.last4||'') + ' · ' + esc(String(k.created_at||'').slice(0,10)) + ' · ' + _keySeen(k) + '</span><button class="warn" data-testid="int-key-revoke-' + esc(k.jti) + '" onclick="intKeyRevoke(\'' + esc(k.jti) + '\')">' + tx('Revoke') + '</button></div>'; }).join('') : '<div style="color:var(--grey)">' + tx(_KEYS === null ? 'reading…' : 'No keys yet.') + '</div>';
   var tab = intTab();
   var head = _misHead('Integrations', tx((INT_TABS.filter(function(t){ return t.key === tab; })[0] || {}).q || 'Connectors, services and the keys they use'));
   if (tab === 'connectors' || tab === 'running') return head + intConnectorsHTML();
   if (tab === 'streams') return head + intStreamsHTML();
   if (tab === 'books')   return head + intReconcileHTML();
   if (tab === 'store')   return head + intProfileMapHTML();
+  if (tab === 'counters') return head + intCountersHTML();
   return head
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'

@@ -341,8 +341,8 @@ test('[TILL-14] a re-paired counter finds the sales its previous copy was holdin
 
   await test.step('⚠️ the SAME shop is paired again — and the new copy is empty and truthful', async () => {
     await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[1]));
-    /* ⚠️ a fragment-only change does NOT reload a page — without this the boot code never adopts the new key */
-    await till.reload();
+    /* ⭐ no reload by hand: since [TILL-15] the counter adopts a pasted key and restarts itself */
+    await till.waitForTimeout(1200);
     await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
     await till.evaluate(() => refresh());
     await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
@@ -417,5 +417,52 @@ test('[TILL-15] pasting a new key into an open counter re-pairs it', async ({ pa
     await till.evaluate((k) => { location.hash = 'key=' + encodeURIComponent(k); }, keys[1]);
     await till.waitForTimeout(700);
     expect(await till.evaluate(() => tillStore()), 'it re-paired with the key it already had').toBe(before);
+  });
+});
+
+// ⭐⭐⭐ [TILL-16] WHERE THIS SHOP IS OPEN, AND FROM WHAT ADDRESS. Athi, 2026-09-16, with one PC pushing bills and
+// another silent: *"can we build IP level information for every counter app ... in how many places the store is
+// opened and to close the duplicates?"* Nothing was ever written back when a key was used, so a counter that had
+// gone quiet was indistinguishable from one that had never existed.
+test('[TILL-16] a counter that has been used is visible to the shop, with its address', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Seen ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Salt 1 kg', unit: 'kg', price: 22, code: 'SAL9' });
+
+  const key = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('keysMint', { body: { name: 'seen counter', scopes: ['till'], days: 1 } });
+    return (r && (r.key || r.api_key)) || null;
+  });
+
+  await test.step('⚠️ before it is ever used the shop is told so, not shown a blank', async () => {
+    const k = await page.evaluate(async () => {
+      const r = await api('keysList', {});
+      return ((r && (r.keys || r)) || []).filter((x) => x && (x.scopes || []).includes('till'))[0];
+    });
+    expect(k, 'the counter is not listed at all').toBeTruthy();
+    expect(k.seen, 'a counter that has never called must have no sighting — the absence IS the diagnosis').toBeFalsy();
+  });
+
+  await test.step('⭐⭐ once the counter talks to ChitBridge, the shop can see when and from where', async () => {
+    const till = await context.newPage();
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.evaluate(() => refresh());
+    await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+    /* the sighting is filed after the answer goes out, so give it a moment */
+    await till.waitForTimeout(2500);
+
+    const k = await page.evaluate(async () => {
+      const r = await api('keysList', {});
+      return ((r && (r.keys || r)) || []).filter((x) => x && (x.scopes || []).includes('till'))[0];
+    });
+    expect(k.seen, 'the counter used its key and the shop still cannot tell').toBeTruthy();
+    expect(k.seen.at, 'no time was recorded for the sighting').toBeTruthy();
+    /* ⭐ the one fact a counter cannot know about itself */
+    expect(k.seen.ip, 'no address was recorded, so one PC cannot be told from another').toBeTruthy();
+    expect(String(k.seen.agent || ''), 'nothing says what kind of machine it is').toMatch(/Mozilla|Chrome|Safari|Firefox/i);
+    /* ⚠️ a sighting must never grant anything — it is an observation, not a permission */
+    expect(k.scopes, 'the sighting changed what the key may do').toEqual(['till']);
   });
 });
