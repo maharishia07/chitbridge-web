@@ -28,29 +28,8 @@ const APP = path.join(__dirname, '..', 'public', 'app.html');
 const src = fs.readFileSync(APP, 'utf8');
 
 /* ── colour maths ────────────────────────────────────────────────────────────────────────────────────────── */
-
-function hex(c) {
-  let s = String(c || '').trim().replace(/^#/, '');
-  if (s.length === 3) s = s.split('').map((x) => x + x).join('');
-  if (!/^[0-9a-f]{6}$/i.test(s)) return null;
-  return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16));
-}
-
-/** WCAG relative luminance — the sRGB transfer curve, not a naive average. */
-function lum(rgb) {
-  const [r, g, b] = rgb.map((v) => {
-    const c = v / 255;
-    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function ratio(fg, bg) {
-  const a = hex(fg), b = hex(bg);
-  if (!a || !b) return null;
-  const la = lum(a), lb = lum(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
-}
+/* ⭐ ONE COPY, shared with till-contrast.cjs — see e2e/lib/contrast.cjs for why it moved out of this file. */
+const { hex, lum, ratio } = require('./lib/contrast.cjs');
 
 /* ── read the themes out of the app ──────────────────────────────────────────────────────────────────────── */
 
