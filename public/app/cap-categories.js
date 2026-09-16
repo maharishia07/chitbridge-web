@@ -673,7 +673,9 @@ function cbcatDetailHTML(){
     + (function(){ var t = cbcatTaxOf(c.id); return '<div class="sec">' + tx('Applied here') + '</div>'
         + '<div class="cbcat-stat" data-testid="catg-tax-applied"><span class="v">' + (t === null ? '…' : t ? (t.dead ? '⚠️' : (t.rate === null || t.rate === undefined ? '?' : t.rate + '%')) : '—') + '</span>'
         + '<span class="k">' + (t === null ? tx('reading the slabs…') : t ? (t.dead ? tx('cites a slab that is not active') : esc(t.name || '') + (t.inherited_from ? ' · ' + esc(tx('inherited from') + ' ' + t.inherited_from) : ' · ' + tx('set on this category'))) : tx('no slab here or above — products fall to the catalogue default')) + '</span></div>'; })()
-    + '<div class="cbcat-stat"><span class="v">' + n + '</span><span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
+    /* ⚠️ the space is written, not left to the flex gap — it read "363products in this category" on the live
+       screen, and a number welded to its noun is the kind of small wrongness that makes a figure look unchecked */
+    + '<div class="cbcat-stat"><span class="v">' + n + '</span> <span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
     /* ⭐ THE REVERSE VIEW. An offer can target a category ("10% off Paints") and until now only the offer knew.
        Athi, 2026-09-03: *"if we want to manage products at category level, can we add here, like this category is
        under offer."* Same live-offers read the product page uses — one loader, one cache. */
