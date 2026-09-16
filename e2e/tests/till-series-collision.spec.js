@@ -86,3 +86,68 @@ test('[TILL-18] a second counter with the same name and number is refused, not a
     expect(rescued.body.chit_id).toBe(first.body.chit_id);
   });
 });
+
+// ⭐⭐⭐ [TILL-19] ONE PERMANENT PREFIX PER COUNTER, GIVEN BY THE SHOP. Athi, 2026-09-17: *"if the same counter
+// number is already opened in another PC ... either stop opening that counter, or allow — but with a different
+// sequence number"*, and then: *"the counter sequence number — we should offer it, and it cannot be changed for a
+// PC, so it is a permanent number."*
+//
+// ⚠️ THE ASSERTION MOVED, IT WAS NOT DROPPED. The first version of this case asserted the newer PC was STOPPED.
+// Athi's second message is better than that design: GST rule 46 allows invoices in multiple series, each
+// consecutive for the year, so the newer PC is simply MOVED to a free prefix and told why. The case now asserts the
+// move — and still asserts it is refused a prefix another counter holds, which is what the stop was protecting.
+test('[TILL-19] each counter gets its own prefix; a clashing one is moved, never given a held prefix', async ({ page }) => {
+  test.setTimeout(300000);
+  await mintEntity(page, { fresh: true, name: 'Prefix ' + Date.now().toString().slice(-6) });
+
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const out = [];
+    for (const n of ['older pc', 'newer pc', 'fresh pc']) {
+      const r = await api('keysMint', { body: { name: n, scopes: ['till'], days: 1 } });
+      out.push(r && (r.key || r.api_key));
+      await new Promise((ok) => setTimeout(ok, 1100));   /* created_at decides who is older — keep them apart */
+    }
+    return out;
+  });
+  const base = await page.evaluate(() => (typeof CFG !== 'undefined' && CFG.API_BASE) || '');
+  const snap = (key, till, issued) => page.evaluate(async ({ base, key, till, issued }) => {
+    const r = await fetch(base + '/api/till/snapshot?till=' + encodeURIComponent(till) + '&issued=' + (issued ? 1 : 0),
+                          { headers: { 'X-Api-Key': key } });
+    const j = await r.json().catch(() => null);
+    return { status: r.status, till: j && j.till };
+  }, { base, key, till, issued });
+
+  await test.step('two PCs that have both issued numbers as C1 — the OLDER keeps it', async () => {
+    const older = await snap(keys[0], 'C1', true);
+    expect(older.status).toBe(200);
+    expect(older.till.moved_from, 'the older counter was moved off its own series').toBeFalsy();
+    expect(older.till.assigned_id).toBe('C1');
+  });
+
+  let movedTo;
+  await test.step('⭐⭐ … and the NEWER one is MOVED to a free prefix, with the reason named', async () => {
+    const newer = await snap(keys[1], 'C1', true);
+    expect(newer.till.clash, 'a counter was stopped when a free prefix existed').toBeFalsy();
+    expect(newer.till.moved_from, 'the move is not said out loud').toBe('C1');
+    expect(newer.till.held_by, 'the move does not say which counter holds C1').toBe('older pc');
+    movedTo = newer.till.assigned_id;
+    expect(movedTo, '⚠️ two PCs were left on one series').not.toBe('C1');
+    expect(movedTo).toMatch(/^[A-Z][1-9]$/);
+  });
+
+  await test.step('⭐ the move is PERMANENT — asking again with the new prefix keeps it, and does not move it back', async () => {
+    const again = await snap(keys[1], movedTo, true);
+    expect(again.till.assigned_id).toBe(movedTo);
+    expect(again.till.moved_from, 'a settled counter was moved a second time').toBeFalsy();
+  });
+
+  await test.step('⭐⭐ a PC that has issued NOTHING is given a prefix nobody holds — and it too is kept', async () => {
+    const fresh = await snap(keys[2], 'C1', false);
+    expect(fresh.till.clash).toBeFalsy();
+    expect(fresh.till.assigned_id, 'a fresh counter was handed the prefix another counter holds').not.toBe('C1');
+    expect(fresh.till.assigned_id, 'a fresh counter was handed the prefix the moved counter holds').not.toBe(movedTo);
+    const again = await snap(keys[2], fresh.till.assigned_id, false);
+    expect(again.till.assigned_id, 'the prefix moved between two reads').toBe(fresh.till.assigned_id);
+  });
+});
