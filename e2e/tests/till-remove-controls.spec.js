@@ -242,3 +242,61 @@ test('[TILL-12] one press frees a queue blocked by another shop, and the report 
     expect(rep, 'a customer name reached the report').not.toMatch(/Walk-in|cname|phone/i);
   });
 });
+
+// ⭐⭐⭐ [TILL-13] THE COUNTER NOBODY CAN REACH, REPORTING ITSELF. Athi, 2026-09-16: *"is there any way of
+// interacting with the counter app where it creates the issue, diagnostic message thrown to server?"* and
+// *"have we got mechanism understanding temp storage we use?"*
+test('[TILL-13] a counter reports itself to the server, and can show what it is keeping', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Diag ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Ghee 500 ml', unit: 'bottle', price: 380, code: 'GHE9' });
+
+  const key = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('keysMint', { body: { name: 'diag counter', scopes: ['till'], days: 1 } });
+    return (r && (r.key || r.api_key)) || null;
+  });
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+
+  await test.step('⭐⭐ the counter posts its own account of itself and the shop can read it back', async () => {
+    await till.evaluate(() => openStuck());
+    await till.evaluate(() => stuckSend());
+    await till.waitForTimeout(1500);
+    /* read it back through the shop's own key list — the screen support would actually look at */
+    const diag = await page.evaluate(async () => {
+      const r = await api('keysList', {});
+      const list = (r && (r.keys || r)) || [];
+      const k = list.filter((x) => x && Array.isArray(x.scopes) && x.scopes.includes('till') && x.diag)[0];
+      return k ? k.diag : null;
+    });
+    expect(diag, 'the counter reported nothing the shop can read').toBeTruthy();
+    expect(diag.at, 'the server did not stamp when the counter spoke').toBeTruthy();
+    expect(typeof diag.queued, 'the counts did not survive').toBe('number');
+    expect(diag.code, 'no support code to quote on a call').toMatch(/^[A-Z0-9]{1,6}$/);
+    /* ⚠️ the one fact a counter cannot know about itself */
+    expect(diag, 'the shop cannot tell which machine this was').toHaveProperty('ip');
+  });
+
+  await test.step('⚠️ and it carries no customer — this is read by people outside the shop', async () => {
+    const diag = await page.evaluate(async () => {
+      const r = await api('keysList', {});
+      const list = (r && (r.keys || r)) || [];
+      return (list.filter((x) => x && x.diag)[0] || {}).diag;
+    });
+    const asText = JSON.stringify(diag);
+    expect(asText, 'a customer name or phone reached the server').not.toMatch(/Walk-in|customer|phone/i);
+  });
+
+  await test.step('⭐⭐ and the counter can say what it is keeping, and where', async () => {
+    const m = await till.evaluate(() => storageMap());
+    expect(Array.isArray(m.idb), 'no account of the databases on this device').toBe(true);
+    expect(m.idb.length, 'this shop\'s own store is not listed').toBeGreaterThan(0);
+    expect(Array.isArray(m.ls), 'no account of the settings kept on this device').toBe(true);
+    await till.evaluate(() => openStorage());
+    await expect(till.locator('[data-testid="till-wipe"]')).toBeVisible();
+  });
+});
