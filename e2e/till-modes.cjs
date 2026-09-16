@@ -16,14 +16,26 @@ const WEB = process.env.CB_WEB_BASE || 'https://chitbridge-web.vercel.app';
   await p.goto('/till.html');
   await p.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBSearch, null, { timeout: 30000 });
 
+  /**
+   * ── ⚠️⚠️ THIS ASSERTION WAS MOVED, NOT DELETED (2026-09-16) ────────────────────────────────────────────────
+   *
+   * It read `[data-testid="till-mode-<m>"]).className === 'on'` — THREE BUTTONS, one lit. On 2026-09-09 the
+   * three became one dropdown (Athi: *"sell, receive, despatch can be in a dropdown box"*), and this guard was
+   * written the day before. It has thrown `Cannot read properties of null` on every run since, inside a suite
+   * with other reds, where a genuine regression is indistinguishable from stale tooling.
+   *
+   * ⭐ THE QUESTION IT ASKS IS STILL THE RIGHT ONE — does choosing a mode actually switch the screen? — so the
+   * question stays and only the control changes: the select now carries the answer, and it is DRIVEN rather
+   * than read, so this proves the wiring a person uses and not a function call. [[feedback-probe-through-the-gate]]
+   */
   for (const mode of ['sell', 'receive', 'despatch']) {
+    await p.selectOption('[data-testid="till-mode"]', mode);
     const r = await p.evaluate((m) => {
-      setMode(m);
-      const lit = document.querySelector('[data-testid="till-mode-' + m + '"]').className;
+      const sel = document.querySelector('[data-testid="till-mode"]');
       const shown = ['sell', 'receive', 'despatch'].filter((k) => document.getElementById('pane_' + k).style.display !== 'none');
-      return { lit, shown, placeholder: document.getElementById('q').placeholder, keys: document.getElementById('keys').innerText.replace(/\s+/g, ' ') };
+      return { lit: sel ? sel.value : null, shown, placeholder: document.getElementById('q').placeholder, keys: document.getElementById('keys').innerText.replace(/\s+/g, ' ') };
     }, mode);
-    const ok = r.lit === 'on' && r.shown.length === 1 && r.shown[0] === mode;
+    const ok = r.lit === mode && r.shown.length === 1 && r.shown[0] === mode;
     console.log((ok ? '  ok   ' : '  FAIL ') + mode.padEnd(9) + '· pane ' + r.shown.join(',') + ' · "' + r.placeholder.slice(0, 44) + '"');
     console.log('         keys: ' + r.keys.slice(0, 110));
   }

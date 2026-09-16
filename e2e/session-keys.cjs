@@ -100,11 +100,50 @@ for (const f of files) {
   /* ⚠️ THE SAME SCAN, ANCHORED TO COLUMN ZERO AND REMEMBERED PER FILE — the shadowing check at the bottom needs
      to know WHERE a name was declared, not only that it was. Indented declarations are nested and share no
      scope with another file's; only column zero enters the one global namespace these classic scripts share. */
-  for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
+  /**
+   * ⚠️⚠️ AND A FILE WRAPPED IN AN IIFE SHARES NO NAMESPACE AT ALL (2026-09-16).
+   *
+   * The rule above says only column zero enters the one global namespace these classic scripts share. That is
+   * true of the hand-written files — and false of every generated mirror, because the vendor pastes the master
+   * at column zero INSIDE `(function (root) { … })(globalThis)`. So app/tax.js, app/tax-slab.js and
+   * app/tax-engine.js all appeared to declare `resolve`, `r2`, `slabOf` globally, and the guard reported
+   * thirteen collisions between three files that cannot collide with anything. It had been saying so for days.
+   *
+   * ⭐ They publish ONE name each — `window.CBTax` — and that really can be contested; `e2e/dup-functions.cjs`
+   * is the check that catches it, and it does. This one is about the shared global namespace, which a wrapped
+   * file never enters.
+   */
+  const wrapped = /^\s*\(function\b/.test(src);
+  if (!wrapped) for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\s*\(/gm)) {
     if (!byName.has(m[1])) byName.set(m[1], new Set());
     byName.get(m[1]).add(f);
   }
-  for (const m of src.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\()/g)) defined.add(m[1]);
+  /**
+   * ── ⚠️⚠️ THE FOURTH, FIFTH AND SIXTH FALSE POSITIVES (2026-09-16) ──────────────────────────────────────────
+   *
+   * This rule used to demand `= function` or `= (`, so it saw only two of the ways a name gets bound. Every
+   * finding this guard reported was a false positive because of it, and it had been red for days — at which
+   * point nobody reads it, which is the real cost. What it was missing:
+   *
+   *   · A PLAIN ALIAS.   `const kindWord = prodOrderKindWord;` then `kindWord(k)` two lines later (app.html).
+   *   · A TERNARY.       `var taxOf = typeof o.taxOf === 'function' ? o.taxOf : function(){…}` (cart.js).
+   *   · METHOD SHORTHAND. `getIdentifier() { return 'cb_system'; }` inside an object literal (tax-engine.js).
+   *
+   * ⭐ ANY INITIALISER NOW COUNTS, because the question is "would this line throw a ReferenceError?" and a name
+   * bound to ANYTHING would not. Binding a number and then calling it is a different bug, and not this one's.
+   */
+  for (const m of src.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=/g)) defined.add(m[1]);
+  /* destructured bindings — `const { slabOf, resolve } = CBTax.slab;` defines both of those names */
+  for (const m of src.matchAll(/\b(?:var|let|const)\s*\{([^}]{1,400})\}\s*=/g)) {
+    for (const p of m[1].split(',')) {
+      const n = p.split(':').pop().trim().split(/[=\s]/)[0];
+      if (/^[A-Za-z_$][\w$]*$/.test(n)) defined.add(n);
+    }
+  }
+  /* object-literal method shorthand: preceded by { or , so a plain `if (x) {` cannot be mistaken for one */
+  for (const m of src.matchAll(/[{,]\s*([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/g)) defined.add(m[1]);
+  /* a class method is a definition too */
+  for (const m of src.matchAll(/^\s{2,}(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^()]*\)\s*\{/gm)) defined.add(m[1]);
   /* parameters count as defined — a callback is not a missing function */
   for (const m of src.matchAll(/function\s*[A-Za-z_$\w]*\s*\(([^)]*)\)/g))
     for (const p of m[1].split(',')) { const n = p.trim().split(/[=\s]/)[0]; if (/^[A-Za-z_$][\w$]*$/.test(n)) defined.add(n); }
