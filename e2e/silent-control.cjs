@@ -50,6 +50,23 @@ const LOCAL_BY_DESIGN = {
      _catfQueuePush send it, and _catfPullServer reads it back with local-wins-if-dirty. Its only toast is a
      FAILURE ("couldn't save locally — it may be too large"), which is the opposite of the bug this hunts. */
   _catfSave:      'draft autosave; the server half is _catfPushServer / _catfQueuePush',
+  /**
+   * ── ⭐ FOUR IN THE TESTING PANEL THAT FILL A FORM AND FILE NOTHING (judged 2026-09-16) ──────────────────────
+   *
+   * All four end the same way: `put('wcTitle', …)` into the Create form and focus it. NOTHING is persisted by
+   * the act, and nothing claims to be — the save is a separate, explicit press (`testCaseSend`), which does ask
+   * the server and does report its outcome. A tester who presses one of these and walks away has lost a draft
+   * they never asked to keep, which is what a draft is.
+   *
+   * ⚠️ THE ONE THAT DESERVED A SECOND LOOK is `testDiagRaise`, because "raise" sounds like filing. It is not:
+   * the button on screen reads "✎ Write this up", it pre-fills the form with the measured numbers and the
+   * correlation id, and the tester still has to press the button that files it. The label and the behaviour
+   * agree, which is the whole question this guard asks.
+   */
+  testTechUse:    'fills the Create form from a technique row; testCaseSend files it',
+  testCoverCase:  'fills the Create form from a coverage row; testCaseSend files it',
+  testDiagRaise:  'fills the Create form with the measured trips ("✎ Write this up"); testCaseSend files it',
+  testDiagClear:  'clears the in-memory CBCALLS ring and this device’s visit log — same case as clearMsgLog',
 };
 
 let pass = 0, fail = 0;

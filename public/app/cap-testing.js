@@ -2377,8 +2377,15 @@ function testCtlRowsFor(code) {
         /* a failure outranks a pass: the worst thing known about a control is what a tester needs first */
         if (!last || (l.status === 'fail' && last.status !== 'fail')) last = l;
       });
-      /* ⭐ what the control itself declares it is for (its title / aria-label), carried by the register */
-      return { code: r.code, label: label, cases: mine, real: real, last: last, purpose: r.purpose || '' };
+      /**
+       * ⭐ what the control itself declares it is for (its title / aria-label), carried by the register.
+       * ⚠️ DROPPED WHEN IT ONLY REPEATS THE NAME. Half the counter's controls are a single glyph, so the sweep
+       * uses their title AS the label — and printing "Their bill total → Their bill total" under the name reads
+       * as a description that has nothing to add, which is worse than an honest blank.
+       */
+      var purpose = String(r.purpose || '');
+      if (purpose && purpose.trim().toLowerCase() === String(label).trim().toLowerCase()) purpose = '';
+      return { code: r.code, label: label, cases: mine, real: real, last: last, purpose: purpose };
     });
   } catch (_) { /* a register that will not read must not take the panel down with it */ }
   return out;

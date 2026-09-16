@@ -822,7 +822,6 @@ window.CBSCREENS = {
   "Control › Counter › Counter • Who it came from": "CTL462",
   "Control › Counter › Counter • bills, the shop screen, settings": "CTL463",
   "Control › Counter › Counter • name@bank": "CTL464",
-  "Control › Counter › Counter • speak (the browser listens; needs the internet)": "CTL465",
   "Control › Counter › Counter • speak the name": "CTL466",
   "Control › Counter › Counter • speak the number": "CTL467",
   "Control › Counter › Counter • take part of this bill in this way, and the rest another": "CTL468",
@@ -8051,18 +8050,6 @@ window.CBSCREENS = {
    "walk": 601
   },
   {
-   "code": "CTL465",
-   "path": "Control › Counter › Counter • speak (the browser listens; needs the internet)",
-   "group": "Control",
-   "screen": "Counter › Counter • speak (the browser listens; needs the internet)",
-   "nav": null,
-   "cases": 0,
-   "since": "2026-09-16",
-   "reached_from": null,
-   "purpose": "speak (the browser listens; needs the internet)",
-   "walk": 602
-  },
-  {
    "code": "CTL466",
    "path": "Control › Counter › Counter • speak the name",
    "group": "Control",
@@ -8072,7 +8059,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "speak the name",
-   "walk": 603
+   "walk": 602
   },
   {
    "code": "CTL467",
@@ -8084,7 +8071,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "speak the number",
-   "walk": 604
+   "walk": 603
   },
   {
    "code": "CTL468",
@@ -8096,7 +8083,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "take part of this bill in this way, and the rest another",
-   "walk": 605
+   "walk": 604
   },
   {
    "code": "CTL469",
@@ -8108,7 +8095,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "what are you doing?",
-   "walk": 606
+   "walk": 605
   },
   {
    "code": "CTL470",
@@ -8120,7 +8107,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "which group",
-   "walk": 607
+   "walk": 606
   },
   {
    "code": "CTL471",
@@ -8132,7 +8119,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": "who is signed in at this counter (F7 to hand over)",
-   "walk": 608
+   "walk": 607
   },
   {
    "code": "CTL472",
@@ -8144,7 +8131,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 609
+   "walk": 608
   },
   {
    "code": "CTL473",
@@ -8156,7 +8143,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 610
+   "walk": 609
   },
   {
    "code": "CTL474",
@@ -8167,8 +8154,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-16",
    "reached_from": null,
-   "purpose": "put the row the list is marking into ' + esc(o.group) + '",
-   "walk": 611
+   "purpose": null,
+   "walk": 610
   },
   {
    "code": "CTL475",
@@ -8180,7 +8167,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 612
+   "walk": 611
   },
   {
    "code": "POP086",
@@ -8192,7 +8179,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 613
+   "walk": 612
   },
   {
    "code": "POP087",
@@ -8204,7 +8191,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 614
+   "walk": 613
   },
   {
    "code": "POP088",
@@ -8216,7 +8203,7 @@ window.CBSCREENS = {
    "since": "2026-09-16",
    "reached_from": null,
    "purpose": null,
-   "walk": 615
+   "walk": 614
   }
  ],
  "byFn": {
@@ -8796,6 +8783,13 @@ window.CBSCREENS = {
    "path": "Panel › Test Manager",
    "since": "2026-09-13",
    "until": "2026-09-13",
+   "why": "no longer in the product"
+  },
+  {
+   "code": "CTL465",
+   "path": "Control › Counter › Counter • speak (the browser listens; needs the internet)",
+   "since": "2026-09-16",
+   "until": "2026-09-16",
    "why": "no longer in the product"
   }
  ]
