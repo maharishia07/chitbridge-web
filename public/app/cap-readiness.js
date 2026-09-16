@@ -11,8 +11,9 @@ if (typeof EP !== 'undefined') {
     readinessVerify: {m:'POST', p:'/api/governance/verify',               ok:'y'},
     instruments:     {m:'GET',  p:'/api/governance/instruments',           ok:'y'},
     journey:         {m:'GET',  p:'/api/governance/journey',               ok:'y'},
-    profileGet:      {m:'GET',  p:'/api/governance/profile',               ok:'y'},
-    profileSave:     {m:'PUT',  p:'/api/governance/profile',               ok:'y'},
+    /* ⚠️ profileGet/profilePut are core's (app.html). Re-registering them here overwrote core's entry by
+       load order, and `profileSave` was a SECOND name for the same PUT — which mattered, because core.js
+       OUTBOX_KEYS is keyed by NAME: one of the twins was queued when offline and the other was not. */
     aiDraft:         {m:'POST', p:'/api/governance/ai-draft',              ok:'y'},
     aiSkills:        {m:'GET',  p:'/api/governance/ai-skills',             ok:'y'},
     aiUsage:         {m:'GET',  p:'/api/governance/ai-usage',              ok:'y'},
@@ -160,7 +161,7 @@ function _rdRungChip(it){ var r=it&&it.rung, map={verified:['var(--ok-3)','verif
 function saveLane(){
   var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   try{ localStorage.setItem('cb_rd_lane', JSON.stringify({vert:vert,dest:dest,origin:origin})); }catch(_){}
-  try{ api('profileSave',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(p){UI.profile=p;}).catch(function(){}); }catch(_){}
+  try{ api('profilePut',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(p){UI.profile=p;}).catch(function(){}); }catch(_){}
 }
 function _rdStatus(st){
   if(st==='gathered') return {col:'var(--ok-3)',ic:'✓',lbl:'gathered'};

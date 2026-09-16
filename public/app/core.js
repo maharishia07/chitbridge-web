@@ -289,7 +289,10 @@ const OUTBOX_KEYS = new Set([
   'advance','status','setPriority','custFlag','star','voidChit','markUnread','archive','unarchive','restore','delChit','purgeChit','assignBulk',
   'actorBreak','actorStatus','actorPinReset','actorDelegate','assign','unassign','actorEdit',
   'resolveDispute',
-  'saveProfile','shopStatus','saveSettings','vaultSave','profileSave',
+  /* ⚠⚠ KEYED BY NAME, NOT BY PATH. `profileSave` was retired in favour of `profilePut` (one endpoint, one
+     name — e2e/ep-aliases.cjs); had the survivor not been added here, that write would have quietly stopped
+     being queued when the counter is offline, with nothing anywhere to say so. */
+  'saveProfile','shopStatus','saveSettings','vaultSave','profilePut',
   'savePrefs',      // b165 — idempotent whole-object overwrite of one's own preferences; the caller ignores the body
   'connRespond','netApprove','netDecline','netSuspend','netResume','netDisconnect',
   'supDel','supPatch','prodDel','prodEdit','folderRename','folderDelete','folderMove',

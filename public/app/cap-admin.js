@@ -6,7 +6,6 @@
  * (Co-assists is planned to move here too, once its shared actor helpers are separated.) */
 
 if (typeof EP !== 'undefined') { Object.assign(EP, {
-  vaultGet:  {m:'GET', p:'/api/governance/profile',       ok:'y'},   // returns the trade profile incl. .vault
   keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
   keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
   keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
@@ -206,7 +205,8 @@ async function loadVault(){
      a save, an actor profile. See _profSeedIncluded. */
   if (UI._vaultSeeded) { UI._vaultSeeded = false; }
   else {
-    try{ var p=(await api('vaultGet'))||{};
+    /* ⭐ profileGet, core's one name for this GET — `vaultGet` was a third alias for it (see e2e/ep-aliases.cjs) */
+    try{ var p=(await api('profileGet'))||{};
       /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
       UI._vault={sections:((p.vault||{}).sections)||[]}; UI._vaultEnc=!!p.vault_encrypted;
     }catch(e){ UI._vault={sections:[]}; UI._vaultEnc=false; }
