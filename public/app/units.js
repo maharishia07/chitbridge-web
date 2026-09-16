@@ -3,7 +3,8 @@
   'use strict';
   const UNITS = {
     kg:     { rec20: 'KGM', uqc: 'KGS', names: ['kg', 'kgs', 'kilogram', 'kilograms', 'kilo', 'kilos', 'kilogramme'] },
-    gram:   { rec20: 'GRM', uqc: 'GMS', names: ['gram', 'grams', 'gm', 'gms', 'gramme'] },
+    /* ⚠️ `g` is the SI symbol; `mg`/`oz` are deliberately NOT here — see the master, lib/units.js */
+    gram:   { rec20: 'GRM', uqc: 'GMS', names: ['gram', 'grams', 'g', 'gm', 'gms', 'gramme'] },
     tonne:  { rec20: 'TNE', uqc: 'MTS', names: ['tonne', 'tonnes', 'ton', 'tons', 'mt', 'metric ton'] },
     litre:  { rec20: 'LTR', uqc: 'LTR', names: ['litre', 'litres', 'liter', 'liters', 'ltr', 'ltrs', 'l'] },
     ml:     { rec20: 'MLT', uqc: 'MLT', names: ['ml', 'millilitre', 'millilitres', 'milliliter', 'mls'] },
