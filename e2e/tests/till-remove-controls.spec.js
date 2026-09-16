@@ -124,3 +124,50 @@ test('[TILL-10] one unsaveable parked bill does not wedge the rail, and a failed
     expect(said.why, 'the failure was not recorded anywhere').toBe('QuotaExceededError');
   });
 });
+
+// ⭐⭐ [TILL-11] THE KEYS SAY WHERE THEY COME FROM. Athi, 2026-09-16: *"how do we set the quick keys? it is just
+// appearing here — where are we setting it?"* On the default source the counter offered no control at all: the
+// group controls appeared only once somebody had already switched to groups, and the only way to switch was a
+// trip to ⚙ Setup. This asserts the control is on the counter BEFORE anyone knows the feature exists.
+test('[TILL-11] the quick keys carry the control that decides what fills them', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Qk ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Idli podi 100 g', unit: 'packet', price: 55, code: 'POD9' });
+
+  const key = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('keysMint', { body: { name: 'qk counter', scopes: ['till'], days: 1 } });
+    return (r && (r.key || r.api_key)) || null;
+  });
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+
+  await test.step('⚠️ on the DEFAULT source — a brand new counter, nobody has changed anything', async () => {
+    const src = await till.evaluate(() => tillOpt().quickSource);
+    expect(src, 'this case only means anything on the default source').toBe('frequent');
+    await expect(till.locator('[data-testid="till-quick-src"]')).toBeVisible();
+  });
+
+  await test.step('⭐ and changing it there switches the source, without going to Setup', async () => {
+    await till.selectOption('[data-testid="till-quick-src"]', 'groups');
+    await till.waitForTimeout(300);
+    expect(await till.evaluate(() => tillOpt().quickSource), 'the bar did not change the setting').toBe('groups');
+    /* the group controls follow it into view */
+    await expect(till.locator('[data-testid="till-quick-group-new"]')).toBeVisible();
+  });
+
+  await test.step('⚠️ Setup and the bar are ONE setting, never two opinions about it', async () => {
+    const same = await till.evaluate(() => {
+      openSettings();
+      const opts = [...document.getElementById('set_qsrc').options].map((o) => o.value);
+      const picked = document.getElementById('set_qsrc').value;
+      document.getElementById('setdlg').close();
+      return { opts, picked, src: QUICK_SRC.map((s) => s[0]) };
+    });
+    expect(same.opts, 'Setup offers a different list from the bar').toEqual(same.src);
+    expect(same.picked, 'Setup opened showing something other than what is in force').toBe('groups');
+  });
+});
