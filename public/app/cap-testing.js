@@ -2312,7 +2312,7 @@ function testCaseFor(code, name) {
  * ⚠️ Matched on the screen's own PATH, not its name: two groups can hold a screen with the same words on it,
  * and matching by name alone would offer a tester the other screen's buttons.
  */
-function testCtlOptions(code) {
+function testCtlOptions(code, sel) {
   try {
     var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
     var me = rows.filter(function (r) { return r.code === code; })[0];
@@ -2322,10 +2322,157 @@ function testCtlOptions(code) {
       return r.group === 'Control' && String(r.path).indexOf('Control \u203a ' + want) === 0;
     }).map(function (r) {
       var label = String(r.screen).split(' \u2022 ').pop();
-      return '<option value="' + testEsc(r.code) + '">' + testEsc(r.code) + ' \u00b7 '
-        + testEsc(label) + '</option>';
+      /* \u2b50 the control chosen in the checklist below arrives here already selected, so the two cannot disagree */
+      return '<option value="' + testEsc(r.code) + '"' + (sel && sel === r.code ? ' selected' : '') + '>'
+        + testEsc(r.code) + ' \u00b7 ' + testEsc(label) + '</option>';
     }).join('');
   } catch (_) { return ''; }
+}
+
+/**
+ * ── ⭐⭐⭐ EVERY CONTROL ON THIS SCREEN, AS A LIST A TESTER CAN WALK ─────────────────────────────────────────
+ *
+ * Athi, "Requirement for counter app", 2026-09-16: *"depends on the screen we are working, if you can bring all
+ * the icon, chit and any other control part of that screen to be loaded, with the purpose, so the person who
+ * tests should test each of those — there must be a selection option, if he selects, the item he selected can
+ * come to one of the sections, or we can include one more to state the item which is being tested now."*
+ *
+ * And the reason, four days earlier: *"right now we are only showcasing the screen; underneath, what he is
+ * supposed to look at is not there. For each screen if we come up with the list based on what the travel paths
+ * are, that would be good."*
+ *
+ * ⭐ THE REGISTER ALREADY KNOWS THEM — 429 controls carry a CTL code, each named by the screen it sits on. What
+ * was missing was never the data: it was that a tester could not SEE the list while testing, so they walked a
+ * screen from memory and no two people walked the same one.
+ *
+ * ⚠️⚠️ AND THE HONEST PART, WHICH IS THE WHOLE VALUE. Most of these controls have NO EXPECTATION WRITTEN — the
+ * sweep says so inside the case itself ("NOBODY HAS WRITTEN WHAT SHOULD HAPPEN"). So this list does NOT invent a
+ * purpose it does not have. It states which controls are still unexplained, which turns the gap into the
+ * worklist rather than hiding it behind a tick box. A control whose expectation somebody HAS written shows that
+ * sentence, because that is the thing a tester is actually checking against.
+ */
+function testCtlRowsFor(code) {
+  var out = { screen: null, list: [] };
+  try {
+    var rows = (window.CBSCREENS && window.CBSCREENS.rows) || [];
+    var me = rows.filter(function (r) { return r.code === code; })[0];
+    if (!me) return out;
+    out.screen = me;
+    var want = 'Control › ' + me.path + ' • ';
+    var cases = CBTEST.cases || [];
+    out.list = rows.filter(function (r) {
+      return r.group === 'Control' && String(r.path).indexOf(want) === 0;
+    }).map(function (r) {
+      var label = String(r.screen).split(' • ').pop();
+      /* the control's own cases: same door, and the label quoted in the title — the key the sweep itself used */
+      var mine = cases.filter(function (c) {
+        return String(c.menu || '') === me.path
+          && String(c.title || '').indexOf('“' + label + '”') >= 0;
+      });
+      var real = mine.filter(function (c) { return !c.generated; });
+      var last = null;
+      mine.forEach(function (c) {
+        var l = (CBTEST.last || {})[c.case_key];
+        if (!l) return;
+        /* a failure outranks a pass: the worst thing known about a control is what a tester needs first */
+        if (!last || (l.status === 'fail' && last.status !== 'fail')) last = l;
+      });
+      /* ⭐ what the control itself declares it is for (its title / aria-label), carried by the register */
+      return { code: r.code, label: label, cases: mine, real: real, last: last, purpose: r.purpose || '' };
+    });
+  } catch (_) { /* a register that will not read must not take the panel down with it */ }
+  return out;
+}
+
+function testControlsHTML(code) {
+  var got = testCtlRowsFor(code);
+  if (!got.screen) return '';
+  var list = got.list;
+  var pad = 'padding:7px 0 6px';
+  if (!list.length) {
+    /* ⚠️ SAY WHY IT IS EMPTY. A blank section reads as "this screen has no controls", which for the Counter —
+       a whole application in one file the sweep has never walked — would be a lie. */
+    return '<div style="' + pad + ';border-top:1px solid var(--line,#efece4);margin-top:10px">'
+      + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:3px">What to check on this screen</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">The register names no controls on '
+      + testEsc(got.screen.path) + ' yet. Controls are swept from the app’s own source into the register '
+      + '(<code>screens.cjs</code>); a screen built outside it — the Counter is one — has none until it '
+      + 'is swept. Record what you check here as a case and it will still be found under this screen.</div></div>';
+  }
+  var done = list.filter(function (x) { return x.last && x.last.status === 'pass'; }).length;
+  var bad  = list.filter(function (x) { return x.last && x.last.status === 'fail'; }).length;
+  var blank = list.filter(function (x) { return !x.real.length; }).length;
+  var chip = function (v, word, tip, col) {
+    return '<span title="' + testEsc(tip) + '" style="display:inline-block;font-size:var(--fs-1);'
+      + 'padding:2px 9px;margin:0 5px 4px 0;border-radius:11px;background:var(--paper,#faf8f3);'
+      + 'border:1px solid var(--grey-4,#646A72);color:' + (col || 'var(--grey-2,#545A61)') + '"><b>'
+      + v + '</b> ' + word + '</span>';
+  };
+  var now = CBTEST.ctlNow || null;
+  var h = '<div style="' + pad + ';border-top:1px solid var(--line,#efece4);margin-top:10px">'
+    + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:2px">What to check on this screen</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-bottom:5px">'
+    + 'Every control the register names on ' + testEsc(got.screen.path)
+    + '. Pick one and it becomes the thing you are testing; the form above then files against it.</div>'
+    + '<div style="margin-bottom:4px">'
+    + chip(list.length, 'controls', 'Every control the register names on this screen')
+    + chip(done, 'passed', 'Last run passed', done ? 'var(--ok-2,#1B7F4B)' : null)
+    + chip(bad, 'failing', 'Last run failed', bad ? 'var(--bad-2,#B3261E)' : null)
+    + chip('⚠ ' + blank, 'unexplained', 'No expectation has been written for these — using one and '
+        + 'writing down what should happen is the most useful thing you can do here')
+    + '</div>';
+  h += list.map(function (x) {
+    var on = now && now.code === x.code;
+    /**
+     * ⭐ WHAT THIS CONTROL IS FOR, in the order a tester needs it:
+     *   1. the EXPECTATION somebody wrote — that is the thing being checked against;
+     *   2. else the purpose the control itself declares (its own tooltip, written for the shopkeeper);
+     *   3. else plainly that nobody has written it, which is the most useful work available here.
+     * ⚠️ Never invented. A purpose guessed by this panel would be a claim about behaviour nobody has verified.
+     */
+    var says = x.real.length
+      ? testEsc(String(x.real[0].title || '').replace(/\s*—\s*what does it do\?\s*$/, ''))
+      : (x.purpose
+        ? testEsc(x.purpose)
+        : '<span style="color:var(--grey-2,#545A61)">⚠ nobody has written what this should do — use it, '
+          + 'then say what happened</span>');
+    var mark = x.last
+      ? '<span style="font-size:var(--fs-1);font-weight:700;color:'
+        + (x.last.status === 'pass' ? 'var(--ok-2,#1B7F4B)' : x.last.status === 'fail' ? 'var(--bad-2,#B3261E)' : 'var(--grey-2,#545A61)')
+        + '">' + testEsc(x.last.status) + '</span>'
+      : '<span style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">not run</span>';
+    return '<div data-testid="ctlrow-' + testEsc(x.code) + '" style="display:flex;gap:8px;align-items:flex-start;'
+      + 'padding:5px 7px;border:1px solid ' + (on ? 'var(--ok-2,#1B7F4B)' : 'var(--line,#efece4)')
+      + ';border-radius:7px;margin-bottom:4px;background:' + (on ? 'var(--ok-tint,#eaf5ee)' : 'transparent') + '">'
+      + '<code style="font-size:var(--fs-1);color:var(--grey-2,#545A61);flex:none">' + testEsc(x.code) + '</code>'
+      + '<div style="flex:1 1 auto;min-width:0">'
+      +   '<div style="font-size:var(--fs-2);font-weight:600;overflow-wrap:anywhere">' + testEsc(x.label) + '</div>'
+      +   '<div style="font-size:var(--fs-1);overflow-wrap:anywhere">' + says + '</div>'
+      + '</div>'
+      + '<div style="flex:none;text-align:right">' + mark + '<br>'
+      +   '<button data-testid="ctlpick-' + testEsc(x.code) + '" onclick="testCtlPick(\'' + testJs(x.code)
+      +     '\',\'' + testJs(x.label) + '\')" style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
+      +     'border:1px solid var(--grey-4,#646A72);border-radius:7px;cursor:pointer;background:var(--card,#fff);'
+      +     'margin-top:2px">' + (on ? 'testing' : 'Test this') + '</button>'
+      + '</div></div>';
+  }).join('');
+  return h + '</div>';
+}
+
+/**
+ * ⭐ THE SELECTION ATHI ASKED FOR: choosing a control says what is being tested NOW, and the form above files
+ * against it. One press, rather than remembering a code and finding it again in a dropdown of four hundred.
+ */
+function testCtlPick(ctlCode, label) {
+  CBTEST.ctlNow = (CBTEST.ctlNow && CBTEST.ctlNow.code === ctlCode) ? null : { code: ctlCode, label: label };
+  var here = CBTEST.popupFor;
+  /* ⚠️ OPENING THE FORM IS PART OF THE GESTURE — picking a control and then having to hunt for "Create" is two
+     acts for one thought, and the second one is the one people forget. */
+  if (CBTEST.ctlNow && !CBTEST.writeFor && here) {
+    try { testCaseFor(here, (typeof codeName === 'function') ? codeName(here) : ''); return; } catch (_) {}
+  }
+  /* ⚠️ the same repaint testCaseCancel chooses: this list lives in the screen popup, not the main panel */
+  if (here) screenCasesPaint(); else testPaint();
 }
 
 /**
@@ -3371,6 +3518,21 @@ function testCaseFormHTML() {
      * ⚠️ It stops growing at 40% of the window: a box that eats the panel takes the type chip, the screenshot
      * and the Create button off screen, and then you cannot file what you have written.
      */
+    /**
+     * ⭐⭐ WHAT IS BEING TESTED RIGHT NOW. Athi: *"we can include one more to state the item which is being
+     * tested now."* Picked from the checklist under the form, shown here where the writing happens — so a
+     * tester walking twenty controls never loses which one the sentence in front of them is about.
+     */
+    + (CBTEST.ctlNow
+      ? '<div data-testid="wctl-now" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;'
+        + 'margin:0 0 6px;padding:5px 9px;border:1px solid var(--ok-2,#1B7F4B);border-radius:7px;'
+        + 'background:var(--ok-tint,#eaf5ee);font-size:var(--fs-1)">'
+        + '<span>Testing now</span><code>' + testEsc(CBTEST.ctlNow.code) + '</code>'
+        + '<b style="overflow-wrap:anywhere">' + testEsc(CBTEST.ctlNow.label) + '</b>'
+        + '<span style="flex:1 1 auto"></span>'
+        + '<button onclick="testCtlPick(\'' + testJs(CBTEST.ctlNow.code) + '\',\'\')" style="' + btn
+        + ';padding:1px 8px">clear</button></div>'
+      : '')
     + testBox('wcTitle', K.t1, inp)
     + testBox('wcDo', K.t2, inp)
     + testBox('wcSee', K.t3, inp)
@@ -3393,7 +3555,7 @@ function testCaseFormHTML() {
      */
     + '<select id="wcCtl" style="' + inp + ';padding:5px">'
     +   '<option value="">Which control? (optional)</option>'
-    +   testCtlOptions(w.code)
+    +   testCtlOptions(w.code, CBTEST.ctlNow && CBTEST.ctlNow.code)
     + '</select>'
     + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;'
     +   'font-size:var(--fs-1);color:var(--grey-2)">' + grade + '</div>'
@@ -6396,7 +6558,8 @@ function screenCasesPaint() {
 
   var body = area === 'behind' ? testBehindHTML(code)
            : area === 'diag' ? testDiagHTML()
-           : area === 'write' ? testCaseFormHTML()
+           /* ⭐ the form, and under it the list of everything on this screen that can be tested (Athi, 2026-09-16) */
+           : area === 'write' ? (testCaseFormHTML() + testControlsHTML(code))
            : area === 'tech' ? testTechAreaHTML()
            : area === 'inc' ? testScrRaisedHTML(code, 'inc')
            : area === 'req' ? testScrRaisedHTML(code, 'req')

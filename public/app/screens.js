@@ -99,12 +99,6 @@ window.CBSCREENS = {
    "icon": "⚙️",
    "label": "Catalogue setup"
   },
-  "platform": {
-   "code": "BUS013",
-   "path": "Business › Platform",
-   "icon": "🛰️",
-   "label": "Platform"
-  },
   "customers": {
    "code": "BUS001",
    "path": "Business › Customers",
@@ -194,12 +188,6 @@ window.CBSCREENS = {
    "path": "Message › Chit messages",
    "icon": "💬",
    "label": "Chit messages"
-  },
-  "platform-entity": {
-   "code": "BUS014",
-   "path": "Business › Platform entity",
-   "icon": "🛰️",
-   "label": "Platform entity"
   },
   "supplier-detail": {
    "code": "BUS009",
@@ -316,7 +304,6 @@ window.CBSCREENS = {
   "Popup › ctDeclaredViewRows": "POP038",
   "Popup › deleteFolder": "POP039",
   "Popup › disputeOverlay": "POP040",
-  "Popup › disputesScreen": "POP041",
   "Popup › gatherReadiness": "POP042",
   "Popup › intakeDismiss": "POP043",
   "Popup › loadSupplierConfidence": "POP044",
@@ -806,7 +793,49 @@ window.CBSCREENS = {
   "Control › Inside a screen › Testing • Re-grade it": "CTL435",
   "Control › Inside a screen › Testing • Record": "CTL436",
   "Panel › Test cases for this screen": "PNL007",
-  "Popup › testAsk": "POP085"
+  "Popup › testAsk": "POP085",
+  "Control › Counter › Counter • Adding": "CTL437",
+  "Control › Counter › Counter • Cancel": "CTL438",
+  "Control › Counter › Counter • Confirm receipt · F9": "CTL439",
+  "Control › Counter › Counter • Day close sheet": "CTL440",
+  "Control › Counter › Counter • Discard": "CTL441",
+  "Control › Counter › Counter • Earlier · from ChitBridge": "CTL442",
+  "Control › Counter › Counter • Everything": "CTL443",
+  "Control › Counter › Counter • Hand over": "CTL444",
+  "Control › Counter › Counter • Health check — what would go wrong today": "CTL445",
+  "Control › Counter › Counter • LR / AWB / vehicle (optional)": "CTL446",
+  "Control › Counter › Counter • Next carton · F8": "CTL447",
+  "Control › Counter › Counter • OK": "CTL448",
+  "Control › Counter › Counter • Off the shelf": "CTL449",
+  "Control › Counter › Counter • On offer": "CTL450",
+  "Control › Counter › Counter • Park · F6": "CTL451",
+  "Control › Counter › Counter • Print a test slip": "CTL452",
+  "Control › Counter › Counter • Remove this group": "CTL453",
+  "Control › Counter › Counter • Send now": "CTL454",
+  "Control › Counter › Counter • Show every hidden key again": "CTL455",
+  "Control › Counter › Counter • Their bill / challan no": "CTL456",
+  "Control › Counter › Counter • Their bill total": "CTL457",
+  "Control › Counter › Counter • Their state code (33, 29…) — for CGST/SGST vs IGST": "CTL458",
+  "Control › Counter › Counter • Today · on this device": "CTL459",
+  "Control › Counter › Counter • UPI": "CTL460",
+  "Control › Counter › Counter • Weight of this carton (kg)": "CTL461",
+  "Control › Counter › Counter • Who it came from": "CTL462",
+  "Control › Counter › Counter • bills, the shop screen, settings": "CTL463",
+  "Control › Counter › Counter • name@bank": "CTL464",
+  "Control › Counter › Counter • speak (the browser listens; needs the internet)": "CTL465",
+  "Control › Counter › Counter • speak the name": "CTL466",
+  "Control › Counter › Counter • speak the number": "CTL467",
+  "Control › Counter › Counter • take part of this bill in this way, and the rest another": "CTL468",
+  "Control › Counter › Counter • what are you doing?": "CTL469",
+  "Control › Counter › Counter • which group": "CTL470",
+  "Control › Counter › Counter • who is signed in at this counter (F7 to hand over)": "CTL471",
+  "Control › Counter › Counter • ↺ Clear and read the shop again": "CTL472",
+  "Control › Counter › Counter • ＋ group": "CTL473",
+  "Control › Counter › Counter • ＋ marked row": "CTL474",
+  "Control › Counter › Counter • ＋ new group": "CTL475",
+  "Popup › paintDisputes": "POP086",
+  "Popup › supportForm": "POP087",
+  "Popup › supportOpen": "POP088"
  },
  "rows": [
   {
@@ -818,6 +847,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 1
   },
   {
@@ -829,6 +859,7 @@ window.CBSCREENS = {
    "cases": 19,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 2
   },
   {
@@ -840,6 +871,7 @@ window.CBSCREENS = {
    "cases": 17,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 3
   },
   {
@@ -851,6 +883,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 8
   },
   {
@@ -862,6 +895,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 9
   },
   {
@@ -873,6 +907,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 10
   },
   {
@@ -884,6 +919,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 11
   },
   {
@@ -895,6 +931,7 @@ window.CBSCREENS = {
    "cases": 8,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 12
   },
   {
@@ -906,6 +943,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 13
   },
   {
@@ -917,6 +955,7 @@ window.CBSCREENS = {
    "cases": 13,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 14
   },
   {
@@ -928,6 +967,7 @@ window.CBSCREENS = {
    "cases": 15,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 15
   },
   {
@@ -939,6 +979,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 16
   },
   {
@@ -950,6 +991,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 18
   },
   {
@@ -961,6 +1003,7 @@ window.CBSCREENS = {
    "cases": 23,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 19
   },
   {
@@ -972,18 +1015,8 @@ window.CBSCREENS = {
    "cases": 39,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 20
-  },
-  {
-   "code": "BUS013",
-   "path": "Business › Platform",
-   "group": "Business",
-   "screen": "Platform",
-   "nav": "platform",
-   "cases": 0,
-   "since": "2026-09-14",
-   "reached_from": null,
-   "walk": 21
   },
   {
    "code": "BUS001",
@@ -994,6 +1027,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 21
   },
   {
@@ -1005,6 +1039,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 23
   },
   {
@@ -1016,6 +1051,7 @@ window.CBSCREENS = {
    "cases": 6,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 27
   },
   {
@@ -1027,6 +1063,7 @@ window.CBSCREENS = {
    "cases": 105,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 28
   },
   {
@@ -1038,6 +1075,7 @@ window.CBSCREENS = {
    "cases": 26,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 29
   },
   {
@@ -1049,6 +1087,7 @@ window.CBSCREENS = {
    "cases": 62,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 33
   },
   {
@@ -1060,6 +1099,7 @@ window.CBSCREENS = {
    "cases": 5,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 34
   },
   {
@@ -1071,6 +1111,7 @@ window.CBSCREENS = {
    "cases": 19,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 35
   },
   {
@@ -1082,6 +1123,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 36
   },
   {
@@ -1093,6 +1135,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 37
   },
   {
@@ -1104,6 +1147,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 38
   },
   {
@@ -1115,6 +1159,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 39
   },
   {
@@ -1126,6 +1171,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 40
   },
   {
@@ -1137,6 +1183,7 @@ window.CBSCREENS = {
    "cases": 264,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 41
   },
   {
@@ -1148,6 +1195,7 @@ window.CBSCREENS = {
    "cases": 60,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 42
   },
   {
@@ -1159,6 +1207,7 @@ window.CBSCREENS = {
    "cases": 17,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 43
   },
   {
@@ -1170,6 +1219,7 @@ window.CBSCREENS = {
    "cases": 4,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 44
   },
   {
@@ -1181,6 +1231,7 @@ window.CBSCREENS = {
    "cases": 14,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 45
   },
   {
@@ -1192,6 +1243,7 @@ window.CBSCREENS = {
    "cases": 18,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 46
   },
   {
@@ -1203,6 +1255,7 @@ window.CBSCREENS = {
    "cases": 15,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 47
   },
   {
@@ -1214,6 +1267,7 @@ window.CBSCREENS = {
    "cases": 1,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 48
   },
   {
@@ -1225,6 +1279,7 @@ window.CBSCREENS = {
    "cases": 2,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 49
   },
   {
@@ -1236,6 +1291,7 @@ window.CBSCREENS = {
    "cases": 17,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 50
   },
   {
@@ -1247,6 +1303,7 @@ window.CBSCREENS = {
    "cases": 10,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 51
   },
   {
@@ -1258,6 +1315,7 @@ window.CBSCREENS = {
    "cases": 8,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 52
   },
   {
@@ -1269,6 +1327,7 @@ window.CBSCREENS = {
    "cases": 32,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 53
   },
   {
@@ -1280,6 +1339,7 @@ window.CBSCREENS = {
    "cases": 3,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 54
   },
   {
@@ -1291,6 +1351,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "task",
+   "purpose": null,
    "walk": 4
   },
   {
@@ -1302,6 +1363,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 55
   },
   {
@@ -1313,6 +1375,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 56
   },
   {
@@ -1324,6 +1387,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 57
   },
   {
@@ -1335,6 +1399,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 58
   },
   {
@@ -1346,6 +1411,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 59
   },
   {
@@ -1357,6 +1423,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 60
   },
   {
@@ -1368,6 +1435,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 61
   },
   {
@@ -1379,6 +1447,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 62
   },
   {
@@ -1390,6 +1459,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 63
   },
   {
@@ -1401,6 +1471,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 64
   },
   {
@@ -1412,6 +1483,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 65
   },
   {
@@ -1423,6 +1495,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 66
   },
   {
@@ -1434,6 +1507,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 67
   },
   {
@@ -1445,6 +1519,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 68
   },
   {
@@ -1456,6 +1531,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 69
   },
   {
@@ -1467,6 +1543,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 70
   },
   {
@@ -1478,6 +1555,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 71
   },
   {
@@ -1489,6 +1567,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 72
   },
   {
@@ -1500,6 +1579,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 73
   },
   {
@@ -1511,6 +1591,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 74
   },
   {
@@ -1522,6 +1603,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 75
   },
   {
@@ -1533,6 +1615,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 76
   },
   {
@@ -1544,6 +1627,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 77
   },
   {
@@ -1555,6 +1639,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 78
   },
   {
@@ -1566,6 +1651,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 79
   },
   {
@@ -1577,6 +1663,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 80
   },
   {
@@ -1588,6 +1675,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 81
   },
   {
@@ -1599,6 +1687,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 82
   },
   {
@@ -1610,6 +1699,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 83
   },
   {
@@ -1621,6 +1711,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 84
   },
   {
@@ -1632,6 +1723,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 85
   },
   {
@@ -1643,6 +1735,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 86
   },
   {
@@ -1654,6 +1747,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 87
   },
   {
@@ -1665,6 +1759,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 88
   },
   {
@@ -1676,6 +1771,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 89
   },
   {
@@ -1687,6 +1783,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 90
   },
   {
@@ -1698,6 +1795,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 91
   },
   {
@@ -1709,6 +1807,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 92
   },
   {
@@ -1720,6 +1819,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 93
   },
   {
@@ -1731,18 +1831,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
+   "purpose": null,
    "walk": 94
-  },
-  {
-   "code": "POP041",
-   "path": "Popup › disputesScreen",
-   "group": "Popup",
-   "screen": "disputesScreen",
-   "nav": null,
-   "cases": 0,
-   "since": "2026-09-12",
-   "reached_from": null,
-   "walk": 95
   },
   {
    "code": "POP042",
@@ -1753,7 +1843,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 96
+   "purpose": null,
+   "walk": 95
   },
   {
    "code": "POP043",
@@ -1764,7 +1855,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 97
+   "purpose": null,
+   "walk": 96
   },
   {
    "code": "POP044",
@@ -1775,7 +1867,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 98
+   "purpose": null,
+   "walk": 97
   },
   {
    "code": "POP045",
@@ -1786,7 +1879,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 99
+   "purpose": null,
+   "walk": 98
   },
   {
    "code": "POP046",
@@ -1797,7 +1891,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 100
+   "purpose": null,
+   "walk": 99
   },
   {
    "code": "POP047",
@@ -1808,7 +1903,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 101
+   "purpose": null,
+   "walk": 100
   },
   {
    "code": "POP048",
@@ -1819,7 +1915,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 102
+   "purpose": null,
+   "walk": 101
   },
   {
    "code": "POP049",
@@ -1830,7 +1927,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 103
+   "purpose": null,
+   "walk": 102
   },
   {
    "code": "POP050",
@@ -1841,7 +1939,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 104
+   "purpose": null,
+   "walk": 103
   },
   {
    "code": "POP051",
@@ -1852,7 +1951,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 105
+   "purpose": null,
+   "walk": 104
   },
   {
    "code": "POP052",
@@ -1863,7 +1963,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 106
+   "purpose": null,
+   "walk": 105
   },
   {
    "code": "POP053",
@@ -1874,7 +1975,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 107
+   "purpose": null,
+   "walk": 106
   },
   {
    "code": "POP054",
@@ -1885,7 +1987,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 108
+   "purpose": null,
+   "walk": 107
   },
   {
    "code": "POP055",
@@ -1896,7 +1999,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 109
+   "purpose": null,
+   "walk": 108
   },
   {
    "code": "POP056",
@@ -1907,7 +2011,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 110
+   "purpose": null,
+   "walk": 109
   },
   {
    "code": "POP057",
@@ -1918,7 +2023,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 111
+   "purpose": null,
+   "walk": 110
   },
   {
    "code": "POP058",
@@ -1929,7 +2035,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 112
+   "purpose": null,
+   "walk": 111
   },
   {
    "code": "POP059",
@@ -1940,7 +2047,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 113
+   "purpose": null,
+   "walk": 112
   },
   {
    "code": "POP060",
@@ -1951,7 +2059,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 114
+   "purpose": null,
+   "walk": 113
   },
   {
    "code": "POP061",
@@ -1962,7 +2071,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 115
+   "purpose": null,
+   "walk": 114
   },
   {
    "code": "POP062",
@@ -1973,7 +2083,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 116
+   "purpose": null,
+   "walk": 115
   },
   {
    "code": "POP063",
@@ -1984,7 +2095,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 117
+   "purpose": null,
+   "walk": 116
   },
   {
    "code": "POP064",
@@ -1995,7 +2107,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 118
+   "purpose": null,
+   "walk": 117
   },
   {
    "code": "POP065",
@@ -2006,7 +2119,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 119
+   "purpose": null,
+   "walk": 118
   },
   {
    "code": "POP066",
@@ -2017,7 +2131,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 120
+   "purpose": null,
+   "walk": 119
   },
   {
    "code": "POP067",
@@ -2028,7 +2143,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 121
+   "purpose": null,
+   "walk": 120
   },
   {
    "code": "POP068",
@@ -2039,7 +2155,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 122
+   "purpose": null,
+   "walk": 121
   },
   {
    "code": "POP069",
@@ -2050,7 +2167,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 123
+   "purpose": null,
+   "walk": 122
   },
   {
    "code": "POP070",
@@ -2061,7 +2179,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 124
+   "purpose": null,
+   "walk": 123
   },
   {
    "code": "POP071",
@@ -2072,7 +2191,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 125
+   "purpose": null,
+   "walk": 124
   },
   {
    "code": "POP072",
@@ -2083,7 +2203,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 126
+   "purpose": null,
+   "walk": 125
   },
   {
    "code": "POP073",
@@ -2094,7 +2215,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 127
+   "purpose": null,
+   "walk": 126
   },
   {
    "code": "POP074",
@@ -2105,7 +2227,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 128
+   "purpose": null,
+   "walk": 127
   },
   {
    "code": "POP075",
@@ -2116,7 +2239,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 129
+   "purpose": null,
+   "walk": 128
   },
   {
    "code": "POP076",
@@ -2127,7 +2251,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 130
+   "purpose": null,
+   "walk": 129
   },
   {
    "code": "POP077",
@@ -2138,7 +2263,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 131
+   "purpose": null,
+   "walk": 130
   },
   {
    "code": "POP078",
@@ -2149,7 +2275,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 132
+   "purpose": null,
+   "walk": 131
   },
   {
    "code": "POP079",
@@ -2160,7 +2287,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 133
+   "purpose": null,
+   "walk": 132
   },
   {
    "code": "POP080",
@@ -2171,7 +2299,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 134
+   "purpose": null,
+   "walk": 133
   },
   {
    "code": "POP081",
@@ -2182,7 +2311,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 135
+   "purpose": null,
+   "walk": 134
   },
   {
    "code": "POP082",
@@ -2193,7 +2323,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 136
+   "purpose": null,
+   "walk": 135
   },
   {
    "code": "POP083",
@@ -2204,7 +2335,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 137
+   "purpose": null,
+   "walk": 136
   },
   {
    "code": "POP084",
@@ -2215,7 +2347,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 138
+   "purpose": null,
+   "walk": 137
   },
   {
    "code": "CTL001",
@@ -2226,7 +2359,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 139
+   "purpose": null,
+   "walk": 138
   },
   {
    "code": "CTL002",
@@ -2237,7 +2371,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 140
+   "purpose": null,
+   "walk": 139
   },
   {
    "code": "CTL003",
@@ -2248,7 +2383,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 141
+   "purpose": null,
+   "walk": 140
   },
   {
    "code": "CTL004",
@@ -2259,7 +2395,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 142
+   "purpose": null,
+   "walk": 141
   },
   {
    "code": "CTL005",
@@ -2270,7 +2407,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 143
+   "purpose": null,
+   "walk": 142
   },
   {
    "code": "CTL006",
@@ -2281,7 +2419,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 144
+   "purpose": null,
+   "walk": 143
   },
   {
    "code": "CTL007",
@@ -2292,7 +2431,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 145
+   "purpose": null,
+   "walk": 144
   },
   {
    "code": "CTL008",
@@ -2303,7 +2443,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 146
+   "purpose": null,
+   "walk": 145
   },
   {
    "code": "CTL009",
@@ -2314,7 +2455,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 147
+   "purpose": null,
+   "walk": 146
   },
   {
    "code": "CTL010",
@@ -2325,7 +2467,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 148
+   "purpose": null,
+   "walk": 147
   },
   {
    "code": "CTL011",
@@ -2336,7 +2479,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 149
+   "purpose": null,
+   "walk": 148
   },
   {
    "code": "CTL012",
@@ -2347,7 +2491,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 150
+   "purpose": null,
+   "walk": 149
   },
   {
    "code": "CTL013",
@@ -2358,7 +2503,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 151
+   "purpose": null,
+   "walk": 150
   },
   {
    "code": "CTL014",
@@ -2369,7 +2515,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 152
+   "purpose": null,
+   "walk": 151
   },
   {
    "code": "CTL015",
@@ -2380,7 +2527,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 153
+   "purpose": null,
+   "walk": 152
   },
   {
    "code": "CTL016",
@@ -2391,7 +2539,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 154
+   "purpose": null,
+   "walk": 153
   },
   {
    "code": "CTL017",
@@ -2402,7 +2551,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 155
+   "purpose": null,
+   "walk": 154
   },
   {
    "code": "CTL018",
@@ -2413,7 +2563,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 156
+   "purpose": null,
+   "walk": 155
   },
   {
    "code": "CTL019",
@@ -2424,7 +2575,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 157
+   "purpose": null,
+   "walk": 156
   },
   {
    "code": "CTL020",
@@ -2435,7 +2587,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 158
+   "purpose": null,
+   "walk": 157
   },
   {
    "code": "CTL021",
@@ -2446,7 +2599,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 159
+   "purpose": null,
+   "walk": 158
   },
   {
    "code": "CTL022",
@@ -2457,7 +2611,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 160
+   "purpose": null,
+   "walk": 159
   },
   {
    "code": "CTL023",
@@ -2468,7 +2623,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 161
+   "purpose": null,
+   "walk": 160
   },
   {
    "code": "CTL024",
@@ -2479,7 +2635,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 162
+   "purpose": null,
+   "walk": 161
   },
   {
    "code": "CTL025",
@@ -2490,7 +2647,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 163
+   "purpose": null,
+   "walk": 162
   },
   {
    "code": "CTL026",
@@ -2501,7 +2659,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 164
+   "purpose": null,
+   "walk": 163
   },
   {
    "code": "CTL027",
@@ -2512,7 +2671,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 165
+   "purpose": null,
+   "walk": 164
   },
   {
    "code": "CTL028",
@@ -2523,7 +2683,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 166
+   "purpose": null,
+   "walk": 165
   },
   {
    "code": "CTL029",
@@ -2534,7 +2695,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 167
+   "purpose": null,
+   "walk": 166
   },
   {
    "code": "CTL030",
@@ -2545,7 +2707,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 168
+   "purpose": null,
+   "walk": 167
   },
   {
    "code": "CTL031",
@@ -2556,7 +2719,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 169
+   "purpose": null,
+   "walk": 168
   },
   {
    "code": "CTL032",
@@ -2567,7 +2731,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 170
+   "purpose": null,
+   "walk": 169
   },
   {
    "code": "CTL033",
@@ -2578,7 +2743,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 171
+   "purpose": null,
+   "walk": 170
   },
   {
    "code": "CTL034",
@@ -2589,7 +2755,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 172
+   "purpose": null,
+   "walk": 171
   },
   {
    "code": "CTL035",
@@ -2600,7 +2767,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 173
+   "purpose": null,
+   "walk": 172
   },
   {
    "code": "CTL036",
@@ -2611,7 +2779,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 174
+   "purpose": null,
+   "walk": 173
   },
   {
    "code": "CTL037",
@@ -2622,7 +2791,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 175
+   "purpose": null,
+   "walk": 174
   },
   {
    "code": "CTL038",
@@ -2633,7 +2803,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 176
+   "purpose": null,
+   "walk": 175
   },
   {
    "code": "CTL039",
@@ -2644,7 +2815,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 177
+   "purpose": null,
+   "walk": 176
   },
   {
    "code": "CTL040",
@@ -2655,7 +2827,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 178
+   "purpose": null,
+   "walk": 177
   },
   {
    "code": "CTL041",
@@ -2666,7 +2839,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 179
+   "purpose": null,
+   "walk": 178
   },
   {
    "code": "CTL042",
@@ -2677,7 +2851,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 180
+   "purpose": null,
+   "walk": 179
   },
   {
    "code": "CTL043",
@@ -2688,7 +2863,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 181
+   "purpose": null,
+   "walk": 180
   },
   {
    "code": "CTL044",
@@ -2699,7 +2875,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 182
+   "purpose": null,
+   "walk": 181
   },
   {
    "code": "CTL045",
@@ -2710,7 +2887,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 183
+   "purpose": null,
+   "walk": 182
   },
   {
    "code": "CTL046",
@@ -2721,7 +2899,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 184
+   "purpose": null,
+   "walk": 183
   },
   {
    "code": "CTL047",
@@ -2732,7 +2911,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 185
+   "purpose": null,
+   "walk": 184
   },
   {
    "code": "CTL048",
@@ -2743,7 +2923,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 186
+   "purpose": null,
+   "walk": 185
   },
   {
    "code": "CTL049",
@@ -2754,7 +2935,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 187
+   "purpose": null,
+   "walk": 186
   },
   {
    "code": "CTL050",
@@ -2765,7 +2947,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 188
+   "purpose": null,
+   "walk": 187
   },
   {
    "code": "CTL051",
@@ -2776,7 +2959,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 189
+   "purpose": null,
+   "walk": 188
   },
   {
    "code": "CTL052",
@@ -2787,7 +2971,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 190
+   "purpose": null,
+   "walk": 189
   },
   {
    "code": "CTL053",
@@ -2798,7 +2983,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 191
+   "purpose": null,
+   "walk": 190
   },
   {
    "code": "CTL054",
@@ -2809,7 +2995,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 192
+   "purpose": null,
+   "walk": 191
   },
   {
    "code": "CTL055",
@@ -2820,7 +3007,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 193
+   "purpose": null,
+   "walk": 192
   },
   {
    "code": "CTL056",
@@ -2831,7 +3019,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 194
+   "purpose": null,
+   "walk": 193
   },
   {
    "code": "CTL057",
@@ -2842,7 +3031,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 195
+   "purpose": null,
+   "walk": 194
   },
   {
    "code": "CTL058",
@@ -2853,7 +3043,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 196
+   "purpose": null,
+   "walk": 195
   },
   {
    "code": "CTL059",
@@ -2864,7 +3055,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 197
+   "purpose": null,
+   "walk": 196
   },
   {
    "code": "CTL060",
@@ -2875,7 +3067,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 198
+   "purpose": null,
+   "walk": 197
   },
   {
    "code": "CTL061",
@@ -2886,7 +3079,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 199
+   "purpose": null,
+   "walk": 198
   },
   {
    "code": "CTL062",
@@ -2897,7 +3091,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 200
+   "purpose": null,
+   "walk": 199
   },
   {
    "code": "CTL063",
@@ -2908,7 +3103,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 201
+   "purpose": null,
+   "walk": 200
   },
   {
    "code": "CTL064",
@@ -2919,7 +3115,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 202
+   "purpose": null,
+   "walk": 201
   },
   {
    "code": "CTL065",
@@ -2930,7 +3127,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 203
+   "purpose": null,
+   "walk": 202
   },
   {
    "code": "CTL066",
@@ -2941,7 +3139,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 204
+   "purpose": null,
+   "walk": 203
   },
   {
    "code": "CTL067",
@@ -2952,7 +3151,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 205
+   "purpose": null,
+   "walk": 204
   },
   {
    "code": "CTL068",
@@ -2963,7 +3163,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 206
+   "purpose": null,
+   "walk": 205
   },
   {
    "code": "CTL069",
@@ -2974,7 +3175,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 207
+   "purpose": null,
+   "walk": 206
   },
   {
    "code": "CTL070",
@@ -2985,7 +3187,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 208
+   "purpose": null,
+   "walk": 207
   },
   {
    "code": "CTL071",
@@ -2996,7 +3199,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 209
+   "purpose": null,
+   "walk": 208
   },
   {
    "code": "CTL072",
@@ -3007,7 +3211,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 210
+   "purpose": null,
+   "walk": 209
   },
   {
    "code": "CTL073",
@@ -3018,7 +3223,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 211
+   "purpose": null,
+   "walk": 210
   },
   {
    "code": "CTL074",
@@ -3029,7 +3235,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 212
+   "purpose": null,
+   "walk": 211
   },
   {
    "code": "CTL075",
@@ -3040,7 +3247,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 213
+   "purpose": null,
+   "walk": 212
   },
   {
    "code": "CTL076",
@@ -3051,7 +3259,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 214
+   "purpose": null,
+   "walk": 213
   },
   {
    "code": "CTL077",
@@ -3062,7 +3271,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 215
+   "purpose": null,
+   "walk": 214
   },
   {
    "code": "CTL078",
@@ -3073,7 +3283,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 216
+   "purpose": null,
+   "walk": 215
   },
   {
    "code": "CTL079",
@@ -3084,7 +3295,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 217
+   "purpose": null,
+   "walk": 216
   },
   {
    "code": "CTL080",
@@ -3095,7 +3307,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 218
+   "purpose": null,
+   "walk": 217
   },
   {
    "code": "CTL081",
@@ -3106,7 +3319,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 219
+   "purpose": null,
+   "walk": 218
   },
   {
    "code": "CTL082",
@@ -3117,7 +3331,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 220
+   "purpose": null,
+   "walk": 219
   },
   {
    "code": "CTL083",
@@ -3128,7 +3343,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 221
+   "purpose": null,
+   "walk": 220
   },
   {
    "code": "CTL084",
@@ -3139,7 +3355,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 222
+   "purpose": null,
+   "walk": 221
   },
   {
    "code": "CTL085",
@@ -3150,7 +3367,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 223
+   "purpose": null,
+   "walk": 222
   },
   {
    "code": "CTL086",
@@ -3161,7 +3379,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 224
+   "purpose": null,
+   "walk": 223
   },
   {
    "code": "CTL087",
@@ -3172,7 +3391,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 225
+   "purpose": null,
+   "walk": 224
   },
   {
    "code": "CTL088",
@@ -3183,7 +3403,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 226
+   "purpose": null,
+   "walk": 225
   },
   {
    "code": "CTL089",
@@ -3194,7 +3415,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 227
+   "purpose": null,
+   "walk": 226
   },
   {
    "code": "CTL090",
@@ -3205,7 +3427,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 228
+   "purpose": null,
+   "walk": 227
   },
   {
    "code": "CTL091",
@@ -3216,7 +3439,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 229
+   "purpose": null,
+   "walk": 228
   },
   {
    "code": "CTL092",
@@ -3227,7 +3451,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 230
+   "purpose": null,
+   "walk": 229
   },
   {
    "code": "CTL093",
@@ -3238,7 +3463,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 231
+   "purpose": null,
+   "walk": 230
   },
   {
    "code": "CTL094",
@@ -3249,7 +3475,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 232
+   "purpose": null,
+   "walk": 231
   },
   {
    "code": "CTL095",
@@ -3260,7 +3487,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 233
+   "purpose": null,
+   "walk": 232
   },
   {
    "code": "CTL096",
@@ -3271,7 +3499,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 234
+   "purpose": null,
+   "walk": 233
   },
   {
    "code": "CTL097",
@@ -3282,7 +3511,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 235
+   "purpose": null,
+   "walk": 234
   },
   {
    "code": "CTL098",
@@ -3293,7 +3523,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 236
+   "purpose": null,
+   "walk": 235
   },
   {
    "code": "CTL099",
@@ -3304,7 +3535,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 237
+   "purpose": null,
+   "walk": 236
   },
   {
    "code": "CTL100",
@@ -3315,7 +3547,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 238
+   "purpose": null,
+   "walk": 237
   },
   {
    "code": "CTL101",
@@ -3326,7 +3559,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 239
+   "purpose": null,
+   "walk": 238
   },
   {
    "code": "CTL102",
@@ -3337,7 +3571,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 240
+   "purpose": null,
+   "walk": 239
   },
   {
    "code": "CTL103",
@@ -3348,7 +3583,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 241
+   "purpose": null,
+   "walk": 240
   },
   {
    "code": "CTL104",
@@ -3359,7 +3595,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 242
+   "purpose": null,
+   "walk": 241
   },
   {
    "code": "CTL105",
@@ -3370,7 +3607,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 243
+   "purpose": null,
+   "walk": 242
   },
   {
    "code": "CTL106",
@@ -3381,7 +3619,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 244
+   "purpose": null,
+   "walk": 243
   },
   {
    "code": "CTL107",
@@ -3392,7 +3631,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 245
+   "purpose": null,
+   "walk": 244
   },
   {
    "code": "CTL108",
@@ -3403,7 +3643,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 246
+   "purpose": null,
+   "walk": 245
   },
   {
    "code": "CTL109",
@@ -3414,7 +3655,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 247
+   "purpose": null,
+   "walk": 246
   },
   {
    "code": "CTL110",
@@ -3425,7 +3667,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 248
+   "purpose": null,
+   "walk": 247
   },
   {
    "code": "CTL111",
@@ -3436,7 +3679,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 249
+   "purpose": null,
+   "walk": 248
   },
   {
    "code": "CTL112",
@@ -3447,7 +3691,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 250
+   "purpose": null,
+   "walk": 249
   },
   {
    "code": "CTL113",
@@ -3458,7 +3703,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 251
+   "purpose": null,
+   "walk": 250
   },
   {
    "code": "CTL114",
@@ -3469,7 +3715,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 252
+   "purpose": null,
+   "walk": 251
   },
   {
    "code": "CTL115",
@@ -3480,7 +3727,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 253
+   "purpose": null,
+   "walk": 252
   },
   {
    "code": "CTL116",
@@ -3491,7 +3739,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 254
+   "purpose": null,
+   "walk": 253
   },
   {
    "code": "CTL117",
@@ -3502,7 +3751,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 255
+   "purpose": null,
+   "walk": 254
   },
   {
    "code": "CTL118",
@@ -3513,7 +3763,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 256
+   "purpose": null,
+   "walk": 255
   },
   {
    "code": "CTL119",
@@ -3524,7 +3775,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 257
+   "purpose": null,
+   "walk": 256
   },
   {
    "code": "CTL120",
@@ -3535,7 +3787,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 258
+   "purpose": null,
+   "walk": 257
   },
   {
    "code": "CTL121",
@@ -3546,7 +3799,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 259
+   "purpose": null,
+   "walk": 258
   },
   {
    "code": "CTL122",
@@ -3557,7 +3811,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 260
+   "purpose": null,
+   "walk": 259
   },
   {
    "code": "CTL123",
@@ -3568,7 +3823,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 261
+   "purpose": null,
+   "walk": 260
   },
   {
    "code": "CTL124",
@@ -3579,7 +3835,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 262
+   "purpose": null,
+   "walk": 261
   },
   {
    "code": "CTL125",
@@ -3590,7 +3847,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 263
+   "purpose": null,
+   "walk": 262
   },
   {
    "code": "CTL126",
@@ -3601,7 +3859,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 264
+   "purpose": null,
+   "walk": 263
   },
   {
    "code": "CTL127",
@@ -3612,7 +3871,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 265
+   "purpose": null,
+   "walk": 264
   },
   {
    "code": "CTL128",
@@ -3623,7 +3883,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 266
+   "purpose": null,
+   "walk": 265
   },
   {
    "code": "CTL129",
@@ -3634,7 +3895,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 267
+   "purpose": null,
+   "walk": 266
   },
   {
    "code": "CTL130",
@@ -3645,7 +3907,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 268
+   "purpose": null,
+   "walk": 267
   },
   {
    "code": "CTL131",
@@ -3656,7 +3919,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 269
+   "purpose": null,
+   "walk": 268
   },
   {
    "code": "CTL132",
@@ -3667,7 +3931,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 270
+   "purpose": null,
+   "walk": 269
   },
   {
    "code": "CTL133",
@@ -3678,7 +3943,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 271
+   "purpose": null,
+   "walk": 270
   },
   {
    "code": "CTL134",
@@ -3689,7 +3955,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 272
+   "purpose": null,
+   "walk": 271
   },
   {
    "code": "CTL135",
@@ -3700,7 +3967,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 273
+   "purpose": null,
+   "walk": 272
   },
   {
    "code": "CTL136",
@@ -3711,7 +3979,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 274
+   "purpose": null,
+   "walk": 273
   },
   {
    "code": "CTL137",
@@ -3722,7 +3991,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 275
+   "purpose": null,
+   "walk": 274
   },
   {
    "code": "CTL138",
@@ -3733,7 +4003,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 276
+   "purpose": null,
+   "walk": 275
   },
   {
    "code": "CTL139",
@@ -3744,7 +4015,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 277
+   "purpose": null,
+   "walk": 276
   },
   {
    "code": "CTL140",
@@ -3755,7 +4027,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 278
+   "purpose": null,
+   "walk": 277
   },
   {
    "code": "CTL141",
@@ -3766,7 +4039,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 279
+   "purpose": null,
+   "walk": 278
   },
   {
    "code": "CTL142",
@@ -3777,7 +4051,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 280
+   "purpose": null,
+   "walk": 279
   },
   {
    "code": "CTL143",
@@ -3788,7 +4063,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 281
+   "purpose": null,
+   "walk": 280
   },
   {
    "code": "CTL144",
@@ -3799,7 +4075,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 282
+   "purpose": null,
+   "walk": 281
   },
   {
    "code": "CTL145",
@@ -3810,7 +4087,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 283
+   "purpose": null,
+   "walk": 282
   },
   {
    "code": "CTL146",
@@ -3821,7 +4099,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 284
+   "purpose": null,
+   "walk": 283
   },
   {
    "code": "CTL147",
@@ -3832,7 +4111,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 285
+   "purpose": null,
+   "walk": 284
   },
   {
    "code": "CTL148",
@@ -3843,7 +4123,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 286
+   "purpose": null,
+   "walk": 285
   },
   {
    "code": "CTL149",
@@ -3854,7 +4135,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 287
+   "purpose": null,
+   "walk": 286
   },
   {
    "code": "CTL150",
@@ -3865,7 +4147,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 288
+   "purpose": null,
+   "walk": 287
   },
   {
    "code": "CTL151",
@@ -3876,7 +4159,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 289
+   "purpose": null,
+   "walk": 288
   },
   {
    "code": "CTL152",
@@ -3887,7 +4171,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 290
+   "purpose": null,
+   "walk": 289
   },
   {
    "code": "CTL153",
@@ -3898,7 +4183,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 291
+   "purpose": null,
+   "walk": 290
   },
   {
    "code": "CTL154",
@@ -3909,7 +4195,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 292
+   "purpose": null,
+   "walk": 291
   },
   {
    "code": "CTL155",
@@ -3920,7 +4207,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 293
+   "purpose": null,
+   "walk": 292
   },
   {
    "code": "CTL156",
@@ -3931,7 +4219,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 294
+   "purpose": null,
+   "walk": 293
   },
   {
    "code": "CTL157",
@@ -3942,7 +4231,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 295
+   "purpose": null,
+   "walk": 294
   },
   {
    "code": "CTL158",
@@ -3953,7 +4243,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 296
+   "purpose": null,
+   "walk": 295
   },
   {
    "code": "CTL159",
@@ -3964,7 +4255,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 297
+   "purpose": null,
+   "walk": 296
   },
   {
    "code": "CTL160",
@@ -3975,7 +4267,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 298
+   "purpose": null,
+   "walk": 297
   },
   {
    "code": "CTL161",
@@ -3986,7 +4279,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 299
+   "purpose": null,
+   "walk": 298
   },
   {
    "code": "CTL162",
@@ -3997,7 +4291,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 300
+   "purpose": null,
+   "walk": 299
   },
   {
    "code": "CTL163",
@@ -4008,7 +4303,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 301
+   "purpose": null,
+   "walk": 300
   },
   {
    "code": "CTL164",
@@ -4019,7 +4315,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 302
+   "purpose": null,
+   "walk": 301
   },
   {
    "code": "CTL165",
@@ -4030,7 +4327,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 303
+   "purpose": null,
+   "walk": 302
   },
   {
    "code": "CTL166",
@@ -4041,7 +4339,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 304
+   "purpose": null,
+   "walk": 303
   },
   {
    "code": "CTL167",
@@ -4052,7 +4351,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 305
+   "purpose": null,
+   "walk": 304
   },
   {
    "code": "CTL168",
@@ -4063,7 +4363,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 306
+   "purpose": null,
+   "walk": 305
   },
   {
    "code": "CTL169",
@@ -4074,7 +4375,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 307
+   "purpose": null,
+   "walk": 306
   },
   {
    "code": "CTL170",
@@ -4085,7 +4387,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 308
+   "purpose": null,
+   "walk": 307
   },
   {
    "code": "CTL171",
@@ -4096,7 +4399,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 309
+   "purpose": null,
+   "walk": 308
   },
   {
    "code": "CTL172",
@@ -4107,7 +4411,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 310
+   "purpose": null,
+   "walk": 309
   },
   {
    "code": "CTL173",
@@ -4118,7 +4423,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 311
+   "purpose": null,
+   "walk": 310
   },
   {
    "code": "CTL174",
@@ -4129,7 +4435,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 312
+   "purpose": null,
+   "walk": 311
   },
   {
    "code": "CTL175",
@@ -4140,7 +4447,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 313
+   "purpose": null,
+   "walk": 312
   },
   {
    "code": "CTL176",
@@ -4151,7 +4459,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 314
+   "purpose": null,
+   "walk": 313
   },
   {
    "code": "CTL177",
@@ -4162,7 +4471,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 315
+   "purpose": null,
+   "walk": 314
   },
   {
    "code": "CTL178",
@@ -4173,7 +4483,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 316
+   "purpose": null,
+   "walk": 315
   },
   {
    "code": "CTL179",
@@ -4184,7 +4495,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 317
+   "purpose": null,
+   "walk": 316
   },
   {
    "code": "CTL180",
@@ -4195,7 +4507,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 318
+   "purpose": null,
+   "walk": 317
   },
   {
    "code": "CTL181",
@@ -4206,7 +4519,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 319
+   "purpose": null,
+   "walk": 318
   },
   {
    "code": "CTL182",
@@ -4217,7 +4531,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 320
+   "purpose": null,
+   "walk": 319
   },
   {
    "code": "CTL183",
@@ -4228,7 +4543,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 321
+   "purpose": null,
+   "walk": 320
   },
   {
    "code": "CTL184",
@@ -4239,7 +4555,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 322
+   "purpose": null,
+   "walk": 321
   },
   {
    "code": "CTL187",
@@ -4250,7 +4567,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 323
+   "purpose": null,
+   "walk": 322
   },
   {
    "code": "CTL188",
@@ -4261,7 +4579,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 324
+   "purpose": null,
+   "walk": 323
   },
   {
    "code": "CTL189",
@@ -4272,7 +4591,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 325
+   "purpose": null,
+   "walk": 324
   },
   {
    "code": "CTL190",
@@ -4283,7 +4603,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 326
+   "purpose": null,
+   "walk": 325
   },
   {
    "code": "CTL191",
@@ -4294,7 +4615,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 327
+   "purpose": null,
+   "walk": 326
   },
   {
    "code": "CTL192",
@@ -4305,7 +4627,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 328
+   "purpose": null,
+   "walk": 327
   },
   {
    "code": "CTL193",
@@ -4316,7 +4639,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 329
+   "purpose": null,
+   "walk": 328
   },
   {
    "code": "CTL194",
@@ -4327,7 +4651,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 330
+   "purpose": null,
+   "walk": 329
   },
   {
    "code": "CTL195",
@@ -4338,7 +4663,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 331
+   "purpose": null,
+   "walk": 330
   },
   {
    "code": "CTL196",
@@ -4349,7 +4675,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 332
+   "purpose": null,
+   "walk": 331
   },
   {
    "code": "CTL197",
@@ -4360,7 +4687,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 333
+   "purpose": null,
+   "walk": 332
   },
   {
    "code": "CTL198",
@@ -4371,7 +4699,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 334
+   "purpose": null,
+   "walk": 333
   },
   {
    "code": "CTL199",
@@ -4382,7 +4711,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 335
+   "purpose": null,
+   "walk": 334
   },
   {
    "code": "CTL200",
@@ -4393,7 +4723,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 336
+   "purpose": null,
+   "walk": 335
   },
   {
    "code": "CTL201",
@@ -4404,7 +4735,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 337
+   "purpose": null,
+   "walk": 336
   },
   {
    "code": "CTL202",
@@ -4415,7 +4747,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 338
+   "purpose": null,
+   "walk": 337
   },
   {
    "code": "CTL203",
@@ -4426,7 +4759,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 339
+   "purpose": null,
+   "walk": 338
   },
   {
    "code": "CTL204",
@@ -4437,7 +4771,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 340
+   "purpose": null,
+   "walk": 339
   },
   {
    "code": "CTL205",
@@ -4448,7 +4783,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 341
+   "purpose": null,
+   "walk": 340
   },
   {
    "code": "CTL206",
@@ -4459,7 +4795,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 342
+   "purpose": null,
+   "walk": 341
   },
   {
    "code": "CTL207",
@@ -4470,7 +4807,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 343
+   "purpose": null,
+   "walk": 342
   },
   {
    "code": "CTL208",
@@ -4481,7 +4819,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 344
+   "purpose": null,
+   "walk": 343
   },
   {
    "code": "CTL209",
@@ -4492,7 +4831,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 345
+   "purpose": null,
+   "walk": 344
   },
   {
    "code": "CTL210",
@@ -4503,7 +4843,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 346
+   "purpose": null,
+   "walk": 345
   },
   {
    "code": "CTL211",
@@ -4514,7 +4855,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 347
+   "purpose": null,
+   "walk": 346
   },
   {
    "code": "CTL212",
@@ -4525,7 +4867,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 348
+   "purpose": null,
+   "walk": 347
   },
   {
    "code": "CTL213",
@@ -4536,7 +4879,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 349
+   "purpose": null,
+   "walk": 348
   },
   {
    "code": "CTL214",
@@ -4547,7 +4891,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 350
+   "purpose": null,
+   "walk": 349
   },
   {
    "code": "CTL215",
@@ -4558,7 +4903,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 351
+   "purpose": null,
+   "walk": 350
   },
   {
    "code": "CTL216",
@@ -4569,7 +4915,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 352
+   "purpose": null,
+   "walk": 351
   },
   {
    "code": "CTL217",
@@ -4580,7 +4927,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 353
+   "purpose": null,
+   "walk": 352
   },
   {
    "code": "CTL218",
@@ -4591,7 +4939,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 354
+   "purpose": null,
+   "walk": 353
   },
   {
    "code": "CTL219",
@@ -4602,7 +4951,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 355
+   "purpose": null,
+   "walk": 354
   },
   {
    "code": "CTL220",
@@ -4613,7 +4963,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 356
+   "purpose": null,
+   "walk": 355
   },
   {
    "code": "CTL221",
@@ -4624,7 +4975,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 357
+   "purpose": null,
+   "walk": 356
   },
   {
    "code": "CTL222",
@@ -4635,7 +4987,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 358
+   "purpose": null,
+   "walk": 357
   },
   {
    "code": "CTL223",
@@ -4646,7 +4999,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 359
+   "purpose": null,
+   "walk": 358
   },
   {
    "code": "CTL224",
@@ -4657,7 +5011,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 360
+   "purpose": null,
+   "walk": 359
   },
   {
    "code": "CTL225",
@@ -4668,7 +5023,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 361
+   "purpose": null,
+   "walk": 360
   },
   {
    "code": "CTL226",
@@ -4679,7 +5035,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 362
+   "purpose": null,
+   "walk": 361
   },
   {
    "code": "CTL227",
@@ -4690,7 +5047,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 363
+   "purpose": null,
+   "walk": 362
   },
   {
    "code": "CTL228",
@@ -4701,7 +5059,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 364
+   "purpose": null,
+   "walk": 363
   },
   {
    "code": "CTL229",
@@ -4712,7 +5071,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 365
+   "purpose": null,
+   "walk": 364
   },
   {
    "code": "CTL230",
@@ -4723,7 +5083,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 366
+   "purpose": null,
+   "walk": 365
   },
   {
    "code": "CTL231",
@@ -4734,7 +5095,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 367
+   "purpose": null,
+   "walk": 366
   },
   {
    "code": "CTL232",
@@ -4745,7 +5107,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 368
+   "purpose": null,
+   "walk": 367
   },
   {
    "code": "CTL233",
@@ -4756,7 +5119,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 369
+   "purpose": null,
+   "walk": 368
   },
   {
    "code": "CTL234",
@@ -4767,7 +5131,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 370
+   "purpose": null,
+   "walk": 369
   },
   {
    "code": "CTL235",
@@ -4778,7 +5143,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 371
+   "purpose": null,
+   "walk": 370
   },
   {
    "code": "CTL236",
@@ -4789,7 +5155,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 372
+   "purpose": null,
+   "walk": 371
   },
   {
    "code": "CTL237",
@@ -4800,7 +5167,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 373
+   "purpose": null,
+   "walk": 372
   },
   {
    "code": "CTL238",
@@ -4811,7 +5179,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 374
+   "purpose": null,
+   "walk": 373
   },
   {
    "code": "CTL239",
@@ -4822,7 +5191,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 375
+   "purpose": null,
+   "walk": 374
   },
   {
    "code": "CTL240",
@@ -4833,7 +5203,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 376
+   "purpose": null,
+   "walk": 375
   },
   {
    "code": "CTL241",
@@ -4844,7 +5215,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 377
+   "purpose": null,
+   "walk": 376
   },
   {
    "code": "CTL242",
@@ -4855,7 +5227,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 378
+   "purpose": null,
+   "walk": 377
   },
   {
    "code": "CTL243",
@@ -4866,7 +5239,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 379
+   "purpose": null,
+   "walk": 378
   },
   {
    "code": "CTL244",
@@ -4877,7 +5251,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 380
+   "purpose": null,
+   "walk": 379
   },
   {
    "code": "CTL245",
@@ -4888,7 +5263,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 381
+   "purpose": null,
+   "walk": 380
   },
   {
    "code": "CTL246",
@@ -4899,7 +5275,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 382
+   "purpose": null,
+   "walk": 381
   },
   {
    "code": "CTL247",
@@ -4910,7 +5287,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 383
+   "purpose": null,
+   "walk": 382
   },
   {
    "code": "CTL248",
@@ -4921,7 +5299,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 384
+   "purpose": null,
+   "walk": 383
   },
   {
    "code": "CTL249",
@@ -4932,7 +5311,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 385
+   "purpose": null,
+   "walk": 384
   },
   {
    "code": "CTL250",
@@ -4943,7 +5323,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 386
+   "purpose": null,
+   "walk": 385
   },
   {
    "code": "CTL251",
@@ -4954,7 +5335,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 387
+   "purpose": null,
+   "walk": 386
   },
   {
    "code": "CTL252",
@@ -4965,7 +5347,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 388
+   "purpose": null,
+   "walk": 387
   },
   {
    "code": "CTL253",
@@ -4976,7 +5359,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 389
+   "purpose": null,
+   "walk": 388
   },
   {
    "code": "CTL254",
@@ -4987,7 +5371,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 390
+   "purpose": null,
+   "walk": 389
   },
   {
    "code": "CTL255",
@@ -4998,7 +5383,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 391
+   "purpose": null,
+   "walk": 390
   },
   {
    "code": "CTL256",
@@ -5009,7 +5395,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 392
+   "purpose": null,
+   "walk": 391
   },
   {
    "code": "CTL257",
@@ -5020,7 +5407,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 393
+   "purpose": null,
+   "walk": 392
   },
   {
    "code": "CTL263",
@@ -5031,7 +5419,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 394
+   "purpose": null,
+   "walk": 393
   },
   {
    "code": "CTL264",
@@ -5042,7 +5431,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 395
+   "purpose": null,
+   "walk": 394
   },
   {
    "code": "CTL265",
@@ -5053,7 +5443,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 396
+   "purpose": null,
+   "walk": 395
   },
   {
    "code": "CTL266",
@@ -5064,7 +5455,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 397
+   "purpose": null,
+   "walk": 396
   },
   {
    "code": "CTL267",
@@ -5075,7 +5467,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 398
+   "purpose": null,
+   "walk": 397
   },
   {
    "code": "CTL268",
@@ -5086,7 +5479,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 399
+   "purpose": null,
+   "walk": 398
   },
   {
    "code": "CTL269",
@@ -5097,7 +5491,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 400
+   "purpose": null,
+   "walk": 399
   },
   {
    "code": "CTL270",
@@ -5108,7 +5503,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 401
+   "purpose": null,
+   "walk": 400
   },
   {
    "code": "CTL271",
@@ -5119,7 +5515,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 402
+   "purpose": null,
+   "walk": 401
   },
   {
    "code": "CTL272",
@@ -5130,7 +5527,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 403
+   "purpose": null,
+   "walk": 402
   },
   {
    "code": "CTL273",
@@ -5141,7 +5539,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 404
+   "purpose": null,
+   "walk": 403
   },
   {
    "code": "CTL274",
@@ -5152,7 +5551,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 405
+   "purpose": null,
+   "walk": 404
   },
   {
    "code": "CTL275",
@@ -5163,7 +5563,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 406
+   "purpose": null,
+   "walk": 405
   },
   {
    "code": "CTL276",
@@ -5174,7 +5575,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 407
+   "purpose": null,
+   "walk": 406
   },
   {
    "code": "CTL277",
@@ -5185,7 +5587,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 408
+   "purpose": null,
+   "walk": 407
   },
   {
    "code": "CTL278",
@@ -5196,7 +5599,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 409
+   "purpose": null,
+   "walk": 408
   },
   {
    "code": "CTL279",
@@ -5207,7 +5611,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 410
+   "purpose": null,
+   "walk": 409
   },
   {
    "code": "CTL280",
@@ -5218,7 +5623,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 411
+   "purpose": null,
+   "walk": 410
   },
   {
    "code": "CTL281",
@@ -5229,7 +5635,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 412
+   "purpose": null,
+   "walk": 411
   },
   {
    "code": "CTL282",
@@ -5240,7 +5647,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 413
+   "purpose": null,
+   "walk": 412
   },
   {
    "code": "CTL283",
@@ -5251,7 +5659,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 414
+   "purpose": null,
+   "walk": 413
   },
   {
    "code": "CTL284",
@@ -5262,7 +5671,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 415
+   "purpose": null,
+   "walk": 414
   },
   {
    "code": "CTL285",
@@ -5273,7 +5683,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 416
+   "purpose": null,
+   "walk": 415
   },
   {
    "code": "CTL286",
@@ -5284,7 +5695,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 417
+   "purpose": null,
+   "walk": 416
   },
   {
    "code": "CTL287",
@@ -5295,7 +5707,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 418
+   "purpose": null,
+   "walk": 417
   },
   {
    "code": "CTL288",
@@ -5306,7 +5719,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 419
+   "purpose": null,
+   "walk": 418
   },
   {
    "code": "CTL289",
@@ -5317,7 +5731,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 420
+   "purpose": null,
+   "walk": 419
   },
   {
    "code": "CTL290",
@@ -5328,7 +5743,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 421
+   "purpose": null,
+   "walk": 420
   },
   {
    "code": "CTL291",
@@ -5339,7 +5755,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 422
+   "purpose": null,
+   "walk": 421
   },
   {
    "code": "CTL292",
@@ -5350,7 +5767,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 423
+   "purpose": null,
+   "walk": 422
   },
   {
    "code": "CTL293",
@@ -5361,7 +5779,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 424
+   "purpose": null,
+   "walk": 423
   },
   {
    "code": "CTL294",
@@ -5372,7 +5791,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 425
+   "purpose": null,
+   "walk": 424
   },
   {
    "code": "CTL295",
@@ -5383,7 +5803,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 426
+   "purpose": null,
+   "walk": 425
   },
   {
    "code": "CTL296",
@@ -5394,7 +5815,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 427
+   "purpose": null,
+   "walk": 426
   },
   {
    "code": "CTL297",
@@ -5405,7 +5827,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 428
+   "purpose": null,
+   "walk": 427
   },
   {
    "code": "CTL298",
@@ -5416,7 +5839,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 429
+   "purpose": null,
+   "walk": 428
   },
   {
    "code": "CTL299",
@@ -5427,7 +5851,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 430
+   "purpose": null,
+   "walk": 429
   },
   {
    "code": "CTL300",
@@ -5438,7 +5863,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 431
+   "purpose": null,
+   "walk": 430
   },
   {
    "code": "CTL301",
@@ -5449,7 +5875,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 432
+   "purpose": null,
+   "walk": 431
   },
   {
    "code": "CTL302",
@@ -5460,7 +5887,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 433
+   "purpose": null,
+   "walk": 432
   },
   {
    "code": "CTL303",
@@ -5471,7 +5899,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 434
+   "purpose": null,
+   "walk": 433
   },
   {
    "code": "CTL304",
@@ -5482,7 +5911,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 435
+   "purpose": null,
+   "walk": 434
   },
   {
    "code": "CTL305",
@@ -5493,7 +5923,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 436
+   "purpose": null,
+   "walk": 435
   },
   {
    "code": "CTL306",
@@ -5504,7 +5935,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 437
+   "purpose": null,
+   "walk": 436
   },
   {
    "code": "CTL307",
@@ -5515,7 +5947,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 438
+   "purpose": null,
+   "walk": 437
   },
   {
    "code": "CTL308",
@@ -5526,7 +5959,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 439
+   "purpose": null,
+   "walk": 438
   },
   {
    "code": "CTL309",
@@ -5537,7 +5971,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 440
+   "purpose": null,
+   "walk": 439
   },
   {
    "code": "CTL310",
@@ -5548,7 +5983,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 441
+   "purpose": null,
+   "walk": 440
   },
   {
    "code": "CTL311",
@@ -5559,7 +5995,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 442
+   "purpose": null,
+   "walk": 441
   },
   {
    "code": "CTL312",
@@ -5570,7 +6007,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 443
+   "purpose": null,
+   "walk": 442
   },
   {
    "code": "CTL313",
@@ -5581,7 +6019,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 444
+   "purpose": null,
+   "walk": 443
   },
   {
    "code": "CTL314",
@@ -5592,7 +6031,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 445
+   "purpose": null,
+   "walk": 444
   },
   {
    "code": "CTL315",
@@ -5603,7 +6043,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 446
+   "purpose": null,
+   "walk": 445
   },
   {
    "code": "CTL316",
@@ -5614,7 +6055,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 447
+   "purpose": null,
+   "walk": 446
   },
   {
    "code": "CTL317",
@@ -5625,7 +6067,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 448
+   "purpose": null,
+   "walk": 447
   },
   {
    "code": "CTL318",
@@ -5636,7 +6079,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 449
+   "purpose": null,
+   "walk": 448
   },
   {
    "code": "CTL319",
@@ -5647,7 +6091,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 450
+   "purpose": null,
+   "walk": 449
   },
   {
    "code": "CTL320",
@@ -5658,7 +6103,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 451
+   "purpose": null,
+   "walk": 450
   },
   {
    "code": "CTL321",
@@ -5669,7 +6115,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 452
+   "purpose": null,
+   "walk": 451
   },
   {
    "code": "CTL322",
@@ -5680,7 +6127,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 453
+   "purpose": null,
+   "walk": 452
   },
   {
    "code": "CTL323",
@@ -5691,7 +6139,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 454
+   "purpose": null,
+   "walk": 453
   },
   {
    "code": "CTL324",
@@ -5702,7 +6151,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 455
+   "purpose": null,
+   "walk": 454
   },
   {
    "code": "CTL325",
@@ -5713,7 +6163,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 456
+   "purpose": null,
+   "walk": 455
   },
   {
    "code": "CTL326",
@@ -5724,7 +6175,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 457
+   "purpose": null,
+   "walk": 456
   },
   {
    "code": "CTL327",
@@ -5735,7 +6187,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 458
+   "purpose": null,
+   "walk": 457
   },
   {
    "code": "CTL328",
@@ -5746,7 +6199,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 459
+   "purpose": null,
+   "walk": 458
   },
   {
    "code": "CTL329",
@@ -5757,7 +6211,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 460
+   "purpose": null,
+   "walk": 459
   },
   {
    "code": "CTL330",
@@ -5768,7 +6223,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 461
+   "purpose": null,
+   "walk": 460
   },
   {
    "code": "CTL331",
@@ -5779,7 +6235,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 462
+   "purpose": null,
+   "walk": 461
   },
   {
    "code": "CTL332",
@@ -5790,7 +6247,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 463
+   "purpose": null,
+   "walk": 462
   },
   {
    "code": "CTL333",
@@ -5801,7 +6259,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 464
+   "purpose": null,
+   "walk": 463
   },
   {
    "code": "CTL334",
@@ -5812,7 +6271,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 465
+   "purpose": null,
+   "walk": 464
   },
   {
    "code": "CTL335",
@@ -5823,7 +6283,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 466
+   "purpose": null,
+   "walk": 465
   },
   {
    "code": "CTL336",
@@ -5834,7 +6295,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 467
+   "purpose": null,
+   "walk": 466
   },
   {
    "code": "CTL337",
@@ -5845,7 +6307,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 468
+   "purpose": null,
+   "walk": 467
   },
   {
    "code": "CTL338",
@@ -5856,7 +6319,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 469
+   "purpose": null,
+   "walk": 468
   },
   {
    "code": "CTL339",
@@ -5867,7 +6331,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 470
+   "purpose": null,
+   "walk": 469
   },
   {
    "code": "CTL340",
@@ -5878,7 +6343,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 471
+   "purpose": null,
+   "walk": 470
   },
   {
    "code": "CTL341",
@@ -5889,7 +6355,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 472
+   "purpose": null,
+   "walk": 471
   },
   {
    "code": "CTL342",
@@ -5900,7 +6367,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 473
+   "purpose": null,
+   "walk": 472
   },
   {
    "code": "CTL343",
@@ -5911,7 +6379,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 474
+   "purpose": null,
+   "walk": 473
   },
   {
    "code": "CTL344",
@@ -5922,7 +6391,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 475
+   "purpose": null,
+   "walk": 474
   },
   {
    "code": "CTL345",
@@ -5933,7 +6403,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 476
+   "purpose": null,
+   "walk": 475
   },
   {
    "code": "CTL346",
@@ -5944,7 +6415,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 477
+   "purpose": null,
+   "walk": 476
   },
   {
    "code": "CTL347",
@@ -5955,7 +6427,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 478
+   "purpose": null,
+   "walk": 477
   },
   {
    "code": "CTL348",
@@ -5966,7 +6439,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 479
+   "purpose": null,
+   "walk": 478
   },
   {
    "code": "CTL349",
@@ -5977,7 +6451,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 480
+   "purpose": null,
+   "walk": 479
   },
   {
    "code": "CTL350",
@@ -5988,7 +6463,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 481
+   "purpose": null,
+   "walk": 480
   },
   {
    "code": "CTL351",
@@ -5999,7 +6475,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 482
+   "purpose": null,
+   "walk": 481
   },
   {
    "code": "CTL352",
@@ -6010,7 +6487,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 483
+   "purpose": null,
+   "walk": 482
   },
   {
    "code": "CTL353",
@@ -6021,7 +6499,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 484
+   "purpose": null,
+   "walk": 483
   },
   {
    "code": "CTL354",
@@ -6032,7 +6511,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 485
+   "purpose": null,
+   "walk": 484
   },
   {
    "code": "CTL355",
@@ -6043,7 +6523,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 486
+   "purpose": null,
+   "walk": 485
   },
   {
    "code": "CTL356",
@@ -6054,7 +6535,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 487
+   "purpose": null,
+   "walk": 486
   },
   {
    "code": "CTL357",
@@ -6065,7 +6547,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 488
+   "purpose": null,
+   "walk": 487
   },
   {
    "code": "CTL358",
@@ -6076,7 +6559,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 489
+   "purpose": null,
+   "walk": 488
   },
   {
    "code": "CTL359",
@@ -6087,7 +6571,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 490
+   "purpose": null,
+   "walk": 489
   },
   {
    "code": "CTL360",
@@ -6098,7 +6583,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 491
+   "purpose": null,
+   "walk": 490
   },
   {
    "code": "CTL361",
@@ -6109,7 +6595,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 492
+   "purpose": null,
+   "walk": 491
   },
   {
    "code": "CTL362",
@@ -6120,7 +6607,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 493
+   "purpose": null,
+   "walk": 492
   },
   {
    "code": "CTL363",
@@ -6131,7 +6619,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 494
+   "purpose": null,
+   "walk": 493
   },
   {
    "code": "CTL364",
@@ -6142,7 +6631,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 495
+   "purpose": null,
+   "walk": 494
   },
   {
    "code": "CTL365",
@@ -6153,7 +6643,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 496
+   "purpose": null,
+   "walk": 495
   },
   {
    "code": "CTL366",
@@ -6164,7 +6655,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 497
+   "purpose": null,
+   "walk": 496
   },
   {
    "code": "CTL367",
@@ -6175,7 +6667,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 498
+   "purpose": null,
+   "walk": 497
   },
   {
    "code": "CTL368",
@@ -6186,7 +6679,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 499
+   "purpose": null,
+   "walk": 498
   },
   {
    "code": "CTL369",
@@ -6197,7 +6691,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 500
+   "purpose": null,
+   "walk": 499
   },
   {
    "code": "CTL370",
@@ -6208,7 +6703,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 501
+   "purpose": null,
+   "walk": 500
   },
   {
    "code": "CTL371",
@@ -6219,7 +6715,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 502
+   "purpose": null,
+   "walk": 501
   },
   {
    "code": "CTL372",
@@ -6230,7 +6727,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 503
+   "purpose": null,
+   "walk": 502
   },
   {
    "code": "CTL373",
@@ -6241,7 +6739,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 504
+   "purpose": null,
+   "walk": 503
   },
   {
    "code": "CTL374",
@@ -6252,7 +6751,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 505
+   "purpose": null,
+   "walk": 504
   },
   {
    "code": "CTL375",
@@ -6263,7 +6763,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 506
+   "purpose": null,
+   "walk": 505
   },
   {
    "code": "CTL376",
@@ -6274,7 +6775,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 507
+   "purpose": null,
+   "walk": 506
   },
   {
    "code": "CTL377",
@@ -6285,7 +6787,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 508
+   "purpose": null,
+   "walk": 507
   },
   {
    "code": "CTL378",
@@ -6296,7 +6799,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 509
+   "purpose": null,
+   "walk": 508
   },
   {
    "code": "CTL379",
@@ -6307,7 +6811,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 510
+   "purpose": null,
+   "walk": 509
   },
   {
    "code": "CTL380",
@@ -6318,7 +6823,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 511
+   "purpose": null,
+   "walk": 510
   },
   {
    "code": "CTL381",
@@ -6329,7 +6835,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 512
+   "purpose": null,
+   "walk": 511
   },
   {
    "code": "CTL382",
@@ -6340,7 +6847,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 513
+   "purpose": null,
+   "walk": 512
   },
   {
    "code": "CTL383",
@@ -6351,7 +6859,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 514
+   "purpose": null,
+   "walk": 513
   },
   {
    "code": "CTL384",
@@ -6362,7 +6871,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 515
+   "purpose": null,
+   "walk": 514
   },
   {
    "code": "CTL385",
@@ -6373,7 +6883,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 516
+   "purpose": null,
+   "walk": 515
   },
   {
    "code": "CTL386",
@@ -6384,7 +6895,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 517
+   "purpose": null,
+   "walk": 516
   },
   {
    "code": "CTL387",
@@ -6395,7 +6907,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 518
+   "purpose": null,
+   "walk": 517
   },
   {
    "code": "CTL388",
@@ -6406,7 +6919,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 519
+   "purpose": null,
+   "walk": 518
   },
   {
    "code": "CTL389",
@@ -6417,7 +6931,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 520
+   "purpose": null,
+   "walk": 519
   },
   {
    "code": "CTL390",
@@ -6428,7 +6943,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 521
+   "purpose": null,
+   "walk": 520
   },
   {
    "code": "CTL391",
@@ -6439,7 +6955,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 522
+   "purpose": null,
+   "walk": 521
   },
   {
    "code": "CTL392",
@@ -6450,7 +6967,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 523
+   "purpose": null,
+   "walk": 522
   },
   {
    "code": "CTL393",
@@ -6461,7 +6979,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 524
+   "purpose": null,
+   "walk": 523
   },
   {
    "code": "CTL394",
@@ -6472,7 +6991,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 525
+   "purpose": null,
+   "walk": 524
   },
   {
    "code": "CTL395",
@@ -6483,7 +7003,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 526
+   "purpose": null,
+   "walk": 525
   },
   {
    "code": "CTL396",
@@ -6494,7 +7015,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 527
+   "purpose": null,
+   "walk": 526
   },
   {
    "code": "CTL397",
@@ -6505,7 +7027,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 528
+   "purpose": null,
+   "walk": 527
   },
   {
    "code": "CTL398",
@@ -6516,7 +7039,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 529
+   "purpose": null,
+   "walk": 528
   },
   {
    "code": "CTL399",
@@ -6527,7 +7051,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 530
+   "purpose": null,
+   "walk": 529
   },
   {
    "code": "CTL400",
@@ -6538,7 +7063,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 531
+   "purpose": null,
+   "walk": 530
   },
   {
    "code": "CTL401",
@@ -6549,7 +7075,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 532
+   "purpose": null,
+   "walk": 531
   },
   {
    "code": "CTL402",
@@ -6560,7 +7087,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 533
+   "purpose": null,
+   "walk": 532
   },
   {
    "code": "CTL403",
@@ -6571,7 +7099,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 534
+   "purpose": null,
+   "walk": 533
   },
   {
    "code": "CTL404",
@@ -6582,7 +7111,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 535
+   "purpose": null,
+   "walk": 534
   },
   {
    "code": "CTL405",
@@ -6593,7 +7123,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 536
+   "purpose": null,
+   "walk": 535
   },
   {
    "code": "CTL406",
@@ -6604,7 +7135,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 537
+   "purpose": null,
+   "walk": 536
   },
   {
    "code": "CTL407",
@@ -6615,7 +7147,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 538
+   "purpose": null,
+   "walk": 537
   },
   {
    "code": "CTL408",
@@ -6626,7 +7159,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 539
+   "purpose": null,
+   "walk": 538
   },
   {
    "code": "CTL409",
@@ -6637,7 +7171,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 540
+   "purpose": null,
+   "walk": 539
   },
   {
    "code": "CTL410",
@@ -6648,7 +7183,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 541
+   "purpose": null,
+   "walk": 540
   },
   {
    "code": "CTL411",
@@ -6659,7 +7195,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 542
+   "purpose": null,
+   "walk": 541
   },
   {
    "code": "CTL412",
@@ -6670,7 +7207,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 543
+   "purpose": null,
+   "walk": 542
   },
   {
    "code": "CTL413",
@@ -6681,7 +7219,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 544
+   "purpose": null,
+   "walk": 543
   },
   {
    "code": "CTL414",
@@ -6692,7 +7231,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 545
+   "purpose": null,
+   "walk": 544
   },
   {
    "code": "CTL415",
@@ -6703,7 +7243,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 546
+   "purpose": null,
+   "walk": 545
   },
   {
    "code": "CTL416",
@@ -6714,7 +7255,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 547
+   "purpose": null,
+   "walk": 546
   },
   {
    "code": "CTL417",
@@ -6725,7 +7267,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 548
+   "purpose": null,
+   "walk": 547
   },
   {
    "code": "CTL418",
@@ -6736,7 +7279,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 549
+   "purpose": null,
+   "walk": 548
   },
   {
    "code": "CTL419",
@@ -6747,7 +7291,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 550
+   "purpose": null,
+   "walk": 549
   },
   {
    "code": "CTL420",
@@ -6758,7 +7303,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 551
+   "purpose": null,
+   "walk": 550
   },
   {
    "code": "CTL421",
@@ -6769,7 +7315,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 552
+   "purpose": null,
+   "walk": 551
   },
   {
    "code": "CTL422",
@@ -6780,7 +7327,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 553
+   "purpose": null,
+   "walk": 552
   },
   {
    "code": "CTL423",
@@ -6791,7 +7339,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 554
+   "purpose": null,
+   "walk": 553
   },
   {
    "code": "CTL424",
@@ -6802,7 +7351,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 555
+   "purpose": null,
+   "walk": 554
   },
   {
    "code": "CTL425",
@@ -6813,7 +7363,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 556
+   "purpose": null,
+   "walk": 555
   },
   {
    "code": "CTL426",
@@ -6824,7 +7375,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 557
+   "purpose": null,
+   "walk": 556
   },
   {
    "code": "CTL427",
@@ -6835,7 +7387,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 558
+   "purpose": null,
+   "walk": 557
   },
   {
    "code": "CTL428",
@@ -6846,7 +7399,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 559
+   "purpose": null,
+   "walk": 558
   },
   {
    "code": "CTL429",
@@ -6857,7 +7411,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 560
+   "purpose": null,
+   "walk": 559
   },
   {
    "code": "CTL430",
@@ -6868,7 +7423,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 561
+   "purpose": null,
+   "walk": 560
   },
   {
    "code": "CTL431",
@@ -6879,7 +7435,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 562
+   "purpose": null,
+   "walk": 561
   },
   {
    "code": "CTL432",
@@ -6890,7 +7447,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 563
+   "purpose": null,
+   "walk": 562
   },
   {
    "code": "CTL433",
@@ -6901,7 +7459,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 564
+   "purpose": null,
+   "walk": 563
   },
   {
    "code": "CAT005",
@@ -6912,6 +7471,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "catalogue",
+   "purpose": null,
    "walk": 17
   },
   {
@@ -6923,6 +7483,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "coassists",
+   "purpose": null,
    "walk": 30
   },
   {
@@ -6934,6 +7495,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "coassists",
+   "purpose": null,
    "walk": 31
   },
   {
@@ -6945,6 +7507,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "coassists",
+   "purpose": null,
    "walk": 32
   },
   {
@@ -6956,6 +7519,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "chit-detail",
+   "purpose": null,
    "walk": 5
   },
   {
@@ -6967,6 +7531,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "chit-detail",
+   "purpose": null,
    "walk": 6
   },
   {
@@ -6978,7 +7543,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 565
+   "purpose": null,
+   "walk": 564
   },
   {
    "code": "PNL002",
@@ -6989,7 +7555,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 566
+   "purpose": null,
+   "walk": 565
   },
   {
    "code": "PNL003",
@@ -7000,7 +7567,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 567
+   "purpose": null,
+   "walk": 566
   },
   {
    "code": "PNL004",
@@ -7011,7 +7579,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 568
+   "purpose": null,
+   "walk": 567
   },
   {
    "code": "PNL005",
@@ -7022,7 +7591,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 569
+   "purpose": null,
+   "walk": 568
   },
   {
    "code": "BUS009",
@@ -7033,6 +7603,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "suppliers",
+   "purpose": null,
    "walk": 24
   },
   {
@@ -7044,6 +7615,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "customers",
+   "purpose": null,
    "walk": 22
   },
   {
@@ -7055,6 +7627,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "suppliers",
+   "purpose": null,
    "walk": 25
   },
   {
@@ -7066,6 +7639,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "suppliers",
+   "purpose": null,
    "walk": 26
   },
   {
@@ -7077,6 +7651,7 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": "chit-detail",
+   "purpose": null,
    "walk": 7
   },
   {
@@ -7088,7 +7663,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 570
+   "purpose": null,
+   "walk": 569
   },
   {
    "code": "CTL435",
@@ -7099,7 +7675,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 571
+   "purpose": null,
+   "walk": 570
   },
   {
    "code": "CTL436",
@@ -7110,7 +7687,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 572
+   "purpose": null,
+   "walk": 571
   },
   {
    "code": "PNL007",
@@ -7121,7 +7699,8 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-12",
    "reached_from": null,
-   "walk": 573
+   "purpose": null,
+   "walk": 572
   },
   {
    "code": "POP085",
@@ -7132,7 +7711,512 @@ window.CBSCREENS = {
    "cases": 0,
    "since": "2026-09-13",
    "reached_from": null,
+   "purpose": null,
+   "walk": 573
+  },
+  {
+   "code": "CTL437",
+   "path": "Control › Counter › Counter • Adding",
+   "group": "Control",
+   "screen": "Counter › Counter • Adding",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
    "walk": 574
+  },
+  {
+   "code": "CTL438",
+   "path": "Control › Counter › Counter • Cancel",
+   "group": "Control",
+   "screen": "Counter › Counter • Cancel",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 575
+  },
+  {
+   "code": "CTL439",
+   "path": "Control › Counter › Counter • Confirm receipt · F9",
+   "group": "Control",
+   "screen": "Counter › Counter • Confirm receipt · F9",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 576
+  },
+  {
+   "code": "CTL440",
+   "path": "Control › Counter › Counter • Day close sheet",
+   "group": "Control",
+   "screen": "Counter › Counter • Day close sheet",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 577
+  },
+  {
+   "code": "CTL441",
+   "path": "Control › Counter › Counter • Discard",
+   "group": "Control",
+   "screen": "Counter › Counter • Discard",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 578
+  },
+  {
+   "code": "CTL442",
+   "path": "Control › Counter › Counter • Earlier · from ChitBridge",
+   "group": "Control",
+   "screen": "Counter › Counter • Earlier · from ChitBridge",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 579
+  },
+  {
+   "code": "CTL443",
+   "path": "Control › Counter › Counter • Everything",
+   "group": "Control",
+   "screen": "Counter › Counter • Everything",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 580
+  },
+  {
+   "code": "CTL444",
+   "path": "Control › Counter › Counter • Hand over",
+   "group": "Control",
+   "screen": "Counter › Counter • Hand over",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 581
+  },
+  {
+   "code": "CTL445",
+   "path": "Control › Counter › Counter • Health check — what would go wrong today",
+   "group": "Control",
+   "screen": "Counter › Counter • Health check — what would go wrong today",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Health check — what would go wrong today",
+   "walk": 582
+  },
+  {
+   "code": "CTL446",
+   "path": "Control › Counter › Counter • LR / AWB / vehicle (optional)",
+   "group": "Control",
+   "screen": "Counter › Counter • LR / AWB / vehicle (optional)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "LR / AWB / vehicle (optional)",
+   "walk": 583
+  },
+  {
+   "code": "CTL447",
+   "path": "Control › Counter › Counter • Next carton · F8",
+   "group": "Control",
+   "screen": "Counter › Counter • Next carton · F8",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 584
+  },
+  {
+   "code": "CTL448",
+   "path": "Control › Counter › Counter • OK",
+   "group": "Control",
+   "screen": "Counter › Counter • OK",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 585
+  },
+  {
+   "code": "CTL449",
+   "path": "Control › Counter › Counter • Off the shelf",
+   "group": "Control",
+   "screen": "Counter › Counter • Off the shelf",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 586
+  },
+  {
+   "code": "CTL450",
+   "path": "Control › Counter › Counter • On offer",
+   "group": "Control",
+   "screen": "Counter › Counter • On offer",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 587
+  },
+  {
+   "code": "CTL451",
+   "path": "Control › Counter › Counter • Park · F6",
+   "group": "Control",
+   "screen": "Counter › Counter • Park · F6",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 588
+  },
+  {
+   "code": "CTL452",
+   "path": "Control › Counter › Counter • Print a test slip",
+   "group": "Control",
+   "screen": "Counter › Counter • Print a test slip",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 589
+  },
+  {
+   "code": "CTL453",
+   "path": "Control › Counter › Counter • Remove this group",
+   "group": "Control",
+   "screen": "Counter › Counter • Remove this group",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 590
+  },
+  {
+   "code": "CTL454",
+   "path": "Control › Counter › Counter • Send now",
+   "group": "Control",
+   "screen": "Counter › Counter • Send now",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 591
+  },
+  {
+   "code": "CTL455",
+   "path": "Control › Counter › Counter • Show every hidden key again",
+   "group": "Control",
+   "screen": "Counter › Counter • Show every hidden key again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 592
+  },
+  {
+   "code": "CTL456",
+   "path": "Control › Counter › Counter • Their bill / challan no",
+   "group": "Control",
+   "screen": "Counter › Counter • Their bill / challan no",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Their bill / challan no",
+   "walk": 593
+  },
+  {
+   "code": "CTL457",
+   "path": "Control › Counter › Counter • Their bill total",
+   "group": "Control",
+   "screen": "Counter › Counter • Their bill total",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Their bill total",
+   "walk": 594
+  },
+  {
+   "code": "CTL458",
+   "path": "Control › Counter › Counter • Their state code (33, 29…) — for CGST/SGST vs IGST",
+   "group": "Control",
+   "screen": "Counter › Counter • Their state code (33, 29…) — for CGST/SGST vs IGST",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Their state code (33, 29…) — for CGST/SGST vs IGST",
+   "walk": 595
+  },
+  {
+   "code": "CTL459",
+   "path": "Control › Counter › Counter • Today · on this device",
+   "group": "Control",
+   "screen": "Counter › Counter • Today · on this device",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 596
+  },
+  {
+   "code": "CTL460",
+   "path": "Control › Counter › Counter • UPI",
+   "group": "Control",
+   "screen": "Counter › Counter • UPI",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "UPI",
+   "walk": 597
+  },
+  {
+   "code": "CTL461",
+   "path": "Control › Counter › Counter • Weight of this carton (kg)",
+   "group": "Control",
+   "screen": "Counter › Counter • Weight of this carton (kg)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Weight of this carton (kg)",
+   "walk": 598
+  },
+  {
+   "code": "CTL462",
+   "path": "Control › Counter › Counter • Who it came from",
+   "group": "Control",
+   "screen": "Counter › Counter • Who it came from",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "Who it came from",
+   "walk": 599
+  },
+  {
+   "code": "CTL463",
+   "path": "Control › Counter › Counter • bills, the shop screen, settings",
+   "group": "Control",
+   "screen": "Counter › Counter • bills, the shop screen, settings",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "bills, the shop screen, settings",
+   "walk": 600
+  },
+  {
+   "code": "CTL464",
+   "path": "Control › Counter › Counter • name@bank",
+   "group": "Control",
+   "screen": "Counter › Counter • name@bank",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "name@bank",
+   "walk": 601
+  },
+  {
+   "code": "CTL465",
+   "path": "Control › Counter › Counter • speak (the browser listens; needs the internet)",
+   "group": "Control",
+   "screen": "Counter › Counter • speak (the browser listens; needs the internet)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "speak (the browser listens; needs the internet)",
+   "walk": 602
+  },
+  {
+   "code": "CTL466",
+   "path": "Control › Counter › Counter • speak the name",
+   "group": "Control",
+   "screen": "Counter › Counter • speak the name",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "speak the name",
+   "walk": 603
+  },
+  {
+   "code": "CTL467",
+   "path": "Control › Counter › Counter • speak the number",
+   "group": "Control",
+   "screen": "Counter › Counter • speak the number",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "speak the number",
+   "walk": 604
+  },
+  {
+   "code": "CTL468",
+   "path": "Control › Counter › Counter • take part of this bill in this way, and the rest another",
+   "group": "Control",
+   "screen": "Counter › Counter • take part of this bill in this way, and the rest another",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "take part of this bill in this way, and the rest another",
+   "walk": 605
+  },
+  {
+   "code": "CTL469",
+   "path": "Control › Counter › Counter • what are you doing?",
+   "group": "Control",
+   "screen": "Counter › Counter • what are you doing?",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "what are you doing?",
+   "walk": 606
+  },
+  {
+   "code": "CTL470",
+   "path": "Control › Counter › Counter • which group",
+   "group": "Control",
+   "screen": "Counter › Counter • which group",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "which group",
+   "walk": 607
+  },
+  {
+   "code": "CTL471",
+   "path": "Control › Counter › Counter • who is signed in at this counter (F7 to hand over)",
+   "group": "Control",
+   "screen": "Counter › Counter • who is signed in at this counter (F7 to hand over)",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "who is signed in at this counter (F7 to hand over)",
+   "walk": 608
+  },
+  {
+   "code": "CTL472",
+   "path": "Control › Counter › Counter • ↺ Clear and read the shop again",
+   "group": "Control",
+   "screen": "Counter › Counter • ↺ Clear and read the shop again",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 609
+  },
+  {
+   "code": "CTL473",
+   "path": "Control › Counter › Counter • ＋ group",
+   "group": "Control",
+   "screen": "Counter › Counter • ＋ group",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 610
+  },
+  {
+   "code": "CTL474",
+   "path": "Control › Counter › Counter • ＋ marked row",
+   "group": "Control",
+   "screen": "Counter › Counter • ＋ marked row",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": "put the row the list is marking into ' + esc(o.group) + '",
+   "walk": 611
+  },
+  {
+   "code": "CTL475",
+   "path": "Control › Counter › Counter • ＋ new group",
+   "group": "Control",
+   "screen": "Counter › Counter • ＋ new group",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 612
+  },
+  {
+   "code": "POP086",
+   "path": "Popup › paintDisputes",
+   "group": "Popup",
+   "screen": "paintDisputes",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 613
+  },
+  {
+   "code": "POP087",
+   "path": "Popup › supportForm",
+   "group": "Popup",
+   "screen": "supportForm",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 614
+  },
+  {
+   "code": "POP088",
+   "path": "Popup › supportOpen",
+   "group": "Popup",
+   "screen": "supportOpen",
+   "nav": null,
+   "cases": 0,
+   "since": "2026-09-16",
+   "reached_from": null,
+   "purpose": null,
+   "walk": 615
   }
  ],
  "byFn": {
@@ -7333,11 +8417,6 @@ window.CBSCREENS = {
   },
   "disputeOverlay": {
    "code": "POP040",
-   "file": "cap-dispute.js",
-   "ambiguous": false
-  },
-  "disputesScreen": {
-   "code": "POP041",
    "file": "cap-dispute.js",
    "ambiguous": false
   },
@@ -7560,6 +8639,21 @@ window.CBSCREENS = {
    "code": "POP085",
    "file": "cap-testing.js",
    "ambiguous": false
+  },
+  "paintDisputes": {
+   "code": "POP086",
+   "file": "cap-dispute.js",
+   "ambiguous": false
+  },
+  "supportForm": {
+   "code": "POP087",
+   "file": "app.html",
+   "ambiguous": false
+  },
+  "supportOpen": {
+   "code": "POP088",
+   "file": "app.html",
+   "ambiguous": false
   }
  },
  "byPanel": {
@@ -7605,6 +8699,13 @@ window.CBSCREENS = {
    "since": "2026-09-12",
    "until": "2026-09-12",
    "why": "the screen was refiled — it is BUS008 now"
+  },
+  {
+   "code": "POP041",
+   "path": "Popup › disputesScreen",
+   "since": "2026-09-12",
+   "until": "2026-09-16",
+   "why": "no longer in the product"
   },
   {
    "code": "CTL185",
