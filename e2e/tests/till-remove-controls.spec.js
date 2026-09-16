@@ -375,3 +375,47 @@ test('[TILL-14] a re-paired counter finds the sales its previous copy was holdin
     expect(got.left, 'the emptied copy should be gone once its rows are safely here').toBe(0);
   });
 });
+
+// ⭐⭐ [TILL-15] A KEY PASTED INTO A COUNTER THAT IS ALREADY OPEN. Changing only the #fragment of a URL does not
+// reload the page, so the pairing address — read only at boot — was ignored entirely. No error, no pairing, no
+// clue: it looked exactly like a key that had been refused, while somebody was trying to fix a counter.
+test('[TILL-15] pasting a new key into an open counter re-pairs it', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Paste ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Jaggery 1 kg', unit: 'kg', price: 72, code: 'JAG9' });
+
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const out = [];
+    for (const n of ['paste one', 'paste two']) {
+      const r = await api('keysMint', { body: { name: n, scopes: ['till'], days: 1 } });
+      out.push(r && (r.key || r.api_key));
+    }
+    return out;
+  });
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[0]));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+  const first = await till.evaluate(() => tillStore());
+
+  await test.step('⭐⭐ the pasted key is adopted without the page being reloaded by hand', async () => {
+    /* exactly what a person does: put the address in and press enter, on the tab already open */
+    await till.evaluate((k) => { location.hash = 'key=' + encodeURIComponent(k); }, keys[1]);
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.waitForTimeout(800);
+    const now = await till.evaluate(() => ({ store: tillStore(), key: ls.get('cb_till_key', null) }));
+    expect(now.key, 'the pasted key was ignored — the counter is still on the old one').toBe(keys[1]);
+    expect(now.store, 'the counter did not move to the new copy').not.toBe(first);
+    /* ⚠️ and the address is tidied by boot, not left with a key sitting in it */
+    expect(await till.evaluate(() => location.hash), 'the key was left in the address bar').toBe('');
+  });
+
+  await test.step('⚠️ the same key again changes nothing and says so', async () => {
+    const before = await till.evaluate(() => tillStore());
+    await till.evaluate((k) => { location.hash = 'key=' + encodeURIComponent(k); }, keys[1]);
+    await till.waitForTimeout(700);
+    expect(await till.evaluate(() => tillStore()), 'it re-paired with the key it already had').toBe(before);
+  });
+});
