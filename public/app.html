@@ -8712,8 +8712,16 @@ async function enquiryOpen(item_id, name){
 }
 async function enquiryLoad(){
   if (!_ENQ) return;
+  /**
+   * ⚠️⚠️ A LIVE BUG, FOUND 2026-09-16 WORKING OFF THE ENVELOPE BASELINE — and the seventh of its exact shape.
+   * `messages` is a COLLAPSE key, so `r` arrives here as the messages ARRAY. `r.messages` was therefore always
+   * undefined and this thread rendered EMPTY every single time — which reads as "nobody has asked", the most
+   * flattering possible wrong answer. `migrated` is a dropped sibling for the same reason, so the "not enabled
+   * on this deployment" banner below could never fire either. It is now carried (core.js SIBS).
+   */
   try { var r = await api('enquiryRead', { params: { itemId: _ENQ.item_id } });
-        _ENQ.msgs = (r && r.messages) || []; _ENQ.migrated = !(r && r.migrated === false); _ENQ.err = null; }
+        _ENQ.msgs = Array.isArray(r) ? r : ((r && r.messages) || []);
+        _ENQ.migrated = !(r && r.migrated === false); _ENQ.err = null; }
   catch (e) { _ENQ.err = (e && e.message) || 'Could not read this conversation.'; }
   _ENQ.busy = false; enquiryPaint();
 }

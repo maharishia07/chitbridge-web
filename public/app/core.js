@@ -118,8 +118,15 @@ function unwrap(j, _key){
    * every one of them was undefined. The connector cockpit has been reading "offline" with an empty device list
    * no matter what the Pi was actually doing, which is the single thing that screen exists to tell you.
    */
+  /**
+   * ⚠️ 2026-09-16 — `migrated` is the SEVENTH instance: the product-enquiry thread read it to say "this is not
+   * enabled on this deployment yet", the sibling was dropped, and the banner could never fire. `supplier` and
+   * `groups` join it for a different reason — they ARE read, but only because supCatalogueFull() bypasses this
+   * function entirely to keep them. Carrying them here is what would let that bypass be retired.
+   */
   var SIBS = ["total","page","limit","truncated","count","offset","status_counts","open","counts",
-              "category_counts","uncategorised","actor_health","actor_last_seen"];
+              "category_counts","uncategorised","actor_health","actor_last_seen",
+              "migrated","supplier","groups"];
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
   /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
   try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}

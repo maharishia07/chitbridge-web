@@ -466,3 +466,74 @@ test('[TILL-16] a counter that has been used is visible to the shop, with its ad
     expect(k.scopes, 'the sighting changed what the key may do').toEqual(['till']);
   });
 });
+
+// ⭐⭐⭐ [TILL-17] THE WRITE THAT WENT NOWHERE. Sweeping for more of the class that caused the parked-bill fault,
+// the deepest one was in the storage wrapper itself: `fall()` caught every IndexedDB failure, flipped to the
+// smaller localStorage store and threw the reason away — and MEM's own writes then ended in `catch(_){ }`.
+//
+// ⚠️⚠️ So a device that would store NOTHING (full disk, private window, locked-down browser) went on billing with
+// every screen looking normal and the bill written nowhere at all. Falling back is right — a till that refuses a
+// customer holding money is worse than useless — but doing it without a word is the fault.
+test('[TILL-17] a refused database, and a lost write, are both spoken aloud', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Fall ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Coconut oil 1 L', unit: 'bottle', price: 240, code: 'COC9' });
+
+  const key = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('keysMint', { body: { name: 'fall counter', scopes: ['till'], days: 1 } });
+    return (r && (r.key || r.api_key)) || null;
+  });
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+
+  await test.step('⭐ a healthy counter says nothing about either — no crying wolf', async () => {
+    const st = await till.evaluate(() => ({ on: MEM.on, fail: MEM.fail, err: DB.lastErr() }));
+    expect(st.on, 'a working database should not report a fallback').toBe(false);
+    expect(st.fail, 'a working counter should have no lost write').toBeFalsy();
+    expect(st.err, 'a working counter should have no database error').toBeFalsy();
+  });
+
+  await test.step('⭐⭐ the fallback records WHY, instead of discarding it', async () => {
+    const st = await till.evaluate(async () => {
+      /* the database refuses exactly once — the wrapper must fall back AND keep the reason */
+      const realTx = IDBDatabase.prototype.transaction;
+      IDBDatabase.prototype.transaction = function () { const e = new Error('nope'); e.name = 'QuotaExceededError'; throw e; };
+      try { await DB.put('bills', { no: 'FALL-1', at: new Date().toISOString(), total: 1, lines: [] }); } catch (_) {}
+      IDBDatabase.prototype.transaction = realTx;
+      return { on: MEM.on, err: DB.lastErr() };
+    });
+    expect(st.on, 'it did not fall back').toBe(true);
+    expect(st.err, 'the database refused and the reason was thrown away').toBeTruthy();
+    expect(st.err.why, 'the reason is not the one the database gave').toBe('QuotaExceededError');
+    expect(st.err.op, 'it does not say which operation failed').toBe('put');
+  });
+
+  await test.step('⭐⭐⭐ and when the fallback ALSO refuses, the lost write is recorded', async () => {
+    const st = await till.evaluate(() => {
+      const real = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k) {
+        if (String(k).indexOf('cb_probe') === 0) return real.apply(this, arguments);
+        const e = new Error('full'); e.name = 'QuotaExceededError'; throw e;
+      };
+      const ok = MEM.put('bills', { no: 'FALL-2', total: 2 });
+      Storage.prototype.setItem = real;
+      return { ok, fail: MEM.fail };
+    });
+    expect(st.ok, 'MEM.put claimed a write that never happened').toBe(false);
+    expect(st.fail, 'a bill was written nowhere at all and nothing recorded it').toBeTruthy();
+    expect(st.fail.store, 'the lost write does not say which store').toBe('bills');
+  });
+
+  await test.step('⚠️ and the 🩺 panel says both, where somebody will actually see them', async () => {
+    await till.evaluate(() => openStuck());
+    const body = await till.locator('#billsbody').innerText();
+    expect(body, 'the panel is silent about the refused database').toMatch(/database refused|smaller store/i);
+    expect(body, 'the panel is silent about the lost write').toMatch(/write was lost/i);
+    const rep = await till.evaluate(() => stuckReport());
+    expect(rep, 'the report a shopkeeper sends does not mention it').toMatch(/A WRITE WAS LOST/);
+  });
+});

@@ -130,26 +130,41 @@ function topKeys(obj) {
 /**
  * ── ⚠️ THE BASELINE, AND WHY IT IS NOT AN EXCUSE ───────────────────────────────────────────────────────────
  *
- * Ten responses already answer with a sibling this envelope drops. Each is a LATENT instance: the field is
- * sent and thrown away, and it becomes a live bug the moment a screen reads it — which is exactly how all six
- * confirmed ones happened. They are listed rather than fixed blind, because "stop sending it" and "carry it"
- * are different answers and only the person who knows what reads it can choose.
+ * Responses that answer with a sibling this envelope drops. Each is a LATENT instance: the field is sent and
+ * thrown away, and it becomes a live bug the moment a screen reads it — which is exactly how all seven confirmed
+ * ones happened. They are listed rather than fixed blind, because "stop sending it" and "carry it" are different
+ * answers and only somebody who knows what reads it can choose.
  *
- * ⭐ THE POINT OF THE LIST IS THAT IT SHRINKS. Same discipline as `e2e/list-controls.cjs`, whose baseline went
- * 55 → 0. A NEW instance fails this guard immediately; these ten are the debt, written down where it can be
- * worked off. Driving it to zero is in BACKLOG.md.
+ * ⭐ THE POINT OF THE LIST IS THAT IT SHRINKS, AND IT HAS: ten → five on 2026-09-16, by tracing every one to its
+ * readers rather than guessing.
+ *   · `migrated` was NOT latent at all — it was live. `messages` is a collapse key, so the product-enquiry
+ *     thread read `r.messages` off the array itself and rendered EMPTY every time, which reads as "nobody has
+ *     asked": the most flattering possible wrong answer. Carried now, and the call site fixed.
+ *   · `supplier` and `groups` ARE read — but only because supCatalogueFull() bypasses api() to keep them.
+ *     Carried, so that bypass can eventually be retired.
+ *   · `view`, `pagination` and `history` had no reader anywhere: a query param echoed back, three numbers
+ *     spelled a second time, and a branch label. Those routes stopped sending them.
+ *
+ * ⚠️ WHAT IS LEFT IS LEFT ON PURPOSE, not unexamined:
+ *   · relationships.js `schema, fields, finishes` — no reader on this payload, but these two are the
+ *     not-found and unavailable FALLBACKS of a route whose success path builds the same keys from
+ *     buildPublicView(). Making a fallback a different shape from the success it stands in for is a worse
+ *     fault than an unread field.
+ *   · products.js — `prodAddMany` has no call site in the web app at all; the only caller is the Node
+ *     connector, which does not pass through core.js and discards the response. Deleting the dead endpoint
+ *     entry is the real fix and it is a decision, not a tidy-up.
+ *   · till.js — that route never goes through core.js (the counter fetches it raw), so it is not a SIBS
+ *     hazard at all. It stays listed only so the guard's arithmetic stays honest.
+ *   · actors.js `summary` — no reader; a genuine candidate to stop sending, left for a day when the
+ *     workforce screens are being touched anyway.
  *
  * ⚠️ Keyed by file + the dropped names, NOT by line number — a baseline that moves when somebody adds a blank
  * line above it is a baseline that gets deleted in frustration.
  */
 const BASELINE = new Set([
   'actors.js|summary',
-  'catalogue.js|migrated',
-  'chits.js|view',
-  'chits.js|pagination',
   'products.js|added,declared,message,warnings',
-  'relationships.js|fields,finishes,schema,supplier',
-  'relationships.js|fields,finishes,groups,schema,supplier',
+  'relationships.js|fields,finishes,schema',
   'testing.js|history',
   'till.js|basis,days,ok,quiet',
 ]);
