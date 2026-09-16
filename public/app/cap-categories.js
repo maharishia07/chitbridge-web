@@ -56,8 +56,31 @@ async function cbcatLoad(force){
  * ⚠️ Counted through `catgIdsOf`, so a product in three categories is counted in three, and the legacy
  * single-`category` shape is understood without this file knowing about it.
  */
+/**
+ * ── ⚠️⚠️ THIS SCREEN WAS COUNTING A PAGE AND CALLING IT A CATALOGUE ─────────────────────────────────────────
+ *
+ * `api('prodList')` with no limit returns ONE PAGE. Counting that gave tallytest — 10,441 products — a
+ * Categories screen reading "Biscuits 19" where the shop holds 400, and "Beverages 0" where it holds 363. The
+ * numbers were not approximate; they answered a different question: how many of the first page happen to be
+ * filed here. Found 2026-09-16, the morning Athi asked why his categories looked empty.
+ *
+ * ⭐ THE SERVER COUNTS NOW, because only the server can see every row. `category_counts` is a GROUP BY that
+ * rides in the SAME batched round trip as the list and the status tally, so an accurate count for a shop of any
+ * size costs no extra journey. `limit:1` because we want the tally, not the products.
+ *
+ * ⚠️ THE OLD LOCAL COUNT SURVIVES AS A FALLBACK, and only as one: the web deploys separately from the API, so
+ * for one deploy this may meet a server that does not send the tally. It is marked `partial` when that happens —
+ * a wrong number that says it is wrong is recoverable; a wrong number that looks right is not.
+ */
 async function cbcatCounts(){
   try {
+    var r = await api('prodList', { query: { limit: 1 } });
+    if (r && r.category_counts) {
+      CBCAT_UI.counts = { by: r.category_counts, none: Number(r.uncategorised) || 0,
+                          total: Number(r.total) || 0, partial: false };
+      return;
+    }
+    /* ⚠️ an older server: count what we can reach and SAY that it is a page, not the shop */
     if (!UI.prods || !UI.prods.length) { var l = await api('prodList'); UI.prods = l || UI.prods || []; }
     var n = {}, none = 0;
     (UI.prods || []).forEach(function(p){
@@ -65,7 +88,7 @@ async function cbcatCounts(){
       if (!ids.length) { none++; return; }
       ids.forEach(function(id){ n[id] = (n[id] || 0) + 1; });
     });
-    CBCAT_UI.counts = { by: n, none: none, total: (UI.prods || []).length };
+    CBCAT_UI.counts = { by: n, none: none, total: (UI.prods || []).length, partial: true };
   } catch (e) { CBCAT_UI.counts = null; }
 }
 
@@ -666,8 +689,26 @@ function cbcatDetailHTML(){
               + (also > 0 ? '<span class="cbcat-also">+' + also + ' other categor' + (also === 1 ? 'y' : 'ies') + '</span>' : '')
               + '</div>'; }).join('')
           + (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '')
+          /**
+           * ⚠️⚠️ THE COUNT IS THE SHOP'S; THIS LIST IS ONLY WHAT IS LOADED. The tally comes from the server and
+           * is true of every row; the names below come from the catalogue page this screen happens to hold. On a
+           * ten-thousand-product shop those differ by a lot, and a heading reading "400 products" above three
+           * names is the kind of quiet contradiction that makes somebody distrust every other number on the page.
+           */
+          + (n > mine.length
+              ? '<div class="cbcat-prow" style="color:var(--grey)">' + (n - mine.length)
+                + ' more in this category, not loaded on this screen — open '
+                + '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">'
+                + tx('Catalogue') + '</span> to search them.</div>'
+              : '')
           + '</div>'
-        : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span> — tick them and press <b>' + tx('Categorise') + '</b>.</div>')
+        : (n > 0
+            /* ⚠️ counted but none loaded: "nothing here yet" would be a flat lie */
+            ? '<div class="cbcat-none">' + n + ' product' + (n === 1 ? '' : 's') + ' ' + (n === 1 ? 'is' : 'are')
+              + ' filed here. None of them are loaded on this screen — open '
+              + '<span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">'
+              + tx('Catalogue') + '</span> to see them.</div>'
+            : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span> — tick them and press <b>' + tx('Categorise') + '</b>.</div>'))
     + '<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--grey);font-size:var(--fs-1)">ⓘ ' + tx('About standard sets and codes') + '</summary>' + cbcatSchemesHTML() + '</details>'
     + '</div>'
     + '<div class="actbar">'
