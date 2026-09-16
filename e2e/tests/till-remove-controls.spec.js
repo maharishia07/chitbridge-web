@@ -300,3 +300,78 @@ test('[TILL-13] a counter reports itself to the server, and can show what it is 
     await expect(till.locator('[data-testid="till-wipe"]')).toBeVisible();
   });
 });
+
+// ⭐⭐⭐ [TILL-14] THE SALES A RE-PAIR LEAVES BEHIND. Athi's device, 2026-09-16, showed FIVE counter databases and
+// storage 0% full: cb-till, cb-till-1403k2a, cb-till-14f27ap, cb-till-s396ab, and cb-till-1dyd5gy ← this shop,
+// "3 bills, 0 queued". His shop holds eight till keys.
+//
+// ⚠️⚠️ tillStore() names the database after the KEY, not the shop — right for keeping two shops apart, but it
+// means minting a fresh key for the SAME shop starts an empty store and abandons the old one with whatever was
+// still queued in it. Nothing looked there: not drain, not the bill list, not the day totals, not the 🩺 panel.
+// That is how a counter says "0 queued" truthfully while sales sit unsent.
+test('[TILL-14] a re-paired counter finds the sales its previous copy was holding', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Orph ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Rava 1 kg', unit: 'kg', price: 58, code: 'RAV9' });
+
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const out = [];
+    for (const n of ['pair one', 'pair two']) {
+      const r = await api('keysMint', { body: { name: n, scopes: ['till'], days: 1 } });
+      out.push(r && (r.key || r.api_key));
+    }
+    return out;
+  });
+  const till = await context.newPage();
+
+  let owner;
+  await test.step('the counter takes a sale, and it does not go', async () => {
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[0]));
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.evaluate(() => refresh());
+    await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+    owner = await till.evaluate(() => OWNER);
+    expect(owner, 'the counter never learned which shop it is').toBeTruthy();
+    await till.evaluate(async () => {
+      const row = { no: 'ORPH-1', at: new Date().toISOString(), total: 58, lines: [], _shop: OWNER };
+      await DB.put('bills', row); await DB.put('queue', row);
+    });
+  });
+
+  await test.step('⚠️ the SAME shop is paired again — and the new copy is empty and truthful', async () => {
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[1]));
+    /* ⚠️ a fragment-only change does NOT reload a page — without this the boot code never adopts the new key */
+    await till.reload();
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.evaluate(() => refresh());
+    await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+    const here = await till.evaluate(async () => ({
+      store: tillStore(), queue: (await DB.allRaw('queue')).length, owner: OWNER,
+    }));
+    expect(here.queue, 'the new copy should be empty — that is the whole trap').toBe(0);
+    expect(here.owner, 'it is the same shop, under a different key').toBe(owner);
+  });
+
+  await test.step('⭐⭐ and the counter now SEES the copy it left behind rather than declaring itself clean', async () => {
+    const found = await till.evaluate(async () => {
+      const o = await otherCounters();
+      return o.filter((s) => String(s.owner || '') === String(OWNER)).reduce((a, s) => a + s.queue, 0);
+    });
+    expect(found, 'the stranded sale is still invisible').toBe(1);
+    await till.evaluate(() => openStuck());
+    await expect(till.locator('[data-testid="till-stuck-verdict"]')).toContainText(/EARLIER copy/i);
+  });
+
+  await test.step('⭐⭐⭐ bringing them in puts the sale back in this counter\'s queue', async () => {
+    await till.evaluate(() => { window.sure = async () => true; window.say = () => {}; });
+    await till.evaluate(() => rescueOrphans());
+    await till.waitForTimeout(1200);
+    const got = await till.evaluate(async () => ({
+      bills: (await DB.allRaw('bills')).filter((b) => b && b.no === 'ORPH-1').length,
+      left: (await otherCounters()).length,
+    }));
+    expect(got.bills, 'the stranded sale did not arrive in this counter').toBe(1);
+    expect(got.left, 'the emptied copy should be gone once its rows are safely here').toBe(0);
+  });
+});
