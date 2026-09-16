@@ -11,7 +11,7 @@
     "check:adoption": "node scripts/check-adoption.js",
     "check:cart": "node scripts/cart-ui.test.mjs && node scripts/cap-network-render.test.mjs",
     "check:steps": "node scripts/step-flow.test.mjs",
-    "check": "npm run check:cart && npm run check:steps && node scripts/check-syntax.js && node scripts/check-adoption.js && npm run check:reads && npm run check:lazy && npm run check:modal && npm run check:tax && npm run check:markup && npm run check:controls && npm run check:order && npm run check:calls && npm run check:till && npm run check:a11y",
+    "check": "npm run check:cart && npm run check:steps && node scripts/check-syntax.js && node scripts/check-adoption.js && npm run check:reads && npm run check:lazy && npm run check:modal && npm run check:tax && npm run check:markup && npm run check:controls && npm run check:order && npm run check:calls && npm run check:till && npm run check:a11y && npm run check:envelope",
     "parsecheck": "node scripts/check-app-parses.cjs",
     "check:reads": "node e2e/screen-reads.cjs",
     "check:lazy": "node e2e/lazy-screen-guard.cjs",
@@ -23,7 +23,8 @@
     "check:controls": "node e2e/list-controls.cjs",
     "check:order": "node e2e/list-behaviour.cjs",
     "check:till": "node e2e/till-contrast.cjs",
-    "check:a11y": "node e2e/a11y-contrast.cjs"
+    "check:a11y": "node e2e/a11y-contrast.cjs",
+    "check:envelope": "node e2e/api-envelope.cjs"
   },
   "dependencies": {
     "react": "^18.2.0",

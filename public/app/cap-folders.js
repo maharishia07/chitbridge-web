@@ -59,7 +59,7 @@ function selectFolder(id){ UI.folderSel=id; UI.folderArch=false; UI.folderChits=
 function setFolderArch(a){ UI.folderArch=a; UI.folderChits=undefined; var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView(); loadFolderChits(); }
 async function loadFolderChits(){
   var id=UI.folderSel; if(!id) return;
-  try{ var r=await api('folderChits',{params:{id:id}, query:{archived:UI.folderArch?1:0}}); UI.folderChits=(r&&(r.chits||r.rows||r.data))||[]; }
+  try{ var r=await api('folderChits',{params:{id:id}, query:{archived:UI.folderArch?1:0}}); UI.folderChits=Array.isArray(r)?r:((r&&(r.chits||r.rows||r.data))||[]);   /* ⚠️ api() collapses {chits:[…]} TO the array — r.chits was undefined, so a folder showed no chits at all */ }
   catch(e){ UI.folderChits=[]; }
   var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView();
 }

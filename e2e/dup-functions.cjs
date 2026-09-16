@@ -45,7 +45,26 @@ const DECL = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;
 function scan(label, files) {
   const seen = new Map();          // name → [{file, line}]
   for (const rel of files) {
-    const lines = fs.readFileSync(path.join(WEB, rel), 'utf8').split('\n');
+    const raw = fs.readFileSync(path.join(WEB, rel), 'utf8');
+    /**
+     * ── ⚠️⚠️ A FILE WRAPPED IN AN IIFE DECLARES NOTHING AT TOP LEVEL (2026-09-16) ────────────────────────────
+     *
+     * This guard's whole premise — "the LAST one wins, every earlier definition is silently discarded" — is
+     * true of a plain script and FALSE of a module wrapper. The generated tax mirrors paste their master at
+     * column zero inside `(function (root) { … })(globalThis)`, so `resolve`, `slabOf` and `r2` appeared to be
+     * declared twice and to be fighting. They are in three separate scopes and cannot see each other.
+     *
+     * ⭐ WHAT THEY REALLY CONTEST IS THE GLOBAL THEY PUBLISH, and that is checked and is fine: app/tax.js sets
+     * `CBTax`, app/tax-slab.js sets `CBTaxSlab`, and app/tax-engine.js — which app.html does not load at all —
+     * sets the combined `CBTax` for the till and for `require()`. The app calls `CBTaxSlab.resolve` and
+     * `CBTax.determine`, which is exactly what those two files provide.
+     */
+    /* ⚠️ COMMENTS STRIPPED FIRST, then a flat test. The obvious pattern for "comments, then (function" nests a
+       quantifier — `(?:\/\*[\s\S]*?\*\/\s*)*` — and on a 400 KB file that does NOT match it backtracks until it
+       hangs. It did, for four minutes, before this line replaced it. */
+    const head = raw.slice(0, 4000).replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
+    if (/^\s*\(function\b/.test(head)) continue;
+    const lines = raw.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const m = DECL.exec(lines[i]);
       if (!m) continue;

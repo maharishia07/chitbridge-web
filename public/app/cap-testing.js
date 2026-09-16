@@ -8177,7 +8177,8 @@ async function testMark(key, status) {
       results: [{ case_key: key, module_key: c.module_key, status: status, run_kind: CBTEST.run.kind || 'manual',
                   tester_name: testWho() || undefined,
                   layer: c.layer || null, note: note || null, evidence: ev || null }] } });
-    var saved = ((r && r.results) || [])[0] || {};
+    /* ⚠️ api() collapses {results:[…]} TO the array, so r.results was undefined and `saved` was always {} */
+    var saved = (Array.isArray(r) ? r : ((r && r.results) || []))[0] || {};
     CBTEST.last[key] = Object.assign({
       case_key: key, status: status, note: note, run_kind: CBTEST.run.kind,
       tester_name: (typeof SESSION !== 'undefined' && SESSION.name) || 'you',

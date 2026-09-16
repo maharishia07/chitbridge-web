@@ -25,7 +25,16 @@ async function acLoadDevices(id){
   UI.acConnsErr=null;
   var ok=false, lastErr=null;                          // retry once — a cold-start blip must NOT silently show "no devices"
   for(var i=0;i<2 && !ok;i++){
-    try{ var r=await api('connectorConns',{params:{actorId:id}}); UI.acConns=(r&&r.connections)||[]; UI.acHealth=(r&&r.actor_health)||'offline'; UI.acLastSeen=(r&&r.actor_last_seen)||null; ok=true; }
+    /**
+     * ⚠️⚠️ `r` IS THE CONNECTIONS ARRAY, not an envelope around it. api() collapses a response whose array key
+     * is on its list, so `r.connections` was undefined and this read `[]` on every successful call — an empty
+     * device list and a permanent "offline", whatever the Pi was really doing. Found 2026-09-16 by
+     * e2e/api-envelope.cjs. The two siblings now survive the collapse (SIBS in core.js); the array is taken as
+     * itself, with the old shape kept as a fallback so an endpoint that stops collapsing still works.
+     */
+    try{ var r=await api('connectorConns',{params:{actorId:id}});
+         UI.acConns=Array.isArray(r)?r:((r&&r.connections)||[]);
+         UI.acHealth=(r&&r.actor_health)||'offline'; UI.acLastSeen=(r&&r.actor_last_seen)||null; ok=true; }
     catch(e){ lastErr=e; }
   }
   if(!ok){ UI.acConns=[]; UI.acHealth='offline'; UI.acConnsErr=(lastErr&&lastErr.message)||'Could not load devices'; }
@@ -266,7 +275,7 @@ async function acReissueSubmit(){ var g=UI.acReissue||{}, id=g.id, mode=g.mode;
     closeModal();
     if(mode==='package'){
       var r=await api('connectorConns',{params:{actorId:id}});
-      var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
+      var devs=(Array.isArray(r)?r:((r&&r.connections)||[]))   /* ⚠️ collapsed to the array — see acLoadDevices */.filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
       _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
       UI.acFreshKey=null; if(typeof paintAcDetail==='function')paintAcDetail();   // key is INSIDE the installer — never shown raw
       if(typeof toast==='function')toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');

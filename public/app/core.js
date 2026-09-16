@@ -99,7 +99,27 @@ function unwrap(j, _key){
    * smaller, tidier number, and nothing anywhere says a field was dropped. A named allow-list on a shared
    * envelope needs a REPORT, the way importCases got one — that is in the backlog now.
    */
-  var SIBS = ["total","page","limit","truncated","count","offset","status_counts","open","counts"];
+  /**
+   * ⚠️⚠️⚠️ AND THE FOURTH AND FIFTH: "category_counts" and "uncategorised" (2026-09-16).
+   *
+   * `/api/products` now counts the categories where the rows are — one GROUP BY over every product, in the same
+   * batched round trip. The Categories screen read `r.category_counts`, got undefined, and fell back to counting
+   * the page: "Biscuits 19" for a shop holding 400. THE SERVER WAS RIGHT AND THE SCREEN WAS WRONG, which is the
+   * signature of this line every single time.
+   *
+   * ⚠️ Exactly as the capitals above predicted, on the same day they were re-read. A warning is not a guard —
+   * so `cbDropNote` below records every dropped key by endpoint, and `e2e/api-envelope.cjs` now FAILS when a
+   * route answers with a sibling this list does not carry.
+   */
+  /**
+   * ⚠️⚠️⚠️ AND THE SIXTH: "actor_health" and "actor_last_seen" (2026-09-16), found by e2e/api-envelope.cjs the
+   * hour it was written. `/connectors/:actorId/connections` answers {actor_health, actor_last_seen, connections}
+   * and cap-connector read all three off the result — but the response COLLAPSES to the connections array, so
+   * every one of them was undefined. The connector cockpit has been reading "offline" with an empty device list
+   * no matter what the Pi was actually doing, which is the single thing that screen exists to tell you.
+   */
+  var SIBS = ["total","page","limit","truncated","count","offset","status_counts","open","counts",
+              "category_counts","uncategorised","actor_health","actor_last_seen"];
   for(const mk of SIBS) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } }
   /* ⚠️ everything NOT on the list, and not the array itself, is gone from here on — so it is written down */
   try{ cbDropNote(_key, Object.keys(j).filter(function(x){ return x !== k && SIBS.indexOf(x) < 0; })); }catch(_){}
