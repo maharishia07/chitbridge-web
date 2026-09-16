@@ -17302,7 +17302,21 @@ function counterOpen(){
 async function counterGo(){
   try {
     let key = counterHasKey() ? (localStorage.getItem('cb_till_key') || null) : null;
-    if (!key) { toast(tx('Making a key for this device…')); key = await counterMint(); }
+    /**
+     * ⚠️⚠️ NO MORE STRAY PAIRINGS (2026-09-17). This minted a fresh, unnamed key every time a device had none — which is
+     * how one test shop came to hold nine, two of them numbering as the same C1. A PC now opens one of the SHOP'S
+     * counters, chosen by a person, and only one PC at a time can hold each.
+     */
+    if (!key) {
+      closeModal();
+      if (typeof ensureCap === 'function') await ensureCap('admin');
+      navTo('settings'); UI.setSec = 'integrations'; UI.intTab = 'counters';
+      try { lsSet('cb_int_tab', 'counters'); } catch (_) {}
+      if (typeof renderApp === 'function') renderApp();
+      if (typeof loadSettings === 'function') loadSettings();
+      toast(tx('Choose which counter to open on this PC'));
+      return;
+    }
     closeModal();
     var addr = '/till.html#key=' + encodeURIComponent(key)
              + '&shop=' + encodeURIComponent(SESSION.entityId || '')

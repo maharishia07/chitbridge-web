@@ -9,6 +9,12 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   keysList:  {m:'GET',    p:'/api/keys',                    ok:'y'},   // API keys for other systems (routes/keys.js)
   keysMint:  {m:'POST',   p:'/api/keys',                    ok:'✓'},
   keysRevoke:{m:'DELETE', p:'/api/keys/:jti',               ok:'✓'},
+  /* ⭐ the shop's counters as standing identities (routes/counters.js, 2026-09-17) */
+  counters:       {m:'GET',  p:'/api/counters',                  ok:'✓'},
+  counterAdd:     {m:'POST', p:'/api/counters',                  ok:'✓'},
+  counterRename:  {m:'PATCH',p:'/api/counters/:id',              ok:'✓'},
+  counterOpen:    {m:'POST', p:'/api/counters/:id/open',         ok:'✓'},
+  counterRelease: {m:'POST', p:'/api/counters/:id/release',      ok:'✓'},
   intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
   intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
   intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
@@ -4959,13 +4965,98 @@ async function intRecRetry(id){
  * copy of the bills on its machine (the counter's tillStore() is named after the key), so a pairing nobody uses is
  * a place sales can go unnoticed. This page exists so that is visible before it becomes a mystery.
  */
+/**
+ * ── ⭐⭐⭐ THE COUNTERS THIS SHOP HAS — created once, opened and closed as often as needed, one PC at a time ─────
+ * Athi, 2026-09-17: *"it has to be like a co-assist — I know the counter number, and I open and close it again and
+ * again, but in only one PC."* This is that register. The pairings further down are the older way in, kept visible
+ * so nothing a shop has already billed through disappears from view.
+ */
+var _CTRS;
+function ctrReload(){ _CTRS = undefined; loadSettings(); }
+function ctrRegisterHTML(){
+  if (_CTRS === undefined) { _CTRS = null; api('counters').then(function(r){ _CTRS = r || { counters: [] }; if (setSec() === 'integrations') loadSettings(); })
+    .catch(function(e){ _CTRS = { counters: [], error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_CTRS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
+  var list = (_CTRS && _CTRS.counters) || [];
+  var rows = list.map(function(c){
+    var open = c.state === 'open', h = c.held_by || {};
+    var where = open
+      ? (tx('open on') + ' ' + esc(h.name || tx('a PC')) + (h.seen && h.seen.ip ? ' · ' + esc(h.seen.ip) : '')
+         + (h.seen && h.seen.at ? ' · ' + esc(_keyAgo(h.seen.at)) : ''))
+      : (c.state === 'opening' ? tx('opening…') : (c.closed_at ? tx('closed') + ' ' + esc(_keyAgo(c.closed_at)) : tx('not opened yet')));
+    var armed = (_CLOSE_ARMED === 'rel:' + c.id);
+    return '<div data-testid="ctr-' + esc(c.id) + '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
+      + '<b style="font-family:var(--mono,monospace);font-size:1.15em;min-width:2.4em">' + esc(c.id) + '</b>'
+      + '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' + esc(c.id) + '">' + esc(c.name) + '</span>'
+      + '<div style="color:var(--grey);font-size:var(--fs-1)">'
+        + (c.last_no ? tx('last bill') + ' ' + esc(c.last_no) + ' · ' : '')
+        + (c.next ? tx('next') + ' ' + esc(String(c.next).padStart(4, '0')) + ' · ' : '')
+        + '<span style="color:var(--' + (open ? 'ok' : 'grey') + ')" data-testid="ctr-state-' + esc(c.id) + '">' + where + '</span></div>'
+      + (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '')
+      + '</span>'
+      + (open
+          ? '<button class="warn" data-testid="ctr-release-' + esc(c.id) + '" onclick="ctrRelease(\'' + esc(c.id) + '\')" title="'
+            + esc(tx('only for a PC that cannot close the counter itself')) + '">'
+            + (armed ? tx('Release — unsent bills stay on that PC') : tx('Release')) + '</button>'
+          : '<button class="pri" data-testid="ctr-open-' + esc(c.id) + '" onclick="ctrOpenHere(\'' + esc(c.id) + '\')"'
+            + (c.state === 'opening' ? ' disabled' : '') + '>' + tx('Open on this PC') + '</button>')
+      + '</div>';
+  }).join('');
+  return '<div style="' + _CARD + '">'
+    + '<div class="sec" style="margin:0 0 6px">' + tx('Counters') + ' · ' + list.length + '</div>'
+    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
+    + tx('Each counter keeps its own number and its own bill series. Open it on a PC to bill; close it from that counter (☰ → Close this counter) and it can be opened again — here or on another PC — carrying on from its last bill. Only one PC can hold a counter at a time.')
+    + '</div>'
+    + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No counters yet.') + '</div>')
+    + '<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+    + '<input class="inp" id="ctr_new_name" data-testid="ctr-new-name" placeholder="' + esc(tx('Name — Front desk, Billing 2 …')) + '" style="flex:1 1 220px">'
+    + '<button class="pri" data-testid="ctr-add" onclick="ctrAdd()">' + tx('Add a counter') + '</button></div>'
+    + (_CTRS && _CTRS.error ? '<div style="color:var(--warn);font-size:var(--fs-1);margin-top:6px">' + tx('Could not read the counters.') + '</div>' : '')
+    + '</div>';
+}
+async function ctrAdd(){
+  var el = document.getElementById('ctr_new_name');
+  try { await api('counterAdd', { body: { name: (el && el.value || '').trim() } }); if (typeof toast === 'function') toast(tx('Counter added')); ctrReload(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not add the counter'), true); }
+}
+/**
+ * ⭐ OPEN ON THIS PC — the key is minted FOR this counter and handed to the counter page, which takes the counter's
+ * number and carries on its series. The same address shape counterGo() uses, so the counter checks it is the shop
+ * it was opened for.
+ */
+async function ctrOpenHere(id){
+  try {
+    var r = await api('counterOpen', { params: { id: id } });
+    if (!r || !r.key) throw new Error(tx('no key came back'));
+    try { localStorage.setItem('cb_till_key', r.key); localStorage.setItem('cb_till_entity', SESSION.entityId || ''); } catch (_) {}
+    var addr = '/till.html#key=' + encodeURIComponent(r.key)
+             + '&shop=' + encodeURIComponent(SESSION.entityId || '')
+             + '&as=' + encodeURIComponent(SESSION.entity || '');
+    window.open(addr, '_blank', 'noopener');
+    ctrReload();
+  } catch (e) {
+    /* ⚠️ held elsewhere is the ordinary refusal — say who has it, in the server's own words */
+    if (typeof toast === 'function') toast((e && e.message) || tx('Could not open the counter'), true);
+    ctrReload();
+  }
+}
+async function ctrRelease(id){
+  if (_CLOSE_ARMED !== 'rel:' + id) { _CLOSE_ARMED = 'rel:' + id; loadSettings(); return; }
+  _CLOSE_ARMED = null;
+  try { await api('counterRelease', { params: { id: id } }); if (typeof toast === 'function') toast(tx('Counter released')); ctrReload(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not release it'), true); }
+}
 function intCountersHTML(){
+  return ctrRegisterHTML() + '<div style="margin-top:12px">' + intPairingsHTML() + '</div>';
+}
+/* ⚠️ the pairings made before the register existed — still listed, because they may still hold bills */
+function intPairingsHTML(){
   if (_KEYS === undefined) { _KEYS = null; api('keysList').then(function(r){ _KEYS = r || { keys: [] }; if (typeof setSec === 'function' && setSec() === 'integrations') loadSettings(); }).catch(function(){ _KEYS = { keys: [], error: true }; if (setSec() === 'integrations') loadSettings(); }); }
   if (_KEYS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   var tills = ((_KEYS && _KEYS.keys) || []).filter(function(k){ return k && (k.scopes || []).indexOf('till') >= 0; });
   var bridge = (typeof S !== 'undefined' && S && S.bridgeId) || '';
   if (!tills.length) return '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('Counters') + '</div>'
-    + '<div style="color:var(--grey)">' + tx('No counter has been paired to this shop yet.') + '</div></div>';
+    + '<div style="color:var(--grey)">' + tx('No PC has been paired to this shop yet.') + '</div></div>';
 
   var live = tills.filter(function(k){ return _keySeenAt(k) && (Date.now() - _keySeenAt(k)) < 900000; });
   var never = tills.filter(function(k){ return !_keySeenAt(k); });
@@ -4976,7 +5067,9 @@ function intCountersHTML(){
 
   var rows = tills.slice().sort(function(a, b){ return _keySeenAt(b) - _keySeenAt(a); }).map(function(k){
     var at = _keySeenAt(k), ip = (k.seen && k.seen.ip) || null, d = k.diag || null;
-    var state = !at ? { c: 'warn', t: tx('never reached ChitBridge') }
+    var shut = !!(k.till && k.till.closed_at);
+    var state = shut ? { c: 'grey', t: tx('closed') + ' ' + _keyAgo(k.till.closed_at) + (k.till.id ? ' · ' + k.till.id : '') }
+              : !at ? { c: 'warn', t: tx('never reached ChitBridge') }
               : (Date.now() - at) < 900000 ? { c: 'ok', t: tx('open now') }
               : { c: (Date.now() - at) > 86400000 ? 'warn' : 'grey', t: _keyAgo(k.seen.at) };
     var armed = (_CLOSE_ARMED === k.jti);
@@ -5007,10 +5100,10 @@ function intCountersHTML(){
     + ' <button data-testid="int-counter-close-dups" onclick="intCounterCloseDups()">' + tx('Close the unused duplicates') + '</button></div>';
 
   return '<div style="' + _CARD + '">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('Counters') + ' · ' + tills.length
+    + '<div class="sec" style="margin:0 0 6px">' + tx('Pairings — every PC ever paired to this shop') + ' · ' + tills.length
     + (live.length ? ' · ' + live.length + ' ' + tx('open now') : '') + '</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
-    + tx('Every counter paired to this shop. A counter IS a key — minting another adds one, it does not replace the last.') + '</div>'
+    + tx('Each pairing is one PC opening a counter. A closed pairing is kept as history; its counter can be opened again above.') + '</div>'
     + rows + note + '</div>';
 }
 function _keySeenAt(k){ return (k && k.seen && k.seen.at) ? new Date(k.seen.at).getTime() : 0; }
