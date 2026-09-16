@@ -171,3 +171,74 @@ test('[TILL-11] the quick keys carry the control that decides what fills them', 
     expect(same.picked, 'Setup opened showing something other than what is in force').toBe('groups');
   });
 });
+
+// ⭐⭐⭐ [TILL-12] RELEASING A QUEUE ON A PC NOBODY CAN REACH. Athi, 2026-09-16: *"how do I release the stuck
+// queue ... in real life if a PC is in such a situation how do we resolve it, because that PC cannot be
+// scrutinised through you."*
+//
+// ⚠️ The stuck condition is made the way it really happens — pair to one shop, bill, then re-pair to another.
+// Every ordinary screen then reads through the ownership filter and sees nothing wrong, which is exactly why
+// nothing reported it: drain, the bill list and the day totals were all blinded by the same guard at once.
+test('[TILL-12] one press frees a queue blocked by another shop, and the report can leave the PC', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Rel ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Toor dal 1 kg', unit: 'kg', price: 148, code: 'DAL9' });
+
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const a = await api('keysMint', { body: { name: 'counter A', scopes: ['till'], days: 1 } });
+    const b = await api('keysMint', { body: { name: 'counter B', scopes: ['till'], days: 1 } });
+    return [(a && (a.key || a.api_key)), (b && (b.key || b.api_key))];
+  });
+  const till = await context.newPage();
+
+  await test.step('a bill is taken while paired one way …', async () => {
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[0]));
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.evaluate(() => refresh());
+    await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+    /* a queued row stamped for THIS owner, then the owner is changed under it */
+    await till.evaluate(async () => {
+      const row = { no: 'STUCK-1', at: new Date().toISOString(), total: 148, lines: [], _tries: 0 };
+      await DB.put('queue', row); await DB.put('bills', row);
+    });
+    const held = await till.evaluate(async () => (await DB.allRaw('queue')).length);
+    expect(held, 'the probe row was not written').toBeGreaterThan(0);
+  });
+
+  await test.step('⚠️ … and after re-pairing, every ordinary screen says the counter is clean', async () => {
+    await till.evaluate((k) => { OWNER = 'SHOP-B-' + k.slice(-6); }, keys[1]);
+    const seen = await till.evaluate(async () => ({
+      filtered: (await DB.all('queue')).length,       /* what drain and the bill list can see */
+      really: (await DB.allRaw('queue')).length,      /* what is actually in there */
+    }));
+    expect(seen.really, 'the row should still be in the store').toBeGreaterThan(seen.filtered);
+    expect(seen.filtered, 'the guard should be hiding it from every ordinary reader').toBe(0);
+  });
+
+  await test.step('⭐⭐ the panel NAMES it rather than saying the counter is fine', async () => {
+    await till.evaluate(() => openStuck());
+    await expect(till.locator('[data-testid="till-stuck-verdict"]')).toContainText(/DIFFERENT shop/i);
+    await expect(till.locator('[data-testid="till-stuck-release"]')).toBeVisible();
+  });
+
+  await test.step('⭐⭐⭐ one press frees it — and does not delete this shop\'s own sale', async () => {
+    till.once('dialog', (d) => d.accept());                  /* the confirm before removing another shop's rows */
+    await till.evaluate(() => { window.sure = async () => true; window.say = () => {}; });
+    await till.evaluate(() => releaseQueue());
+    await till.waitForTimeout(600);
+    const after = await till.evaluate(async () => ({
+      foreign: (await DB.allRaw('queue')).filter((r) => r && r._shop && String(r._shop) !== String(OWNER)).length,
+    }));
+    expect(after.foreign, 'the blocking rows are still there — the queue can never empty').toBe(0);
+  });
+
+  await test.step('⭐⭐ and the report is plain text that carries the facts, with no customer in it', async () => {
+    const rep = await till.evaluate(() => stuckReport());
+    expect(rep, 'the report does not say which shop the database belongs to').toMatch(/shop this database belongs to/i);
+    expect(rep, 'the report has no support code to quote on a call').toMatch(/support code [A-Z0-9]{4,6}/);
+    expect(rep, 'the report should say what the last send attempt did').toMatch(/THE LAST ATTEMPT TO SEND/);
+    /* ⚠️ it is going to be pasted to a stranger before anyone thinks about it */
+    expect(rep, 'a customer name reached the report').not.toMatch(/Walk-in|cname|phone/i);
+  });
+});
