@@ -2387,6 +2387,40 @@ function testCtlRowsFor(code) {
       if (purpose && purpose.trim().toLowerCase() === String(label).trim().toLowerCase()) purpose = '';
       return { code: r.code, label: label, cases: mine, real: real, last: last, purpose: purpose };
     });
+
+    /**
+     * ── ⭐⭐⭐ AND EVERYTHING A TESTER HAS WRITTEN FOR THIS SCREEN (observation 6, division G) ─────────────────
+     *
+     * Athi: *"The chip, icon under these screens are Unassigned, Assigned, Next level, Open, Act, Close — the
+     * first question for someone is HOW DO I UPDATE THE STATUS."* None of those are in the register for Task:
+     * the sweep files a control under the source file it was found in, so the status chips — drawn by the shell
+     * — are registered under "The app itself" and appear on no screen's list at all.
+     *
+     * ⚠️ RE-ATTRIBUTING THEM WOULD BE GUESSWORK. A control drawn by the shell may appear on twelve screens or
+     * one, and the source cannot say which. Inventing an answer would put a checklist item on screens that do
+     * not have it, which is worse than leaving it off.
+     *
+     * ⭐ SO THE LIST GROWS FROM WHAT IS WRITTEN. Athi asked for exactly this in the same breath — *"also need to
+     * have facility to add more test cases"* and *"these should be independent of ids, it cannot be tied to any
+     * id"*. A case written against this screen JOINS the checklist, keyed by the screen and the words a person
+     * chose — never by a record id, and needing no new store, no new endpoint and no re-sweep. Write "the
+     * Unassigned chip" once and it is on Task's list from then on, for everybody.
+     */
+    var named = {};
+    out.list.forEach(function (x) { named[String(x.label).trim().toLowerCase()] = true; });
+    var extra = [];
+    cases.forEach(function (c) {
+      if (String(c.menu || '') !== me.path) return;
+      if (c.generated) return;                      /* a swept case is the register's own, already above */
+      var title = String(c.title || '').trim();
+      if (!title) return;
+      var k = title.toLowerCase();
+      if (named[k]) return;
+      named[k] = true;
+      var l = (CBTEST.last || {})[c.case_key] || null;
+      extra.push({ code: c.case_key, label: title, cases: [c], real: [c], last: l, purpose: '', written: true });
+    });
+    out.list = out.list.concat(extra);
   } catch (_) { /* a register that will not read must not take the panel down with it */ }
   return out;
 }
@@ -2420,7 +2454,16 @@ function testControlsHTML(code) {
     + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:2px">What to check on this screen</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey-2,#545A61);margin-bottom:5px">'
     + 'Every control the register names on ' + testEsc(got.screen.path)
-    + '. Pick one and it becomes the thing you are testing; the form above then files against it.</div>'
+    + ', and everything anyone has written a check for. Pick one and it becomes the thing you are testing; the '
+    + 'form above then files against it.'
+    /**
+     * ⚠️ SAY THAT THE LIST IS NOT COMPLETE, and how to complete it. The register misses controls the shell draws
+     * — the status chips on Task are the case Athi raised — and a checklist that looked exhaustive while missing
+     * "how do I change the status" would send a tester away believing they had finished.
+     */
+    + '<br><b>The register does not name everything</b> — a status chip, a filter inside the search, an icon '
+    + 'that only appears when something is open. Write a check for it above and it joins this list from then on, '
+    + 'for everybody. It is keyed by this screen and the words you choose, never by a record.</div>'
     + '<div style="margin-bottom:4px">'
     + chip(list.length, 'controls', 'Every control the register names on this screen')
     + chip(done, 'passed', 'Last run passed', done ? 'var(--ok-2,#1B7F4B)' : null)
@@ -2448,10 +2491,16 @@ function testControlsHTML(code) {
         + (x.last.status === 'pass' ? 'var(--ok-2,#1B7F4B)' : x.last.status === 'fail' ? 'var(--bad-2,#B3261E)' : 'var(--grey-2,#545A61)')
         + '">' + testEsc(x.last.status) + '</span>'
       : '<span style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">not run</span>';
+    /* ⭐ a row somebody WROTE is marked as theirs, so the list does not pass it off as something the register
+       found — and so it is obvious that writing one is how the list grows. */
+    var mark = x.written
+      ? '<span title="written by a tester, not swept from the source" style="font-size:var(--fs-1);'
+        + 'color:var(--grey-2,#545A61)">written</span>'
+      : '<code style="font-size:var(--fs-1);color:var(--grey-2,#545A61)">' + testEsc(x.code) + '</code>';
     return '<div data-testid="ctlrow-' + testEsc(x.code) + '" style="display:flex;gap:8px;align-items:flex-start;'
       + 'padding:5px 7px;border:1px solid ' + (on ? 'var(--ok-2,#1B7F4B)' : 'var(--line,#efece4)')
       + ';border-radius:7px;margin-bottom:4px;background:' + (on ? 'var(--ok-tint,#eaf5ee)' : 'transparent') + '">'
-      + '<code style="font-size:var(--fs-1);color:var(--grey-2,#545A61);flex:none">' + testEsc(x.code) + '</code>'
+      + '<span style="flex:none">' + mark + '</span>'
       + '<div style="flex:1 1 auto;min-width:0">'
       +   '<div style="font-size:var(--fs-2);font-weight:600;overflow-wrap:anywhere">' + testEsc(x.label) + '</div>'
       +   '<div style="font-size:var(--fs-1);overflow-wrap:anywhere">' + says + '</div>'
