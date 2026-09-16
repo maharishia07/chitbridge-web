@@ -120,11 +120,20 @@ t('⚠️ AN EXCLUSIVE OFFER STOPS THE ONES AFTER IT — and priority decides wh
   assert.ok(r.ev.skipped.some((s) => /exclusive/i.test(s.why || '')), 'and it SAYS why it was skipped');
 });
 
-t('⚠️ two line discounts on ONE line accumulate, and never exceed the line', () => {
+/**
+ * ⚠️⚠️ MOVED, NOT DELETED (2026-09-16). This expected 60% + 60% to SUM to 120% and the line to clamp at zero.
+ * Athi replaced that on 2026-09-06 with *"offers apply in order, each on the RUNNING amount"* — so the second
+ * 60% is taken on what is left: ₹720 → ₹288 → ₹115.20.
+ * ⭐ The invariant the test exists for is untouched and is asserted more strongly than before: a discount can
+ * never exceed the line and a basket can never owe less than nothing — which under this rule holds by
+ * construction, because a percentage of what remains approaches zero without ever crossing it.
+ */
+t('⚠️ two line discounts on ONE line run on the running amount, and never exceed the line', () => {
   const a = { id: 'a', kind: 'percent_off', percent: 60, applies_to: { item_ids: ['tea'] }, priority: 1 };
   const b = { id: 'b', kind: 'percent_off', percent: 60, applies_to: { item_ids: ['tea'] }, priority: 2 };
   const r = mint([TEA], [a, b]);
-  assert.strictEqual(r.lines[0].total, 0, 'capped at the line, never negative');
+  assert.strictEqual(r.lines[0].total, 115.2, '₹720 → 60% → ₹288 → 60% → ₹115.20');
+  assert.ok(r.lines[0].total >= 0, 'never negative');
   assert.ok(r.lines[0].discount <= 720, 'a discount cannot exceed what the line was worth');
   assert.ok(r.value >= 0, 'and a basket can never owe less than nothing');
 });

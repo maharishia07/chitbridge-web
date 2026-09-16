@@ -76,10 +76,51 @@ kind('tier_price', '⭐⭐ tier_price — a RE-PRICE, and the badge carries the 
   const a = only(ev(o));
   assert.strictEqual(a.amount, -60, '3 × (100 − 80)');
   assert.strictEqual(a.basis, 'price', 'marked a re-price, not a discount — it is the price of record');
-  assert.strictEqual(a.why, 'qty 3 reaches the 3+ tier · ₹100 → ₹80 each');
+  /* ⭐ THE BADGE SAYS THE PERCENTAGE TOO (Athi, 2026-09-06 23:4x: *"show 15% discount applied?"*) — worked out
+     from the two prices when the slab was written as a price, so the sentence reads the same either way. This
+     assertion used to expect the older wording and had been red ever since. */
+  assert.strictEqual(a.why, 'qty 3 reaches the 3+ tier · 20% off · ₹100 → ₹80 each');
   assert.strictEqual(O.promise(o, CTX), '₹80 each from 3 (2 price breaks)');
   /* ⚠️ NEVER SILENTLY RAISES. A tier dearer than the list price is not applied. */
   assert.strictEqual(ev(Object.assign({}, o, { tiers: [{ qty: 1, price: 500 }] })).adjustments.length, 0);
+});
+
+/**
+ * ── ⭐ bundle_price — THE ONE KIND IN THE REGISTRY THAT HAD NO CASE (written 2026-09-16) ────────────────────
+ *
+ * The sweep at the foot of this file asserts that every kind is exercised, and it had been failing on exactly
+ * one name: `bundle_price`. A kind with no case is a kind nobody has checked, and this one moves real money —
+ * it re-prices a SET of products bought together and then has to spread the saving back across the lines.
+ *
+ * ⚠️ THE SPREAD IS THE PART WORTH TESTING. The saving is allocated in proportion to each item's price, with
+ * the LAST line taking the remainder — so the shares always add up to the saving exactly, with no rounding
+ * dust left over. A bundle whose parts do not sum to its own discount is the kind of thing a shopkeeper finds
+ * at the counter, in front of a customer.
+ */
+/* ⚠️ the engine rounds to paise; so must a test that adds its answers back up */
+const r2 = (n) => Math.round(n * 100) / 100;
+kind('bundle_price', '⭐⭐ bundle_price — a SET re-priced, and the saving is spread so the parts add up', () => {
+  const o = { id: 'b', kind: 'bundle_price', label: 'Rice + oil',
+              bundle_items: ['rice', 'oil'], bundle_price: 300 };
+  const r = ev(o, [RICE, OIL]);
+  /* rice ₹100 + oil ₹250 = ₹350 a set; the bundle is ₹300, so ₹50 a set. Two sets fit (oil has qty 2). */
+  const total = r.adjustments.reduce((t, a) => t + a.amount, 0);
+  assert.strictEqual(r2(total), -100, '₹50 a set × 2 sets — the smaller quantity decides how many sets fit');
+  assert.strictEqual(r.adjustments.length, 2, 'the saving lands on both lines, not in a lump on one');
+  /* ⚠️ THE SHARES MUST ADD UP TO THE SAVING — the last line carries the remainder for exactly this reason */
+  const byKey = {};
+  r.adjustments.forEach((a) => { byKey[a.target] = r2((byKey[a.target] || 0) + a.amount); });
+  assert.strictEqual(r2(byKey['0'] + byKey['1']), -100, 'no rounding dust: the parts equal the whole');
+
+  /* ⚠️ AND IT DOES NOT FIRE HALF-BUILT. Missing a member is reported, not silently discounted. */
+  const short = ev(o, [RICE]);
+  assert.strictEqual(short.adjustments.length, 0, 'one item of a two-item bundle discounts nothing');
+  assert.match(String(short.notes[0] && short.notes[0].why), /needs 1 more item/,
+    'and it says what is missing rather than staying silent');
+
+  /* ⚠️ A BUNDLE DEARER THAN ITS PARTS GIVES NOTHING — it must never quietly RAISE a price. */
+  const dear = ev(Object.assign({}, o, { bundle_price: 9999 }), [RICE, OIL]);
+  assert.strictEqual(dear.adjustments.length, 0, 'nothing to give, and nothing taken');
 });
 
 kind('threshold', '⭐⭐ threshold — spend, and the shortfall is reported when it does not fire', () => {
@@ -226,18 +267,42 @@ t('⭐⭐ PERCENT + AMOUNT ON ONE PRODUCT BOTH LAND, and they accumulate', () =>
   assert.deepStrictEqual(r.explain, ['10% off rice: 10% off ₹300', '₹25 off rice: ₹25 off']);
 });
 
-t('⚠️⚠️ TWO DISCOUNTS ON ONE LINE NEVER EXCEED THE LINE', () => {
+/**
+ * ── ⚠️⚠️ THIS ASSERTION WAS MOVED, NOT DELETED (2026-09-16) ─────────────────────────────────────────────────
+ *
+ * It expected 60% + 60% to SUM to 120% and the order to be clamped at zero. That was the additive model, and
+ * Athi replaced it on 2026-09-06: *"offers apply in order, each on the RUNNING amount"* — decision 1, recorded
+ * in lib/offers-engine.js beside `unitNow()` and the `net` map. A percentage is now taken on what the line is
+ * worth AFTER the offers already applied: ₹300 → ₹120 → ₹48.
+ *
+ * ⭐ THE INVARIANT THE TEST EXISTS FOR IS UNCHANGED and is still asserted here: **a discount can never turn
+ * into a refund.** Under the running-amount rule a percentage approaches zero and never crosses it, and an
+ * amount is capped at the line — so the floor holds by construction rather than by a clamp. The old expected
+ * NUMBERS were stale; the rule they were protecting was not, so it is proved a stronger way: 100 percentages
+ * in a row still cannot make the total negative.
+ */
+t('⚠️⚠️ STACKED DISCOUNTS RUN ON THE RUNNING AMOUNT, AND CAN NEVER BECOME A REFUND', () => {
   const a = { id: 'a', kind: 'percent_off', label: '60%', percent: 60, applies_to: { item_ids: ['rice'] }, priority: 1 };
   const b = { id: 'b', kind: 'percent_off', label: '60% again', percent: 60, applies_to: { item_ids: ['rice'] }, priority: 2 };
   const lines = [RICE];
   const r = ev([a, b], lines);
-  assert.strictEqual(r.total, 0, 'the order is clamped at zero — a negative total is not a refund');
+  assert.strictEqual(r.total, 48, '₹300 → 60% off → ₹120 → 60% off → ₹48 (percent on percent)');
+  assert.ok(r.total >= 0, 'a negative total is not a refund');
+
   /* ⚠️ THE CAP IS PER LINE, and evaluate() only clamps the ORDER. perLine() is where a caller gets the capped
      figure, and it exists because four call sites were each one `Math.min` away from a −20% line. */
   const per = O.perLine(r, lines);
-  assert.strictEqual(per['0'].off, 300, 'never more than the line was worth');
-  assert.strictEqual(per['0'].capped, true, 'and the caller is TOLD it was trimmed');
+  assert.strictEqual(per['0'].off, 252, 'what actually came off: 180 then 72');
+  assert.ok(per['0'].off <= 300, 'never more than the line was worth');
   assert.deepStrictEqual(per['0'].offers, ['a', 'b'], 'both offers are named on the line');
+
+  /* ⭐ THE FLOOR, PROVED RATHER THAN ASSUMED — a hundred stacked percentages still cannot cross zero. */
+  const many = [];
+  for (let i = 0; i < 100; i++) many.push({ id: 'p' + i, kind: 'percent_off', label: '60%', percent: 60,
+                                            applies_to: { item_ids: ['rice'] }, priority: i });
+  const deep = ev(many, [RICE]);
+  assert.ok(deep.total >= 0, 'a hundred discounts deep, and still not a refund');
+  assert.ok(O.perLine(deep, [RICE])['0'].off <= 300, 'and never more than the line was worth');
 });
 
 t('⚠️ AN EXCLUSIVE OFFER FIRST STOPS THE ONE AFTER IT', () => {
@@ -249,14 +314,26 @@ t('⚠️ AN EXCLUSIVE OFFER FIRST STOPS THE ONE AFTER IT', () => {
   assert.strictEqual(r.skipped[0].why, 'an exclusive offer already applied');
 });
 
-t('⭐⭐ THE SAME TWO OFFERS, THE EXCLUSIVE ONE SECOND — priority decides, not the array', () => {
+/**
+ * ── ⚠️⚠️ AND THIS ONE ASSERTED THE OPPOSITE OF THE DECISION (moved 2026-09-16) ──────────────────────────────
+ *
+ * It expected a high `priority` number to push an exclusive offer SECOND, so the ₹25 would run first and both
+ * would land. Athi ruled the other way on 2026-09-06 19:29, from a real case — *an exclusive 25% for one
+ * customer, and the Flat 10% still applied because it ran first at order 0*. EXCLUSIVE MEANS "INSTEAD OF THE
+ * OTHERS": it runs before every non-exclusive one whatever the stacking numbers say, and then stops them.
+ *
+ * ⭐ The intent of the test — that the ARRAY ORDER must never decide a price — is kept, and is the stronger
+ * half: both orderings give the same answer. Only the claim about priority is corrected.
+ */
+t('⭐⭐ AN EXCLUSIVE OFFER RUNS FIRST WHATEVER ITS PRIORITY NUMBER — and the array never decides', () => {
   const excl = Object.assign({}, P10, { exclusive: true, priority: 9 });
   const r = ev([excl, A25], [RICE]);
-  assert.strictEqual(r.adjustments.length, 2, 'the ₹25 ran first, then the exclusive one');
-  assert.strictEqual(r.total, 245, 'the same price as the non-exclusive pair');
-  assert.strictEqual(r.skipped.length, 0, 'nothing was left to stop');
+  assert.strictEqual(r.adjustments.length, 1, 'the exclusive one ran, and stopped the other');
+  assert.strictEqual(r.total, 270, 'only the 10% — priority 9 does not demote an exclusive');
+  assert.strictEqual(r.skipped.length, 1, 'the ₹25 was stopped, and says why');
+  assert.strictEqual(r.skipped[0].why, 'an exclusive offer already applied');
   /* ⚠️ AND THE ARRAY ORDER IS NOT THE ANSWER — the reversed array gives the same price. */
-  assert.strictEqual(ev([A25, excl], [RICE]).total, 245);
+  assert.strictEqual(ev([A25, excl], [RICE]).total, 270);
 });
 
 t('⚠️ AN OFFER THAT TARGETS ANOTHER PRODUCT IS SKIPPED, and says which', () => {
