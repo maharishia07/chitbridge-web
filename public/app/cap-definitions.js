@@ -592,6 +592,15 @@ function cbDefRuleFields(kind, sub){
     var g = [];
     if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true, pct: true, half: true });
     if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true, money: true, half: true });
+    /**
+     * ⚠️⚠️ THE FORM NEVER ASKED, AND THAT WAS THE BUG. Athi wrote "Rs 20 off cooking oil" meaning twenty off
+     * EACH tin; the engine took twenty off the LINE. Neither was wrong — the question had not been put. It is
+     * put now, and the badge says the answer ("₹20 off each" vs "₹20 off") so the shelf cannot mislead either.
+     * ⚠️ Default 'line', because that is what every offer already written means, and repricing them silently
+     * would be discovered at somebody's counter.
+     */
+    if (sub === 'amount_off') g.push({ k: 'per', label: 'Taken off', half: true,
+      pick: [['line', 'the line once — ₹20 off however many'], ['item', 'each item — 3 × ₹20 = ₹60']] });
     if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true, money: true, half: true });
                                g.push({ k: 'min_qty', label: '…or this many items', num: true, half: true }); }
     /**
@@ -814,6 +823,22 @@ function cbDefPickHTML(x, v){
    */
   if (x.pick === 'product') return cbDefPickProductHTML(x, v);
   if (x.pick === 'customer') return cbDefPickCustomerHTML(x, v);
+  /**
+   * ⭐ A FIXED LIST OF ANSWERS, written on the field itself as [value, what it means]. The first kinds of pick
+   * all read something from the shop; this one is a plain choice between two meanings ("off the line once" vs
+   * "off each item"), and inventing a lookup for it would be a third picker that means nothing.
+   * ⚠️ The FIRST pair is the default, and it is preselected when the rule has no value — so a form that has
+   * never been touched shows the behaviour the engine will actually use.
+   */
+  if (Array.isArray(x.pick)) {
+    var cur = (v === undefined || v === null || v === '') ? String(x.pick[0][0]) : String(v);
+    return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+      + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
+      + x.pick.map(function (p) {
+          return '<option value="' + cbDefEsc(p[0]) + '"' + (cur === String(p[0]) ? ' selected' : '') + '>'
+            + cbDefEsc(p[1]) + '</option>'; }).join('')
+      + '</select>';
+  }
   var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
   if (list === null) {
     if (typeof cbCatgLive === 'function') cbCatgLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });

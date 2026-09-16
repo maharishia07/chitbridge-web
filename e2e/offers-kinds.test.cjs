@@ -353,5 +353,36 @@ t('⚠️ A CLOSED WINDOW SKIPS, and the reason names the date', () => {
     'and a row promises nothing it cannot honour today');
 });
 
+/**
+ * ── ⭐⭐ "₹20 OFF" — OFF THE LINE, OR OFF EACH? (observation 6, division F) ──────────────────────────────────
+ *
+ * Athi authored "Rs 20 off cooking oil" meaning twenty off EACH tin; the engine took twenty off the LINE.
+ * Neither was wrong — the form only ever said "Amount off" and never asked. `per` now carries the answer.
+ *
+ * ⚠️⚠️ THE DEFAULT IS ASSERTED FIRST AND DELIBERATELY. Every offer already written means a flat amount off the
+ * line, and this test exists as much to stop that changing as to prove the new behaviour: repricing live offers
+ * in shops that never asked would be discovered at somebody's counter.
+ */
+t('⭐⭐ amount_off per item multiplies by the quantity; per line does not; the default does not move', () => {
+  const base = { id: 'oil', kind: 'amount_off', label: 'Rs 20 off cooking oil', amount: 20,
+                 applies_to: { item_ids: ['rice'] } };
+  /* RICE is 3 × ₹100 = ₹300 */
+  assert.strictEqual(only(ev(base, [RICE])).amount, -20, 'the default is off the LINE, once — unchanged');
+  assert.strictEqual(only(ev(Object.assign({}, base, { per: 'line' }), [RICE])).amount, -20, 'and saying so is the same');
+
+  const each = only(ev(Object.assign({}, base, { per: 'item' }), [RICE]));
+  assert.strictEqual(each.amount, -60, '3 × ₹20 — what Athi meant when he wrote it');
+  assert.match(each.why, /₹20 off each/, 'and the row SAYS it is each, or the number cannot be checked');
+
+  /* ⚠️ still capped at the line: a discount can never become a refund */
+  const capped = only(ev(Object.assign({}, base, { per: 'item', amount: 500 }), [RICE]));
+  assert.strictEqual(capped.amount, -300, '3 × ₹500 is capped at what the line was worth');
+  assert.match(capped.why, /capped at the line value/, 'and the cap is reported, never silent');
+
+  /* the promise on the shelf must distinguish them too, or the badge re-creates the ambiguity */
+  assert.strictEqual(O.promise(Object.assign({}, base, { per: 'item' }), CTX), '₹20 off each');
+  assert.strictEqual(O.promise(base, CTX), '₹20 off');
+});
+
 console.log('\n' + (fail ? '✗ ' + fail + ' failed, ' : '✓ ') + pass + ' passed\n');
 process.exit(fail ? 1 : 0);
