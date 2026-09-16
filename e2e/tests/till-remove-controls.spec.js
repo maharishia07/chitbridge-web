@@ -537,3 +537,96 @@ test('[TILL-17] a refused database, and a lost write, are both spoken aloud', as
     expect(rep, 'the report a shopkeeper sends does not mention it').toMatch(/A WRITE WAS LOST/);
   });
 });
+
+// ⭐⭐⭐ [TILL-21] THE ABSORBED SALE, RECOVERED ON THE COUNTER ITSELF (Athi, 2026-09-17, option a). A bill that says
+// "sent" but whose chit records ANOTHER counter's sale is found, given a new number of this counter's own series,
+// keeps the number the customer was given, and is sent — and the printed number still finds it for a reprint.
+test('[TILL-21] an absorbed sale is renumbered, keeps its printed number, and reaches the books', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Absorb ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Filter coffee 100 g', unit: 'packet', price: 80, code: 'ABS9' });
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const out = [];
+    for (const n of ['first pc', 'second pc']) {
+      const r = await api('keysMint', { body: { name: n, scopes: ['till'], days: 1 } });
+      out.push(r && (r.key || r.api_key));
+    }
+    return out;
+  });
+  const base = await page.evaluate(() => (typeof CFG !== 'undefined' && CFG.API_BASE) || '');
+
+  /* the FIRST PC's sale is in the books under C1/…/<n> */
+  const NO = 'C1/26-27/' + String(Date.now()).slice(-4);
+  const firstChit = await page.evaluate(async ({ base, key, no }) => {
+    const r = await fetch(base + '/api/chits/send', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key },
+      body: JSON.stringify({ recipients: [{ self: true, name: 'self' }], purpose: 'order', subject: 'Counter sale ' + no,
+        client_ref: no, business_json: { till: { id: 'C1' }, bill_no: no, billed_at: new Date(Date.now() - 300000).toISOString() },
+        line_items: [{ particulars: 'Tea', quantity: 1, unit: 'cup', price: 10, total: 10 }] }) });
+    return (await r.json()).chit_id;
+  }, { base, key: keys[0], no: NO });
+  expect(firstChit).toBeTruthy();
+
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(keys[1]));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 40000 });
+
+  await test.step('the SECOND PC holds its own sale under the same number, wrongly marked "sent" with the first PC\'s chit', async () => {
+    await till.evaluate(async ({ no, chit }) => {
+      const b = { no, at: new Date().toISOString(), till: 'C1', total: 80, paid: 80, change: 0,
+                  lines: [{ name: 'Filter coffee 100 g', qty: 1, unit: 'packet', price: 80, net: 80 }],
+                  _sent: { at: Date.now(), chit_id: chit } };
+      await DB.put('bills', b);
+    }, { no: NO, chit: firstChit });
+  });
+
+  let result;
+  await test.step('⭐⭐ the check finds it and records it under a new number', async () => {
+    await till.evaluate(() => { window.say = () => {}; window.openStuck = () => {}; });
+    result = await till.evaluate(() => checkAbsorbed(true));
+    expect(result && result.fixed, 'the absorbed sale was not found: ' + JSON.stringify(result)).toBe(1);
+    expect(result.renumbered.length).toBe(1);
+    expect(result.renumbered[0].from).toBe(NO);
+    expect(result.renumbered[0].to, 'it was "renumbered" to the same number').not.toBe(NO);
+  });
+
+  await test.step('⭐ the printed number is kept, and still finds the sale', async () => {
+    const got = await till.evaluate(async (no) => {
+      const all = await DB.allRaw('bills');
+      const b = all.filter((x) => x && x.printed_as === no)[0];
+      const stale = all.filter((x) => x && x.no === no).length;
+      return { b, stale };
+    }, NO);
+    expect(got.b, 'the printed number was lost').toBeTruthy();
+    expect(got.stale, 'the old row is still there under the taken number').toBe(0);
+    expect(got.b._sent, 'a sale that never landed still says sent').toBeFalsy();
+  });
+
+  await test.step('⭐⭐⭐ and it really reaches the books this time', async () => {
+    /* ⚠️ WAIT FOR THE RESULT, not a fixed sleep: checkAbsorbed already started a drain, a second call returns at once
+       while it is busy, and a send to the API can take longer than any number picked here. */
+    /* ⚠️ A PLAIN LOOP, NOT waitForFunction(...).catch(() => {}). That swallowed its own failure, so a predicate that
+       errored ended the "45-second wait" at once and the check below read the bill before the send had finished —
+       the very shape of fault this whole file is about, in the test. */
+    let done = false;
+    for (let i = 0; i < 25 && !done; i++) {
+      done = await till.evaluate(async (no) => {
+        if (!HOST._busy) HOST.drain();
+        const b = (await DB.allRaw('bills')).filter((x) => x && x.printed_as === no)[0];
+        return !!(b && b._sent && b._sent.chit_id);
+      }, NO);
+      if (!done) await till.waitForTimeout(2000);
+    }
+    const v = await till.evaluate(async (no) => {
+      const b = (await DB.allRaw('bills')).filter((x) => x && x.printed_as === no)[0];
+      return { sent: !!(b && b._sent && b._sent.chit_id), chit: b && b._sent && b._sent.chit_id, newNo: b && b.no };
+    }, NO);
+    expect(v.sent, 'the recovered sale did not send').toBe(true);
+    expect(v.chit, '⚠️ it was absorbed AGAIN into the first PC\'s chit').not.toBe(firstChit);
+    const again = await till.evaluate(() => checkAbsorbed(true));
+    expect(again.fixed, 'the recovered sale is still not really in the books').toBe(0);
+  });
+});

@@ -151,3 +151,65 @@ test('[TILL-19] each counter gets its own prefix; a clashing one is moved, never
     expect(again.till.assigned_id, 'the prefix moved between two reads').toBe(fresh.till.assigned_id);
   });
 });
+
+// ⭐⭐⭐ [TILL-20] THE RECOVERY — option (a), Athi 2026-09-17. A bill absorbed before the fix holds a REAL chit id —
+// somebody else's — so the counter cannot tell it from a good one. /api/till/reconcile reads each chit back and
+// compares the bill number AND the moment it was taken.
+test('[TILL-20] reconcile tells a recorded bill from an absorbed one', async ({ page }) => {
+  test.setTimeout(300000);
+  await mintEntity(page, { fresh: true, name: 'Recon ' + Date.now().toString().slice(-6) });
+  const keys = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const out = [];
+    for (const n of ['pc a', 'pc b']) {
+      const r = await api('keysMint', { body: { name: n, scopes: ['till'], days: 1 } });
+      out.push(r && (r.key || r.api_key));
+    }
+    return out;
+  });
+  const base = await page.evaluate(() => (typeof CFG !== 'undefined' && CFG.API_BASE) || '');
+  const post = (key, path, body) => page.evaluate(async ({ base, key, path, body }) => {
+    const r = await fetch(base + path, { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Key': key }, body: JSON.stringify(body) });
+    let j = null; try { j = await r.json(); } catch (_) {}
+    return { status: r.status, body: j };
+  }, { base, key, path, body });
+
+  const NO = 'C1/26-27/' + String(Date.now()).slice(-4);
+  const atA = new Date(Date.now() - 120000).toISOString();
+  const atB = new Date(Date.now() - 60000).toISOString();
+
+  /* PC A's sale lands. PC B's sale — same number, a minute later — is what the OLD server absorbed, handing back A's chit. */
+  const a = await post(keys[0], '/api/chits/send', bill(NO, 'C1', atA));
+  expect(a.status).toBeLessThan(300);
+  const chitOfA = a.body.chit_id;
+
+  await test.step('⭐ PC A asking about its own bill: ok', async () => {
+    const r = await post(keys[0], '/api/till/reconcile', { bills: [{ no: NO, at: atA, chit_id: chitOfA }] });
+    expect(r.status, JSON.stringify(r.body)).toBe(200);
+    expect(r.body.bills[0].verdict).toBe('ok');
+  });
+
+  await test.step('⚠️⚠️ PC B holding A\'s chit id for ITS sale: absorbed — the sale never reached the books', async () => {
+    const r = await post(keys[1], '/api/till/reconcile', { bills: [{ no: NO, at: atB, chit_id: chitOfA }] });
+    expect(r.body.bills[0].verdict, 'an absorbed sale was reported as recorded').toBe('absorbed');
+  });
+
+  await test.step('a chit id that does not exist: missing', async () => {
+    const r = await post(keys[1], '/api/till/reconcile',
+      { bills: [{ no: NO, at: atB, chit_id: '00000000-0000-0000-0000-000000000000' }] });
+    expect(r.body.bills[0].verdict).toBe('missing');
+  });
+
+  await test.step('⭐⭐ and the renumbered sale is recorded, carrying the number the customer was given', async () => {
+    const NEW = 'C9/26-27/' + String(Date.now()).slice(-4);
+    const b = bill(NEW, 'C9', atB);
+    b.business_json.printed_as = NO;
+    b.business_json.renumbered = { from: NO, to: NEW, why: 'test' };
+    const r = await post(keys[1], '/api/chits/send', b);
+    expect(r.status, 'the renumbered sale was refused: ' + JSON.stringify(r.body)).toBeLessThan(300);
+    expect(r.body.chit_id).not.toBe(chitOfA);
+    const back = await post(keys[1], '/api/till/reconcile', { bills: [{ no: NEW, at: atB, chit_id: r.body.chit_id }] });
+    expect(back.body.bills[0].verdict, 'the recovered sale is not in the books').toBe('ok');
+  });
+});
