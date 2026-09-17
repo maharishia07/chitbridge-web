@@ -318,6 +318,26 @@ function itemPrice(it){ var c=(it&&it.commercials)||{};
   if(cbHasPrice(c.price)) return {v:cbAmount(c.price),u:c.unit||it.unit||priceUnit(),c:cbCurrency(c.price)};
   if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'litre'};
   return null; }
+/**
+ * ⭐⭐ WHAT A NETWORK PRODUCT'S OFFER TAKES OFF (2026-09-17). An adopted product carries `line_id` and the offers its brand
+ * released and this store took are aimed at it (lib/network-offers.forFinishes). Priced as a basket of one through the same
+ * engine the counter and the server use — the server applies the same offers to the order, so this is the promise and that
+ * is the invoice. null when nothing applies.
+ */
+function finishDeal(it, qty){
+  var offers=_shopOffers(); if(!offers.length||typeof CBOffers==='undefined'||!CBOffers.evaluate||!CBOffers.perLine) return null;
+  var p=itemPrice(it); if(!p||p.v==null||!_showsPrice()) return null;
+  var unit=Number(priceVal(p.v)); if(!(unit>0)) return null;
+  var n=Number(qty)>0?Number(qty):1;
+  var l={ key:'f', item_id:it.line_id||null, sku:it.sku||null, excluded:[], qty:n, unitPrice:unit,
+          categories:[].concat(it.category?[String(it.category)]:[], Array.isArray(it.categories)?it.categories.map(String):[]) };
+  try{
+    var ev=CBOffers.evaluate({ lines:[l], offers:offers, ctx:_shopCtx() });
+    var x=(CBOffers.perLine(ev,[l])||{}).f; if(!x||!(x.off>0)) return null;
+    var src=offers.filter(function(o){ return String(o.id)===String(x.offer_id); })[0];
+    return { off:x.off, label:x.label||'Offer', brand:(src&&src.network&&src.network.brand_name)||null, gross:unit*n, net:Math.round((unit*n-x.off)*100)/100/n };
+  }catch(e){ return null; }
+}
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
 function regionBar(){
   /* ⭐ A DEMO DEVICE, NOT A SHOP FEATURE (Athi, 2026-09-06 09:53: "remove the spin the globe"). Kept behind ?globe=1 for a walkthrough. */
@@ -355,6 +375,9 @@ function finishCard(it, cur, idx, vizEnabled){
     +(function(){ var b=itemBand(it);
         if(!_showsPrice()) return '<div class="price"><small>Price on request</small></div>';   // qty / text — the shop quotes later
         if(_METHOD==='range'&&b) return '<div class="price">'+esc(_bandText(b))+' <small>/ '+esc((p&&p.u)||priceUnit())+' · seller’s range</small></div>';
+        var deal=finishDeal(it, 1);
+        if(deal) return '<div class="price" data-testid="shop-fin-offer-'+idx+'"><s style="color:#9aa3a7;font-weight:400">'+finishPrice(price, p&&p.u, p&&p.c)+'</s> '+finishPrice(deal.net, p&&p.u, p&&p.c)
+          +' <span style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:999px;background:#E6F4EA;color:#1E6B3A;font-size:11px;font-weight:700">'+esc(deal.label)+(deal.brand?' · '+esc(deal.brand):'')+'</span></div>';
         return '<div class="price">'+finishPrice(price, p&&p.u, p&&p.c)+'</div>'; })()
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
@@ -1010,6 +1033,8 @@ function orderRender(msg, err){
     +'<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">'+esc(_isPayload()?_submitLabel():'Order')+' · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
+       /* the offer the order will carry — the same judgement as the card (finishDeal), priced per unit */
+       var dl=finishDeal(it, 1); if(dl&&!_isNegotiable()) bits.push('<b data-testid="shop-order-offer" style="color:#1E6B3A">'+esc(dl.label)+': '+cur+esc(String(dl.net))+' / '+esc(p.u)+'</b>');
        return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
     // PAYLOAD path (enquiry / form): render the DECLARED fields — there is no quantity, price or colour to ask for.
     // the attach control comes FIRST on a readable catalogue — upload, then see the fields already filled
