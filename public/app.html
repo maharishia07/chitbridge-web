@@ -12778,6 +12778,7 @@ async function _cfImportRun(btn, decisions, out){
  * `id` so an applied offer can be cited — and therefore FROZEN — by id.
  */
 function defToOffer(d){ return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {}); }
+var _ctOffersGen = 0;
 function ctOffersEnsure(then){
   if (Array.isArray(UI._ctOffers)) return UI._ctOffers;
   /* ⚠️ EVERY CALLER IS CALLED BACK, not only the first. While the read was in flight, a second caller (the Offers
@@ -12785,16 +12786,22 @@ function ctOffersEnsure(then){
      never repainted: [OFF-01] "live → it is offered here" found the chip missing. One queue, drained once. */
   UI._ctOffersThen = UI._ctOffersThen || [];
   if (then) UI._ctOffersThen.push(then);
-  if (UI._ctOffers === null) return null;   /* in flight — the callback above is queued */
+  if (UI._ctOffers === null && UI._ctOffersGen === _ctOffersGen) return null;   /* in flight — the callback above is queued */
+  /* ⚠️⚠️ A READ STARTED BEFORE A CHANGE MUST NOT LAND AFTER IT. Clearing the cache (UI._ctOffers = undefined) while a read was in
+     flight let that read finish and write the OLD shelf back — [OFF-02]: an offer made exclusive still previewed as not
+     exclusive. Each read carries a generation; one that is no longer current is dropped and its waiters read again. */
+  var gen = ++_ctOffersGen; UI._ctOffersGen = gen;
   UI._ctOffers = null;
   var drain = function(list){ var q = UI._ctOffersThen || []; UI._ctOffersThen = []; q.forEach(function(fn){ try { fn(list); } catch (_) {} }); };
+  var stale = function(){ return UI._ctOffersGen !== gen || UI._ctOffers !== null; };
   /* ⭐ same shelf, same loader — this one and the product page were fetching it twice within a second */
   cbDefsLive('offer')
     .then(function(defs){
+      if (stale()) { if (UI._ctOffers === undefined) ctOffersEnsure(); return; }
       UI._ctOffers = (defs || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
       drain(UI._ctOffers);
     })
-    .catch(function(){ UI._ctOffers = []; drain(UI._ctOffers); });
+    .catch(function(){ if (stale()) return; UI._ctOffers = []; drain(UI._ctOffers); });
   return null;
 }
 /** Open Catalogue setup ON a section. One helper, because the product page points at four of them. */
