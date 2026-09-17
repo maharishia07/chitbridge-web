@@ -8483,7 +8483,7 @@ async function bellUp(){
     var r = await fetchBy(CloudHost.api + '/api/events/ticket', { method:'POST', headers:{ 'X-Api-Key': CloudHost.key } });
     if (!r.ok) return;
     var t = (await r.json()).ticket; if (!t) return;
-    BELL = new EventSource(CloudHost.api + '/api/events/stream?ticket=' + encodeURIComponent(t));
+    BELL = new EventSource(CloudHost.api + '/api/events/stream?t=' + encodeURIComponent(t));
     BELL.onmessage = function(ev){
       var d = {}; try { d = JSON.parse(ev.data || '{}'); } catch (_) {}
       /* ⚠️ only the kinds this screen actually holds a copy of; a chit arriving is the mailbox's business, not the counter's */

@@ -1143,7 +1143,7 @@ async function bellUp(){
     var r = await fetch(API + '/api/events/ticket', { method:'POST', headers:{ 'X-Api-Key': KEY } });
     if (!r.ok) return;
     var t = (await r.json()).ticket; if (!t) return;
-    BELL = new EventSource(API + '/api/events/stream?ticket=' + encodeURIComponent(t));
+    BELL = new EventSource(API + '/api/events/stream?t=' + encodeURIComponent(t));
     BELL.onmessage = async function(ev){
       var d = {}; try { d = JSON.parse(ev.data || '{}'); } catch (_) {}
       if (d.kind !== 'shop') return;
