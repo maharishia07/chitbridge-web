@@ -267,9 +267,11 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
         await t.screenshot({ path: require('path').join(__dirname, '..', 'demo-' + st.handle + '-stuck.png') }).catch(() => {});
         throw e;
       }
-      await t.click('[data-testid="till-add-0"]');
+      /* ⚠️ AN EXACT CODE IS A SCAN — the counter has already put it on the bill ([TILL-27]); pressing + as well billed two */
+      const onBill = await t.evaluate((code) => CART.some((c) => { const i = (S.items || []).find((x) => x.item_id === c.item_id); return i && i.code === code; }), code);
+      if (!onBill) await t.click('[data-testid="till-add-0"]');
       if (qty > 1) {
-        const n = await t.evaluate(() => CART.length - 1);
+        const n = await t.evaluate((code) => CART.findIndex((c) => { const i = (S.items || []).find((x) => x.item_id === c.item_id); return i && i.code === code; }), code);
         await t.fill('[data-testid="till-qty-' + n + '"]', String(qty));
         await t.locator('[data-testid="till-qty-' + n + '"]').dispatchEvent('change');
       }
@@ -278,7 +280,8 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
     await t.click('[data-testid="till-pay-' + pay + '"]').catch(() => t.click('[data-testid="till-pay-cash"]'));
     await t.fill('#tendered', String(Math.ceil(money.net))).catch(() => {});
     await t.click('#save');
-    await expect(t.locator('#sliptitle')).toContainText('Bill', { timeout: 20000 });
+    /* ⚠️ the dialog opens titled just "Bill" — the number arrives a moment later */
+    await expect(t.locator('#sliptitle')).toHaveText(/^Bill \S+ ·/, { timeout: 20000 });
     const no = (await t.locator('#sliptitle').textContent()).replace('Bill ', '').split(' ·')[0].trim();
     await t.click('#slipdlg button:has-text("Close")').catch(() => {});
     return Object.assign({ no }, money);
@@ -300,7 +303,7 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
   const an = stores.find((x) => x.area === 'Anna Nagar');
   await attempt(an, 'billing', async () => {
     await reopen(an);
-    const r = await bill(an, [['PR-APEX-500', 1]], 'cash');
+    const r = await bill(an, [['PR-APEX-500', 1]], 'cash'); expect(r.net, 'the bill total is wrong — a line was added twice, or the offer did not apply').toBeCloseTo(3229.15, 2);
     await done(an); await an.till.close();
     note('Anna Nagar', 'billed ' + r.no + ' — Apex mixer at the store\'s own ₹3,799, 15% network offer applied (₹' + r.off + ' off): ₹' + r.net + ' (cash)');
   });
@@ -308,7 +311,7 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
   const tn = stores.find((x) => x.area === 'T Nagar');
   await attempt(tn, 'billing', async () => {
     await reopen(tn);
-    const r = await bill(tn, [['PR-SUP-750', 1], ['PR-PIC16', 1]], 'upi');
+    const r = await bill(tn, [['PR-SUP-750', 1], ['PR-PIC16', 1]], 'upi'); expect(r.net, 'the bill total is wrong — a line was added twice, or the offer did not apply').toBeCloseTo(9780.75, 2);
     await done(tn); await tn.till.close();
     note('T Nagar', 'billed ' + r.no + ' — Supreme juicer mixer (15% off) + PIC 16.0 (its offer starts at the next opening): ₹' + r.net + ' (₹' + r.off + ' off, UPI)');
   });
@@ -327,7 +330,7 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
 
   await attempt(adyar, 'billing', async () => {
     await reopen(adyar);
-    const r = await bill(adyar, [['PR-APEX-500', 1]], 'cash');
+    const r = await bill(adyar, [['PR-APEX-500', 1]], 'cash'); expect(r.net, 'the bill total is wrong — a line was added twice, or the offer did not apply').toBeCloseTo(4035, 2);
     await done(adyar); await adyar.till.close();
     note('Adyar', 'billed ' + r.no + ' — Apex mixer at full ₹4,035; the store declined the network offer, so ₹' + r.off + ' off: ₹' + r.net + ' (cash)');
   });
@@ -335,7 +338,7 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
   const om = stores.find((x) => x.area === 'OMR');
   await attempt(om, 'billing', async () => {
     await reopen(om);
-    const r = await bill(om, [['PR-GTM02', 2], ['PR-APEX-500', 1]], 'cash');
+    const r = await bill(om, [['PR-GTM02', 2], ['PR-APEX-500', 1]], 'cash'); expect(r.net, 'the bill total is wrong — a line was added twice, or the offer did not apply').toBeCloseTo(17149.75, 2);
     await done(om); await om.till.close();
     note('OMR', 'billed ' + r.no + ' — 2 × gas hob + Apex mixer (15% off the mixer, ₹' + r.off + ' off): ₹' + r.net + ' (cash)');
   });
