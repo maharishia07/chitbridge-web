@@ -101,13 +101,21 @@ test('[TILL-08] the counter says what it is doing — offers, MRP, and the two w
     await till.waitForSelector('[data-testid="till-hit-0"]');
     await till.press('#q', 'Enter');
     const note = await till.locator('#cart').textContent();
-    expect(note, 'the offer that took money off is not named on the line').toMatch(/Buy 2 biscuits, get 1 free/);
     expect(note, 'the line does not say what came off for that offer').toMatch(/−|-\s*₹/);
+    /**
+     * moved 2026-09-17: since the design pass of 2026-09-16 the offer on a line is a CHIP — its words are the TERMS
+     * ("Buy 2 get 1 free", what a cashier acts on) and the offer's NAME and what it did ("1 free, 1 set of this product")
+     * are its title (text budget: a fact beside a number moves to title=). The same four facts, read where they now live.
+     */
+    const chip = till.locator('#cart .ochip:not(.pend)').first();
+    const title = await chip.getAttribute('title');
+    expect(title, 'the offer that took money off is not named on the line').toMatch(/Buy 2 biscuits, get 1 free/);
     /* ⭐ and it says what the LABEL cannot: how many were free, and that this product earned it */
-    expect(note, 'the line no longer says how many units were free').toMatch(/1 free/);
-    expect(note, 'the line does not say the set was earned by this product').toMatch(/set of this product/i);
-    /* ⚠️ and it must NOT repeat the scheme's own terms — the duplication Athi queried */
-    expect(note, 'the line restates "buy 2 get 1" after already naming the offer').not.toMatch(/buy 2 get 1/i);
+    expect(title, 'the line no longer says how many units were free').toMatch(/1 free/);
+    expect(title, 'the line does not say the set was earned by this product').toMatch(/set of this product/i);
+    /* ⚠️ and it must NOT repeat the scheme's own terms — the duplication Athi queried: said once, as the chip */
+    expect((await chip.textContent()).match(/buy 2 get 1/ig) || [], 'the chip states the terms more than once').toHaveLength(1);
+    expect(title, 'the name and the note restate "buy 2 get 1" after the chip already says it').not.toMatch(/buy 2 get 1/i);
   });
 
   await test.step('⭐⭐ "Saved" is shown as a sum, with every part named', async () => {
