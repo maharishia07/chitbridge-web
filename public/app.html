@@ -11552,6 +11552,9 @@ async function prodOfferApply(offerId, add){
     if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
 
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
+    /* ⚠️ AND core.js's live shelf, which ctOffersEnsure re-reads from. It was dropped only when the bell's "shop changed"
+       arrived — a race the re-read usually won, so the tick showed the pre-attach offer ([OFF-01] / [OFF-02], 2026-09-17). */
+    if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
     /* The Definitions/Setup edit form saves whole rules from ITS copy — it must not keep the pre-attach one. */
     if (typeof CBDEF !== 'undefined' && CBDEF) CBDEF.mine = null;
     closeModal();

@@ -67,7 +67,9 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
     await shop.goto('/shop.html?bridge=' + encodeURIComponent(handle));
     const offered = shop.locator('[data-testid^="shop-fin-offer-"]');
     await expect(offered).toHaveCount(1, { timeout: 30000 });
-    await expect(offered).toContainText('Kitchen week 10%');
+    /* the offer's NAME is what a customer sees (its alias when it has one) — never the rule's internal label */
+    await expect(offered).toContainText('Kitchen week');
+    await expect(offered).toContainText('SfBrand ' + stamp);
     await expect(offered).toContainText('1,800');
     await shop.close();
   });

@@ -840,7 +840,8 @@ async function cbcatOfferToggle(cid, offerId, btn){
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
     toast(on ? tx('Offer removed from this category') : tx('Offer applies to this category ✓'));
   } catch (e) { toast((e && e.message) || tx('Could not change that offer'), true); }
-  finally { UI._ctOffers = undefined; if (btn) btn.disabled = false; cbcatPaintDetail(); }
+  /* the live shelf too — not only when the bell's "shop changed" happens to arrive first (see prodOfferApply) */
+  finally { UI._ctOffers = undefined; if (typeof _DEFS !== 'undefined') delete _DEFS.offer; if (btn) btn.disabled = false; cbcatPaintDetail(); }
 }
 /**
  * ⭐ THE OFFERS THAT REACH A CATEGORY, WITH THEIR TIME — Athi, 2026-09-05: "like how tax is shown in the left side

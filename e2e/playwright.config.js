@@ -12,7 +12,8 @@ const SAVED_SESSION = fs.existsSync(AUTH_FILE) ? AUTH_FILE : undefined;
 const COUNTER = { width: 1366, height: 768 };
 const LAPTOP  = { width: 1920, height: 1080 };   // a normal 14" laptop (FHD) — Athi wants it to hold up here too
 // Counter-critical flows that get the cross-browser + size sweep — where a browser/size break actually hurts the operator.
-const COUNTER_FLOWS = [/keyboard\.spec\.js/, /storefront\.spec\.js/, /chits\.spec\.js/];
+/* ⚠️ anchored to the file name — unanchored, /storefront\.spec\.js/ also ran network-storefront.spec.js in four more browsers */
+const COUNTER_FLOWS = [/[\\/]keyboard\.spec\.js$/, /[\\/]storefront\.spec\.js$/, /[\\/]chits\.spec\.js$/];
 
 module.exports = defineConfig({
   testDir: './tests',
