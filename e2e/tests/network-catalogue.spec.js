@@ -40,6 +40,10 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
   const mkStore = async (label, kettle) => {
     const st = await mintInContext(browser, { fresh: true, name: label + ' ' + stamp });
     await st.page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); });
+    /* the name its customers — and its brand — know it by */
+    const idt = await app(st.page, 'vaultSave', { body: { vault: { sections: [{ type: 'identity', label: 'Business identity',
+      rows: [{ name: 'Trade / brand name', value: label + ' store ' + stamp, tag: 'trade_name' }] }] } } });
+    expect(idt.ok, idt.message).toBe(true);
     const ad = await app(st.page, 'catalogueAdopt', { body: { source: sourceKey,
       commercials: { 'Smart kettle': { price: kettle, unit: 'piece' }, 'Desk lamp': { price: 950, unit: 'piece' } } } });
     expect(ad.ok, ad.message).toBe(true);
