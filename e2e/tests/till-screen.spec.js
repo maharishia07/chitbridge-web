@@ -109,3 +109,87 @@ test('[TILL-28] sold-out tray, key styles and colour schemes on the counter', as
     expect(till.errors, 'the counter threw').toEqual([]);
   });
 });
+
+// [TILL-29] ON A PHONE, SELLING IS THREE STEPS — Items · Bill · Pay, with a bar at the thumb that always says how many lines and
+// how much. Nothing on the sell screen is dropped: each part sits on one of the three steps. A desktop never sees the bar.
+test('[TILL-29] a phone sells in three steps and the bill fits the screen', async ({ page, browser }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Ph ' + Date.now().toString().slice(-6) });
+  await addProduct(page, { name: 'Masala dosa', unit: 'plate', price: 70, code: 'DOS29' });
+  await addProduct(page, { name: 'Filter coffee', unit: 'cup', price: 25, code: 'COF29' });
+  const key = await page.evaluate(async () => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('keysMint', { body: { name: 'phone counter', scopes: ['till'], days: 1 } });
+    return (r && (r.key || r.api_key)) || null;
+  });
+  expect(key, 'no till key was minted').toBeTruthy();
+
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const till = await phone.newPage();
+  const errors = [];
+  till.on('pageerror', (e) => errors.push(e.message));
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+  await till.waitForFunction(() => window.CBScreen, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+  await expect(till.locator('[data-testid="till-quick-1"]')).toBeVisible({ timeout: 40000 });
+
+  const bar = till.locator('[data-testid="till-stepbar"]');
+  await test.step('Items: keys on screen, the bill is not, Pay waits for a line', async () => {
+    await expect(bar).toBeVisible();
+    await expect(till.locator('[data-testid="till-step-pick"]')).toHaveAttribute('aria-current', 'step');
+    await expect(till.locator('#cart')).toBeHidden();
+    await expect(till.locator('[data-testid="till-step-pay"]')).toBeDisabled();
+  });
+
+  await test.step('adding stays on Items and the bar counts it', async () => {
+    await till.locator('[data-testid="till-quick-0"]').click();
+    await till.locator('[data-testid="till-quick-0"]').click();
+    await till.locator('[data-testid="till-quick-1"]').click();
+    await expect(till.locator('[data-testid="till-step-count"]')).toHaveText('2');
+    await expect(till.locator('[data-testid="till-step-pick"]')).toHaveAttribute('aria-current', 'step');
+  });
+
+  await test.step('⭐ Bill: every line with its value, inside the screen', async () => {
+    await till.locator('[data-testid="till-step-bill"]').click();
+    await expect(till.locator('[data-testid="till-line-1"]')).toBeVisible();
+    await expect(till.locator('#save')).toBeHidden();
+    for (const k of [0, 1]) {
+      const box = await till.locator(`[data-testid="till-amt-${k}"]`).boundingBox();
+      expect(box, `line ${k} has no value on screen`).toBeTruthy();
+      expect(box.x + box.width, `line ${k}'s value runs off the phone`).toBeLessThanOrEqual(390);
+    }
+    const wide = await till.evaluate(() => document.documentElement.scrollWidth);
+    expect(wide, 'the page scrolls sideways on a phone').toBeLessThanOrEqual(390);
+    await expect(till.locator('[data-testid="till-cart-cols"] .pqh')).toHaveCount(0);   /* no empty column left behind */
+  });
+
+  await test.step('Pay: the ways to pay and Save, not the lines', async () => {
+    await till.locator('[data-testid="till-step-pay"]').click();
+    await expect(till.locator('#save')).toBeVisible();
+    await expect(till.locator('#pay')).toBeVisible();
+    await expect(till.locator('#cart')).toBeHidden();
+    /* the TOTAL stays on the Pay step (the line count lives in the folded breakdown, as on a desktop) */
+    await expect(till.locator('[data-testid="till-total"]')).toBeVisible();
+    const net = await till.evaluate(() => money(billMoney().net));
+    await expect(till.locator('[data-testid="till-total"]')).toContainText(net);
+    await expect(till.locator('[data-testid="till-step-bill"]')).toContainText(net);
+  });
+
+  await test.step('clearing the bill starts the next customer at Items', async () => {
+    await till.evaluate(() => clearBill());
+    await expect(till.locator('[data-testid="till-step-pick"]')).toHaveAttribute('aria-current', 'step');
+    await expect(till.locator('[data-testid="till-step-pay"]')).toBeDisabled();
+  });
+  expect(errors, 'the phone counter threw').toEqual([]);
+  await phone.close();
+
+  await test.step('a desktop counter has no step bar', async () => {
+    const desk = await page.context().newPage();
+    await desk.setViewportSize({ width: 1366, height: 768 });
+    await desk.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+    await desk.waitForFunction(() => window.CBScreen, null, { timeout: 40000 });
+    await expect(desk.locator('body')).not.toHaveClass(/\bsteps\b/);
+    await expect(desk.locator('[data-testid="till-stepbar"]')).toBeHidden();
+    await desk.close();
+  });
+});
