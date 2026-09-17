@@ -41,8 +41,36 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
   });
   expect(handle).toBeTruthy();
 
+  const hint = page.getByTestId('net-unreleased-' + offerId);
+  const openSetupOffers = async () => {
+    await page.evaluate(async () => {
+      if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
+      if (typeof CATSET_DEFS !== 'undefined') delete CATSET_DEFS.offer;
+      await goCatsetSec('offers');
+    });
+  };
+
+  await test.step('⭐⭐ BEFORE release the brand is told its store does not have the offer — and the hint opens the release screen', async () => {
+    const list = await app(page, 'defList', { query: { kind: 'offer' } });
+    const row = (list.body.definitions || []).find((d) => d.definition_id === offerId);
+    expect(row && row.network, 'the definitions list does not say whether the stores have it').toBeTruthy();
+    expect(row.network.released).toBe(false);
+    expect(row.network.stores).toBeGreaterThanOrEqual(1);
+    await openSetupOffers();
+    await expect(hint).toBeVisible({ timeout: 20000 });
+    await expect(hint).toContainText('not released to your');
+    await hint.click();
+    await expect(page.getByTestId('neto-offer-' + offerId), 'the hint did not open the release screen at this offer').toBeVisible({ timeout: 30000 });
+  });
+
   const rel = await app(page, 'netOfferRelease', { params: { id: offerId }, body: { at: 'now' } });
   expect(rel.ok, rel.message).toBe(true);
+
+  await test.step('⭐ AFTER release the hint is gone', async () => {
+    await openSetupOffers();
+    await expect(page.locator('[data-testid^="catset-offer-' + offerId + '"]').first()).toBeVisible({ timeout: 20000 });
+    await expect(hint).toHaveCount(0);
+  });
 
   const view = async () => (await request.get(API + '/api/catalogue/' + encodeURIComponent(handle))).json();
   const order = async (name, quantity) => {

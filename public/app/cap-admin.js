@@ -4987,7 +4987,14 @@ async function intRecRetry(id){
  * brand's release to every member store, and each store to its own counters.
  */
 var _NETO, _NETO_ARMED = null;
-function netoReload(){ _NETO = undefined; loadSettings(); }
+/* ⚠️ a release changes what the offer chips say on the product page and in Catalogue setup (netRelChip) — those caches go too */
+function netoReload(){
+  _NETO = undefined;
+  if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
+  if (typeof UI !== 'undefined') UI._ctOffers = undefined;
+  if (typeof CATSET_DEFS !== 'undefined') delete CATSET_DEFS.offer;
+  loadSettings();
+}
 function _netWhen(iso){
   if (!iso) return '';
   try { return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }

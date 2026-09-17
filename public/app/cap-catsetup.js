@@ -76,7 +76,8 @@ function catsetDefsLoad(kind, force){
       CATSET_DEFS[kind] = ((r && r.definitions) || []).map(function(d){
         return { id: d.definition_id, name: d.name, sub: d.sub_kind || '', status: d.status || 'draft',
                  note: d.note || '', rules: d.rules || {},
-                 governance: d.governance || null };   // the jurisdiction's, not this entity's — shown, never edited
+                 governance: d.governance || null,   // the jurisdiction's, not this entity's — shown, never edited
+                 network: d.network || null };       // a brand's offer: do its stores have it (app.html netRelChip)
       });
       _catsetDefReq[kind] = null; return CATSET_DEFS[kind];
     })
@@ -118,6 +119,7 @@ function catsetDefListHTML(kind, one){
       + '<span class="dn">' + esc(d.name) + '</span>' + catsetDefRowDetail(kind, d)
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
       + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
+      + (kind === 'offer' && d.status === 'live' && typeof netRelChip === 'function' ? netRelChip(d.network, d.id) : '')
       /* ⭐ REINSTATE. Athi, 2026-09-05: "only option to retire is there, but there is no way to reinstate" — a retired
          row goes back to live from here; products that still cite it resolve again on the next paint. */
       + (d.status === 'retired' ? '<span class="da" data-testid="catset-' + kind + '-reinstate-' + esc(d.id) + '" onclick="catsetDefStatus(\'' + esc(d.id) + '\',\'live\')">' + tx('Reinstate') + '</span>'

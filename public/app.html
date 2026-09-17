@@ -4924,7 +4924,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-09-17a';
+const CB_BUILD = '2026-09-17b';
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -11551,6 +11551,8 @@ async function prodOfferApply(offerId, add){
     if (next.length) at.item_ids = next; else delete at.item_ids;
     if (Object.keys(at).length) rules.applies_to = at; else delete rules.applies_to;
 
+    /* what the brand's stores had BEFORE this save — a released offer is now "changed", an unreleased one still is not out */
+    const netWas = (((typeof _DEFS !== 'undefined' && _DEFS.offer) || []).filter(function(x){ return x.definition_id === offerId; })[0] || {}).network || null;
     await api('defSave', { params: { id: offerId }, body: { rules: rules } });
     /* ⚠️ AND core.js's live shelf, which ctOffersEnsure re-reads from. It was dropped only when the bell's "shop changed"
        arrived — a race the re-read usually won, so the tick showed the pre-attach offer ([OFF-01] / [OFF-02], 2026-09-17). */
@@ -11560,8 +11562,13 @@ async function prodOfferApply(offerId, add){
     closeModal();
     UI.prodPicked.clear(); UI.prodPick = false;
     await loadCatalogue('fresh');
-    toast(add ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
-              : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length));
+    toast((add ? txn('{count} product added to the offer ✓', '{count} products added to the offer ✓', ids.length)
+               : txn('{count} product taken off ✓', '{count} products taken off ✓', ids.length))
+      /* ⭐ said at the moment it matters — the stores do not have this yet (see netRelChip) */
+      + ((netWas && netWas.stores > 0)
+          ? ' · ' + txn('your {count} store gets it when you release it (Settings › Integrations › Network offers)',
+                        'your {count} stores get it when you release it (Settings › Integrations › Network offers)', netWas.stores)
+          : ''));
   } catch (e) { toast(MSG.fail(add ? 'add to the offer' : 'remove from the offer', e)); }
   /**
    * ⚠️ hideBusy IN A finally, NOT ONLY IN THE CATCH. My first version hid the overlay when the save FAILED and
@@ -12778,6 +12785,30 @@ async function _cfImportRun(btn, decisions, out){
  * `id` so an applied offer can be cited — and therefore FROZEN — by id.
  */
 function defToOffer(d){ return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {}); }
+/**
+ * ⭐⭐ "NOT RELEASED TO YOUR STORES" (Athi, 2026-09-17: he ticked a new offer on a brand product and his stores never saw it —
+ * a network offer reaches them only when released, and nothing said so). The definitions list stamps `network` on a brand's
+ * offers (routes/definitions → network-offers.stampReleases); this is the one chip for every screen that lists them. Silent
+ * when the shop has no stores, or the stores already run this version. The chip is the control: it opens the release screen.
+ */
+function netRelChip(net, id){
+  if (!net || !(net.stores > 0) || (net.released && !net.changed)) return '';
+  var words = net.released ? tx('changed — your stores still run the released version')
+                           : txn('not released to your {count} store', 'not released to your {count} stores', net.stores);
+  return '<span class="netrel" data-testid="net-unreleased-' + esc(id) + '" role="button" tabindex="0"'
+    + ' onclick="event.stopPropagation();goIntTab(\'netoffers\')" onkeydown="if(event.key===\'Enter\')goIntTab(\'netoffers\')"'
+    + ' style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);cursor:pointer;white-space:nowrap">⚠ '
+    + esc(words) + ' · <u>' + esc(tx('Release…')) + '</u></span>';
+}
+/** the one way to open a tab of Settings › Integrations — the admin capability owns that screen */
+async function goIntTab(k){
+  closeModal();
+  if (typeof ensureCap === 'function') await ensureCap('admin');
+  navTo('settings'); UI.setSec = 'integrations'; UI.intTab = k;
+  try { lsSet('cb_int_tab', k); } catch (_) {}
+  if (typeof renderApp === 'function') renderApp();
+  if (typeof loadSettings === 'function') loadSettings();
+}
 var _ctOffersGen = 0;
 function ctOffersEnsure(then){
   if (Array.isArray(UI._ctOffers)) return UI._ctOffers;
@@ -12798,7 +12829,7 @@ function ctOffersEnsure(then){
   cbDefsLive('offer')
     .then(function(defs){
       if (stale()) { if (UI._ctOffers === undefined) ctOffersEnsure(); return; }
-      UI._ctOffers = (defs || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x) }; });
+      UI._ctOffers = (defs || []).map(function(x){ return { id: x.definition_id, name: x.name, rules: defToOffer(x), network: x.network || null }; });
       drain(UI._ctOffers);
     })
     .catch(function(){ if (stale()) return; UI._ctOffers = []; drain(UI._ctOffers); });
@@ -12857,7 +12888,9 @@ function ctOfferField(d){
           + ' title="' + esc(terms + (win ? ' · ' + win : '')) + '"'
           + ' onclick="ctToggleOffer(\'' + esc(o.id) + '\', this)">'
           + (on ? '✓ ' : '') + esc(o.name) + (everywhere && !on ? ' <span style="font-size:var(--fs-1);color:var(--grey)">· ' + esc(tx('everywhere — tick to limit it to this product')) + '</span>' : '')
-          + '<span style="font-weight:400;opacity:.75"> · ' + esc(terms) + '</span></button>';
+          + '<span style="font-weight:400;opacity:.75"> · ' + esc(terms) + '</span></button>'
+          /* beside the tick, not inside it — a control inside a button would toggle the offer as well */
+          + (on ? netRelChip(o.network, o.id) : '');
       }).join('')
     + '</div>'
     /**
@@ -13712,7 +13745,7 @@ function prodOffersViewHTML(d){
   const on = prodOffersOn(d);
   const line = function(o){
     const terms=(typeof prodOfferTerms==='function')?prodOfferTerms(o.rules):'', win=(typeof prodOfferWindow==='function')?prodOfferWindow(o.rules):'';
-    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b>${o._via?`<span class="pill" style="font-size:var(--fs-1)">${esc(tx('via category')+' '+o._via)}</span>`:''}<span style="color:var(--grey)">${esc(terms)}${terms&&typeof CBOffers!=='undefined'&&CBOffers.scopeLabel?' '+esc(tx(CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})))):''}${win?' · '+esc(win):''}</span></div>`; };
+    return `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><b>${esc(o.name)}</b>${o._via?`<span class="pill" style="font-size:var(--fs-1)">${esc(tx('via category')+' '+o._via)}</span>`:''}<span style="color:var(--grey)">${esc(terms)}${terms&&typeof CBOffers!=='undefined'&&CBOffers.scopeLabel?' '+esc(tx(CBOffers.scopeLabel(Object.assign({ kind:(o.rules||{}).kind }, o.rules||{})))):''}${win?' · '+esc(win):''}</span>${netRelChip(o.network, o.id)}</div>`; };
   return `<div class="sec">${tx('Offers')}</div>`
     + (on.length ? `<div class="itab">${on.map(line).join('')}</div>` : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No offer is attached to this product.')}</div>`)
     /* ⭐ The same calculation as Edit › Offers, from the same function — a read-only screen that showed a
@@ -17318,12 +17351,7 @@ async function counterGo(){
      * counters, chosen by a person, and only one PC at a time can hold each.
      */
     if (!key) {
-      closeModal();
-      if (typeof ensureCap === 'function') await ensureCap('admin');
-      navTo('settings'); UI.setSec = 'integrations'; UI.intTab = 'counters';
-      try { lsSet('cb_int_tab', 'counters'); } catch (_) {}
-      if (typeof renderApp === 'function') renderApp();
-      if (typeof loadSettings === 'function') loadSettings();
+      await goIntTab('counters');
       toast(tx('Choose which counter to open on this PC'));
       return;
     }
