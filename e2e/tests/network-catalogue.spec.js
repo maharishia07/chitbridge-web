@@ -5,7 +5,7 @@
 // kettle's price, adds a product, and publishes — first for a moment a few seconds ahead (applied by the next read, no
 // worker), then from the screen with "Publish now". OWN is shown the new price and answers Keep, then Use.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext } = require('../fixtures');
+const { mintEntity, mintInContext, approveJoins } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
 const app = (page, name, opts) => page.evaluate(async ({ name, opts }) => {
@@ -55,6 +55,16 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
   };
   const follows = await mkStore('Follows', 2000);
   const own = await mkStore('Own', 2200);
+  const kettleAt0 = async (st) => {
+    const v = await (await request.get(API + '/api/catalogue/' + encodeURIComponent(st.handle))).json();
+    return [].concat(...(v.finishes || []).map((f) => f.items || [])).some((i) => i.name === 'Smart kettle');
+  };
+
+  await test.step('⭐⭐ a store that only ASKED sells none of the brand\'s products — until the brand approves it', async () => {
+    expect(await kettleAt0(follows), '⚠️ a store outside the network sells the brand\'s product').toBe(false);
+    expect(await approveJoins(page), 'the two stores did not ask to join by adopting').toBe(2);
+    expect(await kettleAt0(follows), 'an approved store still cannot sell the product').toBe(true);
+  });
   const kettleAt = async (st) => {
     const v = await (await request.get(API + '/api/catalogue/' + encodeURIComponent(st.handle))).json();
     const it = [].concat(...(v.finishes || []).map((f) => f.items || [])).find((i) => i.name === 'Smart kettle');

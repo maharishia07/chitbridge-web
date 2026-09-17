@@ -7,7 +7,7 @@
 // Two shops, as two separate sign-ins: the BRAND authors a catalogue and an offer; the STORE adopts the catalogue and runs a
 // counter. Driven through the same routes the screens use, and the counter's own shop read.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext } = require('../fixtures');
+const { mintEntity, mintInContext, approveJoins } = require('../fixtures');
 
 const api = (page, name, opts) => page.evaluate(async ({ name, opts }) => {
   try { return { ok: true, body: await api(name, opts || {}) }; }
@@ -48,10 +48,26 @@ test('[TILL-26] network offers: released, taken or declined, and on the counter 
   const cid = (await api(store.page, 'counterAdd', { body: { name: 'Showroom' } })).body.counter.id;
   const key = (await api(store.page, 'counterOpen', { params: { id: cid } })).body.key;
 
-  await test.step('⭐ the brand sees its network — the store that adopted it is counted', async () => {
+  /* moved 2026-09-17: adopting no longer PUTS a store in the network — it ASKS to join, and the brand decides (Athi: "the
+     network has to approve"). The assertion "the store is counted" now holds only after the approval. */
+  await test.step('⭐⭐ adopting ASKS to join — the brand sees the request, and the store sells none of its products yet', async () => {
     const v = await api(page, 'netOffers');
     expect(v.body.brand.is_brand).toBe(true);
-    expect(v.body.brand.stores, 'adopting did not put the store in the brand\'s network').toBeGreaterThanOrEqual(1);
+    const ask = (v.body.brand.members || []).find((m) => m.state === 'requested' && m.asked_by === 'store');
+    expect(ask, 'adopting did not ask to join the brand\'s network').toBeTruthy();
+    expect(v.body.brand.stores, 'a store that only asked is counted as in').toBe(0);
+    const s = await snap(store.page, key);
+    expect((s.items || []).filter((i) => i.source).length, '⚠️ a store outside the network sells the brand\'s products').toBe(0);
+    const mine = ((await api(store.page, 'netOffers')).body.store.networks || [])[0];
+    expect(mine && mine.membership && mine.membership.state, 'the store is not told it is waiting').toBe('asked');
+  });
+
+  await test.step('⭐ the brand approves — the store is in, and counted', async () => {
+    expect(await approveJoins(page)).toBe(1);
+    const v = await api(page, 'netOffers');
+    expect(v.body.brand.stores, 'the approved store is not counted').toBeGreaterThanOrEqual(1);
+    const s = await snap(store.page, key);
+    expect((s.items || []).some((i) => i.name === 'Smart kettle'), 'an approved store still cannot sell the brand\'s product').toBe(true);
   });
 
   await test.step('⭐⭐ OPT-IN: released now, but NOT applied until the store takes it', async () => {

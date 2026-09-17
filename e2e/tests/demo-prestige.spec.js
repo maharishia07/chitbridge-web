@@ -13,7 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext } = require('../fixtures');
+const { mintEntity, mintInContext, approveJoins } = require('../fixtures');
 
 const OUT = path.join(__dirname, '..', 'demo-prestige-summary.json');
 const SOURCE = 'prestige-home@v1';
@@ -141,6 +141,16 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
     /* each store prices the network's products itself — Anna Nagar sells the Apex below MRP */
     const commercials = {};
     for (const p of PRODUCTS) commercials[p.name] = { price: (s.area === 'Anna Nagar' && p.code === 'PR-APEX-500') ? 3799 : p.mrp, unit: 'piece' };
+    /* ⭐ JOINING THE NETWORK (Athi, 2026-09-17: "the network has to approve"): Prestige INVITES this existing store, and the store
+       ACCEPTS — the network's own edge. A re-run finds it already in and moves on. */
+    const myHandle = await st.page.evaluate(async () => { const me = await api('me'); const e = (me && me.entity) || me || {}; return e.user_id || e.bridge_id; });
+    await call(page, 'netConnect', { body: { childHandle: myHandle, type: 'commercial' } });
+    const mine = ((await call(st.page, 'netOffers')).body.store.networks || []).find((n) => n.membership && n.membership.state === 'invited');
+    if (mine) {
+      const acc = await call(st.page, 'netApprove', { params: { id: mine.membership.edge_id }, body: {} });
+      expect(acc.ok, s.area + ' could not accept the invitation: ' + acc.message).toBe(true);
+      note(s.area, 'accepted Prestige\'s invitation to its network');
+    }
     const ad = await call(st.page, 'catalogueAdopt', { body: { source: SOURCE, commercials } });
     expect(ad.ok, s.area + ' could not adopt the network catalogue: ' + ad.message).toBe(true);
     /* the store's own particulars — what its counter prints at the top of every bill */

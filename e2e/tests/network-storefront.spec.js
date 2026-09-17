@@ -4,7 +4,7 @@
 // network offer; the storefront showed the same product at full price, and its checkout had no way to apply one. One key
 // per adopted line (lib/network-offers.lineKey) now ties the row's promise to the order's arithmetic.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext } = require('../fixtures');
+const { mintEntity, mintInContext, approveJoins } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
 const app = (page, name, opts) => page.evaluate(async ({ name, opts }) => {
@@ -40,6 +40,8 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
     const me = await api('me'); const e = (me && me.entity) || me || {}; return e.user_id || e.bridge_id;
   });
   expect(handle).toBeTruthy();
+  /* adopting asked to join — the brand approves, and only then is the store in its network */
+  expect(await approveJoins(page), 'the store did not ask to join by adopting').toBe(1);
 
   const hint = page.getByTestId('net-unreleased-' + offerId);
   const openSetupOffers = async () => {

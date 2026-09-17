@@ -473,3 +473,21 @@ async function openTab(page, key) {
   throw new Error('openTab: pane ' + key + ' never became visible — ' + JSON.stringify(why));
 }
 module.exports.openTab = openTab;
+
+/**
+ * approveJoins(brandPage) — the brand approves every store that ASKED to join its network (a store asks when it adopts the
+ * brand's catalogue — the network decides, src/services/network). Returns how many it approved. One helper for every spec
+ * that sets up a brand and its stores.
+ */
+async function approveJoins(brandPage) {
+  const out = await brandPage.evaluate(async () => {
+    const v = await api('netOffers');
+    const asks = ((v && v.brand && v.brand.members) || []).filter((m) => m.state === 'requested' && m.asked_by === 'store');
+    const errs = [];
+    for (const m of asks) { try { await api('netApprove', { params: { id: m.edge_id }, body: {} }); } catch (e) { errs.push(m.name + ': ' + (e && e.message)); } }
+    return { n: asks.length, errs };
+  });
+  if (out.errs.length) throw new Error('approveJoins: ' + out.errs.join('; '));
+  return out.n;
+}
+module.exports.approveJoins = approveJoins;

@@ -5047,10 +5047,8 @@ function netOffersHTML(){
     }).join('');
     out += '<div style="' + _CARD + '">'
       + '<div class="sec" style="margin:0 0 6px">' + tx('Your network') + ' · ' + (b.stores || 0) + ' ' + tx('store(s)') + '</div>'
-      /* ⭐ named, not only counted — a store joins by adopting your catalogue, and may belong to other brands' networks too */
-      + ((b.members || []).length ? '<div data-testid="neto-members" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'
-          + b.members.map(function(m){ return '<span class="pill" title="' + esc(tx('joined') + ' ' + _netWhen(m.joined_at)) + '">' + esc(m.name || m.id) + '</span>'; }).join('')
-          + '</div>' : '')
+      /* ⭐ WHO IS IN — and the network decides (src/services/network: the side that did not ask approves) */
+      + netMembersHTML(b.members || [])
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">'
       + tx('Offers you release reach every store that uses your catalogue, and every counter in those stores. A release takes effect at the next opening, so nothing changes in the middle of a trading day unless you choose to.')
       + '</div>'
@@ -5081,11 +5079,14 @@ function netOffersHTML(){
     }).join('');
     out += '<div style="' + _CARD + '">'
       /* ⭐ one card per brand this store sells for — a store can be in several networks, each with its own offers and prices */
-      + '<div class="sec" style="margin:0 0 6px" data-testid="neto-network-' + esc(nw.brand_id) + '">' + tx('Member of') + ' ' + esc(nw.brand_name || tx('a network')) + '</div>'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
-      + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
-                 : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
-      + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>') + '</div>';
+      + netStandingHTML(nw)
+      + (((nw.membership || {}).state || 'active') === 'active'
+          ? '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
+            + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
+                       : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
+            + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>')
+          : '')
+      + '</div>';
   });
 
   if (!out) out = '<div style="' + _CARD + ';color:var(--grey)">'
@@ -5287,6 +5288,74 @@ async function netoRelease(id, now){
 async function netoWithdraw(id){
   try { await api('netOfferWithdraw', { params: { id: id }, body: {} }); if (typeof toast === 'function') toast(tx('Withdrawn from the next opening')); netoReload(); }
   catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not withdraw'), true); }
+}
+/**
+ * ── ⭐⭐ MEMBERSHIP — THE NETWORK'S OWN EDGES (Athi, 2026-09-17) ──────────────────────────────────────────────────────
+ * *"brand should approve and remove members … using our network architecture … we have that logic already."* Every button
+ * here is an existing /api/network call (netConnect · netApprove · netDecline · netSuspend · netResume · netDisconnect);
+ * the server decides who may press it from the signed-in business. built = a store the brand made (can be paused, not
+ * removed); joined = an existing business that asked or was invited (can be removed).
+ */
+var _NET_STATE = { active: 'in the network', suspended: 'paused', requested: 'waiting' };
+function netMembersHTML(list){
+  var rows = list.map(function(m, i){
+    var btns = '';
+    if (m.state === 'requested' && m.asked_by === 'store')
+      btns = '<button class="pri" data-testid="netm-approve-' + i + '" onclick="netmAct(\'netApprove\',\'' + esc(m.edge_id) + '\')">' + tx('Approve') + '</button>'
+           + '<button data-testid="netm-decline-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Decline') + '</button>';
+    else if (m.state === 'requested')
+      btns = '<button data-testid="netm-cancel-' + i + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Cancel invitation') + '</button>';
+    else if (m.state === 'suspended' && m.edge_id)
+      btns = '<button class="pri" data-testid="netm-resume-' + i + '" onclick="netmAct(\'netResume\',\'' + esc(m.edge_id) + '\')">' + tx('Resume') + '</button>';
+    else if (m.state === 'active' && m.via === 'joined')
+      btns = (_NETO_ARMED === 'rm:' + m.edge_id
+               ? '<button class="warn" data-testid="netm-remove-' + i + '" onclick="netmAct(\'netDisconnect\',\'' + esc(m.edge_id) + '\')">' + tx('Remove — their counters stop selling your products') + '</button>'
+               : '<button data-testid="netm-remove-' + i + '" onclick="_NETO_ARMED=\'rm:' + esc(m.edge_id) + '\';loadSettings()">' + tx('Remove') + '</button>');
+    else if (m.state === 'active' && m.edge_id)
+      btns = '<button data-testid="netm-pause-' + i + '" onclick="netmAct(\'netSuspend\',\'' + esc(m.edge_id) + '\')">' + tx('Pause') + '</button>';
+    var words = m.state === 'requested' ? (m.asked_by === 'store' ? tx('asks to join') : tx('invited — waiting for them')) : tx(_NET_STATE[m.state] || m.state);
+    return '<div data-testid="netm-' + i + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:5px 0;border-top:1px solid var(--line)">'
+      + '<span style="flex:1 1 200px;min-width:0"><b>' + esc(m.name || m.id) + '</b> <span style="font-size:var(--fs-1);color:var(--'
+      + (m.state === 'active' ? 'ok' : 'warn-2') + ')">' + esc(words) + (m.via === 'built' ? ' · ' + esc(tx('your store')) : '') + '</span></span>' + btns + '</div>';
+  }).join('');
+  return '<div data-testid="neto-members" style="margin-bottom:8px">' + rows
+    + '<div style="display:flex;gap:6px;align-items:center;margin-top:6px">'
+    + '<input id="netm_handle" data-testid="netm-handle" placeholder="' + esc(tx('Invite a store by its handle')) + '" style="flex:1;min-width:0">'
+    + '<button data-testid="netm-invite" onclick="netmInvite()">' + tx('Invite') + '</button></div></div>';
+}
+function netStandingHTML(nw){
+  var m = nw.membership || { state: 'active' }, name = esc(nw.brand_name || tx('this brand'));
+  var head = function(words, color){ return '<div class="sec" style="margin:0 0 6px" data-testid="neto-network-' + esc(nw.brand_id) + '">' + words + '</div>'
+    + (color ? '' : ''); };
+  if (m.state === 'active') return head(tx('Member of') + ' ' + name);
+  var note = function(words, btns){ return head(name) + '<div data-testid="neto-standing-' + esc(nw.brand_id) + '" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:var(--fs-2);color:var(--warn-2);margin-bottom:6px"><span style="flex:1 1 220px">' + words + '</span>' + (btns || '') + '</div>'; };
+  if (m.state === 'invited') return note(esc(tx('invited your store to its network')),
+    '<button class="pri" data-testid="neto-accept-' + esc(nw.brand_id) + '" onclick="netmAct(\'netApprove\',\'' + esc(m.edge_id) + '\')">' + tx('Accept') + '</button>'
+    + '<button data-testid="neto-refuse-' + esc(nw.brand_id) + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Decline') + '</button>');
+  if (m.state === 'asked') return note(esc(tx('You asked to join — its products show here once it approves.')),
+    '<button data-testid="neto-unask-' + esc(nw.brand_id) + '" onclick="netmAct(\'netDecline\',\'' + esc(m.edge_id) + '\')">' + tx('Cancel request') + '</button>');
+  if (m.state === 'suspended') return note(esc(tx('paused your store — its products and offers are not shown here for now.')));
+  return note(esc(tx('Not in its network — its products are not shown here.')),
+    (m.brand_node ? '<button class="pri" data-testid="neto-ask-' + esc(nw.brand_id) + '" onclick="netmAsk(\'' + esc(m.brand_node) + '\')">' + tx('Ask to join') + '</button>' : ''));
+}
+function _netmDone(){
+  if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
+  if (typeof UI !== 'undefined') UI._ctOffers = undefined;
+  _NETO_ARMED = null; netoReload();
+}
+async function netmAct(ep, edgeId){
+  try { await api(ep, { params: { id: edgeId }, body: {} }); toast(tx('Done')); _netmDone(); }
+  catch (e) { toast((e && e.message) || tx('Could not do that'), true); }
+}
+async function netmAsk(brandNode){
+  try { await api('netConnect', { body: { parentId: brandNode, type: 'commercial' } }); toast(tx('Asked — the brand decides')); _netmDone(); }
+  catch (e) { toast((e && e.message) || tx('Could not ask'), true); }
+}
+async function netmInvite(){
+  var el = document.getElementById('netm_handle'), h = el && el.value.trim();
+  if (!h) return;
+  try { await api('netConnect', { body: { childHandle: h, type: 'commercial' } }); toast(tx('Invited — they decide')); _netmDone(); }
+  catch (e) { toast((e && e.message) || tx('Could not invite'), true); }
 }
 async function netoChoice(id, choice){
   try { await api('netOfferChoice', { params: { id: id }, body: { choice: choice || null } }); if (typeof toast === 'function') toast(tx('Saved — your counters are told')); netoReload(); }
