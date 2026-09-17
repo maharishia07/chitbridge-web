@@ -15,6 +15,12 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   counterRename:  {m:'PATCH',p:'/api/counters/:id',              ok:'✓'},
   counterOpen:    {m:'POST', p:'/api/counters/:id/open',         ok:'✓'},
   counterRelease: {m:'POST', p:'/api/counters/:id/release',      ok:'✓'},
+  /* ⭐ a brand releases offers to its stores; a store takes them or not (routes/network-offers.js, 2026-09-17) */
+  netOffers:        {m:'GET',  p:'/api/network-offers',              ok:'✓'},
+  netOfferPolicy:   {m:'PUT',  p:'/api/network-offers/policy',       ok:'✓'},
+  netOfferRelease:  {m:'POST', p:'/api/network-offers/:id/release',  ok:'✓'},
+  netOfferWithdraw: {m:'POST', p:'/api/network-offers/:id/withdraw', ok:'✓'},
+  netOfferChoice:   {m:'POST', p:'/api/network-offers/:id/choice',   ok:'✓'},
   intCatalogue:{m:'GET',  p:'/api/integrations/catalogue',  ok:'y'},   // the connectors that exist (routes/integrations.js)
   intStatus: {m:'GET',    p:'/api/integrations/status',     ok:'y'},
   intApprove:{m:'POST',   p:'/api/integrations/:id/approve', ok:'✓'},  // the owner approves a connector's PC (the handshake)   // the connectors that have checked in
@@ -4757,6 +4763,7 @@ var INT_TABS = [
   { key: 'streams',    n: 'Who owns what',   q: 'one owner per stream' },
   { key: 'books',      n: 'In the books',    q: 'did it land, and what is late' },
   { key: 'store',      n: 'The store',       q: 'what your own books say about you' },
+  { key: 'netoffers',  n: 'Network offers',  q: 'offers a brand releases to its stores, and which ones each store takes' },
   { key: 'counters',   n: 'Counters',        q: 'every till on your shop \u2014 where it is, when it last spoke' },
   { key: 'keys',       n: 'Keys & services', q: 'what other systems sign in with' },
 ];
@@ -4971,6 +4978,119 @@ async function intRecRetry(id){
  * again, but in only one PC."* This is that register. The pairings further down are the older way in, kept visible
  * so nothing a shop has already billed through disappears from view.
  */
+/**
+ * ── ⭐⭐⭐ NETWORK OFFERS (Athi, 2026-09-17) ──────────────────────────────────────────────────────────────────────
+ * *"Only offers the store opts into — that can be a setting, opt-in, opt-out … a controlled mechanism of releasing the
+ * offer … those offers reflect in every store and every counter."*
+ * A BRAND sees its model and its offers, and releases or withdraws each — at the next opening unless it says "now".
+ * A STORE sees each network it belongs to and takes or declines each released offer. Every change is pushed: the
+ * brand's release to every member store, and each store to its own counters.
+ */
+var _NETO, _NETO_ARMED = null;
+function netoReload(){ _NETO = undefined; loadSettings(); }
+function _netWhen(iso){
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+  catch (_) { return String(iso).slice(0, 16); }
+}
+function _netRelWords(r){
+  if (!r) return tx('not released');
+  var now = Date.now(), at = r.at ? new Date(r.at).getTime() : 0, until = r.until ? new Date(r.until).getTime() : 0;
+  if (until && until <= now) return tx('withdrawn') + ' ' + _netWhen(r.until);
+  var w = at > now ? tx('released — starts') + ' ' + _netWhen(r.at) : tx('running since') + ' ' + _netWhen(r.at);
+  if (until) w += ' · ' + tx('ends') + ' ' + _netWhen(r.until);
+  return w;
+}
+function netOffersHTML(){
+  if (_NETO === undefined) { _NETO = null; api('netOffers').then(function(r){ _NETO = r || {}; if (setSec() === 'integrations') loadSettings(); })
+    .catch(function(e){ _NETO = { error: (e && e.message) || true }; if (setSec() === 'integrations') loadSettings(); }); }
+  if (_NETO === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
+  if (_NETO.error) return '<div style="' + _CARD + ';color:var(--warn)">' + tx('Could not read network offers.') + '</div>';
+  var b = _NETO.brand || {}, nets = (_NETO.store && _NETO.store.networks) || [];
+  var out = '';
+
+  if (b.is_brand) {
+    var pol = b.policy || 'opt_in';
+    var polBtn = function(k, label, hint){
+      return '<button class="' + (pol === k ? 'pri' : '') + '" data-testid="neto-policy-' + k + '" onclick="netoPolicy(\'' + k + '\')"'
+        + ' title="' + esc(hint) + '">' + tx(label) + '</button>';
+    };
+    var rows = (b.offers || []).map(function(o){
+      var r = o.released, live = o.status === 'live';
+      var running = r && (!r.until || new Date(r.until).getTime() > Date.now());
+      var armed = _NETO_ARMED === 'now:' + o.id;
+      return '<div data-testid="neto-offer-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
+        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
+        + '<div style="font-size:var(--fs-1);color:var(--' + (running ? 'ok' : 'grey') + ')" data-testid="neto-state-' + esc(o.id) + '">'
+        + (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing')) + '</div></span>'
+        + (live && !running
+            ? '<button class="pri" data-testid="neto-release-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',false)">' + tx('Release at next opening') + '</button>'
+              + '<button data-testid="neto-release-now-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',true)">'
+              + (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) + '</button>'
+            : '')
+        + (running ? '<button class="warn" data-testid="neto-withdraw-' + esc(o.id) + '" onclick="netoWithdraw(\'' + esc(o.id) + '\')">' + tx('Withdraw at next opening') + '</button>' : '')
+        + '</div>';
+    }).join('');
+    out += '<div style="' + _CARD + '">'
+      + '<div class="sec" style="margin:0 0 6px">' + tx('Your network') + ' · ' + (b.stores || 0) + ' ' + tx('store(s)') + '</div>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">'
+      + tx('Offers you release reach every store that uses your catalogue, and every counter in those stores. A release takes effect at the next opening, so nothing changes in the middle of a trading day unless you choose to.')
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+      + polBtn('opt_in', 'Stores choose which offers to take', 'opt-in: an offer applies only in stores that take it')
+      + polBtn('opt_out', 'Every released offer applies', 'opt-out: an offer applies unless a store declines it')
+      + '</div>'
+      + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('No offers yet — declare them under Offers, make them live, then release them here.') + '</div>')
+      + '</div>';
+  }
+
+  nets.forEach(function(nw){
+    var optIn = nw.policy !== 'opt_out';
+    var rows = (nw.offers || []).map(function(o){
+      var btn = o.applies
+        ? '<button data-testid="neto-out-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? '' : 'out') + '\')">' + tx(optIn ? 'Stop taking it' : 'Decline') + '</button>'
+        : '<button class="pri" data-testid="neto-in-' + esc(o.id) + '" onclick="netoChoice(\'' + esc(o.id) + '\',\'' + (optIn ? 'in' : '') + '\')">' + tx('Take this offer') + '</button>';
+      return '<div data-testid="neto-net-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
+        + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
+        + '<div style="font-size:var(--fs-1);color:var(--' + (o.applies ? 'ok' : 'grey') + ')">'
+        + (o.applies ? tx('applies at your counters') : tx('not applied here')) + ' · ' + esc(_netRelWords({ at: o.at, until: o.until })) + '</div></span>'
+        + (o.live ? btn : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer live at the brand') + '</span>')
+        + '</div>';
+    }).join('');
+    out += '<div style="' + _CARD + '">'
+      + '<div class="sec" style="margin:0 0 6px">' + tx('From') + ' ' + esc(nw.brand_name || tx('your network')) + '</div>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
+      + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
+                 : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
+      + (rows || '<div style="color:var(--grey);padding:6px 0">' + tx('Nothing released yet.') + '</div>') + '</div>';
+  });
+
+  if (!out) out = '<div style="' + _CARD + ';color:var(--grey)">'
+    + tx('This shop is not part of a network. A brand shares its catalogue with its stores — a store that adopts it sees the brand\'s offers here, and a brand releases them from here.') + '</div>';
+  return out;
+}
+async function netoPolicy(k){
+  try { await api('netOfferPolicy', { body: { policy: k } }); if (typeof toast === 'function') toast(tx('Saved — every store is told')); netoReload(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true); }
+}
+async function netoRelease(id, now){
+  /* ⚠️ "now" is a mid-day change for every store — two presses, and the second one says so */
+  if (now && _NETO_ARMED !== 'now:' + id) { _NETO_ARMED = 'now:' + id; loadSettings(); return; }
+  _NETO_ARMED = null;
+  try {
+    var r = await api('netOfferRelease', { params: { id: id }, body: now ? { at: 'now' } : {} });
+    if (typeof toast === 'function') toast(tx('Released') + ' — ' + ((r && r.pushed && r.pushed.stores) || 0) + ' ' + tx('store(s) told'));
+    netoReload();
+  } catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not release'), true); }
+}
+async function netoWithdraw(id){
+  try { await api('netOfferWithdraw', { params: { id: id }, body: {} }); if (typeof toast === 'function') toast(tx('Withdrawn from the next opening')); netoReload(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not withdraw'), true); }
+}
+async function netoChoice(id, choice){
+  try { await api('netOfferChoice', { params: { id: id }, body: { choice: choice || null } }); if (typeof toast === 'function') toast(tx('Saved — your counters are told')); netoReload(); }
+  catch (e) { if (typeof toast === 'function') toast((e && e.message) || tx('Could not save'), true); }
+}
 var _CTRS;
 function ctrReload(){ _CTRS = undefined; loadSettings(); }
 function ctrRegisterHTML(){
@@ -5199,6 +5319,7 @@ function integrationsSettingsHTML(){
   if (tab === 'books')   return head + intReconcileHTML();
   if (tab === 'store')   return head + intProfileMapHTML();
   if (tab === 'counters') return head + intCountersHTML();
+  if (tab === 'netoffers') return head + netOffersHTML();
   return head
     + '<div style="' + _CARD + '"><div class="sec" style="margin:0 0 6px">' + tx('The services') + '</div>'
     + '<div style="font-size:var(--fs-2)">' + tx('Another system sends lines and gets back the governed answer — the unit price at a quantity, what comes off and why, the tax, the whole invoice — from the same engines the storefront, compose and the chit use.') + '</div>'
