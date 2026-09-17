@@ -143,6 +143,11 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
     for (const p of PRODUCTS) commercials[p.name] = { price: (s.area === 'Anna Nagar' && p.code === 'PR-APEX-500') ? 3799 : p.mrp, unit: 'piece' };
     const ad = await call(st.page, 'catalogueAdopt', { body: { source: SOURCE, commercials } });
     expect(ad.ok, s.area + ' could not adopt the network catalogue: ' + ad.message).toBe(true);
+    /* the store's own particulars — what its counter prints at the top of every bill */
+    const idt = await call(st.page, 'vaultSave', { body: { vault: { sections: [{ type: 'identity', label: 'Business identity', rows: [
+      { name: 'Trade / brand name', value: 'Prestige Smart Kitchen · ' + s.area, tag: 'trade_name' },
+      { name: 'City', value: 'Chennai', tag: 'city' }, { name: 'State', value: 'Tamil Nadu', tag: 'state' }] }] } } });
+    expect(idt.ok, s.area + ' could not save its trade name: ' + idt.message).toBe(true);
     /* a clean slate on re-runs: no leftover choice */
     await call(st.page, 'netOfferChoice', { params: { id: A }, body: { choice: null } });
     /* the store's counter — reused by name, released if a previous run left it held */
@@ -161,11 +166,13 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
       products: (S.items || []).filter((i) => i.source).map((i) => ({ name: i.name, price: i.price, image: !!i.image })),
       offers: (S.offers || []).filter((o) => o.network).map((o) => ({ label: o.label, percent: o.percent, from: o.valid_from })),
       counter: tillId(),
+      shop: S.shop && S.shop.name, address: S.shop && S.shop.address,
     }));
     expect(seen.products.length, s.area + '\'s counter does not have the network products').toBe(5);
     expect(seen.products.every((x) => x.image), s.area + '\'s counter is missing product pictures').toBe(true);
     expect(seen.offers.some((o) => o.percent === 10), s.area + ' did not inherit the running offer').toBe(true);
-    note(s.area, 'store set up; adopted the network catalogue; counter ' + seen.counter + ' opened with ' + seen.products.length
+    expect(seen.shop, s.area + ' — the counter does not show its trade name').toBe('Prestige Smart Kitchen · ' + s.area);
+    note(s.area, 'store "' + seen.shop + '" (' + seen.address + ') set up; adopted the network catalogue; counter ' + seen.counter + ' opened with ' + seen.products.length
       + ' products (all with pictures) and inherited "' + OFFER_A + '" at 10%');
     /* ⚠️ MEMORY: seven browser windows at once got the run stopped. The store's app page has done its job — Adyar makes
        its choice first — and only the counters stay open for billing. */
