@@ -5047,6 +5047,10 @@ function netOffersHTML(){
     }).join('');
     out += '<div style="' + _CARD + '">'
       + '<div class="sec" style="margin:0 0 6px">' + tx('Your network') + ' · ' + (b.stores || 0) + ' ' + tx('store(s)') + '</div>'
+      /* ⭐ named, not only counted — a store joins by adopting your catalogue, and may belong to other brands' networks too */
+      + ((b.members || []).length ? '<div data-testid="neto-members" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'
+          + b.members.map(function(m){ return '<span class="pill" title="' + esc(tx('joined') + ' ' + _netWhen(m.joined_at)) + '">' + esc(m.name || m.id) + '</span>'; }).join('')
+          + '</div>' : '')
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">'
       + tx('Offers you release reach every store that uses your catalogue, and every counter in those stores. A release takes effect at the next opening, so nothing changes in the middle of a trading day unless you choose to.')
       + '</div>'
@@ -5076,7 +5080,8 @@ function netOffersHTML(){
         + '</div>';
     }).join('');
     out += '<div style="' + _CARD + '">'
-      + '<div class="sec" style="margin:0 0 6px">' + tx('From') + ' ' + esc(nw.brand_name || tx('your network')) + '</div>'
+      /* ⭐ one card per brand this store sells for — a store can be in several networks, each with its own offers and prices */
+      + '<div class="sec" style="margin:0 0 6px" data-testid="neto-network-' + esc(nw.brand_id) + '">' + tx('Member of') + ' ' + esc(nw.brand_name || tx('a network')) + '</div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:6px">'
       + tx(optIn ? 'Your network lets each store choose. An offer applies here only if you take it.'
                  : 'Your network applies every released offer. You can decline one for this store.') + '</div>'
@@ -5094,7 +5099,7 @@ function netOffersHTML(){
  * Like an offer: at the next opening unless "now" is pressed twice. A store still at the brand's price follows it; a store
  * with its own price is asked, never overwritten (lib/network-catalogue.js).
  */
-var _NETC_ADD = {};
+var _NETC_ADD = {}, _NETC_OUT = {};
 var _NETC_WORDS = { price: 'price', mrp: 'MRP', name: 'name', category: 'category', hsn: 'HSN', unit: 'unit', image: 'picture', desc: 'description' };
 function _netMoney(n){
   if (n === null || n === undefined || n === '') return '—';
@@ -5108,11 +5113,15 @@ function _netFieldWords(f){
 function netCatBrandHTML(c, stores){
   var key = c.source_key, sel = _NETC_ADD[key] || {};
   var nSel = Object.keys(sel).filter(function(k){ return sel[k]; }).length;
+  var outSel = _NETC_OUT[key] || {};
+  var nOut = Object.keys(outSel).filter(function(k){ return outSel[k]; }).length;
   var armed = _NETO_ARMED === 'pub:' + key;
   var changes = (c.changes || []).map(function(ch, i){
     return '<div data-testid="netc-change-' + i + '" style="padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
       + '<b>' + esc(ch.name) + '</b>' + (ch.was ? ' <span style="color:var(--grey)">(' + tx('was') + ' ' + esc(ch.was) + ')</span>' : '')
-      + ' — ' + (ch.fields || []).map(_netFieldWords).join(' · ') + '</div>';
+      + ' — ' + (ch.kind === 'withdrawn' ? tx('withdrawn from your stores') :
+                 ch.kind === 'withdrawn_at' ? tx('withdrawn from') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') :
+                 ch.kind === 'restored_at' ? tx('offered again at') + ' ' + (ch.stores || []).length + ' ' + tx('store(s)') : (ch.kind === 'added' ? tx('new to your stores') + ' · ' : '') + (ch.fields || []).map(_netFieldWords).join(' · ')) + '</div>';
   }).join('');
   var cands = (c.candidates || []).map(function(p){
     return '<label data-testid="netc-add-' + esc(p.item_id) + '" style="display:flex;gap:8px;align-items:center;padding:4px 0;font-size:var(--fs-2)">'
@@ -5124,7 +5133,39 @@ function netCatBrandHTML(c, stores){
       + esc((c.pending.changes || []).length + ' ' + tx('change(s) go to your stores') + ' ' + _netWhen(c.pending.at))
       + ' <button class="warn" data-testid="netc-cancel" onclick="netcCancel(\'' + esc(key) + '\')">' + tx('Cancel') + '</button></div>'
     : '';
-  var any = (c.changes || []).length || nSel;
+  var any = (c.changes || []).length || nSel || nOut;
+  /* ⭐ WITHDRAW — tick what the stores should stop selling; it goes with the next publish (lib/network-catalogue.diff) */
+  var missing = {}; (c.missing || []).forEach(function(n){ missing[n] = true; });
+  /* ⭐ …or from SOME stores: each product opens a row of its stores, ticked where it is (or will be) withdrawn */
+  var atSel = _NETC_AT[key] || {}, cur = c.withdrawn_at || {}, storeList = c.stores || [];
+  var nAt = netcAtChanges(c).count;
+  any = any || nAt;
+  var shared = (c.published || []).map(function(n, i){
+    var now = cur[n] || [], want = atSel[n] || null;
+    var isOut = function(id){ return want && (id in want) ? !!want[id] : now.indexOf(id) >= 0; };
+    var outCount = storeList.filter(function(s){ return isOut(s.id); }).length;
+    var open = _NETC_OPEN === key + '|' + n;
+    return '<div data-testid="netc-out-' + i + '" style="padding:3px 0;font-size:var(--fs-2)">'
+      + '<label style="display:flex;gap:8px;align-items:center">'
+      + '<input type="checkbox" ' + (outSel[n] ? 'checked ' : '') + 'onchange="netcOut(\'' + esc(key) + '\',' + i + ',this.checked)">'
+      + '<span style="' + (outSel[n] ? 'text-decoration:line-through;color:var(--warn-2)' : '') + '">' + esc(n) + '</span>'
+      + (missing[n] ? ' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('no longer in your products') + '</span>' : '')
+      + (outSel[n] ? ' <span style="color:var(--warn-2);font-size:var(--fs-1)">' + tx('withdrawn from your stores when you publish') + '</span>' : '')
+      + (!outSel[n] && storeList.length
+          ? ' <span role="button" tabindex="0" data-testid="netc-at-open-' + i + '" onclick="event.preventDefault();netcAtOpen(\'' + esc(key) + '\',' + i + ')"'
+            + ' style="color:var(--blue);cursor:pointer;font-size:var(--fs-1)">' + esc(outCount ? tx('withdrawn from') + ' ' + outCount + ' ' + tx('store(s)') + ' ▾' : tx('by store') + ' ▸') + '</span>'
+          : '')
+      + '</label>'
+      + (open && !outSel[n] ? '<div data-testid="netc-at-' + i + '" style="display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 4px 26px">'
+          + storeList.map(function(s, j){
+              var changed = want && (s.id in want) && (!!want[s.id] !== (now.indexOf(s.id) >= 0));
+              return '<label data-testid="netc-at-' + i + '-' + j + '" style="display:flex;gap:4px;align-items:center;font-size:var(--fs-1)' + (changed ? ';font-weight:700' : '') + '">'
+                + '<input type="checkbox" ' + (isOut(s.id) ? 'checked ' : '') + 'onchange="netcAt(\'' + esc(key) + '\',' + i + ',' + j + ',this.checked)">'
+                + esc(tx('withdraw at') + ' ' + s.name) + '</label>';
+            }).join('') + '</div>'
+        : '')
+      + '</div>';
+  }).join('');
   var log = (c.log || []).map(function(l){
     var state = l.cancelled_at ? tx('cancelled') : (l.applied_at ? tx('with your stores since') + ' ' + _netWhen(l.applied_at) : tx('waiting for') + ' ' + _netWhen(l.at));
     return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(_netWhen(l.published_at)) + ' · '
@@ -5136,7 +5177,8 @@ function netCatBrandHTML(c, stores){
     + (changes ? '<div style="font-size:var(--fs-2);margin-bottom:4px">' + tx('Changed since your stores last received it:') + '</div>' + changes
                : '<div data-testid="netc-uptodate" style="color:var(--grey);font-size:var(--fs-2);padding:4px 0">' + tx('Your stores have every change.') + '</div>')
     + (cands ? '<div style="font-size:var(--fs-2);margin:8px 0 2px">' + tx('Not shared with your stores yet — tick to add:') + '</div>' + cands : '')
-    + ((c.missing || []).length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">' + esc(tx('Still offered to your stores, but no longer in your products:') + ' ' + c.missing.join(', ')) + '</div>' : '')
+    + (shared ? '<details data-testid="netc-shared"' + (nOut || (c.missing || []).length ? ' open' : '') + ' style="margin-top:8px"><summary style="cursor:pointer;font-size:var(--fs-2)">'
+        + esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) + '</summary>' + shared + '</details>' : '')
     + (any ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
         + '<button class="pri" data-testid="netc-publish" onclick="netcPublish(\'' + esc(key) + '\',false)">' + tx('Publish at next opening') + '</button>'
         + '<button data-testid="netc-publish-now" onclick="netcPublish(\'' + esc(key) + '\',true)">' + (armed ? tx('Publish NOW — mid-day, every store') : tx('Publish now')) + '</button>'
@@ -5148,15 +5190,47 @@ function netCatBrandHTML(c, stores){
     + (log ? '<div style="margin-top:8px">' + log + '</div>' : '')
     + '</div>';
 }
+var _NETC_AT = {}, _NETC_OPEN = null;
+function _netcCat(key){ return ((((_NETO || {}).brand || {}).catalogue) || []).filter(function(x){ return x.source_key === key; })[0] || null; }
+function netcAtOpen(key, i){
+  var c = _netcCat(key), n = c && (c.published || [])[i]; if (!n) return;
+  _NETC_OPEN = _NETC_OPEN === key + '|' + n ? null : key + '|' + n; loadSettings();
+}
+function netcAt(key, i, j, on){
+  var c = _netcCat(key), n = c && (c.published || [])[i], s = c && (c.stores || [])[j]; if (!n || !s) return;
+  _NETC_AT[key] = _NETC_AT[key] || {}; _NETC_AT[key][n] = _NETC_AT[key][n] || {}; _NETC_AT[key][n][s.id] = !!on; loadSettings();
+}
+/** what the per-store ticks change against what is already withdrawn → { withdraw_at, restore_at, count } */
+function netcAtChanges(c){
+  var sel = (_NETC_AT[c.source_key]) || {}, cur = c.withdrawn_at || {}, w = {}, r = {}, count = 0;
+  Object.keys(sel).forEach(function(n){
+    Object.keys(sel[n]).forEach(function(id){
+      var was = (cur[n] || []).indexOf(id) >= 0;
+      if (sel[n][id] && !was) { (w[n] = w[n] || []).push(id); count++; }
+      if (!sel[n][id] && was) { (r[n] = r[n] || []).push(id); count++; }
+    });
+  });
+  return { withdraw_at: w, restore_at: r, count: count };
+}
+function netCatAtFor(key){ var c = _netcCat(key); return c ? netcAtChanges(c) : { withdraw_at: {}, restore_at: {}, count: 0 }; }
+function netcOut(key, i, on){
+  var c = ((((_NETO || {}).brand || {}).catalogue) || []).filter(function(x){ return x.source_key === key; })[0];
+  var name = c && (c.published || [])[i]; if (!name) return;
+  _NETC_OUT[key] = _NETC_OUT[key] || {}; _NETC_OUT[key][name] = !!on; loadSettings();
+}
 function netcTick(key, id, on){ _NETC_ADD[key] = _NETC_ADD[key] || {}; _NETC_ADD[key][id] = !!on; loadSettings(); }
 async function netcPublish(key, now){
   if (now && _NETO_ARMED !== 'pub:' + key) { _NETO_ARMED = 'pub:' + key; loadSettings(); return; }
   _NETO_ARMED = null;
   var sel = _NETC_ADD[key] || {};
   try {
+    var outs = _NETC_OUT[key] || {};
+    var at = netCatAtFor(key);
     var r = await api('netCatPublish', { body: { source_key: key, at: now ? 'now' : undefined,
-      add: Object.keys(sel).filter(function(k){ return sel[k]; }) } });
-    delete _NETC_ADD[key];
+      add: Object.keys(sel).filter(function(k){ return sel[k]; }),
+      withdraw: Object.keys(outs).filter(function(k){ return outs[k]; }),
+      withdraw_at: at.withdraw_at, restore_at: at.restore_at } });
+    delete _NETC_ADD[key]; delete _NETC_OUT[key]; delete _NETC_AT[key]; _NETC_OPEN = null;
     toast(r && r.applied ? tx('Published — your stores have it now') : tx('Published — your stores get it at the next opening'));
     netoReload();
   } catch (e) { toast((e && e.message) || tx('Could not publish'), true); }
@@ -5167,8 +5241,17 @@ async function netcCancel(key){
 }
 function netCatNoticesHTML(notes){
   return '<div style="' + _CARD + '" data-testid="netc-notices">'
-    + '<div class="sec" style="margin:0 0 6px">' + tx('New prices suggested to you') + '</div>'
+    + '<div class="sec" style="margin:0 0 6px">' + tx('From your brand') + '</div>'
     + notes.map(function(n, i){
+      if (n.kind === 'restored') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
+        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--ok)">'
+        + esc((n.brand_name || tx('Your brand')) + ' ' + tx('offers this to your store again — it is back on your counter and storefront')) + '</div></span>'
+        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
+      if (n.kind === 'withdrawn') return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
+        + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--warn-2)">'
+        + esc((n.brand_name || tx('Your brand')) + ' ' + (n.only_here ? tx('withdrew this from your store — it is off your counter and storefront since')
+                                                                        : tx('no longer offers this — it is off your counter and storefront since')) + ' ' + _netWhen(n.at)) + '</div></span>'
+        + '<button data-testid="netc-ok-' + i + '" onclick="netcAnswer(' + i + ',\'ok\')">' + tx('OK') + '</button></div>';
       return '<div data-testid="netc-notice-' + i + '" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)">'
         + '<span style="flex:1 1 240px;min-width:0"><b>' + esc(n.name) + '</b><div style="font-size:var(--fs-1);color:var(--grey)">'
         + esc((n.brand_name || tx('Your brand')) + ' ' + tx('suggests') + ' ' + _netMoney(n.suggested) + ' · ' + tx('you sell at') + ' ' + _netMoney(n.yours)) + '</div></span>'
@@ -5181,7 +5264,7 @@ async function netcAnswer(i, choice){
   var n = (((_NETO || {}).store || {}).price_notices || [])[i]; if (!n) return;
   try {
     await api('netCatPrice', { body: { source_key: n.source_key, name: n.name, key: n.key, choice: choice } });
-    toast(choice === 'use' ? tx('Your price now follows the brand') : tx('Kept your price'));
+    toast(choice === 'use' ? tx('Your price now follows the brand') : (choice === 'ok' ? tx('Noted') : tx('Kept your price')));
     netoReload();
   } catch (e) { toast((e && e.message) || tx('Could not save'), true); }
 }

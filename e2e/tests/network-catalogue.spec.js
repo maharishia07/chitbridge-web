@@ -131,4 +131,71 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
     await expect(own.page.getByTestId('netc-notices')).toHaveCount(0, { timeout: 30000 });
     expect(await kettleAt(own)).toBe(1700);
   });
+
+  /* ── [NET-CAT-02] who is in the network, and withdrawing — from one store, from all, and back ── */
+  const lampAt = async (st) => {
+    const v = await (await request.get(API + '/api/catalogue/' + encodeURIComponent(st.handle))).json();
+    const it = [].concat(...(v.finishes || []).map((f) => f.items || [])).find((i) => i.name === 'Desk lamp');
+    if (!it) return null;
+    const p = it.commercials && it.commercials.price;
+    return p && typeof p === 'object' ? Number(p.amount) : Number(p);
+  };
+  const catOf = async () => ((await app(page, 'netOffers')).body.brand.catalogue || []).find((x) => x.source_key === sourceKey);
+  const noticeOf = async (st, kind) => ((await app(st.page, 'netOffers')).body.store.price_notices || []).find((x) => x.name === 'Desk lamp' && x.kind === kind);
+
+  await test.step('⭐ the brand sees its stores by name; each store sees the network it belongs to', async () => {
+    const b = (await app(page, 'netOffers')).body.brand;
+    const names = (b.members || []).map((m) => m.name);
+    expect(names.some((n) => /Follows/.test(n)) && names.some((n) => /Own/.test(n)), 'the brand cannot see who is in its network: ' + names).toBe(true);
+    await page.evaluate(async () => { await goIntTab('netoffers'); });
+    await expect(page.getByTestId('neto-members')).toContainText('Own', { timeout: 30000 });
+    const nets = (await app(own.page, 'netOffers')).body.store.networks || [];
+    expect(nets.some((n) => String(n.brand_name).indexOf('CatBrand') >= 0), 'the store cannot see the network it is in').toBe(true);
+  });
+
+  await test.step('⭐⭐ withdraw the lamp from ONE store (from the screen) — gone there, still sold at the other', async () => {
+    const c = await catOf();
+    const i = c.published.indexOf('Desk lamp'), j = c.stores.findIndex((s) => /Own/.test(s.name));
+    expect(i >= 0 && j >= 0, 'the lamp or the store is not offered for withdrawal').toBe(true);
+    await page.evaluate(async () => { if (typeof netoReload === 'function') netoReload(); });
+    await page.getByTestId('netc-at-open-' + i).click();
+    await page.getByTestId('netc-at-' + i + '-' + j).locator('input').check();
+    await page.getByTestId('netc-publish-now').click();
+    await page.getByTestId('netc-publish-now').click();
+    await expect(page.getByTestId('netc-at-open-' + i)).toContainText('withdrawn from 1', { timeout: 30000 });
+    expect(await lampAt(own), 'the lamp is still offered at the store it was withdrawn from').toBe(null);
+    expect(await lampAt(follows), 'withdrawing at one store took it from another').toBe(950);
+    expect(await noticeOf(own, 'withdrawn'), 'the store was not told').toBeTruthy();
+    expect(await noticeOf(follows, 'withdrawn'), 'a store it was NOT withdrawn from was told it was').toBeFalsy();
+  });
+
+  await test.step('⚠️⚠️ the store saving its own prices cannot bring it back', async () => {
+    const r = await app(own.page, 'catalogueAdopt', { body: { source: sourceKey, commercials: { 'Smart kettle': { price: 1700, unit: 'piece' } } } });
+    expect(r.ok, r.message).toBe(true);
+    expect(await lampAt(own), 'a store save undid the brand\'s withdrawal').toBe(null);
+  });
+
+  await test.step('⭐ restored at that store — back at the store\'s own price, and the store is told', async () => {
+    const own_id = (await catOf()).stores.find((s) => /Own/.test(s.name)).id;
+    const r = await app(page, 'netCatPublish', { body: { source_key: sourceKey, at: 'now', restore_at: { 'Desk lamp': [own_id] } } });
+    expect(r.ok, r.message).toBe(true);
+    expect(await lampAt(own), 'the store\'s own price was lost while the product was withdrawn').toBe(950);
+    expect(await noticeOf(own, 'restored')).toBeTruthy();
+  });
+
+  await test.step('⭐⭐ withdrawn from ALL stores — then shared again, and every store has it back at its own price', async () => {
+    const c = await catOf();
+    const i = c.published.indexOf('Desk lamp');
+    await page.evaluate(async () => { if (typeof netoReload === 'function') netoReload(); });
+    await page.getByTestId('netc-out-' + i).locator('input').first().check();
+    await page.getByTestId('netc-publish-now').click();
+    await page.getByTestId('netc-publish-now').click();
+    await expect(page.getByTestId('netc-uptodate')).toBeVisible({ timeout: 30000 });
+    expect([await lampAt(own), await lampAt(follows)]).toEqual([null, null]);
+    expect(await noticeOf(follows, 'withdrawn'), 'a store that sold it was not told').toBeTruthy();
+    const lamp = await idOf('Desk lamp');
+    const back = await app(page, 'netCatPublish', { body: { source_key: sourceKey, at: 'now', add: [lamp.id] } });
+    expect(back.ok, back.message).toBe(true);
+    expect([await lampAt(own), await lampAt(follows)]).toEqual([950, 950]);
+  });
 });
