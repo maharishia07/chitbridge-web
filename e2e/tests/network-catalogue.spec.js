@@ -162,6 +162,8 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
     const i = c.published.indexOf('Desk lamp'), j = c.stores.findIndex((s) => /Own/.test(s.name));
     expect(i >= 0 && j >= 0, 'the lamp or the store is not offered for withdrawal').toBe(true);
     await page.evaluate(async () => { if (typeof netoReload === 'function') netoReload(); });
+    await page.getByTestId('netc-shared').evaluate((d) => { if (!d.open) d.open = true; });
+    await expect(page.getByTestId('netc-out-' + i)).toBeVisible({ timeout: 30000 });
     await page.getByTestId('netc-at-open-' + i).click();
     await page.getByTestId('netc-at-' + i + '-' + j).locator('input').check();
     await page.getByTestId('netc-publish-now').click();
@@ -191,6 +193,8 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
     const c = await catOf();
     const i = c.published.indexOf('Desk lamp');
     await page.evaluate(async () => { if (typeof netoReload === 'function') netoReload(); });
+    await page.getByTestId('netc-shared').evaluate((d) => { if (!d.open) d.open = true; });
+    await expect(page.getByTestId('netc-out-' + i)).toBeVisible({ timeout: 30000 });
     await page.getByTestId('netc-out-' + i).locator('input').first().check();
     await page.getByTestId('netc-publish-now').click();
     await page.getByTestId('netc-publish-now').click();

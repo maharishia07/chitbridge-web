@@ -5177,7 +5177,9 @@ function netCatBrandHTML(c, stores){
     + (changes ? '<div style="font-size:var(--fs-2);margin-bottom:4px">' + tx('Changed since your stores last received it:') + '</div>' + changes
                : '<div data-testid="netc-uptodate" style="color:var(--grey);font-size:var(--fs-2);padding:4px 0">' + tx('Your stores have every change.') + '</div>')
     + (cands ? '<div style="font-size:var(--fs-2);margin:8px 0 2px">' + tx('Not shared with your stores yet — tick to add:') + '</div>' + cands : '')
-    + (shared ? '<details data-testid="netc-shared"' + (nOut || (c.missing || []).length ? ' open' : '') + ' style="margin-top:8px"><summary style="cursor:pointer;font-size:var(--fs-2)">'
+    /* ⚠️ the fold REMEMBERS it is open — every tick repaints the screen, and a list that snapped shut would lose the brand's place */
+    + (shared ? '<details data-testid="netc-shared"' + (_NETC_SHOW[key] || nOut || nAt || (c.missing || []).length ? ' open' : '')
+        + ' ontoggle="_NETC_SHOW[\'' + esc(key) + '\']=this.open" style="margin-top:8px"><summary data-testid="netc-shared-open" style="cursor:pointer;font-size:var(--fs-2)">'
         + esc(tx('With your stores') + ' (' + (c.published || []).length + ') — ' + tx('tick to withdraw')) + '</summary>' + shared + '</details>' : '')
     + (any ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
         + '<button class="pri" data-testid="netc-publish" onclick="netcPublish(\'' + esc(key) + '\',false)">' + tx('Publish at next opening') + '</button>'
@@ -5190,7 +5192,7 @@ function netCatBrandHTML(c, stores){
     + (log ? '<div style="margin-top:8px">' + log + '</div>' : '')
     + '</div>';
 }
-var _NETC_AT = {}, _NETC_OPEN = null;
+var _NETC_AT = {}, _NETC_OPEN = null, _NETC_SHOW = {};
 function _netcCat(key){ return ((((_NETO || {}).brand || {}).catalogue) || []).filter(function(x){ return x.source_key === key; })[0] || null; }
 function netcAtOpen(key, i){
   var c = _netcCat(key), n = c && (c.published || [])[i]; if (!n) return;
