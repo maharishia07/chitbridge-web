@@ -128,7 +128,9 @@ test('[TILL-23] a reopened counter continues its run on a PC that never held it'
   const id = (await h.app('counterAdd', { body: { name: 'Front desk' } })).body.counter.id;
 
   /* PC A takes five numbers, then closes */
-  const keyA = (await h.app('counterOpen', { params: { id } })).body.key;
+  const openA = await h.app('counterOpen', { params: { id } });
+  expect(openA.ok, 'PC A could not open the counter: ' + openA.message).toBe(true);
+  const keyA = openA.body.key;
   const a = await context.newPage();
   await a.goto(TILL + '/till.html#key=' + encodeURIComponent(keyA));
   await a.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
@@ -144,7 +146,9 @@ test('[TILL-23] a reopened counter continues its run on a PC that never held it'
   expect(close.status, JSON.stringify(close.body)).toBe(200);
 
   await test.step('⭐⭐⭐ PC B — its own browser storage — opens the same counter and issues 0006, not 0001', async () => {
-    const keyB = (await h.app('counterOpen', { params: { id } })).body.key;
+    const openB = await h.app('counterOpen', { params: { id } });
+    expect(openB.ok, 'PC B could not open the counter: ' + openB.message).toBe(true);
+    const keyB = openB.body.key;
     const pcB = await page.context().browser().newContext();     /* a different PC: nothing shared with PC A */
     const b = await pcB.newPage();
     await b.goto((TILL || page.url().split('/').slice(0, 3).join('/')) + '/till.html#key=' + encodeURIComponent(keyB));
@@ -167,5 +171,117 @@ test('[TILL-23] a reopened counter continues its run on a PC that never held it'
     const stopped = await c.evaluate(async () => { window.say = () => {}; return await tillStopped(); });
     expect(stopped, 'a counter with no number from the shop was allowed to bill').toBe(true);
     await pcC.close();
+  });
+});
+
+// ⭐⭐⭐ [TILL-24] A NETWORK STORE'S COUNTER SELLS THE NETWORK'S PRODUCTS. Athi, 2026-09-17, on a showroom brand: *"a network
+// store where the network provides the catalogue and offer details — every store underneath is a store on its own with its own
+// GSTIN, but they use the catalogue information from the network to sell the product."*
+// ⚠️ That reached the store's shopfront and never its counter: the snapshot read only the store's own rows.
+test('[TILL-24] a store that adopts a network catalogue sells its priced lines at the counter', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'NetStore ' + Date.now().toString().slice(-6) });
+  await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); });
+  const h = helpers(page);
+
+  await test.step('the store adopts the brand\'s catalogue — pricing one line, leaving another unpriced', async () => {
+    const r = await h.app('catalogueAdopt', { body: { source: 'beta-royale-play@v1',
+      commercials: { 'Tussar': { price: 1200, unit: 'litre' } } } });
+    expect(r.ok, r.message).toBe(true);
+  });
+
+  const id = (await h.app('counterAdd', { body: { name: 'Showroom desk' } })).body.counter.id;
+  const key = (await h.app('counterOpen', { params: { id } })).body.key;
+
+  await test.step('⭐⭐ the counter\'s shop read carries the network line, priced by the STORE', async () => {
+    const snap = await h.raw('GET', '/api/till/snapshot', key);
+    expect(snap.status).toBe(200);
+    const net = (snap.body.items || []).filter((i) => i.source);
+    const tussar = net.find((i) => i.name === 'Tussar');
+    expect(tussar, 'the network\'s product never reached the counter').toBeTruthy();
+    expect(tussar.price, 'the store\'s own price did not overlay the brand\'s line').toBe(1200);
+    expect(tussar.source.key).toBe('beta-royale-play@v1');
+    expect(tussar.item_id, 'a network line needs a stable id the counter can hold').toMatch(/^src:/);
+    /* ⚠️ an unpriced line is held back and COUNTED, never sent at zero */
+    expect(net.every((i) => i.price > 0), 'a network line was offered at no price').toBe(true);
+    expect(snap.body.network.unpriced, 'the unpriced lines were not counted').toBeGreaterThan(0);
+    /* ⚠️ the count the counter checks its copy against must include them, or every refresh re-reads the whole shop */
+    expect(snap.body.total, 'total leaves the network lines out').toBe((snap.body.items || []).length);
+  });
+
+  await test.step('⭐⭐⭐ and the counter rings it up', async () => {
+    const till = await context.newPage();
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await till.evaluate(() => refresh());
+    const got = await till.evaluate(() => {
+      const i = ((S && S.items) || []).find((x) => x.name === 'Tussar');
+      if (!i) return { found: false };
+      CART = []; addItem(i, 1);
+      return { found: true, price: i.price, source: i.source && i.source.key, cart: CART.map((c) => c.name) };
+    }).catch((e) => ({ err: String(e) }));
+    expect(got.found, 'the counter does not list the network product: ' + JSON.stringify(got)).toBe(true);
+    expect(got.price).toBe(1200);
+    expect(got.cart, 'the network product would not go on the bill').toEqual(['Tussar']);
+  });
+});
+
+// ⭐⭐ [TILL-25] A BREAK IS NOT A CLOSE. Athi, 2026-09-17: *"closing a counter need not be closing the sale for the day — they can
+// go for a break also."* The counter stays held, nothing is billed, and the shop's Counters screen says "on break".
+test('[TILL-25] a break keeps the counter, stops billing, and shows on the Counters screen', async ({ page, context }) => {
+  test.setTimeout(420000);
+  await mintEntity(page, { fresh: true, name: 'Brk ' + Date.now().toString().slice(-6) });
+  await page.evaluate(async () => { if (typeof ensureCap === 'function') await ensureCap('admin'); });
+  const h = helpers(page);
+  const id = (await h.app('counterAdd', { body: { name: 'Front desk' } })).body.counter.id;
+  const key = (await h.app('counterOpen', { params: { id } })).body.key;
+  const till = await context.newPage();
+  await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+  await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+  await till.evaluate(() => refresh());
+
+  await test.step('⚠️ BEFORE any break, the counter is uncovered — the cover must never sit over a working till', async () => {
+    await expect(till.locator('[data-testid="till-break-cover"]')).toBeHidden();
+  });
+
+  await test.step('☕ taking a break covers the counter and stops billing', async () => {
+    /* a cashier is signed in, as at any real counter */
+    await till.evaluate(() => { WHO = { id: 'a1', name: 'Ravi', since: new Date().toISOString(), float: 0 }; ls.set(shopLs('cb_till_who'), JSON.stringify(WHO)); });
+    await till.evaluate(() => takeBreak());
+    await expect(till.locator('[data-testid="till-break-cover"]')).toBeVisible();
+    const stopped = await till.evaluate(async () => { window.say = () => {}; return await tillStopped(); });
+    expect(stopped, 'a counter on break could still bill').toBe(true);
+  });
+
+  await test.step('⭐ the shop sees it on break — and the counter is still HELD, so no other PC can take it', async () => {
+    let c = null;
+    for (let i = 0; i < 10; i++) {
+      c = ((await h.app('counters')).body.counters || []).find((x) => x.id === id);
+      if (c && c.state === 'break') break;
+      await page.waitForTimeout(700);
+    }
+    expect(c.state, 'the shop cannot see the break').toBe('break');
+    const other = await h.app('counterOpen', { params: { id } });
+    expect(other.ok, '⚠️ another PC took a counter that was only on break').toBe(false);
+  });
+
+  await test.step('⚠️ a break survives a reload — the cover is back before anyone can bill', async () => {
+    await till.reload();
+    await till.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 40000 });
+    await expect(till.locator('[data-testid="till-break-cover"]')).toBeVisible();
+    /* ⚠️ and so is the cashier — this was forgotten on every reload before [TILL-25] found why */
+    await till.waitForFunction(() => WHO && WHO.name === 'Ravi', null, { timeout: 15000 });
+  });
+
+  await test.step('⭐ back to billing — the cover lifts, and the shop sees it open again', async () => {
+    await till.locator('[data-testid="till-break-end"]').click();
+    await expect(till.locator('[data-testid="till-break-cover"]')).toBeHidden();
+    let c = null;
+    for (let i = 0; i < 10; i++) {
+      c = ((await h.app('counters')).body.counters || []).find((x) => x.id === id);
+      if (c && c.state === 'open') break;
+      await page.waitForTimeout(700);
+    }
+    expect(c.state).toBe('open');
   });
 });

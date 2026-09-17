@@ -4979,8 +4979,12 @@ function ctrRegisterHTML(){
   if (_CTRS === null) return '<div style="' + _CARD + '">' + tx('reading…') + '</div>';
   var list = (_CTRS && _CTRS.counters) || [];
   var rows = list.map(function(c){
-    var open = c.state === 'open', h = c.held_by || {};
-    var where = open
+    /* ⚠️ a counter on break is still HELD by its PC — shown as such, and still releasable only as a last resort */
+    var onBreak = c.state === 'break', open = c.state === 'open' || onBreak, h = c.held_by || {};
+    var where = onBreak
+      ? ('☕ ' + tx('on break') + (c.break_since ? ' ' + tx('since') + ' ' + esc(new Date(c.break_since).toTimeString().slice(0, 5)) : '')
+         + (c.break_by ? ' · ' + esc(c.break_by) : '') + ' · ' + esc(h.name || tx('a PC')))
+      : open
       ? (tx('open on') + ' ' + esc(h.name || tx('a PC')) + (h.seen && h.seen.ip ? ' · ' + esc(h.seen.ip) : '')
          + (h.seen && h.seen.at ? ' · ' + esc(_keyAgo(h.seen.at)) : ''))
       : (c.state === 'opening' ? tx('opening…') : (c.closed_at ? tx('closed') + ' ' + esc(_keyAgo(c.closed_at)) : tx('not opened yet')));
@@ -4991,7 +4995,7 @@ function ctrRegisterHTML(){
       + '<div style="color:var(--grey);font-size:var(--fs-1)">'
         + (c.last_no ? tx('last bill') + ' ' + esc(c.last_no) + ' · ' : '')
         + (c.next ? tx('next') + ' ' + esc(String(c.next).padStart(4, '0')) + ' · ' : '')
-        + '<span style="color:var(--' + (open ? 'ok' : 'grey') + ')" data-testid="ctr-state-' + esc(c.id) + '">' + where + '</span></div>'
+        + '<span style="color:var(--' + (onBreak ? 'warn' : (open ? 'ok' : 'grey')) + ')" data-testid="ctr-state-' + esc(c.id) + '">' + where + '</span></div>'
       + (h.diag && h.diag.verdict ? '<div style="color:var(--warn);font-size:var(--fs-1)">🩺 ' + esc(h.diag.verdict) + '</div>' : '')
       + '</span>'
       + (open
