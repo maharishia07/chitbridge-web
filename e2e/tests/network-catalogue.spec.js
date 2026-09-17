@@ -167,8 +167,13 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
     await page.getByTestId('netc-at-open-' + i).click();
     await page.getByTestId('netc-at-' + i + '-' + j).locator('input').check();
     await page.getByTestId('netc-publish-now').click();
+    const published = page.waitForResponse((r) => r.url().indexOf('/catalogue/publish') >= 0 && r.request().method() === 'POST', { timeout: 45000 });
     await page.getByTestId('netc-publish-now').click();
+    expect((await published).status(), 'the publish was refused').toBe(200);
     await expect(page.getByTestId('netc-at-open-' + i)).toContainText('withdrawn from 1', { timeout: 30000 });
+    /* the server's record, not the screen's memory of the ticks */
+    const after = await catOf();
+    expect(after.withdrawn_at['Desk lamp'] || [], 'the brand\'s record does not say where it was withdrawn: ' + JSON.stringify(after.log && after.log[0])).toHaveLength(1);
     expect(await lampAt(own), 'the lamp is still offered at the store it was withdrawn from').toBe(null);
     expect(await lampAt(follows), 'withdrawing at one store took it from another').toBe(950);
     expect(await noticeOf(own, 'withdrawn'), 'the store was not told').toBeTruthy();
@@ -197,7 +202,9 @@ test('[NET-CAT-01] publish changes: followers move, own prices are asked, nothin
     await expect(page.getByTestId('netc-out-' + i)).toBeVisible({ timeout: 30000 });
     await page.getByTestId('netc-out-' + i).locator('input').first().check();
     await page.getByTestId('netc-publish-now').click();
+    const published = page.waitForResponse((r) => r.url().indexOf('/catalogue/publish') >= 0 && r.request().method() === 'POST', { timeout: 45000 });
     await page.getByTestId('netc-publish-now').click();
+    expect((await published).status(), 'the publish was refused').toBe(200);
     await expect(page.getByTestId('netc-uptodate')).toBeVisible({ timeout: 30000 });
     expect([await lampAt(own), await lampAt(follows)]).toEqual([null, null]);
     expect(await noticeOf(follows, 'withdrawn'), 'a store that sold it was not told').toBeTruthy();
