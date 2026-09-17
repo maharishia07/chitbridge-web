@@ -5022,8 +5022,11 @@ function netOffersHTML(){
       return '<div data-testid="neto-offer-' + esc(o.id) + '" style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line);flex-wrap:wrap">'
         + '<span style="flex:1 1 220px;min-width:0"><b>' + esc(o.name) + '</b>'
         + '<div style="font-size:var(--fs-1);color:var(--' + (running ? 'ok' : 'grey') + ')" data-testid="neto-state-' + esc(o.id) + '">'
-        + (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing')) + '</div></span>'
-        + (live && !running
+        + (live ? esc(_netRelWords(r)) : tx('draft — make it live before releasing'))
+        /* ⚠️ edited since release: the stores are still on the released version until this goes out */
+        + (o.changed ? ' · <b style="color:var(--warn)" data-testid="neto-changed-' + esc(o.id) + '">' + tx('changed since release — stores still have the released version') + '</b>' : '')
+        + '</div></span>'
+        + (live && (!running || o.changed)
             ? '<button class="pri" data-testid="neto-release-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',false)">' + tx('Release at next opening') + '</button>'
               + '<button data-testid="neto-release-now-' + esc(o.id) + '" onclick="netoRelease(\'' + esc(o.id) + '\',true)">'
               + (armed ? tx('Release NOW — mid-day, every store') : tx('Release now')) + '</button>'

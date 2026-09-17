@@ -97,6 +97,25 @@ test('[TILL-26] network offers: released, taken or declined, and on the counter 
     expect(new Date(o.valid_from).getTime(), 'the counter was told to apply it early').toBeGreaterThan(Date.now());
   });
 
+  await test.step('⭐⭐⭐ AN EDIT DOES NOT REACH THE STORES UNTIL IT IS RELEASED — then it replaces the old one at its moment', async () => {
+    /* the brand changes the running offer from 10% to 15% */
+    const ed = await api(page, 'defSave', { params: { id: offerNow }, body: { rules: { kind: 'percent_off', label: 'Kitchen week 15%',
+      percent: 15, scope: 'line', applies_to: { category: 'Kitchen' } } } });
+    expect(ed.ok, 'the brand could not change its offer: ' + ed.message).toBe(true);
+    let o = netOffersIn(await snap(store.page, key), offerNow);
+    expect(o.length).toBe(1);
+    expect(o[0].percent, '⚠️ an unreleased edit reached the store mid-day').toBe(10);
+    const view = await api(page, 'netOffers');
+    expect(view.body.brand.offers.find((x) => x.id === offerNow).changed, 'the brand is not told its edit is unreleased').toBe(true);
+    /* released NOW — the new version is in force, the old one has ended */
+    const rel = await api(page, 'netOfferRelease', { params: { id: offerNow }, body: { at: 'now' } });
+    expect(rel.ok, rel.message).toBe(true);
+    o = netOffersIn(await snap(store.page, key), offerNow);
+    const now = Date.now();
+    const inForce = o.filter((x) => (!x.valid_from || new Date(x.valid_from).getTime() <= now + 1000) && (!x.valid_to || new Date(x.valid_to).getTime() > now + 1000));
+    expect(inForce.map((x) => x.percent), 'after the re-release the store should run exactly the new version').toEqual([15]);
+  });
+
   await test.step('⭐ OPT-OUT: every released offer applies — until the store declines one', async () => {
     await api(store.page, 'netOfferChoice', { params: { id: offerNow }, body: { choice: null } });
     expect((await api(page, 'netOfferPolicy', { body: { policy: 'opt_out' } })).ok).toBe(true);
