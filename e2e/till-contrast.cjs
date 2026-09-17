@@ -59,6 +59,31 @@ const light = tokens(lightBlock);
 const dark = Object.assign({}, light, tokens(darkBlock));
 
 /**
+ * ⭐⭐ THE REGISTRY MUST AGREE WITH THE PAGE IT DESCRIBES. lib/screen-kit.js (vendored to engine/screen.js) is
+ * the counter's own "library of designs" — Settings and the screen gallery preview a theme by reading THIS
+ * registry, never the live page. For `lightCream` and `dark`, applyLook() in till.html deliberately does NOT
+ * apply the registry's vars — it relies on the CSS above and only uses the registry entry to decide light vs
+ * dark. So a shopkeeper previewing "Light cream" was seeing whatever colour someone typed into screen-kit.js,
+ * which had quietly drifted from what picking it actually gives them (2026-09-17: --ink #1D1B16 previewed vs
+ * #141210 live, --ok #16693F vs #1c7a4a, --warn #8E3517 vs #a8410f). Checked here, not eyeballed again.
+ */
+const K = require(path.join(__dirname, '..', '..', 'chitbridge-api', 'lib', 'screen-kit.js'));
+let checks = 0, fails = 0;
+function checkParity(name, registryVars, live) {
+  Object.keys(registryVars).forEach((k) => {
+    if (!(k in live)) return;   // --panel, --accent: screen-kit-only, no live counterpart to drift from
+    checks++;
+    const ok = String(registryVars[k]).toLowerCase() === String(live[k]).toLowerCase();
+    if (!ok) fails++;
+    console.log('    ' + (ok ? '✓' : '✗') + ' registry ' + name + ' ' + k
+      + (ok ? ' matches the counter' : ' is ' + registryVars[k] + ' but the counter is ' + live[k]));
+  });
+}
+console.log('\n  ── screen-kit registry vs the counter it previews ──');
+checkParity('lightCream', K.THEMES.lightCream.vars, light);
+checkParity('dark', K.THEMES.dark.vars, dark);
+
+/**
  * ⚠️ THE INK ON A FILL IS A TOKEN NOW, not a hard-coded white. In dark mode the accents invert to pale mint and
  * apricot, so white on them measured 2.22:1 — the biggest button on the counter, unreadable, for as long as the
  * dark theme has existed. Measuring the token is the whole point: it flips with the theme and this proves it.
@@ -68,7 +93,6 @@ const onFill = (T) => T['--on-accent'] || '#ffffff';
 const THRESH_TEXT = 4.5;   /* WCAG 1.4.3 body text */
 const THRESH_UI = 3;       /* WCAG 1.4.11 non-text: rules, borders */
 
-let checks = 0, fails = 0;
 const say = (ok, what, got, need, why) => {
   checks++;
   if (!ok) fails++;
@@ -80,7 +104,16 @@ const pair = (T, fg, bg, need, why) => {
   say(r != null && r >= need, fg + ' on ' + bg, r, need, why);
 };
 
-for (const [name, T] of [['light', light], ['dark', dark]]) {
+/**
+ * ⭐⭐ PAPER AND NAVY ARE THE TWO THEMES a11y NEVER SAW. Unlike lightCream/dark, applyLook() actually sets THESE
+ * vars as inline overrides on top of the light/dark base (paper is a light theme, navy is dark) — a real,
+ * selectable, live palette with nothing measuring it until now. Merged exactly as applyLook() builds it: reset
+ * to the base for that theme's light/dark, then the registry's own vars laid over it.
+ */
+const paper = Object.assign({}, light, K.THEMES.paper.vars);
+const navy = Object.assign({}, dark, K.THEMES.navy.vars);
+
+for (const [name, T] of [['light', light], ['dark', dark], ['paper', paper], ['navy', navy]]) {
   console.log('\n  ── the counter, ' + name + ' ──');
   /* the figures a bill is made of */
   pair(T, '--ink', '--card', THRESH_TEXT, 'the amounts');
