@@ -18248,7 +18248,11 @@ function contentItems(c){
     const nCand=(li.ambiguous||li.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="More than one match — pick which" style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ ${nCand} ${tx('matches — pick which')}</span>`;
     const rawp=li.raw_phrase?`<span class="cbcat-fact" style="font-style:italic;color:var(--grey)">${tx('they wrote')} “${esc(li.raw_phrase)}”</span>`:'';
-    const below=[why?`<span class="cbcat-fact" style="color:var(--warn-2);font-weight:700">${esc(why)}</span>`:'', was?`<span class="cbcat-fact">${was}</span>`:'', unver, pick, rawp, clip].filter(Boolean).join(' · ')+strip;
+    /* ⚠️ THE STAMPED-STOCK SHORTFALL (routes/catalogue.js reprice). It was on the old line markup and did not survive the move to the
+       cart's row on 2026-09-06 — the seller stopped seeing "short by N" and [STK-02] said so for eleven days. */
+    const p4=it[4]||{};
+    const short=p4.stock?`<span class="cbcat-fact" data-testid="c2-stock-short" title="${esc((p4.stock.source?'stock from '+p4.stock.source+' · ':'')+'as of '+String(p4.stock.as_of).slice(0,16).replace('T',' '))}" style="font-weight:800;color:var(--warn-2)">⚠ ${esc(tx('short by')+' '+p4.stock.short+' · '+tx('stock')+' '+p4.stock.qty)}</span>`:'';
+    const below=[why?`<span class="cbcat-fact" style="color:var(--warn-2);font-weight:700">${esc(why)}</span>`:'', short, was?`<span class="cbcat-fact">${was}</span>`:'', unver, pick, rawp, clip].filter(Boolean).join(' · ')+strip;
     return CBCatUI.rowHTML(UI._chitCart, { type:'line', item:items[idx], item_id:'l'+idx, variant:'' }, {
       readonly:true, testid:()=>'chit-line-'+idx,
       rowClass:()=>(e.removed?'cbcat-removed':'')+(atts.length?' hasatt':''),

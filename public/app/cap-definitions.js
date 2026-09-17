@@ -1364,6 +1364,9 @@ async function cbDefAfterChange(kind, id){
    * dropdown says "No live slab yet". Works when you test it in the other order, which is the worst kind.
    */
   if (kind && typeof cbDefsLive === 'function') await cbDefsLive(kind, true);
+  /* ⚠️ AND AGAIN, NOW THE SHELF IS FRESH. While the reads above were awaited, a repaint refilled UI._ctOffers from the OLD
+     shelf (deleted only after cbDefLoad) — [OFF-02] found an offer made exclusive still previewed as not exclusive. */
+  if (typeof UI !== 'undefined') UI._ctOffers = undefined;
   if (kind && typeof UI !== 'undefined' && UI.nav === 'catsetup' && typeof catsetDefsLoad === 'function') {
     await catsetDefsLoad(kind, true);
     if (typeof catsetPaintDetail === 'function') catsetPaintDetail();
