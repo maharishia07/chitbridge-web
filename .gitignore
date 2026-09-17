@@ -9,3 +9,7 @@ e2e/playwright-report/
 # local design previews — served by the dev server, NEVER deployed (would publish internal notes publicly)
 public/_design/
 test-results/
+
+# demo run outputs (regenerated on every run)
+e2e/demo-*.png
+e2e/demo-prestige-summary.json

@@ -167,13 +167,17 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
     expect(seen.offers.some((o) => o.percent === 10), s.area + ' did not inherit the running offer').toBe(true);
     note(s.area, 'store set up; adopted the network catalogue; counter ' + seen.counter + ' opened with ' + seen.products.length
       + ' products (all with pictures) and inherited "' + OFFER_A + '" at 10%');
-    stores.push(Object.assign({}, s, { ctx: st.context, page: st.page, till, counter: c.id }));
+    /* ⚠️ MEMORY: seven browser windows at once got the run stopped. The store's app page has done its job — Adyar makes
+       its choice first — and only the counters stay open for billing. */
+    if (s.area === 'Adyar') {
+      await call(st.page, 'netOfferChoice', { params: { id: A }, body: { choice: 'out' } });
+      note('Adyar', 'declined "' + OFFER_A + '" for this store');
+    }
+    await st.page.close().catch(() => {});
+    stores.push(Object.assign({}, s, { ctx: st.context, till, counter: c.id, key: open.body.key }));
   }
 
-  /* ════ 3 · ADYAR DECLINES — a store's own choice inside the brand's model ════ */
   const adyar = stores.find((x) => x.area === 'Adyar');
-  await call(adyar.page, 'netOfferChoice', { params: { id: A }, body: { choice: 'out' } });
-  note('Adyar', 'declined "' + OFFER_A + '" for this store');
 
   /* ════ 4 · THE BRAND CHANGES THE OFFER — broadcast to every store, pushed to every counter ════ */
   await call(page, 'defSave', { params: { id: A }, body: { rules: { kind: 'percent_off', label: 'Festive 15% off mixer grinders', percent: 15, scope: 'line', applies_to: { category: 'Mixer grinders' } } } });
@@ -214,11 +218,55 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
       + (got.later.length ? '; waiting for the next opening: ' + got.later.join(', ') : ''));
   }
 
-  /* ════ 5 · EACH COUNTER DOES SOMETHING DIFFERENT — and the offer is on the bill ════ */
+  /* ════ 5 · EACH COUNTER DOES SOMETHING DIFFERENT — and the offer is on the bill ════
+     ⚠️ MEMORY: five counters open at once crashed a tab on this machine. They were all open together for the push proof
+     above; for billing, each store's counter is reopened on its own and closed again. Same key, same counter, same copy. */
+  for (const st of stores) { await st.till.close().catch(() => {}); st.till = null; }
+  const reopen = async (st) => {
+    const t = await st.ctx.newPage();
+    t.on('crash', () => note(st.area, '⚠️ the counter tab CRASHED'));
+    await t.goto('/till.html#key=' + encodeURIComponent(st.key));
+    await t.waitForFunction(() => window.CBOffers && window.CBTax, null, { timeout: 60000 });
+    await t.evaluate(() => refresh());
+    await t.waitForSelector('[data-testid="till-hit-0"]', { timeout: 60000 });
+    st.till = t;
+    return t;
+  };
+  const done = async (st) => {
+    await st.till.evaluate(() => HOST.drain()).catch(() => {});
+    let pend = 0;
+    for (let i = 0; i < 10; i++) {
+      pend = await st.till.evaluate(async () => ((await DB.all('queue')) || []).length).catch(() => -1);
+      if (pend === 0) break;
+      await st.till.waitForTimeout(1500);
+      await st.till.evaluate(() => HOST.drain()).catch(() => {});
+    }
+    note(st.area, pend === 0 ? 'every bill reached ChitBridge' : (pend + ' bill(s) still sending'));
+  };
   const bill = async (st, picks, pay) => {
     const t = st.till;
+    /* ⚠️ say what, if anything, is covering the counter — a modal makes the search box uneditable */
+    const cover = await t.evaluate(() => ({ dialogs: [...document.querySelectorAll('dialog[open]')].map((d) => d.id + ': ' + (d.innerText || '').slice(0, 120)),
+      breakOn: !document.getElementById('breakcover') || !document.getElementById('breakcover').hidden }));
+    if (cover.dialogs.length || cover.breakOn) note(st.area, 'before billing, the counter was covered by: ' + JSON.stringify(cover));
+    await t.screenshot({ path: require('path').join(__dirname, '..', 'demo-' + st.handle + '-before-bill.png') }).catch(() => {});
     for (const [code, qty] of picks) {
-      await t.fill('#q', code);
+      try { await t.fill('#q', code, { timeout: 8000 }); }
+      catch (e) {
+        const why = await t.evaluate(() => {
+          const q = document.getElementById('q');
+          const chain = []; for (let n = q; n; n = n.parentElement) {
+            if (n.hasAttribute && (n.hasAttribute('inert') || n.getAttribute('aria-disabled') === 'true' || n.disabled))
+              chain.push((n.id || n.tagName) + (n.hasAttribute('inert') ? ' inert' : '') + (n.getAttribute('aria-disabled') ? ' aria-disabled' : '') + (n.disabled ? ' disabled' : ''));
+          }
+          return { dialogs: [...document.querySelectorAll('dialog')].filter((d) => d.open).map((d) => d.id + ' :: ' + (d.innerText || '').slice(0, 200)),
+                   blockedBy: chain, readOnly: q.readOnly, disabled: q.disabled, active: document.activeElement && (document.activeElement.id || document.activeElement.tagName),
+                   bodyInert: document.body.inert };
+        });
+        note(st.area, 'SEARCH BOX NOT EDITABLE: ' + JSON.stringify(why));
+        await t.screenshot({ path: require('path').join(__dirname, '..', 'demo-' + st.handle + '-stuck.png') }).catch(() => {});
+        throw e;
+      }
       await t.click('[data-testid="till-add-0"]');
       if (qty > 1) {
         const n = await t.evaluate(() => CART.length - 1);
@@ -236,37 +284,61 @@ test('[DEMO-PRESTIGE] a brand, five stores, their counters, and an offer that tr
     return Object.assign({ no }, money);
   };
 
+  /* ⚠️ a tab that crashes is reopened and the activity tried once more — a starved machine must not sink the demo */
+  const attempt = async (st, label, fn) => {
+    for (let i = 1; i <= 2; i++) {
+      try { await fn(); return; }
+      catch (e) {
+        note(st.area, label + ' — attempt ' + i + ' failed: ' + String(e.message || e).split(String.fromCharCode(10))[0]);
+        try { if (st.till) await st.till.close(); } catch (_) {}
+        if (i === 2) throw e;
+      }
+    }
+  };
+  /* the brand's work is done — its heavy app page is closed to give the counters room */
+  await page.close().catch(() => {});
   const an = stores.find((x) => x.area === 'Anna Nagar');
-  let r = await bill(an, [['PR-APEX-500', 1]], 'cash');
-  note('Anna Nagar', 'billed ' + r.no + ' — Apex mixer at the store\'s own ₹3,799, 15% network offer applied: ₹' + r.net + ' (cash)');
+  await attempt(an, 'billing', async () => {
+    await reopen(an);
+    const r = await bill(an, [['PR-APEX-500', 1]], 'cash');
+    await done(an); await an.till.close();
+    note('Anna Nagar', 'billed ' + r.no + ' — Apex mixer at the store\'s own ₹3,799, 15% network offer applied (₹' + r.off + ' off): ₹' + r.net + ' (cash)');
+  });
 
   const tn = stores.find((x) => x.area === 'T Nagar');
-  r = await bill(tn, [['PR-SUP-750', 1], ['PR-PIC16', 1]], 'upi');
-  note('T Nagar', 'billed ' + r.no + ' — Supreme juicer mixer (15% off) + PIC 16.0 (no offer yet): ₹' + r.net + ' (UPI)');
+  await attempt(tn, 'billing', async () => {
+    await reopen(tn);
+    const r = await bill(tn, [['PR-SUP-750', 1], ['PR-PIC16', 1]], 'upi');
+    await done(tn); await tn.till.close();
+    note('T Nagar', 'billed ' + r.no + ' — Supreme juicer mixer (15% off) + PIC 16.0 (its offer starts at the next opening): ₹' + r.net + ' (₹' + r.off + ' off, UPI)');
+  });
 
   const ve = stores.find((x) => x.area === 'Velachery');
-  await ve.till.fill('#q', 'PR-GTM02'); await ve.till.click('[data-testid="till-add-0"]');
-  await ve.till.evaluate(() => parkBill());
-  await ve.till.evaluate(() => takeBreak());
-  await expect(ve.till.locator('[data-testid="till-break-cover"]')).toBeVisible();
-  note('Velachery', 'parked a gas-hob bill for a customer who stepped away, then went ON BREAK — left on break for you to see');
+  await attempt(ve, 'park and break', async () => {
+    await reopen(ve);
+    await ve.till.fill('#q', 'PR-GTM02'); await ve.till.click('[data-testid="till-add-0"]');
+    await ve.till.evaluate(() => parkBill());
+    await ve.till.evaluate(() => takeBreak());
+    await expect(ve.till.locator('[data-testid="till-break-cover"]')).toBeVisible();
+    await ve.till.waitForTimeout(2000);           /* let "on break" reach ChitBridge */
+    await ve.till.close();
+    note('Velachery', 'parked a gas-hob bill for a customer who stepped away, then went ON BREAK — left on break for you to see');
+  });
 
-  r = await bill(adyar, [['PR-APEX-500', 1]], 'cash');
-  note('Adyar', 'billed ' + r.no + ' — Apex mixer at full ₹4,035: the store declined the network offer, so none applied (₹' + r.net + ')');
+  await attempt(adyar, 'billing', async () => {
+    await reopen(adyar);
+    const r = await bill(adyar, [['PR-APEX-500', 1]], 'cash');
+    await done(adyar); await adyar.till.close();
+    note('Adyar', 'billed ' + r.no + ' — Apex mixer at full ₹4,035; the store declined the network offer, so ₹' + r.off + ' off: ₹' + r.net + ' (cash)');
+  });
 
   const om = stores.find((x) => x.area === 'OMR');
-  r = await bill(om, [['PR-GTM02', 2], ['PR-APEX-500', 1]], 'cash');
-  note('OMR', 'billed ' + r.no + ' — 2 × gas hob + Apex mixer (15% off the mixer): ₹' + r.net + ' (cash)');
-
-  /* every sale reaches the books */
-  for (const st of [an, tn, adyar, om]) {
-    await st.till.evaluate(() => HOST.drain());
-  }
-  await page.waitForTimeout(6000);
-  for (const st of [an, tn, adyar, om]) {
-    const pend = await st.till.evaluate(async () => ((await DB.all('queue')) || []).length);
-    note(st.area, pend ? pend + ' bill(s) still sending' : 'every bill reached ChitBridge');
-  }
+  await attempt(om, 'billing', async () => {
+    await reopen(om);
+    const r = await bill(om, [['PR-GTM02', 2], ['PR-APEX-500', 1]], 'cash');
+    await done(om); await om.till.close();
+    note('OMR', 'billed ' + r.no + ' — 2 × gas hob + Apex mixer (15% off the mixer, ₹' + r.off + ' off): ₹' + r.net + ' (cash)');
+  });
 
   /* ════ 6 · THE SUMMARY ════ */
   fs.writeFileSync(OUT, JSON.stringify({ ran: new Date().toISOString(), source: SOURCE, activities: log,
