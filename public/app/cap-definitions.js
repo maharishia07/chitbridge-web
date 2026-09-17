@@ -1352,6 +1352,12 @@ async function cbDefAfterChange(kind, id){
      an offer was still a draft, it kept saying "None live" after the offer went live — [OFF-01] ATTACH found it:
      author → make live → open the product → nothing to tick, until a reload. Any change to a definition drops it. */
   if (typeof UI !== 'undefined') UI._ctOffers = undefined;
+  /* ⚠️⚠️ BOTH CACHES DROP BEFORE ANYTHING IS AWAITED (2026-09-17). The live shelf used to be dropped only after the reload below —
+     about three seconds here — and a screen that repainted in between refilled UI._ctOffers from the OLD shelf: [OFF-02] saw an
+     offer just made exclusive previewed as not exclusive. The kind comes from the list already in hand when it was not passed. */
+  var _pre = (!kind && id) ? (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0] : null;
+  if (_pre && _pre.kind) kind = _pre.kind;
+  if (kind && typeof _DEFS !== 'undefined') delete _DEFS[kind];
   await cbDefLoad(true);
   if (!kind && id) { var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0]; kind = d && d.kind; }
   /* core.js's per-kind live-definition cache (cbDefsLive → _DEFS) feeds the slab pickers and the tax resolver;
