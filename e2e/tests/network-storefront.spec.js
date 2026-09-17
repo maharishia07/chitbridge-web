@@ -4,7 +4,7 @@
 // network offer; the storefront showed the same product at full price, and its checkout had no way to apply one. One key
 // per adopted line (lib/network-offers.lineKey) now ties the row's promise to the order's arithmetic.
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext, approveJoins } = require('../fixtures');
+const { mintEntity, mintInContext, approveJoins, clickNav, settle } = require('../fixtures');
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
 const app = (page, name, opts) => page.evaluate(async ({ name, opts }) => {
@@ -48,8 +48,11 @@ test('[NET-SF-01] a released network offer is on the member storefront and on it
     await page.evaluate(async () => {
       if (typeof _DEFS !== 'undefined') delete _DEFS.offer;
       if (typeof CATSET_DEFS !== 'undefined') delete CATSET_DEFS.offer;
-      await goCatsetSec('offers');
     });
+    /* ⚠️ through the controls a person uses (as [OFF-01] does) — goCatsetSec's timer lost the race under a slow API */
+    await clickNav(page, 'catsetup');
+    await page.getByTestId('catset-sec-offers').click({ timeout: 30000 });
+    await settle(page);
   };
 
   await test.step('⭐⭐ BEFORE release the brand is told its store does not have the offer — and the hint opens the release screen', async () => {
