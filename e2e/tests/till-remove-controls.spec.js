@@ -155,8 +155,37 @@ test('[TILL-11] the quick keys carry the control that decides what fills them', 
     await till.selectOption('[data-testid="till-quick-src"]', 'groups');
     await till.waitForTimeout(300);
     expect(await till.evaluate(() => tillOpt().quickSource), 'the bar did not change the setting').toBe('groups');
-    /* the group controls follow it into view */
-    await expect(till.locator('[data-testid="till-quick-group-new"]')).toBeVisible();
+    /* the CHOOSER follows it into view — which group fills the keys is a selling decision */
+    await expect(till.locator('[data-testid="till-quick-group"]')).toBeVisible();
+  });
+
+  /**
+   * ⭐⭐ AUTHORING IS NOT SELLING — MOVED, NOT DROPPED (2026-09-18). Athi: *"quick key management is not part of
+   * selling — sell panel should have only temporary out of stock buttons, not to create or update the group."*
+   *
+   * This step used to assert `till-quick-group-new` was visible ON THE KEYS. It now asserts the opposite there
+   * and the same thing in ⚙ Setup, because the capability moved rather than went away — which is the only
+   * reading of "not part of selling" that does not quietly cost the shop a feature.
+   */
+  await test.step('⚠️ making or filling a group is NOT on the sell panel, and IS in Setup', async () => {
+    await expect(till.locator('[data-testid="till-quick-group-new"]')).toHaveCount(0);
+    await expect(till.locator('[data-testid="till-quick-group-add"]')).toHaveCount(0);
+    await expect(till.locator('[data-testid^="till-quick-group-add-"]')).toHaveCount(0);
+    await expect(till.locator('[data-testid^="till-quick-ungroup-"]')).toHaveCount(0);
+
+    await till.evaluate(() => openSettings());
+    await expect(till.locator('[data-testid="till-set-group-new"]')).toBeVisible();
+    /* ⭐ and a group can actually be FILLED here — Setup could make one and empty one but never fill one until
+       the sell-panel ＋ was removed, which would have left a list nobody could put anything into. */
+    await till.evaluate(() => { tillOptSet({ groups: { Morning: [] }, group: 'Morning' }); paintSetup(); });
+    await expect(till.locator('[data-testid="till-set-group-find"]')).toBeVisible();
+    const box = till.locator('[data-testid="till-set-group-items"]');
+    await expect(box).toBeVisible();
+    const tick = box.locator('input[type="checkbox"]').first();
+    await tick.check();
+    expect(await till.evaluate(() => (tillOpt().groups.Morning || []).length),
+      'ticking a product in Setup did not put it in the group').toBe(1);
+    await till.evaluate(() => { document.getElementById('setdlg').close(); });
   });
 
   await test.step('⚠️ Setup and the bar are ONE setting, never two opinions about it', async () => {
