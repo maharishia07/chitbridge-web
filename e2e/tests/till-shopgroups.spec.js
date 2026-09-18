@@ -18,6 +18,23 @@ const { mintEntity, addProduct } = require('../fixtures');
 const TILL = process.env.CB_TILL_BASE || '';
 const API = process.env.CB_API_BASE || 'https://chitbridge-api-production.up.railway.app';
 
+/**
+ * shopWith(), but the products carry a CATEGORY. addProduct() walks the Catalogue form and its parameter list
+ * is { name, price, desc, unit, code } — a category passed to it is dropped without a word, which would have
+ * left [TILL-40] hunting a chip for a category no product had. POST /api/products/bulk is the same door the
+ * importer uses, so the field reaches the counter's snapshot exactly as a real shop's would.
+ */
+async function shopWithCategories(page, context, name, products) {
+  await mintEntity(page, { fresh: true, name: name + Date.now().toString(36) });
+  const made = await page.evaluate(async (items) => {
+    if (typeof ensureCap === 'function') await ensureCap('admin');
+    const r = await api('prodAddMany', { body: { items } });
+    const k = await api('keysMint', { body: { name: 'counter', scopes: ['till'], days: 1 } });
+    return { n: (r && (r.created || (r.items || []).length)) || 0, key: (k && (k.key || k.api_key)) || null };
+  }, products);
+  return made;
+}
+
 async function shopWith(page, context, name, products) {
   await mintEntity(page, { fresh: true, name: name + Date.now().toString(36) });
   for (const p of products) await addProduct(page, p);
@@ -210,4 +227,79 @@ test('[TILL-35] a kitchen ticket goes once, and only the new lines go on the nex
     await till.evaluate(() => { clearBill(); });
     await till.waitForTimeout(300);
     expect(await till.evaluate(() => KOT_N)).toBe(0);
+  });
+
+test('[TILL-40] a category chip narrows the quick keys too, says so, and lets go of it',
+  async ({ page, context }) => {
+    test.setTimeout(240000);
+    /* the shape Athi described: one group, most of it one category and the rest another */
+    const { key } = await shopWithCategories(page, context, 'catkeys', [
+      { name: 'Idli', unit: 'plate', price: 40, category: 'Tiffin' },
+      { name: 'Dosa', unit: 'plate', price: 70, category: 'Tiffin' },
+      { name: 'Vada', unit: 'plate', price: 35, category: 'Tiffin' },
+      { name: 'Coffee', unit: 'cup', price: 25, category: 'Drinks' },
+      { name: 'Jalebi', unit: 'piece', price: 20, category: 'Sweets' },   /* on the shelf, NOT in the group */
+    ]);
+    const till = await context.newPage();
+    await till.goto(TILL + '/till.html#key=' + encodeURIComponent(key));
+    await till.waitForSelector('[data-testid="till-hit-0"]', { timeout: 60000 });
+
+    await till.evaluate(() => {
+      const o = tillOpt();
+      o.groups['Morning'] = (S.items || []).filter((i) => i.category !== 'Sweets').map((i) => i.item_id);
+      tillOptSet({ groups: o.groups, group: 'Morning', quickSource: 'groups' });
+      clearBill();
+    });
+    await till.waitForTimeout(600);
+    expect(await till.evaluate(() => document.querySelectorAll('#quick button[data-qk]').length),
+      'the whole group is on the keys to begin with').toBe(4);
+
+    /* ⚠️ THE CHIP IS PRESSED, not the function — the point under test is that the shelf control reaches the keys */
+    await till.evaluate(() => document.querySelector('[data-testid="till-chip-tiffin"]').click());
+    await till.waitForTimeout(500);
+    expect(await till.evaluate(() => document.querySelectorAll('#quick button[data-qk]').length),
+      'only the Tiffin keys are left').toBe(3);
+    /**
+     * ⚠️⚠️ AND IT SAYS SO. Keys gone without a reason read as keys LOST, and the chip that did it is a row away.
+     * This is the assertion that stops the feature becoming a fault report. [[feedback-silence-is-the-bug]]
+     */
+    expect(await till.evaluate(() => (document.querySelector('[data-testid="till-quick-cat"]') || {}).textContent))
+      .toContain('Tiffin only');
+    expect(await till.evaluate(() => QUICK.length), 'the group itself is untouched — this is a view, not an edit').toBe(4);
+
+    /* ⚠️ a narrowed key still sells; narrowing the grid must never narrow what a press does */
+    await till.evaluate(() => document.querySelector('#quick button[data-qk]').click());
+    await till.waitForTimeout(500);
+    expect(await till.evaluate(() => CART.length), 'a key still bills while the grid is narrowed').toBe(1);
+
+    /**
+     * ⚠️⚠️ ARRANGING SEES THE GROUP WHOLE. qkDropOn() places a key at the position it was dropped on; against a
+     * filtered list that writes an order nobody chose, so the narrowing is dropped for the duration and said out loud.
+     */
+    await till.evaluate(() => qkArrangeToggle());
+    await till.waitForTimeout(500);
+    expect(await till.evaluate(() => document.querySelectorAll('#quick button[data-qk]').length),
+      'every key is back while an order is being written').toBe(4);
+    expect(await till.evaluate(() => document.querySelector('[data-testid="till-arrange-note"]').textContent))
+      .toContain('Every key in the group is shown');
+    await till.evaluate(() => qkArrangeToggle());
+    await till.waitForTimeout(400);
+
+    /* and the way out is one tap, with the bill untouched */
+    await till.evaluate(() => document.querySelector('[data-testid="till-quick-catall"]').click());
+    await till.waitForTimeout(500);
+    expect(await till.evaluate(() => document.querySelectorAll('#quick button[data-qk]').length)).toBe(4);
+    expect(await till.evaluate(() => CART.length), 'letting go of a filter is not an edit to the bill').toBe(1);
+
+    /**
+     * ⚠️ A CATEGORY WITH NOTHING IN THE GROUP ANSWERS THE QUESTION rather than drawing a blank panel. Jalebi is
+     * on the shelf and not in Morning, which is the case an empty grid would have made look like a broken one.
+     */
+    await till.evaluate(() => document.querySelector('[data-testid="till-chip-sweets"]').click());
+    await till.waitForTimeout(500);
+    expect(await till.evaluate(() => document.querySelectorAll('#quick button[data-qk]').length)).toBe(0);
+    expect(await till.evaluate(() => (document.querySelector('[data-testid="till-quick-catempty"]') || {}).textContent))
+      .toContain('No Sweets');
+    /* ⚠️ and it is still sellable — the keys are a shortcut, never the shelf */
+    expect(await till.evaluate(() => hits().some((i) => i.name === 'Jalebi')), 'the shelf still carries it').toBe(true);
   });
