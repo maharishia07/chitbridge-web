@@ -89,6 +89,40 @@ const ITEMS = [
   await p.screenshot({ path: shot, fullPage: false });
   console.log('wrote ' + shot);
 
+  /* ⭐⭐ AND THE PHONE, which png/MaintV2Phone.png draws as a bottom sheet over the list. A separate page,
+     because the shape is decided when the page boots. */
+  const ph = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  ph.on('pageerror', (e) => threw.push('phone: ' + e.message));
+  await ph.goto(base + '/till.html');
+  await ph.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBSearch, null, { timeout: 30000 });
+  const pout = await ph.evaluate((items) => {
+    window.S = { shop: { name: 'Mayur Bhavan' }, items: items, offers: [], at: new Date().toISOString() };
+    CHANGED = { price: [], stock: [] };
+    setMode('maintain');
+    CARD_ID = 'i3';
+    paintHits(); paintCard(); paintChips();
+    const r = document.querySelector('.right').getBoundingClientRect();
+    return { body: document.body.className,
+             sheetTop: Math.round(r.top), sheetH: Math.round(r.height),
+             closeSeen: !!document.querySelector('[data-testid="card-close"]')
+               && getComputedStyle(document.querySelector('[data-testid="card-close"]')).display !== 'none' };
+  }, ITEMS);
+  /* ⚠️ THE SHEET SLIDES. Measuring or screenshotting straight after paintCard() catches it mid-transition
+     — transform read translateY(740px) and the sheet looked broken when it was simply still moving. */
+  await ph.waitForFunction(() => {
+    const r = document.querySelector('.right');
+    return r && getComputedStyle(r).transform === 'matrix(1, 0, 0, 1, 0, 0)';
+  }, null, { timeout: 4000 });
+  const pgeo = await ph.evaluate(() => {
+    const r = document.querySelector('.right').getBoundingClientRect();
+    return { top: Math.round(r.top), h: Math.round(r.height) };
+  });
+  pout.sheetTop = pgeo.top; pout.sheetH = pgeo.h;
+  console.log('phone  · body="' + pout.body + '" sheet top=' + pout.sheetTop + ' h=' + pout.sheetH + ' close=' + pout.closeSeen);
+  const pshot = path.join(__dirname, 'shots', 'maint-v2-phone.png');
+  await ph.screenshot({ path: pshot, fullPage: false });
+  console.log('wrote ' + pshot);
+
   if (threw.length) { console.log('THREW · ' + threw.join(' | ')); process.exitCode = 1; }
   await b.close();
   srv.close();
