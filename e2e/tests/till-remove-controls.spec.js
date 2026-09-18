@@ -173,7 +173,10 @@ test('[TILL-11] the quick keys carry the control that decides what fills them', 
     await expect(till.locator('[data-testid^="till-quick-group-add-"]')).toHaveCount(0);
     await expect(till.locator('[data-testid^="till-quick-ungroup-"]')).toHaveCount(0);
 
-    await till.evaluate(() => openSettings());
+    /* ⚠️ ON ITS OWN TAB, AND SAY SO. Settings reopens on whichever tab was last used (setTab remembers it per
+       device), so asserting straight after openSettings() found the control present and invisible — which is
+       also the honest answer to "where did ＋ group go?": it is under ⚙ Setup ▸ Quick keys, not on the keys. */
+    await till.evaluate(() => openSettings('keys'));
     await expect(till.locator('[data-testid="till-set-group-new"]')).toBeVisible();
     /* ⭐ and a group can actually be FILLED here — Setup could make one and empty one but never fill one until
        the sell-panel ＋ was removed, which would have left a list nobody could put anything into. */
