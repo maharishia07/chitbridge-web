@@ -207,10 +207,12 @@ test('[TILL-35] a kitchen ticket goes once, and only the new lines go on the nex
      * ⚠️⚠️ SENT ONCE. Re-sending the whole table on the second round is the classic way this feature is got
      * wrong — the kitchen cooks the first two dishes again.
      */
-    await till.evaluate(() => { addItem(S.items[2], 1, null); price(); });
+    const third = await till.evaluate(() => { addItem(S.items[2], 1, null); price(); return S.items[2].name; });
     await till.waitForTimeout(500);
     const second = await till.evaluate(() => kotPending().map((c) => c.name));
-    expect(second, 'only the dish added since the last ticket').toEqual(['Coffee']);
+    /* the shelf comes back in the catalogue's own order, not the order these were added — an expectation
+       typed here ('Coffee') failed on ['Dosa'] while the feature was perfectly right. Ask the page. */
+    expect(second, 'only the dish added since the last ticket').toEqual([third]);
 
     await till.evaluate(() => { sendKOT(); });
     await till.waitForTimeout(700);
