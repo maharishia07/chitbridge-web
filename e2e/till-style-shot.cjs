@@ -43,6 +43,17 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  console.log('          · preview tiles='+after.tiles+'  counter still '+after.live
    +(after.live===before?'  OK nothing applied yet':'  ✗ APPLIED WITHOUT ASKING'));
 
+ /* ⭐⭐ PHOTOS BY SURFACE ([TILL-80]) — Athi: "a popup window to check where, and all the photos off" */
+ const ph0=await p.evaluate(()=>({keys:!!screenCfg().photos, list:thumbsOn()}));
+ await p.click('[data-testid="till-style-photos-list"]');
+ const ph1=await p.evaluate(()=>({keys:!!styleVal('photos'), list:thumbsOn()}));
+ console.log('photos    · list toggled: keys='+ph1.keys+' list='+ph1.list
+   +((ph1.list!==ph0.list)?'  OK the list has its own switch':'  ✗'));
+ await p.click('[data-testid="till-style-photos-none"]');
+ const ph2=await p.evaluate(()=>({keys:!!styleVal('photos'), list:thumbsOn()}));
+ console.log('          · all off: keys='+ph2.keys+' list='+ph2.list
+   +((!ph2.keys&&!ph2.list)?'  OK every surface':'  ✗ SOMETHING STILL ON'));
+
  const shot=path.join(__dirname,'shots','screen-style.png');
  fs.mkdirSync(path.dirname(shot),{recursive:true});
  await p.screenshot({path:shot}); console.log('wrote '+shot);
