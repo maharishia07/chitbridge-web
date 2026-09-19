@@ -156,6 +156,56 @@ function reportFor(text) {
   say('it is explicitly confirmed', body.confirm === true, 'confirm:true');
   say('the dialog closes', !sent.open, 'the shopkeeper is returned to the counter');
 
+  /* ══ ⭐⭐⭐ AN EXCEL FILE, THE SAME WAY ([TILL-109]) ══════════════════════════════ */
+  console.log('\n── the same list as a workbook ' + '─'.repeat(33));
+  /**
+   * ⚠️ A REAL .xlsx, built byte by byte by the SAME fixture the reader's own test uses. There is no
+   * spreadsheet library in this project — that is the point of lib/xlsx-read — so the fixture is shared
+   * rather than written twice.
+   */
+  const XBOOK = require(path.join(__dirname, '..', '..', 'chitbridge-api', 'tests', 'xlsx-fixture.cjs')).book([
+    ['Particulars', 'Rate (INR)', 'UOM', 'Group'],
+    ['Tomato', 40, 'Kg', 'Vegetables'],
+    ['தக்காளி', 45, 'kg', 'Vegetables'],
+  ], { sheets: ['Products', 'Notes'] });
+
+  const xl = await p.evaluate(async ({ b64 }) => {
+    window.HOST.tillPost = async (pathname, body) => {
+      window.__sent = { pathname, body };
+      if (pathname.indexOf('preflight') < 0) return { ok: true, message: '2 products added' };
+      return { ok: true, accepted: ['name', 'price', 'unit', 'category'],
+        sheet: 'Products', sheets: ['Products', 'Notes'],
+        report: { summary: { rows: 2, importable: 2, errors: 0, warnings: 0 }, issues: [], ready: true,
+          mapping: [{ incoming: 'Particulars', canonical: 'name', why: 'a common name for name' },
+                    { incoming: 'Rate (INR)', canonical: 'price', why: 'a common name for price' },
+                    { incoming: 'UOM', canonical: 'unit', why: 'a common name for unit' },
+                    { incoming: 'Group', canonical: 'category', why: 'a common name for category' }] } };
+    };
+    const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const f = new File([bin], 'prices.xlsx',
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    await upRead(f);
+    return { sent: window.__sent, go: document.getElementById('upgo').disabled,
+             sheetNote: (document.querySelector('[data-testid="till-upload-sheet"]') || { innerText: '' }).innerText,
+             head: (document.querySelector('[data-testid="till-upload-head"]') || { innerText: '' }).innerText };
+  }, { b64: XBOOK.toString('base64') });
+
+  /**
+   * ⚠️⚠️ A WORKBOOK IS BINARY. Reading it with .text() the way a .csv is read would mangle it past
+   * recognition and the server would report a damaged file — so it must travel as base64, and the CSV must
+   * keep travelling as text.
+   */
+  say('a workbook goes as base64', !!(xl.sent && xl.sent.body && xl.sent.body.xlsx && !xl.sent.body.csv),
+    xl.sent && xl.sent.body ? ('keys: ' + Object.keys(xl.sent.body).join(', ')) : 'nothing was sent');
+  /* ⚠️ and it must ARRIVE INTACT — base64 that decodes to something else is the silent version of this bug */
+  const back = Buffer.from(String((xl.sent.body || {}).xlsx || ''), 'base64');
+  say('and it arrives intact', back.length === XBOOK.length && back[0] === 0x50 && back[1] === 0x4b,
+    back.length + ' bytes, same as the file, starting PK');
+  say('the report is shown', /2 of 2 rows can be added/.test(xl.head.replace(/\s+/g, ' ')),
+    '"' + xl.head.trim() + '"');
+  /* ⭐ a workbook with more than one sheet says WHICH it read, and what else was in there */
+  say('it names the sheet read', /Products/.test(xl.sheetNote) && /Notes/.test(xl.sheetNote),
+    '"' + xl.sheetNote.replace(/\s+/g, ' ').slice(0, 84) + '"');
   if (SHOTS) {
     await p.evaluate(async ({ text, rep }) => {
       window.HOST.tillPost = async (pathname) => (pathname.indexOf('preflight') >= 0 ? rep : { ok: true });
