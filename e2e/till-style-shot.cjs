@@ -1,67 +1,169 @@
-/* till-style-shot.cjs — SEE IT BEFORE YOU LIVE WITH IT ([TILL-77], png/DisplaySettings.png)
- * Athi: "bring the miniature version in the popup to show this is how it looks and then ask for the apply."
+/* till-style-shot.cjs — SCREEN STYLE, ITS OWN ROOM ([TILL-84], design-style/png/StyleStudio.png)
+ *
+ * Athi 2026-09-17: "bring the miniature version in the popup to show this is how it looks and then ask for
+ * the apply."  Athi 2026-09-19: "it has its own content and deserves own panel."
+ *
+ * ⚠️⚠️ THE RULE THIS RUN ENFORCES, and the one the old preview broke: A STYLE PREVIEW SHOWS THE WHOLE SCREEN.
+ * Of the seven settings, five used to change nothing you could see in a grid of six tiles. So every check
+ * below asks the MINIATURE what it looks like, not the store what it holds — a preview that agrees with the
+ * store and disagrees with the screen is the exact failure being tested for.
+ * [[feedback-shoot-the-screen-not-the-dom]]
  */
 'use strict';
 const { chromium } = require('@playwright/test');
-const http=require('http'),fs=require('fs'),path=require('path');
-const ROOT=path.join(__dirname,'..','public');
-const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
-(async()=>{
- const srv=http.createServer((q,r)=>{const rel=decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/,'')||'index.html';const f=path.join(ROOT,rel);
-  if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);return r.end('no');}
-  r.writeHead(200,{'content-type':T[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r);});
- await new Promise(r=>srv.listen(0,r));
- const b=await chromium.launch();
- const p=await b.newPage({viewport:{width:1500,height:1000},deviceScaleFactor:2});
- const threw=[];p.on('pageerror',e=>threw.push(e.message));
- await p.goto('http://127.0.0.1:'+srv.address().port+'/till.html');
- await p.waitForFunction(()=>typeof window.setMode==='function'&&!!window.CBScreen,null,{timeout:30000});
- await p.evaluate(()=>{ window.S={shop:{name:'Mayur Bhavan',currency:'INR'},items:[],offers:[],at:new Date().toISOString()}; setMode('sell'); });
+const http = require('http'), fs = require('fs'), path = require('path');
+const ROOT = path.join(__dirname, '..', 'public');
+const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.json':'application/json',
+            '.svg':'image/svg+xml', '.png':'image/png', '.webmanifest':'application/manifest+json' };
+let bad = 0;
+const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
 
- const before=await p.evaluate(()=>screenCfg().theme+'/'+screenCfg().tile+'/'+screenCfg().layout);
- console.log('in force  · '+before);
+(async () => {
+  const srv = http.createServer((q, r) => {
+    const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html';
+    const f = path.join(ROOT, rel);
+    if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+    r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' });
+    fs.createReadStream(f).pipe(r);
+  });
+  await new Promise(r => srv.listen(0, r));
+  const b = await chromium.launch();
+  const p = await b.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
+  const threw = []; p.on('pageerror', e => threw.push(e.message));
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
+  await p.waitForFunction(() => typeof window.setMode === 'function' && !!window.CBScreen, null, { timeout: 30000 });
+  await p.evaluate(() => {
+    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, items: [], offers: [], at: new Date().toISOString() };
+    setMode('sell');
+  });
 
- /* ⚠️ DRIVE THE GATE: the strip, How it looks, then the door */
- await p.click('[data-testid="till-side-open"]');
- await p.waitForSelector('#tillmenu',{state:'visible',timeout:5000});
- await p.click('[data-testid="till-msec-btn-look"]');
- await p.waitForSelector('[data-testid="till-open-style"]',{state:'visible',timeout:5000});
- await p.click('[data-testid="till-open-style"]');
- await p.waitForSelector('#styledlg[open]',{timeout:5000});
+  const before = await p.evaluate(() => screenCfg().theme + '/' + screenCfg().tile + '/' + screenCfg().layout);
+  console.log('in force  · ' + before);
 
- const rows=await p.evaluate(()=>Array.from(document.querySelectorAll('.stylerow .sl')).map(x=>x.textContent.trim()));
- console.log('groups    · '+rows.join(' · '));
- const says0=await p.evaluate(()=>document.getElementById('stylesays').textContent);
- console.log('preview   · '+says0);
+  /* ⚠️ DRIVE THE GATE a person drives: the strip, How it looks, then the door. [[feedback-probe-through-the-gate]] */
+  await p.click('[data-testid="till-side-open"]');
+  await p.waitForSelector('#tillmenu', { state: 'visible', timeout: 5000 });
+  await p.click('[data-testid="till-msec-btn-look"]');
+  const door = await p.textContent('[data-testid="till-open-style"]');
+  say('the door', !/preset|tile/i.test(door), '"' + door.trim() + '"  (no jargon)');
+  await p.click('[data-testid="till-open-style"]');
+  await p.waitForSelector('#styledlg[open]', { timeout: 5000 });
+  await p.waitForTimeout(150);
 
- /* choose Kiosk and watch the miniature change — WITHOUT applying */
- await p.click('[data-testid="till-style-preset-kiosk"]');
- const after=await p.evaluate(()=>({says:document.getElementById('stylesays').textContent,
-   tiles:document.querySelectorAll('#stylepreview .sk-tile').length,
-   live:screenCfg().theme+'/'+screenCfg().tile+'/'+screenCfg().layout}));
- console.log('kiosk     · '+after.says);
- console.log('          · preview tiles='+after.tiles+'  counter still '+after.live
-   +(after.live===before?'  OK nothing applied yet':'  ✗ APPLIED WITHOUT ASKING'));
+  /* ── 1 · the rows say what a shopkeeper would say ─────────────────────────────────────────────────── */
+  const rows = await p.$$eval('#stylebody .strow>b', n => n.map(x => x.textContent.trim()));
+  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Photos', rows.join(' · '));
 
- /* ⭐⭐ PHOTOS BY SURFACE ([TILL-80]) — Athi: "a popup window to check where, and all the photos off" */
- const ph0=await p.evaluate(()=>({keys:!!screenCfg().photos, list:thumbsOn()}));
- await p.click('[data-testid="till-style-photos-list"]');
- const ph1=await p.evaluate(()=>({keys:!!styleVal('photos'), list:thumbsOn()}));
- console.log('photos    · list toggled: keys='+ph1.keys+' list='+ph1.list
-   +((ph1.list!==ph0.list)?'  OK the list has its own switch':'  ✗'));
- await p.click('[data-testid="till-style-photos-none"]');
- const ph2=await p.evaluate(()=>({keys:!!styleVal('photos'), list:thumbsOn()}));
- console.log('          · all off: keys='+ph2.keys+' list='+ph2.list
-   +((!ph2.keys&&!ph2.list)?'  OK every surface':'  ✗ SOMETHING STILL ON'));
+  /* ── 2 · ⚠️⚠️ EVERY SETTING VISIBLY CHANGES THE MINIATURE (spec §7.1) ─────────────────────────────── */
+  /* ⚠️ THE WHOLE DRAWN STATE, not just the markup: the theme rides on the canvas's CSS VARIABLES, so an
+     innerHTML-only comparison reports "theme changes nothing" about a miniature that visibly went black. */
+  const shot = () => p.evaluate(() => {
+    const c = document.getElementById('stcanvas');
+    return c.getAttribute('style') + '|' + c.innerHTML;
+  });
+  const base = await shot();
+  const moved = [];
+  for (const [key, val] of [['layout','vertical'], ['tile','photo'], ['picker','groupRail'],
+                            ['theme','dark'], ['density','compact']]) {
+    await p.click(`[data-testid="till-style-${key}-${val}"]`);
+    await p.waitForTimeout(60);
+    const now = await shot();
+    moved.push(key + (now === base ? ':NO' : ':yes'));
+    /* back to where we were, so each one is measured on its own */
+    await p.evaluate(() => { STYLE_DRAFT = {}; stylePaint(); });
+    await p.waitForTimeout(40);
+  }
+  say('each one', moved.every(m => m.endsWith(':yes')), moved.join('  '));
 
- const shot=path.join(__dirname,'shots','screen-style.png');
- fs.mkdirSync(path.dirname(shot),{recursive:true});
- await p.screenshot({path:shot}); console.log('wrote '+shot);
+  /* the theme also has to reach the FRAME, not only the tiles */
+  await p.click('[data-testid="till-style-theme-dark"]');
+  await p.waitForTimeout(60);
+  const paper = await p.evaluate(() => getComputedStyle(document.getElementById('stcanvas')).backgroundColor);
+  say('colours', /23, 21, 15|17, 21, 15/.test(paper) || paper !== 'rgb(252, 250, 245)', 'the whole miniature is ' + paper);
 
- await p.click('[data-testid="till-style-apply"]');
- const applied=await p.evaluate(()=>screenCfg().theme+'/'+screenCfg().tile+'/'+screenCfg().layout);
- console.log('apply     · '+applied+(applied!==before?'  OK applied on request':'  ✗ DID NOTHING'));
+  /* ── 3 · the key grid really is the layout's column count ─────────────────────────────────────────── */
+  await p.evaluate(() => { STYLE_DRAFT = {}; stylePaint(); });
+  const cols = async () => p.evaluate(() =>
+    getComputedStyle(document.querySelector('#stcanvas .sk-grid')).gridTemplateColumns.split(' ').length);
+  const wide = await cols();
+  await p.click('[data-testid="till-style-layout-rail"]');
+  await p.waitForTimeout(60);
+  const rail = await cols();
+  say('columns', wide !== rail && wide >= 4 && rail <= 3, 'horizontal ' + wide + ' → rail ' + rail);
 
- if(threw.length){console.log('THREW · '+threw.join(' | '));process.exitCode=1;}
- await b.close();srv.close();
+  /* ── 4 · the device tabs re-scale, and the label tells the truth ──────────────────────────────────── */
+  await p.evaluate(() => { STYLE_DRAFT = {}; stylePaint(); });
+  await p.click('[data-testid="till-style-dev-phone"]');
+  await p.waitForTimeout(80);
+  const ph = await p.evaluate(() => ({
+    w: document.getElementById('stcanvas').style.width,
+    lab: document.getElementById('styscale').textContent,
+    cols: getComputedStyle(document.querySelector('#stcanvas .sk-grid')).gridTemplateColumns.split(' ').length
+  }));
+  say('phone', ph.w === '390px' && /390 × 844/.test(ph.lab) && ph.cols <= 3,
+    ph.w + ', ' + ph.cols + ' in a row · "' + ph.lab + '"');
+  await p.click('[data-testid="till-style-dev-screen"]');
+
+  /* ── 5 · Now vs After swaps what is drawn, and nothing else ───────────────────────────────────────── */
+  await p.click('[data-testid="till-style-theme-dark"]');
+  await p.waitForTimeout(60);
+  const after = await p.evaluate(() => getComputedStyle(document.getElementById('stcanvas')).backgroundColor);
+  await p.click('[data-testid="till-style-show-now"]');
+  await p.waitForTimeout(60);
+  const nowc = await p.evaluate(() => getComputedStyle(document.getElementById('stcanvas')).backgroundColor);
+  say('now/after', after !== nowc, 'after ' + after + ' vs now ' + nowc);
+  await p.click('[data-testid="till-style-show-after"]');
+
+  /* ── 6 · it says what changes, in consequences ────────────────────────────────────────────────────── */
+  const changes = await p.$$eval('[data-testid="till-style-changes"] li', n => n.map(x => x.textContent.trim()));
+  const pend = await p.textContent('[data-testid="till-style-pending"]');
+  say('says', changes.length === 1 && /easier on the eyes/.test(changes[0]) && /1 change/.test(pend),
+    '"' + pend.trim() + '" → ' + changes.join(' | '));
+
+  /* ── 7 · ⚠️ NOTHING HAS MOVED ON THE COUNTER YET ──────────────────────────────────────────────────── */
+  const still = await p.evaluate(() => screenCfg().theme + '/' + screenCfg().tile + '/' + screenCfg().layout);
+  say('untouched', still === before, 'counter is still ' + still);
+
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'screen-style.png') });
+
+  /* ── 8 · the nine, as pictures ────────────────────────────────────────────────────────────────────── */
+  await p.click('[data-testid="till-style-seeall"]');
+  await p.waitForSelector('#stylegal[open]', { timeout: 4000 });
+  const gal = await p.$$eval('#stygal button', n => n.map(x => ({
+    wire: !!x.querySelector('.wf'), name: (x.querySelector('.gn') || {}).textContent,
+    good: ((x.querySelector('.gd') || {}).textContent || '').length })));
+  say('the nine', gal.length === 9 && gal.every(g => g.wire && g.good > 20),
+    gal.length + ' cards, every one a picture with a line saying what it is for');
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'screen-presets.png') });
+  await p.click('[data-testid="till-gal-kiosk"]');
+  await p.waitForTimeout(80);
+  const loaded = await p.evaluate(() => styleCfg().layout + '/' + styleCfg().tile);
+  say('pick one', loaded === 'vertical/photo', 'Kiosk loads as ' + loaded + ' — into the preview only');
+
+  /* ── 9 · photos, by surface (moved from the old run — [TILL-80] still holds) ──────────────────────── */
+  await p.click('[data-testid="till-style-photos-list"]');
+  const both = await p.evaluate(() => ({ keys: !!styleCfg().photos, list: thumbsOn() }));
+  say('photos', both.keys && both.list, 'keys=' + both.keys + ' list=' + both.list + ' — the list has its own switch');
+  await p.click('[data-testid="till-style-photos-none"]');
+  const off = await p.evaluate(() => ({ keys: !!styleCfg().photos, list: thumbsOn() }));
+  say('all off', !off.keys && !off.list, 'every surface, one press');
+
+  /* ── 10 · ⚠️⚠️ NEVER MID-BILL (spec §5.3) ─────────────────────────────────────────────────────────── */
+  await p.click('[data-testid="till-style-theme-dark"]');
+  await p.evaluate(() => { CART = [{ item_id: 'x', name: 'Tea', qty: 1, price: 25, key: 'x' }]; });
+  await p.evaluate(() => stylePaint());
+  const warn = await p.textContent('#stysays');
+  say('mid-bill', /waits until the bill in hand/.test(warn), 'the screen says so before you apply');
+  await p.click('[data-testid="till-style-apply"]');
+  await p.waitForTimeout(80);
+  const held = await p.evaluate(() => ({ live: screenCfg().theme, pend: !!STYLE_PEND }));
+  say('held', held.live === 'lightCream' && held.pend, 'applied nothing yet, and it is holding the change');
+  await p.evaluate(() => clearBill());
+  await p.waitForTimeout(80);
+  const landed = await p.evaluate(() => ({ live: screenCfg().theme, pend: !!STYLE_PEND }));
+  say('lands', landed.live === 'dark' && !landed.pend, 'the bill finished → ' + landed.live);
+
+  if (threw.length) console.log('⚠️ threw: ' + threw.join(' | '));
+  console.log(bad ? ('\n' + bad + ' FAILED') : '\nthe whole screen previews the whole screen');
+  await b.close(); srv.close(); process.exit(bad ? 1 : 0);
 })();
