@@ -49,7 +49,12 @@ const ITEMS=[
    const h=document.querySelector('.qcat');
    return { heads:document.querySelectorAll('.qcat').length, order:order,
             span:h?getComputedStyle(h).gridColumnStart+'/'+getComputedStyle(h).gridColumnEnd:'-',
-            firstIsHead: kids.length? kids[0].classList.contains('qcat') : false };
+            /* ⚠️⚠️ MOVED, NOT DELETED. This read kids[0], and the first child of #quick is the TOOLBAR
+               (.qbar) — it moved inside the grid after this harness was written, so the check has been
+               failing on correct code. The rule it protects is unchanged: a category heading OPENS the
+               first group. The answer is the first child that is not the toolbar. */
+            firstIsHead: (()=>{ const k=kids.filter(c=>!c.classList.contains('qbar'));
+              return k.length ? k[0].classList.contains('qcat') : false; })() };
  });
  console.log('grouped   · headings='+grp.heads+' span='+grp.span+' · '+grp.order.join('  '));
  console.log('          · first child is a heading='+grp.firstIsHead+((grp.heads===3&&grp.firstIsHead)?'  OK three breaks':'  ✗'));
@@ -59,6 +64,14 @@ const ITEMS=[
    .map(x=>(x.textContent||'').trim().split('\n')[0]).slice(0,7));
  console.log('order     · '+inner.join(' | '));
 
+ /**
+  * ⚠️⚠️ AND THE CHIPS FOLLOW THE *LIST* SWITCH, NOT THE KEYS' ([TILL-80]). This harness set
+  * screenSet({photos:true}) — the QUICK KEYS' pictures — and then asserted the chips carried one. They
+  * stopped following that switch when the chips were moved to follow the list they sit above and filter,
+  * so the check has been failing on correct behaviour ever since. Drive the one function that owns it.
+  */
+ await p.evaluate(()=>{ if(!thumbsOn()) thumbsToggle(); paintChips(); });
+ await p.waitForTimeout(150);
  /* category chips with pictures */
  const chips=await p.evaluate(()=>{
    const withPic=Array.from(document.querySelectorAll('#chips button.haspic')).map(x=>x.textContent.replace(/\s+/g,' ').trim());

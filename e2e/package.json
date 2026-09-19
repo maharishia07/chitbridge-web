@@ -24,7 +24,10 @@
     "report": "playwright show-report",
     "trace": "playwright show-trace",
     "codegen": "playwright codegen",
-    "install-browsers": "playwright install chromium firefox webkit"
+    "install-browsers": "playwright install chromium firefox webkit",
+    "till": "node till-all.cjs",
+    "till:shots": "node till-all.cjs --shots",
+    "till:bite": "node till-all.cjs --bite"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
