@@ -46,13 +46,18 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   })));
   const grey = '120,116,110';
   const unset = secs.filter(x => !x.mh || x.mh === grey).map(x => x.id);
-  say('hues', secs.length >= 8 && !unset.length,
+  /* ⚠️ COUNT-FREE ([TILL-99]). This asserted 'at least 8 sections' and failed when the hub was re-cut from
+     nine overlapping sections to six themed ones — testing the arithmetic instead of the rule. The rule is
+     that every section has a hue of its own. [[feedback-improvise-update-cases]] */
+  say('hues', secs.length >= 5 && !unset.length,
     secs.length + ' sections, every one with its own hue' + (unset.length ? ' — except ' + unset.join(',') : ''));
 
   /* ⚠️ AND NO TWO MEAN THE SAME THING BY ACCIDENT. Slate is shared on purpose (both are "facts about a thing"),
      so the check is that the PALETTE is not collapsing, not that every value is unique. */
   const distinct = new Set(secs.map(x => x.mh)).size;
-  say('distinct', distinct >= 7, distinct + ' different hues across ' + secs.length + ' sections');
+  /* ⭐ AND NOW EVERY ONE IS DIFFERENT. The re-cut removed the two slate sections that shared a hue, so this
+     can be exact rather than a threshold: no two sections may look the same. */
+  say('distinct', distinct === secs.length, distinct + ' different hues across ' + secs.length + ' sections');
 
   /* ── 2 · the open one is visibly the open one ─────────────────────────────────────────────────────── */
   const open = await p.evaluate(() => {
