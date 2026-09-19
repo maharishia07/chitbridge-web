@@ -56,6 +56,9 @@ const HARNESSES = [
      RUNNING server, so 'works offline' was an assertion for as long as the counter has existed. This one stops
      the server dead and opens the page again. Athi: *'do the cold offline harness first.'* */
   ['till-cold.cjs',        'with the server stopped: it opens, prices, numbers a bill and banks it'],
+  ['till-blank.cjs',       'a counter connected to nothing says so — and never that everything arrived'],
+  ['till-pair.cjs',        'a blank counter signs in, gets its key, and two shops never share a folder'],
+  ['till-summary.cjs',     'day, week and month summary chits — folded, sent, and stamped only when they land'],
   /* ⭐⭐ THE LINE, TURNED DOWN ON PURPOSE ([TILL-116]). Athi: *'switch off network, reduce the speed to 2g
      and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — the page
      asks it in 34 places, and a simulator that only slowed fetch would leave all of them fooled. */
