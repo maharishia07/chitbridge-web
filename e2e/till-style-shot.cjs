@@ -52,7 +52,7 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
 
   /* ── 1 · the rows say what a shopkeeper would say ─────────────────────────────────────────────────── */
   const rows = await p.$$eval('#stylebody .strow>b', n => n.map(x => x.textContent.trim()));
-  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Room·Photos', rows.join(' · '));
+  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Room·Key size·Photos', rows.join(' · '));
 
   /* ── 2 · ⚠️⚠️ EVERY SETTING VISIBLY CHANGES THE MINIATURE (spec §7.1) ─────────────────────────────── */
   /* ⚠️ THE WHOLE DRAWN STATE, not just the markup: the theme rides on the canvas's CSS VARIABLES, so an
@@ -84,16 +84,36 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   const paper = await p.evaluate(() => getComputedStyle(document.getElementById('stcanvas')).backgroundColor);
   say('colours', /23, 21, 15|17, 21, 15/.test(paper) || paper !== 'rgb(252, 250, 245)', 'the whole miniature is ' + paper);
 
-  /* ── 3 · the key grid really is the layout's column count ─────────────────────────────────────────── */
-  await p.evaluate(() => { STYLE_DRAFT = {}; stylePaint(); });
+  /* ── 3 · ⚠️⚠️ THE COLUMN COUNT COMES FROM THE KEY WIDTH, NOT FROM THE LAYOUT ([TILL-93]) ─────────────
+     This used to assert that changing LAYOUT changed the count, which it did — from LAYOUTS[].keysPerRow, a
+     stored table the real grid has never read. The rule being protected is unchanged (the preview must
+     reflect what the counter does); the answer moved, so the assertion moves with it.
+     [[feedback-improvise-update-cases]] */
+  await p.evaluate(() => { STYLE_DRAFT = {}; keySizePick(''); stylePaint(); });
   const cols = async () => p.evaluate(() =>
     getComputedStyle(document.querySelector('#stcanvas .sk-grid')).gridTemplateColumns.split(' ').length);
-  const wide = await cols();
-  await p.click('[data-testid="till-style-layout-rail"]');
-  await p.waitForTimeout(60);
-  const rail = await cols();
-  say('columns', wide !== rail && wide >= 4 && rail <= 3, 'horizontal ' + wide + ' → rail ' + rail);
+  const big = await (async () => { await p.click('[data-testid="till-style-keysize-xlarge"]');
+    await p.waitForTimeout(80); return cols(); })();
+  const small = await (async () => { await p.click('[data-testid="till-style-keysize-small"]');
+    await p.waitForTimeout(80); return cols(); })();
+  say('key size', small > big, 'Extra large ' + big + ' in a row → Small ' + small);
 
+  /* ⚠️ AND THE BADGE AGREES WITH THE GRID, because both ask styleFit() — a badge saying 6 over a grid of 5
+     is the exact fault this screen exists to prevent. */
+  const badge = await p.textContent('#stybadge');
+  say('badge', badge.includes(small + ' in a row'), '"' + badge.trim() + '"');
+
+  /* ⚠️ a picture at Small would be ~40px, so pictures turn themselves off AND say why (spec §1) */
+  const offWhy = await p.textContent('#stylebody');
+  say('too small', /too small to tell one packet/.test(offWhy), 'Small says why pictures are off');
+
+  /* ⭐ and Automatic is a stop on the control, not a checkbox — one tap gives the screen its say back */
+  await p.click('[data-testid="till-style-keysize-auto"]');
+  await p.waitForTimeout(80);
+  const auto = await p.evaluate(() => ({ chosen: keySizeChosen(), now: keySizeNow(),
+    suggests: !!document.querySelector('.schip.suggests') }));
+  say('automatic', !auto.chosen && !!auto.now && auto.suggests,
+    'nobody chose → the screen picks ' + auto.now + ', and its suggestion is shown dashed');
   /* ── 4 · the device tabs re-scale, and the label tells the truth ──────────────────────────────────── */
   await p.evaluate(() => { STYLE_DRAFT = {}; stylePaint(); });
   await p.click('[data-testid="till-style-dev-phone"]');
