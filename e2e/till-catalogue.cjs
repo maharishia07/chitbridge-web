@@ -127,6 +127,38 @@ const VEG = [
   say('the dialog closes', !minted.open, 'the shopkeeper is returned to the counter');
   say('the shelf redraws', /3 products/.test(minted.shelf), '"' + minted.shelf.trim() + '"');
 
+  /* ══ ⭐⭐⭐ THE CATEGORY MASTER IS THE TRUTH, THE NAME IS A CACHE ([TILL-114]) ═════════════════ */
+  console.log('\n── the local copy stays in step ' + '─'.repeat(30));
+  /**
+   * Athi: *"they can always in sync?"* — they can, but only if the ID is what is trusted. The snapshot sends
+   * the master in full every time while a DELTA leaves unchanged products alone, so a renamed category would
+   * otherwise stick on every product that happened not to change.
+   */
+  const sync = await p.evaluate(() => {
+    const snap = { shop: { name: 'S', currency: 'INR', country: 'IN' }, at: new Date().toISOString(), offers: [],
+      categories: [{ id: '838f', name: 'Grains' }, { id: 'b6d6', name: 'Flour' }],
+      items: [
+        { item_id: 'a', name: 'Rice',   price: 10, unit: 'kg', category: 'Veg',    category_id: '838f' },
+        { item_id: 'b', name: 'Atta',   price: 20, unit: 'kg', category: null,     category_id: 'b6d6' },
+        { item_id: 'c', name: 'Old',    price: 30, unit: 'pc', category: 'Legacy', category_id: null },
+        { item_id: 'd', name: 'Orphan', price: 40, unit: 'pc', category: 'Kept',   category_id: 'zzzz' },
+      ] };
+    const after = catRestamp(snap);
+    const by = {};
+    after.items.forEach((i) => { by[i.name] = i.category; });
+    return by;
+  });
+
+  /* ⭐ A RENAME TAKES EFFECT on a product that did not itself change — the point of the whole arrangement */
+  say('a rename reaches old rows', sync.Rice === 'Grains', 'Rice was baked as "Veg", now reads "' + sync.Rice + '"');
+  say('an unnamed one resolves', sync.Atta === 'Flour', 'Atta had no name and now reads "' + sync.Atta + '"');
+  /**
+   * ⚠️⚠️ AND NOTHING IS LOST. A product with no id keeps its legacy name, and one citing an id the master
+   * does not hold keeps what it had — replacing a name with nothing is a regression, not a fix.
+   */
+  say('the legacy name survives', sync.Old === 'Legacy', 'a product with no id still reads "' + sync.Old + '"');
+  say('an unknown id keeps its name', sync.Orphan === 'Kept', 'not blanked to "' + sync.Orphan + '"');
+
   /* ══ 4 · AND THE SHOP CAN SELL, with the veg differentiator intact ════════════════════════════════════ */
   const sale = await p.evaluate(() => {
     CART.length = 0;
