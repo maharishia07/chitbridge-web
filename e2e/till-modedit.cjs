@@ -60,6 +60,40 @@ const DOSA={item_id:'d1',name:'Masala Dosa',code:'T1',category:'Tiffin',unit:'pl
  console.log('cancel   · '+kept.lines+' line of '+kept.qty+' ('+kept.mods+')'
    +((kept.lines===1&&kept.qty===2&&kept.mods==='Hot+Paneer')?'  OK unchanged':'  FAILED'));
 
+ /* ⚠️⚠️ THE SAME COMBINATION, PICKED IN A DIFFERENT ORDER, IS THE SAME LINE ([TILL-76]).
+    Athi: "if the same choice is chosen again, it has to be added to the existing cart." Inside a group that
+    allows more than one, pick order used to change the key — two identical pizzas on one bill. */
+ const canon = await p.evaluate((d)=>{
+   CART.length=0; CARTSEL=-1;
+   addItem(d,1,[{group:'Extra',option:'Paneer',price:20},{group:'Extra',option:'Cheese',price:15}]);
+   addItem(d,1,[{group:'Extra',option:'Cheese',price:15},{group:'Extra',option:'Paneer',price:20}]);
+   price();
+   return { lines:CART.length, qty:CART[0].qty, key:CART[0].key };
+ }, DOSA);
+ console.log('canonical · two pick orders -> '+canon.lines+' line of '+canon.qty+'  key='+canon.key
+   +((canon.lines===1&&canon.qty===2)?'  OK one line':'  FAILED two lines for one combination'));
+
+ /* ⚠️ ACROSS GROUPS TOO, not only within one. modChosen() happens to walk the groups in order, so this case
+    was safe by accident — but a mod list restored from a parked draft or handed over by an API can arrive in
+    any order at all, and the signature must not care. */
+ const cross = await p.evaluate((d)=>{
+   CART.length=0; CARTSEL=-1;
+   addItem(d,1,[{group:'Spice',option:'Hot',price:0},{group:'Extra',option:'Paneer',price:20}]);
+   addItem(d,1,[{group:'Extra',option:'Paneer',price:20},{group:'Spice',option:'Hot',price:0}]);
+   price(); return { lines:CART.length, qty:CART[0].qty, key:CART[0].key };
+ }, DOSA);
+ console.log('cross-grp · either order -> '+cross.lines+' line of '+cross.qty+'  key='+cross.key
+   +((cross.lines===1&&cross.qty===2)?'  OK':'  FAILED'));
+
+ /* ⭐ and genuinely different choices stay two lines */
+ const diff = await p.evaluate((d)=>{
+   CART.length=0; CARTSEL=-1;
+   addItem(d,1,[{group:'Spice',option:'Medium',price:0}]);
+   addItem(d,1,[{group:'Spice',option:'Hot',price:0}]);
+   price(); return CART.length;
+ }, DOSA);
+ console.log('distinct  · medium and hot -> '+diff+' lines'+((diff===2)?'  OK':'  FAILED'));
+
  const shot=path.join(__dirname,'shots','mod-edit.png');
  fs.mkdirSync(path.dirname(shot),{recursive:true});
  await p.screenshot({path:shot}); console.log('wrote '+shot);
