@@ -49,6 +49,13 @@ const HARNESSES = [
      hotel is working and end to end veg shop is working.'* */
   ['till-currency.cjs',    'the counter bills in AED, USD and JPY — and yen carries no minor unit'],
   ['till-verticals.cjs',   'one counter, two trades: plates counted, vegetables weighed'],
+  /* ⭐⭐ THE FRONT DOOR ([TILL-105]). A shop setting itself up from the counter — validated where it is typed,
+     then synced. Athi: *'counter has no password, use the till key alone for the time being.'* */
+  ['till-shopedit.cjs',    'the counter sets up its own shop, checks the GSTIN, and refuses what it may not set'],
+  /* ⚠️⚠️⚠️ THE ONE THE WHOLE PITCH RESTS ON ([TILL-106]). Every other harness here serves the page from a
+     RUNNING server, so 'works offline' was an assertion for as long as the counter has existed. This one stops
+     the server dead and opens the page again. Athi: *'do the cold offline harness first.'* */
+  ['till-cold.cjs',        'with the server stopped: it opens, prices, numbers a bill and banks it'],
   ['till-settings.cjs',    'no visual control has two homes'],
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
