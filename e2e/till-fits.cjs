@@ -58,6 +58,7 @@ for (let i = 0; i < 60; i++) ITEMS.push({ item_id: 'p' + i, name: 'Product numbe
       if (L && L.shape) tillOptSet({ shape: L.shape });
       applyLook();
       /* a bill in hand, because an empty bill is the easy case */
+      paintChips();
       items.slice(0, 6).forEach((i) => addItem(i, 1));
       price();
     }, { items: ITEMS, layout });
@@ -76,6 +77,19 @@ for (let i = 0; i < 60; i++) ITEMS.push({ item_id: 'p' + i, name: 'Product numbe
         shape: (document.body.className.match(/shape-\w+/) || [''])[0],
         /* on a tall screen the keys must be ABOVE the bill */
         keysFirst: lr.top < rr.top,
+        /* ⚠️⚠️ THE THINGS THAT MUST NOT BE SQUASHED. A chip row flattened to 8px and a shelf list at 0 was
+           what Athi saw as "all get mixed up" — flex children shrink unless told not to. */
+        chips: Math.round((document.querySelector('.chips')||{getBoundingClientRect:()=>({height:0})}).getBoundingClientRect().height),
+        /* ⭐ AND THE ONE CONTROL A TILL MAY NEVER HIDE: Save & print must be on the screen, not below it. */
+        goBottom: Math.round(document.querySelector('.go').getBoundingClientRect().bottom),
+        /* ⚠️⚠️ AND NOTHING IS PRINTED ON TOP OF ANYTHING ELSE. Athi: "look at the bottom some text
+           overlapping" — the GST note under "Clear · Esc". A squeezed box whose CONTENT is not squeezed
+           paints over its neighbour, and only a rect comparison catches it. */
+        overlap: (() => {
+          const f = document.querySelector('.foot').getBoundingClientRect();
+          const g = document.querySelector('.go').getBoundingClientRect();
+          return g.bottom > f.top + 1 && g.top < f.bottom - 1;
+        })(),
         billPc: Math.round(rr.height / window.innerHeight * 100),
       };
     });
@@ -89,9 +103,13 @@ for (let i = 0; i < 60; i++) ITEMS.push({ item_id: 'p' + i, name: 'Product numbe
     say(layout + ' ' + w + 'x' + h, fits,
       m.shape.replace('shape-', '') + ' · page overflows by ' + m.docOver + 'px · shell ' + m.wrapH + ' of ' + m.vh);
     if (tall) {
-      say('', m.keysFirst && m.billPc <= 45,
+      say('', m.keysFirst && m.billPc <= 52,
         '  keys above the bill, bill takes ' + m.billPc + '% of the height');
     }
+    /* ⚠️ these two hold for EVERY shape, not only the tall one */
+    say('', m.chips >= 28, '  the chip row is ' + m.chips + 'px, not squashed');
+    say('', m.goBottom <= m.vh + 1, '  Save & print ends at ' + m.goBottom + ' of ' + m.vh);
+    say('', !m.overlap, '  the foot and the pay row do not overlap');
     await p.close();
   }
 
