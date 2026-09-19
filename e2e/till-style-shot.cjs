@@ -44,15 +44,15 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   await p.click('[data-testid="till-side-open"]');
   await p.waitForSelector('#tillmenu', { state: 'visible', timeout: 5000 });
   await p.click('[data-testid="till-msec-btn-look"]');
-  const door = await p.textContent('[data-testid="till-open-style"]');
+  const door = await p.textContent('[data-testid="till-msec-link-look"]');
   say('the door', !/preset|tile/i.test(door), '"' + door.trim() + '"  (no jargon)');
-  await p.click('[data-testid="till-open-style"]');
+  await p.click('[data-testid="till-msec-link-look"]');
   await p.waitForSelector('#styledlg[open]', { timeout: 5000 });
   await p.waitForTimeout(150);
 
   /* ── 1 · the rows say what a shopkeeper would say ─────────────────────────────────────────────────── */
   const rows = await p.$$eval('#stylebody .strow>b', n => n.map(x => x.textContent.trim()));
-  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Photos', rows.join(' · '));
+  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Room·Photos', rows.join(' · '));
 
   /* ── 2 · ⚠️⚠️ EVERY SETTING VISIBLY CHANGES THE MINIATURE (spec §7.1) ─────────────────────────────── */
   /* ⚠️ THE WHOLE DRAWN STATE, not just the markup: the theme rides on the canvas's CSS VARIABLES, so an
@@ -63,8 +63,11 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   });
   const base = await shot();
   const moved = [];
+  /* ⚠️ ROOM IS IN THIS LIST DELIBERATELY ([TILL-88]). Athi could not tell what "Balanced" or "Bill first"
+     would do, and the answer was never a better diagram — it was drawing them. If this one ever stops
+     changing the miniature, the presets are back to being five ratios nobody can read. */
   for (const [key, val] of [['layout','vertical'], ['tile','photo'], ['picker','groupRail'],
-                            ['theme','dark'], ['density','compact']]) {
+                            ['theme','dark'], ['density','compact'], ['room','nokeys']]) {
     await p.click(`[data-testid="till-style-${key}-${val}"]`);
     await p.waitForTimeout(60);
     const now = await shot();

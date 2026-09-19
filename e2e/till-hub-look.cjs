@@ -73,16 +73,33 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   say('both halves', strip.length > 4 && !wrong.length,
     strip.length + ' strip icons, every hue the one its section carries' + (wrong.length ? ' — except ' + wrong.join(',') : ''));
 
-  /* ── 4 · the door to Screen style says where it goes, and is not clipped ──────────────────────────── */
+  /* ── 4 · ⚠️ ONE DOOR, NOT TWO ([TILL-88]) — the full-width button inside the section opened the same
+     dialog as the heading link. The check is now that it is GONE and the link is the only way in. ──── */
   await p.click('[data-testid="till-msec-btn-look"]');
   await p.waitForTimeout(150);
-  const door = await p.evaluate(() => {
-    const d = document.querySelector('[data-testid="till-open-style"]');
-    return { text: d.textContent.trim(), clipped: d.scrollWidth > d.clientWidth + 1 };
+  const doors = await p.$$eval('#tillmenu [data-testid="till-open-style"]', n => n.length);
+  say('one door', doors === 0, 'the duplicate full-width door is gone');
+  /* ── 5 · the section is called Screen, and the way in is in its heading ([TILL-88]) ──────────── */
+  const head = await p.evaluate(() => {
+    const b = document.querySelector('[data-testid="till-msec-btn-look"]');
+    const l = document.querySelector('[data-testid="till-msec-link-look"]');
+    return { title: b.querySelector('b').textContent.trim(), icon: b.querySelector('.mi').textContent.trim(),
+             link: l ? l.textContent.trim() : null,
+             /* ⚠️ it must be a SIBLING of the fold button — nested, it would fold what it tries to open */
+             nested: !!(l && b.contains(l)) };
   });
-  say('the door', !door.clipped && !/preset|tile|picker/i.test(door.text),
-    '"' + door.text.slice(0, 40) + '…" — nothing clipped, no jargon');
+  say('named', head.title === 'Screen' && head.icon !== '◐', '"' + head.icon + ' ' + head.title + '"');
+  say('preview', head.link === 'Preview' && !head.nested, 'a "' + head.link + '" link beside it, not inside the button');
+  /* ⭐ and it opens the studio without folding the section it sits on */
+  await p.click('[data-testid="till-msec-link-look"]');
+  await p.waitForSelector('#styledlg[open]', { timeout: 4000 });
+  say('it opens', true, 'the studio, straight from the heading');
+  await p.evaluate(() => styleClose());
 
+  /* ⚠️ fromMenu() closes the hub before it runs, which is correct — so the shot has to open it again, or it
+     photographs an empty counter and says nothing about the menu it is named after. */
+  await p.evaluate(() => { toggleMenu(); menuSection('look'); });
+  await p.waitForTimeout(250);
   await p.screenshot({ path: path.join(__dirname, 'shots', 'hub.png') });
   if (threw.length) console.log('⚠️ threw: ' + threw.join(' | '));
   console.log(bad ? ('\n' + bad + ' FAILED') : '\nthe hub is found by colour, not read');
