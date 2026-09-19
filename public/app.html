@@ -342,6 +342,17 @@
   /* Welcome (pre-register) */
   .welwrap{max-width:860px;margin:0 auto;padding:6px 18px 70px}
   .weltop{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px}
+  /* ⭐ WHAT WE WORKED OUT, at registration — quiet, because the shop is only checking it ([REG-2]) */
+  .govbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:10px 0 8px;background:var(--card)}
+  .govhd{font-size:var(--fs-1);color:var(--grey);margin-bottom:8px}
+  .govrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 10px;padding:5px 0;border-top:1px solid var(--line)}
+  .govrow:first-of-type{border-top:0}
+  .govrow .gw{color:var(--grey);font-size:var(--fs-1)}
+  .govrow .gv{font-weight:700;overflow-wrap:anywhere}
+  .govrow .gf{grid-column:2;color:var(--grey);font-size:var(--fs-1)}
+  .govrow.unknown .gv{color:var(--amber,#8E3517);font-weight:600}
+  .govagree{display:flex;align-items:flex-start;gap:9px;margin:4px 0 10px;cursor:pointer;line-height:1.45}
+  .govagree input{margin-top:3px;width:18px;height:18px;flex:none}
   .welsignin{font-size:var(--fs-2);color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:var(--card);cursor:pointer}
   .welhero{text-align:center;padding:14px 0 6px}
   .welhero h1{font-family:'Space Grotesk';font-size:var(--fs-6);font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
@@ -1656,6 +1667,8 @@ body.lab-only #cbtestpanel{
      everything that reads a price, because cbAmount() and the cart both forward to it. -->
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
+<!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
+<script src="/app/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
 <!-- ⭐ THE FIVE LIST CONTROLS, WRITTEN ONCE — search · filters · sort · count · lazy rows, for a list the browser
      already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
@@ -3375,6 +3388,15 @@ function route(){
   
   const h=location.hash||"#/";
   if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome") && !h.startsWith("#/legend")) return go("#/login");
+  /**
+   * ⭐⭐ A PAIRED COUNTER OPENS ITS TILL ([REG-4]). Here, and not at any of the five places a session begins,
+   * because the router is the one place all of them arrive at.
+   * ⚠️ ONLY ON THE WAY TO THE APP'S HOME. Someone who navigated deliberately to Settings or the catalogue
+   * asked for that screen, and answering a specific request with a different screen is its own bug.
+   * ⚠️⚠️ AND ONLY UNTIL THEY REFUSE — counterStay() remembers, or the owner of the machine can never reach
+   * the back office on it.
+   */
+  if(SESSION.token && counterHere() && !counterStay() && (h==="#/" || h==="" || h.startsWith("#/app"))) return toCounter();
   if(h.startsWith("#/welcome")) return renderWelcome();
   if(h.startsWith("#/legend")){ renderWelcome(); return openLegend(); }
   if(h.startsWith("#/register")) return renderRegister();
@@ -3463,6 +3485,75 @@ function regReset(){ REG={step:"form", name:"", email:"", busy:false, err:""}; r
 /* SCREEN: Register (#/register) · module target: auth.js
    Real flow: POST EP.register {display_name, email} -> OTP -> POST EP.ownerVerify {email, otp} -> token + active entity (signed in).
    GAPS (API-side, for CLI): STEP 2 role/blueprint carry (not stored yet) · STEP 3 schema gate (fresh entity needs a default entity_schemas, else catalogue 404s). */
+/**
+ * ⭐⭐ WHAT WE FILLED IN, AND WHERE EACH ANSWER CAME FROM. Five rows, one line of explanation, and a tick. The
+ * shop does not type any of it; it only says whether we got it right.
+ * ⚠️ AN UNKNOWN IS SHOWN AS AN UNKNOWN. Country decides tax and money, so a blank a person can see beats a
+ * default they never saw. [[feedback-write-for-the-shopkeeper]]
+ */
+function govRows(){
+  try { return (window.CBGov && CBGov.rows(govCtx())) || []; } catch (_) { return []; }
+}
+var _govCtx = null;
+function govCtx(){
+  /* ⚠️ READ ONCE. Re-deriving on every repaint would let the values move under the person while they read. */
+  try { if (!_govCtx && window.CBGov) _govCtx = CBGov.read(); } catch (_) { _govCtx = null; }
+  return _govCtx;
+}
+function govPanel(){
+  var rows = govRows();
+  if (!rows.length) return '';
+  return '<div class="govbox" data-testid="reg-gov">'
+    + '<div class="govhd">We filled these in from your browser. Change any of them after you sign in.</div>'
+    + rows.map(function(r){
+        return '<div class="govrow' + (r.known ? '' : ' unknown') + '" data-testid="reg-gov-' + r.key + '">'
+          + '<span class="gw">' + esc(r.what) + '</span>'
+          + '<span class="gv">' + esc(r.known ? r.value : 'not known') + '</span>'
+          + '<span class="gf">' + esc(r.known ? r.from : 'you can set this after signing in') + '</span>'
+          + '</div>';
+      }).join('')
+    + '</div>'
+    /* ⚠️⚠️ THE GATE. Not a notice — a question about the country that decides their tax. */
+    + '<label class="govagree"><input type="checkbox" id="r_agree" data-testid="reg-agree"'
+    + (REG.agreed ? ' checked' : '') + ' onchange="REG.agreed=this.checked;renderRegister()">'
+    + '<span>These are right, and I accept the terms of use.</span></label>';
+}
+/**
+ * ⭐⭐ IF THIS DEVICE IS A COUNTER, THE COUNTER IS WHERE IT GOES. Athi: *"if it is counter, redirect to the
+ * counter application."* A browser that has been paired holds `cb_till_key`, and app.html and till.html share
+ * an origin, so the answer is already on the device — no round trip and no question.
+ * ⚠️ IT SAYS SO ON THE WAY, AND LEAVES A DOOR. A redirect nobody can refuse is how an owner who wanted the back
+ * office gets trapped on the till. [[feedback-question-is-not-an-instruction]]
+ */
+function counterHere(){
+  try { return String(localStorage.getItem('cb_till_key') || '').trim(); } catch (_) { return ''; }
+}
+/**
+ * ⚠️⚠️ A REFUSAL IS REMEMBERED FOR THE SESSION. Without this the router would send the owner straight back to
+ * the till every time they reached the app's home, and the back office would be unreachable on the one machine
+ * that most needs it. sessionStorage, not localStorage: it lasts this sitting, not for ever.
+ */
+function counterStay(){
+  try { return sessionStorage.getItem('cb_stay_in_app') === '1'; } catch (_) { return false; }
+}
+function counterStayHere(){
+  try { sessionStorage.setItem('cb_stay_in_app', '1'); } catch (_) {}
+  /* ⚠️⚠️ go() MOVES THE HASH, AND A HASH THAT IS ALREADY #/app DOES NOT MOVE. No hashchange fires, route()
+     never runs, and the person who just chose to stay is left looking at the leaving screen while the timer
+     counts down behind it. So the route is re-run directly. [[feedback-check-after-the-wire]] */
+  try { if ((location.hash || '') !== '#/app') location.hash = '#/app'; } catch (_) {}
+  try { route(); } catch (_) {}
+}
+function toCounter(why){
+  document.getElementById('root').innerHTML = '<div class="auth"><div class="card"><div class="body">'
+    + '<h2 data-testid="reg-tocounter">Opening the counter</h2>'
+    + '<p class="sub">' + esc(why || 'This device is paired as a counter.') + '</p>'
+    + '<a class="btn gold" href="/till.html">Open the counter now</a>'
+    + '<p style="margin-top:10px"><a href="#/app" data-testid="reg-stay" onclick="counterStayHere();return false">Stay in ChitBridge instead</a></p>'
+    + '</div></div></div>';
+  /* ⚠️ the timer checks the refusal, not the hash — clicking 'stay' sets it before the hash has moved */
+  try { setTimeout(function(){ if (!counterStay()) location.href = '/till.html'; }, 1800); } catch (_) {}
+}
 function renderRegister(){
   const R=REG; const who='style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px"'; const muted='style="color:var(--grey);font-weight:400"';
   let form="";
@@ -3488,9 +3579,10 @@ function renderRegister(){
   } else {
     form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
        ${regVerticalChooser()}
+       ${govPanel()}
        <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${(R.busy||!R.agreed)?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify &amp; enter <span class=arw>→</span>"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
@@ -3542,8 +3634,18 @@ async function doRegister(){
       try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null; }catch(_){ REG.verticals=[]; }
       return renderRegister();
     }
-    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined}});
-    setSession(entFromVerify(r, R.name)); R.busy=false; go("#/app");
+    /**
+     * ⭐⭐ THE GOVERNANCE LAYER TRAVELS WITH THE VERIFICATION — one round trip, and it arrives at the moment the
+     * identity becomes real rather than as a second call that can fail on its own.
+     * ⚠️ `agreed_at` IS THE EVIDENCE, not the tick. A boolean says somebody ticked a box; a timestamp says when.
+     */
+    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined,
+      context:(window.CBGov?CBGov.payload(govCtx()):undefined), agreed_at:new Date().toISOString()}});
+    setSession(entFromVerify(r, R.name)); R.busy=false;
+    /* ⭐ a paired device goes to the till it is paired to — see toCounter() */
+    var ck=counterHere();
+    if(ck) return toCounter('This device is paired as a counter.');
+    go("#/app");
   }catch(e){ R.busy=false; R.err="Could not register: "+e.message+" (check endpoint / stage)"; renderRegister(); }
 }
 /* The vertical/blueprint chooser at sign-up — showcases the available constitutions (verticals) so the registrant
