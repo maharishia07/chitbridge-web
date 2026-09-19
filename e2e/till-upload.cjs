@@ -59,6 +59,18 @@ function reportFor(text) {
   await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
 
   const dirty = reportFor(SHEET);
+  /**
+   * ⭐ the two readings of the SAME titled file, both from the real preflight: once as the reader takes it
+   * (the title as headings) and once told the headings are on row 3.
+   */
+  const TITLED_TEXT = ['Anbu Vegetables — price list', 'as at 19 September',
+                       'Particulars,Rate (INR),UOM', 'Tomato,40,Kg', 'Onion,Rs 30,kg'].join('\n');
+  const headReport1 = Object.assign(reportFor(TITLED_TEXT), { header_row: 1, preview: [
+    { row: 1, cells: ['Anbu Vegetables — price list'] }, { row: 2, cells: ['as at 19 September'] },
+    { row: 3, cells: ['Particulars', 'Rate (INR)', 'UOM'] }, { row: 4, cells: ['Tomato', '40', 'Kg'] } ] });
+  const headReport3 = Object.assign(
+    reportFor(['Particulars,Rate (INR),UOM', 'Tomato,40,Kg', 'Onion,Rs 30,kg'].join('\n')),
+    { header_row: 3, preview: headReport1.preview });
   console.log('  (the real preflight found ' + dirty.report.summary.errors + ' bad rows of '
     + dirty.report.summary.rows + ', and could not place ' + (dirty.report.unmatched || []).length + ' column)');
 
@@ -206,11 +218,54 @@ function reportFor(text) {
   /* ⭐ a workbook with more than one sheet says WHICH it read, and what else was in there */
   say('it names the sheet read', /Products/.test(xl.sheetNote) && /Notes/.test(xl.sheetNote),
     '"' + xl.sheetNote.replace(/\s+/g, ' ').slice(0, 84) + '"');
+  /* ══ ⭐⭐⭐ "MY HEADINGS ARE ON ROW ___" ([TILL-110]) ═════════════════════════════ */
+  console.log('\n── a list that opens with the shop name ' + '─'.repeat(24));
+  const TITLED = ['Anbu Vegetables — price list', 'as at 19 September',
+                  'Particulars,Rate (INR),UOM', 'Tomato,40,Kg', 'Onion,Rs 30,kg'].join('\n');
+
+  const head = await p.evaluate(async ({ text, first, second }) => {
+    const seen = [];
+    window.HOST.tillPost = async (pathname, body) => {
+      seen.push(body);
+      if (pathname.indexOf('preflight') < 0) return { ok: true, message: '2 products added' };
+      /* ⚠️ the server answers differently depending on the row asked for — which is the whole point */
+      return Number(body.header_row) === 3 ? second : first;
+    };
+    await upRead(new File([text], 'list.csv', { type: 'text/csv' }));
+    const before = [...document.querySelectorAll('#upbody select[data-inc]')].map((s) => s.getAttribute('data-inc'));
+    const pick = document.querySelector('[data-testid="till-headrow"]');
+    const options = [...pick.options].map((o) => o.text);
+    pick.value = '3';
+    await upHeadRow('3');
+    const after = [...document.querySelectorAll('#upbody select[data-inc]')].map((s) => s.getAttribute('data-inc'));
+    await upCommit();
+    return { options, before, after, seen, selected: (document.querySelector('[data-testid="till-headrow"]') || {}).value };
+  }, { text: TITLED, first: headReport1, second: headReport3 });
+
+  /* ⭐ the rows are offered AS THEY READ, not as a number to count to */
+  say('the rows are offered', head.options.length >= 3 && /Anbu Vegetables/.test(head.options[0]),
+    '"' + head.options.slice(0, 2).join('" / "') + '"');
+  say('it read the title first', head.before.indexOf('Anbu Vegetables — price list') >= 0,
+    'columns were: ' + head.before.join(', '));
+  /* ⚠️⚠️ picking a row RE-READS THE FILE on the server — the page holds no parse of its own */
+  say('picking a row re-reads it', head.seen.length >= 2 && Number(head.seen[1].header_row) === 3,
+    'the second request carried header_row ' + (head.seen[1] || {}).header_row);
+  say('and the columns change', head.after.indexOf('Particulars') >= 0 && head.after.indexOf('Anbu Vegetables — price list') < 0,
+    'columns are now: ' + head.after.join(', '));
+  /**
+   * ⚠️⚠️⚠️ AND THE COMMIT CARRIES IT. Without header_row on the commit the server would re-read from row 1
+   * and import against headings nobody approved — a silent mismatch between the report and what was written.
+   */
+  const committed = head.seen[head.seen.length - 1] || {};
+  say('the commit sends the row', Number(committed.header_row) === 3 && committed.confirm === true,
+    'header_row ' + committed.header_row + ', confirm ' + committed.confirm);
+
   if (SHOTS) {
+    /* ⭐ the titled file, so the picture shows the heading-row control doing its job ([TILL-110]) */
     await p.evaluate(async ({ text, rep }) => {
-      window.HOST.tillPost = async (pathname) => (pathname.indexOf('preflight') >= 0 ? rep : { ok: true });
-      await upRead(new File([text], 'shop.csv', { type: 'text/csv' }));
-    }, { text: SHEET, rep: dirty });
+      window.HOST.tillPost = async () => rep;
+      await upRead(new File([text], 'price list.csv', { type: 'text/csv' }));
+    }, { text: TITLED_TEXT, rep: headReport1 });
     const out = path.join(__dirname, '..', 'png', 'Upload.png');
     fs.mkdirSync(path.dirname(out), { recursive: true });
     await p.screenshot({ path: out });
