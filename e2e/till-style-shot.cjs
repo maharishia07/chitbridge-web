@@ -176,9 +176,19 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   await p.evaluate(() => { CART = [{ item_id: 'x', name: 'Tea', qty: 1, price: 25, key: 'x' }]; });
   await p.evaluate(() => stylePaint());
   const warn = await p.textContent('#stysays');
-  say('mid-bill', /waits until the bill in hand/.test(warn), 'the screen says so before you apply');
+  /* ⚠️ WORDING MOVED, RULE UNCHANGED ([TILL-95]): the warning is now future tense before you press ("will
+     wait") and past tense after ("Held."), because a refusal has to read differently from a prediction. */
+  say('mid-bill', /will wait until the bill in hand/.test(warn), 'the screen says so BEFORE you apply');
   await p.click('[data-testid="till-style-apply"]');
-  await p.waitForTimeout(80);
+  await p.waitForTimeout(150);
+  /* ⚠️⚠️ AND IT STILL SAYS SO AFTERWARDS. A toast that vanishes over a dialog that closes is what Athi read as
+     "apply to counter is not working" — the held state must be as visible as applying would have been. */
+  const heldState = await p.evaluate(() => ({
+    open: !!document.querySelector('#styledlg[open]'),
+    held: !!document.querySelector('[data-testid="till-style-held"]'),
+    btn: (document.getElementById('styapply') || {}).textContent || '' }));
+  say('held, and said', heldState.open && heldState.held && /Waiting for the bill/.test(heldState.btn),
+    'the studio stays open, the note says "Held", the button says "' + heldState.btn.trim() + '"');
   const held = await p.evaluate(() => ({ live: screenCfg().theme, pend: !!STYLE_PEND }));
   say('held', held.live === 'lightCream' && held.pend, 'applied nothing yet, and it is holding the change');
   await p.evaluate(() => clearBill());
