@@ -56,6 +56,10 @@ const HARNESSES = [
      RUNNING server, so 'works offline' was an assertion for as long as the counter has existed. This one stops
      the server dead and opens the page again. Athi: *'do the cold offline harness first.'* */
   ['till-cold.cjs',        'with the server stopped: it opens, prices, numbers a bill and banks it'],
+  /* ⭐⭐ THE LINE, TURNED DOWN ON PURPOSE ([TILL-116]). Athi: *'switch off network, reduce the speed to 2g
+     and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — the page
+     asks it in 34 places, and a simulator that only slowed fetch would leave all of them fooled. */
+  ['till-netsim.cjs',      'the line can be turned down, and it says so while it is'],
   /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
      strip a product field by field and see where the counter stops being able to sell. */
   ['till-catalogue.cjs',   'the axiom, the two trades, and a shop that opens and sells'],
