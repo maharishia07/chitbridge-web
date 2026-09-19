@@ -56,6 +56,9 @@ const HARNESSES = [
      RUNNING server, so 'works offline' was an assertion for as long as the counter has existed. This one stops
      the server dead and opens the page again. Athi: *'do the cold offline harness first.'* */
   ['till-cold.cjs',        'with the server stopped: it opens, prices, numbers a bill and banks it'],
+  /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
+     strip a product field by field and see where the counter stops being able to sell. */
+  ['till-catalogue.cjs',   'the axiom, the two trades, and a shop that opens and sells'],
   ['till-settings.cjs',    'no visual control has two homes'],
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
