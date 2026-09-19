@@ -13,7 +13,7 @@
  */
 'use strict';
 const UNITS = {
-  kg:     { rec20: 'KGM', uqc: 'KGS', names: ['kg', 'kgs', 'kilogram', 'kilograms', 'kilo', 'kilos', 'kilogramme', 'கிலோ', 'கிலோகிராம்', 'किलो', 'किलोग्राम'] },
+  kg:     { measured: true, rec20: 'KGM', uqc: 'KGS', names: ['kg', 'kgs', 'kilogram', 'kilograms', 'kilo', 'kilos', 'kilogramme', 'கிலோ', 'கிலோகிராம்', 'किलो', 'किलोग्राम'] },
   /**
    * ⚠️ `g` IS THE SI SYMBOL FOR GRAM and it was the one spelling missing, so `12 g` of bullion was refused by
    * lib/convert.js while `12 gm` was accepted. Added deliberately, not slipped in: this table is vendored, and a
@@ -24,19 +24,19 @@ const UNITS = {
    * error in the one domain (bullion, pharma) where it would matter most. They need canonical units of their
    * own, with factors, which is a larger change than a name.
    */
-  gram:   { rec20: 'GRM', uqc: 'GMS', names: ['gram', 'grams', 'g', 'gm', 'gms', 'gramme', 'கிராம்', 'ग्राम'] },
-  tonne:  { rec20: 'TNE', uqc: 'MTS', names: ['tonne', 'tonnes', 'ton', 'tons', 'mt', 'metric ton', 'டன்', 'टन'] },
-  litre:  { rec20: 'LTR', uqc: 'LTR', names: ['litre', 'litres', 'liter', 'liters', 'ltr', 'ltrs', 'l', 'லிட்டர்', 'लीटर'] },
-  ml:     { rec20: 'MLT', uqc: 'MLT', names: ['ml', 'millilitre', 'millilitres', 'milliliter', 'mls', 'மில்லி', 'मिलीलीटर'] },
+  gram:   { measured: true, rec20: 'GRM', uqc: 'GMS', names: ['gram', 'grams', 'g', 'gm', 'gms', 'gramme', 'கிராம்', 'ग्राम'] },
+  tonne:  { measured: true, rec20: 'TNE', uqc: 'MTS', names: ['tonne', 'tonnes', 'ton', 'tons', 'mt', 'metric ton', 'டன்', 'टन'] },
+  litre:  { measured: true, rec20: 'LTR', uqc: 'LTR', names: ['litre', 'litres', 'liter', 'liters', 'ltr', 'ltrs', 'l', 'லிட்டர்', 'लीटर'] },
+  ml:     { measured: true, rec20: 'MLT', uqc: 'MLT', names: ['ml', 'millilitre', 'millilitres', 'milliliter', 'mls', 'மில்லி', 'मिलीलीटर'] },
   piece:  { rec20: 'H87', uqc: 'PCS', names: ['piece', 'pieces', 'pcs', 'pc', 'பீஸ்', 'पीस', 'नग'] },
   count:  { rec20: 'H87', uqc: 'NOS', names: ['count', 'counts', 'nos', 'no', 'number', 'numbers', 'each', 'ea', 'எண்ணிக்கை'] },
   unit:   { rec20: 'C62', uqc: 'UNT', names: ['unit', 'units', 'unt', 'யூனிட்', 'यूनिट'] },
   pack:   { rec20: 'PK',  uqc: 'PAC', names: ['pack', 'packs', 'pac', 'packet', 'packets', 'pkt', 'பேக்', 'पैकेट', 'pkts'] },
   box:    { rec20: 'BX',  uqc: 'BOX', names: ['box', 'boxes', 'பாக்ஸ்', 'डिब्बा', 'बॉक्स'] },
   dozen:  { rec20: 'DZN', uqc: 'DOZ', names: ['dozen', 'dozens', 'doz', 'டஜன்', 'दर्जन', 'dzn'] },
-  barrel: { rec20: 'BLL', uqc: 'DRM', names: ['barrel', 'barrels', 'drum', 'drums', 'drm'] },
-  metre:  { rec20: 'MTR', uqc: 'MTR', names: ['metre', 'metres', 'meter', 'meters', 'mtr', 'm', 'மீட்டர்', 'मीटर'] },
-  sqft:   { rec20: 'FTK', uqc: 'SQF', names: ['sqft', 'sq ft', 'square foot', 'square feet', 'sqf'] },
+  barrel: { measured: true, rec20: 'BLL', uqc: 'DRM', names: ['barrel', 'barrels', 'drum', 'drums', 'drm'] },
+  metre:  { measured: true, rec20: 'MTR', uqc: 'MTR', names: ['metre', 'metres', 'meter', 'meters', 'mtr', 'm', 'மீட்டர்', 'मीटर'] },
+  sqft:   { measured: true, rec20: 'FTK', uqc: 'SQF', names: ['sqft', 'sq ft', 'square foot', 'square feet', 'sqf'] },
   roll:   { rec20: 'RO',  uqc: 'ROL', names: ['roll', 'rolls', 'rol'] },
   bag:    { rec20: 'BG',  uqc: 'BAG', names: ['bag', 'bags'] },
   carton: { rec20: 'CT',  uqc: 'CTN', names: ['carton', 'cartons', 'ctn'] },
@@ -65,8 +65,8 @@ const UNITS = {
   bowl:   { rec20: null, uqc: null, names: ['bowl', 'bowls', 'katori', '\u0b95\u0bbf\u0ba3\u0bcd\u0ba3\u0bae\u0bcd', '\u0915\u091f\u094b\u0930\u0940', '\u092c\u093e\u0909\u0932'] },
   serving:{ rec20: null, uqc: null, names: ['serving', 'servings', 'portion', 'portions', 'helping', 'helpings'] },
   set:    { rec20: 'SET', uqc: 'SET', names: ['set', 'sets'] },
-  sqm:    { rec20: 'MTK', uqc: 'SQM', names: ['sqm', 'square metre', 'square meter', 'sq m'] },
-  quintal:{ rec20: 'DTN', uqc: 'QTL', names: ['quintal', 'quintals', 'qtl'] },
+  sqm:    { measured: true, rec20: 'MTK', uqc: 'SQM', names: ['sqm', 'square metre', 'square meter', 'sq m'] },
+  quintal:{ measured: true, rec20: 'DTN', uqc: 'QTL', names: ['quintal', 'quintals', 'qtl'] },
   /**
    * ⚠️⚠️ `bunch` WAS DROPPED ENTIRELY by the 2026-09-05 rewrite and is restored here. It is not an exotic unit:
    * கட்டு is how greens are sold in every vegetable shop this product is aimed at, and without it a captured
@@ -184,7 +184,21 @@ function aliasesOf(canon) {
   return k && UNITS[k] ? UNITS[k].names.slice() : [];
 }
 
-var EXPORTS = { UNITS, ALIASES, unitOf, normUnit, sameUnit, aliasesOf, uqcOf, rec20Of };
+/**
+ * ⭐⭐ IS THIS QUANTITY A MAGNITUDE OR A COUNT? ([TILL-104])
+ *
+ * The counter asks this to know whether "0.25" is an ordinary sale (a quarter kilo) or a mistake (a quarter
+ * plate), whether + and − should step by 1 or by a fraction, and whether two line quantities may be added
+ * together at all.
+ * ⚠️ AN UNKNOWN UNIT IS COUNTED. A shop that types a unit we have never seen is far likelier to be selling
+ * things than weighing them, and the counted path is the one that cannot invent a fractional object.
+ */
+function isMeasured(any) {
+  const k = unitOf(any);
+  return !!(k && UNITS[k] && UNITS[k].measured);
+}
+
+var EXPORTS = { UNITS, ALIASES, unitOf, normUnit, sameUnit, aliasesOf, uqcOf, rec20Of, isMeasured };
 
 window.CBUnits = EXPORTS;
 })();

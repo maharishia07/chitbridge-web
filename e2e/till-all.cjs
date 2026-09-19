@@ -43,6 +43,12 @@ const HARNESSES = [
   ['till-modedit.cjs',     'a combination can be changed on the bill, and the money follows'],
   ['till-dayimg.cjs',      'the shop’s own picture is resized, kept, shown — and a refusal is said'],
   ['till-shelf-row.cjs',   'nothing in a shelf row wraps onto its own line'],
+  /* ⭐⭐ THE TWO DIMENSIONS THE COUNTER HAD NEVER BEEN RUN IN ([TILL-103], [TILL-104]). Every other harness
+     here seeds currency:'INR' and a tiffin shop — so 'the till works' has only ever meant 'in rupees, for a
+     hotel'. Athi: *'if we change the currency, does the till behave correctly… we have to ensure end to end
+     hotel is working and end to end veg shop is working.'* */
+  ['till-currency.cjs',    'the counter bills in AED, USD and JPY — and yen carries no minor unit'],
+  ['till-verticals.cjs',   'one counter, two trades: plates counted, vegetables weighed'],
   ['till-settings.cjs',    'no visual control has two homes'],
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
