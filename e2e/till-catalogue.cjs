@@ -94,9 +94,14 @@ const VEG = [
     const cards = [...document.querySelectorAll('.trade')].map((t) => ({
       key: t.getAttribute('data-testid'), text: t.innerText.replace(/\s+/g, ' ').trim() }));
     return { open: document.getElementById('startdlg').open, cards,
+             /* ⭐ the OTHER way in — a shop that already keeps a list brings it ([TILL-108]). It is not a
+                trade and does not wear that class, which is what keeps `.trade` a meaningful set. */
+             bring: !!document.querySelector('.bring[data-testid="till-upload-open"]'),
              note: (document.querySelector('#startbody .note') || { innerText: '' }).innerText };
   }, BLUEPRINTS);
   say('both trades are offered', listed.cards.length === 2, listed.cards.map((c) => c.key).join(' '));
+  /* ⚠️ and exactly two — the upload card must not creep into the set and be treated as a blueprint */
+  say('and a way to bring a list', listed.bring, 'offered beside them, without pretending to be a trade');
   /* ⭐ A BLUEPRINT LEADS WITH ITS OUTCOME — that is what makes it a blueprint and not a starter list */
   say('each leads with its outcome', listed.cards.every((c) => /counter that can/.test(c.text)),
     '"' + (listed.cards[0] || {}).text + '"');

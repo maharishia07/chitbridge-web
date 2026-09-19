@@ -59,6 +59,10 @@ const HARNESSES = [
   /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
      strip a product field by field and see where the counter stops being able to sell. */
   ['till-catalogue.cjs',   'the axiom, the two trades, and a shop that opens and sells'],
+  /* ⚠️⚠️ THE REPORT IS THE FEATURE ([TILL-108]). csv-preflight exists because the old import mapped headers
+     silently and made Rate / Price (INR) / price into three different fields. A screen that did the same behind
+     a progress bar would rebuild that bug, so what is asserted is what it ASKS and what it REFUSES. */
+  ['till-upload.cjs',      'a product list read before it becomes data, and approved a column at a time'],
   ['till-settings.cjs',    'no visual control has two homes'],
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
