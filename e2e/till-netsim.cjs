@@ -109,32 +109,67 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
    * ⚠️ AND THE SERVER-ERROR PATH LIED: {ok:false,status:500} fell through and toasted "up to date".
    */
   console.log('\n── a refresh that could not happen ' + '─'.repeat(26));
+  /**
+   * ⚠️ MOVED, NOT DELETED ([TILL-157]). These read the footer line, because that is where [TILL-143] put the
+   * message. Athi, later: *"when the reload is not working, no message is appearing… in icon format?"* — the
+   * footer is where a counter puts things nobody has to notice, and a reload that did not happen is the
+   * opposite of that. The properties below are the ones they always were; only the surface changed.
+   */
   const fail = await p2.evaluate(async () => {
     netSet('off');
     CloudHost.key = 'test-key'; CloudHost.api = location.origin; HOST = CloudHost;
-    document.getElementById('lastnote').textContent = '';
+    flashHide();
     await refresh();
-    return { note: document.getElementById('lastnote').textContent,
+    const el = document.getElementById('flash');
+    return { shown: !el.hidden, text: el.innerText.replace(/\s+/g, ' ').trim(),
+             ico: (el.querySelector('.fico') || {}).innerText,
+             go: (el.querySelector('.fgo') || {}).innerText,
+             ok: (el.querySelector('.fx') || {}).innerText,
              busy: (document.getElementById('busy') || {}).hidden };
   });
-  say('it does not fail silently', /./.test(fail.note), '"' + fail.note + '"');
-  say('it names what went wrong', /could not read the shop/i.test(fail.note), 'the read is reported as failed');
-  /* ⭐ THE HALF THAT MATTERS TO A SHOPKEEPER — a failed READ costs nothing, and he should be told that */
-  say('and says billing carries on', /billing carries on|no prices on this counter/i.test(fail.note),
-      'it says what still works');
-  /* ⚠️⚠️ NEVER DIAGNOSE A FAULT SOMEBODY CHOSE ([TILL-140]) */
-  say('and owns up to the simulator', /simulator/i.test(fail.note), 'it does not blame a real router');
+  say('it does not fail silently', fail.shown, '"' + fail.text + '"');
+  /* ⭐ SEEN, NOT READ — the symbol carries it for somebody who cannot read the words */
+  say('it leads with a symbol', /[\u{1F300}-\u{1FAFF}⚠✕]/u.test(fail.ico || ''), 'icon "' + fail.ico + '"');
+  /* ⭐ AND IT OFFERS THE NEXT MOVE, not a description of the problem */
+  say('and offers what to do', !!fail.go, 'button "' + fail.go + '"');
+  /* ⚠️⚠️ IT STAYS UNTIL OK ([TILL-157]) — Athi: *"it has to stay until click ok."* */
+  say('and it waits for OK', /^ok$/i.test(fail.ok || ''), 'dismissed by "' + fail.ok + '", never by a timer');
   say('and the busy box gets out of the way', fail.busy === true, 'busyDone ran');
+
+  /**
+   * ⚠️⚠️⚠️ THE CAUSE PICKS THE MESSAGE. Athi: *"depends on what the issue is — say not signed in, network
+   * issue, whatever it may be."* One message for every failure is never wrong and never helps: a revoked key
+   * and a dead line look identical and need completely different things done about them.
+   */
+  const causes = await p2.evaluate(async () => {
+    const out = {};
+    [[0, 'line'], [401, 'key'], [500, 'shop']].forEach(function (pair) {
+      flashHide(); refreshFailed(pair[0]);
+      const el = document.getElementById('flash');
+      out[pair[1]] = { ico: el.querySelector('.fico').innerText, go: el.querySelector('.fgo').innerText };
+    });
+    flashHide();
+    return out;
+  });
+  say('no line says so', /line/i.test(causes.line.go) || causes.line.ico === '🚫', JSON.stringify(causes.line));
+  say('a dead key says so instead', /sign in/i.test(causes.key.go), JSON.stringify(causes.key));
+  say('and a silent shop is a third thing', /try again/i.test(causes.shop.go), JSON.stringify(causes.shop));
+  say('the three are told apart by the symbol alone',
+      new Set([causes.line.ico, causes.key.ico, causes.shop.ico]).size === 3,
+      [causes.line.ico, causes.key.ico, causes.shop.ico].join(' '));
 
   const lied = await p2.evaluate(async () => {
     netSet('full');
     HOST = { mode: 'cloud', refresh: async () => ({ ok: false, status: 500 }) };
-    document.getElementById('lastnote').textContent = '';
+    flashHide();
     await refresh();
-    return document.getElementById('lastnote').textContent;
+    const el = document.getElementById('flash');
+    return { shown: !el.hidden, text: el.innerText.replace(/\s+/g, ' ').trim(),
+             note: document.getElementById('lastnote').textContent };
   });
-  say('a refused read is not "up to date"', !/up to date/i.test(lied) && /error \(500\)/.test(lied),
-      '"' + lied + '"');
+  /* ⚠️⚠️ a refused read reporting success is the one answer that stops somebody looking */
+  say('a refused read is not "up to date"', lied.shown && !/up to date/i.test(lied.note),
+      '"' + lied.text + '"');
   /* ══ ⭐⭐⭐ AND IT SAYS WHAT IT BREAKS, AT THE PLACE YOU SWITCH IT ON ([TILL-144] → [TILL-153]) ═══════
    *
    * Athi: *"can you bring what are to be affected in the test location itself?"* A simulator that will not
