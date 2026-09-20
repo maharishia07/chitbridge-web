@@ -66,6 +66,7 @@ const HARNESSES = [
      and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — the page
      asks it in 34 places, and a simulator that only slowed fetch would leave all of them fooled. */
   ['till-netsim.cjs',      'the line can be turned down, and it says so while it is'],
+  ['till-selfheal.cjs',    'the line went, the shop kept selling, and the counter put itself right'],
   /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
      strip a product field by field and see where the counter stops being able to sell. */
   ['till-catalogue.cjs',   'the axiom, the two trades, and a shop that opens and sells'],
