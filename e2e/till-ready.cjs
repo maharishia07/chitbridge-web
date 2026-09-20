@@ -177,7 +177,7 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
   c = await start();
   const clean = await out(false);
   say('it just goes', clean.ok === true && !clean.left, 'nothing waiting, so no question is asked');
-  say('and says so plainly', /reached ChitBridge/i.test(clean.message || ''), '"' + clean.message + '"');
+  say('and says so plainly', /reached the server/i.test(clean.message || ''), '"' + clean.message + '"');
 
   await stop(c); await new Promise((r) => cb.close(r));
   console.log('\n' + (bad ? '✗ ' + bad + ' FAILED\n' : '✓ all good\n'));
