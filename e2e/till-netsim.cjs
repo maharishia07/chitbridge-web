@@ -135,31 +135,53 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   });
   say('a refused read is not "up to date"', !/up to date/i.test(lied) && /error \(500\)/.test(lied),
       '"' + lied + '"');
-
-  /* ══ ⭐⭐⭐ AND IT SAYS WHAT IT BREAKS, AT THE PLACE YOU SWITCH IT ON ([TILL-144]) ════════════════════
+  /* ══ ⭐⭐⭐ AND IT SAYS WHAT IT BREAKS, AT THE PLACE YOU SWITCH IT ON ([TILL-144] → [TILL-153]) ═══════
    *
-   * Athi: *"can you bring what are to be affected in the test location itself? … what will be other issues
-   * to be listed? can we make it explicit?"* A simulator that will not name its consequences makes a tester
-   * guess which failures are theirs — and a guess goes wrong in both directions.
+   * Athi: *"can you bring what are to be affected in the test location itself?"* A simulator that will not
+   * name its consequences makes a tester guess which failures are theirs, and a guess goes wrong both ways.
+   *
+   * ⚠️ MOVED, NOT DELETED. These asserted a bullet list that no longer exists: the panel was rebuilt for
+   * somebody who cannot read ([TILL-152]) into a face, three counts and one button, and the names now live
+   * behind the tile you tap. Every property below is the one it always was — that the consequences are
+   * NAMED, that what still works is said, and that billing is never among the casualties.
    */
   console.log('\n── what the simulation affects ' + '─'.repeat(30));
   const what = await p2.evaluate(async () => {
     netSet('off');
+    LINE_TRIES = []; for (let i = 0; i < 20; i++) lineNote(false);
     document.querySelector('[data-testid="till-net-what"]').click();
-    await new Promise((r) => setTimeout(r, 120));
-    const el = document.getElementById('netwhat');
-    return { open: el.hidden === false, text: el.innerText.replace(/\s+/g, ' ').trim(),
-             stop: el.querySelectorAll('.stop li').length, goes: el.querySelectorAll('.goes li').length };
+    await new Promise((r) => setTimeout(r, 400));
+    const dlg = document.getElementById('linedlg');
+    /* ⭐ DRIVE THE CONTROL: the names are behind the locked tile, exactly as a person would find them */
+    document.querySelector('[data-testid="till-line-tile-need"]').click();
+    await new Promise((r) => setTimeout(r, 200));
+    const locked = document.querySelector('[data-testid="till-line-tell-need"]');
+    document.querySelector('[data-testid="till-line-tile-ok"]').click();
+    await new Promise((r) => setTimeout(r, 200));
+    const ok = document.querySelector('[data-testid="till-line-tell-ok"]');
+    return { open: !!(dlg && dlg.open),
+             stopText: locked ? locked.innerText.replace(/\s+/g, ' ') : '',
+             stop: locked ? locked.querySelectorAll('.lcard').length : 0,
+             okText: ok ? ok.innerText.replace(/\s+/g, ' ') : '',
+             head: (document.querySelector('[data-testid="till-line-banner"]') || { innerText: '' }).innerText };
   });
-  say('the list opens from the bar', what.open, 'the panel is there beside the switch');
-  say('and it is specific, not "things may not work"', what.stop >= 8, what.stop + ' named consequences');
+  say('the panel opens from the bar', what.open, 'one panel, opened where the line is set');
+  say('and it is specific, not "things may not work"', what.stop >= 4, what.stop + ' named consequences');
   /* ⭐ THE HALF A TESTER NEEDS MOST — what is still expected to work, so a real fault stands out */
-  say('it also says what still works', what.goes >= 1, what.goes + ' still working');
-  say('and that billing is not at risk', /never touch/i.test(what.text), 'billing is excluded, and says why');
+  say('it also says what still works', /Selling and billing/.test(what.okText), 'the working list is there');
+  say('and that billing is not at risk', /Selling and billing/.test(what.okText) && /Taking money/.test(what.okText),
+      'selling and taking money are listed as carrying on');
   /* ⚠️⚠️ THE ROWS THAT COST REAL MONEY IF A TESTER DOES NOT KNOW THEY STOPPED */
-  ['Bills reaching the shop', 'Closing the counter', 'Changes made by other counters'].forEach((n) => {
-    say('it names: ' + n.toLowerCase(), what.text.indexOf(n) >= 0, 'listed');
+  ['Closing the counter', 'Changes made by other counters'].forEach((n) => {
+    say('it names: ' + n.toLowerCase(), what.stopText.indexOf(n) >= 0, 'listed');
   });
+  /* ⚠️⚠️ AND EVERY BLOCKED ROW CARRIES ITS WAY ROUND IT, ON ITS OWN CARD (spec §8.2) */
+  say('each blocked row says what to do instead', /Keep the counter open/.test(what.stopText),
+      'the way round it is on the card');
+  /* ⭐ NEVER "believes", never "REFUSED", never "the server" — the package bans all three by name (§4) */
+  say('and it does not hedge or shout', !/believes|REFUSED/i.test(what.stopText + what.head),
+      '"' + what.head.replace(/\n/g, ' ') + '"');
+  await p2.evaluate(() => lineClose());
 
   /* ══ ⚠️⚠️⚠️ AND THE WATCHDOG REPORTS THE SAME ROWS WHEN ONE REALLY STOPS ════════════════════════════ */
   console.log('\n── the watchdog ' + '─'.repeat(45));
@@ -244,13 +266,14 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
     const r = el.getBoundingClientRect();
     const sel = document.querySelector('[data-testid="till-net-sim"]');
     const sr = sel ? sel.getBoundingClientRect() : null;
-    return { hidden: el.hidden, rows: el.querySelectorAll('li').length, h: Math.round(r.height),
+    return { hidden: el.hidden, tiles: el.querySelectorAll('.ltile').length, h: Math.round(r.height),
              below: sr ? r.top >= sr.top : false,
              text: el.innerText.replace(/\s+/g, ' ').trim() };
   });
   say('the list is at the switch', !!inline && !inline.hidden, 'it renders in the panel that sets the line');
   say('and it is under the control', !!inline && inline.below, 'below the Line chooser, not elsewhere');
-  say('and it is the same list', !!inline && inline.rows >= 10, (inline || {}).rows + ' rows');
+  /* ⚠️ MOVED ([TILL-153]): it is the same PANEL now, not a second list — which is the stronger property */
+  say('and it is the same panel', !!inline && inline.tiles === 3, (inline || {}).tiles + ' tiles, as on the pill');
 
   /* ⭐ IT FOLLOWS THE SWITCH — the consequence is on screen before the person looks away from the control */
   const followed = await p2.evaluate(async () => {
@@ -262,9 +285,10 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
     await new Promise((r) => setTimeout(r, 200));
     return { slow, gone: el.hidden };
   });
-  say('changing the setting changes the list', /Nothing stops/i.test(followed.slow),
-      '2G says nothing stops, it only waits');
-  say('and full speed clears it', followed.gone === true, 'nothing to say when the line is real');
+  /* ⭐ IT FOLLOWS THE SWITCH — back at full speed the same panel says all is well rather than emptying */
+  say('changing the setting changes the panel', /Slow|Keep selling/i.test(followed.slow),
+      '2G still shows the panel, in its own state');
+  say('and full speed says so', followed.gone === false, 'the panel stays and reports a good line');
 
   if (SHOTS) {
     await p2.evaluate(() => netSet('off'));
