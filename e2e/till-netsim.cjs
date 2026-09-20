@@ -157,7 +157,7 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   say('it also says what still works', what.goes >= 1, what.goes + ' still working');
   say('and that billing is not at risk', /never touch/i.test(what.text), 'billing is excluded, and says why');
   /* ⚠️⚠️ THE ROWS THAT COST REAL MONEY IF A TESTER DOES NOT KNOW THEY STOPPED */
-  ['Bills leaving this counter', 'Closing the counter', 'Live updates'].forEach((n) => {
+  ['Bills reaching the shop', 'Closing the counter', 'Changes made by other counters'].forEach((n) => {
     say('it names: ' + n.toLowerCase(), what.text.indexOf(n) >= 0, 'listed');
   });
 
@@ -178,6 +178,8 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
     watchTick();                                  /* nothing changed — must not repeat itself */
     const again = document.getElementById('lastnote').textContent;
     MEM.fail = false;
+    /* ⚠️ the state comes from the last 20 ATTEMPTS now ([TILL-151]) — a line is not back until something gets through */
+    LINE_TRIES = []; for (let i = 0; i < 5; i++) lineNote(true);
     document.getElementById('lastnote').textContent = '';
     watchTick();
     const back = document.getElementById('lastnote').textContent;
@@ -185,7 +187,7 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   });
   say('one list, both readers', dog.rows >= 10, dog.rows + ' rows watched');
   say('the first reading is a baseline', dog.first === '', 'it does not announce the state it started in');
-  say('a real fault is reported', /Saving a bill/.test(dog.spoke) && /lose work/i.test(dog.spoke),
+  say('a real fault is reported', /Saving a bill/.test(dog.spoke) && /ring for help/i.test(dog.spoke),
       '"' + dog.spoke + '"');
   /* ⚠️ a line that repeats every 15s is wallpaper, and wallpaper is how the next real one is missed */
   say('and it does not repeat itself', dog.again === '', 'silent while nothing changes');
@@ -240,7 +242,7 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
     const el = document.querySelector('[data-testid="till-net-inline"]');
     if (!el) return null;
     const r = el.getBoundingClientRect();
-    const sel = document.querySelector('[data-testid="till-net"]');
+    const sel = document.querySelector('[data-testid="till-net-sim"]');
     const sr = sel ? sel.getBoundingClientRect() : null;
     return { hidden: el.hidden, rows: el.querySelectorAll('li').length, h: Math.round(r.height),
              below: sr ? r.top >= sr.top : false,
