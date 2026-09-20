@@ -60,6 +60,8 @@ const HARNESSES = [
   ['till-pair.cjs',        'a blank counter signs in, gets its key, and two shops never share a folder'],
   ['till-summary.cjs',     'day, week and month summary chits — folded, sent, and stamped only when they land'],
   ['till-purge.cjs',       'the 90-day floor: old detail goes, the summary stays, and an unsent bill holds its day'],
+  ['till-rollup-page.cjs', 'the page, the program and the server agree on what a day took'],
+  ['till-ready.cjs',       'an unready counter says so, and signing out never strands a sale'],
   /* ⭐⭐ THE LINE, TURNED DOWN ON PURPOSE ([TILL-116]). Athi: *'switch off network, reduce the speed to 2g
      and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — the page
      asks it in 34 places, and a simulator that only slowed fetch would leave all of them fooled. */

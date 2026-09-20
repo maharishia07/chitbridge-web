@@ -195,7 +195,15 @@ async function setUp(label, shop, freePort) {
   fs.mkdirSync(flat, { recursive: true });
   fs.writeFileSync(path.join(flat, 'queue.jsonl'), JSON.stringify({ no: 'D-7', total: 1250 }) + '\n' + JSON.stringify({ no: 'D-8', total: 90 }) + '\n');
   fs.writeFileSync(path.join(flat, 'series.json'), JSON.stringify({ C1: 8 }));
-  fs.writeFileSync(path.join(flat, 'bills-2026-09-19.jsonl'), JSON.stringify({ no: 'D-6', total: 300 }) + '\n');
+  /**
+   * ⚠️⚠️ TODAY, NOT A FIXED DATE. This said 2026-09-19 and passed until the clock rolled over — once that day
+   * was CLOSED the rollup summarised it and queued a summary chit, so `queued` became 3 and the upgrade
+   * assertion failed for a reason that had nothing to do with upgrading. The same date trap that caught
+   * till-summary.cjs on the day it was written. A day still being billed is never summarised, so using TODAY
+   * keeps this test about the thing it is actually testing.
+   */
+  const dayNow = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(flat, 'bills-' + dayNow + '.jsonl'), JSON.stringify({ no: 'D-6', total: 300 }) + '\n');
 
   const D = await counter(homeD, 7314);
   const ds = await state(7314);
@@ -205,7 +213,7 @@ async function setUp(label, shop, freePort) {
     'the two unsent bills came across and are still unsent (' + ds.queued + ' queued)');
   say('upgrade · series carried', fs.existsSync(path.join(dDir, 'series.json')),
     'the bill series came too — numbering does not restart');
-  say('upgrade · the day carried', fs.existsSync(path.join(dDir, 'bills-2026-09-19.jsonl')),
+  say('upgrade · the day carried', fs.existsSync(path.join(dDir, 'bills-' + dayNow + '.jsonl')),
     "and so did the day's bills");
   say('upgrade · nothing left behind', fs.readdirSync(flat).filter((n) => fs.statSync(path.join(flat, n)).isFile()).length === 0,
     'no loose file is stranded in the old flat folder');
