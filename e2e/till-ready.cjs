@@ -60,11 +60,18 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
     'the fix is a button, not a sentence about a button');
 
   /**
-   * ⚠️ STOPS ARE FATAL, WARNS ARE NOT. A counter with nobody signed in can still take money; one with no
-   * shop cannot. Conflating them would either block a sale that should happen or allow one that cannot.
+   * ⚠️⚠️ NOBODY SIGNED IN MOVED FROM WARN TO **STOP** ([TILL-128]). Athi: *"each counter has to be signed in,
+   * at the entity level or at the coassist level. a counter without sign-in is not a right thing — so we can
+   * record at this counter who is doing the sale."*
+   *
+   * ⚠️ IT COULD ONLY BE CLOSED ONCE THERE WAS A WAY THROUGH. A shop with no co-assists had nothing to pick, so
+   * refusing would have been a dead end that no shopkeeper could escape; the entity option — "the shop itself,
+   * the owner is at the counter" — is what makes the refusal fair.
    */
-  say('warns are separate', Array.isArray(rd.warns) && rd.warns.some((w) => /nobody is signed in/i.test(w)),
-    'nobody-on-shift is a warning, not a stop (' + rd.warns.length + ' warning(s))');
+  const whoStop = rd.stops.find((x) => /Nobody is signed in/i.test(x.why));
+  say('nobody is a STOP', !!whoStop, 'a counter with no one signed in may not put anything on a bill');
+  say('and it can be fixed', !!(whoStop && whoStop.act === 'openWho'),
+    'the fix opens the who dialog, where the shop itself is one of the choices');
 
   console.log('\n── ⚠️⚠️ what a blank counter says AT LOAD ' + '─'.repeat(27));
   /**

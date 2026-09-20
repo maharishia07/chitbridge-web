@@ -1,0 +1,33 @@
+const { chromium } = require('@playwright/test');
+const http=require('http'),fs=require('fs'),path=require('path');
+const ROOT=path.join('C:/dev/chitbridge-web','public');
+const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
+(async()=>{
+  const srv=http.createServer((q,r)=>{const rel=decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/,'')||'index.html';
+    const f=path.join(ROOT,rel);if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);return r.end('no')}
+    r.writeHead(200,{'content-type':T[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(r)});
+  await new Promise(r=>srv.listen(0,r));
+  const WEB='http://127.0.0.1:'+srv.address().port;
+  const b=await chromium.launch();const ctx=await b.newContext({viewport:{width:1400,height:900}});
+  await ctx.addInitScript((a)=>{try{localStorage.setItem('cb_api_base',a)}catch(_){}} ,'https://chitbridge-api-production.up.railway.app');
+  const p=await ctx.newPage();
+  await p.goto(WEB+'/app.html');await p.waitForTimeout(1500);
+  await p.locator('[data-testid="nav-signin"]').first().click().catch(()=>{});
+  await p.waitForTimeout(1000);
+  await p.getByRole('link',{name:'Create an entity'}).click().catch(async()=>{ await p.getByText('Create an entity',{exact:true}).click().catch(()=>{}); });
+  await p.waitForTimeout(1200);
+  await p.getByRole('button',{name:/Get started/}).first().click().catch(()=>{});
+  await p.waitForTimeout(1200);
+  await p.getByRole('button',{name:/Continue to register/}).first().click().catch(()=>{});
+  await p.waitForTimeout(1500);
+  await p.getByText('Run my business',{exact:true}).first().click().catch(()=>{});
+  await p.waitForTimeout(700);
+  await p.getByRole('button',{name:/Continue to register/}).first().click().catch(()=>{});
+  await p.waitForTimeout(1200);
+  console.log('STEP3 buttons: '+await p.evaluate(()=>Array.from(document.querySelectorAll('button,a')).map(e=>e.textContent.trim()).filter(Boolean).slice(0,24).join(' | ')));
+  await p.screenshot({path:'C:/dev/chitbridge-web/png/sim-reg.png'});
+  console.log('reg-name present: '+await p.locator('[data-testid="reg-name"]').count());
+  console.log('=== buttons/links on the sign-in screen ===');
+  console.log(await p.evaluate(()=>Array.from(document.querySelectorAll('button,a')).map(e=>e.textContent.trim()).filter(Boolean).slice(0,30).join(' | ')));
+  await b.close();srv.close();
+})();
