@@ -100,6 +100,116 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   });
   say('one click restores it', back.now === 'full' && back.banner === true, 'back to full speed, banner gone');
 
+  /* ══ ⚠️⚠️⚠️ AND A REFRESH ON A DEAD LINE SAYS SO ([TILL-143]) ══════════════════════════════════════════
+   *
+   * Athi: *"when i set the network speed to stop, and when i try to refresh the shop, what it is suppose to
+   * say?"* It said NOTHING — netGate rejects, nobody caught it, the busy box vanished and the rejection went
+   * unhandled. A counter that swallows a failed read teaches its owner that the button does nothing.
+   *
+   * ⚠️ AND THE SERVER-ERROR PATH LIED: {ok:false,status:500} fell through and toasted "up to date".
+   */
+  console.log('\n── a refresh that could not happen ' + '─'.repeat(26));
+  const fail = await p2.evaluate(async () => {
+    netSet('off');
+    CloudHost.key = 'test-key'; CloudHost.api = location.origin; HOST = CloudHost;
+    document.getElementById('lastnote').textContent = '';
+    await refresh();
+    return { note: document.getElementById('lastnote').textContent,
+             busy: (document.getElementById('busy') || {}).hidden };
+  });
+  say('it does not fail silently', /./.test(fail.note), '"' + fail.note + '"');
+  say('it names what went wrong', /could not read the shop/i.test(fail.note), 'the read is reported as failed');
+  /* ⭐ THE HALF THAT MATTERS TO A SHOPKEEPER — a failed READ costs nothing, and he should be told that */
+  say('and says billing carries on', /billing carries on|no prices on this counter/i.test(fail.note),
+      'it says what still works');
+  /* ⚠️⚠️ NEVER DIAGNOSE A FAULT SOMEBODY CHOSE ([TILL-140]) */
+  say('and owns up to the simulator', /simulator/i.test(fail.note), 'it does not blame a real router');
+  say('and the busy box gets out of the way', fail.busy === true, 'busyDone ran');
+
+  const lied = await p2.evaluate(async () => {
+    netSet('full');
+    HOST = { mode: 'cloud', refresh: async () => ({ ok: false, status: 500 }) };
+    document.getElementById('lastnote').textContent = '';
+    await refresh();
+    return document.getElementById('lastnote').textContent;
+  });
+  say('a refused read is not "up to date"', !/up to date/i.test(lied) && /error \(500\)/.test(lied),
+      '"' + lied + '"');
+
+  /* ══ ⭐⭐⭐ AND IT SAYS WHAT IT BREAKS, AT THE PLACE YOU SWITCH IT ON ([TILL-144]) ════════════════════
+   *
+   * Athi: *"can you bring what are to be affected in the test location itself? … what will be other issues
+   * to be listed? can we make it explicit?"* A simulator that will not name its consequences makes a tester
+   * guess which failures are theirs — and a guess goes wrong in both directions.
+   */
+  console.log('\n── what the simulation affects ' + '─'.repeat(30));
+  const what = await p2.evaluate(async () => {
+    netSet('off');
+    document.querySelector('[data-testid="till-net-what"]').click();
+    await new Promise((r) => setTimeout(r, 120));
+    const el = document.getElementById('netwhat');
+    return { open: el.hidden === false, text: el.innerText.replace(/\s+/g, ' ').trim(),
+             stop: el.querySelectorAll('.stop li').length, goes: el.querySelectorAll('.goes li').length };
+  });
+  say('the list opens from the bar', what.open, 'the panel is there beside the switch');
+  say('and it is specific, not "things may not work"', what.stop >= 8, what.stop + ' named consequences');
+  /* ⭐ THE HALF A TESTER NEEDS MOST — what is still expected to work, so a real fault stands out */
+  say('it also says what still works', what.goes >= 1, what.goes + ' still working');
+  say('and that billing is not at risk', /never touch/i.test(what.text), 'billing is excluded, and says why');
+  /* ⚠️⚠️ THE ROWS THAT COST REAL MONEY IF A TESTER DOES NOT KNOW THEY STOPPED */
+  ['Bills leaving this counter', 'Closing the counter', 'Live updates'].forEach((n) => {
+    say('it names: ' + n.toLowerCase(), what.text.indexOf(n) >= 0, 'listed');
+  });
+
+  /* ══ ⚠️⚠️⚠️ AND THE WATCHDOG REPORTS THE SAME ROWS WHEN ONE REALLY STOPS ════════════════════════════ */
+  console.log('\n── the watchdog ' + '─'.repeat(45));
+  const dog = await p2.evaluate(async () => {
+    netSet('full');
+    WATCH_WAS = null;
+    document.getElementById('lastnote').textContent = '';   /* the previous section left a line here */
+    watchTick();                                  /* the baseline — must say nothing */
+    const first = document.getElementById('lastnote').textContent;
+    /* ⚠️ a REAL fault, not a simulated one: the device stops being able to save */
+    MEM.fail = true;
+    document.getElementById('lastnote').textContent = '';
+    watchTick();
+    const spoke = document.getElementById('lastnote').textContent;
+    document.getElementById('lastnote').textContent = '';
+    watchTick();                                  /* nothing changed — must not repeat itself */
+    const again = document.getElementById('lastnote').textContent;
+    MEM.fail = false;
+    document.getElementById('lastnote').textContent = '';
+    watchTick();
+    const back = document.getElementById('lastnote').textContent;
+    return { first, spoke, again, back, rows: watchNow().length };
+  });
+  say('one list, both readers', dog.rows >= 10, dog.rows + ' rows watched');
+  say('the first reading is a baseline', dog.first === '', 'it does not announce the state it started in');
+  say('a real fault is reported', /Saving a bill/.test(dog.spoke) && /lose work/i.test(dog.spoke),
+      '"' + dog.spoke + '"');
+  /* ⚠️ a line that repeats every 15s is wallpaper, and wallpaper is how the next real one is missed */
+  say('and it does not repeat itself', dog.again === '', 'silent while nothing changes');
+  say('and it says when it comes back', /working again/i.test(dog.back), '"' + dog.back + '"');
+
+  /* ⚠️⚠️ NEVER DIAGNOSE A FAULT SOMEBODY CHOSE ([TILL-140]) — except the one that loses work */
+  const quiet = await p2.evaluate(async () => {
+    netSet('off');
+    WATCH_WAS = null; watchTick();
+    document.getElementById('lastnote').textContent = '';
+    WATCH_WAS = '';                                /* pretend everything was fine a moment ago */
+    watchTick();
+    const said = document.getElementById('lastnote').textContent;
+    MEM.fail = true;
+    document.getElementById('lastnote').textContent = '';
+    WATCH_WAS = '';
+    watchTick();
+    const loud = document.getElementById('lastnote').textContent;
+    MEM.fail = false; netSet('full');
+    return { said, loud };
+  });
+  say('it stays quiet about a simulated outage', quiet.said === '', 'the bar is already saying so');
+  say('but never about losing work', /Saving a bill/.test(quiet.loud), '"' + quiet.loud + '"');
+
   if (SHOTS) {
     await p2.evaluate(() => netSet('off'));
     const out = path.join(__dirname, '..', 'png', 'NetSim.png');

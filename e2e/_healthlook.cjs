@@ -20,14 +20,12 @@ const T = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css', '.j
   await p.waitForFunction(() => typeof window.paintHealth === 'function', null, { timeout: 30000 });
   await p.waitForTimeout(1500);
   console.log('CBVerdict loaded : ' + await p.evaluate(() => !!(window.CBVerdict && window.CBVerdict.read)));
-  /* ⚠️ pretend the program is reporting a stuck queue — the state the page exists for */
   await p.evaluate(() => {
-    window.CloudHost.key = 'x.y.z'; window.STATE = Object.assign({}, window.STATE, { online: true, paired: true, queued: 10,
-      shop: { name: 'desktop3', bridge_id: 'CBR2K5LL48', scopes: ['till'] },
-      queue_why: { fatal: true, online: true, code: 'COUNTER_CLOSED',
-        say: 'This counter was closed on 2026-09-20. Open a new counter from ChitBridge to bill again.' },
-      queue_kinds: { by: { bill: 0, document: 0, shift: 1, summary: 9 }, oldest: null },
-      till: { id: 'C1' } });
+    window.CloudHost.key = 'x.y.z';
+    window.S = Object.assign({}, window.S || {}, { items: [{}], shop: { name: 'Mayur Bhavan' } });
+    window.STATE = Object.assign({}, window.STATE, { online: false, paired: true, queued: 0,
+      shop: { name: 'Mayur Bhavan', bridge_id: 'CBMAYUR01', scopes: ['till'] },
+      queue_why: null, till: { id: 'C1' } });
   });
   await p.evaluate(() => window.openHealth());
   await p.waitForTimeout(1000);
