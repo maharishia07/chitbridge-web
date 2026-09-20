@@ -146,12 +146,19 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
     [[0, 'line'], [401, 'key'], [500, 'shop']].forEach(function (pair) {
       flashHide(); refreshFailed(pair[0]);
       const el = document.getElementById('flash');
-      out[pair[1]] = { ico: el.querySelector('.fico').innerText, go: el.querySelector('.fgo').innerText };
+      out[pair[1]] = { ico: el.querySelector('.fico').innerText, go: el.querySelector('.fgo').innerText,
+                         slashed: !!el.querySelector('.noico') };
     });
     flashHide();
     return out;
   });
-  say('no line says so', /line/i.test(causes.line.go) || causes.line.ico === '🚫', JSON.stringify(causes.line));
+  /**
+   * ⚠️ MOVED ([TILL-158]). This asked for the glyph 🚫. Athi: *"change to No Network with the network symbol
+   * crossed — image as much as possible."* A generic prohibition sign is not a picture of a network; the bars
+   * with a line through them are. The property is that it is the NETWORK symbol and that it is CROSSED.
+   */
+  say('no network shows crossed bars', causes.line.slashed && /📶/.test(causes.line.ico),
+      JSON.stringify(causes.line));
   say('a dead key says so instead', /sign in/i.test(causes.key.go), JSON.stringify(causes.key));
   say('and a silent shop is a third thing', /try again/i.test(causes.shop.go), JSON.stringify(causes.shop));
   say('the three are told apart by the symbol alone',
