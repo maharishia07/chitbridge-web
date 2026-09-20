@@ -74,7 +74,14 @@ function bigPng() {
 
   /* ⚠️ DRIVE THE REAL CONTROL: open the hub, the day section, and the + that asks for a file */
   await p.click('[data-testid="till-side-open"]');
-  await p.click('[data-testid="till-msec-btn-day"]');
+  /**
+   * ⚠️⚠️ ENSURE OPEN, DO NOT TOGGLE ([TILL-148]). This used to click the heading unconditionally. 'day' is
+   * already the open section after the start-of-day panel, so the click CLOSED it — and the harness only
+   * passed because .mbody set display and so drew a collapsed section anyway. With [hidden] finally winning,
+   * the blind toggle became a real miss. The button states its own answer in aria-expanded; ask it.
+   */
+  if ((await p.getAttribute('[data-testid="till-msec-btn-day"]', 'aria-expanded')) !== 'true')
+    await p.click('[data-testid="till-msec-btn-day"]');
   await p.waitForSelector('[data-testid="till-day-img-add"]', { timeout: 4000 });
   const chooser = p.waitForEvent('filechooser');
   await p.click('[data-testid="till-day-img-add"]');

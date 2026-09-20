@@ -210,6 +210,60 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   say('it stays quiet about a simulated outage', quiet.said === '', 'the bar is already saying so');
   say('but never about losing work', /Saving a bill/.test(quiet.loud), '"' + quiet.loud + '"');
 
+  /* ══ ⚠️⚠️⚠️ AND NOTHING HANGS OVER THE COUNTER AT REST ([TILL-148]) ═══════════════════════════════════
+   *
+   * Athi sent a screenshot of a live shop with an empty white box across the header and a thin orange strip
+   * above it. `.netbar` and `.netwhat` set `display`, which beats the user agent's `[hidden]{display:none}`,
+   * so BOTH drew on every counter whether the simulator was on or not. The banner had done so since it was
+   * built.
+   *
+   * ⚠️⚠️ THE OLD CHECK SAID "banner gone" — it read el.hidden, which was true the whole time. The property
+   * was right and the pixels were wrong. And when the fix was first written it landed INSIDE the multi-line
+   * .netbar rule, breaking the CSS; the source guard passed on that too. Only geometry settles it.
+   */
+  console.log('\n── at rest ' + '─'.repeat(50));
+  const rest = await p2.evaluate(() => {
+    netSet('full');
+    const box = (id) => { const r = document.getElementById(id).getBoundingClientRect();
+                          return Math.round(r.width) + 'x' + Math.round(r.height); };
+    return { bar: box('netbar'), what: box('netwhat') };
+  });
+  say('the banner takes no space', rest.bar === '0x0', 'netbar measures ' + rest.bar);
+  say('and nor does the affects panel', rest.what === '0x0', 'netwhat measures ' + rest.what);
+
+  /* ══ ⭐⭐⭐ THE CONSEQUENCES OPEN WHERE THE LINE IS SET ([TILL-149]) ═══════════════════════════════════ */
+  console.log('\n── at the switch ' + '─'.repeat(44));
+  const inline = await p2.evaluate(async () => {
+    netSet('off');
+    openStuck();
+    await new Promise((r) => setTimeout(r, 400));
+    const el = document.querySelector('[data-testid="till-net-inline"]');
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const sel = document.querySelector('[data-testid="till-net"]');
+    const sr = sel ? sel.getBoundingClientRect() : null;
+    return { hidden: el.hidden, rows: el.querySelectorAll('li').length, h: Math.round(r.height),
+             below: sr ? r.top >= sr.top : false,
+             text: el.innerText.replace(/\s+/g, ' ').trim() };
+  });
+  say('the list is at the switch', !!inline && !inline.hidden, 'it renders in the panel that sets the line');
+  say('and it is under the control', !!inline && inline.below, 'below the Line chooser, not elsewhere');
+  say('and it is the same list', !!inline && inline.rows >= 10, (inline || {}).rows + ' rows');
+
+  /* ⭐ IT FOLLOWS THE SWITCH — the consequence is on screen before the person looks away from the control */
+  const followed = await p2.evaluate(async () => {
+    netSet('g2');
+    await new Promise((r) => setTimeout(r, 200));
+    const el = document.querySelector('[data-testid="till-net-inline"]');
+    const slow = el.innerText.replace(/\s+/g, ' ').trim();
+    netSet('full');
+    await new Promise((r) => setTimeout(r, 200));
+    return { slow, gone: el.hidden };
+  });
+  say('changing the setting changes the list', /Nothing stops/i.test(followed.slow),
+      '2G says nothing stops, it only waits');
+  say('and full speed clears it', followed.gone === true, 'nothing to say when the line is real');
+
   if (SHOTS) {
     await p2.evaluate(() => netSet('off'));
     const out = path.join(__dirname, '..', 'png', 'NetSim.png');
