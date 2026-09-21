@@ -82,6 +82,18 @@ const sale = (no, total, d) => ({ no, total, at: d + 'T10:00:00Z', payments: [{ 
   for (const d of [OLD, OLDER, EDGE, NEW]) {
     fs.writeFileSync(path.join(dir, 'bills-' + d + '.jsonl'), JSON.stringify(sale('B-' + d, 100, d)) + '\n');
   }
+  /**
+   * ⚠️⚠️ shifts.jsonl APPENDED FOR EVER AND NO PURGE TOUCHED IT ([TILL-174]). Small, so never noticed — but a
+   * counter that bounds its bills and quietly keeps one file for ever has a rule with an exception in it, and
+   * the exception is what is still growing on the oldest machine in the shop.
+   */
+  fs.writeFileSync(path.join(dir, 'shifts.jsonl'),
+    [{ till: 'C1', from: OLD + 'T09:00:00Z', to: OLD + 'T18:00:00Z', by: { name: 'old' } },
+     { till: 'C1', from: NEW + 'T09:00:00Z', to: NEW + 'T18:00:00Z', by: { name: 'new' } },
+     /* ⚠️ unparseable is not the same as old — this line must survive */
+     { till: 'C1', by: { name: 'undated' } }]
+      .map((x) => JSON.stringify(x)).join('\n') + '\n');
+
   const bills = (d) => fs.existsSync(path.join(dir, 'bills-' + d + '.jsonl'));
   const sum = (p, k) => fs.existsSync(path.join(dir, 'summary', p + '-' + k + '.json'));
 
@@ -107,6 +119,16 @@ const sale = (no, total, d) => ({ no, total, at: d + 'T10:00:00Z', payments: [{ 
   const kept = JSON.parse(fs.readFileSync(path.join(dir, 'summary', 'day-' + OLD + '.json'), 'utf8'));
   say('and still has its figures', kept.totals && kept.totals.total === 100 && !!kept.synced_at,
     'total ' + kept.totals.total + ', synced');
+
+  /* ⭐ and the shift lines go with the days they describe — one floor, no exceptions ([TILL-174]) */
+  const shifts = fs.readFileSync(path.join(dir, 'shifts.jsonl'), 'utf8')
+    .split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const names = shifts.map((x) => x.by && x.by.name);
+  say('THE OLD SHIFT WENT', names.indexOf('old') < 0, 'the 200-day shift line was trimmed');
+  say('the recent shift stayed', names.indexOf('new') >= 0, 'the 10-day line is kept');
+  /* ⚠️ a line whose date cannot be read is KEPT — unparseable is not old */
+  say('and an undated line is kept', names.indexOf('undated') >= 0,
+    'a line we cannot date is never dropped for being old');
 
   console.log('\n── the dry run says what it would do ' + '─'.repeat(30));
   const plan = await get(7331, '/api/purge');

@@ -135,7 +135,46 @@ async function bill(p, names, note) {
   await p.waitForTimeout(1600);
   await p.evaluate(() => { try { setClose(); } catch (_) {} });
   await p.waitForTimeout(700);
-  say('julian', true, 'the series now carries the julian date');
+  /**
+   * ── ⚠️⚠️⚠️ THIS CHECK USED TO BE `say('julian', true, …)` ([TILL-175]) ──────────────────────────────
+   *
+   * Athi: *"julian dating did not take, and the check was weak — the harness reported 'julian OK' from the
+   * fact that the option had been SELECTED, not from the number that came out. Assert the EMITTED number."*
+   *
+   * He was right about the check and half right about the cause. The setting is not ignored: a scheme is
+   * stored ON the series and adopted at the next roll, because renumbering mid-run leaves a hole in a series
+   * a shop may have to show a tax officer. A series that has issued NOTHING adopts it at once.
+   *
+   * ⭐ SO THE HARNESS NOW ASKS THE NUMBERER, and accepts either honest answer — adopted now, or deferred and
+   * SAYING so. What it will not accept is a claim with nothing behind it.
+   */
+  /**
+   * ⚠️⚠️ AND THE PROBE MUST NOT MINT ONE. My first version called nextNumber('sale'), which CONSUMES a bill
+   * number and persists it — a test that burns a number out of a shop's legal series to satisfy itself is a
+   * worse fault than the one it was written to catch. It asks the same engine for the same period key that
+   * the numberer would use, and touches nothing.
+   */
+  const ser = await p.evaluate(async () => {
+    const scheme = (typeof tillScheme === 'function') ? tillScheme() : null;
+    let had = null; try { had = await DB.get('series'); } catch (_) {}
+    const eff = (had && Number(had.next) > 1 && had.scheme) ? had.scheme : scheme;
+    let key = null;
+    try {
+      key = window.CBDoc && window.CBDoc.periodKey
+        ? window.CBDoc.periodKey({ country: (typeof country !== 'undefined' ? country : 'IN'), at: new Date(), scheme: eff })
+        : null;
+    } catch (_) {}
+    return { chose: scheme && scheme.dating, effective: eff && eff.dating, key: key,
+             issued: had ? Number(had.next) : 1,
+             when: (typeof schemeTakesEffect === 'function') ? await schemeTakesEffect() : null };
+  });
+  /* a julian period is the day of the year (5 digits: 2-digit year + 3-digit day); an FY period is "26-27" */
+  const isJulian = /^\d{5}$/.test(String(ser.key || ''));
+  const deferred = ser.effective !== 'julian' && /next reset/.test(String(ser.when || ''));
+  say('julian', ser.chose === 'julian' && (isJulian || deferred),
+    isJulian ? ('the next number would carry the julian day: ' + ser.key)
+             : (deferred ? ('held mid-run (issued ' + ser.issued + ') and says so: ' + ser.when)
+                         : ('⚠️ chosen, but the period is still ' + ser.key + ' and nothing says why')));
 
   step('two bills as the shop');
   await bill(p, ['Idli', 'Dosa'], 'desktop3');
