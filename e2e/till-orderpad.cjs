@@ -83,26 +83,28 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(38) + '· ' + d 
 
   console.log('\n── many at once, which is the whole layout ' + '─'.repeat(16));
   const many = await p.evaluate(async () => {
-    ['7', '9', '12'].forEach((t) => orderStart(t));
+    /* ⚠️ AWAITED SINCE [TILL-178b]. Opening a table is a round trip once a shop has a floor, so these
+       return a promise now — and forEach over an async call opened three tables in an order nobody controls. */
+    for (const t of ['7', '9', '12']) await orderStart(t);
     paintOrders();
     return { tiles: document.querySelectorAll('[data-testid="till-order-tile"]').length,
              open: orderOpen().length };
   });
   say('three tables open together', many.tiles === 3 && many.open === 3, many.tiles + ' tiles');
   /* ⚠️ the same subject twice is two bills for one table — the C1 failure again */
-  const dupe = await p.evaluate(() => { const a = orderStart('7'), c = orderStart('7');
-    return { same: a.id === c.id, n: orderOpen().length }; });
+  const dupe = await p.evaluate(async () => { const a = await orderStart('7'), c = await orderStart('7');
+    return { same: a.order.id === c.order.id, n: orderOpen().length }; });
   say('⚠️⚠️ the same table cannot open twice', dupe.same && dupe.n === 3, 'it returns the one already open');
 
   console.log('\n── part orders under one table ' + '─'.repeat(28));
   const rounds = await p.evaluate(async () => {
     const o = orderOpen().filter((x) => x.subject === '7')[0];
-    orderPick(o.id);
+    await orderPick(o.id);
     addItem(S.items[0], 2); price();
-    const r1 = orderAddRound(o);
+    const r1 = (await orderAddRound(o)).round;
     addItem(S.items[1], 1); price();
-    const r2 = orderAddRound(o);
-    const t = orderTotals(o);
+    const r2 = (await orderAddRound(o)).round;
+    const t = orderTotals(orderFind(o.id));
     return { r1, r2, lines: o.lines.length, cart: CART.length, total: t.total,
              stamped: o.lines.map((l) => l.round) };
   });
@@ -116,15 +118,18 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(38) + '· ' + d 
 
   /* ══ ⚠️⚠️ WALKING AWAY MID-ORDER MUST NOT PUT A DOSA ON ANOTHER TABLE'S BILL ═════════════════════════ */
   console.log('\n── walking to another table ' + '─'.repeat(31));
-  const walk = await p.evaluate(() => {
+  const walk = await p.evaluate(async () => {
     const seven = orderOpen().filter((x) => x.subject === '7')[0];
-    orderPick(seven.id);
+    await orderPick(seven.id);
     addItem(S.items[0], 1); price();          /* typed, not sent */
     const nine = orderOpen().filter((x) => x.subject === '9')[0];
-    orderPick(nine.id);                        /* he walks away mid-order */
-    return { cart: CART.length, sevenLines: seven.lines.length,
-             held: seven.lines.filter((l) => l.round === 0).length,
-             nineLines: nine.lines.length };
+    await orderPick(nine.id);                  /* he walks away mid-order */
+    /* ⚠️ RE-READ AFTER THE HOLD. The hub answers with the order, and the copy captured before the walk
+       is by then a device's stale picture — which is the very fault this whole seam exists to prevent. */
+    const s7 = orderFind(seven.id), n9 = orderFind(nine.id);
+    return { cart: CART.length, sevenLines: s7.lines.length,
+             held: s7.lines.filter((l) => l.round === 0).length,
+             nineLines: n9.lines.length };
   });
   say('⚠️⚠️ the typed line stays with its own table', walk.held === 1 && walk.nineLines === 0,
       'held on 7, and table 9 has ' + walk.nineLines + ' lines');
@@ -134,7 +139,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(38) + '· ' + d 
 
   fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
   /* ⭐ with tables open and one being served — the state a waiter actually sees */
-  await p.evaluate(() => { const o = orderOpen()[0]; ORDER_ID = o && o.id; paintOrders(); });
+  await p.evaluate(async () => { const o = orderOpen()[0]; if (o) await orderPick(o.id); paintOrders(); });
   await p.waitForTimeout(200);
   await p.screenshot({ path: path.join(__dirname, '..', 'png', 'OrderPad.png') });
 
