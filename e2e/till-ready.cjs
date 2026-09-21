@@ -67,9 +67,21 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
    * the same engine the page asks rather than restating a literal that can drift away from it.
    * [[feedback-improvise-update-cases]]
    */
+  /**
+   * ⚠️⚠️ MOVED, NOT DELETED ([TILL-188]). This asserted act === 'signinOpen'. On a BROWSER counter that
+   * function opened a paragraph naming four menu steps in ChitBridge and left the reader to walk them —
+   * so the assertion was passing on a fix that could not fix anything, which is the defect it was written
+   * to catch. Athi: *"even though it says pair the key, no way of pairing the key."*
+   * ⭐ pairAgain() is the one that FINISHES on either host: the OTP flow on the shop PC, and the key box
+   * itself in a browser. The check now also asserts the page really has that function.
+   * [[feedback-improvise-update-cases]]
+   */
   const DOORWORD = await p.evaluate(() => window.signDoor().label);
-  say('and what to DO', rd.stops[0].fix === DOORWORD && rd.stops[0].act === 'signinOpen',
+  const CANFIX = await p.evaluate(() => typeof window.pairAgain === 'function');
+  say('and what to DO', rd.stops[0].fix === DOORWORD && rd.stops[0].act === 'pairAgain' && CANFIX,
     'the fix is a button, not a sentence about a button — and it says "' + DOORWORD + '"');
+  say('⭐ and the button it names is one that can finish', CANFIX,
+    'pairAgain() exists on the page — a named act that is not a function is a dead button');
   say('⭐ and it is NOT the same word as signing a person in', DOORWORD !== 'Sign in',
     'a blank browser counter needs a key, not a sign-in');
 
