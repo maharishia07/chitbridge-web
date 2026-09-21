@@ -75,6 +75,14 @@ const HARNESSES = [
      as a local network?"* Three browser contexts — a waiter's phone, a kitchen screen and a till — run a whole
      table with every request to the cloud aborted at the network layer and counted. The last line it prints is
      the count, and the count is zero. */
+  /* ⭐⭐ THE MORNING ([TILL-182]). It reads the WORDS on the screen, not the state behind them — a counter
+     that settles everything silently would pass any test written against state alone, and silence is exactly
+     what Athi objected to. */
+  ['till-morning.cjs',     'the counter sets itself up out loud, names its number, and stops when somebody else holds it'],
+  /* ⭐⭐ THE VEG SHOP'S SCALE ([TILL-185]). The decoding is proved without a browser; what is proved here is
+     that a DAMAGED label and an UNKNOWN item code stop the counter and say so, which is what the page-side
+     reader used to get wrong by returning null and falling through to the ordinary product search. */
+  ['till-scale.cjs',       'the scale is read, the wrong label is refused out loud, and an ordinary barcode is untouched'],
   ['till-lan.cjs',         'three devices ran a whole table — seated, fired, cooked, billed — and not one byte left the shop'],
   /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
      strip a product field by field and see where the counter stops being able to sell. */

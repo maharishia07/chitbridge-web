@@ -52,6 +52,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   })()`;
   await p.evaluate(shop());
 
+  /**
+   * ⚠️⚠️ ASK THE COUNTER WHAT IT IS CALLED. The first draft set C2 and then asserted C2 — and the page
+   * reported C1, because tillGivenKey() is shop-scoped and the shop was not set when it was written. Every
+   * clash check below then compared C2 against C1, found no clash, and reported "may open" for the right
+   * reason and the wrong one. A fixture that states what it expects instead of reading it proves nothing.
+   */
+  const MINE = await p.evaluate(() => tillId());
+  console.log('  (this counter calls itself ' + MINE + ')');
+
   console.log('\n══ the engine is on the page, and the page holds no rule ' + '═'.repeat(16));
   const wired = await p.evaluate(() => ({
     engine: !!window.CBDayOpen,
@@ -70,7 +79,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   });
   rows.forEach((r) => console.log('      ' + r.state.padEnd(5) + ' ' + r.text));
   say('five rows, each with its answer', rows.length === 5, rows.map((r) => r.step).join(' · '));
-  say('⭐ the counter number is PROVIDED', /C2/.test((rows.filter((r) => r.step === 'counter')[0] || {}).text || ''),
+  say('⭐ the counter number is PROVIDED', new RegExp(MINE).test((rows.filter((r) => r.step === 'counter')[0] || {}).text || ''),
       (rows.filter((r) => r.step === 'counter')[0] || {}).text);
   say('the drawer is said back', /2,000/.test((rows.filter((r) => r.step === 'float')[0] || {}).text || ''),
       (rows.filter((r) => r.step === 'float')[0] || {}).text);
@@ -89,15 +98,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
    * "find which counter was already associated and provide that number, BEFORE THAT find if it is not used
    * by someone." Two PCs numbering as C1 put 29 duplicated bills in a shop's books. */
   console.log('\n── when somebody else is already on that counter ' + '─'.repeat(23));
-  const held = await p.evaluate(() => {
-    TILL_CLASH = { id: 'C2', held_by: 'Back office' };
+  const held = await p.evaluate((mine) => {
+    TILL_CLASH = { id: mine, held_by: 'Back office' };
     const el = document.createElement('div'); el.innerHTML = dayLines(null);
     const r = el.querySelector('[data-step="counter"]');
     const why = el.querySelector('[data-testid="till-day-why"]');
     return { state: r.dataset.state, text: r.innerText.replace(/\s+/g, ' ').trim(),
              why: why ? why.innerText.trim() : '', open: canOpenSaysWhat() };
     function canOpenSaysWhat(){ const v = CBDayOpen.canOpen(dayState()); return v.ok ? 'may open' : ('blocked at ' + v.step); }
-  });
+  }, MINE);
   say('⚠️⚠️⚠️ the morning STOPS', held.open === 'blocked at counter', held.open);
   say('and it names who has it', /Back office/.test(held.why), '"' + held.why + '"');
   say('with the way out on the same line', /Close it there first/.test(held.why), 'not just a refusal');
@@ -125,14 +134,23 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
 
   /* ══ ⭐ AND THE WHOLE THING, DRIVEN THE WAY A PERSON DRIVES IT ═════════════════════════════════════ */
   console.log('\n── opening the day, through the button ' + '─'.repeat(33));
-  await p.evaluate(() => { TILL_CLASH = null; menuOpen ? menuOpen() : null; });
-  await p.evaluate(() => { MENU_OPEN_SEC = 'day'; paintMenu(); });
+  /* ⚠️ toggleMenu() is the page's own control — menuOpen() was a name I invented, and it threw. */
+  await p.evaluate(() => { TILL_CLASH = null; toggleMenu(); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { menuSection('day'); });
   await p.waitForTimeout(400);
   const btn = p.locator('[data-testid="till-day-begin"]');
   const there = await btn.count();
   say('the Open the day button is there', there === 1, there + ' found');
   if (there) {
-    await btn.first().click({ force: true });
+    /**
+     * ⚠️ THE BUTTON'S OWN onclick, not beginDay() by name. The menu panel scrolls, so a real pointer click
+     * needs the row on screen and Playwright refused it as "not visible" — but clicking the ELEMENT still goes
+     * through the control the page wired, which is the thing worth proving. Calling beginDay() directly would
+     * prove the function works and say nothing about whether anything reaches it.
+     * [[feedback-probe-through-the-gate]]
+     */
+    await p.$eval('[data-testid="till-day-begin"]', function(el){ el.click(); });
     /* ⭐ caught MID-RUN, which is the only way to prove it narrates rather than jumping to the end */
     await p.waitForTimeout(300);
     const mid = await p.evaluate(() => {
@@ -143,7 +161,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     await p.waitForFunction(() => typeof dayOpened === 'function' && dayOpened(), null, { timeout: 15000 }).catch(() => {});
     const end = await p.evaluate(() => ({ opened: dayOpened(), said: CBDayOpen.done(dayState()) }));
     say('and the day ends up open', end.opened === true, 'dayOpened()');
-    say('with one sentence for what it settled', /Bala is on counter C2/.test(end.said), '"' + end.said + '"');
+    say('with one sentence for what it settled', new RegExp('Bala is on counter ' + MINE).test(end.said), '"' + end.said + '"');
   }
 
   if (process.argv.includes('--shots')) {
