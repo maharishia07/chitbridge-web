@@ -56,8 +56,22 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
   say('it names the first thing', /not signed in to a shop/i.test(rd.stops[0].why),
     '"' + rd.stops[0].why + '"');
   say('what it MEANS', /nothing to sell/i.test(rd.stops[0].means), 'and what that costs, in the shopkeeper’s terms');
-  say('and what to DO', rd.stops[0].fix === 'Sign in' && rd.stops[0].act === 'signinOpen',
-    'the fix is a button, not a sentence about a button');
+  /**
+   * ⚠️⚠️ THE WORD MOVED, AND THE MOVE IS THE POINT ([TILL-187]). This asserted "Sign in" — and so did the
+   * fix on a wrong-kind key, and so did the fix for nobody standing at the counter. Three identical
+   * instructions for three unrelated problems, which is what Athi walked into: *"There is a real confusion
+   * in sign-in procedure in the counter application."*
+   *
+   * This is a BROWSER counter with no key, so the act it needs is not signing in at all — it is a key, which
+   * a browser cannot fetch by signing in. lib/signin.js door() decides the word now, so the assertion asks
+   * the same engine the page asks rather than restating a literal that can drift away from it.
+   * [[feedback-improvise-update-cases]]
+   */
+  const DOORWORD = await p.evaluate(() => window.signDoor().label);
+  say('and what to DO', rd.stops[0].fix === DOORWORD && rd.stops[0].act === 'signinOpen',
+    'the fix is a button, not a sentence about a button — and it says "' + DOORWORD + '"');
+  say('⭐ and it is NOT the same word as signing a person in', DOORWORD !== 'Sign in',
+    'a blank browser counter needs a key, not a sign-in');
 
   /**
    * ⚠️⚠️ NOBODY SIGNED IN MOVED FROM WARN TO **STOP** ([TILL-128]). Athi: *"each counter has to be signed in,
@@ -70,8 +84,19 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
    */
   const whoStop = rd.stops.find((x) => /Nobody is signed in/i.test(x.why));
   say('nobody is a STOP', !!whoStop, 'a counter with no one signed in may not put anything on a bill');
-  say('and it can be fixed', !!(whoStop && whoStop.act === 'openWho'),
-    'the fix opens the who dialog, where the shop itself is one of the choices');
+  /**
+   * ⚠️⚠️ THE FIX MOVED FROM openWho TO whoAct ([TILL-187]), and the old wiring was the bug in miniature: a
+   * STOP that exists because nobody is signed in offered the one screen that cannot sign anybody in. The
+   * picker puts a NAME on a bill — its own last line says *"it is not a sign-in"* — so pressing the fix
+   * satisfied the check without the thing the check is for ever happening.
+   *
+   * ⭐ THE ENTITY OPTION IS NOT LOST, which is what [TILL-128] turned this from a warn into a stop for. It
+   * moved UP: lib/signin.js signs an entity in exactly as it signs an employee in — same endpoint, same
+   * path, `kind` recorded — so "the owner is at the counter" is now an authenticated answer rather than a
+   * choice off a list. [[feedback-improvise-update-cases]]
+   */
+  say('and it can be fixed', !!(whoStop && whoStop.act === 'whoAct'),
+    'the fix opens whichever door this counter actually needs — engine-decided, not hard-wired');
 
   console.log('\n── ⚠️⚠️ what a blank counter says AT LOAD ' + '─'.repeat(27));
   /**

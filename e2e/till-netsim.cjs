@@ -159,7 +159,20 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
    */
   say('no network shows crossed bars', causes.line.slashed && /📶/.test(causes.line.ico),
       JSON.stringify(causes.line));
-  say('a dead key says so instead', /sign in/i.test(causes.key.go), JSON.stringify(causes.key));
+  /**
+   * ⚠️⚠️ MOVED ([TILL-187]). This asked for the literal words "sign in" — and that literal was the defect
+   * Athi reported: *"There is a real confusion in sign-in procedure in the counter application."* A refused
+   * KEY is not a person failing to sign in, and telling a shopkeeper to sign in when the problem is the key
+   * on the PC sends them to the wrong screen. The property worth holding is that the flash offers the
+   * DEVICE door — whichever this surface has — and that it is a different word from a dead line.
+   * lib/signin.js owns that word now, so the check asks the engine rather than restating it.
+   * [[feedback-improvise-update-cases]]
+   */
+  const KEYWORD = await p2.evaluate(() => window.keyWord());
+  say('a dead key offers the KEY door', causes.key.go === KEYWORD,
+      JSON.stringify(causes.key) + ' — the engine calls it "' + KEYWORD + '"');
+  say('⭐ and not the same word as a dead line', causes.key.go !== causes.line.go,
+      '"' + causes.key.go + '" vs "' + causes.line.go + '"');
   say('and a silent shop is a third thing', /try again/i.test(causes.shop.go), JSON.stringify(causes.shop));
   say('the three are told apart by the symbol alone',
       new Set([causes.line.ico, causes.key.ico, causes.shop.ico]).size === 3,
