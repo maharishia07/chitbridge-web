@@ -189,15 +189,32 @@ const back = (no, amount, at) => ({ no, kind: 'credit_note', total: -amount, at,
   fs.writeFileSync(path.join(fresh, 'connector.json'), JSON.stringify({ api, key, till: { id: 'C2' } }, null, 2));
   const fdir = path.join(fresh, 'till-data', '127.0.0.1-' + cb.srv.address().port, 'CB-SUMMY');
   fs.mkdirSync(fdir, { recursive: true });
-  /* yesterday and today — both inside the CURRENT week, which is still open */
-  const yest = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
-  for (const d of [yest, today]) {
+  /**
+   * ⚠️⚠️ THE MONDAY TRAP, AND IT ONLY FIRES ONE DAY IN SEVEN. This used to write "yesterday and today" and
+   * call them "both inside the CURRENT week". On a Monday, yesterday is SUNDAY — the last day of the previous
+   * ISO week — so the counter correctly closes that week and writes a week chit, and the assertion below
+   * failed. The product was right and the fixture was wrong; it took until 2026-09-21 for a run to land on a
+   * Monday and say so.
+   *
+   * ⭐ SO THE DAYS ARE DERIVED FROM THE WEEK, not from the clock: every fixture day is inside the current ISO
+   * week by construction. On a Monday that is today alone, which is the honest shape of "this week so far".
+   */
+  const dow = (new Date().getDay() + 6) % 7;              /* 0 = Monday, ISO */
+  const days = [];
+  for (let back = Math.min(dow, 1); back >= 1; back--) {
+    days.push(new Date(Date.now() - back * 864e5).toISOString().slice(0, 10));
+  }
+  const yest = days[0] || null;                            /* null on a Monday: there is no earlier day this week */
+  days.push(today);
+  for (const d of days) {
     fs.writeFileSync(path.join(fdir, 'bills-' + d + '.jsonl'), JSON.stringify(sale('X', 10, d + 'T10:00:00Z')) + '\n');
   }
   const c2 = await counter(fresh, 7322);
   await sleep(700);
   const ff = fs.readdirSync(path.join(fdir, 'summary'));
-  say('yesterday is closed', ff.includes('day-' + yest + '.json'), 'yesterday is summarised');
+  /* ⚠️ on a Monday there is no earlier day in this week, so there is nothing to assert about one */
+  if (yest) say('yesterday is closed', ff.includes('day-' + yest + '.json'), 'yesterday is summarised');
+  else console.log('  (Monday: no earlier day inside this week — nothing to close)');
   say('today is not', !ff.includes('day-' + today + '.json'), 'today is not');
   say('THE WEEK WAITS', !ff.some((f) => /^week-/.test(f)),
     'and no week chit is written at all, because this week is not over');

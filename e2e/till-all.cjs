@@ -68,6 +68,7 @@ const HARNESSES = [
   ['till-netsim.cjs',      'the line can be turned down, and it says so while it is'],
   ['till-selfheal.cjs',    'the line went, the shop kept selling, and the counter put itself right'],
   ['till-bell.cjs',        'a quiet bell is told from a dead one, and rebuilt by itself'],
+  ['till-confirm.cjs',     'the caution travels with the action, and carries the numbers'],
   /* ⭐⭐⭐ THE FRONT DOOR ([TILL-107]) — and the first block of it is where AXIOM = name + price came from:
      strip a product field by field and see where the counter stops being able to sell. */
   ['till-catalogue.cjs',   'the axiom, the two trades, and a shop that opens and sells'],
