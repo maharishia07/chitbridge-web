@@ -72,8 +72,9 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
    * function opened a paragraph naming four menu steps in ChitBridge and left the reader to walk them —
    * so the assertion was passing on a fix that could not fix anything, which is the defect it was written
    * to catch. Athi: *"even though it says pair the key, no way of pairing the key."*
-   * ⭐ pairAgain() is the one that FINISHES on either host: the OTP flow on the shop PC, and the key box
-   * itself in a browser. The check now also asserts the page really has that function.
+   * ⭐ pairAgain() is the one that FINISHES on either host: the OTP flow on the shop PC, and — since [TILL-190]
+   * — the SAME sign-in on a browser, which now mints its own key on success (usignEnrolIfNeeded()) instead of
+   * sending the person to a manual key box. The check now also asserts the page really has that function.
    * [[feedback-improvise-update-cases]]
    */
   const DOORWORD = await p.evaluate(() => window.signDoor().label);
