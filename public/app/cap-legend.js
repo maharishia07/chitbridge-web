@@ -292,6 +292,38 @@ const CAP_CATALOGUE = [
       {n:'Versioned evidence store (b94) — issuing-body cert link + shareable link + audit outcome + maintenance milestones, frozen on fold (SPEC-versioned-evidence)', s:'backlog'},
       {n:'Governing-partner delegation + opt-in buyer-facing track-record exposure', s:'backlog'},
     ]},
+  /**
+   * ⭐⭐⭐ SIGN-IN AS A CAPABILITY (Athi, 2026-09-23, mid-fix on "entity OTP is not accepting": *"can you keep
+   * it as a helper function, always implemented in one go everywhere... is it a capability, if so can you note
+   * it down as a capability so you can search there very quickly."*)
+   *
+   * The proof it qualifies is the same test 'cart' and 'money-language' passed above: a CONTRACT (one lookup,
+   * one verify, whatever the identity type), ONE implementation two routes now call instead of two divergent
+   * copies, and real branch coverage (tests/identity-auth.test.js, 13 checks, in GUARDS).
+   *
+   * ⚠️ maturity 2 (packaged), not yet 3: chitbridge-api/lib/identity-auth.js is the one place — built
+   * 2026-09-23, including the counter's own PIN prompt (usignPaint()/usignAsk() in till.html) — but nothing
+   * yet FAILS A BUILD if a THIRD route grows its own OTP/PIN branch the way routes/actors.js's did for two
+   * months before this. That guard, not the module, is the L3 lever.
+   */
+  { id:'sign-in', name:'Sign-in — one identity, entity or coassist', icon:'🔑', load:'eager', maturity:2, target:3,
+    gov:2, govTarget:3, governedUnder:'the identities table (one row shape for entity and actor alike) + lib/resolveuserid.js\'s namespace grammar (docs/NAMESPACE.md)',
+    governedBy:[
+      'ONE FILE: chitbridge-api/lib/identity-auth.js — findLoginIdentity (adopts resolveuserid.classify(), never re-splits \'@\' by hand) · needsPin · issueOtp (routed through lib/dev-otp.js\'s fixedOtp, so a sealed environment cannot leak a fixed code) · verifyCredential (OTP or PIN, one attempt-lock shape) · personShape (one response shape both routes hand a client)',
+      'routes/entities.js (/register · /verify — what the counter\'s Sign in dialog calls) and routes/actors.js (/login — OTP first time, PIN returning) both call it instead of each keeping its own copy',
+      'the counter\'s own rules (chitbridge-api/lib/signin.js, TILL-183/187/188): door()/leave() decide which of four acts a button means; code()/verify() tell a 4-digit PIN from a 6-digit code by length; nothing on a selling screen ever prints a server sentence, an id or an HTTP code',
+      'tests/identity-auth.test.js (13 checks: entity by email/handle, a coassist by the b260 form AND by the unsuffixed form a person actually types, ambiguity refused, the PIN lockout, personShape parity) + tests/signin.test.js (3 checks added the same day) — both in GUARDS',
+    ],
+    govGap:[
+      'no guard yet fails a build if a new route grows its own OTP/PIN branch instead of calling this file — the exact drift that put routes/actors.js two months behind lib/dev-otp.js',
+    ],
+    blurb:'One lookup and one verify for whoever is signing in — a business by its handle or real email, a coassist by the b260 form or the name they naturally type — so an entity and a coassist stop being two authentication systems that happen to share a database column.',
+    features:[
+      {n:'Entity sign-in — OTP, fixed to 123456 in dev via lib/dev-otp.js, a real code once sealed', s:'done'},
+      {n:'Coassist sign-in — OTP the first time, their own PIN every time after, through the SAME counter box', s:'done'},
+      {n:'The counter prompts for a PIN, not a code, once the server says use_pin — usignPaint()/usignAsk()', s:'done'},
+      {n:'A guard that fails if a route re-implements OTP/PIN instead of calling this file', s:'backlog'},
+    ]},
   { id:'help', name:'Assistant', icon:'💬', load:'eager', maturity:1, target:3,
     gov:null, governedUnder:'— static / read-only Q&A (nothing to govern)',
     blurb:'One context-sensitive Assistant (engine in Core). Q&A is served from the DB (GET /api/assist/questions) — nothing static in the frontend; the same store feeds the AI when wired.',
