@@ -577,7 +577,25 @@ function catItems(id){return P.filter(function(p){return p.cat===id;});}
 function items(){ return S.scope==='item' ? (byId(S.itemId)?[byId(S.itemId)]:[]) : catItems(S.catId); }
 function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return GOALS[i];}
 
-function edit(k,v){ S[k]=v; S.applied=false; render(); }
+/**
+ * ── ⭐⭐⭐ EVERY NUMBER FIELD REBUILT ITSELF MID-KEYSTROKE (Athi: "couldn't edit loyalty bonus in setting
+ * page, something happening there") ────────────────────────────────────────────────────────────────────────
+ *
+ * Not just loyalty — every input on every screen calls edit() on oninput, and render() replaces the WHOLE
+ * screen's innerHTML on every call, including the very input being typed into. Destroying and recreating a
+ * focused DOM node drops focus and the cursor, so typing a second digit ("15" after "1") landed nowhere —
+ * indistinguishable from "the field will not take more than one character", which is exactly what was seen.
+ * One character worked; anything real to type in did not.
+ * ⭐ THE FIX KEEPS THE LIVE-AS-YOU-TYPE FEEL (the whole point of a lab — "flick it and watch the numbers
+ * move"), rather than falling back to onchange (fires once, on blur) and losing that. Each affected input
+ * carries `data-key` naming the same field edit() writes; refocus the one with a matching key after the
+ * rebuild, and put the cursor back where it was.
+ */
+function edit(k,v){
+  var af=document.activeElement, key=af&&af.getAttribute&&af.getAttribute('data-key'), start=af&&af.selectionStart, end=af&&af.selectionEnd;
+  S[k]=v; S.applied=false; render();
+  if(key){ var el=document.querySelector('[data-key="'+key+'"]'); if(el){ el.focus(); try{ el.setSelectionRange(start,end); }catch(_){} } }
+}
 function editKeep(k,v){ S[k]=v; render(); }
 function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
   if(n===3 && savedLive()) loadSaved();   /* the shelf may have changed on another tab/device since last look */
@@ -748,8 +766,7 @@ function renderS0(){
      '<p class="hs">Set it once. Every offer in the Lab is judged against it.</p>'+
      '<div class="two" style="margin-top:16px">'+
        '<div class="f"><span class="lbl">Your margin</span>'+
-         '<div class="inp"><input type="number" min="0" max="95" value="'+num(S.margin)+
-           '" oninput="edit(\'margin\',this.value)"><span>%</span></div>'+
+         '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.margin==null?'':String(S.margin))+'" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div>'+
          '<div class="hint">₹'+num(S.margin)+' profit on every ₹100 you sell.</div></div>'+
        '<div class="f"><span class="lbl">Right now your catalogue averages</span>'+
          '<div class="inp" style="background:var(--panel);border-style:dashed"><input value="'+am+
@@ -767,8 +784,7 @@ function renderS0(){
          'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
        '<span class="lt">Use loyalty bonuses</span>'+
               (S.custOn?'<div class="inp" style="width:130px"><span>up to</span>'+
-         '<input type="number" min="0" max="95" value="'+num(S.cap)+
-         '" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
+         '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
      '</div>'+
      (S.custOn&&over?'<div class="note n-bad"><span class="ic">!</span><div>A '+num(S.cap)+
        '% bonus on a '+num(S.margin)+'% margin leaves you nothing. Keep the ceiling under your margin.'+
@@ -891,15 +907,15 @@ function loyBar(){
     '<span class="lt">Loyalty bonus</span>';
   if(!S.loyOn){ h+='<span class="ls">off</span>'; }
   else if(mode==='pct'){
-    h+='<div class="inp"><input type="number" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
-       num(S.loyPct)+'" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
+    h+='<div class="inp"><input type="text" inputmode="decimal" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
+       esc(S.loyPct==null?'':String(S.loyPct))+'" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
        '<span class="ls">on top \u00b7 ceiling '+num(S.cap)+'%'+
        (num(S.loyPct)>num(S.cap)?' <b style="color:var(--red-i)">over</b>':'')+'</span>';
   } else if(mode==='top'){
     h+='<span class="ls">they start at the best step</span>';
   } else {
-    h+='<div class="inp"><input type="number" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
-       num(S.loyPct)+'" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
+    h+='<div class="inp"><input type="text" inputmode="decimal" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
+       esc(S.loyPct==null?'':String(S.loyPct))+'" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
        '<span class="ls">either the free thing or the bonus</span>';
   }
   return h+'</div>';
@@ -939,12 +955,10 @@ function cfgHTML(){
   switch(S.goal){
     case 'percent':
       return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off</span>'+
-        '<div class="inp"><input type="number" min="0" max="95" value="'+num(S.pctOff)+
-        '" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div></div>';
+        '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div></div>';
     case 'amount':
       return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off each</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.rsOff)+
-        '" oninput="edit(\'rsOff\',this.value)"></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></div>'+
         '<div class="hint">A different percentage on each item.</div>';
     case 'qty':
       return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Steps</span>'+
@@ -973,8 +987,7 @@ function cfgHTML(){
       if(S.freeShape==='cheapest')
         h+='<div class="two" style="margin-top:12px">'+scopeRow(true)+
           '<div class="f"><span class="lbl">They buy</span>'+
-          '<div class="inp"><input type="number" min="2" max="20" value="'+num(S.cheapN)+
-          '" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>'+'</div></div>';
+          '<div class="inp"><input type="text" inputmode="decimal" min="2" max="20" value="'+esc(S.cheapN==null?'':String(S.cheapN))+'" data-key="cheapN" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>'+'</div></div>';
       return h;
     case 'bundle':
       return '<div class="two"><div class="f"><span class="lbl">This</span>'+
@@ -982,34 +995,26 @@ function cfgHTML(){
         '<div class="f"><span class="lbl">and this</span>'+
         selectOf(prodOpts(P),S.bunB,'setB')+'</div></div>'+
         '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bunPrice)+
-        '" oninput="edit(\'bunPrice\',this.value)"></div></div>';
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bunPrice==null?'':String(S.bunPrice))+'" data-key="bunPrice" oninput="edit(\'bunPrice\',this.value)"></div></div>';
     case 'spend':
       return '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.spendAt)+
-        '" oninput="edit(\'spendAt\',this.value)"></div></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendAt==null?'':String(S.spendAt))+'" data-key="spendAt" oninput="edit(\'spendAt\',this.value)"></div></div>'+
         '<div class="f"><span class="lbl">Then give back</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.spendVal)+
-        '" oninput="edit(\'spendVal\',this.value)"></div></div></div>';
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.spendVal==null?'':String(S.spendVal))+'" data-key="spendVal" oninput="edit(\'spendVal\',this.value)"></div></div></div>';
     case 'ship':
       return '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipCost)+
-        '" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCost==null?'':String(S.shipCost))+'" data-key="shipCost" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>'+
         '<div class="hint">Your average, per drop.</div>'+
         '<div class="f"><span class="lbl">Free above</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipAt)+
-        '" oninput="edit(\'shipAt\',this.value)"></div></div></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipAt==null?'':String(S.shipAt))+'" data-key="shipAt" oninput="edit(\'shipAt\',this.value)"></div></div></div>'+
         '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipCharge)+
-        '" oninput="edit(\'shipCharge\',this.value)"></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.shipCharge==null?'':String(S.shipCharge))+'" data-key="shipCharge" oninput="edit(\'shipCharge\',this.value)"></div>'+
         '<div class="hint">Zero means free.</div></div>';
     case 'band':
       return '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bandLo)+
-        '" oninput="edit(\'bandLo\',this.value)"></div></div>'+
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandLo==null?'':String(S.bandLo))+'" data-key="bandLo" oninput="edit(\'bandLo\',this.value)"></div></div>'+
         '<div class="f"><span class="lbl">Largest</span>'+
-        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bandHi)+
-        '" oninput="edit(\'bandHi\',this.value)"></div></div></div>';
+        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.bandHi==null?'':String(S.bandHi))+'" data-key="bandHi" oninput="edit(\'bandHi\',this.value)"></div></div></div>';
   }
   return '';
 }
