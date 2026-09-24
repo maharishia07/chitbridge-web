@@ -650,6 +650,14 @@ function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
              scope:'line',applies_to:{item_ids:[aItemId]}}] });
   return R2(r.line_net.a);
 }
+/** ⭐ buy a FEW, the cheapest of them is free — mix_and_match, one line of N units of a single item. What N of
+ * ONE product pays after the cheapest of the N is free, the same kind the cheapest-of-a-mixed-shelf save uses. */
+function engineMixMatchPay(unitPrice, n){
+  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(n-1));
+  var r=CBOffers.evaluate({ lines:[{key:'x',qty:n,unitPrice:unitPrice}],
+    offers:[{id:'preview',kind:'mix_and_match',buy:n-1,get:1,get_percent:100,scope:'line'}] });
+  return R2(r.line_net.x);
+}
 
 /* one row of the item table, for a given total fraction off */
 function row(p,frac){
@@ -1268,7 +1276,14 @@ function outCheap(){
   var heads=three.map(function(p,i){return [esc(p.name),
     '<span style="font-family:\'IBM Plex Mono\',monospace">'+M0(p.price)+' · '+labels[i]+'</span>',
     i===three.length-1];});
-  var mk=function(p){ var pay=(n-1)*p.price, cost=n*p.cost;
+  /**
+   * ⭐ mix_and_match, live — each of the three columns asks "if every one of the N were THIS item, what is the
+   * cheapest-of-N worth". A single item bought N times has only one price to be cheapest among, so this reads
+   * the same number buy_x_get_y would (verified when that kind was first wired) — the point of asking the real
+   * engine is provenance, not a different answer: a future change to how it rounds or stacks reaches this
+   * screen too, automatically, rather than a parallel formula quietly falling out of step.
+   */
+  var mk=function(p){ var pay=engineMixMatchPay(p.price,n), cost=n*p.cost;
     return {pay:pay,cost:cost,make:pay-cost,m:marginPct(pay,cost)};};
   var rows=[
     ['They take', three.map(function(){return n;})],
