@@ -63,14 +63,24 @@ const HARNESSES = [
   ['till-rollup-page.cjs', 'the page, the program and the server agree on what a day took'],
   ['till-ready.cjs',       'an unready counter says so, and signing out never strands a sale'],
   /* ⭐⭐ THE LINE, TURNED DOWN ON PURPOSE ([TILL-116]). Athi: *'switch off network, reduce the speed to 2g
-     and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — the page
-     asks it in 34 places, and a simulator that only slowed fetch would leave all of them fooled. */
+     and so on, so we can see how it works.'* Faithful because navigator.onLine is overridden too — almost
+     every belief/gate now asks lineUp() (Phase 4.1) rather than the flag directly, but lineUp() still bottoms
+     out on it, so a simulator that only slowed fetch would still leave the whole page fooled. */
   ['till-netsim.cjs',      'the line can be turned down, and it says so while it is'],
+  /* ⭐⭐⭐ THE LINE, BELIEVED FROM WHAT GOT THROUGH ([TILL-151]/Phase 4.1). navigator.onLine can say "online"
+     for ever on wifi with a dead upstream link — this proves lineUp() catches that where the flag alone
+     never would, and that a real interface drop still overrides a good recent run. */
+  ['till-lineup.cjs',      'the line is judged by what got through, not by the interface'],
   ['till-selfheal.cjs',    'the line went, the shop kept selling, and the counter put itself right'],
   ['till-bell.cjs',        'a quiet bell is told from a dead one, and rebuilt by itself'],
   ['till-confirm.cjs',     'the caution travels with the action, and carries the numbers'],
   ['till-devbar.cjs',      'the ribbon names the screen, frames the size, and times the line'],
   ['till-orderpad.cjs',    'the pad holds many orders open, and a billing shop never sees it'],
+  /* ⭐⭐⭐ ADD WORKED, REVIEW AND CLOSE DID NOT ([TILL-187]). Athi: *"in the table option, i could add item
+     to the tables, but not able to review or close the table."* Drives the real "+"/"=" buttons a waiter
+     presses, not the engine functions orderpad.cjs already proved correct — the wiring between them was the
+     actual gap. */
+  ['till-order-review-close.cjs', 'a table can be added to, reviewed, and closed — all from the screen'],
   /* ⭐⭐⭐ THE FLOOR, PROVED ([TILL-178b]). Athi: *"how do we prove without internet the entire cycle works,
      as a local network?"* Three browser contexts — a waiter's phone, a kitchen screen and a till — run a whole
      table with every request to the cloud aborted at the network layer and counted. The last line it prints is
