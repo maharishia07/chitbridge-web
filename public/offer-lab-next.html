@@ -296,6 +296,7 @@ button{cursor:pointer}
 .p-draft{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
 .p-appr{background:var(--blue-t);color:var(--blue-i);border:1px solid var(--blue-b)}
 .p-live{background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b)}
+.p-paused{background:var(--red-t);color:var(--red-i);border:1px solid var(--red-b)}
 .p-stale{background:var(--amber-t);color:var(--amber-i);border:1px solid var(--amber-b)}
 .empty{text-align:center;padding:38px 20px;color:var(--faint);font-size:13.5px}
 
@@ -372,6 +373,7 @@ button{cursor:pointer}
   </div>
 
   <div id="strip"></div>
+  <div id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
   <div class="steps" id="steps"></div>
 
   <div class="screen" id="s0"></div>
@@ -525,6 +527,8 @@ var FRESH={ biz:'hotel', step:0, goal:'percent', scope:'cat',
   custOn:true, costSource:'typed', applied:false };
 
 var S, CATS, P, SAVED=[], SEQ=0;
+/* ⭐ the same override the current offer-lab.html supports (?api=) — one lab, testable against any deploy */
+var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
 
 /* ── plumbing ──────────────────────────────────────────────────────────── */
 function applyBiz(id){
@@ -566,7 +570,9 @@ function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return 
 
 function edit(k,v){ S[k]=v; S.applied=false; render(); }
 function editKeep(k,v){ S[k]=v; render(); }
-function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
+  if(n===3 && savedLive()) loadSaved();   /* the shelf may have changed on another tab/device since last look */
+}
 function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
 function apply(){ S.applied=true; render(); }
 function setCost(id,v){ var p=byId(id); if(!p) return;
@@ -1324,11 +1330,92 @@ function keyNumber(){
     var tt=totals(items().map(function(p){return row(p,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
   return ['—','see it'];
 }
-function saveOffer(){
-  var l=label(), k=keyNumber();
-  SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
-    n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
-  go(3);
+/**
+ * ── ⭐⭐⭐ SAVED OFFERS, ON THE REAL SHELF (Athi: "we have already built the offer engine... how we enhance it
+ * to adopt this") ──────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * routes/definitions.js already does everything "draft → approved → live → paused" needs — create, list,
+ * version on edit, retire — for exactly `kind:'offer'`, with lib/definition-check.js validating the same six
+ * sub-kinds this page computes with. Nothing new was built here; SAVED just stops being an array that forgets
+ * itself on reload and starts being a mirror of that shelf.
+ * ⚠️ SIGNED IN ONLY. Demo mode (the two sample books, no cb_sess) keeps the exact in-memory behaviour this
+ * prototype always had — nothing to save to, nothing lost, no network call ever attempted.
+ */
+function savedLive(){ try { var s=JSON.parse(localStorage.getItem('cb_sess')||'null'); return !!(s&&s.token); } catch(_){ return false; } }
+function savedToken(){ try { return (JSON.parse(localStorage.getItem('cb_sess')||'null')||{}).token||null; } catch(_){ return null; } }
+async function defFetch(method,path,body){
+  var r=await fetch(API+'/api/definitions'+path, { method:method,
+    headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
+    body: body?JSON.stringify(body):undefined });
+  var j=null; try{ j=await r.json(); }catch(_){}
+  return {ok:r.ok, status:r.status, body:j||{}};
+}
+/** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
+function subKindOf(){
+  if(S.goal==='percent') return 'percent_off';
+  if(S.goal==='amount') return 'amount_off';
+  if(S.goal==='qty') return 'tier_price';
+  if(S.goal==='bundle') return 'bundle_price';
+  if(S.goal==='spend') return 'threshold';
+  if(S.goal==='ship') return 'shipping';
+  if(S.goal==='free') return S.freeShape==='cheapest'?'mix_and_match':S.freeShape==='anything'?'threshold':'buy_x_get_y';
+  return null;   /* 'band' — refuse a very small/large bill — has no engine kind yet; kept local-only, see §the plan */
+}
+/** the concrete rule this screen is CURRENTLY showing, in the exact field names lib/offers-engine.js reads */
+function ruleParamsOf(){
+  var scopeIds=S.scope==='item'?{item_ids:[S.itemId]}:{category:S.catId};
+  if(S.goal==='percent') return {percent:num(S.pctOff), scope:'line', applies_to:scopeIds};
+  if(S.goal==='amount') return {amount:num(S.rsOff), scope:'line', applies_to:scopeIds};
+  if(S.goal==='qty') return {tiers:tiers(), scope:'line', applies_to:scopeIds};
+  if(S.goal==='bundle') return {bundle_price:num(S.bunPrice), bundle_items:[S.bunA,S.bunB], scope:'line'};
+  if(S.goal==='spend') return {min_amount:num(S.spendAt), amount:num(S.spendVal), scope:'cart'};
+  if(S.goal==='ship') return {min_amount:num(S.shipAt), free:true, scope:'shipping'};
+  if(S.goal==='free'){
+    if(S.freeShape==='anything'){ var g=byId(S.giftId);
+      /* ⚠️ "any bill" needs SOME stated minimum or the engine reads it as unfinished (verified against the
+         real engine before this was written) — a nominal 1 is "any bill that is a bill", not a real threshold */
+      return {min_amount:1, get_item_id:S.giftId, get_item_name:g?g.name:'', get_qty:1, get_percent:100, scope:'cart'}; }
+    if(S.freeShape==='same'){ var n=counts()[0]||1;
+      return {buy:n, get:1, get_percent:100, scope:'line', applies_to:{item_ids:[S.itemId]}}; }
+    if(S.freeShape==='pair'){ var b=byId(S.pairB);
+      return {buy:1, get:1, get_item_id:S.pairB, get_item_name:b?b.name:'', get_percent:100,
+              scope:'line', applies_to:{item_ids:[S.pairA]}}; }
+    if(S.freeShape==='cheapest'){ var n2=Math.max(2,num(S.cheapN));
+      return {buy:n2-1, get:1, get_percent:100, scope:'line', applies_to:{category:S.catId}}; }
+  }
+  return {};
+}
+/** a unique-enough name — the API refuses a second definition of one kind with the same name */
+function saveName(l){ return l.title+(l.detail?' · '+l.detail:'')+' · '+new Date().toISOString().slice(0,16); }
+async function saveOffer(){
+  var l=label(), k=keyNumber(), sub=subKindOf();
+  if(!savedLive()){
+    SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
+      n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
+    go(3); return;
+  }
+  if(!sub){ toastSay('This one cannot be saved to the shelf yet — work it out here for now.'); return; }
+  var r=await defFetch('POST','',{ kind:'offer', sub_kind:sub, name:saveName(l), status:'draft',
+    rules:Object.assign(ruleParamsOf(), { _lab:{ snap:snapshot(), costs:costPrint(), at:new Date().toISOString(),
+      title:l.title, detail:l.detail, n:k[0], k:k[1] } }) });
+  if(!r.ok){ toastSay((r.body&&r.body.message)||'That did not save.'); return; }
+  await loadSaved(); go(3);
+}
+/** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
+async function loadSaved(){
+  if(!savedLive()) return;   /* demo mode: SAVED is already whatever the session has built locally */
+  /* ⚠️ NOT &all=1 — retired must leave this list, exactly as routes/definitions.js excludes it by default.
+     A retired offer stays resolvable by id forever (openSaved could still fetch one directly); it is simply
+     not on the shelf any more, which is the entire point of "Retire" over the old prototype's silent forget. */
+  var r=await defFetch('GET','?kind=offer');
+  if(!r.ok) return;
+  SAVED=(r.body.definitions||[]).map(function(d){
+    var lab=(d.rules&&d.rules._lab)||{};
+    return { id:d.definition_id, when:new Date(d.created_at), biz:S.biz, remote:true,
+      title:lab.title||d.sub_kind||d.name, detail:lab.detail||'', n:lab.n||'—', k:lab.k||'saved',
+      status:d.status, snap:lab.snap||{}, costs:lab.costs||{} };
+  });
+  render();
 }
 function openSaved(id){
   var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv) return;
@@ -1336,8 +1423,22 @@ function openSaved(id){
   KEEP.forEach(function(kk){ if(sv.snap[kk]!=null) S[kk]=JSON.parse(JSON.stringify(sv.snap[kk])); });
   S.applied=true; go(2);
 }
-function setStatus(id,st){ SAVED.forEach(function(x){ if(x.id===id) x.status=st; }); render(); }
-function dropSaved(id){ SAVED=SAVED.filter(function(x){return x.id!==id;}); render(); }
+async function setStatus(id,st){
+  if(!savedLive()){ SAVED.forEach(function(x){ if(x.id===id) x.status=st; }); render(); return; }
+  var r=await defFetch('PUT','/'+id,{status:st});
+  if(!r.ok){ toastSay((r.body&&r.body.message)||'That did not save.'); return; }
+  await loadSaved();
+}
+/** ⚠️ "DELETE" RETIRES, IT DOES NOT ERASE ([TILL-187], matching routes/definitions.js's own DELETE exactly)
+ * — a live offer's history must stay resolvable, so signed-in mode retires; demo mode still just forgets it,
+ * because nothing there was ever more than this browser tab's memory. */
+async function dropSaved(id){
+  if(!savedLive()){ SAVED=SAVED.filter(function(x){return x.id!==id;}); render(); return; }
+  var r=await defFetch('DELETE','/'+id);
+  if(!r.ok){ toastSay((r.body&&r.body.message)||'That could not be retired.'); return; }
+  await loadSaved();
+}
+function toastSay(t){ var n=document.getElementById('labtoast'); if(n){ n.textContent=t; n.hidden=false; } else alert(t); }
 
 /* commercetools' rule, borrowed: only ONE item-level discount may apply to an
    item (highest ranked wins); bill-level ones can stack. So two live offers
@@ -1357,29 +1458,34 @@ function clash(sv){
   return other.length?other.length:null;
 }
 
+/**
+ * ⚠️ FOUR REAL STATES, NOT THREE PRETENDING TO BE FIVE. v5's own prototype sent "Pause" back to 'approved' —
+ * indistinguishable from a draft someone had just reviewed and not yet launched. A live offer that stops must
+ * say PAUSED, or "why is this showing at the till" and "why did we never launch this" become the same question.
+ */
 function renderS3(){
   var h='<div class="card pad"><h2 class="h">Saved offers</h2>'+
-        '<p class="hs">Draft → approved → live.</p></div>';
+        '<p class="hs">'+(savedLive()?'Draft → approved → live → paused.':'Draft → approved → live. Sign in to keep these past this tab.')+'</p></div>';
   if(!SAVED.length) return h+'<div class="card empty">Nothing saved yet.</div>';
   h+='<div class="bucket" style="margin-top:14px">';
   SAVED.forEach(function(sv){
-    var moved=costMoved(sv);
+    var moved=costMoved(sv), pillClass=sv.status==='live'?'live':sv.status==='paused'?'paused':sv.status==='approved'?'appr':'draft';
     h+='<div class="sv"><div class="svm">'+
       '<div class="svt">'+esc(sv.title)+'</div>'+
-      '<div class="svd">'+sv.detail+' · '+BIZ[sv.biz].name+'</div>'+
+      '<div class="svd">'+esc(sv.detail)+' · '+esc(BIZ[sv.biz].name)+'</div>'+
       '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'+
-        '<span class="pill p-'+(sv.status==='live'?'live':sv.status==='approved'?'appr':'draft')+'">'+
-          sv.status+'</span>'+
+        '<span class="pill p-'+pillClass+'">'+esc(sv.status)+'</span>'+
         (moved?'<span class="pill p-stale">'+moved+' cost'+(moved>1?'s':'')+' changed since</span>':'')+
         (clash(sv)?'<span class="pill p-stale">overlaps '+clash(sv)+' other</span>':'')+
       '</div></div>'+
-      '<div style="text-align:right"><div class="svn">'+sv.n+'</div><div class="svk">'+sv.k+'</div></div>'+
+      '<div style="text-align:right"><div class="svn">'+esc(sv.n)+'</div><div class="svk">'+esc(sv.k)+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">'+
         '<button class="btn sm" onclick="openSaved(\''+sv.id+'\')">Review</button>'+
         (sv.status==='draft'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Approve</button>':'')+
         (sv.status==='approved'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Go live</button>':'')+
-        (sv.status==='live'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Pause</button>':'')+
-        '<button class="btn sm" onclick="dropSaved(\''+sv.id+'\')">Delete</button>'+
+        (sv.status==='live'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'paused\')">Pause</button>':'')+
+        (sv.status==='paused'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Resume</button>':'')+
+        '<button class="btn sm" onclick="dropSaved(\''+sv.id+'\')">'+(savedLive()?'Retire':'Delete')+'</button>'+
       '</div></div>';
   });
   return h+'</div>';
