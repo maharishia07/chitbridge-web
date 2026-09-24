@@ -3,10 +3,12 @@
  * Athi: *"give an icon to set-up network capability like switch off network reduce the speed to 2g and so on,
  * so we can see how it works… you will be able to simulate the combinations, can you?"*
  *
- * ⚠️⚠️ THE SIMULATOR IS ONLY WORTH HAVING IF IT IS FAITHFUL. The counter asks `navigator.onLine` in 34 places —
- * whether to queue a bill, whether to offer Send now, whether to try at all. A simulator that only slowed
- * fetch would leave all 34 believing the line was fine and produce behaviour no real outage causes, so the
- * assertions below are mostly about that: does the page BELIEVE it.
+ * ⚠️⚠️ THE SIMULATOR IS ONLY WORTH HAVING IF IT IS FAITHFUL. Almost every "should I queue a bill, offer Send
+ * now, try at all" decision asks lineUp() now (Phase 4.1, see till-lineup.cjs), not `navigator.onLine` — but
+ * lineUp() itself still bottoms out on the flag as its "no interface" floor, so this override is exactly as
+ * load-bearing as it always was. A simulator that only slowed fetch would leave the whole page believing the
+ * line was fine and produce behaviour no real outage causes, so the assertions below are mostly about that:
+ * does the page BELIEVE it.
  *
  * ⚠️⚠️⚠️ AND A COUNTER LEFT IN "off" MUST NOT LOOK BROKEN. It persists across a reload on purpose — testing
  * whether an offline bill survives a restart is the point — so the banner is the thing that stops somebody
