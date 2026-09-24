@@ -370,6 +370,9 @@ button{cursor:pointer}
     <span class="grow"></span>
     <button class="chip" onclick="go(3)" id="bucketChip">Saved offers <b>0</b></button>
     <button class="chip" onclick="labUseMine()" id="labMineBtn">Use my catalogue</button>
+    <button class="chip" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved">Import a spreadsheet</button>
+    <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
+    <button class="chip" onclick="exportCsv()" title="Everything on screen right now, as a CSV">Export CSV</button>
     <div class="bizSw" id="bizSw"></div>
   </div>
   <div id="labqueue" class="note n-warn" hidden style="margin-bottom:14px"></div>
@@ -405,6 +408,14 @@ button{cursor:pointer}
   which is what lets this same file serve a public/demo mode later.
 -->
 <script src="engine/offers.js"></script>
+<!--
+  ⭐⭐ VENDORED, NOT A CDN LINK (Athi: "possibly excel... bring it here"). vendor/xlsx.full.min.js is SheetJS
+  (Apache-2.0), served from this same origin so the public/demo mode's "zero network calls" claim a few lines
+  above stays true even for the import — a CDN script would need the internet the first time regardless of
+  whether the page itself does. Reads .xlsx, .xls and .csv alike; only the numbers a visitor uploads ever
+  leave their own browser tab, and only because they chose to type them into it.
+-->
+<script src="vendor/xlsx.full.min.js"></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
    OFFER LAB — the flow is v5's; the arithmetic is lib/offers-engine.js, live
@@ -1592,6 +1603,25 @@ async function labUseCache(who,why){
   toastSay(who+' — '+why+', and nothing of your catalogue is cached here yet. Showing examples.');
   return false;
 }
+/**
+ * ⭐⭐ ONE BUILDER, TWO SOURCES OF ROWS. The real catalogue (labApplyCatalogue, below) and a spreadsheet
+ * import (importApplyRows, further down) both end up with the same tuple shape — [id, name, cat, price,
+ * cost] — and hand it here rather than each building its own BIZ entry, the same "one registry" discipline
+ * edit() and selectOf() already follow.
+ */
+function buildBiz(key, rows, who){
+  var byCat={}; rows.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
+  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
+  var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
+  BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
+    d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
+        spendAt:500, spendVal:50, buyId:firstItem, getId:firstItem, getOff:100,
+        bunA:firstItem, bunB:secondItem, bunPrice:0, shipAt:300, shipCharge:0, bandLo:50, bandHi:2000,
+        custId:null } };
+  BIZ[key].d.freeShape='anything'; BIZ[key].d.giftId=firstItem; BIZ[key].d.freeCounts=[1,2,3];
+  BIZ[key].d.bills=[100,250,500]; BIZ[key].d.cheapN=3; BIZ[key].d.shipCost=30;
+  BIZ[key].d.pairA=firstItem; BIZ[key].d.pairB=secondItem;
+}
 function labApplyCatalogue(items, who, fromCache){
   var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
   var mineP=items.map(function(p){
@@ -1601,20 +1631,76 @@ function labApplyCatalogue(items, who, fromCache){
     var cost=(d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value)))?Number(d.cost.value):null;
     return [p.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost];
   });
-  var byCat={}; mineP.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
-  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
-  var firstItem=(mineP[0]||[])[0], secondItem=(mineP[1]||mineP[0]||[])[0];
-  BIZ.mine={ name:who, cats:cats, prods:mineP, margin:25, cap:10,
-    d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
-        spendAt:500, spendVal:50, buyId:firstItem, getId:firstItem, getOff:100,
-        bunA:firstItem, bunB:secondItem, bunPrice:0, shipAt:300, shipCharge:0, bandLo:50, bandHi:2000,
-        custId:null } };
-  BIZ.mine.d.freeShape='anything'; BIZ.mine.d.giftId=firstItem; BIZ.mine.d.freeCounts=[1,2,3];
-  BIZ.mine.d.bills=[100,250,500]; BIZ.mine.d.cheapN=3; BIZ.mine.d.shipCost=30;
-  BIZ.mine.d.pairA=firstItem; BIZ.mine.d.pairB=secondItem;
+  buildBiz('mine', mineP, who);
   applyBiz('mine');
   if(fromCache) toastSay(who+' — showing what was cached here; offline right now, so this may be a little behind.');
   render();
+}
+
+/**
+ * ── ⭐⭐⭐ IMPORT A SPREADSHEET, FEEL THE PURPOSE WITH YOUR OWN NUMBERS (Athi: "possibly excel... bring it
+ * here... so we can releast it public domain if required to use it, and feel the purpose") ──────────────────
+ *
+ * A visitor with no ChitBridge account can drop in their own product list and see their OWN margins react to
+ * real offer mechanics, instead of a hotel and a pharma distributor that are not theirs. Nothing here is the
+ * real-catalogue import the app already has elsewhere for onboarding — this never saves anywhere, never
+ * leaves the browser tab, and forgets itself on reload exactly like the demo books always have.
+ * ⚠️ HEADER NAMES ARE MATCHED LOOSELY, NEVER POSITIONALLY. A column-order guess is how the old catalogue
+ * importer's csv-preflight screen was built to refuse silent mismatches; the same care applies here on a much
+ * smaller scale — name/category/price/cost, whatever a person happened to call them.
+ */
+var IMPORT_NAME  = ['name','item','item name','product','product name'];
+var IMPORT_CAT   = ['category','cat','section'];
+var IMPORT_PRICE = ['price','rate','mrp','selling price','sale price'];
+var IMPORT_COST  = ['cost','purchase','purchase price','cost price','buying price'];
+function importField(row, names){
+  var keys = Object.keys(row);
+  for (var i=0;i<names.length;i++){
+    for (var k=0;k<keys.length;k++){ if (String(keys[k]).trim().toLowerCase()===names[i]) return row[keys[k]]; }
+  }
+  return null;
+}
+function importSpreadsheet(input){
+  var file = input && input.files && input.files[0]; if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      var wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+      var sheet = wb.Sheets[wb.SheetNames[0]];
+      var raw = XLSX.utils.sheet_to_json(sheet, { defval:null });
+      if (!raw.length) { toastSay('That file has no rows Offer Lab can read.'); return; }
+      var seq = 0, rows = raw.map(function(r){
+        var name = importField(r, IMPORT_NAME); if(!name) return null;
+        var price = num(importField(r, IMPORT_PRICE));
+        var costRaw = importField(r, IMPORT_COST);
+        var cost = (costRaw==null || costRaw==='') ? null : num(costRaw);
+        var cat = importField(r, IMPORT_CAT) || 'Imported';
+        return ['imp'+(++seq), String(name).trim(), String(cat).trim(), price, cost];
+      }).filter(Boolean);
+      if (!rows.length) { toastSay('No row had a name Offer Lab could read — check the column is called "Name" or "Item".'); return; }
+      buildBiz('imported', rows, file.name.replace(/\.(xlsx|xls|csv)$/i,''));
+      applyBiz('imported');
+      toastSay(rows.length+' rows read from '+file.name+' — nothing was saved anywhere; this stays in this tab.');
+      render();
+    } catch(err){ toastSay('Could not read that file — is it a spreadsheet (.xlsx, .xls or .csv)?'); }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+/** ⭐ the reverse direction — a plain CSV of what is on screen right now, no library needed to write one */
+function exportCsv(){
+  var rows = [['Item','Category','Price','Cost']].concat(P.map(function(p){
+    return [p.name, p.cat, p.price, p.cost==null?'':p.cost];
+  }));
+  var csv = rows.map(function(r){
+    return r.map(function(c){ var s=String(c==null?'':c); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }).join(',');
+  }).join('\r\n');
+  var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (BIZ[S.biz]&&BIZ[S.biz].name||'offer-lab')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 /** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
 function subKindOf(){
