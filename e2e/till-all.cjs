@@ -102,6 +102,11 @@ const HARNESSES = [
      a progress bar would rebuild that bug, so what is asserted is what it ASKS and what it REFUSES. */
   ['till-upload.cjs',      'a product list read before it becomes data, and approved a column at a time'],
   ['till-settings.cjs',    'no visual control has two homes'],
+  /* ⭐⭐⭐ EVERY ROW SAVES ITSELF ([TILL-187], Phase 4.2). The printer, the counter key and the ChitBridge
+     address were the last three staged until Close in one batched saveSettings() — proves each now saves on
+     change, before Close is ever pressed, and that the counter key saves on change (blur/Enter) and never on
+     a keystroke, or DB.reopen()+S=null would fire on a key half typed. */
+  ['till-settings-perrow.cjs', 'everything saves as you change it, and closing loses nothing'],
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
   ['till-contrast.cjs',    'the counter’s own palette, measured'],
