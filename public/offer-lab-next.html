@@ -1011,18 +1011,80 @@ function setB(v){ if(S.goal==='bundle') S.bunB=v; else S.pairB=v; render(); }
 
 /* ═══ OUTPUT ══════════════════════════════════════════════════════════ */
 function outHTML(){
+  var body='';
   switch(S.goal){
-    case 'percent': case 'amount': return outLine();
-    case 'qty':    return outQty();
-    case 'free':   return S.freeShape==='anything'?outGift():
+    case 'percent': case 'amount': body=outLine(); break;
+    case 'qty':    body=outQty(); break;
+    case 'free':   body=S.freeShape==='anything'?outGift():
                           S.freeShape==='same'    ?outSame():
-                          S.freeShape==='pair'    ?outPair():outCheap();
-    case 'bundle': return outBundle();
-    case 'spend':  return outSpend();
-    case 'ship':   return outShip();
-    case 'band':   return outBand();
+                          S.freeShape==='pair'    ?outPair():outCheap(); break;
+    case 'bundle': body=outBundle(); break;
+    case 'spend':  body=outSpend(); break;
+    case 'ship':   body=outShip(); break;
+    case 'band':   body=outBand(); break;
   }
-  return '';
+  return body+cartPreviewHTML();
+}
+/**
+ * ── ⭐⭐⭐ ON A REAL BASKET, NOT JUST ONE ITEM (Athi: "can provide how the cart looks like with this offer in
+ * place, and also can compute margin"; "we should not lose that functionality" — the current offer-lab.html
+ * already shows a real cart via app/cart.js) ──────────────────────────────────────────────────────────────
+ *
+ * Not a second offer type merged onto the screen — the SAME one offer this screen is configured as (reusing
+ * subKindOf()/ruleParamsOf(), built for Saved offers), shown against 2-3 everyday items together instead of
+ * one, through the real engine, because that is what a customer's bill actually looks like: several things,
+ * only some of them touched by any one offer.
+ * ⚠️ NOT FOR spend/ship/band — those already show three whole-bill sightlines, which answers the same question
+ * a mixed basket would, more directly (a spend threshold cares about the BILL TOTAL, not which items make it
+ * up). Forcing a basket onto them would be a second, weaker way to ask something already answered.
+ */
+function cartPreviewItems(){
+  var pool=P.filter(function(p){return p.cost!=null;}); if(pool.length<2) pool=P.slice();
+  var picked=[];
+  function add(p){ if(p && picked.indexOf(p)<0) picked.push(p); }
+  if(S.goal==='bundle'){ add(byId(S.bunA)); add(byId(S.bunB)); }
+  else if(S.goal==='free'){
+    if(S.freeShape==='same') add(byId(S.itemId));
+    else if(S.freeShape==='pair'){ add(byId(S.pairA)); add(byId(S.pairB)); }
+    else if(S.freeShape==='anything') add(byId(S.giftId));
+    else if(S.freeShape==='cheapest') catItems(S.catId).slice(0,2).forEach(add);
+  } else if(S.goal==='percent'||S.goal==='amount'||S.goal==='qty'){
+    if(S.scope==='item') add(byId(S.itemId)); else catItems(S.catId).slice(0,2).forEach(add);
+  } else return [];   /* spend / ship / band: the three-bill sightline already answers this */
+  for(var i=0;i<pool.length && picked.length<3;i++) add(pool[i]);
+  return picked.slice(0,3);
+}
+function cartPreviewLines(items){
+  return items.map(function(p){
+    var qty=1;
+    if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && p.id===S.itemId) qty=top.qty; }
+    else if(S.goal==='free'&&S.freeShape==='same'&&p.id===S.itemId) qty=(counts()[0]||1)+1;
+    else if(S.goal==='free'&&S.freeShape==='cheapest') qty=Math.max(2,num(S.cheapN));
+    return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
+  });
+}
+function cartPreviewHTML(){
+  var items=cartPreviewItems(); var sub=subKindOf();
+  if(!items.length || !sub) return '';
+  var lines=cartPreviewLines(items);
+  var offer=Object.assign({id:'preview',kind:sub}, ruleParamsOf());
+  var ev; try{ ev=CBOffers.evaluate({ lines:lines, offers:[offer] }); }catch(e){ return ''; }
+  var costTotal=0, costKnown=true;
+  lines.forEach(function(l){ if(l.cost==null) costKnown=false; else costTotal+=l.cost*l.qty; });
+  var margin=(costKnown && ev.total>0) ? Math.round((ev.total-costTotal)/ev.total*100) : null;
+  var rows=lines.map(function(l){
+    var was=R2(l.unitPrice*l.qty), now=R2(ev.line_net[l.key]!=null?ev.line_net[l.key]:was), moved=Math.abs(was-now)>0.005;
+    return '<tr><td data-l="">'+esc(l.qty)+' × '+esc(l.name)+(moved?' <span class="pill p-appr" style="margin-left:4px">this offer</span>':'')+'</td>'
+      +'<td class="num" data-l="Price">'+(moved?'<span class="was">'+M0(was)+'</span>':'')+M0(now)+'</td></tr>';
+  }).join('');
+  var notes=(ev.notes||[]).filter(function(n){return n.why;}).map(function(n){return '<div class="hint">'+esc(n.why)+'</div>';}).join('');
+  return '<div class="card pad" style="margin-top:14px">'
+    +'<h3 class="h" style="font-size:16px">On a real basket</h3>'
+    +'<p class="hs">A sample bill with other everyday items on it too — not just what this offer targets.</p>'
+    +headline([[M0(ev.total),'this basket comes to'],
+               [margin==null?'N/A':margin+'%','basket margin',margin!=null&&margin<num(S.margin)?'dn':'up']])
+    +'<div style="overflow-x:auto"><table class="res"><thead><tr><th>Item</th><th>Price</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +notes+'</div>';
 }
 function under(m){ return m!=null && m<num(S.margin); }
 function mgnSpan(m,st){ return '<span class="cm '+mgnClass(m,st)+'">'+mgnText(m,st)+'</span>'; }
