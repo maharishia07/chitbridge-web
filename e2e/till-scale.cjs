@@ -168,7 +168,9 @@ function label(mask, item, value) {
 
   /* ══ THE SETTING, DRIVEN THROUGH ITS OWN CONTROL ════════════════════════════════════════════════════ */
   console.log('\n── setting it up, with a worked example ' + '─'.repeat(31));
-  await p.evaluate(() => { document.getElementById('setdlg').showModal(); paintSetup(); setTab('counter'); });
+  /* ⚠️ setTab() is gone (design-handoff/04-settings, Phase 2.5) — Settings is one scrolling list now, so
+     #set_weigh and its neighbours are already in the document with no tab to switch to first. */
+  await p.evaluate(() => { document.getElementById('setdlg').showModal(); paintSetup(); });
   await p.waitForTimeout(300);
   await p.selectOption('#set_weigh', 'weight_13');
   await p.waitForTimeout(250);
