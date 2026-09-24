@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Offer Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6;
+  --line:#DDD6C6; --line-soft:#E6E0D2; --hair:#F0ECE2;
+  --ink:#1D1B16; --muted:#5E594D; --faint:#8A8374; --ghost:#A8A295;
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  --r:14px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 22px 60px}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.title{font-family:'Bricolage Grotesque',sans-serif;font-size:25px;font-weight:800;letter-spacing:-.02em;margin:0}
+.grow{flex:1}
+.chip{height:36px;padding:0 13px;border-radius:10px;border:1px solid var(--line);background:var(--card);
+  font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.bizSw{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line-soft);border-radius:10px;padding:4px}
+.bizSw button{height:30px;padding:0 12px;border-radius:7px;border:0;background:transparent;
+  font-size:12.5px;font-weight:600;color:var(--muted)}
+.bizSw button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.07)}
+
+.strip{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line-soft);
+  border-radius:11px;padding:9px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.strip b{color:var(--ink)}
+.strip button{margin-left:auto;height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);font-size:12.5px;font-weight:600}
+
+.steps{display:flex;gap:8px;margin-bottom:16px}
+.stp{flex:1;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;text-align:left}
+.stp .n{width:27px;height:27px;border-radius:8px;background:var(--panel);color:var(--muted);
+  font-size:13px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
+.stp .t{display:block;font-size:13.5px;font-weight:700}
+.stp .v{display:block;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stp.on{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
+.stp.on .n{background:var(--green);color:#fff}
+.stp.done .n{background:var(--green-t);color:var(--green-d)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r)}
+.pad{padding:18px 20px}
+.h{font-family:'Bricolage Grotesque',sans-serif;font-size:21px;font-weight:800;margin:0}
+.hs{font-size:13px;color:var(--muted);margin:4px 0 0}
+.lbl{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
+.hint{font-size:12.5px;color:var(--faint);margin-top:5px;line-height:1.35}
+.screen{display:none} .screen.on{display:block}
+.cols{display:grid;gap:16px}
+@media(min-width:900px){ .c-2{grid-template-columns:1fr 1fr} }
+
+.goals{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:10px}
+.goal{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;text-align:left;
+  display:flex;gap:12px;align-items:flex-start;min-height:74px}
+.goal.on{border:2px solid var(--green);background:var(--green-t);padding:13px}
+.goal .gi{width:38px;height:38px;border-radius:10px;background:var(--panel);display:grid;place-items:center;
+  font-size:19px;flex:0 0 auto}
+.goal.on .gi{background:var(--green);color:#fff}
+.goal b{display:block;font-size:14.5px;line-height:1.25}
+.goal .ex{display:block;font-size:12.5px;color:var(--muted);margin-top:4px;font-family:'IBM Plex Mono',monospace}
+.grouphead{grid-column:1/-1;font-size:12.5px;font-weight:700;color:var(--muted);margin:9px 0 -2px;
+  display:flex;align-items:center;gap:9px}
+.grouphead i{flex:1;height:1px;background:var(--line-soft);font-style:normal}
+
+.seg{display:flex;gap:7px;flex-wrap:wrap}
+.seg button{height:44px;padding:0 16px;border-radius:11px;border:1px solid var(--line);
+  background:var(--card);font-size:14px;font-weight:600}
+.seg button.on{background:var(--green);border-color:var(--green);color:#fff}
+.inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:11px;background:var(--card);
+  overflow:hidden;height:48px}
+.inp span{padding:0 11px;color:var(--faint);font-weight:600;font-size:14px;flex:0 0 auto;white-space:nowrap}
+.inp input,.inp select{border:0;outline:0;padding:0 11px;height:100%;width:100%;background:transparent;
+  font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600}
+.inp select{font-family:'IBM Plex Sans',sans-serif;font-size:15px;font-weight:500}
+.inp:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.f{margin-bottom:14px}
+
+/* ── the results table: Shopify / Tally pattern — profit in rupees, margin as a percent,
+      plain adjacent columns. No invented chart. ── */
+.res{width:100%;border-collapse:collapse;font-size:14px}
+.res th{text-align:right;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ghost);
+  font-weight:700;padding:0 10px 8px;white-space:nowrap}
+.res th:first-child{text-align:left}
+.res td{padding:9px 10px;border-top:1px solid var(--hair);text-align:right;white-space:nowrap}
+.res td:first-child{text-align:left;white-space:normal}
+.res tbody tr:hover{background:var(--panel)}
+.res .nm{display:flex;align-items:center;gap:10px}
+.res .nm b{font-weight:600;font-size:14px}
+.tile{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;
+  font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:12px}
+.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.was{color:var(--faint);text-decoration:line-through;font-size:12.5px;display:block;text-align:right}
+.mgn{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:600;font-size:14px}
+.mgn-under{color:var(--amber-i)}
+.mgn-loss{color:var(--red-i);font-weight:700}
+.mgn-na{color:var(--ghost);font-weight:500}
+/* the linked cost / margin / price row — Lightspeed X-Series */
+.trio{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+.trio > div > span{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ghost);margin-bottom:5px}
+.ladder{border:1px solid var(--line-soft);border-radius:11px;overflow:hidden;margin-top:6px}
+.lhead{display:grid;grid-template-columns:26px 1fr 1fr 1fr 34px;gap:8px;padding:8px 10px;background:var(--panel)}
+.lhead span{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ghost)}
+.lrow{display:grid;grid-template-columns:26px 1fr 1fr 1fr 34px;gap:8px;padding:8px 10px;align-items:center;
+  border-top:1px solid var(--hair);cursor:pointer}
+.radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);background:var(--card);
+  display:block;position:relative}
+.radio.on{border-color:var(--green)}
+.radio.on::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--green)}
+.lrow.on{background:var(--green-t);box-shadow:inset 3px 0 0 var(--green)}
+.lrow .inp{height:38px}
+.lrow .inp input{font-size:15px;padding:0 8px}
+.lrow .inp span{padding:0 7px;font-size:13px}
+.lprice{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;text-align:right;padding-right:6px}
+.lx{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--card);
+  color:var(--faint);font-size:16px;line-height:1}
+.lx:disabled{opacity:.3}
+.rungs{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:8px}
+.rung{flex:1;min-width:120px;border:1px solid var(--line);border-radius:11px;background:var(--card);
+  padding:11px 13px;text-align:left;display:block}
+.rung.on{border:2px solid var(--green);background:var(--green-t);padding:10px 12px}
+.rung .rq{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}
+.rung .rp{display:block;font-size:12.5px;color:var(--faint);margin-top:1px}
+.rung .rm{display:block;font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;margin-top:6px;color:var(--green-d)}
+.rung .rm.under{color:var(--amber-i)}
+.rung .rk{display:block;font-size:11px;line-height:1.35;color:var(--muted)}
+.trioNote{font-size:12.5px;color:var(--faint);margin-top:9px;line-height:1.35}
+.costIn{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);height:32px;max-width:92px;overflow:hidden}
+.costIn span{padding:0 6px;color:var(--faint);font-size:12.5px}
+.costIn input{border:0;outline:0;width:100%;height:100%;padding:0 6px 0 0;background:transparent;
+  font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;text-align:right}
+.costIn:focus-within{border-color:var(--green);box-shadow:0 0 0 2px var(--green-t)}
+
+/* the live total — Vyapar's profit indicator, one number beside where you type */
+.live{display:flex;gap:22px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line-soft);
+  border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.live > div{display:flex;flex-direction:column}
+.live .k{font-size:11.5px;color:var(--muted);order:2;margin-top:2px}
+.live .v{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;line-height:1.1;order:1}
+.live .v small{font-size:13px;color:var(--faint);font-weight:500}
+.live .v.dn{color:var(--red-i)} .live .v.up{color:var(--green-d)}
+
+.note{padding:11px 13px;border-radius:11px;font-size:13px;line-height:1.4;display:flex;gap:9px;align-items:flex-start}
+.note .ic{flex:0 0 auto}
+.n-ok{background:var(--green-t);border:1px solid var(--green-b);color:var(--green-d)}
+.n-warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
+.n-bad{background:var(--red-t);border:1px solid var(--red-b);color:var(--red-i)}
+.n-info{background:var(--blue-t);border:1px solid var(--blue-b);color:var(--blue-i)}
+
+.sw{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--hair)}
+.sw:last-of-type{border-bottom:0}
+.sw b{display:block;font-size:14px} .sw span{font-size:12.5px;color:var(--muted)}
+.tog{position:relative;width:48px;height:27px;flex:0 0 auto}
+.tog input{opacity:0;width:0;height:0;position:absolute}
+.tog i{position:absolute;inset:0;background:var(--line);border-radius:99px;transition:.15s}
+.tog i::before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.tog input:checked + i{background:var(--green)}
+.tog input:checked + i::before{transform:translateX(21px)}
+.pick{display:flex;flex-direction:column;gap:6px}
+.pick button{min-height:44px;padding:10px 13px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);text-align:left;display:flex;gap:10px;align-items:flex-start;width:100%}
+.pick button.on{border:2px solid var(--green);background:var(--green-t);padding:9px 12px}
+.pick b{display:block;font-size:13.5px} .pick small{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.pick .tick{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;
+  display:grid;place-items:center;font-size:12px;color:transparent;margin-top:1px}
+.pick button.on .tick{background:var(--green);border-color:var(--green);color:#fff}
+.pick button:disabled{opacity:.5;cursor:not-allowed}
+.soon{font-size:10px;font-weight:700;background:var(--panel);color:var(--faint);padding:1px 6px;border-radius:5px;margin-left:6px}
+.setRow{padding:14px 0;border-bottom:1px solid var(--hair)}
+.setRow:last-child{border-bottom:0}
+.setRow > b{display:block;font-size:14px;margin-bottom:2px}
+.setRow > span{display:block;font-size:12.5px;color:var(--muted);margin-bottom:9px}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 20px;border-top:1px solid var(--hair)}
+.btn{height:48px;padding:0 19px;border-radius:11px;border:1px solid var(--line);background:var(--card);
+  font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:7px}
+.btn.primary{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.scroll{max-height:460px;overflow-y:auto;border:1px solid var(--line-soft);border-radius:12px}
+@media(max-width:760px){
+  .res th:nth-child(2),.res td:nth-child(2){display:none}
+  .steps{flex-direction:column}
+}
+/* ═══ v5 additions ═══════════════════════════════════════════════════════ */
+
+/* the one number that matters, said big, above everything */
+.headline{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end;
+  padding:16px 20px;background:var(--panel);border:1px solid var(--line-soft);
+  border-radius:var(--r);margin-bottom:14px}
+.headline .hv{display:block;font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+  font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.01em}
+.headline .hv small{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;
+  color:var(--faint);text-decoration:line-through;margin-left:7px;letter-spacing:0}
+.headline .hk{display:block;font-size:11.5px;font-weight:600;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ghost);margin-top:5px}
+.headline .up{color:var(--green-d)} .headline .dn{color:var(--amber-i)}
+.headline .bad{color:var(--red-i)}
+.headline .sep{width:1px;align-self:stretch;background:var(--line)}
+
+/* the loyalty bar — one switch, one number, never a column */
+.loy{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:12px;background:var(--card);
+  padding:12px 15px;margin-top:14px}
+.loy.on{border-color:var(--blue-b);background:var(--blue-t)}
+.loy .inp{height:38px;width:112px}
+.loy .lt{font-size:13.5px;font-weight:700}
+.loy .ls{font-size:12.5px;color:var(--muted);flex:1;min-width:200px}
+.sw{width:44px;height:25px;border-radius:13px;border:1px solid var(--line);background:var(--panel);
+  position:relative;flex:0 0 auto;transition:background .12s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .12s}
+.sw.on{background:var(--blue);border-color:var(--blue)}
+.sw.on::after{left:21px}
+
+/* sightline / comparison table: labels down the left, up to three columns */
+.g3{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed}
+.g3 th:first-child,.g3 td:first-child{width:27%}
+.g3 th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ghost);
+  font-weight:700;padding:0 10px 9px;text-align:right;border-bottom:1px solid var(--line)}
+.g3 th:first-child{text-align:left}
+.g3 th b{display:block;font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--ink);
+  letter-spacing:0;text-transform:none;margin-bottom:2px}
+.g3 th.on{color:var(--green-d)} .g3 th.on b{color:var(--green-d)}
+.g3 td{padding:8px 10px;border-top:1px solid var(--hair);text-align:right;white-space:nowrap;
+  font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+.g3 td:first-child{text-align:left;font-family:'IBM Plex Sans',sans-serif;
+  color:var(--muted);font-size:13px;white-space:normal}
+.g3 tr.big td{font-size:18px;font-weight:700;padding-top:11px;padding-bottom:11px}
+.g3 tr.big td:first-child{font-size:13px;font-weight:600}
+.g3 .sub{display:block;font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;
+  font-weight:400;color:var(--faint);text-decoration:line-through}
+
+/* editable column head for a ladder — the header IS the control */
+.chead{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.chead .inp{height:33px;width:118px}
+.chead .inp input{font-size:14px;padding:0 7px;min-width:34px;text-align:right}
+.chead .inp span{padding:0 8px 0 4px;font-size:11.5px;white-space:nowrap}
+.colx{width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:var(--card);
+  font-size:13px;line-height:1;color:var(--faint)}
+.colx:disabled{opacity:.25}
+.colwrap{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+
+/* the per-slab cells in the item table */
+.cell{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.cell .cp{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600}
+.cell .cm{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--green-d);font-weight:600}
+.cell .cm.under{color:var(--amber-i)} .cell .cm.loss{color:var(--red-i);font-weight:700}
+.cell .cm.na{color:var(--ghost);font-weight:500}
+.res th.slab{background:var(--panel)} .res td.slab{background:rgba(243,239,230,.45)}
+
+.phoneOnly{display:none}
+.stepEd{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.stepEd .inp{height:38px;width:104px}
+.stepEd .inp input{padding:0 7px;text-align:right}
+.stepEd .inp span{padding:0 8px 0 4px;font-size:11.5px}
+
+/* notes */
+.note{display:flex;gap:9px;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.4;margin-top:12px}
+.note .ic{font-weight:700;flex:0 0 auto}
+.n-ok{background:var(--green-t);border:1px solid var(--green-b);color:var(--green-d)}
+.n-warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
+.n-bad{background:var(--red-t);border:1px solid var(--red-b);color:var(--red-i)}
+.n-say{background:var(--panel);border:1px solid var(--line-soft);color:var(--muted)}
+
+/* actions */
+.acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.btn{height:44px;padding:0 16px;white-space:nowrap;border-radius:11px;border:1px solid var(--line);background:var(--card);
+  font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.pri:disabled{background:var(--panel);border-color:var(--line);color:var(--ghost)}
+.btn.sm{height:34px;padding:0 12px;font-size:13px;border-radius:9px}
+
+/* saved offers */
+.bucket{display:flex;flex-direction:column;gap:10px}
+.sv{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:13px 15px;
+  display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.sv .svm{flex:1;min-width:220px}
+.sv .svt{font-size:14.5px;font-weight:700}
+.sv .svd{font-size:12.5px;color:var(--muted);margin-top:3px}
+.sv .svn{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700}
+.sv .svk{font-size:11px;color:var(--ghost);text-transform:uppercase;letter-spacing:.05em}
+.pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:7px;
+  font-size:11.5px;font-weight:700;letter-spacing:.02em}
+.p-draft{background:var(--panel);color:var(--muted);border:1px solid var(--line)}
+.p-appr{background:var(--blue-t);color:var(--blue-i);border:1px solid var(--blue-b)}
+.p-live{background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b)}
+.p-stale{background:var(--amber-t);color:var(--amber-i);border:1px solid var(--amber-b)}
+.empty{text-align:center;padding:38px 20px;color:var(--faint);font-size:13.5px}
+
+.shapes{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:9px;margin-bottom:6px}
+.shape{border:1px solid var(--line);border-radius:11px;background:var(--card);padding:11px 13px;text-align:left}
+.shape.on{border:2px solid var(--green);background:var(--green-t);padding:10px 12px}
+.shape b{display:block;font-size:13.5px;line-height:1.25}
+.shape span{display:block;font-size:12px;color:var(--muted);margin-top:3px;
+  font-family:'IBM Plex Mono',monospace}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sect{margin-top:22px}
+.sect > h3{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:700;
+  margin:0 0 9px;letter-spacing:-.01em}
+
+@media(max-width:860px){
+  .two{grid-template-columns:1fr}
+  .headline{gap:18px}
+  .headline .sep{display:none}
+}
+@media(max-width:560px){
+  .wrap{padding:14px 14px 50px}
+  .res th.hide,.res td.hide{display:none}
+  .headline .hv{font-size:24px}
+  .steps{display:none}
+}
+
+/* ═══ phone: the item table becomes one card per item ═══════════════════ */
+@media(max-width:620px){
+  .res{display:block}
+  .res thead{display:none}
+  .res tbody,.res tfoot{display:block}
+  .res tbody tr,.res tfoot tr{display:block;border:1px solid var(--line);border-radius:12px;
+    background:var(--card);padding:11px 13px;margin-bottom:9px}
+  .res td{display:block;border:0;padding:1px 0;text-align:left;white-space:normal}
+  .res td[data-l]::before{content:attr(data-l);display:block;font-size:9.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ghost);font-family:'IBM Plex Sans',sans-serif;font-weight:700}
+  .res td.hide{display:block}
+  .res td:empty{display:none}
+  .res td.slab{display:inline-block;width:32%;vertical-align:top;background:none;
+    margin-top:8px;padding-right:6px}
+  .res td.slab .cell{align-items:flex-start}
+  .res .was{text-align:left;display:inline;margin-right:6px}
+  .res .nm b{font-size:15px}
+  .res .tile{width:26px;height:26px;font-size:10px}
+  .res tfoot td[colspan]{font-size:14px}
+  .g3{font-size:13px}
+  .g3 th,.g3 td{padding:6px 4px;font-size:12.5px}
+  .g3 th:first-child,.g3 td:first-child{width:24%}
+  .g3 th b{font-size:13px}
+  .g3 tr.big td{font-size:15px}
+  .g3 td:first-child{font-size:12px}
+  .chead .inp{width:100px;height:30px}
+  .headline{padding:13px 15px;gap:14px}
+  .headline > div{min-width:88px}
+  .acts{gap:8px}
+  .acts .btn{flex:1 1 auto;justify-content:center;font-size:13.5px;padding:0 12px}
+  .acts .grow{display:none}
+  .two{grid-template-columns:1fr}
+  .shapes{grid-template-columns:1fr}
+  .phoneOnly{display:block}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1 class="title">Offer Lab</h1>
+    <span class="chip" id="bizName">—</span>
+    <span class="grow"></span>
+    <button class="chip" onclick="go(3)" id="bucketChip">Saved offers <b>0</b></button>
+    <div class="bizSw" id="bizSw"></div>
+  </div>
+
+  <div id="strip"></div>
+  <div class="steps" id="steps"></div>
+
+  <div class="screen" id="s0"></div>
+  <div class="screen" id="s1"></div>
+  <div class="screen" id="s2"></div>
+  <div class="screen" id="s3"></div>
+
+</div>
+<!--
+  ⭐⭐⭐ THE ARITHMETIC IS THE REAL ENGINE, NOT A REIMPLEMENTATION (Athi: "we have already built the offer
+  engine, that is being served everywhere as a capability... how we enhance it to adopt this"). This page IS
+  the v5 prototype/spec — same layout, same one-screen-per-offer flow, same wording — but `row()` and the
+  free/bundle/bill screens now ask window.CBOffers.evaluate(), the exact function the till, the storefront and
+  the order page call, instead of a parallel set of formulas that could quietly drift from what a real bill
+  does. Verified against the spec's own §10 checks before this file was written: every number matched, once
+  rounding and the below-cost floor are recognised as this PAGE's policy layered on the engine's exact output,
+  never inside the engine itself.
+  ⚠️ NO /api/ CALL ON THIS SCRIPT TAG. offers.js is a pure, dependency-free function of (lines, offers, ctx) —
+  loading it costs nothing and works with the sample catalogues below with no sign-in, no server, no network,
+  which is what lets this same file serve a public/demo mode later.
+-->
+<script src="engine/offers.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   OFFER LAB — the flow is v5's; the arithmetic is lib/offers-engine.js, live
+
+   The one rule that shapes everything:
+   IF A NUMBER NEEDS TO KNOW HOW MUCH YOU SELL, IT IS NOT IN HERE.
+   No units sold, no period, no average basket. Sales-against-volume is a
+   separate feature for when real data has accumulated.
+
+   What it computes, and nothing else:
+     two percentages per item, compounded, and the margin that leaves you.
+       final  = price x (1 - offer%) x (1 - loyalty%)
+       margin = (final - cost) / final          <- Shopify's formula, verbatim
+     For offers that act on a bill rather than an item, the same three facts
+     at three sightlines, because the cost is flat and only its SHARE moves.
+
+   Nothing here is invented. Borrowed, in order:
+     Shopify        cost -> profit + margin, live, and the margin formula
+     Tally / Vyapar "Profit" for rupees, "Margin" for the percent, adjacent
+     Vyapar         one live profit figure beside the discount box
+     Lightspeed     cost / margin / price as linked fields on a single item
+     Odoo           Min. Quantity ladders; rule on one side, effect on the other
+     Cin7           N/A when there is no cost
+     Fulfilment-lab free-delivery threshold: flat cost, shrinking share
+     Shopify guides discount profitability as a ladder to break-even
+
+   Deliberate non-decisions, recorded so nobody reopens them:
+     - No stacked cost/profit bar. Not one commercial product uses one.
+     - "Markup" appears nowhere. It is the number most confused with margin.
+     - The free-delivery formula's AVERAGE ORDER VALUE term is dropped. Every
+       calculator online needs it; it is sales data, so it is not here. The
+       curve across three bills says more than one averaged point would.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var HOTEL={ name:'Mayur Bhavan', what:'a hotel counter',
+  cats:[['tiffin','Tiffin'],['curries','Curries'],['drinks','Drinks'],['sweets','Sweets'],
+        ['breads','Breads'],['starters','Starters'],['combos','Combos']],
+  prods:[
+    ['idli','Idli (2 pc)','tiffin',40,17],['ghee','Ghee Podi Idli','tiffin',70,34],
+    ['sambar','Sambar Idli','tiffin',60,27],['rava','Rava Idli','tiffin',60,29],
+    ['kanchi','Kanchipuram Idli','tiffin',65,33],['plain','Plain Dosa','tiffin',55,24],
+    ['masala','Masala Dosa','tiffin',70,38],['onionrava','Onion Rava Dosa','tiffin',90,52],
+    ['paper','Paper Roast','tiffin',85,41],['medu','Medu Vada (2 pc)','tiffin',35,16],
+    ['upma','Upma','tiffin',45,19],['pongal','Ven Pongal','tiffin',50,24],
+    ['sambarc','Sambar','curries',45,22],['kurma','Vegetable Kurma','curries',75,46],
+    ['paneer','Paneer Butter Masala','curries',160,118],['chana','Channa Masala','curries',90,49],
+    ['coffee','Filter Coffee','drinks',20,7],['tea','Tea','drinks',15,5],
+    ['badam','Badam Milk','drinks',45,26],['lassi','Sweet Lassi','drinks',50,31],
+    ['juice','Fresh Juice','drinks',60,null],
+    ['mysore','Mysore Pak','sweets',35,21],['gulab','Gulab Jamun (2)','sweets',40,23],
+    ['halwa','Kesari Halwa','sweets',35,18],
+    ['poori','Poori Masala','breads',65,30],['chapati','Chapati (2 pc)','breads',40,18],
+    ['paratha','Malabar Paratha','breads',50,26],
+    ['bajji','Mixed Bajji','starters',45,20],['bonda','Mysore Bonda','starters',35,15],
+    ['lunch','Lunch Combo','combos',180,150],['tiffinc','Tiffin Combo','combos',110,86]],
+  margin:25, cap:10, gst:5,
+  cust:[['ravi','Ravi Tiffin Service','trade',3],['lakshmi','Sri Lakshmi Caterers','trade',5],
+        ['velcan','Vel Offices canteen','trade',0]],
+  d:{catId:'tiffin', itemId:'masala', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
+     spendAt:500, spendVal:50, buyId:'masala', getId:'masala', getOff:100,
+     bunA:'masala', bunB:'coffee', bunPrice:80, shipAt:300, shipCharge:0,
+     bandLo:50, bandHi:2000, custId:'ravi'} };
+
+var PHARMA={ name:'Sri Sai Pharma Distributors', what:'a pharma distributor',
+  cats:[['tablets','Tablets'],['syrups','Syrups'],['inject','Injectables'],
+        ['topical','Topicals'],['otc','OTC & wellness'],['devices','Devices']],
+  prods:[
+    ['para','Paracetamol 500mg (15s)','tablets',21,17],['amox','Amoxicillin 500mg (10s)','tablets',78,62],
+    ['azi','Azithromycin 500mg (3s)','tablets',96,77],['panto','Pantoprazole 40mg (15s)','tablets',112,90],
+    ['omep','Omeprazole 20mg (15s)','tablets',64,51],['metf','Metformin 500mg (20s)','tablets',38,30],
+    ['glim','Glimepiride 2mg (15s)','tablets',72,58],['ator','Atorvastatin 10mg (15s)','tablets',86,69],
+    ['amlo','Amlodipine 5mg (15s)','tablets',42,34],['telmi','Telmisartan 40mg (15s)','tablets',105,84],
+    ['losar','Losartan 50mg (15s)','tablets',68,54],['monte','Montelukast 10mg (10s)','tablets',124,99],
+    ['cetri','Cetirizine 10mg (10s)','tablets',24,19],
+    ['cough','Cough syrup 100ml','syrups',86,67],['antac','Antacid suspension 200ml','syrups',118,92],
+    ['parasyp','Paracetamol syrup 60ml','syrups',45,35],
+    ['ors','ORS sachet','otc',9,7],['multi','Multivitamin (30s)','otc',185,141],
+    ['calc','Calcium + D3 (15s)','otc',94,71],['mask','Surgical mask (50s)','otc',120,91],
+    ['diclo','Diclofenac gel 30g','topical',78,62],['povi','Povidone iodine 100ml','topical',92,null],
+    ['burn','Silver sulfadiazine 20g','topical',110,87],
+    ['insul','Insulin pen refill','inject',340,279],['ceft','Ceftriaxone 1g vial','inject',54,44],
+    ['vitb','Vitamin B12 injection','inject',38,31],
+    ['gloves','Examination gloves (100s)','devices',390,328],
+    ['syringe','Disposable syringe (100s)','devices',260,218],
+    ['thermo','Digital thermometer','devices',165,139],['bp','BP monitor','devices',1450,1218],
+    ['gluco','Glucometer strips (50s)','devices',720,605]],
+  margin:10, cap:8, gst:12,
+  cust:[['sharma','Sharma Medical Stores','reseller',8],['nandha','Nandha Chemists chain','reseller',6],
+        ['citysub','City Sub-stockist','reseller',7],['gh','Guru Hospital pharmacy','trade',4]],
+  d:{catId:'tablets', itemId:'panto', pctOff:5, rsOff:4, tiers:[[10,3],[30,5],[100,8]], tierView:2,
+     spendAt:10000, spendVal:600, buyId:'panto', getId:'panto', getOff:100,
+     bunA:'panto', bunB:'omep', bunPrice:160, shipAt:5000, shipCharge:0,
+     bandLo:500, bandHi:200000, custId:'sharma'} };
+
+var BIZ={hotel:HOTEL, pharma:PHARMA};
+/* per-book defaults for the v5 offers */
+HOTEL.d.freeShape='anything'; HOTEL.d.giftId='medu'; HOTEL.d.freeCounts=[1,2,3];
+HOTEL.d.bills=[100,250,500];  HOTEL.d.cheapN=3;      HOTEL.d.shipCost=30;
+HOTEL.d.pairA='masala';       HOTEL.d.pairB='coffee';
+PHARMA.d.freeShape='anything';PHARMA.d.giftId='ors'; PHARMA.d.freeCounts=[5,10,20];
+PHARMA.d.bills=[2000,5000,10000]; PHARMA.d.cheapN=3; PHARMA.d.shipCost=120;
+PHARMA.d.pairA='panto';       PHARMA.d.pairB='omep';
+
+var GOALS=[
+  {id:'percent',kind:'line', icon:'%', n:'A percentage off',           ex:'10% off'},
+  {id:'amount', kind:'line', icon:'₹', n:'Rupees off',            ex:'₹10 off each'},
+  {id:'qty',    kind:'line', icon:'▦', n:'Cheaper when they buy more', ex:'2+ → 5%, 5+ → 10%'},
+  {id:'free',   kind:'pair', icon:'+', n:'Something free',             ex:'buy 2, get 1'},
+  {id:'bundle', kind:'pair', icon:'▣', n:'Two things at one price', ex:'dosa + coffee = ₹80'},
+  {id:'spend',  kind:'bill', icon:'↑', n:'Reward a big bill',     ex:'over ₹500 → ₹50 back'},
+  {id:'ship',   kind:'bill', icon:'⌁', n:'Free delivery',         ex:'over ₹300 → free'},
+  {id:'band',   kind:'guard',icon:'⌂', n:'Refuse very small or big bills', ex:'₹50 to ₹2,000'}
+];
+var KINDS={line:'These change what one thing costs',
+           pair:'These are about two things together',
+           bill:'These are about the size of a bill',
+           guard:'This one only allows or blocks'};
+
+var SHAPES=[
+  {id:'anything',n:'Buy anything — this is free',        ex:'any bill → one free item'},
+  {id:'same',    n:'Buy some of one thing — one more free', ex:'buy 2, get 1'},
+  {id:'pair',    n:'Buy this — that is free',            ex:'buy A, get B'},
+  {id:'cheapest',n:'Buy a few — the cheapest is free',   ex:'buy 3, cheapest free'}
+];
+
+var FRESH={ biz:'hotel', step:0, goal:'percent', scope:'cat',
+  margin:25, cap:10, belowCost:true, belowAct:'exclude', round:'1',
+  loyOn:false, loyPct:0, loyTop:true,
+  custOn:true, costSource:'typed', applied:false };
+
+var S, CATS, P, SAVED=[], SEQ=0;
+
+/* ── plumbing ──────────────────────────────────────────────────────────── */
+function applyBiz(id){
+  var B=BIZ[id];
+  CATS=B.cats.map(function(c){return {id:c[0],name:c[1]};});
+  P=B.prods.map(function(p){return {id:p[0],name:p[1],cat:p[2],price:p[3],cost:p[4]};});
+  S=Object.assign({},FRESH,{biz:id,margin:B.margin,cap:B.cap},
+    JSON.parse(JSON.stringify(B.d)));
+}
+function setBiz(id){var st=S.step; applyBiz(id); S.step=st; S.applied=false; render();}
+function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
+function R2(n){return Math.round(n*100)/100;}
+function byId(id){for(var i=0;i<P.length;i++) if(P[i].id===id) return P[i]; return null;}
+function catName(id){for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].name; return '';}
+function M0(n){ if(n==null||isNaN(n)) return '—';
+  var neg=n<-0.004; n=Math.abs(n);
+  return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
+function PC(n){ if(n==null||!isFinite(n)) return '—';
+  return (Math.round(n*10)/10)+'%'; }
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+function marginPct(price,cost){return price>0?Math.round(((price-cost)/price)*100):0;}
+function roundDown(v,cap){
+  var r=String(S.round);
+  if(r==='0') v=Math.floor(v*100)/100;
+  else if(r==='1') v=Math.floor(v);
+  else if(r==='5') v=Math.floor(v/5)*5;
+  else if(r==='10') v=Math.floor(v/10)*10;
+  return Math.min(v,cap);
+}
+/* the catalogue's own average margin, as a fraction. Used only where the basket
+   is genuinely unknowable, and always labelled as an average when it is. */
+function avgM(){var pb=0,cb=0;
+  P.forEach(function(p){ if(p.cost==null) return; pb+=p.price; cb+=p.cost; });
+  return pb>0?(pb-cb)/pb:0;}
+function catItems(id){return P.filter(function(p){return p.cat===id;});}
+function items(){ return S.scope==='item' ? (byId(S.itemId)?[byId(S.itemId)]:[]) : catItems(S.catId); }
+function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return GOALS[i];}
+
+function edit(k,v){ S[k]=v; S.applied=false; render(); }
+function editKeep(k,v){ S[k]=v; render(); }
+function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
+function apply(){ S.applied=true; render(); }
+function setCost(id,v){ var p=byId(id); if(!p) return;
+  p.cost = (v===''||v==null) ? null : Math.max(0,num(v)); render(); }
+function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v)); render(); }
+
+/* ── the engine: two percentages, compounded ───────────────────────────── */
+function offerFrac(p){
+  if(S.goal==='percent') return Math.min(.99,num(S.pctOff)/100);
+  if(S.goal==='amount')  return p.price>0?Math.min(1,num(S.rsOff)/p.price):0;
+  return 0;
+}
+function loyMode(){
+  if(!S.custOn || !S.loyOn) return 'none';
+  if(S.goal==='percent'||S.goal==='amount') return 'pct';
+  if(S.goal==='qty') return 'top';
+  if(S.goal==='free') return (S.freeShape==='same'||S.freeShape==='cheapest')?'top':'either';
+  if(S.goal==='bundle') return 'either';
+  return 'na';
+}
+function loyFrac(){ return loyMode()==='pct' ? Math.min(.95,num(S.loyPct)/100) : 0; }
+function combo(a,b){ return 1-(1-a)*(1-b); }
+/**
+ * ⭐⭐⭐ THE ONE PLACE THE REAL ENGINE ANSWERS "WHAT DOES A % OFF COME TO" (Phase: offer-lab adoption).
+ * `frac` is already the combined offer+loyalty fraction (combo(), above) — a single percent_off asked of
+ * CBOffers.evaluate() at that percentage is mathematically identical to price*(1-frac), and provably so:
+ * verified against the spec's own §10 checks (10% off ₹70 → ₹63, compounded 10%+10% → 19% not 20%) before
+ * this file was written. The difference from computing it locally is provenance, not the number — every
+ * "final price" on this screen now comes from the same call the till and the storefront make, so a future
+ * change to how the engine rounds or stacks reaches this page automatically instead of silently diverging.
+ * ⚠️ ROUNDING AND THE BELOW-COST FLOOR STAY HERE, NOT IN THE ENGINE. They are this LAB's own policy — "never
+ * show a price you would not actually charge" — not a fact about the offer, and the engine correctly knows
+ * nothing about either.
+ */
+function engineFinal(unitPrice, frac){
+  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*(1-frac));   /* engine missing: never blank the screen */
+  var pct=Math.min(99,Math.max(0,frac*100));
+  if(pct<=0) return R2(unitPrice);
+  var r=CBOffers.evaluate({ lines:[{key:'x',qty:1,unitPrice:unitPrice}],
+    offers:[{id:'preview',kind:'percent_off',percent:pct,scope:'line'}] });
+  return R2(r.line_net.x);
+}
+/** ⭐ buy N of ONE item, get 1 more free (or at a %) — same-item buy_x_get_y, N+1 units on one line */
+function engineBuyGetPay(unitPrice, buy, get, getPercent){
+  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(unitPrice*buy);
+  var r=CBOffers.evaluate({ lines:[{key:'x',qty:buy+get,unitPrice:unitPrice}],
+    offers:[{id:'preview',kind:'buy_x_get_y',buy:buy,get:get,get_percent:getPercent==null?100:getPercent,scope:'line'}] });
+  return R2(r.line_net.x);
+}
+/** ⭐ buy A, get B free (or at a %) — buy_x_get_y with a DIFFERENT reward item, exactly the cross-item shape
+ * lib/offers-engine.js added for "buy rice, get oil free". Returns what is paid for A; B's line (if it were on
+ * the same basket) would show as free — the wizard only ever prices the pair it was given, per spec §4. */
+function engineBuyGetPayCross(aItemId, aPrice, bItemId, bQty, getPercent){
+  if(!(window.CBOffers && window.CBOffers.evaluate)) return R2(aPrice);
+  /* ⚠️ applies_to.item_ids RESTRICTS "BUY" TO A SPECIFICALLY, or the engine would count B's own line towards
+     the purchase requirement too — the exact cross-item wiring lib/offers-engine.js was built for. */
+  var r=CBOffers.evaluate({ lines:[{key:'a',item_id:aItemId,qty:1,unitPrice:aPrice},{key:'b',item_id:bItemId,qty:bQty,unitPrice:0}],
+    offers:[{id:'preview',kind:'buy_x_get_y',buy:1,get:bQty,get_item_id:bItemId,get_percent:getPercent==null?100:getPercent,
+             scope:'line',applies_to:{item_ids:[aItemId]}}] });
+  return R2(r.line_net.a);
+}
+
+/* one row of the item table, for a given total fraction off */
+function row(p,frac){
+  var base=p.price, want=engineFinal(base,frac), status='ok';
+  if(p.cost==null) status='nocost';
+  else if(S.belowCost && want < p.cost-0.005){
+    if(S.belowAct==='exclude'){ status='left'; want=base; }
+    else if(S.belowAct==='cap'){ status='capped'; want=p.cost; }
+    else status='loss';
+  }
+  var shown=R2(status==='left'?base:roundDown(want,base));
+  if(p.cost!=null && shown<p.cost-0.005) status='loss';
+  return {p:p, base:base, shown:shown, status:status,
+    profit: p.cost==null?null:R2(shown-p.cost),
+    margin: p.cost==null?null:marginPct(shown,p.cost),
+    wasProfit: p.cost==null?null:R2(base-p.cost),
+    wasMargin: p.cost==null?null:marginPct(base,p.cost)};
+}
+/* "as if one of each" — there is no volume in here, ever */
+function totals(rs){
+  var pb=0,pa=0,cb=0,n=0,blind=0;
+  rs.forEach(function(r){ if(r.p.cost==null){blind++;return;}
+    n++; pb+=r.base; pa+=r.shown; cb+=r.p.cost; });
+  return {n:n, blind:blind, priceBefore:R2(pb), priceAfter:R2(pa), cost:R2(cb),
+    profitBefore:R2(pb-cb), profitAfter:R2(pa-cb),
+    marginBefore: pb>0?Math.round((pb-cb)/pb*100):0,
+    marginAfter:  pa>0?Math.round((pa-cb)/pa*100):0};
+}
+function lineRows(){ var f=combo(0,loyFrac());
+  return items().map(function(p){ return row(p, combo(offerFrac(p), loyFrac())); }); }
+
+/* ── ladders (max three steps, always) ─────────────────────────────────── */
+function tiers(){ return (S.tiers||[]).map(function(t){return {qty:num(t[0]),pct:num(t[1])};}); }
+function setTier(i,which,v){ if(!S.tiers[i]) return; S.tiers[i][which]=Math.max(0,num(v)); S.applied=true; render(); }
+function addTier(){ if(S.tiers.length>=3) return;
+  var t=S.tiers[S.tiers.length-1]||[1,0];
+  S.tiers.push([num(t[0])*2, Math.min(95,num(t[1])+5)]); S.applied=true; render(); }
+function delTier(i){ if(S.tiers.length<=1) return; S.tiers.splice(i,1); S.applied=true; render(); }
+function tierFault(){ var t=tiers(), bad=[];
+  for(var i=1;i<t.length;i++){
+    if(t[i].qty<=t[i-1].qty) bad.push('Step '+(i+1)+' must be more than '+t[i-1].qty);
+    if(t[i].pct <t[i-1].pct) bad.push('Buying more should not give less than '+t[i-1].pct+'%'); }
+  return bad; }
+function counts(){ return (S.freeCounts||[1,2,3]).map(num); }
+function setCount(i,v){ S.freeCounts[i]=Math.max(1,num(v)); S.applied=true; render(); }
+function addCount(){ if(S.freeCounts.length>=3) return;
+  S.freeCounts.push(num(S.freeCounts[S.freeCounts.length-1])+1); S.applied=true; render(); }
+function delCount(i){ if(S.freeCounts.length<=1) return; S.freeCounts.splice(i,1); S.applied=true; render(); }
+function setBill(i,v){ S.bills[i]=Math.max(1,num(v)); S.applied=true; render(); }
+
+/* three representative items in the shelf: cheapest, middle, dearest */
+function threeOf(list){
+  var xs=list.filter(function(p){return p.cost!=null;})
+             .sort(function(a,b){return a.price-b.price;});
+  if(!xs.length) return [];
+  if(xs.length<3) return xs;
+  return [xs[0], xs[Math.floor(xs.length/2)], xs[xs.length-1]];
+}
+
+/* ── small view helpers ────────────────────────────────────────────────── */
+function mgnClass(m,status){
+  if(status==='nocost'||m==null) return 'na';
+  if(m<0) return 'loss';
+  if(m<num(S.margin)) return 'under';
+  return '';
+}
+function mgnText(m,status){ return (status==='nocost'||m==null)?'N/A':m+'%'; }
+function seg(k,opts,fn){
+  return '<div class="seg">'+opts.map(function(o){
+    return '<button class="'+(String(S[k])===String(o[0])?'on':'')+'" onclick="'+
+      (fn||'edit')+'(\''+k+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</div>';
+}
+function selectOf(list,val,fn){
+  return '<div class="inp"><select onchange="'+fn+'(this.value)">'+list.map(function(o){
+    return '<option value="'+o[0]+'" '+(String(val)===String(o[0])?'selected':'')+'>'+esc(o[1])+'</option>';
+  }).join('')+'</select></div>';
+}
+function prodOpts(list){ return list.map(function(p){
+  return [p.id, p.name+'  —  '+M0(p.price)];}); }
+
+/* ═══ SCREEN 0 · SETTINGS ══════════════════════════════════════════════ */
+function renderS0(){
+  var am=Math.round(avgM()*100), noCost=P.filter(function(p){return p.cost==null;});
+  var over=num(S.cap)>=num(S.margin);
+  var h='<div class="cols" style="grid-template-columns:1fr">';
+
+  h+='<div class="card pad"><h2 class="h">First, the number everything is measured against</h2>'+
+     '<p class="hs">Set it once. Every offer in the Lab is judged against it.</p>'+
+     '<div class="two" style="margin-top:16px">'+
+       '<div class="f"><span class="lbl">Your margin</span>'+
+         '<div class="inp"><input type="number" min="0" max="95" value="'+num(S.margin)+
+           '" oninput="edit(\'margin\',this.value)"><span>%</span></div>'+
+         '<div class="hint">₹'+num(S.margin)+' profit on every ₹100 you sell.</div></div>'+
+       '<div class="f"><span class="lbl">Right now your catalogue averages</span>'+
+         '<div class="inp" style="background:var(--panel);border-style:dashed"><input value="'+am+
+           '%" disabled style="font-family:\'IBM Plex Mono\',monospace"></div>'+
+         '<div class="hint">Across every item that has a cost written down.</div></div>'+
+     '</div>'+
+     '<div class="note n-say"><span class="ic">i</span><div>This is <b>before</b> rent, staff, power '+
+       'and everything else — a rough guide, not your accounts.</div></div></div>';
+
+  h+='<div class="card pad"><h2 class="h">Loyalty bonus</h2>'+
+     '<p class="hs">An extra percentage for a customer you want to keep. '+
+     'Off here and it never appears on any offer.</p>'+
+     '<div class="loy '+(S.custOn?'on':'')+'" style="margin-top:14px">'+
+       '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
+         'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
+       '<span class="lt">Use loyalty bonuses</span>'+
+              (S.custOn?'<div class="inp" style="width:130px"><span>up to</span>'+
+         '<input type="number" min="0" max="95" value="'+num(S.cap)+
+         '" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
+     '</div>'+
+     (S.custOn&&over?'<div class="note n-bad"><span class="ic">!</span><div>A '+num(S.cap)+
+       '% bonus on a '+num(S.margin)+'% margin leaves you nothing. Keep the ceiling under your margin.'+
+       '</div></div>':'')+'</div>';
+
+  h+='<div class="two">'+
+     '<div class="card pad"><h2 class="h" style="font-size:17px">Never sell below cost</h2>'+
+       '<div class="loy '+(S.belowCost?'on':'')+'" style="margin-top:10px">'+
+         '<button class="sw '+(S.belowCost?'on':'')+'" onclick="edit(\'belowCost\','+(!S.belowCost)+')" '+
+           'role="switch" aria-checked="'+(S.belowCost?'true':'false')+'"></button>'+
+         '<span class="lt">Stop me</span></div>'+
+       (S.belowCost?'<div style="margin-top:12px">'+seg('belowAct',
+          [['exclude','Leave it out'],['cap','Sell it at cost'],['warn','Do it anyway']])+'</div>':'')+
+     '</div>'+
+     '<div class="card pad"><h2 class="h" style="font-size:17px">Prices shown as</h2>'+
+       '<div style="margin-top:12px">'+seg('round',
+          [['0','Exact'],['1','Whole ₹'],['5','Ends 0 or 5'],['10','Ends 0']])+'</div>'+
+       '<div class="hint">Always rounded <b>down</b>, never above the normal price.</div></div>'+
+     '</div>';
+
+  h+='<div class="card pad"><h2 class="h" style="font-size:17px">Where cost comes from</h2>'+
+     '<p class="hs">An indicative accumulated cost on the item. Rough on purpose — it moves with '+
+       'the day rate, and that is fine.</p><div class="seg" style="margin-top:12px">'+
+     [['typed','Typed against each item',1],['purchases','From what you last paid',0],
+      ['supplier','From a supplier list',0],['rule','From a rule you set',0]].map(function(o){
+       return '<button class="'+(S.costSource===o[0]?'on':'')+'" '+(o[2]?'':'disabled style="opacity:.45"')+
+         ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\')':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
+     }).join('')+'</div>'+
+     '<div class="note n-say"><span class="ic">●</span><div><b>Cost is yours alone.</b> '+
+       'No customer, reseller or link ever sees it. Offer Lab is the only thing that reads it.</div></div>'+
+     (noCost.length? '<div class="sect"><h3>'+noCost.length+
+        ' item'+(noCost.length>1?'s have':' has')+' no cost written down</h3>'+
+        noCost.map(function(p){
+          return '<div class="sv"><div class="svm"><div class="svt">'+esc(p.name)+'</div>'+
+            '<div class="svd">'+catName(p.cat)+' · sells at '+M0(p.price)+'</div></div>'+
+            '<div class="inp" style="width:130px;height:40px"><span>₹</span>'+
+            '<input type="number" min="0" placeholder="cost" onchange="setCost(\''+p.id+'\',this.value)">'+
+            '</div></div>';}).join('')+
+        '<div class="hint">Items with no cost are left out of every total — never counted as free.</div>'+
+      '</div>' : '<div class="note n-ok"><span class="ic">✓</span><div>Every item has a cost.</div></div>')+
+     '</div>';
+
+  h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
+  return h+'</div>';
+}
+
+/* ═══ SCREEN 1 · WHAT ══════════════════════════════════════════════════ */
+function renderS1(){
+  var h='<div class="card pad"><h2 class="h">What kind of offer?</h2>'+
+        '<p class="hs">Eight shapes. Pick one and the next screen does the arithmetic.</p>'+
+        '<div class="goals" style="margin-top:16px">';
+  var last=null;
+  GOALS.forEach(function(g){
+    if(g.kind!==last){ last=g.kind;
+      h+='<div class="grouphead">'+KINDS[g.kind]+'<i></i></div>'; }
+    h+='<button class="goal '+(S.goal===g.id?'on':'')+'" onclick="pickGoal(\''+g.id+'\')">'+
+       '<span class="gi">'+g.icon+'</span><b>'+g.n+'</b><span class="ex">'+g.ex+'</span></button>';
+  });
+  return h+'</div></div>';
+}
+
+/* ═══ shared view pieces ══════════════════════════════════════════════ */
+function headline(cells){
+  return '<div class="headline">'+cells.map(function(c){
+    if(c===null) return '<span class="sep"></span>';
+    return '<div><span class="hv '+(c[2]||'')+'">'+c[0]+
+      (c[3]?' <small>'+c[3]+'</small>':'')+'</span><span class="hk">'+c[1]+'</span></div>';
+  }).join('')+'</div>';
+}
+/* labels down the left, up to three columns across. The one table shape used by
+   every offer that acts on a bill rather than on an item. */
+function g3(heads,rows){
+  return '<div style="overflow-x:auto"><table class="g3"><thead><tr><th></th>'+
+    heads.map(function(h){return '<th'+(h[2]?' class="on"':'')+'><b>'+h[0]+'</b>'+(h[1]||'')+'</th>';}).join('')+
+    '</tr></thead><tbody>'+rows.map(function(r){
+      return '<tr'+(r[2]?' class="big"':'')+'><td>'+r[0]+'</td>'+
+        r[1].map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+function costCell(p){
+  return '<td class="hide" data-l="Cost"><span class="costIn"><span>₹</span>'+
+    '<input type="number" min="0" value="'+(p.cost==null?'':p.cost)+'" placeholder="?" '+
+    'onchange="setCost(\''+p.id+'\',this.value)"></span></td>';
+}
+function nameCell(p){
+  var ini=p.name.replace(/[^A-Za-zऀ-ॿ ]/g,'').split(' ')
+          .filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();
+  return '<td data-l=""><span class="nm"><span class="tile">'+ini+'</span><b>'+esc(p.name)+'</b></span></td>';
+}
+
+/* ═══ SCREEN 2 · MAKE IT ══════════════════════════════════════════════ */
+function scopeRow(catOnly){
+  var h='<div class="f"><span class="lbl">Apply it to</span>';
+  if(catOnly){
+    h+=selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat');
+    h+='</div>';
+    return h;
+  }
+  h+='<div class="seg" style="margin-bottom:10px">'+
+     '<button class="'+(S.scope==='cat'?'on':'')+'" onclick="edit(\'scope\',\'cat\')">A whole category</button>'+
+     '<button class="'+(S.scope==='item'?'on':'')+'" onclick="edit(\'scope\',\'item\')">One item</button></div>';
+  h+= S.scope==='cat'
+      ? selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat')
+      : selectOf(prodOpts(P),S.itemId,'setItem');
+  return h+'</div>';
+}
+function setCat(v){ S.catId=v; render(); }
+function setItem(v){ S.itemId=v; render(); }
+function setShape(v){ S.freeShape=v; S.applied=false; render(); }
+function setPair(which,v){ S[which]=v; render(); }
+
+function loyBar(){
+  var mode=loyMode();
+  if(!S.custOn) return '';
+  if(mode==='na'||(!S.loyOn&&(S.goal==='spend'||S.goal==='ship'||S.goal==='band')))
+    return '<div class="note n-say"><span class="ic">i</span><div>No loyalty bonus here \u2014 it is already in the item prices.</div></div>';
+  var h='<div class="loy '+(S.loyOn?'on':'')+'">'+
+    '<button class="sw '+(S.loyOn?'on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" '+
+      'role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
+    '<span class="lt">Loyalty bonus</span>';
+  if(!S.loyOn){ h+='<span class="ls">off</span>'; }
+  else if(mode==='pct'){
+    h+='<div class="inp"><input type="number" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
+       num(S.loyPct)+'" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
+       '<span class="ls">on top \u00b7 ceiling '+num(S.cap)+'%'+
+       (num(S.loyPct)>num(S.cap)?' <b style="color:var(--red-i)">over</b>':'')+'</span>';
+  } else if(mode==='top'){
+    h+='<span class="ls">they start at the best step</span>';
+  } else {
+    h+='<div class="inp"><input type="number" min="0" max="'+num(S.cap)+'" step="0.5" value="'+
+       num(S.loyPct)+'" oninput="edit(\'loyPct\',this.value)"><span>%</span></div>'+
+       '<span class="ls">either the free thing or the bonus</span>';
+  }
+  return h+'</div>';
+}
+
+function renderS2(){
+  var g=goalOf(S.goal);
+  var h='<div class="card pad">'+
+    '<h2 class="h">'+g.n+'</h2><p class="hs">'+cfgLine()+'</p>'+
+    '<div style="margin-top:16px">'+cfgHTML()+'</div>'+
+    loyBar()+
+    '<div class="acts">'+
+      '<button class="btn pri" onclick="apply()">'+(S.applied?'Work it out again':'Work it out')+'</button>'+
+      (S.applied?'<button class="btn" onclick="saveOffer()">Save for review</button>':'')+
+      '<span class="grow"></span>'+
+      '<button class="btn sm" onclick="go(1)">Pick a different offer</button>'+
+    '</div></div>';
+  if(S.applied) h+='<div class="sect">'+outHTML()+'</div>';
+  return h;
+}
+
+function cfgLine(){
+  switch(S.goal){
+    case 'percent': return 'The same percentage off everything you pick.';
+    case 'amount':  return 'The same rupees off each one \u2014 a different percentage on each.';
+    case 'qty':     return 'Up to three steps. The percentage comes off <b>each one</b>.';
+    case 'free':    return 'Four shapes. The arithmetic differs for each.';
+    case 'bundle':  return 'Two things, one price. Break-even is the two costs.';
+    case 'spend':   return 'Worst at the threshold, better above it.';
+    case 'ship':    return 'The cost is flat. Only its share of the bill moves.';
+    case 'band':    return 'No money changes hands.';
+  }
+  return '';
+}
+
+function cfgHTML(){
+  switch(S.goal){
+    case 'percent':
+      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off</span>'+
+        '<div class="inp"><input type="number" min="0" max="95" value="'+num(S.pctOff)+
+        '" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div></div>';
+    case 'amount':
+      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off each</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.rsOff)+
+        '" oninput="edit(\'rsOff\',this.value)"></div>'+
+        '<div class="hint">A different percentage on each item.</div>';
+    case 'qty':
+      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Steps</span>'+
+        '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div>';
+    case 'free':
+      var h='<span class="lbl">Which shape?</span><div class="shapes">'+SHAPES.map(function(s){
+        return '<button class="shape '+(S.freeShape===s.id?'on':'')+'" onclick="setShape(\''+s.id+'\')">'+
+          '<b>'+s.n+'</b><span>'+s.ex+'</span></button>';}).join('')+'</div>';
+      if(S.freeShape==='anything')
+        h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">What is free</span>'+
+          selectOf(prodOpts(P),S.giftId,'setGift')+
+          '<div class="hint">Only the gift matters.</div>'+
+          '<div class="f"><span class="lbl">Three bills to look at</span>'+
+          '<div class="hint" style="margin-top:0">Edit them in the headings.</div>';
+      if(S.freeShape==='same')
+        h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">The item</span>'+
+          selectOf(prodOpts(P),S.itemId,'setItem')+'</div>'+
+          '<div class="f"><span class="lbl">How many they buy</span>'+
+          '<div class="hint" style="margin-top:0">Up to three, in the headings.</div>'+
+          '</div></div>';
+      if(S.freeShape==='pair')
+        h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">They buy</span>'+
+          selectOf(prodOpts(P),S.pairA,'setA')+'</div>'+
+          '<div class="f"><span class="lbl">They get, free</span>'+
+          selectOf(prodOpts(P),S.pairB,'setB')+'</div></div>';
+      if(S.freeShape==='cheapest')
+        h+='<div class="two" style="margin-top:12px">'+scopeRow(true)+
+          '<div class="f"><span class="lbl">They buy</span>'+
+          '<div class="inp"><input type="number" min="2" max="20" value="'+num(S.cheapN)+
+          '" oninput="edit(\'cheapN\',this.value)"><span>things</span></div>'+'</div></div>';
+      return h;
+    case 'bundle':
+      return '<div class="two"><div class="f"><span class="lbl">This</span>'+
+        selectOf(prodOpts(P),S.bunA,'setA')+'</div>'+
+        '<div class="f"><span class="lbl">and this</span>'+
+        selectOf(prodOpts(P),S.bunB,'setB')+'</div></div>'+
+        '<div class="f" style="max-width:280px"><span class="lbl">together cost</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bunPrice)+
+        '" oninput="edit(\'bunPrice\',this.value)"></div></div>';
+    case 'spend':
+      return '<div class="two"><div class="f"><span class="lbl">Bill must reach</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.spendAt)+
+        '" oninput="edit(\'spendAt\',this.value)"></div></div>'+
+        '<div class="f"><span class="lbl">Then give back</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.spendVal)+
+        '" oninput="edit(\'spendVal\',this.value)"></div></div></div>';
+    case 'ship':
+      return '<div class="two"><div class="f"><span class="lbl">A delivery costs you</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipCost)+
+        '" oninput="edit(\'shipCost\',this.value)"><span>a drop</span></div>'+
+        '<div class="hint">Your average, per drop.</div>'+
+        '<div class="f"><span class="lbl">Free above</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipAt)+
+        '" oninput="edit(\'shipAt\',this.value)"></div></div></div>'+
+        '<div class="f" style="max-width:280px"><span class="lbl">They still pay</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.shipCharge)+
+        '" oninput="edit(\'shipCharge\',this.value)"></div>'+
+        '<div class="hint">Zero means free.</div></div>';
+    case 'band':
+      return '<div class="two"><div class="f"><span class="lbl">Smallest bill allowed</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bandLo)+
+        '" oninput="edit(\'bandLo\',this.value)"></div></div>'+
+        '<div class="f"><span class="lbl">Largest</span>'+
+        '<div class="inp"><span>₹</span><input type="number" min="0" value="'+num(S.bandHi)+
+        '" oninput="edit(\'bandHi\',this.value)"></div></div></div>';
+  }
+  return '';
+}
+function setGift(v){ S.giftId=v; render(); }
+function setA(v){ if(S.goal==='bundle') S.bunA=v; else S.pairA=v; render(); }
+function setB(v){ if(S.goal==='bundle') S.bunB=v; else S.pairB=v; render(); }
+
+/* ═══ OUTPUT ══════════════════════════════════════════════════════════ */
+function outHTML(){
+  switch(S.goal){
+    case 'percent': case 'amount': return outLine();
+    case 'qty':    return outQty();
+    case 'free':   return S.freeShape==='anything'?outGift():
+                          S.freeShape==='same'    ?outSame():
+                          S.freeShape==='pair'    ?outPair():outCheap();
+    case 'bundle': return outBundle();
+    case 'spend':  return outSpend();
+    case 'ship':   return outShip();
+    case 'band':   return outBand();
+  }
+  return '';
+}
+function under(m){ return m!=null && m<num(S.margin); }
+function mgnSpan(m,st){ return '<span class="cm '+mgnClass(m,st)+'">'+mgnText(m,st)+'</span>'; }
+
+/* ── a percentage off / rupees off ─────────────────────────────────── */
+function outLine(){
+  var rs=lineRows().sort(function(a,b){
+    var x=a.margin==null?999:a.margin, y=b.margin==null?999:b.margin; return x-y; });
+  var t=totals(rs), lf=loyFrac();
+  var h=headline([
+    [M0(t.priceAfter),'they pay, one of each','',M0(t.priceBefore)],
+    [M0(t.profitAfter),'your profit','',M0(t.profitBefore)],
+    [t.marginAfter+'%','margin',t.marginAfter<num(S.margin)?'dn':'up',t.marginBefore+'%']
+  ]);
+  if(lf>0) h+='<div class="note n-say"><span class="ic">●</span><div>'+
+    PC(offerFrac(items()[0]||{price:1})*100)+' + '+PC(num(S.loyPct))+' = <b>'+
+    PC(combo(offerFrac(items()[0]||{price:1}),lf)*100)+' off</b></div></div>';
+  h+='<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>'+
+     '<th>Item</th><th class="hide">Cost</th><th>Price</th><th>Profit</th><th>Margin</th>'+
+     '</tr></thead><tbody>'+rs.map(function(r){
+       var ch=r.shown!==r.base;
+       return '<tr>'+nameCell(r.p)+costCell(r.p)+
+         '<td class="num" data-l="Price">'+(ch?'<span class="was">'+M0(r.base)+'</span>':'')+M0(r.shown)+'</td>'+
+         '<td class="num" data-l="Profit">'+(r.profit==null?'—':
+           (ch&&r.wasProfit!=null?'<span class="was">'+M0(r.wasProfit)+'</span>':'')+M0(r.profit))+'</td>'+
+         '<td data-l="Margin">'+(ch&&r.wasMargin!=null&&r.margin!=null&&r.wasMargin!==r.margin
+             ?'<span class="was">'+r.wasMargin+'%</span>':'')+
+           '<span class="mgn mgn-'+(mgnClass(r.margin,r.status)||'ok')+'">'+
+           mgnText(r.margin,r.status)+'</span></td></tr>';
+     }).join('')+'</tbody></table></div>';
+  if(t.blind) h+='<div class="hint">'+t.blind+' with no cost — left out.</div>';
+  return h;
+}
+
+/* ── the quantity ladder: the headings ARE the control ─────────────── */
+function outQty(){
+  var ts=tiers(), faults=tierFault(), its=items();
+  var h='';
+  if(faults.length) h+='<div class="note n-bad"><span class="ic">!</span><div>'+faults.join('. ')+'.</div></div>';
+  h+='<div class="phoneOnly"><span class="lbl">Steps</span><div class="stepEd">'+
+     ts.map(function(t,i){
+       return '<span class="inp"><input type="number" min="1" value="'+t.qty+
+         '" onchange="setTier('+i+',0,this.value)"><span>or more</span></span>'+
+         '<span class="inp" style="width:86px"><input type="number" min="0" max="95" value="'+t.pct+
+         '" onchange="setTier('+i+',1,this.value)"><span>%</span></span>';}).join('')+
+     (ts.length<3?'<button class="btn sm" onclick="addTier()">+ step</button>':'')+
+     (ts.length>1?'<button class="btn sm" onclick="delTier('+(ts.length-1)+')">\u2212 step</button>':'')+
+     '</div></div>';
+  h+='<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>'+
+     '<th>Item</th><th class="hide">Cost</th><th>Price</th>'+
+     ts.map(function(t,i){
+       return '<th class="slab"><div class="colwrap"><div class="chead">'+
+         '<span class="inp"><input type="number" min="1" value="'+t.qty+
+           '" onchange="setTier('+i+',0,this.value)"><span>or more</span></span>'+
+         '<span class="inp"><input type="number" min="0" max="95" value="'+t.pct+
+           '" onchange="setTier('+i+',1,this.value)"><span>%</span></span></div>'+
+         '<button class="colx" onclick="delTier('+i+')" '+(ts.length<=1?'disabled':'')+'>×</button>'+
+         '</div></th>';}).join('')+
+     (ts.length<3?'<th><button class="colx" onclick="addTier()" title="add a step">+</button></th>':'')+
+     '</tr></thead><tbody>'+
+     its.map(function(p){
+       return '<tr>'+nameCell(p)+costCell(p)+'<td class="num" data-l="Price">'+M0(p.price)+'</td>'+
+         ts.map(function(t){ var r=row(p,t.pct/100);
+           return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
+             '<span class="cp">'+M0(r.shown)+'</span>'+mgnSpan(r.margin,r.status)+'</span></td>';}).join('')+
+         (ts.length<3?'<td></td>':'')+'</tr>';}).join('')+
+     '</tbody><tfoot><tr><td colspan="2"><b>All '+its.length+'</b></td><td></td>'+
+     ts.map(function(t){ var tt=totals(its.map(function(p){return row(p,t.pct/100);}));
+       return '<td class="slab" data-l="buy '+t.qty+'+"><span class="cell">'+
+         '<span class="cm '+(tt.marginAfter<num(S.margin)?'under':'')+'" style="font-size:15px">'+
+         tt.marginAfter+'%</span></span></td>';}).join('')+
+     (ts.length<3?'<td></td>':'')+'</tr></tfoot></table></div>';
+
+  if(loyMode()==='top'&&S.loyOn){
+    var top=ts[ts.length-1], one=its[0];
+    var r=one?row(one,top.pct/100):null;
+    h+='<div class="note n-ok"><span class="ic">●</span><div>Loyalty: '+top.pct+'% from the first one'+
+       (r?' · '+esc(one.name)+' '+M0(r.shown)+' · '+mgnText(r.margin,r.status):'')+'</div></div>';
+  }
+  return h;
+}
+
+/* ── buy anything, one named thing free ────────────────────────────── */
+function outGift(){
+  var g=byId(S.giftId); if(!g) return '';
+  var am=avgM(), bills=(S.bills||[]).map(num);
+  var heads=bills.map(function(b,i){
+    return ['<span class="inp" style="width:104px;height:31px"><span>₹</span>'+
+      '<input type="number" min="1" value="'+b+'" onchange="setBill('+i+',this.value)"></span>','',false];});
+  var rows=[
+    ['Share', bills.map(function(b){return PC(g.price/b*100);})],
+    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
+    ['Gift', bills.map(function(){return g.cost==null?'N/A':M0(g.cost);})],
+    ['You make', bills.map(function(b){return g.cost==null?'N/A':M0(b*am-g.cost);}), true],
+    ['Margin', bills.map(function(b){
+       if(g.cost==null) return 'N/A';
+       var m=Math.round((am-g.cost/b)*100);
+       return '<span class="'+(m<num(S.margin)?'':'')+'" style="color:'+
+         (m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+'">'+m+'%</span>'+
+         '<span class="sub">'+Math.round(am*100)+'%</span>';}), true]
+  ];
+  var h=headline([[M0(g.price),'worth to them'],
+                  [g.cost==null?'N/A':M0(g.cost),'costs you','bad'],
+                  [Math.round(am*100)+'%','your average margin']]);
+  h+='<div class="card pad">'+g3(heads,rows)+'</div>';
+  if(g.cost!=null){
+    var be=g.cost/(am-num(S.margin)/100);
+    h+='<div class="note '+(be>0?'n-warn':'n-ok')+'"><span class="ic">●</span><div>'+
+      M0(g.cost)+' every time · '+(be>0?'under your '+num(S.margin)+'% below a '+M0(be)+' bill':
+      'always clears your '+num(S.margin)+'%')+'</div></div>';
+  }
+  h+=eitherNote(g.price);
+  h+='<div class="hint">Goods cost uses your catalogue average — what they buy is not knowable here.</div>';
+  return h;
+}
+
+/* ── buy N of one thing, one more free ─────────────────────────────── */
+function outSame(){
+  var p=byId(S.itemId); if(!p) return '';
+  var cs=counts();
+  var heads=cs.map(function(n,i){
+    return ['<span class="inp" style="width:104px;height:31px">'+
+      '<input type="number" min="1" value="'+n+'" onchange="setCount('+i+',this.value)"><span>buy</span></span>',
+      '<span style="font-family:\'IBM Plex Mono\',monospace">+1 · '+PC(100/(n+1))+'</span>',false];});
+  /* ⭐ buy_x_get_y, live — the same kind and the same call the till fires when a real N+1 round is rung */
+  var mk=function(n){ var pay=engineBuyGetPay(p.price,n,1), cost=p.cost==null?null:(n+1)*p.cost;
+    return {pay:pay,cost:cost,make:cost==null?null:pay-cost,
+            m:cost==null?null:marginPct(pay,cost)};};
+  var rows=[
+    ['They take', cs.map(function(n){return (n+1);})],
+    ['They pay',  cs.map(function(n){return M0(mk(n).pay);})],
+    ['Costs you', cs.map(function(n){return mk(n).cost==null?'N/A':M0(mk(n).cost);})],
+    ['You make',  cs.map(function(n){var x=mk(n);return x.make==null?'N/A':M0(x.make);}),true],
+    ['Margin',    cs.map(function(n){var x=mk(n); if(x.m==null) return 'N/A';
+       return '<span style="color:'+(x.m<0?'var(--red-i)':x.m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
+         '">'+x.m+'%</span><span class="sub">'+marginPct(p.price,p.cost)+'%</span>';}),true]
+  ];
+  var h=headline([[M0(p.price),esc(p.name)],
+                  [p.cost==null?'N/A':M0(p.cost),'costs you'],
+                  [marginPct(p.price,p.cost)+'%','margin now']]);
+  h+='<div class="card pad">'+g3(heads,rows)+'</div>';
+  var ok=cs.filter(function(n){var x=mk(n);return x.m!=null&&x.m>=num(S.margin);});
+  h+='<div class="note '+(ok.length?'n-ok':'n-bad')+'"><span class="ic">'+(ok.length?'✓':'!')+
+     '</span><div>'+(ok.length?'Clears your '+num(S.margin)+'% from buy '+ok[0]+' +1':
+     'No step here clears your '+num(S.margin)+'%')+'</div></div>';
+  if(loyMode()==='top'&&S.loyOn){
+    var x=mk(cs[0]);
+    h+='<div class="note '+(x.m!=null&&x.m<num(S.margin)?'n-warn':'n-ok')+'"><span class="ic">●</span>'+
+       '<div>Loyalty: buy '+cs[0]+' +1 from the first visit · '+
+       (x.m==null?'N/A':M0(x.make)+' · '+x.m+'%')+'</div></div>';
+  }
+  return h;
+}
+
+/* ── buy A, get B free ─────────────────────────────────────────────── */
+function outPair(){
+  var a=byId(S.pairA), b=byId(S.pairB); if(!a||!b) return '';
+  var was=a.price+b.price, cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
+  /* ⭐ buy_x_get_y, cross-item, live — the same call the till fires when B's line reads "free — buy A get B" */
+  var pay=engineBuyGetPayCross(a.id,a.price,b.id,1);
+  var make=cost==null?null:pay-cost, m=cost==null?null:marginPct(pay,cost);
+  var h=headline([[M0(pay),'they pay','',M0(was)],
+                  [make==null?'N/A':M0(make),'you make',make!=null&&make<0?'bad':''],
+                  [m==null?'N/A':m+'%','margin',m!=null&&m<num(S.margin)?'dn':'up']]);
+  h+='<div class="card pad">'+g3([[esc(a.name)+' + '+esc(b.name),'',true]],[
+     ['Apart',[M0(was)]],['They pay',[M0(a.price)]],
+     ['Costs you',[cost==null?'N/A':M0(cost)]],
+     ['You make',[make==null?'N/A':M0(make)],true],
+     ['Margin',[m==null?'N/A':m+'%'],true]])+'</div>';
+  h+='<div class="note n-say"><span class="ic">●</span><div>The free one is <b>'+
+     PC(b.price/was*100)+'</b> of the pair</div></div>';
+  h+=eitherNote(b.price,was);
+  return h;
+}
+
+/* ── buy N, cheapest free ──────────────────────────────────────────── */
+function outCheap(){
+  var n=Math.max(2,num(S.cheapN)), three=threeOf(catItems(S.catId));
+  if(!three.length) return '<div class="note n-warn"><span class="ic">!</span><div>No costs on this shelf.</div></div>';
+  var labels=['Your cheapest','A middle one','Your dearest'].slice(0,three.length);
+  var heads=three.map(function(p,i){return [esc(p.name),
+    '<span style="font-family:\'IBM Plex Mono\',monospace">'+M0(p.price)+' · '+labels[i]+'</span>',
+    i===three.length-1];});
+  var mk=function(p){ var pay=(n-1)*p.price, cost=n*p.cost;
+    return {pay:pay,cost:cost,make:pay-cost,m:marginPct(pay,cost)};};
+  var rows=[
+    ['They take', three.map(function(){return n;})],
+    ['They pay',  three.map(function(p){return M0(mk(p).pay);})],
+    ['Costs you', three.map(function(p){return M0(mk(p).cost);})],
+    ['You make',  three.map(function(p){return M0(mk(p).make);}),true],
+    ['Margin',    three.map(function(p){var x=mk(p);
+      return '<span style="color:'+(x.m<0?'var(--red-i)':x.m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
+        '">'+x.m+'%</span><span class="sub">'+marginPct(p.price,p.cost)+'%</span>';}),true]
+  ];
+  var worst=three[three.length-1], wx=mk(worst);
+  var h=headline([['buy '+n,'cheapest free'],
+                  [PC(100/n),'off, at most'],
+                  [wx.m+'%','worst case',wx.m<num(S.margin)?'dn':'up']]);
+  h+='<div class="card pad">'+g3(heads,rows)+'</div>';
+  h+='<div class="note '+(wx.m<num(S.margin)?'n-warn':'n-ok')+'"><span class="ic">●</span><div>'+
+     'Worst case is '+n+' × '+esc(worst.name)+' · '+wx.m+'%</div></div>';
+  return h;
+}
+
+/* ── two things, one price ─────────────────────────────────────────── */
+function outBundle(){
+  var a=byId(S.bunA), b=byId(S.bunB); if(!a||!b) return '';
+  var was=a.price+b.price, pay=num(S.bunPrice);
+  var cost=(a.cost==null||b.cost==null)?null:a.cost+b.cost;
+  var make=cost==null?null:R2(pay-cost), m=cost==null?null:marginPct(pay,cost);
+  var h=headline([[M0(pay),'they pay','',M0(was)],
+                  [make==null?'N/A':M0(make),'you make',make!=null&&make<0?'bad':''],
+                  [m==null?'N/A':m+'%','margin',m!=null&&m<num(S.margin)?'dn':'up']]);
+  h+='<div class="card pad">'+g3([[esc(a.name)+' + '+esc(b.name),'',true]],[
+     ['Apart',[M0(was)]],['Together',[M0(pay)]],
+     ['That is',[PC((was-pay)/was*100)+' off']],
+     ['Break-even',[cost==null?'N/A':M0(cost)]],
+     ['You make',[make==null?'N/A':M0(make)],true],
+     ['Margin',[m==null?'N/A':m+'%'],true]])+'</div>';
+  if(cost!=null&&pay<cost) h+='<div class="note n-bad"><span class="ic">!</span><div>Below '+
+     M0(cost)+' you lose money</div></div>';
+  h+=eitherNote(was-pay,was);
+  return h;
+}
+
+/* ── a big bill gets something back ────────────────────────────────── */
+function outSpend(){
+  var at=Math.max(1,num(S.spendAt)), give=num(S.spendVal), am=avgM();
+  var bills=[at,at*2,at*4];
+  var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
+  var rows=[
+    ['Share', bills.map(function(b){return PC(give/b*100);})],
+    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
+    ['You make', bills.map(function(b){return M0(b*am-give);}),true],
+    ['Margin', bills.map(function(b){
+       var m=Math.round((b*am-give)/(b-give)*100);
+       return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
+         '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
+  ];
+  var m0=Math.round((at*am-give)/(at-give)*100);
+  var h=headline([[PC(give/at*100),'at the threshold'],
+                  [M0(give),'given back'],
+                  [m0+'%','worst case',m0<num(S.margin)?'dn':'up']]);
+  h+='<div class="card pad">'+g3(heads,rows)+'</div>';
+  h+='<div class="note '+(m0<num(S.margin)?'n-warn':'n-ok')+'"><span class="ic">●</span><div>'+
+     'Worst at exactly '+M0(at)+'. Above that it only improves.</div></div>';
+  h+='<div class="hint">Goods cost uses your catalogue average.</div>';
+  return h;
+}
+
+/* ── free delivery ─────────────────────────────────────────────────── */
+function outShip(){
+  var at=Math.max(1,num(S.shipAt)), c=num(S.shipCost), pay=num(S.shipCharge), am=avgM();
+  var absorb=Math.max(0,c-pay), bills=[at,at*2,at*3];
+  var heads=bills.map(function(b,i){return [M0(b),'',i===0];});
+  var rows=[
+    ['Share', bills.map(function(b){return PC(absorb/b*100);})],
+    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
+    ['Delivery', bills.map(function(){return M0(absorb);})],
+    ['You make', bills.map(function(b){return M0(b*am-absorb);}),true],
+    ['Margin', bills.map(function(b){ var m=Math.round((am-absorb/b)*100);
+       return '<span style="color:'+(m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+
+         '">'+m+'%</span><span class="sub">'+Math.round(am*100)+'%</span>';}),true]
+  ];
+  var m0=Math.round((am-absorb/at)*100), be=absorb/(am-num(S.margin)/100);
+  var h=headline([[M0(absorb),'you absorb, a drop'],
+                  [PC(absorb/at*100),'at the threshold'],
+                  [m0+'%','worst case',m0<num(S.margin)?'dn':'up']]);
+  h+='<div class="card pad">'+g3(heads,rows)+'</div>';
+  h+='<div class="note '+(be>at?'n-warn':'n-ok')+'"><span class="ic">●</span><div>'+
+     M0(absorb)+' whatever they order'+(be>0?' · under your '+num(S.margin)+'% below '+M0(be):'')+
+     '</div></div>';
+  return h;
+}
+
+function outBand(){
+  return '<div class="card pad">'+g3([['Allowed','',true]],[
+    ['Smallest',[M0(num(S.bandLo))]],['Largest',[M0(num(S.bandHi))]]])+'</div>'+
+    '<div class="note n-say"><span class="ic">●</span><div>No money changes hands.</div></div>';
+}
+
+/* a free thing and a bonus never stack — say which wins, in one line */
+function eitherNote(giftValue,base){
+  if(loyMode()!=='either'||!S.loyOn) return '';
+  var l=num(S.loyPct)/100; if(l<=0) return '';
+  if(base){ var need=giftValue/base*100;
+    return '<div class="note n-say"><span class="ic">●</span><div>Bonus wins only above <b>'+
+      PC(need)+'</b> · yours is '+PC(num(S.loyPct))+'</div></div>'; }
+  return '<div class="note n-say"><span class="ic">●</span><div>Bonus wins only above a <b>'+
+    M0(giftValue/l)+'</b> bill</div></div>';
+}
+
+/* ═══ SCREEN 3 · SAVED OFFERS ═════════════════════════════════════════ */
+var KEEP=['goal','scope','catId','itemId','pctOff','rsOff','tiers','freeShape','giftId',
+  'freeCounts','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
+  'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowCost','belowAct',
+  'round','loyOn','loyPct'];
+function snapshot(){ var o={}; KEEP.forEach(function(k){o[k]=JSON.parse(JSON.stringify(S[k]==null?null:S[k]));}); return o; }
+function costPrint(){ var o={}; P.forEach(function(p){o[p.id]=p.cost;}); return o; }
+function costMoved(sv){ var now=costPrint(), n=0;
+  for(var k in sv.costs) if(sv.costs[k]!==now[k]) n++;
+  return n; }
+
+function label(){
+  var g=goalOf(S.goal), where = (S.goal==='percent'||S.goal==='amount'||S.goal==='qty')
+    ? (S.scope==='item'?(byId(S.itemId)||{}).name:catName(S.catId)) : '';
+  var what='';
+  if(S.goal==='percent') what=num(S.pctOff)+'% off';
+  else if(S.goal==='amount') what=M0(num(S.rsOff))+' off each';
+  else if(S.goal==='qty') what=tiers().map(function(t){return t.qty+'+ '+t.pct+'%';}).join(' · ');
+  else if(S.goal==='free') what=(SHAPES.filter(function(s){return s.id===S.freeShape;})[0]||{}).n;
+  else if(S.goal==='bundle') what=M0(num(S.bunPrice));
+  else if(S.goal==='spend') what=M0(num(S.spendAt))+' → '+M0(num(S.spendVal))+' back';
+  else if(S.goal==='ship') what='free above '+M0(num(S.shipAt));
+  else what=M0(num(S.bandLo))+'–'+M0(num(S.bandHi));
+  return {title:g.n, detail:[what,where].filter(Boolean).join(' · ')};
+}
+function keyNumber(){
+  if(S.goal==='percent'||S.goal==='amount'){ var t=totals(lineRows()); return [t.marginAfter+'%','margin']; }
+  if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1];
+    var tt=totals(items().map(function(p){return row(p,top.pct/100);})); return [tt.marginAfter+'%','at '+top.qty+'+']; }
+  return ['—','see it'];
+}
+function saveOffer(){
+  var l=label(), k=keyNumber();
+  SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
+    n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
+  go(3);
+}
+function openSaved(id){
+  var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv) return;
+  if(sv.biz!==S.biz) applyBiz(sv.biz);
+  KEEP.forEach(function(kk){ if(sv.snap[kk]!=null) S[kk]=JSON.parse(JSON.stringify(sv.snap[kk])); });
+  S.applied=true; go(2);
+}
+function setStatus(id,st){ SAVED.forEach(function(x){ if(x.id===id) x.status=st; }); render(); }
+function dropSaved(id){ SAVED=SAVED.filter(function(x){return x.id!==id;}); render(); }
+
+/* commercetools' rule, borrowed: only ONE item-level discount may apply to an
+   item (highest ranked wins); bill-level ones can stack. So two live offers
+   touching the same shelf is a collision worth naming, not a silent race. */
+function clash(sv){
+  if(['percent','amount','qty'].indexOf(sv.snap.goal)<0) return null;
+  var mine=sv.snap.scope==='item'?'i:'+sv.snap.itemId:'c:'+sv.snap.catId;
+  var other=SAVED.filter(function(x){
+    if(x.id===sv.id||x.biz!==sv.biz) return false;
+    if(x.status==='draft'&&sv.status==='draft') return false;
+    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return false;
+    var his=x.snap.scope==='item'?'i:'+x.snap.itemId:'c:'+x.snap.catId;
+    return his===mine || (his[0]!==mine[0] &&
+      (his[0]==='i'? (byId(his.slice(2))||{}).cat===mine.slice(2)
+                   : (byId(mine.slice(2))||{}).cat===his.slice(2)));
+  });
+  return other.length?other.length:null;
+}
+
+function renderS3(){
+  var h='<div class="card pad"><h2 class="h">Saved offers</h2>'+
+        '<p class="hs">Draft → approved → live.</p></div>';
+  if(!SAVED.length) return h+'<div class="card empty">Nothing saved yet.</div>';
+  h+='<div class="bucket" style="margin-top:14px">';
+  SAVED.forEach(function(sv){
+    var moved=costMoved(sv);
+    h+='<div class="sv"><div class="svm">'+
+      '<div class="svt">'+esc(sv.title)+'</div>'+
+      '<div class="svd">'+sv.detail+' · '+BIZ[sv.biz].name+'</div>'+
+      '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'+
+        '<span class="pill p-'+(sv.status==='live'?'live':sv.status==='approved'?'appr':'draft')+'">'+
+          sv.status+'</span>'+
+        (moved?'<span class="pill p-stale">'+moved+' cost'+(moved>1?'s':'')+' changed since</span>':'')+
+        (clash(sv)?'<span class="pill p-stale">overlaps '+clash(sv)+' other</span>':'')+
+      '</div></div>'+
+      '<div style="text-align:right"><div class="svn">'+sv.n+'</div><div class="svk">'+sv.k+'</div></div>'+
+      '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">'+
+        '<button class="btn sm" onclick="openSaved(\''+sv.id+'\')">Review</button>'+
+        (sv.status==='draft'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Approve</button>':'')+
+        (sv.status==='approved'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Go live</button>':'')+
+        (sv.status==='live'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Pause</button>':'')+
+        '<button class="btn sm" onclick="dropSaved(\''+sv.id+'\')">Delete</button>'+
+      '</div></div>';
+  });
+  return h+'</div>';
+}
+
+/* ═══ SHELL ═══════════════════════════════════════════════════════════ */
+function render(){
+  var B=BIZ[S.biz];
+  document.getElementById('bizName').textContent=B.name;
+  document.getElementById('bizSw').innerHTML=Object.keys(BIZ).map(function(k){
+    return '<button class="'+(S.biz===k?'on':'')+'" onclick="setBiz(\''+k+'\')">'+
+      BIZ[k].name.split(' ')[0]+'</button>';}).join('');
+  document.getElementById('bucketChip').innerHTML='Saved offers <b>'+SAVED.length+'</b>';
+
+  document.getElementById('strip').innerHTML = S.step===0?'' :
+    '<div class="strip">Margin <b>'+num(S.margin)+'%</b><span>·</span>'+
+    (S.round==='0'?'exact':S.round==='1'?'whole ₹':'ends '+(S.round==='5'?'0 or 5':'0'))+
+    '<span>·</span>loyalty '+(S.custOn?'up to <b>'+num(S.cap)+'%</b>':'off')+
+    '<button onclick="go(0)">Change</button></div>';
+
+  var names=['Settings','Offer','Work it out'];
+  document.getElementById('steps').innerHTML = S.step===3?'' : names.map(function(n,i){
+    return '<button class="stp '+(S.step===i?'on':S.step>i?'done':'')+'" onclick="go('+i+')">'+
+      '<span class="n">'+(i+1)+'</span><span><span class="t">'+n+'</span></span></button>';}).join('');
+
+  [0,1,2,3].forEach(function(i){
+    var el=document.getElementById('s'+i);
+    el.className='screen'+(S.step===i?' on':'');
+    if(S.step===i) el.innerHTML=[renderS0,renderS1,renderS2,renderS3][i]();
+  });
+}
+applyBiz('hotel');
+render();
+
+</script>
+</body>
+</html>
