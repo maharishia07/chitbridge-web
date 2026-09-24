@@ -1107,14 +1107,21 @@ function outLine(){
     [M0(t.profitAfter),'your profit','',M0(t.profitBefore)],
     [t.marginAfter+'%','margin',t.marginAfter<num(S.margin)?'dn':'up',t.marginBefore+'%']
   ]);
-  if(lf>0) h+='<div class="note n-say"><span class="ic">●</span><div>'+
-    PC(offerFrac(items()[0]||{price:1})*100)+' + '+PC(num(S.loyPct))+' = <b>'+
-    PC(combo(offerFrac(items()[0]||{price:1}),lf)*100)+' off</b></div></div>';
+  /**
+   * ⭐⭐⭐ THE COMBINED PERCENTAGE, PER ROW, NOT ONE EXAMPLE ABOVE THE TABLE (Athi: "one more column to show
+   * 10+5%=14.5%... otherwise someone has to compute"). The single note this replaced used items()[0] to stand
+   * in for every row — exactly right on the % screen, where every item takes the same flat rate, but WRONG on
+   * the ₹ screen: ₹10 off a ₹20 item is 50%, ₹10 off a ₹200 item is 5%, so one example at the top understated
+   * or overstated every other row. ⚠️ COMPUTED FROM base/shown, NEVER FROM THE REQUESTED FRACTION — a row that
+   * was left out (below-cost, excluded) shows 0% actually taken, not the 14.5% that was asked for and refused.
+   */
   h+='<div class="card" style="overflow-x:auto"><table class="res"><thead><tr>'+
-     '<th>Item</th><th class="hide">Cost</th><th>Price</th><th>Profit</th><th>Margin</th>'+
+     '<th>Item</th><th class="hide">Cost</th><th>Off</th><th>Price</th><th>Profit</th><th>Margin</th>'+
      '</tr></thead><tbody>'+rs.map(function(r){
        var ch=r.shown!==r.base;
+       var offAmt=R2(r.base-r.shown), offPct=r.base>0?(offAmt/r.base*100):0;
        return '<tr>'+nameCell(r.p)+costCell(r.p)+
+         '<td class="num" data-l="Off">'+(offAmt>0?M0(offAmt)+' <span class="sub">'+PC(offPct)+'</span>':'—')+'</td>'+
          '<td class="num" data-l="Price">'+(ch?'<span class="was">'+M0(r.base)+'</span>':'')+M0(r.shown)+'</td>'+
          '<td class="num" data-l="Profit">'+(r.profit==null?'—':
            (ch&&r.wasProfit!=null?'<span class="was">'+M0(r.wasProfit)+'</span>':'')+M0(r.profit))+'</td>'+
