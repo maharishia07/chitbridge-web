@@ -57,8 +57,10 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
   /* ⭐ THE PAGE BELIEVES IT — this is what makes the simulation faithful rather than cosmetic */
   say('the page believes it is off', off.onLine === false, 'navigator.onLine is ' + off.onLine);
   say('and a request really fails', off.threw === 'TypeError', 'fetchBy rejected with ' + off.threw);
-  /* ⚠️⚠️ AND IT SAYS SO — a counter quietly on a fake dead line is indistinguishable from a broken one */
-  say('the banner is up', off.banner === false && /simulator/i.test(off.text), '"' + off.text.slice(0, 74) + '"');
+  /* ⚠️⚠️ AND IT SAYS SO — a counter quietly on a fake dead line is indistinguishable from a broken one.
+     ⚠️ /pretend/, not /simulator/ (design-handoff/03-the-line §4, Phase 3.4) — the banner's own copy moved
+     to "Pretending: X", the spec's exact wording; this check moved with it rather than being dropped. */
+  say('the banner is up', off.banner === false && /pretend/i.test(off.text), '"' + off.text.slice(0, 74) + '"');
   say('and nothing is covered', off.shifted, 'the shell moves down for the banner');
 
   /* ══ ⭐ A SLOW LINE DELAYS RATHER THAN FAILS ══════════════════════════════════════════════════════════ */
@@ -90,7 +92,7 @@ const say = (l, ok, d) => { console.log(String(l).padEnd(28) + '· ' + d + '  ' 
    * ⚠️⚠️⚠️ AND ANNOUNCES ITSELF IMMEDIATELY. A persisted setting with no banner is the whole hazard: the person
    * who finds the counter is not the person who set it, and they will debug a fault that does not exist.
    */
-  say('and says so on load', after.banner === false && /simulator/i.test(after.text), '"' + after.text.slice(0, 70) + '"');
+  say('and says so on load', after.banner === false && /pretend/i.test(after.text), '"' + after.text.slice(0, 70) + '"');
 
   /* ══ ⭐ AND ONE CLICK BACK ════════════════════════════════════════════════════════════════════════════ */
   const back = await p2.evaluate(async () => {

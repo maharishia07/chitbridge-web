@@ -51,8 +51,10 @@ const say = (l, ok, d) => { console.log(l.padEnd(10) + '· ' + d + '  ' + (ok ? 
   await p.waitForTimeout(150);
 
   /* ── 1 · the rows say what a shopkeeper would say ─────────────────────────────────────────────────── */
+  /* ⚠️ "Shape" is new (design-handoff/06-card-shape §5, Phase 3.2) — sits above Key size, "what shape,
+     then how big", moved here rather than deleted when the row landed. */
   const rows = await p.$$eval('#stylebody .strow>b', n => n.map(x => x.textContent.trim()));
-  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Room·Key size·Photos', rows.join(' · '));
+  say('rows', rows.join('·') === 'Layout·Quick keys·Groups open·Colours·Size·Room·Shape·Key size·Photos', rows.join(' · '));
 
   /* ── 2 · ⚠️⚠️ EVERY SETTING VISIBLY CHANGES THE MINIATURE (spec §7.1) ─────────────────────────────── */
   /* ⚠️ THE WHOLE DRAWN STATE, not just the markup: the theme rides on the canvas's CSS VARIABLES, so an
