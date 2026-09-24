@@ -748,10 +748,33 @@ function seg(k,opts,fn){
     return '<button class="'+(String(S[k])===String(o[0])?'on':'')+'" onclick="'+
       (fn||'edit')+'(\''+k+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</div>';
 }
+/**
+ * ── ⭐⭐⭐ SEARCH, NOT A DROPDOWN TO SCROLL (Athi: "the real catalogue, and the search function all should
+ * be in place here... like till application for the catalogue") ──────────────────────────────────────────
+ *
+ * A plain <input list=datalist> — the browser's OWN type-to-filter, not a hand-built combobox: no custom
+ * keyboard handling to get wrong, no dropdown-positioning code to maintain, and it never re-renders anything
+ * until a real pick is made (onchange, not oninput) — sidestepping the whole class of bug edit() just had to
+ * be fixed for, by using the one input type that was never at risk of it.
+ * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — one registry, the way edit() became one
+ * choke point for every number field, rather than a second picker mechanism living beside the old one.
+ */
+var _searchLists = {};
 function selectOf(list,val,fn){
-  return '<div class="inp"><select onchange="'+fn+'(this.value)">'+list.map(function(o){
-    return '<option value="'+o[0]+'" '+(String(val)===String(o[0])?'selected':'')+'>'+esc(o[1])+'</option>';
-  }).join('')+'</select></div>';
+  var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
+  var dlid = 'dl-'+fn;
+  _searchLists[dlid] = list;
+  return '<div class="inp"><input type="text" list="'+dlid+'" value="'+esc(cur?cur[1]:'')+'" placeholder="Search…" '+
+    'onchange="searchPick(\''+dlid+'\',\''+fn+'\',this.value)"></div>'+
+    '<datalist id="'+dlid+'">'+list.map(function(o){ return '<option value="'+esc(o[1])+'">'; }).join('')+'</datalist>';
+}
+/** ⭐ resolves the picked TEXT back to the id and calls the exact setter selectOf() always called —
+ * unmatched text (a typo, an empty field) re-renders rather than guesses, snapping back to the last real pick */
+function searchPick(dlid,fnName,text){
+  var list = _searchLists[dlid] || [];
+  var hit = list.filter(function(o){ return o[1]===text; })[0];
+  if(hit && typeof window[fnName]==='function') window[fnName](hit[0]);
+  else render();
 }
 function prodOpts(list){ return list.map(function(p){
   return [p.id, p.name+'  —  '+M0(p.price)];}); }
