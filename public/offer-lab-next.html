@@ -369,8 +369,17 @@ button{cursor:pointer}
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <button class="chip" onclick="go(3)" id="bucketChip">Saved offers <b>0</b></button>
+    <button class="chip" onclick="labUseMine()" id="labMineBtn">Use my catalogue</button>
     <div class="bizSw" id="bizSw"></div>
   </div>
+  <div id="labqueue" class="note n-warn" hidden style="margin-bottom:14px"></div>
+  <!--
+    ⭐⭐⭐ AN ESTIMATE, SAID ONCE, NEVER A PARAGRAPH (Athi: "it is an estimation model and never be the final
+    margin, we declare the same and say, this gives you an idea"). Matches the spec's own honesty about cost —
+    "rough on purpose" — extended to what the whole page computes from it: a real margin also depends on
+    wastage, taxes and what the catalogue's rough cost does not capture, none of which this page can know.
+  -->
+  <p class="hs" style="margin:-6px 0 12px">An estimate to explore trade-offs — not your final margin.</p>
 
   <div id="strip"></div>
   <div id="labtoast" class="note n-warn" hidden style="margin-bottom:14px" onclick="this.hidden=true"></div>
@@ -576,7 +585,14 @@ function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
 function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
 function apply(){ S.applied=true; render(); }
 function setCost(id,v){ var p=byId(id); if(!p) return;
-  p.cost = (v===''||v==null) ? null : Math.max(0,num(v)); render(); }
+  var val = (v===''||v==null) ? null : Math.max(0,num(v));
+  p.cost = val; render();
+  /* ⭐ writes through only for your OWN catalogue — the sample books have nothing real to write to */
+  if(S.biz==='mine' && savedLive()){
+    var patch = val==null ? {cost:null} : {cost:{value:val, source:'manual', updated_at:new Date().toISOString()}};
+    apiFetch('PATCH', API+'/api/products/'+id, {item_data:patch, merge:true}, 'cost');
+  }
+}
 function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v)); render(); }
 
 /* ── the engine: two percentages, compounded ───────────────────────────── */
@@ -1341,14 +1357,152 @@ function keyNumber(){
  * ⚠️ SIGNED IN ONLY. Demo mode (the two sample books, no cb_sess) keeps the exact in-memory behaviour this
  * prototype always had — nothing to save to, nothing lost, no network call ever attempted.
  */
+/**
+ * ⚠️⚠️⚠️ KNOWN GAP, ON THE BACKLOG, NOT SILENT (Athi: "role based authorisation is required... margin and
+ * other things should not be visible to everyone... we keep it as a role based access and will implement it
+ * later"). savedLive() only asks "is somebody signed in to this entity" — cost and margin are visible to
+ * every role that can sign in today, the same way [[project-iam-access-model]]'s viewer/commenter/editor
+ * split does not yet reach here. Do not read this check as "authorised to see cost" anywhere it is used below.
+ */
 function savedLive(){ try { var s=JSON.parse(localStorage.getItem('cb_sess')||'null'); return !!(s&&s.token); } catch(_){ return false; } }
 function savedToken(){ try { return (JSON.parse(localStorage.getItem('cb_sess')||'null')||{}).token||null; } catch(_){ return null; } }
-async function defFetch(method,path,body){
-  var r=await fetch(API+'/api/definitions'+path, { method:method,
-    headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
-    body: body?JSON.stringify(body):undefined });
-  var j=null; try{ j=await r.json(); }catch(_){}
-  return {ok:r.ok, status:r.status, body:j||{}};
+
+/**
+ * ── ⭐⭐⭐ OFFLINE, ON PURPOSE (Athi: "must work offline too") ─────────────────────────────────────────────────
+ *
+ * Offer Lab is a planning tool, not a point-of-sale action — but the same shopkeeper who lost the line mid-bill
+ * should not also lose the ability to keep pricing while it is down. Two stores, the shape till.html's own DB
+ * already proved: `kv` (the last catalogue this browser read, so the page opens with real numbers with no
+ * line) and `outbox` (a write that could not reach the server yet, replayed in order once it can).
+ * ⚠️ ITS OWN DATABASE, NOT TILL.HTML'S. The till's is keyed per PAIRED COUNTER (a device); this is keyed per
+ * SIGNED-IN PERSON — a different identity and a different scope, and conflating them is the exact fault
+ * [[project-till-store-per-key]] already paid for once, in the other direction.
+ */
+var LabDB = (function(){
+  var p = null;
+  function open(){
+    if (p) return p;
+    p = new Promise(function(res, rej){
+      var rq = indexedDB.open('offerlab', 1);
+      rq.onupgradeneeded = function(){ var db = rq.result;
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+        if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath:'id', autoIncrement:true }); };
+      rq.onsuccess = function(){ res(rq.result); }; rq.onerror = function(){ rej(rq.error); };
+    });
+    return p;
+  }
+  function tx(store, mode, fn){ return open().then(function(db){ return new Promise(function(res, rej){
+    var t = db.transaction(store, mode), s = t.objectStore(store); var rq = fn(s);
+    t.oncomplete = function(){ res(rq && ('result' in rq) ? rq.result : undefined); }; t.onerror = function(){ rej(t.error); }; }); }); }
+  return {
+    get: function(k){ return tx('kv','readonly',function(s){ return s.get(k); }).catch(function(){ return undefined; }); },
+    set: function(k,v){ return tx('kv','readwrite',function(s){ return s.put(v,k); }).catch(function(){}); },
+    queuePush: function(row){ return tx('outbox','readwrite',function(s){ return s.add(Object.assign({at:new Date().toISOString()},row)); }).catch(function(){ return null; }); },
+    queueAll: function(){ return tx('outbox','readonly',function(s){ return s.getAll(); }).catch(function(){ return []; }); },
+    queueDel: function(id){ return tx('outbox','readwrite',function(s){ return s.delete(id); }).catch(function(){}); },
+  };
+})();
+/**
+ * ⭐⭐ ONE FETCH, ONE QUEUE, FOR EVERY WRITE THIS PAGE MAKES — the offer shelf and an item's cost alike. On a
+ * real network failure (fetch itself throwing — not a server ANSWER, not a 4xx) the request is held in the
+ * outbox and replayed once the line returns: the exact "fall through and queue it" shape till.html's own
+ * tillPost() already uses. ⚠️ A GET is never queued — there is nothing to replay a READ as; its caller falls
+ * back to the cache instead (labUseMine, below).
+ */
+async function apiFetch(method, url, body, queueKind){
+  try {
+    var r=await fetch(url, { method:method,
+      headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
+      body: body?JSON.stringify(body):undefined });
+    var j=null; try{ j=await r.json(); }catch(_){}
+    return {ok:r.ok, status:r.status, body:j||{}, queued:false};
+  } catch (e) {
+    if (queueKind && method!=='GET') { await LabDB.queuePush({kind:queueKind, method:method, url:url, body:body||null}); labPaintQueue(); }
+    return {ok:true, queued:true, body:{}};
+  }
+}
+/** ⭐ replays queued writes IN ORDER; a real refusal (4xx) is dropped rather than retried for ever — the same
+ * offer would only be refused again, and a queue that never empties is a queue nobody trusts */
+async function labDrainOutbox(){
+  var rows = await LabDB.queueAll();
+  for (var i=0;i<rows.length;i++){
+    var row = rows[i];
+    try {
+      var r = await fetch(row.url, { method:row.method,
+        headers:Object.assign({'Content-Type':'application/json'}, savedToken()?{Authorization:'Bearer '+savedToken()}:{}),
+        body: row.body?JSON.stringify(row.body):undefined });
+      if (r.ok || (r.status>=400 && r.status<500)) await LabDB.queueDel(row.id);
+      else break;   /* still refusing for a server reason — stop, try the rest again next time */
+    } catch(_) { break; }   /* still offline — stop, try again on the next drain */
+  }
+  labPaintQueue();
+  if (savedLive() && S.step===3) await loadSaved();
+}
+function labPaintQueue(){
+  LabDB.queueAll().then(function(rows){
+    var n=document.getElementById('labqueue'); if(!n) return;
+    if(!rows.length){ n.hidden=true; return; }
+    n.hidden=false; n.textContent=rows.length+' change'+(rows.length>1?'s':'')+' waiting to sync — will send once the line is back.';
+  });
+}
+window.addEventListener('online', function(){ labDrainOutbox(); });
+
+function defFetch(method,path,body){ return apiFetch(method, API+'/api/definitions'+path, body, method==='GET'?null:'definitions'); }
+
+/**
+ * ── ⭐⭐⭐ THE REAL CATALOGUE, CACHED SO OFFLINE MEANS "LAST SEEN", NOT "NOTHING" ────────────────────────────────
+ *
+ * The same read the current offer-lab.html already does — GET /api/products, filtered to priced items, the same
+ * amountOfLoose() unwrap that fixed "Use my catalogue" never working on a real shop. Cost rides on item_data.cost
+ * (lib/item-cost.js's shape) — the first real reader of that field.
+ * ⚠️ CACHED ON SUCCESS, READ FROM CACHE ON FAILURE. A shopkeeper who opened this yesterday and has no line today
+ * still sees yesterday's real numbers — stale and SAID to be stale, never a blank screen pretending to be empty.
+ */
+async function labUseMine(quiet){
+  if(!savedLive()){ if(!quiet) toastSay('Sign in to the app on this browser first, then try again.'); return false; }
+  var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
+  var who=(sess&&(sess.entity||sess.name))||'your shop';
+  try {
+    var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var j=await r.json();
+    var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
+    var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(p){ return p&&p.item_data&&amountOf(p.item_data.price)>0; });
+    if(!items.length) return labUseCache(who,'no priced products yet');
+    await LabDB.set('catalogue', {items:items, who:who, at:Date.now()});
+    labApplyCatalogue(items, who, false);
+    return true;
+  } catch(e){ return labUseCache(who,'offline right now'); }
+}
+async function labUseCache(who,why){
+  var c=await LabDB.get('catalogue');
+  if(c && c.items && c.items.length){ labApplyCatalogue(c.items, c.who||who, true); return true; }
+  toastSay(who+' — '+why+', and nothing of your catalogue is cached here yet. Showing examples.');
+  return false;
+}
+function labApplyCatalogue(items, who, fromCache){
+  var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
+  var mineP=items.map(function(p){
+    var d=p.item_data||{};
+    var cats=Array.isArray(d.categories)?d.categories:(d.category?[String(d.category)]:[]);
+    /* ⭐ lib/item-cost.js's shape, read plainly — a malformed or absent cost is unknown, never zero */
+    var cost=(d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value)))?Number(d.cost.value):null;
+    return [p.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost];
+  });
+  var byCat={}; mineP.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
+  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
+  var firstItem=(mineP[0]||[])[0], secondItem=(mineP[1]||mineP[0]||[])[0];
+  BIZ.mine={ name:who, cats:cats, prods:mineP, margin:25, cap:10,
+    d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
+        spendAt:500, spendVal:50, buyId:firstItem, getId:firstItem, getOff:100,
+        bunA:firstItem, bunB:secondItem, bunPrice:0, shipAt:300, shipCharge:0, bandLo:50, bandHi:2000,
+        custId:null } };
+  BIZ.mine.d.freeShape='anything'; BIZ.mine.d.giftId=firstItem; BIZ.mine.d.freeCounts=[1,2,3];
+  BIZ.mine.d.bills=[100,250,500]; BIZ.mine.d.cheapN=3; BIZ.mine.d.shipCost=30;
+  BIZ.mine.d.pairA=firstItem; BIZ.mine.d.pairB=secondItem;
+  applyBiz('mine');
+  if(fromCache) toastSay(who+' — showing what was cached here; offline right now, so this may be a little behind.');
+  render();
 }
 /** ⭐ ONE ENGINE KIND PER SCREEN — the same registry lib/offers-engine.js's KINDS already names */
 function subKindOf(){
@@ -1519,6 +1673,11 @@ function render(){
 }
 applyBiz('hotel');
 render();
+/* ⭐ signed in → try your own catalogue quietly; queued writes from a previous offline session try to send
+ * now too. Neither blocks the first paint — the samples are already on screen the instant this loads. */
+labPaintQueue();
+labDrainOutbox();
+if (savedLive()) labUseMine(true);
 
 </script>
 </body>
