@@ -39,6 +39,10 @@ const HARNESSES = [
   ['till-keysize.cjs',     'the preview counts the keys the counter actually fits, exactly, at 16 combinations'],
   ['till-apply-again.cjs', 'apply works again and again, and a held change says so'],
   ['till-catorder.cjs',    'one category order, and the shop sets it'],
+  /* ⭐⭐⭐ HIDING A CATEGORY (Phase 4.3) — leaves the chips and the keys, ungrouped and grouped, and nothing
+     else: search still sells it. The risk the item names by itself, driven end to end through the real
+     dialog, Save, and back again with Show. */
+  ['till-category-hide.cjs', 'a hidden category leaves the chips and the keys and nothing else — search still sells it'],
   ['till-combo.cjs',       'the combo chooser answers the real 1-9 keys'],
   ['till-modedit.cjs',     'a combination can be changed on the bill, and the money follows'],
   ['till-dayimg.cjs',      'the shop’s own picture is resized, kept, shown — and a refusal is said'],
@@ -107,6 +111,10 @@ const HARNESSES = [
      change, before Close is ever pressed, and that the counter key saves on change (blur/Enter) and never on
      a keystroke, or DB.reopen()+S=null would fire on a key half typed. */
   ['till-settings-perrow.cjs', 'everything saves as you change it, and closing loses nothing'],
+  /* ⭐⭐⭐ SETTINGS DECLUTTERED (design-handoff/04-settings §3, 00-CORRECTIONS.md #18, Phase 4.5). Quick keys
+     and the shop's tax block are one line each with a link out, and "Clear and reload" has left Settings
+     entirely — its only home is Counter health's confirm sheet. */
+  ['till-settings-declutter.cjs', 'Quick keys and the shop are one line each in Settings, and Clear and reload has left it entirely'],
   /* ⭐ OFFER LAB, ONE LINK OUT OF THE TILL ([TILL-187]). Proves the op opens the real page in a new tab with
      no fragment (Offer Lab authenticates a person, never a paired counter's key) and never touches MODE/CART. */
   ['till-offerlab-link.cjs', 'Offer Lab is one link out of the till, never a second implementation inside it'],

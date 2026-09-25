@@ -160,47 +160,57 @@ test('[TILL-11] the quick keys carry the control that decides what fills them', 
   });
 
   /**
-   * ⭐⭐ AUTHORING IS NOT SELLING — MOVED, NOT DROPPED (2026-09-18). Athi: *"quick key management is not part of
-   * selling — sell panel should have only temporary out of stock buttons, not to create or update the group."*
+   * ⭐⭐ AUTHORING IS NOT SELLING — MOVED, NOT DROPPED (2026-09-18, then again 00-CORRECTIONS.md #18, Phase
+   * 4.5). Athi: *"quick key management is not part of selling — sell panel should have only temporary out of
+   * stock buttons, not to create or update the group."* Then the package's own reconciliation went further:
+   * *"Quick keys: a setting, or maintenance? Decision: Maintenance. Settings keeps one line and a link."*
    *
-   * This step used to assert `till-quick-group-new` was visible ON THE KEYS. It now asserts the opposite there
-   * and the same thing in ⚙ Setup, because the capability moved rather than went away — which is the only
-   * reading of "not part of selling" that does not quietly cost the shop a feature.
+   * This step used to assert `till-quick-group-new` was visible ON THE KEYS, then straight inside Settings ⚙
+   * Setup ▸ Quick keys. Both moves are the same rule applied again: the capability moved rather than went
+   * away, this time from Settings itself into its own Quick keys maintenance dialog, reached by the one line
+   * Settings now keeps.
    */
-  await test.step('⚠️ making or filling a group is NOT on the sell panel, and IS in Setup', async () => {
+  await test.step('⚠️ making or filling a group is NOT on the sell panel, and IS in Quick keys maintenance', async () => {
     await expect(till.locator('[data-testid="till-quick-group-new"]')).toHaveCount(0);
     await expect(till.locator('[data-testid="till-quick-group-add"]')).toHaveCount(0);
     await expect(till.locator('[data-testid^="till-quick-group-add-"]')).toHaveCount(0);
     await expect(till.locator('[data-testid^="till-quick-ungroup-"]')).toHaveCount(0);
 
-    /* ⚠️ ON ITS OWN TAB, AND SAY SO. Settings reopens on whichever tab was last used (setTab remembers it per
-       device), so asserting straight after openSettings() found the control present and invisible — which is
-       also the honest answer to "where did ＋ group go?": it is under ⚙ Setup ▸ Quick keys, not on the keys. */
+    /* ⚠️ SETTINGS ITSELF NEVER EDITS A GROUP AGAIN — it keeps one line (a value and "Edit ↗") and nothing here
+       lets you touch a group without going through it, which is the honest answer to "where did ＋ group go?" */
     await till.evaluate(() => openSettings('keys'));
+    await expect(till.locator('[data-testid="till-quicksum"]')).toBeVisible();
+    await expect(till.locator('[data-testid="till-set-group-new"]')).toHaveCount(0);
+    await till.click('[data-testid="till-quickmaint-open"]');
     await expect(till.locator('[data-testid="till-set-group-new"]')).toBeVisible();
-    /* ⭐ and a group can actually be FILLED here — Setup could make one and empty one but never fill one until
-       the sell-panel ＋ was removed, which would have left a list nobody could put anything into. */
-    await till.evaluate(() => { tillOptSet({ groups: { Morning: [] }, group: 'Morning' }); paintSetup(); });
+    /* ⭐ and a group can actually be FILLED here — the dialog could make one and empty one but never fill one
+       until the sell-panel ＋ was removed, which would have left a list nobody could put anything into. */
+    await till.evaluate(() => { tillOptSet({ groups: { Morning: [] }, group: 'Morning' }); quickMaintPaint(); });
     await expect(till.locator('[data-testid="till-set-group-find"]')).toBeVisible();
     const box = till.locator('[data-testid="till-set-group-items"]');
     await expect(box).toBeVisible();
     const tick = box.locator('input[type="checkbox"]').first();
     await tick.check();
     expect(await till.evaluate(() => (tillOpt().groups.Morning || []).length),
-      'ticking a product in Setup did not put it in the group').toBe(1);
+      'ticking a product in the maintenance dialog did not put it in the group').toBe(1);
+    /* ⭐ and Settings' own one line picked up the change live, behind the dialog — it is a VIEW of the same state */
+    await till.evaluate(() => quickMaintClose());
+    await expect(till.locator('[data-testid="till-quicksum"]')).toContainText('Morning (1)');
     await till.evaluate(() => { document.getElementById('setdlg').close(); });
   });
 
-  await test.step('⚠️ Setup and the bar are ONE setting, never two opinions about it', async () => {
+  await test.step('⚠️ the maintenance dialog and the bar are ONE setting, never two opinions about it', async () => {
     const same = await till.evaluate(() => {
       openSettings();
-      const opts = [...document.getElementById('set_qsrc').options].map((o) => o.value);
-      const picked = document.getElementById('set_qsrc').value;
+      quickMaintOpen();
+      const opts = [...document.getElementById('qm_qsrc').options].map((o) => o.value);
+      const picked = document.getElementById('qm_qsrc').value;
+      quickMaintClose();
       document.getElementById('setdlg').close();
       return { opts, picked, src: QUICK_SRC.map((s) => s[0]) };
     });
-    expect(same.opts, 'Setup offers a different list from the bar').toEqual(same.src);
-    expect(same.picked, 'Setup opened showing something other than what is in force').toBe('groups');
+    expect(same.opts, 'the maintenance dialog offers a different list from the bar').toEqual(same.src);
+    expect(same.picked, 'it opened showing something other than what is in force').toBe('groups');
   });
 });
 
