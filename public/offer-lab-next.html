@@ -359,6 +359,51 @@ button{cursor:pointer}
   .shapes{grid-template-columns:1fr}
   .phoneOnly{display:block}
 }
+
+/**
+ * ── ⭐⭐⭐ THE PRICE LIST OVERLAY — ONE WINDOW, BUILT ONCE, REUSABLE (Athi: "this will help when we enable
+ * other icons, it can work perfectly as a separate window") ──────────────────────────────────────────────
+ * A real modal: dimmed backdrop, a fixed header with the close button, a fixed search/category toolbar, and
+ * only the ROW LIST scrolls — never the whole page. Every "icon" that later wants to work against the full
+ * product list (not just the ones missing a cost) opens the SAME panel; only #ovlBody's row-renderer differs.
+ */
+.ovl{position:fixed;inset:0;background:rgba(29,27,22,.5);z-index:200;display:none;
+  align-items:center;justify-content:center;padding:24px}
+.ovl.on{display:flex}
+.ovlpanel{background:var(--card);border-radius:var(--r);width:min(920px,100%);max-height:min(760px,92vh);
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(29,27,22,.35)}
+.ovlhead{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.ovlhead h2{margin:0;font-size:18px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;flex:1}
+.ovlhead .hs{margin:0}
+.ovlx{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--card);
+  font-size:16px;line-height:1;color:var(--muted);flex:0 0 auto}
+.ovlx:hover{background:var(--panel)}
+.ovltools{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:10px;flex:0 0 auto}
+.ovltools input[type=text],.ovltools input[type=search]{width:100%;height:42px;border:1px solid var(--line);
+  border-radius:10px;padding:0 14px;font-size:14px;background:var(--card)}
+.ovltools input:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.ovlcats{display:flex;gap:6px;flex-wrap:wrap}
+.ovlchip{height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);
+  font-size:12.5px;font-weight:600;color:var(--muted)}
+.ovlchip.on{background:var(--green);border-color:var(--green);color:#fff}
+.ovlbody{overflow:auto;flex:1 1 auto}
+.ovltbl{width:100%;border-collapse:collapse;font-size:14px}
+.ovltbl thead th{position:sticky;top:0;background:var(--card);text-align:left;font-size:10.5px;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ghost);font-weight:700;
+  padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+.ovltbl td{padding:8px 14px;border-bottom:1px solid var(--hair)}
+.ovltbl tr:last-child td{border-bottom:0}
+.ovltbl .ovlname{font-weight:600}
+.ovltbl .ovlcat{color:var(--muted);font-size:12.5px}
+/* ⭐ the sale price — read-only, right-aligned like every other money figure on this page, for scale against the cost typed beside it */
+.ovltbl th.ovlpriceh,.ovltbl td.ovlprice{text-align:right;font-family:'IBM Plex Mono',monospace}
+.ovltbl .inp{height:36px;width:118px;margin-left:auto}
+.ovlfoot{padding:10px 20px;border-top:1px solid var(--line);flex:0 0 auto;font-size:12.5px;color:var(--muted)}
+@media(max-width:620px){
+  .ovl{padding:0}
+  .ovlpanel{width:100%;max-height:100dvh;height:100dvh;border-radius:0}
+  .ovltbl .ovlcat{display:none}
+}
 </style>
 </head>
 <body>
@@ -393,6 +438,26 @@ button{cursor:pointer}
   <div class="screen" id="s2"></div>
   <div class="screen" id="s3"></div>
 
+</div>
+<!--
+  ⭐⭐⭐ THE PRICE LIST — ONE OVERLAY, MEANT TO BE REUSED (see the CSS block's own header comment). Opened
+  today from "Typed against each item"; any future icon that needs the whole catalogue in front of someone —
+  search, category, scroll, a column of context (sale price) beside the thing they're actually setting —
+  opens this same panel rather than growing a second one.
+-->
+<div class="ovl" id="priceOverlay" role="dialog" aria-modal="true" aria-labelledby="ovlTitle">
+  <div class="ovlpanel">
+    <div class="ovlhead">
+      <h2 id="ovlTitle">Price list</h2>
+      <button class="ovlx" onclick="closePriceOverlay()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <div class="ovltools">
+      <input type="text" id="ovlSearch" placeholder="Search products…" oninput="priceOvSearch(this.value)">
+      <div class="ovlcats" id="ovlCats"></div>
+    </div>
+    <div class="ovlbody" id="ovlBody"></div>
+    <div class="ovlfoot" id="ovlFoot"></div>
+  </div>
 </div>
 <!--
   ⭐⭐⭐ THE ARITHMETIC IS THE REAL ENGINE, NOT A REIMPLEMENTATION (Athi: "we have already built the offer
@@ -616,6 +681,9 @@ function apply(){ S.applied=true; render(); }
 function setCost(id,v){ var p=byId(id); if(!p) return;
   var val = (v===''||v==null) ? null : Math.max(0,num(v));
   p.cost = val; render();
+  /* ⭐ the overlay is a SEPARATE div render() never touches ([0,1,2,3].forEach only walks #s0..#s3) — its own
+     row list and the "N left" footer need their own repaint, or a cost typed there would look unsaved. */
+  if(priceOvOpen()) paintPriceOvBody();
   /* ⭐ writes through only for your OWN catalogue — the sample books have nothing real to write to */
   if(S.biz==='mine' && savedLive()){
     var patch = val==null ? {cost:null} : {cost:{value:val, source:'manual', updated_at:new Date().toISOString()}};
@@ -623,6 +691,89 @@ function setCost(id,v){ var p=byId(id); if(!p) return;
   }
 }
 function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v)); render(); }
+
+/**
+ * ── ⭐⭐⭐ THE PRICE LIST OVERLAY (Athi: "bring the product list as a overlay, so it can be seen separate and
+ * work within a single page, scroll and so on… this will help when we enable other icons, it can work
+ * perfectly as a separate window") ───────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ A SEPARATE STATE OBJECT, NEVER S. The search box and the category filter are the overlay's own working
+ * state, not a Lab setting — closing the overlay and reopening it starts clean, and typing in it never marks
+ * the Lab "unapplied" the way editing a real setting does.
+ * ⚠️ THE TOOLBAR NEVER REBUILDS ITSELF. Search filters only #ovlBody; the search box that is being typed
+ * into is never one of the elements a repaint replaces, so there is no focus to lose and nothing to restore
+ * — the same class of bug the Lab's own number fields were fixed for, avoided here by construction instead
+ * of by a fix.
+ */
+var OVL={q:'',cat:null,noCostOnly:false};
+function priceOvOpen(){ var el=document.getElementById('priceOverlay'); return !!(el&&el.classList.contains('on')); }
+function openPriceOverlay(){
+  OVL={q:'',cat:null,noCostOnly:false};
+  var el=document.getElementById('priceOverlay'); if(!el) return;
+  el.classList.add('on');
+  var s=document.getElementById('ovlSearch'); if(s) s.value='';
+  paintPriceOvCats(); paintPriceOvBody();
+  if(s) s.focus();
+}
+function closePriceOverlay(){ var el=document.getElementById('priceOverlay'); if(el) el.classList.remove('on'); }
+function priceOvSearch(v){ OVL.q=v; paintPriceOvBody(); }
+function priceOvCat(id){ OVL.cat=(OVL.cat===id?null:id); paintPriceOvCats(); paintPriceOvBody(); }
+/**
+ * ⚠️⚠️ EVERY ROW STAYS, ALWAYS — Athi: "when i updated the cost price, that row is getting removed... the
+ * current design should allow to edit the value, it has to showcase all the updated value and the empty row
+ * also." The OLD inline list this overlay replaced only ever showed items MISSING a cost, so typing one in
+ * made the row vanish — no way back to adjust it. priceOvList() never filters on whether cost is set; the
+ * ONLY way a row disappears is `noCostOnly`, a filter the person turns on and off themselves, never a side
+ * effect of editing.
+ */
+function priceOvToggleNoCost(){ OVL.noCostOnly=!OVL.noCostOnly; paintPriceOvCats(); paintPriceOvBody(); }
+function priceOvList(){
+  var q=(OVL.q||'').trim().toLowerCase();
+  return P.filter(function(p){
+    if(OVL.cat && p.cat!==OVL.cat) return false;
+    if(OVL.noCostOnly && p.cost!=null) return false;
+    if(q && p.name.toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+}
+/** ⭐ only the categories actually IN this book, and only once (not once per product) */
+function priceOvCats(){
+  var seen={}, out=[];
+  P.forEach(function(p){ if(p.cat && !seen[p.cat]){ seen[p.cat]=1; out.push(p.cat); } });
+  return out.map(function(id){ return {id:id, name:catName(id)}; });
+}
+function paintPriceOvCats(){
+  var el=document.getElementById('ovlCats'); if(!el) return;
+  var cats=priceOvCats(), noCostN=P.filter(function(p){return p.cost==null;}).length;
+  el.innerHTML='<button class="ovlchip'+(!OVL.cat?' on':'')+'" onclick="priceOvCat(null)">All</button>'+
+    cats.map(function(c){ return '<button class="ovlchip'+(OVL.cat===c.id?' on':'')+'" onclick="priceOvCat(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('')+
+    '<span style="flex:1"></span>'+
+    '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>';
+}
+/**
+ * ⭐ SALE PRICE, RIGHT THERE BESIDE COST — Athi: "bring the sale price also on the right hand side… so it
+ * will give them an idea of the current product price." The whole reason for this column: nobody typing a
+ * cost should have to hold the price in their head or flip back to another screen to sanity-check it.
+ */
+function paintPriceOvBody(){
+  var body=document.getElementById('ovlBody'), foot=document.getElementById('ovlFoot');
+  if(!body) return;
+  var list=priceOvList();
+  body.innerHTML = !list.length
+    ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
+    : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Sale price</th><th class="ovlpriceh">Cost</th></tr></thead><tbody>'+
+      list.map(function(p){
+        return '<tr><td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
+          '<td class="ovlprice">'+M0(p.price)+'</td>'+
+          '<td><div class="inp"><span>₹</span><input type="number" min="0" placeholder="—" value="'+
+            (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div></td></tr>';
+      }).join('')+'</tbody></table>';
+  if(foot){
+    var withCost=P.filter(function(p){return p.cost!=null;}).length;
+    foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown · '+
+      withCost+' of '+P.length+' have a cost written down';
+  }
+}
 
 /* ── the engine: two percentages, compounded ───────────────────────────── */
 function offerFrac(p){
@@ -817,7 +968,13 @@ function renderS0(){
        '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
          'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
        '<span class="lt">Use loyalty bonuses</span>'+
-              (S.custOn?'<div class="inp" style="width:130px"><span>up to</span>'+
+       /* ⚠️ "up to" used to live INSIDE the bordered .inp box beside the number and the % sign — three
+          flex children in one 130px box left too little room for even a two-digit value, and it read as
+          clipped ("1" with the "0" swallowed by the % sign). The label now sits outside the box, as every
+          other field on this screen already does (see "Your margin" above), and the box holds only what a
+          number box should: the digits and their unit. */
+              (S.custOn?'<span style="font-size:13px;color:var(--muted)">up to</span>'+
+         '<div class="inp" style="width:96px">'+
          '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
      '</div>'+
      (S.custOn&&over?'<div class="note n-bad"><span class="ic">!</span><div>A '+num(S.cap)+
@@ -839,26 +996,31 @@ function renderS0(){
        '<div class="hint">Always rounded <b>down</b>, never above the normal price.</div></div>'+
      '</div>';
 
+  /**
+   * ⭐⭐⭐ THE PRICE LIST REPLACES THE INLINE "NO COST" LIST (Athi: "type against each item let it be the
+   * clickable icon and bring the product list as a overlay… the entire price list facility should be here").
+   * "Typed against each item" now does both jobs at once — it is still the segmented choice that SELECTS this
+   * source, and clicking it also OPENS the overlay, so there is one thing to click, not a choice and then a
+   * separate hunt for where to actually type. Every other cost source stays a disabled placeholder; when one
+   * of them ships, it opens the same overlay too — see the CSS block's own header comment.
+   */
   h+='<div class="card pad"><h2 class="h" style="font-size:17px">Where cost comes from</h2>'+
      '<p class="hs">An indicative accumulated cost on the item. Rough on purpose — it moves with '+
        'the day rate, and that is fine.</p><div class="seg" style="margin-top:12px">'+
-     [['typed','Typed against each item',1],['purchases','From what you last paid',0],
+     [['typed','📋 Typed against each item',1],['purchases','From what you last paid',0],
       ['supplier','From a supplier list',0],['rule','From a rule you set',0]].map(function(o){
        return '<button class="'+(S.costSource===o[0]?'on':'')+'" '+(o[2]?'':'disabled style="opacity:.45"')+
-         ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\')':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
+         ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\');openPriceOverlay()':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
      }).join('')+'</div>'+
      '<div class="note n-say"><span class="ic">●</span><div><b>Cost is yours alone.</b> '+
        'No customer, reseller or link ever sees it. Offer Lab is the only thing that reads it.</div></div>'+
-     (noCost.length? '<div class="sect"><h3>'+noCost.length+
-        ' item'+(noCost.length>1?'s have':' has')+' no cost written down</h3>'+
-        noCost.map(function(p){
-          return '<div class="sv"><div class="svm"><div class="svt">'+esc(p.name)+'</div>'+
-            '<div class="svd">'+catName(p.cat)+' · sells at '+M0(p.price)+'</div></div>'+
-            '<div class="inp" style="width:130px;height:40px"><span>₹</span>'+
-            '<input type="number" min="0" placeholder="cost" onchange="setCost(\''+p.id+'\',this.value)">'+
-            '</div></div>';}).join('')+
-        '<div class="hint">Items with no cost are left out of every total — never counted as free.</div>'+
-      '</div>' : '<div class="note n-ok"><span class="ic">✓</span><div>Every item has a cost.</div></div>')+
+     '<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">'+
+       (noCost.length
+         ? '<div class="note n-warn" style="margin:0;flex:1"><span class="ic">!</span><div>'+noCost.length+
+           ' item'+(noCost.length>1?'s have':' has')+' no cost written down — left out of every total, never counted as free.</div></div>'
+         : '<div class="note n-ok" style="margin:0;flex:1"><span class="ic">✓</span><div>Every item has a cost.</div></div>')+
+       '<button class="btn sm" style="margin-inline-start:12px" onclick="openPriceOverlay()">📋 Open the price list</button>'+
+     '</div>'+
      '</div>';
 
   h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
@@ -1847,9 +2009,12 @@ function renderS3(){
 function render(){
   var B=BIZ[S.biz];
   document.getElementById('bizName').textContent=B.name;
-  document.getElementById('bizSw').innerHTML=Object.keys(BIZ).map(function(k){
-    return '<button class="'+(S.biz===k?'on':'')+'" onclick="setBiz(\''+k+'\')">'+
-      BIZ[k].name.split(' ')[0]+'</button>';}).join('');
+  /* ⚠️⚠️ THE SAMPLE SWITCHER IS GONE (Athi: "there is a Sri button appearing... we have to speak about the
+     shop only"). "Sri Sai Pharma Distributors" sat one tap from the real shop's own name — HOTEL's sample is
+     itself named "Mayur Bhavan" for realism, so the two together read as "which of these is actually mine?"
+     rather than as an obvious demo. HOTEL stays as the one thing the page boots with before a sign-in or an
+     import replaces it; PHARMA (var PHARMA above) and setBiz() are untouched below for a future public/
+     marketing release that genuinely wants more than one example, but nothing in this build reaches them. */
   document.getElementById('bucketChip').innerHTML='Saved offers <b>'+SAVED.length+'</b>';
 
   document.getElementById('strip').innerHTML = S.step===0?'' :
