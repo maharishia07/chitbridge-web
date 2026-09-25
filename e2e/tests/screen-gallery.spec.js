@@ -37,3 +37,28 @@ test('[SCREEN-01] every scheme, preset, key style, picker and layout is on the g
   expect(grounds.size, 'each colour scheme paints its own ground: ' + [...grounds].join(' · ')).toBe(reg.themes.length);
   expect(errors, 'the gallery threw').toEqual([]);
 });
+
+/* ⚠️⚠️ [SCREEN-02] "COMPACT ROW" BROKE A PLAIN NAME ONE LETTER PER LINE. .sk-row .sk-name had min-width:0 and
+ * nothing to grow into, so any row short on space took it all out of the name — down to zero — and the base
+ * overflow-wrap:anywhere rule then wrapped "Veg Biryani" ten lines tall, one character each. Reachable live:
+ * Counter rail and Handheld both ship this tile. Proven against the REAL preset row (622px), not the gallery's
+ * own narrow side-by-side comparison column, which squeezes all six tile styles into one shared width on
+ * purpose and is not the width a shop's own rail ever renders at. */
+test('[SCREEN-02] a compact-row product name stays on one line, at the real preset width', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(BASE + '/screen-gallery.html');
+  await page.waitForFunction(() => window.CBScreen, null, { timeout: 30000 });
+  await page.locator('[data-testid="gal-preset-counterRail"]').click();
+
+  const names = await page.evaluate(() => Array.from(document.querySelectorAll('#preview .sk-tile.sk-row .sk-name')).map((el) => {
+    const r = el.getBoundingClientRect();
+    return { text: el.textContent, width: r.width, height: r.height, wrapped: el.scrollHeight > r.height + 2 };
+  }));
+  expect(names.length, 'Counter rail is compactRow — there should be rows to check').toBeGreaterThan(0);
+  for (const n of names) {
+    expect(n.width, `"${n.text}" claims real width, not a sliver`).toBeGreaterThan(40);
+    expect(n.wrapped, `"${n.text}" stays one line tall — a compact row must not grow per key`).toBe(false);
+  }
+  expect(errors, 'the gallery threw').toEqual([]);
+});
