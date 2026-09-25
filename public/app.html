@@ -13679,8 +13679,16 @@ function prodOutcomeHTML(k, d){
     switch(k){
       case 'product': {
         const n=Object.keys(d).length; const ds=String(pDesc(d)||'').trim();
+        /**
+         * ⭐⭐⭐ SCALARS ONLY, HERE TOO (Athi: "the json is visible as part of details" — modifiers rendered as
+         * "[object Object],[object Object],[object Object]"). ctDeclaredViewRows() already carries this exact
+         * rule ("an object is a record, not a value") for the Details tab's own field-by-field list; this
+         * summary line had never picked it up, so a structured declared column (modifiers, an import's nested
+         * combo_of) read as JS's own String(array-of-objects) rather than as nothing. A field with its own
+         * dedicated tab — modifiers has one now — has no business repeating itself here as garbage anyway.
+         */
         /* declared columns first — "Fineness 999.9 · Assay yes" IS the fact sheet; the count and the description follow */
-        const decl=(typeof ctDeclaredList==='function'?ctDeclaredList():[]).filter(f=>d[f.field_key]!==undefined && d[f.field_key]!=='' && d[f.field_key]!==null);
+        const decl=(typeof ctDeclaredList==='function'?ctDeclaredList():[]).filter(f=>d[f.field_key]!==undefined && d[f.field_key]!=='' && d[f.field_key]!==null && typeof d[f.field_key]!=='object');
         const facts=decl.slice(0,3).map(f=>`<span data-testid="prod-fact-${esc(f.field_key)}">${esc(f.field_name||f.field_key)} <b>${esc(String(d[f.field_key]))}</b></span>`).join(' · ')+(decl.length>3?' '+grey('+'+String(decl.length-3)):'');
         const head=facts||`<b>${esc(txf('{n} fields', { n: String(n) }))}</b>`;
         return head+(ds?' '+grey('· '+esc(ds.length>70?ds.slice(0,70)+'…':ds)):(facts?'':' '+grey(esc(tx('· no description')))));
@@ -14019,13 +14027,15 @@ async function prodModSave(groups){
     prodRepaintSection('modifiers');
   }catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
 }
-function prodModAddGroup(){ prodModSave(CBVariant.addGroup(prodModCurrentGroups(), tx('New group'))); }
-function prodModRemoveGroup(gi){ prodModSave(CBVariant.removeGroup(prodModCurrentGroups(), gi)); }
-function prodModMoveGroup(gi, by){ prodModSave(CBVariant.moveGroup(prodModCurrentGroups(), gi, gi+by)); }
-function prodModSetGroup(gi, patch){ prodModSave(CBVariant.setGroup(prodModCurrentGroups(), gi, patch)); }
-function prodModAddOption(gi){ prodModSave(CBVariant.addOption(prodModCurrentGroups(), gi, '', 0)); }
-function prodModRemoveOption(gi, oi){ prodModSave(CBVariant.removeOption(prodModCurrentGroups(), gi, oi)); }
-function prodModSetOption(gi, oi, patch){ prodModSave(CBVariant.setOption(prodModCurrentGroups(), gi, oi, patch)); }
+/* ⭐ each RETURNS prodModSave()'s own promise — harmless for the button's fire-and-forget onclick, and lets a
+ * test (or a future caller) await the exact same action a real click makes, rather than a second, faked one */
+function prodModAddGroup(){ return prodModSave(CBVariant.addGroup(prodModCurrentGroups(), tx('New group'))); }
+function prodModRemoveGroup(gi){ return prodModSave(CBVariant.removeGroup(prodModCurrentGroups(), gi)); }
+function prodModMoveGroup(gi, by){ return prodModSave(CBVariant.moveGroup(prodModCurrentGroups(), gi, gi+by)); }
+function prodModSetGroup(gi, patch){ return prodModSave(CBVariant.setGroup(prodModCurrentGroups(), gi, patch)); }
+function prodModAddOption(gi){ return prodModSave(CBVariant.addOption(prodModCurrentGroups(), gi, tx('New option'), 0)); }
+function prodModRemoveOption(gi, oi){ return prodModSave(CBVariant.removeOption(prodModCurrentGroups(), gi, oi)); }
+function prodModSetOption(gi, oi, patch){ return prodModSave(CBVariant.setOption(prodModCurrentGroups(), gi, oi, patch)); }
 /**
  * ⭐ CONSISTS OF — the product's bill of materials, the `bom:[{item, qty}]` facet the Network tool authors on a node
  * (catalogue-model.js). A READ-OUT here, on purpose: composition is designed where the flow is designed, and the

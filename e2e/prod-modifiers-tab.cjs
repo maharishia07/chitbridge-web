@@ -204,6 +204,51 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the renamed option is no longer shown as picked', !stalePick.stillClaimsHot, 'no stale ✓ Hot');
   say('and the required group is correctly reported unanswered again', stalePick.stillNeedsSpice, 'Spice is needed');
 
+  console.log('\n── ⚠️⚠️⚠️ "+ ADD AN OPTION" ACTUALLY ADDS ONE — the exact button, no name supplied by hand ' + '─'.repeat(0));
+  const addOpt = await p.evaluate(async () => {
+    window.api = async function (n, opts) { return { item: { item_data: opts.body.item_data } }; };
+    UI.prods = [{ item_id: 'i7', item_data: { modifiers: [] } }];
+    UI.prodSel = 'i7';
+    await prodModAddGroup();            /* real button, no args — same call the "+ Add a group" button makes */
+    await prodModAddOption(0);          /* real button, no args — the exact call "+ Add an option" makes */
+    const groups = UI.prods[0].item_data.modifiers;
+    return { groupCount: groups.length, optionCount: groups[0] ? groups[0].options.length : -1, optName: groups[0] && groups[0].options[0] && groups[0].options[0].name };
+  });
+  say('the group was actually created', addOpt.groupCount === 1, addOpt.groupCount + ' group(s)');
+  say('⚠️⚠️⚠️ and the option was actually added, not stripped in the same call that created it', addOpt.optionCount === 1,
+    addOpt.optionCount + ' option(s)');
+  say('with a real, editable placeholder name, not blank', !!addOpt.optName, '"' + addOpt.optName + '"');
+
+  console.log('\n── ⭐⭐⭐ A PRODUCT THAT ALREADY HAS MODIFIERS OPENS SHOWING THEM, READY TO EDIT (Athi: "i assume we' + '─'.repeat(0));
+  console.log('   already have some products with modifiers we should be able to open those... and edit as well") ' + '─'.repeat(0));
+  const existing = await p.evaluate(async () => {
+    window.api = async function (n, opts) { return { item: { item_data: opts.body.item_data } }; };
+    /* the exact shape a product imported or seeded earlier would carry — Tiffin Combo's own scenario */
+    UI.prods = [{ item_id: 'combo1', item_data: { name: 'Tiffin Combo', modifiers: [
+      { name: 'Choice of tiffin', required: true, max: 1, options: [{ name: 'Idli', price: 0 }, { name: 'Dosa', price: 0 }, { name: 'Pongal', price: 10 }] },
+      { name: 'Extra chutney', required: false, max: 2, options: [{ name: 'Coconut', price: 5 }, { name: 'Tomato', price: 5 }] },
+    ] } }];
+    UI.prodSel = 'combo1';
+    const viewHTML = prodModifiersTab(UI.prods[0].item_data, false);
+    const editHTML = prodModifiersTab(UI.prods[0].item_data, true);
+    /* now actually EDIT an existing option's price — the real, exact call the price input's onchange makes */
+    await prodModSetOption(0, 2, { price: 15 });
+    return {
+      viewHTML: viewHTML, editHTML: editHTML,
+      afterEdit: UI.prods[0].item_data.modifiers[0].options[2],
+      groupCountUnchanged: UI.prods[0].item_data.modifiers.length === 2,
+    };
+  });
+  say('View shows the real, existing groups — not "No modifiers yet"',
+    /Choice of tiffin/.test(existing.viewHTML) && /Extra chutney/.test(existing.viewHTML) && !/No modifiers yet/.test(existing.viewHTML),
+    'both real group names shown, the empty-state message is gone');
+  say('Edit pre-fills the first group’s real name', /value="Choice of tiffin"/.test(existing.editHTML), 'found');
+  say('and every one of its real options, not a blank form', /value="Idli"/.test(existing.editHTML) && /value="Dosa"/.test(existing.editHTML) && /value="Pongal"/.test(existing.editHTML),
+    'all three found');
+  say('the second, unrelated group is untouched by opening the tab', /value="Extra chutney"/.test(existing.editHTML), 'found');
+  say('editing an EXISTING option (not a newly added one) actually changes its price', existing.afterEdit.price === 15, JSON.stringify(existing.afterEdit));
+  say('and the edit did not add or remove any group in the process', existing.groupCountUnchanged, 'still 2 groups');
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();
   console.log(bad || errs.length ? '\n' + (bad + errs.length) + ' failed'

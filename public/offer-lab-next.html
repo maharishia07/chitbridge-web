@@ -460,6 +460,25 @@ button{cursor:pointer}
   </div>
 </div>
 <!--
+  ⭐⭐⭐ THE MODIFIER LAB — SAME WINDOW STYLE AS THE PRICE LIST (Athi: "try how the modifiers can be created
+  and once if they are happy… apply it to the real product"), its own instance because the shape of the job
+  is different (pick ONE product, then build against it) — but the chrome (.ovl/.ovlpanel/.ovlhead/.ovlx) is
+  the exact same CSS the price list already proved out, precisely so a third icon has somewhere to land too.
+-->
+<div class="ovl" id="modLabOverlay" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
+  <div class="ovlpanel">
+    <div class="ovlhead">
+      <h2 id="modLabTitle">Modifier lab</h2>
+      <button class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <div class="ovltools">
+      <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)">
+    </div>
+    <div class="ovlbody" id="modLabBody"></div>
+    <div class="ovlfoot" id="modLabFoot"></div>
+  </div>
+</div>
+<!--
   ⭐⭐⭐ THE ARITHMETIC IS THE REAL ENGINE, NOT A REIMPLEMENTATION (Athi: "we have already built the offer
   engine, that is being served everywhere as a capability... how we enhance it to adopt this"). This page IS
   the v5 prototype/spec — same layout, same one-screen-per-offer flow, same wording — but `row()` and the
@@ -473,6 +492,9 @@ button{cursor:pointer}
   which is what lets this same file serve a public/demo mode later.
 -->
 <script src="engine/offers.js"></script>
+<!-- ⭐ CBVariant — the SAME module app.html's Modifiers tab and the till's own chooser both use. Pure, no
+     DOM, no fetch — the Modifier lab below is a paint over its authoring verbs, exactly like that tab is. -->
+<script src="engine/variant.js"></script>
 <!--
   ⭐⭐ VENDORED, NOT A CDN LINK (Athi: "possibly excel... bring it here"). vendor/xlsx.full.min.js is SheetJS
   (Apache-2.0), served from this same origin so the public/demo mode's "zero network calls" claim a few lines
@@ -619,7 +641,8 @@ var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-a
 function applyBiz(id){
   var B=BIZ[id];
   CATS=B.cats.map(function(c){return {id:c[0],name:c[1]};});
-  P=B.prods.map(function(p){return {id:p[0],name:p[1],cat:p[2],price:p[3],cost:p[4]};});
+  /* ⭐ modifiers, the 6th tuple slot — [] for every sample/import row, the real shape for a real catalogue */
+  P=B.prods.map(function(p){return {id:p[0],name:p[1],cat:p[2],price:p[3],cost:p[4],modifiers:Array.isArray(p[5])?p[5]:[]};});
   S=Object.assign({},FRESH,{biz:id,margin:B.margin,cap:B.cap},
     JSON.parse(JSON.stringify(B.d)));
 }
@@ -772,6 +795,160 @@ function paintPriceOvBody(){
     var withCost=P.filter(function(p){return p.cost!=null;}).length;
     foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown · '+
       withCost+' of '+P.length+' have a cost written down';
+  }
+}
+
+/**
+ * ── ⭐⭐⭐ THE MODIFIER LAB — TRY IT, THEN APPLY IT (Athi: "so people can try how the modifiers can be
+ * created and once if they are happy, we would be able to save that modifier and apply it to the real
+ * product. which is apply button so it will be part of the product catalogue") ─────────────────────────────
+ *
+ * ⚠️ EVERY ACTION HERE EDITS A LOCAL DRAFT ONLY (held right on the in-memory product, p.modifiers) — unlike
+ * app.html's Modifiers tab, which saves each action at once because it IS the authoritative place to edit a
+ * real product. Here the whole point is trying something before committing to it, so nothing reaches the
+ * real catalogue until "Apply" is pressed — the same merge:true PATCH setCost() already uses, and, like
+ * setCost(), only when a real signed-in catalogue is loaded (S.biz==='mine' && savedLive()). On the sample
+ * books "Apply" still works, just locally — there is nothing real to write to.
+ * ⚠️ THE PREVIEW IS THE SAME CAPABILITY app.html's tab USES — CBVariant.groupsOf()/toggle()/missing()/words(),
+ * not a second implementation of "what does trying this feel like".
+ */
+var MODLAB={pid:null,q:''}, MODLABPREV=[];
+function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
+function openModLab(){
+  MODLAB={pid:null,q:''}; MODLABPREV=[];
+  var el=document.getElementById('modLabOverlay'); if(!el) return;
+  el.classList.add('on');
+  var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
+  paintModLab();
+  if(s) s.focus();
+}
+function closeModLab(){ var el=document.getElementById('modLabOverlay'); if(el) el.classList.remove('on'); }
+function modLabSearch(v){ MODLAB.q=v; paintModLab(); }
+function modLabList(){
+  var q=(MODLAB.q||'').trim().toLowerCase();
+  return P.filter(function(p){ return !q || p.name.toLowerCase().indexOf(q)>=0; });
+}
+function modLabPick(id){ MODLAB.pid=id; MODLABPREV=[]; paintModLab(); }
+function modLabBack(){ MODLAB.pid=null; paintModLab(); }
+function modLabGroups(){
+  var p=byId(MODLAB.pid); if(!p) return [];
+  return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:p.modifiers}):(Array.isArray(p.modifiers)?p.modifiers:[]);
+}
+/** ⭐ every editing verb funnels through here — one place that writes the draft and clears stale preview picks */
+function modLabSetGroups(newGroups){
+  var p=byId(MODLAB.pid); if(!p) return;
+  p.modifiers=newGroups;
+  MODLABPREV=[];   /* an edited group can invalidate an old pick (a removed option, a group gone) — simplest to restart */
+  paintModLab();
+}
+function modLabAddGroup(){ modLabSetGroups(CBVariant.addGroup(modLabGroups(), 'New group')); }
+function modLabRemoveGroup(gi){ modLabSetGroups(CBVariant.removeGroup(modLabGroups(), gi)); }
+function modLabMoveGroup(gi,by){ modLabSetGroups(CBVariant.moveGroup(modLabGroups(), gi, gi+by)); }
+function modLabSetGroup(gi,patch){ modLabSetGroups(CBVariant.setGroup(modLabGroups(), gi, patch)); }
+function modLabAddOption(gi){ modLabSetGroups(CBVariant.addOption(modLabGroups(), gi, 'New option', 0)); }
+function modLabRemoveOption(gi,oi){ modLabSetGroups(CBVariant.removeOption(modLabGroups(), gi, oi)); }
+function modLabSetOption(gi,oi,patch){ modLabSetGroups(CBVariant.setOption(modLabGroups(), gi, oi, patch)); }
+/** ⭐ only what could ever actually be sold — the exact filter the till itself applies */
+function modLabPreviewGroups(){ return CBVariant.groupsOf({modifiers:modLabGroups()}); }
+function modLabPreviewPick(gi,oi){
+  var groups=modLabPreviewGroups(), g=groups[gi]; if(!g||!g.options[oi]) return;
+  MODLABPREV=CBVariant.toggle(MODLABPREV, g, g.options[oi].name);
+  paintModLab();
+}
+function modLabPreviewReset(){ MODLABPREV=[]; paintModLab(); }
+async function modLabApply(){
+  var p=byId(MODLAB.pid); if(!p) return;
+  var clean=CBVariant.normalize(modLabGroups());
+  p.modifiers=clean;
+  if(S.biz==='mine' && savedLive()){
+    try{ await apiFetch('PATCH', API+'/api/products/'+p.id, {item_data:{modifiers:clean}, merge:true}, 'modifiers');
+      toastSay('Applied to '+p.name+' — saved to your catalogue.'); }
+    catch(e){ toastSay('Could not save '+p.name+'’s modifiers — try again.'); }
+  } else {
+    toastSay('Applied here, in the Lab. Sign in and use your own catalogue to save this for real.');
+  }
+  paintModLab();
+}
+function paintModLab(){
+  var body=document.getElementById('modLabBody'), foot=document.getElementById('modLabFoot');
+  var tools=document.querySelector('#modLabOverlay .ovltools');
+  if(!body) return;
+  if(!MODLAB.pid){
+    if(tools) tools.style.display='';
+    var list=modLabList();
+    body.innerHTML = !list.length
+      ? '<div class="hs" style="padding:24px">No products match'+(MODLAB.q?' "'+esc(MODLAB.q)+'"':'')+'.</div>'
+      : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Modifiers</th></tr></thead><tbody>'
+        + list.map(function(p){
+            var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
+            return '<tr style="cursor:pointer" onclick="modLabPick(\''+p.id+'\')"><td class="ovlname">'+esc(p.name)+'</td>'
+              + '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'
+              + '<td class="ovlprice">'+(n?n+' group'+(n===1?'':'s'):'—')+'</td></tr>';
+          }).join('')+'</tbody></table>';
+    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to build against';
+    return;
+  }
+  if(tools) tools.style.display='none';
+  var p=byId(MODLAB.pid); if(!p){ modLabBack(); return; }
+  var groups=modLabGroups();
+  var err=CBVariant.validate(groups).errors;
+  var errFor=function(gi){ return err.filter(function(e){return e.at===gi;}).map(function(e){return e.message;}); };
+  var groupHTML=function(g,gi){
+    var gerr=errFor(gi);
+    return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '<input class="inp" style="flex:1;min-width:140px;height:38px" value="'+esc(g.name)+'" placeholder="Group name" onchange="modLabSetGroup('+gi+',{name:this.value})">'
+      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px"><input type="checkbox" '+(g.required?'checked':'')+' onchange="modLabSetGroup('+gi+',{required:this.checked})"> Required</label>'
+      + '<label style="display:flex;gap:4px;align-items:center;font-size:13px">Pick up to <input type="number" min="1" value="'+g.max+'" style="width:52px;height:32px" onchange="modLabSetGroup('+gi+',{max:this.value})"></label>'
+      + '<button class="btn sm" onclick="modLabMoveGroup('+gi+',-1)" '+(gi===0?'disabled':'')+'>↑</button>'
+      + '<button class="btn sm" onclick="modLabMoveGroup('+gi+',1)" '+(gi===groups.length-1?'disabled':'')+'>↓</button>'
+      + '<button class="btn sm" onclick="modLabRemoveGroup('+gi+')">✕ Remove</button>'
+      + '</div>'
+      + (gerr.length?'<div style="color:var(--red);font-size:12px;margin-top:4px">'+gerr.map(function(m){return esc(m);}).join(' · ')+'</div>':'')
+      + '<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">'
+      + g.options.map(function(o,oi){
+          return '<div style="display:flex;gap:6px;align-items:center">'
+            + '<input class="inp" style="flex:1;height:36px" value="'+esc(o.name)+'" placeholder="Option" onchange="modLabSetOption('+gi+','+oi+',{name:this.value})">'
+            + '<div class="inp" style="width:100px;height:36px"><span>₹</span><input type="number" step="0.01" value="'+o.price+'" onchange="modLabSetOption('+gi+','+oi+',{price:this.value})"></div>'
+            + '<button class="btn sm" onclick="modLabRemoveOption('+gi+','+oi+')">✕</button></div>';
+        }).join('')
+      + '<button class="btn sm" style="align-self:flex-start" onclick="modLabAddOption('+gi+')">+ Add an option</button>'
+      + '</div></div>';
+  };
+  var sellable=modLabPreviewGroups();
+  var previewHTML = !sellable.length
+    ? '<div class="hs" style="padding:8px 0">Add at least one group with an option above to preview.</div>'
+    : sellable.map(function(g,gi){
+        var picked=MODLABPREV.filter(function(m){return m.group===g.name;}).map(function(m){return m.option;});
+        return '<div class="kv" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'
+          + '<div style="display:flex;gap:8px;align-items:baseline"><b>'+esc(g.name)+'</b>'
+          + '<span style="font-size:12px;color:var(--muted)">'+(g.required?'required':'optional')+(g.max>1?' · up to '+g.max:'')+'</span></div>'
+          + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'
+          + g.options.map(function(o,oi){
+              var on=picked.indexOf(o.name)>=0;
+              return '<button type="button" class="btn sm'+(on?' pri':'')+'" onclick="modLabPreviewPick('+gi+','+oi+')">'+(on?'✓ ':'')+esc(o.name)+(o.price?' +'+M0(o.price):'')+'</button>';
+            }).join('')+'</div></div>';
+      }).join('')
+      + (function(){
+          var missing=CBVariant.missing(sellable, MODLABPREV), words=CBVariant.words(MODLABPREV, M0);
+          return '<div style="padding:4px 0 8px;font-size:14px">'+(missing.length
+            ? '<span style="color:var(--amber-i)">● Still needs: '+esc(missing.join(', '))+'</span>'
+            : '<b>Ready to add'+(words?' — ':'')+'</b>'+esc(words))+'</div>';
+        })()
+      + '<button class="btn sm" onclick="modLabPreviewReset()">Reset preview</button>';
+  body.innerHTML = '<div style="padding:0 20px 20px">'
+    + '<button class="btn sm" onclick="modLabBack()">← All products</button>'
+    + '<h3 style="margin:12px 0 2px">'+esc(p.name)+'</h3>'
+    + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+esc(catName(p.cat)||'—')+' · sells at '+M0(p.price)+'</div>'
+    + groups.map(groupHTML).join('')
+    + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
+    + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+previewHTML+'</div>'
+    + '</div>';
+  if(foot){
+    var canApply=S.biz==='mine' && savedLive();
+    foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
+      + '<span>'+(canApply?'Applying writes to your real catalogue.':'Using a sample catalogue — Apply tries it here, not on a real product.')+'</span>'
+      + '<button class="btn pri sm" onclick="modLabApply()">Apply to '+esc(p.name)+'</button></div>';
   }
 }
 
@@ -1022,6 +1199,28 @@ function renderS0(){
        '<button class="btn sm" style="margin-inline-start:12px" onclick="openPriceOverlay()">📋 Open the price list</button>'+
      '</div>'+
      '</div>';
+
+  /**
+   * ── ⭐⭐⭐ THE MODIFIER LAB (Athi: "modifiers are part of product creation… can we include as a facility in
+   * offer lab, so people can try how the modifiers can be created and once if they are happy, we would be
+   * able to save that modifier and apply it to the real product") ───────────────────────────────────────────
+   *
+   * A try-before-you-commit space, unlike app.html's own Modifiers tab (which saves every action at once —
+   * the right rule for authoritative editing, the wrong one for trying something out). Pick a product, build
+   * groups against CBVariant's own authoring verbs, watch the SAME live preview app.html's tab uses, and only
+   * "Apply" actually writes it — through the identical merge:true PATCH setCost() already uses for your own
+   * catalogue, never for the sample books.
+   */
+  var modCount=P.filter(function(p){return Array.isArray(p.modifiers)&&CBVariant.groupsOf({modifiers:p.modifiers}).length;}).length;
+  h+='<div class="card pad"><h2 class="h" style="font-size:17px">Modifiers</h2>'+
+     '<p class="hs">A set of choices before something goes on the bill — a spice level, a size, an extra. '+
+       'Try one here first; nothing changes on the real product until you say Apply.</p>'+
+     '<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">'+
+       (modCount
+         ? '<div class="note n-ok" style="margin:0;flex:1"><span class="ic">✓</span><div>'+modCount+' item'+(modCount>1?'s already carry':' already carries')+' at least one modifier.</div></div>'
+         : '<div class="note n-say" style="margin:0;flex:1"><span class="ic">●</span><div>No product has a modifier yet.</div></div>')+
+       '<button class="btn sm" style="margin-inline-start:12px" onclick="openModLab()">🧩 Open the modifier lab</button>'+
+     '</div></div>';
 
   h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
   return h+'</div>';
@@ -1791,7 +1990,10 @@ function labApplyCatalogue(items, who, fromCache){
     var cats=Array.isArray(d.categories)?d.categories:(d.category?[String(d.category)]:[]);
     /* ⭐ lib/item-cost.js's shape, read plainly — a malformed or absent cost is unknown, never zero */
     var cost=(d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value)))?Number(d.cost.value):null;
-    return [p.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost];
+    /* ⭐ groupsRaw(), not groupsOf() — a group this product's owner has half-built (a name, no option yet)
+       should still turn up here to finish, not vanish the moment the Lab reads the shop. */
+    var mods=(typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw(d):[];
+    return [p.item_id, d.name||'(unnamed)', cats[0]||'other', amountOf(d.price), cost, mods];
   });
   buildBiz('mine', mineP, who);
   applyBiz('mine');
