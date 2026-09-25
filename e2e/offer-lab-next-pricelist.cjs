@@ -83,6 +83,25 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   say('a real sale price shows in its own column', /₹/.test(priceCol.price) || /\d/.test(priceCol.price), priceCol.price);
   say('and the cost is right there, editable, in the same row', priceCol.hasCostInput, 'found');
 
+  console.log('\n── ⚠️⚠️ [OFFR-02] MARKUP IS COMPUTED, NEVER STORED — reads straight off price and cost ' + '─'.repeat(0));
+  const markup = await p.evaluate(() => {
+    setCost(P[0].id, '50');    /* a known cost against a known sale price, so the % is checkable by hand */
+    const wanted = Math.round(((P[0].price - 50) / 50) * 100);
+    const row = Array.from(document.querySelectorAll('.ovltbl tbody tr')).find((r) => r.querySelector('.ovlname').textContent === P[0].name);
+    const cells = row.querySelectorAll('.ovlprice');
+    const shown = cells[cells.length - 1].textContent;
+    setCost(P[0].id, '42');    /* leave the fixture as the next block expects it */
+    return { wanted: wanted, shown: shown, noCostShown: (() => {
+      const withoutCost = P.find((x) => x.cost == null);
+      if (!withoutCost) return '—';
+      const r2 = Array.from(document.querySelectorAll('.ovltbl tbody tr')).find((r) => r.querySelector('.ovlname').textContent === withoutCost.name);
+      const c2 = r2.querySelectorAll('.ovlprice');
+      return c2[c2.length - 1].textContent;
+    })() };
+  });
+  say('a real cost turns into the exact markup a shopkeeper would compute by hand', markup.shown === markup.wanted + '%', markup.wanted + '% expected, "' + markup.shown + '" shown');
+  say('no cost means no markup — a dash, never a division that would lie', markup.noCostShown === '—', '"' + markup.noCostShown + '"');
+
   console.log('\n── ⭐⭐⭐ A ROW NEVER VANISHES WHEN ITS COST IS EDITED (Athi’s own report) ' + '─'.repeat(0));
   const edited = await p.evaluate(() => {
     const before = document.querySelectorAll('.ovltbl tbody tr').length;

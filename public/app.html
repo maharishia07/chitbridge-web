@@ -14588,6 +14588,30 @@ function prodBarcodePrint(code){
   w.document.write('<!doctype html><title>'+esc(code)+'</title><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:system-ui"><div style="font-size:14px;margin-bottom:6px">'+esc(nm)+'</div>'+r.svg+'<script>window.onload=function(){window.print()}<\/script></body>');
   w.document.close();
 }
+/**
+ * ⚠️⚠️⚠️ [OFFR-02] READ-ONLY, ON PURPOSE — Athi: "the price updated should be visible in offer lab, either
+ * in the backend app or in the frontend app... can we bring a markup value in the screen, where it will be
+ * suitable, any standard or switch can be introduced?"
+ *
+ * The standard already exists and predates this line: lib/item-cost.js's own header says cost "MUST NEVER
+ * REACH A CUSTOMER-FACING SURFACE" — exposure.js deletes item_data.cost unconditionally before any
+ * customer-facing projection, "not one of the seller's own switches, because unlike tax or synonyms a
+ * seller never gets to choose to show it." Markup is derived from the same number and carries the same
+ * risk, so it follows the same rule here, unconditionally — this tab is app.html's own product editor,
+ * already staff/owner-only, never a customer-facing screen, so no switch is needed to keep it off one.
+ *
+ * item-cost.js's own comment says "Offer Lab is the only reader this module is written for; nothing else
+ * should import it" — this is the one deliberate exception: a READ only, no edit control, so the field
+ * still has exactly one place it is ever WRITTEN (Offer Lab's setCost(), the same merge:true PATCH), just a
+ * second place it can be SEEN once that write has happened, per Athi's own request above.
+ */
+function prodCostMarkupHTML(d){
+  const c=d&&d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value))?Number(d.cost.value):null;
+  if(c==null) return `<div class="kv" style="padding:0 12px 8px;font-size:var(--fs-2);color:var(--grey)">${tx('Cost — not set')} · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="window.open('offer-lab-next.html','_blank')">${tx('set it in Offer Lab')}</span></div>`;
+  const price=pPrice(d); const mk=price>0&&c>0?Math.round(((price-c)/c)*100):null;
+  return `<div class="kv" style="padding:0 12px 8px;font-size:var(--fs-2);color:var(--grey)">${tx('Cost')} <b style="color:var(--ink)"><bdi>${inr(c)}</bdi></b>`
+    + (mk==null?'':` · ${tx('Markup')} <b style="color:${mk<0?'var(--warn-3)':'var(--ink)'}">${mk}%</b>`)+`</div>`;
+}
 /* Read-outs of the catalogue-wide rules that apply to this product — the face is read once and kept on UI._face. */
 function prodPricingTab(d){
   /* The pane schedules its own fill, so it works whichever paint produced it (paintProdDetail or a full render). */
@@ -14603,6 +14627,7 @@ function prodPricingTab(d){
      point. This tab is THIS product's price and THIS product's tax, nothing else; the storefront has its own panel. */
   return `<div class="sec">${tx('Price')}</div>`
     + `<div class="kv" style="display:flex;gap:8px;padding:8px 12px;font-size:var(--fs-2)"><b><bdi>${inr(pPrice(d))}</bdi></b><span style="color:var(--grey)">/ <bdi>${esc(pUnit(d))}</bdi> · ${tx('list price')}</span></div>`
+    + prodCostMarkupHTML(d)
     + `<div class="sec">${tx('Pricing structure')}</div>`
     + `<div id="prod_pricing" data-testid="prod-pricing" style="padding:8px 12px;font-size:var(--fs-2)">${tx('reading…')}</div>`
     + `<div class="sec">${tx('Tax')}</div>`

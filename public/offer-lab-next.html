@@ -801,19 +801,28 @@ function paintPriceOvCats(){
  * ⭐ SALE PRICE, RIGHT THERE BESIDE COST — Athi: "bring the sale price also on the right hand side… so it
  * will give them an idea of the current product price." The whole reason for this column: nobody typing a
  * cost should have to hold the price in their head or flip back to another screen to sanity-check it.
+ * ⚠️⚠️ [OFFR-02] MARKUP, THE MOMENT COST EXISTS — Athi: "can we bring a markup value in the screen, we have
+ * to see where we can showcase?" This is the one screen where price and cost already sit side by side for
+ * every product at once, so it is also the one screen where a computed markup costs nothing extra to show
+ * and nothing extra to keep in sync — it is read straight off the same two numbers already in the row, not
+ * stored anywhere. "—" until a cost exists (item-cost.js: unknown, never zero) rather than a division that
+ * would otherwise read as an infinite or nonsensical margin.
  */
+function markupPct(price,cost){ if(cost==null||!(cost>0)) return null; return Math.round(((price-cost)/cost)*100); }
 function paintPriceOvBody(){
   var body=document.getElementById('ovlBody'), foot=document.getElementById('ovlFoot');
   if(!body) return;
   var list=priceOvList();
   body.innerHTML = !list.length
     ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
-    : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Sale price</th><th class="ovlpriceh">Cost</th></tr></thead><tbody>'+
+    : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Sale price</th><th class="ovlpriceh">Cost</th><th class="ovlpriceh">Markup</th></tr></thead><tbody>'+
       list.map(function(p){
+        var mk=markupPct(p.price,p.cost);
         return '<tr><td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
           '<td class="ovlprice">'+M0(p.price)+'</td>'+
           '<td><div class="inp"><span>₹</span><input type="number" min="0" placeholder="—" value="'+
-            (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div></td></tr>';
+            (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div></td>'+
+          '<td class="ovlprice" style="color:'+(mk==null?'inherit':(mk<0?'var(--red-i)':'var(--green-d)'))+'">'+(mk==null?'—':mk+'%')+'</td></tr>';
       }).join('')+'</tbody></table>';
   if(foot){
     var withCost=P.filter(function(p){return p.cost!=null;}).length;
