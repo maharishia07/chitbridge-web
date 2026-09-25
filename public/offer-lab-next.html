@@ -849,7 +849,9 @@ function modLabSetGroups(newGroups){
   MODLABPREV=[];   /* an edited group can invalidate an old pick (a removed option, a group gone) — simplest to restart */
   paintModLab();
 }
-function modLabAddGroup(){ modLabSetGroups(CBVariant.addGroup(modLabGroups(), 'New group')); }
+/* ⭐ exampleGroup(), not addGroup() — see app.html's own comment on the same call; the answer to "I don't
+ * know what to provide" is a worked example already on screen, not a blank field. */
+function modLabAddGroup(){ modLabSetGroups(CBVariant.exampleGroup(modLabGroups())); }
 function modLabRemoveGroup(gi){ modLabSetGroups(CBVariant.removeGroup(modLabGroups(), gi)); }
 function modLabMoveGroup(gi,by){ modLabSetGroups(CBVariant.moveGroup(modLabGroups(), gi, gi+by)); }
 function modLabSetGroup(gi,patch){ modLabSetGroups(CBVariant.setGroup(modLabGroups(), gi, patch)); }

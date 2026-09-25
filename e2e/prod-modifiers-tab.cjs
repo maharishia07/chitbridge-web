@@ -209,15 +209,19 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     window.api = async function (n, opts) { return { item: { item_data: opts.body.item_data } }; };
     UI.prods = [{ item_id: 'i7', item_data: { modifiers: [] } }];
     UI.prodSel = 'i7';
-    await prodModAddGroup();            /* real button, no args — same call the "+ Add a group" button makes */
+    await prodModAddGroup();            /* real button, no args — now seeds a WORKED EXAMPLE (2 real options) */
+    const afterGroup = UI.prods[0].item_data.modifiers[0].options.length;
     await prodModAddOption(0);          /* real button, no args — the exact call "+ Add an option" makes */
     const groups = UI.prods[0].item_data.modifiers;
-    return { groupCount: groups.length, optionCount: groups[0] ? groups[0].options.length : -1, optName: groups[0] && groups[0].options[0] && groups[0].options[0].name };
+    const last = groups[0].options[groups[0].options.length - 1];
+    return { groupCount: groups.length, afterGroup: afterGroup, optionCount: groups[0] ? groups[0].options.length : -1, lastOptName: last && last.name };
   });
   say('the group was actually created', addOpt.groupCount === 1, addOpt.groupCount + ' group(s)');
-  say('⚠️⚠️⚠️ and the option was actually added, not stripped in the same call that created it', addOpt.optionCount === 1,
-    addOpt.optionCount + ' option(s)');
-  say('with a real, editable placeholder name, not blank', !!addOpt.optName, '"' + addOpt.optName + '"');
+  say('⭐ and it starts as a worked EXAMPLE, not empty — the answer to "I don’t know what to provide"',
+    addOpt.afterGroup === 2, addOpt.afterGroup + ' example option(s) already on it');
+  say('⚠️⚠️⚠️ "+ Add an option" really adds a THIRD, not stripped in the same call that created it',
+    addOpt.optionCount === 3, addOpt.optionCount + ' option(s)');
+  say('with a real, editable placeholder name, not blank', !!addOpt.lastOptName, '"' + addOpt.lastOptName + '"');
 
   console.log('\n── ⭐⭐⭐ A PRODUCT THAT ALREADY HAS MODIFIERS OPENS SHOWING THEM, READY TO EDIT (Athi: "i assume we' + '─'.repeat(0));
   console.log('   already have some products with modifiers we should be able to open those... and edit as well") ' + '─'.repeat(0));

@@ -14029,7 +14029,10 @@ async function prodModSave(groups){
 }
 /* ⭐ each RETURNS prodModSave()'s own promise — harmless for the button's fire-and-forget onclick, and lets a
  * test (or a future caller) await the exact same action a real click makes, rather than a second, faked one */
-function prodModAddGroup(){ return prodModSave(CBVariant.addGroup(prodModCurrentGroups(), tx('New group'))); }
+/* ⭐ exampleGroup(), not addGroup() — a worked example (a real name, two named options with real prices) is
+ * the button's own answer to "I don't know what to provide" (Athi), and every value in it is exactly as
+ * editable/removable as one typed by hand. */
+function prodModAddGroup(){ return prodModSave(CBVariant.exampleGroup(prodModCurrentGroups())); }
 function prodModRemoveGroup(gi){ return prodModSave(CBVariant.removeGroup(prodModCurrentGroups(), gi)); }
 function prodModMoveGroup(gi, by){ return prodModSave(CBVariant.moveGroup(prodModCurrentGroups(), gi, gi+by)); }
 function prodModSetGroup(gi, patch){ return prodModSave(CBVariant.setGroup(prodModCurrentGroups(), gi, patch)); }
