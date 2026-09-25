@@ -130,6 +130,33 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   say('typing a search term narrows the rows to what actually matches', search.rows === search.matches,
     search.rows + ' shown for "' + search.q + '"');
 
+  console.log('\n── ⚠️⚠️⚠️ [OFFR-01] THE SAMPLE CANNOT BE MISTAKEN FOR A REAL SHOP ANY MORE ' + '─'.repeat(0));
+  const identity = await p.evaluate(() => ({ bizName: document.getElementById('bizName').textContent, biz: S.biz }));
+  say('the sample is no longer named after Athi\'s own real shop', identity.bizName !== 'Mayur Bhavan', '"' + identity.bizName + '"');
+  const banner = await p.evaluate(() => {
+    const n = document.getElementById('labSampleNote');
+    return { hiddenOnSample: n.hidden, text: n.textContent };
+  });
+  say('a persistent banner says so on the very first screen, not only inside one overlay', banner.hiddenOnSample === false, '"' + banner.text + '"');
+  say('and it names the sample and offers the real door out', /Use my catalogue/.test(banner.text) && new RegExp(identity.bizName).test(banner.text), banner.text);
+  const footNote = await p.evaluate(() => {
+    openPriceOverlay(); const foot = document.getElementById('ovlFoot').textContent; closePriceOverlay(); return foot;
+  });
+  say('the price overlay’s own footer repeats it — the screen a cost is actually typed on', /do not reach a real product/.test(footNote), '"' + footNote.replace(/\s+/g, ' ') + '"');
+
+  console.log('\n── and once signed in to a real shop, both go quiet ' + '─'.repeat(0));
+  const asMine = await p.evaluate(() => {
+    localStorage.setItem('cb_sess', JSON.stringify({ token: 'demo-token', entity: 'Athi’s real shop' }));
+    S.biz = 'mine'; BIZ.mine = BIZ.mine || { name: 'Athi’s real shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
+    render();
+    const bannerHidden = document.getElementById('labSampleNote').hidden;   /* read NOW — before the reset below */
+    openPriceOverlay(); const foot = document.getElementById('ovlFoot').textContent; closePriceOverlay();
+    S.biz = 'hotel'; localStorage.removeItem('cb_sess'); render();          /* leave the page as later tests expect it */
+    return { bannerHidden: bannerHidden, footNote: foot };
+  });
+  say('the banner disappears once the real shop is showing', asMine.bannerHidden === true, 'labSampleNote.hidden');
+  say('and the overlay footer says it now saves for real', /save to your real catalogue/.test(asMine.footNote), '"' + asMine.footNote.replace(/\s+/g, ' ') + '"');
+
   console.log('\n── closing the overlay actually closes it ' + '─'.repeat(0));
   const closed = await p.evaluate(() => { closePriceOverlay(); return document.getElementById('priceOverlay').classList.contains('on'); });
   say('close really closes', closed === false, 'priceOverlay.on removed');

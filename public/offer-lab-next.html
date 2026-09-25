@@ -420,6 +420,12 @@ button{cursor:pointer}
     <button class="chip" onclick="exportCsv()" title="Everything on screen right now, as a CSV">Export CSV</button>
     <div class="bizSw" id="bizSw"></div>
   </div>
+  <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
+       own footer already said "Using a sample catalogue — Apply tries it here, not on a real product" —
+       but that sentence only exists inside ONE overlay, three taps in. Cost is typed on the very FIRST
+       screen this page shows, so the same fact has to be said there too, in the one place every visit
+       passes through, or a session that never opens that overlay never sees it at all. -->
+  <div id="labSampleNote" class="note n-warn" hidden style="margin-bottom:14px"></div>
   <div id="labqueue" class="note n-warn" hidden style="margin-bottom:14px"></div>
   <!--
     ⭐⭐⭐ AN ESTIMATE, SAID ONCE, NEVER A PARAGRAPH (Athi: "it is an estimation model and never be the final
@@ -537,7 +543,13 @@ button{cursor:pointer}
        curve across three bills says more than one averaged point would.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-var HOTEL={ name:'Mayur Bhavan', what:'a hotel counter',
+/* ⚠️⚠️⚠️ [OFFR-01] THIS SAMPLE WAS NAMED "Mayur Bhavan" — Athi's own REAL shop's name, by coincidence, not
+ * design. He typed real cost prices believing he was editing his real catalogue while this sample (biz:
+ * 'hotel', not 'mine') was still showing, because nothing on screen could tell the two apart at a glance —
+ * same name, same products. Renamed to something no real shop of his could ever collide with again. See
+ * the "Sample data" banner (render()) and the price-overlay's own "writes to your real catalogue" line
+ * (paintPriceOvBody()) for the other half of this fix — the name alone was not enough. */
+var HOTEL={ name:'Sample Tiffin Corner', what:'a hotel counter',
   cats:[['tiffin','Tiffin'],['curries','Curries'],['drinks','Drinks'],['sweets','Sweets'],
         ['breads','Breads'],['starters','Starters'],['combos','Combos']],
   prods:[
@@ -701,7 +713,14 @@ function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
 }
 function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
 function apply(){ S.applied=true; render(); }
-function setCost(id,v){ var p=byId(id); if(!p) return;
+/**
+ * ⚠️⚠️⚠️ [OFFR-01] AWAITED, NOT FIRED-AND-FORGOTTEN. Athi: "the cost price we update, it has to be stored
+ * as part of the catalogue, otherwise you keep typing? you need to have a save, edit button and all." The
+ * write itself was already correct (merge:true PATCH, [OFFR-01]'s other half fixed WHICH catalogue this
+ * runs against) — what was missing is that nobody watched it finish. A shopkeeper typing a cost and moving
+ * on had no way to tell a real save from a silently dropped one; now every real attempt says which.
+ */
+async function setCost(id,v){ var p=byId(id); if(!p) return;
   var val = (v===''||v==null) ? null : Math.max(0,num(v));
   p.cost = val; render();
   /* ⭐ the overlay is a SEPARATE div render() never touches ([0,1,2,3].forEach only walks #s0..#s3) — its own
@@ -710,7 +729,10 @@ function setCost(id,v){ var p=byId(id); if(!p) return;
   /* ⭐ writes through only for your OWN catalogue — the sample books have nothing real to write to */
   if(S.biz==='mine' && savedLive()){
     var patch = val==null ? {cost:null} : {cost:{value:val, source:'manual', updated_at:new Date().toISOString()}};
-    apiFetch('PATCH', API+'/api/products/'+id, {item_data:patch, merge:true}, 'cost');
+    var r = await apiFetch('PATCH', API+'/api/products/'+id, {item_data:patch, merge:true}, 'cost');
+    if(r.queued) toastSay('Saved here — '+esc(p.name)+'’s cost will reach your catalogue once you’re back online.');
+    else if(!r.ok) toastSay('Could not save '+esc(p.name)+'’s cost: '+((r.body&&r.body.message)||'try again.'));
+    /* a real, successful write says nothing further — the row already shows the value it just saved */
   }
 }
 function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v)); render(); }
@@ -795,8 +817,17 @@ function paintPriceOvBody(){
       }).join('')+'</tbody></table>';
   if(foot){
     var withCost=P.filter(function(p){return p.cost!=null;}).length;
-    foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown · '+
-      withCost+' of '+P.length+' have a cost written down';
+    /* ⚠️⚠️⚠️ [OFFR-01] SAID HERE TOO, NOT ONLY IN THE MODIFIER LAB'S OWN FOOTER — this overlay is where a
+       cost is actually typed, and the modifier lab's "Applying writes to your real catalogue" line never
+       appeared on this screen at all. setCost() decides by the SAME test (S.biz==='mine' && savedLive());
+       reading it here rather than re-deriving it keeps this line and the write it describes from ever
+       disagreeing. */
+    var canApply=S.biz==='mine' && savedLive();
+    foot.innerHTML='<div>'+list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown · '+
+      withCost+' of '+P.length+' have a cost written down</div>'
+      +'<div style="margin-top:4px;color:'+(canApply?'var(--green-d)':'var(--amber-i)')+'">'
+      +(canApply?'Costs typed here save to your real catalogue.':'Using a sample catalogue — costs typed here do not reach a real product.')
+      +'</div>';
   }
 }
 
@@ -2227,11 +2258,23 @@ function render(){
   var B=BIZ[S.biz];
   document.getElementById('bizName').textContent=B.name;
   /* ⚠️⚠️ THE SAMPLE SWITCHER IS GONE (Athi: "there is a Sri button appearing... we have to speak about the
-     shop only"). "Sri Sai Pharma Distributors" sat one tap from the real shop's own name — HOTEL's sample is
-     itself named "Mayur Bhavan" for realism, so the two together read as "which of these is actually mine?"
-     rather than as an obvious demo. HOTEL stays as the one thing the page boots with before a sign-in or an
-     import replaces it; PHARMA (var PHARMA above) and setBiz() are untouched below for a future public/
-     marketing release that genuinely wants more than one example, but nothing in this build reaches them. */
+     shop only"). "Sri Sai Pharma Distributors" sat one tap from the real shop's own name. HOTEL stays as the
+     one thing the page boots with before a sign-in or an import replaces it; PHARMA (var PHARMA above) and
+     setBiz() are untouched below for a future public/marketing release that genuinely wants more than one
+     example, but nothing in this build reaches them.
+     ⚠️⚠️⚠️ [OFFR-01] THAT WAS NOT THE WHOLE FIX. HOTEL's own sample was ALSO named "Mayur Bhavan" — Athi's
+     real shop's name, by coincidence — so a session that opened before sign-in (or where sign-in silently
+     failed) still read "Mayur Bhavan" at the top, identical to the real thing, with no switcher left to
+     reveal a second name to compare it against. Athi typed real cost prices into it believing it was his
+     shop's own catalogue; none of them reached it, because S.biz was still 'hotel', not 'mine'. Renamed
+     the sample (see HOTEL above) AND added a banner that says so on every visit, not only inside one
+     overlay's footer — a fact this important cannot depend on which screen happens to be open. */
+  var sampleNote=document.getElementById('labSampleNote');
+  if(S.biz!=='mine'){
+    sampleNote.hidden=false;
+    sampleNote.innerHTML='Showing sample data ('+esc(B.name)+') — nothing typed here reaches your shop.'
+      +' <button class="chip" onclick="labUseMine()">Use my catalogue</button>';
+  } else sampleNote.hidden=true;
   document.getElementById('bucketChip').innerHTML='Saved offers <b>'+SAVED.length+'</b>';
 
   document.getElementById('strip').innerHTML = S.step===0?'' :
