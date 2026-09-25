@@ -1315,23 +1315,25 @@ function renderS0(){
      '</div></div>';
 
   /**
-   * ── ⭐⭐⭐ [OFFR-04] STAFF ACCESS — THE ONE CHECKBOX, OWNER ONLY (Athi: "employees should not see without
-   * a specific permission. otherwise, leave it with owner only... Make cost visible for offer lab as a
-   * check box and it can be made visible otherwise they can only set the availability flag, nothing else.")
+   * ── ⭐⭐⭐ [OFFR-04] STAFF ACCESS — POINTS AT CO-ASSISTS, DOES NOT DUPLICATE IT (Athi: "employees should
+   * not see without a specific permission. otherwise, leave it with owner only.")
    *
-   * ⚠️ RENDERED ONLY WHEN COST_ACCESS.is_owner — an actor never sees this card at all, matching "leave it
-   * with owner only" literally: not shown-but-disabled, not shown-then-refused, simply not there. The real
-   * gate is server-side (routes/entities.js's PATCH /me/offer-lab-costs checks identity_type==='entity'
-   * itself) — this is the UI half of an already-enforced rule, not the rule itself.
+   * ⚠️⚠️⚠️ THIS USED TO BE ITS OWN CHECKBOX HERE, WRITING ITS OWN ENTITY-WIDE SWITCH. That duplicated a
+   * mechanism that already existed: lib/cost.js (b145) gates cost/margin with a per-actor
+   * identities.can_see_costs column, granted one co-assist at a time on the EXISTING Co-assists screen
+   * (app.html), which already has its own "Sees costs" toggle, its own audit trail, and its own owner-only
+   * check. A second on/off switch here would not have agreed with that one — two mechanisms answering the
+   * same question is the exact defect this rewrite closes. This card only explains and links out; nothing
+   * is ever set from Offer Lab itself.
+   * ⚠️ RENDERED ONLY WHEN COST_ACCESS.is_owner — an actor never sees this card at all.
    */
   if(S.biz==='mine' && savedLive() && COST_ACCESS.is_owner){
     h+='<div class="card pad"><h2 class="h" style="font-size:17px">Staff access</h2>'+
-       '<p class="hs">Cost and margin are yours alone by default. Turn this on to let your team see them too '+
-         'in Offer Lab — off, they can still mark an item available or unavailable, nothing else.</p>'+
-       '<label style="display:flex;gap:10px;align-items:center;margin-top:10px;cursor:pointer">'+
-         '<input type="checkbox" '+(COST_ACCESS.visible_to_staff?'checked':'')+' onchange="setCostVisibility(this.checked)">'+
-         '<span>Staff can see cost and margin here</span>'+
-       '</label></div>';
+       '<p class="hs">Cost and margin are yours alone by default. To let a co-assist see them here too — '+
+         'they can otherwise still mark an item available or unavailable, nothing else — grant "Sees costs" '+
+         'on their own row.</p>'+
+       '<button class="btn sm" style="margin-top:8px" onclick="window.open(\'app.html\',\'_blank\')">'+
+         '👥 Open Co-assists</button></div>';
   }
 
   h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
@@ -2060,29 +2062,23 @@ function defFetch(method,path,body){ return apiFetch(method, API+'/api/definitio
  * itself for a cost-blind caller, and refuses a PATCH touching anything but status) — a cost-blind
  * caller's own products never carry a cost value to begin with, whatever this object says. What THIS is
  * for: disabling the cost input proactively (so a blocked save is never the first anyone hears of it) and
- * showing the owner-only checkbox to nobody who cannot use it.
+ * showing the "Open Co-assists" card to nobody who cannot grant anything there.
+ * ⚠️⚠️⚠️ NO setCostVisibility() HERE ANY MORE. A version of this briefly PATCHed its own entity-wide
+ * switch; granting now happens on the Co-assists screen, per co-assist, the same way editing anything else
+ * about a co-assist already works — reading GET /api/entities/me/can-see-costs is the only call this file
+ * makes for this feature.
  * ⚠️ DEFAULTS OPTIMISTIC (can_see_costs:true) until the fetch resolves — safe because the server-side
  * strip does not depend on this flag at all; the only risk of a stale-true default is a cost input that
  * looks editable for the first moment of a page load, which a rejected save (already handled, [OFFR-01])
  * would catch immediately if it mattered.
  */
-var COST_ACCESS = { can_see_costs:true, is_owner:false, visible_to_staff:false, loaded:false };
+var COST_ACCESS = { can_see_costs:true, is_owner:false, loaded:false };
 async function loadCostAccess(){
   try {
-    var r=await fetch(API+'/api/entities/me/offer-lab-costs', {headers:{Authorization:'Bearer '+savedToken()}});
-    if(r.ok){ var j=await r.json(); COST_ACCESS={ can_see_costs:!!j.can_see_costs, is_owner:!!j.is_owner, visible_to_staff:!!j.visible_to_staff, loaded:true }; }
+    var r=await fetch(API+'/api/entities/me/can-see-costs', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(r.ok){ var j=await r.json(); COST_ACCESS={ can_see_costs:!!j.can_see_costs, is_owner:!!j.is_owner, loaded:true }; }
   } catch(_){ /* stays optimistic; the server-side strip is what actually protects the data */ }
   if(priceOvOpen()) paintPriceOvBody();
-  render();
-}
-/** the owner's own checkbox — the ONE place this can be turned on, per [OFFR-04]'s own server-side check */
-async function setCostVisibility(on){
-  try {
-    var r=await apiFetch('PATCH', API+'/api/entities/me/offer-lab-costs', {visible_to_staff:!!on});
-    if(!r.ok){ toastSay('Could not save: '+((r.body&&r.body.message)||'try again.')); return; }
-    COST_ACCESS.visible_to_staff=!!on;
-    toastSay(on?'Staff can now see cost and margin in Offer Lab.':'Cost and margin are hidden from staff again.');
-  } catch(e){ toastSay('Could not save — try again.'); }
   render();
 }
 async function labUseMine(quiet){
