@@ -1691,6 +1691,10 @@ body.lab-only #cbtestpanel{
      draws it. ⚠️ Loaded with the codes because the register panel is useless without both halves. -->
 <script src="/app/assets.js"></script>
 <script src="/app/cart.js"></script>   <!-- CAPABILITY: CART — one file: state · money · rows · picker (2026-09-05) -->
+<!-- ⭐ CBVariant — ONE PRODUCT, MANY COMBINATIONS ([TILL-33]/[TILL-76]). The SAME file the counter loads
+     (/engine/variant.js) — one module owns what a modifier IS, read (the till's chooser) and written (the
+     product page's Modifiers tab), so the two can never disagree about the shape. Pure, no DOM, no fetch. -->
+<script src="/app/variant.js"></script>
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
      CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
 <!-- ⭐ CBPick — open the catalogue OVER any screen and get the selection back. The four screens that
@@ -13638,7 +13642,7 @@ async function saveAvail(id){
  */
 /* ⭐ ORDER = what a trader asks first (designer, 2026-09-05): commercial (what will I pay / sell) → identity (what is
    this) → logistics (can I fulfil / scan it). The index and the sheet both follow it; no group headers on screen. */
-const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['lifecycle','Lifecycle'],['bom','Consists of'],['barcode','Identifiers'],['history','History'],['storefront','Storefront'],['exposure','Shown to customers']];
+const PROD_TABS=[['pricing','Pricing & tax'],['invoice','Invoice'],['offers','Offers'],['ordermodel','Order model'],['product','Details'],['categories','Categories'],['variants','Variants'],['modifiers','Modifiers'],['synonyms','Synonyms'],['media','Media'],['stock','Stock'],['lifecycle','Lifecycle'],['bom','Consists of'],['barcode','Identifiers'],['history','History'],['storefront','Storefront'],['exposure','Shown to customers']];
 function prodTab(){ return UI.prodTab||'product'; }
 /**
  * ⭐⭐ ONE PAGE OR TABS — Athi, 2026-09-05: "redesign the view / product page — how do we split each section to
@@ -13710,6 +13714,7 @@ function prodOutcomeHTML(k, d){
       }
       case 'stock': { const st=d.status||'available'; const q=(d.qty!=null&&d.qty!=='')?d.qty:(d.stock!=null?d.stock:null); return `<b>${esc(tx(st==='available'?'available':st))}</b>${q!=null?' · '+grey(esc(tx('qty')+' '+q)):''}`; }
       case 'variants': return d.variant?`<b>${esc(d.variant)}</b>`:none(tx('No variants'));
+      case 'modifiers': { const s=(typeof CBVariant!=='undefined'&&CBVariant.summary)?CBVariant.summary(d.modifiers):'No modifiers yet'; return d.modifiers&&d.modifiers.length?`<b>${esc(tx(s))}</b>`:none(tx(s)); }
       case 'ordermodel': { const c=prodOrderDecl(d); if(c.unresolved) return `<span style="color:var(--warn-3)">● ${esc(tx('model not readable — pick in Edit'))}</span>`; return `<b>${esc(c.decl&&c.decl.name?c.decl.name:prodOrderDescribe(c.decl))}</b>${c.decl&&c.decl.name?' '+grey(esc(prodOrderDescribe(c.decl))):''}${c.source==='adopted'?' '+grey('↳ '+esc(tx('from Setup'))):c.source==='catalogue'?' '+grey('↳ '+esc(tx('catalogue default'))):''}`; }
       case 'synonyms': { const l=(Array.isArray(d.synonyms)?d.synonyms:[]).filter(Boolean); return l.length?l.map(x=>`<span class="pill">${esc(String(x))}</span>`).join(' '):none(tx('No synonyms — add in Edit')); }
       case 'bom': { const rows=(Array.isArray(d.bom)?d.bom:[]).filter(b=>b&&b.item); return rows.length?`<b>${esc(txf('{n} component(s)', { n:String(rows.length) }))}</b> ${grey(esc(rows.map(b=>b.item+' ×'+(Number(b.qty)||1)).join(', ')))}`:none(tx('Not a kit')); }
@@ -13780,6 +13785,7 @@ function prodSectionHTML(k, d, id, editing){
     case 'offers': return editing ? ctOfferField(d) : prodOffersViewHTML(d);
     case 'stock': return prodAvailBlock(d, id);
     case 'variants': return prodVariantsTab(d);
+    case 'modifiers': return prodModifiersTab(d, editing);
     case 'pricing': return prodPricingTab(d);
     case 'ordermodel': return prodOrderModelTab(d, editing);
     case 'synonyms': return prodSynonymsTab(d, editing);
@@ -13860,6 +13866,98 @@ function prodVariantsTab(d){
     + (d.variant ? `<div class="kv" style="padding:8px 12px;font-size:var(--fs-2)">${tx('This line is the')} <b>${esc(d.variant)}</b> ${tx('variant.')}</div>` : '')
     + `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey);line-height:1.5">${tx('One product, several sizes: each size keeps its own code and price, and the catalogue declares which lines belong together and by what (size, colour, pack). That grouping lives in')} <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="goCatsetSec('variants')">${tx('Catalogue setup › Variants')}</span>.</div>`;
 }
+/**
+ * ── ⭐⭐⭐ MODIFIERS — A SET OF CHOICES BEFORE IT GOES ON THE BILL ([TILL-33]: "no onion", extra cheese,
+ * spice level, half/full) ──────────────────────────────────────────────────────────────────────────────────
+ *
+ * This tab is a thin PAINT over CBVariant's authoring verbs (variant.js) — every button below calls one of
+ * them, then saves the result and repaints. Nothing about the shape, the validation or the stored format
+ * lives in this file; it all lives in the one module that also reads modifiers at selling time (till.html's
+ * chooser), so authoring and selling can never disagree about what a "modifier" is.
+ * ⚠️ A CAPABILITY, NOT A SCREEN. CBVariant's own verbs take a groups array and a small patch and hand back a
+ * new groups array — nothing here about a `<dialog>`, a tab, or this page. A future host (a bulk importer, a
+ * till-side quick-edit) reuses the exact same calls and paints them however fits that screen.
+ * ⚠️ SAVED AS YOU GO, LIKE MEDIA — never batched into the page's own Save button. A nested list of groups and
+ * options is exactly the shape a lost edit costs the most on, and each action here is already a complete,
+ * valid, mergeable unit (the same reasoning [EXP-01] gave exposure: merge:true against the freshest stored
+ * record, never the whole item_data this pane happened to load minutes ago).
+ */
+/**
+ * ⚠️⚠️ groupsRaw(), NEVER groupsOf(), FOR AUTHORING. groupsOf() is the STRICT, sale-ready reader (till.html's
+ * chooser must never offer a group somebody has not finished naming) — using it here too would make an
+ * in-progress group vanish from its own edit screen the instant a sibling row saves, which is worse than
+ * useless for a form. groupsOf() still decides what a customer can ever choose; this only decides what an
+ * editor can currently see.
+ */
+function prodModGroups(d){ return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw(d):(Array.isArray(d.modifiers)?d.modifiers:[]); }
+function prodModCurrentGroups(){
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
+  return p ? prodModGroups(pData(p)) : [];
+}
+function prodModifiersTab(d, edit){
+  const groups = prodModGroups(d);
+  if(!edit){
+    return `<div class="sec">${tx('Modifiers')}</div>`
+      + (groups.length ? groups.map((g,gi)=>`<div class="kv" data-testid="prod-mod-${gi}" style="padding:8px 12px;border-top:1px dashed var(--line)">`
+          + `<b>${esc(g.name)}</b> <span style="font-size:var(--fs-1);color:var(--grey)">${esc(g.required?tx('required'):tx('optional'))}${g.max>1?' · '+esc(txf('up to {n}', { n:String(g.max) })):''}</span>`
+          + `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${g.options.map(o=>`<span class="pill">${esc(o.name)}${o.price?' +'+esc(String(o.price)):''}</span>`).join('')}</div></div>`).join('')
+        : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No modifiers yet — add spice level, size or extras in Edit › Modifiers.')}</div>`);
+  }
+  const err = (typeof CBVariant!=='undefined'&&CBVariant.validate)?CBVariant.validate(groups).errors:[];
+  const errFor = (gi)=>err.filter(e=>e.at===gi).map(e=>e.message);
+  const groupHTML = (g, gi) => {
+    const gerr = errFor(gi);
+    return `<div class="kv" data-testid="prod-mod-${gi}" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">`
+      + `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">`
+      + `<input class="inp" data-testid="prod-mod-name-${gi}" value="${esc(g.name)}" placeholder="${esc(tx('Group name — Spice level, Size…'))}" style="flex:1;min-width:160px" onchange="prodModSetGroup(${gi},{name:this.value})">`
+      + `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" data-testid="prod-mod-required-${gi}" ${g.required?'checked':''} onchange="prodModSetGroup(${gi},{required:this.checked})">${tx('Required')}</label>`
+      + `<label style="display:flex;gap:4px;align-items:center;font-size:var(--fs-2)">${tx('Pick up to')} <input type="number" min="1" data-testid="prod-mod-max-${gi}" value="${g.max}" style="width:52px" onchange="prodModSetGroup(${gi},{max:this.value})"></label>`
+      + `<button class="composebtn" data-testid="prod-mod-up-${gi}" ${gi===0?'disabled':''} onclick="prodModMoveGroup(${gi},-1)" title="${esc(tx('Move up'))}">↑</button>`
+      + `<button class="composebtn" data-testid="prod-mod-down-${gi}" ${gi===groups.length-1?'disabled':''} onclick="prodModMoveGroup(${gi},1)" title="${esc(tx('Move down'))}">↓</button>`
+      + `<button class="composebtn" data-testid="prod-mod-remove-${gi}" onclick="prodModRemoveGroup(${gi})">✕ ${tx('Remove group')}</button>`
+      + `</div>`
+      + (gerr.length ? `<div style="color:var(--warn-3);font-size:var(--fs-1);margin-top:4px">${gerr.map(m=>esc(tx(m))).join(' · ')}</div>` : '')
+      + `<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px">`
+      + g.options.map((o,oi)=>`<div style="display:flex;gap:6px;align-items:center" data-testid="prod-mod-opt-${gi}-${oi}">`
+          + `<input class="inp" data-testid="prod-mod-opt-name-${gi}-${oi}" value="${esc(o.name)}" placeholder="${esc(tx('Option — Naan, Hot, Extra cheese…'))}" style="flex:1" onchange="prodModSetOption(${gi},${oi},{name:this.value})">`
+          + `<input class="inp" type="number" step="0.01" data-testid="prod-mod-opt-price-${gi}-${oi}" value="${o.price}" placeholder="0" style="width:90px" onchange="prodModSetOption(${gi},${oi},{price:this.value})">`
+          + `<button class="composebtn" data-testid="prod-mod-opt-remove-${gi}-${oi}" onclick="prodModRemoveOption(${gi},${oi})">✕</button></div>`).join('')
+      + `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>`
+      + `</div></div>`;
+  };
+  return `<div class="sec">${tx('Modifiers')}</div>`
+    + `<div style="padding:0 12px 8px;font-size:var(--fs-1);color:var(--grey)">${tx('Let a buyer choose from a set before it goes on the bill — a spice level, a size, an extra. Saved as you go, one change at a time.')}</div>`
+    + `<div style="padding:0 12px">${groups.map(groupHTML).join('')}</div>`
+    + `<div style="padding:0 12px 8px"><button class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>`;
+}
+/**
+ * ⚠️⚠️ NORMALIZE, NEVER VALIDATE, WHAT ACTUALLY SAVES. validate().groups silently DROPS a nameless group —
+ * exactly right for "does this count as a real modifier a customer could choose", exactly wrong for "does
+ * this survive to the next paint". A group mid-type (named, not yet given an option, or the reverse) must
+ * stay on screen so its own name field is still there to type into — groupsOf() already keeps an unfinished
+ * group off the sell screen on its own, so nothing incomplete can ever reach a customer either way. validate()
+ * still runs, in the render, purely to show the inline warning beside the row it names.
+ */
+async function prodModSave(groups){
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel); if(!p) return;
+  /* ⚠️⚠️⚠️ NEVER A SILENT FALLBACK TO groups UNCLEANED — that is exactly the shape-guard this whole capability
+     exists to enforce, and a save that skips it because a script failed to load is worse than a save that
+     refuses. CBVariant is a hard <script src> dependency of this page now, not an optional one. */
+  if(typeof CBVariant==='undefined'||typeof CBVariant.normalize!=='function'){ toast(tx('Could not save — the modifiers engine did not load. Reload the page.'), true); return; }
+  const clean = CBVariant.normalize(groups);
+  try{
+    const r = await api('prodEdit', { params:{ id: prodId(p) }, body:{ item_data:{ modifiers: clean }, merge:true } });
+    p.item_data = (r && r.item && r.item.item_data) || Object.assign({}, p.item_data||{}, { modifiers: clean });
+    prodRepaintSection('modifiers');
+  }catch(e){ toast((e&&e.message)||tx('Could not save'), true); }
+}
+function prodModAddGroup(){ prodModSave(CBVariant.addGroup(prodModCurrentGroups(), tx('New group'))); }
+function prodModRemoveGroup(gi){ prodModSave(CBVariant.removeGroup(prodModCurrentGroups(), gi)); }
+function prodModMoveGroup(gi, by){ prodModSave(CBVariant.moveGroup(prodModCurrentGroups(), gi, gi+by)); }
+function prodModSetGroup(gi, patch){ prodModSave(CBVariant.setGroup(prodModCurrentGroups(), gi, patch)); }
+function prodModAddOption(gi){ prodModSave(CBVariant.addOption(prodModCurrentGroups(), gi, '', 0)); }
+function prodModRemoveOption(gi, oi){ prodModSave(CBVariant.removeOption(prodModCurrentGroups(), gi, oi)); }
+function prodModSetOption(gi, oi, patch){ prodModSave(CBVariant.setOption(prodModCurrentGroups(), gi, oi, patch)); }
 /**
  * ⭐ CONSISTS OF — the product's bill of materials, the `bom:[{item, qty}]` facet the Network tool authors on a node
  * (catalogue-model.js). A READ-OUT here, on purpose: composition is designed where the flow is designed, and the
