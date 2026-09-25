@@ -13890,6 +13890,22 @@ function prodVariantsTab(d){
  * editor can currently see.
  */
 function prodModGroups(d){ return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw(d):(Array.isArray(d.modifiers)?d.modifiers:[]); }
+/**
+ * ⭐⭐⭐ THE PREVIEW'S OWN PICKS — never saved, never sent anywhere (Athi: "when we create modifiers, we
+ * should be able to see the behaviour where we are authoring"). Reset the moment a DIFFERENT product's
+ * Modifiers tab opens, so a pick made on one product's spice level cannot bleed into another's.
+ */
+var MODPREV_ID=null, MODPREV=[];
+/** ⭐ only what a customer could actually be offered — the same filter groupsOf() always applies at the till */
+function prodModPreviewGroups(){
+  return (typeof CBVariant!=='undefined'&&CBVariant.groupsOf)?CBVariant.groupsOf({modifiers:prodModCurrentGroups()}):[];
+}
+function prodModPreviewPick(gi,oi){
+  const groups=prodModPreviewGroups(), g=groups[gi]; if(!g||!g.options[oi]) return;
+  MODPREV=CBVariant.toggle(MODPREV, g, g.options[oi].name);
+  prodRepaintSection('modifiers');
+}
+function prodModPreviewReset(){ MODPREV=[]; prodRepaintSection('modifiers'); }
 function prodModCurrentGroups(){
   const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
   return p ? prodModGroups(pData(p)) : [];
@@ -13903,6 +13919,9 @@ function prodModifiersTab(d, edit){
           + `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:6px">${g.options.map(o=>`<span class="pill">${esc(o.name)}${o.price?' +'+esc(String(o.price)):''}</span>`).join('')}</div></div>`).join('')
         : `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('No modifiers yet — add spice level, size or extras in Edit › Modifiers.')}</div>`);
   }
+  /* ⭐ a different product's Modifiers tab opening must not carry over what was tapped on the last one */
+  const pid=UI.prodSel||d.item_id||d.id||'';
+  if(MODPREV_ID!==pid){ MODPREV_ID=pid; MODPREV=[]; }
   const err = (typeof CBVariant!=='undefined'&&CBVariant.validate)?CBVariant.validate(groups).errors:[];
   const errFor = (gi)=>err.filter(e=>e.at===gi).map(e=>e.message);
   const groupHTML = (g, gi) => {
@@ -13925,10 +13944,59 @@ function prodModifiersTab(d, edit){
       + `<button class="composebtn" data-testid="prod-mod-opt-add-${gi}" onclick="prodModAddOption(${gi})" style="align-self:flex-start">+ ${tx('Add an option')}</button>`
       + `</div></div>`;
   };
+  /**
+   * ── ⭐⭐⭐ THE PREVIEW — SEE THE BEHAVIOUR WHILE AUTHORING (Athi: "when we create modifiers, we should be
+   * able to see the behaviour where we are authoring") ───────────────────────────────────────────────────────
+   * Built from CBVariant.groupsOf() — the SAME strict filter the till applies — so what appears here is
+   * exactly what a customer would be offered, no more, no less; an unfinished group above simply is not in
+   * it yet, same as at the counter. Tapping an option calls CBVariant.toggle(), the identical rule a real
+   * chooser follows (max 1 replaces, max > 1 fills up then drops the oldest) — this IS the behaviour, not a
+   * mockup of it. Never saves anything; MODPREV lives only in this tab, reset per product.
+   */
+  const sellable = prodModPreviewGroups();
+  /* ⚠️ A PICK CAN OUTLIVE THE OPTION IT WAS MADE ON — rename "Hot" to "Mild" right after tapping it, and the
+     stale pick would otherwise still claim "Hot" was chosen (CBVariant.byGroup() only drops a choice whose
+     GROUP is gone, not one whose option was renamed within a group that still exists — not the right tool
+     for this half of the cleanup, so it is done directly here instead). */
+  MODPREV = MODPREV.filter(m=>{
+    const g = sellable.find(x=>x.name===m.group);
+    return g && g.options.some(o=>o.name===m.option);
+  });
+  const previewHTML = `<div class="sec" style="margin-top:18px">${tx('Preview — what a customer sees')}</div>`
+    + (!sellable.length
+      ? `<div style="padding:8px 12px;font-size:var(--fs-2);color:var(--grey)">${tx('Add at least one group with an option above to see how it behaves.')}</div>`
+      : `<div style="padding:0 12px 6px;font-size:var(--fs-1);color:var(--grey)">${tx('Tap through it exactly as a customer would — nothing here is saved.')}</div>`
+        + `<div style="padding:0 12px">`
+        + sellable.map((g,gi)=>{
+            const picked=MODPREV.filter(m=>m.group===g.name).map(m=>m.option);
+            return `<div class="kv" data-testid="prod-mod-preview-group-${gi}" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">`
+              + `<div style="display:flex;gap:8px;align-items:baseline"><b>${esc(g.name)}</b>`
+              + `<span style="font-size:var(--fs-1);color:var(--grey)">${esc(g.required?tx('required'):tx('optional'))}${g.max>1?' · '+esc(txf('up to {n}', { n:String(g.max) })):''}</span></div>`
+              + `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
+              + g.options.map((o,oi)=>{
+                  const on=picked.indexOf(o.name)>=0;
+                  /* ⚠️ .ghost for OFF, plain .composebtn (its own default blue fill) for ON — .pri is not a
+                     real variant of this class (the file's own comment above warns exactly against inventing
+                     one ad hoc: a colour override with no matching text-colour pairing renders invisibly). */
+                  return `<button type="button" class="composebtn${on?'':' ghost'}" data-testid="prod-mod-preview-${gi}-${oi}" onclick="prodModPreviewPick(${gi},${oi})">`
+                    + `${on?'✓ ':''}${esc(o.name)}${o.price?' +'+esc(fmtMoney(o.price, typeof myCur==='function'?myCur():'INR')):''}</button>`;
+                }).join('')
+              + `</div></div>`;
+          }).join('')
+        + `<div style="padding:2px 0 8px;font-size:var(--fs-2)">${(()=>{
+            const missing=CBVariant.missing(sellable, MODPREV);
+            const words=CBVariant.words(MODPREV, n=>fmtMoney(n, typeof myCur==='function'?myCur():'INR'));
+            return missing.length
+              ? `<span style="color:var(--warn-3)">● ${esc(txf('Still needs: {g}', { g: missing.join(', ') }))}</span>`
+              : `<b>${esc(tx('Ready to add')+(words?' — ':''))}</b>${words?esc(words):''}`;
+          })()}</div>`
+        + `<button class="composebtn" data-testid="prod-mod-preview-reset" onclick="prodModPreviewReset()">${tx('Reset preview')}</button>`
+        + `</div>`);
   return `<div class="sec">${tx('Modifiers')}</div>`
     + `<div style="padding:0 12px 8px;font-size:var(--fs-1);color:var(--grey)">${tx('Let a buyer choose from a set before it goes on the bill — a spice level, a size, an extra. Saved as you go, one change at a time.')}</div>`
     + `<div style="padding:0 12px">${groups.map(groupHTML).join('')}</div>`
-    + `<div style="padding:0 12px 8px"><button class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>`;
+    + `<div style="padding:0 12px 8px"><button class="composebtn" data-testid="prod-mod-add" onclick="prodModAddGroup()">+ ${tx('Add a group')}</button></div>`
+    + previewHTML;
 }
 /**
  * ⚠️⚠️ NORMALIZE, NEVER VALIDATE, WHAT ACTUALLY SAVES. validate().groups silently DROPS a nameless group —

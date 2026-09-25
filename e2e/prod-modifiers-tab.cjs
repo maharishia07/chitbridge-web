@@ -144,9 +144,69 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     midType.soldAt + ' groups would show at the counter');
   say('and the edit view names what is still missing', /has no options yet/.test(midType.warned), 'the row says so');
 
+  console.log('\n── ⭐⭐⭐ THE PREVIEW — SEE THE BEHAVIOUR WHILE AUTHORING (Athi’s own words) ' + '─'.repeat(0));
+  const preview = await p.evaluate(() => {
+    UI.prods = [{ item_id: 'i5', item_data: { modifiers: [
+      { name: 'Spice', required: true, max: 1, options: [{ name: 'Mild', price: 0 }, { name: 'Hot', price: 0 }] },
+      { name: 'Extra', required: false, max: 2, options: [{ name: 'Paneer', price: 20 }, { name: 'Cheese', price: 15 }] },
+    ] } }];
+    UI.prodSel = 'i5'; MODPREV_ID = null; MODPREV = [];   /* force a fresh preview for this product */
+    let html = prodModifiersTab(UI.prods[0].item_data, true);
+    const beforePick = { needsSpice: /Still needs: Spice/.test(html), hasButtons: /prod-mod-preview-0-0/.test(html) };
+    prodModPreviewPick(0, 1);   /* tap "Hot" in the required Spice group */
+    html = prodModifiersTab(UI.prods[0].item_data, true);
+    const afterPick = { ready: /Ready to add/.test(html), showsHot: /✓ Hot/.test(html) };
+    return { beforePick: beforePick, afterPick: afterPick };
+  });
+  say('an unfinished required pick is named, before anything is tapped', preview.beforePick.needsSpice, 'shown');
+  say('real, clickable option buttons render for each group', preview.beforePick.hasButtons, 'found');
+  say('picking the required option clears the warning', preview.afterPick.ready, '"Ready to add" shown');
+  say('and the picked option shows as picked', preview.afterPick.showsHot, '✓ Hot rendered');
+
+  const noSave = await p.evaluate(() => {
+    let apiCalled = false;
+    window.api = async function () { apiCalled = true; };
+    prodModPreviewPick(1, 0);   /* Extra → Paneer */
+    prodModPreviewPick(1, 1);   /* Extra → Cheese, max 2, both fit */
+    return { apiCalled: apiCalled, item_data: UI.prods[0].item_data };
+  });
+  say('the preview never calls the save API — it is a preview, not an edit', noSave.apiCalled === false, 'api() never touched');
+  say('and the product’s real, saved modifiers are untouched by tapping the preview', noSave.item_data.modifiers.length === 2,
+    JSON.stringify(noSave.item_data.modifiers.map((g) => g.name)));
+
+  const resetAndSwitch = await p.evaluate(() => {
+    prodModPreviewReset();
+    const afterReset = /Still needs: Spice/.test(prodModifiersTab(UI.prods[0].item_data, true));
+    /* a DIFFERENT product must never inherit the last one's taps — opening ITS tab is what resets MODPREV,
+       exactly as switching products in the real UI always renders the tab before any click can reach it */
+    UI.prods.push({ item_id: 'i6', item_data: { modifiers: [{ name: 'Size', required: true, max: 1, options: [{ name: 'Small', price: 0 }] }] } });
+    UI.prodSel = 'i6';
+    prodModifiersTab(UI.prods[1].item_data, true);   /* opening i6's tab — this is what resets MODPREV for it */
+    prodModPreviewPick(0, 0);
+    UI.prodSel = 'i5';
+    const stillFresh = /Still needs: Spice/.test(prodModifiersTab(UI.prods[0].item_data, true));
+    return { afterReset: afterReset, stillFresh: stillFresh };
+  });
+  say('"Reset preview" clears every pick back to the start', resetAndSwitch.afterReset, 'Spice is needed again');
+  say('switching products does not carry a pick over to a product it was never made on', resetAndSwitch.stillFresh,
+    'i5 was not touched by a pick made while i6 was open');
+
+  console.log('\n── ⚠️⚠️ A STALE PICK DOES NOT OUTLIVE THE OPTION IT WAS MADE ON ' + '─'.repeat(30));
+  const stalePick = await p.evaluate(() => {
+    UI.prodSel = 'i5';
+    prodModPreviewPick(0, 1);   /* re-pick "Hot" in Spice, on a clean product */
+    /* the option is renamed underneath the pick (a direct edit here, not a round trip through the async
+       save, which is already covered elsewhere — this isolates the PREVIEW's own cleanup, the thing built) */
+    UI.prods[0].item_data.modifiers[0].options[1].name = 'Mild renamed';
+    const html = prodModifiersTab(UI.prods[0].item_data, true);
+    return { stillClaimsHot: /✓ Hot/.test(html), stillNeedsSpice: /Still needs: Spice/.test(html) };
+  });
+  say('the renamed option is no longer shown as picked', !stalePick.stillClaimsHot, 'no stale ✓ Hot');
+  say('and the required group is correctly reported unanswered again', stalePick.stillNeedsSpice, 'Spice is needed');
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();
   console.log(bad || errs.length ? '\n' + (bad + errs.length) + ' failed'
-    : '\nthe Modifiers tab is a thin paint over CBVariant, and saves through the same safe merge-patch shape');
+    : '\nthe Modifiers tab is a thin paint over CBVariant, saves through the same safe merge-patch shape, and previews the real behaviour live');
   process.exit(bad || errs.length ? 1 : 0);
 })();
