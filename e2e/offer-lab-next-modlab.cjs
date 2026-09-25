@@ -47,23 +47,32 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   }));
   say('the picker screen says plainly that this is where a combo starts', /Create a new combo/.test(combo.heading), '"' + combo.heading + '"');
 
-  console.log('\n── ⭐⭐⭐ [OFFR-06] "the example shown is very pathetic... something similar to the combo offer ' + '─'.repeat(0));
-  console.log('   in a popup window with possibly combination, and also with save as option" — Athi, live ' + '─'.repeat(0));
+  console.log('\n── ⭐⭐⭐ [OFFR-07] "the modifier example has only extra cheese only... we need the entire stuff, ' + '─'.repeat(0));
+  console.log('   provide the combo name, add the price, then what each section is" — Athi, pointing at the ' + '─'.repeat(0));
+  console.log('   real till combo chooser beside the old one-group example ' + '─'.repeat(0));
   const builtFresh = await p.evaluate(() => {
     modLabBuildFresh();
     const html = document.getElementById('modLabBody').innerHTML;
     return {
       building: MODLAB.building, notTiedToProduct: MODLAB.pid === null,
-      hasRealGroup: /value="Extra toppings"/.test(html), hasRealOptions: /value="Extra cheese"/.test(html) && /value="Extra chutney"/.test(html),
+      hasName: !!MODLAB.name, hasPrice: Number(MODLAB.price) > 0,
+      nameFieldShown: /value="Tiffin Combo"/.test(html), priceFieldShown: new RegExp('value="' + MODLAB.price + '"').test(html),
+      groupCount: modLabGroups().length,
+      hasRealGroup: /value="Choose the main"/.test(html), hasRealOptions: /value="Masala Dosa"/.test(html) && /value="Idli \(2 pc\)"/.test(html),
       editable: /onchange="modLabSetGroup/.test(html), hasPreview: /Preview — what a customer sees/.test(html),
       hasSaveAsButton: /modLabSaveAsOpen/.test(document.getElementById('modLabFoot').innerHTML),
+      hasCreateNewButton: /modLabCreateNew/.test(document.getElementById('modLabFoot').innerHTML),
     };
   });
   say('"Build a combo" opens a real builder, not tied to any product yet', builtFresh.building && builtFresh.notTiedToProduct, 'confirmed');
-  say('seeded with a REAL, EDITABLE starting group — inputs, not static text', builtFresh.hasRealGroup && builtFresh.editable, 'found');
+  say('it comes with a real NAME already, editable in a real field', builtFresh.hasName && builtFresh.nameFieldShown, 'found');
+  say('and a real PRICE already, editable in a real field', builtFresh.hasPrice && builtFresh.priceFieldShown, 'found');
+  say('seeded with THE ENTIRE STUFF — several real sections, not one lone group', builtFresh.groupCount >= 3, builtFresh.groupCount + ' group(s)');
+  say('each section is a REAL, EDITABLE group — inputs, not static text', builtFresh.hasRealGroup && builtFresh.editable, 'found');
   say('with real options already on it', builtFresh.hasRealOptions, 'found');
   say('and the SAME live "what a customer sees" preview the per-product screen has', builtFresh.hasPreview, 'found');
   say('a "Save as…" button is offered from here too', builtFresh.hasSaveAsButton, 'found');
+  say('and so is "Create as a new product" — a whole new combo, not just a modifier on one that exists', builtFresh.hasCreateNewButton, 'found');
 
   console.log('\n── ⭐⭐⭐ "SAVE AS" — POSTs to /api/combo-templates (b266) ' + '─'.repeat(0));
   const saved = await p.evaluate(async () => {
@@ -74,14 +83,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     };
     BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
     S.biz = 'mine'; window.savedLive = () => true;
-    modLabSetGroup(0, { name: 'Extra toppings', required: false, max: 2 });
     modLabSaveAsOpen();
+    const prefilled = document.getElementById('modLabSaveName').value;
     document.getElementById('modLabSaveName').value = 'My topping combo';
     await modLabSaveAsConfirm();
-    return { call: call, dialogClosed: !MODLAB.savingAs };
+    return { call: call, dialogClosed: !MODLAB.savingAs, prefilled: prefilled };
   });
+  say('the save name starts prefilled with the combo’s own name — one less thing to retype', saved.prefilled === 'Tiffin Combo', '"' + saved.prefilled + '"');
   say('Save as posts the built groups under the typed name', saved.call && saved.call.body.name === 'My topping combo', saved.call ? JSON.stringify(saved.call.body.name) : 'not called');
-  say('carrying the real group definition, not a stub', saved.call && Array.isArray(saved.call.body.definition) && saved.call.body.definition.length === 1, saved.call ? JSON.stringify(saved.call.body.definition) : '');
+  say('carrying the real group definition — all three sections, not a stub', saved.call && Array.isArray(saved.call.body.definition) && saved.call.body.definition.length === 3, saved.call ? JSON.stringify(saved.call.body.definition.map((g) => g.name)) : '');
   say('and the inline save row closes on success', saved.dialogClosed, 'confirmed');
   say('saving with NO name is refused before any request is made', await p.evaluate(async () => {
     let called = false; window.apiFetch = async () => { called = true; return { ok: true, body: {} }; };
@@ -137,6 +147,42 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('and the draft is spent, not left lying around for the next visit', draftFlow.draftCleared, 'confirmed');
   const stillReal = await p.evaluate(() => { modLabBack(); return document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length; });
   say('the real product list is exactly what it always was, once the builder is done with', stillReal, 'confirmed');
+
+  console.log('\n── ⭐⭐⭐ [OFFR-07] "CREATE AS A NEW PRODUCT" — the combo becomes a real, sellable product ' + '─'.repeat(0));
+  const createdNew = await p.evaluate(async () => {
+    modLabBuildFresh();   /* fresh 'Tiffin Combo' example: a real name, a real price, three real sections */
+    let postCall = null;
+    const realApiFetch = window.apiFetch, realFetch = window.fetch;
+    window.apiFetch = async (method, url, body) => {
+      if (method === 'POST' && /\/api\/products$/.test(url)) { postCall = { method: method, url: url, body: body }; return { ok: true, body: { item: { item_id: 'newcombo1' } } }; }
+      return realApiFetch(method, url, body);
+    };
+    window.fetch = async () => ({ ok: true, json: async () => ({ items: [] }) });   /* labUseMine()'s own re-read after creating */
+    BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
+    S.biz = 'mine'; window.savedLive = () => true;
+    await modLabCreateNew();
+    window.apiFetch = realApiFetch; window.fetch = realFetch;
+    return { postCall: postCall, buildingAfter: MODLAB.building, nameAfter: MODLAB.name };
+  });
+  say('"Create as a new product" POSTs to the real /api/products, not a combo-templates row', createdNew.postCall && createdNew.postCall.method === 'POST', createdNew.postCall ? createdNew.postCall.url : 'not called');
+  say('carrying the real name, the real price, and all three sections — not a stub', createdNew.postCall
+    && createdNew.postCall.body.item_data.name === 'Tiffin Combo' && createdNew.postCall.body.item_data.price === 110
+    && createdNew.postCall.body.item_data.modifiers.length === 3,
+    createdNew.postCall ? JSON.stringify(createdNew.postCall.body.item_data) : '');
+  say('and the builder resets once the product exists for real', !createdNew.buildingAfter && !createdNew.nameAfter, 'confirmed');
+
+  const refusedNoPrice = await p.evaluate(async () => {
+    modLabBuildFresh(); modLabSetPrice('');
+    let called = false; const real = window.apiFetch;
+    window.apiFetch = async (m, u) => { if (/\/api\/products$/.test(u)) called = true; return real(m, u); };
+    await modLabCreateNew();
+    window.apiFetch = real;
+    const refused = !called;
+    modLabCancelBuild(true);
+    return refused;
+  });
+  say('creating with no price is refused before any request is made', refusedNoPrice, 'confirmed');
+
   /* ⚠️ cleanup — the draft-attach above put a real group on P[0], and the save-as test above switched to a
      'mine' catalogue to prove the real PATCH shape; the sections below assume a clean slate on both, the
      same way they always could before this run added a combo-builder story ahead of them. */

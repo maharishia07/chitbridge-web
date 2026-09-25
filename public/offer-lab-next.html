@@ -861,7 +861,7 @@ function paintPriceOvBody(){
  * ⚠️ THE PREVIEW IS THE SAME CAPABILITY app.html's tab USES — CBVariant.groupsOf()/toggle()/missing()/words(),
  * not a second implementation of "what does trying this feel like".
  */
-var MODLAB={pid:null,q:'',building:false,draft:[],libraryOpen:false,savingAs:false}, MODLABPREV=[];
+var MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',libraryOpen:false,savingAs:false}, MODLABPREV=[];
 /** ⭐ the saved-combo library (b266) — loaded once per open, refreshed after a save or a delete */
 var COMBO_LIB={items:null,loaded:false};
 /**
@@ -888,7 +888,7 @@ var COMBO_LIB={items:null,loaded:false};
  */
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
-  MODLAB={pid:null,q:'',building:false,draft:[],libraryOpen:false,savingAs:false}; MODLABPREV=[];
+  MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',libraryOpen:false,savingAs:false}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
@@ -927,20 +927,68 @@ function modLabSetGroups(newGroups){
   paintModLab();
 }
 /**
- * ── ⭐⭐⭐ [OFFR-06] THE BUILDER — a combo before it is tied to any product ─────────────────────────────────
+ * ── ⭐⭐⭐ [OFFR-06→OFFR-07] THE BUILDER — a combo before it is tied to any product ────────────────────────
+ *
+ * ⚠️⚠️⚠️ [OFFR-07] "the modifier example has only extra cheese only, but we need to have the entire stuff,
+ * say provide the combo name, add the price, then what each section is" — Athi, pointing at the real till
+ * combo chooser (a named product, a price, several clearly-purposed sections) beside this builder's one
+ * lone "Extra toppings" group. Two gaps, both closed here:
+ *   - comboExampleFresh() replaces the single-group CBVariant.exampleGroup() start with a worked, THREE-
+ *     SECTION combo (a required "choose the main," a required "choose a drink," an optional "add extras") —
+ *     the actual shape a combo needs, not one afterthought add-on.
+ *   - MODLAB.name/MODLAB.price are new: the combo now has a name and a price WHILE it is being built, not
+ *     only after it is attached to something that already had them. modLabCreateNew() (below) turns that
+ *     into a genuinely NEW product — the standalone-combo path "Apply to a product ▸" was never able to
+ *     offer, because that path only ever edits a product that already exists.
  */
+function comboExampleFresh(){
+  return { name:'Tiffin Combo', price:110, groups:[
+    { name:'Choose the main', required:true, max:1, options:[{name:'Masala Dosa',price:0},{name:'Idli (2 pc)',price:0},{name:'Ven Pongal',price:0}] },
+    { name:'Choose a drink', required:true, max:1, options:[{name:'Filter Coffee',price:0},{name:'Tea',price:0},{name:'Buttermilk',price:0}] },
+    { name:'Add extras', required:false, max:2, options:[{name:'Extra sambar',price:20},{name:'Extra chutney',price:15}] },
+  ] };
+}
 function modLabBuildFresh(){
   MODLAB.building=true; MODLAB.savingAs=false;
-  if(!MODLAB.draft.length) MODLAB.draft=CBVariant.exampleGroup([]);   /* a worked start, same verb "+ Add a group" uses */
+  if(!MODLAB.draft.length){
+    var ex=comboExampleFresh();
+    MODLAB.draft=ex.groups; MODLAB.name=ex.name; MODLAB.price=ex.price;
+  }
   MODLABPREV=[];
   paintModLab();
 }
 function modLabResumeBuild(){ MODLAB.building=true; MODLAB.savingAs=false; paintModLab(); }
 function modLabCancelBuild(discard){
   MODLAB.building=false;
-  if(discard) MODLAB.draft=[];
+  if(discard){ MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; }
   MODLAB.savingAs=false; MODLABPREV=[];
   paintModLab();
+}
+function modLabSetName(v){ MODLAB.name=String(v||''); }
+function modLabSetPrice(v){ MODLAB.price=v; }
+/**
+ * ⭐⭐⭐ [OFFR-07] "CREATE AS A NEW PRODUCT" — the path Athi asked for: the combo he is naming and pricing
+ * right here becomes a real, sellable product, with these groups already on it, in one step. Distinct from
+ * "Apply to a product ▸" (modLabAttachDraftTo), which only ever edits a product that already exists —
+ * neither replaces the other, because "I'm inventing a new combo meal" and "I'm adding a choice to
+ * something I already sell" are different jobs.
+ */
+async function modLabCreateNew(){
+  var name=String(MODLAB.name||'').trim();
+  if(!name){ toastSay('Give this combo a name first.'); return; }
+  var priceNum=Number(MODLAB.price);
+  if(!(priceNum>0)){ toastSay('Give this combo a price first.'); return; }
+  var v=CBVariant.validate(modLabGroups());
+  if(!v.ok){ toastSay('Fix this first: '+v.errors[0].message); return; }
+  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to create a real product.'); return; }
+  var item_data={name:name, price:priceNum, modifiers:v.groups};
+  var r=await apiFetch('POST', API+'/api/products', {item_data:item_data});
+  if(!r.ok){ toastSay('Could not create "'+name+'": '+((r.body&&r.body.message)||'try again.')); return; }
+  toastSay('Created "'+name+'" — '+M0(priceNum)+', with its combo groups already on it.');
+  MODLAB.building=false; MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; MODLABPREV=[];
+  await labUseMine(true);   /* the new product needs to be in P before anything can open or show it */
+  paintModLab();
+  render();
 }
 /** ⭐ "pick a product to apply this to" — the picker's own row click, redirected while a draft is pending
  *  (see paintModLab()'s picker branch): ADDS the draft's groups to whatever that product already has,
@@ -1096,8 +1144,11 @@ function comboPreviewHTML(){
 /** ⭐ the inline "Save as" row — a text input beside the page's own edits, never a native prompt() */
 function comboSaveAsRowHTML(){
   if(!MODLAB.savingAs) return '';
+  /* ⭐ pre-filled from the combo's own name when building fresh (it already has one to type) — never guessed
+   * when editing an existing product's own modifiers, where MODLAB.name is not that product's identity. */
+  var prefill=(!MODLAB.pid && MODLAB.name)?esc(MODLAB.name):'';
   return '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-    + '<input id="modLabSaveName" class="inp" style="flex:1;min-width:180px;height:38px" placeholder="Name this combo — e.g. \u2018Weekday tiffin combo\u2019" onkeydown="if(event.key===\'Enter\')modLabSaveAsConfirm()">'
+    + '<input id="modLabSaveName" class="inp" style="flex:1;min-width:180px;height:38px" value="'+prefill+'" placeholder="Name this combo — e.g. \u2018Weekday tiffin combo\u2019" onkeydown="if(event.key===\'Enter\')modLabSaveAsConfirm()">'
     + '<button class="btn sm pri" onclick="modLabSaveAsConfirm()">Save</button>'
     + '<button class="btn sm" onclick="modLabSaveAsCancel()">Cancel</button></div>';
 }
@@ -1163,10 +1214,19 @@ function paintModLab(){
   if(tools) tools.style.display='none';
   if(MODLAB.building){
     var dgroups=modLabGroups();
+    /** ⭐⭐⭐ [OFFR-07] name + price — the combo as a whole, not just its sections. Athi: "provide the combo
+     * name, add the price, then what each section is." Both are plain fields on MODLAB, read at "Create as a
+     * new product" time; they mean nothing to "Apply to a product ▸" (attaching to something that already
+     * has its own name and price), which is the whole reason there are now two different buttons below. */
+    var nameprice = '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">'
+      + '<input class="inp" style="flex:2;min-width:180px;height:40px;font-weight:700" value="'+esc(MODLAB.name)+'" placeholder="Combo name — e.g. ‘Tiffin Combo’" onchange="modLabSetName(this.value)">'
+      + '<div class="inp" style="flex:1;min-width:120px;height:40px"><span>₹</span><input type="number" step="0.01" value="'+esc(MODLAB.price)+'" placeholder="Price" onchange="modLabSetPrice(this.value)"></div>'
+      + '</div>';
     body.innerHTML = '<div style="padding:0 20px 20px">'
       + '<button class="btn sm" onclick="modLabCancelBuild(true)">← Cancel</button>'
       + '<h3 style="margin:12px 0 2px">Build a combo</h3>'
-      + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Not tied to a product yet — build it here, then save it or apply it to one.</div>'
+      + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Name it, price it, then build what each section offers.</div>'
+      + nameprice
       + comboGroupsEditorHTML(dgroups)
       + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
       + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
@@ -1175,9 +1235,10 @@ function paintModLab(){
       + '</div>';
     if(foot){
       foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
-        + '<span>Save it for later, or pick a product to apply it to now.</span>'
-        + '<div style="display:flex;gap:8px">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
-        + '<button class="btn pri sm" onclick="modLabCancelBuild(false)">Apply to a product ▸</button></div></div>';
+        + '<span>Create it as a new product, attach it to one you already sell, or just save it for later.</span>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
+        + '<button class="btn sm" onclick="modLabCancelBuild(false)">Attach to a product ▸</button>'
+        + '<button class="btn pri sm" onclick="modLabCreateNew()">✚ Create as a new product</button></div></div>';
     }
     return;
   }
