@@ -71,7 +71,11 @@ add('Starters',    ['Vada', 'Bonda']);
   say('agree', JSON.stringify(c0) === JSON.stringify(h0), 'keys ' + h0.join(' › '));
 
   /* ── 2 · ⚠️⚠️ THE SHOP SAYS, AND EVERY SURFACE OBEYS ─────────────────────────────────────────────── */
+  /* ⚠️⚠️ Phase 4.6: a saved order only counts once the mode is 'fixed' — "mode: most_used means fixed is
+     ignored" (spec §5). Every direct catOrderSet() below now sets the mode alongside it, the way the real
+     dialog would (choosing "The order I set" is what makes a manual order stick in the first place). */
   await p.evaluate(() => {
+    catOrderModeSet('fixed');
     catOrderSet(['Starters', 'Drinks', 'Main course', 'Desserts']);
     paintChips(); paintQuick();
   });
@@ -128,13 +132,52 @@ add('Starters',    ['Vada', 'Bonda']);
   const c4 = await chips(), h4 = await heads();
   say("saved", c4[0] === last && h4[0] === last, "chips and keys both start with " + c4[0]);
 
-  /* ── 6 · and "back to most-used first" means exactly that, not alphabetical ──────────────────────── */
+  /* ── 6 · ⭐⭐⭐ THE MODE, NOT A BUTTON (Phase 4.6) — "Most used first" replaces "Back to most-used
+     first", asks before discarding the manual order, and means exactly that, not alphabetical ────────── */
   await p.click('[data-testid="till-catorder"]');
   await p.waitForSelector('#catdlg[open]', { timeout: 4000 });
-  await p.click('[data-testid="till-catorder-reset"]');
+  const modeBefore = await p.evaluate(() => ({
+    checked: document.querySelector('[data-testid="till-catmode-fixed"]').checked,
+    dragEnabled: !document.querySelector('[data-testid="till-catup-1"]').disabled,
+  }));
+  say('opens on "The order I set"', modeBefore.checked, 'this counter chose fixed in step 2');
+  say('and the rows are draggable', modeBefore.dragEnabled, 'arrows are enabled in fixed mode');
+
+  await p.click('[data-testid="till-catmode-most_used"]');
+  /* ⚠️ sure() (not sureSheet()) drives this confirm — #askdlg/till-ask-*, the general-purpose two-way ask,
+     not the live-figures bottom sheet close/repair use. Both exist; this one is the right fit for a plain
+     yes/no with no numbers to show. */
+  await p.waitForSelector('[data-testid="till-ask-ok"]', { timeout: 4000 });
+  const confirmText = await p.evaluate(() => document.getElementById('askbody').innerText);
+  say('it asks before discarding the manual order', /replaced by what sells most/i.test(confirmText),
+    '"' + confirmText.trim() + '"');
+  await p.click('[data-testid="till-ask-ok"]');
+  await p.waitForTimeout(150);
+  const afterMode = await p.evaluate(() => ({
+    dragDisabled: document.querySelector('[data-testid="till-catup-1"]').disabled,
+    rows: [...document.querySelectorAll('#catbody .catrow .ct')].map((x) => x.textContent.trim()),
+  }));
+  say('the rows stop being draggable', afterMode.dragDisabled, 'most_used is a preview, not a manual list');
+  say('and it really is most-used order', afterMode.rows[0] === 'Main course', afterMode.rows.join(' › '));
+
+  await p.click('[data-testid="till-catorder-save"]');
   await p.waitForTimeout(150);
   const c5 = await chips();
-  say('reset', c5[0] === 'Main course', 'most-used first again: ' + c5.join(' › '));
+  say('saved, and the sell screen agrees', c5[0] === 'Main course', 'most-used first again: ' + c5.join(' › '));
+
+  /* ── 7 · picture mode disables the option without lying about what is stored ─────────────────────── */
+  await p.evaluate(() => { catOrderModeSet('most_used'); ls.set('cb_till_picture', '1'); });
+  await p.click('[data-testid="till-catorder"]');
+  await p.waitForSelector('#catdlg[open]', { timeout: 4000 });
+  const picLock = await p.evaluate(() => ({
+    disabled: document.querySelector('[data-testid="till-catmode-most_used"]').disabled,
+    checked: document.querySelector('[data-testid="till-catmode-most_used"]').checked,
+    effective: catOrderModeEffective(),
+  }));
+  say('the option is disabled in picture mode', picLock.disabled, 'cannot be turned on from here');
+  say('but the honest stored preference still shows', picLock.checked, 'most_used is what this counter actually chose');
+  say('while the EFFECTIVE mode is forced fixed', picLock.effective === 'fixed', 'nothing sorts by sales while picture mode is on');
+  await p.evaluate(() => { document.getElementById('catdlg').close(); ls.set('cb_till_picture', ''); });
 
   if (threw.length) console.log('⚠️ threw: ' + threw.join(' | '));
   console.log(bad ? ('\n' + bad + ' FAILED') : '\none order, and the shop sets it');

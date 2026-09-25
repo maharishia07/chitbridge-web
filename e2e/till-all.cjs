@@ -39,6 +39,9 @@ const HARNESSES = [
   ['till-keysize.cjs',     'the preview counts the keys the counter actually fits, exactly, at 16 combinations'],
   ['till-apply-again.cjs', 'apply works again and again, and a held change says so'],
   ['till-catorder.cjs',    'one category order, and the shop sets it'],
+  /* ⭐⭐⭐ "MOST USED FIRST" IS A LIVE MODE (design-handoff/02-category-order §2/§5, Phase 4.6) — real
+     30-day sales rank, not product count; switching to a fixed order freezes exactly what was showing. */
+  ['till-category-mostused.cjs', 'most used first is real 30-day sales, and switching to a fixed order freezes exactly what was showing'],
   /* ⭐⭐⭐ HIDING A CATEGORY (Phase 4.3) — leaves the chips and the keys, ungrouped and grouped, and nothing
      else: search still sells it. The risk the item names by itself, driven end to end through the real
      dialog, Save, and back again with Show. */
@@ -71,6 +74,12 @@ const HARNESSES = [
      every belief/gate now asks lineUp() (Phase 4.1) rather than the flag directly, but lineUp() still bottoms
      out on it, so a simulator that only slowed fetch would still leave the whole page fooled. */
   ['till-netsim.cjs',      'the line can be turned down, and it says so while it is'],
+  /* ⭐⭐⭐ PHASE 4.7 — pretending is loud, timed and reversible: a real countdown that always ends on its
+     own, held while a bill is in hand, and "Full speed" IS Stop, not a second control beside it. */
+  ['till-netsim-autostop.cjs', 'pretending is loud, timed and reversible — it cannot be left on'],
+  /* ⭐⭐⭐ PHASE 4.8 — "columns may change on a turn; shape and size must not." A turn-and-back never
+     crosses the two-second grace window; a genuine, held remount still re-decides with no reload. */
+  ['till-shape-stable.cjs', 'shape and size hold through a turn, and still re-decide themselves once a move genuinely sticks'],
   /* ⭐⭐⭐ THE LINE, BELIEVED FROM WHAT GOT THROUGH ([TILL-151]/Phase 4.1). navigator.onLine can say "online"
      for ever on wifi with a dead upstream link — this proves lineUp() catches that where the flag alone
      never would, and that a real interface drop still overrides a good recent run. */
