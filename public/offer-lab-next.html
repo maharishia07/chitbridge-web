@@ -813,16 +813,22 @@ function paintPriceOvBody(){
   var body=document.getElementById('ovlBody'), foot=document.getElementById('ovlFoot');
   if(!body) return;
   var list=priceOvList();
+  /* ⚠️⚠️⚠️ [OFFR-04] costBlind reads what the SERVER already decided (COST_ACCESS.can_see_costs) — it
+     disables the input proactively, but the actual protection is that a cost-blind caller's own p.cost is
+     already null here (the server never sent it). Disabling this saves a rejected save, nothing more. */
+  var costBlind = S.biz==='mine' && savedLive() && !COST_ACCESS.can_see_costs;
   body.innerHTML = !list.length
     ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
     : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Sale price</th><th class="ovlpriceh">Cost</th><th class="ovlpriceh">Markup</th></tr></thead><tbody>'+
       list.map(function(p){
-        var mk=markupPct(p.price,p.cost);
+        var mk=costBlind?null:markupPct(p.price,p.cost);
         return '<tr><td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
           '<td class="ovlprice">'+M0(p.price)+'</td>'+
-          '<td><div class="inp"><span>₹</span><input type="number" min="0" placeholder="—" value="'+
-            (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div></td>'+
-          '<td class="ovlprice" style="color:'+(mk==null?'inherit':(mk<0?'var(--red-i)':'var(--green-d)'))+'">'+(mk==null?'—':mk+'%')+'</td></tr>';
+          '<td>'+(costBlind
+            ? '<span style="color:var(--muted)" title="Ask the owner for access">🔒</span>'
+            : '<div class="inp"><span>₹</span><input type="number" min="0" placeholder="—" value="'+
+              (p.cost==null?'':p.cost)+'" onchange="setCost(\''+p.id+'\',this.value)"></div>')+'</td>'+
+          '<td class="ovlprice" style="color:'+(mk==null?'inherit':(mk<0?'var(--red-i)':'var(--green-d)'))+'">'+(costBlind?'🔒':(mk==null?'—':mk+'%'))+'</td></tr>';
       }).join('')+'</tbody></table>';
   if(foot){
     var withCost=P.filter(function(p){return p.cost!=null;}).length;
@@ -834,8 +840,9 @@ function paintPriceOvBody(){
     var canApply=S.biz==='mine' && savedLive();
     foot.innerHTML='<div>'+list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown · '+
       withCost+' of '+P.length+' have a cost written down</div>'
-      +'<div style="margin-top:4px;color:'+(canApply?'var(--green-d)':'var(--amber-i)')+'">'
-      +(canApply?'Costs typed here save to your real catalogue.':'Using a sample catalogue — costs typed here do not reach a real product.')
+      +'<div style="margin-top:4px;color:'+(costBlind?'var(--amber-i)':(canApply?'var(--green-d)':'var(--amber-i)'))+'">'
+      +(costBlind?'Your access does not include cost or margin — ask the owner. You can still change availability.'
+        :(canApply?'Costs typed here save to your real catalogue.':'Using a sample catalogue — costs typed here do not reach a real product.'))
       +'</div>';
   }
 }
@@ -1306,6 +1313,26 @@ function renderS0(){
          : '<div class="note n-say" style="margin:0;flex:1"><span class="ic">●</span><div>No product has a modifier yet.</div></div>')+
        '<button class="btn sm" style="margin-inline-start:12px" onclick="openModLab()">🧩 Open the modifier lab</button>'+
      '</div></div>';
+
+  /**
+   * ── ⭐⭐⭐ [OFFR-04] STAFF ACCESS — THE ONE CHECKBOX, OWNER ONLY (Athi: "employees should not see without
+   * a specific permission. otherwise, leave it with owner only... Make cost visible for offer lab as a
+   * check box and it can be made visible otherwise they can only set the availability flag, nothing else.")
+   *
+   * ⚠️ RENDERED ONLY WHEN COST_ACCESS.is_owner — an actor never sees this card at all, matching "leave it
+   * with owner only" literally: not shown-but-disabled, not shown-then-refused, simply not there. The real
+   * gate is server-side (routes/entities.js's PATCH /me/offer-lab-costs checks identity_type==='entity'
+   * itself) — this is the UI half of an already-enforced rule, not the rule itself.
+   */
+  if(S.biz==='mine' && savedLive() && COST_ACCESS.is_owner){
+    h+='<div class="card pad"><h2 class="h" style="font-size:17px">Staff access</h2>'+
+       '<p class="hs">Cost and margin are yours alone by default. Turn this on to let your team see them too '+
+         'in Offer Lab — off, they can still mark an item available or unavailable, nothing else.</p>'+
+       '<label style="display:flex;gap:10px;align-items:center;margin-top:10px;cursor:pointer">'+
+         '<input type="checkbox" '+(COST_ACCESS.visible_to_staff?'checked':'')+' onchange="setCostVisibility(this.checked)">'+
+         '<span>Staff can see cost and margin here</span>'+
+       '</label></div>';
+  }
 
   h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
   return h+'</div>';
@@ -2027,10 +2054,42 @@ function defFetch(method,path,body){ return apiFetch(method, API+'/api/definitio
  * ⚠️ CACHED ON SUCCESS, READ FROM CACHE ON FAILURE. A shopkeeper who opened this yesterday and has no line today
  * still sees yesterday's real numbers — stale and SAID to be stale, never a blank screen pretending to be empty.
  */
+/**
+ * ⚠️⚠️⚠️ [OFFR-04] WHAT THIS CALLER MAY SEE OF COST — read once per sign-in, alongside the catalogue itself.
+ * The real protection is server-side (routes/products.js strips item_data.cost from the LIST response
+ * itself for a cost-blind caller, and refuses a PATCH touching anything but status) — a cost-blind
+ * caller's own products never carry a cost value to begin with, whatever this object says. What THIS is
+ * for: disabling the cost input proactively (so a blocked save is never the first anyone hears of it) and
+ * showing the owner-only checkbox to nobody who cannot use it.
+ * ⚠️ DEFAULTS OPTIMISTIC (can_see_costs:true) until the fetch resolves — safe because the server-side
+ * strip does not depend on this flag at all; the only risk of a stale-true default is a cost input that
+ * looks editable for the first moment of a page load, which a rejected save (already handled, [OFFR-01])
+ * would catch immediately if it mattered.
+ */
+var COST_ACCESS = { can_see_costs:true, is_owner:false, visible_to_staff:false, loaded:false };
+async function loadCostAccess(){
+  try {
+    var r=await fetch(API+'/api/entities/me/offer-lab-costs', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(r.ok){ var j=await r.json(); COST_ACCESS={ can_see_costs:!!j.can_see_costs, is_owner:!!j.is_owner, visible_to_staff:!!j.visible_to_staff, loaded:true }; }
+  } catch(_){ /* stays optimistic; the server-side strip is what actually protects the data */ }
+  if(priceOvOpen()) paintPriceOvBody();
+  render();
+}
+/** the owner's own checkbox — the ONE place this can be turned on, per [OFFR-04]'s own server-side check */
+async function setCostVisibility(on){
+  try {
+    var r=await apiFetch('PATCH', API+'/api/entities/me/offer-lab-costs', {visible_to_staff:!!on});
+    if(!r.ok){ toastSay('Could not save: '+((r.body&&r.body.message)||'try again.')); return; }
+    COST_ACCESS.visible_to_staff=!!on;
+    toastSay(on?'Staff can now see cost and margin in Offer Lab.':'Cost and margin are hidden from staff again.');
+  } catch(e){ toastSay('Could not save — try again.'); }
+  render();
+}
 async function labUseMine(quiet){
   if(!savedLive()){ if(!quiet) toastSay('Sign in to the app on this browser first, then try again.'); return false; }
   var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
   var who=(sess&&(sess.entity||sess.name))||'your shop';
+  loadCostAccess();   /* alongside, not blocking — the catalogue read matters more and must not wait on this */
   try {
     var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
     if(!r.ok) throw new Error('HTTP '+r.status);
