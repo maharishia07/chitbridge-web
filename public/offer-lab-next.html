@@ -854,10 +854,33 @@ function paintPriceOvBody(){
  * ⚠️ THE PREVIEW IS THE SAME CAPABILITY app.html's tab USES — CBVariant.groupsOf()/toggle()/missing()/words(),
  * not a second implementation of "what does trying this feel like".
  */
-var MODLAB={pid:null,q:''}, MODLABPREV=[];
+var MODLAB={pid:null,q:'',showExample:false}, MODLABPREV=[];
+/**
+ * ⚠️⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" AND "SHOW EXAMPLE" — Athi, watching the lab live: "in the combo lab,
+ * we do not have create new combo button, show example button, so they can see what combo means and they
+ * can create a new combo, a combo is the new one to create... show couple of example and say copy and
+ * modify for your own self based on your business." Then, on scope: "can we do one and we can translate
+ * later as a standalone example?" — the picker screen (below), on the SAME per-product data model
+ * (modifiers still live on item_data.modifiers), reframed and taught rather than rebuilt. A standalone
+ * combo — its own record, independent of any one product — is a real, bigger, later decision (logged in
+ * BACKLOG.md) and this does not attempt it.
+ * ⭐ modLabExampleGroup() calls the EXACT SAME CBVariant.exampleGroup() the real "+ Add a group" button
+ * uses — one worked example, shown here purely to teach, never written anywhere until a real product picks
+ * it up and Apply is pressed on it.
+ */
+function modLabToggleExample(){ MODLAB.showExample=!MODLAB.showExample; paintModLab(); }
+function modLabExampleHTML(){
+  var g=CBVariant.exampleGroup([])[0];
+  return '<div class="kv" style="padding:12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:12px;background:var(--panel)">'
+    + '<div style="font-weight:700;margin-bottom:2px">Example — '+esc(g.name)+'</div>'
+    + '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Pick '+(g.required?'one, required':'up to '+g.max+', optional')+'</div>'
+    + g.options.map(function(o){ return '<div style="font-size:13px">'+esc(o.name)+' <span style="color:var(--muted)">+₹'+o.price+'</span></div>'; }).join('')
+    + '<div style="font-size:12px;color:var(--muted);margin-top:8px">This is just an example — pick a product below, then copy and change the names, options and prices for your own business.</div>'
+    + '</div>';
+}
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
-  MODLAB={pid:null,q:''}; MODLABPREV=[];
+  MODLAB={pid:null,q:'',showExample:false}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
@@ -931,7 +954,14 @@ function paintModLab(){
   if(!MODLAB.pid){
     if(tools) tools.style.display='';
     var list=modLabList();
-    body.innerHTML = !list.length
+    /* ⭐ [OFFR-03] "Create new combo" is a heading, not a second button — the table below IS how you start
+       one; the show-example toggle is the only new control, so the flow itself is not duplicated. */
+    body.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
+        + '<h3 style="margin:0">Create a new combo</h3>'
+        + '<button class="btn sm" onclick="modLabToggleExample()">'+(MODLAB.showExample?'Hide example':'Show example')+'</button>'
+        + '</div>'
+      + (MODLAB.showExample?modLabExampleHTML():'')
+      + (!list.length
       ? '<div class="hs" style="padding:24px">No products match'+(MODLAB.q?' "'+esc(MODLAB.q)+'"':'')+'.</div>'
       : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Modifiers</th></tr></thead><tbody>'
         + list.map(function(p){
@@ -939,8 +969,8 @@ function paintModLab(){
             return '<tr style="cursor:pointer" onclick="modLabPick(\''+p.id+'\')"><td class="ovlname">'+esc(p.name)+'</td>'
               + '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'
               + '<td class="ovlprice">'+(n?n+' group'+(n===1?'':'s'):'—')+'</td></tr>';
-          }).join('')+'</tbody></table>';
-    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to build against';
+          }).join('')+'</tbody></table>');
+    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to build its combo against';
     return;
   }
   if(tools) tools.style.display='none';

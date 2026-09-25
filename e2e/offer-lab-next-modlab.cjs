@@ -41,6 +41,24 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('every product is listed to pick from', picker.rows === picker.total, picker.rows + ' rows for ' + picker.total + ' products');
   say('with a search box', picker.hasSearch, 'found');
 
+  console.log('\n── ⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" AND "SHOW EXAMPLE" (Athi: "so they can see what combo means") ' + '─'.repeat(0));
+  const combo = await p.evaluate(() => ({
+    heading: (document.querySelector('#modLabBody h3') || {}).textContent,
+    exampleHiddenAtStart: !document.querySelector('#modLabBody').textContent.includes('Extra chutney'),
+  }));
+  say('the picker screen says plainly that this is where a combo starts', /Create a new combo/.test(combo.heading), '"' + combo.heading + '"');
+  say('the example is off by default — not clutter on every visit', combo.exampleHiddenAtStart, 'confirmed');
+  const shown = await p.evaluate(() => {
+    modLabToggleExample();
+    const text = document.getElementById('modLabBody').textContent;
+    return { hasGroup: /Extra toppings/.test(text), hasOptions: /Extra cheese/.test(text) && /Extra chutney/.test(text) };
+  });
+  say('"Show example" reveals a real, complete worked combo, not placeholder text', shown.hasGroup && shown.hasOptions, 'found');
+  const backOff = await p.evaluate(() => { modLabToggleExample(); return !document.getElementById('modLabBody').textContent.includes('Extra chutney'); });
+  say('pressing it again hides it — it teaches once, it does not nag', backOff, 'confirmed');
+  const stillReal = await p.evaluate(() => document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length);
+  say('the real product list is still there underneath, untouched by the example toggle', stillReal, 'confirmed');
+
   console.log('\n── ⭐⭐⭐ picking a product opens the group editor and a live preview ' + '─'.repeat(0));
   const picked = await p.evaluate(() => {
     modLabPick(P[0].id);
