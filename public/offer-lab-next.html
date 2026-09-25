@@ -861,33 +861,34 @@ function paintPriceOvBody(){
  * ⚠️ THE PREVIEW IS THE SAME CAPABILITY app.html's tab USES — CBVariant.groupsOf()/toggle()/missing()/words(),
  * not a second implementation of "what does trying this feel like".
  */
-var MODLAB={pid:null,q:'',showExample:false}, MODLABPREV=[];
+var MODLAB={pid:null,q:'',building:false,draft:[],libraryOpen:false,savingAs:false}, MODLABPREV=[];
+/** ⭐ the saved-combo library (b266) — loaded once per open, refreshed after a save or a delete */
+var COMBO_LIB={items:null,loaded:false};
 /**
- * ⚠️⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" AND "SHOW EXAMPLE" — Athi, watching the lab live: "in the combo lab,
- * we do not have create new combo button, show example button, so they can see what combo means and they
- * can create a new combo, a combo is the new one to create... show couple of example and say copy and
- * modify for your own self based on your business." Then, on scope: "can we do one and we can translate
- * later as a standalone example?" — the picker screen (below), on the SAME per-product data model
- * (modifiers still live on item_data.modifiers), reframed and taught rather than rebuilt. A standalone
- * combo — its own record, independent of any one product — is a real, bigger, later decision (logged in
- * BACKLOG.md) and this does not attempt it.
- * ⭐ modLabExampleGroup() calls the EXACT SAME CBVariant.exampleGroup() the real "+ Add a group" button
- * uses — one worked example, shown here purely to teach, never written anywhere until a real product picks
- * it up and Apply is pressed on it.
+ * ⚠️⚠️⚠️ [OFFR-03→OFFR-06] "CREATE NEW COMBO" — from a static example to a real builder + saved library.
+ *
+ * [OFFR-03] (2026-09-25, earlier the same day) taught the per-product model with one hardcoded, read-only
+ * CBVariant.exampleGroup() text box: "Extra toppings / Extra cheese +₹20", never interactive, the same for
+ * every merchant. Athi, testing it: "the example shown is very pathetic... what i want is something similar
+ * to the combo offer in a popup window with possibly combination, and also with save as option, if we are
+ * doing save as feature then we should be having a mechanism of open the same again."
+ *
+ * That static box is gone. In its place:
+ *   - modLabBuildFresh() opens a REAL builder — the exact group-editor and live "what a customer sees"
+ *     preview the per-product screen already had, now usable BEFORE picking a product (comboGroupsEditorHTML/
+ *     comboPreviewHTML below, extracted so there is one implementation, not two that can drift).
+ *   - "💾 Save as…" (modLabSaveAsOpen/Confirm) — POSTs to /api/combo-templates (b266, [OFFR-06]).
+ *   - "📂 My saved combos" (modLabOpenLibrary/UseTemplate/DeleteTemplate) — the "mechanism to open the same
+ *     again": a named, reusable library, independent of any one product. Athi: "can we do one and we can
+ *     translate later as a standalone example?" — this is that standalone record, the data-model decision
+ *     BACKLOG.md had logged as deferred under [OFFR-03].
+ * ⭐ Every editing verb (modLabSetGroup/AddOption/…) already reads/writes through modLabGroups()/
+ *   modLabSetGroups() below — making THOSE TWO draft-aware (a product's own modifiers, or a not-yet-attached
+ *   draft) is the only change the existing editing code needed; nothing else duplicated.
  */
-function modLabToggleExample(){ MODLAB.showExample=!MODLAB.showExample; paintModLab(); }
-function modLabExampleHTML(){
-  var g=CBVariant.exampleGroup([])[0];
-  return '<div class="kv" style="padding:12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:12px;background:var(--panel)">'
-    + '<div style="font-weight:700;margin-bottom:2px">Example — '+esc(g.name)+'</div>'
-    + '<div style="font-size:13px;color:var(--muted);margin-bottom:8px">Pick '+(g.required?'one, required':'up to '+g.max+', optional')+'</div>'
-    + g.options.map(function(o){ return '<div style="font-size:13px">'+esc(o.name)+' <span style="color:var(--muted)">+₹'+o.price+'</span></div>'; }).join('')
-    + '<div style="font-size:12px;color:var(--muted);margin-top:8px">This is just an example — pick a product below, then copy and change the names, options and prices for your own business.</div>'
-    + '</div>';
-}
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
-  MODLAB={pid:null,q:'',showExample:false}; MODLABPREV=[];
+  MODLAB={pid:null,q:'',building:false,draft:[],libraryOpen:false,savingAs:false}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
@@ -906,17 +907,99 @@ function modLabList(){
   var q=(MODLAB.q||'').trim().toLowerCase();
   return P.filter(function(p){ return !q || p.name.toLowerCase().indexOf(q)>=0; });
 }
-function modLabPick(id){ MODLAB.pid=id; MODLABPREV=[]; paintModLab(); }
-function modLabBack(){ MODLAB.pid=null; paintModLab(); }
+function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLABPREV=[]; paintModLab(); }
+function modLabBack(){ MODLAB.pid=null; MODLAB.savingAs=false; paintModLab(); }
+/** ⭐⭐ [OFFR-06] DRAFT-AWARE: a product's own item_data.modifiers when one is picked, otherwise the
+ *  not-yet-attached MODLAB.draft — every other editing verb calls this and modLabSetGroups() below, so
+ *  making these two aware of the draft is the whole reason the builder needed no second set of verbs. */
 function modLabGroups(){
-  var p=byId(MODLAB.pid); if(!p) return [];
-  return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:p.modifiers}):(Array.isArray(p.modifiers)?p.modifiers:[]);
+  if(MODLAB.pid){
+    var p=byId(MODLAB.pid); if(!p) return [];
+    return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:p.modifiers}):(Array.isArray(p.modifiers)?p.modifiers:[]);
+  }
+  return (typeof CBVariant!=='undefined'&&CBVariant.groupsRaw)?CBVariant.groupsRaw({modifiers:MODLAB.draft}):(Array.isArray(MODLAB.draft)?MODLAB.draft:[]);
 }
 /** ⭐ every editing verb funnels through here — one place that writes the draft and clears stale preview picks */
 function modLabSetGroups(newGroups){
-  var p=byId(MODLAB.pid); if(!p) return;
-  p.modifiers=newGroups;
+  if(MODLAB.pid){ var p=byId(MODLAB.pid); if(!p) return; p.modifiers=newGroups; }
+  else { MODLAB.draft=newGroups; }
   MODLABPREV=[];   /* an edited group can invalidate an old pick (a removed option, a group gone) — simplest to restart */
+  paintModLab();
+}
+/**
+ * ── ⭐⭐⭐ [OFFR-06] THE BUILDER — a combo before it is tied to any product ─────────────────────────────────
+ */
+function modLabBuildFresh(){
+  MODLAB.building=true; MODLAB.savingAs=false;
+  if(!MODLAB.draft.length) MODLAB.draft=CBVariant.exampleGroup([]);   /* a worked start, same verb "+ Add a group" uses */
+  MODLABPREV=[];
+  paintModLab();
+}
+function modLabResumeBuild(){ MODLAB.building=true; MODLAB.savingAs=false; paintModLab(); }
+function modLabCancelBuild(discard){
+  MODLAB.building=false;
+  if(discard) MODLAB.draft=[];
+  MODLAB.savingAs=false; MODLABPREV=[];
+  paintModLab();
+}
+/** ⭐ "pick a product to apply this to" — the picker's own row click, redirected while a draft is pending
+ *  (see paintModLab()'s picker branch): ADDS the draft's groups to whatever that product already has,
+ *  never replaces — the same "add, don't overwrite" rule modLabAddGroup() already follows. */
+function modLabAttachDraftTo(id){
+  var draftGroups=CBVariant.normalize(MODLAB.draft);
+  MODLAB.building=false; MODLAB.savingAs=false; MODLAB.pid=id;
+  var existing=modLabGroups();
+  MODLAB.draft=[];
+  modLabSetGroups(existing.concat(draftGroups));
+}
+
+/**
+ * ── ⭐⭐⭐ [OFFR-06] "SAVE AS" AND THE LIBRARY — the mechanism to open the same again ────────────────────────
+ * Works from EITHER screen: a not-yet-attached draft, or a real product's own modifiers — either can be
+ * named and saved, and either can later pull a saved combo back in.
+ */
+function modLabSaveAsOpen(){ MODLAB.savingAs=true; paintModLab();
+  var i=document.getElementById('modLabSaveName'); if(i) i.focus(); }
+function modLabSaveAsCancel(){ MODLAB.savingAs=false; paintModLab(); }
+async function modLabSaveAsConfirm(){
+  var el=document.getElementById('modLabSaveName');
+  var name=String((el&&el.value)||'').trim();
+  if(!name){ toastSay('Type a name for this combo first — that is what you’ll look for to reopen it.'); return; }
+  var v=CBVariant.validate(modLabGroups());
+  if(!v.ok){ toastSay('Fix this first: '+v.errors[0].message); return; }
+  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save a combo for real.'); return; }
+  var r=await apiFetch('POST', API+'/api/combo-templates', {name:name, definition:v.groups});
+  if(r.ok){ toastSay('Saved “'+name+'” to your combos.'); MODLAB.savingAs=false; await comboLibLoad(true); }
+  else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
+  paintModLab();
+}
+/** ⭐ loaded once per Lab session (cached on COMBO_LIB), forced fresh right after a save or a delete */
+async function comboLibLoad(force){
+  if(COMBO_LIB.loaded && !force) return COMBO_LIB.items||[];
+  if(!(S.biz==='mine' && savedLive())){ COMBO_LIB.items=[]; COMBO_LIB.loaded=true; return []; }
+  var r=await apiFetch('GET', API+'/api/combo-templates');
+  if(r.ok && r.body && Array.isArray(r.body.templates)) COMBO_LIB.items=r.body.templates;
+  COMBO_LIB.loaded=true;
+  return COMBO_LIB.items||[];
+}
+async function modLabOpenLibrary(){ MODLAB.libraryOpen=true; paintModLab(); await comboLibLoad(!COMBO_LIB.loaded?false:true); paintModLab(); }
+function modLabCloseLibrary(){ MODLAB.libraryOpen=false; paintModLab(); }
+/** ⭐⭐⭐ REOPENING A SAVED COMBO — added to whatever is already being built/edited, never a silent replace */
+function modLabUseTemplate(id){
+  var t=(COMBO_LIB.items||[]).filter(function(x){return x.id===id;})[0]; if(!t) return;
+  var groups=CBVariant.normalize(t.definition);
+  modLabSetGroups(modLabGroups().concat(groups));
+  MODLAB.libraryOpen=false;
+  if(!MODLAB.pid) MODLAB.building=true;
+  toastSay('Added “'+t.name+'” — '+groups.length+' group'+(groups.length===1?'':'s')+'.');
+  paintModLab();
+}
+/** ⚠️ no confirm() dialog — matches this Lab's own style (✕ on a group/option removes immediately too), and
+ *  deleting a SAVED combo touches nothing already applied to a product; the toast says so. */
+async function modLabDeleteTemplate(id,name){
+  var r=await apiFetch('DELETE', API+'/api/combo-templates/'+id);
+  if(r.ok){ toastSay('Deleted “'+name+'”.'); await comboLibLoad(true); }
+  else toastSay('Could not delete “'+name+'” — try again.');
   paintModLab();
 }
 /* ⭐ exampleGroup(), not addGroup() — see app.html's own comment on the same call; the answer to "I don't
@@ -954,38 +1037,15 @@ async function modLabApply(){
    * using the real, deployed page, not by reading the code. */
   render();
 }
-function paintModLab(){
-  var body=document.getElementById('modLabBody'), foot=document.getElementById('modLabFoot');
-  var tools=document.querySelector('#modLabOverlay .ovltools');
-  if(!body) return;
-  if(!MODLAB.pid){
-    if(tools) tools.style.display='';
-    var list=modLabList();
-    /* ⭐ [OFFR-03] "Create new combo" is a heading, not a second button — the table below IS how you start
-       one; the show-example toggle is the only new control, so the flow itself is not duplicated. */
-    body.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
-        + '<h3 style="margin:0">Create a new combo</h3>'
-        + '<button class="btn sm" onclick="modLabToggleExample()">'+(MODLAB.showExample?'Hide example':'Show example')+'</button>'
-        + '</div>'
-      + (MODLAB.showExample?modLabExampleHTML():'')
-      + (!list.length
-      ? '<div class="hs" style="padding:24px">No products match'+(MODLAB.q?' "'+esc(MODLAB.q)+'"':'')+'.</div>'
-      : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Modifiers</th></tr></thead><tbody>'
-        + list.map(function(p){
-            var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
-            return '<tr style="cursor:pointer" onclick="modLabPick(\''+p.id+'\')"><td class="ovlname">'+esc(p.name)+'</td>'
-              + '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'
-              + '<td class="ovlprice">'+(n?n+' group'+(n===1?'':'s'):'—')+'</td></tr>';
-          }).join('')+'</tbody></table>');
-    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to build its combo against';
-    return;
-  }
-  if(tools) tools.style.display='none';
-  var p=byId(MODLAB.pid); if(!p){ modLabBack(); return; }
-  var groups=modLabGroups();
+/**
+ * ── ⭐⭐⭐ [OFFR-06] THE SHARED EDITOR — one implementation, used by the builder AND the per-product screen ──
+ * Unchanged from the original per-product code except reading `groups` as an argument instead of closing
+ * over `p` — same markup, same verbs (modLabSetGroup/AddOption/…, already draft-aware).
+ */
+function comboGroupsEditorHTML(groups){
   var err=CBVariant.validate(groups).errors;
   var errFor=function(gi){ return err.filter(function(e){return e.at===gi;}).map(function(e){return e.message;}); };
-  var groupHTML=function(g,gi){
+  return groups.map(function(g,gi){
     var gerr=errFor(gi);
     return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px">'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
@@ -1006,41 +1066,139 @@ function paintModLab(){
         }).join('')
       + '<button class="btn sm" style="align-self:flex-start" onclick="modLabAddOption('+gi+')">+ Add an option</button>'
       + '</div></div>';
-  };
+  }).join('');
+}
+/** ⭐⭐ the live "what a customer sees" preview — same CBVariant.toggle()/missing()/words() the till itself
+ * uses to sell, so this can never show a combination the counter would then refuse. Unchanged from the
+ * original per-product code, just no longer closed over one particular product. */
+function comboPreviewHTML(){
   var sellable=modLabPreviewGroups();
-  var previewHTML = !sellable.length
-    ? '<div class="hs" style="padding:8px 0">Add at least one group with an option above to preview.</div>'
-    : sellable.map(function(g,gi){
-        var picked=MODLABPREV.filter(function(m){return m.group===g.name;}).map(function(m){return m.option;});
-        return '<div class="kv" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'
-          + '<div style="display:flex;gap:8px;align-items:baseline"><b>'+esc(g.name)+'</b>'
-          + '<span style="font-size:12px;color:var(--muted)">'+(g.required?'required':'optional')+(g.max>1?' · up to '+g.max:'')+'</span></div>'
-          + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'
-          + g.options.map(function(o,oi){
-              var on=picked.indexOf(o.name)>=0;
-              return '<button type="button" class="btn sm'+(on?' pri':'')+'" onclick="modLabPreviewPick('+gi+','+oi+')">'+(on?'✓ ':'')+esc(o.name)+(o.price?' +'+M0(o.price):'')+'</button>';
-            }).join('')+'</div></div>';
-      }).join('')
-      + (function(){
-          var missing=CBVariant.missing(sellable, MODLABPREV), words=CBVariant.words(MODLABPREV, M0);
-          return '<div style="padding:4px 0 8px;font-size:14px">'+(missing.length
-            ? '<span style="color:var(--amber-i)">● Still needs: '+esc(missing.join(', '))+'</span>'
-            : '<b>Ready to add'+(words?' — ':'')+'</b>'+esc(words))+'</div>';
-        })()
-      + '<button class="btn sm" onclick="modLabPreviewReset()">Reset preview</button>';
+  if(!sellable.length) return '<div class="hs" style="padding:8px 0">Add at least one group with an option above to preview.</div>';
+  return sellable.map(function(g,gi){
+      var picked=MODLABPREV.filter(function(m){return m.group===g.name;}).map(function(m){return m.option;});
+      return '<div class="kv" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'
+        + '<div style="display:flex;gap:8px;align-items:baseline"><b>'+esc(g.name)+'</b>'
+        + '<span style="font-size:12px;color:var(--muted)">'+(g.required?'required':'optional')+(g.max>1?' · up to '+g.max:'')+'</span></div>'
+        + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'
+        + g.options.map(function(o,oi){
+            var on=picked.indexOf(o.name)>=0;
+            return '<button type="button" class="btn sm'+(on?' pri':'')+'" onclick="modLabPreviewPick('+gi+','+oi+')">'+(on?'✓ ':'')+esc(o.name)+(o.price?' +'+M0(o.price):'')+'</button>';
+          }).join('')+'</div></div>';
+    }).join('')
+    + (function(){
+        var missing=CBVariant.missing(sellable, MODLABPREV), words=CBVariant.words(MODLABPREV, M0);
+        return '<div style="padding:4px 0 8px;font-size:14px">'+(missing.length
+          ? '<span style="color:var(--amber-i)">● Still needs: '+esc(missing.join(', '))+'</span>'
+          : '<b>Ready to add'+(words?' — ':'')+'</b>'+esc(words))+'</div>';
+      })()
+    + '<button class="btn sm" onclick="modLabPreviewReset()">Reset preview</button>';
+}
+/** ⭐ the inline "Save as" row — a text input beside the page's own edits, never a native prompt() */
+function comboSaveAsRowHTML(){
+  if(!MODLAB.savingAs) return '';
+  return '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    + '<input id="modLabSaveName" class="inp" style="flex:1;min-width:180px;height:38px" placeholder="Name this combo — e.g. \u2018Weekday tiffin combo\u2019" onkeydown="if(event.key===\'Enter\')modLabSaveAsConfirm()">'
+    + '<button class="btn sm pri" onclick="modLabSaveAsConfirm()">Save</button>'
+    + '<button class="btn sm" onclick="modLabSaveAsCancel()">Cancel</button></div>';
+}
+/** ⭐⭐⭐ "a mechanism of open the same again" — the saved-combo library, reachable from every screen */
+function comboLibraryHTML(){
+  var items=COMBO_LIB.items||[];
+  return '<div style="padding:0 20px 20px">'
+    + '<button class="btn sm" onclick="modLabCloseLibrary()">← Back</button>'
+    + '<h3 style="margin:12px 0 10px">My saved combos</h3>'
+    + (!COMBO_LIB.loaded
+      ? '<div class="hs" style="padding:24px">Loading…</div>'
+      : !items.length
+      ? '<div class="hs" style="padding:24px">Nothing saved yet. Build a combo, then "💾 Save as…" to see it here.</div>'
+      : items.map(function(t){
+          var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(s,g){return s+((g&&g.options)||[]).length;},0);
+          return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
+            + '<div><div style="font-weight:700">'+esc(t.name)+'</div>'
+            + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · '+opts+' option'+(opts===1?'':'s')+'</div></div>'
+            + '<div style="display:flex;gap:6px"><button class="btn sm pri" onclick="modLabUseTemplate(\''+t.id+'\')">Use</button>'
+            + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(t.name).replace(/'/g,"\\'")+'\')">✕</button></div></div>';
+        }).join(''))
+    + '</div>';
+}
+function paintModLab(){
+  var body=document.getElementById('modLabBody'), foot=document.getElementById('modLabFoot');
+  var tools=document.querySelector('#modLabOverlay .ovltools');
+  if(!body) return;
+  if(MODLAB.libraryOpen){
+    if(tools) tools.style.display='none';
+    body.innerHTML=comboLibraryHTML();
+    if(foot) foot.textContent=(COMBO_LIB.items||[]).length+' saved combo'+((COMBO_LIB.items||[]).length===1?'':'s')+' — "Use" adds its groups to what you\u2019re building now';
+    return;
+  }
+  if(!MODLAB.pid && !MODLAB.building){
+    if(tools) tools.style.display='';
+    var list=modLabList();
+    var pendingDraft=MODLAB.draft.length>0;
+    /* ⭐ [OFFR-06] two real entry points, not one passive toggle: build fresh, or reopen a saved combo. */
+    body.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
+        + '<h3 style="margin:0">Create a new combo</h3>'
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button class="btn sm pri" onclick="modLabBuildFresh()">🔧 Build a combo</button>'
+        + '<button class="btn sm" onclick="modLabOpenLibrary()">📂 My saved combos'+(COMBO_LIB.loaded?' ('+(COMBO_LIB.items||[]).length+')':'')+'</button>'
+        + '</div></div>'
+      + (pendingDraft
+        ? '<div class="kv" style="padding:10px 12px;border:1px solid var(--amber-i);border-radius:9px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+          + '<span>🔧 You have an unsaved combo ready — pick a product below to apply it.</span>'
+          + '<span style="display:flex;gap:6px"><button class="btn sm" onclick="modLabResumeBuild()">Resume building</button>'
+          + '<button class="btn sm" onclick="modLabCancelBuild(true)">Discard</button></span></div>'
+        : '<p class="hs" style="margin:0 0 12px">Build one from scratch, reopen one you saved before, or pick a product below to edit its own modifiers directly.</p>')
+      + (!list.length
+      ? '<div class="hs" style="padding:24px">No products match'+(MODLAB.q?' "'+esc(MODLAB.q)+'"':'')+'.</div>'
+      : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Modifiers</th></tr></thead><tbody>'
+        + list.map(function(p){
+            var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
+            return '<tr style="cursor:pointer" onclick="'+(pendingDraft?'modLabAttachDraftTo':'modLabPick')+'(\''+p.id+'\')"><td class="ovlname">'+esc(p.name)+'</td>'
+              + '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'
+              + '<td class="ovlprice">'+(n?n+' group'+(n===1?'':'s'):'—')+'</td></tr>';
+          }).join('')+'</tbody></table>');
+    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to '+(pendingDraft?'apply your combo to':'build its combo against');
+    return;
+  }
+  if(tools) tools.style.display='none';
+  if(MODLAB.building){
+    var dgroups=modLabGroups();
+    body.innerHTML = '<div style="padding:0 20px 20px">'
+      + '<button class="btn sm" onclick="modLabCancelBuild(true)">← Cancel</button>'
+      + '<h3 style="margin:12px 0 2px">Build a combo</h3>'
+      + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Not tied to a product yet — build it here, then save it or apply it to one.</div>'
+      + comboGroupsEditorHTML(dgroups)
+      + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
+      + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
+      + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+comboPreviewHTML()+'</div>'
+      + comboSaveAsRowHTML()
+      + '</div>';
+    if(foot){
+      foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
+        + '<span>Save it for later, or pick a product to apply it to now.</span>'
+        + '<div style="display:flex;gap:8px">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
+        + '<button class="btn pri sm" onclick="modLabCancelBuild(false)">Apply to a product ▸</button></div></div>';
+    }
+    return;
+  }
+  var p=byId(MODLAB.pid); if(!p){ modLabBack(); return; }
+  var groups=modLabGroups();
   body.innerHTML = '<div style="padding:0 20px 20px">'
     + '<button class="btn sm" onclick="modLabBack()">← All products</button>'
     + '<h3 style="margin:12px 0 2px">'+esc(p.name)+'</h3>'
     + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+esc(catName(p.cat)||'—')+' · sells at '+M0(p.price)+'</div>'
-    + groups.map(groupHTML).join('')
+    + comboGroupsEditorHTML(groups)
     + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
-    + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+previewHTML+'</div>'
+    + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
+    + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+comboPreviewHTML()+'</div>'
+    + comboSaveAsRowHTML()
     + '</div>';
   if(foot){
     var canApply=S.biz==='mine' && savedLive();
     foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
       + '<span>'+(canApply?'Applying writes to your real catalogue.':'Using a sample catalogue — Apply tries it here, not on a real product.')+'</span>'
-      + '<button class="btn pri sm" onclick="modLabApply()">Apply to '+esc(p.name)+'</button></div>';
+      + '<div style="display:flex;gap:8px">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
+      + '<button class="btn pri sm" onclick="modLabApply()">Apply to '+esc(p.name)+'</button></div></div>';
   }
 }
 

@@ -41,23 +41,106 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('every product is listed to pick from', picker.rows === picker.total, picker.rows + ' rows for ' + picker.total + ' products');
   say('with a search box', picker.hasSearch, 'found');
 
-  console.log('\n── ⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" AND "SHOW EXAMPLE" (Athi: "so they can see what combo means") ' + '─'.repeat(0));
+  console.log('\n── ⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" IS A REAL HEADING, THE PICKER IS STILL UNDERNEATH ' + '─'.repeat(0));
   const combo = await p.evaluate(() => ({
     heading: (document.querySelector('#modLabBody h3') || {}).textContent,
-    exampleHiddenAtStart: !document.querySelector('#modLabBody').textContent.includes('Extra chutney'),
   }));
   say('the picker screen says plainly that this is where a combo starts', /Create a new combo/.test(combo.heading), '"' + combo.heading + '"');
-  say('the example is off by default — not clutter on every visit', combo.exampleHiddenAtStart, 'confirmed');
-  const shown = await p.evaluate(() => {
-    modLabToggleExample();
-    const text = document.getElementById('modLabBody').textContent;
-    return { hasGroup: /Extra toppings/.test(text), hasOptions: /Extra cheese/.test(text) && /Extra chutney/.test(text) };
+
+  console.log('\n── ⭐⭐⭐ [OFFR-06] "the example shown is very pathetic... something similar to the combo offer ' + '─'.repeat(0));
+  console.log('   in a popup window with possibly combination, and also with save as option" — Athi, live ' + '─'.repeat(0));
+  const builtFresh = await p.evaluate(() => {
+    modLabBuildFresh();
+    const html = document.getElementById('modLabBody').innerHTML;
+    return {
+      building: MODLAB.building, notTiedToProduct: MODLAB.pid === null,
+      hasRealGroup: /value="Extra toppings"/.test(html), hasRealOptions: /value="Extra cheese"/.test(html) && /value="Extra chutney"/.test(html),
+      editable: /onchange="modLabSetGroup/.test(html), hasPreview: /Preview — what a customer sees/.test(html),
+      hasSaveAsButton: /modLabSaveAsOpen/.test(document.getElementById('modLabFoot').innerHTML),
+    };
   });
-  say('"Show example" reveals a real, complete worked combo, not placeholder text', shown.hasGroup && shown.hasOptions, 'found');
-  const backOff = await p.evaluate(() => { modLabToggleExample(); return !document.getElementById('modLabBody').textContent.includes('Extra chutney'); });
-  say('pressing it again hides it — it teaches once, it does not nag', backOff, 'confirmed');
-  const stillReal = await p.evaluate(() => document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length);
-  say('the real product list is still there underneath, untouched by the example toggle', stillReal, 'confirmed');
+  say('"Build a combo" opens a real builder, not tied to any product yet', builtFresh.building && builtFresh.notTiedToProduct, 'confirmed');
+  say('seeded with a REAL, EDITABLE starting group — inputs, not static text', builtFresh.hasRealGroup && builtFresh.editable, 'found');
+  say('with real options already on it', builtFresh.hasRealOptions, 'found');
+  say('and the SAME live "what a customer sees" preview the per-product screen has', builtFresh.hasPreview, 'found');
+  say('a "Save as…" button is offered from here too', builtFresh.hasSaveAsButton, 'found');
+
+  console.log('\n── ⭐⭐⭐ "SAVE AS" — POSTs to /api/combo-templates (b266) ' + '─'.repeat(0));
+  const saved = await p.evaluate(async () => {
+    let call = null;
+    window.apiFetch = async (method, url, body) => {
+      if (method === 'POST' && /\/api\/combo-templates$/.test(url)) { call = { method, url, body }; return { ok: true, body: { template: Object.assign({ id: 'tpl1' }, body) } }; }
+      return { ok: true, body: { templates: [] } };
+    };
+    BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
+    S.biz = 'mine'; window.savedLive = () => true;
+    modLabSetGroup(0, { name: 'Extra toppings', required: false, max: 2 });
+    modLabSaveAsOpen();
+    document.getElementById('modLabSaveName').value = 'My topping combo';
+    await modLabSaveAsConfirm();
+    return { call: call, dialogClosed: !MODLAB.savingAs };
+  });
+  say('Save as posts the built groups under the typed name', saved.call && saved.call.body.name === 'My topping combo', saved.call ? JSON.stringify(saved.call.body.name) : 'not called');
+  say('carrying the real group definition, not a stub', saved.call && Array.isArray(saved.call.body.definition) && saved.call.body.definition.length === 1, saved.call ? JSON.stringify(saved.call.body.definition) : '');
+  say('and the inline save row closes on success', saved.dialogClosed, 'confirmed');
+  say('saving with NO name is refused before any request is made', await p.evaluate(async () => {
+    let called = false; window.apiFetch = async () => { called = true; return { ok: true, body: {} }; };
+    modLabSaveAsOpen(); document.getElementById('modLabSaveName').value = '  ';
+    await modLabSaveAsConfirm();
+    return !called;
+  }), 'confirmed');
+
+  console.log('\n── ⭐⭐⭐ "A MECHANISM OF OPEN THE SAME AGAIN" — the saved-combo library ' + '─'.repeat(0));
+  const TPL = { id: 'tpl1', name: 'My topping combo', definition: [{ name: 'Extra toppings', required: false, max: 2, options: [{ name: 'Extra cheese', price: 20 }, { name: 'Extra chutney', price: 10 }] }] };
+  const lib = await p.evaluate(async (tpl) => {
+    window.apiFetch = async (method, url) => {
+      if (method === 'GET' && /\/api\/combo-templates$/.test(url)) return { ok: true, body: { templates: [tpl] } };
+      return { ok: true, body: {} };
+    };
+    modLabCancelBuild(true);           /* clear the earlier draft so the "used" groups below are unambiguous */
+    await modLabOpenLibrary();
+    const html = document.getElementById('modLabBody').innerHTML;
+    return { open: MODLAB.libraryOpen, showsSavedName: html.indexOf('My topping combo') >= 0, showsCount: /2 groups?/.test(html) === false && /1 group/.test(html) };
+  }, TPL);
+  say('"My saved combos" opens a real library, fetched from the server', lib.open, 'confirmed');
+  say('showing the combo saved a moment ago, by the name it was given', lib.showsSavedName, 'found');
+  say('with an honest group/option count, not a guess', lib.showsCount, 'confirmed');
+
+  const reopened = await p.evaluate(() => {
+    modLabUseTemplate('tpl1');
+    const groups = MODLAB.building ? MODLAB.draft : P[0].modifiers;
+    return { closedLibrary: !MODLAB.libraryOpen, resumedBuilding: MODLAB.building, groupName: groups[groups.length - 1] && groups[groups.length - 1].name };
+  });
+  say('"Use" closes the library and brings the saved groups back in', reopened.closedLibrary && reopened.groupName === 'Extra toppings', 'confirmed');
+  say('landing back in the builder, ready to keep editing', reopened.resumedBuilding, 'confirmed');
+
+  const deleted = await p.evaluate(async () => {
+    let call = null;
+    window.apiFetch = async (method, url) => { if (method === 'DELETE') { call = url; return { ok: true, body: {} }; } return { ok: true, body: { templates: [] } }; };
+    await modLabDeleteTemplate('tpl1', 'My topping combo');
+    return { call: call };
+  });
+  say('deleting a saved combo calls the real DELETE route', deleted.call && /\/api\/combo-templates\/tpl1$/.test(deleted.call), deleted.call);
+
+  console.log('\n── ⚠️⚠️ AN UNSAVED DRAFT OFFERS ITSELF TO THE NEXT PRODUCT PICKED, IT IS NOT LOST ' + '─'.repeat(0));
+  const draftFlow = await p.evaluate(() => {
+    modLabCancelBuild(true); modLabBack();
+    modLabBuildFresh();
+    modLabCancelBuild(false);   /* "Apply to a product ▸" — keep the draft, go pick one */
+    const html = document.getElementById('modLabBody').innerHTML;
+    const bannerShown = /unsaved combo/i.test(html);
+    modLabAttachDraftTo(P[0].id);
+    return { bannerShown: bannerShown, attachedTo: P[0].id === MODLAB.pid, gotGroups: P[0].modifiers.length > 0, draftCleared: MODLAB.draft.length === 0 };
+  });
+  say('the picker warns a combo is waiting to be applied', draftFlow.bannerShown, 'banner shown');
+  say('picking a product attaches the draft to it', draftFlow.attachedTo && draftFlow.gotGroups, 'confirmed');
+  say('and the draft is spent, not left lying around for the next visit', draftFlow.draftCleared, 'confirmed');
+  const stillReal = await p.evaluate(() => { modLabBack(); return document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length; });
+  say('the real product list is exactly what it always was, once the builder is done with', stillReal, 'confirmed');
+  /* ⚠️ cleanup — the draft-attach above put a real group on P[0], and the save-as test above switched to a
+     'mine' catalogue to prove the real PATCH shape; the sections below assume a clean slate on both, the
+     same way they always could before this run added a combo-builder story ahead of them. */
+  await p.evaluate(() => { P[0].modifiers = []; MODLAB.pid = null; S.biz = 'hotel'; });
 
   console.log('\n── ⭐⭐⭐ picking a product opens the group editor and a live preview ' + '─'.repeat(0));
   const picked = await p.evaluate(() => {
