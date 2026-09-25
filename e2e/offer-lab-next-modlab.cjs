@@ -93,6 +93,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const realApply = await p.evaluate(async () => {
     let call = null;
     window.apiFetch = async (method, url, body) => { call = { method, url, body }; return {}; };
+    /* render() (called by modLabApply() now — see the fix this run caught) reads BIZ[S.biz].name, so a real
+       'mine' entry has to exist here, the same as labUseMine()/buildBiz('mine',…) always provides for real */
+    BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
     S.biz = 'mine';
     window.savedLive = () => true;
     await modLabApply();
@@ -141,6 +144,27 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('and its real, existing options — not a blank form', existing.hasIdli && existing.hasDosa, 'both found');
   say('editing an EXISTING option really changes it, in place', existing.afterEdit.price === 8, JSON.stringify(existing.afterEdit));
   say('without disturbing the other, unrelated group', existing.stillTwoGroups, 'still 2 groups');
+
+  console.log('\n── ⭐⭐⭐ THE SETTINGS SCREEN’S OWN "MODIFIERS" CARD IS REFRESHED, NEVER LEFT STALE ' + '─'.repeat(0));
+  console.log('   (found live, on the deployed page: Apply worked, but "No product has a modifier yet" stayed on screen) ' + '─'.repeat(0));
+  const cardFresh = await p.evaluate(async () => {
+    let renderCalls = 0;
+    const realRender = window.render;
+    window.render = function () { renderCalls++; return realRender.apply(this, arguments); };
+    modLabPick(P[1].id);
+    modLabAddGroup();
+    const beforeApply = renderCalls;
+    await modLabApply();     /* the moment the count actually changes */
+    const afterApply = renderCalls;
+    closeModLab();            /* the moment the person actually SEES the Settings screen again */
+    const afterClose = renderCalls;
+    window.render = realRender;
+    return { beforeApply: beforeApply, afterApply: afterApply, afterClose: afterClose };
+  });
+  say('Apply itself refreshes the page behind the overlay', cardFresh.afterApply > cardFresh.beforeApply,
+    'render() called ' + (cardFresh.afterApply - cardFresh.beforeApply) + ' time(s) by modLabApply()');
+  say('and closing the lab refreshes it again, so it is never stale by the time it is actually seen',
+    cardFresh.afterClose > cardFresh.afterApply, 'render() called again by closeModLab()');
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();

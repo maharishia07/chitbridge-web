@@ -738,7 +738,9 @@ function openPriceOverlay(){
   paintPriceOvCats(); paintPriceOvBody();
   if(s) s.focus();
 }
-function closePriceOverlay(){ var el=document.getElementById('priceOverlay'); if(el) el.classList.remove('on'); }
+/* ⭐ setCost() already calls render() on every edit, so this is belt-and-braces — but cheap, and it matches
+ * the rule closeModLab() now follows for exactly the same class of bug. */
+function closePriceOverlay(){ var el=document.getElementById('priceOverlay'); if(el) el.classList.remove('on'); render(); }
 function priceOvSearch(v){ OVL.q=v; paintPriceOvBody(); }
 function priceOvCat(id){ OVL.cat=(OVL.cat===id?null:id); paintPriceOvCats(); paintPriceOvBody(); }
 /**
@@ -822,7 +824,13 @@ function openModLab(){
   paintModLab();
   if(s) s.focus();
 }
-function closeModLab(){ var el=document.getElementById('modLabOverlay'); if(el) el.classList.remove('on'); }
+/**
+ * ⚠️⚠️⚠️ RENDER() ON CLOSE, NOT JUST paintModLab() — the Settings screen's own "Modifiers" card (its count of
+ * how many items already carry one) is part of the PAGE render() draws, never the overlay paintModLab() owns.
+ * Applying a modifier and closing the lab left that card saying "No product has a modifier yet" underneath,
+ * stale, until some UNRELATED edit (margin, loyalty…) happened to force a repaint. Found by actually using it.
+ */
+function closeModLab(){ var el=document.getElementById('modLabOverlay'); if(el) el.classList.remove('on'); render(); }
 function modLabSearch(v){ MODLAB.q=v; paintModLab(); }
 function modLabList(){
   var q=(MODLAB.q||'').trim().toLowerCase();
@@ -868,6 +876,11 @@ async function modLabApply(){
     toastSay('Applied here, in the Lab. Sign in and use your own catalogue to save this for real.');
   }
   paintModLab();
+  /* ⭐⭐⭐ THE SETTINGS SCREEN'S OWN "MODIFIERS" CARD IS render()'s JOB, NOT paintModLab()'s — its count of how
+   * many items already carry one goes stale (still "No product has a modifier yet") the moment Apply actually
+   * changes that count, exactly the way setCost() already avoids by calling render() on every edit. Found by
+   * using the real, deployed page, not by reading the code. */
+  render();
 }
 function paintModLab(){
   var body=document.getElementById('modLabBody'), foot=document.getElementById('modLabFoot');
