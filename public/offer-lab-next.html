@@ -1048,10 +1048,27 @@ function closeWork(){ var el=document.getElementById('workScrim'); if(el) el.cla
  * (S.belowAct) and rounding stay exactly as correct here as everywhere else on this page.
  */
 var WORK_PANEL=1;   /* 1 = "Your margin" (cost/verdict), 2 = "On a bill" (what the customer sees) — resets to 1 each open */
+/**
+ * ⭐⭐⭐ [found by review, 2026-09-26] A LOYALTY CUSTOMER CAN NEVER PAY MORE THAN EVERYONE ELSE. row('exclude')
+ * means "leave this item's price alone rather than sell it below cost" — read literally, "alone" is the
+ * item's own FULL price, which is correct for row() taken on its own. But taken as the LOYALTY price
+ * specifically, on an item whose base offer alone is still fine (didn't need excluding), "leave it alone" can
+ * land ABOVE the base-offer price — a loyalty bonus that charges the loyalty customer MORE than a regular one
+ * for the identical item, and percentDecide() then picked whichever margin was BETTER, silently reporting a
+ * pass on an item that just overcharged its own loyalty customer. Never possible under 'cap' (settles at cost,
+ * always <= the base price) or 'warn' (never reverts at all) — only 'exclude', the shop's own default.
+ * Capped once, here, so every reader of `.all` downstream (the table, the totals, the bill) sees the same,
+ * correct number without needing its own copy of this check.
+ */
 function percentRows(){
   return items().map(function(p){
     var pub=row(p, offerFrac(p));
     var all=(loyMode()==='pct') ? row(p, combo(offerFrac(p), loyFrac())) : pub;
+    if(all.shown>pub.shown){
+      all=Object.assign({},all,{shown:pub.shown,status:pub.status,
+        margin:p.cost==null?null:marginPct(pub.shown,p.cost),
+        profit:p.cost==null?null:R2(pub.shown-p.cost)});
+    }
     return {p:p, pub:pub, all:all};
   });
 }
@@ -1845,8 +1862,15 @@ function scopeRow(catOnly){
     'onclick="openApplyPicker()"><span>'+label+'</span><span style="color:var(--faint)">▾</span></button></div>';
 }
 function setCat(v){ S.catId=v; render(); }
-/** ⭐ the overlay's own commits — replaces setItem() for THIS picker only; setItem()/S.itemId stay exactly as
- * they were for the "free/same shape" picker, which is a genuinely different, single-item setting. */
+/**
+ * ⭐⭐⭐ [found by review, 2026-09-26] THIS COMMENT WAS WRONG AND setItem() WAS ACTUALLY DELETED — the claim
+ * below ("setItem()/S.itemId stay exactly as they were") was written the same edit that removed setItem()
+ * itself. selectOf() still calls it by name for the free/same-shape picker ("buy N of this exact item, get
+ * one more free" — a genuinely different, single-item setting, untouched by the multi-item scope work below).
+ * Since overlayPick() only checks `typeof window[fn]==='function'` before calling it, the missing function
+ * failed SILENTLY: the picker opened, a click did nothing, and nothing errored. Restored.
+ */
+function setItem(v){ S.itemId=v; render(); }
 function applyWholeCategory(id){ S.scope='cat'; S.catId=id; S.applied=false; render(); }
 function applyItemList(ids){ S.scope='item'; S.itemIds=ids; S.applied=false; render(); }
 function setShape(v){ S.freeShape=v; S.applied=false; render(); }
@@ -1943,9 +1967,14 @@ function loyBoxHTML(){
  * ⭐⭐⭐ [2026-09-26, per offer-lab-controls_1.html] "The combined figure is a sentence, not a formula —
  * `10% + 10% off = 19%` reads like broken arithmetic, anyone checking it gets 20. It now says which customer
  * pays what." Reworded to the doc's own exact sentence; the underlying math (combo()) is unchanged.
+ * ⚠️⚠️ [found by review, 2026-09-26] CLAMPED, matching offerFrac()/loyFrac()'s own 99%/95% caps — both fields
+ * are plain text inputs with no real limit (the `max` attribute is cosmetic only, edit() never clamps), so
+ * typing e.g. 150% loyalty used to make this sentence say "145% off" while the SAME modal's header tag and
+ * table both showed the correctly-capped 95.5% — two different combined rates for the identical offer, on
+ * the same screen.
  */
 function sumLineHTML(){
-  var off=num(S.pctOff), loy=S.loyOn?num(S.loyPct):0;
+  var off=Math.min(99,num(S.pctOff)), loy=S.loyOn?Math.min(95,num(S.loyPct)):0;
   var c=Math.round(combo(off/100,loy/100)*1000)/10;
   return S.loyOn
     ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer. Everyone else pays <b>'+
@@ -2782,6 +2811,17 @@ function openSaved(id){
   var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv) return;
   if(sv.biz!==S.biz) applyBiz(sv.biz);
   KEEP.forEach(function(kk){ if(sv.snap[kk]!=null) S[kk]=JSON.parse(JSON.stringify(sv.snap[kk])); });
+  /**
+   * ⭐⭐⭐ [found by review, 2026-09-26] an offer saved BEFORE itemIds existed only carries the old singular
+   * `itemId` — the KEEP restore above silently skips `S.itemIds` (`sv.snap.itemIds` is `undefined`, so its
+   * `!= null` check never fires) and leaves whatever array was already sitting in S from before this call —
+   * a real product, just not the one this offer was actually saved against. scopeCoversItem()/scopesOverlap()
+   * already fall back to `snap.itemId` for exactly this reason (clash-detection was tested against old
+   * offers); reopening one for editing needed the identical fallback and didn't have it.
+   */
+  if(sv.snap.scope==='item' && (!sv.snap.itemIds||!sv.snap.itemIds.length) && sv.snap.itemId){
+    S.itemIds=[sv.snap.itemId];
+  }
   S.applied=true; go(2);
 }
 async function setStatus(id,st){
