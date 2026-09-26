@@ -20,11 +20,22 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(34) + '· ' + d 
   /** the two kinds of heartbeat, switchable — this is the whole experiment */
   let mode = 'named';           /* 'named' = event: ping · 'comment' = ': ping' only */
   let beats = 0;
+  const conns = [];   /* [REV — till notifications] open SSE responses, so a test can push a real 'cb' event on demand */
   const srv = http.createServer((q, r) => {
     const url = q.url.split('?')[0];
+    if (url === '/push-cb' && q.method === 'POST') {
+      let body = '';
+      q.on('data', (c) => { body += c; });
+      q.on('end', () => {
+        conns.forEach((c) => { try { c.write('event: cb\ndata: ' + body + '\n\n'); } catch (_) {} });
+        r.writeHead(200, { 'content-type': 'application/json' }); r.end('{"ok":true}');
+      });
+      return;
+    }
     if (url === '/api/events/stream') {
       r.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
       r.write('event: hello\ndata: {}\n\n');
+      conns.push(r);
       const hb = setInterval(() => {
         beats++;
         try {
@@ -32,7 +43,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(34) + '· ' + d 
           if (mode === 'named') r.write('event: ping\ndata: {"t":' + Date.now() + '}\n\n');
         } catch (_) {}
       }, 200);
-      q.on('close', () => clearInterval(hb));
+      q.on('close', () => { clearInterval(hb); const i = conns.indexOf(r); if (i >= 0) conns.splice(i, 1); });
       return;
     }
     if (url.startsWith('/api/')) { r.writeHead(200, { 'content-type': 'application/json' }); return r.end('{"ok":true,"ticket":"t"}'); }
@@ -104,6 +115,32 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(34) + '· ' + d 
   });
   say('the dead stream is replaced', back.replaced, 'a new EventSource was built');
   say('and it reads live again', back.live === true && back.ok === true, 'nobody pressed anything');
+
+  /* ══ ⭐ [till notifications] a chit arriving is told quietly — the SAME line 'shop' already uses ══════════ */
+  console.log('\n── something landed in the mailbox while the counter was open ' + '─'.repeat(1));
+  const pushCb = (payload) => new Promise((resolve, reject) => {
+    const body = JSON.stringify(payload);
+    const req = http.request(base + '/push-cb', { method: 'POST', headers: { 'content-type': 'application/json' } },
+      (res) => { res.on('data', () => {}); res.on('end', resolve); });
+    req.on('error', reject); req.end(body);
+  });
+  await p.evaluate(() => { document.getElementById('lastnote').textContent = ''; });
+  await pushCb({ kind: 'chit', who: 'Test Customer' });
+  await p.waitForTimeout(300);
+  const noted = await p.evaluate(() => document.getElementById('lastnote').textContent);
+  say('a chit arriving is noted, with who it was from', noted === 'New in your mailbox — Test Customer.', JSON.stringify(noted));
+
+  await p.evaluate(() => { document.getElementById('lastnote').textContent = ''; });
+  await pushCb({ kind: 'capture' });
+  await p.waitForTimeout(300);
+  const notedNoWho = await p.evaluate(() => document.getElementById('lastnote').textContent);
+  say('one with no name at all still says something arrived, not "undefined"', notedNoWho === 'New in your mailbox.', JSON.stringify(notedNoWho));
+
+  await p.evaluate(() => { document.getElementById('lastnote').textContent = ''; });
+  await pushCb({ kind: 'task' });
+  await p.waitForTimeout(300);
+  const notedTask = await p.evaluate(() => document.getElementById('lastnote').textContent);
+  say('a task reassignment is still the mailbox’s business, not the counter’s — no note', notedTask === '', JSON.stringify(notedTask));
 
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' failed' : '\na quiet bell is told from a dead one, and rebuilt by itself');
