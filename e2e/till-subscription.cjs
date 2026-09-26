@@ -1,5 +1,14 @@
 /* till-subscription.cjs — A RECURRING COMMITMENT, SOLD, THEN TRACKED VISIT BY VISIT
  *
+ * ⚠️⚠️⚠️ [HELD, 2026-09-26] Athi, after seeing this live: "remove the subscription now, it has to be tied
+ * with the customer, otherwise how you would know. keep it as one of the asset but not to be showcased...
+ * when we bring the customer then we can include it here, otherwise, tidy this with the backend app as part
+ * of customer link. not here." "Customer" here was always a free-text name, not a real customer record, so
+ * there was nowhere for "your AMC is due" to actually reach anyone — right call. The mechanism this test
+ * proves is UNCHANGED and stays correct; only menuSubscriptionSummary() now returns '' instead of the two
+ * buttons, so the door out of the till menu is closed until a real customer link exists. See BACKLOG.md for
+ * where that link is expected to live (routes/relationships.js / lib/customer-groups.js).
+ *
  * Athi: "scope the subscription/AMC feature and let's build it." Following the same shape as expenses (his
  * own framing, reused deliberately): "it can be anything like Gpay... or cash or card, need to know what the
  * expense is and the mode of payment and amount... we are not classifying... assuming if we are bringing the
@@ -52,15 +61,19 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(62) + '· ' + d 
     window.sure = async () => true;   /* the confirmation itself is proven elsewhere; this test drives the form */
   }, base);
 
-  console.log('\n── the door exists, gated the same way an expense’s is ' + '─'.repeat(0));
+  console.log('\n── ⚠️⚠️⚠️ [HELD, 2026-09-26] NOT SHOWCASED IN THE TILL MENU — see menuSubscriptionSummary()’s own note ' + '─'.repeat(0));
+  console.log('   Athi: "remove the subscription now, it has to be tied with the customer, otherwise how you ' + '─'.repeat(0));
+  console.log('   would know... keep it as one of the asset but not to be showcased." Everything below still ' + '─'.repeat(0));
+  console.log('   proves the MECHANISM works — only the menu door is closed until a real customer link exists. ' + '─'.repeat(0));
   const gate = await p.evaluate(() => ({
     canIssue: subCanIssue(),
-    menuHasBoth: (function(){ menuSection('day'); paintMenu(); var h = document.getElementById('tillmenu').innerHTML;
+    menuHasBoth: (function(){ if (!menuIsOpen('moremoney')) menuSection('moremoney'); paintMenu();
+      var h = document.getElementById('tillmenu').innerHTML;
       return { newBtn: /till-open-subscription"/.test(h), listBtn: /till-open-subscription-list/.test(h) }; })(),
   }));
-  say('subCanIssue() is true once HOST.subscription exists', gate.canIssue, 'confirmed');
-  say('"🔁 New subscription/AMC" is offered in the Day section', gate.menuHasBoth.newBtn, 'found');
-  say('"📋 My subscriptions & AMCs" is offered right beside it', gate.menuHasBoth.listBtn, 'found');
+  say('subCanIssue() is still true — the mechanism itself is untouched', gate.canIssue, 'confirmed');
+  say('but "🔁 New subscription/AMC" is NOT in the menu — held, deliberately', gate.menuHasBoth.newBtn === false, gate.menuHasBoth.newBtn ? 'still showing — regression' : 'correctly hidden');
+  say('and neither is "📋 My subscriptions & AMCs"', gate.menuHasBoth.listBtn === false, gate.menuHasBoth.listBtn ? 'still showing — regression' : 'correctly hidden');
 
   console.log('\n── signing someone up for a FIXED-COUNT AMC (4 visits), through the real dialog ' + '─'.repeat(0));
   const signedUp = await p.evaluate(async () => {

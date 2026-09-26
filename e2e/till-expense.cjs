@@ -50,11 +50,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   console.log('\n── the door exists, gated the same way a credit note’s is ' + '─'.repeat(0));
   const gate = await p.evaluate(() => ({
     canIssue: expCanIssue(),
-    menuHasIt: (function(){ menuSection('day'); paintMenu(); var h = document.getElementById('tillmenu').innerHTML;
+    menuHasIt: (function(){ menuSection('moremoney'); paintMenu(); var h = document.getElementById('tillmenu').innerHTML;
       return /till-open-expense/.test(h); })(),
   }));
   say('expCanIssue() is true once HOST.expense exists', gate.canIssue, 'confirmed');
-  say('"💰 Record an expense" is offered in the Day section of the menu', gate.menuHasIt, 'found');
+  say('"💰 Record an expense" is offered in the "Other money" section of the menu', gate.menuHasIt, 'found');
 
   console.log('\n── recording one, through the real dialog ' + '─'.repeat(15));
   const recorded = await p.evaluate(async () => {
