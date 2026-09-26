@@ -128,6 +128,55 @@ button{cursor:pointer}
 /* ⭐⭐⭐ [2026-09-26] item/category pickers now open #priceOverlay in a picking mode (see openPickOverlay,
    selectOf) instead of a dropdown of their own — no picker-specific CSS needed here any more. */
 .ovlpickrow:hover{background:var(--green-t)}
+/**
+ * ── ⭐⭐⭐ [2026-09-26] "WORK IT OUT" REBUILT PER ATHI'S OWN offer-lab-workitout.html — the two discounts as a
+ * side-by-side pair, a live combined-rate line, and the result as a MODAL over the controls rather than pushed
+ * in below them. Reuses .headline/.res/.ovlx (already this file's own — the doc's prototype was built against
+ * them); only .pair/.box/.num/.sum/.scrim/.sheet/.shhd/.tag/.shbd/.shft are genuinely new.
+ * ⚠️ "Apply it to" (scopeRow()) stays the REAL picker built and tested over this whole session — checkboxes,
+ * select-all, dynamic-category, clash-highlighting — not the doc's own plain <select>, which named only 4
+ * illustrative options out of 7 categories and 31 products. That control was standing in for "a picker goes
+ * here," the same way the Settings doc's "61%" stood in for a live number, not a literal instruction to
+ * replace a working, tested mechanism with one that cannot check a box.
+ */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-top:16px}
+.box{border:1px solid var(--line);border-radius:12px;padding:13px 15px;min-height:96px}
+.box.loy{border-color:var(--blue-b);background:var(--blue-t)}
+.box.loy.off{border-color:var(--line);background:var(--card)}
+.boxhd{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.boxhd .t{font-size:13.5px;font-weight:700}
+.num{display:inline-flex;align-items:baseline;gap:2px}
+.num input{width:78px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+  height:52px;padding:0 10px;text-align:right;outline:0;
+  font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:26px;font-weight:700}
+.num input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.num .u{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--faint)}
+.hint.bad{color:var(--red-i);font-weight:600}
+.sum{display:flex;align-items:baseline;gap:10px;margin-top:16px;padding:13px 16px;
+  background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;flex-wrap:wrap}
+.sum .big{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.sum .wd{font-size:13px;color:var(--muted)}
+/* the result, as an overlay — never pushed in below the controls */
+.scrim{position:fixed;inset:0;background:rgba(29,27,22,.45);display:none;
+  align-items:center;justify-content:center;padding:24px;z-index:50}
+.scrim.on{display:flex}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;
+  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden}
+.shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+.shhd h3{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;margin:0}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+  background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b);border-radius:8px;padding:2px 9px}
+.shbd{overflow:auto;padding:0}
+.shft{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--hair);background:var(--page);flex-wrap:wrap;align-items:center}
+.why{font-size:12.5px;color:var(--faint)}
+@media(max-width:760px){
+  .pair{grid-template-columns:1fr}
+  .scrim{padding:0;align-items:stretch}
+  .sheet{border-radius:0;border:0;max-height:none;height:100%;width:100%}
+  .headline{gap:16px} .headline .hv{font-size:20px}
+  .shft .btn{flex:1;justify-content:center}
+}
 /* ⭐ a row already covered by another live offer — Athi: "it has to highlight, which offer it is already
    included" (see offerCoveringItem() in the JS) */
 .ovlinother{background:var(--amber-t)}
@@ -560,6 +609,24 @@ button{cursor:pointer}
     <div class="ovlfoot" id="ovlFoot"></div>
   </div>
 </div>
+
+<!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
+<div class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
+    <div class="shhd">
+      <h3 id="workTitle"></h3>
+      <span class="tag" id="workTag"></span>
+      <button class="ovlx" onclick="closeWork()" aria-label="Close" title="Close" style="margin-left:auto">✕</button>
+    </div>
+    <div class="shbd" id="workBody"></div>
+    <div class="shft">
+      <button class="btn pri" onclick="saveOffer()">Save for review</button>
+      <button class="btn" onclick="closeWork()">Change it</button>
+      <span class="grow"></span>
+      <span class="why" id="workNote"></span>
+    </div>
+  </div>
+</div>
 <!--
   ⭐⭐⭐ [Labs split, 2026-09-26] THE MODIFIER/COMBO LAB MOVED TO ITS OWN PAGE. Athi: "bring offer lab and
   combo lab as a separate item rather than in one place. I guess combo lab earned its place now." It lived
@@ -837,9 +904,35 @@ function edit(k,v){
 function editKeep(k,v){ S[k]=v; render(); }
 function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
   if(n===3 && savedLive()) loadSaved();   /* the shelf may have changed on another tab/device since last look */
+  closeWork();   /* navigating away from "Work it out" must not leave its result floating over the next screen */
 }
 function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
-function apply(){ S.applied=true; render(); }
+/**
+ * ⭐⭐⭐ [2026-09-26, per offer-lab-workitout.html] THE RESULT IS A MODAL NOW, NOT A PANEL PUSHED IN BELOW THE
+ * CONTROLS — Athi's own doc: "the result, as an overlay — never pushed in below the controls." `S.applied`
+ * keeps its existing meaning (has this configuration been worked out at least once — still what "Work it out
+ * again" / "Save for review"'s visibility key off elsewhere); `paintWork()`/`closeWork()` separately control
+ * whether the modal is CURRENTLY open, so closing it to tweak a number and reopening doesn't lose that state.
+ */
+function apply(){ S.applied=true; render(); paintWork(); }
+function closeWork(){ var el=document.getElementById('workScrim'); if(el) el.classList.remove('on'); document.body.style.overflow=''; }
+function paintWork(){
+  var el=document.getElementById('workScrim'); if(!el) return;
+  var l=label();
+  document.getElementById('workTitle').textContent=l.title;
+  document.getElementById('workTag').textContent=l.detail;
+  document.getElementById('workBody').innerHTML=outHTML();
+  /* ⭐ "N of M fall under your margin%" — per offer-lab-workitout.html's own footer note */
+  var note='';
+  if(S.goal==='percent'||S.goal==='amount'){
+    var rs=lineRows(), under=rs.filter(function(r){ return r.margin!=null && r.margin<num(S.margin); }).length;
+    note = under ? under+' of '+rs.length+' fall under your '+num(S.margin)+'%.' : 'All clear your '+num(S.margin)+'%.';
+  }
+  document.getElementById('workNote').textContent=note;
+  el.classList.add('on');
+  document.body.style.overflow='hidden';
+}
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeWork(); closePriceOverlay(); } });
 /**
  * ⚠️⚠️⚠️ [OFFR-01] AWAITED, NOT FIRED-AND-FORGOTTEN. Athi: "the cost price we update, it has to be stored
  * as part of the catalogue, otherwise you keep typing? you need to have a save, edit button and all." The
@@ -1443,21 +1536,31 @@ function loyBar(){
   return h+'</div>';
 }
 
+/**
+ * ⭐ [2026-09-26, percent/amount only] "Work it out" is refused (per offer-lab-workitout.html) until there is
+ * something real to work out — no scope chosen, or a zero/blank rate — with the reason said right beside the
+ * button rather than a silent no-op click. Other goal kinds are untouched; the doc only covers this pair.
+ */
+function applyWhy(){
+  if(S.goal!=='percent' && S.goal!=='amount') return '';
+  var scopeOk = S.scope==='cat' ? !!S.catId : !!(S.itemIds && S.itemIds.length);
+  if(!scopeOk) return 'Choose what it applies to first.';
+  var val = S.goal==='percent' ? num(S.pctOff) : num(S.rsOff);
+  if(val<=0) return S.goal==='percent' ? 'Take off more than zero.' : 'Take off more than ₹0.';
+  return '';
+}
 function renderS2(){
-  var g=goalOf(S.goal);
+  var g=goalOf(S.goal), why=applyWhy();
   var h='<div class="card pad">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
     '<h2 class="h">'+g.n+'</h2>'+backBtn(1)+'</div><p class="hs">'+cfgLine()+'</p>'+
     '<div style="margin-top:16px">'+cfgHTML()+'</div>'+
-    (g.kind==='line'?'':loyBar())+   /* percent/amount/qty already placed loyBar() themselves, in the new order */
+    (g.kind==='line'?'':loyBar())+   /* percent/amount/qty already placed their own loyalty control */
     '<div class="acts">'+
-      '<button class="btn pri" onclick="apply()">'+(S.applied?'Work it out again':'Work it out')+'</button>'+
-      (S.applied?'<button class="btn" onclick="saveOffer()">Save for review</button>':'')+
-      '<span class="grow"></span>'+
-      '<button class="btn sm" onclick="go(1)">Pick a different offer</button>'+
+      '<button class="btn pri" '+(why?'disabled':'')+' onclick="apply()">'+(S.applied?'Work it out again':'Work it out')+'</button>'+
+      (why?'<span class="why">'+esc(why)+'</span>':'')+
     '</div></div>';
-  if(S.applied) h+='<div class="sect">'+outHTML()+'</div>';
-  return h;
+  return h;   /* ⭐ the result is now the #workScrim modal (paintWork()) — never appended inline below the card */
 }
 
 function cfgLine(){
@@ -1475,24 +1578,49 @@ function cfgLine(){
 }
 
 /**
- * ⭐⭐⭐ [2026-09-26] REORDERED — Athi: "the order can change a bit, first show the percentage offer to be
- * declared, next box show the loyalty bonus, next is apply for product." percent/amount/qty (the "line" kind
- * goals) now build the offer's own number first, loyBar() second, "Apply it to" last — the picker being a
- * single one-line button now (see scopeRow()'s own comment) is what makes stacking these three read cleanly
- * rather than needing the old side-by-side `.two` grid. renderS2() skips its own loyBar() call for these three
- * goals so it isn't rendered twice.
+ * ⭐⭐⭐ [2026-09-26, SUPERSEDES the earlier reorder — per offer-lab-workitout.html's own comment] "scope
+ * first: you choose WHAT before you choose HOW MUCH." Athi's own doc, more explicit and more recent than the
+ * verbal "percentage first" ask this replaces — "Apply it to" is first again for percent/amount, then the two
+ * discounts as a side-by-side pair (`.pair`/`.box`), then — percent only, since amount's rate is a different
+ * fraction on every item and has no one honest combined number — a live "sum" line stating the combined rate
+ * plainly: "39% off for a loyalty customer — 10% then 30%, not 40%." `loyBoxHTML()`/`sumLineHTML()` are new;
+ * `loyBar()` is untouched and still serves every other goal kind.
  */
+function loyBoxHTML(){
+  var over=S.loyOn && num(S.loyPct)>num(S.cap);
+  return '<div class="box loy'+(S.loyOn?'':' off')+'">'+
+    '<div class="boxhd"><span class="t">Loyalty bonus</span>'+
+      '<button class="sw'+(S.loyOn?' on':'')+'" style="margin-left:auto" onclick="edit(\'loyOn\','+(!S.loyOn)+')" '+
+        'role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
+    (S.loyOn?'<span class="num"><input type="text" inputmode="decimal" min="0" max="95" value="'+
+      esc(S.loyPct==null?'':String(S.loyPct))+'" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span class="u">%</span></span>':'')+
+    '<div class="hint'+(over?' bad':'')+'">'+(!S.loyOn?'Off — everyone pays the same.'
+      :over?'Over your '+num(S.cap)+'% ceiling.':'On top, for a loyalty customer.')+'</div>'+
+  '</div>';
+}
+function sumLineHTML(){
+  var off=num(S.pctOff), loy=S.loyOn?num(S.loyPct):0;
+  var c=Math.round(combo(off/100,loy/100)*1000)/10;
+  return S.loyOn
+    ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer — '+off+'% then '+loy+
+      '%, not '+R2(off+loy)+'%. Everyone else pays '+off+'% less.</span>'
+    : '<span class="big">'+off+'%</span><span class="wd">off, for everyone.</span>';
+}
 function cfgHTML(){
   switch(S.goal){
     case 'percent':
-      return '<div class="f"><span class="lbl">Take off</span>'+
-        '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div>'+
-        loyBar()+scopeRow();
+      return scopeRow()+'<div class="pair">'+
+        '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>'+
+          '<span class="num"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>'+
+          '<div class="hint">Everyone pays this.</div></div>'+
+        loyBoxHTML()+'</div>'+
+        '<div class="sum">'+sumLineHTML()+'</div>';
     case 'amount':
-      return '<div class="f"><span class="lbl">Take off each</span>'+
-        '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></div>'+
-        '<div class="hint">A different percentage on each item.</div></div>'+
-        loyBar()+scopeRow();
+      return scopeRow()+'<div class="pair">'+
+        '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>'+
+          '<span class="num"><span class="u">₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>'+
+          '<div class="hint">A different percentage on each item.</div></div>'+
+        loyBoxHTML()+'</div>';
     case 'qty':
       return '<div class="f"><span class="lbl">Steps</span>'+
         '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div></div>'+
@@ -2451,6 +2579,11 @@ function render(){
     el.className='screen'+(S.step===i?' on':'');
     if(S.step===i) el.innerHTML=[renderS0,renderS1,renderS2,renderS3][i]();
   });
+  /* ⭐ if the "Work it out" modal is open, keep it in sync — e.g. editing a qty tier's own inline inputs while
+   * the result is on screen calls render() the same way every other edit does, and the modal is not one of
+   * the four .screen divs render() already repaints above. */
+  var ws=document.getElementById('workScrim');
+  if(ws && ws.classList.contains('on')) paintWork();
 }
 applyBiz('hotel');
 render();
