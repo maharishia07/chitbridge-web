@@ -1796,11 +1796,21 @@ function tierFault(){ var t=tiers(), bad=[];
     if(t[i].qty<=t[i-1].qty) bad.push('Step '+(i+1)+' must be more than '+t[i-1].qty);
     if(t[i].pct <t[i-1].pct) bad.push('Buying more should not give less than '+t[i-1].pct+'%'); }
   return bad; }
+/**
+ * ⭐⭐⭐ [found live, 2026-09-27] "you are showcasing the percentage, but which offer is to be choosen, how to
+ * select the x? either 1 or 2 or 3?" then, more specifically: "need to have a radio button to select the
+ * choice so that count is attached to the item." Real gap, not a misunderstanding — ruleParamsOf()'s 'same'
+ * branch always saved `counts()[0]` no matter which column you'd actually been comparing, with nothing on
+ * screen marking any column as "this one is what gets saved." The three columns stay independently editable
+ * "what if" comparisons (buy 1 vs 2 vs 3, genuinely different economics, worth exploring side by side) —
+ * chooseCount() below is the missing piece: an explicit pick, not an implicit "whatever's in slot 0".
+ */
 function counts(){ return (S.freeCounts||[1,2,3]).map(num); }
 function setCount(i,v){ S.freeCounts[i]=Math.max(1,num(v)); S.applied=true; render(); }
-function addCount(){ if(S.freeCounts.length>=3) return;
-  S.freeCounts.push(num(S.freeCounts[S.freeCounts.length-1])+1); S.applied=true; render(); }
-function delCount(i){ if(S.freeCounts.length<=1) return; S.freeCounts.splice(i,1); S.applied=true; render(); }
+/** ⭐ the radio choice itself — which column IS the offer. Clamped to how many columns currently exist so a
+ *  stale index from a shorter ladder can never point at nothing. */
+function chosenCount(){ return Math.min(S.freeChosen||0, counts().length-1); }
+function chooseCount(i){ S.freeChosen=i; S.applied=true; render(); }
 function setBill(i,v){ S.bills[i]=Math.max(1,num(v)); S.applied=true; render(); }
 
 /* three representative items in the shelf: cheapest, middle, dearest */
@@ -2174,7 +2184,7 @@ function cfgHTML(){
         h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">The item</span>'+
           selectOf(prodOpts(P),S.itemId,'setItem')+'</div>'+
           '<div class="f"><span class="lbl">How many they buy</span>'+
-          '<div class="hint" style="margin-top:0">Up to three, in the headings.</div>'+
+          '<div class="hint" style="margin-top:0">Compare up to three in the headings, then pick one with its radio.</div>'+
           '</div></div>';
       if(S.freeShape==='pair')
         h+='<div class="two" style="margin-top:12px"><div class="f"><span class="lbl">They buy</span>'+
@@ -2268,7 +2278,7 @@ function cartPreviewLines(items){
   return items.map(function(p){
     var qty=1;
     if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && S.scope==='item' && (S.itemIds||[]).indexOf(p.id)>=0) qty=top.qty; }
-    else if(S.goal==='free'&&S.freeShape==='same'&&p.id===S.itemId) qty=(counts()[0]||1)+1;
+    else if(S.goal==='free'&&S.freeShape==='same'&&p.id===S.itemId) qty=(counts()[chosenCount()]||1)+1;
     else if(S.goal==='free'&&S.freeShape==='cheapest') qty=Math.max(2,num(S.cheapN));
     return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
   });
@@ -2419,13 +2429,25 @@ function outGift(){
 }
 
 /* ── buy N of one thing, one more free ─────────────────────────────── */
+/**
+ * ⭐⭐⭐ [found live, 2026-09-27] "which offer is to be choosen, how to select the x?... need to have a radio
+ * button to select the choice so that count is attached to the item" — the three "buy N" columns stay
+ * independently editable (genuinely different economics worth comparing side by side), but a radio per
+ * column now says which ONE is actually the offer — chosenCount()/chooseCount() — instead of ruleParamsOf()
+ * silently always saving whatever sat in column 1.
+ */
 function outSame(){
   var p=byId(S.itemId); if(!p) return '';
-  var cs=counts();
+  var cs=counts(), chosen=chosenCount();
   var heads=cs.map(function(n,i){
     return ['<span class="inp" style="width:104px;height:31px">'+
-      '<input type="number" min="1" value="'+n+'" onchange="setCount('+i+',this.value)"><span>buy</span></span>',
-      '<span style="font-family:\'IBM Plex Mono\',monospace">+1 · '+PC(100/(n+1))+'</span>',false];});
+        '<input type="number" min="1" value="'+n+'" onchange="setCount('+i+',this.value)"><span>buy</span></span>'+
+        '<label style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:5px;'+
+          'font-size:11.5px;font-weight:700;cursor:pointer;color:'+(i===chosen?'var(--green-d)':'var(--muted)')+'">'+
+          '<input type="radio" name="sameChosen" style="margin:0" '+(i===chosen?'checked':'')+' onchange="chooseCount('+i+')">'+
+          (i===chosen?'Your offer':'Use this')+
+        '</label>',
+      '<span style="font-family:\'IBM Plex Mono\',monospace">+1 · '+PC(100/(n+1))+'</span>', i===chosen];});
   /* ⭐ buy_x_get_y, live — the same kind and the same call the till fires when a real N+1 round is rung */
   var mk=function(n){ var pay=engineBuyGetPay(p.price,n,1), cost=p.cost==null?null:(n+1)*p.cost;
     return {pay:pay,cost:cost,make:cost==null?null:pay-cost,
@@ -2443,15 +2465,14 @@ function outSame(){
                   [p.cost==null?'N/A':M0(p.cost),'costs you'],
                   [marginPct(p.price,p.cost)+'%','margin now']]);
   h+='<div class="card pad">'+g3(heads,rows)+'</div>';
-  var ok=cs.filter(function(n){var x=mk(n);return x.m!=null&&x.m>=num(S.margin);});
-  h+='<div class="note '+(ok.length?'n-ok':'n-bad')+'"><span class="ic">'+(ok.length?'✓':'!')+
-     '</span><div>'+(ok.length?'Clears your '+num(S.margin)+'% from buy '+ok[0]+' +1':
-     'No step here clears your '+num(S.margin)+'%')+'</div></div>';
+  var chosenN=cs[chosen], cx=mk(chosenN), clears=cx.m!=null&&cx.m>=num(S.margin);
+  h+='<div class="note '+(clears?'n-ok':'n-bad')+'"><span class="ic">'+(clears?'✓':'!')+
+     '</span><div>Your offer — buy '+chosenN+' +1 — '+(clears?'clears your '+num(S.margin)+'%':
+     'does not clear your '+num(S.margin)+'%')+'</div></div>';
   if(loyMode()==='top'&&S.loyOn){
-    var x=mk(cs[0]);
-    h+='<div class="note '+(x.m!=null&&x.m<num(S.margin)?'n-warn':'n-ok')+'"><span class="ic">●</span>'+
-       '<div>Loyalty: buy '+cs[0]+' +1 from the first visit · '+
-       (x.m==null?'N/A':M0(x.make)+' · '+x.m+'%')+'</div></div>';
+    h+='<div class="note '+(cx.m!=null&&cx.m<num(S.margin)?'n-warn':'n-ok')+'"><span class="ic">●</span>'+
+       '<div>Loyalty: buy '+chosenN+' +1 from the first visit · '+
+       (cx.m==null?'N/A':M0(cx.make)+' · '+cx.m+'%')+'</div></div>';
   }
   return h;
 }
@@ -2605,8 +2626,14 @@ function eitherNote(giftValue,base){
 /* ⚠️⚠️ itemIds ADDED — the multi-item "Apply it to" picker's own field, alongside itemId (still needed for
    the free/same-shape picker, an unrelated setting). Without this, a saved offer's specific-items scope was
    silently dropped on save — snapshot() only ever copies what KEEP names. */
+/**
+ * ⚠️ [found live, 2026-09-27] `freeChosen` ADDED alongside `freeCounts` — the radio pick (chooseCount()) that
+ * says WHICH of the three "buy N" columns is the real offer has to travel with the snapshot the same way
+ * `freeCounts` (the three numbers themselves) already does, or reopening a saved offer to edit it would
+ * silently reset the choice to column 1 — possibly a DIFFERENT number than what was actually saved.
+ */
 var KEEP=['goal','scope','catId','itemId','itemIds','pctOff','rsOff','tiers','freeShape','giftId',
-  'freeCounts','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
+  'freeCounts','freeChosen','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
   'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowAct',
   'round','loyOn','loyPct'];
 function snapshot(){ var o={}; KEEP.forEach(function(k){o[k]=JSON.parse(JSON.stringify(S[k]==null?null:S[k]));}); return o; }
@@ -2625,7 +2652,21 @@ function label(){
   if(S.goal==='percent') what=num(S.pctOff)+'% off';
   else if(S.goal==='amount') what=M0(num(S.rsOff))+' off each';
   else if(S.goal==='qty') what=tiers().map(function(t){return t.qty+'+ '+t.pct+'%';}).join(' · ');
-  else if(S.goal==='free') what=(SHAPES.filter(function(s){return s.id===S.freeShape;})[0]||{}).n;
+  /**
+   * ⚠️ [found live, 2026-09-27] "it cannot be general, it has to be buy2 get 1 free or buy 3 get 1 free,
+   * depends on which offer is choosen. you are trying to generalise, but it will be confusing" — SHAPES[i].n
+   * is the SHAPE PICKER's own label (Screen 1's "Which shape?" cards — necessarily generic, it's naming a
+   * whole category of offer before one has been configured). Reusing it here made every "buy N get 1 free"
+   * offer read identically in Saved offers regardless of what N actually was. Specific to what THIS offer is
+   * actually configured to do instead — chosenCount() for 'same' is the same radio pick ruleParamsOf() saves.
+   */
+  else if(S.goal==='free'){
+    if(S.freeShape==='same'){ what='Buy '+(counts()[chosenCount()]||1)+', get 1 free'; }
+    else if(S.freeShape==='anything'){ var g=byId(S.giftId); what=(g?g.name:'A gift')+' free on any bill'; }
+    else if(S.freeShape==='pair'){ var pa=byId(S.pairA), pb=byId(S.pairB);
+      what='Buy '+(pa?pa.name:'one')+', get '+(pb?pb.name:'another')+' free'; }
+    else { what='Buy '+Math.max(2,num(S.cheapN))+', cheapest free'; }
+  }
   else if(S.goal==='bundle') what=M0(num(S.bunPrice));
   else if(S.goal==='spend') what=M0(num(S.spendAt))+' → '+M0(num(S.spendVal))+' back';
   else if(S.goal==='ship') what='free above '+M0(num(S.shipAt));
@@ -2925,7 +2966,7 @@ function ruleParamsOf(){
       /* ⚠️ "any bill" needs SOME stated minimum or the engine reads it as unfinished (verified against the
          real engine before this was written) — a nominal 1 is "any bill that is a bill", not a real threshold */
       return {min_amount:1, get_item_id:S.giftId, get_item_name:g?g.name:'', get_qty:1, get_percent:100, scope:'cart'}; }
-    if(S.freeShape==='same'){ var n=counts()[0]||1;
+    if(S.freeShape==='same'){ var n=counts()[chosenCount()]||1;
       return {buy:n, get:1, get_percent:100, scope:'line', applies_to:{item_ids:[S.itemId]}}; }
     if(S.freeShape==='pair'){ var b=byId(S.pairB);
       return {buy:1, get:1, get_item_id:S.pairB, get_item_name:b?b.name:'', get_percent:100,
@@ -2999,6 +3040,10 @@ function openSaved(id){
   if(sv.snap.scope==='item' && (!sv.snap.itemIds||!sv.snap.itemIds.length) && sv.snap.itemId){
     S.itemIds=[sv.snap.itemId];
   }
+  /* ⚠️ same fallback shape as itemIds above, for an offer saved BEFORE the radio pick existed: every offer
+     that old only ever saved column 1's number (ruleParamsOf()'s own old behaviour), so 0 is not a guess —
+     it is exactly what ruleParamsOf() actually used at the time. */
+  if(sv.snap.freeChosen==null) S.freeChosen=0;
   S.applied=true; go(2);
 }
 async function setStatus(id,st){
@@ -3095,12 +3140,28 @@ function offerCoveringItem(p){
  * trusts — instead of a bare list of names, and closing it (an overlay, not a navigation) returns to Saved
  * offers exactly where it was, for free.
  */
+/**
+ * ⚠️ [found live, 2026-09-27] "12 items linked" on a buy-3-get-1-free offer that only ever names ONE item —
+ * `snap.scope`/`snap.itemIds` is percent/amount/qty's OWN scope system (the "Apply it to" picker); 'free'
+ * never touches it, so whatever category a PREVIOUS percent/amount/qty screen last left `S.scope`/`S.catId`
+ * pointing at leaked straight through as if it were this offer's own scope. 'free' has its own, different
+ * field per shape (`itemId` for 'same', `pairA`/`pairB` for 'pair', `giftId` for 'anything', `catId` for
+ * 'cheapest' — the one shape that genuinely IS category-scoped) and has to be read through THOSE, not the
+ * generic chain built for a different goal entirely.
+ */
 function savedItemIds(sv){
   var snap=sv.snap||{};
+  if(snap.goal==='free'){
+    if(snap.freeShape==='same') return snap.itemId&&byId(snap.itemId)?[snap.itemId]:null;
+    if(snap.freeShape==='pair') return [snap.pairA,snap.pairB].filter(function(id){return id&&byId(id);});
+    if(snap.freeShape==='anything') return snap.giftId&&byId(snap.giftId)?[snap.giftId]:null;
+    if(snap.freeShape==='cheapest') return catItems(snap.catId).map(function(p){return p.id;});
+    return null;
+  }
   if(snap.scope==='cat') return catItems(snap.catId).map(function(p){return p.id;});
   if(snap.itemIds && snap.itemIds.length) return snap.itemIds.filter(function(id){return byId(id);});
   if(snap.itemId && byId(snap.itemId)) return [snap.itemId];
-  return null;   /* not an item/category-scoped goal kind (bundle, spend, ship, band, buy-A-get-B, …) */
+  return null;   /* not an item/category-scoped goal kind (bundle, spend, ship, band) */
 }
 function savedItemNames(sv){ var ids=savedItemIds(sv); return ids?ids.map(function(id){return byId(id).name;}):null; }
 function savedItemCount(sv){ var n=savedItemNames(sv); return n?n.length:null; }
