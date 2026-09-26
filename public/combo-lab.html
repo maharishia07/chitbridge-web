@@ -421,7 +421,57 @@ button{cursor:pointer}
   .ovl{padding:0}
   .ovlpanel{width:100%;max-height:100dvh;height:100dvh;border-radius:0}
   .ovltbl .ovlcat{display:none}
+  .tabs .say{display:none}
 }
+/**
+ * ── ⭐⭐⭐ [2026-09-27, per Athi's own combo-modifier-lab.html] MODIFIERS AND COMBOS, TWO TABS NOT ONE SCREEN
+ * ──────────────────────────────────────────────────────────────────────────────────────────────────────────
+ * Athi's own doc's diagnosis, verbatim: "The screen was doing two unrelated jobs under one name" (title said
+ * Modifier lab, the heading said Create a new combo, the footer talked about building a combo against a
+ * product); "31 rows, every one showing —" (the flat product table listed EVERYTHING, useful rows buried among
+ * blanks); "The Category column was 'Tiffin' twelve times" (a group heading rendered as a repeated cell);
+ * "Three ways in, competing" (Build a combo / My saved combos / pick-a-product-below all fighting for the same
+ * line). See paintModLab()'s top-level branch for the real rewrite — this is only the doc's own CSS, carried
+ * over unchanged except where a name already meant something else on THIS page (below).
+ *
+ * ⚠️ `.chip` ALREADY EXISTS on this page (the toolbar's business-name / Saved-offers / Import / Export
+ * pills, 36px tall) — the doc's own `.chip` is a small modifier-group tag ("Spice", 22px). Reusing the name
+ * would silently inherit the wrong component's height/padding/border, the exact `.box.loy`/`.loy` collision
+ * already paid for once on offer-lab-next.html this same day. Renamed to `.modchip` here, nowhere else.
+ */
+.tabs{display:flex;gap:22px;padding:12px 20px 0;border-bottom:1px solid var(--line-soft)}
+.tabs button{border:0;background:none;padding:0 0 11px;font-size:14.5px;font-weight:700;
+  color:var(--faint);position:relative;display:flex;align-items:center;gap:7px}
+.tabs button .c{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;
+  background:var(--panel);border-radius:6px;padding:1px 7px;color:var(--muted)}
+.tabs button.on{color:var(--ink)}
+.tabs button.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+  background:var(--green);border-radius:2px}
+.tabs button.on .c{background:var(--green-t);color:var(--green-d)}
+.tabs .say{margin-left:auto;font-size:12.5px;color:var(--faint);padding-bottom:11px}
+.modlist .grp{padding:13px 20px 6px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ghost);font-weight:700;background:var(--page);position:sticky;top:0;
+  border-bottom:1px solid var(--hair)}
+.modlist .it{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--hair);
+  width:100%;text-align:left;background:none;border-left:0;border-right:0;border-top:0}
+.modlist .it:hover{background:var(--page)}
+.modlist .it .nm{flex:1;min-width:0}
+.modlist .it .nm b{display:block;font-size:14.5px;font-weight:600}
+.modlist .it .nm>span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modlist .it .rt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--faint);
+  white-space:nowrap;flex:0 0 auto}
+.modlist .it .go{color:var(--ghost);font-size:15px;flex:0 0 auto}
+.modchip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:7px;
+  background:var(--panel);border:1px solid var(--line-soft);font-size:12px;font-weight:600;
+  color:var(--muted);margin-right:5px}
+.modlist .add{display:flex;align-items:center;gap:14px;padding:12px 20px;width:100%;text-align:left;
+  background:none;border:0;border-bottom:1px solid var(--hair);color:var(--muted)}
+.modlist .add:hover{background:var(--page)}
+.modlist .add .pl{width:28px;height:28px;border-radius:9px;border:1px dashed var(--line);
+  display:grid;place-items:center;color:var(--ghost);font-size:15px;flex:0 0 auto}
+.empty b{display:block;font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;color:var(--ink)}
+.empty span{display:block;font-size:13.5px;color:var(--muted);margin:6px 0 16px}
 
 /**
  * ── ⭐⭐⭐ [TILL/OFFR-08] THE COMBO CHOOSER — SAME CLASSES, SAME MARKUP AS THE TILL, THIS PAGE'S OWN PALETTE ──
@@ -528,11 +578,18 @@ button{cursor:pointer}
 <div class="ovl" id="modLabOverlay" role="dialog" aria-modal="true" aria-labelledby="modLabTitle">
   <div class="ovlpanel">
     <div class="ovlhead">
-      <h2 id="modLabTitle">Modifier lab</h2>
+      <h2 id="modLabTitle">Combos and modifiers</h2>
       <button class="ovlx" onclick="closeModLab()" aria-label="Close" title="Close">✕</button>
     </div>
+    <!-- ⭐ [2026-09-27] two tabs, each carrying its own count (paintModLab() fills modLabTabs; see its own
+         header comment). #modLabSearch stays a STATIC element, never replaced by innerHTML on repaint — only
+         its placeholder changes per tab — so a keystroke never loses its own cursor position mid-type. -->
+    <div class="tabs" id="modLabTabs"></div>
     <div class="ovltools">
-      <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)">
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" id="modLabSearch" placeholder="Search products…" oninput="modLabSearch(this.value)" style="flex:1">
+        <span id="modLabBarExtra"></span>
+      </div>
     </div>
     <div class="ovlbody" id="modLabBody"></div>
     <div class="ovlfoot" id="modLabFoot"></div>
@@ -981,12 +1038,44 @@ var COMBO_LIB={items:null,loaded:false};
  */
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
-  MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',templateId:null,libraryOpen:false,savingAs:false}; MODLABPREV=[];
+  MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',templateId:null,libraryOpen:false,savingAs:false,
+    tab:'mods',showBare:false}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
   paintModLab();
   if(s) s.focus();
+  comboLibLoad(false).then(paintModLab);   /* background — so the Combos tab's own count is right by the time it's looked at */
+}
+/** ⭐ [2026-09-27] tab switch: MODLAB.tab decides which top-level list paintModLab() shows (see its own
+ *  header comment) — distinct from MODLAB.libraryOpen, which stays the existing "pull a saved combo's
+ *  groups into what I'm building right now" picker, reachable from inside the builder/editor regardless of
+ *  which tab this is. #modLabSearch's value is cleared here directly rather than through a repaint, so a
+ *  stale query from the OTHER tab never silently keeps filtering this one. */
+function modLabTab(t){
+  MODLAB.tab=t; MODLAB.q=''; MODLAB.showBare=false;
+  var s=document.getElementById('modLabSearch'); if(s) s.value='';
+  if(t==='combos') comboLibLoad(false).then(paintModLab);
+  paintModLab();
+}
+/** ⭐ the worst a customer could add across every group at once — each group's own priciest option, summed;
+ *  a product with only free options (or none) reads as "no price change", never a misleading ₹0. */
+function modLabMaxUp(p){
+  var sum=0;
+  CBVariant.groupsOf({modifiers:p.modifiers}).forEach(function(g){
+    var mx=0; (g.options||[]).forEach(function(o){ var v=Number(o.price)||0; if(v>mx) mx=v; }); sum+=mx;
+  });
+  return sum;
+}
+/** ⭐ the Modifiers tab's own split — products that carry at least one group, and the rest ("Athi's own doc:
+ *  '31 rows, every one showing —' ... The list now shows only what HAS something, and names it"). */
+function modLabModsSplit(){
+  var q=(MODLAB.q||'').trim().toLowerCase(), withMods=[], bare=[];
+  P.forEach(function(p){
+    if(q && p.name.toLowerCase().indexOf(q)<0) return;
+    (CBVariant.groupsOf({modifiers:p.modifiers}).length ? withMods : bare).push(p);
+  });
+  return {withMods:withMods, bare:bare};
 }
 /**
  * ⭐⭐⭐ [Labs split, 2026-09-26] Athi: "bring offer lab and combo lab as a separate item rather than in one
@@ -1007,10 +1096,6 @@ function closeModLab(){
   setTimeout(function(){ toastSay('You can close this tab now.'); }, 50);
 }
 function modLabSearch(v){ MODLAB.q=v; paintModLab(); }
-function modLabList(){
-  var q=(MODLAB.q||'').trim().toLowerCase();
-  return P.filter(function(p){ return !q || p.name.toLowerCase().indexOf(q)>=0; });
-}
 function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLAB.templateId=null; MODLABPREV=[]; paintModLab(); }
 function modLabBack(){ MODLAB.pid=null; MODLAB.savingAs=false; paintModLab(); }
 /** ⭐⭐ [OFFR-06] DRAFT-AWARE: a product's own item_data.modifiers when one is picked, otherwise the
@@ -1377,9 +1462,17 @@ function comboLibraryUnsavedProducts(){
   var linked = {}; (COMBO_LIB.items||[]).forEach(function(t){ if (t.product_item_id) linked[t.product_item_id]=true; });
   return P.filter(function(p){ return !linked[p.id] && CBVariant.groupsOf({modifiers:p.modifiers}).length>0; });
 }
-function comboLibraryHTML(){
-  var items=COMBO_LIB.items||[];
-  var live=comboLibraryUnsavedProducts();
+/**
+ * ⭐ [2026-09-27] SPLIT OUT OF comboLibraryHTML() so the top-level Combos TAB (comboTabHTML(), per Athi's own
+ * combo-modifier-lab.html doc) and the mid-build "📂 Use a saved combo" picker (comboLibraryHTML(), unchanged
+ * below) share the exact same rows/actions instead of two copies drifting apart. `filterQ` is optional and
+ * used ONLY by the tab (it has a real search box); the mid-build picker has none, so it calls this with no
+ * argument and stays exactly as unfiltered as it always was.
+ */
+function comboLibraryRowsHTML(filterQ){
+  var q=(filterQ||'').trim().toLowerCase();
+  var items=(COMBO_LIB.items||[]).filter(function(t){return !q || (t.name||'').toLowerCase().indexOf(q)>=0;});
+  var live=comboLibraryUnsavedProducts().filter(function(p){return !q || p.name.toLowerCase().indexOf(q)>=0;});
   var rowHTML=function(t){
     var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(s,g){return s+((g&&g.options)||[]).length;},0);
     var linkedProduct=t.product_item_id && S.biz==='mine' ? byId(t.product_item_id) : null;
@@ -1405,15 +1498,105 @@ function comboLibraryHTML(){
       + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\''+esc(p.name).replace(/'/g,"\\'")+'\','+p.price+',JSON.parse(this.dataset.g))" data-g=\''+esc(JSON.stringify(p.modifiers||[]))+'\'>👁 Preview</button>'
       + '<button class="btn sm pri" onclick="modLabCloseLibrary();modLabPick(\''+p.id+'\')">✏️ Edit</button></div></div>';
   };
+  if(!COMBO_LIB.loaded) return '<div class="hs" style="padding:24px">Loading…</div>';
+  if(!items.length && !live.length) return null;
+  return items.map(rowHTML).join('') + live.map(liveRowHTML).join('');
+}
+function comboLibraryHTML(){
+  var rows=comboLibraryRowsHTML();
   return '<div style="padding:0 20px 20px">'
     + '<button class="btn sm" onclick="modLabCloseLibrary()">← Back</button>'
     + '<h3 style="margin:12px 0 10px">My saved combos</h3>'
-    + (!COMBO_LIB.loaded
-      ? '<div class="hs" style="padding:24px">Loading…</div>'
-      : (!items.length && !live.length)
-      ? '<div class="hs" style="padding:24px">Nothing saved yet. Build a combo, then "💾 Save as…" to see it here.</div>'
-      : items.map(rowHTML).join('') + live.map(liveRowHTML).join(''))
+    + (rows==null ? '<div class="hs" style="padding:24px">Nothing saved yet. Build a combo, then "💾 Save as…" to see it here.</div>' : rows)
     + '</div>';
+}
+/**
+ * ── ⭐⭐⭐ [2026-09-27, per Athi's own combo-modifier-lab.html] THE COMBOS TAB — the top-level list, not the
+ * mid-build picker above. Reuses comboLibraryRowsHTML() for the SAME rows/actions; the only thing this adds
+ * is the tab's own chrome — a real "Nothing matches" for a search miss vs. "No combos yet" for a genuinely
+ * empty shelf, and the "+ Build a combo" entry point the doc puts in the tab's own bar. */
+function comboTabHTML(){
+  var rows=comboLibraryRowsHTML(MODLAB.q);
+  if(rows==null){
+    return (MODLAB.q||'').trim()
+      ? '<div class="empty"><b>Nothing matches</b><span>Try another word.</span></div>'
+      : '<div class="empty"><b>No combos yet</b><span>Two or more products sold at one price.</span>'
+        + '<button class="btn pri" onclick="modLabBuildFresh()">+ Build a combo</button></div>';
+  }
+  return '<div style="padding:14px 20px 20px">'+rows+'</div>';
+}
+function comboTabFootHTML(){
+  if(!COMBO_LIB.loaded) return '';
+  var n=(COMBO_LIB.items||[]).length + comboLibraryUnsavedProducts().length;
+  return n ? n+' combo'+(n===1?'':'s')+' saved.' : '';
+}
+/** ⭐ the Modifiers tab's own footer fact — UNFILTERED by search, a catalogue-wide count ("10 carry
+ *  modifiers, 12 do not") that stays put while typing, same as Athi's own doc. */
+function modLabModsTotals(){
+  var withMods=0, bare=0;
+  P.forEach(function(p){ (CBVariant.groupsOf({modifiers:p.modifiers}).length?withMods++:bare++); });
+  return {withMods:withMods, bare:bare};
+}
+function modLabShowBare(){ MODLAB.showBare=true; paintModLab(); }
+function modLabHideBare(){ MODLAB.showBare=false; paintModLab(); }
+function modsTabFootHTML(){
+  var t=modLabModsTotals();
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+    + '<span><b>'+t.withMods+'</b> product'+(t.withMods===1?'':'s')+' carry modifiers · '+t.bare+' do not.</span>'
+    + '<span style="flex:1"></span>'
+    + (MODLAB.showBare?'<button class="btn sm" onclick="modLabHideBare()">Hide the rest</button>':'')
+    + '</div>';
+}
+/**
+ * ── ⭐⭐⭐ [2026-09-27, per Athi's own combo-modifier-lab.html] THE MODIFIERS TAB — grouped by category (a
+ * group heading, never a repeated column — the doc's own complaint: "The Category column was 'Tiffin' twelve
+ * times"), showing only products that HAVE something, named ("Spice · Size", not "—"). Products with none sit
+ * collapsed behind "Add modifiers to another product · N have none" until asked for — the doc's own fix for
+ * "31 rows, every one showing —": 12 useful facts no longer hide among 19 blanks.
+ */
+function modsTabHTML(pendingDraft){
+  var totals=modLabModsTotals(), q=(MODLAB.q||'').trim();
+  if(totals.withMods===0 && totals.bare===0){
+    return '<div class="empty"><b>Nothing here yet</b><span>Add products to your catalogue first.</span></div>';
+  }
+  if(totals.withMods===0 && !q && !MODLAB.showBare){
+    return '<div class="empty"><b>No modifiers yet</b><span>A choice before something goes on the bill — spice level, size, an extra.</span>'
+      + '<button class="btn pri" onclick="modLabShowBare()">Add one to a product</button></div>';
+  }
+  var rows=modLabModsSplit(), withMods=rows.withMods, bare=rows.bare;
+  var clickFn = pendingDraft ? 'modLabAttachDraftTo' : 'modLabPick';
+  var h='<div class="modlist">';
+  if(!withMods.length){
+    h+='<div class="empty"><b>Nothing matches</b><span>Try another word.</span></div>';
+  } else {
+    var byCat={}, order=[];
+    withMods.forEach(function(p){ var c=catName(p.cat)||'—'; if(!byCat[c]){byCat[c]=[];order.push(c);} byCat[c].push(p); });
+    order.forEach(function(c){
+      h+='<div class="grp">'+esc(c)+'</div>';
+      byCat[c].forEach(function(p){
+        var groups=CBVariant.groupsOf({modifiers:p.modifiers});
+        var chips=groups.map(function(g){return '<span class="modchip">'+esc(g.title||g.name||'')+'</span>';}).join('');
+        var up=modLabMaxUp(p);
+        h+='<button class="it" onclick="'+clickFn+'(\''+p.id+'\')"><span class="nm"><b>'+esc(p.name)+'</b><span>'+chips+'</span></span>'
+          + '<span class="rt">'+(up?'up to +'+M0(up):'no price change')+'</span><span class="go">›</span></button>';
+      });
+    });
+  }
+  if(MODLAB.showBare){
+    if(bare.length){
+      h+='<div class="grp">Without modifiers · '+bare.length+'</div>';
+      bare.forEach(function(p){
+        h+='<button class="add" onclick="'+clickFn+'(\''+p.id+'\')"><span class="pl">+</span>'
+          + '<span class="nm"><b style="color:var(--ink)">'+esc(p.name)+'</b></span>'
+          + '<span class="rt">'+esc(catName(p.cat)||'—')+'</span></button>';
+      });
+    }
+  } else if(bare.length){
+    h+='<button class="add" onclick="modLabShowBare()"><span class="pl">+</span>'
+      + '<span class="nm">Add modifiers to another product</span>'
+      + '<span class="rt">'+bare.length+' have none</span></button>';
+  }
+  return h+'</div>';
 }
 /** ⭐ a saved template's own groups, for the "Preview" onclick above — kept as a tiny lookup rather than
  *  inlining the whole (possibly large) definition array into an attribute string. */
@@ -1447,40 +1630,38 @@ function paintModLab(){
   if(!body) return;
   if(MODLAB.libraryOpen){
     if(tools) tools.style.display='none';
+    var tabsElLib=document.getElementById('modLabTabs'); if(tabsElLib) tabsElLib.style.display='none';
     body.innerHTML=comboLibraryHTML();
     if(foot) foot.textContent=(COMBO_LIB.items||[]).length+' saved combo'+((COMBO_LIB.items||[]).length===1?'':'s')+' — "Use" adds its groups to what you\u2019re building now';
     return;
   }
   if(!MODLAB.pid && !MODLAB.building){
     if(tools) tools.style.display='';
-    var list=modLabList();
+    var tabsEl=document.getElementById('modLabTabs');
+    if(tabsEl) tabsEl.style.display='';
     var pendingDraft=MODLAB.draft.length>0;
-    /* ⭐ [OFFR-06] two real entry points, not one passive toggle: build fresh, or reopen a saved combo. */
-    body.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px">'
-        + '<h3 style="margin:0">Create a new combo</h3>'
-        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-        + '<button class="btn sm pri" onclick="modLabBuildFresh()">🔧 Build a combo</button>'
-        + '<button class="btn sm" onclick="modLabOpenLibrary()">📂 My saved combos'+(COMBO_LIB.loaded?' ('+(COMBO_LIB.items||[]).length+')':'')+'</button>'
-        + '</div></div>'
-      + (pendingDraft
-        ? '<div class="kv" style="padding:10px 12px;border:1px solid var(--amber-i);border-radius:9px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
-          + '<span>🔧 You have an unsaved combo ready — pick a product below to apply it.</span>'
-          + '<span style="display:flex;gap:6px"><button class="btn sm" onclick="modLabResumeBuild()">Resume building</button>'
-          + '<button class="btn sm" onclick="modLabCancelBuild(true)">Discard</button></span></div>'
-        : '<p class="hs" style="margin:0 0 12px">Build one from scratch, reopen one you saved before, or pick a product below to edit its own modifiers directly.</p>')
-      + (!list.length
-      ? '<div class="hs" style="padding:24px">No products match'+(MODLAB.q?' "'+esc(MODLAB.q)+'"':'')+'.</div>'
-      : '<table class="ovltbl"><thead><tr><th>Product</th><th>Category</th><th class="ovlpriceh">Modifiers</th></tr></thead><tbody>'
-        + list.map(function(p){
-            var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
-            return '<tr style="cursor:pointer" onclick="'+(pendingDraft?'modLabAttachDraftTo':'modLabPick')+'(\''+p.id+'\')"><td class="ovlname">'+esc(p.name)+'</td>'
-              + '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'
-              + '<td class="ovlprice">'+(n?n+' group'+(n===1?'':'s'):'—')+'</td></tr>';
-          }).join('')+'</tbody></table>');
-    if(foot) foot.textContent=list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' shown — pick one to '+(pendingDraft?'apply your combo to':'build its combo against');
+    var nmods=modLabModsTotals().withMods;
+    var ncombos=COMBO_LIB.loaded?((COMBO_LIB.items||[]).length+comboLibraryUnsavedProducts().length):null;
+    if(tabsEl) tabsEl.innerHTML=
+      '<button class="'+(MODLAB.tab!=='combos'?'on':'')+'" onclick="modLabTab(\'mods\')">Modifiers <span class="c">'+nmods+'</span></button>'
+      + '<button class="'+(MODLAB.tab==='combos'?'on':'')+'" onclick="modLabTab(\'combos\')">Combos <span class="c">'+(ncombos==null?'…':ncombos)+'</span></button>'
+      + '<span class="say">'+(MODLAB.tab==='combos'?'Two or more products, one price':'A choice before it goes on the bill')+'</span>';
+    var srch=document.getElementById('modLabSearch'), extra=document.getElementById('modLabBarExtra');
+    if(srch) srch.placeholder = MODLAB.tab==='combos' ? 'Find a combo' : 'Find a product';
+    if(extra) extra.innerHTML = MODLAB.tab==='combos' ? '<button class="btn pri" onclick="modLabBuildFresh()">+ Build a combo</button>' : '';
+
+    var banner = pendingDraft
+      ? '<div class="kv" style="margin:14px 20px 0;padding:10px 12px;border:1px solid var(--amber-i);border-radius:9px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+        + '<span>🔧 You have an unsaved combo ready — pick a product below to apply it.</span>'
+        + '<span style="display:flex;gap:6px"><button class="btn sm" onclick="modLabResumeBuild()">Resume building</button>'
+        + '<button class="btn sm" onclick="modLabCancelBuild(true)">Discard</button></span></div>'
+      : '';
+    body.innerHTML = banner + (MODLAB.tab==='combos' ? comboTabHTML() : modsTabHTML(pendingDraft));
+    if(foot) foot.innerHTML = MODLAB.tab==='combos' ? comboTabFootHTML() : modsTabFootHTML();
     return;
   }
   if(tools) tools.style.display='none';
+  var tabsElSub=document.getElementById('modLabTabs'); if(tabsElSub) tabsElSub.style.display='none';
   if(MODLAB.building){
     var dgroups=modLabGroups();
     /** ⭐⭐⭐ [OFFR-07] name + price — the combo as a whole, not just its sections. Athi: "provide the combo

@@ -154,12 +154,25 @@ button{cursor:pointer}
 .box.on{border-color:var(--blue-b);background:var(--blue-t)}
 .boxhd{display:flex;align-items:center;gap:9px;margin-bottom:10px}
 .boxhd .t{font-size:13.5px;font-weight:700}
-.num{display:inline-flex;align-items:baseline;gap:2px}
-.num input{width:78px;border:1px solid var(--line);border-radius:10px;background:var(--card);
+/**
+ * ⭐⭐⭐ [found live, 2026-09-26, goal-audit pass] A SECOND COLLISION, RIGHT NEXT TO THE FIRST ONE'S OWN
+ * WARNING ABOVE — Athi: "when i change the offer type, the headers are going north... it has to be
+ * consistent." Real cause on the 'amount' (₹ off) goal's result table: THIS session's own new "Take off" /
+ * "Loyalty bonus" number field (a <span class="num"> wrapping an <input> and a unit suffix) reused the class
+ * name `.num` — already, and much longer, a plain <td class="num"> utility on every results table (outLine/
+ * outQty/cartPreviewHTML) that does nothing but set a monospace, tabular-numeral font. `display:inline-flex`
+ * (needed for the input+unit pair, wrong for a table cell) doesn't get overridden by the older rule two
+ * screens away — CSS merges non-overlapping properties from both — so every `<td class="num">` cell quietly
+ * became `display:inline-flex`, which pulls it clean out of the table's column grid: exactly the "headers
+ * over here, the numbers under them somewhere else" jumble reported live. Renamed to `.numf` (a NUMBER
+ * FIELD, not a number cell) so nothing but the input component ever matches this again.
+ */
+.numf{display:inline-flex;align-items:baseline;gap:2px}
+.numf input{width:78px;border:1px solid var(--line);border-radius:10px;background:var(--card);
   height:52px;padding:0 10px;text-align:right;outline:0;
   font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:26px;font-weight:700}
-.num input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
-.num .u{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--faint)}
+.numf input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.numf .u{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--faint)}
 .hint.bad{color:var(--red-i);font-weight:600}
 .sum{display:flex;align-items:baseline;gap:10px;margin-top:16px;padding:13px 16px;
   background:var(--panel);border:1px solid var(--line-soft);border-radius:12px;flex-wrap:wrap}
@@ -2075,7 +2088,7 @@ function loyBoxHTML(){
     '<div class="boxhd"><span class="t">Loyalty bonus</span>'+
       '<button class="sw'+(S.loyOn?' on':'')+'" style="margin-left:auto" onclick="edit(\'loyOn\','+(!S.loyOn)+')" '+
         'role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
-    (S.loyOn?'<span class="num"><input type="text" inputmode="decimal" min="0" max="95" value="'+
+    (S.loyOn?'<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="'+
       esc(S.loyPct==null?'':String(S.loyPct))+'" data-key="loyPct" oninput="edit(\'loyPct\',this.value)"><span class="u">%</span></span>':'')+
     '<div class="hint'+(over?' bad':'')+'">'+(!S.loyOn?'Off — everyone pays the same.'
       :over?'Over your '+num(S.cap)+'% ceiling.':'On top, for a loyalty customer.')+'</div>'+
@@ -2108,14 +2121,14 @@ function cfgHTML(){
            that's actually being typed. Reworded to describe the discount itself, matching "For selected
            customers only" right beside it. */
         '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>'+
-          '<span class="num"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>'+
+          '<span class="numf"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>'+
           '<div class="hint">Applied to every customer.</div></div>'+
         loyBoxHTML()+'</div>'+
         '<div class="sum">'+sumLineHTML()+'</div>';
     case 'amount':
       return scopeRow()+'<div class="pair">'+
         '<div class="box"><div class="boxhd"><span class="t">Take off each</span></div>'+
-          '<span class="num"><span class="u">₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>'+
+          '<span class="numf"><span class="u">₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></span>'+
           '<div class="hint">A different percentage on each item.</div></div>'+
         loyBoxHTML()+'</div>';
     case 'qty':
