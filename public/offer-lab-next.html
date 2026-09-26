@@ -701,6 +701,7 @@ button{cursor:pointer}
       <div class="pnl" id="workPnl"></div>
       <button class="ovlx" onclick="closeWork()" aria-label="Close" title="Close" style="margin-left:auto">✕</button>
     </div>
+    <div class="seg" id="workDemo" style="padding:12px 20px 0"></div>
     <div class="shbd" id="workBody"></div>
     <div class="shft">
       <button class="btn pri" id="workSave" onclick="saveOffer()">Save for review</button>
@@ -1107,11 +1108,27 @@ function percentBillHTML(rs){
         'the basket is sales data, and that is not in here.</div></div>';
 }
 function workGoPanel(n){ WORK_PANEL=n; paintWork(); }
+/**
+ * ⭐⭐⭐ [found live, 2026-09-26] "there is a panel on the top to try other combinations, can you include that,
+ * as a change in percentage" — the doc's own prototype had a strip of quick presets ABOVE the sheet, for
+ * trying loyalty on/off, a few margin thresholds and a couple of discount rates without leaving the modal.
+ * Reuses .seg (the same toggle-row every other picker on this page already is) rather than the doc's own
+ * dark-on-stage `.demo` styling — sits OUTSIDE #workBody (unlike the verdict/table/bill) so it survives
+ * switching between "Your margin" and "On a bill". Each button calls edit(), the same choke point every other
+ * field on this page already goes through — a real change, not a preview.
+ */
+function workDemoHTML(){
+  return '<button class="'+(S.loyOn?'on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')">Loyalty bonus</button>'+
+    [50,25,10].map(function(t){ return '<button class="'+(num(S.margin)===t?'on':'')+'" onclick="edit(\'margin\','+t+')">Threshold '+t+'%</button>'; }).join('')+
+    [10,30].map(function(o){ return '<button class="'+(num(S.pctOff)===o?'on':'')+'" onclick="edit(\'pctOff\','+o+')">'+o+'% off</button>'; }).join('');
+}
 function paintWork(){
   var el=document.getElementById('workScrim'); if(!el) return;
   var l=label();
   var pnl=document.getElementById('workPnl'), flip=document.getElementById('workFlip'), save=document.getElementById('workSave');
+  var demo=document.getElementById('workDemo');
   if(S.goal==='percent'){
+    demo.style.display=''; demo.innerHTML=workDemoHTML();
     var rs=percentRows(), showLoy=loyMode()==='pct';
     var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
     document.getElementById('workTitle').textContent=l.title;
@@ -1128,6 +1145,7 @@ function paintWork(){
       ? 'Judged on what a loyalty customer pays — the lower of the two.' : 'Loyalty bonus is off.';
   } else {
     pnl.style.display='none';
+    demo.style.display='none'; demo.innerHTML='';
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=l.detail;
     document.getElementById('workBody').innerHTML=outHTML();
