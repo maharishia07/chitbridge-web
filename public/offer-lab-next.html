@@ -1089,7 +1089,7 @@ function apply(){
   /* fresh open always starts centred — a drag from a PREVIOUS open must not carry over */
   var sheet=document.querySelector('#workScrim .sheet');
   if(sheet){ sheet.style.position=''; sheet.style.left=''; sheet.style.top=''; sheet.style.margin=''; }
-  S.applied=true; WORK_PANEL=1; render(); paintWork();
+  S.applied=true; WORK_PANEL=1; SHOW_MARKUP=false; render(); paintWork();
 }
 function closeWork(){ var el=document.getElementById('workScrim'); if(el) el.classList.remove('on'); document.body.style.overflow=''; }
 /**
@@ -1122,6 +1122,9 @@ function dragSheetStart(e){
  * (S.belowAct) and rounding stay exactly as correct here as everywhere else on this page.
  */
 var WORK_PANEL=1;   /* 1 = "Your margin" (cost/verdict), 2 = "On a bill" (what the customer sees) — resets to 1 each open */
+var SHOW_MARKUP=false;   /* the header's own "Markup" toggle — a display preference for THIS table, not part
+  of the offer, so it is never saved with it; resets to off each open, same as WORK_PANEL */
+function toggleMarkup(){ SHOW_MARKUP=!SHOW_MARKUP; paintWork(); }
 /**
  * ⭐⭐⭐ [found by review, 2026-09-26] A LOYALTY CUSTOMER CAN NEVER PAY MORE THAN EVERYONE ELSE. row('exclude')
  * means "leave this item's price alone rather than sell it below cost" — read literally, "alone" is the
@@ -1181,10 +1184,18 @@ function percentVerdictHTML(rs){
   var v=percentVerdict(rs);
   return '<div class="verdict '+v.cls+'">'+v.html+'</div>';
 }
+/**
+ * ⭐ [found live, 2026-09-26] "mock up column not included, can we include after price... mock up toggle on
+ * top of the panel, we have space" — the same markupPct() the price-list overlay already shows (OFFR-02),
+ * off by default here: the header note this whole table is built next to says "'Markup' appears nowhere. It
+ * is the number most confused with margin" — still true as a DEFAULT, so this stays a click away in the
+ * header's own #workPnl pill (SHOW_MARKUP, toggleMarkup()) rather than a column that's always on screen.
+ */
 function percentTableHTML(rs){
   var showLoy=loyMode()==='pct';
   var h='<div class="scroll" style="overflow-x:auto"><table class="vtbl"><thead><tr>'+
       '<th rowspan="2">Item</th><th rowspan="2">Cost</th><th rowspan="2">Price now</th>'+
+      (SHOW_MARKUP?'<th rowspan="2">Markup</th>':'')+
       '<th class="grp">Everyone pays</th>'+(showLoy?'<th class="grp">Loyalty pays</th>':'')+
       '<th class="grp" rowspan="2">Meets your '+num(S.margin)+'%?</th>'+
     '</tr><tr class="sub">'+
@@ -1193,11 +1204,13 @@ function percentTableHTML(rs){
     '</tr></thead><tbody>'+
     rs.map(function(r){
       var ans=percentAnswer(r), ansHtml=(typeof ans==='string')?ans:ans.html;
+      var mk=markupPct(r.p.price, r.p.cost);
       return '<tr>'+
         '<td data-l="">'+esc(r.p.name)+'</td>'+
         '<td data-l="Cost"><span class="costin"><span>₹</span><input type="number" min="0" value="'+
           (r.p.cost==null?'':r.p.cost)+'" placeholder="?" onchange="setCost(\''+r.p.id+'\',this.value)"></span></td>'+
         '<td data-l="Price now">'+M0(r.p.price)+'</td>'+
+        (SHOW_MARKUP?'<td data-l="Markup">'+(mk==null?'—':mk+'%')+'</td>':'')+
         '<td class="grp" data-l="Everyone pays"><span class="pay">'+M0(r.pub.shown)+'</span>'+
           (r.pub.margin!=null?'<span class="mgn '+(r.pub.margin<0?'loss':r.pub.margin<num(S.margin)?'bad':'ok')+'">'+r.pub.margin+'% margin</span>':'')+'</td>'+
         (showLoy?'<td class="grp" data-l="Loyalty pays"><span class="pay">'+M0(r.all.shown)+'</span>'+
@@ -1213,8 +1226,10 @@ function percentFootHTML(rs, showLoy){
   var tc=0,tp=0,tpub=0,tall=0;
   priced.forEach(function(r){ tc+=r.p.cost; tp+=r.p.price; tpub+=r.pub.shown; tall+=r.all.shown; });
   var tmPub=tpub>0?Math.round((tpub-tc)/tpub*100):0, tmAll=tall>0?Math.round((tall-tc)/tall*100):0;
+  var tmk=tc>0?Math.round((tp-tc)/tc*100):null;
   var decide=showLoy?tmAll:tmPub, target=num(S.margin);
   return '<tfoot><tr><td>All '+rs.length+'</td><td>'+M0(tc)+'</td><td>'+M0(tp)+'</td>'+
+    (SHOW_MARKUP?'<td>'+(tmk==null?'—':tmk+'%')+'</td>':'')+
     '<td class="grp">'+M0(tpub)+' <span class="mgn" style="display:inline">'+tmPub+'%</span></td>'+
     (showLoy?'<td class="grp">'+M0(tall)+' <span class="mgn" style="display:inline">'+tmAll+'%</span></td>':'')+
     '<td class="grp">'+(decide>=target?'<span class="ans ok">✓ yes</span>':'<span class="ans '+(decide<0?'never':'trim')+'">✗ '+decide+'%</span>')+'</td>'+
@@ -1351,7 +1366,11 @@ function paintWork(){
     var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=(showLoy?num(S.pctOff)+'% + '+num(S.loyPct)+'% = '+combined+'%':num(S.pctOff)+'%')+' off · '+rs.length+' items';
-    pnl.style.display='none';
+    /* ⭐ [found live, 2026-09-26] "mock up toggle on top of the panel, we have space" — the tab-switcher pill
+       (#workPnl) went unused once "On a bill" was removed; reused here for a single on/off toggle instead of
+       adding new chrome. */
+    pnl.style.display='';
+    pnl.innerHTML='<button class="'+(SHOW_MARKUP?'on':'')+'" onclick="toggleMarkup()" title="Cost-to-price markup, alongside cost">Markup</button>';
     document.getElementById('workBody').innerHTML = percentTableHTML(rs);
     flip.textContent='Change it'; flip.onclick=closeWork;
     var v=percentVerdict(rs);
