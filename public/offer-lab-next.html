@@ -554,6 +554,15 @@ button{cursor:pointer}
 .btn b{font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:rgba(0,0,0,.08);border-radius:5px;padding:1px 6px}
 .btn.pri b{background:rgba(255,255,255,.22)}
 /**
+ * ⭐ [found live, 2026-09-26] "back button is there, but not noticeable, possibly you have to give a specific
+ * color for all the back buttons. same color" — backBtn() was a plain `.btn`, background var(--card), sitting
+ * on a `.card` section whose own background is the SAME white — nothing but a 1px line separated it from the
+ * page. Every backBtn() call (screen 2, screen 3, the goal picker) shares this one class, so one rule covers
+ * all of them, always the same color, per the ask.
+ */
+.btn.back{background:var(--panel);border-color:var(--ghost);font-weight:700}
+.btn.back:hover{background:var(--line-soft)}
+/**
  * ⭐ [found live, 2026-09-26] "apply to is not looking prominant" — scopeRow()'s picker was a plain `.btn`,
  * identical to every other secondary button on the screen, even though it decides WHICH items the whole offer
  * below it applies to — nothing downstream means anything until this is set. Given the same blue accent the
@@ -579,6 +588,10 @@ button{cursor:pointer}
 .p-live{background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b)}
 .p-paused{background:var(--red-t);color:var(--red-i);border:1px solid var(--red-b)}
 .p-stale{background:var(--amber-t);color:var(--amber-i);border:1px solid var(--amber-b)}
+/* the saved-offers TYPE summary (savedSummaryHTML()) — deliberately its own neutral color, not .p-appr's
+   blue: that blue already means "approved" on every row right below it, and a type/item COUNT is not a
+   status — reusing it would make the summary read as if every saved offer were approved. */
+.p-type{background:var(--panel);color:var(--ink);border:1px solid var(--line-soft);font-weight:700}
 .empty{text-align:center;padding:38px 20px;color:var(--faint);font-size:13.5px}
 
 .shapes{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:9px;margin-bottom:6px}
@@ -1894,7 +1907,7 @@ function renderS0(){
  * right, and doesn't read as "back." One helper, same wording, same place (top-left of the card) on every
  * screen after Settings.
  */
-function backBtn(step){ return '<button class="btn sm" onclick="go('+step+')">← Back</button>'; }
+function backBtn(step){ return '<button class="btn sm back" onclick="go('+step+')">← Back</button>'; }
 function renderS1(){
   var h='<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
         '<h2 class="h">What kind of offer?</h2>'+backBtn(0)+'</div>'+
@@ -2999,6 +3012,45 @@ function offerCoveringItem(p){
 }
 
 /**
+ * ⭐ [found live, 2026-09-26] "we need to provide how many type of offers are saved and under each one how
+ * many items are linked" — `sv.title` is already the goal-kind's own name (label()'s `g.n`, e.g. "A
+ * percentage off"), and `sv.snap` already carries the real scope (itemIds / catId) the offer was saved
+ * against, so nothing new has to be stored — just resolved and counted at display time. Category scope reads
+ * the CURRENT catalogue's items for that category (catItems()), same "dynamic, not a snapshot" rule
+ * scopeRow()'s own comment already applies to "whole category" offers everywhere else on this page.
+ */
+function savedItemNames(sv){
+  var snap=sv.snap||{};
+  if(snap.scope==='cat') return catItems(snap.catId).map(function(p){return p.name;});
+  if(snap.itemIds && snap.itemIds.length) return snap.itemIds.map(function(id){return (byId(id)||{}).name;}).filter(Boolean);
+  if(snap.itemId) return [(byId(snap.itemId)||{}).name].filter(Boolean);
+  return null;   /* not an item/category-scoped goal kind (bundle, spend, ship, band, buy-A-get-B, …) */
+}
+function savedItemCount(sv){ var n=savedItemNames(sv); return n?n.length:null; }
+/**
+ * ⭐ [found live, 2026-09-26] "when i click the saved offers, it is going to the panel and i have to look at
+ * the entire life cycle... can we bring it below as a collapsable for the items attached... if you say edit
+ * go to the full cycle." openSaved() (renamed here from "Review" to "Edit") still opens the whole config
+ * screen — that stays the right place to actually CHANGE anything — but just checking what's IN an offer no
+ * longer needs it: this expands the same row in place, no navigation, same "the panel stays, only what's
+ * inside it scrolls/opens" discipline as the Result modal's own sticky verdict.
+ */
+var SVOPEN={};
+function toggleSaved(id){ SVOPEN[id]=!SVOPEN[id]; render(); }
+function savedSummaryHTML(){
+  var groups={}, order=[];
+  SAVED.forEach(function(sv){
+    if(!groups[sv.title]){ groups[sv.title]={n:0,items:0,hasItems:false}; order.push(sv.title); }
+    var g=groups[sv.title], ic=savedItemCount(sv);
+    g.n++;
+    if(ic!=null){ g.items+=ic; g.hasItems=true; }
+  });
+  return '<div class="hs" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+order.map(function(t){
+    var g=groups[t];
+    return '<span class="pill p-type">'+g.n+' '+esc(t)+(g.hasItems?' · '+g.items+' item'+(g.items===1?'':'s')+' linked':'')+'</span>';
+  }).join('')+'</div>';
+}
+/**
  * ⚠️ FOUR REAL STATES, NOT THREE PRETENDING TO BE FIVE. v5's own prototype sent "Pause" back to 'approved' —
  * indistinguishable from a draft someone had just reviewed and not yet launched. A live offer that stops must
  * say PAUSED, or "why is this showing at the till" and "why did we never launch this" become the same question.
@@ -3006,11 +3058,13 @@ function offerCoveringItem(p){
 function renderS3(){
   var h='<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
         '<h2 class="h">Saved offers</h2>'+backBtn(0)+'</div>'+
-        '<p class="hs">'+(savedLive()?'Draft → approved → live → paused.':'Draft → approved → live. Sign in to keep these past this tab.')+'</p></div>';
+        '<p class="hs">'+(savedLive()?'Draft → approved → live → paused.':'Draft → approved → live. Sign in to keep these past this tab.')+'</p>'+
+        (SAVED.length?savedSummaryHTML():'')+'</div>';
   if(!SAVED.length) return h+'<div class="card empty">Nothing saved yet.</div>';
   h+='<div class="bucket" style="margin-top:14px">';
   SAVED.forEach(function(sv){
     var moved=costMoved(sv), pillClass=sv.status==='live'?'live':sv.status==='paused'?'paused':sv.status==='approved'?'appr':'draft';
+    var names=savedItemNames(sv), open=!!SVOPEN[sv.id];
     h+='<div class="sv"><div class="svm">'+
       '<div class="svt">'+esc(sv.title)+'</div>'+
       '<div class="svd">'+esc(sv.detail)+' · '+esc(BIZ[sv.biz].name)+'</div>'+
@@ -3018,10 +3072,15 @@ function renderS3(){
         '<span class="pill p-'+pillClass+'">'+esc(sv.status)+'</span>'+
         (moved?'<span class="pill p-stale">'+moved+' cost'+(moved>1?'s':'')+' changed since</span>':'')+
         (clash(sv)?'<span class="pill p-stale">overlaps '+clash(sv)+' other</span>':'')+
-      '</div></div>'+
+      '</div>'+
+      (names?'<button class="btn sm" style="margin-top:7px" onclick="toggleSaved(\''+sv.id+'\')">'+
+        (open?'▾':'▸')+' '+names.length+' item'+(names.length===1?'':'s')+' linked</button>'+
+        (open?'<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--panel);border-radius:9px">'+
+          (names.length?names.map(esc).join(', '):'None on the current catalogue.')+'</div>':''):'')+
+      '</div>'+
       '<div style="text-align:right"><div class="svn">'+esc(sv.n)+'</div><div class="svk">'+esc(sv.k)+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">'+
-        '<button class="btn sm" onclick="openSaved(\''+sv.id+'\')">Review</button>'+
+        '<button class="btn sm" onclick="openSaved(\''+sv.id+'\')">Edit</button>'+
         (sv.status==='draft'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'approved\')">Approve</button>':'')+
         (sv.status==='approved'?'<button class="btn sm pri" onclick="setStatus(\''+sv.id+'\',\'live\')">Go live</button>':'')+
         (sv.status==='live'?'<button class="btn sm" onclick="setStatus(\''+sv.id+'\',\'paused\')">Pause</button>':'')+
@@ -3087,6 +3146,14 @@ render();
 labPaintQueue();
 labDrainOutbox();
 if (savedLive()) labUseMine(true);
+/**
+ * ⚠️ [found live, 2026-09-26] "it says saved offers 0, but there are quite a number of saved offers" —
+ * loadSaved() was only ever called AFTER landing on step 3 (go(3)'s own trigger) or after a save/status
+ * change. The Settings screen's own "Saved offers <n>" badge reads SAVED.length directly, so on a fresh
+ * signed-in load — before step 3 has ever been visited THIS session — it always showed 0, whatever the shelf
+ * actually held. Loaded here too, at boot, alongside the catalogue.
+ */
+if (savedLive()) loadSaved();
 
 </script>
 </body>
