@@ -2987,15 +2987,28 @@ function scopesOverlap(a,b){
   var itemSide=a.scope==='item'?aIds:bIds, catSide=a.scope==='item'?b.catId:a.catId;
   return itemSide.some(function(id){ var p=byId(id); return p&&p.cat===catSide; });
 }
-function clash(sv){
+/**
+ * ⭐ [found live, 2026-09-26] "here we are showcasing overlapping? do we need to avoid? we should showcase
+ * which item overlaps" — the collision itself is real and worth keeping (commercetools' own rule, see above:
+ * only one item-level discount may apply to an item, so two live offers touching the same shelf is a genuine
+ * problem, not noise to hide) — what was missing was WHICH item. clashDetail() resolves the actual items each
+ * conflicting offer shares with this one (scopeCoversItem(), the same per-item test the "Apply it to" picker
+ * already uses), not just how many offers conflict.
+ */
+function clashDetail(sv){
   if(['percent','amount','qty'].indexOf(sv.snap.goal)<0) return null;
-  var other=SAVED.filter(function(x){
-    if(x.id===sv.id||x.biz!==sv.biz) return false;
-    if(x.status==='draft'&&sv.status==='draft') return false;
-    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return false;
-    return scopesOverlap(sv.snap,x.snap);
+  var mine=sv.snap.scope==='cat'?catItems(sv.snap.catId):
+    (sv.snap.itemIds&&sv.snap.itemIds.length?sv.snap.itemIds.map(byId):(sv.snap.itemId?[byId(sv.snap.itemId)]:[])).filter(Boolean);
+  var hits=[];
+  SAVED.forEach(function(x){
+    if(x.id===sv.id||x.biz!==sv.biz) return;
+    if(x.status==='draft'&&sv.status==='draft') return;
+    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return;
+    if(!scopesOverlap(sv.snap,x.snap)) return;
+    var items=mine.filter(function(p){return scopeCoversItem(x.snap,p);}).map(function(p){return p.name;});
+    hits.push({title:x.title, status:x.status, items:items});
   });
-  return other.length?other.length:null;
+  return hits.length?hits:null;
 }
 /** ⭐ Athi, live: "if any of the item is already in the offer it has to highlight, which offer it is already
  * included." The same overlap test clash() uses, asked per PRODUCT instead of per saved-offer-pair, so the
@@ -3036,7 +3049,7 @@ function savedItemCount(sv){ var n=savedItemNames(sv); return n?n.length:null; }
  * inside it scrolls/opens" discipline as the Result modal's own sticky verdict.
  */
 var SVOPEN={};
-function toggleSaved(id){ SVOPEN[id]=!SVOPEN[id]; render(); }
+function toggleSaved(id,which){ var k=id+':'+(which||'items'); SVOPEN[k]=!SVOPEN[k]; render(); }
 function savedSummaryHTML(){
   var groups={}, order=[];
   SAVED.forEach(function(sv){
@@ -3064,15 +3077,22 @@ function renderS3(){
   h+='<div class="bucket" style="margin-top:14px">';
   SAVED.forEach(function(sv){
     var moved=costMoved(sv), pillClass=sv.status==='live'?'live':sv.status==='paused'?'paused':sv.status==='approved'?'appr':'draft';
-    var names=savedItemNames(sv), open=!!SVOPEN[sv.id];
+    var names=savedItemNames(sv), open=!!SVOPEN[sv.id+':items'];
+    var hits=clashDetail(sv), clashOpen=!!SVOPEN[sv.id+':clash'];
     h+='<div class="sv"><div class="svm">'+
       '<div class="svt">'+esc(sv.title)+'</div>'+
       '<div class="svd">'+esc(sv.detail)+' · '+esc(BIZ[sv.biz].name)+'</div>'+
       '<div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap">'+
         '<span class="pill p-'+pillClass+'">'+esc(sv.status)+'</span>'+
         (moved?'<span class="pill p-stale">'+moved+' cost'+(moved>1?'s':'')+' changed since</span>':'')+
-        (clash(sv)?'<span class="pill p-stale">overlaps '+clash(sv)+' other</span>':'')+
+        (hits?'<span class="pill p-stale" style="cursor:pointer" role="button" tabindex="0" '+
+          'onclick="toggleSaved(\''+sv.id+'\',\'clash\')">'+(clashOpen?'▾':'▸')+' overlaps '+hits.length+
+          ' other'+(hits.length>1?'s':'')+'</span>':'')+
       '</div>'+
+      (clashOpen&&hits?'<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--amber-t);border:1px solid var(--amber-b);border-radius:9px">'+
+        hits.map(function(x){ return '<b>'+esc(x.title)+'</b> ('+esc(x.status)+')'+
+          (x.items.length?': '+x.items.map(esc).join(', '):' — whole overlapping category'); }).join('<br>')+
+        '</div>':'')+
       (names?'<button class="btn sm" style="margin-top:7px" onclick="toggleSaved(\''+sv.id+'\')">'+
         (open?'▾':'▸')+' '+names.length+' item'+(names.length===1?'':'s')+' linked</button>'+
         (open?'<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--panel);border-radius:9px">'+
