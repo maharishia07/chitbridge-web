@@ -701,7 +701,7 @@ button{cursor:pointer}
       <div class="pnl" id="workPnl"></div>
       <button class="ovlx" onclick="closeWork()" aria-label="Close" title="Close" style="margin-left:auto">✕</button>
     </div>
-    <div class="seg" id="workDemo" style="padding:12px 20px 0"></div>
+    <div id="workDemo"></div>
     <div class="shbd" id="workBody"></div>
     <div class="shft">
       <button class="btn pri" id="workSave" onclick="saveOffer()">Save for review</button>
@@ -1089,13 +1089,24 @@ function percentFootHTML(rs, showLoy){
  * this panel — they never leave the last one." Built from the SAME rows percentTableHTML() uses, just never
  * reading r.p.cost or any margin field while building this string.
  */
+/**
+ * ⭐⭐⭐ [2026-09-26] TWO LEVELS PER LINE, NOT ONE TOTAL AT THE END — Athi: "lb in toggle mode or in bill show
+ * two levels one with lb, another one is without lb... here they can see how it shows with different
+ * percentages." Each line now names BOTH prices when loyalty is on — the everyone-pays price and, right next
+ * to it, the loyalty-pays price — instead of only the base price per line with the loyalty total held back
+ * for one lump row at the bottom. The bottom totals (They pay / You take off / A loyalty customer pays) stay
+ * exactly as they were; this adds the SAME comparison at the line level.
+ */
 function percentBillHTML(rs){
   var showLoy=loyMode()==='pct';
   var was=0, pay=0, loyPay=0, lines='';
   rs.forEach(function(r){
     was+=r.p.price; pay+=r.pub.shown; loyPay+=r.all.shown;
     lines+='<div class="ln"><span class="nm">1 × '+esc(r.p.name)+'</span>'+
-      '<span class="old">'+M0(r.p.price)+'</span><span class="new">'+M0(r.pub.shown)+'</span></div>';
+      '<span class="old">'+M0(r.p.price)+'</span><span class="new">'+M0(r.pub.shown)+'</span>'+
+      (showLoy?'<span class="new" style="color:var(--blue-i);font-size:13px">→ '+M0(r.all.shown)+
+        ' <span style="font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.85">loy</span></span>':'')+
+      '</div>';
   });
   return '<div class="billhd"><b>What the customer sees</b>'+
       '<span>Cost and margin are not on this panel — they never leave the last one.</span></div>'+
@@ -1112,15 +1123,41 @@ function workGoPanel(n){ WORK_PANEL=n; paintWork(); }
  * ⭐⭐⭐ [found live, 2026-09-26] "there is a panel on the top to try other combinations, can you include that,
  * as a change in percentage" — the doc's own prototype had a strip of quick presets ABOVE the sheet, for
  * trying loyalty on/off, a few margin thresholds and a couple of discount rates without leaving the modal.
- * Reuses .seg (the same toggle-row every other picker on this page already is) rather than the doc's own
- * dark-on-stage `.demo` styling — sits OUTSIDE #workBody (unlike the verdict/table/bill) so it survives
- * switching between "Your margin" and "On a bill". Each button calls edit(), the same choke point every other
- * field on this page already goes through — a real change, not a preview.
+ * Sits OUTSIDE #workBody (unlike the verdict/table/bill) so it survives switching between "Your margin" and
+ * "On a bill". Every field calls edit(), the same choke point every other field on this page already goes
+ * through — a real change, not a preview.
+ *
+ * ⭐⭐⭐ [2026-09-26, extended] Athi, on that strip: "show loyalty bonus and the product bonus next to each
+ * other with percentage, so when the toggle is on, show the final percentage as = , what i mean is LB - 10%,
+ * 10% off as an editable icon, both so it can be changed = final percentage... threshold, next so, threshold
+ * can be checked as well." All three real numbers — margin threshold, loyalty %, discount % — are now typed
+ * fields in one row, live: "Threshold [25]% · LB ⏻ [10]% + [10]% off = 19%", the "=" recomputed on every
+ * keystroke. The preset buttons stay below as quick jumps to the same three fields, not a second mechanism.
+ * `data-key`s here are prefixed 'm' (mMargin/mLoyPct/mPctOff) — screen 2's OWN margin/loyPct/pctOff fields
+ * carry the plain, unprefixed keys, and edit()'s own refocus-after-render step matches by data-key; sharing a
+ * key between the modal's copy and the screen behind it would refocus whichever one happens to sit first in
+ * the DOM, not the one actually being typed into.
  */
+function workNum(key, mkey, val, disabled){
+  return '<span class="num" style="'+(disabled?'opacity:.4':'')+'"><input type="text" inputmode="decimal" min="0" max="95" '+(disabled?'disabled':'')+
+    ' style="width:56px;height:38px;font-size:18px" value="'+esc(val==null?'':String(val))+'" data-key="'+mkey+'" '+
+    'oninput="edit(\''+key+'\',this.value)"><span class="u" style="font-size:16px">%</span></span>';
+}
 function workDemoHTML(){
-  return '<button class="'+(S.loyOn?'on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')">Loyalty bonus</button>'+
-    [50,25,10].map(function(t){ return '<button class="'+(num(S.margin)===t?'on':'')+'" onclick="edit(\'margin\','+t+')">Threshold '+t+'%</button>'; }).join('')+
-    [10,30].map(function(o){ return '<button class="'+(num(S.pctOff)===o?'on':'')+'" onclick="edit(\'pctOff\','+o+')">'+o+'% off</button>'; }).join('');
+  var combined=Math.round(combo(num(S.pctOff)/100, S.loyOn?num(S.loyPct)/100:0)*1000)/10;
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 20px 0">'+
+      '<span style="font-size:13px;font-weight:700;color:var(--muted)">Threshold</span>'+workNum('margin','mMargin',S.margin)+
+      '<span style="width:1px;align-self:stretch;background:var(--line-soft)"></span>'+
+      '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
+      '<span style="font-size:13px;font-weight:700;color:var(--muted)">LB</span>'+workNum('loyPct','mLoyPct',S.loyPct,!S.loyOn)+
+      '<span style="color:var(--faint);font-weight:700">+</span>'+workNum('pctOff','mPctOff',S.pctOff)+
+      '<span style="color:var(--faint);font-weight:700">off =</span>'+
+      '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:20px;font-weight:800;color:var(--green-d)">'+combined+'%</span>'+
+    '</div>'+
+    '<div class="seg" style="padding:10px 20px 0">'+
+      [50,25,10].map(function(t){ return '<button class="'+(num(S.margin)===t?'on':'')+'" onclick="edit(\'margin\','+t+')">Threshold '+t+'%</button>'; }).join('')+
+      [10,30].map(function(o){ return '<button class="'+(num(S.pctOff)===o?'on':'')+'" onclick="edit(\'pctOff\','+o+')">'+o+'% off</button>'; }).join('')+
+    '</div>';
 }
 function paintWork(){
   var el=document.getElementById('workScrim'); if(!el) return;
