@@ -160,9 +160,11 @@ button{cursor:pointer}
 .scrim{position:fixed;inset:0;background:rgba(29,27,22,.45);display:none;
   align-items:center;justify-content:center;padding:24px;z-index:50}
 .scrim.on{display:flex}
+/* ⭐ [found live, 2026-09-26] "a resizable window" — native CSS resize, no JS: drag the bottom-right corner.
+   min-width/min-height stop it collapsing onto its own header. */
 .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
   width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;
-  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden}
+  box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:460px;min-height:340px}
 .shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
 .shhd h3{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;margin:0}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
@@ -298,6 +300,23 @@ button{cursor:pointer}
   .sheet{border-radius:0;border:0;max-height:none;height:100%;width:100%}
   .headline{gap:16px} .headline .hv{font-size:20px}
   .shft .btn{flex:1;justify-content:center}
+}
+/**
+ * ⭐⭐⭐ [2026-09-26] PRINTABLE — Athi: "if it is printable, that will be good." Only the offer's own name/rate
+ * and its verdict+table print; the editable controls (.no-print — margin/discount/loyalty fields, the toggle,
+ * every quick-preset) and the footer's own action buttons have no place on paper. `position:sticky` is reset
+ * to static for print — sticky is a screen-scrolling behaviour, and printed pages have no "scroll" to stick
+ * within, only page breaks (a stuck header would otherwise repeat mid-table or clip a row behind it).
+ */
+@media print{
+  body *{visibility:hidden}
+  .scrim, .scrim *{visibility:visible}
+  .scrim{position:static;background:none;display:block;padding:0}
+  .sheet{position:static;width:100%;max-height:none;height:auto;box-shadow:none;border:0;resize:none;overflow:visible}
+  .no-print, .shft, .ovlx, #workPnl{display:none!important}
+  .shbd{overflow:visible!important}
+  .vtbl thead{position:static}
+  .scroll{overflow:visible!important}
 }
 /* ⭐ a row already covered by another live offer — Athi: "it has to highlight, which offer it is already
    included" (see offerCoveringItem() in the JS) */
@@ -746,6 +765,7 @@ button{cursor:pointer}
     <div class="shft">
       <button class="btn pri" id="workSave" onclick="saveOffer()">Save for review</button>
       <button class="btn" id="workFlip" onclick="closeWork()">Change it</button>
+      <button class="btn" onclick="window.print()" title="Print this offer — the editable controls stay off the page">🖨 Print</button>
       <span class="grow"></span>
       <span class="why" id="workNote"></span>
     </div>
@@ -1231,8 +1251,12 @@ function workQuick(key, vals, live){
  * after it closes — otherwise it spans the container's full width, edge to edge, while the sum sits inset by
  * the card's own 20px padding: two different widths stacked directly on each other, the exact "doesn't read
  * as one piece" seam this pass exists to close. */
+/** ⭐ "if it is printable, that will be good" — the editable rows (fields, toggle, quick-presets) are
+ * wrapped in `.no-print` (see the print media block) so a printed copy shows the offer and its verdict, not
+ * the controls used to build it; `tail` (the verdict) sits OUTSIDE that wrapper so it still prints. */
 function workDemoHTML(tail){
   return '<div class="card" style="border:0;border-radius:0;padding:14px 20px 14px;box-shadow:none">'+
+    '<div class="no-print">'+
     /* ⭐ "No text below margin threshold" — the only row with no per-offer decision riding on it (it's the
        shop's own settings-screen number, just editable here too); the other two rows keep their captions,
        since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
@@ -1248,6 +1272,7 @@ function workDemoHTML(tail){
       workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span>'+
       '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
     '<div class="sum" style="margin-top:12px;padding:11px 15px">'+sumLineHTML()+'</div>'+
+    '</div>'+
     (tail||'')+
     '</div>';
 }
@@ -1257,17 +1282,24 @@ function paintWork(){
   var pnl=document.getElementById('workPnl'), flip=document.getElementById('workFlip'), save=document.getElementById('workSave');
   var demo=document.getElementById('workDemo');
   if(S.goal==='percent'){
+    /**
+     * ⭐⭐⭐ [found live, 2026-09-26] "on a bill chip itself is not required. your margin itself is
+     * showcasing all very nicely... just one page is enough." Checked first, not assumed: everything "On a
+     * bill" showed (item prices, the totals, the loyalty total) is already on "Your margin" too — the same
+     * numbers, just alongside cost/margin/verdict this tool's only ever-user (the shop owner, never an actual
+     * customer) already needs to see. Nothing unique to lose. The panel toggle is gone from the UI; WORK_PANEL/
+     * workGoPanel()/percentBillHTML() stay in the file, unreachable, not deleted — the same "held, not
+     * showcased" discipline this session's subscription feature already follows, in case a genuinely
+     * customer-facing use for it turns up later.
+     */
     var rs=percentRows(), showLoy=loyMode()==='pct';
-    demo.style.display=''; demo.innerHTML=workDemoHTML(WORK_PANEL===1?percentVerdictHTML(rs):'');
+    demo.style.display=''; demo.innerHTML=workDemoHTML(percentVerdictHTML(rs));
     var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=(showLoy?num(S.pctOff)+'% + '+num(S.loyPct)+'% = '+combined+'%':num(S.pctOff)+'%')+' off · '+rs.length+' items';
-    pnl.style.display='';
-    pnl.innerHTML='<button class="'+(WORK_PANEL===1?'on':'')+'" onclick="workGoPanel(1)">Your margin</button>'+
-      '<button class="'+(WORK_PANEL===2?'on':'')+'" onclick="workGoPanel(2)">On a bill</button>';
-    document.getElementById('workBody').innerHTML = WORK_PANEL===1 ? percentTableHTML(rs) : percentBillHTML(rs);
-    flip.textContent = WORK_PANEL===1 ? 'See it on a bill →' : '← Back to margins';
-    flip.onclick = function(){ workGoPanel(WORK_PANEL===1?2:1); };
+    pnl.style.display='none';
+    document.getElementById('workBody').innerHTML = percentTableHTML(rs);
+    flip.textContent='Change it'; flip.onclick=closeWork;
     var v=percentVerdict(rs);
     save.textContent=v.save;
     document.getElementById('workNote').textContent = showLoy
