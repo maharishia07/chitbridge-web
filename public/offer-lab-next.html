@@ -1090,7 +1090,7 @@ function go(n){ S.step=n; render(); window.scrollTo({top:0,behavior:'smooth'});
   if(n===3 && savedLive()) loadSaved();   /* the shelf may have changed on another tab/device since last look */
   closeWork();   /* navigating away from "Work it out" must not leave its result floating over the next screen */
 }
-function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
+function pickGoal(id){ EDITING=null; S.goal=id; S.applied=false; S.step=2; render(); }
 /**
  * ⭐⭐⭐ [2026-09-26, per offer-lab-workitout.html] THE RESULT IS A MODAL NOW, NOT A PANEL PUSHED IN BELOW THE
  * CONTROLS — Athi's own doc: "the result, as an overlay — never pushed in below the controls." `S.applied`
@@ -2899,18 +2899,34 @@ function ruleParamsOf(){
 }
 /** a unique-enough name — the API refuses a second definition of one kind with the same name */
 function saveName(l){ return l.title+(l.detail?' · '+l.detail:'')+' · '+new Date().toISOString().slice(0,16); }
+/**
+ * ⭐ [found live, 2026-09-26] "editing the current offer to reduce or include more items" — when this save
+ * follows openSaved() (EDITING set to the offer just opened), update THAT one in place rather than adding a
+ * second, separate offer next to it. A content edit always lands back in 'draft' — the item list just
+ * changed, so whatever review got it to approved/live/paused applied to a list that no longer exists.
+ */
 async function saveOffer(){
   var l=label(), k=keyNumber(), sub=subKindOf();
   if(!savedLive()){
-    SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
-      n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
-    go(3); return;
+    var existing = EDITING && SAVED.filter(function(x){return x.id===EDITING;})[0];
+    if(existing){
+      existing.title=l.title; existing.detail=l.detail; existing.n=k[0]; existing.k=k[1];
+      existing.snap=snapshot(); existing.costs=costPrint(); existing.status='draft';
+    } else {
+      SAVED.unshift({id:'o'+(++SEQ), when:new Date(), biz:S.biz, title:l.title, detail:l.detail,
+        n:k[0], k:k[1], status:'draft', snap:snapshot(), costs:costPrint()});
+    }
+    EDITING=null; go(3); return;
   }
   if(!sub){ toastSay('This one cannot be saved to the shelf yet — work it out here for now.'); return; }
-  var r=await defFetch('POST','',{ kind:'offer', sub_kind:sub, name:saveName(l), status:'draft',
-    rules:Object.assign(ruleParamsOf(), { _lab:{ snap:snapshot(), costs:costPrint(), at:new Date().toISOString(),
-      title:l.title, detail:l.detail, n:k[0], k:k[1] } }) });
+  var rules=Object.assign(ruleParamsOf(), { _lab:{ snap:snapshot(), costs:costPrint(), at:new Date().toISOString(),
+    title:l.title, detail:l.detail, n:k[0], k:k[1] } });
+  var editingLive = EDITING && SAVED.some(function(x){return x.id===EDITING;});
+  var r = editingLive
+    ? await defFetch('PUT','/'+EDITING,{rules:rules, status:'draft'})
+    : await defFetch('POST','',{ kind:'offer', sub_kind:sub, name:saveName(l), status:'draft', rules:rules });
   if(!r.ok){ toastSay((r.body&&r.body.message)||'That did not save.'); return; }
+  EDITING=null;
   await loadSaved(); go(3);
 }
 /** ⭐ mirrors the shelf into SAVED's own shape, so renderS3/clash/costMoved need not know the source */
@@ -2931,6 +2947,7 @@ async function loadSaved(){
 }
 function openSaved(id){
   var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv) return;
+  EDITING=sv.id;   /* saveOffer() below updates THIS one in place instead of creating a duplicate */
   if(sv.biz!==S.biz) applyBiz(sv.biz);
   KEEP.forEach(function(kk){ if(sv.snap[kk]!=null) S[kk]=JSON.parse(JSON.stringify(sv.snap[kk])); });
   /**
@@ -3050,6 +3067,17 @@ function savedItemCount(sv){ var n=savedItemNames(sv); return n?n.length:null; }
  */
 var SVOPEN={};
 function toggleSaved(id,which){ var k=id+':'+(which||'items'); SVOPEN[k]=!SVOPEN[k]; render(); }
+/**
+ * ⭐ [found live, 2026-09-26] "retire basically removes the offer from the queue... no pause or editing the
+ * current offer to reduce or include more items" — Pause/Resume already exist (see the four-state buttons
+ * below, live↔paused); they just never appear on screen until an offer actually reaches 'live', which none of
+ * Athi's test data had yet. EDITING is the real gap: openSaved() restored a saved offer's own item list into
+ * the config screen, but saveOffer() only ever knew how to POST a brand new definition — "editing" it and
+ * saving actually created a SECOND, separate offer, leaving the original (now stale) one still on the shelf.
+ * routes/definitions.js already supports exactly this (PUT /:id with `rules` mints a new VERSION of the SAME
+ * definition — "version on edit", per its own comment) — nothing to build server-side, just wire it in.
+ */
+var EDITING=null;
 function savedSummaryHTML(){
   var groups={}, order=[];
   SAVED.forEach(function(sv){
