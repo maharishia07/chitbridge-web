@@ -381,6 +381,13 @@ button{cursor:pointer}
 .ovl{position:fixed;inset:0;background:rgba(29,27,22,.5);z-index:200;display:none;
   align-items:center;justify-content:center;padding:24px}
 .ovl.on{display:flex}
+/* ⚠️ [found live, 2026-09-26] "old offer lab screen is still appearing" — #modLabOverlay is the one .ovl that
+   opens straight over the INERT copy of offer-lab-next.html's shell this page carries just for its shared
+   machinery ("there is nothing behind it a person could reach" — openModLab()'s own comment). The plain .ovl
+   scrim above is 50% opaque, meant for overlays with a real, relevant page behind them; here it let that dead
+   shell's heading and cards read straight through, looking exactly like the wrong page had loaded. Opaque
+   here, and only here, so nothing behind it is ever legible again. */
+#modLabOverlay{background:var(--page)}
 .ovlpanel{background:var(--card);border-radius:var(--r);width:min(920px,100%);max-height:min(760px,92vh);
   display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(29,27,22,.35)}
 .ovlhead{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);flex:0 0 auto}
@@ -448,7 +455,16 @@ button{cursor:pointer}
 <div class="wrap">
 
   <div class="top">
-    <h1 class="title">Offer Lab</h1>
+    <!-- ⚠️ [found live, 2026-09-26] "when i click the combos, old offer lab screen is still appearing" — this
+         heading is copied, word for word, from offer-lab-next.html's own shared shell (see the header comment:
+         "a copy of offer-lab-next.html's own shared machinery... with Offer Lab's screens left inert
+         underneath a permanently-open modal"). Inert was never the same as invisible: the modifier lab opens
+         over it (openModLab(), called at the bottom of this file), but its own scrim was only 50% opaque, so
+         this exact heading — plus "Settings", the sample-data banner, "First, the numbers" — read straight
+         through, and looked exactly like the old Offer Lab page had loaded instead of Combo Lab's own. Two
+         fixes, not one: renamed so the shell reads correctly on the rare frame it's visible at all (a resize,
+         a slow paint), and #modLabOverlay below made fully opaque so nothing behind it is legible again. -->
+    <h1 class="title">Combo Lab</h1>
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
     <button class="chip" onclick="go(3)" id="bucketChip">Saved offers <b>0</b></button>
