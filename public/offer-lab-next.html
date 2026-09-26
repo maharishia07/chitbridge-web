@@ -320,6 +320,15 @@ button{cursor:pointer}
 .stepEd .inp span{padding:0 8px 0 4px;font-size:11.5px}
 
 /* notes */
+/**
+ * ⚠️⚠️⚠️ [found live, 2026-09-26] "i don't need this" — two empty amber bars sitting where #labqueue and
+ * #labtoast should have been invisible. Both carry `hidden` in the HTML, but `.note{display:flex}` (declared
+ * twice in this file, at equal specificity to the browser's own `[hidden]{display:none}`) wins because
+ * author CSS always beats the UA stylesheet — so a `hidden`, empty .note rendered as a bordered pill with
+ * nothing in it instead of vanishing. `.note[hidden]` outranks a bare `.note` on specificity alone, so this
+ * one rule fixes both duplicated `.note{}` blocks without touching either of them.
+ */
+.note[hidden]{display:none}
 .note{display:flex;gap:9px;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.4;margin-top:12px}
 .note .ic{font-weight:700;flex:0 0 auto}
 .n-ok{background:var(--green-t);border:1px solid var(--green-b);color:var(--green-d)}
@@ -1322,8 +1331,17 @@ function renderS0(){
 }
 
 /* ═══ SCREEN 1 · WHAT ══════════════════════════════════════════════════ */
+/**
+ * ⭐⭐⭐ [found live, 2026-09-26] "you need to have a normal back button in the next page if we want to come
+ * back." Real gap: the step tabs at the top of the page are the only way back off screens 1 and 3 — no
+ * button on the screen itself says so, and screen 2's own "Pick a different offer" is small, off to the
+ * right, and doesn't read as "back." One helper, same wording, same place (top-left of the card) on every
+ * screen after Settings.
+ */
+function backBtn(step){ return '<button class="btn sm" onclick="go('+step+')">← Back</button>'; }
 function renderS1(){
-  var h='<div class="card pad"><h2 class="h">What kind of offer?</h2>'+
+  var h='<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+        '<h2 class="h">What kind of offer?</h2>'+backBtn(0)+'</div>'+
         '<p class="hs">Eight shapes. Pick one and the next screen does the arithmetic.</p>'+
         '<div class="goals" style="margin-top:16px">';
   var last=null;
@@ -1428,7 +1446,8 @@ function loyBar(){
 function renderS2(){
   var g=goalOf(S.goal);
   var h='<div class="card pad">'+
-    '<h2 class="h">'+g.n+'</h2><p class="hs">'+cfgLine()+'</p>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+    '<h2 class="h">'+g.n+'</h2>'+backBtn(1)+'</div><p class="hs">'+cfgLine()+'</p>'+
     '<div style="margin-top:16px">'+cfgHTML()+'</div>'+
     (g.kind==='line'?'':loyBar())+   /* percent/amount/qty already placed loyBar() themselves, in the new order */
     '<div class="acts">'+
@@ -2362,7 +2381,8 @@ function offerCoveringItem(p){
  * say PAUSED, or "why is this showing at the till" and "why did we never launch this" become the same question.
  */
 function renderS3(){
-  var h='<div class="card pad"><h2 class="h">Saved offers</h2>'+
+  var h='<div class="card pad"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'+
+        '<h2 class="h">Saved offers</h2>'+backBtn(0)+'</div>'+
         '<p class="hs">'+(savedLive()?'Draft → approved → live → paused.':'Draft → approved → live. Sign in to keep these past this tab.')+'</p></div>';
   if(!SAVED.length) return h+'<div class="card empty">Nothing saved yet.</div>';
   h+='<div class="bucket" style="margin-top:14px">';
