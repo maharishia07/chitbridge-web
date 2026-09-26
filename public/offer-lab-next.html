@@ -171,6 +171,36 @@ button{cursor:pointer}
 .shft{display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--hair);background:var(--page);flex-wrap:wrap;align-items:center}
 .why{font-size:12.5px;color:var(--faint)}
 /**
+ * ── ⭐⭐⭐ [2026-09-26] THE CONTROLS, PER ATHI'S OWN offer-lab-controls_1.html — its own review corrects the
+ * compact formula row this session had just shipped: "the combined figure is a sentence, not a formula ——
+ * `10% + 10% off = 19%` reads like broken arithmetic — anyone checking it gets 20." One row per real number
+ * (margin threshold / take off / loyalty bonus), a big typed field, and shortcut buttons that write into that
+ * field and light up only while they match it — "not a second control." Reuses .sum/.sw/.note.n-bad already
+ * in this file (the doc's own `.out`/`.warn` match them closely enough that a second copy would just be the
+ * same tokens under a different name); `.row`/`.fld`/`.quick` are genuinely new.
+ */
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--hair)}
+.row:first-child{padding-top:0}
+.row:last-of-type{border-bottom:0}
+.row .lab{width:150px;flex:0 0 auto;font-size:13.5px;font-weight:700}
+.row .lab small{display:block;font-size:11.5px;font-weight:500;color:var(--faint);margin-top:1px}
+.fld{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:11px;background:var(--card);height:48px;overflow:hidden;flex:0 0 auto}
+.fld input{border:0;outline:0;background:transparent;width:74px;padding:0 4px 0 12px;text-align:right;
+  font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:24px;font-weight:700}
+.fld .u{padding:0 12px 0 3px;color:var(--faint);font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700}
+.fld:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
+.fld.off{opacity:.4}
+.quick{display:flex;gap:5px;flex-wrap:wrap}
+.quick button{height:34px;min-width:52px;padding:0 11px;border-radius:9px;border:1px solid var(--line);background:var(--card);
+  font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:700;color:var(--muted)}
+.quick button.on{background:var(--green);border-color:var(--green);color:#fff}
+.quick button:hover:not(.on){border-color:var(--ghost)}
+@media(max-width:640px){
+  .row{gap:10px}
+  .row .lab{width:100%}
+  .quick{width:100%} .quick button{flex:1}
+}
+/**
  * ── ⭐⭐⭐ [2026-09-26] THE RESULT PANEL, PER ATHI'S OWN offer-lab-result.html — a verdict said in words before
  * any table, a per-row "meets your margin?" answer with a computed "only up to N% off" fix, and a second,
  * genuinely NEW panel: what the CUSTOMER sees, cost and margin absent from it entirely, not hidden — never
@@ -1120,43 +1150,45 @@ function percentBillHTML(rs){
 }
 function workGoPanel(n){ WORK_PANEL=n; paintWork(); }
 /**
- * ⭐⭐⭐ [found live, 2026-09-26] "there is a panel on the top to try other combinations, can you include that,
- * as a change in percentage" — the doc's own prototype had a strip of quick presets ABOVE the sheet, for
- * trying loyalty on/off, a few margin thresholds and a couple of discount rates without leaving the modal.
- * Sits OUTSIDE #workBody (unlike the verdict/table/bill) so it survives switching between "Your margin" and
- * "On a bill". Every field calls edit(), the same choke point every other field on this page already goes
- * through — a real change, not a preview.
- *
- * ⭐⭐⭐ [2026-09-26, extended] Athi, on that strip: "show loyalty bonus and the product bonus next to each
- * other with percentage, so when the toggle is on, show the final percentage as = , what i mean is LB - 10%,
- * 10% off as an editable icon, both so it can be changed = final percentage... threshold, next so, threshold
- * can be checked as well." All three real numbers — margin threshold, loyalty %, discount % — are now typed
- * fields in one row, live: "Threshold [25]% · LB ⏻ [10]% + [10]% off = 19%", the "=" recomputed on every
- * keystroke. The preset buttons stay below as quick jumps to the same three fields, not a second mechanism.
- * `data-key`s here are prefixed 'm' (mMargin/mLoyPct/mPctOff) — screen 2's OWN margin/loyPct/pctOff fields
- * carry the plain, unprefixed keys, and edit()'s own refocus-after-render step matches by data-key; sharing a
- * key between the modal's copy and the screen behind it would refocus whichever one happens to sit first in
- * the DOM, not the one actually being typed into.
+ * ── ⭐⭐⭐ [2026-09-26] "THE CONTROLS", per Athi's own offer-lab-controls_1.html — replaces the compact formula
+ * row two turns back. That doc's own review: "two controls for one number became one... a preset now writes
+ * into the field and lights up only while it matches, so there is no state where the two disagree" — and "the
+ * combined figure is a sentence, not a formula — anyone checking `10% + 10% off = 19%` gets 20." One row per
+ * real number (Margin threshold / Take off / Loyalty bonus), a big typed field, shortcuts that write into it.
+ * Sits OUTSIDE #workBody so it survives switching between "Your margin" and "On a bill".
+ * `data-key`s stay prefixed 'm' (mMargin/mPctOff/mLoyPct) — see the fix two turns back: screen 2's own
+ * fields carry the plain keys, and sharing one would refocus whichever match sits first in the DOM after
+ * render(), not the one actually being typed into.
  */
-function workNum(key, mkey, val, disabled){
-  return '<span class="num" style="'+(disabled?'opacity:.4':'')+'"><input type="text" inputmode="decimal" min="0" max="95" '+(disabled?'disabled':'')+
-    ' style="width:56px;height:38px;font-size:18px" value="'+esc(val==null?'':String(val))+'" data-key="'+mkey+'" '+
-    'oninput="edit(\''+key+'\',this.value)"><span class="u" style="font-size:16px">%</span></span>';
+function workField(key, mkey, val, disabled){
+  return '<span class="fld'+(disabled?' off':'')+'"><input type="text" inputmode="decimal" min="0" max="95" '+(disabled?'disabled':'')+
+    ' value="'+esc(val==null?'':String(val))+'" data-key="'+mkey+'" oninput="edit(\''+key+'\',this.value)"><span class="u">%</span></span>';
+}
+/** ⭐ a shortcut writes into the field and lights up ONLY while it already matches — never a second, competing
+ * source of truth for the same number. `live=false` (loyalty's own presets while the bonus is off) dims and
+ * disables them, matching the field they write into. */
+function workQuick(key, vals, live){
+  return vals.map(function(n){
+    return '<button class="'+(live&&num(S[key])===n?'on':'')+'" '+(live?'':'disabled style="opacity:.35"')+
+      ' onclick="edit(\''+key+'\','+n+')">'+n+'%</button>';
+  }).join('');
 }
 function workDemoHTML(){
-  var combined=Math.round(combo(num(S.pctOff)/100, S.loyOn?num(S.loyPct)/100:0)*1000)/10;
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 20px 0">'+
-      '<span style="font-size:13px;font-weight:700;color:var(--muted)">Threshold</span>'+workNum('margin','mMargin',S.margin)+
-      '<span style="width:1px;align-self:stretch;background:var(--line-soft)"></span>'+
+  var tg=num(S.margin), off=num(S.pctOff), loy=S.loyOn?num(S.loyPct):0;
+  var all=Math.round(combo(off/100,loy/100)*1000)/10;
+  var warn='';
+  if(S.loyOn && loy>=tg) warn='A '+loy+'% bonus on a '+tg+'% margin leaves nothing.';
+  else if(all>=tg) warn=all+'% off cannot clear a '+tg+'% margin on any item.';
+  return '<div class="card" style="border:0;border-radius:0;padding:16px 20px 0;box-shadow:none">'+
+    '<div class="row"><span class="lab">Margin threshold<small>What every offer is judged against</small></span>'+
+      workField('margin','mMargin',S.margin)+'<span class="quick">'+workQuick('margin',[10,25,50],true)+'</span></div>'+
+    '<div class="row"><span class="lab">Take off<small>Everyone pays this</small></span>'+
+      workField('pctOff','mPctOff',S.pctOff)+'<span class="quick">'+workQuick('pctOff',[10,20,30],true)+'</span></div>'+
+    '<div class="row"><span class="lab">Loyalty bonus<small>On top, for a loyalty customer</small></span>'+
       '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
-      '<span style="font-size:13px;font-weight:700;color:var(--muted)">LB</span>'+workNum('loyPct','mLoyPct',S.loyPct,!S.loyOn)+
-      '<span style="color:var(--faint);font-weight:700">+</span>'+workNum('pctOff','mPctOff',S.pctOff)+
-      '<span style="color:var(--faint);font-weight:700">off =</span>'+
-      '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:20px;font-weight:800;color:var(--green-d)">'+combined+'%</span>'+
-    '</div>'+
-    '<div class="seg" style="padding:10px 20px 0">'+
-      [50,25,10].map(function(t){ return '<button class="'+(num(S.margin)===t?'on':'')+'" onclick="edit(\'margin\','+t+')">Threshold '+t+'%</button>'; }).join('')+
-      [10,30].map(function(o){ return '<button class="'+(num(S.pctOff)===o?'on':'')+'" onclick="edit(\'pctOff\','+o+')">'+o+'% off</button>'; }).join('')+
+      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span></div>'+
+    '<div class="sum">'+sumLineHTML()+'</div>'+
+    (warn?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>'+esc(warn)+'</div></div>':'')+
     '</div>';
 }
 function paintWork(){
@@ -1864,12 +1896,17 @@ function loyBoxHTML(){
       :over?'Over your '+num(S.cap)+'% ceiling.':'On top, for a loyalty customer.')+'</div>'+
   '</div>';
 }
+/**
+ * ⭐⭐⭐ [2026-09-26, per offer-lab-controls_1.html] "The combined figure is a sentence, not a formula —
+ * `10% + 10% off = 19%` reads like broken arithmetic, anyone checking it gets 20. It now says which customer
+ * pays what." Reworded to the doc's own exact sentence; the underlying math (combo()) is unchanged.
+ */
 function sumLineHTML(){
   var off=num(S.pctOff), loy=S.loyOn?num(S.loyPct):0;
   var c=Math.round(combo(off/100,loy/100)*1000)/10;
   return S.loyOn
-    ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer — '+off+'% then '+loy+
-      '%, not '+R2(off+loy)+'%. Everyone else pays '+off+'% less.</span>'
+    ? '<span class="big">'+c+'%</span><span class="wd">off for a loyalty customer. Everyone else pays <b>'+
+      off+'%</b> less. '+(off&&loy?'Not '+R2(off+loy)+'% — the bonus comes off what is left.':'')+'</span>'
     : '<span class="big">'+off+'%</span><span class="wd">off, for everyone.</span>';
 }
 function cfgHTML(){
