@@ -141,8 +141,17 @@ button{cursor:pointer}
  */
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-top:16px}
 .box{border:1px solid var(--line);border-radius:12px;padding:13px 15px;min-height:96px}
-.box.loy{border-color:var(--blue-b);background:var(--blue-t)}
-.box.loy.off{border-color:var(--line);background:var(--card)}
+/**
+ * ⭐⭐⭐ [found live, 2026-09-26] "take off, everyone pay this, alignment is not same as the other box" — real
+ * cause, not just a styling gap: the loyalty box carried classes `box loy`, and `.loy` ALREADY existed as a
+ * completely different, older component (the full-width "loyalty bar", `display:flex;align-items:center`) —
+ * so the loyalty box silently inherited a flex-ROW layout that laid its header/field/hint out side by side,
+ * while the plain "Take off" box (just `.box`, no such collision) stacked the same three pieces vertically.
+ * Two boxes meant to be a matched pair, rendering with two different internal layouts. Renamed to `.box.on`
+ * (the same plain modifier `.quick button.on`/`.pnl button.on` already use elsewhere) so nothing but THIS
+ * rule ever matches it again.
+ */
+.box.on{border-color:var(--blue-b);background:var(--blue-t)}
 .boxhd{display:flex;align-items:center;gap:9px;margin-bottom:10px}
 .boxhd .t{font-size:13.5px;font-weight:700}
 .num{display:inline-flex;align-items:baseline;gap:2px}
@@ -1262,7 +1271,7 @@ function workDemoHTML(tail){
        since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
     '<div class="row"><span class="lab">Margin threshold</span>'+
       workField('margin','mMargin',S.margin)+'<span class="quick">'+workQuick('margin',[10,25,50],true)+'</span></div>'+
-    '<div class="row"><span class="lab">Discount<small>Everyone pays this</small></span>'+
+    '<div class="row"><span class="lab">Discount<small>Applied to every customer</small></span>'+
       workField('pctOff','mPctOff',S.pctOff)+'<span class="quick">'+workQuick('pctOff',[10,20,30],true)+'</span></div>'+
     /* ⚠️⚠️ [found live, 2026-09-26] THIRD position for this switch — "next to the percentage values, right
        side, not on the right extreme." Not before the field (that was "moved to the left"), not margin-left:
@@ -1985,7 +1994,7 @@ function cfgLine(){
  */
 function loyBoxHTML(){
   var over=S.loyOn && num(S.loyPct)>num(S.cap);
-  return '<div class="box loy'+(S.loyOn?'':' off')+'">'+
+  return '<div class="box'+(S.loyOn?' on':'')+'">'+
     '<div class="boxhd"><span class="t">Loyalty bonus</span>'+
       '<button class="sw'+(S.loyOn?' on':'')+'" style="margin-left:auto" onclick="edit(\'loyOn\','+(!S.loyOn)+')" '+
         'role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
@@ -2017,9 +2026,13 @@ function cfgHTML(){
   switch(S.goal){
     case 'percent':
       return scopeRow()+'<div class="pair">'+
+        /* ⚠️ [found live, 2026-09-26] "it is not the customer pay this, rather discount applied, the wording
+           says the other way" — "Everyone pays this" reads as if the field held a PRICE, not the discount
+           that's actually being typed. Reworded to describe the discount itself, matching "For selected
+           customers only" right beside it. */
         '<div class="box"><div class="boxhd"><span class="t">Take off</span></div>'+
           '<span class="num"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span class="u">%</span></span>'+
-          '<div class="hint">Everyone pays this.</div></div>'+
+          '<div class="hint">Applied to every customer.</div></div>'+
         loyBoxHTML()+'</div>'+
         '<div class="sum">'+sumLineHTML()+'</div>';
     case 'amount':
