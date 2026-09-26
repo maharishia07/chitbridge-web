@@ -211,17 +211,27 @@ button{cursor:pointer}
 .pnl{display:flex;gap:3px;background:var(--panel);border:1px solid var(--line-soft);border-radius:9px;padding:3px;margin-left:6px}
 .pnl button{height:28px;padding:0 11px;border-radius:6px;border:0;background:transparent;font-size:12.5px;font-weight:600;color:var(--muted);white-space:nowrap}
 .pnl button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.verdict{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid}
-.verdict .mk{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:19px;font-weight:800;flex:0 0 auto;color:#fff}
-.verdict .tx b{display:block;font-size:17px;font-weight:700;line-height:1.25}
+/**
+ * ⭐ [2026-09-26, holistic pass] "look at the whole as one piece again... a bit more aesthetic." Was edge-to-
+ * edge with square corners while .sum (right above it) is an inset, rounded, bordered card — two different
+ * visual languages stacked directly on each other, a real seam from being assembled across several docs. Now
+ * matches .sum's own treatment (inset, rounded, a full border in its own colour) so the two read as one flow.
+ */
+.verdict{display:flex;align-items:center;gap:14px;padding:14px 17px;margin-top:12px;border-radius:12px;border:1px solid}
+.verdict .mk{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;font-weight:800;flex:0 0 auto;color:#fff}
+.verdict .tx b{display:block;font-size:16px;font-weight:700;line-height:1.25}
 .verdict .tx span{display:block;font-size:13px;margin-top:2px;opacity:.9}
-.verdict.pass{background:var(--green-t);border-bottom-color:var(--green-b);color:var(--green-d)}
+.verdict.pass{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
 .verdict.pass .mk{background:var(--green)}
-.verdict.some{background:var(--amber-t);border-bottom-color:var(--amber-b);color:var(--amber-i)}
+.verdict.some{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
 .verdict.some .mk{background:var(--amber-i)}
-.verdict.fail{background:var(--red-t);border-bottom-color:var(--red-b);color:var(--red-i)}
+.verdict.fail{background:var(--red-t);border-color:var(--red-b);color:var(--red-i)}
 .verdict.fail .mk{background:var(--red-i)}
 .vtbl{width:100%;border-collapse:collapse;font-size:14px}
+/* ⭐ "only the products should scroll" — the whole <thead> (both its rows) stays pinned while tbody scrolls
+   beneath it; the verdict above the table is pinned separately, outside the scroll entirely (see
+   percentVerdictHTML/paintWork). */
+.vtbl thead{position:sticky;top:0;z-index:2}
 .vtbl thead th{padding:10px 12px;background:var(--panel);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
   color:var(--ghost);font-weight:700;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line-soft)}
 .vtbl thead th:first-child{text-align:left}
@@ -1073,11 +1083,16 @@ function percentVerdict(rs){
     '<span>'+(never===n?'Not one of them reaches '+num(S.margin)+'% even at full price — the threshold, not the offer, is the problem.'
       :'Worst is '+esc(worst.n)+' at '+worst.m+'%.')+'</span></span>', save:'Save anyway'};
 }
+/** ⭐ [found live, 2026-09-26] "the panel has to stay, only the products should scroll" — lifted out of the
+ * scrolling table area entirely, into #workDemo (which already sits outside #workBody's scroll — see
+ * paintWork()), so it never scrolls away. The table's own thead is pinned separately, see .vtbl thead th. */
+function percentVerdictHTML(rs){
+  var v=percentVerdict(rs);
+  return '<div class="verdict '+v.cls+'">'+v.html+'</div>';
+}
 function percentTableHTML(rs){
   var showLoy=loyMode()==='pct';
-  var v=percentVerdict(rs);
-  var h='<div class="verdict '+v.cls+'">'+v.html+'</div>'+
-    '<div class="scroll" style="overflow-x:auto"><table class="vtbl"><thead><tr>'+
+  var h='<div class="scroll" style="overflow-x:auto"><table class="vtbl"><thead><tr>'+
       '<th rowspan="2">Item</th><th rowspan="2">Cost</th><th rowspan="2">Price now</th>'+
       '<th class="grp">Everyone pays</th>'+(showLoy?'<th class="grp">Loyalty pays</th>':'')+
       '<th class="grp" rowspan="2">Meets your '+num(S.margin)+'%?</th>'+
@@ -1182,27 +1197,37 @@ function workQuick(key, vals, live){
       ' onclick="edit(\''+key+'\','+n+')">'+n+'%</button>';
   }).join('');
 }
-function workDemoHTML(){
-  var tg=num(S.margin), off=num(S.pctOff), loy=S.loyOn?num(S.loyPct):0;
-  var all=Math.round(combo(off/100,loy/100)*1000)/10;
-  var warn='';
-  if(S.loyOn && loy>=tg) warn='A '+loy+'% bonus on a '+tg+'% margin leaves nothing.';
-  else if(all>=tg) warn=all+'% off cannot clear a '+tg+'% margin on any item.';
-  return '<div class="card" style="border:0;border-radius:0;padding:16px 20px 0;box-shadow:none">'+
-    /* ⭐ [found live, 2026-09-26] "No text below margin threshold" — the only row with no per-offer decision
-       riding on it (it's the shop's own settings-screen number, just editable here too); the other two rows
-       keep their captions, since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
+/**
+ * ⭐⭐⭐ [found live, 2026-09-26] "is the message correct?" — no. "14.5% off cannot clear a 10% margin on any
+ * item" fired right beside the REAL, per-item verdict saying all 12 items DID clear it — a genuine bug, not a
+ * display glitch: a discount rate sitting at or above the margin threshold does not mean no item can clear it
+ * — that depends entirely on each item's own cost, which this quick check never looked at (an item with a
+ * high enough baseline margin absorbs any discount and still clears any target). Same flaw in the loyalty-
+ * alone check right above it. Both removed — the per-item verdict banner (percentVerdictHTML, now pinned
+ * beside these controls, not buried in the scrolling table) is the one number here actually computed from
+ * real costs, and it already says this correctly on its own.
+ * ⚠️ "the loyalty discount switch... has to be next to the discount percentage, no one will see the toggle" —
+ * moved from the row's right edge back beside its own field, ahead of it, the same shape as a normal
+ * ⏻-then-value control.
+ */
+/** ⭐ `tail` (the verdict, when shown) renders INSIDE the same padded card as the sum line, not appended
+ * after it closes — otherwise it spans the container's full width, edge to edge, while the sum sits inset by
+ * the card's own 20px padding: two different widths stacked directly on each other, the exact "doesn't read
+ * as one piece" seam this pass exists to close. */
+function workDemoHTML(tail){
+  return '<div class="card" style="border:0;border-radius:0;padding:14px 20px 14px;box-shadow:none">'+
+    /* ⭐ "No text below margin threshold" — the only row with no per-offer decision riding on it (it's the
+       shop's own settings-screen number, just editable here too); the other two rows keep their captions,
+       since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
     '<div class="row"><span class="lab">Margin threshold</span>'+
       workField('margin','mMargin',S.margin)+'<span class="quick">'+workQuick('margin',[10,25,50],true)+'</span></div>'+
     '<div class="row"><span class="lab">Discount<small>Everyone pays this</small></span>'+
       workField('pctOff','mPctOff',S.pctOff)+'<span class="quick">'+workQuick('pctOff',[10,20,30],true)+'</span></div>'+
-    /* ⭐ the switch moved to the row's own right edge (margin-left:auto), after the field and its shortcuts —
-       "Loyalty discount" / "For selected customers only" per Athi's own wording. */
     '<div class="row"><span class="lab">Loyalty discount<small>For selected customers only</small></span>'+
-      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span>'+
-      '<button class="sw'+(S.loyOn?' on':'')+'" style="margin-left:auto" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
-    '<div class="sum">'+sumLineHTML()+'</div>'+
-    (warn?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>'+esc(warn)+'</div></div>':'')+
+      '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
+      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span></div>'+
+    '<div class="sum" style="margin-top:12px;padding:11px 15px">'+sumLineHTML()+'</div>'+
+    (tail||'')+
     '</div>';
 }
 function paintWork(){
@@ -1211,8 +1236,8 @@ function paintWork(){
   var pnl=document.getElementById('workPnl'), flip=document.getElementById('workFlip'), save=document.getElementById('workSave');
   var demo=document.getElementById('workDemo');
   if(S.goal==='percent'){
-    demo.style.display=''; demo.innerHTML=workDemoHTML();
     var rs=percentRows(), showLoy=loyMode()==='pct';
+    demo.style.display=''; demo.innerHTML=workDemoHTML(WORK_PANEL===1?percentVerdictHTML(rs):'');
     var combined=Math.round(combo(num(S.pctOff)/100,loyFrac())*1000)/10;
     document.getElementById('workTitle').textContent=l.title;
     document.getElementById('workTag').textContent=(showLoy?num(S.pctOff)+'% + '+num(S.loyPct)+'% = '+combined+'%':num(S.pctOff)+'%')+' off · '+rs.length+' items';
