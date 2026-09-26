@@ -297,20 +297,33 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   console.log('\n── ⭐⭐⭐ APPLY on a real, signed-in catalogue — the exact merge:true PATCH setCost() uses ' + '─'.repeat(0));
   const realApply = await p.evaluate(async () => {
     let call = null;
-    window.apiFetch = async (method, url, body) => { call = { method, url, body }; return {}; };
+    window.apiFetch = async (method, url, body) => { call = { method, url, body }; return { ok: true, body: {} }; };
     /* render() (called by modLabApply() now — see the fix this run caught) reads BIZ[S.biz].name, so a real
        'mine' entry has to exist here, the same as labUseMine()/buildBiz('mine',…) always provides for real */
     BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
     S.biz = 'mine';
     window.savedLive = () => true;
     await modLabApply();
-    return { call: call, expectUrl: 'https://chitbridge-api-production.up.railway.app/api/products/' + P[0].id };
+    return { call: call, expectUrl: 'https://chitbridge-api-production.up.railway.app/api/products/' + P[0].id,
+      toast: (document.getElementById('labtoast') || {}).textContent };
   });
   say('it PATCHes the real product endpoint', realApply.call && realApply.call.method === 'PATCH' && realApply.call.url === realApply.expectUrl,
     realApply.call ? realApply.call.method + ' ' + realApply.call.url : 'not called');
   say('with merge:true — never the whole record', realApply.call && realApply.call.body.merge === true, JSON.stringify(realApply.call && realApply.call.body.merge));
   say('the PATCH body carries only modifiers', realApply.call && Object.keys(realApply.call.body.item_data).join(',') === 'modifiers',
     realApply.call ? Object.keys(realApply.call.body.item_data).join(',') : '');
+  say('a REAL success says so in both places — the Lab AND the catalogue', /Lab and in your catalogue/.test(realApply.toast), realApply.toast);
+
+  console.log('\n── ⚠️⚠️ [found live-testing] a REFUSED save must say so, never claim success (apiFetch never throws on 4xx/5xx) ' + '─'.repeat(0));
+  const refusedApply = await p.evaluate(async () => {
+    window.apiFetch = async () => ({ ok: false, status: 400, body: { message: 'modifiers: too many groups' } });
+    BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
+    S.biz = 'mine'; window.savedLive = () => true;
+    await modLabApply();
+    return { toast: (document.getElementById('labtoast') || {}).textContent };
+  });
+  say('a refused PATCH shows "NOT in your catalogue", not "saved"', /NOT in your catalogue/.test(refusedApply.toast) && /too many groups/.test(refusedApply.toast),
+    refusedApply.toast);
 
   console.log('\n── going back to the picker and closing the lab both work ' + '─'.repeat(20));
   const backAndClose = await p.evaluate(() => {

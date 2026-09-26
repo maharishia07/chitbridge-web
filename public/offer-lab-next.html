@@ -1060,16 +1060,18 @@ async function modLabSaveAsConfirm(){
    * the product's it already belongs to (editing an existing one's modifiers) — so it can be pushed/previewed
    * with a real price later without retyping it. */
   var price = MODLAB.pid ? (byId(MODLAB.pid)||{}).price : (MODLAB.price!==''? Number(MODLAB.price): null);
+  toastSay('Saving “'+name+'” to your combos…');
   var r=await apiFetch('POST', API+'/api/combo-templates', {name:name, definition:v.groups, price:price});
   if(r.ok){
-    toastSay('Saved “'+name+'” to your combos.'); MODLAB.savingAs=false;
+    toastSay('Saved “'+name+'” — in your combo library (back office). Not on your product list yet — “Push to products” below puts it there.');
+    MODLAB.savingAs=false;
     /* ⭐ [OFFR-08] "if we save or save as, we have to explicitly show preview and push" — a fresh save/save-as
      * always leaves behind a real template id, which is what makes "👁 Preview" and "✚ Push to products"
      * appear in the footer right below, instead of the person having to go find them separately. */
     MODLAB.templateId=r.body.template.id;
     await comboLibLoad(true);
   }
-  else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
+  else toastSay('NOT saved — “'+name+'” did not reach your combo library: '+((r.body&&r.body.message)||'try again.'));
   paintModLab();
 }
 /**
@@ -1085,9 +1087,17 @@ async function modLabSaveConfirm(){
   if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save for real.'); return; }
   var name=String(MODLAB.name||'').trim() || 'Untitled combo';
   var price=MODLAB.pid ? (byId(MODLAB.pid)||{}).price : (MODLAB.price!==''? Number(MODLAB.price): null);
+  toastSay('Saving changes to “'+name+'”…');
   var r=await apiFetch('PATCH', API+'/api/combo-templates/'+MODLAB.templateId, {name:name, definition:v.groups, price:price});
-  if(r.ok){ toastSay('Saved.'); await comboLibLoad(true); }
-  else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
+  /* ⭐ Athi: "save, commit, update message is a must without which not able to understand the change" — a bare
+   * "Saved." said nothing. This names what changed and where it landed (combo library = back office), and — if
+   * this template is already live as a product — that the product itself is now out of date until pushed again. */
+  if(r.ok){
+    toastSay('Saved “'+name+'” — updated in your combo library (back office).'
+      + (modLabTemplateLinked() ? ' The live product still has the OLD version until you push this update.' : ''));
+    await comboLibLoad(true);
+  }
+  else toastSay('NOT saved — the update to “'+name+'” did not reach your combo library: '+((r.body&&r.body.message)||'try again.'));
   paintModLab();
 }
 /** ⭐ loaded once per Lab session (cached on COMBO_LIB), forced fresh right after a save or a delete */
@@ -1146,13 +1156,22 @@ function modLabSetOption(gi,oi,patch){ modLabSetGroups(CBVariant.setOption(modLa
 async function modLabApply(){
   var p=byId(MODLAB.pid); if(!p) return;
   var clean=CBVariant.normalize(modLabGroups());
-  p.modifiers=clean;
+  p.modifiers=clean;   /* the Lab's own copy — true immediately, whatever the save below does */
   if(S.biz==='mine' && savedLive()){
-    try{ await apiFetch('PATCH', API+'/api/products/'+p.id, {item_data:{modifiers:clean}, merge:true}, 'modifiers');
-      toastSay('Applied to '+p.name+' — saved to your catalogue.'); }
-    catch(e){ toastSay('Could not save '+p.name+'’s modifiers — try again.'); }
+    toastSay('Saving “'+p.name+'”…');
+    /**
+     * ⚠️⚠️ [found live-testing, 2026-09-26] Athi: "not sure whether it reflected in the back office or only
+     * in the front end." The bug: apiFetch() never THROWS on a real server refusal (4xx/5xx) — it resolves
+     * normally with {ok:false}. This try/catch's `catch` was therefore dead code, and EVERY refusal still
+     * printed "saved to your catalogue" because nothing ever reached it. Checking r.ok/r.queued directly is
+     * the fix — and it is also the honest three-way answer: saved for real, only queued (offline), or refused.
+     */
+    var r=await apiFetch('PATCH', API+'/api/products/'+p.id, {item_data:{modifiers:clean}, merge:true}, 'modifiers');
+    if(r.queued) toastSay('Saved here in the Lab. Offline right now — this reaches your catalogue (and then the till, on its next price refresh) once you’re back online.');
+    else if(r.ok) toastSay('Saved — in the Lab and in your catalogue. The till will show it next time it refreshes prices.');
+    else toastSay('Saved here in the Lab only — NOT in your catalogue: '+((r.body&&r.body.message)||'the save was refused')+'. The till will not see this.');
   } else {
-    toastSay('Applied here, in the Lab. Sign in and use your own catalogue to save this for real.');
+    toastSay('Saved here in the Lab only — this is a sample catalogue, not yours. Sign in and use your own catalogue for this to reach your products or the till.');
   }
   paintModLab();
   /* ⭐⭐⭐ THE SETTINGS SCREEN'S OWN "MODIFIERS" CARD IS render()'s JOB, NOT paintModLab()'s — its count of how
@@ -1200,6 +1219,20 @@ function comboGroupsEditorHTML(groups){
  * similar-looking rendering that this file owns and could drift from the real one. Nothing here needed the
  * helper (modLabPreviewGroups()) that only this dead code called — deleted with it.
  */
+/**
+ * ⭐⭐⭐ Athi, live-testing: "not showing updating panel... not sure whether it reflected in the back office or
+ * only in the front end... when it is pushed to product status has to change where applied. no information at
+ * all." A toast fades and is easy to miss mid-edit; this is the answer that STAYS on screen — where the combo
+ * actually stands right now, read fresh off MODLAB.templateId + the library's own copy, never a guess.
+ */
+function modLabStatusLineHTML(){
+  if(!MODLAB.templateId) return '';
+  var linked=modLabTemplateLinked();
+  var msg = linked
+    ? '✓ Saved to your combos, and live in your products — the till picks it up on its next price refresh.'
+    : '✓ Saved to your combos. Not on your product list yet — "Push to products" below puts it there.';
+  return '<div style="font-size:12px;color:var(--green-d);margin:-2px 0 10px;font-weight:600">'+msg+'</div>';
+}
 /** ⭐ the inline "Save as" row — a text input beside the page's own edits, never a native prompt() */
 function comboSaveAsRowHTML(){
   if(!MODLAB.savingAs) return '';
@@ -1331,12 +1364,17 @@ function modLabTemplateLinked(){ var t=(COMBO_LIB.items||[]).filter(function(x){
  */
 async function modLabPushTemplate(id){
   if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to push a real product.'); return; }
+  toastSay('Pushing to your products…');
   var r=await apiFetch('POST', API+'/api/combo-templates/'+id+'/push');
   if(r.ok){
-    toastSay((r.body.verb==='created'?'Created "':'Updated "')+r.body.item.item_data.name+'" in your products.');
+    /* ⭐ Athi: "when it is pushed to product status has to change where applied. no information at all" — this
+     * names BOTH halves: what happened to the PRODUCT (created vs updated, in your catalogue = back office)
+     * and that the TILL only sees it on its own next price refresh, never instantly. modLabStatusLineHTML()
+     * (right above the buttons, once comboLibLoad(true) below refreshes) is the part that STAYS on screen. */
+    toastSay((r.body.verb==='created'?'Created "':'Updated "')+r.body.item.item_data.name+'" in your products (back office). The till will show it next time it refreshes prices.');
     await labUseMine(true);   /* the pushed/updated product needs to be in P before the library can show it as linked */
     await comboLibLoad(true);
-  } else toastSay('Could not push this combo: '+((r.body&&r.body.message)||'try again.'));
+  } else toastSay('NOT pushed — this combo did not reach your products: '+((r.body&&r.body.message)||'try again.'));
   paintModLab();
 }
 function paintModLab(){
@@ -1394,6 +1432,7 @@ function paintModLab(){
       + '<h3 style="margin:12px 0 2px">Build a combo</h3>'
       + '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">Name it, price it, then build what each section offers.</div>'
       + nameprice
+      + modLabStatusLineHTML()
       + comboGroupsEditorHTML(dgroups)
       + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
       + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
