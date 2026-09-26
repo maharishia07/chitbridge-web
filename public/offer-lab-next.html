@@ -174,7 +174,12 @@ button{cursor:pointer}
 .sheet{background:var(--card);border:1px solid var(--line);border-radius:16px;
   width:min(960px,100%);max-height:100%;display:flex;flex-direction:column;
   box-shadow:0 18px 48px rgba(29,27,22,.22);overflow:hidden;resize:both;min-width:460px;min-height:340px}
-.shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap}
+/* ⭐ [found live, 2026-09-26] "it is not movable, i should be able to drag anywhere as i want" — the header
+   is the drag handle (dragSheetStart()); its own buttons keep a normal pointer cursor, see the rule below. */
+.shhd{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--hair);flex-wrap:wrap;
+  cursor:grab;user-select:none}
+.shhd:active{cursor:grabbing}
+.shhd button{cursor:pointer}
 .shhd h3{font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;margin:0}
 .tag{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
   background:var(--green-t);color:var(--green-d);border:1px solid var(--green-b);border-radius:8px;padding:2px 9px}
@@ -321,7 +326,11 @@ button{cursor:pointer}
   body *{visibility:hidden}
   .scrim, .scrim *{visibility:visible}
   .scrim{position:static;background:none;display:block;padding:0}
-  .sheet{position:static;width:100%;max-height:none;height:auto;box-shadow:none;border:0;resize:none;overflow:visible}
+  /* !important on position/left/top/margin: a dragged sheet carries those as INLINE styles (dragSheetStart()),
+     which beat a plain stylesheet rule — without !important a print taken mid-drag would print at that fixed
+     screen spot instead of full-width on the page. */
+  .sheet{position:static!important;left:auto!important;top:auto!important;margin:0!important;
+    width:100%;max-height:none;height:auto;box-shadow:none;border:0;resize:none;overflow:visible}
   .no-print, .shft, .ovlx, #workPnl{display:none!important}
   .shbd{overflow:visible!important}
   .vtbl thead{position:static}
@@ -544,6 +553,15 @@ button{cursor:pointer}
 .btn.sm{height:34px;padding:0 12px;font-size:13px;border-radius:9px}
 .btn b{font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:rgba(0,0,0,.08);border-radius:5px;padding:1px 6px}
 .btn.pri b{background:rgba(255,255,255,.22)}
+/**
+ * ⭐ [found live, 2026-09-26] "apply to is not looking prominant" — scopeRow()'s picker was a plain `.btn`,
+ * identical to every other secondary button on the screen, even though it decides WHICH items the whole offer
+ * below it applies to — nothing downstream means anything until this is set. Given the same blue accent the
+ * loyalty switch and the matched-pair boxes already use for "this is live and it matters", so it reads as the
+ * one control worth looking at first, not just another button in the row.
+ */
+.btn.scope{border:1.5px solid var(--blue-b);background:var(--blue-t);color:var(--blue-i)}
+.btn.scope:hover{border-color:var(--blue)}
 
 /* saved offers */
 .bucket{display:flex;flex-direction:column;gap:10px}
@@ -763,7 +781,7 @@ button{cursor:pointer}
 <!-- ══ "Work it out"'s own result — an overlay over the controls, not a panel pushed in under them ══ -->
 <div class="scrim" id="workScrim" onclick="if(event.target===this)closeWork()">
   <div class="sheet" role="dialog" aria-modal="true" aria-label="What this offer does">
-    <div class="shhd">
+    <div class="shhd" onpointerdown="dragSheetStart(event)">
       <h3 id="workTitle"></h3>
       <span class="tag" id="workTag"></span>
       <div class="pnl" id="workPnl"></div>
@@ -1067,8 +1085,35 @@ function pickGoal(id){ S.goal=id; S.applied=false; S.step=2; render(); }
  * again" / "Save for review"'s visibility key off elsewhere); `paintWork()`/`closeWork()` separately control
  * whether the modal is CURRENTLY open, so closing it to tweak a number and reopening doesn't lose that state.
  */
-function apply(){ S.applied=true; WORK_PANEL=1; render(); paintWork(); }
+function apply(){
+  /* fresh open always starts centred — a drag from a PREVIOUS open must not carry over */
+  var sheet=document.querySelector('#workScrim .sheet');
+  if(sheet){ sheet.style.position=''; sheet.style.left=''; sheet.style.top=''; sheet.style.margin=''; }
+  S.applied=true; WORK_PANEL=1; render(); paintWork();
+}
 function closeWork(){ var el=document.getElementById('workScrim'); if(el) el.classList.remove('on'); document.body.style.overflow=''; }
+/**
+ * ⭐ [found live, 2026-09-26] "it is not movable, i should be able to drag anywhere as i want" — resize:both
+ * (the corner handle, added earlier) only ever changes SIZE. Dragging the header now moves the sheet itself:
+ * on pointerdown it leaves the scrim's centering flex layout for `position:fixed` at its own current spot (so
+ * there's no jump), then tracks the pointer until release. Bails out on a click that started on one of the
+ * header's own buttons (Close, the panel tabs) so those keep working exactly as before.
+ */
+function dragSheetStart(e){
+  if(e.target.closest('button,input,select,textarea')) return;
+  var sheet=e.currentTarget.parentElement; if(!sheet||!sheet.classList.contains('sheet')) return;
+  var r=sheet.getBoundingClientRect(), offX=e.clientX-r.left, offY=e.clientY-r.top;
+  sheet.style.position='fixed'; sheet.style.margin='0';
+  sheet.style.left=r.left+'px'; sheet.style.top=r.top+'px';
+  function move(ev){
+    var x=Math.min(Math.max(0,ev.clientX-offX), window.innerWidth-72);
+    var y=Math.min(Math.max(0,ev.clientY-offY), window.innerHeight-48);
+    sheet.style.left=x+'px'; sheet.style.top=y+'px';
+  }
+  function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); }
+  document.addEventListener('pointermove',move);
+  document.addEventListener('pointerup',up);
+}
 /**
  * ── ⭐⭐⭐ [2026-09-26] THE RESULT PANEL, per Athi's own offer-lab-result.html — scoped to the 'percent' goal,
  * exactly what the doc covers. Every other goal kind keeps the PREVIOUS doc's plain modal (outHTML(), "Change
@@ -1899,8 +1944,8 @@ function scopeRow(catOnly){
     : (S.itemIds && S.itemIds.length) ? (S.itemIds.length===1 ? esc((byId(S.itemIds[0])||{}).name||'1 item') : S.itemIds.length+' items chosen')
     : 'Choose…';
   return '<div class="f"><span class="lbl">Apply it to</span>'+
-    '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" '+
-    'onclick="openApplyPicker()"><span>'+label+'</span><span style="color:var(--faint)">▾</span></button></div>';
+    '<button type="button" class="btn scope" style="width:100%;justify-content:space-between;font-weight:700" '+
+    'onclick="openApplyPicker()"><span>'+label+'</span><span style="color:var(--blue-i)">▾</span></button></div>';
 }
 function setCat(v){ S.catId=v; render(); }
 /**
