@@ -1127,15 +1127,24 @@ function percentFootHTML(rs, showLoy){
  * for one lump row at the bottom. The bottom totals (They pay / You take off / A loyalty customer pays) stay
  * exactly as they were; this adds the SAME comparison at the line level.
  */
+/** ⭐ [found live, 2026-09-26] "Price n% m%" — a header row over the lines naming what each column actually
+ * is, the same way the "Your margin" table already labels its own two columns "after 10%"/"after 19%". */
+function percentBillHeadHTML(off,all,showLoy){
+  return '<div class="ln" style="font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ghost);font-weight:700">'+
+    '<span class="nm">Item</span><span style="min-width:62px;text-align:right">Price</span>'+
+    '<span style="min-width:62px;text-align:right">'+off+'%</span>'+
+    (showLoy?'<span style="min-width:62px;text-align:right;color:var(--blue-i)">'+all+'%</span>':'')+
+    '</div>';
+}
 function percentBillHTML(rs){
   var showLoy=loyMode()==='pct';
-  var was=0, pay=0, loyPay=0, lines='';
+  var off=num(S.pctOff), all=Math.round(combo(off/100,loyFrac())*1000)/10;
+  var was=0, pay=0, loyPay=0, lines=percentBillHeadHTML(off,all,showLoy);
   rs.forEach(function(r){
     was+=r.p.price; pay+=r.pub.shown; loyPay+=r.all.shown;
     lines+='<div class="ln"><span class="nm">1 × '+esc(r.p.name)+'</span>'+
       '<span class="old">'+M0(r.p.price)+'</span><span class="new">'+M0(r.pub.shown)+'</span>'+
-      (showLoy?'<span class="new" style="color:var(--blue-i);font-size:13px">→ '+M0(r.all.shown)+
-        ' <span style="font-size:9.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;opacity:.85">loy</span></span>':'')+
+      (showLoy?'<span class="new" style="color:var(--blue-i);font-size:13px">'+M0(r.all.shown)+'</span>':'')+
       '</div>';
   });
   return '<div class="billhd"><b>What the customer sees</b>'+
@@ -1180,13 +1189,18 @@ function workDemoHTML(){
   if(S.loyOn && loy>=tg) warn='A '+loy+'% bonus on a '+tg+'% margin leaves nothing.';
   else if(all>=tg) warn=all+'% off cannot clear a '+tg+'% margin on any item.';
   return '<div class="card" style="border:0;border-radius:0;padding:16px 20px 0;box-shadow:none">'+
-    '<div class="row"><span class="lab">Margin threshold<small>What every offer is judged against</small></span>'+
+    /* ⭐ [found live, 2026-09-26] "No text below margin threshold" — the only row with no per-offer decision
+       riding on it (it's the shop's own settings-screen number, just editable here too); the other two rows
+       keep their captions, since "Discount"/"Loyalty discount" alone don't say what each is FOR. */
+    '<div class="row"><span class="lab">Margin threshold</span>'+
       workField('margin','mMargin',S.margin)+'<span class="quick">'+workQuick('margin',[10,25,50],true)+'</span></div>'+
-    '<div class="row"><span class="lab">Take off<small>Everyone pays this</small></span>'+
+    '<div class="row"><span class="lab">Discount<small>Everyone pays this</small></span>'+
       workField('pctOff','mPctOff',S.pctOff)+'<span class="quick">'+workQuick('pctOff',[10,20,30],true)+'</span></div>'+
-    '<div class="row"><span class="lab">Loyalty bonus<small>On top, for a loyalty customer</small></span>'+
-      '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
-      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span></div>'+
+    /* ⭐ the switch moved to the row's own right edge (margin-left:auto), after the field and its shortcuts —
+       "Loyalty discount" / "For selected customers only" per Athi's own wording. */
+    '<div class="row"><span class="lab">Loyalty discount<small>For selected customers only</small></span>'+
+      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span>'+
+      '<button class="sw'+(S.loyOn?' on':'')+'" style="margin-left:auto" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
     '<div class="sum">'+sumLineHTML()+'</div>'+
     (warn?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>'+esc(warn)+'</div></div>':'')+
     '</div>';
