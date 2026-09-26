@@ -57,6 +57,46 @@ button{cursor:pointer}
 .lbl{font-size:13px;font-weight:700;display:block;margin-bottom:6px}
 .hint{font-size:12.5px;color:var(--faint);margin-top:5px;line-height:1.35}
 .screen{display:none} .screen.on{display:block}
+/**
+ * ── ⭐⭐⭐ [2026-09-26] SETTINGS SCREEN REBUILT PER SPEC — from Athi's own design doc
+ * (offer-lab-settings.md.docx): "The screen you built is ~1,300 px tall, six cards, three yellow strips and
+ * two competing action rows. The new one is one card, 281 px. Nothing was lost; things were put where they
+ * belong." Reuses .inp/.two/.lbl/.seg/.btn/.acts/.chip already in this file (the doc built its prototype
+ * against these exact tokens); only what's genuinely new gets a new class below.
+ */
+.loyrow{display:flex;align-items:center;gap:11px;border:1px solid var(--line);
+  border-radius:11px;height:50px;padding:0 13px}
+.loyrow.on{border-color:var(--blue-b);background:var(--blue-t)}
+.loyrow .sm{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);height:34px;margin-left:auto}
+.loyrow .sm input{border:0;outline:0;background:transparent;width:46px;padding:0 0 0 9px;
+  font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;text-align:right}
+.loyrow .sm span{padding:0 9px;color:var(--faint);font-size:13px;font-weight:600}
+.loyrow .off{margin-left:auto;font-size:13px;color:var(--ghost);font-weight:600}
+.now{font-size:13px;color:var(--muted);margin-top:9px}
+.now b{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--ink)}
+.now i{font-style:normal;color:var(--ghost)}
+/* the fine print: one line, everything that is already fine, until "Change" opens it */
+.fine{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:18px;
+  padding-top:15px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
+.fine .dot{color:var(--ghost)}
+.fine button{margin-left:auto;height:32px;padding:0 12px;border-radius:9px;
+  border:1px solid var(--line);background:var(--card);font-size:12.5px;font-weight:600}
+.open{display:none;margin-top:16px;border-top:1px solid var(--hair);padding-top:16px}
+.open.on{display:block}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px 24px}
+.fld>span.lbl{margin-bottom:6px}
+.sub{font-size:12px;color:var(--ghost);margin-top:6px}
+/* ⭐ "Tools become icon-only (labels drop, icons grow)" — the top-bar's .chip.tool buttons, per the spec's own
+   phone rule. `.g` is the icon glyph, `.tx` its label; only .tx hides. */
+.tool .g{font-size:14px;color:var(--faint);line-height:1}
+@media(max-width:760px){
+  .fine button{margin-left:0;width:100%}
+  .grid{grid-template-columns:1fr}
+  .tool{flex:1;justify-content:center;padding:0 8px}
+  .tool .tx{display:none}
+  .tool .g{font-size:17px}
+}
 .cols{display:grid;gap:16px}
 @media(min-width:900px){ .c-2{grid-template-columns:1fr 1fr} }
 
@@ -294,6 +334,8 @@ button{cursor:pointer}
 .btn.pri{background:var(--green);border-color:var(--green);color:#fff}
 .btn.pri:disabled{background:var(--panel);border-color:var(--line);color:var(--ghost)}
 .btn.sm{height:34px;padding:0 12px;font-size:13px;border-radius:9px}
+.btn b{font-family:'IBM Plex Mono',monospace;font-size:12.5px;background:rgba(0,0,0,.08);border-radius:5px;padding:1px 6px}
+.btn.pri b{background:rgba(255,255,255,.22)}
 
 /* saved offers */
 .bucket{display:flex;flex-direction:column;gap:10px}
@@ -449,15 +491,19 @@ button{cursor:pointer}
 <body>
 <div class="wrap">
 
+  <!-- ⭐⭐⭐ [2026-09-26, per Athi's own design doc] "Price list, Combos, Import and Export move to the top
+       bar as icons. They are other tools, not settings." "Saved offers" and "Use my catalogue" DROPPED from
+       here — rule 3 ("the same string never appears twice on one screen"): both already say themselves once,
+       on the card and in the sample-data notice below. -->
   <div class="top">
     <h1 class="title">Offer Lab</h1>
     <span class="chip" id="bizName">—</span>
     <span class="grow"></span>
-    <button class="chip" onclick="go(3)" id="bucketChip">Saved offers <b>0</b></button>
-    <button class="chip" onclick="labUseMine()" id="labMineBtn">Use my catalogue</button>
-    <button class="chip" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved">Import a spreadsheet</button>
+    <button class="chip tool" onclick="openPriceOverlay()" title="Cost and price for every item"><span class="g">₹</span><span class="tx">Price list</span></button>
+    <button class="chip tool" onclick="window.open('combo-lab.html','cb_combo_lab')" title="Combos and modifiers"><span class="g">▣</span><span class="tx">Combos</span></button>
+    <button class="chip tool" onclick="document.getElementById('labImportFile').click()" title="A spreadsheet with Name, Category, Price and Cost columns — stays in this tab, nothing is saved"><span class="g">↓</span><span class="tx">Import</span></button>
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
-    <button class="chip" onclick="exportCsv()" title="Everything on screen right now, as a CSV">Export CSV</button>
+    <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
     <div class="bizSw" id="bizSw"></div>
   </div>
   <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
@@ -669,7 +715,7 @@ var SHAPES=[
 ];
 
 var FRESH={ biz:'hotel', step:0, goal:'percent', scope:'cat',
-  margin:25, cap:10, belowCost:true, belowAct:'exclude', round:'1',
+  margin:25, cap:10, belowAct:'exclude', round:'1',
   loyOn:false, loyPct:0, loyTop:true,
   custOn:true, costSource:'typed', applied:false };
 
@@ -686,7 +732,7 @@ var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-a
  * lose it. labLoadSettings() restores whatever was last saved for THIS shop, over the fresh defaults — same
  * order as before, just not the last word any more.
  */
-var SETTINGS_KEYS=['margin','cap','custOn','belowCost','belowAct','round','costSource'];
+var SETTINGS_KEYS=['margin','cap','custOn','belowAct','round','costSource'];
 /** ⭐⭐⭐ scoped to the signed-in shop, never global — [[feedback-shop-scoped-local-store]]: settings typed for
  * one shop must not silently apply to whatever shop is tested next on the same machine. Falls back to one
  * shared 'demo' bucket only when nobody is signed in (the two sample books have no shop of their own). */
@@ -1085,11 +1131,18 @@ function engineMixMatchPay(unitPrice, n){
   return R2(r.line_net.x);
 }
 
-/* one row of the item table, for a given total fraction off */
+/**
+ * ⭐⭐⭐ [2026-09-26, per design doc] THE TOGGLE WAS REDUNDANT WITH ITS OWN THIRD OPTION. `S.belowCost:false`
+ * and `S.belowAct==='warn'` always produced the identical result: neither branch here ever ran, `want` stayed
+ * unchanged, and line ~1098's own after-the-fact check still caught it as 'loss' if it genuinely landed below
+ * cost — the same outcome either way. So the toggle was a second way to say what the third segmented option
+ * already said. Collapsed to one 3-way choice ("When an offer goes below cost": Leave it out / Sell it at
+ * cost / Do it anyway); FRESH's default ('exclude') keeps the exact behaviour a shop had before this change.
+ */
 function row(p,frac){
   var base=p.price, want=engineFinal(base,frac), status='ok';
   if(p.cost==null) status='nocost';
-  else if(S.belowCost && want < p.cost-0.005){
+  else if(want < p.cost-0.005){
     if(S.belowAct==='exclude'){ status='left'; want=base; }
     else if(S.belowAct==='cap'){ status='capped'; want=p.cost; }
     else status='loss';
@@ -1181,147 +1234,89 @@ function prodOpts(list){ return list.map(function(p){
   return [p.id, p.name+'  —  '+M0(p.price)];}); }
 
 /* ═══ SCREEN 0 · SETTINGS ══════════════════════════════════════════════ */
+/**
+ * ── ⭐⭐⭐ [2026-09-26] REBUILT PER ATHI'S OWN DESIGN DOC (offer-lab-settings.md.docx) — "The screen you built
+ * is ~1,300 px tall, six cards, three yellow strips and two competing action rows. The new one is one card,
+ * 281 px. Nothing was lost; things were put where they belong." "Build to match it, don't interpret around
+ * it," so this follows the doc's own HTML/class names (.loyrow/.now/.fine/.open/.grid/.fld — new; everything
+ * else is this file's existing .inp/.two/.lbl/.seg/.btn/.acts, which the doc's own prototype was built
+ * against). What moved:
+ *   · Price list / Combos / Import / Export → top-bar tool icons (see the .top HTML). Modifiers' whole card is
+ *     GONE — "X items already carry a modifier" was rule 6's exact target ("only a failing thing earns a
+ *     row"); the ▣ Combos icon is where that work happens now, needing no status line here.
+ *   · Never-sell-below-cost + Prices-shown-as + Where-cost-comes-from + Staff-access (four cards) → one
+ *     collapsed "fine print" line, opened by "Change" (S0_OPEN, below) into a 4-field grid. The live "N items
+ *     missing cost" count is gone too — it already lives in the Price list overlay's own footer; saying it
+ *     twice was rule 3's target.
+ *   · Current margin left its boxed `.inp` (read as editable, wasn't) for plain text beside the number it
+ *     describes: "Your catalogue is at 61% today."
+ *   · New: the loyalty bonus turns red at or above the margin threshold — "a warning that carries its own
+ *     fix, because the field that is wrong is right beside it" (the doc's own rule 5).
+ */
+var S0_OPEN=false;   /* the fine print's own open/closed state — never saved, starts closed every visit */
+function toggleS0Open(){ S0_OPEN=!S0_OPEN; render(); }
+var BELOW_TXT={exclude:'leave it out',cap:'sell it at cost',warn:'do it anyway'};
+var ROUND_TXT={'0':'Exact prices','1':'Whole ₹','5':'Ends 0 or 5','10':'Ends 0'};
+var COST_TXT={typed:'Cost typed on each item',purchases:'Cost from what you last paid',supplier:'Cost from a supplier list',rule:'Cost from a rule you set'};
 function renderS0(){
-  var am=Math.round(avgM()*100), noCost=P.filter(function(p){return p.cost==null;});
+  var am=Math.round(avgM()*100);
   var over=num(S.cap)>=num(S.margin);
   var h='<div class="cols" style="grid-template-columns:1fr">';
 
-  /**
-   * ⭐⭐⭐ [2026-09-26] ONLY THREE THINGS ARE MUST, ON ONE LINE, THEN CREATE/VIEW — Athi: "to create an offer
-   * only three things are must, which is to understand the margin threshold, current margin percentage and
-   * then apply loyalty bonus, can we bring all three in the same line, then below create an offer / view
-   * existing offer... possibly we have to place it somewhere else as they are not part of setting up offer.
-   * for the timebeing, keep it below the create / view offer icon."
-   *
-   * Everything below this card (never-sell-below-cost, prices-shown-as, where cost comes from, modifiers,
-   * staff access) is UNCHANGED — same cards, same order among themselves — just moved to AFTER Create/View
-   * rather than before, per "for the timebeing." None of it is required to make an offer; Athi's own words
-   * mark it as belonging somewhere else eventually, not here.
-   */
-  h+='<div class="card pad"><h2 class="h">Ready to make an offer</h2>'+
-     '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;align-items:flex-start">'+
-       '<div class="f" style="flex:1;min-width:150px"><span class="lbl">Margin threshold</span>'+
-         '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.margin==null?'':String(S.margin))+'" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div></div>'+
-       '<div class="f" style="flex:1;min-width:150px"><span class="lbl">Current margin</span>'+
-         '<div class="inp" style="background:var(--panel);border-style:dashed"><input value="'+am+
-           '%" disabled style="font-family:\'IBM Plex Mono\',monospace"></div></div>'+
-       /**
-        * ⚠️⚠️ [2026-09-26] NOT THE FULL `.loy` BAR — that component's own CSS comment says why: "the loyalty
-        * bar — one switch, one number, never a column." Squeezed into a third column here it brought its own
-        * border/background/padding sized for a full-width bar, sitting visibly taller than the plain `.inp`
-        * boxes either side of it — the exact "alignment... loyalty bonus tab" Athi flagged live. Same toggle
-        * switch, same fields, but built to the same 48px `.inp` height as its neighbours instead. */
-       '<div class="f" style="flex:1;min-width:190px"><span class="lbl">Loyalty bonus</span>'+
-         '<div class="inp" style="gap:10px;padding-inline-start:12px;justify-content:flex-start">'+
-           '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
-             'role="switch" aria-checked="'+(S.custOn?'true':'false')+'" style="flex:0 0 auto"></button>'+
+  h+='<div class="card pad">'+
+     '<div class="two">'+
+       '<div><span class="lbl">Margin threshold</span>'+
+         '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.margin==null?'':String(S.margin))+'" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div>'+
+         '<div class="now">Your catalogue is at <b>'+am+'%</b> today. <i>An estimate.</i></div>'+
+       '</div>'+
+       '<div><span class="lbl">Loyalty bonus</span>'+
+         '<div class="loyrow'+(S.custOn?' on':'')+'">'+
+           '<button class="sw'+(S.custOn?' on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
+             'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
            (S.custOn
-             ? '<span style="font-size:13px;color:var(--muted);white-space:nowrap">up to</span>'+
-               '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" '+
-                 /* ⚠️⚠️ [found live, 2026-09-26] "10" showed clipped as "1…" — width:38px looked generous until
-                    `.inp input`'s own global rule (`padding:0 11px`, 22px total) ate most of it, leaving ~16px
-                    for the digits themselves. Widened; the box has room to spare either way. */
-                 'data-key="cap" oninput="edit(\'cap\',this.value)" style="width:58px;padding-inline:0;text-align:right;'+
-                 'border:0;outline:0;background:transparent;font-family:\'IBM Plex Mono\',monospace;font-size:16px;font-weight:600">'+
-               '<span>%</span>'
-             : '<span style="font-size:14px;color:var(--muted)">off</span>')+
-         '</div></div>'+
+             ? '<span>up to</span><span class="sm"><input type="text" inputmode="decimal" min="0" max="95" '+
+               'value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></span>'
+             : '<span class="off">off</span>')+
+         '</div>'+
+         '<div class="now">'+(!S.custOn?'&nbsp;'
+           :over?'<b style="color:var(--red-i)">'+num(S.cap)+'% of a '+num(S.margin)+'% margin leaves nothing.</b>'
+           :'Must stay under your margin.')+'</div>'+
+       '</div>'+
      '</div>'+
-     (S.custOn&&over?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>A '+num(S.cap)+
-       '% bonus on a '+num(S.margin)+'% margin leaves you nothing. Keep the ceiling under your margin.'+
-       '</div></div>':'')+
-     '<div class="acts" style="margin-top:16px">'+
+     '<div class="acts">'+
        '<button class="btn pri" onclick="go(1)">Create an offer</button>'+
-       '<button class="btn" onclick="go(3)">View existing offers ('+SAVED.length+')</button>'+
-     '</div></div>';
-
-  h+='<div class="two">'+
-     '<div class="card pad"><h2 class="h" style="font-size:17px">Never sell below cost</h2>'+
-       '<div class="loy '+(S.belowCost?'on':'')+'" style="margin-top:10px">'+
-         '<button class="sw '+(S.belowCost?'on':'')+'" onclick="edit(\'belowCost\','+(!S.belowCost)+')" '+
-           'role="switch" aria-checked="'+(S.belowCost?'true':'false')+'"></button>'+
-         '<span class="lt">Stop me</span></div>'+
-       (S.belowCost?'<div style="margin-top:12px">'+seg('belowAct',
-          [['exclude','Leave it out'],['cap','Sell it at cost'],['warn','Do it anyway']])+'</div>':'')+
+       '<button class="btn" onclick="go(3)">Saved offers <b>'+SAVED.length+'</b></button>'+
      '</div>'+
-     '<div class="card pad"><h2 class="h" style="font-size:17px">Prices shown as</h2>'+
-       '<div style="margin-top:12px">'+seg('round',
-          [['0','Exact'],['1','Whole ₹'],['5','Ends 0 or 5'],['10','Ends 0']])+'</div>'+
-       '<div class="hint">Always rounded <b>down</b>, never above the normal price.</div></div>'+
-     '</div>';
-
-  /**
-   * ⭐⭐⭐ THE PRICE LIST REPLACES THE INLINE "NO COST" LIST (Athi: "type against each item let it be the
-   * clickable icon and bring the product list as a overlay… the entire price list facility should be here").
-   * "Typed against each item" now does both jobs at once — it is still the segmented choice that SELECTS this
-   * source, and clicking it also OPENS the overlay, so there is one thing to click, not a choice and then a
-   * separate hunt for where to actually type. Every other cost source stays a disabled placeholder; when one
-   * of them ships, it opens the same overlay too — see the CSS block's own header comment.
-   */
-  h+='<div class="card pad"><h2 class="h" style="font-size:17px">Where cost comes from</h2>'+
-     '<p class="hs">An indicative accumulated cost on the item. Rough on purpose — it moves with '+
-       'the day rate, and that is fine.</p><div class="seg" style="margin-top:12px">'+
-     [['typed','📋 Typed against each item',1],['purchases','From what you last paid',0],
-      ['supplier','From a supplier list',0],['rule','From a rule you set',0]].map(function(o){
-       return '<button class="'+(S.costSource===o[0]?'on':'')+'" '+(o[2]?'':'disabled style="opacity:.45"')+
-         ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\');openPriceOverlay()':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
-     }).join('')+'</div>'+
-     '<div class="note n-say"><span class="ic">●</span><div><b>Cost is yours alone.</b> '+
-       'No customer, reseller or link ever sees it. Offer Lab is the only thing that reads it.</div></div>'+
-     '<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">'+
-       (noCost.length
-         ? '<div class="note n-warn" style="margin:0;flex:1"><span class="ic">!</span><div>'+noCost.length+
-           ' item'+(noCost.length>1?'s have':' has')+' no cost written down — left out of every total, never counted as free.</div></div>'
-         : '<div class="note n-ok" style="margin:0;flex:1"><span class="ic">✓</span><div>Every item has a cost.</div></div>')+
-       '<button class="btn sm" style="margin-inline-start:12px" onclick="openPriceOverlay()">📋 Open the price list</button>'+
+     '<div class="fine">'+
+       '<span>Below cost: '+BELOW_TXT[S.belowAct]+'</span>'+
+       '<span class="dot">·</span><span>'+ROUND_TXT[S.round]+'</span>'+
+       '<span class="dot">·</span><span>'+COST_TXT[S.costSource]+'</span>'+
+       '<button onclick="toggleS0Open()">'+(S0_OPEN?'Close':'Change')+'</button>'+
      '</div>'+
-     '</div>';
-
-  /**
-   * ── ⭐⭐⭐ THE MODIFIER LAB (Athi: "modifiers are part of product creation… can we include as a facility in
-   * offer lab, so people can try how the modifiers can be created and once if they are happy, we would be
-   * able to save that modifier and apply it to the real product") ───────────────────────────────────────────
-   *
-   * A try-before-you-commit space, unlike app.html's own Modifiers tab (which saves every action at once —
-   * the right rule for authoritative editing, the wrong one for trying something out). Pick a product, build
-   * groups against CBVariant's own authoring verbs, watch the SAME live preview app.html's tab uses, and only
-   * "Apply" actually writes it — through the identical merge:true PATCH setCost() already uses for your own
-   * catalogue, never for the sample books.
-   */
-  var modCount=P.filter(function(p){return Array.isArray(p.modifiers)&&CBVariant.groupsOf({modifiers:p.modifiers}).length;}).length;
-  h+='<div class="card pad"><h2 class="h" style="font-size:17px">Modifiers</h2>'+
-     '<p class="hs">A set of choices before something goes on the bill — a spice level, a size, an extra. '+
-       'Try one here first; nothing changes on the real product until you say Apply.</p>'+
-     '<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">'+
-       (modCount
-         ? '<div class="note n-ok" style="margin:0;flex:1"><span class="ic">✓</span><div>'+modCount+' item'+(modCount>1?'s already carry':' already carries')+' at least one modifier.</div></div>'
-         : '<div class="note n-say" style="margin:0;flex:1"><span class="ic">●</span><div>No product has a modifier yet.</div></div>')+
-       /* ⚠️ a named target, not '_blank' — one Combo Lab tab, reused whichever page opens it (see till.html's
-          openComboLab() for the full reasoning) */
-       '<a class="btn sm" style="margin-inline-start:12px;text-decoration:none" href="combo-lab.html" target="cb_combo_lab">🧩 Combo Lab ↗</a>'+
-     '</div></div>';
-
-  /**
-   * ── ⭐⭐⭐ [OFFR-04] STAFF ACCESS — POINTS AT CO-ASSISTS, DOES NOT DUPLICATE IT (Athi: "employees should
-   * not see without a specific permission. otherwise, leave it with owner only.")
-   *
-   * ⚠️⚠️⚠️ THIS USED TO BE ITS OWN CHECKBOX HERE, WRITING ITS OWN ENTITY-WIDE SWITCH. That duplicated a
-   * mechanism that already existed: lib/cost.js (b145) gates cost/margin with a per-actor
-   * identities.can_see_costs column, granted one co-assist at a time on the EXISTING Co-assists screen
-   * (app.html), which already has its own "Sees costs" toggle, its own audit trail, and its own owner-only
-   * check. A second on/off switch here would not have agreed with that one — two mechanisms answering the
-   * same question is the exact defect this rewrite closes. This card only explains and links out; nothing
-   * is ever set from Offer Lab itself.
-   * ⚠️ RENDERED ONLY WHEN COST_ACCESS.is_owner — an actor never sees this card at all.
-   */
-  if(S.biz==='mine' && savedLive() && COST_ACCESS.is_owner){
-    h+='<div class="card pad"><h2 class="h" style="font-size:17px">Staff access</h2>'+
-       '<p class="hs">Cost and margin are yours alone by default. To let a co-assist see them here too — '+
-         'they can otherwise still mark an item available or unavailable, nothing else — grant "Sees costs" '+
-         'on their own row.</p>'+
-       '<button class="btn sm" style="margin-top:8px" onclick="window.open(\'app.html\',\'_blank\')">'+
-         '👥 Open Co-assists</button></div>';
-  }
+     '<div class="open'+(S0_OPEN?' on':'')+'">'+
+       '<div class="grid">'+
+         '<div class="fld"><span class="lbl">When an offer goes below cost</span>'+
+           seg('belowAct',[['exclude','Leave it out'],['cap','Sell it at cost'],['warn','Do it anyway']])+'</div>'+
+         '<div class="fld"><span class="lbl">Prices shown as</span>'+
+           seg('round',[['0','Exact'],['1','Whole ₹'],['5','Ends 0 or 5'],['10','Ends 0']])+
+           '<div class="sub">Always rounded down, never above the normal price.</div></div>'+
+         /* ⭐ "Typed on each item" still opens the price overlay on click, same as before — one thing to
+            click, not a choice and then a separate hunt for where to actually type. */
+         '<div class="fld"><span class="lbl">Where cost comes from</span><div class="seg">'+
+           [['typed','Typed on each item',1],['purchases','What you last paid',0],
+            ['supplier','A supplier list',0],['rule','A rule you set',0]].map(function(o){
+             return '<button class="'+(S.costSource===o[0]?'on':'')+'" '+(o[2]?'':'disabled')+
+               ' onclick="'+(o[2]?'edit(\'costSource\',\''+o[0]+'\');openPriceOverlay()':'')+'">'+o[1]+(o[2]?'':' · later')+'</button>';
+           }).join('')+'</div>'+
+           '<div class="sub">Cost is yours alone. No customer or link ever sees it.</div></div>'+
+         (S.biz==='mine' && savedLive() && COST_ACCESS.is_owner
+           ? '<div class="fld"><span class="lbl">Who else sees cost</span><div class="seg">'+
+             '<button onclick="window.open(\'app.html\',\'cb_app\')">Open co-assists</button></div>'+
+             '<div class="sub">Yours alone by default.</div></div>'
+           : '')+
+       '</div>'+
+     '</div>'+
+   '</div>';
 
   return h+'</div>';
 }
@@ -1930,7 +1925,7 @@ function eitherNote(giftValue,base){
    silently dropped on save — snapshot() only ever copies what KEEP names. */
 var KEEP=['goal','scope','catId','itemId','itemIds','pctOff','rsOff','tiers','freeShape','giftId',
   'freeCounts','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
-  'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowCost','belowAct',
+  'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowAct',
   'round','loyOn','loyPct'];
 function snapshot(){ var o={}; KEEP.forEach(function(k){o[k]=JSON.parse(JSON.stringify(S[k]==null?null:S[k]));}); return o; }
 function costPrint(){ var o={}; P.forEach(function(p){o[p.id]=p.cost;}); return o; }
@@ -2410,13 +2405,15 @@ function render(){
      shop's own catalogue; none of them reached it, because S.biz was still 'hotel', not 'mine'. Renamed
      the sample (see HOTEL above) AND added a banner that says so on every visit, not only inside one
      overlay's footer — a fact this important cannot depend on which screen happens to be open. */
+  /* ⭐ [per Athi's design doc] "Sample data — nothing here reaches your shop." — shorter, matches the
+     12-word explanation budget; the sample business's own name (e.g. "Sample Tiffin Corner") already sits
+     right beside it as the #bizName chip, so repeating it here was rule 3's duplicate string, not new info. */
   var sampleNote=document.getElementById('labSampleNote');
   if(S.biz!=='mine'){
     sampleNote.hidden=false;
-    sampleNote.innerHTML='Showing sample data ('+esc(B.name)+') — nothing typed here reaches your shop.'
+    sampleNote.innerHTML='Sample data — nothing here reaches your shop.'
       +' <button class="chip" onclick="labUseMine()">Use my catalogue</button>';
   } else sampleNote.hidden=true;
-  document.getElementById('bucketChip').innerHTML='Saved offers <b>'+SAVED.length+'</b>';
 
   document.getElementById('strip').innerHTML = S.step===0?'' :
     '<div class="strip">Margin <b>'+num(S.margin)+'%</b><span>·</span>'+
