@@ -506,6 +506,16 @@ button{cursor:pointer}
 .g3 th:first-child{text-align:left}
 .g3 th b{display:block;font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--ink);
   letter-spacing:0;text-transform:none;margin-bottom:2px}
+/**
+ * ⭐ [found live, 2026-09-27] "alignment?" — g3()'s editable headers (outGift()'s bill amounts, outSame()'s
+ * buy-counts) are a `<span class="inp">` with a fixed width, and `.inp` is `display:flex` — a BLOCK box.
+ * `.g3 th{text-align:right}` (above) only ever moves INLINE content; a block box ignores it completely and
+ * just sits flush against the left edge of its container, while the plain-text numbers in the column's own
+ * body cells (a real `text-align:right` on `.g3 td`) correctly hug the right edge — two different rules
+ * quietly producing two different edges for what's meant to be one column. `margin-left:auto` is the actual
+ * way to right-align a block box; scoped to `.g3 th` so it can never reach an `.inp` anywhere else on the page.
+ */
+.g3 th .inp{margin-left:auto}
 .g3 th.on{color:var(--green-d)} .g3 th.on b{color:var(--green-d)}
 .g3 td{padding:8px 10px;border-top:1px solid var(--hair);text-align:right;white-space:nowrap;
   font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
