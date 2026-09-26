@@ -2395,6 +2395,17 @@ function outQty(){
 }
 
 /* ── buy anything, one named thing free ────────────────────────────── */
+/**
+ * ⭐⭐⭐ [found live, 2026-09-27] "i don't really understand this table, goods, gift, etc... what are we
+ * trying to say here?" then, plainer still: "share goods gift, nothing makes sense." Real gap, not a
+ * misreading — three single-word row labels ("Share", "Goods", "Gift") named the ENGINE'S OWN VARIABLES
+ * (share of the bill, cost of goods sold, cost of the gift) rather than saying what each row means to a
+ * shopkeeper deciding whether to run this offer. Then: "say price of onion rava dosa, cost of onion rava
+ * dosa, so it makes sense" — generic "the gift" still made a reader do the work of remembering what "the
+ * gift" was; the actual item's own name now sits in the row label. The table reads as one sentence top to
+ * bottom: this is what the gift is worth, this is what everything ELSE cost you, this is what the gift
+ * itself cost you on top, this is what's left, this is the margin that leaves you with.
+ */
 function outGift(){
   var g=byId(S.giftId); if(!g) return '';
   var am=avgM(), bills=(S.bills||[]).map(num);
@@ -2402,20 +2413,22 @@ function outGift(){
     return ['<span class="inp" style="width:104px;height:31px"><span>₹</span>'+
       '<input type="number" min="1" value="'+b+'" onchange="setBill('+i+',this.value)"></span>','',false];});
   var rows=[
-    ['Share', bills.map(function(b){return PC(g.price/b*100);})],
-    ['Goods', bills.map(function(b){return M0(b*(1-am));})],
-    ['Gift', bills.map(function(){return g.cost==null?'N/A':M0(g.cost);})],
-    ['You make', bills.map(function(b){return g.cost==null?'N/A':M0(b*am-g.cost);}), true],
-    ['Margin', bills.map(function(b){
+    ['Price of '+esc(g.name), bills.map(function(){return M0(g.price);})],
+    ['Everything else costs you', bills.map(function(b){return M0(b*(1-am));})],
+    ['Cost of '+esc(g.name), bills.map(function(){return g.cost==null?'N/A':M0(g.cost);})],
+    ['You keep', bills.map(function(b){return g.cost==null?'N/A':M0(b*am-g.cost);}), true],
+    ['Margin on this bill', bills.map(function(b){
        if(g.cost==null) return 'N/A';
        var m=Math.round((am-g.cost/b)*100);
        return '<span class="'+(m<num(S.margin)?'':'')+'" style="color:'+
          (m<0?'var(--red-i)':m<num(S.margin)?'var(--amber-i)':'var(--green-d)')+'">'+m+'%</span>'+
-         '<span class="sub">'+Math.round(am*100)+'%</span>';}), true]
+         '<span class="sub">'+Math.round(am*100)+'% normally</span>';}), true]
   ];
   var h=headline([[M0(g.price),'worth to them'],
                   [g.cost==null?'N/A':M0(g.cost),'costs you','bad'],
                   [Math.round(am*100)+'%','your average margin']]);
+  h+='<p class="hs" style="margin:14px 0 -2px">Three sample bills — the smaller the bill, the more the '+
+     'free gift eats into what you’d normally keep from it.</p>';
   h+='<div class="card pad">'+g3(heads,rows)+'</div>';
   if(g.cost!=null){
     var be=g.cost/(am-num(S.margin)/100);
@@ -2424,7 +2437,7 @@ function outGift(){
       'always clears your '+num(S.margin)+'%')+'</div></div>';
   }
   h+=eitherNote(g.price);
-  h+='<div class="hint">Goods cost uses your catalogue average — what they buy is not knowable here.</div>';
+  h+='<div class="hint">"Everything else costs you" is an estimate, from your average margin — what they actually buy alongside '+esc(g.name)+' is not knowable here.</div>';
   return h;
 }
 
