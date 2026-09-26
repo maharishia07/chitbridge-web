@@ -1043,39 +1043,41 @@ function renderS0(){
   var over=num(S.cap)>=num(S.margin);
   var h='<div class="cols" style="grid-template-columns:1fr">';
 
-  h+='<div class="card pad"><h2 class="h">First, the number everything is measured against</h2>'+
-     '<p class="hs">Set it once. Every offer in the Lab is judged against it.</p>'+
-     '<div class="two" style="margin-top:16px">'+
-       '<div class="f"><span class="lbl">Your margin</span>'+
-         '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.margin==null?'':String(S.margin))+'" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div>'+
-         '<div class="hint">₹'+num(S.margin)+' profit on every ₹100 you sell.</div></div>'+
-       '<div class="f"><span class="lbl">Right now your catalogue averages</span>'+
+  /**
+   * ⭐⭐⭐ [2026-09-26] ONLY THREE THINGS ARE MUST, ON ONE LINE, THEN CREATE/VIEW — Athi: "to create an offer
+   * only three things are must, which is to understand the margin threshold, current margin percentage and
+   * then apply loyalty bonus, can we bring all three in the same line, then below create an offer / view
+   * existing offer... possibly we have to place it somewhere else as they are not part of setting up offer.
+   * for the timebeing, keep it below the create / view offer icon."
+   *
+   * Everything below this card (never-sell-below-cost, prices-shown-as, where cost comes from, modifiers,
+   * staff access) is UNCHANGED — same cards, same order among themselves — just moved to AFTER Create/View
+   * rather than before, per "for the timebeing." None of it is required to make an offer; Athi's own words
+   * mark it as belonging somewhere else eventually, not here.
+   */
+  h+='<div class="card pad"><h2 class="h">Ready to make an offer</h2>'+
+     '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-top:14px;align-items:flex-start">'+
+       '<div class="f" style="flex:1;min-width:150px"><span class="lbl">Margin threshold</span>'+
+         '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.margin==null?'':String(S.margin))+'" data-key="margin" oninput="edit(\'margin\',this.value)"><span>%</span></div></div>'+
+       '<div class="f" style="flex:1;min-width:150px"><span class="lbl">Current margin</span>'+
          '<div class="inp" style="background:var(--panel);border-style:dashed"><input value="'+am+
-           '%" disabled style="font-family:\'IBM Plex Mono\',monospace"></div>'+
-         '<div class="hint">Across every item that has a cost written down.</div></div>'+
+           '%" disabled style="font-family:\'IBM Plex Mono\',monospace"></div></div>'+
+       '<div class="f" style="flex:1;min-width:190px"><span class="lbl">Loyalty bonus</span>'+
+         '<div class="loy '+(S.custOn?'on':'')+'">'+
+           '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
+             'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
+           '<span class="lt">'+(S.custOn?'up to':'off')+'</span>'+
+           (S.custOn?'<div class="inp" style="width:80px">'+
+             '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
+         '</div></div>'+
      '</div>'+
-     '<div class="note n-say"><span class="ic">i</span><div>This is <b>before</b> rent, staff, power '+
-       'and everything else — a rough guide, not your accounts.</div></div></div>';
-
-  h+='<div class="card pad"><h2 class="h">Loyalty bonus</h2>'+
-     '<p class="hs">An extra percentage for a customer you want to keep. '+
-     'Off here and it never appears on any offer.</p>'+
-     '<div class="loy '+(S.custOn?'on':'')+'" style="margin-top:14px">'+
-       '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
-         'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
-       '<span class="lt">Use loyalty bonuses</span>'+
-       /* ⚠️ "up to" used to live INSIDE the bordered .inp box beside the number and the % sign — three
-          flex children in one 130px box left too little room for even a two-digit value, and it read as
-          clipped ("1" with the "0" swallowed by the % sign). The label now sits outside the box, as every
-          other field on this screen already does (see "Your margin" above), and the box holds only what a
-          number box should: the digits and their unit. */
-              (S.custOn?'<span style="font-size:13px;color:var(--muted)">up to</span>'+
-         '<div class="inp" style="width:96px">'+
-         '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
-     '</div>'+
-     (S.custOn&&over?'<div class="note n-bad"><span class="ic">!</span><div>A '+num(S.cap)+
+     (S.custOn&&over?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>A '+num(S.cap)+
        '% bonus on a '+num(S.margin)+'% margin leaves you nothing. Keep the ceiling under your margin.'+
-       '</div></div>':'')+'</div>';
+       '</div></div>':'')+
+     '<div class="acts" style="margin-top:16px">'+
+       '<button class="btn pri" onclick="go(1)">Create an offer</button>'+
+       '<button class="btn" onclick="go(3)">View existing offers ('+SAVED.length+')</button>'+
+     '</div></div>';
 
   h+='<div class="two">'+
      '<div class="card pad"><h2 class="h" style="font-size:17px">Never sell below cost</h2>'+
@@ -1163,7 +1165,6 @@ function renderS0(){
          '👥 Open Co-assists</button></div>';
   }
 
-  h+='<div class="acts"><button class="btn pri" onclick="go(1)">Done — pick an offer</button></div>';
   return h+'</div>';
 }
 
