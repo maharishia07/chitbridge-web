@@ -524,6 +524,7 @@ export default function InboxPage() {
   const [tab, setTab]           = useState(() => sessionStorage.getItem('inboxTab') || 'open');
   const [chits, setChits]       = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [actorList, setActorList] = useState([]);
   const [assigningChitId, setAssigningChitId] = useState(null);
 
@@ -555,10 +556,28 @@ export default function InboxPage() {
       const all = res.data.chits || [];
       const senderName = isActor ? parentEntity : entity?.display_name;
       setChits(all.filter(c => c.sender_entity_display_name !== senderName));
+      setLoadError(null);
     } catch (err) {
+      /**
+       * ⚠️⚠️ [REV-26] "the inbox renders a dead network as 'you have no chits'." This used to only
+       * console.error and fall through — loading flips false, chits stays whatever it last was (never
+       * cleared, which is right), but with nothing on screen saying the load failed, an empty or stale list
+       * reads as "the inbox is clear" rather than "the server could not be reached." A token expiring mid-
+       * session hits this exact path. loadError is shown instead of the empty state, with a Retry.
+       */
       console.error('Inbox error:', err);
+      setLoadError(err?.response?.data?.message || 'Could not load your inbox — check your connection and try again.');
     } finally { setLoading(false); }
   };
+
+  /**
+   * ⚠️⚠️ [REV-26] "swipe a chit to Completed, server returns 409 (dispute open), the catch discards it, and
+   * nothing at all happens on screen." Every status-change handler below used to swallow into a bare
+   * `catch {}` (or console.error only) — the swipe/tap visibly reverts with no explanation, and a genuine
+   * refusal (a dispute, a stale version, an expired session) looks identical to a lost tap. Matches the
+   * alert() this page already used for delete (the one place a failure here was ever shown at all).
+   */
+  const alertErr = (err, fallback) => alert(err?.response?.data?.message || fallback);
 
   // ── Undo logic ──────────────────────────────────────────────
   const handleSwipeLeft = async (chit) => {
@@ -573,7 +592,7 @@ export default function InboxPage() {
         previousStatus,
         msg: `Marked as completed`,
       });
-    } catch {}
+    } catch (err) { alertErr(err, 'Could not mark this as completed.'); }
   };
 
   const handleUndo = async () => {
@@ -581,7 +600,7 @@ export default function InboxPage() {
     try {
       await updateChitStatus(activeUndo.chitId, activeUndo.previousStatus);
       loadChits();
-    } catch {}
+    } catch (err) { alertErr(err, 'Could not undo — reload to see the current status.'); }
     setActiveUndo(null);
   };
 
@@ -592,21 +611,21 @@ export default function InboxPage() {
       if (newStatus === 'completed') {
         setActiveUndo({ chitId, previousStatus, msg: 'Marked as done' });
       }
-    } catch {}
+    } catch (err) { alertErr(err, 'Could not update this chit.'); }
   };
 
   const handleRegress = async (chitId, newStatus) => {
     try {
       await updateChitStatus(chitId, newStatus);
       loadChits();
-    } catch {}
+    } catch (err) { alertErr(err, 'Could not move this chit back.'); }
   };
 
   const handlePull = async (chitId) => {
     try {
       await assignChit(chitId, { action: 'pull' });
       loadChits();
-    } catch (err) { console.error(err); }
+    } catch (err) { alertErr(err, 'Could not pull this chit.'); }
   };
 
   const handlePushToActor = async (chitId, targetActorId, actorName) => {
@@ -614,7 +633,7 @@ export default function InboxPage() {
       await assignChit(chitId, { action: 'push', target_actor_id: targetActorId });
       setAssigningChitId(null);
       loadChits();
-    } catch (err) { console.error(err); }
+    } catch (err) { alertErr(err, 'Could not assign this chit.'); }
   };
 
   const handleConfirmDelete = async () => {
@@ -626,7 +645,7 @@ export default function InboxPage() {
       loadChits();
     } catch (err) {
       // Backend blocks delete while a dispute is open (409)
-      alert(err?.response?.data?.message || 'Delete failed');
+      alertErr(err, 'Delete failed');
     } finally {
       setDeleting(false);
     }
@@ -788,6 +807,17 @@ export default function InboxPage() {
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading...</div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <div className="text-4xl mb-3">⚠️</div>
+              <div className="text-sm font-medium text-gray-700">Couldn't load your inbox</div>
+              <div className="text-xs mt-1 mb-6 text-gray-400">{loadError}</div>
+              <button
+                onClick={() => loadChits()}
+                className="bg-blue-600 text-white text-xs px-4 py-2.5 rounded-lg font-medium">
+                Retry
+              </button>
+            </div>
           ) : tabChits.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <div className="text-4xl mb-3">📭</div>

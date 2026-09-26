@@ -180,9 +180,28 @@ function RaiseDisputeModal({ onClose, onSubmit, submitting, participants = [], m
   );
 }
 
-function DisputeBanner({ disputes, myEntityId, onResolve, resolving }) {
+function DisputeBanner({ disputes, myEntityId, onResolve, resolving, disputesUnknown }) {
   const open     = disputes.filter(d => d.status === 'open');
   const resolved = disputes.filter(d => d.status === 'resolved');
+
+  /**
+   * ⚠️⚠️ [REV-26] "a chit with an open dispute then opens with a blue header, no warning badge, and an empty
+   * dispute section — and the user marks it complete." That happened because a FAILED dispute fetch was
+   * silently treated the same as a SUCCESSFUL one that found none (`.catch(() => ({data:{disputes:[]}}))`).
+   * disputesUnknown distinguishes them — shown before either of the "no dispute" outcomes below, because we
+   * genuinely do not know which one this is.
+   */
+  if (disputesUnknown) {
+    return (
+      <div className="mx-4 mt-3 mb-1 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+        <span className="text-amber-500 text-base flex-shrink-0">⚠️</span>
+        <div>
+          <div className="text-xs font-semibold text-amber-700">Could not check for an open dispute</div>
+          <div className="text-xs text-amber-600 mt-0.5">This chit may have one — reload before marking it complete.</div>
+        </div>
+      </div>
+    );
+  }
 
   if (open.length === 0 && resolved.length > 0) {
     return (
@@ -427,6 +446,7 @@ export default function ChitDetailPage() {
   const [data, setData]           = useState(null);
   const [messages, setMessages]   = useState([]);
   const [disputes, setDisputes]   = useState([]);
+  const [disputesUnknown, setDisputesUnknown] = useState(false);   // [REV-26] a failed fetch is NOT "no disputes"
   const [tab, setTab]             = useState(searchParams.get('tab') || 'details');
   const [thread, setThread]       = useState('all');
   const [loading, setLoading]     = useState(true);
@@ -450,14 +470,16 @@ export default function ChitDetailPage() {
   const loadAll = async () => {
     try {
       setLoading(true);
+      let dFailed = false;
       const [chitRes, msgRes, dispRes] = await Promise.all([
         getChitDetail(chitId),
         getMessages(chitId, 'all').catch(() => ({ data: { messages: [] } })),
-        getDisputes(chitId).catch(() => ({ data: { disputes: [] } })),
+        getDisputes(chitId).catch(() => { dFailed = true; return { data: { disputes: [] } }; }),
       ]);
       setData(chitRes.data);
       setMessages(msgRes.data.messages || []);
       setDisputes(dispRes.data.disputes || []);
+      setDisputesUnknown(dFailed);   // [REV-26] a failed fetch must never read as "confirmed clear"
     } catch { setError('Could not load — check your connection'); }
     finally { setLoading(false); }
   };
@@ -522,8 +544,12 @@ export default function ChitDetailPage() {
       }
       setShowDispute(false);
       showFlash(ok > 1 ? `Dispute raised with ${ok} parties` : (ok === 1 ? (lastAlert || 'Dispute raised') : lastErr));
-      const d = await getDisputes(chitId);
+      /* [REV-26] same guarantee as loadAll() — a refresh that fails here must not read as "no dispute", right
+       * after the person raised one. */
+      let dFailed = false;
+      const d = await getDisputes(chitId).catch(() => { dFailed = true; return { data: { disputes: [] } }; });
       setDisputes(d.data.disputes || []);
+      setDisputesUnknown(dFailed);
     } finally { setSubmitDispute(false); }
   };
 
@@ -532,8 +558,12 @@ export default function ChitDetailPage() {
     try {
       await resolveDispute(chitId, disputeId, { resolution_note: resolutionNote });
       showFlash('Dispute resolved');
-      const res = await getDisputes(chitId);
+      /* [REV-26] a failed REFRESH here must not read as "Failed to resolve" (resolveDispute above already
+       * succeeded) and must not read as "no dispute" either — same guarantee as loadAll(). */
+      let dFailed = false;
+      const res = await getDisputes(chitId).catch(() => { dFailed = true; return { data: { disputes: [] } }; });
       setDisputes(res.data.disputes || []);
+      setDisputesUnknown(dFailed);
     } catch (err) {
       showFlash(err.response?.data?.message || 'Failed to resolve');
     } finally { setResolving(false); }
@@ -747,6 +777,7 @@ export default function ChitDetailPage() {
                 myEntityId={effectiveEntityId}
                 onResolve={handleResolveDispute}
                 resolving={resolving}
+                disputesUnknown={disputesUnknown}
               />
 
               {/* DEMO-5 — diagnosis panel (probe → localise → route) */}
