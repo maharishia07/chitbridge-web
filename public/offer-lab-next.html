@@ -404,6 +404,33 @@ button{cursor:pointer}
   .ovlpanel{width:100%;max-height:100dvh;height:100dvh;border-radius:0}
   .ovltbl .ovlcat{display:none}
 }
+
+/**
+ * ── ⭐⭐⭐ [TILL/OFFR-08] THE COMBO CHOOSER — SAME CLASSES, SAME MARKUP AS THE TILL, THIS PAGE'S OWN PALETTE ──
+ * Athi: "if it reuses what is being used in cart, then there should not be any difference at all." The
+ * markup comes from the ONE shared CBVariant.chooserHTML() (lib/variant.js) — till.html's modPaint() calls
+ * the exact same function. Only the CSS below is page-specific, mapped onto Offer Lab's own tokens
+ * (var(--green)/var(--amber) here, var(--ok)/var(--warn) on the till) rather than duplicated colours.
+ */
+.modg{padding:10px 0;border-bottom:1px solid var(--line)}
+.modg:last-child{border-bottom:0}
+.modg>b{display:flex;align-items:baseline;gap:8px;font-size:.95em;margin-bottom:8px;font-weight:700}
+.modg .tag{font-style:normal;font-size:.78em;font-weight:600;color:var(--muted);background:var(--panel);border-radius:999px;padding:2px 9px}
+.modg .gstate{margin-inline-start:auto;font-weight:700;font-size:.85em;color:var(--muted)}
+.modg .gstate.done{color:var(--green)}
+.modg .gstate.want{color:var(--amber-i)}
+.modo{display:flex;flex-wrap:wrap;gap:8px}
+.modopt{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 14px;
+  border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);font:inherit;cursor:pointer}
+.modopt .mn{font-weight:700}
+.modopt .mw{font-size:.85em;color:var(--muted)}
+.modopt.on{border-color:var(--green);background:var(--green-t);color:var(--green-d);font-weight:700}
+.modopt.on .mw{color:var(--green)}
+.modopt.out{opacity:.55;cursor:not-allowed;border-style:dashed}
+.modopt.out .mn{text-decoration:line-through}
+.modopt .mk{position:absolute;top:4px;inset-inline-end:6px;font-style:normal;font-size:.7em;color:var(--muted)}
+.combohead{font-size:.92em;color:var(--muted);margin-bottom:12px;padding:10px 12px;background:var(--panel);border-radius:var(--r)}
+.combohead b{display:block;margin-top:4px;color:var(--green);font-size:1.05em}
 </style>
 </head>
 <body>
@@ -482,6 +509,19 @@ button{cursor:pointer}
     </div>
     <div class="ovlbody" id="modLabBody"></div>
     <div class="ovlfoot" id="modLabFoot"></div>
+  </div>
+</div>
+<!-- ⭐⭐⭐ [TILL/OFFR-08] "how it appears in the counter app" — CBVariant.chooserHTML(), the SAME function
+     till.html's own combo dialog calls, so there is nothing here that could show a different combo than the
+     one a customer would actually see. -->
+<div class="ovl" id="comboTillPreviewOverlay" role="dialog" aria-modal="true" aria-labelledby="comboTillPreviewTitle">
+  <div class="ovlpanel" style="max-width:520px">
+    <div class="ovlhead">
+      <h2 id="comboTillPreviewTitle">Preview</h2>
+      <button class="ovlx" onclick="closeComboTillPreview()" aria-label="Close" title="Close">✕</button>
+    </div>
+    <div class="ovlbody" id="comboTillPreviewBody" style="padding:16px 20px"></div>
+    <div class="ovlfoot" id="comboTillPreviewFoot"></div>
   </div>
 </div>
 <!--
@@ -1016,7 +1056,11 @@ async function modLabSaveAsConfirm(){
   var v=CBVariant.validate(modLabGroups());
   if(!v.ok){ toastSay('Fix this first: '+v.errors[0].message); return; }
   if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save a combo for real.'); return; }
-  var r=await apiFetch('POST', API+'/api/combo-templates', {name:name, definition:v.groups});
+  /* ⭐ [OFFR-08] a price travels with the save too, when one is known — the combo's own (building fresh) or
+   * the product's it already belongs to (editing an existing one's modifiers) — so it can be pushed/previewed
+   * with a real price later without retyping it. */
+  var price = MODLAB.pid ? (byId(MODLAB.pid)||{}).price : (MODLAB.price!==''? Number(MODLAB.price): null);
+  var r=await apiFetch('POST', API+'/api/combo-templates', {name:name, definition:v.groups, price:price});
   if(r.ok){ toastSay('Saved “'+name+'” to your combos.'); MODLAB.savingAs=false; await comboLibLoad(true); }
   else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
   paintModLab();
@@ -1059,14 +1103,6 @@ function modLabSetGroup(gi,patch){ modLabSetGroups(CBVariant.setGroup(modLabGrou
 function modLabAddOption(gi){ modLabSetGroups(CBVariant.addOption(modLabGroups(), gi, 'New option', 0)); }
 function modLabRemoveOption(gi,oi){ modLabSetGroups(CBVariant.removeOption(modLabGroups(), gi, oi)); }
 function modLabSetOption(gi,oi,patch){ modLabSetGroups(CBVariant.setOption(modLabGroups(), gi, oi, patch)); }
-/** ⭐ only what could ever actually be sold — the exact filter the till itself applies */
-function modLabPreviewGroups(){ return CBVariant.groupsOf({modifiers:modLabGroups()}); }
-function modLabPreviewPick(gi,oi){
-  var groups=modLabPreviewGroups(), g=groups[gi]; if(!g||!g.options[oi]) return;
-  MODLABPREV=CBVariant.toggle(MODLABPREV, g, g.options[oi].name);
-  paintModLab();
-}
-function modLabPreviewReset(){ MODLABPREV=[]; paintModLab(); }
 async function modLabApply(){
   var p=byId(MODLAB.pid); if(!p) return;
   var clean=CBVariant.normalize(modLabGroups());
@@ -1116,31 +1152,14 @@ function comboGroupsEditorHTML(groups){
       + '</div></div>';
   }).join('');
 }
-/** ⭐⭐ the live "what a customer sees" preview — same CBVariant.toggle()/missing()/words() the till itself
- * uses to sell, so this can never show a combination the counter would then refuse. Unchanged from the
- * original per-product code, just no longer closed over one particular product. */
-function comboPreviewHTML(){
-  var sellable=modLabPreviewGroups();
-  if(!sellable.length) return '<div class="hs" style="padding:8px 0">Add at least one group with an option above to preview.</div>';
-  return sellable.map(function(g,gi){
-      var picked=MODLABPREV.filter(function(m){return m.group===g.name;}).map(function(m){return m.option;});
-      return '<div class="kv" style="padding:8px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px">'
-        + '<div style="display:flex;gap:8px;align-items:baseline"><b>'+esc(g.name)+'</b>'
-        + '<span style="font-size:12px;color:var(--muted)">'+(g.required?'required':'optional')+(g.max>1?' · up to '+g.max:'')+'</span></div>'
-        + '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'
-        + g.options.map(function(o,oi){
-            var on=picked.indexOf(o.name)>=0;
-            return '<button type="button" class="btn sm'+(on?' pri':'')+'" onclick="modLabPreviewPick('+gi+','+oi+')">'+(on?'✓ ':'')+esc(o.name)+(o.price?' +'+M0(o.price):'')+'</button>';
-          }).join('')+'</div></div>';
-    }).join('')
-    + (function(){
-        var missing=CBVariant.missing(sellable, MODLABPREV), words=CBVariant.words(MODLABPREV, M0);
-        return '<div style="padding:4px 0 8px;font-size:14px">'+(missing.length
-          ? '<span style="color:var(--amber-i)">● Still needs: '+esc(missing.join(', '))+'</span>'
-          : '<b>Ready to add'+(words?' — ':'')+'</b>'+esc(words))+'</div>';
-      })()
-    + '<button class="btn sm" onclick="modLabPreviewReset()">Reset preview</button>';
-}
+/**
+ * ⚠️ [TILL/OFFR-08] THE INLINE "what a customer sees" PREVIEW USED TO LIVE HERE — a hand-rolled row of plain
+ * buttons that only APPROXIMATED the real till dialog. Athi: "if it reuses what is being used in cart, then
+ * there should not be any difference at all." Replaced by "👁 Preview like the till" (openComboTillPreview(),
+ * above), which calls the SAME CBVariant.chooserHTML() till.html's own modPaint() calls — not a second,
+ * similar-looking rendering that this file owns and could drift from the real one. Nothing here needed the
+ * helper (modLabPreviewGroups()) that only this dead code called — deleted with it.
+ */
 /** ⭐ the inline "Save as" row — a text input beside the page's own edits, never a native prompt() */
 function comboSaveAsRowHTML(){
   if(!MODLAB.savingAs) return '';
@@ -1153,24 +1172,137 @@ function comboSaveAsRowHTML(){
     + '<button class="btn sm" onclick="modLabSaveAsCancel()">Cancel</button></div>';
 }
 /** ⭐⭐⭐ "a mechanism of open the same again" — the saved-combo library, reachable from every screen */
+/**
+ * ── ⭐⭐⭐ [TILL/OFFR-08] THE PREVIEW POPUP — "how it appears in the counter app," literally ──────────────────
+ * Athi: "the combo preview if it reuses what is being used in cart, then there should not be any difference
+ * at all." COMBO_TILL_PREVIEW holds only what a chooser needs (name, price, groups) — MODLABPREV (the SAME
+ * picks array the inline per-product preview already used) is reused here too, so there is exactly one
+ * "what has been tapped so far" anywhere in this Lab, not a second one for this popup alone.
+ */
+var COMBO_TILL_PREVIEW = null;   // {name, price, groups} or null when the popup is closed
+/** ⭐ "👁 Preview like the till" on the builder AND the per-product screen — whichever one is open decides
+ * what name/price/groups mean; the popup itself never needs to know which screen sent it. */
+function modLabPreviewLikeTill(){
+  if(MODLAB.pid){ var p=byId(MODLAB.pid); if(!p) return; openComboTillPreview(p.name, p.price, modLabGroups()); }
+  else openComboTillPreview(MODLAB.name||'This combo', MODLAB.price===''?null:Number(MODLAB.price), modLabGroups());
+}
+function openComboTillPreview(name, price, groups){
+  COMBO_TILL_PREVIEW = { name: name, price: price, groups: CBVariant.groupsOf({ modifiers: groups }) };
+  MODLABPREV = [];
+  var el = document.getElementById('comboTillPreviewOverlay'); if (!el) return;
+  el.classList.add('on');
+  paintComboTillPreview();
+}
+function closeComboTillPreview(){
+  var el = document.getElementById('comboTillPreviewOverlay'); if (el) el.classList.remove('on');
+  COMBO_TILL_PREVIEW = null;
+}
+function comboTillPreviewPick(gi, oi){
+  if (!COMBO_TILL_PREVIEW) return;
+  var g = COMBO_TILL_PREVIEW.groups[gi]; if (!g || !g.options[oi]) return;
+  MODLABPREV = CBVariant.toggle(MODLABPREV, g, g.options[oi].name);
+  paintComboTillPreview();
+}
+function paintComboTillPreview(){
+  var body = document.getElementById('comboTillPreviewBody'), foot = document.getElementById('comboTillPreviewFoot');
+  var ttl = document.getElementById('comboTillPreviewTitle');
+  if (!body || !COMBO_TILL_PREVIEW) return;
+  var cv = COMBO_TILL_PREVIEW;
+  if (ttl) ttl.textContent = cv.name || 'Preview';
+  /* ⭐ the same "Separately ₹X" banner spot the till's #combohead sits in — here it just names the combo's
+   * own price, since a draft has no "separate items" to compare against yet (see PATCHNOTE below). */
+  var head = '<div class="combohead">' + esc(cv.name || 'This combo')
+    + (cv.price != null ? '<b>' + M0(Number(cv.price)) + '</b>' : '') + '</div>';
+  body.innerHTML = head + CBVariant.chooserHTML(cv.groups, MODLABPREV, {
+    money: M0,
+    onClick: function (gi, oi) { return 'comboTillPreviewPick(' + gi + ',' + oi + ')'; },
+    testIdGroup: function (gi) { return 'preview-modg-' + gi; },
+    testIdOption: function (gi, oi) { return 'preview-modopt-' + gi + '-' + oi; },
+  });
+  if (foot) {
+    var missing = CBVariant.missing(cv.groups, MODLABPREV);
+    var words = CBVariant.words(MODLABPREV, M0);
+    foot.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+      + '<span>' + (missing.length
+          ? '<span style="color:var(--amber-i)">● Still needs: ' + esc(missing.join(', ')) + '</span>'
+          : '<b>Ready' + (words ? ' — ' : '') + '</b>' + esc(words))
+      + '</span><button class="btn sm" onclick="closeComboTillPreview()">Close</button></div>';
+  }
+}
+/**
+ * ⭐⭐ [OFFR-08] "all the existing combo should appear, so it can be modified and updated in the product
+ * list" — every real product that already carries modifier groups but has never been through Save As shows
+ * up here too, so nothing already live is invisible to this screen. Read-only until "Use" or "Push" is
+ * pressed on one — nothing is written just by opening the library.
+ */
+function comboLibraryUnsavedProducts(){
+  if (!(S.biz==='mine')) return [];
+  var linked = {}; (COMBO_LIB.items||[]).forEach(function(t){ if (t.product_item_id) linked[t.product_item_id]=true; });
+  return P.filter(function(p){ return !linked[p.id] && CBVariant.groupsOf({modifiers:p.modifiers}).length>0; });
+}
 function comboLibraryHTML(){
   var items=COMBO_LIB.items||[];
+  var live=comboLibraryUnsavedProducts();
+  var rowHTML=function(t){
+    var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(s,g){return s+((g&&g.options)||[]).length;},0);
+    var linkedProduct=t.product_item_id && S.biz==='mine' ? byId(t.product_item_id) : null;
+    return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
+      + '<div><div style="font-weight:700">'+esc(t.name)+(t.price!=null?' · '+M0(Number(t.price)):'')+'</div>'
+      + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · '+opts+' option'+(opts===1?'':'s')
+        + (t.product_item_id ? (linkedProduct ? ' · live as "'+esc(linkedProduct.name)+'"' : ' · was pushed, product no longer found') : ' · not on your product list yet')+'</div></div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      + '<button class="btn sm" onclick="openComboTillPreview(\''+esc(t.name).replace(/'/g,"\\'")+'\','+(t.price==null?'null':Number(t.price))+',comboLibDef(\''+t.id+'\'))">👁 Preview</button>'
+      + '<button class="btn sm" onclick="modLabUseTemplate(\''+t.id+'\')">Use</button>'
+      + '<button class="btn sm pri" onclick="modLabPushTemplate(\''+t.id+'\')">'+(t.product_item_id?'⟳ Update product':'✚ Push to products')+'</button>'
+      + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(t.name).replace(/'/g,"\\'")+'\')">✕</button></div></div>';
+  };
+  var liveRowHTML=function(p){
+    var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
+    return '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
+      + '<div><div style="font-weight:700">'+esc(p.name)+' · '+M0(p.price)+'</div>'
+      + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · already live · not in this library yet</div></div>'
+      + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\''+esc(p.name).replace(/'/g,"\\'")+'\','+p.price+',JSON.parse(this.dataset.g))" data-g=\''+esc(JSON.stringify(p.modifiers||[]))+'\'>👁 Preview</button>'
+      + '<button class="btn sm pri" onclick="modLabAdoptExisting(\''+p.id+'\')">Bring into this library</button></div></div>';
+  };
   return '<div style="padding:0 20px 20px">'
     + '<button class="btn sm" onclick="modLabCloseLibrary()">← Back</button>'
     + '<h3 style="margin:12px 0 10px">My saved combos</h3>'
     + (!COMBO_LIB.loaded
       ? '<div class="hs" style="padding:24px">Loading…</div>'
-      : !items.length
+      : (!items.length && !live.length)
       ? '<div class="hs" style="padding:24px">Nothing saved yet. Build a combo, then "💾 Save as…" to see it here.</div>'
-      : items.map(function(t){
-          var n=(t.definition||[]).length, opts=(t.definition||[]).reduce(function(s,g){return s+((g&&g.options)||[]).length;},0);
-          return '<div class="kv" style="padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
-            + '<div><div style="font-weight:700">'+esc(t.name)+'</div>'
-            + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · '+opts+' option'+(opts===1?'':'s')+'</div></div>'
-            + '<div style="display:flex;gap:6px"><button class="btn sm pri" onclick="modLabUseTemplate(\''+t.id+'\')">Use</button>'
-            + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(t.name).replace(/'/g,"\\'")+'\')">✕</button></div></div>';
-        }).join(''))
+      : items.map(rowHTML).join('') + live.map(liveRowHTML).join(''))
     + '</div>';
+}
+/** ⭐ a saved template's own groups, for the "Preview" onclick above — kept as a tiny lookup rather than
+ *  inlining the whole (possibly large) definition array into an attribute string. */
+function comboLibDef(id){ var t=(COMBO_LIB.items||[]).filter(function(x){return x.id===id;})[0]; return t?t.definition:[]; }
+/** ⭐ a live product's own modifiers, adopted as a NEW saved template — so it becomes manageable from here on,
+ *  exactly like one built through "Build a combo" from the start. */
+async function modLabAdoptExisting(productId){
+  var p=byId(productId); if(!p) return;
+  var groups=CBVariant.normalize(p.modifiers);
+  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save this for real.'); return; }
+  var r=await apiFetch('POST', API+'/api/combo-templates', {name:p.name, definition:groups, price:p.price});
+  if(r.ok){ await apiFetch('PATCH', API+'/api/combo-templates/'+r.body.template.id, {product_item_id:p.id});
+    toastSay('"'+p.name+'" is now in your saved combos.'); await comboLibLoad(true); }
+  else toastSay('Could not bring this in — try again.');
+  paintModLab();
+}
+/**
+ * ⭐⭐⭐ [OFFR-08] "the saved combo should be able to push to product list as a new product... if it is an
+ * existing combo... it has to update only" — POSTs to the real /:id/push, which decides create vs. update on
+ * its own (never guessed here).
+ */
+async function modLabPushTemplate(id){
+  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to push a real product.'); return; }
+  var r=await apiFetch('POST', API+'/api/combo-templates/'+id+'/push');
+  if(r.ok){
+    toastSay((r.body.verb==='created'?'Created "':'Updated "')+r.body.item.item_data.name+'" in your products.');
+    await labUseMine(true);   /* the pushed/updated product needs to be in P before the library can show it as linked */
+    await comboLibLoad(true);
+  } else toastSay('Could not push this combo: '+((r.body&&r.body.message)||'try again.'));
+  paintModLab();
 }
 function paintModLab(){
   var body=document.getElementById('modLabBody'), foot=document.getElementById('modLabFoot');
@@ -1230,7 +1362,7 @@ function paintModLab(){
       + comboGroupsEditorHTML(dgroups)
       + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
       + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
-      + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+comboPreviewHTML()+'</div>'
+      + ' <button class="btn sm" onclick="modLabPreviewLikeTill()">👁 Preview like the till</button>'
       + comboSaveAsRowHTML()
       + '</div>';
     if(foot){
@@ -1251,7 +1383,7 @@ function paintModLab(){
     + comboGroupsEditorHTML(groups)
     + '<button class="btn sm" onclick="modLabAddGroup()">+ Add a group</button>'
     + ' <button class="btn sm" onclick="modLabOpenLibrary()">📂 Use a saved combo</button>'
-    + '<div class="sect" style="margin-top:18px"><h3>Preview — what a customer sees</h3>'+comboPreviewHTML()+'</div>'
+    + ' <button class="btn sm" onclick="modLabPreviewLikeTill()">👁 Preview like the till</button>'
     + comboSaveAsRowHTML()
     + '</div>';
   if(foot){

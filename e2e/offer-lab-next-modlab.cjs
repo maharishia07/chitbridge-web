@@ -59,7 +59,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
       nameFieldShown: /value="Tiffin Combo"/.test(html), priceFieldShown: new RegExp('value="' + MODLAB.price + '"').test(html),
       groupCount: modLabGroups().length,
       hasRealGroup: /value="Choose the main"/.test(html), hasRealOptions: /value="Masala Dosa"/.test(html) && /value="Idli \(2 pc\)"/.test(html),
-      editable: /onchange="modLabSetGroup/.test(html), hasPreview: /Preview — what a customer sees/.test(html),
+      editable: /onchange="modLabSetGroup/.test(html), hasPreviewButton: /modLabPreviewLikeTill/.test(html),
       hasSaveAsButton: /modLabSaveAsOpen/.test(document.getElementById('modLabFoot').innerHTML),
       hasCreateNewButton: /modLabCreateNew/.test(document.getElementById('modLabFoot').innerHTML),
     };
@@ -70,7 +70,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('seeded with THE ENTIRE STUFF — several real sections, not one lone group', builtFresh.groupCount >= 3, builtFresh.groupCount + ' group(s)');
   say('each section is a REAL, EDITABLE group — inputs, not static text', builtFresh.hasRealGroup && builtFresh.editable, 'found');
   say('with real options already on it', builtFresh.hasRealOptions, 'found');
-  say('and the SAME live "what a customer sees" preview the per-product screen has', builtFresh.hasPreview, 'found');
+  say('and "👁 Preview like the till" is offered here too — the real dialog, not an inline approximation', builtFresh.hasPreviewButton, 'found');
   say('a "Save as…" button is offered from here too', builtFresh.hasSaveAsButton, 'found');
   say('and so is "Create as a new product" — a whole new combo, not just a modifier on one that exists', builtFresh.hasCreateNewButton, 'found');
 
@@ -131,6 +131,51 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     return { call: call };
   });
   say('deleting a saved combo calls the real DELETE route', deleted.call && /\/api\/combo-templates\/tpl1$/.test(deleted.call), deleted.call);
+
+  console.log('\n── ⭐⭐⭐ [OFFR-08] "push to product list" — create the first time, update the next ' + '─'.repeat(0));
+  const pushCreate = await p.evaluate(async () => {
+    let call = null;
+    window.apiFetch = async (method, url) => {
+      if (method === 'POST' && /\/push$/.test(url)) { call = { method, url }; return { ok: true, body: { verb: 'created', item: { item_id: 'newp1', item_data: { name: 'Pushed combo' } } } }; }
+      return { ok: true, body: {} };
+    };
+    BIZ.mine = { name: 'My Shop', cats: [], prods: [], margin: 25, cap: 10, d: {} };
+    S.biz = 'mine'; window.savedLive = () => true;
+    await modLabPushTemplate('tpl1');
+    return { call: call };
+  });
+  say('"Push to products" calls the real /:id/push route', pushCreate.call && /\/api\/combo-templates\/tpl1\/push$/.test(pushCreate.call.url), pushCreate.call ? pushCreate.call.url : 'not called');
+  say('…as a POST, never a GET that could be prefetched', pushCreate.call && pushCreate.call.method === 'POST', pushCreate.call ? pushCreate.call.method : '');
+
+  console.log('\n── ⭐⭐ [OFFR-08] a product that already has modifiers, never saved, shows up in the library too ' + '─'.repeat(0));
+  const liveCombo = await p.evaluate(async () => {
+    P.push({ id: 'livecombo1', name: 'Already a combo', cat: 'combos', price: 90, cost: null,
+      modifiers: [{ name: 'Pick one', required: true, max: 1, options: [{ name: 'A', price: 0 }, { name: 'B', price: 0 }] }] });
+    window.apiFetch = async (method, url) => { if (method === 'GET' && /\/api\/combo-templates$/.test(url)) return { ok: true, body: { templates: [] } }; return { ok: true, body: {} }; };
+    await modLabOpenLibrary();
+    const html = document.getElementById('modLabBody').innerHTML;
+    return { shown: html.indexOf('Already a combo') >= 0, saysNotInLibrary: /not in this library yet/.test(html), hasAdoptButton: /modLabAdoptExisting\('livecombo1'\)/.test(html) };
+  });
+  say('an existing combo PRODUCT (never Saved As) still appears here', liveCombo.shown, 'found');
+  say('honestly labelled as not yet in the saved library', liveCombo.saysNotInLibrary, 'confirmed');
+  say('with a way to bring it in', liveCombo.hasAdoptButton, 'found');
+
+  const adopted = await p.evaluate(async () => {
+    let call = null;
+    window.apiFetch = async (method, url, body) => {
+      if (method === 'POST' && /\/api\/combo-templates$/.test(url)) { call = { post: body }; return { ok: true, body: { template: { id: 'adopted1' } } }; }
+      if (method === 'PATCH') { call = Object.assign(call || {}, { patch: { url: url, body: body } }); return { ok: true, body: { template: {} } }; }
+      return { ok: true, body: { templates: [] } };
+    };
+    await modLabAdoptExisting('livecombo1');
+    return { call: call };
+  });
+  say('"Bring into this library" saves a new template from the live product’s own data', adopted.call && adopted.call.post && adopted.call.post.name === 'Already a combo', adopted.call ? JSON.stringify(adopted.call.post) : 'not called');
+  say('…then immediately LINKS it to that same product — never a second, orphaned copy', adopted.call && adopted.call.patch && /\/api\/combo-templates\/adopted1$/.test(adopted.call.patch.url) && adopted.call.patch.body.product_item_id === 'livecombo1',
+    adopted.call && adopted.call.patch ? JSON.stringify(adopted.call.patch) : 'not called');
+  /* ⚠️ cleanup — modLabOpenLibrary() above left MODLAB.libraryOpen true, and paintModLab() checks that FIRST
+   * of everything else; every section after this one would otherwise keep rendering the library screen. */
+  await p.evaluate(() => { P.pop(); modLabCloseLibrary(); });
 
   console.log('\n── ⚠️⚠️ AN UNSAVED DRAFT OFFERS ITSELF TO THE NEXT PRODUCT PICKED, IT IS NOT LOST ' + '─'.repeat(0));
   const draftFlow = await p.evaluate(() => {
@@ -215,16 +260,30 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the draft group is exactly what was built', built.groups.length === 1 && built.groups[0].name === 'Spice level', JSON.stringify(built.groups[0]));
   say('it is already sellable-shaped (name + at least one option)', built.sellable === 1, built.sellable + ' group(s)');
 
-  console.log('\n── ⭐⭐⭐ THE PREVIEW IS THE REAL BEHAVIOUR — tap through it like a customer would ' + '─'.repeat(0));
+  console.log('\n── ⭐⭐⭐ [TILL/OFFR-08] "Preview like the till" opens the REAL till dialog, not a lookalike ' + '─'.repeat(0));
   const preview = await p.evaluate(() => {
-    const before = document.getElementById('modLabBody').innerText;
-    modLabPreviewPick(0, 0);   /* Hot */
-    const after = document.getElementById('modLabBody').innerText;
-    return { neededBefore: /Still needs: Spice level/.test(before), readyAfter: /Ready to add/.test(after), showsHot: /✓ Hot/.test(after) };
+    modLabPreviewLikeTill();
+    const opened = document.getElementById('comboTillPreviewOverlay').classList.contains('on');
+    const usesRealMarkup = /class="modg/.test(document.getElementById('comboTillPreviewBody').innerHTML)
+      && /class="modopt/.test(document.getElementById('comboTillPreviewBody').innerHTML);
+    const bodyBefore = document.getElementById('comboTillPreviewBody').innerHTML;
+    comboTillPreviewPick(0, 0);   /* Hot */
+    const after = document.getElementById('comboTillPreviewBody').innerHTML;
+    const footAfter = document.getElementById('comboTillPreviewFoot').innerHTML;
+    closeComboTillPreview();
+    const closed = !document.getElementById('comboTillPreviewOverlay').classList.contains('on');
+    return {
+      opened: opened, usesRealMarkup: usesRealMarkup, closed: closed,
+      neededBefore: /waiting for a pick/.test(bodyBefore), readyAfter: /Ready/.test(footAfter),
+      showsHot: /class="modopt on"[^>]*><span class="mn">Hot/.test(after),
+    };
   });
+  say('"👁 Preview like the till" opens the real popup', preview.opened, 'confirmed');
+  say('rendered with the SAME classes till.html itself uses (.modg/.modopt) — CBVariant.chooserHTML(), not a lookalike', preview.usesRealMarkup, 'found');
   say('a required, unanswered group is named before any tap', preview.neededBefore, 'shown');
-  say('picking the option clears the warning', preview.readyAfter, '"Ready to add" shown');
-  say('and the picked option renders as picked', preview.showsHot, '✓ Hot found');
+  say('picking the option clears the warning', preview.readyAfter, '"Ready" shown');
+  say('and the picked option renders as picked, in the real dialog', preview.showsHot, 'class="modopt on" found');
+  say('closing the popup really closes it', preview.closed, 'confirmed');
 
   console.log('\n── ⭐⭐⭐ APPLY — on the sample books it tries locally, never calls a real API ' + '─'.repeat(0));
   const sampleApply = await p.evaluate(async () => {
