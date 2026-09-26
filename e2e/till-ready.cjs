@@ -53,9 +53,12 @@ const token = (p) => b64({ alg: 'HS256' }) + '.' + b64(p) + '.stub';
   console.log('\n── every required parameter, in one answer ' + '─'.repeat(25));
   const rd = await p.evaluate(() => window.shopReady());
   say('it knows it is unfit', rd.ok === false, 'shopReady().ok is false on a blank counter');
-  say('it names the first thing', /not signed in to a shop/i.test(rd.stops[0].why),
+  /* ⚠️ [TILL-193] the wording moved again, on purpose — a browser counter's "not signed in" no longer names
+   * the mechanism ("key"), it says "due to maintenance" and points at the one fix (sign in again). See that
+   * commit's own comment on shopReady() for why. Assertion moved, not deleted. */
+  say('it names the first thing', /due to maintenance/i.test(rd.stops[0].why),
     '"' + rd.stops[0].why + '"');
-  say('what it MEANS', /nothing to sell/i.test(rd.stops[0].means), 'and what that costs, in the shopkeeper’s terms');
+  say('what it MEANS', /nothing can be sold/i.test(rd.stops[0].means), 'and what that costs, in the shopkeeper’s terms');
   /**
    * ⚠️⚠️ THE WORD MOVED, AND THE MOVE IS THE POINT ([TILL-187]). This asserted "Sign in" — and so did the
    * fix on a wrong-kind key, and so did the fix for nobody standing at the counter. Three identical
