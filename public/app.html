@@ -14607,7 +14607,11 @@ function prodBarcodePrint(code){
  */
 function prodCostMarkupHTML(d){
   const c=d&&d.cost&&typeof d.cost==='object'&&d.cost.value!=null&&isFinite(Number(d.cost.value))?Number(d.cost.value):null;
-  if(c==null) return `<div class="kv" style="padding:0 12px 8px;font-size:var(--fs-2);color:var(--grey)">${tx('Cost — not set')} · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="window.open('offer-lab-next.html','_blank')">${tx('set it in Offer Lab')}</span></div>`;
+  /* ⚠️ NAMED WINDOW, NOT '_blank' — one Offer Lab tab whether it's opened from here (the back office) or from
+     the till's own "Pricing" section, per [[feedback-no-duplicate-functions]]'s reasoning applied to windows,
+     not functions: '_blank' spawns a fresh tab every time, from every caller, so opening it from both places
+     left two tabs of the same page open with two independent, unaware-of-each-other copies of its state. */
+  if(c==null) return `<div class="kv" style="padding:0 12px 8px;font-size:var(--fs-2);color:var(--grey)">${tx('Cost — not set')} · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="window.open('offer-lab-next.html','cb_offer_lab')">${tx('set it in Offer Lab')}</span></div>`;
   const price=pPrice(d); const mk=price>0&&c>0?Math.round(((price-c)/c)*100):null;
   return `<div class="kv" style="padding:0 12px 8px;font-size:var(--fs-2);color:var(--grey)">${tx('Cost')} <b style="color:var(--ink)"><bdi>${inr(c)}</bdi></b>`
     + (mk==null?'':` · ${tx('Markup')} <b style="color:${mk<0?'var(--warn-3)':'var(--ink)'}">${mk}%</b>`)+`</div>`;

@@ -85,8 +85,10 @@
   <div><h1>Conversion lab</h1><div class="sub">What is this worth — in another currency, or at today's market price? Every step is shown, with who said it and when.</div></div>
   <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)">
     <span id="src" class="chip">example lines</span>
-    <a class="btn" href="offer-lab-next.html" style="text-decoration:none">offer lab</a>
-    <a class="btn" href="combo-lab.html" style="text-decoration:none">combo lab</a>
+    <!-- ⚠️ target names, not '_blank' — same reasoning as till.html's openOfferLab()/openComboLab(): one tab
+         per Lab, reused whichever page asked for it, never a new one on every click. -->
+    <a class="btn" href="offer-lab-next.html" target="cb_offer_lab" style="text-decoration:none">offer lab</a>
+    <a class="btn" href="combo-lab.html" target="cb_combo_lab" style="text-decoration:none">combo lab</a>
     <a class="btn" href="app.html" style="text-decoration:none">← app</a>
   </div>
 </header>

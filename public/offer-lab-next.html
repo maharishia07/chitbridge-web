@@ -1140,7 +1140,9 @@ function renderS0(){
        (modCount
          ? '<div class="note n-ok" style="margin:0;flex:1"><span class="ic">✓</span><div>'+modCount+' item'+(modCount>1?'s already carry':' already carries')+' at least one modifier.</div></div>'
          : '<div class="note n-say" style="margin:0;flex:1"><span class="ic">●</span><div>No product has a modifier yet.</div></div>')+
-       '<a class="btn sm" style="margin-inline-start:12px;text-decoration:none" href="combo-lab.html" target="_blank" rel="noopener">🧩 Combo Lab ↗</a>'+
+       /* ⚠️ a named target, not '_blank' — one Combo Lab tab, reused whichever page opens it (see till.html's
+          openComboLab() for the full reasoning) */
+       '<a class="btn sm" style="margin-inline-start:12px;text-decoration:none" href="combo-lab.html" target="cb_combo_lab">🧩 Combo Lab ↗</a>'+
      '</div></div>';
 
   /**
