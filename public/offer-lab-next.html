@@ -85,6 +85,13 @@ button{cursor:pointer}
 .inp select{font-family:'IBM Plex Sans',sans-serif;font-size:15px;font-weight:500}
 .inp:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
 .f{margin-bottom:14px}
+/* ⭐⭐⭐ [2026-09-26] item/category pickers now open #priceOverlay in a picking mode (see openPickOverlay,
+   selectOf) instead of a dropdown of their own — no picker-specific CSS needed here any more. */
+.ovlpickrow:hover{background:var(--green-t)}
+/* ⭐ a row already covered by another live offer — Athi: "it has to highlight, which offer it is already
+   included" (see offerCoveringItem() in the JS) */
+.ovlinother{background:var(--amber-t)}
+.ovlinother:hover{background:var(--amber-t)}
 
 /* ── the results table: Shopify / Tally pattern — profit in rupees, margin as a percent,
       plain adjacent columns. No invented chart. ── */
@@ -588,7 +595,7 @@ var HOTEL={ name:'Sample Tiffin Corner', what:'a hotel counter',
   margin:25, cap:10, gst:5,
   cust:[['ravi','Ravi Tiffin Service','trade',3],['lakshmi','Sri Lakshmi Caterers','trade',5],
         ['velcan','Vel Offices canteen','trade',0]],
-  d:{catId:'tiffin', itemId:'masala', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
+  d:{catId:'tiffin', itemId:'masala', itemIds:['masala'], pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
      spendAt:500, spendVal:50, buyId:'masala', getId:'masala', getOff:100,
      bunA:'masala', bunB:'coffee', bunPrice:80, shipAt:300, shipCharge:0,
      bandLo:50, bandHi:2000, custId:'ravi'} };
@@ -619,7 +626,7 @@ var PHARMA={ name:'Sri Sai Pharma Distributors', what:'a pharma distributor',
   margin:10, cap:8, gst:12,
   cust:[['sharma','Sharma Medical Stores','reseller',8],['nandha','Nandha Chemists chain','reseller',6],
         ['citysub','City Sub-stockist','reseller',7],['gh','Guru Hospital pharmacy','trade',4]],
-  d:{catId:'tablets', itemId:'panto', pctOff:5, rsOff:4, tiers:[[10,3],[30,5],[100,8]], tierView:2,
+  d:{catId:'tablets', itemId:'panto', itemIds:['panto'], pctOff:5, rsOff:4, tiers:[[10,3],[30,5],[100,8]], tierView:2,
      spendAt:10000, spendVal:600, buyId:'panto', getId:'panto', getOff:100,
      bunA:'panto', bunB:'omep', bunPrice:160, shipAt:5000, shipCharge:0,
      bandLo:500, bandHi:200000, custId:'sharma'} };
@@ -665,6 +672,35 @@ var S, CATS, P, SAVED=[], SEQ=0;
 var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
 
 /* ── plumbing ──────────────────────────────────────────────────────────── */
+/**
+ * ⚠️⚠️⚠️ [found live, 2026-09-26] "the margin threshold stays as 25 always, i updated to 50 and when i
+ * refresh again only 25 appearing, not 50." Real — S.margin/S.cap/etc. lived only in memory, and applyBiz()
+ * (run on every load, and again every time "Use my catalogue" or the biz switcher runs) always overwrote them
+ * from FRESH/B.margin/B.cap. Nothing anywhere ever wrote what was typed back out; a refresh could not help but
+ * lose it. labLoadSettings() restores whatever was last saved for THIS shop, over the fresh defaults — same
+ * order as before, just not the last word any more.
+ */
+var SETTINGS_KEYS=['margin','cap','custOn','belowCost','belowAct','round','costSource'];
+/** ⭐⭐⭐ scoped to the signed-in shop, never global — [[feedback-shop-scoped-local-store]]: settings typed for
+ * one shop must not silently apply to whatever shop is tested next on the same machine. Falls back to one
+ * shared 'demo' bucket only when nobody is signed in (the two sample books have no shop of their own). */
+function labSettingsKey(){
+  var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
+  return 'cb_offerlab_settings_'+((sess&&(sess.entity||sess.name))||'demo');
+}
+function labSaveSettings(){
+  try{
+    var out={}; SETTINGS_KEYS.forEach(function(k){ out[k]=S[k]; });
+    localStorage.setItem(labSettingsKey(), JSON.stringify(out));
+  }catch(_){ /* a settings save that fails costs nothing beyond this one refresh not remembering it */ }
+}
+function labLoadSettings(){
+  try{
+    var raw=localStorage.getItem(labSettingsKey()); if(!raw) return;
+    var saved=JSON.parse(raw);
+    SETTINGS_KEYS.forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+  }catch(_){}
+}
 function applyBiz(id){
   var B=BIZ[id];
   CATS=B.cats.map(function(c){return {id:c[0],name:c[1]};});
@@ -672,6 +708,17 @@ function applyBiz(id){
   P=B.prods.map(function(p){return {id:p[0],name:p[1],cat:p[2],price:p[3],cost:p[4],modifiers:Array.isArray(p[5])?p[5]:[]};});
   S=Object.assign({},FRESH,{biz:id,margin:B.margin,cap:B.cap},
     JSON.parse(JSON.stringify(B.d)));
+  labLoadSettings();
+  /**
+   * ⚠️⚠️ [found live, 2026-09-26] "if the previous panel loyalty bonus and the percentage is set, it has to
+   * come to this panel automatically, why it is not cascading?" Real gap: S.custOn/S.cap (screen 0, shop-wide)
+   * and S.loyOn/S.loyPct (screen 2, per-offer) are two different flags, and the per-offer one was hardcoded to
+   * start off/0 in FRESH regardless of what screen 0 said. An offer now starts with loyalty inherited from the
+   * shop-wide setting — still a per-offer toggle after this, loyBar() lets it be turned off or re-percented for
+   * just this one offer, exactly as before; only the STARTING point cascades now.
+   */
+  S.loyOn = S.custOn;
+  S.loyPct = S.cap;
 }
 function setBiz(id){var st=S.step; applyBiz(id); S.step=st; S.applied=false; render();}
 function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
@@ -700,7 +747,9 @@ function avgM(){var pb=0,cb=0;
   P.forEach(function(p){ if(p.cost==null) return; pb+=p.price; cb+=p.cost; });
   return pb>0?(pb-cb)/pb:0;}
 function catItems(id){return P.filter(function(p){return p.cat===id;});}
-function items(){ return S.scope==='item' ? (byId(S.itemId)?[byId(S.itemId)]:[]) : catItems(S.catId); }
+/* ⭐ scope='item' now means "one or more specific items" — S.itemIds, not S.itemId. items() already returned
+ * an array either way, so this is the only line the multi-item picker needed to change in the engine itself. */
+function items(){ return S.scope==='item' ? (S.itemIds||[]).map(byId).filter(Boolean) : catItems(S.catId); }
 function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return GOALS[i];}
 
 /**
@@ -719,7 +768,9 @@ function goalOf(id){for(var i=0;i<GOALS.length;i++) if(GOALS[i].id===id) return 
  */
 function edit(k,v){
   var af=document.activeElement, key=af&&af.getAttribute&&af.getAttribute('data-key'), start=af&&af.selectionStart, end=af&&af.selectionEnd;
-  S[k]=v; S.applied=false; render();
+  S[k]=v; S.applied=false;
+  if(SETTINGS_KEYS.indexOf(k)>=0) labSaveSettings();   /* margin, cap, loyalty on/off, etc. survive a refresh */
+  render();
   if(key){ var el=document.querySelector('[data-key="'+key+'"]'); if(el){ el.focus(); try{ el.setSelectionRange(start,end); }catch(_){} } }
 }
 function editKeep(k,v){ S[k]=v; render(); }
@@ -765,21 +816,52 @@ function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v
  * — the same class of bug the Lab's own number fields were fixed for, avoided here by construction instead
  * of by a fix.
  */
-var OVL={q:'',cat:null,noCostOnly:false};
+var OVL={q:'',cat:null,noCostOnly:false,pickMode:null,pickFn:null};
 function priceOvOpen(){ var el=document.getElementById('priceOverlay'); return !!(el&&el.classList.contains('on')); }
-function openPriceOverlay(){
-  OVL={q:'',cat:null,noCostOnly:false};
+/**
+ * ⭐⭐⭐ [2026-09-26] ONE OPEN, TWO JOBS — `pickMode`/`pickFn` turn this same overlay into a category/item
+ * PICKER (selectOf() below) instead of the cost editor it was built for; null (the ordinary call, unchanged)
+ * is exactly what "Typed against each item"/"Open the price list" already did. Nothing about the cost-editing
+ * path changes shape — it just reads OVL.pickMode being falsy the same way it always implicitly was.
+ */
+function openOverlay(pickMode,pickFn,picked){
+  OVL={q:'',cat:null,noCostOnly:false,pickMode:pickMode||null,pickFn:pickFn||null,picked:picked||[]};
   var el=document.getElementById('priceOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('ovlSearch'); if(s) s.value='';
+  var t=document.getElementById('ovlTitle');
+  if(t) t.textContent = pickMode==='cat' ? 'Choose a category' : pickMode==='item' ? 'Choose a product'
+    : pickMode==='apply' ? 'Apply this offer to' : 'Price list';
   paintPriceOvCats(); paintPriceOvBody();
   if(s) s.focus();
 }
+function openPriceOverlay(){ openOverlay(null,null); }
+/** ⭐ selectOf()'s own opener — 'cat' picks straight off the category chips, 'item' picks a product row */
+function openPickOverlay(kind,fn){ openOverlay(kind,fn); }
+/** ⭐ the "Apply it to" picker — scopeRow()'s own opener. Starts pre-checked with whatever S.itemIds already
+ * holds (picking up where you left off), never with a category pre-selected — a whole category is committed
+ * the moment you click it, not something you "start from". */
+function openApplyPicker(){ openOverlay('apply', null, (S.scope==='item'&&S.itemIds)?S.itemIds.slice():[]); }
 /* ⭐ setCost() already calls render() on every edit, so this is belt-and-braces — but cheap, and it matches
  * the rule closeModLab() now follows for exactly the same class of bug. */
 function closePriceOverlay(){ var el=document.getElementById('priceOverlay'); if(el) el.classList.remove('on'); render(); }
 function priceOvSearch(v){ OVL.q=v; paintPriceOvBody(); }
 function priceOvCat(id){ OVL.cat=(OVL.cat===id?null:id); paintPriceOvCats(); paintPriceOvBody(); }
+/** ⭐ a chip pick (category mode) or a row pick (item mode) — the setter's name travelled in with OVL.pickFn,
+ * so there is nothing to thread through every chip/row's own onclick beyond the id itself */
+function overlayPick(id){
+  var fn=OVL.pickFn; closePriceOverlay();
+  if(typeof window[fn]==='function') window[fn](id);
+}
+/** ⭐ 'apply' mode's own three actions — a checkbox toggle (stays open), "use the whole category" (commits and
+ * closes, DYNAMIC — see scopeRow()'s own comment), and "Done" (commits the checked list and closes). */
+function overlayApplyToggle(id){
+  var i=OVL.picked.indexOf(id);
+  if(i>=0) OVL.picked.splice(i,1); else OVL.picked.push(id);
+  paintPriceOvBody();
+}
+function overlayApplyWholeCategory(id){ closePriceOverlay(); applyWholeCategory(id); }
+function overlayApplyDone(){ var picked=OVL.picked.slice(); closePriceOverlay(); applyItemList(picked); }
 /**
  * ⚠️⚠️ EVERY ROW STAYS, ALWAYS — Athi: "when i updated the cost price, that row is getting removed... the
  * current design should allow to edit the value, it has to showcase all the updated value and the empty row
@@ -806,11 +888,19 @@ function priceOvCats(){
 }
 function paintPriceOvCats(){
   var el=document.getElementById('ovlCats'); if(!el) return;
-  var cats=priceOvCats(), noCostN=P.filter(function(p){return p.cost==null;}).length;
+  var cats=priceOvCats();
+  /* ⭐ 'cat' mode: the chips ARE the answer — clicking one picks it and closes, same chip list the cost
+     editor already filters by, no second "list of categories" built anywhere. */
+  if(OVL.pickMode==='cat'){
+    el.innerHTML = cats.map(function(c){ return '<button class="ovlchip" onclick="overlayPick(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('');
+    return;
+  }
+  var noCostN=P.filter(function(p){return p.cost==null;}).length;
   el.innerHTML='<button class="ovlchip'+(!OVL.cat?' on':'')+'" onclick="priceOvCat(null)">All</button>'+
     cats.map(function(c){ return '<button class="ovlchip'+(OVL.cat===c.id?' on':'')+'" onclick="priceOvCat(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('')+
-    '<span style="flex:1"></span>'+
-    '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>';
+    (OVL.pickMode==='item'||OVL.pickMode==='apply' ? '' :   /* pick modes still filter by category, never need this toggle */
+      '<span style="flex:1"></span>'+
+      '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>');
 }
 /**
  * ⭐ SALE PRICE, RIGHT THERE BESIDE COST — Athi: "bring the sale price also on the right hand side… so it
@@ -828,6 +918,48 @@ function paintPriceOvBody(){
   var body=document.getElementById('ovlBody'), foot=document.getElementById('ovlFoot');
   if(!body) return;
   var list=priceOvList();
+  /**
+   * ⭐⭐⭐ 'apply' mode — the unified "Apply it to" picker (scopeRow()). Checkboxes build a static item list;
+   * filtering down to one category surfaces a banner offering the DYNAMIC alternative instead ("Use all of
+   * X" — see scopeRow()'s own comment on why that stays a real category, not a snapshot). Any row already
+   * covered by another live offer is flagged, per Athi: "if any of the item is already in the offer it has
+   * to highlight, which offer it is already included" — offerCoveringItem() is the same overlap test clash()
+   * runs after a save, asked here BEFORE one, so a collision is seen while picking, not discovered after.
+   */
+  if(OVL.pickMode==='apply'){
+    var banner = OVL.cat ? '<div class="hs" style="padding:12px 20px;border-bottom:1px solid var(--hair);'+
+      'display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span>Want the offer to follow the whole '+
+      esc(catName(OVL.cat))+' category automatically — including anything added to it later?</span>'+
+      '<button class="btn sm" onclick="overlayApplyWholeCategory(\''+OVL.cat+'\')">Use all of '+esc(catName(OVL.cat))+'</button></div>' : '';
+    body.innerHTML = banner + (!list.length
+      ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
+      : '<table class="ovltbl"><tbody>'+list.map(function(p){
+          var checked=OVL.picked.indexOf(p.id)>=0, hit=offerCoveringItem(p);
+          return '<tr class="ovlpickrow'+(hit?' ovlinother':'')+'" style="cursor:pointer" onclick="overlayApplyToggle(\''+p.id+'\')">'+
+            '<td style="width:30px"><input type="checkbox" '+(checked?'checked':'')+' '+
+              'onclick="event.stopPropagation();overlayApplyToggle(\''+p.id+'\')"></td>'+
+            '<td class="ovlname">'+esc(p.name)+(hit?'<div style="font-size:11.5px;color:var(--amber-i);font-weight:600;margin-top:2px">Already in “'+esc(hit.title)+'”</div>':'')+'</td>'+
+            '<td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
+            '<td class="ovlprice">'+M0(p.price)+'</td></tr>';
+        }).join('')+'</tbody></table>');
+    if(foot) foot.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+      '<span>'+OVL.picked.length+' item'+(OVL.picked.length===1?'':'s')+' checked</span>'+
+      '<button class="btn pri sm" onclick="overlayApplyDone()">Done</button></div>';
+    return;
+  }
+  /* ⭐ 'item' mode: click a ROW to pick it — same search box, same category filter, same scrolling body the
+     cost editor uses; just name + category + price, and a click instead of a cost cell. */
+  if(OVL.pickMode==='item'){
+    body.innerHTML = !list.length
+      ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
+      : '<table class="ovltbl"><tbody>'+list.map(function(p){
+          return '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\''+p.id+'\')">'+
+            '<td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
+            '<td class="ovlprice">'+M0(p.price)+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    if(foot) foot.innerHTML='<div>'+list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' — click one to pick it</div>';
+    return;
+  }
   /* ⚠️⚠️⚠️ [OFFR-04] costBlind reads what the SERVER already decided (COST_ACCESS.can_see_costs) — it
      disables the input proactively, but the actual protection is that a cost-blind caller's own p.cost is
      already null here (the server never sent it). Disabling this saves a rejected save, nothing more. */
@@ -998,41 +1130,24 @@ function seg(k,opts,fn){
 }
 /**
  * ── ⭐⭐⭐ SEARCH, NOT A DROPDOWN TO SCROLL (Athi: "the real catalogue, and the search function all should
- * be in place here... like till application for the catalogue") ──────────────────────────────────────────
+ * be in place here... like till application for the counter") ──────────────────────────────────────────
  *
- * A plain <input list=datalist> — the browser's OWN type-to-filter, not a hand-built combobox: no custom
- * keyboard handling to get wrong, no dropdown-positioning code to maintain, and it never re-renders anything
- * until a real pick is made (onchange, not oninput) — sidestepping the whole class of bug edit() just had to
- * be fixed for, by using the one input type that was never at risk of it.
- * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — one registry, the way edit() became one
- * choke point for every number field, rather than a second picker mechanism living beside the old one.
+ * ⚠️⚠️⚠️ [REBUILT AGAIN, 2026-09-26] First this was an <input list=datalist> (unreliable native popup —
+ * "the category list was nicely appearing... now it is not appearing at all"). Replaced with a hand-built
+ * dropdown of its own. Athi, on THAT: "why are you not reusing the existing component?" — right question:
+ * this page already has a real, scrollable, searchable product list — #priceOverlay, opened today from
+ * "Typed against each item," whose OWN header comment says "any future icon that needs the whole catalogue
+ * in front of someone... opens this same panel rather than growing a second one." A second one is exactly
+ * what got built. selectOf() now just opens THAT overlay in a picking mode (openPickOverlay, below); no
+ * second list-rendering, filtering or scrolling mechanism of its own.
+ * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — item, category, gift, bundle A/B, pair
+ * A/B all open the one overlay, never a picker mechanism of their own.
  */
-/**
- * ⚠️⚠️ [found live, 2026-09-26] "only one item is appearing" / "the category list is not appearing" — the
- * field opened pre-filled with the CURRENT pick's own text, and a browser's native datalist filters its
- * suggestions against whatever is already typed. A box already holding "Tomato — ₹40.00" matches only itself,
- * so clicking in showed a list of one, on the item picker and the category picker alike — anywhere something
- * had already been picked. `onfocus` clears it so the full list is what a click reveals; leaving it empty and
- * clicking away is a real value-change (blank → the old text), which `onchange` already sends to searchPick(),
- * which already restores the prior pick via render() when nothing was typed. No new revert path needed.
- */
-var _searchLists = {};
 function selectOf(list,val,fn){
   var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
-  var dlid = 'dl-'+fn;
-  _searchLists[dlid] = list;
-  return '<div class="inp"><input type="text" list="'+dlid+'" value="'+esc(cur?cur[1]:'')+'" placeholder="Search…" '+
-    'onfocus="this.value=\'\'" '+
-    'onchange="searchPick(\''+dlid+'\',\''+fn+'\',this.value)"></div>'+
-    '<datalist id="'+dlid+'">'+list.map(function(o){ return '<option value="'+esc(o[1])+'">'; }).join('')+'</datalist>';
-}
-/** ⭐ resolves the picked TEXT back to the id and calls the exact setter selectOf() always called —
- * unmatched text (a typo, an empty field) re-renders rather than guesses, snapping back to the last real pick */
-function searchPick(dlid,fnName,text){
-  var list = _searchLists[dlid] || [];
-  var hit = list.filter(function(o){ return o[1]===text; })[0];
-  if(hit && typeof window[fnName]==='function') window[fnName](hit[0]);
-  else render();
+  return '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" '+
+    'onclick="openPickOverlay(\''+(fn==='setCat'?'cat':'item')+'\',\''+fn+'\')">'+
+    '<span>'+(cur?esc(cur[1]):'Choose…')+'</span><span style="color:var(--faint)">▾</span></button>';
 }
 function prodOpts(list){ return list.map(function(p){
   return [p.id, p.name+'  —  '+M0(p.price)];}); }
@@ -1062,13 +1177,26 @@ function renderS0(){
        '<div class="f" style="flex:1;min-width:150px"><span class="lbl">Current margin</span>'+
          '<div class="inp" style="background:var(--panel);border-style:dashed"><input value="'+am+
            '%" disabled style="font-family:\'IBM Plex Mono\',monospace"></div></div>'+
+       /**
+        * ⚠️⚠️ [2026-09-26] NOT THE FULL `.loy` BAR — that component's own CSS comment says why: "the loyalty
+        * bar — one switch, one number, never a column." Squeezed into a third column here it brought its own
+        * border/background/padding sized for a full-width bar, sitting visibly taller than the plain `.inp`
+        * boxes either side of it — the exact "alignment... loyalty bonus tab" Athi flagged live. Same toggle
+        * switch, same fields, but built to the same 48px `.inp` height as its neighbours instead. */
        '<div class="f" style="flex:1;min-width:190px"><span class="lbl">Loyalty bonus</span>'+
-         '<div class="loy '+(S.custOn?'on':'')+'">'+
+         '<div class="inp" style="gap:10px;padding-inline-start:12px;justify-content:flex-start">'+
            '<button class="sw '+(S.custOn?'on':'')+'" onclick="edit(\'custOn\','+(!S.custOn)+')" '+
-             'role="switch" aria-checked="'+(S.custOn?'true':'false')+'"></button>'+
-           '<span class="lt">'+(S.custOn?'up to':'off')+'</span>'+
-           (S.custOn?'<div class="inp" style="width:80px">'+
-             '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" data-key="cap" oninput="edit(\'cap\',this.value)"><span>%</span></div>':'')+
+             'role="switch" aria-checked="'+(S.custOn?'true':'false')+'" style="flex:0 0 auto"></button>'+
+           (S.custOn
+             ? '<span style="font-size:13px;color:var(--muted);white-space:nowrap">up to</span>'+
+               '<input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.cap==null?'':String(S.cap))+'" '+
+                 /* ⚠️⚠️ [found live, 2026-09-26] "10" showed clipped as "1…" — width:38px looked generous until
+                    `.inp input`'s own global rule (`padding:0 11px`, 22px total) ate most of it, leaving ~16px
+                    for the digits themselves. Widened; the box has room to spare either way. */
+                 'data-key="cap" oninput="edit(\'cap\',this.value)" style="width:58px;padding-inline:0;text-align:right;'+
+                 'border:0;outline:0;background:transparent;font-family:\'IBM Plex Mono\',monospace;font-size:16px;font-weight:600">'+
+               '<span>%</span>'
+             : '<span style="font-size:14px;color:var(--muted)">off</span>')+
          '</div></div>'+
      '</div>'+
      (S.custOn&&over?'<div class="note n-bad" style="margin-top:12px"><span class="ic">!</span><div>A '+num(S.cap)+
@@ -1215,23 +1343,37 @@ function nameCell(p){
 }
 
 /* ═══ SCREEN 2 · MAKE IT ══════════════════════════════════════════════ */
+/**
+ * ⭐⭐⭐ [2026-09-26] ONE PICKER, NOT TWO — Athi: "can the same multi checkbox can be used for either single
+ * item or for entire category with select all option, why do we need 2?" Right question. The old "A whole
+ * category / One item" toggle plus two separate pickers is now one button that opens #priceOverlay once, in
+ * 'apply' mode: check any number of specific products (a static list — exactly what was picked, never more),
+ * or — while filtered to one category — "Use the whole X category" instead (still a real, DYNAMIC category
+ * scope, not a snapshot of today's items in it: Athi, same conversation: "if we apply for a category, then it
+ * has to be applied for the entire category, if a new product is added, then it has to ask specifically, are
+ * you happy to apply the offer as well" — that ask-on-new-product step is catalogue-write territory, a real
+ * follow-up, not part of this picker; what this picker preserves is that the SAVED scope stays `category:X`,
+ * not `item_ids:[...]`, so that follow-up has something dynamic to hook into later).
+ * ⚠️ `catOnly` (free/cheapest's OWN picker, which only ever means a category) is untouched — it still opens
+ * the simple single-chip category picker via selectOf(), unrelated to this.
+ */
 function scopeRow(catOnly){
-  var h='<div class="f"><span class="lbl">Apply it to</span>';
   if(catOnly){
-    h+=selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat');
-    h+='</div>';
-    return h;
+    return '<div class="f"><span class="lbl">Apply it to</span>'+
+      selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat')+'</div>';
   }
-  h+='<div class="seg" style="margin-bottom:10px">'+
-     '<button class="'+(S.scope==='cat'?'on':'')+'" onclick="edit(\'scope\',\'cat\')">A whole category</button>'+
-     '<button class="'+(S.scope==='item'?'on':'')+'" onclick="edit(\'scope\',\'item\')">One item</button></div>';
-  h+= S.scope==='cat'
-      ? selectOf(CATS.map(function(c){return [c.id,c.name];}),S.catId,'setCat')
-      : selectOf(prodOpts(P),S.itemId,'setItem');
-  return h+'</div>';
+  var label = S.scope==='cat' ? ('Whole category — '+esc(catName(S.catId)||'—'))
+    : (S.itemIds && S.itemIds.length) ? (S.itemIds.length===1 ? esc((byId(S.itemIds[0])||{}).name||'1 item') : S.itemIds.length+' items chosen')
+    : 'Choose…';
+  return '<div class="f"><span class="lbl">Apply it to</span>'+
+    '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" '+
+    'onclick="openApplyPicker()"><span>'+label+'</span><span style="color:var(--faint)">▾</span></button></div>';
 }
 function setCat(v){ S.catId=v; render(); }
-function setItem(v){ S.itemId=v; render(); }
+/** ⭐ the overlay's own commits — replaces setItem() for THIS picker only; setItem()/S.itemId stay exactly as
+ * they were for the "free/same shape" picker, which is a genuinely different, single-item setting. */
+function applyWholeCategory(id){ S.scope='cat'; S.catId=id; S.applied=false; render(); }
+function applyItemList(ids){ S.scope='item'; S.itemIds=ids; S.applied=false; render(); }
 function setShape(v){ S.freeShape=v; S.applied=false; render(); }
 function setPair(which,v){ S[which]=v; render(); }
 
@@ -1265,7 +1407,7 @@ function renderS2(){
   var h='<div class="card pad">'+
     '<h2 class="h">'+g.n+'</h2><p class="hs">'+cfgLine()+'</p>'+
     '<div style="margin-top:16px">'+cfgHTML()+'</div>'+
-    loyBar()+
+    (g.kind==='line'?'':loyBar())+   /* percent/amount/qty already placed loyBar() themselves, in the new order */
     '<div class="acts">'+
       '<button class="btn pri" onclick="apply()">'+(S.applied?'Work it out again':'Work it out')+'</button>'+
       (S.applied?'<button class="btn" onclick="saveOffer()">Save for review</button>':'')+
@@ -1290,18 +1432,29 @@ function cfgLine(){
   return '';
 }
 
+/**
+ * ⭐⭐⭐ [2026-09-26] REORDERED — Athi: "the order can change a bit, first show the percentage offer to be
+ * declared, next box show the loyalty bonus, next is apply for product." percent/amount/qty (the "line" kind
+ * goals) now build the offer's own number first, loyBar() second, "Apply it to" last — the picker being a
+ * single one-line button now (see scopeRow()'s own comment) is what makes stacking these three read cleanly
+ * rather than needing the old side-by-side `.two` grid. renderS2() skips its own loyBar() call for these three
+ * goals so it isn't rendered twice.
+ */
 function cfgHTML(){
   switch(S.goal){
     case 'percent':
-      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off</span>'+
-        '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div></div>';
+      return '<div class="f"><span class="lbl">Take off</span>'+
+        '<div class="inp"><input type="text" inputmode="decimal" min="0" max="95" value="'+esc(S.pctOff==null?'':String(S.pctOff))+'" data-key="pctOff" oninput="edit(\'pctOff\',this.value)"><span>%</span></div></div>'+
+        loyBar()+scopeRow();
     case 'amount':
-      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Take off each</span>'+
+      return '<div class="f"><span class="lbl">Take off each</span>'+
         '<div class="inp"><span>₹</span><input type="text" inputmode="decimal" min="0" value="'+esc(S.rsOff==null?'':String(S.rsOff))+'" data-key="rsOff" oninput="edit(\'rsOff\',this.value)"></div>'+
-        '<div class="hint">A different percentage on each item.</div>';
+        '<div class="hint">A different percentage on each item.</div></div>'+
+        loyBar()+scopeRow();
     case 'qty':
-      return '<div class="two">'+scopeRow()+'<div class="f"><span class="lbl">Steps</span>'+
-        '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div>';
+      return '<div class="f"><span class="lbl">Steps</span>'+
+        '<div class="hint" style="margin-top:0">Edit them in the table headings. Three at most.</div></div>'+
+        loyBar()+scopeRow();
     case 'free':
       var h='<span class="lbl">Which shape?</span><div class="shapes">'+SHAPES.map(function(s){
         return '<button class="shape '+(S.freeShape===s.id?'on':'')+'" onclick="setShape(\''+s.id+'\')">'+
@@ -1401,7 +1554,7 @@ function cartPreviewItems(){
     else if(S.freeShape==='anything') add(byId(S.giftId));
     else if(S.freeShape==='cheapest') catItems(S.catId).slice(0,2).forEach(add);
   } else if(S.goal==='percent'||S.goal==='amount'||S.goal==='qty'){
-    if(S.scope==='item') add(byId(S.itemId)); else catItems(S.catId).slice(0,2).forEach(add);
+    if(S.scope==='item') (S.itemIds||[]).forEach(function(id){ add(byId(id)); }); else catItems(S.catId).slice(0,2).forEach(add);
   } else return [];   /* spend / ship / band: the three-bill sightline already answers this */
   for(var i=0;i<pool.length && picked.length<3;i++) add(pool[i]);
   return picked.slice(0,3);
@@ -1409,7 +1562,7 @@ function cartPreviewItems(){
 function cartPreviewLines(items){
   return items.map(function(p){
     var qty=1;
-    if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && p.id===S.itemId) qty=top.qty; }
+    if(S.goal==='qty'){ var ts=tiers(), top=ts[ts.length-1]; if(top && S.scope==='item' && (S.itemIds||[]).indexOf(p.id)>=0) qty=top.qty; }
     else if(S.goal==='free'&&S.freeShape==='same'&&p.id===S.itemId) qty=(counts()[0]||1)+1;
     else if(S.goal==='free'&&S.freeShape==='cheapest') qty=Math.max(2,num(S.cheapN));
     return { key:p.id, item_id:p.id, name:p.name, category:p.cat, qty:qty, unitPrice:p.price, cost:p.cost };
@@ -1744,7 +1897,10 @@ function eitherNote(giftValue,base){
 }
 
 /* ═══ SCREEN 3 · SAVED OFFERS ═════════════════════════════════════════ */
-var KEEP=['goal','scope','catId','itemId','pctOff','rsOff','tiers','freeShape','giftId',
+/* ⚠️⚠️ itemIds ADDED — the multi-item "Apply it to" picker's own field, alongside itemId (still needed for
+   the free/same-shape picker, an unrelated setting). Without this, a saved offer's specific-items scope was
+   silently dropped on save — snapshot() only ever copies what KEEP names. */
+var KEEP=['goal','scope','catId','itemId','itemIds','pctOff','rsOff','tiers','freeShape','giftId',
   'freeCounts','bills','cheapN','pairA','pairB','bunA','bunB','bunPrice','spendAt','spendVal',
   'shipAt','shipCharge','shipCost','bandLo','bandHi','margin','cap','belowCost','belowAct',
   'round','loyOn','loyPct'];
@@ -1756,7 +1912,10 @@ function costMoved(sv){ var now=costPrint(), n=0;
 
 function label(){
   var g=goalOf(S.goal), where = (S.goal==='percent'||S.goal==='amount'||S.goal==='qty')
-    ? (S.scope==='item'?(byId(S.itemId)||{}).name:catName(S.catId)) : '';
+    ? (S.scope==='item'
+        ? ((S.itemIds||[]).length===1 ? (byId(S.itemIds[0])||{}).name : (S.itemIds||[]).length+' items')
+        : catName(S.catId))
+    : '';
   var what='';
   if(S.goal==='percent') what=num(S.pctOff)+'% off';
   else if(S.goal==='amount') what=M0(num(S.rsOff))+' off each';
@@ -1945,7 +2104,7 @@ function buildBiz(key, rows, who){
   var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
   var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
   BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
-    d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
+    d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', itemIds:firstItem?[firstItem]:[], pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,
         spendAt:500, spendVal:50, buyId:firstItem, getId:firstItem, getOff:100,
         bunA:firstItem, bunB:secondItem, bunPrice:0, shipAt:300, shipCharge:0, bandLo:50, bandHi:2000,
         custId:null } };
@@ -2049,7 +2208,7 @@ function subKindOf(){
 }
 /** the concrete rule this screen is CURRENTLY showing, in the exact field names lib/offers-engine.js reads */
 function ruleParamsOf(){
-  var scopeIds=S.scope==='item'?{item_ids:[S.itemId]}:{category:S.catId};
+  var scopeIds=S.scope==='item'?{item_ids:(S.itemIds||[])}:{category:S.catId};
   if(S.goal==='percent') return {percent:num(S.pctOff), scope:'line', applies_to:scopeIds};
   if(S.goal==='amount') return {amount:num(S.rsOff), scope:'line', applies_to:scopeIds};
   if(S.goal==='qty') return {tiers:tiers(), scope:'line', applies_to:scopeIds};
@@ -2126,22 +2285,52 @@ async function dropSaved(id){
 }
 function toastSay(t){ var n=document.getElementById('labtoast'); if(n){ n.textContent=t; n.hidden=false; } else alert(t); }
 
-/* commercetools' rule, borrowed: only ONE item-level discount may apply to an
-   item (highest ranked wins); bill-level ones can stack. So two live offers
-   touching the same shelf is a collision worth naming, not a silent race. */
+/**
+ * ── commercetools' rule, borrowed: only ONE item-level discount may apply to an item (highest ranked wins);
+ * bill-level ones can stack. So two live offers touching the same shelf is a collision worth naming, not a
+ * silent race.
+ *
+ * ⭐⭐⭐ [2026-09-26] ONE SHARED "DOES THIS SCOPE COVER THAT ITEM" TEST — lifted out of clash() so
+ * overlayApplyRows() (the new checkbox picker) can ask the SAME question per-row, live, while picking, rather
+ * than only after saving. `snap.itemIds` is the current shape; `snap.itemId` (singular) is read too, so an
+ * older saved offer from before this field existed is still understood correctly.
+ */
+function scopeCoversItem(snap,p){
+  if(!p) return false;
+  if(snap.scope==='cat') return p.cat===snap.catId;
+  var ids=(snap.itemIds&&snap.itemIds.length)?snap.itemIds:(snap.itemId?[snap.itemId]:[]);
+  return ids.indexOf(p.id)>=0;
+}
+function scopesOverlap(a,b){
+  if(a.scope==='cat'&&b.scope==='cat') return a.catId===b.catId;
+  var aIds=(a.itemIds&&a.itemIds.length)?a.itemIds:(a.itemId?[a.itemId]:[]);
+  var bIds=(b.itemIds&&b.itemIds.length)?b.itemIds:(b.itemId?[b.itemId]:[]);
+  if(a.scope==='item'&&b.scope==='item') return aIds.some(function(id){return bIds.indexOf(id)>=0;});
+  var itemSide=a.scope==='item'?aIds:bIds, catSide=a.scope==='item'?b.catId:a.catId;
+  return itemSide.some(function(id){ var p=byId(id); return p&&p.cat===catSide; });
+}
 function clash(sv){
   if(['percent','amount','qty'].indexOf(sv.snap.goal)<0) return null;
-  var mine=sv.snap.scope==='item'?'i:'+sv.snap.itemId:'c:'+sv.snap.catId;
   var other=SAVED.filter(function(x){
     if(x.id===sv.id||x.biz!==sv.biz) return false;
     if(x.status==='draft'&&sv.status==='draft') return false;
     if(['percent','amount','qty'].indexOf(x.snap.goal)<0) return false;
-    var his=x.snap.scope==='item'?'i:'+x.snap.itemId:'c:'+x.snap.catId;
-    return his===mine || (his[0]!==mine[0] &&
-      (his[0]==='i'? (byId(his.slice(2))||{}).cat===mine.slice(2)
-                   : (byId(mine.slice(2))||{}).cat===his.slice(2)));
+    return scopesOverlap(sv.snap,x.snap);
   });
   return other.length?other.length:null;
+}
+/** ⭐ Athi, live: "if any of the item is already in the offer it has to highlight, which offer it is already
+ * included." The same overlap test clash() uses, asked per PRODUCT instead of per saved-offer-pair, so the
+ * picker can say so BEFORE a save ever happens, not just warn after. First match wins (rare in practice —
+ * a shop with two live overlapping offers already has a clash() warning on both of them). */
+function offerCoveringItem(p){
+  for(var i=0;i<SAVED.length;i++){
+    var x=SAVED[i];
+    if(x.biz!==S.biz||x.status==='retired') continue;
+    if(['percent','amount','qty'].indexOf(x.snap.goal)<0) continue;
+    if(scopeCoversItem(x.snap,p)) return x;
+  }
+  return null;
 }
 
 /**

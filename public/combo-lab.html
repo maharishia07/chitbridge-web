@@ -85,6 +85,17 @@ button{cursor:pointer}
 .inp select{font-family:'IBM Plex Sans',sans-serif;font-size:15px;font-weight:500}
 .inp:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-t)}
 .f{margin-bottom:14px}
+/* ⭐⭐⭐ [2026-09-26] a hand-rendered list, not a native datalist popup — see offer-lab-next.html's own
+   comment beside selectOf() for why. Kept byte-for-byte identical to that copy. */
+.combo{position:relative}
+.comboList{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;max-height:260px;
+  overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:11px;
+  box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.comboList.on{display:block}
+.comboOpt{padding:10px 14px;font-size:15px;cursor:pointer}
+.comboOpt:hover,.comboOpt.hi{background:var(--green-t);color:var(--green-d)}
+.comboOpt+.comboOpt{border-top:1px solid var(--hair)}
+.comboEmpty{padding:10px 14px;font-size:14px;color:var(--muted)}
 
 /* ── the results table: Shopify / Tally pattern — profit in rupees, margin as a percent,
       plain adjacent columns. No invented chart. ── */
@@ -790,20 +801,29 @@ function setPrice(id,v){ var p=byId(id); if(!p) return; p.price=Math.max(0,num(v
  * — the same class of bug the Lab's own number fields were fixed for, avoided here by construction instead
  * of by a fix.
  */
-var OVL={q:'',cat:null,noCostOnly:false};
+var OVL={q:'',cat:null,noCostOnly:false,pickMode:null,pickFn:null};
 function priceOvOpen(){ var el=document.getElementById('priceOverlay'); return !!(el&&el.classList.contains('on')); }
-function openPriceOverlay(){
-  OVL={q:'',cat:null,noCostOnly:false};
+/* ⭐⭐⭐ [2026-09-26] one open, two jobs — see offer-lab-next.html's own comment on this exact function */
+function openOverlay(pickMode,pickFn){
+  OVL={q:'',cat:null,noCostOnly:false,pickMode:pickMode||null,pickFn:pickFn||null};
   var el=document.getElementById('priceOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('ovlSearch'); if(s) s.value='';
+  var t=document.getElementById('ovlTitle');
+  if(t) t.textContent = pickMode==='cat' ? 'Choose a category' : pickMode==='item' ? 'Choose a product' : 'Price list';
   paintPriceOvCats(); paintPriceOvBody();
   if(s) s.focus();
 }
+function openPriceOverlay(){ openOverlay(null,null); }
+function openPickOverlay(kind,fn){ openOverlay(kind,fn); }
 /* ⭐ setCost() already calls render() on every edit, so this is belt-and-braces — but cheap, and it matches
  * the rule closeModLab() now follows for exactly the same class of bug. */
 function closePriceOverlay(){ var el=document.getElementById('priceOverlay'); if(el) el.classList.remove('on'); render(); }
 function priceOvSearch(v){ OVL.q=v; paintPriceOvBody(); }
+function overlayPick(id){
+  var fn=OVL.pickFn; closePriceOverlay();
+  if(typeof window[fn]==='function') window[fn](id);
+}
 function priceOvCat(id){ OVL.cat=(OVL.cat===id?null:id); paintPriceOvCats(); paintPriceOvBody(); }
 /**
  * ⚠️⚠️ EVERY ROW STAYS, ALWAYS — Athi: "when i updated the cost price, that row is getting removed... the
@@ -831,11 +851,17 @@ function priceOvCats(){
 }
 function paintPriceOvCats(){
   var el=document.getElementById('ovlCats'); if(!el) return;
-  var cats=priceOvCats(), noCostN=P.filter(function(p){return p.cost==null;}).length;
+  var cats=priceOvCats();
+  if(OVL.pickMode==='cat'){
+    el.innerHTML = cats.map(function(c){ return '<button class="ovlchip" onclick="overlayPick(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('');
+    return;
+  }
+  var noCostN=P.filter(function(p){return p.cost==null;}).length;
   el.innerHTML='<button class="ovlchip'+(!OVL.cat?' on':'')+'" onclick="priceOvCat(null)">All</button>'+
     cats.map(function(c){ return '<button class="ovlchip'+(OVL.cat===c.id?' on':'')+'" onclick="priceOvCat(\''+c.id+'\')">'+esc(c.name)+'</button>'; }).join('')+
-    '<span style="flex:1"></span>'+
-    '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>';
+    (OVL.pickMode==='item' ? '' :
+      '<span style="flex:1"></span>'+
+      '<button class="ovlchip'+(OVL.noCostOnly?' on':'')+'" onclick="priceOvToggleNoCost()">Missing cost only ('+noCostN+')</button>');
 }
 /**
  * ⭐ SALE PRICE, RIGHT THERE BESIDE COST — Athi: "bring the sale price also on the right hand side… so it
@@ -853,6 +879,17 @@ function paintPriceOvBody(){
   var body=document.getElementById('ovlBody'), foot=document.getElementById('ovlFoot');
   if(!body) return;
   var list=priceOvList();
+  if(OVL.pickMode==='item'){
+    body.innerHTML = !list.length
+      ? '<div class="hs" style="padding:24px">No products match'+(OVL.q?' "'+esc(OVL.q)+'"':'')+'.</div>'
+      : '<table class="ovltbl"><tbody>'+list.map(function(p){
+          return '<tr class="ovlpickrow" style="cursor:pointer" onclick="overlayPick(\''+p.id+'\')">'+
+            '<td class="ovlname">'+esc(p.name)+'</td><td class="ovlcat">'+esc(catName(p.cat)||'—')+'</td>'+
+            '<td class="ovlprice">'+M0(p.price)+'</td></tr>';
+        }).join('')+'</tbody></table>';
+    if(foot) foot.innerHTML='<div>'+list.length+' of '+P.length+' product'+(P.length===1?'':'s')+' — click one to pick it</div>';
+    return;
+  }
   /* ⚠️⚠️⚠️ [OFFR-04] costBlind reads what the SERVER already decided (COST_ACCESS.can_see_costs) — it
      disables the input proactively, but the actual protection is that a cost-blind caller's own p.cost is
      already null here (the server never sent it). Disabling this saves a rejected save, nothing more. */
@@ -1620,40 +1657,17 @@ function seg(k,opts,fn){
       (fn||'edit')+'(\''+k+'\',\''+o[0]+'\')">'+o[1]+'</button>';}).join('')+'</div>';
 }
 /**
- * ── ⭐⭐⭐ SEARCH, NOT A DROPDOWN TO SCROLL (Athi: "the real catalogue, and the search function all should
- * be in place here... like till application for the catalogue") ──────────────────────────────────────────
- *
- * A plain <input list=datalist> — the browser's OWN type-to-filter, not a hand-built combobox: no custom
- * keyboard handling to get wrong, no dropdown-positioning code to maintain, and it never re-renders anything
- * until a real pick is made (onchange, not oninput) — sidestepping the whole class of bug edit() just had to
- * be fixed for, by using the one input type that was never at risk of it.
- * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — one registry, the way edit() became one
- * choke point for every number field, rather than a second picker mechanism living beside the old one.
+ * ── ⭐⭐⭐ SEARCH, NOT A DROPDOWN TO SCROLL — [REUSES THE OVERLAY, 2026-09-26, same as offer-lab-next.html's
+ * own copy] First an <input list=datalist> (unreliable native popup), then a hand-built dropdown of its own.
+ * Athi, on that: "why are you not reusing the existing component?" — right question: #priceOverlay below is
+ * a real, scrollable, searchable product list already, built to be reused. selectOf() just opens it in a
+ * picking mode now. Kept byte-for-byte identical to the sibling copy on purpose.
  */
-/**
- * ⚠️⚠️ [found live, 2026-09-26, same bug as offer-lab-next.html — this copy carries the same fix] a field
- * pre-filled with the current pick's own text makes a browser's native datalist filter its suggestions
- * against that text, matching only itself — "only one item is appearing" the moment anything is already
- * picked. `onfocus` clears it so a click reveals the full list; `onchange` already restores the prior pick
- * via render() when the field is left blank.
- */
-var _searchLists = {};
 function selectOf(list,val,fn){
   var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
-  var dlid = 'dl-'+fn;
-  _searchLists[dlid] = list;
-  return '<div class="inp"><input type="text" list="'+dlid+'" value="'+esc(cur?cur[1]:'')+'" placeholder="Search…" '+
-    'onfocus="this.value=\'\'" '+
-    'onchange="searchPick(\''+dlid+'\',\''+fn+'\',this.value)"></div>'+
-    '<datalist id="'+dlid+'">'+list.map(function(o){ return '<option value="'+esc(o[1])+'">'; }).join('')+'</datalist>';
-}
-/** ⭐ resolves the picked TEXT back to the id and calls the exact setter selectOf() always called —
- * unmatched text (a typo, an empty field) re-renders rather than guesses, snapping back to the last real pick */
-function searchPick(dlid,fnName,text){
-  var list = _searchLists[dlid] || [];
-  var hit = list.filter(function(o){ return o[1]===text; })[0];
-  if(hit && typeof window[fnName]==='function') window[fnName](hit[0]);
-  else render();
+  return '<button type="button" class="btn" style="width:100%;justify-content:space-between;font-weight:500" '+
+    'onclick="openPickOverlay(\''+(fn==='setCat'?'cat':'item')+'\',\''+fn+'\')">'+
+    '<span>'+(cur?esc(cur[1]):'Choose…')+'</span><span style="color:var(--faint)">▾</span></button>';
 }
 function prodOpts(list){ return list.map(function(p){
   return [p.id, p.name+'  —  '+M0(p.price)];}); }
