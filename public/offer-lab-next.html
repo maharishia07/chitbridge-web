@@ -1223,9 +1223,13 @@ function workDemoHTML(tail){
       workField('margin','mMargin',S.margin)+'<span class="quick">'+workQuick('margin',[10,25,50],true)+'</span></div>'+
     '<div class="row"><span class="lab">Discount<small>Everyone pays this</small></span>'+
       workField('pctOff','mPctOff',S.pctOff)+'<span class="quick">'+workQuick('pctOff',[10,20,30],true)+'</span></div>'+
+    /* ⚠️⚠️ [found live, 2026-09-26] THIRD position for this switch — "next to the percentage values, right
+       side, not on the right extreme." Not before the field (that was "moved to the left"), not margin-left:
+       auto at the row's far edge either (that was "the right extreme") — immediately AFTER the quick buttons,
+       flush against them, no gap. */
     '<div class="row"><span class="lab">Loyalty discount<small>For selected customers only</small></span>'+
-      '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button>'+
-      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span></div>'+
+      workField('loyPct','mLoyPct',S.loyPct,!S.loyOn)+'<span class="quick">'+workQuick('loyPct',[5,10,15],S.loyOn)+'</span>'+
+      '<button class="sw'+(S.loyOn?' on':'')+'" onclick="edit(\'loyOn\','+(!S.loyOn)+')" role="switch" aria-checked="'+(S.loyOn?'true':'false')+'"></button></div>'+
     '<div class="sum" style="margin-top:12px;padding:11px 15px">'+sumLineHTML()+'</div>'+
     (tail||'')+
     '</div>';
