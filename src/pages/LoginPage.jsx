@@ -49,7 +49,12 @@ export default function LoginPage() {
         } else {
           setActorHasPin(false);
           setStep('otp'); // first time — ask for OTP from admin
-          setDevOtp('123456');
+          /* [REV-06] NOT setDevOtp('123456') any more. check-login (above) never returns a dev_otp — there is
+             no server-confirmed code to show here, in ANY environment. Hardcoding one showed a fabricated
+             "Dev mode — use this code" banner unconditionally, on every environment, to every co-assist
+             logging in for the first time — see the login screenshot the review quoted. The help text above
+             ("Enter the OTP your admin shared with you") is the honest instruction; nothing should contradict
+             it with a guessed number. */
         }
       } else {
         // Entity login — only allows existing accounts
@@ -238,7 +243,7 @@ export default function LoginPage() {
             <button type="button" onClick={reset} className="text-xs text-blue-600 text-center">← Back</button>
             <div className="text-center">
               <button type="button"
-                onClick={() => { setStep('otp'); setActorHasPin(false); setDevOtp('123456'); }}
+                onClick={() => { setStep('otp'); setActorHasPin(false); }}
                 className="text-xs text-gray-400 underline">
                 Forgot PIN? Use OTP from admin
               </button>
