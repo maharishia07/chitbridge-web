@@ -1007,12 +1007,22 @@ function seg(k,opts,fn){
  * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — one registry, the way edit() became one
  * choke point for every number field, rather than a second picker mechanism living beside the old one.
  */
+/**
+ * ⚠️⚠️ [found live, 2026-09-26] "only one item is appearing" / "the category list is not appearing" — the
+ * field opened pre-filled with the CURRENT pick's own text, and a browser's native datalist filters its
+ * suggestions against whatever is already typed. A box already holding "Tomato — ₹40.00" matches only itself,
+ * so clicking in showed a list of one, on the item picker and the category picker alike — anywhere something
+ * had already been picked. `onfocus` clears it so the full list is what a click reveals; leaving it empty and
+ * clicking away is a real value-change (blank → the old text), which `onchange` already sends to searchPick(),
+ * which already restores the prior pick via render() when nothing was typed. No new revert path needed.
+ */
 var _searchLists = {};
 function selectOf(list,val,fn){
   var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
   var dlid = 'dl-'+fn;
   _searchLists[dlid] = list;
   return '<div class="inp"><input type="text" list="'+dlid+'" value="'+esc(cur?cur[1]:'')+'" placeholder="Search…" '+
+    'onfocus="this.value=\'\'" '+
     'onchange="searchPick(\''+dlid+'\',\''+fn+'\',this.value)"></div>'+
     '<datalist id="'+dlid+'">'+list.map(function(o){ return '<option value="'+esc(o[1])+'">'; }).join('')+'</datalist>';
 }

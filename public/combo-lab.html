@@ -1630,12 +1630,20 @@ function seg(k,opts,fn){
  * ⚠️ EVERY CALLER OF selectOf() GETS THIS FOR FREE, SAME SIGNATURE — one registry, the way edit() became one
  * choke point for every number field, rather than a second picker mechanism living beside the old one.
  */
+/**
+ * ⚠️⚠️ [found live, 2026-09-26, same bug as offer-lab-next.html — this copy carries the same fix] a field
+ * pre-filled with the current pick's own text makes a browser's native datalist filter its suggestions
+ * against that text, matching only itself — "only one item is appearing" the moment anything is already
+ * picked. `onfocus` clears it so a click reveals the full list; `onchange` already restores the prior pick
+ * via render() when the field is left blank.
+ */
 var _searchLists = {};
 function selectOf(list,val,fn){
   var cur = list.filter(function(o){ return String(o[0])===String(val); })[0];
   var dlid = 'dl-'+fn;
   _searchLists[dlid] = list;
   return '<div class="inp"><input type="text" list="'+dlid+'" value="'+esc(cur?cur[1]:'')+'" placeholder="Search…" '+
+    'onfocus="this.value=\'\'" '+
     'onchange="searchPick(\''+dlid+'\',\''+fn+'\',this.value)"></div>'+
     '<datalist id="'+dlid+'">'+list.map(function(o){ return '<option value="'+esc(o[1])+'">'; }).join('')+'</datalist>';
 }
