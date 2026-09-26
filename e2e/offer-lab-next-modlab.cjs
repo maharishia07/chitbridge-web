@@ -147,35 +147,34 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('"Push to products" calls the real /:id/push route', pushCreate.call && /\/api\/combo-templates\/tpl1\/push$/.test(pushCreate.call.url), pushCreate.call ? pushCreate.call.url : 'not called');
   say('…as a POST, never a GET that could be prefetched', pushCreate.call && pushCreate.call.method === 'POST', pushCreate.call ? pushCreate.call.method : '');
 
-  console.log('\n── ⭐⭐ [OFFR-08] a product that already has modifiers, never saved, shows up in the library too ' + '─'.repeat(0));
+  console.log('\n── ⭐⭐ [OFFR-08→simplified] "preview and edit option should be there" — no auto-copy into the library ' + '─'.repeat(0));
   const liveCombo = await p.evaluate(async () => {
     P.push({ id: 'livecombo1', name: 'Already a combo', cat: 'combos', price: 90, cost: null,
       modifiers: [{ name: 'Pick one', required: true, max: 1, options: [{ name: 'A', price: 0 }, { name: 'B', price: 0 }] }] });
     window.apiFetch = async (method, url) => { if (method === 'GET' && /\/api\/combo-templates$/.test(url)) return { ok: true, body: { templates: [] } }; return { ok: true, body: {} }; };
     await modLabOpenLibrary();
     const html = document.getElementById('modLabBody').innerHTML;
-    return { shown: html.indexOf('Already a combo') >= 0, saysNotInLibrary: /not in this library yet/.test(html), hasAdoptButton: /modLabAdoptExisting\('livecombo1'\)/.test(html) };
+    return {
+      shown: html.indexOf('Already a combo') >= 0,
+      saysAlreadyOnList: /already on your product list/.test(html),
+      hasPreview: /openComboTillPreview\(/.test(html),
+      hasEdit: /modLabCloseLibrary\(\);modLabPick\('livecombo1'\)/.test(html),
+      noAdoptButton: !/modLabAdoptExisting/.test(html) && !/Bring into this library/.test(html),
+    };
   });
   say('an existing combo PRODUCT (never Saved As) still appears here', liveCombo.shown, 'found');
-  say('honestly labelled as not yet in the saved library', liveCombo.saysNotInLibrary, 'confirmed');
-  say('with a way to bring it in', liveCombo.hasAdoptButton, 'found');
+  say('honestly labelled as already live, not a draft', liveCombo.saysAlreadyOnList, 'confirmed');
+  say('with "👁 Preview" — the same popup a saved template gets', liveCombo.hasPreview, 'found');
+  say('and "✏️ Edit" — opens the SAME per-product screen every product opens through', liveCombo.hasEdit, 'found');
+  say('no "bring into this library" step — nothing copied just to be listed', liveCombo.noAdoptButton, 'confirmed');
 
-  const adopted = await p.evaluate(async () => {
-    let call = null;
-    window.apiFetch = async (method, url, body) => {
-      if (method === 'POST' && /\/api\/combo-templates$/.test(url)) { call = { post: body }; return { ok: true, body: { template: { id: 'adopted1' } } }; }
-      if (method === 'PATCH') { call = Object.assign(call || {}, { patch: { url: url, body: body } }); return { ok: true, body: { template: {} } }; }
-      return { ok: true, body: { templates: [] } };
-    };
-    await modLabAdoptExisting('livecombo1');
-    return { call: call };
+  const editedLive = await p.evaluate(() => {
+    modLabCloseLibrary(); modLabPick('livecombo1');
+    return { pid: MODLAB.pid, templateIdCleared: MODLAB.templateId === null };
   });
-  say('"Bring into this library" saves a new template from the live product’s own data', adopted.call && adopted.call.post && adopted.call.post.name === 'Already a combo', adopted.call ? JSON.stringify(adopted.call.post) : 'not called');
-  say('…then immediately LINKS it to that same product — never a second, orphaned copy', adopted.call && adopted.call.patch && /\/api\/combo-templates\/adopted1$/.test(adopted.call.patch.url) && adopted.call.patch.body.product_item_id === 'livecombo1',
-    adopted.call && adopted.call.patch ? JSON.stringify(adopted.call.patch) : 'not called');
-  /* ⚠️ cleanup — modLabOpenLibrary() above left MODLAB.libraryOpen true, and paintModLab() checks that FIRST
-   * of everything else; every section after this one would otherwise keep rendering the library screen. */
-  await p.evaluate(() => { P.pop(); modLabCloseLibrary(); });
+  say('"✏️ Edit" opens that exact product, not a copy', editedLive.pid === 'livecombo1', editedLive.pid);
+  say('…with no template id attached — editing the product directly means Apply, not Save', editedLive.templateIdCleared, 'confirmed');
+  await p.evaluate(() => { modLabBack(); P.pop(); });
 
   console.log('\n── ⚠️⚠️ AN UNSAVED DRAFT OFFERS ITSELF TO THE NEXT PRODUCT PICKED, IT IS NOT LOST ' + '─'.repeat(0));
   const draftFlow = await p.evaluate(() => {

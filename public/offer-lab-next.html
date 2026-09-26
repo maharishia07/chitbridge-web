@@ -901,7 +901,7 @@ function paintPriceOvBody(){
  * ⚠️ THE PREVIEW IS THE SAME CAPABILITY app.html's tab USES — CBVariant.groupsOf()/toggle()/missing()/words(),
  * not a second implementation of "what does trying this feel like".
  */
-var MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',libraryOpen:false,savingAs:false}, MODLABPREV=[];
+var MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',templateId:null,libraryOpen:false,savingAs:false}, MODLABPREV=[];
 /** ⭐ the saved-combo library (b266) — loaded once per open, refreshed after a save or a delete */
 var COMBO_LIB={items:null,loaded:false};
 /**
@@ -928,7 +928,7 @@ var COMBO_LIB={items:null,loaded:false};
  */
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
-  MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',libraryOpen:false,savingAs:false}; MODLABPREV=[];
+  MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',templateId:null,libraryOpen:false,savingAs:false}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
@@ -947,7 +947,7 @@ function modLabList(){
   var q=(MODLAB.q||'').trim().toLowerCase();
   return P.filter(function(p){ return !q || p.name.toLowerCase().indexOf(q)>=0; });
 }
-function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLABPREV=[]; paintModLab(); }
+function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLAB.templateId=null; MODLABPREV=[]; paintModLab(); }
 function modLabBack(){ MODLAB.pid=null; MODLAB.savingAs=false; paintModLab(); }
 /** ⭐⭐ [OFFR-06] DRAFT-AWARE: a product's own item_data.modifiers when one is picked, otherwise the
  *  not-yet-attached MODLAB.draft — every other editing verb calls this and modLabSetGroups() below, so
@@ -1000,7 +1000,7 @@ function modLabBuildFresh(){
 function modLabResumeBuild(){ MODLAB.building=true; MODLAB.savingAs=false; paintModLab(); }
 function modLabCancelBuild(discard){
   MODLAB.building=false;
-  if(discard){ MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; }
+  if(discard){ MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; MODLAB.templateId=null; }
   MODLAB.savingAs=false; MODLABPREV=[];
   paintModLab();
 }
@@ -1025,7 +1025,7 @@ async function modLabCreateNew(){
   var r=await apiFetch('POST', API+'/api/products', {item_data:item_data});
   if(!r.ok){ toastSay('Could not create "'+name+'": '+((r.body&&r.body.message)||'try again.')); return; }
   toastSay('Created "'+name+'" — '+M0(priceNum)+', with its combo groups already on it.');
-  MODLAB.building=false; MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; MODLABPREV=[];
+  MODLAB.building=false; MODLAB.draft=[]; MODLAB.name=''; MODLAB.price=''; MODLAB.templateId=null; MODLABPREV=[];
   await labUseMine(true);   /* the new product needs to be in P before anything can open or show it */
   paintModLab();
   render();
@@ -1061,7 +1061,32 @@ async function modLabSaveAsConfirm(){
    * with a real price later without retyping it. */
   var price = MODLAB.pid ? (byId(MODLAB.pid)||{}).price : (MODLAB.price!==''? Number(MODLAB.price): null);
   var r=await apiFetch('POST', API+'/api/combo-templates', {name:name, definition:v.groups, price:price});
-  if(r.ok){ toastSay('Saved “'+name+'” to your combos.'); MODLAB.savingAs=false; await comboLibLoad(true); }
+  if(r.ok){
+    toastSay('Saved “'+name+'” to your combos.'); MODLAB.savingAs=false;
+    /* ⭐ [OFFR-08] "if we save or save as, we have to explicitly show preview and push" — a fresh save/save-as
+     * always leaves behind a real template id, which is what makes "👁 Preview" and "✚ Push to products"
+     * appear in the footer right below, instead of the person having to go find them separately. */
+    MODLAB.templateId=r.body.template.id;
+    await comboLibLoad(true);
+  }
+  else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
+  paintModLab();
+}
+/**
+ * ⭐⭐⭐ [OFFR-08] "you have save as option, but no Save option, if i edit the existing combo, we have to
+ * save as well" — the plain "Save," update-in-place, the way a normal document editor works: a template
+ * opened for editing (MODLAB.templateId set — see modLabUseTemplate()) can be saved back onto ITSELF; "Save
+ * as…" beside it still forks a new, separate copy, exactly like "Save" vs "Save as" anywhere else.
+ */
+async function modLabSaveConfirm(){
+  if(!MODLAB.templateId) return;   /* the button that calls this is only ever shown when one exists */
+  var v=CBVariant.validate(modLabGroups());
+  if(!v.ok){ toastSay('Fix this first: '+v.errors[0].message); return; }
+  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save for real.'); return; }
+  var name=String(MODLAB.name||'').trim() || 'Untitled combo';
+  var price=MODLAB.pid ? (byId(MODLAB.pid)||{}).price : (MODLAB.price!==''? Number(MODLAB.price): null);
+  var r=await apiFetch('PATCH', API+'/api/combo-templates/'+MODLAB.templateId, {name:name, definition:v.groups, price:price});
+  if(r.ok){ toastSay('Saved.'); await comboLibLoad(true); }
   else toastSay('Could not save: '+((r.body&&r.body.message)||'try again.'));
   paintModLab();
 }
@@ -1076,14 +1101,29 @@ async function comboLibLoad(force){
 }
 async function modLabOpenLibrary(){ MODLAB.libraryOpen=true; paintModLab(); await comboLibLoad(!COMBO_LIB.loaded?false:true); paintModLab(); }
 function modLabCloseLibrary(){ MODLAB.libraryOpen=false; paintModLab(); }
-/** ⭐⭐⭐ REOPENING A SAVED COMBO — added to whatever is already being built/edited, never a silent replace */
+/**
+ * ⭐⭐⭐ REOPENING A SAVED COMBO — two different jobs, told apart by whether anything is being built yet.
+ * ⚠️ [OFFR-08] "you have save as option, but no Save option, if i edit the existing combo, we have to save
+ * as well." A blank builder means this IS the thing being opened — its groups REPLACE the (empty) draft, its
+ * name/price load too, and MODLAB.templateId remembers which template this is, so "💾 Save" (below) can
+ * update it directly. Anything already being built means this is being COMBINED with something else — its
+ * groups are ADDED, never a silent replace, and templateId stays null: a combination is not "that one
+ * template" any more, only "Save as" (a new one) makes sense for it.
+ */
 function modLabUseTemplate(id){
   var t=(COMBO_LIB.items||[]).filter(function(x){return x.id===id;})[0]; if(!t) return;
   var groups=CBVariant.normalize(t.definition);
-  modLabSetGroups(modLabGroups().concat(groups));
+  var editing = !MODLAB.pid && !modLabGroups().length;
+  if(editing){
+    modLabSetGroups(groups);
+    MODLAB.name=t.name||''; MODLAB.price=(t.price==null?'':t.price); MODLAB.templateId=t.id;
+  } else {
+    modLabSetGroups(modLabGroups().concat(groups));
+    MODLAB.templateId=null;
+  }
   MODLAB.libraryOpen=false;
   if(!MODLAB.pid) MODLAB.building=true;
-  toastSay('Added “'+t.name+'” — '+groups.length+' group'+(groups.length===1?'':'s')+'.');
+  toastSay(editing ? 'Opened “'+t.name+'” to edit.' : 'Added “'+t.name+'” — '+groups.length+' group'+(groups.length===1?'':'s')+'.');
   paintModLab();
 }
 /** ⚠️ no confirm() dialog — matches this Lab's own style (✕ on a group/option removes immediately too), and
@@ -1256,13 +1296,17 @@ function comboLibraryHTML(){
       + '<button class="btn sm pri" onclick="modLabPushTemplate(\''+t.id+'\')">'+(t.product_item_id?'⟳ Update product':'✚ Push to products')+'</button>'
       + '<button class="btn sm" onclick="modLabDeleteTemplate(\''+t.id+'\',\''+esc(t.name).replace(/'/g,"\\'")+'\')">✕</button></div></div>';
   };
+  /** ⭐⭐ [OFFR-08→simplified] Athi: "we don't need a permanent copy in the library, whatever exists we can
+   * showcase... preview and edit option should be there." No auto-save just to be listed — this row reads
+   * straight off the real product, and "✏️ Edit" opens the SAME per-product screen every product already
+   * opens through, where Save as / Apply already exist. Nothing is written just by seeing this row. */
   var liveRowHTML=function(p){
     var n=CBVariant.groupsOf({modifiers:p.modifiers}).length;
     return '<div class="kv" style="padding:10px 12px;border:1px dashed var(--line);border-radius:9px;margin-bottom:8px;display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap">'
       + '<div><div style="font-weight:700">'+esc(p.name)+' · '+M0(p.price)+'</div>'
-      + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · already live · not in this library yet</div></div>'
+      + '<div style="font-size:12px;color:var(--muted)">'+n+' group'+(n===1?'':'s')+' · already on your product list</div></div>'
       + '<div style="display:flex;gap:6px"><button class="btn sm" onclick="openComboTillPreview(\''+esc(p.name).replace(/'/g,"\\'")+'\','+p.price+',JSON.parse(this.dataset.g))" data-g=\''+esc(JSON.stringify(p.modifiers||[]))+'\'>👁 Preview</button>'
-      + '<button class="btn sm pri" onclick="modLabAdoptExisting(\''+p.id+'\')">Bring into this library</button></div></div>';
+      + '<button class="btn sm pri" onclick="modLabCloseLibrary();modLabPick(\''+p.id+'\')">✏️ Edit</button></div></div>';
   };
   return '<div style="padding:0 20px 20px">'
     + '<button class="btn sm" onclick="modLabCloseLibrary()">← Back</button>'
@@ -1277,18 +1321,9 @@ function comboLibraryHTML(){
 /** ⭐ a saved template's own groups, for the "Preview" onclick above — kept as a tiny lookup rather than
  *  inlining the whole (possibly large) definition array into an attribute string. */
 function comboLibDef(id){ var t=(COMBO_LIB.items||[]).filter(function(x){return x.id===id;})[0]; return t?t.definition:[]; }
-/** ⭐ a live product's own modifiers, adopted as a NEW saved template — so it becomes manageable from here on,
- *  exactly like one built through "Build a combo" from the start. */
-async function modLabAdoptExisting(productId){
-  var p=byId(productId); if(!p) return;
-  var groups=CBVariant.normalize(p.modifiers);
-  if(!(S.biz==='mine' && savedLive())){ toastSay('Sign in and use your own catalogue to save this for real.'); return; }
-  var r=await apiFetch('POST', API+'/api/combo-templates', {name:p.name, definition:groups, price:p.price});
-  if(r.ok){ await apiFetch('PATCH', API+'/api/combo-templates/'+r.body.template.id, {product_item_id:p.id});
-    toastSay('"'+p.name+'" is now in your saved combos.'); await comboLibLoad(true); }
-  else toastSay('Could not bring this in — try again.');
-  paintModLab();
-}
+/** ⭐ whether the CURRENT builder's saved template (MODLAB.templateId) already has a live product behind
+ *  it — just the push button's own label ("Push" vs "Update"), decided here so the footer never guesses. */
+function modLabTemplateLinked(){ var t=(COMBO_LIB.items||[]).filter(function(x){return x.id===MODLAB.templateId;})[0]; return !!(t&&t.product_item_id); }
 /**
  * ⭐⭐⭐ [OFFR-08] "the saved combo should be able to push to product list as a new product... if it is an
  * existing combo... it has to update only" — POSTs to the real /:id/push, which decides create vs. update on
@@ -1368,7 +1403,11 @@ function paintModLab(){
     if(foot){
       foot.innerHTML = '<div style="display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap">'
         + '<span>Create it as a new product, attach it to one you already sell, or just save it for later.</span>'
-        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'+(MODLAB.savingAs?'':'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>')
+        + '<div style="display:flex;gap:8px;flex-wrap:wrap">'+(MODLAB.savingAs?'':(
+            (MODLAB.templateId?'<button class="btn sm" onclick="modLabSaveConfirm()">💾 Save</button> ':'')
+            +'<button class="btn sm" onclick="modLabSaveAsOpen()">💾 Save as…</button>'
+            +(MODLAB.templateId?' <button class="btn sm" onclick="modLabPushTemplate(\''+MODLAB.templateId+'\')">'+(modLabTemplateLinked()?'⟳ Update product':'✚ Push to products')+'</button>':'')
+          ))
         + '<button class="btn sm" onclick="modLabCancelBuild(false)">Attach to a product ▸</button>'
         + '<button class="btn pri sm" onclick="modLabCreateNew()">✚ Create as a new product</button></div></div>';
     }
