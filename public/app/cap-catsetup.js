@@ -695,6 +695,9 @@ function catsetBody(k){
          from Conversion lab's own nav and covered by e2e/tests/offer-lab.spec.js) but nothing in the app
          points a shopkeeper at it any more. */
       '<a class="composebtn" data-testid="catset-offer-lab" href="offer-lab-next.html" target="_blank" rel="noopener" title="Design an offer and see what a customer sees — the same engine as the shop" style="text-decoration:none;margin-right:6px">🧪 ' + tx('Offer lab') + '</a>'
+      /* ⭐ [Labs split, 2026-09-26] its own page now, its own link beside Offer lab's — see combo-lab.html's
+         own header comment for why. */
+      + '<a class="composebtn" data-testid="catset-combo-lab" href="combo-lab.html" target="_blank" rel="noopener" title="Build a modifier/combo and preview it exactly as the till will show it" style="text-decoration:none;margin-right:6px">🧩 ' + tx('Combo lab') + '</a>'
       + '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
     + catsetCard('The next six months', catsetOfferPlanHTML(),
       '<button class="composebtn" data-testid="catset-offer-plan-new" onclick="catsetPlanOpen()">📅 ' + tx('Plan several') + '</button>')

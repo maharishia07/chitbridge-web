@@ -1,11 +1,13 @@
-/* offer-lab-next-modlab.cjs — TRY A MODIFIER, THEN APPLY IT TO THE REAL PRODUCT
+/* combo-lab.cjs — TRY A MODIFIER, THEN APPLY IT TO THE REAL PRODUCT
  *
  * Athi: "modifiers are part of product creation / offer creation, so can we include as a facility in offer
  * lab, so people can try how the modifiers can be created and once if they are happy, we would be able to
  * save that modifier and apply it to the real product. which is apply button so it will be part of the
- * product catalogue."
+ * product catalogue." Combo Lab started life as a modal inside offer-lab-next.html; [Labs split, 2026-09-26]
+ * — "bring offer lab and combo lab as a separate item... combo lab earned its place now" — moved it to its
+ * own page, combo-lab.html, which boots straight into what used to be the modal.
  *
- * Run: node e2e/offer-lab-next-modlab.cjs
+ * Run: node e2e/combo-lab.cjs
  */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -27,12 +29,20 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   const p = await b.newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
-  await p.goto('http://127.0.0.1:' + srv.address().port + '/offer-lab-next.html');
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/combo-lab.html');
   await p.waitForTimeout(200);
 
-  console.log('\n── ⭐⭐⭐ opening the modifier lab — a product picker first ' + '─'.repeat(0));
-  const opened = await p.evaluate(() => { openModLab(); return document.getElementById('modLabOverlay').classList.contains('on'); });
-  say('the lab opens', opened, 'modLabOverlay is on');
+  console.log('\n── ⭐⭐⭐ [Labs split] the page IS the lab now — no "open" step, a product picker first ' + '─'.repeat(0));
+  const opened = await p.evaluate(() => ({
+    onLoad: document.getElementById('modLabOverlay').classList.contains('on'),
+    title: document.title,
+    /* ⭐ openModLab() itself still exists and still works (used to reset/reopen) — just never needs calling
+     * to get here, since the page's own boot sequence already did. */
+    stillCallable: typeof openModLab === 'function',
+  }));
+  say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
+  say('the tab is titled for what it is', opened.title === 'Combo Lab', opened.title);
+  say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
   const picker = await p.evaluate(() => ({
     hasSearch: !!document.getElementById('modLabSearch'),
     rows: document.querySelectorAll('#modLabBody .ovltbl tbody tr').length,
@@ -363,8 +373,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('editing an EXISTING option really changes it, in place', existing.afterEdit.price === 8, JSON.stringify(existing.afterEdit));
   say('without disturbing the other, unrelated group', existing.stillTwoGroups, 'still 2 groups');
 
-  console.log('\n── ⭐⭐⭐ THE SETTINGS SCREEN’S OWN "MODIFIERS" CARD IS REFRESHED, NEVER LEFT STALE ' + '─'.repeat(0));
-  console.log('   (found live, on the deployed page: Apply worked, but "No product has a modifier yet" stayed on screen) ' + '─'.repeat(0));
+  console.log('\n── ⭐⭐⭐ [Labs split] APPLY STILL REFRESHES THE (NOW INVISIBLE, HARMLESS) PAGE UNDERNEATH ' + '─'.repeat(0));
+  console.log('   (the original bug, on offer-lab-next.html: Apply worked but a Settings card stayed stale — ' + '─'.repeat(0));
+  console.log('   that card has no viewer here any more, since closing this page closes the tab, not a screen) ' + '─'.repeat(0));
   const cardFresh = await p.evaluate(async () => {
     let renderCalls = 0;
     const realRender = window.render;
@@ -372,17 +383,28 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     modLabPick(P[1].id);
     modLabAddGroup();
     const beforeApply = renderCalls;
-    await modLabApply();     /* the moment the count actually changes */
+    await modLabApply();     /* modLabApply()'s own call to render() is unchanged by the Labs split */
     const afterApply = renderCalls;
-    closeModLab();            /* the moment the person actually SEES the Settings screen again */
-    const afterClose = renderCalls;
     window.render = realRender;
-    return { beforeApply: beforeApply, afterApply: afterApply, afterClose: afterClose };
+    return { beforeApply: beforeApply, afterApply: afterApply };
   });
-  say('Apply itself refreshes the page behind the overlay', cardFresh.afterApply > cardFresh.beforeApply,
+  say('Apply still refreshes the page behind the overlay (unchanged behaviour, now harmless)',
+    cardFresh.afterApply > cardFresh.beforeApply,
     'render() called ' + (cardFresh.afterApply - cardFresh.beforeApply) + ' time(s) by modLabApply()');
-  say('and closing the lab refreshes it again, so it is never stale by the time it is actually seen',
-    cardFresh.afterClose > cardFresh.afterApply, 'render() called again by closeModLab()');
+
+  console.log('\n── ⭐⭐⭐ [Labs split] CLOSING THIS PAGE CLOSES THE TAB, NOT A SCREEN UNDERNEATH ' + '─'.repeat(0));
+  const closed = await p.evaluate(() => {
+    openModLab();   /* a prior section already closed it — reopen so this test starts from a known state */
+    var before = document.getElementById('modLabOverlay').classList.contains('on');
+    var threw = null;
+    try { closeModLab(); } catch (e) { threw = e.message; }
+    var after = document.getElementById('modLabOverlay').classList.contains('on');
+    return { before: before, after: after, threw: threw };
+  });
+  say('the overlay was showing before the close', closed.before, 'confirmed');
+  say('closeModLab() never throws, even though window.close() can’t actually close a Playwright page', closed.threw === null, closed.threw || 'confirmed');
+  say('the overlay class comes off either way — a fallback toast (see the page’s own comment) covers the rest', closed.after === false, 'confirmed');
+  await p.evaluate(() => { openModLab(); });   /* put it back for anything after this that expects the lab open */
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();
