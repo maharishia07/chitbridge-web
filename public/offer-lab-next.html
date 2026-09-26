@@ -2271,7 +2271,18 @@ function cartPreviewItems(){
   } else if(S.goal==='percent'||S.goal==='amount'||S.goal==='qty'){
     if(S.scope==='item') (S.itemIds||[]).forEach(function(id){ add(byId(id)); }); else catItems(S.catId).slice(0,2).forEach(add);
   } else return [];   /* spend / ship / band: the three-bill sightline already answers this */
-  for(var i=0;i<pool.length && picked.length<3;i++) add(pool[i]);
+  /**
+   * ⭐ [found live, 2026-09-27] "how [were] other items added... it has to be specific to this item only?
+   * where the other items were chosen?" — real gap: the padding used to be "the first 1-2 costed products in
+   * the WHOLE catalogue," catalogue order, with no connection to what's actually being offered — Idli and
+   * Ghee Podi Idli filling out a Masala Dosa offer's basket for no reason a reader could see. Same category
+   * as something already picked FIRST (a plausible thing to actually be on the same bill), the rest of the
+   * catalogue only as a last resort when a category doesn't have enough else in it.
+   */
+  var cats={}; picked.forEach(function(p){ if(p.cat) cats[p.cat]=true; });
+  pool.filter(function(p){return p.cat && cats[p.cat];})
+    .concat(pool.filter(function(p){return !(p.cat && cats[p.cat]);}))
+    .forEach(function(p){ if(picked.length<3) add(p); });
   return picked.slice(0,3);
 }
 function cartPreviewLines(items){
