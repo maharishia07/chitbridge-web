@@ -388,6 +388,15 @@ button{cursor:pointer}
    shell's heading and cards read straight through, looking exactly like the wrong page had loaded. Opaque
    here, and only here, so nothing behind it is ever legible again. */
 #modLabOverlay{background:var(--page)}
+/**
+ * ⭐ [found live, 2026-09-27] "the item should appear as a pop up" — the new "+ Add to another product" chip
+ * opens #priceOverlay's own 'item' picker WHILE #modLabOverlay is still open underneath it, a genuinely new
+ * overlay-on-overlay case: both share the plain `.ovl` z-index (200), and #modLabOverlay sits LATER in the
+ * DOM, so at equal z-index it painted on TOP of the picker and silently ate every click meant for a row in
+ * it. #priceOverlay is always the innermost, most-specific dialog whenever it's opened this way, so it gets
+ * the higher z-index rather than depending on DOM order to happen to work out.
+ */
+#priceOverlay{z-index:210}
 .ovlpanel{background:var(--card);border-radius:var(--r);width:min(920px,100%);max-height:min(760px,92vh);
   display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 70px rgba(29,27,22,.35)}
 .ovlhead{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);flex:0 0 auto}
@@ -1039,7 +1048,7 @@ var COMBO_LIB={items:null,loaded:false};
 function modLabOpen(){ return !!(document.getElementById('modLabOverlay')||{}).classList.contains('on'); }
 function openModLab(){
   MODLAB={pid:null,q:'',building:false,draft:[],name:'',price:'',templateId:null,libraryOpen:false,savingAs:false,
-    tab:'mods',showBare:false}; MODLABPREV=[];
+    tab:'mods'}; MODLABPREV=[];
   var el=document.getElementById('modLabOverlay'); if(!el) return;
   el.classList.add('on');
   var s=document.getElementById('modLabSearch'); if(s){ s.value=''; }
@@ -1053,7 +1062,7 @@ function openModLab(){
  *  which tab this is. #modLabSearch's value is cleared here directly rather than through a repaint, so a
  *  stale query from the OTHER tab never silently keeps filtering this one. */
 function modLabTab(t){
-  MODLAB.tab=t; MODLAB.q=''; MODLAB.showBare=false;
+  MODLAB.tab=t; MODLAB.q='';
   var s=document.getElementById('modLabSearch'); if(s) s.value='';
   if(t==='combos') comboLibLoad(false).then(paintModLab);
   paintModLab();
@@ -1537,15 +1546,24 @@ function modLabModsTotals(){
   P.forEach(function(p){ (CBVariant.groupsOf({modifiers:p.modifiers}).length?withMods++:bare++); });
   return {withMods:withMods, bare:bare};
 }
-function modLabShowBare(){ MODLAB.showBare=true; paintModLab(); }
-function modLabHideBare(){ MODLAB.showBare=false; paintModLab(); }
+/**
+ * ⭐ [found live, 2026-09-27] "Add should be in the top as a chip, not at the bottom, no one will notice" then
+ * "and the item should appear as a pop up" — the old row sat at the BOTTOM of a list that, with a real
+ * catalogue's worth of modifiers on it, could run to 19+ rows before it — exactly the kind of control this
+ * page's own doc already warned about ("the layout did not say what the screen was for"). A chip in the bar
+ * (same spot the Combos tab's own "+ Build a combo" already lives) is never scrolled past; the existing
+ * 'item' picker overlay (openPickOverlay(), already proven on this page for "The item"/"They buy" elsewhere)
+ * is the pop up, so nothing new had to be built to answer "which product" — modLabPickForModifiers() is just
+ * that overlay's own onclick, routed the same way every other product-row click on this tab already is
+ * (pendingDraft → attach the combo being built; otherwise → open that product's own editor).
+ */
+function modLabAddToProduct(){ openPickOverlay('item','modLabPickForModifiers'); }
+function modLabPickForModifiers(id){
+  if(MODLAB.draft.length>0) modLabAttachDraftTo(id); else modLabPick(id);
+}
 function modsTabFootHTML(){
   var t=modLabModsTotals();
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
-    + '<span><b>'+t.withMods+'</b> product'+(t.withMods===1?'':'s')+' carry modifiers · '+t.bare+' do not.</span>'
-    + '<span style="flex:1"></span>'
-    + (MODLAB.showBare?'<button class="btn sm" onclick="modLabHideBare()">Hide the rest</button>':'')
-    + '</div>';
+  return '<span><b>'+t.withMods+'</b> product'+(t.withMods===1?'':'s')+' carry modifiers · '+t.bare+' do not.</span>';
 }
 /**
  * ── ⭐⭐⭐ [2026-09-27, per Athi's own combo-modifier-lab.html] THE MODIFIERS TAB — grouped by category (a
@@ -1559,11 +1577,11 @@ function modsTabHTML(pendingDraft){
   if(totals.withMods===0 && totals.bare===0){
     return '<div class="empty"><b>Nothing here yet</b><span>Add products to your catalogue first.</span></div>';
   }
-  if(totals.withMods===0 && !q && !MODLAB.showBare){
+  if(totals.withMods===0 && !q){
     return '<div class="empty"><b>No modifiers yet</b><span>A choice before something goes on the bill — spice level, size, an extra.</span>'
-      + '<button class="btn pri" onclick="modLabShowBare()">Add one to a product</button></div>';
+      + '<button class="btn pri" onclick="modLabAddToProduct()">Add one to a product</button></div>';
   }
-  var rows=modLabModsSplit(), withMods=rows.withMods, bare=rows.bare;
+  var withMods=modLabModsSplit().withMods;
   var clickFn = pendingDraft ? 'modLabAttachDraftTo' : 'modLabPick';
   var h='<div class="modlist">';
   if(!withMods.length){
@@ -1581,20 +1599,6 @@ function modsTabHTML(pendingDraft){
           + '<span class="rt">'+(up?'up to +'+M0(up):'no price change')+'</span><span class="go">›</span></button>';
       });
     });
-  }
-  if(MODLAB.showBare){
-    if(bare.length){
-      h+='<div class="grp">Without modifiers · '+bare.length+'</div>';
-      bare.forEach(function(p){
-        h+='<button class="add" onclick="'+clickFn+'(\''+p.id+'\')"><span class="pl">+</span>'
-          + '<span class="nm"><b style="color:var(--ink)">'+esc(p.name)+'</b></span>'
-          + '<span class="rt">'+esc(catName(p.cat)||'—')+'</span></button>';
-      });
-    }
-  } else if(bare.length){
-    h+='<button class="add" onclick="modLabShowBare()"><span class="pl">+</span>'
-      + '<span class="nm">Add modifiers to another product</span>'
-      + '<span class="rt">'+bare.length+' have none</span></button>';
   }
   return h+'</div>';
 }
@@ -1648,7 +1652,9 @@ function paintModLab(){
       + '<span class="say">'+(MODLAB.tab==='combos'?'Two or more products, one price':'A choice before it goes on the bill')+'</span>';
     var srch=document.getElementById('modLabSearch'), extra=document.getElementById('modLabBarExtra');
     if(srch) srch.placeholder = MODLAB.tab==='combos' ? 'Find a combo' : 'Find a product';
-    if(extra) extra.innerHTML = MODLAB.tab==='combos' ? '<button class="btn pri" onclick="modLabBuildFresh()">+ Build a combo</button>' : '';
+    if(extra) extra.innerHTML = MODLAB.tab==='combos'
+      ? '<button class="btn pri" onclick="modLabBuildFresh()">+ Build a combo</button>'
+      : '<button class="btn" onclick="modLabAddToProduct()">+ Add to another product</button>';
 
     var banner = pendingDraft
       ? '<div class="kv" style="margin:14px 20px 0;padding:10px 12px;border:1px solid var(--amber-i);border-radius:9px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
