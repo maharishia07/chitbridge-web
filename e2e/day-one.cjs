@@ -201,6 +201,41 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
   say('⭐ the shop profile carries its storefront link', !!front && /shop\.html\?s=mayurbhavan/.test(front),
     front ? front.slice(0, 64) : 'not shown');
 
+  /**
+   * ── ⭐⭐ 8 · AND WHAT A CUSTOMER WOULD SEE OF IT ─────────────────────────────────────────────────────
+   *
+   * Athi, pointing at the back office's own Storefront tab: *"we have the shopfront page the catalogue, so
+   * possibly we can reuse."* It reuses shop.html itself, in a frame — so the assertion is that it frames
+   * THE REAL PAGE, and that it has not booted it yet.
+   *
+   * ⚠️⚠️ THE SECOND ASSERTION IS THE IMPORTANT ONE. app.html already paid for this: the frame used to load
+   * eagerly and it is not slow rendering, it is a second application starting (CAT001-H06, Athi's own
+   * report). A preview that costs a page load per product is one nobody keeps.
+   */
+  console.log('\n── 8 · what a customer would see of it ' + '─'.repeat(22));
+  const prev = await p.evaluate(() => {
+    CARD_ID = window.S.items[0].item_id;           /* the product card is open on the first product */
+    shopPrevOpen();
+    const f = document.getElementById('shopprevframe');
+    return { open: document.getElementById('shopprevdlg').open,
+             src: f ? (f.getAttribute('src') || '') : 'no frame',
+             dataSrc: f ? (f.getAttribute('data-src') || '') : '',
+             holdShown: !!document.getElementById('shopprevhold') };
+  });
+  say('the counter offers the customer’s own page, not a drawing of it',
+    /shop\.html\?s=mayurbhavan&item=/.test(prev.dataSrc) && /preview=1/.test(prev.dataSrc),
+    prev.dataSrc.replace(/^.*\/shop/, '/shop').slice(0, 52));
+  say('⚠️⚠️ and it has NOT booted the storefront — an outline and a button first',
+    prev.src === '' && prev.holdShown, 'src empty until asked');
+  const loaded = await p.evaluate(() => {
+    shopPrevLoad();
+    const f = document.getElementById('shopprevframe');
+    return { src: f.getAttribute('src') || '', hidden: (document.getElementById('shopprevhold') || {}).style.display };
+  });
+  say('⭐ and it loads on the one press that asks for it', /shop\.html/.test(loaded.src) && loaded.hidden === 'none',
+    'frame given its src');
+  await p.evaluate(() => shopPrevClose());
+
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
 
