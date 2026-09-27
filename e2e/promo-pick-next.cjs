@@ -59,6 +59,19 @@ let snap = () => ({ shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Dat
     return { fresh: showNewPickNext(before), same: AT === was }; });
   say('a re-read with no new pick leaves the rotation alone', quiet.fresh === false && quiet.same, JSON.stringify(quiet));
 
+  /* ↻ says what it read — Athi, on his phone: "it is not doing anything" */
+  console.log('\n── ↻ says what it read');
+  items[3].screen = true;
+  await p.click('#refresh');
+  await p.waitForTimeout(400);
+  const msg = await p.evaluate(() => document.getElementById('hint').textContent);
+  say('↻ answers in digits, and names the new pick', /^↻ \d+ on sale · 📌 2 · next: Dish 3$/.test(msg), msg);
+  await p.evaluate(() => { API = 'http://127.0.0.1:1'; });            /* ChitBridge unreachable */
+  await p.click('#refresh');
+  await p.waitForTimeout(600);
+  const off = await p.evaluate(() => document.getElementById('hint').textContent);
+  say('a read that failed says so, not "done"', /Could not reach ChitBridge/.test(off), off);
+
   say('console/page errors', !errs.length, errs.length ? errs.join(' | ').slice(0, 200) : 'none');
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' FAILED' : '\na product switched onto the screen is shown next');
