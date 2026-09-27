@@ -70,6 +70,19 @@
  */
 (function (root) {
   'use strict';
+  /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md), found wherever this copy runs: CBMoney in
+     a page, lib/money.js on the server. Looked up PER CALL, because on the shop screen an engine can load before
+     money.js does. ⚠️ The fallback is the SAME rule, only for a page where money.js failed to load — and
+     tests/money-round.test.js holds every copy of it equal to money.round. */
+  var MONEY_ = null;
+  function roundMoney_(n) {
+    var M = (typeof CBMoney !== 'undefined' && CBMoney.round) ? CBMoney : MONEY_;
+    if (M === null && typeof require === 'function') { try { M = MONEY_ = require('./money'); } catch (_) { M = MONEY_ = false; } }
+    if (M && M.round) return M.round(n);
+    var x = Number(n); if (!isFinite(x)) return x;
+    var c = Math.round(Number((Math.abs(x) * 100).toPrecision(15))) / 100;
+    return (x < 0 && c !== 0) ? -c : c;
+  }
 
   var C = {};            // ns -> cart state
   var MAX_QTY = 100000;  // the server's own line cap; refuse at the row so a typo is caught where it was made
@@ -442,9 +455,9 @@
          (compute → M.rowOff); a row must not promise ₹180 and charge ₹170 (OFF-03, 2026-09-06). A threshold the line alone cannot reach
          simply does not fire here, which is honest. */
       /* decision 3 (industry standard, 2026-09-06 20:0x): the preview, like the row, carries the line's own offers only */
-      var off = Math.min(base * q, Math.round(((p && p.off) || 0) * 100) / 100);
+      var off = Math.min(base * q, roundMoney_((p && p.off) || 0));
       if (off > 0) { var labels = (ev.adjustments || []).filter(function (a) { return a.scope === 'line' && Math.abs(Number(a.amount) || 0) > 0; }).map(function (a) { return a.label || a.kind; }); var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
-        return { unit: Math.max(0, Math.round((base - off / q) * 100) / 100), off: off, label: uniq.join(' + ') || (p && p.label) || 'offer' }; }
+        return { unit: Math.max(0, roundMoney_(base - off / q)), off: off, label: uniq.join(' + ') || (p && p.label) || 'offer' }; }
     } catch (e) {}
     return null;
   }
@@ -465,7 +478,7 @@
     if (s.sel[r.item_id] > 0) {
       var M = compute(ns), p = M && M.rowOff ? M.rowOff[String(r.item_id)] : null;
       if (!p || !(p.off > 0)) return null;
-      return { unit: Math.max(0, Math.round((base - p.off / q) * 100) / 100), off: p.off, label: p.label || 'offer', ids: p.ids || [], line_off: p.line_off, cart_off: p.cart_off };
+      return { unit: Math.max(0, roundMoney_(base - p.off / q)), off: p.off, label: p.label || 'offer', ids: p.ids || [], line_off: p.line_off, cart_off: p.cart_off };
     }
     s.deals = s.deals || {}; if (Object.prototype.hasOwnProperty.call(s.deals, key)) return s.deals[key];
     var out = dealCalc(d, r.item_id, base, q, offers, { now: new Date(), currency: (s.cat.shop && s.cat.shop.currency_code) || 'INR', customer_groups: viewerGroups(s.cat), money: function (n) { return fmt(ns, n); } });
@@ -508,7 +521,7 @@
        ₹575.90 while the block said ₹510.80 after a cart-scope 10%). The rows carry line offers; the order-level ones are evaluated here
        once per selection (memoised on the selection + the offers) and taken off the headline, so bar, pill and block say one figure. */
     /* the figure itself comes from the ONE evaluation (compute); the loop above only learned whether a line is negotiated or unpriced */
-    if (!partial && !offered && amount > 0) { try { var M = compute(ns); if (M && M.ev && M.ev.total != null) amount = Math.round(Number(M.ev.total) * 100) / 100; } catch (e) {} }
+    if (!partial && !offered && amount > 0) { try { var M = compute(ns); if (M && M.ev && M.ev.total != null) amount = roundMoney_(Number(M.ev.total)); } catch (e) {} }
     // `offered` lets a screen say WHOSE number this is. A total that mixes an asking price and an offer without
     // saying so reads as agreed when nothing has been agreed.
     return { amount: amount, partial: partial, offered: offered };
@@ -556,7 +569,7 @@
       var labels = mine.map(function (a) { return a.label || a.kind; });
       var uniq = labels.filter(function (x, i) { return x && labels.indexOf(x) === i; });
       var ids = mine.map(function (a) { return a.offer_id; }).filter(function (x, i, arr) { return x != null && arr.indexOf(x) === i; });
-      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: Math.round((lineOff + cartShare) * 100) / 100, line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
+      if (lineOff + cartShare > 0) M.rowOff[String(l.key)] = { off: roundMoney_(lineOff + cartShare), line_off: lineOff, cart_off: cartShare, label: uniq.join(' + '), ids: ids };
     });
     s._M = { key: key, M: M }; return M;
   }
@@ -1687,13 +1700,13 @@
       var net = (ev.line_net && ev.line_net[String(l.key)] != null) ? Number(ev.line_net[String(l.key)]) : Math.max(0, g - off - (gross > 0 ? orderOff * g / gross : 0));
       var t = taxOf(l.item_id, l);
       if (t && t.rate != null) {
-        var rate = Number(t.rate) + (Number(t.cess) || 0), tax = Math.round(net * rate / 100 * 100) / 100;
+        var rate = Number(t.rate) + (Number(t.cess) || 0), tax = roundMoney_(net * rate / 100);
         var k = (t.name && !/^\d/.test(String(t.name)) ? String(t.name) : 'GST') + ' · ' + Number(t.rate) + '%' + (Number(t.cess) ? ' + ' + Number(t.cess) + '% cess' : '');
-        byRate[k] = Math.round(((byRate[k] || 0) + tax) * 100) / 100; taxTotal += tax;
+        byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
-    taxTotal = Math.round(taxTotal * 100) / 100;
-    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: Math.round(untaxed * 100) / 100, grand: Math.round(((ev.total != null ? ev.total : gross) + taxTotal) * 100) / 100, ctx: ctx, offers: offers };
+    taxTotal = roundMoney_(taxTotal);
+    return { gross: gross, ev: ev, byRate: byRate, taxTotal: taxTotal, untaxed: roundMoney_(untaxed), grand: roundMoney_((ev.total != null ? ev.total : gross) + taxTotal), ctx: ctx, offers: offers };
   }
   /**
    * ⭐ THE MONEY BLOCK FROM RECORDED LINES — a chit's lines as they were written (price · quantity · discount · offer · gst_rate), the
@@ -1710,18 +1723,18 @@
       var net = (l.total != null && isFinite(Number(l.total))) ? Number(l.total) : Math.max(0, g - off);
       gross += g; after += net;
       /* a line that carried two offers (offer.parts, lib/offers-live) makes two rows — the same rows the live cart printed */
-      if (off > 0 && l.offer && Array.isArray(l.offer.parts) && l.offer.parts.length >= 1) l.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = Math.round((cartParts[ck].amount - (Number(pt.off) || 0)) * 100) / 100; } else adjustments.push({ scope: 'line', key: String(i), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
+      if (off > 0 && l.offer && Array.isArray(l.offer.parts) && l.offer.parts.length >= 1) l.offer.parts.forEach(function (pt) {   /* one part too: a lone basket-level part must fold to a basket row, not read as a line offer */ if (pt.scope === 'cart') { var ck = String(pt.offer_id || pt.label); if (!cartParts[ck]) { cartParts[ck] = { scope: 'cart', offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: 0 }; adjustments.push(cartParts[ck]); } cartParts[ck].amount = roundMoney_(cartParts[ck].amount - (Number(pt.off) || 0)); } else adjustments.push({ scope: 'line', key: String(i), offer_id: pt.offer_id || null, label: pt.label || 'offer', amount: -(Number(pt.off) || 0) }); });
       else if (off > 0) adjustments.push({ scope: 'line', key: String(i), offer_id: (l.offer && l.offer.offer_id) || null, label: (l.offer && l.offer.label) || 'offer', amount: -off });
       var rate = (l.gst_rate != null) ? Number(l.gst_rate) : ((l.tax && l.tax.rate != null) ? Number(l.tax.rate) : null);
       if (rate != null && isFinite(rate)) {
-        var cess = Number(l.cess_rate) || 0, tax = Math.round(net * (rate + cess) / 100 * 100) / 100;
+        var cess = Number(l.cess_rate) || 0, tax = roundMoney_(net * (rate + cess) / 100);
         var k = ((l.tax_name || (l.tax && l.tax.name)) && !/^\d/.test(String(l.tax_name || l.tax.name)) ? String(l.tax_name || l.tax.name) : 'GST') + ' · ' + rate + '%' + (cess ? ' + ' + cess + '% cess' : '');
-        byRate[k] = Math.round(((byRate[k] || 0) + tax) * 100) / 100; taxTotal += tax;
+        byRate[k] = roundMoney_((byRate[k] || 0) + tax); taxTotal += tax;
       } else untaxed += net;
     });
-    taxTotal = Math.round(taxTotal * 100) / 100;
-    return { gross: gross, ev: { adjustments: adjustments, notes: [], subtotal: gross, total: Math.round(after * 100) / 100 }, byRate: byRate, taxTotal: taxTotal,
-             untaxed: Math.round(untaxed * 100) / 100, grand: Math.round((after + taxTotal) * 100) / 100, ctx: ctx };
+    taxTotal = roundMoney_(taxTotal);
+    return { gross: gross, ev: { adjustments: adjustments, notes: [], subtotal: gross, total: roundMoney_(after) }, byRate: byRate, taxTotal: taxTotal,
+             untaxed: roundMoney_(untaxed), grand: roundMoney_(after + taxTotal), ctx: ctx };
   }
   /** a screen changed: a floating summary whose list is no longer on screen hides (the Suppliers card followed Athi to the Order page, 2026-09-06) */
   function floatsSync() {
@@ -1747,7 +1760,7 @@
     });
     /* ⭐ WHAT THIS CUSTOMER GETS BEYOND THE DECLARED OFFERS (Athi, 2026-09-06: "more importantly what additional offer he gets more than declared") — a row from an offer the seller scoped to a group or to this customer says so */
     var forYou = function (g) { var src = (m.offers || []).filter(function (o) { return g.offer_id && String(o.id) === String(g.offer_id); })[0]; return (src && src.customer_group) ? ' <small data-testid="cbcart-foryou" style="color:var(--ok-2,#1a7f4b);font-weight:700">' + esc('only for you') + '</small>' : ''; };
-    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + forYou(g) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(Math.round(g.amount * 100) / 100)) + '</b>'); }).join('');
+    var rows = grouped.map(function (g) { return row('🏷️ ' + esc(g.label) + forYou(g) + (g.scope === 'line' && g.n > 1 ? ' <small style="opacity:.7">' + esc(g.n + ' items') + '</small>' : '') + (g.scope && g.scope !== 'line' ? ' <small style="opacity:.7">' + esc(g.scope) + '</small>' : ''), '<b style="color:#c0392b">−' + esc(ctx.money(roundMoney_(g.amount))) + '</b>'); }).join('');
     var notes = (ev.notes || []).map(function (n) { return '<div style="opacity:.75">💡 ' + esc(n.why || n.text || n.label || '') + '</div>'; }).join('');
     var keys = Object.keys(m.byRate || {});
     var taxRows = keys.map(function (k) { return '<div data-testid="' + esc(opt.taxTestid || 'cart-tax') + '" style="display:flex;justify-content:space-between;gap:8px;opacity:.85"><span>' + esc(k) + '</span><span>' + esc(ctx.money(m.byRate[k])) + '</span></div>'; }).join('')
@@ -2004,7 +2017,7 @@
     try {
       var t = o.tax;
       if (t && t.rate != null && isFinite(o.amount)) {
-        var rate = Number(t.rate) + (Number(t.cess) || 0), incl = Math.round(o.amount * (1 + rate / 100) * 100) / 100;
+        var rate = Number(t.rate) + (Number(t.cess) || 0), incl = roundMoney_(o.amount * (1 + rate / 100));
         taxChip = '<span class="cbcat-tax" data-testid="cbcat-tax-' + esc(o.id) + '" title="' + esc(t.name || 'GST') + '">+' + esc(String(Number(t.rate))) + '% GST' + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '% cess' : '') + ' · ' + esc(m(incl)) + ' incl.</span>';
         slab = '<span class="cbcat-slab" title="' + esc(t.name || 'GST') + '">' + esc('GST ' + String(Number(t.rate)) + '%') + (Number(t.cess) ? ' +' + esc(String(Number(t.cess))) + '%' : '') + '</span>';
       }

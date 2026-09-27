@@ -34,6 +34,19 @@
  */
 var CBPick = (function () {
   'use strict';
+  /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md), found wherever this copy runs: CBMoney in
+     a page, lib/money.js on the server. Looked up PER CALL, because on the shop screen an engine can load before
+     money.js does. ⚠️ The fallback is the SAME rule, only for a page where money.js failed to load — and
+     tests/money-round.test.js holds every copy of it equal to money.round. */
+  var MONEY_ = null;
+  function roundMoney_(n) {
+    var M = (typeof CBMoney !== 'undefined' && CBMoney.round) ? CBMoney : MONEY_;
+    if (M === null && typeof require === 'function') { try { M = MONEY_ = require('./money'); } catch (_) { M = MONEY_ = false; } }
+    if (M && M.round) return M.round(n);
+    var x = Number(n); if (!isFinite(x)) return x;
+    var c = Math.round(Number((Math.abs(x) * 100).toPrecision(15))) / 100;
+    return (x < 0 && c !== 0) ? -c : c;
+  }
 
   var HOST_LIST = 'cbpick_pk';
   var HOST_BAR = 'cbcartbar_pk';
@@ -91,7 +104,7 @@ var CBPick = (function () {
         code: l.code || null,
         price: price,
         qty: qty,
-        amount: Math.round(total * 100) / 100,
+        amount: roundMoney_(total),
       };
     });
   }
