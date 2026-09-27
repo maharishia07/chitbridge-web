@@ -129,6 +129,20 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
    * ⚠️ EVERY ASSERTION ABOVE PASSED THROUGHOUT, because they all set the value programmatically —
    * expAmountSet('1500') never involves a keystroke. Only typing finds this, so this block types.
    */
+  /**
+   * ⭐ THE SIGN BESIDE THE AMOUNT IS THE SHOP'S, not a hard-coded ₹ (it was, from fd409b6 until 2026-09-27 —
+   * tests/snapshot-wire caught it). This shop is INR, so ₹ would pass either way; the proof is a USD shop.
+   */
+  console.log('\n── the currency sign is the shop\'s own ' + '─'.repeat(6));
+  const sign = await p.evaluate(() => {
+    const was = S.shop.currency; const read = () => { expOpen(); return document.querySelector('#expbody .cur').textContent; };
+    const inr = read(); document.getElementById('expdlg').close();
+    S.shop.currency = 'USD'; const usd = read(); document.getElementById('expdlg').close();
+    S.shop.currency = was; return { inr, usd };
+  });
+  say('an INR shop sees ₹', sign.inr === '₹', sign.inr);
+  say('⭐ a USD shop sees $, not ₹', sign.usd === '$' || sign.usd === 'US$', sign.usd);
+
   console.log('\n── typed one key at a time, the way a person does ' + '─'.repeat(6));
   const typed = await p.evaluate(() => { HOST.expense = async () => ({ ok: true }); expOpen(); });
   await p.waitForSelector('#expamt', { timeout: 5000 });
