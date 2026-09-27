@@ -195,6 +195,49 @@ function label(mask, item, value) {
   say('⚠️ a pattern with no prefix is refused there and then',
       /digits your scale always prints/.test(refused), '"' + refused.trim() + '"');
 
+  /**
+   * ── ⭐⭐⭐ AND THE STARTER CATALOGUE CAN ACTUALLY BE WEIGHED (2026-09-27) ──────────────────────────────
+   *
+   * Athi: *"how this item are connected to the scale?"* — asked while switching a test shop onto the veg
+   * blueprint, and the honest answer at that moment was "it isn't". veg mints `code: 'V0001'`; a scale label
+   * carries digits only and there is nowhere in a barcode to put the 'V', so weighRead() looked for "1",
+   * found nothing, and refused EVERY label on the trade most likely to own a scale.
+   *
+   * ⭐ veg@2 now also carries a numeric PLU in `barcode` (catalogue-blueprint.withScalePlu), which is the
+   * handle weighRead() already looked for. This asserts the join in both directions, because the failure it
+   * replaces was invisible from either side alone: the label decoded perfectly and the catalogue looked fine.
+   */
+  console.log('\n── the veg blueprint, weighed ' + '─'.repeat(28));
+  const bp = require('../../chitbridge-api/lib/catalogue-blueprint');
+  const veg = bp.blueprint('veg');
+  const tom = veg.starter.find((x) => x.name === 'Tomato');
+  say('veg@2 gives every product a numeric PLU for the scale',
+    veg.starter.every((x) => /^[0-9]+$/.test(String(x.barcode || ''))),
+    bp.pin(veg) + ' · Tomato PLU ' + (tom && tom.barcode));
+  const joined = await p.evaluate((row) => {
+    const mk = (item, grams) => {
+      const body = '21' + String(item).padStart(5, '0') + String(grams).padStart(5, '0');
+      let s = 0; for (let i = 0; i < 12; i++) s += Number(body[i]) * (i % 2 === 0 ? 1 : 3);
+      return body + String((10 - (s % 10)) % 10);
+    };
+    /* ⚠️ set again here: the settings section above deliberately leaves a refused pattern behind */
+    tillOptSet({ weigh: { on: true, preset: 'weight_13', mask: '' } });
+    const label = mk(Number(row.barcode), 750);
+    const mint = { item_id: 'v1', name: row.name, price: row.price, unit: row.unit,
+                   code: 'V0001', barcode: row.barcode, category: row.category };
+    window.S = { shop: { pay: [] }, items: [mint] };
+    const withPlu = weighRead(label);
+    delete window.S.items[0].barcode;                    /* ⚠️ the same shop before the PLU existed */
+    const without = weighRead(label);
+    return { label, withPlu: withPlu && (withPlu.bad || { qty: withPlu.qty, why: withPlu.why }),
+             without: without && (without.bad || { qty: without.qty }) };
+  }, tom);
+  say('a 750 g label on that PLU lands as 0.75 kg, priced by the shop’s rate',
+    joined.withPlu && joined.withPlu.qty === 0.75 && /weight/.test(joined.withPlu.why || ''),
+    joined.label + ' → ' + JSON.stringify(joined.withPlu));
+  say('⚠️ and without the PLU the same label is refused — the bug this fixes, kept visible',
+    typeof joined.without === 'string' && /code 1/.test(joined.without), '"' + joined.without + '"');
+
   if (process.argv.includes('--shots')) {
     fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
     await p.screenshot({ path: path.join(__dirname, '..', 'png', 'Scale.png') });
