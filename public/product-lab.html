@@ -88,6 +88,11 @@ tr.has .whose{color:var(--ok)}
     <button class="pill" data-own="mine" onclick="setOwn('mine')" data-testid="pl-own-mine">✓ In my catalogue</button>
     <button class="pill" data-own="new" onclick="setOwn('new')" data-testid="pl-own-new">Not yet</button>
   </div>
+  <!--
+    ⭐ SOLD HOW? Athi: *"say i get crate and kg as well, so i choose to ignore crate, so i get a minimal
+    list."* One row per unit is what makes these lists long, so the unit is the sharpest way to shorten one.
+  -->
+  <div class="row" id="units" data-testid="pl-units"></div>
 
   <div id="tablewrap"></div>
   <p class="note" id="hint"></p>
@@ -99,7 +104,7 @@ tr.has .whose{color:var(--ok)}
 </div>
 
 <script>
-var OWN = '';
+var OWN = '', OFFUNITS = {};   /* units the shopkeeper has switched OFF for this list */
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var DATA = null, LIST = null, LANGS = [], PICKED = {}, BUSY = false;
 
@@ -155,7 +160,7 @@ async function load(){
 
 function pickList(k){
   LIST = DATA.lists.filter(function(l){ return l.key === k; })[0];
-  PICKED = {}; LANGS = [];
+  PICKED = {}; LANGS = []; OFFUNITS = {};
   Array.prototype.forEach.call(document.querySelectorAll('#lists .pill'), function(b){
     b.classList.toggle('on', b.getAttribute('data-testid') === 'pl-list-' + k); });
   document.getElementById('langs').innerHTML = LIST.languages.length
@@ -166,6 +171,7 @@ function pickList(k){
   var cat = document.getElementById('cat');
   cat.innerHTML = '<option value="">Every shelf</option>'
     + LIST.categories.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+  paintUnits();
   document.getElementById('q').value = '';
   say('');
   paint();
@@ -186,6 +192,7 @@ function shown(){
     if (c && r.category !== c) return false;
     if (OWN === 'mine' && !have(r)) return false;
     if (OWN === 'new' && have(r)) return false;
+    if (OFFUNITS[r.unit]) return false;
     if (!q) return true;
     if (r.name.toLowerCase().indexOf(q) >= 0) return true;
     if ((r.category || '').toLowerCase().indexOf(q) >= 0) return true;
@@ -200,6 +207,34 @@ function localOf(r){
   (LANGS.length ? LANGS : Object.keys(n)).forEach(function(l){ (n[l] || []).forEach(function(w){
     if (out.indexOf(w) < 0) out.push(w); }); });
   return out.join(', ');
+}
+/**
+ * ⭐ THE UNITS THIS LIST ACTUALLY USES, counted — asked of the ROWS, never of the blueprint's declared
+ * , which can name one no row uses. A filter offering a unit that hides nothing is a control that
+ * does nothing when pressed.
+ */
+function unitCounts(){
+  var out = {};
+  (LIST.rows || []).forEach(function(r){ out[r.unit] = (out[r.unit] || 0) + 1; });
+  return out;
+}
+function paintUnits(){
+  var c = unitCounts(), keys = Object.keys(c).sort(function(a, b){ return c[b] - c[a]; });
+  /* ⚠️ a list sold in ONE unit needs no filter — offering it would be a row of furniture */
+  document.getElementById('units').innerHTML = keys.length < 2 ? '' :
+    '<span class="note">Sold by:</span> ' + keys.map(function(u){
+      return '<button class="pill ' + (OFFUNITS[u] ? '' : 'on') + '" data-unit="' + esc(u) + '"'
+        + ' data-testid="pl-unit-' + esc(u) + '" onclick="toggleUnit(\'' + esc(u) + '\')">'
+        + esc(u) + ' <b>' + c[u] + '</b></button>';
+    }).join('');
+}
+/** ⚠️ turning a unit off also UNTICKS its rows — adopting something you cannot see is the worst outcome here */
+function toggleUnit(u){
+  if (OFFUNITS[u]) delete OFFUNITS[u]; else {
+    OFFUNITS[u] = 1;
+    Object.keys(PICKED).forEach(function(k){ if (k.split('')[1] === u) delete PICKED[k]; });
+  }
+  paintUnits(); paint();
 }
 function have(r){ return !!(DATA._have[keyOf(r)] || DATA._have[r.name.toLowerCase()]); }
 /**

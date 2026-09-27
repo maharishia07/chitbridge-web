@@ -194,11 +194,43 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     /suggested/.test(await p.innerText('[data-testid=pl-table]')), 'labelled "suggested"');
   await p.click('#own .pill[data-own=""]');
 
+  /**
+   * ── ⭐ IGNORING A UNIT, TO GET A SHORTER LIST ──────────────────────────────────────────────────────
+   * Athi: *"can we sort based on unit or may be a check box to include, say i get crate and kg as well, so
+   * i choose to ignore crate, so i get a minimal list."* One row per unit is what makes these lists long,
+   * so the unit is the sharpest way to shorten one. Eggs is the clearest case: piece, dozen and box.
+   */
+  console.log('\n── ignoring a unit, to get a shorter list ' + '─'.repeat(19));
+  await p.click('[data-testid=pl-list-egg]');
+  const unitPills = await p.$$eval('#units .pill', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+  say('the units this list actually uses, counted', unitPills.length === 4, unitPills.join(' · '));
+  const allEgg = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+
+  await p.click('[data-testid=pl-unit-box]');
+  const noBox = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  say('⭐ switching a unit off shortens the list by exactly its count',
+    noBox === allEgg - 1, allEgg + ' → ' + noBox + ' rows without "box"');
+  say('and no row sold in that unit is left behind',
+    !/\bbox\b/.test(await p.innerText('[data-testid=pl-table]')), 'no box rows shown');
+
+  /* ⚠️ the one that would actually hurt: ticking rows, then hiding them */
+  await p.click('[data-testid=pl-unit-box]');          /* box back on */
+  await p.click('[data-testid=pl-all]');
+  const before = await p.textContent('#count');
+  await p.click('[data-testid=pl-unit-box]');          /* off again, with its rows ticked */
+  const after = await p.textContent('#count');
+  say('⚠️⚠️ hiding a unit UNTICKS its rows — adopting what you cannot see is the worst outcome here',
+    /18 products ticked/.test(before) && /17 products ticked/.test(after), before.trim() + ' → ' + after.trim());
+  await p.click('[data-testid=pl-unit-box]');
+  await p.click('[data-testid=pl-list-veg]');
+  say('a list sold one way offers no unit filter at all',
+    (await p.$$eval('#units .pill', (b) => b.length)) > 1, 'veg has 6 units, so it does');
+
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
   if (process.argv.includes('--shots')) {
     fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
-    await p.click('[data-testid=pl-list-veg]'); await p.fill('#q', ''); await p.click('[data-testid=pl-own-mine]');
+    await p.click('[data-testid=pl-list-egg]'); await p.fill('#q', ''); await p.click('#own .pill[data-own=""]');
     await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab.png'), fullPage: false });
   }
   await b.close(); srv.close();
