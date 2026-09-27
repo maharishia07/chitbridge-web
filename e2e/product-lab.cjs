@@ -55,7 +55,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
         fresh.forEach((n) => shelf.push({ name: n.name, unit: n.unit, price: 9 }));
         const s = (b.names || []).length - fresh.length;
         r.writeHead(200, { 'content-type': 'application/json' });
-        r.end(JSON.stringify({ ok: true, added: fresh.length, skipped: new Array(s).fill({}),
+        r.end(JSON.stringify({ ok: true, added: fresh.length, skipped: new Array(s).fill({}), status: b.status,
           message: fresh.length + ' products added' + (s ? ' · ' + s + ' you already sell were left alone' : '') + '.' }));
       });
       return;
@@ -132,11 +132,14 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('a language can be asked for', await p.$eval('[data-testid=pl-lang-ta]', (e) => e.classList.contains('on')), 'Tamil on');
   await p.click('[data-testid=pl-all]');
   const ticked = await p.textContent('#count');
-  say('"tick all shown" ticks the shelf and nothing else', /\b22 products ticked/.test(ticked), ticked.trim());
-  say('the button names what it will do', /Add 22 to my catalogue/.test(await p.textContent('#adopt')),
-    (await p.textContent('#adopt')).trim());
+  say('"tick all shown" ticks the shelf and nothing else', /\b22 products chosen/.test(ticked), ticked.trim());
+  say('the button moves to the next step, it does not add yet',
+    /Next — price 22 products/.test(await p.textContent('[data-testid=pl-next]')),
+    (await p.textContent('[data-testid=pl-next]')).trim());
 
-  await p.click('#adopt');
+  await p.click('[data-testid=pl-next]');           /* step 1 → 2, the conscious decision */
+  await p.waitForSelector('[data-testid=pl-review]', { timeout: 10000 });
+  await p.click('[data-testid=pl-adopt]');
   await p.waitForFunction(() => /added/.test(document.getElementById('say').textContent), null, { timeout: 15000 });
   say('it says what it did, in a sentence', /22 products added/.test(await p.textContent('#say')),
     (await p.textContent('#say')).trim());
@@ -178,7 +181,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   await p.click('[data-testid=pl-own-mine]');
   const mineRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)',
     (r) => r.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
-  say('⭐ a filter shows only what is in my catalogue', mineRows.length === 23, mineRows.length + ' rows');
+  say('⭐ a filter shows only what is in my catalogue', mineRows.length === shelf.length, mineRows.length + ' rows');
   const tomRow = mineRows.find((x) => /^Tomato /.test(x)) || '';
   say('⭐⭐ and it shows the SHOP’s price, not the list’s suggestion',
     /52/.test(tomRow) && !/40\.00/.test(tomRow), tomRow.slice(0, 58));
@@ -188,8 +191,29 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
   await p.click('[data-testid=pl-own-new]');
   const newRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  /* ⚠️ derived, never a literal — the list grows (202 → 216 the day bulk rows landed) and a hardcoded
+     count turns a healthy change into a red test. */
+  const vegTotal = BP.blueprint('veg').starter.length;
   say('"Not yet" shows the rest — the question somebody adding products actually has',
-    newRows === 202 - 23, newRows + ' of 202 still to add');
+    newRows === vegTotal - shelf.length, newRows + ' of ' + vegTotal + ' still to add');
+
+  /**
+   * ⚠️⚠️ AND A BULK ROW IS NOT GREYED JUST BECAUSE ITS kg SIBLING IS SOLD ([found by adding veg@3]).
+   * The page used to fall back to matching on the NAME alone, which was invisible while every product had
+   * one unit. The moment "Tomato · box" appeared beside "Tomato · kg", a shop selling tomatoes by the kilo
+   * had the box row greyed out as already-sold — and the box row is exactly what a wholesale buyer came
+   * for. Athi, on the bulk units: *"if it is b2b, those only would help."*
+   */
+  await p.click('#own .pill[data-own=""]');
+  await p.fill('#q', 'tomato');
+  const tomBoth = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)',
+    (rows) => rows.map((x) => ({ t: x.innerText.replace(/\s+/g, ' ').trim(), had: x.classList.contains('has') })));
+  const tomKg = tomBoth.find((x) => /^Tomato /.test(x.t) && / kg /.test(x.t));
+  const tomBox = tomBoth.find((x) => /^Tomato /.test(x.t) && / box /.test(x.t));
+  say('⚠️⚠️ the kg row is greyed (they sell it) but the B2B box row is still offered',
+    !!(tomKg && tomKg.had) && !!(tomBox && !tomBox.had),
+    'kg: ' + (tomKg && tomKg.had ? 'already sold' : '?') + ' · box: ' + (tomBox && !tomBox.had ? 'offered' : '?'));
+  await p.fill('#q', '');
   say('a suggested price is labelled as suggested, never as theirs',
     /suggested/.test(await p.innerText('[data-testid=pl-table]')), 'labelled "suggested"');
   await p.click('#own .pill[data-own=""]');
@@ -203,7 +227,8 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   console.log('\n── ignoring a unit, to get a shorter list ' + '─'.repeat(19));
   await p.click('[data-testid=pl-list-egg]');
   const unitPills = await p.$$eval('#units .pill', (b) => b.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-  say('the units this list actually uses, counted', unitPills.length === 4, unitPills.join(' · '));
+  const eggUnits = new Set(BP.blueprint('egg').starter.map((x) => x.unit));
+  say('the units this list actually uses, counted', unitPills.length === eggUnits.size, unitPills.join(' · '));
   const allEgg = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
 
   await p.click('[data-testid=pl-unit-box]');
@@ -220,18 +245,106 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   await p.click('[data-testid=pl-unit-box]');          /* off again, with its rows ticked */
   const after = await p.textContent('#count');
   say('⚠️⚠️ hiding a unit UNTICKS its rows — adopting what you cannot see is the worst outcome here',
-    /18 products ticked/.test(before) && /17 products ticked/.test(after), before.trim() + ' → ' + after.trim());
+    /18 products chosen/.test(before) && /17 products chosen/.test(after), before.trim() + ' → ' + after.trim());
   await p.click('[data-testid=pl-unit-box]');
   await p.click('[data-testid=pl-list-veg]');
   say('a list sold one way offers no unit filter at all',
     (await p.$$eval('#units .pill', (b) => b.length)) > 1, 'veg has 6 units, so it does');
 
+  /**
+   * ── ⭐⭐⭐ STEP 2 — THE CONSCIOUS DECISION ───────────────────────────────────────────────────────────
+   *
+   * Athi: *"we have to say clearly, this is only adding a product to catalogue, then update price and make
+   * it available like the flow of cart, so it is a conscious decision, otherwise it just getting added.
+   * flow has to be there."* And then the rule that decides the default: *"it is just the first step of
+   * adding the product, then there may be tax, there may be offer and combo etc, so we should not directly
+   * make it available."*
+   */
+  /**
+   * ⚠️⚠️⚠️ THE CHECKBOX ITSELF, CLICKED — not "Tick all shown" ([found 2026-09-27]).
+   * Every tick assertion above drives the BUTTON, which calls pickAll() directly. That left the row
+   * checkbox's own handler completely unexercised, and it was broken: its onchange was built by
+   * interpolating JSON.stringify(name) into a double-quoted attribute, so the attribute ended early and
+   * the browser threw "SyntaxError: Unexpected end of input" on every row. A control can be dead while
+   * the feature it drives looks thoroughly tested. This clicks the actual box.
+   */
+  console.log('\n── the checkbox a person actually clicks ' + '─'.repeat(20));
+  await p.click('[data-testid=pl-list-egg]');
+  await p.click('[data-testid=pl-table] tbody tr:not(.catrow):not(.has) input[type=checkbox]');
+  say('⭐ ticking one row with the mouse registers it', /1 product chosen/.test(await p.textContent('#count')),
+    (await p.textContent('#count')).trim());
+  await p.click('[data-testid=pl-table] tbody tr:not(.catrow):not(.has) input[type=checkbox]');
+  say('and unticking it takes it back off', /Tick what this shop sells/.test(await p.textContent('#count')),
+    'back to none');
+
+  console.log('\n── step 2, where the decisions are made ' + '─'.repeat(21));
+  await p.click('[data-testid=pl-all]');
+  say('step 2 is not reachable with nothing chosen — a step that opens empty is a dead end',
+    await p.$eval('[data-testid=pl-step-2]', (e) => !e.disabled), 'enabled once something is chosen');
+  await p.click('[data-testid=pl-next]');
+  await p.waitForSelector('[data-testid=pl-review]', { timeout: 10000 });
+
+  const reviewRows = await p.$$eval('[data-testid=pl-review] tbody tr', (r) => r.length);
+  say('only what was chosen is carried forward', reviewRows === 18, reviewRows + ' rows to price');
+  say('⭐⭐⭐ and OFF THE SHELF is the default — tax and offers come first',
+    await p.$eval('[data-testid=pl-shelf-unavailable]', (e) => e.classList.contains('on')),
+    '"Not yet — set tax and offers first" is pre-selected');
+  say('the footer says what will happen, before it happens',
+    /off the shelf until you switch them on/.test(await p.textContent('#count')),
+    (await p.textContent('#count')).trim());
+
+  /* ⭐ amend a price — the thing step 2 exists for */
+  const priceBox = '[data-testid="pl-price-Boiled egg"]';
+  say('every chosen row offers its price to amend',
+    (await p.$$eval('[data-testid=pl-review] input[type=number]', (i) => i.length)) === 18, '18 price boxes');
+  await p.fill(priceBox, '18');
+  await p.click('[data-testid=pl-shelf-available]');
+  say('and the shelf choice can be overridden deliberately',
+    /on sale immediately/.test(await p.textContent('#count')), (await p.textContent('#count')).trim());
+
+  /* ⚠️ back and forth must not lose the decision — that is what makes it a flow and not two forms */
+  await p.click('[data-testid=pl-step-1]');
+  await p.waitForSelector('[data-testid=pl-table]', { timeout: 10000 });
+  await p.click('[data-testid=pl-step-2]');
+  await p.waitForSelector('[data-testid=pl-review]', { timeout: 10000 });
+  say('⚠️ a price typed in step 2 survives a trip back to step 1',
+    (await p.inputValue(priceBox)) === '18', 'Boiled egg still ₹18');
+
+  await p.click('[data-testid=pl-adopt]');
+  await p.waitForFunction(() => /added/.test(document.getElementById('say').textContent), null, { timeout: 15000 });
+  say('⭐⭐ the amended price is what reached the server, not the suggestion',
+    (lastAdopt.names.find((x) => x.name === 'Boiled egg') || {}).price === 18,
+    JSON.stringify(lastAdopt.names.find((x) => x.name === 'Boiled egg')));
+  /**
+   * ⭐⭐ EVERY ROW SENDS THE PRICE THAT WAS ON SCREEN — including the ones left at the suggestion.
+   * The first version of this assertion expected untouched rows to send nothing and let the server
+   * re-derive the list's figure. That is worse: if the list moved between the page loading and the
+   * shopkeeper pressing Add, the price written would not be the price they were looking at. What is
+   * displayed is what is decided, so what is displayed is what travels.
+   */
+  const anEgg = lastAdopt.names.find((x) => x.name === 'Duck egg' && x.unit === 'piece');
+  say('⭐ and a row left at its suggestion sends that same figure — what was shown is what is written',
+    !!anEgg && anEgg.price === 12, JSON.stringify(anEgg));
+  say('nothing was sent that the person did not see',
+    lastAdopt.names.every((x) => x.price === undefined || Number.isFinite(x.price)),
+    lastAdopt.names.length + ' rows, every price a real number');
+  say('and the shelf decision travelled with them', lastAdopt.status === 'available', lastAdopt.status);
+  say('it lands back on step 1, ready for the next helping',
+    await p.$eval('[data-testid=pl-step-1]', (e) => e.classList.contains('on')), 'step 1');
+
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
   if (process.argv.includes('--shots')) {
     fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
-    await p.click('[data-testid=pl-list-egg]'); await p.fill('#q', ''); await p.click('#own .pill[data-own=""]');
-    await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab.png'), fullPage: false });
+    /* step 1 on the big list, then step 2 on a small one — the two things worth looking at */
+    await p.click('[data-testid=pl-list-veg]');
+    await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab.png') });
+    /* ⚠️ a list this run has NOT adopted — eggs are all on the shelf by now, so nothing would tick */
+    await p.click('[data-testid=pl-list-meat]');
+    await p.click('[data-testid=pl-all]');
+    await p.click('[data-testid=pl-next]');
+    await p.waitForSelector('[data-testid=pl-review]', { timeout: 10000 });
+    await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab-2.png') });
   }
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' failed\n' : '\na shop adopts a ready-made list, in its own language, without typing a product\n');
