@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product Lab</title>
+<!--
+  ⭐⭐⭐ PRODUCT LAB ([2026-09-27]) — Athi: *"in the product lab, showcase what are the product lists are
+  available, there they can choose the synonym language as well... what we can showcase is the spread sheet
+  kind of with the checkbox, so they can choose according to their interest, ofcourse category should be
+  included, so in one go or may be in multiple iteration, they can add products into their catalogue."*
+
+  ⚠️ FUNCTION FIRST, ON PURPOSE. Athi: *"if it has to be well designed we can do it later as well"* / *"only
+  the designing part, let us see things in action."* So this is the working thing, plainly dressed. It is NOT
+  the counter's design system and does not pretend to be.
+
+  ⚠️⚠️ IT AUTHENTICATES A PERSON, never a counter key — the same rule Offer Lab states: adopting products
+  creates sellable goods on a live shelf, which is not authority a key taped to a till should carry. The
+  till's own POST /api/till/catalogue stays the narrow SETUP door and is untouched by this page.
+-->
+<style>
+:root{
+  --page:#F7F5F0; --card:#fff; --ink:#1D1B16; --dim:#5E594D; --line:#DDD6C6; --hair:#EFEAE0;
+  --ok:#16693F; --ok-t:#E8F4ED; --warn:#8E3517; --warn-t:#FBEAE3; --accent:#2F74C9;
+}
+:root:not([data-theme="light"]){ }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --page:#171613; --card:#201E1A; --ink:#F2EFE8; --dim:#A8A295; --line:#3A362E; --hair:#2A2721;
+  --ok:#5FBF8C; --ok-t:#1B2E24; --warn:#E08A63; --warn-t:#33211A; --accent:#7FB0F0;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--card);
+  display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:1.15em}
+header .u{color:var(--dim);font-size:.85em}
+.wrap{padding:14px 16px 120px;max-width:1100px;margin:0 auto}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+button{font:inherit;color:inherit;cursor:pointer}
+.pill{padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--dim)}
+.pill.on{border-color:var(--ok);background:var(--ok-t);color:var(--ok);font-weight:700}
+input[type=search],select{font:inherit;color:inherit;padding:8px 10px;border:1px solid var(--line);
+  border-radius:8px;background:var(--card);min-width:0}
+input[type=search]{flex:1;min-width:180px}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px}
+th,td{padding:7px 10px;text-align:start;border-bottom:1px solid var(--hair);font-size:.92em;vertical-align:top}
+th{position:sticky;top:57px;background:var(--card);color:var(--dim);font-size:.78em;text-transform:uppercase;
+  letter-spacing:.04em;z-index:2}
+tr.has td{opacity:.5}
+td.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.loc{color:var(--dim)}
+.catrow td{background:var(--hair);font-weight:700;font-size:.85em}
+.foot{position:fixed;inset-inline:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
+  padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.go{padding:11px 20px;border:1px solid var(--ok);border-radius:10px;background:var(--ok);color:#fff;font-weight:700}
+.go:disabled{opacity:.45;cursor:not-allowed;background:var(--card);color:var(--dim);border-color:var(--line)}
+.say{padding:10px 12px;border-radius:9px;margin-bottom:12px}
+.say.ok{background:var(--ok-t);color:var(--ok)} .say.bad{background:var(--warn-t);color:var(--warn)}
+.note{color:var(--dim);font-size:.88em}
+@media (max-width:560px){ th:nth-child(6),td:nth-child(6){display:none} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Product Lab</h1>
+  <span class="u" id="who">…</span>
+</header>
+<div class="wrap">
+  <div id="say"></div>
+
+  <div class="row" id="lists" data-testid="pl-lists"></div>
+  <div class="row" id="langs" data-testid="pl-langs"></div>
+  <div class="row">
+    <input type="search" id="q" placeholder="Search a product…" oninput="paint()" data-testid="pl-search">
+    <select id="cat" onchange="paint()" data-testid="pl-cat"></select>
+    <button class="pill" onclick="pickAll(true)" data-testid="pl-all">Tick all shown</button>
+    <button class="pill" onclick="pickAll(false)">Clear</button>
+  </div>
+
+  <div id="tablewrap"></div>
+  <p class="note" id="hint"></p>
+</div>
+
+<div class="foot">
+  <span id="count" class="note">…</span>
+  <button class="go" id="adopt" onclick="adopt()" disabled data-testid="pl-adopt">Add to my catalogue</button>
+</div>
+
+<script>
+var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var DATA = null, LIST = null, LANGS = [], PICKED = {}, BUSY = false;
+
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+  return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
+function token(){ try { return (JSON.parse(localStorage.getItem('cb_sess') || 'null') || {}).token || null; } catch (_) { return null; } }
+function say(t, bad){ var el = document.getElementById('say');
+  el.innerHTML = t ? '<div class="say ' + (bad ? 'bad' : 'ok') + '">' + esc(t) + '</div>' : ''; }
+/** ⚠️ name AND unit — one row per unit is the whole shape of these lists, so the key must carry both */
+function keyOf(r){ return r.name + '' + r.unit; }
+
+async function load(){
+  if (!token()) {
+    document.getElementById('who').textContent = 'not signed in';
+    say('Sign in to ChitBridge in this browser first — adopting products writes to your catalogue, so it asks who you are.', true);
+    return;
+  }
+  try {
+    var r = await fetch(API + '/api/products/lists', { headers: { Authorization: 'Bearer ' + token() } });
+    if (!r.ok) { say('Could not read the product lists (' + r.status + ').', true); return; }
+    DATA = await r.json();
+  } catch (e) { say('Could not reach ChitBridge. ' + e.message, true); return; }
+
+  document.getElementById('who').textContent = DATA.have + ' products in your catalogue today';
+  /* ⭐ what the shop already sells, so a row it has is shown greyed and pre-ticked-off rather than offered twice */
+  DATA._have = {};
+  (DATA.mine || []).forEach(function(m){ DATA._have[keyOf({ name: m.name, unit: m.unit })] = 1;
+                                        DATA._have[String(m.name).toLowerCase()] = 1; });
+  document.getElementById('lists').innerHTML = DATA.lists.map(function(l){
+    return '<button class="pill" data-testid="pl-list-' + esc(l.key) + '" onclick="pickList(\'' + esc(l.key) + '\')">'
+      + esc(l.label) + ' <b>' + l.count + '</b></button>';
+  }).join('');
+  pickList(DATA.lists[0].key);
+}
+
+function pickList(k){
+  LIST = DATA.lists.filter(function(l){ return l.key === k; })[0];
+  PICKED = {}; LANGS = [];
+  Array.prototype.forEach.call(document.querySelectorAll('#lists .pill'), function(b){
+    b.classList.toggle('on', b.getAttribute('data-testid') === 'pl-list-' + k); });
+  document.getElementById('langs').innerHTML = LIST.languages.length
+    ? '<span class="note">Also carry the local name:</span> ' + LIST.languages.map(function(l){
+        return '<button class="pill" data-testid="pl-lang-' + esc(l) + '" onclick="toggleLang(\'' + esc(l) + '\')">'
+          + esc((DATA.language_names || {})[l] || l) + '</button>'; }).join('')
+    : '<span class="note">No local names on this list yet.</span>';
+  var cat = document.getElementById('cat');
+  cat.innerHTML = '<option value="">Every shelf</option>'
+    + LIST.categories.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+  document.getElementById('q').value = '';
+  say('');
+  paint();
+}
+function toggleLang(l){
+  var i = LANGS.indexOf(l); if (i < 0) LANGS.push(l); else LANGS.splice(i, 1);
+  Array.prototype.forEach.call(document.querySelectorAll('#langs .pill'), function(b){
+    var k = (b.getAttribute('data-testid') || '').replace('pl-lang-', '');
+    b.classList.toggle('on', LANGS.indexOf(k) >= 0); });
+  paint();
+}
+
+/** the rows the search and the shelf leave visible — one place, so the table and "tick all shown" agree */
+function shown(){
+  var q = document.getElementById('q').value.trim().toLowerCase();
+  var c = document.getElementById('cat').value;
+  return (LIST.rows || []).filter(function(r){
+    if (c && r.category !== c) return false;
+    if (!q) return true;
+    if (r.name.toLowerCase().indexOf(q) >= 0) return true;
+    if ((r.category || '').toLowerCase().indexOf(q) >= 0) return true;
+    /* ⭐ a search must find thakkali, or the local names were pointless */
+    var n = r.names || {};
+    for (var l in n) if (n[l].join(' ').toLowerCase().indexOf(q) >= 0) return true;
+    return false;
+  });
+}
+function localOf(r){
+  var n = r.names || {}, out = [];
+  (LANGS.length ? LANGS : Object.keys(n)).forEach(function(l){ (n[l] || []).forEach(function(w){
+    if (out.indexOf(w) < 0) out.push(w); }); });
+  return out.join(', ');
+}
+function have(r){ return !!(DATA._have[keyOf(r)] || DATA._have[r.name.toLowerCase()]); }
+
+function paint(){
+  var rows = shown(), out = [], lastCat = null;
+  rows.forEach(function(r){
+    if (r.category !== lastCat) {
+      lastCat = r.category;
+      out.push('<tr class="catrow"><td colspan="6">' + esc(r.category || 'Everything else') + '</td></tr>');
+    }
+    var k = keyOf(r), got = have(r);
+    out.push('<tr class="' + (got ? 'has' : '') + '">'
+      + '<td><input type="checkbox" ' + (PICKED[k] ? 'checked' : '') + (got ? ' disabled' : '')
+        + ' onchange="pick(this.checked,\'' + esc(k).replace(/'/g, "\\'") + '\')"></td>'
+      + '<td>' + esc(r.name) + (got ? ' <span class="note">· you sell this</span>' : '') + '</td>'
+      + '<td class="loc">' + esc(localOf(r)) + '</td>'
+      + '<td>' + esc(r.unit) + '</td>'
+      + '<td class="num">' + (r.price != null ? Number(r.price).toFixed(2) : '') + '</td>'
+      + '<td class="loc">' + esc(r.category || '') + '</td></tr>');
+  });
+  document.getElementById('tablewrap').innerHTML = rows.length
+    ? '<table data-testid="pl-table"><thead><tr><th></th><th>Product</th><th>Local name</th><th>Unit</th>'
+      + '<th class="num">Price</th><th>Shelf</th></tr></thead><tbody>' + out.join('') + '</tbody></table>'
+    : '<p class="note">Nothing matches that.</p>';
+  document.getElementById('hint').textContent =
+    'Prices are a starting point — change any of them later in the counter’s maintenance screen.';
+  tally();
+}
+function pick(on, k){ if (on) PICKED[k] = 1; else delete PICKED[k]; tally(); }
+function pickAll(on){
+  shown().forEach(function(r){ if (have(r)) return; var k = keyOf(r); if (on) PICKED[k] = 1; else delete PICKED[k]; });
+  paint();
+}
+function tally(){
+  var n = Object.keys(PICKED).length;
+  document.getElementById('count').textContent = n
+    ? n + ' product' + (n === 1 ? '' : 's') + ' ticked' + (LANGS.length ? ' · with local names' : '')
+    : 'Tick what this shop sells. You can come back and add more later.';
+  var b = document.getElementById('adopt');
+  b.disabled = !n || BUSY;
+  b.textContent = BUSY ? 'Adding…' : (n ? 'Add ' + n + ' to my catalogue' : 'Add to my catalogue');
+}
+
+async function adopt(){
+  var picked = Object.keys(PICKED); if (!picked.length || BUSY) return;
+  BUSY = true; tally(); say('');
+  var names = picked.map(function(k){ var p = k.split(''); return { name: p[0], unit: p[1] }; });
+  var r = null;
+  try {
+    var res = await fetch(API + '/api/products/lists/adopt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
+      body: JSON.stringify({ list: LIST.key, names: names, languages: LANGS }) });
+    r = await res.json();
+    if (!res.ok) { say((r && r.message) || 'That could not be added.', true); BUSY = false; tally(); return; }
+  } catch (e) { say('Could not reach ChitBridge. Nothing was added. ' + e.message, true); BUSY = false; tally(); return; }
+
+  BUSY = false;
+  PICKED = {};
+  var said = r.message || 'Added.';
+  /* ⚠️ RE-READ rather than assume: what is on the shelf now is the server's answer, and the next adoption
+     must grey out what this one just added. [[feedback-check-after-the-wire]] */
+  await load();
+  /* ⚠️ SAID AFTER THE RELOAD, NOT BEFORE IT. load() ends by re-selecting the list, which clears the
+     message — so the one sentence telling a shopkeeper what just happened flashed and vanished. Caught by
+     e2e/product-lab, which waited for it and timed out. */
+  say(said);
+}
+
+load();
+</script>
+</body>
+</html>
