@@ -211,7 +211,7 @@ function label(mask, item, value) {
   const bp = require('../../chitbridge-api/lib/catalogue-blueprint');
   const veg = bp.blueprint('veg');
   const tom = veg.starter.find((x) => x.name === 'Tomato');
-  say('veg@2 gives every product a numeric PLU for the scale',
+  say('every product on the list carries a numeric PLU for the scale',
     veg.starter.every((x) => /^[0-9]+$/.test(String(x.barcode || ''))),
     bp.pin(veg) + ' · Tomato PLU ' + (tom && tom.barcode));
   const joined = await p.evaluate((row) => {
