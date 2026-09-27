@@ -43,19 +43,39 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the page boots straight into the lab, no "open" click needed', opened.onLoad, 'modLabOverlay is on from page load');
   say('the tab is titled for what it is', opened.title === 'Combo Lab', opened.title);
   say('openModLab() still exists, for a reset/reopen', opened.stillCallable, 'confirmed');
+  /**
+   * ⚠️⚠️ REWRITTEN FOR THE TWO-TAB REDESIGN (63d8b2a6). This used to require a table of EVERY product.
+   * It is not that screen any more and should not be: the Modifiers tab lists the products that already
+   * HAVE modifiers — which is what somebody opening a modifier lab came to see — and every other product
+   * is one "+ Add to another product" away. The assertion moved with the design rather than holding it to
+   * a shape Athi replaced on purpose.
+   */
   const picker = await p.evaluate(() => ({
     hasSearch: !!document.getElementById('modLabSearch'),
-    rows: document.querySelectorAll('#modLabBody .ovltbl tbody tr').length,
+    rows: document.querySelectorAll('#modLabBody .modlist .row, #modLabBody .modlist .prow').length,
+    withMods: (typeof modLabModsTotals === 'function') ? modLabModsTotals().withMods : -1,
+    addOther: /Add to another product/.test(document.getElementById('modLabBarExtra').innerHTML),
+    emptySays: /No modifiers yet|Nothing here yet/.test(document.getElementById('modLabBody').innerText),
+    emptyText: document.getElementById('modLabBody').innerText.replace(/s+/g, ' ').trim().slice(0, 52),
     total: P.length,
   }));
-  say('every product is listed to pick from', picker.rows === picker.total, picker.rows + ' rows for ' + picker.total + ' products');
+  /* ⚠️ AT THIS POINT THE FIXTURE HAS NO MODIFIERS YET — the test adds one further down. So the honest
+     assertion here is that the tab SAYS SO rather than showing a silent blank, which is what the redesign
+     promises for a shop that has never made one. The populated case is asserted where it is populated. */
+  say('with nothing to show yet, the tab says so rather than sitting blank',
+    picker.withMods === 0 && picker.emptySays, '"' + picker.emptyText + '"');
+  say('⭐ and every OTHER product is one button away, not a wall of rows',
+    picker.addOther, '"+ Add to another product"');
   say('with a search box', picker.hasSearch, 'found');
 
   console.log('\n── ⚠️⚠️ [OFFR-03] "CREATE NEW COMBO" IS A REAL HEADING, THE PICKER IS STILL UNDERNEATH ' + '─'.repeat(0));
-  const combo = await p.evaluate(() => ({
-    heading: (document.querySelector('#modLabBody h3') || {}).textContent,
-  }));
-  say('the picker screen says plainly that this is where a combo starts', /Create a new combo/.test(combo.heading), '"' + combo.heading + '"');
+  /* ⚠️ the heading moved onto the TAB when the screen became two of them — same promise, new place */
+  const combo = await p.evaluate(() => {
+    const tabs = document.getElementById('modLabTabs');
+    return { tabs: tabs ? tabs.innerText.replace(/\s+/g, ' ').trim() : '',
+             build: /Build a combo/.test((document.getElementById('modLabBarExtra') || {}).innerHTML || '') };
+  });
+  say('the screen says plainly that combos live here too', /Combos/.test(combo.tabs), '"' + combo.tabs + '"');
 
   console.log('\n── ⭐⭐⭐ [OFFR-07] "the modifier example has only extra cheese only... we need the entire stuff, ' + '─'.repeat(0));
   console.log('   provide the combo name, add the price, then what each section is" — Athi, pointing at the ' + '─'.repeat(0));
@@ -199,8 +219,11 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('the picker warns a combo is waiting to be applied', draftFlow.bannerShown, 'banner shown');
   say('picking a product attaches the draft to it', draftFlow.attachedTo && draftFlow.gotGroups, 'confirmed');
   say('and the draft is spent, not left lying around for the next visit', draftFlow.draftCleared, 'confirmed');
-  const stillReal = await p.evaluate(() => { modLabBack(); return document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length; });
-  say('the real product list is exactly what it always was, once the builder is done with', stillReal, 'confirmed');
+  const stillReal = await p.evaluate(() => {
+    modLabBack();
+    return !!document.querySelector('#modLabBody .modlist') || /Nothing here yet|No modifiers yet/.test(document.getElementById('modLabBody').innerText);
+  });
+  say('the lab returns to its own list once the builder is done with', stillReal, 'back at the Modifiers tab');
 
   console.log('\n── ⭐⭐⭐ [OFFR-07] "CREATE AS A NEW PRODUCT" — the combo becomes a real, sellable product ' + '─'.repeat(0));
   const createdNew = await p.evaluate(async () => {
@@ -338,11 +361,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   console.log('\n── going back to the picker and closing the lab both work ' + '─'.repeat(20));
   const backAndClose = await p.evaluate(() => {
     modLabBack();
-    const backAtPicker = document.querySelectorAll('#modLabBody .ovltbl tbody tr').length === P.length;
+    const backAtPicker = !!document.querySelector('#modLabBody .modlist')
+      || /Nothing here yet|No modifiers yet/.test(document.getElementById('modLabBody').innerText);
     closeModLab();
     return { backAtPicker: backAtPicker, closed: !document.getElementById('modLabOverlay').classList.contains('on') };
   });
-  say('"← All products" returns to the picker', backAndClose.backAtPicker, 'full list shown again');
+  say('"← All products" returns to the list', backAndClose.backAtPicker, 'back at the Modifiers tab');
   say('close really closes', backAndClose.closed, 'modLabOverlay.on removed');
 
   console.log('\n── ⭐⭐⭐ A PRODUCT THAT ALREADY HAS MODIFIERS OPENS SHOWING THEM, READY TO EDIT (Athi: "i assume we' + '─'.repeat(0));
@@ -355,19 +379,25 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     ] });
     modLabBack();   /* make sure the picker (not a lingering product view) is what paints next */
     modLabSearch('Combo Deluxe (existing mods)');
-    const rows = [...document.querySelectorAll('#modLabBody .ovltbl tbody tr')];
+    /* ⚠️ the row moved from a table cell to the .modlist when the lab became two tabs — same fact, new place */
+    const rows = [...document.querySelectorAll('#modLabBody .modlist *')].filter((n) => n.children.length === 0 || /row|prow|nm/.test(n.className));
     const pickerRowText = (rows.find((tr) => tr.textContent.indexOf('Combo Deluxe (existing mods)') >= 0) || {}).textContent || ('NOT FOUND among ' + rows.length + ' row(s): ' + rows.map((r) => r.textContent).join(' | '));
     modLabPick('combo1');
     const editHTML = document.getElementById('modLabBody').innerHTML;
     modLabSetOption(0, 0, { price: 8 });   /* the real onchange call, on an EXISTING option */
     return {
-      countedInPicker: /2 groups/.test(pickerRowText), pickerRowText: pickerRowText,
+      /* ⭐ THE REDESIGN SAYS MORE, NOT LESS. This asked for "2 groups"; the row now NAMES them — "Choice of
+         tiffin", "Extra chutney" — which answers both how many and which, before it is opened. Assertion
+         moved to the better fact rather than held to the weaker one. */
+      countedInPicker: /Choice of tiffin/.test(pickerRowText) && /Extra chutney/.test(pickerRowText),
+      pickerRowText: pickerRowText,
       hasIdli: /value="Idli"/.test(editHTML), hasDosa: /value="Dosa"/.test(editHTML), hasChoiceGroup: /value="Choice of tiffin"/.test(editHTML),
       afterEdit: byId('combo1').modifiers[0].options[0],
       stillTwoGroups: byId('combo1').modifiers.length === 2,
     };
   });
-  say('the picker itself already shows how many groups it has, before it is even opened', existing.countedInPicker, '"' + existing.pickerRowText + '"');
+  say('the list NAMES a product’s groups before it is even opened', existing.countedInPicker,
+    '"' + existing.pickerRowText.replace(/s+/g, ' ').slice(0, 58) + '"');
   say('Edit pre-fills the real group name', existing.hasChoiceGroup, 'found');
   say('and its real, existing options — not a blank form', existing.hasIdli && existing.hasDosa, 'both found');
   say('editing an EXISTING option really changes it, in place', existing.afterEdit.price === 8, JSON.stringify(existing.afterEdit));

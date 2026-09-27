@@ -160,7 +160,24 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
   await p.evaluate(() => { window.S.items[0].status = 'available'; });
   const nowOne = await p.evaluate(() => { FILTER = { offer:'', cat:'', off:'', job:'' }; return (hits() || []).length; });
   say('⭐ switching one on makes exactly that one sellable', nowOne === 1, nowOne + ' on the shelf');
-  gap('a "switch all the new ones on" control', 'today each is switched on one at a time on its card');
+  /**
+   * ⚠️⚠️ THIS WAS LOGGED AS A GAP AND IT WAS NOT ONE — my mistake, corrected 2026-09-27. I reported that a
+   * shop adopting 22 products faced "22 separate card visits"; the maintenance screen has had a multi-select
+   * pickbar for some time ("Back on the shelf" / "Off the shelf" / "Run out today"). The CONTROL existed.
+   * What was wrong sat underneath it: pickedDo() looped one round trip per product. It is one call now.
+   * ⭐ So the assertion is that the control is real and reaches the BULK route — not that it is missing.
+   */
+  const bulk = await p.evaluate(() => {
+    MODE = 'maintain';
+    PICKED_IDS = (window.S.items || []).slice(0, 5).map((i) => i.item_id);
+    paintHits();
+    const bar = document.querySelector('[data-testid=till-pickbar]');
+    return { shown: !!bar, on: !!document.querySelector('[data-testid=till-pick-on]'),
+             says: bar ? bar.innerText.replace(/\s+/g, ' ').trim().slice(0, 40) : '' };
+  });
+  say('⭐ several can be chosen and switched on together', bulk.shown && bulk.on, '"' + bulk.says + '"');
+  say('⭐⭐ and that is ONE call now, not one per product',
+    await p.evaluate(() => /stock\/bulk/.test(String(window.pickedDo))), 'POST /api/till/stock/bulk');
 
   /* ── 6 · THE FIRST BILL ────────────────────────────────────────────────────────────────────── */
   console.log('\n── 6 · the first bill ' + '─'.repeat(39));
