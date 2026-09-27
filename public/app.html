@@ -3408,6 +3408,9 @@ function route(){
   return renderApp();
 }
 
+/* ⭐ MONEY ROUNDING (2026-09-27): every paisa-rounding in this file calls CBMoney.round — THE one rounder (C:\dev\SPEC-money-one-reader.md,
+   half away from zero on the decimal value; the old Math.round(x*100)/100 was wrong ~6,200 times in 1.4 M percent-off cases).
+   engine/money.js loads before any script here, so it is called directly, as cap-chit2.js does. */
 /* ---------------- AUTH: REGISTER ---------------- */
 /* SCREEN: Welcome (#/welcome) · module target: auth.js · pre-register flow: preview -> select (role + vertical/Blueprint) -> register.
    Source: Drive "Landing->choose->register mock". JUNCTURE (design later): Blueprint -> settings/schema cascade.
@@ -6365,7 +6368,7 @@ async function selfBillSend(btn){
           var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
           var p = byId[String(l.item_id)] || {}, off = (per[String(l.item_id)] || {}).off || 0, adj = (MR && MR.model && MR.model.ev && MR.model.ev.adjustments || []).find(function(a){ return String(a.target) === String(l.item_id) && a.scope === 'line'; });
           var line = { particulars: l.name || 'item', unit: l.unit || 'unit', quantity: Number(l.qty || 1) || 1, price: Number(raw) || 0, comment: UI._sbNote || undefined, ref: { item_id: l.item_id, how: 'picked' } };
-          if (off > 0) { line.discount = Math.round(off * 100) / 100; line.total = Math.round(((Number(raw) || 0) * line.quantity - off) * 100) / 100; line.offer = { label: (adj && adj.label) || 'offer', off: line.discount }; }
+          if (off > 0) { line.discount = CBMoney.round(off); line.total = CBMoney.round((Number(raw) || 0) * line.quantity - off); line.offer = { label: (adj && adj.label) || 'offer', off: line.discount }; }
           if (p.tax && p.tax.rate != null) { line.gst_rate = Number(p.tax.rate); if (Number(p.tax.cess)) line.cess_rate = Number(p.tax.cess); }
           return line;
         });
@@ -7136,7 +7139,7 @@ function ccSyncOffers(){
     }
 
     /* 5 · what they saved — the whole point of showing it. Athi: "so you can show what is the savings as well." */
-    CC.savings = Math.round(Math.abs(Number(ev.goods_adjustment) || 0) * 100) / 100;
+    CC.savings = CBMoney.round(Math.abs(Number(ev.goods_adjustment) || 0));
     CC.offerNotes = (ev.notes || []).map(function(n){ return n.why; });
   } catch (e) {
     /* ⚠️ An offer engine failure must never cost the buyer their basket. The lines and their prices stand on
@@ -7186,8 +7189,8 @@ function ccRenderTotal(){
    * savings as well."* A discount nobody sees is a discount nobody values.
    */
   const gross=CC.items.reduce((s,it)=>s+ccLineTotal(it),0);
-  const saved=Math.round((CC.savings||0)*100)/100;
-  const owed=Math.max(0, Math.round((gross-saved)*100)/100);
+  const saved=CBMoney.round(CC.savings||0);
+  const owed=Math.max(0, CBMoney.round(gross-saved));
   t.innerHTML = CC.items.length
     ? esc('Total ' + fmtMoney(owed, myCur ? myCur() : 'INR'))
       + (saved > 0 ? ' <span data-testid="cc-saved" style="color:var(--ok-3);font-weight:700">'
@@ -7301,13 +7304,13 @@ async function submitCompose(isDraft){
    */
   const line_items=CC.items.map(it=>{
     const gross=ccLineTotal(it);
-    const off=Math.min(Math.round((+it._offer_off||0)*100)/100, gross);
+    const off=Math.min(CBMoney.round(+it._offer_off||0), gross);
     const row={
       particulars:it.particulars,
       unit:it.unit||'unit',
       quantity:+it.qty||0,
       price:+it.price||0,
-      total:Math.round((gross-off)*100)/100,
+      total:CBMoney.round(gross-off),
       comment:it.comment||'',
       ref:it.ref||null
     };
@@ -13132,11 +13135,11 @@ function prodOfferCartHTML(d, offers, qty, totalTestid, opts){   /* opts.custome
   try { ev = CBOffers.evaluate({ lines: lines, offers: offers, money: money, customer_groups: (opts && Array.isArray(opts.customer_groups)) ? opts.customer_groups : [] }); }
   catch(e){ return ''; }   /* the offers are a view of the product; a failing engine must not take the tab down */
   const per = (CBOffers.perLine(ev, lines) || {})['0'] || { off: 0 };
-  const gross = Math.round(qty * ((cbAmount(d.price) || 0)) * 100) / 100;
+  const gross = CBMoney.round(qty * ((cbAmount(d.price) || 0)));
   return '<div class="prodprev-c">'
     + '<div class="prodprev-l"><span class="n">' + esc(d.name || tx('This product')) + '</span>'
     + '<span class="q">' + qty + ' × ' + esc(money((cbAmount(d.price) || 0))) + '</span>'
-    + '<span class="p">' + esc(money(gross)) + (per.off ? ' → <b>' + esc(money(Math.round((gross - per.off) * 100) / 100)) + '</b>' : '') + '</span></div>'
+    + '<span class="p">' + esc(money(gross)) + (per.off ? ' → <b>' + esc(money(CBMoney.round(gross - per.off))) + '</b>' : '') + '</span></div>'
     /**
      * ⭐ THE FREEBIE LINES THE CART WOULD ADD, shown as what they are: a CONSEQUENCE, not something chosen.
      * ⚠️ The engine never adds them itself (see offers.js) — claims() is what a cart acts on, and showing them
@@ -13152,7 +13155,7 @@ function prodOfferCartHTML(d, offers, qty, totalTestid, opts){   /* opts.custome
           /* ⚠️ TAX ON THE AFTER-OFFERS FIGURE. It was computed on the listed price (Athi, 2026-09-04: "the tax applied in the whole
              value not after the discount") because only the line-scope discount was passed; the gap between gross and the
              engine's total is EVERYTHING that came off, whatever its scope. */
-          tailRows: prodOfferTaxFooterHTML(d, qty, Math.max(0, Math.round((gross - (ev.total != null ? ev.total : gross)) * 100) / 100)) })
+          tailRows: prodOfferTaxFooterHTML(d, qty, Math.max(0, CBMoney.round(gross - (ev.total != null ? ev.total : gross)))) })
     + ''
     + '</div>';
 }
@@ -13180,7 +13183,7 @@ function prodOfferTaxFooterHTML(d, qty, off){
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   /* rows for the SAME money table as the offers above (catalogue-ui offersHTML, opt.tailRows): GST grey between the two totals; After tax the only heavy row */
   const row = (l, v, cls, tid, attrs) => `<tr class="cbm-row ${cls || ''}"${tid ? ' data-testid="' + tid + '"' : ''}${attrs || ''}><td class="cbm-l">${l}</td><td class="cbm-a"><bdi>${esc(money(v))}</bdi></td></tr>`;
-  return row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), Math.round((it.TotItemVal - it.AssAmt) * 100) / 100, 'cbm-tax')
+  return row(txf('{name} · {rate}%', { name: esc(r.name || 'GST'), rate: String(r.rate) }), CBMoney.round(it.TotItemVal - it.AssAmt), 'cbm-tax')
     + row(tx('After tax'), it.TotItemVal, 'cbm-grand', 'prod-offer-preview-tax-' + qty, ` data-before="${esc(it.AssAmt)}" data-after="${esc(it.TotItemVal)}"`)
     + prodSavingsRowHTML(off, one(0).TotItemVal, it.TotItemVal, qty * price, row);
 }
@@ -13192,7 +13195,7 @@ function prodOfferTaxFooterHTML(d, qty, off){
  */
 function prodSavingsRowHTML(off, totalAtList, totalNet, gross, row){
   if (!(off > 0)) return '';
-  const allIn = Math.round((totalAtList - totalNet) * 100) / 100;
+  const allIn = CBMoney.round(totalAtList - totalNet);
   const pct = gross > 0 ? Math.round(off / gross * 1000) / 10 : 0;
   const money = function(n){ return fmtMoney(n, myCur ? myCur() : 'INR'); };
   /* inside the sheet (row given): one row — You save (pct) · before tax X · all-in Y */
@@ -14453,7 +14456,7 @@ function prodInvoiceModel(d, pos){
       if(on.length&&typeof CBOffers!=='undefined'&&typeof cbOfferLine==='function'){
         const pid=UI.prodSel||d.item_id||d.id||''; const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), qty)];
         const ev=CBOffers.evaluate({ lines, offers:on.map(o=>o.rules), money:(n)=>fmtMoney(n, (typeof myCur==='function')?myCur():'INR') }); const per=(CBOffers.perLine(ev, lines)||{})['0']||{};
-        off=Math.round((per.off||0)*100)/100; offLabel=per.label||'';
+        off=CBMoney.round(per.off||0); offLabel=per.label||'';
         (ev.adjustments||[]).forEach(function(a){ if(a.scope==='note'){ notes.push({ label:a.label, why:a.why||'' }); } else if(a.scope!=='line'&&Number(a.amount)){ orderAdj.push({ label:a.label, scope:a.scope, amount:Math.abs(Number(a.amount)), why:a.why||'' }); } });
       }
     }catch(_){ off=0; }
@@ -14868,7 +14871,7 @@ function prodTaxPreviewHTML(d,r){
       const pid=UI.prodSel||d.item_id||d.id||'';
       const lines=[cbOfferLine(0, Object.assign({}, d, { item_id: pid }), 1)];
       const ev=CBOffers.evaluate({ lines: lines, offers: on.map(o=>o.rules), money: (n)=>fmtMoney(n, myCur?myCur():'INR') });
-      off=Math.round((((CBOffers.perLine(ev, lines)||{})['0']||{}).off||0)*100)/100;
+      off=CBMoney.round(((CBOffers.perLine(ev, lines)||{})['0']||{}).off||0);
       offWhy=(ev.adjustments||[]).map(a=>a.label).join(' · ');
       offRows=(ev.adjustments||[]).map(a=>({ label:a.label, why:a.why||'', amount:(a.scope==='line'&&a.target!=null)?Math.abs(Number(a.amount)||0):null, scope:(typeof CBOffers.scopeLabel==='function')?CBOffers.scopeLabel({ kind:a.kind, scope:a.scope }):'' }));
     }
@@ -14927,7 +14930,7 @@ function prodTaxPreviewHTML(d,r){
   const cessRow = cessRate>0
     ? row(txf('Cess {r}%', { r: String(cessRate) })+' '+code('CesAmt'), tx('on the taxable value, on top of the slab'), money(intra.CesAmt), money(inter.CesAmt), false, 'prod-tax-cess')
     : row(tx('Cess'), tx('none on this slab'), '—', '—', false, 'prod-tax-cess');
-  const saveRow = off>0 ? (()=>{ const atList=one0(HOME).TotItemVal; const allIn=Math.round((atList-intra.TotItemVal)*100)/100; const pct=price>0?Math.round(off/price*1000)/10:0;
+  const saveRow = off>0 ? (()=>{ const atList=one0(HOME).TotItemVal; const allIn=CBMoney.round(atList-intra.TotItemVal); const pct=price>0?Math.round(off/price*1000)/10:0;
       return `<tr data-testid="prod-savings" data-before="${esc(off)}" data-allin="${esc(allIn)}" style="color:var(--ok-2);font-weight:700">${td(tx('You save')+' <span style="font-weight:400">('+esc(String(pct))+'%)</span>')}${td(money(off)+' '+tx('before tax'),'color:var(--grey);font-weight:400')}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}${amt(money(allIn)+' <span style="font-weight:400;color:var(--grey)">'+tx('all-in')+'</span>',true)}</tr>`; })() : '';
   return `<div data-testid="prod-tax-preview">`
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">`
@@ -15405,7 +15408,7 @@ async function chitShowQr(id, amount){
   /* the cached party may predate the id (a sync landed after the screen opened) — read once more when it has none */
   let upi=UI._party&&UI._party.upi_id; if(!upi){ try{ const p=await api('profileGet'); UI._party=(p&&p.invoice_party)||{}; upi=UI._party.upi_id; }catch(_){} }
   if(!upi){ modal(`<div class="mhd"><div class="t">${esc(tx('No UPI id on record'))}</div></div><div class="mbody">${esc(tx('Add your UPI id under Settings › Documents › Business identity (tag upi_id), or let the connector copy it from your system.'))}</div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`); return; }
-  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(SESSION.name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(Math.round(amount*100)/100)):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(id).slice(0,8));
+  const link='upi://pay?pa='+encodeURIComponent(upi)+'&pn='+encodeURIComponent(String(SESSION.name||'').slice(0,60))+(amount?'&am='+encodeURIComponent(String(CBMoney.round(amount))):'')+'&cu=INR&tn='+encodeURIComponent('CB-'+String(id).slice(0,8));
   let img=''; try{ if(typeof qrcode==='function'){ const qr=qrcode(0,'M'); qr.addData(link); qr.make(); img=qr.createImgTag(5,8).replace('<img ','<img data-testid="chit-upi-qr" alt="UPI QR" '); } }catch(_){}
   modal(`<div class="mhd"><div class="t">${esc(tx('Pay by UPI'))}</div><div class="s">${esc(upi)}${amount?' · '+esc(inr(amount)):''} · CB-${esc(String(id).slice(0,8))}</div></div><div class="mbody" style="text-align:center">${img||esc(tx('QR library not loaded'))}<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">${esc(tx('Any UPI app scans this. Then Mark paid with the transaction id.'))}</div></div><div class="mfoot"><button onclick="closeModal()">${esc(tx('Close'))}</button></div>`);
 }
@@ -17435,7 +17438,7 @@ function detailInner(){
        `trade_cover` policy flag (Settings › Governance), off by default. */
     const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean);
     let M=null; try { M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); } catch(_) {}
-    const savings=M?Math.round((M.gross-(M.ev&&M.ev.total!=null?M.ev.total:M.gross))*100)/100:0;
+    const savings=M?CBMoney.round(M.gross-(M.ev&&M.ev.total!=null?M.ev.total:M.gross)):0;
     const tile=(k,v,tid)=>`<div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx(k)}</div><div class="disp" data-testid="${tid}" style="font-size:var(--fs-4);font-weight:700">${v}</div></div>`;
     const tiles=`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fmtMoney(M?M.grand:c.amt,c.currency), 'chit-summary-grand')}${tile('You save', fmtMoney(savings,c.currency), 'chit-summary-savings')}${tile('Tax', fmtMoney(M?M.taxTotal:0,c.currency), 'chit-summary-taxtotal')}</div>`;
     const block=M?`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-summary-total', taxTestid:'chit-summary-tax' })}</div>`:'';
@@ -18595,7 +18598,7 @@ function contentItems(c){
      unverified/rejected flags, their own words, a removal reason, the history — rides in through the row's hooks. */
   const ents=(c.items||[]).map((it,idx)=>({ it, idx, e:(it[3]||{}), li:((it[3]&&(it[3].live||it[3].original))||{}) }));
   const items=ents.map(x=>{ const li=x.li, q=Number(li.quantity)||0, p=Number(li.price), off=(li.offer&&li.offer.line_off!=null)?Number(li.offer.line_off):(Number(li.discount)||(li.offer&&Number(li.offer.off))||0);   /* decision 3 (industry standard): the row shows its OWN offers; a basket offer sits in the money block */
-    const unit=(isFinite(p)&&q>0&&off>0)?Math.round((p-off/q)*100)/100:null;
+    const unit=(isFinite(p)&&q>0&&off>0)?CBMoney.round(p-off/q):null;
     return { item_id:'l'+x.idx, item_data:{ name:li.particulars||x.it[0]||'Item', unit:li.unit||'unit', price:isFinite(p)?p:null, code:li.sku||li.code||null, hsn:li.hsn||null,
       description:(x.it[4]&&x.it[4].desc)||null, deal_recorded:(unit!=null?{ unit, off, label:(li.offer&&li.offer.label)||'offer', promise:(li.offer&&li.offer.promise)||null, parts:(li.offer&&Array.isArray(li.offer.parts))?li.offer.parts:null }:null) },
       tax:(li.gst_rate!=null?{ rate:Number(li.gst_rate), name:li.tax_name||'GST' }:null) }; });
@@ -19170,7 +19173,7 @@ function amendPaint(){
   const items0=(cat&&cat.items)||[];
   const money = (n)=> (n===''||n==null||isNaN(Number(n))) ? '' : String(Number(n));
   const total = (Number(l.quantity)>0 && Number(l.price)>0)
-    ? '<span style="color:var(--grey)"> = </span><b>'+esc(money(Math.round(Number(l.quantity)*Number(l.price)*100)/100))+'</b>' : '';
+    ? '<span style="color:var(--grey)"> = </span><b>'+esc(money(CBMoney.round(Number(l.quantity)*Number(l.price))))+'</b>' : '';
 
   modal(`${wrote}
     ${showCands ? `<div style="margin-bottom:14px">${amdShortlistHTML(cands0, cat, items0.length)}</div>` : ''}
