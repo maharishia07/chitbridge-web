@@ -5,9 +5,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppModeProvider } from './context/AppModeContext';
 
 import LoginPage       from './pages/LoginPage';
-import InboxPage       from './pages/InboxPage';
-import ChitDetailPage  from './pages/ChitDetailPage';
-import SendChitPage    from './pages/SendChitPage';
+/* ⚠️ InboxPage, ChitDetailPage and SendChitPage are RETIRED (2026-09-27) — see GoToApp below. The files stay, per
+   src/FROZEN.md ("do NOT delete this src/ tree"); only their routes hand over to app.html. */
 import ConnectionsPage from './pages/ConnectionsPage';
 import SettingsPage    from './pages/SettingsPage';
 import MISPage         from './pages/MISPage';
@@ -53,6 +52,16 @@ const CatalogueRoute = () => {
   );
 };
 
+/**
+ * ⭐ RETIRED ROUTES HAND OVER TO app.html (2026-09-27, C:\dev\SPEC-money-one-reader.md decision D4).
+ * External review §29: these three pages formatted money their own way — ₹ hard-coded on a USD chit, en-IN grouping
+ * for every currency, toFixed(2) beside a 0-decimal approval screen. app.html, the canonical front end (FROZEN.md),
+ * already formats through the one formatter. Athi chose "redirect to app.html" over patching frozen pages.
+ * ⚠️ A replace, not a push, so Back does not bounce the user into the retired page again.
+ * ⚠️ /chit/:id lands on the Task list, not that chit — app.html has no deep link to one chit yet (a follow-up).
+ */
+const GoToApp = () => { window.location.replace('/app.html'); return null; };
+
 const AppRoutes = () => {
   const { isLoggedIn } = useAuth();
   return (
@@ -87,9 +96,9 @@ const AppRoutes = () => {
       <Route path="/catalogue" element={
         <Suspense fallback={<div style={{padding:24}}>Loading catalogue…</div>}><CatalogueRoute/></Suspense>
       }/>
-      <Route path="/inbox"          element={<Protected><InboxPage/></Protected>}/>
-      <Route path="/chit/:chitId"   element={<Protected><ChitDetailPage/></Protected>}/>
-      <Route path="/send"           element={<Protected><SendChitPage/></Protected>}/>
+      <Route path="/inbox"          element={<GoToApp/>}/>
+      <Route path="/chit/:chitId"   element={<GoToApp/>}/>
+      <Route path="/send"           element={<GoToApp/>}/>
       <Route path="/connections"    element={<Protected><ConnectionsPage/></Protected>}/>
       <Route path="/settings"       element={<Protected><SettingsPage/></Protected>}/>
       <Route path="/mis"            element={<Protected><MISPage/></Protected>}/>
