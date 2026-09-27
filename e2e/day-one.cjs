@@ -236,6 +236,51 @@ const gap = (l, d) => { todo++; console.log('  ' + String(l).padEnd(58) + '· ' 
     'frame given its src');
   await p.evaluate(() => shopPrevClose());
 
+  /**
+   * ── ⭐⭐⭐ 9 · WHOSE COUNTER IS THIS? ────────────────────────────────────────────────────────────────
+   *
+   * Athi, testing many shops in one browser: *"i create a store called vegdemo1 and when we click the
+   * counter, it goes to mayuri bhavan... whatever userid signs in, that shop's counter should open, this is
+   * the confusion i keep saying."*
+   *
+   * The counter opened COLD (a bookmark, an old tab) uses whatever key the browser holds and — until now —
+   * said nothing about whose shop that was. wrongShop() stays deliberately silent there, and its reasoning
+   * is right for a shop PC: nothing declared an expectation, so there is nothing to contradict. In a
+   * BROWSER there is: cb_sess, on this very origin, names the shop the person signed in as.
+   */
+  console.log('\n── 9 · whose counter is this? ' + '─'.repeat(31));
+  const same = await p.evaluate(() => {
+    localStorage.setItem('cb_sess', JSON.stringify({ entityId: 'ent-mayur', entity: 'Mayur Bhavan' }));
+    window.S.entity_id = 'ent-mayur';
+    return { bar: whoseShopSay(), m: signedInElsewhere() };
+  });
+  say('signed in as the SAME shop the counter belongs to — it says nothing',
+    same.bar === '' && same.m === null, 'silent, as it should be');
+
+  const other = await p.evaluate(() => {
+    /* the exact case: the person is signed in as vegdemo1, the counter holds Mayur Bhavan's key */
+    localStorage.setItem('cb_sess', JSON.stringify({ entityId: 'ent-vegdemo1', entity: 'vegdemo1' }));
+    return { bar: whoseShopSay(), m: signedInElsewhere() };
+  });
+  say('⭐⭐⭐ signed in as vegdemo1 on Mayur Bhavan’s counter — it SAYS so',
+    /vegdemo1/.test(other.bar) && /Mayur Bhavan/.test(other.bar),
+    other.bar.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim().slice(0, 74));
+  say('and offers the way over, named', /Open vegdemo1’s counter/.test(other.bar), 'a button, not an instruction');
+
+  /* ⚠️ the one thing it must NOT do */
+  const stillSells = await p.evaluate(() => {
+    CART.length = 0; addItem(window.S.items[0], 1); price();
+    return CART.length;
+  });
+  say('⚠️⚠️ and it never blocks a sale — this is a suspicion, not a proven fault',
+    stillSells === 1, 'the counter still bills');
+
+  const coldPC = await p.evaluate(() => {
+    localStorage.removeItem('cb_sess');                 /* a shop PC: nobody is signed into an app here */
+    return whoseShopSay();
+  });
+  say('a shop PC with nobody signed in here is left alone', coldPC === '', 'silent');
+
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
 
