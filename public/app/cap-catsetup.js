@@ -31,7 +31,10 @@ var CATSET_SECS = [
   /* ⭐⭐ FIRST, because adopting a published catalogue sets the columns, the units and the shape in ONE act.
      Athi: 'if the user can use the prototype ie blueprint, that sets everything… if not then go step by step.'
      Everything below this line IS the step-by-step, and the order says so. */
-  { key: 'blueprint', icon: '📋', name: 'Blueprint',        q: 'Copy a working catalogue' },
+  /* ⚠️ THE KEY STAYS 'blueprint' — it is a deep-link target (UI.catsetWant) and a data-testid, and
+     renaming it would break links for a word nobody sees. Athi named the SCREENS, 2026-09-27:
+     "product list and reference catalogue". */
+  { key: 'blueprint', icon: '📋', name: 'Reference catalogue', q: 'Follow another shop’s catalogue' },
   { key: 'columns',  icon: '📐', name: 'Columns',          q: 'What every product records' },
   { key: 'variants', icon: '🔗', name: 'Variants',         q: 'One product, several sizes' },
   /**
@@ -623,18 +626,19 @@ function catsetBody(k){
      * into this panel would be a second implementation of the one thing on this screen that must not disagree
      * with itself. The hub is the entry point; the screen it opens is the detail.
      */
-    return catsetCard('Start from a working catalogue',
-      'Someone in your trade has published theirs as a <b>blueprint</b>. Adopt it and your columns, units and '
+    return catsetCard('Follow another shop’s catalogue',
+      'Someone in your trade has published theirs as a <b>reference catalogue</b>. Follow it and your columns, units and '
       + 'shape are set in one act — you put your own prices over their design, and a correction they publish '
       + 'reaches you.'
-      + '<div class="catset-std">In PIM terms a blueprint is a <b>reference catalogue</b>: you cite it rather '
+      + '<div class="catset-std">⭐ <b>Following is not copying.</b> You cite it rather '
       + 'than copy it, so it stays THEIRS to correct. ⚠️ Adopting <b>by reference</b> shares the design and keeps '
       + 'your prices your own; adopting <b>by value</b> takes a copy that stops following them. The screen below '
       + 'asks which.</div>'
-      + '<div class="catset-std">⭐ <b>No blueprint for your trade?</b> Then the panels below are the step-by-step '
+      + '<div class="catset-std">⭐ <b>Nobody publishing for your trade?</b> Then start from a <b>product list</b> in the '
+      + 'counter’s Product Lab — that one is a COPY that becomes yours — or use the panels below, which are the step-by-step '
       + 'way — columns first, then how a price is arrived at, then how customers order from you.</div>',
       '<button class="composebtn pri" data-testid="catset-blueprint" onclick="catsetBlueprint()">'
-      + tx('📋 See the blueprints available') + '</button>')
+      + tx('📋 See the catalogues you can follow') + '</button>')
     + catsetCard('What you have adopted', catsetAdoptedHTML(), '');
   }
   if (k === 'columns') {
