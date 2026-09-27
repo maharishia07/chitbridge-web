@@ -79,8 +79,23 @@ const BADSUM = '33AABCU9603R1ZX';       /* one character out */
 
   /* ── an empty GSTIN says what the shop IS ───────────────────────────────────────────────────────────── */
   const empty = await p.evaluate(() => { shopCheck(); return document.getElementById('shopsay').innerText; });
-  say('no GSTIN is an answer', /not registered for GST/i.test(empty) && /40 lakh/.test(empty),
-    '"' + empty.slice(0, 95) + '…"');
+  say('no GSTIN is an answer', /not registered for GST/i.test(empty), '"' + empty.slice(0, 95) + '…"');
+  /**
+   * ⭐⭐ THE ₹40 LAKH FIGURE MOVED BEHIND "Why?", AND THIS ASSERTION MOVED WITH IT (2026-09-27).
+   * It used to require the threshold paragraph in the default message; the design package Athi brought
+   * calls that out by name — "a 47-word GST paragraph pinned at the bottom... tax education, not a form" —
+   * so it is now one tap away instead of always on screen. ⚠️ Still asserted, in BOTH directions: the fact
+   * a shopkeeper may actually need must remain REACHABLE, and "moved behind a toggle" is one small edit
+   * away from "quietly dropped".
+   */
+  say('the threshold paragraph is no longer pinned to the message', !/40 lakh/.test(empty), 'out of the way');
+  const why = await p.evaluate(() => { document.querySelector('[data-testid=till-shop-why]').click();
+    return document.getElementById('shopsay').innerText; });
+  say('⭐ but "Why?" still produces it, in full', /40 lakh/.test(why) && /register/i.test(why),
+    '"' + why.replace(/\s+/g, ' ').slice(-90) + '"');
+  await p.evaluate(() => { document.querySelector('[data-testid=till-shop-why]').click(); });   /* fold it back */
+  /* ⭐ the document a bill will actually be headed with, said as the badge — the design move the sheet turns on */
+  say('and the slip it will print is named, not described', /CASH MEMO/.test(empty), empty.split('·')[0].trim());
 
   /* ── a mistyped GSTIN is caught HERE, before anything is sent ───────────────────────────────────────── */
   const wrong = await p.evaluate((g) => {
@@ -100,6 +115,21 @@ const BADSUM = '33AABCU9603R1ZX';       /* one character out */
   }, GOOD);
   say('a good one confirms', right.sendable && /Tamil Nadu/.test(right.said) && /AABCU9603R/.test(right.said),
     '"' + right.said + '"');
+  /**
+   * ⚠️⚠️⚠️ AND IT DOES NOT CLAIM MORE THAN IT DID (2026-09-27). Athi: *"in the GSTN, we are verifying only
+   * the checksum, not against registry? correct?"* Correct — so this line must never say "Verified", which
+   * in lib/profile-map's own ladder ['declared','copied','checked','verified'] is the rung ABOVE the one
+   * assess() gives a passing checksum ('checked'). It is a number printed on a tax invoice; the copy must
+   * not round the rung up. This asserts the claim stays honest even if somebody reaches for a stronger word.
+   */
+  say('⭐ and claims only what it checked — never "verified"', !/verified/i.test(right.said),
+    right.said.split('·')[1] ? right.said.split('·')[1].trim() : right.said.slice(0, 30));
+  const caveat = await p.evaluate(() => {
+    const b = [...document.querySelectorAll('#shopsay b')].find((x) => /checks out/i.test(x.textContent));
+    return b ? b.getAttribute('title') || '' : '';
+  });
+  say('the registry caveat rides in title=, where a fact guarding a number belongs',
+    /registry/i.test(caveat), '"' + caveat.slice(-58) + '"');
 
   /**
    * ── ⚠️⚠️ THE ONE A CHECKSUM CANNOT CATCH: a valid Tamil Nadu GSTIN beside a Kerala PIN code. Both fields are

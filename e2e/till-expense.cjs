@@ -54,7 +54,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
       return /till-open-expense/.test(h); })(),
   }));
   say('expCanIssue() is true once HOST.expense exists', gate.canIssue, 'confirmed');
-  say('"💰 Record an expense" is offered in the "Other money" section of the menu', gate.menuHasIt, 'found');
+  say('"💰 Record an expense" is offered in the "Record expenses" section of the menu', gate.menuHasIt, 'found');
 
   console.log('\n── recording one, through the real dialog ' + '─'.repeat(15));
   const recorded = await p.evaluate(async () => {
@@ -66,10 +66,14 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
     expWhat('Rent'); expAmountSet('1500'); expHow('Cash');
     var goLabel = document.getElementById('expgo').textContent;
     await expIssue();
-    var dlgOpenAfter = document.getElementById('expdlg').open;
+    /* ⭐ 2026-09-27: success no longer CLOSES the sheet — it turns it into a receipt. See below. */
+    var after = { open: document.getElementById('expdlg').open,
+                  body: document.getElementById('expbody').innerText.replace(/\s+/g, ' ').trim(),
+                  go: document.getElementById('expgo').textContent,
+                  cancel: document.querySelector('#expdlg [value=cancel]').textContent };
     var bills = await HOST.bills();
     var mine = bills.filter(function(x){ return x.kind === 'expense'; });
-    return { dlgOpenBefore: dlgOpenBefore, goLabel: goLabel, dlgOpenAfter: dlgOpenAfter,
+    return { dlgOpenBefore: dlgOpenBefore, goLabel: goLabel, after: after,
       call: call, saved: mine[0] || null };
   });
   say('the dialog actually opened', recorded.dlgOpenBefore === true, 'confirmed');
@@ -79,7 +83,22 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   say('it went out of Cash specifically, via `spent` (never `payments`)',
     recorded.call && Array.isArray(recorded.call.spent) && recorded.call.spent[0].how === 'Cash' && recorded.call.spent[0].amount === 1500,
     JSON.stringify(recorded.call && recorded.call.spent));
-  say('the dialog closes on success', recorded.dlgOpenAfter === false, 'confirmed');
+
+  /**
+   * ⭐⭐ THIS ASSERTION WAS "the dialog closes on success", AND IT IS MOVED, NOT DROPPED (2026-09-27).
+   * The design package Athi brought asks for the opposite on purpose: "expenses come in runs... after
+   * recording, the sheet becomes a receipt with Record another, because re-opening the sheet each time is
+   * the slow path." What the old line was really guarding — that the sheet must not sit there afterwards
+   * still looking like an unsaved form somebody has to press again — is what these three now guard.
+   */
+  say('success turns the sheet into a receipt rather than closing it', recorded.after.open === true, 'still open');
+  say('and the receipt states what was recorded, so it cannot be mistaken for an unsaved form',
+    /1,500/.test(recorded.after.body) && /Rent/.test(recorded.after.body), recorded.after.body.slice(0, 60));
+  say('the footer becomes Done / Record another — no "Record it" left to press twice',
+    /Record another/.test(recorded.after.go) && /Done/.test(recorded.after.cancel),
+    recorded.after.cancel + ' / ' + recorded.after.go);
+  const closes = await p.evaluate(() => { expClose(); return document.getElementById('expdlg').open; });
+  say('and Done closes it', closes === false, 'confirmed');
   say('it was written to the local bills store, tagged E — its own series, same convention as a credit note’s C',
     recorded.saved && /^E\//.test(String(recorded.saved.no)), recorded.saved && recorded.saved.no);
   say('purpose:\'expense\' is what reaches the server, per the chit it built',
@@ -97,6 +116,44 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   });
   say('the dialog stays open on a refusal', refused.open === true, 'confirmed');
   say('nothing typed is lost', refused.what === 'Electrician' && refused.amount === '900', JSON.stringify(refused));
+  await p.evaluate(() => { expClose(); });
+
+  /**
+   * ── ⚠️⚠️⚠️ TYPED BY A PERSON, ONE KEY AT A TIME ([found live 2026-09-27]) ──────────────────────────────
+   *
+   * Athi, on the rebuilt sheet: *"when i type 4 immediately it jumps to record, it is not receiving the full
+   * amount."* The sheet's oninput repainted the whole of #expbody, which destroyed the very box being typed
+   * into — focus fell to the body on the first keystroke and every digit after it went nowhere. ₹400 was
+   * recorded as ₹4, and on a touch counter the keyboard closed as well, which is what "jumps" looked like.
+   *
+   * ⚠️ EVERY ASSERTION ABOVE PASSED THROUGHOUT, because they all set the value programmatically —
+   * expAmountSet('1500') never involves a keystroke. Only typing finds this, so this block types.
+   */
+  console.log('\n── typed one key at a time, the way a person does ' + '─'.repeat(6));
+  const typed = await p.evaluate(() => { HOST.expense = async () => ({ ok: true }); expOpen(); });
+  await p.waitForSelector('#expamt', { timeout: 5000 });
+  await p.click('#expamt');
+  await p.keyboard.type('400', { delay: 40 });
+  const t1 = await p.evaluate(() => ({ box: document.getElementById('expamt').value, state: EXP_AMOUNT,
+    focus: document.activeElement && document.activeElement.id, go: document.getElementById('expgo').textContent,
+    off: document.getElementById('expgo').disabled, hint: document.getElementById('exphintbox').textContent.trim() }));
+  say('the whole amount lands, not just the first digit', t1.box === '400' && t1.state === '400', JSON.stringify([t1.box, t1.state]));
+  say('⭐ and the caret never leaves the box it was typed into', t1.focus === 'expamt', t1.focus);
+  say('the button names it live', /400/.test(t1.go), t1.go);
+  say('but stays disabled, saying which half is missing', t1.off === true && /what it was for/i.test(t1.hint), t1.hint);
+
+  await p.click('#expbody [data-chip="Staff tea"]');
+  await p.keyboard.type(' x2', { delay: 30 });
+  const t2 = await p.evaluate(() => ({ what: document.getElementById('expwhat').value, state: EXP_WHAT,
+    live: !document.getElementById('expgo').disabled,
+    drawer: (function(d){ return d.hidden ? '' : d.textContent.trim(); })(document.getElementById('expdrawerbox')) }));
+  say('a chip fills the reason box and leaves it editable', t2.what === 'Staff tea x2' && t2.state === 'Staff tea x2', t2.what);
+  say('with both halves answered, Record goes live', t2.live === true, 'enabled');
+  say('and Cash says what it costs the drawer, in the amount actually typed', /400/.test(t2.drawer), t2.drawer.slice(0, 64));
+
+  await p.click('#expbody [data-way="Card"]');
+  const onCard = await p.evaluate(() => document.getElementById('expdrawerbox').hidden);
+  say('⚠️ the drawer line belongs to Cash alone — Card does not touch the drawer', onCard === true, 'hidden');
   await p.evaluate(() => { expClose(); });
 
   console.log('\n── reached from a to-do reminder, pre-filled, so nothing is typed twice ' + '─'.repeat(0));
