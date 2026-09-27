@@ -3207,6 +3207,36 @@ function openSavedItemsOverlay(id){
 var SVOPEN={};
 function toggleSaved(id,which){ var k=id+':'+(which||'items'); SVOPEN[k]=!SVOPEN[k]; render(); }
 /**
+ * ⭐⭐⭐ [b268, 2026-09-27] "who approved the offer or made it live" — GET /api/definitions/:id now returns
+ * `status_log` (definition_status_log, joined to identities for a display_name) alongside the definition and
+ * its rule versions. Fetched on demand, once, cached on the SAVED entry itself (sv._history) — a per-offer
+ * history is a detail nobody needs until they ask for it, same as the "N items linked" overlay.
+ * ⚠️ REAL OFFERS ONLY (sv.remote): a demo-mode entry never touched the server, so it has no history to fetch.
+ */
+async function loadOfferHistory(id){
+  var sv=SAVED.filter(function(x){return x.id===id;})[0]; if(!sv||sv._history) return;
+  var r=await defFetch('GET','/'+id);
+  sv._history=(r.ok&&r.body&&r.body.status_log)?r.body.status_log:[];
+  render();
+}
+function toggleHistory(id){
+  var k=id+':history'; SVOPEN[k]=!SVOPEN[k];
+  if(SVOPEN[k]) loadOfferHistory(id);
+  render();
+}
+function historyHTML(sv){
+  var body;
+  if(sv._history===undefined) body='Loading…';
+  else if(!sv._history.length) body='No status changes recorded yet.';
+  else body=sv._history.map(function(h){
+    var who=h.changed_by_name||'someone no longer on this shop';
+    var when=new Date(h.changed_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+    var status=h.status?(h.status.charAt(0).toUpperCase()+h.status.slice(1)):h.status;
+    return '<div>'+esc(status)+' — '+esc(who)+' · '+esc(when)+'</div>';
+  }).join('');
+  return '<div class="hs" style="margin-top:6px;padding:9px 12px;background:var(--panel);border-radius:9px">'+body+'</div>';
+}
+/**
  * ⭐ [found live, 2026-09-26] "retire basically removes the offer from the queue... no pause or editing the
  * current offer to reduce or include more items" — Pause/Resume already exist (see the four-state buttons
  * below, live↔paused); they just never appear on screen until an offer actually reaches 'live', which none of
@@ -3262,6 +3292,9 @@ function renderS3(){
         '</div>':'')+
       (names&&names.length?'<button class="btn sm" style="margin-top:7px" onclick="openSavedItemsOverlay(\''+sv.id+'\')">'+
         names.length+' item'+(names.length===1?'':'s')+' linked ›</button>':'')+
+      (sv.remote?'<button class="btn sm" style="margin-top:7px" onclick="toggleHistory(\''+sv.id+'\')">'+
+        (SVOPEN[sv.id+':history']?'▾':'▸')+' History</button>'+
+        (SVOPEN[sv.id+':history']?historyHTML(sv):''):'')+
       '</div>'+
       '<div style="text-align:right"><div class="svn">'+esc(sv.n)+'</div><div class="svk">'+esc(sv.k)+'</div></div>'+
       '<div style="display:flex;gap:7px;flex-wrap:wrap;width:100%">'+
