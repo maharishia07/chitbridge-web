@@ -3529,8 +3529,35 @@ function govPanel(){
  * ⚠️ IT SAYS SO ON THE WAY, AND LEAVES A DOOR. A redirect nobody can refuse is how an owner who wanted the back
  * office gets trapped on the till. [[feedback-question-is-not-an-instruction]]
  */
+/**
+ * ── ⚠️⚠️⚠️ A KEY IS NOT "THIS SHOP'S KEY" — THE DEMO-KILLER, FOUND 2026-09-27 ─────────────────────────────
+ *
+ * Athi, cancelling a demo over it: *"i am going to sign-in a new store in front of them and then open the
+ * counter app, and it is going to open completely a different shop, they will immediately say, go away, we
+ * cannot trust your product."*
+ *
+ * He was right, and it was worse than the counter: THIS function drove an AUTOMATIC redirect. It answered
+ * "is there a till key in this browser" — any key, any shop — and two callers act on that answer:
+ *   · the router (#/ or #/app, on every sign-in) → toCounter() → /till.html 1.8s later
+ *   · registration verify, the instant a BRAND NEW shop is created
+ * So signing in — or registering — as vegdemo1 in a browser that had ever opened Mayur Bhavan's counter sent
+ * the demo straight into Mayur Bhavan's till. Nobody pressed anything.
+ *
+ * ⭐ counterHasKey() twenty lines below HAD the right rule all along — key AND cb_till_entity === the shop
+ * signed in. Two functions answering nearly the same question, one of them shop-aware, is the drift; the
+ * unsafe one happened to be the one wired to the automatic jump. There is one rule now.
+ *
+ * ⚠️ AND A KEY WITH NO RECORDED SHOP COUNTS AS NOT-THIS-SHOP. An older key minted before cb_till_entity
+ * existed cannot prove whose it is, and the safe answer to "should I automatically open a till I cannot
+ * identify?" is no. The Counter button still works; only the unasked-for jump stops.
+ */
 function counterHere(){
-  try { return String(localStorage.getItem('cb_till_key') || '').trim(); } catch (_) { return ''; }
+  try {
+    var k = String(localStorage.getItem('cb_till_key') || '').trim();
+    if (!k) return '';
+    if (!SESSION || !SESSION.entityId) return '';
+    return (counterKeyEntity() === SESSION.entityId) ? k : '';
+  } catch (_) { return ''; }
 }
 /**
  * ⚠️⚠️ A REFUSAL IS REMEMBERED FOR THE SESSION. Without this the router would send the owner straight back to
