@@ -49,6 +49,8 @@ th{position:sticky;top:57px;background:var(--card);color:var(--dim);font-size:.7
 tr.has td{opacity:.5}
 td.num{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.loc{color:var(--dim)}
+.whose{font-size:.72em;color:var(--dim);font-weight:400;letter-spacing:.03em}
+tr.has .whose{color:var(--ok)}
 .catrow td{background:var(--hair);font-weight:700;font-size:.85em}
 .foot{position:fixed;inset-inline:0;bottom:0;background:var(--card);border-top:1px solid var(--line);
   padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
@@ -76,6 +78,16 @@ td.loc{color:var(--dim)}
     <button class="pill" onclick="pickAll(true)" data-testid="pl-all">Tick all shown</button>
     <button class="pill" onclick="pickAll(false)">Clear</button>
   </div>
+  <!--
+    ⭐ WHAT THIS SHOP ALREADY SELLS, AND AT WHAT PRICE (Athi, 2026-09-27). Three states rather than a single
+    toggle, because "show me only what I do NOT have" is the question somebody adding products actually has,
+    and a two-way switch cannot ask it.
+  -->
+  <div class="row" id="own" data-testid="pl-own">
+    <button class="pill on" data-own="" onclick="setOwn('')">Everything</button>
+    <button class="pill" data-own="mine" onclick="setOwn('mine')" data-testid="pl-own-mine">✓ In my catalogue</button>
+    <button class="pill" data-own="new" onclick="setOwn('new')" data-testid="pl-own-new">Not yet</button>
+  </div>
 
   <div id="tablewrap"></div>
   <p class="note" id="hint"></p>
@@ -87,6 +99,7 @@ td.loc{color:var(--dim)}
 </div>
 
 <script>
+var OWN = '';
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var DATA = null, LIST = null, LANGS = [], PICKED = {}, BUSY = false;
 
@@ -96,6 +109,20 @@ function token(){ try { return (JSON.parse(localStorage.getItem('cb_sess') || 'n
 function say(t, bad){ var el = document.getElementById('say');
   el.innerHTML = t ? '<div class="say ' + (bad ? 'bad' : 'ok') + '">' + esc(t) + '</div>' : ''; }
 /** ⚠️ name AND unit — one row per unit is the whole shape of these lists, so the key must carry both */
+/**
+ * ⭐⭐ A NUMBER WITH ITS CURRENCY, ALWAYS. Athi: *"just the number doesn't make sense."* Intl does the
+ * symbol and the grouping per currency, so nothing here hard-codes ₹ and a Gulf shop reads its own money.
+ * ⭐ ONE CURRENCY ON THIS SCREEN, AND IT IS THE SHOP'S. A list carries no currency of its own — what is
+ * inherited is the NAME, the unit, the shelf and the local words, which are the same tomato in Chennai and
+ * in New Jersey. The figure is an indicative STARTING number and is stamped with the entity's currency when
+ * it is written, exactly as every other product is. (Athi: *"they will set up their shop in US$, but they
+ * inherit the products, so the product will map with their shop currency."*)
+ */
+function money(n, cur){
+  if (n == null) return '—';
+  try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur || 'INR' }).format(n); }
+  catch (_) { return (cur || '') + ' ' + Number(n).toFixed(2); }
+}
 function keyOf(r){ return r.name + '' + r.unit; }
 
 async function load(){
@@ -110,11 +137,15 @@ async function load(){
     DATA = await r.json();
   } catch (e) { say('Could not reach ChitBridge. ' + e.message, true); return; }
 
-  document.getElementById('who').textContent = DATA.have + ' products in your catalogue today';
+  document.getElementById('who').textContent = DATA.have + ' products in your catalogue today · prices in '
+    + (DATA.currency || 'INR');
   /* ⭐ what the shop already sells, so a row it has is shown greyed and pre-ticked-off rather than offered twice */
-  DATA._have = {};
-  (DATA.mine || []).forEach(function(m){ DATA._have[keyOf({ name: m.name, unit: m.unit })] = 1;
-                                        DATA._have[String(m.name).toLowerCase()] = 1; });
+  DATA._have = {}; DATA._mine = {};
+  (DATA.mine || []).forEach(function(m){
+    var k = keyOf({ name: m.name, unit: m.unit });
+    DATA._have[k] = 1; DATA._have[String(m.name).toLowerCase()] = 1;
+    DATA._mine[k] = m; DATA._mine[String(m.name).toLowerCase()] = m;
+  });
   document.getElementById('lists').innerHTML = DATA.lists.map(function(l){
     return '<button class="pill" data-testid="pl-list-' + esc(l.key) + '" onclick="pickList(\'' + esc(l.key) + '\')">'
       + esc(l.label) + ' <b>' + l.count + '</b></button>';
@@ -153,6 +184,8 @@ function shown(){
   var c = document.getElementById('cat').value;
   return (LIST.rows || []).filter(function(r){
     if (c && r.category !== c) return false;
+    if (OWN === 'mine' && !have(r)) return false;
+    if (OWN === 'new' && have(r)) return false;
     if (!q) return true;
     if (r.name.toLowerCase().indexOf(q) >= 0) return true;
     if ((r.category || '').toLowerCase().indexOf(q) >= 0) return true;
@@ -169,6 +202,21 @@ function localOf(r){
   return out.join(', ');
 }
 function have(r){ return !!(DATA._have[keyOf(r)] || DATA._have[r.name.toLowerCase()]); }
+/**
+ * ⭐⭐ WHOSE PRICE IS SHOWN, AND IT IS NOT ALWAYS THIS LIST'S. Athi: *"as per the stores catalogue, not from
+ * here, because we don't update the price."*
+ *
+ * A row this shop already sells shows **the shop's own price**, read from its catalogue — because that is
+ * the true one, and because this page will never change it: adopting SKIPS what the shop has, it does not
+ * overwrite it. Showing the list's indicative ₹40 next to a shop charging ₹52 would be stating a number
+ * that is not true anywhere and implying this screen might apply it.
+ * ⚠️ A shop that has the product but no readable price gets "—", never 0. [[lib/money amountOf]]
+ */
+function priceOf(r){
+  if (!have(r)) return { n: r.price, whose: 'suggested' };
+  var m = DATA._mine[keyOf(r)] || DATA._mine[r.name.toLowerCase()];
+  return { n: (m && m.price != null) ? m.price : null, whose: 'yours' };
+}
 
 function paint(){
   var rows = shown(), out = [], lastCat = null;
@@ -184,16 +232,27 @@ function paint(){
       + '<td>' + esc(r.name) + (got ? ' <span class="note">· you sell this</span>' : '') + '</td>'
       + '<td class="loc">' + esc(localOf(r)) + '</td>'
       + '<td>' + esc(r.unit) + '</td>'
-      + '<td class="num">' + (r.price != null ? Number(r.price).toFixed(2) : '') + '</td>'
+      + (function(){ var pr = priceOf(r);
+          return '<td class="num">' + money(pr.n, DATA.currency)
+            + '<div class="whose">' + (pr.whose === 'yours' ? 'yours' : 'suggested') + '</div></td>'; })()
       + '<td class="loc">' + esc(r.category || '') + '</td></tr>');
   });
   document.getElementById('tablewrap').innerHTML = rows.length
     ? '<table data-testid="pl-table"><thead><tr><th></th><th>Product</th><th>Local name</th><th>Unit</th>'
       + '<th class="num">Price</th><th>Shelf</th></tr></thead><tbody>' + out.join('') + '</tbody></table>'
     : '<p class="note">Nothing matches that.</p>';
+  /* ⚠️ SAID ONCE, and it says which way round it is: this page never rewrites a price it did not set. */
   document.getElementById('hint').textContent =
-    'Prices are a starting point — change any of them later in the counter’s maintenance screen.';
+    'A suggested price is only a starting point — set your own in the counter’s maintenance screen. '
+    + 'A product you already sell keeps your price; this page never changes it.';
   tally();
+}
+/** ⭐ three states: everything · only what this shop sells · only what it does not */
+function setOwn(v){
+  OWN = v;
+  Array.prototype.forEach.call(document.querySelectorAll('#own .pill'), function(b){
+    b.classList.toggle('on', (b.getAttribute('data-own') || '') === v); });
+  paint();
 }
 function pick(on, k){ if (on) PICKED[k] = 1; else delete PICKED[k]; tally(); }
 function pickAll(on){

@@ -23,14 +23,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
 
 (async () => {
   /* the shop's shelf, as the stub remembers it between calls — so "come back and add more" is real */
-  let shelf = [{ name: 'Tomato', unit: 'kg' }];
+  /* ⭐ the shop charges 52 for a tomato the list suggests at 40 — the whole point of showing its own price */
+  let shelf = [{ name: 'Tomato', unit: 'kg', price: 52 }];
   let lastAdopt = null;
 
   const srv = http.createServer((q, r) => {
     const url = q.url.split('?')[0];
     if (url === '/api/products/lists') {
       const body = {
-        have: shelf.length, mine: shelf,
+        have: shelf.length, mine: shelf, currency: 'INR',
         language_names: { ta: 'Tamil', hi: 'Hindi' },
         lists: Object.keys(BP.BLUEPRINTS).map((k) => {
           const bp = BP.blueprint(k);
@@ -51,7 +52,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
         /* the real route skips what the shop already sells; the stub does the same so the count is honest */
         const fresh = (b.names || []).filter((n) => !shelf.some((s) =>
           s.name.toLowerCase() === String(n.name).toLowerCase() && s.unit === n.unit));
-        fresh.forEach((n) => shelf.push({ name: n.name, unit: n.unit }));
+        fresh.forEach((n) => shelf.push({ name: n.name, unit: n.unit, price: 9 }));
         const s = (b.names || []).length - fresh.length;
         r.writeHead(200, { 'content-type': 'application/json' });
         r.end(JSON.stringify({ ok: true, added: fresh.length, skipped: new Array(s).fill({}),
@@ -163,11 +164,41 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     eggs.length === 3 && /piece/.test(eggs.join(' ')) && /dozen/.test(eggs.join(' ')) && /box/.test(eggs.join(' ')),
     eggs.length + ' rows: ' + eggs.map((e) => e.replace('Hen egg (white) ', '')).join(' | ').slice(0, 70));
 
+  /**
+   * ── ⭐⭐ WHAT I ALREADY SELL, AND AT WHOSE PRICE ────────────────────────────────────────────────────
+   * Athi: *"can we have an icon / filter to see what is in my catalogue with its price here"* — and the
+   * constraint that makes it correct: *"as per the stores catalogue, not from here, because we don't
+   * update the price."* So the assertion is not merely that a price shows, but that it is the SHOP'S 52
+   * rather than the list's suggested 40 — a page that showed 40 here would be stating a number that is
+   * true nowhere and implying this screen might apply it.
+   */
+  console.log('\n── what this shop already sells, at ITS price ' + '─'.repeat(15));
+  await p.click('[data-testid=pl-list-veg]');
+  await p.fill('#q', '');
+  await p.click('[data-testid=pl-own-mine]');
+  const mineRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)',
+    (r) => r.map((x) => x.innerText.replace(/\s+/g, ' ').trim()));
+  say('⭐ a filter shows only what is in my catalogue', mineRows.length === 23, mineRows.length + ' rows');
+  const tomRow = mineRows.find((x) => /^Tomato /.test(x)) || '';
+  say('⭐⭐ and it shows the SHOP’s price, not the list’s suggestion',
+    /52/.test(tomRow) && !/40\.00/.test(tomRow), tomRow.slice(0, 58));
+  say('⚠️ the number carries its currency — a bare 52 is not a price',
+    /₹/.test(tomRow), (tomRow.match(/₹[\d,.]+/g) || ['none']).join(' '));
+  say('and the cell says whose number it is', /yours/.test(tomRow), 'labelled "yours"');
+
+  await p.click('[data-testid=pl-own-new]');
+  const newRows = await p.$$eval('[data-testid=pl-table] tbody tr:not(.catrow)', (r) => r.length);
+  say('"Not yet" shows the rest — the question somebody adding products actually has',
+    newRows === 202 - 23, newRows + ' of 202 still to add');
+  say('a suggested price is labelled as suggested, never as theirs',
+    /suggested/.test(await p.innerText('[data-testid=pl-table]')), 'labelled "suggested"');
+  await p.click('#own .pill[data-own=""]');
+
   console.log('\nconsole/page errors: ' + (errs.length ? errs.join(' · ') : 'none'));
   if (errs.length) bad++;
   if (process.argv.includes('--shots')) {
     fs.mkdirSync(path.join(__dirname, '..', 'png'), { recursive: true });
-    await p.click('[data-testid=pl-list-veg]'); await p.fill('#q', '');
+    await p.click('[data-testid=pl-list-veg]'); await p.fill('#q', ''); await p.click('[data-testid=pl-own-mine]');
     await p.screenshot({ path: path.join(__dirname, '..', 'png', 'ProductLab.png'), fullPage: false });
   }
   await b.close(); srv.close();
