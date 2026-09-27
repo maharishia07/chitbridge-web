@@ -94,6 +94,28 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(60) + '· ' + d 
   say('it asked ChitBridge to revoke THAT screen', !!rev && JSON.parse(rev.body).jti === 'bbb222', rev ? rev.body : 'no call');
   say('and the count drops to what is left', after === '📺 1', after);
 
+  /* ⭐ Athi: "i should be able to remove and add item as i like and the changes has to be immediate" — the card's
+     "Pick for the shop screen" switch was STAGED until Save, so his second pick never left the counter */
+  console.log('\n── the product card\'s screen switch saves the moment it is flipped (no Save)');
+  await p.evaluate(() => { tvClose();
+    S.items = [{ item_id: 'it-1', name: 'Masala Dosa', price: 70, unit: 'plate', category: 'Tiffin' }];
+    MODE = 'maintain'; CARD_ID = 'it-1'; pendClear(); paintCard(); });
+  await p.waitForSelector('[data-testid="card-screen"]', { state: 'attached', timeout: 5000 });
+  const n0 = calls.filter((c) => c.url === '/api/till/flags').length;
+  await p.evaluate(() => document.querySelector('[data-testid="card-screen"]').click());
+  await p.waitForFunction((n) => true, n0);
+  await p.waitForTimeout(500);
+  const flagsOn = calls.filter((c) => c.url === '/api/till/flags').slice(n0);
+  const onState = await p.evaluate(() => ({ sw: document.querySelector('[data-testid="card-screen"]').classList.contains('on'),
+    pending: PEND.screen !== undefined, note: (document.getElementById('lastnote') || {}).textContent || '' }));
+  say('flipping it ON writes to ChitBridge at once', flagsOn.length === 1 && JSON.parse(flagsOn[0].body).screen === true, flagsOn.map((c) => c.body).join(' '));
+  say('nothing is left waiting for Save', onState.pending === false && onState.sw === true, JSON.stringify({ sw: onState.sw, pending: onState.pending }));
+  say('it says so', /on the shop screen now/.test(onState.note), onState.note);
+  await p.evaluate(() => document.querySelector('[data-testid="card-screen"]').click());
+  await p.waitForTimeout(500);
+  const flagsOff = calls.filter((c) => c.url === '/api/till/flags').slice(n0 + 1);
+  say('flipping it OFF writes at once too', flagsOff.length === 1 && JSON.parse(flagsOff[0].body).screen === false, flagsOff.map((c) => c.body).join(' '));
+
   say('console/page errors', !errs.length, errs.length ? errs.join(' | ').slice(0, 200) : 'none');
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' FAILED' : '\nthe shop screen can be paired and switched off from the counter');

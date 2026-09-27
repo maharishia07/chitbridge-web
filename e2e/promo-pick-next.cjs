@@ -59,13 +59,19 @@ let snap = () => ({ shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Dat
     return { fresh: showNewPickNext(before), same: AT === was }; });
   say('a re-read with no new pick leaves the rotation alone', quiet.fresh === false && quiet.same, JSON.stringify(quiet));
 
+  /* and REMOVING a pick takes it out of the run on the same re-read — "remove and add item as i like" */
+  items[17].screen = false;
+  const gone = await p.evaluate(async () => { await readShop(); SLIDES = build();
+    return shown().some((s) => s.kind === 'picked' && s.item && s.item.name === 'Dish 17'); });
+  say('an un-picked product leaves the screen on the next re-read', gone === false, gone ? 'still there' : 'gone');
+
   /* ↻ says what it read — Athi, on his phone: "it is not doing anything" */
   console.log('\n── ↻ says what it read');
   items[3].screen = true;
   await p.click('#refresh');
   await p.waitForTimeout(400);
   const msg = await p.evaluate(() => document.getElementById('hint').textContent);
-  say('↻ answers in digits, and names the new pick', /^↻ \d+ on sale · 📌 2 · next: Dish 3$/.test(msg), msg);
+  say('↻ answers in digits, and names the new pick', /^↻ \d+ on sale · 📌 1 · next: Dish 3$/.test(msg), msg);
   await p.evaluate(() => { API = 'http://127.0.0.1:1'; });            /* ChitBridge unreachable */
   await p.click('#refresh');
   await p.waitForTimeout(600);
