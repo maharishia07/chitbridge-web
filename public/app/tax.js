@@ -1,15 +1,9 @@
-/* ⚠️⚠️ GENERATED — DO NOT EDIT. A byte-for-byte mirror of chitbridge-api/lib/tax.js,
- * produced by chitbridge-api/scripts/mirror-pure-libs.cjs. That file is AUTHORITATIVE; edit it there and
- * re-run the generator. A retyped copy of an invoice split is the worst defect available: it agrees on
- * every example anyone tries and diverges on the one that matters.
- *
- * Wrapped in an IIFE so the pure module's own names (r2 · num · pick · determine) never become globals —
- * e2e/dup-functions.cjs is right to forbid that, and `pick` would collide with app/pick.js today.
- */
+/* ADOPTED from chitbridge-engines v1.1.0 · tax · sha256 069a7a64c4135018973d0163f9dcb650368e9aa362cd0da2f81b1250932b15bc — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · tax. Edited ONLY in chitbridge-engines/src/tax.js; every platform adopts a released version of it. */
 (function (root) {
+'use strict';
 // @stage tested
 // @stage-note GST determination: two addresses in, INV-01 vocabulary out. Pure — no I/O, no rate tables, no DB.
-'use strict';
 /**
  * tax.js — the determination, not the rates.
  *
@@ -337,5 +331,20 @@ const systemProvider = {
   },
 };
 
-root.CBTax = { determine, supplyType, systemProvider, r2, splitLineTax };
+
+const EXPORTS = { determine, supplyType, systemProvider, r2, splitLineTax };
+
+/**
+ * ⭐ CBTax.slab — the counter has always asked ONE global for both halves (CBTax.slab.resolve). It is the tax-slab engine
+ * itself, found where the page put it, never a copy. Not enumerable, so the export list is exactly the server's.
+ * ⚠️ Load tax-slab BEFORE tax on a page (engines.json "needs"); the counter's bundle does. On the server require
+ * tax-slab directly — nothing there reads .slab.
+ */
+Object.defineProperty(EXPORTS, 'slab', { enumerable: false, get: function () {
+  return root.CBTaxSlab || (root.window && root.window.CBTaxSlab) || undefined;
+} });
+
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBTax. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBTax = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

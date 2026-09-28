@@ -37,6 +37,9 @@ const skipIf = (cond, why) => { if (cond) { const e = new Error(why); e.__skip =
 
 /* ⚠️ REQUIRED FOR THE SIDE EFFECT, exactly as a <script> tag loads them. The files export nothing; they attach a
    global, which is the whole reason they are wrapped in an IIFE — see e2e/dup-functions.cjs. */
+/* ⭐ 2026-09-28: the files are ADOPTED chitbridge-engines releases, which hand a page window.CBTax — and in a browser
+   `window` IS the global. Node has no window, so say what a browser would. (money-language.test.js does the same.) */
+globalThis.window = globalThis.window || globalThis;
 require('../public/app/tax.js');
 require('../public/app/tax-slab.js');
 const T = globalThis.CBTax;
@@ -134,15 +137,13 @@ t('the generated mirror matches chitbridge-api/lib, byte for byte', () => {
   /* ⚠️ LF-NORMALISED FIRST. Two checkouts of one repo can differ in nothing but CRLF on Windows, and my first
      run of this reported a byte-identical file as STALE — a guard that cries wolf is a guard people delete. */
   const lf = (s) => String(s).replace(/\r\n/g, '\n');
-  for (const [lib, out] of [['tax.js', 'tax.js'], ['tax-slab.js', 'tax-slab.js']]) {
-    const src = lf(fs.readFileSync(path.join(apiLib, lib), 'utf8'));
-    const mirror = lf(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', out), 'utf8'));
-    /* The ONLY permitted difference is the export tail, which is what the generator rewrites. Everything before
-       `module.exports` must appear verbatim inside the mirror. */
-    const body = src.slice(0, src.search(/\nmodule\.exports\s*=/));
-    assert.ok(body.length > 500, lib + ': could not find the body to compare');
-    assert.ok(mirror.includes(body),
-      out + ' is STALE — run: node ../chitbridge-api/scripts/mirror-pure-libs.cjs');
+  /* ⭐ 2026-09-28: both sides now ADOPT one chitbridge-engines release, so "the same bytes" is the same release —
+     the api's copy and this one must be byte-identical, header and all. (mirror-pure-libs.cjs is retired.) */
+  for (const f of ['tax.js', 'tax-slab.js']) {
+    const src = lf(fs.readFileSync(path.join(apiLib, f), 'utf8'));
+    const mirror = lf(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'));
+    assert.ok(/^\/\* ADOPTED from chitbridge-engines v/.test(mirror), f + ' is not an adopted file — run: node ../chitbridge-engines/tools/adopt.cjs .');
+    assert.strictEqual(mirror, src, f + ' is not the release chitbridge-api adopts — the two repos pin different versions');
   }
 });
 

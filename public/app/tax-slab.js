@@ -1,15 +1,9 @@
-/* ⚠️⚠️ GENERATED — DO NOT EDIT. A byte-for-byte mirror of chitbridge-api/lib/tax-slab.js,
- * produced by chitbridge-api/scripts/mirror-pure-libs.cjs. That file is AUTHORITATIVE; edit it there and
- * re-run the generator. A retyped copy of an invoice split is the worst defect available: it agrees on
- * every example anyone tries and diverges on the one that matters.
- *
- * Wrapped in an IIFE so the pure module's own names (r2 · num · pick · determine) never become globals —
- * e2e/dup-functions.cjs is right to forbid that, and `pick` would collide with app/pick.js today.
- */
+/* ADOPTED from chitbridge-engines v1.1.0 · tax-slab · sha256 7abb2bea829423509a0aa4c72658c711e7b170a38462c74335bd059b9c39f9d4 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · tax-slab. Edited ONLY in chitbridge-engines/src/tax-slab.js; every platform adopts a released version of it. */
 (function (root) {
+'use strict';
 // @stage tested
 // @stage-note Which slab answers for this product, and WHO answered. Pure — no I/O, no DB, no rate table.
-'use strict';
 /**
  * tax-slab.js — a named tax slab, cited by a product, inherited when it is not.
  *
@@ -318,6 +312,11 @@ function describe(resolved) {
   return dead + (dead ? 'Using ' : '') + head + ' · ' + from + (r.pending ? ' · not in force until ' + r.effective_from : '') + clash;
 }
 
-root.CBTaxSlab = { GST_SLAB_RATES, SLAB_KEY, SLAB_NAME_KEY, RATE_KEY,
+
+const EXPORTS = { GST_SLAB_RATES, SLAB_KEY, SLAB_NAME_KEY, RATE_KEY,
                    slabOf, indexSlabs, categoryIdsOf, resolve, setOn, applyToLine, describe };
+
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBTaxSlab. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBTaxSlab = EXPORTS;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
