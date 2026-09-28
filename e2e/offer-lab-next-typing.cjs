@@ -55,7 +55,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
       JSON.stringify(marginResult));
 
   console.log('\n── WORK IT OUT — percent off, the next screen Athi asked to check ' + '─'.repeat(0));
-  await p.evaluate(() => { pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; apply(); });
+  /* since the 09-26 rebuild apply() opens the result sheet OVER the controls; a person returns to the fields with
+     "Change it" (closeWork) — the same path here, or the click lands on the sheet's backdrop */
+  await p.evaluate(() => { pickGoal('percent'); S.scope = 'item'; S.itemId = 'masala'; apply(); closeWork(); });
   await p.waitForTimeout(100);
   const pctEl = await p.$('[data-key="pctOff"]');
   await pctEl.click({ clickCount: 3 });
@@ -66,7 +68,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
       JSON.stringify(pctResult));
 
   console.log('\n── WORK IT OUT — rupees off, a decimal this time ' + '─'.repeat(19));
-  await p.evaluate(() => { pickGoal('amount'); S.scope = 'item'; S.itemId = 'masala'; apply(); });
+  await p.evaluate(() => { pickGoal('amount'); S.scope = 'item'; S.itemId = 'masala'; apply(); closeWork(); });
   await p.waitForTimeout(100);
   const rsEl = await p.$('[data-key="rsOff"]');
   await rsEl.click({ clickCount: 3 });
