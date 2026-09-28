@@ -20,8 +20,11 @@ window.CBASSETS = {
     "lib/bridgeid.js",
     "lib/dev-otp.js",
     "lib/handle.js",
+    "lib/identity-auth.js",
     "lib/meter.js",
+    "lib/mintuserid.js",
     "lib/otp.js",
+    "lib/resolveuserid.js",
     "lib/respond.js",
     "lib/schema.js",
     "middleware/auth.js",
@@ -59,9 +62,12 @@ window.CBASSETS = {
     "lib/container.js",
     "lib/logger.js",
     "lib/money.js",
+    "lib/network-catalogue.js",
+    "lib/network-membership.js",
     "lib/regional.js",
     "lib/respond.js",
-    "middleware/auth.js"
+    "middleware/auth.js",
+    "src/services/network.js"
    ]
   },
   {
@@ -133,10 +139,13 @@ window.CBASSETS = {
     "lib/container.js",
     "lib/dev-otp.js",
     "lib/events.js",
+    "lib/identity-auth.js",
     "lib/identity.js",
     "lib/itemmatch.js",
     "lib/itemstatus.js",
+    "lib/knownerr.js",
     "lib/mint.js",
+    "lib/mintuserid.js",
     "lib/money.js",
     "lib/network-view.js",
     "lib/notify.js",
@@ -144,6 +153,7 @@ window.CBASSETS = {
     "lib/order-input.js",
     "lib/otp.js",
     "lib/pricing-engine.js",
+    "lib/raiseticket.js",
     "lib/regional.js",
     "lib/respond.js",
     "lib/storage.js",
@@ -193,6 +203,7 @@ window.CBASSETS = {
     "lib/handle.js",
     "lib/instruments.js",
     "lib/itemmatch.js",
+    "lib/knownerr.js",
     "lib/logger.js",
     "lib/meter.js",
     "lib/mint.js",
@@ -215,7 +226,8 @@ window.CBASSETS = {
     "lib/whatsapp-out.js",
     "lib/workpattern.js",
     "middleware/auth.js",
-    "middleware/validate.js"
+    "middleware/validate.js",
+    "routes/counters.js"
    ]
   },
   {
@@ -268,6 +280,8 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/definition-check.js",
+    "lib/network-membership.js",
+    "lib/network-offers.js",
     "lib/regional.js",
     "lib/respond.js",
     "lib/shopchanged.js",
@@ -289,20 +303,30 @@ window.CBASSETS = {
    "uses": [
     "lib/bridgeid.js",
     "lib/channels.js",
+    "lib/cost.js",
+    "lib/dev-otp.js",
     "lib/exposure.js",
     "lib/govresolve.js",
     "lib/handle.js",
+    "lib/identity-auth.js",
+    "lib/istest.js",
     "lib/logger.js",
     "lib/notify.js",
     "lib/otp.js",
+    "lib/plans.js",
+    "lib/platformroot.js",
     "lib/policy.js",
     "lib/profile.js",
+    "lib/raiseticket.js",
     "lib/rates.js",
     "lib/readiness.js",
     "lib/respond.js",
+    "lib/rootlink.js",
     "lib/schema-bootstrap.js",
     "lib/schema.js",
+    "lib/versionref.js",
     "lib/visibility-cap.js",
+    "lib/workroute.js",
     "middleware/auth.js",
     "middleware/validate.js",
     "routes/governance.js"
@@ -384,8 +408,10 @@ window.CBASSETS = {
     "lib/reference.js",
     "lib/respond.js",
     "lib/schema.js",
+    "lib/shopchanged.js",
     "lib/source.js",
     "lib/verify.js",
+    "lib/versionref.js",
     "lib/workpattern.js",
     "middleware/auth.js"
    ]
@@ -491,7 +517,8 @@ window.CBASSETS = {
     "lib/schema-bootstrap.js",
     "lib/visibility-cap.js",
     "middleware/auth.js",
-    "routes/governance.js"
+    "routes/governance.js",
+    "src/services/network.js"
    ]
   },
   {
@@ -519,6 +546,7 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/catalogue-view.js",
+    "lib/money.js",
     "lib/offers-engine.js",
     "middleware/auth.js",
     "routes/openapi.js"
@@ -568,13 +596,16 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/availability.js",
+    "lib/catalogue-blueprint.js",
     "lib/catalogue-columns.js",
+    "lib/catalogue-write.js",
+    "lib/categories.js",
+    "lib/cost.js",
     "lib/csv-preflight.js",
     "lib/csv.js",
     "lib/defaults.js",
     "lib/identity.js",
     "lib/itemstatus.js",
-    "lib/meter.js",
     "lib/mint-product.js",
     "lib/money.js",
     "lib/order-input.js",
@@ -586,6 +617,9 @@ window.CBASSETS = {
     "lib/shopchanged.js",
     "lib/starter-fields.js",
     "lib/storage-object.js",
+    "lib/units.js",
+    "lib/xlsx-read.js",
+    "lib/xlsx-write.js",
     "middleware/auth.js",
     "middleware/validate.js"
    ]
@@ -712,6 +746,11 @@ window.CBASSETS = {
    "uses": [
     "lib/gherkin.js",
     "lib/storage.js",
+    "lib/supportcopy.js",
+    "lib/testboard.js",
+    "lib/testnews.js",
+    "lib/teststatus.js",
+    "lib/trips.js",
     "middleware/auth.js"
    ]
   },
@@ -725,21 +764,37 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
+    "lib/catalogue-blueprint.js",
+    "lib/catalogue-build.js",
+    "lib/catalogue-read.js",
     "lib/catalogue-view.js",
+    "lib/catalogue-write.js",
+    "lib/categories.js",
+    "lib/container.js",
     "lib/deliverline.js",
+    "lib/inventory.js",
     "lib/itemstatus.js",
     "lib/logger.js",
     "lib/lotfields.js",
+    "lib/money.js",
+    "lib/network-offers.js",
     "lib/policy.js",
+    "lib/profile-map.js",
     "lib/profile.js",
+    "lib/quick-keys.js",
     "lib/regional.js",
     "lib/reward-store.js",
     "lib/rewards.js",
+    "lib/rollup.js",
     "lib/select.js",
     "lib/shopchanged.js",
     "lib/speech.js",
+    "lib/stock-store.js",
     "lib/tax-shelf.js",
+    "lib/units.js",
+    "lib/variant.browser.js",
     "middleware/auth.js",
+    "routes/counters.js",
     "routes/keys.js"
    ]
   },
@@ -780,7 +835,8 @@ window.CBASSETS = {
    "uses": [
     "lib/reqctx.js",
     "lib/schema.js",
-    "middleware/hat-gate.js"
+    "middleware/hat-gate.js",
+    "routes/keys.js"
    ]
   },
   {
@@ -842,6 +898,7 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/dev-otp.js",
+    "lib/knownerr.js",
     "lib/logger.js",
     "lib/trips.js",
     "middleware/idempotency.js",
@@ -854,8 +911,11 @@ window.CBASSETS = {
     "routes/catalogue.js",
     "routes/channels.js",
     "routes/chits.js",
+    "routes/combo-templates.js",
     "routes/connections.js",
     "routes/connectors.js",
+    "routes/counters.js",
+    "routes/ctp.js",
     "routes/definitions.js",
     "routes/entities.js",
     "routes/events.js",
@@ -868,11 +928,13 @@ window.CBASSETS = {
     "routes/keys.js",
     "routes/kyb.js",
     "routes/network-design.js",
+    "routes/network-offers.js",
     "routes/notifications.js",
     "routes/offers.js",
     "routes/openapi.js",
     "routes/pricing.js",
     "routes/products.js",
+    "routes/quick-keys.js",
     "routes/relationships.js",
     "routes/schemas.js",
     "routes/service.js",
@@ -883,6 +945,93 @@ window.CBASSETS = {
     "routes/till.js",
     "src/routes/catalogue.js",
     "src/routes/network.js"
+   ]
+  },
+  {
+   "code": "API045",
+   "type": "API",
+   "kind": "Route",
+   "name": "combo-templates.js",
+   "path": "chitbridge-api/routes/combo-templates.js",
+   "group": "api.route",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/catalogue-columns.js",
+    "lib/mint-product.js",
+    "lib/money.js",
+    "lib/regional.js",
+    "lib/respond.js",
+    "lib/schema-bootstrap.js",
+    "middleware/auth.js",
+    "middleware/validate.js",
+    "routes/products.js"
+   ]
+  },
+  {
+   "code": "API046",
+   "type": "API",
+   "kind": "Route",
+   "name": "counters.js",
+   "path": "chitbridge-api/routes/counters.js",
+   "group": "api.route",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "middleware/auth.js",
+    "routes/keys.js"
+   ]
+  },
+  {
+   "code": "API047",
+   "type": "API",
+   "kind": "Route",
+   "name": "ctp.js",
+   "path": "chitbridge-api/routes/ctp.js",
+   "group": "api.route",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/ctpaddress.js",
+    "lib/ctpdirectory.js",
+    "lib/ctpenvelope.js",
+    "lib/ctpkeys.js",
+    "lib/ctpquery.js",
+    "lib/govresolve.js",
+    "lib/mint.js",
+    "lib/resolveuserid.js",
+    "routes/catalogue.js"
+   ]
+  },
+  {
+   "code": "API048",
+   "type": "API",
+   "kind": "Route",
+   "name": "network-offers.js",
+   "path": "chitbridge-api/routes/network-offers.js",
+   "group": "api.route",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/network-catalogue.js",
+    "lib/network-membership.js",
+    "lib/network-offers.js",
+    "lib/shopchanged.js",
+    "middleware/auth.js"
+   ]
+  },
+  {
+   "code": "API049",
+   "type": "API",
+   "kind": "Route",
+   "name": "quick-keys.js",
+   "path": "chitbridge-api/routes/quick-keys.js",
+   "group": "api.route",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/quick-keys.js",
+    "middleware/auth.js"
    ]
   },
   {
@@ -1272,7 +1421,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
-    "lib/gs1.js"
+    "lib/gs1.js",
+    "lib/money.js"
    ]
   },
   {
@@ -1398,7 +1548,11 @@ window.CBASSETS = {
    "group": "engine.adopted",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js",
+    "lib/network-catalogue.js",
+    "lib/network-membership.js"
+   ]
   },
   {
    "code": "ENG016",
@@ -1440,6 +1594,8 @@ window.CBASSETS = {
     "lib/defaults.js",
     "lib/exposure.js",
     "lib/itemstatus.js",
+    "lib/money.js",
+    "lib/network-offers.js",
     "lib/policy.js",
     "lib/profile.js",
     "lib/regional.js",
@@ -1504,7 +1660,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
-    "lib/boilerplate.js"
+    "lib/boilerplate.js",
+    "lib/versionref.js"
    ]
   },
   {
@@ -1530,7 +1687,9 @@ window.CBASSETS = {
    "group": "engine.other",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/versionref.js"
+   ]
   },
   {
    "code": "ENG026",
@@ -1541,7 +1700,9 @@ window.CBASSETS = {
    "group": "engine.infra",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG027",
@@ -1631,7 +1792,9 @@ window.CBASSETS = {
    "group": "engine.infra",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/testboard.js"
+   ]
   },
   {
    "code": "ENG035",
@@ -1693,7 +1856,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
-    "lib/confcache.js"
+    "lib/confcache.js",
+    "lib/versionref.js"
    ]
   },
   {
@@ -1710,19 +1874,9 @@ window.CBASSETS = {
     "lib/consolidate.js",
     "lib/itemmatch.js",
     "lib/measure.js",
+    "lib/money.js",
     "lib/select.js"
    ]
-  },
-  {
-   "code": "ENG041",
-   "type": "ENG",
-   "kind": "Engine",
-   "name": "gs1.browser.js",
-   "path": "chitbridge-api/lib/gs1.browser.js",
-   "group": "engine.other",
-   "stage": "tested",
-   "draws": [],
-   "uses": []
   },
   {
    "code": "ENG042",
@@ -1833,17 +1987,6 @@ window.CBASSETS = {
    "uses": []
   },
   {
-   "code": "ENG051",
-   "type": "ENG",
-   "kind": "Engine",
-   "name": "lotfields.browser.js",
-   "path": "chitbridge-api/lib/lotfields.browser.js",
-   "group": "engine.other",
-   "stage": "tested",
-   "draws": [],
-   "uses": []
-  },
-  {
    "code": "ENG052",
    "type": "ENG",
    "kind": "Engine",
@@ -1920,6 +2063,9 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
+    "lib/ctpaddress.js",
+    "lib/ctpenvelope.js",
+    "lib/ctptransport.js",
     "lib/folder-rules.js"
    ]
   },
@@ -1962,17 +2108,6 @@ window.CBASSETS = {
    ]
   },
   {
-   "code": "ENG061",
-   "type": "ENG",
-   "kind": "Engine",
-   "name": "numerals.browser.js",
-   "path": "chitbridge-api/lib/numerals.browser.js",
-   "group": "engine.other",
-   "stage": "tested",
-   "draws": [],
-   "uses": []
-  },
-  {
    "code": "ENG062",
    "type": "ENG",
    "kind": "Engine",
@@ -1992,7 +2127,9 @@ window.CBASSETS = {
    "group": "engine.other",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG064",
@@ -2007,6 +2144,7 @@ window.CBASSETS = {
     "lib/catalogue-view.js",
     "lib/customer-groups.js",
     "lib/money.js",
+    "lib/network-offers.js",
     "lib/offers-engine.js"
    ]
   },
@@ -2052,7 +2190,9 @@ window.CBASSETS = {
    "group": "engine.other",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG069",
@@ -2131,7 +2271,8 @@ window.CBASSETS = {
    "uses": [
     "lib/boilerplate.js",
     "lib/profile-map.js",
-    "lib/profile.js"
+    "lib/profile.js",
+    "lib/versionref.js"
    ]
   },
   {
@@ -2276,6 +2417,7 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/catalogue-view.js",
+    "lib/money.js",
     "lib/offers-engine.js",
     "lib/pricing-engine.js",
     "lib/regional.js",
@@ -2458,6 +2600,7 @@ window.CBASSETS = {
    "stage": "tested",
    "draws": [],
    "uses": [
+    "lib/policy.js",
     "lib/tax-lines.js"
    ]
   },
@@ -2468,9 +2611,12 @@ window.CBASSETS = {
    "name": "tax-engine.browser.js",
    "path": "chitbridge-api/lib/tax-engine.browser.js",
    "group": "engine.other",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js",
+    "lib/tax-packs.js"
+   ]
   },
   {
    "code": "ENG102",
@@ -2493,6 +2639,7 @@ window.CBASSETS = {
    "stage": "tested",
    "draws": [],
    "uses": [
+    "lib/money.js",
     "lib/tax-slab.js",
     "lib/tax.js",
     "lib/units.js"
@@ -2522,7 +2669,9 @@ window.CBASSETS = {
    "group": "engine.infra",
    "stage": "tested",
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/tax-packs.js"
+   ]
   },
   {
    "code": "ENG106",
@@ -2533,7 +2682,10 @@ window.CBASSETS = {
    "group": "engine.infra",
    "stage": "tested",
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js",
+    "lib/tax-packs.js"
+   ]
   },
   {
    "code": "ENG107",
@@ -2648,7 +2800,10 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
-    "lib/boilerplate.js"
+    "lib/boilerplate.js",
+    "lib/govresolve.js",
+    "lib/versionref.js",
+    "lib/workroute.js"
    ]
   },
   {
@@ -2693,7 +2848,9 @@ window.CBASSETS = {
    "group": "engine.tier",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "lib/money.js"
+   ]
   },
   {
    "code": "ENG121",
@@ -2749,7 +2906,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
-    "lib/container.js"
+    "lib/container.js",
+    "lib/versionref.js"
    ]
   },
   {
@@ -2785,6 +2943,571 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/units.js",
    "group": "engine.tier",
    "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG129",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "catalogue-blueprint.js",
+   "path": "chitbridge-api/lib/catalogue-blueprint.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/money.js",
+    "lib/versionref.js"
+   ]
+  },
+  {
+   "code": "ENG130",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "catalogue-write.js",
+   "path": "chitbridge-api/lib/catalogue-write.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/catalogue-columns.js",
+    "lib/meter.js",
+    "lib/money.js",
+    "lib/regional.js",
+    "lib/schema-bootstrap.js"
+   ]
+  },
+  {
+   "code": "ENG131",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "categories.js",
+   "path": "chitbridge-api/lib/categories.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG132",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "convert.js",
+   "path": "chitbridge-api/lib/convert.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": [
+    "lib/money.js",
+    "lib/units.js"
+   ]
+  },
+  {
+   "code": "ENG133",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctpaddress.js",
+   "path": "chitbridge-api/lib/ctpaddress.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG134",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctpdirectory.js",
+   "path": "chitbridge-api/lib/ctpdirectory.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG135",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctpenvelope.js",
+   "path": "chitbridge-api/lib/ctpenvelope.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": [
+    "lib/canon.js"
+   ]
+  },
+  {
+   "code": "ENG136",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctpkeys.js",
+   "path": "chitbridge-api/lib/ctpkeys.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG137",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctpquery.js",
+   "path": "chitbridge-api/lib/ctpquery.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": [
+    "lib/canon.js",
+    "lib/ctpaddress.js",
+    "lib/ctpkeys.js"
+   ]
+  },
+  {
+   "code": "ENG138",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ctptransport.js",
+   "path": "chitbridge-api/lib/ctptransport.js",
+   "group": "engine.other",
+   "stage": "poc",
+   "draws": [],
+   "uses": [
+    "lib/ctpenvelope.js",
+    "lib/ctpkeys.js"
+   ]
+  },
+  {
+   "code": "ENG139",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "dayopen.js",
+   "path": "chitbridge-api/lib/dayopen.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG140",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "entitykind.js",
+   "path": "chitbridge-api/lib/entitykind.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG141",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "govcontext.browser.js",
+   "path": "chitbridge-api/lib/govcontext.browser.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG142",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "identity-auth.js",
+   "path": "chitbridge-api/lib/identity-auth.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/dev-otp.js",
+    "lib/otp.js",
+    "lib/resolveuserid.js"
+   ]
+  },
+  {
+   "code": "ENG143",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "istest.js",
+   "path": "chitbridge-api/lib/istest.js",
+   "group": "engine.infra",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/entitykind.js"
+   ]
+  },
+  {
+   "code": "ENG144",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "knownerr.js",
+   "path": "chitbridge-api/lib/knownerr.js",
+   "group": "engine.infra",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG145",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "locale.browser.js",
+   "path": "chitbridge-api/lib/locale.browser.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG146",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "mintuserid.js",
+   "path": "chitbridge-api/lib/mintuserid.js",
+   "group": "engine.tier",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/bridgeid.js",
+    "lib/handle.js"
+   ]
+  },
+  {
+   "code": "ENG147",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "namedentity.js",
+   "path": "chitbridge-api/lib/namedentity.js",
+   "group": "engine.infra",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG148",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "network-catalogue.js",
+   "path": "chitbridge-api/lib/network-catalogue.js",
+   "group": "engine.adopted",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/container.js",
+    "lib/money.js",
+    "lib/network-membership.js",
+    "lib/network-offers.js",
+    "lib/shopchanged.js"
+   ]
+  },
+  {
+   "code": "ENG149",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "network-membership.js",
+   "path": "chitbridge-api/lib/network-membership.js",
+   "group": "engine.adopted",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG150",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "network-offers.js",
+   "path": "chitbridge-api/lib/network-offers.js",
+   "group": "engine.adopted",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/catalogue-view.js",
+    "lib/network-membership.js",
+    "lib/profile.js",
+    "lib/shopchanged.js"
+   ]
+  },
+  {
+   "code": "ENG151",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "orderhub.js",
+   "path": "chitbridge-api/lib/orderhub.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/orders.js"
+   ]
+  },
+  {
+   "code": "ENG152",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "orders.js",
+   "path": "chitbridge-api/lib/orders.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/money.js"
+   ]
+  },
+  {
+   "code": "ENG153",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "platformroot.js",
+   "path": "chitbridge-api/lib/platformroot.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/namedentity.js"
+   ]
+  },
+  {
+   "code": "ENG154",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "qty.js",
+   "path": "chitbridge-api/lib/qty.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/money.js"
+   ]
+  },
+  {
+   "code": "ENG155",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "quick-keys.js",
+   "path": "chitbridge-api/lib/quick-keys.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG156",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "raiseticket.js",
+   "path": "chitbridge-api/lib/raiseticket.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/mint.js",
+    "lib/platformroot.js",
+    "lib/workroute.js"
+   ]
+  },
+  {
+   "code": "ENG157",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "resolveuserid.js",
+   "path": "chitbridge-api/lib/resolveuserid.js",
+   "group": "engine.tier",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/handle.js",
+    "lib/versionref.js"
+   ]
+  },
+  {
+   "code": "ENG158",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "rollup.js",
+   "path": "chitbridge-api/lib/rollup.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/money.js",
+    "lib/rollup.js"
+   ]
+  },
+  {
+   "code": "ENG159",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "rootlink.js",
+   "path": "chitbridge-api/lib/rootlink.js",
+   "group": "engine.other",
+   "stage": "held",
+   "draws": [],
+   "uses": [
+    "lib/logger.js",
+    "lib/platformroot.js"
+   ]
+  },
+  {
+   "code": "ENG160",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "scalecode.js",
+   "path": "chitbridge-api/lib/scalecode.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG161",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "screen-kit.js",
+   "path": "chitbridge-api/lib/screen-kit.js",
+   "group": "engine.adopted",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG162",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "signin.js",
+   "path": "chitbridge-api/lib/signin.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG163",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "supportcopy.js",
+   "path": "chitbridge-api/lib/supportcopy.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/raiseticket.js"
+   ]
+  },
+  {
+   "code": "ENG164",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "tax-packs.js",
+   "path": "chitbridge-api/lib/tax-packs.js",
+   "group": "engine.infra",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG165",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "testboard.js",
+   "path": "chitbridge-api/lib/testboard.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/namedentity.js"
+   ]
+  },
+  {
+   "code": "ENG166",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "testnews.js",
+   "path": "chitbridge-api/lib/testnews.js",
+   "group": "engine.infra",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/events.js"
+   ]
+  },
+  {
+   "code": "ENG167",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "teststatus.js",
+   "path": "chitbridge-api/lib/teststatus.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG168",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "variant.browser.js",
+   "path": "chitbridge-api/lib/variant.browser.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "lib/money.js"
+   ]
+  },
+  {
+   "code": "ENG169",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "verdict.js",
+   "path": "chitbridge-api/lib/verdict.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG170",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "versionref.js",
+   "path": "chitbridge-api/lib/versionref.js",
+   "group": "engine.tier",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG171",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "workroute.js",
+   "path": "chitbridge-api/lib/workroute.js",
+   "group": "engine.other",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG172",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "xlsx-read.js",
+   "path": "chitbridge-api/lib/xlsx-read.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG173",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "xlsx-write.js",
+   "path": "chitbridge-api/lib/xlsx-write.js",
+   "group": "engine.other",
+   "stage": "tested",
    "draws": [],
    "uses": []
   },
@@ -3031,17 +3754,6 @@ window.CBASSETS = {
    "uses": []
   },
   {
-   "code": "WEB023",
-   "type": "WEB",
-   "kind": "Web part",
-   "name": "tax-engine.js",
-   "path": "chitbridge-web/public/app/tax-engine.js",
-   "group": "web.primitive",
-   "stage": "tested",
-   "draws": [],
-   "uses": []
-  },
-  {
    "code": "WEB024",
    "type": "WEB",
    "kind": "Web part",
@@ -3059,7 +3771,7 @@ window.CBASSETS = {
    "name": "tax.js",
    "path": "chitbridge-web/public/app/tax.js",
    "group": "web.primitive",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
    "uses": []
   },
@@ -3125,7 +3837,7 @@ window.CBASSETS = {
    "name": "docnumber.js",
    "path": "chitbridge-web/public/engine/docnumber.js",
    "group": "web.shell",
-   "stage": "tested",
+   "stage": "held",
    "draws": [],
    "uses": []
   },
@@ -3158,7 +3870,7 @@ window.CBASSETS = {
    "name": "lots.js",
    "path": "chitbridge-web/public/engine/lots.js",
    "group": "web.shell",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
    "uses": []
   },
@@ -3169,7 +3881,7 @@ window.CBASSETS = {
    "name": "money.js",
    "path": "chitbridge-web/public/engine/money.js",
    "group": "web.shell",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
    "uses": []
   },
@@ -3180,7 +3892,7 @@ window.CBASSETS = {
    "name": "nums.js",
    "path": "chitbridge-web/public/engine/nums.js",
    "group": "web.shell",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
    "uses": []
   },
@@ -3193,7 +3905,9 @@ window.CBASSETS = {
    "group": "web.shell",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "public/engine/money.js"
+   ]
   },
   {
    "code": "WEB038",
@@ -3204,7 +3918,9 @@ window.CBASSETS = {
    "group": "web.shell",
    "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "public/engine/money.js"
+   ]
   },
   {
    "code": "WEB039",
@@ -3246,9 +3962,11 @@ window.CBASSETS = {
    "name": "tax.js",
    "path": "chitbridge-web/public/engine/tax.js",
    "group": "web.shell",
-   "stage": "tested",
+   "stage": null,
    "draws": [],
-   "uses": []
+   "uses": [
+    "public/engine/money.js"
+   ]
   },
   {
    "code": "WEB043",
@@ -3258,6 +3976,229 @@ window.CBASSETS = {
    "path": "chitbridge-web/public/till-sw.js",
    "group": "web.shell",
    "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB044",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "govcontext.js",
+   "path": "chitbridge-web/public/app/govcontext.js",
+   "group": "web.primitive",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB045",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "list-ctl.js",
+   "path": "chitbridge-web/public/app/list-ctl.js",
+   "group": "web.primitive",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB046",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "variant.js",
+   "path": "chitbridge-web/public/app/variant.js",
+   "group": "web.primitive",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB047",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "convert.js",
+   "path": "chitbridge-web/public/engine/convert.js",
+   "group": "web.shell",
+   "stage": "poc",
+   "draws": [],
+   "uses": [
+    "public/engine/money.js",
+    "public/engine/units.js"
+   ]
+  },
+  {
+   "code": "WEB048",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "dayopen.js",
+   "path": "chitbridge-web/public/engine/dayopen.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB049",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "govcontext.js",
+   "path": "chitbridge-web/public/engine/govcontext.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB050",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "jurisdiction.js",
+   "path": "chitbridge-web/public/engine/jurisdiction.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB051",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "orderhub.js",
+   "path": "chitbridge-web/public/engine/orderhub.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "public/engine/orders.js"
+   ]
+  },
+  {
+   "code": "WEB052",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "orders.js",
+   "path": "chitbridge-web/public/engine/orders.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "public/engine/money.js"
+   ]
+  },
+  {
+   "code": "WEB053",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "profilemap.js",
+   "path": "chitbridge-web/public/engine/profilemap.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB054",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "qty.js",
+   "path": "chitbridge-web/public/engine/qty.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "public/engine/money.js"
+   ]
+  },
+  {
+   "code": "WEB055",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "rollup.js",
+   "path": "chitbridge-web/public/engine/rollup.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "public/engine/money.js",
+    "public/engine/rollup.js"
+   ]
+  },
+  {
+   "code": "WEB056",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "scalecode.js",
+   "path": "chitbridge-web/public/engine/scalecode.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB057",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "screen.js",
+   "path": "chitbridge-web/public/engine/screen.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB058",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "signin.js",
+   "path": "chitbridge-web/public/engine/signin.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB059",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "units.js",
+   "path": "chitbridge-web/public/engine/units.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB060",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "variant.js",
+   "path": "chitbridge-web/public/engine/variant.js",
+   "group": "web.shell",
+   "stage": null,
+   "draws": [],
+   "uses": [
+    "public/engine/money.js"
+   ]
+  },
+  {
+   "code": "WEB061",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "verdict.js",
+   "path": "chitbridge-web/public/engine/verdict.js",
+   "group": "web.shell",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "WEB062",
+   "type": "WEB",
+   "kind": "Web part",
+   "name": "xlsx.full.min.js",
+   "path": "chitbridge-web/public/vendor/xlsx.full.min.js",
+   "group": "web.shell",
+   "stage": null,
    "draws": [],
    "uses": []
   }
