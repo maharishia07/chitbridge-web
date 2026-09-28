@@ -55,6 +55,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   say('⚠️ a keystroke alone must not save it', typing.keyNow === 'old-key-0000', 'CloudHost.key is still "' + typing.keyNow + '"');
   say('⚠️⚠️ and must not have thrown the screen away mid-type', typing.sBeforeBlur, 'S is still set');
 
+  /**
+   * ⚠️ MOVED, NOT DELETED (2026-09-28). This asserted the dialog stayed open after a key was saved. Since G1
+   * (SPEC-counter-identity.md) a new key IS a new shop, and a change of shop goes through becomeShop(), which
+   * RELOADS — a repaint in place carried the bill, the day and the person into the next shop. So: saved on change,
+   * before Close, and then the page reloads into the new key. The rest of this harness sets itself up again.
+   */
+  const reloaded = p.waitForEvent('load', { timeout: 30000 });
   const committed = await p.evaluate(() => {
     var el = document.getElementById('set_key');
     el.value = 'new-shop-key-999';
@@ -63,7 +70,17 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   });
   say('⭐ change (blur/Enter) does save it', committed.keyNow === 'new-shop-key-999', 'CloudHost.key is "' + committed.keyNow + '"');
   say('to storage too, not just memory', committed.stored === 'new-shop-key-999', 'ls holds "' + committed.stored + '"');
-  say('⭐⭐⭐ and BEFORE Close was ever pressed', committed.dialogStillOpen, 'the settings dialog is still open');
+  say('⭐⭐⭐ and BEFORE Close was ever pressed', committed.dialogStillOpen, 'the settings dialog was still open when it saved');
+  await reloaded;
+  await p.waitForFunction(() => typeof window.screenSet === 'function', null, { timeout: 30000 });
+  say('⭐⭐ a new key goes through the one door: the page reloads into it', await p.evaluate(() => CloudHost.key === 'new-shop-key-999'), 'reloaded with the new key');
+  await p.evaluate((api) => {
+    CloudHost.api = api; HOST = CloudHost;
+    ls.set(tillGivenKey(), 'C1');
+    window.S = { shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Date().toISOString(), items: [] };
+    setMode('sell');
+    openSettings();
+  }, base);
 
   console.log('\n── THE CHITBRIDGE ADDRESS — same test ' + '─'.repeat(30));
   const apiSaved = await p.evaluate((api2) => {
