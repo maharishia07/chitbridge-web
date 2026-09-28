@@ -16,7 +16,8 @@
     "verdict": "1.5.0",
     "scalecode": "1.5.0",
     "signin": "1.5.0",
-    "dayopen": "1.5.0"
+    "dayopen": "1.5.0",
+    "docnumber": "1.5.0"
   },
   "adopt": {
     "money": [
@@ -66,6 +67,9 @@
     ],
     "dayopen": [
       "public/engine/dayopen.js"
+    ],
+    "docnumber": [
+      "public/engine/docnumber.js"
     ]
   },
   "bundles": {
@@ -94,6 +98,7 @@
     "scalecode": "6ac871cc2e934d9cc45778036f6fb5ce087bdbc6c6f7f3aa885a0b5f983827cf",
     "signin": "50634c6dcb5ee22f053483b6ee7338cadbd44718bb06fb721bf80e2427e52911",
     "dayopen": "443e57e8d62e3f4fe053818b8c4b32b1bdb035c2357ea95f53dc62250a776fa0",
+    "docnumber": "51ab8c8a9dae42037a494cca58dd62b11d6050a5ad482b8b39e36d026014bbbb",
     "tax-packs": "f62bf3675a3e7f26bf7fdd415c3815f65f96aa9658d1d3e1029238ec778d5812",
     "tax": "01c906213bd77d2a141c39b17a5f8937a7155d2c98a0eb713986f2dc5690f542"
   }

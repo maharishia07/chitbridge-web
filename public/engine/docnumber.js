@@ -1,10 +1,9 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · docnumber · sha256 51ab8c8a9dae42037a494cca58dd62b11d6050a5ad482b8b39e36d026014bbbb — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · docnumber. Edited ONLY in chitbridge-engines/src/docnumber.js; every platform adopts a released version of it. */
+(function (root) {
+'use strict';
 // @stage held
 // @stage-note The numbering RULES, per jurisdiction. Built 2026-09-11; the counter adopts it in the same change.
-'use strict';
 /**
  * ── lib/docnumber.js · WHAT A DOCUMENT NUMBER MAY LOOK LIKE, WHEREVER THE SHOP IS ──────────────────────────────
  *
@@ -261,8 +260,10 @@ function maxPrefix(country, kind) {
   return Math.max(1, r.maxLen - without);
 }
 
-var EXPORTS = { rules, studied, compose, check, maxPrefix, KINDS, RULES,
+const EXPORTS = { rules, studied, compose, check, maxPrefix, KINDS, RULES,
                    periodLabel, periodKey, julianLabel, tradingDay, DEFAULT_SCHEME };
 
-window.CBDoc = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBDoc. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBDoc = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
