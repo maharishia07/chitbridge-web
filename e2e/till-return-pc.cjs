@@ -151,6 +151,10 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
     const n1 = Number(saleNo.split('/').pop()), n2 = Number(sale2.split('/').pop());
     say('the next sale follows the last one — no hole for the CN or EXP', n2 === n1 + 1, saleNo + ' → ' + sale2);
 
+    /* M11: the program lists the bills it holds for the last N days — what a return after midnight reads, offline */
+    const held = await p.evaluate(() => HOST.local(30));
+    say('the program lists what it holds over days (a return after midnight reads this)', held.some((x) => x.no === saleNo) && held.some((x) => x.no === cnNo),
+      held.length + ' held: ' + held.map((x) => x.no).join(', '));
     const forged = await fetch('http://127.0.0.1:' + PORT + '/api/record', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ doc: { kind: 'credit_note', no: 'CN/C1/26-27/9999' }, chitBody: { client_ref: 'CN/C1/26-27/9999' } }) }).then((x) => x.json());
     say('⚠️ a record with a number the program never issued is refused', forged.ok === false, forged.message || '');
