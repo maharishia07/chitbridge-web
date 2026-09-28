@@ -33,6 +33,15 @@ const FILES = ['app.html'].concat(
 );
 
 /** Surfaces that are meant to look the same however the app is themed. Reason required — see the header. */
+/**
+ * ⭐ A DECLARED REGION, NOT A WINDOW (2026-09-27). The whole-file EXEMPT below cannot say "this one function is paper":
+ * app.html's product-page Invoice tab (prodInvoiceTab) draws a SAMPLE INVOICE on a white sheet — its container sets
+ * background:#fff;color:#111 — so its #666 captions are grey on paper, correct in every theme, exactly as the readiness
+ * card is. The guard's rule against looking at neighbouring lines stands; this names a whole FUNCTION, with a reason.
+ */
+const EXEMPT_FN = {
+  'app.html': { prodInvoiceTab: 'the sample invoice on the product page — drawn on a white sheet (background:#fff;color:#111), paper by design' },
+};
 const EXEMPT = {
   'app/cap-readiness.js': 'the printable readiness card — it is exported and printed, so it is white paper by design',
 };
@@ -107,9 +116,13 @@ const findings = [];
 
 for (const rel of FILES) {
   const lines = fs.readFileSync(path.join(WEB, rel), 'utf8').split('\n');
+  let fnName = '';
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const fm = line.match(/^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/);
+    if (fm) fnName = fm[1];
     if (isComment(line) || !inlineStyled(line)) continue;
+    const fnWhy = (EXEMPT_FN[rel] || {})[fnName] || null;
 
     const decls = [];
     let m;
@@ -139,7 +152,7 @@ for (const rel of FILES) {
         else if (L > 0.72) { sev = 'critical'; why = 'light ink, nothing painted under it — invisible on a light theme'; }
       }
       findings.push({ rel, line: i + 1, prop: d.prop, val: d.val.slice(0, 28), sev, why,
-        exempt: EXEMPT[rel] || null });
+        exempt: EXEMPT[rel] || fnWhy || null });
     }
   }
 }

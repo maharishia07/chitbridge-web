@@ -2923,15 +2923,16 @@ function screenCodeHTML(){
   } catch (_) { info = null; }
   if (!info) return '';
   /* ⚠️ the topbar is dark in every theme, so this is light ink on a translucent white, not the muted grey that
-     was invisible on navy in the ribbon it came from */
+     was invisible on navy in the ribbon it came from. ⭐ 2026-09-27: the ink is the topbar's own --chrome-on, not
+     #e8f1f6/#cfe0ea — a theme that re-colours the chrome now re-colours this with it (e2e/theme-literals) */
   return '<span data-testid="screen-code-wrap" style="display:inline-flex;align-items:center;gap:6px;'
     + 'margin-inline-start:12px;padding-inline-start:12px;border-inline-start:1px solid rgba(255,255,255,.22)">'
     +   (info.icon ? '<span aria-hidden="true" style="font-size:var(--fs-3)">' + esc(info.icon) + '</span>' : '')
     +   '<span data-testid="screen-code" title="' + tx('The code for this screen — quote it instead of describing where you are')
-    +     '" style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-2);color:#e8f1f6;'
+    +     '" style="font-family:\'Space Mono\',ui-monospace,monospace;font-size:var(--fs-2);color:var(--chrome-on);'
     +     'background:rgba(255,255,255,.14);border-radius:5px;padding:2px 7px;user-select:all;font-weight:600;'
     +     'letter-spacing:.04em">' + esc(info.code) + '</span>'
-    +   '<span style="font-size:var(--fs-2);color:#cfe0ea;font-weight:600;white-space:nowrap">'
+    +   '<span style="font-size:var(--fs-2);color:var(--chrome-on);opacity:.85;font-weight:600;white-space:nowrap">'
     +     esc(info.label || '') + '</span>'
     + '</span>';
 }
