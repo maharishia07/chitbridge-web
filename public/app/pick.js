@@ -40,12 +40,17 @@ var CBPick = (function () {
      engine/money.js FIRST (tests/one-rounding-rule.test.cjs checks each one), and a page that somehow has no
      money.js SAYS so here — it never rounds a second way. */
   var MONEY_ = null;
-  function roundMoney_(n) {
+  function money_() {
     var M = (typeof CBMoney !== 'undefined' && CBMoney.round) ? CBMoney : MONEY_;
     if (M === null && typeof require === 'function') { try { M = MONEY_ = require('./money'); } catch (_) { M = MONEY_ = false; } }
-    if (M && M.round) return M.round(n);
+    if (M && M.round) return M;
     throw new Error('CBMoney is not loaded — /engine/money.js is missing from this page');
   }
+  function roundMoney_(n) { return money_().round(n); }
+  /* ⭐ ONE READER FOR A STORED PRICE (2026-09-28, M20): money.priceOf reads every stored shape — {amount}, a bare
+     number, a numeric string — and answers null for "no price". This file read `d.price.amount` raw, so a price
+     stored as "12.50" reached the cart as TEXT (review §21: the counter billed it, the storefront called it unpriced). */
+  function priceOf_(v) { return money_().priceOf(v); }
 
   var HOST_LIST = 'cbpick_pk';
   var HOST_BAR = 'cbcartbar_pk';
@@ -62,7 +67,7 @@ var CBPick = (function () {
   function toItems(list) {
     return (list || []).map(function (p, i) {
       var d = p.item_data || p;
-      var price = (d.price && typeof d.price === 'object') ? d.price.amount : d.price;
+      var pv = priceOf_(d.price), price = (pv === null) ? undefined : pv;   /* absent stays absent, as before */
       return {
         item_id: p.item_id || d.item_id || ('pk' + i),
         item_data: Object.assign({}, d, {
@@ -92,7 +97,7 @@ var CBPick = (function () {
          computes it once precisely so no screen decides again what a line costs. Fall back only for a row
          that predates it. */
       var raw = (l.unit_price != null) ? l.unit_price
-        : ((l.price && l.price.amount != null) ? l.price.amount : l.price);
+        : priceOf_(l.price);
       var price = Number(raw) || 0;
       var qty = Number(l.qty || 1) || 1;
       var total = (l.line_total != null && isFinite(l.line_total)) ? Number(l.line_total) : qty * price;

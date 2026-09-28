@@ -2543,7 +2543,7 @@
       if (!offs.length || !root.CBOffers || !root.CBOffers.onOffer) return true;
       var d = dataOf(row) || {};
       return root.CBOffers.onOffer(
-        { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: Number(d.price && d.price.amount != null ? d.price.amount : d.price) || 0 },
+        { item_id: row.item_id, sku: d.sku, categories: catgIds(d), unitPrice: (root.CBMoney.priceOf(d.price) || 0) },
         offs, { now: new Date(), customer_groups: (opts && opts.customer_groups) || root.CBCart.viewerGroups(opts && opts.cat) });
     } catch (e) { return true; }   /* a failing filter must never empty a catalogue */
   }

@@ -6366,7 +6366,7 @@ async function selfBillSend(btn){
         try { if (MR && MR.model && typeof CBOffers !== 'undefined' && CBOffers.perLine) { var EL = (c.state().cat.items || []).filter(function(p){ return c.qtyOf(p.item_id) > 0; }).map(function(p){ var d = p.item_data || {}; return { key: String(p.item_id), item_id: p.item_id, qty: c.qtyOf(p.item_id) }; }); per = CBOffers.perLine(MR.model.ev, EL) || {}; } } catch (_) { per = {}; }
         var byId = {}; try { (c.state().cat.items || []).forEach(function(p){ byId[String(p.item_id)] = p; }); } catch (_) {}
         return lines.map(function(l){
-          var raw = (l.price && l.price.amount != null) ? l.price.amount : l.price;
+          var raw = CBMoney.priceOf(l.price);   /* the one reader of a stored price (M20) */
           var p = byId[String(l.item_id)] || {}, off = (per[String(l.item_id)] || {}).off || 0, adj = (MR && MR.model && MR.model.ev && MR.model.ev.adjustments || []).find(function(a){ return String(a.target) === String(l.item_id) && a.scope === 'line'; });
           var line = { particulars: l.name || 'item', unit: l.unit || 'unit', quantity: Number(l.qty || 1) || 1, price: Number(raw) || 0, comment: UI._sbNote || undefined, ref: { item_id: l.item_id, how: 'picked' } };
           if (off > 0) { line.discount = CBMoney.round(off); line.total = CBMoney.round((Number(raw) || 0) * line.quantity - off); line.offer = { label: (adj && adj.label) || 'offer', off: line.discount }; }
@@ -10532,7 +10532,7 @@ function supStepsFor(x){
          */
         compose({ recipients:[{ name:tx('Self'), role:'to', self:true }],
           items:lines.map(function(l){
-          var raw=(l.price&&l.price.amount!=null)?l.price.amount:l.price;
+          var raw=CBMoney.priceOf(l.price);   /* the one reader of a stored price (M20) */
           return { particulars:l.name||l.particulars||'', unit:l.unit||'unit',
                    quantity:Number(l.qty||l.quantity||1)||1, price:Number(raw)||0 };
         }) });
