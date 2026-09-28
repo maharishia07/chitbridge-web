@@ -307,7 +307,9 @@ test.describe('Order step flow', () => {
     await page.locator('#sup_body [data-testid="cart-add"]').first().click();
     await expect.poll(async () => (await page.locator('[data-testid^="cart-count-"]').count()) > 0 ? '' : await page.evaluate(() => {
       const b = document.querySelector('#sup_body [data-testid="cart-add"]'); const on = b ? (b.getAttribute('onclick') || '') : '(no +)';
-      const held = (window.UI && UI._supCart && UI._supCart.ns) || '(no handle)'; const rowNs = (on.match(/cbcart-d+/) || ['?'])[0];
+      /* ⚠️ `UI` is a script-scoped `let` — never on window, so window.UI was ALWAYS undefined and this always said
+         "(no handle)"; and /cbcart-d+/ had lost its backslash, so it never matched a namespace (guard-static, 2026-09-27) */
+      const held = (typeof UI !== 'undefined' && UI && UI._supCart && UI._supCart.ns) || '(no handle)'; const rowNs = (on.match(/cbcart-\d+/) || ['?'])[0];
       const live = window.CBCart && CBCart.state ? !!CBCart.state(rowNs) : null;
       return 'row → ' + rowNs + ' · screen holds ' + held + ' · row cart alive: ' + live + ' · bar: ' + ((document.getElementById('cbcartbar_sup') || {}).innerText || '').trim();
     }), { timeout: 8000, message: 'the count never appeared' }).toBe('');

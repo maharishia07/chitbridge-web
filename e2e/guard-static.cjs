@@ -145,7 +145,16 @@ console.log('\n6 · one global, one owner');
    * assignment hidden in a template literal is a genuine collision and should still be caught.
    */
   const decomment = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
-  const files = [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+  /**
+   * ⚠️ ONLY FILES THAT CAN SHARE A PAGE WITH app.html (2026-09-27). This read every app/*.js as if one page loaded them
+   * all, and reported `CBTax` assigned by tax-engine.js AND tax.js — but nothing loads tax-engine.js: it is the SOURCE
+   * vendor-tax.cjs builds the counter's engine/tax.js from, and both are generated from the same lib/tax.js. A file
+   * counts as loadable when app.html, or another script (not the assets.js INVENTORY, which lists every file), names it
+   * — capabilities load on demand, so a static <script> list alone would miss them.
+   */
+  const srcOf = {}; CAPS.forEach((f) => { srcOf[f] = fs.readFileSync(path.join(WEB, 'app', f), 'utf8'); });
+  const loadable = (f) => app.includes(f) || CAPS.some((o) => o !== f && o !== 'assets.js' && srcOf[o].includes(f));
+  const files = [['app.html', app]].concat(CAPS.filter(loadable).map((f) => [f, srcOf[f]]))
     .map(([name, src]) => [name, decomment(src)]);
   const owners = {};
   files.forEach(([name, src]) => {
