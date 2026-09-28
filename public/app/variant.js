@@ -1,3 +1,5 @@
+/* ADOPTED from chitbridge-engines v1.4.0 · variant · sha256 2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · variant. Edited ONLY in chitbridge-engines/src/variant.js; every platform adopts a released version of it. */
 /**
  * variant.js — ONE PRODUCT, MANY COMBINATIONS, AND A NAME FOR EACH ([TILL-76] / CBVariant)
  *
