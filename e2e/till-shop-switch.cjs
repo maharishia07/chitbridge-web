@@ -6,7 +6,7 @@
  *
  * ⚠️ WHY [TILL-04] NEVER CAUGHT IT. counter-key.spec.js opens the counter from the APP, where counterHasKey()
  * compares shops. This path is the counter's OWN sign-in dialog, which trusted any key it already held
- * (usignEnrolIfNeeded) and adopted a person from shop Y onto shop X's shelf.
+ * (the old usignEnrolIfNeeded) and adopted a person from shop Y onto shop X's shelf.
  *
  * ⭐ DRIVEN THROUGH THE DIALOG'S OWN CONTROLS — type the user id, press "Send me a code", press "Sign in",
  * answer the question — against a stand-in ChitBridge that answers PER KEY, so each shop's shelf arrives through
@@ -91,7 +91,7 @@ const PEOPLE = {
     items: ((S && S.items) || []).map((i) => i.name), key: localStorage.getItem('cb_till_key'),
     who: (typeof WHO !== 'undefined' && WHO && WHO.name) || null }));
   const ready = async (shop) => {
-    await p.waitForFunction(() => typeof usignOpen === 'function' && typeof usignOtherShop === 'function', null, { timeout: 30000 });
+    await p.waitForFunction(() => typeof usignOpen === 'function' && typeof becomeShop === 'function', null, { timeout: 30000 });
     await p.evaluate(() => refresh().catch(function(){}));
     await p.waitForFunction((n) => S && S.shop && S.shop.name === n, shop, { timeout: 30000 });
   };

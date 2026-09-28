@@ -35,46 +35,50 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
   await p.goto('http://127.0.0.1:' + srv.address().port + '/till.html');
-  await p.waitForFunction(() => typeof usignEnrolIfNeeded === 'function' && typeof pairAgain === 'function', null, { timeout: 30000 });
+  /**
+   * ⚠️ MOVED, NOT DELETED (2026-09-28, one gate). usignEnrolIfNeeded() is gone: WHETHER a sign-in changes the
+   * shop is usignShopMove()'s one question, and the change itself is becomeShop() — which RELOADS, so the new key
+   * is read back from storage on the other side of the reload rather than from memory.
+   */
+  await p.waitForFunction(() => typeof usignShopMove === 'function' && typeof becomeShop === 'function' && typeof pairAgain === 'function', null, { timeout: 30000 });
 
-  console.log('\n── ⚠️⚠️⚠️ [TILL-192] A ROUTINE SIGN-IN SKIPS RE-ENROL — the existing key is trusted, as it always was ' + '─'.repeat(0));
-  const routine = await p.evaluate(async () => {
+  console.log('\n── ⚠️⚠️⚠️ [TILL-192] A ROUTINE SIGN-IN DOES NOT CHANGE THE SHOP — the existing key is trusted, as it always was ' + '─'.repeat(0));
+  const routine = await p.evaluate(() => {
     ls.set('cb_till_key', 'old-refused-key'); CloudHost.key = 'old-refused-key';
-    var called = false;
-    window.fetchBy = function(){ called = true; return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ key: 'never-should-land' }) }); };
     usignOpen();   /* no force — the routine 'signin' door's own call shape */
-    var ok = await usignEnrolIfNeeded('a-real-token');
-    return { ok: ok, fetchCalled: called, keyAfter: CloudHost.key };
+    return { move: usignShopMove({ identity: {} }), keyAfter: CloudHost.key };
   });
-  say('returns true (safe to carry on) without touching the network', routine.ok && !routine.fetchCalled, 'ok=' + routine.ok + ' fetchBy called=' + routine.fetchCalled);
+  say('a routine sign-in on a paired counter is "same" — no enrol, no network', routine.move === 'same', 'move=' + routine.move);
   say('the existing key is left exactly as it was', routine.keyAfter === 'old-refused-key', '"' + routine.keyAfter + '"');
 
   console.log('\n── ⭐⭐⭐ pairAgain() FORCES A REAL RE-ENROL — entered ONLY because the current key just failed ' + '─'.repeat(0));
-  const forced = await p.evaluate(async () => {
+  const forced = await p.evaluate(() => {
     ls.set('cb_till_key', 'old-refused-key'); CloudHost.key = 'old-refused-key';
-    var called = false, sentBody = null;
-    window.fetchBy = function(url, opts){ called = true; sentBody = JSON.parse(opts.body); return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ key: 'freshly-minted-key' }) }); };
     pairAgain();   /* the real button the 🔑 "Not signed in" flash and whoAct()'s 'connect'/'key' doors press */
-    var forcedFlag = (typeof USIGN !== 'undefined' && USIGN) ? !!USIGN.forceEnrol : null;
-    var ok = await usignEnrolIfNeeded('a-real-token');
-    return { forcedFlag: forcedFlag, ok: ok, fetchCalled: called, keyAfter: CloudHost.key, counterSent: sentBody && sentBody.counter };
+    return { forcedFlag: !!(USIGN && USIGN.forceEnrol), move: usignShopMove({ identity: {} }) };
   });
   say('pairAgain() marks the sign-in as a forced re-enrol', forced.forcedFlag, String(forced.forcedFlag));
-  say('this time the enrol call is actually made', forced.ok && forced.fetchCalled, 'ok=' + forced.ok + ' fetchBy called=' + forced.fetchCalled);
-  say('and the OLD, refused key is replaced by the NEW one', forced.keyAfter === 'freshly-minted-key', '"' + forced.keyAfter + '"');
-  say('the same counter number is asked for again, not a different one', typeof forced.counterSent === 'string' && forced.counterSent.length > 0, '"' + forced.counterSent + '"');
+  say('so this sign-in DOES change the key ("pair")', forced.move === 'pair', 'move=' + forced.move);
+  let sentBody = null;
+  await p.route('**/api/till/enrol', async (route) => { sentBody = JSON.parse(route.request().postData() || '{}');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ key: 'freshly-minted-key' }) }); });
+  const nav = p.waitForEvent('load', { timeout: 30000 });
+  await p.evaluate(() => { CloudHost.api = location.origin; becomeShop({ token: 'a-real-token' }); });
+  await nav;
+  await p.waitForFunction(() => typeof becomeShop === 'function', null, { timeout: 30000 });
+  const after = await p.evaluate(() => localStorage.getItem('cb_till_key'));
+  say('the enrol call is actually made, through the one door', !!sentBody, 'enrol body=' + JSON.stringify(sentBody));
+  say('and the OLD, refused key is replaced by the NEW one — after a reload', after === 'freshly-minted-key', '"' + after + '"');
+  say('the same counter number is asked for again, not a different one', !!(sentBody && typeof sentBody.counter === 'string' && sentBody.counter.length), '"' + (sentBody && sentBody.counter) + '"');
 
-  console.log('\n── ⚠️ AN UNPAIRED DEVICE STILL ENROLS EITHER WAY — this fix must not narrow the FIRST-EVER pairing ' + '─'.repeat(0));
-  const firstTime = await p.evaluate(async () => {
-    ls.set('cb_till_key', ''); CloudHost.key = null;
-    var called = false;
-    window.fetchBy = function(){ called = true; return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ key: 'first-key-ever' }) }); };
-    usignOpen();   /* not forced — a brand-new device has never met a key, forceEnrol should not even be needed */
-    var ok = await usignEnrolIfNeeded('a-real-token');
-    return { ok: ok, fetchCalled: called, keyAfter: CloudHost.key };
+  console.log('\n── ⚠️ AN UNPAIRED DEVICE STILL ENROLS — the FIRST-EVER pairing is not narrowed ' + '─'.repeat(0));
+  const firstTime = await p.evaluate(() => {
+    ls.set('cb_till_key', ''); try { localStorage.removeItem('cb_till_key'); } catch (_) {}
+    CloudHost.key = null;
+    usignOpen();   /* not forced — a brand-new device has never met a key */
+    return { move: usignShopMove({ identity: {} }) };
   });
-  say('a device with no key at all still enrols on a plain, unforced sign-in', firstTime.ok && firstTime.fetchCalled, 'ok=' + firstTime.ok + ' fetchBy called=' + firstTime.fetchCalled);
-  say('and comes away with a real key', firstTime.keyAfter === 'first-key-ever', '"' + firstTime.keyAfter + '"');
+  say('a device with no key at all is "pair" on a plain, unforced sign-in', firstTime.move === 'pair', 'move=' + firstTime.move);
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();

@@ -35,12 +35,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(24) + '· ' + d 
   await p.waitForTimeout(1300);
   await p.locator('[data-testid="till-set-signin"]').click({ timeout: 8000 });
   await p.waitForTimeout(900);
-  await p.locator('[data-testid="till-signin-who"]').fill(EMAIL);
-  await p.locator('[data-testid="till-signin-send"]').click();
+  await p.locator('[data-testid="till-usign-who"]').fill(EMAIL);
+  await p.locator('[data-testid="till-usign-ask"]').click();
   await p.waitForTimeout(4500);
-  const filled = await p.locator('[data-testid="till-signin-otp"]').inputValue().catch(() => '');
-  if (!/^\d{6}$/.test(filled)) await p.locator('[data-testid="till-signin-otp"]').fill('123456');
-  await p.locator('[data-testid="till-signin-go"]').click();
+  const filled = await p.locator('[data-testid="till-usign-otp"]').inputValue().catch(() => '');
+  if (!/^\d{6}$/.test(filled)) await p.locator('[data-testid="till-usign-otp"]').fill('123456');
+  await p.locator('[data-testid="till-usign-verify"]').click();
   say('signed in', true, 'a fresh till key, which claims C1 back');
 
   /* the program restarts; give it time, then watch the queue */
