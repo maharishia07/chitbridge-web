@@ -274,7 +274,14 @@ test('[TILL-25] a break keeps the counter, stops billing, and shows on the Count
   });
 
   await test.step('⭐ back to billing — the cover lifts, and the shop sees it open again', async () => {
+    /* ⚠️ MOVED, NOT DELETED (2026-09-28, Athi: "make break a lock too"). Back to billing is a SIGN-IN now: the
+       tap opens the one sign-in and the cover stays until somebody is proved. This spec is about the break
+       reaching the shop, so it hands the gate the cashier it signed in above; the proof itself — counter PIN,
+       offline, wrong tries — is e2e/till-lock.cjs. */
     await till.locator('[data-testid="till-break-end"]').click();
+    await expect(till.locator('#usigndlg')).toBeVisible();
+    await expect(till.locator('[data-testid="till-break-cover"]')).toBeVisible();
+    await till.evaluate(() => { usignClose(); personIn({ id: WHO.id, name: WHO.name, kind: 'coassist' }); });
     await expect(till.locator('[data-testid="till-break-cover"]')).toBeHidden();
     let c = null;
     for (let i = 0; i < 10; i++) {

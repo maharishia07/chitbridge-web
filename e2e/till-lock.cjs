@@ -172,6 +172,32 @@ const PEOPLE = {
   await p.evaluate(() => usignClose());
   say('closing the dialog leaves it locked', (await st()).locked, 'cover up');
 
+  console.log('\n── ☕ A BREAK IS A LOCK — Athi: "make break a lock too" ' + '─'.repeat(0));
+  await ctx.setOffline(true);
+  await p.click('[data-testid="till-unlock"]');
+  await signIn('xclerk', '4826');
+  await p.waitForFunction(() => document.getElementById('lockcover').hidden, null, { timeout: 10000 });
+  await p.fill('#q', 'XMANGO');
+  await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 });
+  await p.click('[data-testid="till-add-0"]');
+  await p.evaluate(() => openWho());
+  await p.click('[data-testid="till-break"]');
+  const b1 = await p.evaluate(() => ({ brk: !document.getElementById('breakcover').hidden, lock: !!LOCK, reason: LOCK && LOCK.reason,
+    cart: CART.length, parked: PARKED.length }));
+  await p.screenshot({ path: path.join(SHOTS, '3-break.png') });
+  say('☕ covers the counter with the break\'s own cover, as a LOCK', b1.brk && b1.lock && b1.reason === 'break', JSON.stringify(b1));
+  say('the bill in hand was parked, as a break always did', b1.cart === 0 && b1.parked >= 1, 'parked=' + b1.parked);
+  const qBefore = await p.evaluate(() => document.getElementById('q').value);
+  await p.keyboard.press('Escape'); await p.keyboard.type('zz');
+  const qAfter = await p.evaluate(() => document.getElementById('q').value);
+  say('⚠️ keys behind the break cover do nothing', qAfter === qBefore && await p.evaluate(() => !document.getElementById('breakcover').hidden && PARKED.length >= 1), 'q "' + qBefore + '" → "' + qAfter + '"');
+  const tapOnly = await p.evaluate(() => { document.querySelector('[data-testid="till-break-end"]').click(); return !document.getElementById('breakcover').hidden; });
+  say('⚠️⚠️ "Back to billing" alone does NOT end it — it asks who is back', tapOnly && await p.locator('#usigndlg[open]').count() > 0, 'cover still up, sign-in open');
+  await signIn('xclerk', '4826');
+  await p.waitForFunction(() => document.getElementById('breakcover').hidden && !LOCK, null, { timeout: 10000 });
+  const b2 = await p.evaluate(() => ({ brk: BREAK, breaks: (WHO && WHO.breaks || []).length, who: WHO && WHO.name }));
+  say('the PIN ends the break, and its minutes are on X Clerk\'s shift', !b2.brk && b2.breaks === 1 && b2.who === 'X Clerk', JSON.stringify(b2));
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
   await b.close(); web.close(); api.close();
