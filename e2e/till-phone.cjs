@@ -61,6 +61,26 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   say('nothing runs off the side (no sideways scroll)', fit.sw <= fit.vw + 1 && fit.bodyW <= fit.vw + 1, 'viewport ' + fit.vw + ' · page ' + fit.sw);
   await p.screenshot({ path: path.join(__dirname, 'shots', 'till-phone.png') });
 
+  /* Athi: "fix the search placeholder and the cart count mismatch" */
+  console.log('\n── the search box and the counts read right on a phone');
+  const ph = await p.evaluate(() => {
+    const q = document.getElementById('q');
+    const c = document.createElement('canvas').getContext('2d'); const cs = getComputedStyle(q);
+    c.font = cs.fontSize + ' ' + cs.fontFamily;
+    const room = q.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    return { text: q.placeholder, fits: c.measureText(q.placeholder).width <= room, room: Math.round(room), need: Math.round(c.measureText(q.placeholder).width) };
+  });
+  say('the placeholder is the short one, and it fits the box', ph.text === 'Item or barcode' && ph.fits, '"' + ph.text + '" · ' + ph.need + 'px in ' + ph.room + 'px');
+  const counts = await p.evaluate(() => { try { paintQuick(); } catch (_) {} try { paintSteps(); } catch (_) {}
+    const chip = document.querySelector('[data-testid="till-cart-chip"] b'); const step = document.querySelector('[data-testid="till-step-count"]');
+    return { chip: chip && chip.textContent, step: step && step.textContent }; });
+  say('the cart chip and the Bill button give ONE count', !!counts.chip && counts.chip === counts.step, 'chip ' + counts.chip + ' · Bill ' + counts.step);
+
+  const d = await (await b.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
+  await d.goto(base + '/till.html'); await d.waitForFunction(() => typeof window.modOpen === 'function', null, { timeout: 30000 });
+  const wide = await d.evaluate(() => { setMode('sell'); return document.getElementById('q').placeholder; });
+  say('a desktop keeps the full hint (↓↑, Enter)', /↓↑ to choose, Enter to add/.test(wide), '"' + wide + '"');
+
   say('console/page errors', !errs.length, errs.length ? errs.join(' | ').slice(0, 240) : 'none');
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' FAILED' : '\nthe counter runs on a phone');
