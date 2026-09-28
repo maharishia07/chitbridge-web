@@ -139,6 +139,17 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(66) + '· ' + d 
       && cn.business_json.against && cn.business_json.against.bill_no === saleNo, cn ? JSON.stringify({ host: cn.business_json.till.host, refund: cn.business_json.refund.total, against: cn.business_json.against && cn.business_json.against.bill_no }) : '—');
     say('the expense arrived in its OWN series', !!ex && /^EXP\/C1\//.test(ex.client_ref), ex ? ex.client_ref : 'not sent');
 
+    /* M16: the program wrote its own health down as it CHANGED — waiting during the outage, clear after it */
+    await sleep(500);
+    const hs = await state();
+    const hlog = hs.health_log || [];
+    const wentBad = hlog.findIndex((h) => h.waiting), cameBack = hlog.findIndex((h, i) => i > wentBad && !h.waiting);
+    say('⭐ the program RECORDED the outage and the recovery, with times', wentBad >= 0 && cameBack > wentBad,
+      hlog.map((h) => h.at.slice(11, 19) + (h.waiting ? ' waiting ' + h.queued : ' clear')).join(' → '));
+    say('and /api/state reports its health now — clear, with no stale reason', hs.health && hs.health.queued === 0 && !hs.health.fatal && !hs.health.why, JSON.stringify(hs.health));
+    const hfile = fs.readdirSync(path.join(home, 'till-data')).map((h) => path.join(home, 'till-data', h, 'CB-X', 'health.jsonl')).filter((x) => fs.existsSync(x))[0];
+    say('in the shop\'s own folder, where a morning check can read it', !!hfile && fs.readFileSync(hfile, 'utf8').trim().split('\n').length === hlog.length, hfile ? path.basename(path.dirname(hfile)) + '/health.jsonl' : 'missing');
+
     console.log('\n── ⚠️ THE SALES SERIES IS UNTOUCHED ' + '─'.repeat(0));
     await p.fill('#q', 'XMANGO');
     await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 });

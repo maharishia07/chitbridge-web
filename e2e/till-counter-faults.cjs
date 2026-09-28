@@ -117,6 +117,34 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   });
   say('the bill number carries today\'s Julian date', !!r18.want && r18.title.indexOf('/' + r18.want + '/') >= 0, r18.title.trim() + ' · julian ' + r18.want);
 
+  console.log('\n── M15 · what the browser counter KEEPS — once a business day, unsent never leaves ' + '─'.repeat(0));
+  const old = new Date(Date.now() - 40 * 86400000).toISOString();
+  await p.evaluate(async (at) => {
+    var mk = function(no, sent){ var b = { no: no, at: at, total: 50, lines: [{ name: 'XMANGO', qty: 1, net: 50 }], payments: [{ how: 'Cash', amount: 50 }] };
+      if (sent) b._sent = { chit_id: 'c-' + no }; return b; };
+    await DB.put('bills', mk('OLD/0001', true)); await DB.put('bills', mk('OLD/0002', true)); await DB.put('bills', mk('OLD/0003', false));
+    ls.set(shopLs('cb_till_retained'), '2000-01-01');
+  }, old);
+  await p.reload();
+  await p.waitForFunction(() => typeof retainDaily === 'function' && S && S.shop, null, { timeout: 30000 });
+  await p.waitForFunction(() => ls.get(shopLs('cb_till_retained'), '') === bizDay(), null, { timeout: 15000 }).catch(() => {});
+  const r15 = await p.evaluate(async (at) => {
+    var nos = ((await DB.all('bills')) || []).map(function(b){ return b.no; });
+    return { nos: nos, sum: !!(await DB.get('sum:' + at.slice(0, 10))), ran: ls.get(shopLs('cb_till_retained'), '') === bizDay() };
+  }, old);
+  say('the day\'s first open ran it (not only a counter being retired)', r15.ran, 'ran=' + r15.ran);
+  say('settled bills older than 30 days left this device', r15.nos.indexOf('OLD/0001') < 0 && r15.nos.indexOf('OLD/0002') < 0, 'kept: ' + r15.nos.join(', '));
+  say('⚠️⚠️ the UNSENT one stayed, however old', r15.nos.indexOf('OLD/0003') >= 0, 'OLD/0003 kept');
+  say('and the day they left was summarised first', r15.sum, 'sum:' + old.slice(0, 10));
+  await p.evaluate(() => openSettings('technical'));
+  await p.waitForSelector('[data-testid="till-set-keep-days"]', { timeout: 10000 });
+  await p.fill('[data-testid="till-set-keep-days"]', '7');
+  await p.dispatchEvent('[data-testid="till-set-keep-days"]', 'change');
+  await p.waitForFunction(() => /\S/.test((document.querySelector('[data-testid="till-set-keep-say"]') || {}).textContent || ''), null, { timeout: 10000 });
+  const s15 = await p.evaluate(() => ({ days: retainLimits().days, say: document.querySelector('[data-testid="till-set-keep-say"]').textContent }));
+  say('Settings shows the three limits, saves a change, and says what binds', s15.days === 7 && /bill/.test(s15.say), JSON.stringify(s15));
+  await p.evaluate(() => { retainSet('days', 30); setClose(); });
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
   await b.close(); web.close(); api.close();

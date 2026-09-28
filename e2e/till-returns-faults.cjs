@@ -98,7 +98,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(70) + '· ' + d 
   await p.evaluate(() => { try { document.getElementById('slipdlg').close(); } catch (_) {} });
   const old = await p.evaluate(async () => {
     var all = await DB.all('bills'); var b = all.filter(function(x){ return x && x.lines && x.kind !== 'credit_note'; }).pop();
-    var y = new Date(); y.setDate(y.getDate() - 1); y.setHours(23, 58, 0, 0);
+    /* ⚠️ TWO days back, late evening: the counter's "today" is a UTC date, so "23:58 yesterday" in India is still
+       "today" to it until 05:30 — a separate finding (reported), not what this case is about */
+    var y = new Date(); y.setDate(y.getDate() - 2); y.setHours(23, 58, 0, 0);
     b.at = y.toISOString(); await DB.put('bills', b);
     return { no: b.no, at: b.at, total: b.total };
   });
