@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · verdict · sha256 fd056da9669edcf81ce3fc94b9505982628e56ec471b69005b6330fc27452f10 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · verdict. Edited ONLY in chitbridge-engines/src/verdict.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 /**
  * ── ⭐⭐⭐ verdict.js — ONE CAUSE, ONE SENTENCE, ONE BUTTON ─────────────────────────────────────────────────────
@@ -178,7 +177,9 @@ function support(code, till) {
        + '-' + String(n).padStart(3, '0');
 }
 
-var EXPORTS = { read, support, VERDICTS };
+const EXPORTS = { read, support, VERDICTS };
 
-window.CBVerdict = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBVerdict. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBVerdict = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
