@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · dayopen · sha256 443e57e8d62e3f4fe053818b8c4b32b1bdb035c2357ea95f53dc62250a776fa0 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · dayopen. Edited ONLY in chitbridge-engines/src/dayopen.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 // @stage tested
 // @stage-note [TILL-182] The morning, as a sequence with rules. The COUNTER calls every function here through
@@ -306,8 +305,10 @@ function firstRun(s) {
                 + ' Connect to a network and sign in. After that it works with the line down.' };
 }
 
-var EXPORTS = { STEPS, all, read, next, canOpen, done, counterState, priceAge,
+const EXPORTS = { STEPS, all, read, next, canOpen, done, counterState, priceAge,
                    shiftChange, assign, firstRun };
 
-window.CBDayOpen = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBDayOpen. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBDayOpen = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
