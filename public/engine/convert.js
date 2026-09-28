@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · convert · sha256 31b4b4d40a211f0a437ad1b5f4ff394bfb6f63637f05c24323b9846a1e51a5ba — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · convert. Edited ONLY in chitbridge-engines/src/convert.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 // @stage poc
 // @stage-note The conversion engine. Pure: no database, no network, no clock it is not handed. Proven by
@@ -39,8 +38,8 @@
  * default, and the workings say when it happened.
  */
 
-const money = window.CBMoney;
-const units = window.CBUnits;
+const money = ((typeof module !== 'undefined' && typeof require === 'function') ? require('./money') : root.CBMoney);
+const units = ((typeof module !== 'undefined' && typeof require === 'function') ? require('./units') : root.CBUnits);
 
 /** how sure we are of a number, in the order a reader should trust them */
 const PROVENANCE = ['quoted', 'contract', 'published', 'stored', 'typed', 'unknown'];
@@ -285,7 +284,9 @@ function round(n, dp) {
   return Math.round((n + Number.EPSILON) * f) / f;
 }
 
-var EXPORTS = { rate, table, convertMoney, valueOf, valueLines, convertLines, PROVENANCE, round };
+const EXPORTS = { rate, table, convertMoney, valueOf, valueLines, convertLines, PROVENANCE, round };
 
-window.CBConvert = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBConvert. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBConvert = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
