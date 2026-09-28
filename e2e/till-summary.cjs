@@ -199,7 +199,10 @@ const back = (no, amount, at) => ({ no, kind: 'credit_note', total: -amount, at,
    * ⭐ SO THE DAYS ARE DERIVED FROM THE WEEK, not from the clock: every fixture day is inside the current ISO
    * week by construction. On a Monday that is today alone, which is the honest shape of "this week so far".
    */
-  const dow = (new Date().getDay() + 6) % 7;              /* 0 = Monday, ISO */
+  /* ⚠️ UTC, like every date string here AND like till.js (today() = toISOString): getDay() is LOCAL, and between
+     00:00 and 05:30 IST it named Tuesday while the dates still said Monday — "yesterday" became last Sunday, the
+     counter rightly closed that week, and THE WEEK WAITS went red (2026-09-29, 00:40 IST). */
+  const dow = (new Date().getUTCDay() + 6) % 7;           /* 0 = Monday, ISO — on the same clock as the dates */
   const days = [];
   for (let back = Math.min(dow, 1); back >= 1; back--) {
     days.push(new Date(Date.now() - back * 864e5).toISOString().slice(0, 10));
