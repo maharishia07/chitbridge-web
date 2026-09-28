@@ -60,11 +60,20 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
   console.log('\n── the imported book works like any other — real engine, real margin ' + '─'.repeat(2));
   const worked = await p.evaluate(() => {
     pickGoal('percent'); S.scope = 'item'; S.itemId = P.filter((x) => x.name === 'Pencil')[0].id; S.pctOff = 10; apply();
-    var r = row(byId(S.itemId), combo(offerFrac(byId(S.itemId)), loyFrac()));
-    return { shown: r.shown, margin: r.margin };
+    /* ⚠️ MOVED, NOT DELETED (2026-09-28). Since 2026-09-26 the per-offer loyalty switch follows the shop-wide one
+       (S.loyOn = S.custOn, on by default), so combo(offer, loyalty) is the LOYALTY price — ₹10 → ₹9 → ₹8.10,
+       rounded down to ₹8, margin (8−4)/8 = 50%, which is right. The ₹9 / ~56% this case always meant is the PUBLIC
+       price, row(p, offerFrac(p)). Both are asserted now, each against its own formula. */
+    var pub = row(byId(S.itemId), offerFrac(byId(S.itemId)));
+    var loy = row(byId(S.itemId), combo(offerFrac(byId(S.itemId)), loyFrac()));
+    return { shown: pub.shown, margin: pub.margin, loyOn: S.loyOn, loyShown: loy.shown, loyMargin: loy.margin,
+             loyExpect: S.loyOn ? Math.round(((loy.shown - 4) / loy.shown) * 100) : null };
   });
-  say('10% off pencil (₹10, cost ₹4) → ₹9, margin ~56%', worked.shown === 9 && worked.margin >= 55 && worked.margin <= 56,
-      JSON.stringify(worked));
+  say('10% off pencil (₹10, cost ₹4) → ₹9, margin ~56% (the public price)', worked.shown === 9 && worked.margin >= 55 && worked.margin <= 56,
+      JSON.stringify({ shown: worked.shown, margin: worked.margin }));
+  say('and the loyalty price stacks on it, margin taken on what that customer pays', !worked.loyOn
+      || (worked.loyShown < worked.shown && worked.loyMargin === worked.loyExpect),
+      JSON.stringify({ loyOn: worked.loyOn, shown: worked.loyShown, margin: worked.loyMargin }));
 
   console.log('\n── a file with no readable name column is refused, not silently emptied ' + '─'.repeat(1));
   const badPath = path.join(require('os').tmpdir(), 'bad-' + Date.now() + '.csv');
