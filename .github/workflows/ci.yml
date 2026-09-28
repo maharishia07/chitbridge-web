@@ -52,3 +52,5 @@ jobs:
           npm run check:calls
           npm run check:a11y
           npm run check:eps
+      - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
+        run: node e2e/cmdb-records.cjs
