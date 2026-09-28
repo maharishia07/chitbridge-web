@@ -98,7 +98,13 @@ const PEOPLE = {
   for (let i = 0; i < 100 && !(await state()); i++) await sleep(150);
 
   const b = await chromium.launch();
-  const p = await b.newPage();
+  const ctx = await b.newContext();
+  /* ⚠️ S1b: a parked bill left by the OLD page under the plain, device-wide name — it must land in the shop this PC holds */
+  await ctx.addInitScript(() => {
+    if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+    localStorage.setItem('cb_till_parked', JSON.stringify([{ at: new Date().toISOString(), name: 'LEGACY', phone: '', cart: [] }]));
+  });
+  const p = await ctx.newPage();
   const errs = [];
   p.on('pageerror', (e) => errs.push(String(e)));
   const page = () => p.evaluate(() => ({ shop: (S && S.shop && S.shop.name) || null, items: ((S && S.items) || []).map((i) => i.name),
@@ -137,6 +143,20 @@ const PEOPLE = {
   say('it is paired to shop X', s1 && s1.paired && s1.shop && s1.shop.bridge_id === 'CB-X', JSON.stringify(s1 && s1.shop));
   say('the page shows X\'s own shelf', g1.shop === 'Shop X' && g1.items.indexOf('XMANGO') >= 0, JSON.stringify(g1.items));
   say('and the person who signed in is on the counter', g1.who === 'X Clerk', 'who=' + g1.who);
+  console.log('\n── ⚠️⚠️ S1b · PARKED BILLS BELONG TO THE SHOP — on the PC too ' + '─'.repeat(0));
+  const parked = () => p.evaluate(() => (PARKED || []).map((x) => x.name));
+  say('the pre-upgrade parked bill MOVED into shop X (once, into an empty slot)', (await parked()).indexOf('LEGACY') >= 0
+    && await p.evaluate(() => localStorage.getItem('cb_till_parked') === null), JSON.stringify(await parked()));
+  await p.fill('#q', 'XMANGO').catch(() => {});
+  await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 });
+  await p.click('[data-testid="till-add-0"]');
+  await p.fill('#cname', 'X CUSTOMER');
+  await p.click('[data-testid="till-park"]');
+  await p.waitForSelector('[data-testid="till-parked-1"]', { timeout: 10000 });
+  await p.reload();
+  await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X', null, { timeout: 30000 });
+  const px = await parked();
+  say('⚠️⚠️ both parked bills SURVIVE A RELOAD (they were read before the key, then saved over)', px.indexOf('LEGACY') >= 0 && px.indexOf('X CUSTOMER') >= 0, JSON.stringify(px));
   say('connector.json kept everything else (merge, not rewrite)', JSON.parse(fs.readFileSync(cfgFile, 'utf8')).printer === 'KeepMe', 'printer kept');
 
   console.log('\n── ⭐⭐⭐ SHOP Y signs in on X\'s PC and SWITCHES — through the one door, a restart ' + '─'.repeat(0));
@@ -150,6 +170,10 @@ const PEOPLE = {
   say('the program is shop Y now', s2 && s2.shop && s2.shop.bridge_id === 'CB-Y', JSON.stringify(s2 && s2.shop));
   say('shop Y\'s shelf, and NOTHING of shop X', g2.items.indexOf('YPANEER') >= 0 && g2.items.indexOf('XMANGO') < 0, JSON.stringify(g2.items));
   say('the person who switched it is signed in', g2.who === 'Y Owner', 'who=' + g2.who);
+  const py = await parked();
+  say("⚠️⚠️ S1b · NONE of X's parked bills on Y's counter", py.length === 0 && !(await p.locator('[data-testid="till-parked-0"]').count()), JSON.stringify(py));
+  const kept = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem('cb_till_parked@pc-CB-X') || '[]').map((x) => x.name); } catch (_) { return []; } });
+  say("and X's are KEPT in X's own slot, for when X signs in here again", kept.length === 2, JSON.stringify(kept));
   const dirs = fs.readdirSync(path.join(home, 'till-data')).map((h) => fs.readdirSync(path.join(home, 'till-data', h))).flat();
   say('X\'s own folder is KEPT on this PC (its queue is money)', dirs.indexOf('CB-X') >= 0 && dirs.indexOf('CB-Y') >= 0, JSON.stringify(dirs));
 
