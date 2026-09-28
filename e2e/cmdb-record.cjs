@@ -29,6 +29,12 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(62) + '· ' + d 
     const u = q.url.split('?')[0];
     if (u === '/api/testing/cmdb') return j(200, { records: [{ ci: REC.ci, title: REC.title, version: 1, flags: [] }] });
     if (u === '/api/testing/cmdb/CAP-SIGNIN') return j(200, { ci: 'CAP-SIGNIN', version: 1, current_version: 1, saved_at: '2026-09-28T20:00:00Z', record: REC, flags: [] });
+    /* any other record the API ships (the GENERATED ones) is served as it is on disk */
+    const ci = u.split('/').pop(), f2 = path.join(SEED, ci + '.json');
+    if (u.indexOf('/api/testing/cmdb/') === 0 && /^CAP-[A-Z0-9-]+$/.test(ci) && fs.existsSync(f2)) {
+      const rec = JSON.parse(fs.readFileSync(f2, 'utf8'));
+      return j(200, { ci, version: 1, current_version: 1, record: rec, flags: [] });
+    }
     if (u.indexOf('/api/testing/cmdb/') === 0) return j(404, { error: 'No such record', message: 'Nothing in the CMDB is called ' + u.split('/').pop() + '.' });
     return j(404, { message: 'not here' });
   });
@@ -66,6 +72,20 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(62) + '· ' + d 
     hotNodes: document.querySelectorAll('.node.hot').length, title: document.getElementById('dt').textContent }));
   say('selecting a box follows its lines through the map', hot.dim && hot.hotNodes > 2 && /Shop gate/.test(hot.title), hot.hotNodes + ' lit · ' + hot.title);
   await p.screenshot({ path: path.join(__dirname, 'shots', 'cmdb-record.png'), fullPage: true }).catch(() => {});
+
+  console.log('\n── ⭐ A GENERATED record — derived from the code, and its map moves between capabilities ' + '─'.repeat(0));
+  const GEN = fs.readdirSync(SEED).map((n) => JSON.parse(fs.readFileSync(path.join(SEED, n), 'utf8'))).find((r) => r.source === 'generated');
+  if (!GEN) say('the API ships at least one GENERATED record', false, 'none in data/cmdb');
+  else {
+    await p.goto(BASE + '/cmdb/record.html?api=' + encodeURIComponent(API) + '#' + GEN.ci);
+    await p.waitForFunction((t) => document.getElementById('title').textContent === t, GEN.title, { timeout: 15000 });
+    const g = await p.evaluate(() => ({ links: Array.from(document.querySelectorAll('#capmap a.cap')).map((a) => a.getAttribute('href')),
+      nodes: document.querySelectorAll('.node').length, tag: document.getElementById('tags').textContent }));
+    say('it says it was generated from the code', /generated from the code/.test(g.tag), g.tag.slice(0, 70));
+    say('every other capability on its map is a link to that record', g.links.length === GEN.map.length - 1 && g.links.every((h) => /^#CAP-/.test(h)),
+      g.links.length + ' links of ' + (GEN.map.length - 1));
+    say('its entry, process and exit boxes are all drawn', g.nodes === GEN.entries.length + GEN.process.length + GEN.exits.length, g.nodes + ' boxes');
+  }
 
   console.log('\n── the list, and the refusals ' + '─'.repeat(0));
   await p.goto(BASE + '/cmdb/record.html?api=' + encodeURIComponent(API));

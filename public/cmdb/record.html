@@ -235,8 +235,11 @@
       var st = t.state || 'off';
       var cls = st === 'ok' ? 'ok' : (st === 'off' ? 'off' : 'warn');
       var tag = st === 'ok' ? 'green' : (st === 'off' ? 'not mapped' : st);
-      var el = (t.node || t.ci === j.ci) ? 'button' : 'div';
-      return '<' + el + ' class="cap ' + cls + (t.ci === j.ci ? ' sel' : '') + '"' + (el === 'button' ? ' type="button" data-tile="' + i + '"' : '') + '>'
+      /* a tile naming ANOTHER record opens that record — the capability map is how you move between capabilities */
+      var other = t.ci && t.ci !== j.ci && /^CAP-[A-Z0-9-]+$/.test(t.ci);
+      var el = other ? 'a' : ((t.node || t.ci === j.ci) ? 'button' : 'div');
+      var attr = other ? ' href="#' + esc(t.ci) + '" style="text-decoration:none;color:inherit"' : (el === 'button' ? ' type="button" data-tile="' + i + '"' : '');
+      return '<' + el + ' class="cap ' + cls + (t.ci === j.ci ? ' sel' : '') + '"' + attr + '>'
         + '<div class="row"><h3>' + esc(t.title) + '</h3><span class="pill ' + cls + '">' + esc(tag) + '</span></div>'
         + '<small>' + esc(t.note || '') + '</small></' + el + '>';
     }).join('') || '<p class="muted">No map for this record yet.</p>';
