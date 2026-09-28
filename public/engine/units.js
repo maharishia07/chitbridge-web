@@ -1,7 +1,7 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · units · sha256 93626bcaf343cde1a56ca3fa554b8ed0a0e6cdf40e5ab6368fe3b332572b8219 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · units. Edited ONLY in chitbridge-engines/src/units.js; every platform adopts a released version of it. */
+(function (root) {
+'use strict';
 /**
  * lib/units.js — ONE UNIT, THREE NAMES: ours (kg · litre · bag …), the UN/ECE Recommendation 20 code the world uses
  * (KGM · LTR · BG …, what GS1, Peppol and INV-01 carry), and India's GST Unit Quantity Code (KGS · LTR · BAG …, what a tax
@@ -11,7 +11,6 @@
  * Vendored verbatim to the web (app/catalogue-model.js reads the same table) and used by the connector (a Tally BASEUNITS
  * symbol or UQC → our unit). Pure. Adopted lists, not invented: UN/ECE Rec 20 · CBIC's UQC master.
  */
-'use strict';
 const UNITS = {
   kg:     { measured: true, rec20: 'KGM', uqc: 'KGS', names: ['kg', 'kgs', 'kilogram', 'kilograms', 'kilo', 'kilos', 'kilogramme', 'கிலோ', 'கிலோகிராம்', 'किलो', 'किलोग्राम'] },
   /**
@@ -198,7 +197,9 @@ function isMeasured(any) {
   return !!(k && UNITS[k] && UNITS[k].measured);
 }
 
-var EXPORTS = { UNITS, ALIASES, unitOf, normUnit, sameUnit, aliasesOf, uqcOf, rec20Of, isMeasured };
+const EXPORTS = { UNITS, ALIASES, unitOf, normUnit, sameUnit, aliasesOf, uqcOf, rec20Of, isMeasured };
 
-window.CBUnits = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBUnits. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBUnits = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
