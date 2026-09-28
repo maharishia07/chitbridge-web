@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · rollup · sha256 caa165589a6c658cc6a8cbd83c743576f287d6397bc4f9fca20ad4b5f7d51662 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · rollup. Edited ONLY in chitbridge-engines/src/rollup.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 /**
  * ── ⭐⭐⭐ rollup.js — A DAY, A WEEK, A MONTH: ONE SET OF FIGURES, COMPUTED ONCE ───────────────────────────────
@@ -415,7 +414,7 @@ function coverage(sum) {
   return { partial: true, parts: parts, from: src[0], to: to, say: say };
 }
 
-var EXPORTS = { coverage, isReturn, isExpense, totals, fold, dayKey, yearKey, weekKey, monthKey, keyOf, daysIn, isClosed, summary, chitOf, refOf, PERIODS, planPurge, FLOOR_DAYS, MAX_PER_RUN, acrossCounters };
+const EXPORTS = { coverage, isReturn, isExpense, totals, fold, dayKey, yearKey, weekKey, monthKey, keyOf, daysIn, isClosed, summary, chitOf, refOf, PERIODS, planPurge, FLOOR_DAYS, MAX_PER_RUN, acrossCounters };
 
 /**
  * ⚠️ NO SELF-ASSIGNED GLOBAL HERE, DELIBERATELY ([TILL-125]). scripts/vendor-till.cjs wrapForBrowser() turns
@@ -425,5 +424,7 @@ var EXPORTS = { coverage, isReturn, isExpense, totals, fold, dayKey, yearKey, we
  * ⚠️ The KIT copy is a plain copy, not a wrap, so `require('./rollup')` in till.js is unaffected.
  */
 
-window.CBRollup = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBRollup. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBRollup = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
