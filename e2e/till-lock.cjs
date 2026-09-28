@@ -198,6 +198,37 @@ const PEOPLE = {
   const b2 = await p.evaluate(() => ({ brk: BREAK, breaks: (WHO && WHO.breaks || []).length, who: WHO && WHO.name }));
   say('the PIN ends the break, and its minutes are on X Clerk\'s shift', !b2.brk && b2.breaks === 1 && b2.who === 'X Clerk', JSON.stringify(b2));
 
+  console.log('\n── ⭐⭐ AUTO-LOCK — Athi: "add auto-lock after 5 idle minutes, keep it as editable" ' + '─'.repeat(0));
+  say('the default is 5 minutes, before anybody chooses', await p.evaluate(() => autoLockMins()) === 5, 'minutes=' + await p.evaluate(() => autoLockMins()));
+  /* the real control, through its own onchange; the minutes are shortened (0.05 min = 3 s) only so a test can wait for them */
+  const setLock = (v) => p.evaluate((val) => { paintMenu(); const el = document.getElementById('mq_lock');
+    let o = [...el.options].find((x) => x.value === String(val)); if (!o) { o = new Option('test', String(val)); el.add(o); }
+    el.value = String(val); el.dispatchEvent(new Event('change')); return localStorage.getItem(shopLs('cb_till_autolock')); }, v);
+  say('the ☰ 🔒 control saves the choice under the shop', (await setLock(10)) === '10', 'stored 10');
+  await setLock(0.05);
+  await p.fill('#q', 'XMANGO');
+  await p.waitForSelector('[data-testid="till-add-0"]', { timeout: 20000 });
+  await p.click('[data-testid="till-add-0"]');
+  const inHand = (await st()).cart.length;
+  await p.waitForFunction(() => !document.getElementById('lockcover').hidden, null, { timeout: 15000 });
+  const a1 = await st();
+  say('left alone, the counter LOCKS BY ITSELF', a1.locked, 'cover up');
+  say('and the bill in hand is kept', a1.cart.length === inHand && inHand >= 1, JSON.stringify(a1.cart));
+  await p.click('[data-testid="till-unlock"]');
+  await signIn('xclerk', '4826');
+  await p.waitForFunction(() => document.getElementById('lockcover').hidden, null, { timeout: 10000 });
+  /* busy: a key every second for five seconds — the 3-second clock must keep restarting */
+  for (let i = 0; i < 5; i++) { await p.keyboard.press('Shift'); await p.waitForTimeout(1000); }
+  say('⭐ a counter in use never locks — every touch restarts the clock', !(await st()).locked, 'still open after 5 s of use');
+  await p.evaluate(() => openWho());
+  await p.waitForTimeout(4500);
+  say('⚠️ it WAITS while a dialog is open (a dialog would sit above the cover)', !(await st()).locked, 'still open with the picker up');
+  await p.evaluate(() => document.getElementById('whodlg').close());
+  await setLock(0);
+  await p.waitForTimeout(4500);
+  say('"Never lock" means never', !(await st()).locked, 'open after 4.5 s');
+  await setLock(5);
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
   await b.close(); web.close(); api.close();
