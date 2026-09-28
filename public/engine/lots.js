@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · lots · sha256 2653cbbb378263d56cffe3c6c1f6a30761adeca5ed103be9b5772dfab7206df6 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · lots. Edited ONLY in chitbridge-engines/src/lots.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 /**
  * lib/lotfields.js — WHAT A VERTICAL MUST CAPTURE ABOUT A CONSIGNMENT (2026-09-08).
@@ -195,8 +194,10 @@ function toleranceNote(diff, ordered, unit, tol) {
   return (d < 0 ? 'short ' + Math.abs(d) : 'excess ' + d) + ' ' + (unit || '') + ' — within what this trade absorbs';
 }
 
-var EXPORTS = { forEntity, packFor, check, FIELDS, PACKS, withinTolerance, toleranceNote, weighed,
+const EXPORTS = { forEntity, packFor, check, FIELDS, PACKS, withinTolerance, toleranceNote, weighed,
                    tracksBatch, lotKey };
 
-window.CBLots = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBLots. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBLots = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
