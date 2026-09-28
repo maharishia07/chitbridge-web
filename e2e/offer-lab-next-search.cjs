@@ -5,6 +5,11 @@
  * unusable for a real shop's hundreds. Replaced everywhere selectOf() was called (item, category, gift,
  * bundle A/B, pair A/B) with a native <input list=datalist> — the browser's own type-to-filter.
  *
+ * ⭐ 2026-09-28 — THE ASSERTIONS MOVED, NONE WAS DROPPED. The datalist was itself replaced (2026-09-24…27) by the
+ * searchable picker OVERLAY every selectOf() now opens (openPickOverlay), and "Apply it to" became a multi-item
+ * picker (openApplyPicker). This harness still looked for input[list="dl-setItem"] and crashed on a null — so it had
+ * been reporting nothing for days. Each check below asks the same question of the picker that exists today.
+ *
  * Run: node e2e/offer-lab-next-search.cjs
  */
 'use strict';
@@ -30,57 +35,55 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
   await p.goto('http://127.0.0.1:' + srv.address().port + '/offer-lab-next.html');
   await p.waitForTimeout(200);
 
-  console.log('\n── the item picker is a real search box, not a <select> ' + '─'.repeat(10));
+  console.log('\n── every picker is a searchable overlay, not a <select> to scroll ' + '─'.repeat(6));
   const shape = await p.evaluate(() => {
-    pickGoal('percent'); S.scope = 'item'; apply();
+    pickGoal('free'); S.freeShape = 'same'; apply();
     const html = renderS2 ? renderS2() : '';
-    return { hasSelect: /<select/.test(html), hasDatalist: /<datalist/.test(html), hasSearchInput: /list="dl-setItem"/.test(html) };
+    return { hasSelect: /<select/.test(html), opensOverlay: /openPickOverlay\('item','setItem'\)/.test(html) };
   });
   say('no <select> left for item/category pickers', !shape.hasSelect, 'plain <select> is gone');
-  say('a real <datalist> backs it', shape.hasDatalist, 'native browser filtering');
-  say('wired to the same setItem it always called', shape.hasSearchInput, 'list="dl-setItem" present');
+  say('the item picker opens the search overlay', shape.opensOverlay, "openPickOverlay('item','setItem')");
 
-  console.log('\n── typing a name and choosing it picks the same item selectOf() always picked ' + '─'.repeat(0));
+  console.log('\n── "Apply it to": search, tick, Done — the item the name names ' + '─'.repeat(8));
   const picked = await p.evaluate(() => {
-    /* apply() already re-rendered #s2 for real */
-    var input = document.querySelector('input[list="dl-setItem"]');
-    input.value = 'Filter Coffee  —  ₹20';   /* exactly what prodOpts() would have shown for this item */
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return { itemId: S.itemId };
+    pickGoal('percent'); S.scope = 'item'; S.itemIds = []; apply();
+    openApplyPicker(); priceOvSearch('');
+    const all = priceOvList().length;
+    priceOvSearch('Filter Coffee');
+    const shown = priceOvList().map((x) => x.id);
+    overlayApplyToggle('coffee'); overlayApplyDone();
+    return { all, shown, itemIds: S.itemIds.slice(), scope: S.scope };
   });
-  say('resolves the typed text back to the real item id', picked.itemId === 'coffee', 'S.itemId is "' + picked.itemId + '"');
+  say('the search narrows the list to what was typed', picked.shown.indexOf('coffee') >= 0 && picked.shown.length < picked.all,
+      picked.shown.length + ' of ' + picked.all + ' — ' + JSON.stringify(picked.shown));
+  say('ticking it and Done picks exactly that item', picked.scope === 'item' && JSON.stringify(picked.itemIds) === '["coffee"]', 'S.itemIds = ' + JSON.stringify(picked.itemIds));
 
-  console.log('\n── an unmatched / cleared search snaps back, it does not silently keep a typo ' + '─'.repeat(0));
-  const cleared = await p.evaluate(() => {
-    var before = S.itemId;
-    /* apply() already re-rendered #s2 for real */
-    var input = document.querySelector('input[list="dl-setItem"]');
-    input.value = 'something that does not exist at all';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    return { before: before, after: S.itemId, shownValue: document.querySelector('input[list="dl-setItem"]').value };
+  console.log('\n── a search that matches nothing picks nothing, and changes nothing ' + '─'.repeat(3));
+  const typo = await p.evaluate(() => {
+    const before = S.itemIds.slice();
+    openApplyPicker(); priceOvSearch('something that does not exist at all');
+    const shown = priceOvList().length;
+    closePriceOverlay();                      /* walked away — no Done */
+    return { shown, before, after: S.itemIds.slice() };
   });
-  say('the underlying pick does not change on a typo', cleared.after === cleared.before, 'still "' + cleared.after + '"');
-  say('and the box redraws showing the real selection, not the typo', cleared.shownValue !== 'something that does not exist at all',
-      'shows "' + cleared.shownValue + '"');
+  say('an unmatched search shows no rows', typo.shown === 0, typo.shown + ' rows');
+  say('and closing without Done keeps the pick as it was', JSON.stringify(typo.after) === JSON.stringify(typo.before), JSON.stringify(typo.after));
 
-  console.log('\n── bundle screen: two independent search boxes, never confused with each other ' + '─'.repeat(0));
+  console.log('\n── bundle screen: two independent pickers, never confused with each other ' + '─'.repeat(2));
   const bundle = await p.evaluate(() => {
     pickGoal('bundle'); S.bunA = 'masala'; S.bunB = 'coffee'; apply();
-    /* apply() already re-rendered #s2 for real */
-    var a = document.querySelector('input[list="dl-setA"]');
-    var b = document.querySelector('input[list="dl-setB"]');
-    return { aExists: !!a, bExists: !!b, aVal: a && a.value, bVal: b && b.value, distinctLists: a && b && a.getAttribute('list') !== b.getAttribute('list') };
+    const html = renderS2();
+    openPickOverlay('item', 'setB'); overlayPick('masala');          /* B, chosen through B's own picker */
+    return { aOpens: /openPickOverlay\('item','setA'\)/.test(html), bOpens: /openPickOverlay\('item','setB'\)/.test(html),
+             a: S.bunA, b: S.bunB };
   });
-  say('both A and B are real, independent search boxes', bundle.aExists && bundle.bExists, JSON.stringify({ a: bundle.aVal, b: bundle.bVal }));
-  say('each with its own datalist, never sharing one', bundle.distinctLists, 'dl-setA ≠ dl-setB');
+  say('A and B each open their own picker', bundle.aOpens && bundle.bOpens, "setA · setB");
+  say('choosing through B changes B and leaves A alone', bundle.a === 'masala' && bundle.b === 'masala', JSON.stringify({ a: bundle.a, b: bundle.b }));
 
   console.log('\n── category search works the same way, for a shop with many categories ' + '─'.repeat(2));
   const cat = await p.evaluate(() => {
     pickGoal('percent'); S.scope = 'cat'; apply();
-    /* apply() already re-rendered #s2 for real */
-    var input = document.querySelector('input[list="dl-setCat"]');
-    input.value = 'Drinks';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
+    openPickOverlay('cat', 'setCat'); priceOvSearch('Drinks'); overlayPick('drinks');
     return { catId: S.catId };
   });
   say('category picks resolve the same way', cat.catId === 'drinks', 'S.catId is "' + cat.catId + '"');

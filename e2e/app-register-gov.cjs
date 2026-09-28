@@ -58,8 +58,16 @@ const T={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'
  const bc2=await b.newContext(ctxOpts);
  const p2=await bc2.newPage();
  p2.on('pageerror',e=>threw.push('paired: '+e.message));
- await p2.addInitScript(()=>{ try{ localStorage.setItem('cb_till_key','CB-TEST-KEY');
-   localStorage.setItem('cb_sess', JSON.stringify({token:'t.t.t',role:'entity',name:'Test Shop'})); }catch(_){} });
+ /* ⚠️ 2026-09-28 — THE FIXTURE MOVED WITH THE RULE. Since d8c2c117 ("the counter that opens must be the shop you signed
+    in as") the app offers the till only when the stored key's shop (cb_till_entity) IS the signed-in shop (read from
+    the session token's payload). The old fixture — token 't.t.t', no shop on the key — could never qualify, so this
+    step timed out for days. An unsigned token that names a shop, and a key recorded for that same shop; nothing leaves
+    the page (the API is stubbed). */
+ await p2.addInitScript(()=>{ try{
+   const b64=(o)=>btoa(JSON.stringify(o)).replace(/=+$/,'').replace(/\+/g,'-').replace(/\//g,'_');
+   const tok=b64({alg:'none'})+'.'+b64({identity_id:'ent-test-shop',identity_type:'entity',exp:Math.floor(Date.now()/1000)+3600})+'.x';
+   localStorage.setItem('cb_till_key','CB-TEST-KEY'); localStorage.setItem('cb_till_entity','ent-test-shop');
+   localStorage.setItem('cb_sess', JSON.stringify({token:tok,role:'entity',name:'Test Shop'})); }catch(_){} });
  await p2.goto(base+'/app.html#/app');
  await p2.waitForSelector('[data-testid="reg-tocounter"]',{timeout:8000});
  console.log('paired    · a counter device is offered its till  OK');
