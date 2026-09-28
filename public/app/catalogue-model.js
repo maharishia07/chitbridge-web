@@ -258,14 +258,18 @@
     gram:    { ta: ['கிராம்'], hi: ['ग्राम'], en: ['grams', 'gm', 'gms', 'gramme'] },
     litre:   { ta: ['லிட்டர்'], hi: ['लीटर'], en: ['liter', 'liters', 'litres', 'ltr', 'ltrs'] },
     ml:      { ta: ['மில்லி'], hi: ['मिलीलीटर'], en: ['millilitre', 'millilitres', 'milliliter', 'mls'] },
-    piece:   { ta: ['பீஸ்'], hi: ['पीस', 'नग'], en: ['pieces', 'pcs', 'pc', 'nos', 'no'] },
+    piece:   { ta: ['பீஸ்'], hi: ['पीस', 'नग'], en: ['pieces', 'pcs', 'pc'] },
     bunch:   { ta: ['கட்டு', 'kattu'], hi: ['गड्डी', 'गुच्छा'], en: ['bunches'] },
     pack:    { ta: ['பேக்'], hi: ['पैकेट'], en: ['packet', 'packets', 'pkt', 'pkts', 'packs'] },
-    box:     { ta: ['பாக்ஸ்'], hi: ['डिब्बा', 'बॉक्स'], en: ['boxes', 'carton', 'cartons'] },
+    box:     { ta: ['பாக்ஸ்'], hi: ['डिब्बा', 'बॉक्स'], en: ['boxes'] },
+    /* ⚠️ 2026-09-27: carton was filed under box here and nos/no under piece, while lib/units.js — the platform's table —
+       has carton and count as units of their own (tests/units-alias: "the two halves of one fact disagree"). A carton is a
+       near neighbour of a box, and a near neighbour IS a conversion, not a spelling (lib/ai.js). This view follows the API. */
+    carton:  { en: ['cartons'] },
     dozen:   { ta: ['டஜன்'], hi: ['दर्जन'], en: ['dozens', 'dzn'] },
     tonne:   { ta: ['டன்'], hi: ['टन'], en: ['ton', 'tons', 'tonnes', 'mt'] },
     metre:   { ta: ['மீட்டர்'], hi: ['मीटर'], en: ['meter', 'meters', 'metres', 'mtr'] },
-    count:   { ta: ['எண்ணிக்கை'], en: ['counts'] },
+    count:   { ta: ['எண்ணிக்கை'], en: ['counts', 'nos', 'no'] },
     unit:    { ta: ['யூனிட்'], hi: ['यूनिट'], en: ['units'] },
   };
   // the whole grammar, in one place — what the AI composes from
