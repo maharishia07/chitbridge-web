@@ -38,7 +38,10 @@ let snap = () => ({ shop: { name: 'Mayur Bhavan', currency: 'INR' }, at: new Dat
   await p.evaluate((api) => { API = api; KEY = 'demo-key'; }, base);
 
   /* a TV that has been running a while */
-  const start = await p.evaluate(async () => { await readShop(); SLIDES = build(); AT = 6; paint(false);
+  /* ⚠️ PIN THE CAMPAIGN (2026-09-28). The TV picks a campaign by the HOUR ('Morning' 5–11, 'Fresh today' 6–20 …), so this
+     passed at 10:00 and failed at 11:12 with one slide — the harness was testing the clock, not the pick. 'all' is what
+     the television runs when nobody has chosen; the pick logic is the same under every campaign. */
+  const start = await p.evaluate(async () => { CAMP = 'all'; await readShop(); SLIDES = build(); AT = 6; paint(false);
     return { n: shown().length, at: AT, kind: shown()[AT].kind }; });
   say('the TV is part-way through its run', start.at === 6 && start.n >= 7, start.n + ' slides, on ' + (start.at + 1) + ' (' + start.kind + ')');
 
