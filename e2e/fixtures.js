@@ -263,12 +263,31 @@ async function composeChit(page, { subject, item = 'Widget', qty, price, items, 
   if (!send) return;
   const sent = page.waitForResponse((r) => /\/chits\/send/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
   await stableClick(page, 'chit-send');
-  await sent;            // wait for the server to confirm the send before the next step (slow engine / cold API)
+  const res = await sent;   // wait for the server to confirm the send before the next step (slow engine / cold API)
   await settle(page);   // let the post-send refresh finish so the next nav click isn't intercepted
+  /* ⭐ RETURNED, NOT SWALLOWED (2026-09-28). The wait ends in .catch(() => null) so a slow send cannot hang a spec —
+     but that also made "no chit at all" look exactly like success. The caller now gets the answer (null = none came). */
+  return res;
 }
 
+/**
+ * ⚠️⚠️ A FIXTURE THAT SWALLOWS ITS OWN FAILURE (backlog, REG-04): for a freshly minted entity this produced NO chit —
+ * most likely no catalogue item to pick, so the wizard never finished — and nothing said so. REG-04 then failed at
+ * "no chit" three times while the lookup was changed each time; the thing never checked was whether compose had
+ * produced one at all. *Assert the precondition before blaming the thing under test.* This fixture exists only to
+ * MAKE a chit, so it now fails HERE, in words, when it did not.
+ */
 async function composeSelfChit(page, subject) {
-  await composeChit(page, { subject, self: true });
+  const res = await composeChit(page, { subject, self: true });
+  let body = null;
+  try { body = res ? await res.json() : null; } catch (_) { body = null; }
+  const id = body && (body.chit_id || (body.data && body.data.chit_id) || (body.chit && body.chit.chit_id));
+  if (!res || !res.ok() || !id) {
+    throw new Error('composeSelfChit produced no chit — '
+      + (!res ? 'no POST /chits/send was seen (the wizard did not finish; is there a catalogue item to pick?)'
+              : 'the send answered ' + res.status() + (body && (body.message || body.error) ? ': ' + (body.message || body.error) : ' with no chit_id')));
+  }
+  return id;
 }
 
 // ── MULTIPARTY — the real capability. Each browser CONTEXT is an isolated logged-in party. Mint N entities in N contexts,
