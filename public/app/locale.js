@@ -1,3 +1,5 @@
+/* ADOPTED from chitbridge-engines v1.4.0 · locale · sha256 0f8c7bd83ec0190beb18731192fdde3c0b20dc93d0477bb52197887716aa3668 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · locale. Edited ONLY in chitbridge-engines/src/locale.js; every platform adopts a released version of it. */
 /**
  * locale.js — THE LOCALISATION LAYER. One roof for every decision that changes across a border.
  *
