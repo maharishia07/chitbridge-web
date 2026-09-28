@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · qty · sha256 48f6fb0cc0338202b1b938193cff6e0e9b1ef1edc10cd36a27104e967d1b9fbe — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · qty. Edited ONLY in chitbridge-engines/src/qty.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 // @stage tested
 // @stage-note [TILL-186] Magnitude, as opposed to vocabulary. The COUNTER calls it through window.CBQty for
@@ -100,7 +99,9 @@ function measured(u, units) { return !!base(u, units); }
 /** the family two units share, or null — used to decide whether asking is even sensible */
 function family(u, units) { const b = base(u, units); return b ? b[0] : null; }
 
-var EXPORTS = { FAMILY, base, convert, measured, family };
+const EXPORTS = { FAMILY, base, convert, measured, family };
 
-window.CBQty = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBQty. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBQty = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
