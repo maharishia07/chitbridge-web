@@ -19,7 +19,8 @@
     "dayopen": "1.5.0",
     "docnumber": "1.5.0",
     "gs1": "1.5.0",
-    "lots": "1.5.0"
+    "lots": "1.5.0",
+    "nums": "1.5.0"
   },
   "adopt": {
     "money": [
@@ -78,6 +79,9 @@
     ],
     "lots": [
       "public/engine/lots.js"
+    ],
+    "nums": [
+      "public/engine/nums.js"
     ]
   },
   "bundles": {
@@ -109,6 +113,7 @@
     "docnumber": "51ab8c8a9dae42037a494cca58dd62b11d6050a5ad482b8b39e36d026014bbbb",
     "gs1": "5c3be207c19920b50ec2e99da5904fe17f7480d2078a912170879cce5518a3cd",
     "lots": "2653cbbb378263d56cffe3c6c1f6a30761adeca5ed103be9b5772dfab7206df6",
+    "nums": "acde341546a99823f0ee9b7e3544ebfddabbb5773dd64fb371e2f5cffbbaebc5",
     "tax-packs": "f62bf3675a3e7f26bf7fdd415c3815f65f96aa9658d1d3e1029238ec778d5812",
     "tax": "01c906213bd77d2a141c39b17a5f8937a7155d2c98a0eb713986f2dc5690f542"
   }
