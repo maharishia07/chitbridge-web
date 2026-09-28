@@ -70,18 +70,17 @@
  */
 (function (root) {
   'use strict';
-  /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md), found wherever this copy runs: CBMoney in
-     a page, lib/money.js on the server. Looked up PER CALL, because on the shop screen an engine can load before
-     money.js does. ⚠️ The fallback is the SAME rule, only for a page where money.js failed to load — and
-     tests/money-round.test.js holds every copy of it equal to money.round. */
+  /* ⭐ money.round — THE one rounder (C:devSPEC-money-one-reader.md): CBMoney (engine/money.js) in a page,
+     lib/money.js in node. Looked up PER CALL, because on the shop screen an engine can load before money.js does.
+     ⚠️⚠️ NO FALLBACK COPY (retired 2026-09-28, the loader step): every page that loads this file loads
+     engine/money.js FIRST (tests/one-rounding-rule.test.cjs checks each one), and a page that somehow has no
+     money.js SAYS so here — it never rounds a second way. */
   var MONEY_ = null;
   function roundMoney_(n) {
     var M = (typeof CBMoney !== 'undefined' && CBMoney.round) ? CBMoney : MONEY_;
     if (M === null && typeof require === 'function') { try { M = MONEY_ = require('./money'); } catch (_) { M = MONEY_ = false; } }
     if (M && M.round) return M.round(n);
-    var x = Number(n); if (!isFinite(x)) return x;
-    var c = Math.round(Number((Math.abs(x) * 100).toPrecision(15))) / 100;
-    return (x < 0 && c !== 0) ? -c : c;
+    throw new Error('CBMoney is not loaded — /engine/money.js is missing from this page');
   }
 
   var C = {};            // ns -> cart state

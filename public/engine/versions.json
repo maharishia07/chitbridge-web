@@ -1,0 +1,31 @@
+{
+  "engines": {
+    "convert": "1.5.0",
+    "dayopen": "1.5.0",
+    "docnumber": "1.5.0",
+    "govcontext": "1.4.0",
+    "gs1": "1.5.0",
+    "jurisdiction": "1.5.0",
+    "locale": "1.4.0",
+    "lots": "1.5.0",
+    "money": "1.0.0",
+    "nums": "1.5.0",
+    "offers": "1.3.0",
+    "orderhub": "1.5.0",
+    "orders": "1.5.0",
+    "pricing": "1.3.0",
+    "profilemap": "1.5.0",
+    "qr": "unversioned",
+    "qty": "1.5.0",
+    "rewards": "1.5.0",
+    "rollup": "1.5.0",
+    "scalecode": "1.5.0",
+    "screen": "1.5.0",
+    "search": "1.4.0",
+    "signin": "1.6.0",
+    "tax": "1.2.0",
+    "units": "1.5.0",
+    "variant": "1.4.0",
+    "verdict": "1.5.0"
+  }
+}

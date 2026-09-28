@@ -40,6 +40,7 @@ const PEOPLE = {
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
   PORT = await new Promise((res) => { const t = require('net').createServer(); t.listen(0, '127.0.0.1', () => { const n = t.address().port; t.close(() => res(n)); }); });
+  const snapEng = [];
   /* ── the stand-in ChitBridge ── */
   const api = http.createServer(async (q, r) => {
     let raw = ''; for await (const c of q) raw += c;
@@ -58,6 +59,7 @@ const PEOPLE = {
       return j(200, { key: jwt({ identity_id: s.identity_id, bridge_id: s.bridge_id, display_name: s.display_name, kind: 'api_key', scopes: ['till'] }),
                       shop: { name: s.display_name, bridge_id: s.bridge_id } });
     }
+    if (u === '/api/till/snapshot') { const e = new URL(q.url, 'http://x').searchParams.get('eng'); if (e) snapEng.push(e); }
     const who = unjwt(q.headers['x-api-key']);
     const s = who && SHOPS[who.identity_id];
     if (u === '/api/till/snapshot') {
@@ -81,7 +83,7 @@ const PEOPLE = {
   /* ── a shop PC: a copy of the kit, an unpaired connector.json, and counter.cmd's restart loop ── */
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'cbswitchpc-'));
   const kit = path.join(home, 'kit'); fs.mkdirSync(kit);
-  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js']
+  ['till.js', 'till.html', 'core.js', 'printer.js', 'rollup.js', 'orders.js', 'orderhub.js', 'signin.js', 'money.js']
     .forEach((n) => fs.copyFileSync(path.join(KIT, n), path.join(kit, n)));
   const cfgFile = path.join(home, 'connector.json');
   fs.writeFileSync(cfgFile, JSON.stringify({ api: API, till: { id: 'C1' }, printer: 'KeepMe' }, null, 2));
@@ -131,6 +133,12 @@ const PEOPLE = {
   const s0 = await state();
   say('the PC starts unpaired', s0 && s0.paired === false, 'paired=' + (s0 && s0.paired));
   say('⚠️ and still has the signin engine — the KIT\'s own copy', await p.evaluate(() => !!window.CBSignin), 'CBSignin loaded=' + (await p.evaluate(() => !!window.CBSignin)));
+  /* ⭐⭐ THE LOADER STEP (2026-09-28): versions are read off the files the program serves; money is in the kit too */
+  const v0 = (s0 && s0.engines) || {};
+  say('⭐ unpaired, /api/state names the KIT\'s releases — signin and money — and nothing it does not have',
+    /^\d+\.\d+\.\d+$/.test(v0.signin) && /^\d+\.\d+\.\d+$/.test(v0.money) && v0.tax === false, JSON.stringify({ signin: v0.signin, money: v0.money, tax: v0.tax }));
+  say('⭐ the page rounds with money straight away — the kit\'s money.js, no second copy of the rule', await p.evaluate(() => r2(1.005) === 1.01 && !!window.CBMoney), 'r2(1.005)=' + await p.evaluate(() => { try { return r2(1.005); } catch (e) { return e.message; } }));
+  say('⚠️ and NO page errors on the unpaired sign-in screen (it threw "CBQty is not loaded")', errs.length === 0, errs.length ? errs.join(' | ').slice(0, 160) : 'none');
 
   console.log('\n── ⭐⭐ FIRST SIGN-IN on the shop PC — the shared dialog, the program enrols and restarts ' + '─'.repeat(0));
   const was = starts;
@@ -168,6 +176,12 @@ const PEOPLE = {
   await p.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X', null, { timeout: 30000 });
   const px = await parked();
   say('⚠️⚠️ both parked bills SURVIVE A RELOAD (they were read before the key, then saved over)', px.indexOf('LEGACY') >= 0 && px.indexOf('X CUSTOMER') >= 0, JSON.stringify(px));
+  const sent = snapEng.join(' | ');
+  say('⭐ the program SENDS its engine releases with its snapshot call', /signin:\d+\.\d+\.\d+/.test(sent) && /money:\d+\.\d+\.\d+/.test(sent), sent.slice(0, 90));
+  const vx = (s1 && s1.engines) || {};
+  say('paired, /api/state names a release for every engine it fetched', /^\d+\.\d+\.\d+$/.test(vx.tax) && /^\d+\.\d+\.\d+$/.test(vx.signin), JSON.stringify({ tax: vx.tax, signin: vx.signin, qr: vx.qr }));
+  const shown = await p.evaluate(() => { const w = whoAmI(); return w && w.engines && w.engines.signin; });
+  say('and the "what is this counter" panel shows them', /^\d+\.\d+\.\d+$/.test(String(shown)), 'signin ' + shown);
   say('connector.json kept everything else (merge, not rewrite)', JSON.parse(fs.readFileSync(cfgFile, 'utf8')).printer === 'KeepMe', 'printer kept');
 
   console.log('\n── ⭐⭐⭐ SHOP Y signs in on X\'s PC and SWITCHES — through the one door, a restart ' + '─'.repeat(0));

@@ -43,7 +43,7 @@ const PEOPLE = {
     r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' });
     fs.createReadStream(f).pipe(r);
   });
-  const enrolled = [];
+  const enrolled = [], snapEng = [];
   const api = http.createServer(async (q, r) => {
     let raw = ''; for await (const c of q) raw += c;
     const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
@@ -66,6 +66,7 @@ const PEOPLE = {
       return j(200, { key: p.key, shop: SHOPS[p.key].shop });
     }
     if (u === '/api/till/snapshot') {
+      const e = new URL(q.url, 'http://x').searchParams.get('eng'); if (e) snapEng.push(e);
       const s = SHOPS[q.headers['x-api-key']]; if (!s) return j(401, { message: 'key refused' });
       return j(200, { at: new Date().toISOString(), entity_id: s.entity_id, shop: s.shop,
         items: [{ id: s.item.toLowerCase(), name: s.item, price: 50, unit: 'nos', code: s.item }] });
@@ -114,6 +115,7 @@ const PEOPLE = {
   await p.goto('http://127.0.0.1:' + web.address().port + '/till.html');
   await ready('Shop X');
   const x0 = await shelf();
+  say('⭐ a browser counter sends its engine releases with its claim (engine/versions.json)', snapEng.some((e) => /money:\d+\.\d+\.\d+/.test(e) && /signin:\d+\.\d+\.\d+/.test(e)), (snapEng[0] || 'nothing sent').slice(0, 80));
   say('the counter starts as shop X, with X\'s own shelf', x0.shop === 'Shop X' && x0.items.indexOf('XMANGO') >= 0, JSON.stringify(x0.items));
 
   console.log('\n── ⭐ SHOP X\'s OWN PERSON signs in — nothing switches, nothing is asked ' + '─'.repeat(0));
