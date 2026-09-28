@@ -229,6 +229,45 @@ const PEOPLE = {
   say('"Never lock" means never', !(await st()).locked, 'open after 4.5 s');
   await setLock(5);
 
+  console.log('\n── ⚠️⚠️ H1 (critic review): NEVER LOCK INTO A STATE NOBODY CAN LEAVE ' + '─'.repeat(0));
+  /* a counter where nobody has a counter PIN — the state most shops are in on day one */
+  await p.evaluate(() => { try { localStorage.removeItem(shopLs('cb_till_pins')); } catch (_) {} });
+  await ctx.setOffline(true);
+  await p.waitForFunction(() => !lineUp(), null, { timeout: 10000 });
+  await setLock(0.05);
+  await p.waitForTimeout(4500);
+  say('offline with no PIN anywhere, auto-lock does NOT fire', !(await st()).locked, 'still open after 4.5 s');
+  await p.click('[data-testid="till-lock"]');
+  const refusedWhy = await p.evaluate(() => document.getElementById('lastnote').textContent);
+  say('and 🔒 refuses — saying why and what to do', !(await st()).locked && /counter PIN/.test(refusedWhy), '"' + refusedWhy.slice(0, 80) + '…"');
+  await setLock(5);
+
+  /* locked while the line was up, then the line dropped — still nobody with a PIN */
+  await ctx.setOffline(false);
+  await p.waitForFunction(() => lineUp(), null, { timeout: 10000 });
+  await p.click('[data-testid="till-lock"]');
+  await ctx.setOffline(true);
+  await p.waitForFunction(() => !lineUp(), null, { timeout: 10000 });
+  await p.click('[data-testid="till-unlock"]');
+  await p.waitForSelector('#askdlg[open]', { timeout: 10000 });
+  const asked = await p.evaluate(() => document.getElementById('askbody').textContent + ' | ' + document.getElementById('askok').textContent);
+  say('⚠️ stranded (locked, then offline, no PIN): it offers the one way out, and says why', /nobody can sign in/i.test(asked) && /Unlock anyway/.test(asked), '"' + asked.slice(0, 70) + '…"');
+  await p.click('#askok');
+  await p.waitForFunction(() => document.getElementById('lockcover').hidden, null, { timeout: 10000 });
+  const noted = await p.evaluate(() => { try { return JSON.parse(localStorage.getItem(shopLs('cb_till_unproven')) || '[]').length; } catch (_) { return 0; } });
+  say('it unlocks, and the unproven unlock is NOTED in the shop’s own log', !(await st()).locked && noted >= 1, 'log entries=' + noted);
+  await ctx.setOffline(false);
+  await p.waitForFunction(() => lineUp(), null, { timeout: 10000 });
+
+  console.log('\n── ⚠️ M1 (critic review): A LOCKED COUNTER IS COVERED FROM THE FIRST MOMENT OF A RELOAD ' + '─'.repeat(0));
+  await p.click('[data-testid="till-lock"]');
+  /* slow the host probe (/api/state, what pickHost asks first — critic M1's own repro) so the old window (lock read before the key) would be wide open */
+  await p.route('**/api/state', async (r) => { await new Promise((z) => setTimeout(z, 3000)); await r.continue(); });
+  await p.reload({ waitUntil: 'domcontentloaded' });
+  const early = await p.evaluate(() => ({ cover: !document.getElementById('lockcover').hidden, lock: !!(typeof LOCK !== 'undefined' && LOCK) }));
+  say('covered at DOMContentLoaded, before the shop has answered', early.cover && early.lock, JSON.stringify(early));
+  await p.unroute('**/api/state');
+
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ').slice(0, 300) : 'none');
   say('no page errors', errs.length === 0, errs.length + ' error(s)');
   await b.close(); web.close(); api.close();
