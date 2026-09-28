@@ -666,7 +666,7 @@ function catsetBody(k){
       /* ⭐ THE SAME RULE, MADE PLAYABLE. The lab is the conversion engine as a page — a rate carries its source
          and its date, a quantity is valued at a market price, and the weakest link in the chain is named above
          the total. It belongs HERE because "where and when a price came from" is this card's subject. */
-      '<a class="composebtn" data-testid="catset-conversion-lab" href="conversion-lab.html" target="_blank" rel="noopener" title="What is a quantity worth, and what is this basket in another currency — the same engine as the server, with every step shown" style="text-decoration:none">💱 ' + tx('Conversion lab') + '</a>')
+      '<a class="composebtn" data-testid="catset-conversion-lab" href="conversion-lab.html" target="_blank" rel="noopener" title="Value a quantity or convert a basket — same engine as the server, steps shown" style="text-decoration:none">💱 ' + tx('Conversion lab') + '</a>')
     + catsetRegistry(['pricing', 'priceorigin'])
     + catsetCard('Your pricing structures', catsetDefListHTML('pricing', 'pricing structure'), '');
   }

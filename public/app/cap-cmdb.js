@@ -430,8 +430,8 @@ function cmdbPaint() {
     + '<th style="text-align:start;padding:3px 6px 3px 0">Code</th>'
     + '<th style="text-align:start;padding:3px 6px">Menu</th>'
     + '<th style="text-align:start;padding:3px 6px">Screen</th>'
-      + '<th style="text-align:end;padding:3px 6px" title="Cases the board holds for this screen. '
-    +   'NOT coverage: the sweep counts a screen\u2019s controls against the file that owns them.">Cases</th>'
+      + '<th style="text-align:end;padding:3px 6px" title="Cases on the board for this screen. '
+    +   'Not coverage of its controls.">Cases</th>'
     + '<th style="text-align:start;padding:3px 0 3px 6px">Drawn by</th></tr>';
   rows.forEach(function (r) {
     h += '<tr style="border-top:1px solid var(--line,#efece4)">'

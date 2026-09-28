@@ -12,8 +12,10 @@ require('C:/dev/chitbridge-web/public/engine/docnumber.js');
 
 /* pull just nextNumber + its two helpers */
 const grab = (name) => {
-  const i = src.indexOf('function ' + name + '(');
+  let i = src.indexOf('function ' + name + '(');
   const j = src.indexOf('\n}', i);
+  /* ⚠️ keep a leading `async ` — slicing from "function" dropped it, and an await inside became a SyntaxError */
+  if (src.slice(i - 6, i) === 'async ') i -= 6;
   return src.slice(i, j + 2);
 };
 const fn = [
@@ -22,6 +24,15 @@ const fn = [
   'var DB = { get: async (k) => BOXES[k], set: async (k, v) => { BOXES[k] = v; } };',
   'function fyOf(d){ var y=d.getFullYear(), apr=d.getMonth()>=3, a=apr?y:y-1; return String(a).slice(2)+"-"+String(a+1).slice(2); }',
   grab('docCountry'), grab('tillId'),
+  /* ⚠️ nextNumber now reads DOC_TAGS (receipt/despatch/credit/expense/subscription series) — taken from the page
+     itself, never retyped here, so the table this test runs against is the one the counter runs (2026-09-27) */
+  (src.match(/^var DOC_TAGS = \{[^\n]*\};$/m) || ['var DOC_TAGS = {};'])[0],
+  /* ⚠️ and the numbering SCHEME it grew since (a series prefix per counter, and when a change of it takes effect):
+     every helper nextNumber now calls, taken from the page. shopLs is the one stand-in — it names the browser store
+     per counter key, which is not what this test is about; one store is enough here. */
+  'function shopLs(k){ return k; }',
+  (src.match(/^var TILLOPT = [^\n]*;$/m) || ["var TILLOPT = null, TILLOPT_AT = '';"])[0],
+  grab('tillOptDefaults'), grab('tillOpt'), grab('tillScheme'), grab('schemeTakesEffect'), grab('docTagOf'), grab('docKindOf'),
   src.slice(src.indexOf('async function nextNumber(kind){'), src.indexOf('\n}', src.indexOf('async function nextNumber(kind){')) + 2),
   'return nextNumber;',
 ].join('\n');

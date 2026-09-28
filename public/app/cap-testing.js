@@ -1034,7 +1034,7 @@ function testPaint() {
         var bits = [];
         if (forMe) {
           bits.push('<button data-testid="hdr-forme" onclick="testSetView(\'work\');testWorkFilter(\'mine\')" '
-            + 'title="Somebody says they fixed what you reported. Until you look, it is a claim and not a fix." '
+            + 'title="Marked fixed by someone. Look, then confirm — until then it is a claim" '
             + 'style="font:inherit;font-size:var(--fs-1);font-weight:700;padding:3px 10px;border-radius:11px;'
             + 'cursor:pointer;border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);'
             + 'color:var(--warn-2,#8a6100);margin-inline-end:6px">⚠ ' + forMe
@@ -3289,8 +3289,7 @@ function testTechHTML() {
     var sv = (CBTEST.tech || {}).seenVals;
     if (sv && sv.length) {
       h += '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:3px">'
-        + '<button onclick="testTechUseSeen()" title="These are the values this screen has actually put on '
-        + 'the wire — not the only ones it accepts. The kinds nobody has sent are the ones nobody has tried." '
+        + '<button onclick="testTechUseSeen()" title="Values this screen has sent, not all it accepts — unsent kinds are untried" '
         + 'style="font:inherit;font-size:var(--fs-1);padding:2px 9px;'
         + 'border-radius:11px;cursor:pointer;border:0;background:var(--neutral-tint,#f2efe6);'
         + 'color:var(--grey-2,#545A61);margin-inline-end:6px">⚠ Use what it has sent</button>'
@@ -4200,8 +4199,8 @@ function testCiteHTML(c) {
               q.level ? 'level ' + q.level : null].filter(Boolean);
   return '<div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:4px;padding:3px 7px;'
     + 'background:var(--paper,#faf8f3);border-inline-start:2px solid var(--line,#e7e3d8);border-radius:0 6px 6px 0">'
-    + '<span title="Not our opinion — a published clause. If the standard moves, every case still citing '
-    + 'this one is exactly the set to look at again.">Required by <b>'
+    + '<span title="A published clause. If it changes, '
+    + 'recheck every case that cites it">Required by <b>'
     + testEsc(bits.join(' \u00b7 ')) + '</b></span></div>';
 }
 
@@ -5014,8 +5013,8 @@ function testBehindHTML(code) {
      * could print. The register does not name a control on every screen; where it names none, this says so and
      * stands on the code view below instead of inventing a score.
      */
-    h += testNotes(['<span title="That is a gap in the register, not a statement about the screen. What is '
-      + 'known about the code underneath is below.">\u26a0 No control registered here</span>'], 'warn');
+    h += testNotes(['<span title="Gap in the register, not a verdict on the screen. '
+      + 'The code is below">\u26a0 No control registered here</span>'], 'warn');
   } else {
     var pct = Math.round((done.length / ctls.length) * 100);
     var grade = !done.length ? ['Nothing here is checked', 'var(--disp,#b4453f)']
@@ -5192,8 +5191,7 @@ function testBehindHTML(code) {
 
   /* ── 5 · the weak rung, kept apart and marked ── */
   if (b.named.length) {
-    h += lab('Named after that code \u00b7 ' + b.named.length + ' <span title="Matched on the WORD in the '
-      + 'file name, not on a declared link. Read these as leads \u2014 they are counted nowhere above."'
+    h += lab('Named after that code \u00b7 ' + b.named.length + ' <span title="Matched by file name, not a declared link \u2014 leads, counted nowhere above"'
       + ' style="font-weight:400;color:var(--warn-2,#8a6100)">(\u26a0 leads)</span>');
     h += b.named.slice(0, 25).map(function (c) { return caseRow(c, true); }).join('');
     if (b.named.length > 25) h += quiet('\u2026 and ' + (b.named.length - 25) + ' more.');
@@ -5588,7 +5586,7 @@ function testDiagHTML() {
 
   h += '<table style="width:100%;border-collapse:collapse;font-size:var(--fs-2)">'
     + '<tr style="text-align:start;color:var(--grey-2,#545A61);font-size:var(--fs-1)">'
-    + '<th style="text-align:start;padding:3px 6px 3px 0" title="Quote a call\u2019s id when reporting it '
+    + '<th style="text-align:start;padding:3px 6px 3px 0" title="Quote this id when reporting '
     +   '\u2014 the server logged the same one">Call</th>'
     + '<th style="text-align:start;padding:3px 6px">Path</th>'
     + '<th style="text-align:end;padding:3px 6px">ms</th>'
@@ -5648,8 +5646,7 @@ function testDiagHTML() {
       + slower.map(function (x) {
           return testEsc(x.key) + ' \u2014 <b>' + x.now + ' ms</b> now, best was ' + x.was + ' ms';
         }).join('<br>')
-      + '<br><span style="color:var(--grey-2)" title="Not the last one: one slow visit would otherwise hide '
-      + 'the next regression behind it.">vs best earlier visit</span></div>';
+      + '<br><span style="color:var(--grey-2)" title="Best earlier visit, so one slow visit cannot hide a regression">vs best earlier visit</span></div>';
   }
 
   /* ⭐ and the other question: not what this screen cost, but which route is expensive everywhere */
@@ -5924,8 +5921,7 @@ var TEST_TONE = {
 };
 
 /** the one boot caveat, said once and shown as a glyph — it was written out in full at two sites */
-var TEST_BOOTING_WARN = '<span title="The app was still starting, so its sign-in and set-up calls are '
-  + 'counted here too. Go to another screen and come back for a clean reading.">'
+var TEST_BOOTING_WARN = '<span title="Start-up calls included. Leave and come back for a clean reading">'
   + '\u26a0 includes start-up calls</span>';
 function testNotes(list, tone) {
   var rows = (list || []).filter(Boolean);
@@ -5955,11 +5951,9 @@ function testDiagBarHTML() {
        question a person asks before pressing them: whose readings am I throwing away? They are this
        browser's, under this login. It was the fourth bullet; it is not lost, it moved to where it is asked. */
     +   '<button data-testid="diag-clear-screen" onclick="testDiagClear()" style="' + chip + undo + '" '
-    +     'title="Throw away this screen’s readings only. They live in this browser under your login, so '
-    +     'clearing cannot touch anybody else’s.">⟲ Clear this screen</button>'
+    +     'title="Clear this screen’s readings — only yours, in this browser">⟲ Clear this screen</button>'
     +   '<button data-testid="diag-clear-all" onclick="testDiagClear(\'all\')" style="' + chip + undo + '" '
-    +     'title="Throw away every screen’s readings and start again. They live in this browser under your '
-    +     'login, so clearing cannot touch anybody else’s.">⟲ Clear everything</button>'
+    +     'title="Clear every screen’s readings — only yours, in this browser">⟲ Clear everything</button>'
     /* ⭐ pushed to the end of the row: it is a SETTING, not one of the four things you do here — and it is
        in the same slot whether it is off, on, or still being read */
     +   '<span style="float:inline-end">' + testTraceChip() + '</span>'
@@ -6087,16 +6081,14 @@ function testTraceChip() {
     var left = testTraceLeft();
     return '<span data-testid="trace-on" id="cbtracechip" style="' + flat
       + ';background:var(--ok-2,#1B7F4B);color:#fff;font-weight:700" '
-      + 'title="Every call is reporting what it spent inside the server, and how many database trips it '
-      + 'made. Only your own calls.">\u23f1 Timings ON \u00b7 ' + left + ' min left</span>'
+      + 'title="Server time and database trips per call \u2014 your calls only">\u23f1 Timings ON \u00b7 ' + left + ' min left</span>'
       + '<button data-testid="trace-off" onclick="testTraceSet(0)" style="' + chip
       + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)" '
       + 'title="Stop timing now">Stop</button>';
   }
 
   return '<span data-testid="trace-off-now" style="' + flat + '" '
-    + 'title="Turn them on and each call shows what it spent inside the server and how many database '
-    + 'trips it made. It stops by itself, and only your own calls are timed.">\u23f1 Timings off</span>'
+    + 'title="Show server time and database trips per call; yours only, stops by itself">\u23f1 Timings off</span>'
     + [10, 15, 30].map(function (m) {
         return '<button data-testid="trace-' + m + '" onclick="testTraceSet(' + m + ')" style="' + chip
           + 'background:var(--neutral-tint,#f2efe6);color:var(--grey-2,#545A61)">' + m + ' min</button>';
@@ -6127,8 +6119,7 @@ function testTraceHTML() {
       + '</div>';
   }
   return '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-2)">'
-    + '<b title="Turn them on and each call shows what it spent inside the server and how many database '
-    + 'trips it made. It stops by itself, and only your own calls are timed.">\u23f1 Timings off</b> '
+    + '<b title="Show server time and database trips per call; yours only, stops by itself">\u23f1 Timings off</b> '
     + [10, 15, 30].map(function (m) {
         return '<button onclick="testTraceSet(' + m + ')" style="' + btn + ';margin-top:5px">'
           + m + ' min</button>';
@@ -7205,8 +7196,7 @@ function testWorkHTML() {
   if (mine.length) {
     h += '<div data-testid="work-yours" style="margin:2px 0 7px;padding:7px 9px;border-radius:8px;'
       + 'border:1px solid var(--warn-2,#8a6100);background:var(--warn-tint,#fdf6e6);font-size:var(--fs-1)">'
-      + '<b title="Somebody says they fixed what you reported. Look again, then say whether it holds — '
-      + 'until you do, it is a claim and not a fix.">' + mine.length + ' waiting for you to retest</b>'
+      + '<b title="Marked fixed by someone. Look again, then confirm — until then it is a claim">' + mine.length + ' waiting for you to retest</b>'
       + ' <button onclick="testWorkFilter(\'mine\')" style="' + chip
       + 'background:var(--warn-2,#8a6100);color:#fff">Show them</button></div>';
   }
@@ -7399,8 +7389,7 @@ function testHandHTML() {
   if (waiting.length) {
     h += '<div style="margin:6px 0 4px;padding:7px 9px;border-radius:8px;border:1px solid var(--ok-2,#1B7F4B);'
       + 'background:var(--ok-tint,#eaf5ee);font-size:var(--fs-1)">'
-      + '<b title="Somebody answered what you reported. Open the screen, look, then say whether it holds — '
-      + 'until you do, it is a claim and not a fix.">' + waiting.length
+      + '<b title="Answered by someone. Look, then confirm — until then it is a claim">' + waiting.length
       + ' fixed \u00b7 waiting for your retest</b>'
       + ' <button onclick="testHandFilter(\'verify\')" style="font:inherit;font-size:var(--fs-1);'
       + 'margin-inline-start:6px;padding:1px 8px;border-radius:7px;cursor:pointer;border:1px solid '
@@ -7731,8 +7720,7 @@ function testSetupHTML() {
      * front of. This is the app booted with the lab open and its own shell hidden — a named target, so
      * pressing twice raises the window already open instead of stacking a second one.
      */
-    + '<button onclick="testPopOut()" title="Open the board in its own window \u2014 the app on one screen, '
-    +   'the scripts on the other" style="' + TEST_BTN_SMALL + '">\u2197 Own window</button>'
+    + '<button onclick="testPopOut()" title="Board in its own window \u2014 app on one screen, scripts on the other" style="' + TEST_BTN_SMALL + '">\u2197 Own window</button>'
     + '<button onclick="testAddOpen()" title="Add a case for something you just found" '
     +   'style="' + TEST_BTN_SMALL + '">+ Case</button>'
     + '<button onclick="testGuide(true)" title="How to use this" '
@@ -7800,7 +7788,7 @@ function testMenuHTML(shown) {
         + '</div>';
     }
     return '<div style="padding:12px;font-size:var(--fs-2);line-height:1.6">'
-      + '<b title="Journey steps and automated files belong to no single door and never appear here.">'
+      + '<b title="Journey steps and automated files belong to no door, so never show here">'
       + 'No door matches this filter.</b><br>'
       + '<button onclick="testClearFilters()" style="margin-top:9px;font:inherit;font-size:var(--fs-1);padding:3px 10px;border-radius:7px;border:1px solid var(--grey-4,#646A72);background:var(--card,#fff);cursor:pointer">Clear filters</button></div>';
   }
@@ -8342,8 +8330,7 @@ function testAddHTML() {
     /* ⚠️ said on the button, before they press it: a case written here is real but is not yet in the
        document in the repository, so it is not in the printed script either */
     +   '<button class="btn pri" onclick="testAddSave()" style="font-size:var(--fs-2)" '
-    +     'title="It becomes a real case on the board straight away. To get it into the printed script as '
-    +     'well, add it to TEST-CASES-V2.js.">Add the case</button>'
+    +     'title="Goes on the board now. For the printed script, also add it to TEST-CASES-V2.js">Add the case</button>'
     +   '<button class="btn" onclick="testAddClose()" style="font-size:var(--fs-2)">Cancel</button>'
     + '</div></div>';
 }
