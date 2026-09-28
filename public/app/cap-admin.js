@@ -6019,6 +6019,12 @@ var POLICY_FLAGS = [
   { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry' },
   { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep' },
   { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Set by the platform' },
+  /* ⭐ Athi, 2026-09-18 (quick-keys handoff, decision 2): "keep it as a choice in settings". Read by the counter's
+     Level-2 quick-key state since then and settable by nobody until 2026-09-28 (e2e/policy-reachable.cjs). The help
+     says plainly that shift close changes nothing yet — there are no shifts to close against. */
+  { key:'quick_key_reset_at', label:'Counter sold-out marks clear', type:'enum', options:['business_day','shift_close'],
+    labels:{ business_day:'At the day roll', shift_close:'At shift close' }, def:'business_day', level:'entity', gov:'entity',
+    help:'When a counter\'s sold-out marks on its quick keys clear themselves. At the day roll — the usual case. At shift close works like the day roll until shifts are recorded.' },
 ];
 var _POL = { flags:null, busy:false, err:null, migrated:true };
 function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
