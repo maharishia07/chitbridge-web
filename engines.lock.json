@@ -8,7 +8,8 @@
     "pricing": "1.3.0",
     "offers": "1.3.0",
     "variant": "1.4.0",
-    "search": "1.4.0"
+    "search": "1.4.0",
+    "govcontext": "1.4.0"
   },
   "adopt": {
     "money": [
@@ -32,6 +33,10 @@
     "search": [
       "public/app/search.js",
       "public/engine/search.js"
+    ],
+    "govcontext": [
+      "public/app/govcontext.js",
+      "public/engine/govcontext.js"
     ]
   },
   "bundles": {
@@ -52,6 +57,7 @@
     "offers": "b90632d3ffa35196adcee8722269468dc83255edd327e2ff28e3cb07f5d82dee",
     "variant": "2b82dcbaba8ad8590623ef72d41979894d4390468abf74d862f158d7d4e48946",
     "search": "3e6b74d84e1fa082d5aa7d676f53421b263beafd8c455dfe9719f7d25cd841fa",
+    "govcontext": "b49816056f5284d60599004a4e65df388c61609bdc344a28baad169f58b86d87",
     "tax-packs": "f62bf3675a3e7f26bf7fdd415c3815f65f96aa9658d1d3e1029238ec778d5812",
     "tax": "01c906213bd77d2a141c39b17a5f8937a7155d2c98a0eb713986f2dc5690f542"
   }
