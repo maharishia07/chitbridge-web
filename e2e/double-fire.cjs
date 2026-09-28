@@ -59,6 +59,9 @@ const sandbox = {
   tx: (s) => s, txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => (v || {})[k]),
   esc: (x) => String(x == null ? '' : x),
   cblog() {}, toast() {}, renderApp() {},
+  /* ⚠️ core.js now registers a window 'error' listener as it loads (core.js:829) — a sandbox window without
+     addEventListener died there, before the double-fire question was ever asked (2026-09-27) */
+  addEventListener() {}, removeEventListener() {},
   fetch: (url, opts) => {
     sent.push((opts && opts.method) || 'GET');
     /* hold the first request open until the test lets it finish */
@@ -129,9 +132,26 @@ const t = (name, cond, extra) => {
   const hold1 = release;
   const g2 = ctx.api('listThing'); g2.catch(() => {});
   await new Promise((r) => setTimeout(r, 10));
-  t('two concurrent GETs both go', sent.length === 2, sent.length + ' request(s)');
+  /**
+   * ⚠️ MOVED 2026-09-27, not deleted. This asserted TWO requests. core.js has since JOINED identical in-flight reads
+   * (_apiInflight — "IN FLIGHT ONLY, THIS IS NOT A CACHE", "READS ONLY", "EVERY JOINER GETS ITS OWN COPY"). What
+   * this section guards — a read is never REFUSED the way a double write is — still holds, and is now asserted as:
+   * one trip for two identical reads, BOTH answered, each with its own copy; and two different reads both go.
+   */
+  t('two identical concurrent GETs share ONE trip (joined, not refused)', sent.length === 1, sent.length + ' request(s)');
   if (hold1) hold1(); if (release) release();
-  await Promise.allSettled([g1, g2]);
+  const both = await Promise.allSettled([g1, g2]);
+  t('  ...and BOTH callers get an answer', both.every((x) => x.status === 'fulfilled'), both.map((x) => x.status).join(','));
+  t('  ...each its own copy, so one screen\'s edit cannot appear in another',
+    both[0].value !== undefined && both[0].value !== both[1].value && JSON.stringify(both[0].value) === JSON.stringify(both[1].value));
+  sent = [];
+  const h1 = ctx.api('listThing', { params: { page: 1 } }); h1.catch(() => {});
+  const holdH = release;
+  const h2 = ctx.api('listThing', { params: { page: 2 } }); h2.catch(() => {});
+  await new Promise((r) => setTimeout(r, 10));
+  t('two DIFFERENT concurrent GETs both go', sent.length === 2, sent.length + ' request(s)');
+  if (holdH) holdH(); if (release) release();
+  await Promise.allSettled([h1, h2]);
 
   console.log('\n  ══ ' + pass + ' passed · ' + fail + ' failed ══\n');
   process.exit(fail ? 1 : 0);

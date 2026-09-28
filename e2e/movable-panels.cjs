@@ -41,7 +41,8 @@ global.document = { createElement: mkEl, addEventListener(){}, removeEventListen
 global.getComputedStyle = () => ({ position: 'relative' });
 global.window = { innerWidth: 1400, innerHeight: 900 };
 
-const fnSrc = src.match(/function makeMovable\(panel, opts\)\{[\s\S]*?\n\}\n/)[0];
+/* ⚠️ \r?\n — app.html is checked out with Windows line endings here, and a bare \n never matched the closing brace */
+const fnSrc = src.match(/function makeMovable\(panel, opts\)\{[\s\S]*?\r?\n\}\r?\n/)[0];
 const makeMovable = new Function(fnSrc + '; return makeMovable;')();
 
 /* ── 1 · no A buttons are built any more ─────────────────────────────────────────────────────────────── */
