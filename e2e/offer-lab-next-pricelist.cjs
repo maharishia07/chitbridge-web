@@ -46,18 +46,22 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
   console.log('\n── ⭐⭐⭐ the loyalty bonus value is readable, not hidden behind the % sign ' + '─'.repeat(0));
   const loy = await p.evaluate(() => {
     S.custOn = true; S.cap = 10; document.getElementById('s0').innerHTML = renderS0();
-    const box = document.querySelector('.loy.on');
+    /* the row was renamed .loy → .loyrow in the Offer Lab class-collision fix (2026-09-26); same row, same behaviour */
+    const box = document.querySelector('.loyrow.on');
     const input = box.querySelector('input[data-key="cap"]');
     const label = [...box.querySelectorAll('span')].find((s) => /up to/i.test(s.textContent));
     return {
       value: input.value,
-      widthPx: input.closest('.inp').getBoundingClientRect().width,
-      labelOutsideBox: label && !label.closest('.inp'),
+      widthPx: input.closest('.sm').getBoundingClientRect().width,   /* the wrapper is .sm since the rebuild (was .inp) */
+      clipped: input.scrollWidth > input.clientWidth + 1,
+      labelOutsideBox: label && !label.closest('.sm'),
     };
   });
   say('the typed value is the real value, not truncated in the markup', loy.value === '10', 'input.value="' + loy.value + '"');
-  say('the box is wide enough to actually show two digits and a % sign', loy.widthPx >= 90, loy.widthPx + 'px');
-  say('"up to" no longer competes with the number inside the same tiny box', loy.labelOutsideBox, 'label sits outside .inp');
+  /* ⚠️ MOVED (2026-09-28): this was `widthPx >= 90`, a number fitted to the pre-rebuild layout where the % sat inside the
+     box. The promise is that two digits are never CLIPPED — so that is what is measured now, whatever the box's width. */
+  say('the box shows the whole value — two digits are not clipped', loy.clipped === false, loy.widthPx + 'px, clipped=' + loy.clipped);
+  say('"up to" no longer competes with the number inside the same tiny box', loy.labelOutsideBox, 'label sits outside .sm');
 
   console.log('\n── ⭐⭐⭐ opening the price list — a real window: title, close, search, categories ' + '─'.repeat(0));
   const opened = await p.evaluate(() => { openPriceOverlay(); return document.getElementById('priceOverlay').classList.contains('on'); });
@@ -157,7 +161,10 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(56) + '· ' + d 
     return { hiddenOnSample: n.hidden, text: n.textContent };
   });
   say('a persistent banner says so on the very first screen, not only inside one overlay', banner.hiddenOnSample === false, '"' + banner.text + '"');
-  say('and it names the sample and offers the real door out', /Use my catalogue/.test(banner.text) && new RegExp(identity.bizName).test(banner.text), banner.text);
+  /* ⚠️ MOVED (2026-09-28): the banner no longer repeats the sample's name (the copy budget trimmed it in the 09-26 rebuild);
+     the page header carries it. So: the banner says SAMPLE and offers the door out, and the header names the sample. */
+  say('and it says sample and offers the real door out', /Sample/.test(banner.text) && /Use my catalogue/.test(banner.text), banner.text);
+  say('the header names the sample, so it cannot be mistaken for a real shop', /Sample/.test(identity.bizName), '"' + identity.bizName + '"');
   const footNote = await p.evaluate(() => {
     openPriceOverlay(); const foot = document.getElementById('ovlFoot').textContent; closePriceOverlay(); return foot;
   });

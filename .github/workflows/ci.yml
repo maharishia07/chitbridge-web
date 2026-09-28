@@ -1,9 +1,16 @@
 name: web-ci
 
-# Guards the DEV web app on every push/PR:
-#  - syntax: app.html inline JS + public/app/*.js must parse
-#  - demo-leak: app.html must contain NO demo data/code (structural no-leak guarantee).
-# A red check here means the demo/dev split was broken — do not merge/deploy.
+# Guards the web app on every push/PR — only checks that run OFFLINE, with no npm install and no other repo.
+#
+# ⚠️ 2026-09-28: this was RED ON EVERY PUSH for seven weeks. Its second step ran scripts/check-demo-leak.js, which was
+#    deleted with the demo itself on 2026-08-10 (d54ee414 "delete the demo from the codebase") — the check had nothing
+#    left to guard and the step was never removed, so the one CI signal the repo had meant nothing. Removed here, and
+#    the offline half of `npm run check` put in its place so a red means a real fault again.
+#
+# NOT here, and why (run them locally with `npm run check`):
+#   check:engines   reads ../chitbridge-engines (a sibling checkout)
+#   check:envelope  reads ../chitbridge-api (a sibling checkout)
+#   check:till      needs Playwright (a browser) — an install this job deliberately does not do
 
 on:
   push:
@@ -21,5 +28,29 @@ jobs:
           node-version: '20'
       - name: Syntax (app.html inline + app/*.js)
         run: node scripts/check-syntax.js
-      - name: Demo-leak tripwire (app.html must be demo-free)
-        run: node scripts/check-demo-leak.js
+      - name: The page parses as a whole
+        run: node scripts/check-app-parses.cjs
+      - name: Every top-level function declared once
+        run: node e2e/dup-functions.cjs
+      - name: Static guards
+        run: node e2e/guard-static.cjs
+      - name: Cart, steps, adoption
+        run: |
+          node scripts/cart-ui.test.mjs
+          node scripts/cap-network-render.test.mjs
+          node scripts/step-flow.test.mjs
+          node scripts/check-adoption.js
+      - name: Screen reads, lazy screens, modals, tax, markup, controls, order, calls, a11y, endpoints
+        run: |
+          node e2e/screen-reads.cjs
+          node e2e/lazy-screen-guard.cjs
+          npm run check:modal
+          npm run check:tax
+          npm run check:markup
+          npm run check:controls
+          npm run check:order
+          npm run check:calls
+          npm run check:a11y
+          npm run check:eps
+      - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
+        run: node e2e/cmdb-records.cjs

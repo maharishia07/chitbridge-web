@@ -134,7 +134,9 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     const second = SAVED.filter((s) => s.status === 'draft')[0];
     await setStatus(second.id, 'approved');
     const first = SAVED.filter((s) => s.id !== second.id)[0];   /* the live one from the cycle above */
-    return { firstOverlap: clash(first), secondOverlap: clash(second) };
+    /* clash(sv) → a count became clashDetail(sv) → the clashing offers, or null (2026-09-26); the count is its length */
+    const n = (sv) => (clashDetail(sv) || []).length;
+    return { firstOverlap: n(first), secondOverlap: n(second) };
   });
   say('both offers on masala dosa see each other', overlap.firstOverlap === 1 && overlap.secondOverlap === 1, JSON.stringify(overlap));
 

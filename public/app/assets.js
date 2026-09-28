@@ -744,6 +744,7 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
+    "lib/cmdb.js",
     "lib/gherkin.js",
     "lib/storage.js",
     "lib/supportcopy.js",
@@ -3508,6 +3509,17 @@ window.CBASSETS = {
    "path": "chitbridge-api/lib/xlsx-write.js",
    "group": "engine.other",
    "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG174",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "cmdb.js",
+   "path": "chitbridge-api/lib/cmdb.js",
+   "group": "engine.other",
+   "stage": null,
    "draws": [],
    "uses": []
   },

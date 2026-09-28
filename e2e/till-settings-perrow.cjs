@@ -55,16 +55,6 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   say('⚠️ a keystroke alone must not save it', typing.keyNow === 'old-key-0000', 'CloudHost.key is still "' + typing.keyNow + '"');
   say('⚠️⚠️ and must not have thrown the screen away mid-type', typing.sBeforeBlur, 'S is still set');
 
-  const committed = await p.evaluate(() => {
-    var el = document.getElementById('set_key');
-    el.value = 'new-shop-key-999';
-    el.dispatchEvent(new Event('change', { bubbles: true }));   /* what blur / Enter actually fires */
-    return { keyNow: CloudHost.key, stored: ls.get('cb_till_key', ''), dialogStillOpen: document.getElementById('setdlg').open };
-  });
-  say('⭐ change (blur/Enter) does save it', committed.keyNow === 'new-shop-key-999', 'CloudHost.key is "' + committed.keyNow + '"');
-  say('to storage too, not just memory', committed.stored === 'new-shop-key-999', 'ls holds "' + committed.stored + '"');
-  say('⭐⭐⭐ and BEFORE Close was ever pressed', committed.dialogStillOpen, 'the settings dialog is still open');
-
   console.log('\n── THE CHITBRIDGE ADDRESS — same test ' + '─'.repeat(30));
   const apiSaved = await p.evaluate((api2) => {
     var el = document.getElementById('set_api');
@@ -106,6 +96,26 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
   say('the dialog closes', closed.dialogOpen === false, 'setdlg.open is false');
   say('⭐ and reads nothing, calls nothing — every row already saved itself', closed.extraCalls === 0,
       closed.extraCalls + ' extra refresh/load call(s) from Close');
+
+
+  console.log('\n── ⭐⭐⭐ THE COUNTER KEY, COMMITTED — last, because it now RELOADS the page ' + '─'.repeat(1));
+  /* ⚠️ MOVED, NOT DELETED (2026-09-28, G1). This asserted the key saved and the dialog stayed open with no reload.
+     A new key is a new shop, and becomeShop() — the one door to a shop — stores it and RELOADS so the start-up
+     path opens that shop; a repaint in place carried the bill, the day and the person across (Athi's report).
+     So: saved on change (still never on a keystroke, above), and the page goes away, never repainted. */
+  /* the printer check above switched the page to the shop-PC host; the key row belongs to a BROWSER counter */
+  await p.evaluate(() => { CloudHost.mode = 'cloud'; HOST = CloudHost; openSettings(); });
+  await p.waitForSelector('#set_key', { timeout: 10000 });
+  const nav = p.waitForEvent('load', { timeout: 20000 }).then(() => true).catch(() => false);
+  await p.evaluate(() => {
+    var el = document.getElementById('set_key');
+    el.value = 'new-shop-key-999';
+    el.dispatchEvent(new Event('change', { bubbles: true }));   /* what blur / Enter actually fires */
+  });
+  const reloaded = await nav;
+  const stored = await p.evaluate(() => localStorage.getItem('cb_till_key'));
+  say('⭐ change (blur/Enter) does save it', stored === 'new-shop-key-999', 'storage holds "' + stored + '"');
+  say('⭐⭐⭐ and the page RELOADS into that shop — never a repaint', reloaded, reloaded ? 'reloaded' : 'no reload');
 
   await b.close(); srv.close();
   console.log(bad ? '\n' + bad + ' failed' : '\neverything saves as you change it, and closing loses nothing because there is nothing left to lose');

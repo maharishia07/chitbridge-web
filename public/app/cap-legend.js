@@ -307,6 +307,9 @@ const CAP_CATALOGUE = [
    * months before this. That guard, not the module, is the L3 lever.
    */
   { id:'sign-in', name:'Sign-in — one identity, entity or coassist', icon:'🔑', load:'eager', maturity:2, target:3,
+    /* ⭐ its CMDB record (2026-09-28, Athi: "linked in the cmdb database as part of this capability, so anyone can look
+       at this"): stored in the cloud (definition kind 'cmdb'), drawn by the one page /cmdb/record.html */
+    record:'/cmdb/record.html#CAP-SIGNIN',
     gov:2, govTarget:3, governedUnder:'the identities table (one row shape for entity and actor alike) + lib/resolveuserid.js\'s namespace grammar (docs/NAMESPACE.md)',
     governedBy:[
       'ONE FILE: chitbridge-api/lib/identity-auth.js — findLoginIdentity (adopts resolveuserid.classify(), never re-splits \'@\' by hand) · needsPin · issueOtp (routed through lib/dev-otp.js\'s fixedOtp, so a sealed environment cannot leak a fixed code) · verifyCredential (OTP or PIN, one attempt-lock shape) · personShape (one response shape both routes hand a client)',
@@ -800,6 +803,7 @@ function _openLegendImpl(){
     const on=!!LOADED[c.id];
     return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'var(--grey-2)'};background:${on?'var(--blue-tint)':'var(--warn-tint)'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
+  const recLink=(c)=>c.record?`<a href="${esc(c.record)}" target="_blank" rel="noopener" data-testid="cap-record-${esc(c.id)}" title="Its CMDB record: ways in, what it does, what comes out, tests" style="font-size:var(--fs-1);font-weight:700;color:var(--blue-d);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:6px;padding:1px 7px;text-decoration:none">📄 Record</a>`:'';
   const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`<span class=arw>→</span>L${c.target}`:''; return `<span title="Capability maturity — 1 to 5, see the Legend" style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-2);color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
@@ -821,7 +825,7 @@ function _openLegendImpl(){
     </div>`;
   };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'};color:${c.load==='planned' ? 'var(--on-card)' : 'var(--on-card)'}">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:var(--fs-3)">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${esc(c.name)}</span><span style="margin-inline-start:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:var(--fs-3)">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${esc(c.name)}</span><span style="margin-inline-start:auto;display:flex;gap:6px;align-items:center">${recLink(c)}${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${govBand(c)}
     ${c.features.map(featRow).join('')}
