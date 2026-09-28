@@ -135,5 +135,30 @@ root.cbMediaGallery = function (d, o) {
   return head + '<div data-testid="prod-media" style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0">' + tiles.join('') + '</div>';
 };
 root.cbLineRows = cbLineRows;
-  if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows };
+
+/**
+ * ⭐ ONE WALK UP THE CATEGORY TREE (2026-09-28, M40) — an offer on a PARENT category reaches its children.
+ * The app's product page did this (core.js catgWithAncestors, over the definitions store); the storefront matched an
+ * offer's category exactly, so "10% off Fruits" never reached a product filed under "Fruits › Dried Fruits" in the
+ * shop window while the owner's own preview showed it. One walker, told how each store reads a category:
+ *   the app's definitions  { definition_id, rules: { parent } }   ·   the public payload  { id, parent }
+ * Returns the ids first, then each ancestor once, closest first. A cycle or a runaway chain stops at 16 hops.
+ */
+function cbCatgAncestors(ids, cats, parentOf, idOf) {
+  var out = (ids || []).map(String).filter(Boolean), seen = {};
+  out.forEach(function (id) { seen[id] = true; });
+  if (!cats || !cats.length) return out;
+  var pOf = parentOf || function (c) { return c && c.parent; };
+  var iOf = idOf || function (c) { return c && (c.id != null ? c.id : c.definition_id); };
+  var by = {}; cats.forEach(function (c) { var k = iOf(c); if (k != null) by[String(k)] = c; });
+  out.slice().forEach(function (id) {
+    var p = pOf(by[id]), hops = 0;
+    while (p != null && p !== '' && !seen[String(p)] && hops++ < 16) {
+      seen[String(p)] = true; out.push(String(p)); p = pOf(by[String(p)]);
+    }
+  });
+  return out;
+}
+root.cbCatgAncestors = cbCatgAncestors;
+  if (typeof module !== 'undefined' && module.exports) module.exports = { cbLineRows: cbLineRows, cbCatgAncestors: cbCatgAncestors };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -369,12 +369,13 @@ function catgWithAncestors(ids){
     return out;
   }
   if (!cats.length) return out;
-  var by = {}; cats.forEach(function (x) { by[String(x.definition_id || x.id)] = x; });
-  out.slice().forEach(function (id) {
-    var p = by[id] && by[id].rules && by[id].rules.parent, hops = 0;
-    while (p && !seen[String(p)] && hops++ < 16) { seen[String(p)] = true; out.push(String(p)); var n = by[String(p)]; p = n && n.rules && n.rules.parent; }
-  });
-  return out;
+  /* ⭐ THE WALK IS catalogue-lines.js's cbCatgAncestors (2026-09-28) — one walker for the app and the storefront, told
+     how this store reads a category. Where catalogue-lines is not loaded (a bare test of this file) the ids stay as
+     they are, which is what cart.js already does outside the app — never a second copy of the walk. */
+  if (typeof cbCatgAncestors !== 'function') return out;
+  return cbCatgAncestors(out, cats,
+    function (x) { return x && x.rules && x.rules.parent; },
+    function (x) { return x && (x.definition_id || x.id); });
 }
 /** The travelling names, positionally aligned with catgIdsOf. Used only where an id cannot be resolved. */
 function catgNamesOf(d){

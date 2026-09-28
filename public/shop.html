@@ -325,13 +325,22 @@ function itemPrice(it){ var c=(it&&it.commercials)||{};
  * engine the counter and the server use — the server applies the same offers to the order, so this is the promise and that
  * is the invoice. null when nothing applies.
  */
+/**
+ * ⭐ A PRODUCT'S CATEGORIES WITH THEIR PARENTS, from the categories this shop sends (2026-09-28, M40). An offer on
+ * "Fruits" must reach "Fruits › Dried Fruits" in the shop window exactly as it does on the owner's product page —
+ * the storefront matched the id exactly and missed every child. The walk is catalogue-lines.js's cbCatgAncestors.
+ */
+function _catgUp(ids){
+  var cats=(_SHOPDATA&&Array.isArray(_SHOPDATA.categories))?_SHOPDATA.categories:[];
+  return (typeof cbCatgAncestors==='function') ? cbCatgAncestors(ids, cats) : (ids||[]).map(String);
+}
 function finishDeal(it, qty){
   var offers=_shopOffers(); if(!offers.length||typeof CBOffers==='undefined'||!CBOffers.evaluate||!CBOffers.perLine) return null;
   var p=itemPrice(it); if(!p||p.v==null||!_showsPrice()) return null;
   var unit=Number(priceVal(p.v)); if(!(unit>0)) return null;
   var n=Number(qty)>0?Number(qty):1;
   var l={ key:'f', item_id:it.line_id||null, sku:it.sku||null, excluded:[], qty:n, unitPrice:unit,
-          categories:[].concat(it.category?[String(it.category)]:[], Array.isArray(it.categories)?it.categories.map(String):[]) };
+          categories:_catgUp([].concat(it.category?[String(it.category)]:[], Array.isArray(it.categories)?it.categories.map(String):[])) };
   try{
     var ev=CBOffers.evaluate({ lines:[l], offers:offers, ctx:_shopCtx() });
     var x=(CBOffers.perLine(ev,[l])||{}).f; if(!x||!(x.off>0)) return null;
@@ -491,7 +500,7 @@ function shopPickListHtml(){ if(!_CART) return ''; try{ if(typeof CBCatUI!=='und
  */
 function _shopOffers(){ return (_SHOPDATA && Array.isArray(_SHOPDATA.offers)) ? _SHOPDATA.offers : []; }
 function _shopCtx(){ return { now: new Date(), currency: (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR', money: function(n){ return (typeof CBLocale!=='undefined')?CBLocale.money(n, (_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||'INR'):String(n); } }; }
-function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, excluded:Array.isArray(d.offers_excluded)?d.offers_excluded.map(String):[], categories:(typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[])), qty:qty||1, unitPrice:cbAmount(d.price) }; }
+function _lineOf(p, qty){ var d=(p.item_data||p)||{}; return { key:String(p.item_id||''), item_id:p.item_id||null, sku:d.sku||d.code||null, excluded:Array.isArray(d.offers_excluded)?d.offers_excluded.map(String):[], categories:_catgUp((typeof catgIdsOf==='function')?catgIdsOf(d):((Array.isArray(d.categories)?d.categories:[]))), qty:qty||1, unitPrice:cbAmount(d.price) }; }
 /* ⚠️ RE-ENTRANCY. setOffer() repaints the cart, the repaint fires onChange, onChange called this again — an infinite
    recursion that crashed the page (stack overflow) whenever the shop was framed on a product page with an offer
    attached. Found by the tour's debugger capture, 2026-09-04: listHTML → paint → touched → setOffer → shopOffersSync →
