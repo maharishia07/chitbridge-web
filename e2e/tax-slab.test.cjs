@@ -142,8 +142,9 @@ t('the generated mirror matches chitbridge-api/lib, byte for byte', () => {
   for (const f of ['tax.js', 'tax-slab.js']) {
     const src = lf(fs.readFileSync(path.join(apiLib, f), 'utf8'));
     const mirror = lf(fs.readFileSync(path.join(__dirname, '..', 'public', 'app', f), 'utf8'));
-    assert.ok(/^\/\* ADOPTED from chitbridge-engines v/.test(mirror), f + ' is not an adopted file — run: node ../chitbridge-engines/tools/adopt.cjs .');
-    assert.strictEqual(mirror, src, f + ' is not the release chitbridge-api adopts — the two repos pin different versions');
+    /* app/tax.js is a BUNDLE since v1.2.0 (tax-packs + tax) — the api's copy must appear in it whole, header and all */
+    assert.ok(/^\/\* ADOPTED (BUNDLE )?from chitbridge-engines/.test(mirror), f + ' is not an adopted file — run: node ../chitbridge-engines/tools/adopt.cjs .');
+    assert.ok(mirror.includes(src), f + ' does not carry the release chitbridge-api adopts — the two repos pin different versions');
   }
 });
 
