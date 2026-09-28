@@ -60,7 +60,13 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(46) + '· ' + d 
     }, lab.fn);
     say('window.open was called exactly once', opened.length === 1, JSON.stringify(opened));
     say('to the same page chitbridge-web already serves', opened[0] && opened[0].url === lab.url, 'url="' + (opened[0] && opened[0].url) + '"');
-    say('in a NEW tab, not the counter\'s own', opened[0] && opened[0].target === '_blank', 'target="' + (opened[0] && opened[0].target) + '"');
+    /* ⚠️ MOVED 2026-09-28, not deleted: this asserted '_blank'. Athi, 2026-09-26: "we need to have one window only,
+       either we call it from backend app or till app, the same application should respond" — so each lab opens in a
+       NAMED window (cb_offer_lab / cb_combo_lab) that is REUSED if already open. What this guards still holds: never
+       the counter's own tab. */
+    const tgt = opened[0] && opened[0].target;
+    say('in its own named window, never the counter\'s own tab', !!tgt && /^cb_[a-z_]+_lab$/.test(tgt) && tgt !== '_self' && tgt !== '_top',
+      'target="' + tgt + '"');
     say('⚠️ no #key= or &shop= fragment — neither lab has any use for a till key', opened[0] && opened[0].url.indexOf('#') < 0, 'url carries no fragment');
     const after = await p.evaluate(() => ({ mode: MODE, cart: CART.length }));
     say('the counter itself is completely unaffected', JSON.stringify(before) === JSON.stringify(after), 'MODE and CART unchanged');

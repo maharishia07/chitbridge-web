@@ -126,7 +126,7 @@ const HARNESSES = [
   ['till-settings-declutter.cjs', 'Quick keys and the shop are one line each in Settings, and Clear and reload has left it entirely'],
   /* ⭐ OFFER LAB, ONE LINK OUT OF THE TILL ([TILL-187]). Proves the op opens the real page in a new tab with
      no fragment (Offer Lab authenticates a person, never a paired counter's key) and never touches MODE/CART. */
-  ['till-offerlab-link.cjs', 'Offer Lab is one link out of the till, never a second implementation inside it'],
+  ['till-labs-link.cjs', 'Offer Lab and Combo Lab are one link each out of the till, never a second implementation inside it'],   /* renamed from till-offerlab-link.cjs at the Labs split, 2026-09-26 */
   ['till-todo.cjs',        'the to-do is one list, and it never asks the browser for permission'],
   ['till-category.cjs',    'categories are shown the way quick keys are'],
   ['till-contrast.cjs',    'the counter’s own palette, measured'],
