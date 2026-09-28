@@ -104,6 +104,13 @@ const PEOPLE = {
     await p.click('[data-testid="till-usign-verify"]');
   };
 
+  /* ⭐ v1.6.0: an online sign-in is followed by "Choose a counter PIN" — these checks are about shops, so: Not now */
+  const signedIn = async () => {
+    await p.waitForSelector('[data-testid="till-usign-in"], [data-testid="till-usign-pinlater"]', { timeout: 10000 });
+    if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+    await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
+  };
+
   await p.goto('http://127.0.0.1:' + web.address().port + '/till.html');
   await ready('Shop X');
   const x0 = await shelf();
@@ -111,7 +118,7 @@ const PEOPLE = {
 
   console.log('\n── ⭐ SHOP X\'s OWN PERSON signs in — nothing switches, nothing is asked ' + '─'.repeat(0));
   await signIn('xclerk');
-  await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
+  await signedIn();
   const x1 = await shelf();
   say('signed in on the same counter', x1.who === 'X Clerk' && x1.key === 'KEY-X', 'who=' + x1.who + ' key=' + x1.key);
   say('no enrol call — an ordinary sign-in stays cheap', enrolled.length === 0, 'enrol calls=' + enrolled.length);
@@ -154,7 +161,7 @@ const PEOPLE = {
   await p.click('[data-testid="till-usign-out"]').catch(() => {});
   await p.evaluate(() => { try { usignOut(); usignClose(); } catch (_) {} });
   await signIn('oldsrv');
-  await p.waitForSelector('[data-testid="till-usign-in"]', { timeout: 10000 });
+  await signedIn();
   const o = await shelf();
   say('signed in as before, on the same counter', o.who === 'Old Server' && o.key === 'KEY-Y', 'who=' + o.who + ' key=' + o.key);
 

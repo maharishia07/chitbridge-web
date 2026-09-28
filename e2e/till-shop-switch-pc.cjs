@@ -137,6 +137,17 @@ const PEOPLE = {
   const r1 = reopened('Shop X');
   await signIn('xclerk', true);
   await r1;
+  /* ⭐ v1.6.0: the first sign-in here is the moment a counter PIN is offered — set one, on the shop PC's own page */
+  await p.waitForSelector('[data-testid="till-usign-pin1"]', { timeout: 20000 });
+  await p.fill('[data-testid="till-usign-pin1"]', '1357');
+  await p.fill('[data-testid="till-usign-pin2"]', '1357');
+  await p.click('[data-testid="till-usign-pinsave"]');
+  await p.waitForSelector('[data-testid="till-usign-done"]', { timeout: 20000 });
+  const book = await p.evaluate(() => pinBook());
+  const pinx = book.xclerk || {};
+  say('⭐ a counter PIN was set on the shop PC — a salt and a hash, never the PIN',
+    !!(pinx.salt && pinx.hash) && JSON.stringify(book).indexOf('1357') < 0, 'ids=' + JSON.stringify(pinx.ids));
+  await p.click('[data-testid="till-usign-done"]');
   const s1 = await state(), g1 = await page();
   await p.screenshot({ path: path.join(SHOTS, '1-shop-x.png') });
   say('the program RESTARTED (its folder is chosen at boot)', starts > was, 'starts=' + starts);
@@ -165,6 +176,8 @@ const PEOPLE = {
   const r2 = reopened('Shop Y');
   await p.click('#askok');
   await r2;
+  if (await p.locator('[data-testid="till-usign-pinlater"]').count()) await p.click('[data-testid="till-usign-pinlater"]');
+  await p.evaluate(() => { try { usignClose(); } catch (_) {} });
   const s2 = await state(), g2 = await page();
   await p.screenshot({ path: path.join(SHOTS, '2-shop-y.png') });
   say('the program is shop Y now', s2 && s2.shop && s2.shop.bridge_id === 'CB-Y', JSON.stringify(s2 && s2.shop));
