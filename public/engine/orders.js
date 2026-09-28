@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · orders · sha256 a8e4417ed369e5b6e18bb5bf90eaf57e1097c112744566a47ebc46af0d3ba069 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · orders. Edited ONLY in chitbridge-engines/src/orders.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 // @stage tested
 // @stage-note [TILL-181] No server route reaches this yet, and being uncalled-and-unlabelled is how an
@@ -185,8 +184,11 @@ function age(o, now) {
  * the real export alone, and the browser answered "module is not defined". till-vendor.test.js caught it by
  * actually executing the file, which is the only way that fault is visible.
  */
-var EXPORTS = { PURPOSES, WORDS, KINDS, kindOf, kindLabel, purposeOf, purposeHas, says,
+
+const EXPORTS = { PURPOSES, WORDS, KINDS, kindOf, kindLabel, purposeOf, purposeHas, says,
                    start, findOpen, openOnly, totals, addRound, hold, billable, canSettle, age };
 
-window.CBOrders = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBOrders. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBOrders = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
