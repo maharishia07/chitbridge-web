@@ -49,8 +49,18 @@ const FALLBACK = /user_id\s*\|\|\s*[A-Za-z0-9_$]+\.bridge_id/;
 const displayed = [], logic = [];
 for (const f of files) {
   const all = fs.readFileSync(path.join(ROOT, f), 'utf8').split(/\r?\n/);
+  /**
+   * ⭐ THE OPERATOR'S OWN SCREEN IS NOT A PERSON'S (2026-09-27). The Platform screen (platRowHTML · platTabBodyHTML ·
+   * platColumns) exists to show an operator — cbincroot — every identifier side by side: User ID, bridge id, UUID. That
+   * is its job, and a shop never sees it. So a bridge id inside a function named plat… is operator detail, not a leak;
+   * everywhere else is still checked. Tracked by the enclosing `function plat…(` a line sits in.
+   */
+  let fn = '';
   all.forEach((l, i) => {
+    const fm = l.match(/^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(/);
+    if (fm) fn = fm[1];
     if (!/bridge_?[Ii]d/.test(l) || isComment(l)) return;
+    if (/^plat[A-Z]/.test(fn)) { logic.push({ where: f + ':' + (i + 1), text: '(operator screen) ' + l.trim().slice(0, 80) }); return; }
     const entry = { where: f + ':' + (i + 1), text: l.trim().slice(0, 96) };
     /* ⚠️ esc() INSIDE AN onclick IS AN ARGUMENT, NOT A DISPLAY. viewSupplierPassport(esc(x.bridge_id)) escapes
        the key so it survives an attribute — the value is never read by a person. Escaping means "going into
