@@ -1357,7 +1357,7 @@ function catsetOfferPlanHTML(){
   var touches = function (d, m) { var r = d.rules || {}; var f = r.valid_from ? new Date(r.valid_from) : null, t = r.valid_to ? new Date(r.valid_to + 'T23:59:59') : null; if (f && f > m.to) return false; if (t && t < m.from) return false; return true; };
   var cells = months.map(function (m, i) {
     var on = live.filter(function (d) { return touches(d, m); });
-    return '<div data-testid="catset-plan-month-' + i + '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' + (i === 0 ? ';background:var(--paper)' : '') + '">'
+    return '<div data-testid="catset-plan-month-' + i + '" style="flex:1 1 130px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:70px' + (i === 0 ? ';background:var(--paper);color:var(--on-bg)' : '') + '">'
       + '<div style="font-weight:700;margin-bottom:4px">' + esc(m.label) + (i === 0 ? ' <span style="color:var(--grey);font-weight:400">' + tx('now') + '</span>' : '') + '</div>'
       + (on.length ? on.map(function (d) { return '<div style="font-size:var(--fs-1);cursor:pointer;color:var(--blue)" onclick="catsetDefEdit(\'offer\',\'' + esc(d.id) + '\')">' + esc(d.name) + '</div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">—</div>')
       + '</div>';

@@ -5380,7 +5380,7 @@ function ctrRegisterHTML(){
       : (c.state === 'opening' ? tx('opening…') : (c.closed_at ? tx('closed') + ' ' + esc(_keyAgo(c.closed_at)) : tx('not opened yet')));
     var armed = (_CLOSE_ARMED === 'rel:' + c.id);
     return '<div data-testid="ctr-' + esc(c.id) + '" style="display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">'
-      + '<b style="font-family:var(--mono,monospace);font-size:1.15em;min-width:2.4em">' + esc(c.id) + '</b>'
+      + '<b class="mono" style="font-size:1.15em;min-width:2.4em">' + esc(c.id) + '</b>'
       + '<span style="flex:1;min-width:0"><span data-testid="ctr-name-' + esc(c.id) + '">' + esc(c.name) + '</span>'
       + '<div style="color:var(--grey);font-size:var(--fs-1)">'
         + (c.last_no ? tx('last bill') + ' ' + esc(c.last_no) + ' · ' : '')
@@ -5671,7 +5671,7 @@ function businessSettingsHTML(s){
            : me.catalogue_visibility === 'private' ? 'private' : '';
   var card = function(title, sub, inner, note){
     return '<div style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;'
-      + 'margin-bottom:var(--sp-4);background:var(--card)">'
+      + 'margin-bottom:var(--sp-4);background:var(--card);color:var(--on-card)">'
       + '<div style="padding:12px 13px 9px"><div style="font-weight:700;font-size:var(--fs-3);'
       + 'font-family:\'Space Grotesk\'">' + esc(tx(title)) + '</div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(tx(sub)) + '</div></div>'

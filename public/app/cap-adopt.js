@@ -53,7 +53,7 @@ function adoptPaint(){
   var ready = adoptReadyCount();
 
   modal('<div style="padding:2px;max-height:70vh;overflow-y:auto">' + head + body
-    + '<div style="display:flex;gap:8px;margin-top:16px;position:sticky;bottom:0;background:var(--card);padding-top:10px">'
+    + '<div style="display:flex;gap:8px;margin-top:16px;position:sticky;bottom:0;background:var(--card);color:var(--on-card);padding-top:10px">'
     +   '<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Not now') + '</button>'
     +   '<button class="composebtn pri" style="flex:1" data-testid="adopt-accept" ' + (ready ? '' : 'disabled ')
     +     'onclick="adoptAccept()">'

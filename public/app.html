@@ -350,7 +350,7 @@
   .govrow .gw{color:var(--grey);font-size:var(--fs-1)}
   .govrow .gv{font-weight:700;overflow-wrap:anywhere}
   .govrow .gf{grid-column:2;color:var(--grey);font-size:var(--fs-1)}
-  .govrow.unknown .gv{color:var(--amber,#8E3517);font-weight:600}
+  .govrow.unknown .gv{color:var(--warn-2);font-weight:600}   /* the amber TEXT token (2026-09-28): it used an amber token that was never defined, so its fallback literal rendered in every theme */
   .govagree{display:flex;align-items:flex-start;gap:9px;margin:4px 0 10px;cursor:pointer;line-height:1.45}
   .govagree input{margin-top:3px;width:18px;height:18px;flex:none}
   .welsignin{font-size:var(--fs-2);color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:var(--card);cursor:pointer}
@@ -7846,7 +7846,7 @@ function supportBoxesFor(desk){
   return SUPPORT_BOXES.filter(function(b){ return b.to === desk; }).map(function(b){
         var id = b.kind + '@' + b.to;
         return '<button data-testid="support-box-' + id + '" onclick="supportForm(\'' + id + '\')" '
-          + 'style="text-align:start;border:1px solid var(--line);background:var(--card);border-radius:var(--r-md);'
+          + 'style="text-align:start;border:1px solid var(--line);background:var(--card);color:var(--on-card);border-radius:var(--r-md);'
           + 'padding:13px;cursor:pointer;display:block;width:100%">'
           + '<div style="font-size:21px;line-height:1.1;margin-bottom:5px">' + b.icon + '</div>'
           + '<div style="font-weight:650;font-size:var(--fs-3);color:var(--disp)">' + esc(tx(b.label)) + '</div>'
@@ -8297,7 +8297,7 @@ function specCalls(){
 function specCallsBar(){
   if (!specOn()) return '';
   return '<div id="speccalls" style="position:fixed;inset-inline:10px;bottom:10px;z-index:9998;max-height:38vh;'
-    + 'overflow:auto;background:var(--card);border:1px dashed var(--line);border-radius:10px;'
+    + 'overflow:auto;background:var(--card);color:var(--on-card);border:1px dashed var(--line);border-radius:10px;'
     + 'box-shadow:0 6px 22px rgba(15,46,61,.18);padding:4px 10px 8px">' + specCalls() + '</div>';
 }
 
@@ -9175,7 +9175,7 @@ function selectPlat(id){ UI.platSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var 
 function paintPlatDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=platDetailHTML(); } }
 
 function platGrp(t,inner){ return '<div class="sec">'+t+'</div>'
-  +'<div class="itab" style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--sp-3);background:var(--card);box-shadow:var(--shadow)">'+inner+'</div>'; }
+  +'<div class="itab" style="border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:var(--sp-3);background:var(--card);color:var(--on-card);box-shadow:var(--shadow)">'+inner+'</div>'; }
 function platKv(l,v){ return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line-soft);font-size:var(--fs-2)">'
   +'<b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'+l+'</b>'
   +'<span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>'; }
@@ -9884,7 +9884,7 @@ function platColMenuHTML(){
   if (!UI.platColMenu) return '';
   var on = platCols();
   return '<div data-testid="plat-colmenu" onclick="event.stopPropagation()" '
-    + 'style="position:absolute;z-index:40;margin-top:4px;background:var(--card);border:1px solid var(--line);'
+    + 'style="position:absolute;z-index:40;margin-top:4px;background:var(--card);color:var(--on-card);border:1px solid var(--line);'
     + 'border-radius:var(--r-md);padding:9px 11px;box-shadow:0 8px 24px rgba(0,0,0,.28);max-height:320px;'
     + 'overflow:auto;min-width:190px">'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">'
@@ -10020,7 +10020,7 @@ function platScopeTableHTML(){
     + 'background:var(--card);color:var(--grey-2);border-radius:var(--r-sm)">'
     + esc(tx('⚙ columns')) + ' <span style="color:var(--grey-4)">' + defs.length + '/'
     + platColumns().length + '</span></button>' + platColMenuHTML() + '</div>'
-    + '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card)">'
+    + '<div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--card);color:var(--on-card)">'
     /* ⚠️ table-layout:fixed and a <col> per column. With auto layout a dragged width is only a SUGGESTION —
        the browser re-balances on content and the column springs back, which reads as the drag not working. */
     + '<table id="pl_table" style="border-collapse:collapse;table-layout:fixed;width:100%;min-width:'
@@ -13018,7 +13018,7 @@ function ctOfferField(d){
         /* an offer that names NO target applies everywhere; here the tick means 'limit it to this product' — a real act, so it stays a button */
         const everywhere = via === tx('whole catalogue');
         if (via && !on && !everywhere) return '<span class="ctcatg' + (excluded ? '' : ' on') + '" data-testid="cat-offer-' + esc(o.id) + '" data-via="' + esc(via) + '" data-excluded="' + (excluded ? '1' : '0') + '" title="' + esc(terms + (win ? ' · ' + win : '')) + '" style="opacity:.85;cursor:default">' + (excluded ? '✕ ' : '✓ ') + esc(o.name)
-          + ' <button type="button" data-testid="cat-offer-exclude-' + esc(o.id) + '" onclick="prodOfferExcludeToggle(\'' + esc(pid) + '\',\'' + esc(o.id) + '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);cursor:pointer;padding:0 6px">' + (excluded ? esc(tx('include')) : esc(tx('exclude'))) + '</button>'
+          + ' <button type="button" data-testid="cat-offer-exclude-' + esc(o.id) + '" onclick="prodOfferExcludeToggle(\'' + esc(pid) + '\',\'' + esc(o.id) + '\', this)" style="margin-inline-start:6px;font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--on-bg);cursor:pointer;padding:0 6px">' + (excluded ? esc(tx('include')) : esc(tx('exclude'))) + '</button>'
           + ' <span style="font-weight:400;color:var(--grey)">' + esc(tx('via category') + ' ' + via) + '</span></span>';
         return '<button type="button" class="ctcatg' + (on ? ' on' : '') + '"'
           + ' data-testid="cat-offer-' + esc(o.id) + '"'
@@ -14176,7 +14176,7 @@ function prodMediaTab(d, edit){
                 + `<div style="display:flex;gap:6px;margin-top:8px;align-items:center"><input class="inp" id="ct_media_link" data-testid="cat-field-media-link" placeholder="${esc(tx('YouTube or Vimeo link'))}" style="flex:1"><button class="composebtn" data-testid="cat-media-link-add" onclick="prodMediaLink('${esc(id)}')">${tx('Add video')}</button></div>`
                 + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">${tx('A video is a link — it plays inside the storefront from where it is hosted.')}</div></div>` : '');
   }
-  const tile=(x)=>`<div data-testid="prod-media-${esc(x.id)}" style="position:relative;width:140px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--paper)">`
+  const tile=(x)=>`<div data-testid="prod-media-${esc(x.id)}" style="position:relative;width:140px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--paper);color:var(--on-bg)">`
     + (x.kind==='video' ? `<video src="${esc(prodMediaUrl(id,x.id))}" controls preload="metadata" style="width:100%;height:100px;object-fit:cover;display:block"></video>` : x.kind==='image' ? `<img src="${esc(prodMediaUrl(id,x.id))}" alt="${esc(x.name||'')}" loading="lazy" style="width:100%;height:100px;object-fit:cover;display:block">` : `<div style="height:100px;display:flex;align-items:center;justify-content:center;color:var(--grey)">📄</div>`)
     + `<div style="padding:4px 6px;font-size:var(--fs-1);color:var(--grey);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(x.name||'')}">${esc(x.name||'')}</div>`
     + (edit ? `<button class="composebtn" data-testid="prod-media-del-${esc(x.id)}" style="position:absolute;top:4px;inset-inline-end:4px;padding:2px 6px" onclick="prodMediaRemove('${esc(id)}','${esc(x.id)}')">✕</button>` : '')
@@ -15392,7 +15392,7 @@ function chitMarkPaid(id, amount){
   modal(`<div class="mhd"><div class="t">${esc(tx('Mark paid'))}</div><div class="s">${esc(tx('What you received, and the reference on it'))}</div></div><div class="mbody" style="display:grid;gap:8px">
     <select class="inp" id="pay_method" data-testid="pay-method"><option value="upi">UPI</option><option value="cash">${esc(tx('Cash'))}</option><option value="card">${esc(tx('Card'))}</option><option value="bank">${esc(tx('Bank transfer'))}</option><option value="other">${esc(tx('Other'))}</option></select>
     <input class="inp" id="pay_ref" data-testid="pay-ref" placeholder="${esc(tx('UPI transaction id / reference'))}">
-    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
+    <span class="cbdef-adorn" style="display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--on-card);overflow:hidden"><b style="padding:0 10px;color:var(--grey-2);font-size:var(--fs-2)">${esc((typeof CBLocale!=='undefined'&&CBLocale.symbol)?CBLocale.symbol((SESSION&&SESSION.currency)||'INR'):'₹')}</b><input class="inp" id="pay_amount" data-testid="pay-amount" type="number" step="0.01" value="${esc(String(amount||''))}" placeholder="${esc(tx('Amount'))}" style="border:0;margin:0;flex:1;min-width:0;background:transparent"></span></div>
     <div class="mfoot"><button onclick="closeModal()">${esc(tx('Cancel'))}</button><button class="pri" id="mok" data-testid="pay-ok" onclick="chitPaySubmit('${id}')">${esc(tx('Record'))}</button></div>`);
 }
 async function chitPaySubmit(id){
