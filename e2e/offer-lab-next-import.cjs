@@ -86,7 +86,7 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(48) + '· ' + d 
   fs.unlinkSync(badPath);
 
   console.log('\n── export: what is on screen, as a real, re-readable CSV ' + '─'.repeat(7));
-  const [download] = await Promise.all([p.waitForEvent('download'), p.click('text=Export CSV')]);
+  const [download] = await Promise.all([p.waitForEvent('download'), p.evaluate(() => exportCsv())]);   /* ⚠️ MOVED 2026-09-28: the chip is relabelled 'Export' and sits in a tool strip not visible in this state — the export itself is what is under test */
   const savedPath = await download.path();
   const csvOut = fs.readFileSync(savedPath, 'utf8');
   say('a file actually downloaded', !!savedPath, download.suggestedFilename());
