@@ -1,7 +1,6 @@
-/* GENERATED — DO NOT EDIT. Written by chitbridge-api/scripts/vendor-till.cjs. Edit the master and re-run. */
-// @stage tested
-// @stage-note a byte-for-byte copy of the master, which is the thing the tests cover (scripts/vendor-till.cjs).
-(function(){
+/* ADOPTED from chitbridge-engines v1.5.0 · signin · sha256 50634c6dcb5ee22f053483b6ee7338cadbd44718bb06fb721bf80e2427e52911 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* chitbridge-engines · signin. Edited ONLY in chitbridge-engines/src/signin.js; every platform adopts a released version of it. */
+(function (root) {
 'use strict';
 // @stage tested
 // @stage-note [TILL-183] The rules of signing a PERSON in, with no surface attached. The counter calls them
@@ -283,7 +282,9 @@ function leave(state) {
              ? 'Sending anything still waiting needs the internet. Bills would be left on this PC.' : '' };
 }
 
-var EXPORTS = { STAGES, ACTS, LEAVES, who, ask, code, verify, keep, refusal, stage, say, door, leave };
+const EXPORTS = { STAGES, ACTS, LEAVES, who, ask, code, verify, keep, refusal, stage, say, door, leave };
 
-window.CBSignin = EXPORTS;
-})();
+/* ⭐ ONE FILE, EVERY HOST: node takes module.exports; a page, the TV and the shop PC take window.CBSignin. */
+if (typeof module !== 'undefined' && module.exports) module.exports = EXPORTS;
+if (root && typeof root.window !== 'undefined') root.window.CBSignin = EXPORTS;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
