@@ -170,6 +170,8 @@ const NOT_A_LIST = {
     'the lazy-load dispatcher — its "rows" is the LOADING SPINNER shown until the real screen arrives',
   settingsScreen:
     'a fixed rail of SET_SECS (plus the 7 governance layers as sub-rows) — a menu, not records',
+  ledgerScreen:
+    'a fixed rail of BK_TABS (ten views: day book, ledgers, trial balance …) — a menu, not records; each view is a dated report',
   misScreen:
     'a fixed rail of MIS_BANDS — its own comment reads "FIVE FIXED ROWS"',
   catalogueSetupHubScreen:

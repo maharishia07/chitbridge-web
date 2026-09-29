@@ -1828,6 +1828,9 @@ const EP = {
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},
+  booksHealth:     {m:"GET",  p:"/api/books/health",                      ok:"y"},   // 404 = the Ledger is off for this shop → the door stays hidden
+  booksDues:       {m:"GET",  p:"/api/books/dues",                        ok:"y"},   // every party's balance + oldest due in one read (the row chips)
+  booksStatement:  {m:"GET",  p:"/api/books/party/:id/statement",         ok:"y"},
   platMis:         {m:"GET",  p:"/api/entities/mis",                       ok:"✓"},
   /* ⭐ the operator adds a population from the Platform strip. Root-gated server-side; there is deliberately
      no PUT and no DELETE — the code is stamped on every entity that joins it. */
@@ -4959,7 +4962,7 @@ const MENUS = {
        which may not be essential — we have already the supplier menu"*). It is the Other tab inside Suppliers.
        The screen and its routes are unchanged; only the door moved, because a shop should not have to decide
        which of two menus a purchase belongs to before it can record one. */
-    ["Business",[["platform","🛰️","Platform"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    ["Business",[["platform","🛰️","Platform"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["ledger","📒","Ledger"],["match","⚖️","Match"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     /* ⭐ REGISTER SITS UNDER INSIGHT — Athi, 2026-08-30: *"can we bring it under insight in the menu as a raida
        report so we can see all the open and closed stuff in a single place."* It was a topbar icon next to the
        key, which is where things that WATCH you live; a report is a place you GO. */
@@ -5038,7 +5041,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { match:'match', definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
+const CAP_OF = { match:'match', definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages', ledger:'books' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 /**
@@ -5061,7 +5064,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-09-28d';   /* ⚠️ bumped 2026-09-28 (a; b for cart.js's theme token and the cap-testing/cmdb/catsetup tooltips; c, d for cap-legend.js's CMDB record link) — cart/offers/pricing/variant/pick/cap-chit2/cap-admin/catalogue-model all changed since 17g, and a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-09-29a';   /* ⚠️ bumped 2026-09-28 (a; b for cart.js's theme token and the cap-testing/cmdb/catsetup tooltips; c, d for cap-legend.js's CMDB record link) — cart/offers/pricing/variant/pick/cap-chit2/cap-admin/catalogue-model all changed since 17g, and a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -5086,7 +5089,7 @@ const CAP_LOADED = {};
  * data, so a loading state that only fills the list would leave the exact half that misled him empty and
  * unexplained.
  */
-var CAP_TITLES = { matchScreen:'Match', misScreen:'Insight', profileScreen:'Profile', settingsScreen:'Settings',
+var CAP_TITLES = { ledgerScreen:'Ledger', matchScreen:'Match', misScreen:'Insight', profileScreen:'Profile', settingsScreen:'Settings',
   coassistsScreen:'Co-assists', assistReviewScreen:'Assistant review', disputesScreen:'Disputes',
   foldersScreen:'Folders', readinessScreen:'Trade ready', traceabilityScreen:'Traceability',
   networkScreen:'Network' };
@@ -5266,6 +5269,10 @@ function _renderApp(){
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)
   if(SESSION.token && role!=="customer" && SESSION._hdChecked===undefined){ SESSION._hdChecked=true;
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) bgRenderApp(); }).catch(function(){}); }
+  /* once per session: is the Ledger switched on for this shop? /api/books answers 404 when it is off, so the door
+     and the party blocks stay out of sight rather than opening onto an error. */
+  if(SESSION.token && role!=="customer" && SESSION._booksChecked===undefined){ SESSION._booksChecked=true;
+    api('booksHealth').then(function(r){ const was=SESSION.booksOn; SESSION.booksOn=!!(r&&r.enabled!==false); if(SESSION.booksOn&&!was){ ensureCap('books').then(function(){ bgRenderApp(); }).catch(function(){}); } }).catch(function(){ SESSION.booksOn=false; }); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
     /**
@@ -5629,7 +5636,7 @@ function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMa
  * signed-in user with no way to move. One role changed; the others keep working untouched.
  */
 function menuBody(M, role){
-  var gate = function(it){ var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
+  var gate = function(it){ if (it[0] === 'ledger' && SESSION.booksOn !== true) return false; var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
   if (!M.groups) {
     return '<div class="grp">' + tx('Mailbox') + '</div>' + M.top.map(menuBtn).join('')
       + '<div class="grp">' + (role === 'customer' ? 'More' : 'Manage') + '</div>'
@@ -8553,7 +8560,7 @@ function supRowHTML(x){
     : (x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">' + tx('📕 catalogue') + '</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>');
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
-    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span>${typeof partyDueChipHTML==='function'?partyDueChipHTML(x.supplier_entity_id):''}</div>
     ${supForYouHTML(x)}
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.user_id||x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
@@ -8681,7 +8688,7 @@ function supSlideHTML(){
   return '<div class="supslide" id="supslide">'
     + '<div class="supslide-h"><button class="supback" data-testid="sup-back" onclick="supClosePanel()">‹ Suppliers</button>'
       + '<div class="supslide-t">'+esc(supName(x))+(x.preferred?' <span style="color:#e0a92b">★</span>':'')+'</div></div>'
-    + '<div class="supslide-b">'+supInfoCardHTML(x)+'</div></div>';
+    + '<div class="supslide-b">'+supInfoCardHTML(x)+(SESSION.booksOn===true && typeof partyBooksHTML==='function' && x.supplier_entity_id ? partyBooksHTML('supplier', x.supplier_entity_id, x) : '')+'</div></div>';
 }
 /* ══ WHICH OF MY SUPPLIERS SELLS THIS? ════════════════════════════════════════════════════════════════════════
    Athi, 2026-08-16: *"do we have a chance to seach the product under all the suppliers, similar to network?"*
@@ -10307,7 +10314,7 @@ function customersScreen(){
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
 function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_count||0);
-  return '<div class="row '+(sel?'sel':'')+'" data-testid="cust-row-'+esc(c.customer_identity_id)+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+  return '<div class="row '+(sel?'sel':'')+'" data-testid="cust-row-'+esc(c.customer_identity_id)+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+(typeof partyDueChipHTML==='function'?partyDueChipHTML(c.customer_identity_id):'')+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
 function custRowsHTML(){
   custCtl();
   /* ⚠️ "No customers yet" and "nothing matches ravi" are different sentences, and showing the first when the
@@ -10358,6 +10365,7 @@ function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.custom
      */
     + grp('Points', '<div id="cu_rw" data-testid="cust-rewards">'
         + '<div class="kv" style="padding:9px 13px;color:var(--grey);font-size:var(--fs-1)">' + tx('Reading…') + '</div></div>')
+    + (SESSION.booksOn===true && typeof partyBooksHTML==='function' ? partyBooksHTML('customer', c.customer_identity_id, c) : '')
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">Signed in / ordered through your storefront. ' + txf('This customer exists {only} — the platform never shares them with anyone else.', { only: '<b>' + tx('only under your shop') + '</b>' }) + '</div></div>';
 }
 /* ⭐ NAMED GROUPS (decision 2, Athi 2026-09-06: "we should be having option to name them"): the seller's own group names as chips — tick to
@@ -10421,16 +10429,18 @@ async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(e
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{ var r=await api('custList'); UI.custs=(r&&r.customers)||(Array.isArray(r)?r:[]); UI._custLoading=false; paintCustList();
+  try{ var r=await api('custList'); UI.custs=(r&&r.customers)||(Array.isArray(r)?r:[]); UI._custLoading=false; paintCustList(); booksDuesAfterList();
     if(UI.custSel && !UI.custs.some(function(x){return x.customer_identity_id===UI.custSel;})) UI.custSel=null;
     if(!UI.custSel && UI.custs.length && UI.vp!=='mob'){ selectCust(UI.custs[0].customer_identity_id); } else paintCustDetail();
   }catch(e){ UI._custLoading=false; var rb2=document.getElementById('cu_rows'); if(rb2)rb2.innerHTML=scrErr(e,'customers','loadCustomers()'); }
 }
+/** the row chips' one read — only when the Ledger is on; cap-books is fetched on first need, never pre-loaded */
+function booksDuesAfterList(){ if(SESSION.booksOn!==true) return; ensureCap('books').then(function(){ if(typeof booksDuesLoad==='function') booksDuesLoad(); }).catch(function(){}); }
 async function loadSuppliers(){
   UI._supLoading=true; const rb=document.getElementById('sup_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
     const r=await api("supList"); UI.sups=Array.isArray(r)?r:((r&&r.suppliers)||[]);
-    UI._supLoading=false; paintSupList();
+    UI._supLoading=false; paintSupList(); booksDuesAfterList();
     if(UI.supSel && !UI.sups.some(s=>s.supplier_list_id===UI.supSel)){ UI.supSel=null; UI.supDet=null; supCartRelease(); }
     if(!UI.supSel && UI.sups.length && UI.vp!=='mob'){ selectSupplier(UI.sups[0].supplier_list_id, true); }
     else paintSupDetail();
@@ -15211,6 +15221,7 @@ function mainBody(){
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="supplies") return capScreen("suppliesScreen");
   if(UI.nav==="customers") return customersScreen();
+  if(UI.nav==="ledger") return SESSION.booksOn===true ? capScreen("ledgerScreen") : emptyState('📒', tx('Ledger is off'), '');
   if(UI.nav==="platform") return platformScreen();
   /**
    * ⚠️⚠️ NOT AN ENTRY POINT — A DETAIL SCREEN. Athi, 2026-09-02: *"we have catalogue setup and set up your
