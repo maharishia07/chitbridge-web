@@ -56,7 +56,14 @@ function bkMoney(minor, c) {
 function bkToMinor(v, c) { var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? Math.round(n * Math.pow(10, bkDec(c))) : NaN; }
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
 function bkToday() { return new Date().toISOString().slice(0, 10); }
-function bkErr(e) { return esc((e && e.message) || tx('Could not be read')); }
+/** ⭐ ONE door for a failure's words: the app's verdict table (friendlyErr, app.html) first, the screen's own fallback
+ *  when the server said nothing — never a second table here, never a raw message pasted into a pane. */
+function bkWhy(e, fallback) {
+  var m = (e && e.message) || '';
+  if (!m) return fallback || tx('Could not be read');
+  return typeof friendlyErr === 'function' ? friendlyErr(e) : m;
+}
+function bkErr(e) { return esc(bkWhy(e, tx('Could not be read'))); }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
 var BK = { dues: null, duesAt: 0, stmt: {}, tab: 'daybook' };
@@ -169,7 +176,7 @@ function partyDupCheck(kind, partyId) {
   var all = (UI.custs || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name, tax: c.tax_ids }; })
     .concat((UI.sups || []).map(function (s) { return { id: s.supplier_entity_id, name: s.display_name || s.nickname, tax: s.tax_ids }; }));
   var hit = all.filter(function (p) { return p.id !== partyId && (p.tax || []).some(function (t) { return t.scheme === sc && String(t.value).toUpperCase() === v; }); })[0];
-  box.textContent = hit ? txf('{name} already has this {scheme}. Same business?', { name: hit.name || '', scheme: sc }) : '';
+  box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: sc }) : '';
 }
 async function partyEditSave(kind, partyId) {
   var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
@@ -179,8 +186,8 @@ async function partyEditSave(kind, partyId) {
   var body = { legal_name: g('pe_legal') || null, nickname: g('pe_nick') || null, state_code: g('pe_state') || null,
     credit_days: days === '' ? null : parseInt(days, 10), credit_limit_minor: lim === '' ? null : bkToMinor(lim),
     tax_ids: g('pe_taxid') ? [{ scheme: g('pe_scheme'), value: g('pe_taxid').toUpperCase() }] : [] };
-  if (body.credit_days != null && !(body.credit_days >= 0)) { toast(tx('Credit days is a whole number')); return; }
-  if (body.credit_limit_minor != null && !(body.credit_limit_minor >= 0)) { toast(tx('The credit limit is an amount')); return; }
+  if (body.credit_days != null && !(body.credit_days >= 0)) { toast(tx('Credit days: a whole number')); return; }
+  if (body.credit_limit_minor != null && !(body.credit_limit_minor >= 0)) { toast(tx('Credit limit: an amount')); return; }
   try {
     await api(kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: listId }, body: body });
     Object.assign(r, body);
@@ -188,7 +195,7 @@ async function partyEditSave(kind, partyId) {
     if (kind === 'supplier') { if (typeof paintSupSlide === 'function') paintSupSlide(); } else if (typeof paintCustDetail === 'function') paintCustDetail();
   } catch (e) {
     /* the server's own duplicate check (409 DUPLICATE_PARTY) says the same as the warning, with authority */
-    var box = document.getElementById('pe_dup'); if (box) box.textContent = (e && e.message) || tx('Could not save');
+    var box = document.getElementById('pe_dup'); if (box) box.textContent = bkWhy(e, tx('Could not save'));
   }
 }
 
@@ -219,24 +226,24 @@ async function payRecord() {
     PAY.id = r && r.payment && r.payment.payment_id; PAY.amount = amt;
     /* ⭐ C3: a cheque counts on CLEARING — nothing to match yet, and it says so */
     if (r && r.payment && r.payment.status === 'cheque_received') {
-      document.getElementById('pay_body').innerHTML = '<p data-testid="pay_cheque_note">' + tx('Cheque received. It is matched to bills when it clears.') + '</p>';
+      document.getElementById('pay_body').innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>';
       document.getElementById('pay_foot').innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
       return;
     }
     var p = await api('booksPayPropose', { params: { id: PAY.id } });
     PAY.proposal = p;
     payProposalPaint();
-  } catch (e) { if (why) why.textContent = (e && e.message) || tx('Could not record it'); }
+  } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not record it')); }
 }
 /** ⭐ D1: the rule PROPOSES (oldest due first); the person changes it if they want; a disputed bill cannot take anything */
 function payProposalPaint() {
   var p = PAY.proposal || {}, rows = p.proposal || [];
   var body = document.getElementById('pay_body'); if (!body) return;
-  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + txf('{amt} — oldest due first. Change any amount.', { amt: bkMoney(PAY.amount) }) + '</div>'
+  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey)">' + txf('{amt}, oldest due first — change any amount', { amt: bkMoney(PAY.amount) }) + '</div>'
     + '<table class="bktab" style="width:100%;font-size:var(--fs-1)"><thead><tr><th>' + tx('Bill') + '</th><th>' + tx('Due') + '</th><th class="num">' + tx('Open') + '</th><th class="num">' + tx('Apply') + '</th></tr></thead><tbody>'
     + rows.map(function (it, i) {
         return '<tr data-testid="alloc-row-' + i + '"><td class="mono">' + esc(it.bill_no || it.against_ref) + (it.disputed ? ' <span class="optchip" style="color:var(--warn-2)">' + tx('disputed') + '</span>' : '') + '</td><td>' + esc(bkDate(it.due_date)) + '</td><td class="num">' + esc(bkMoney(it.open_minor)) + '</td>'
-          + '<td class="num"><input class="inp" data-testid="alloc-' + i + '" id="alloc_' + i + '" style="width:110px;text-align:end" inputmode="decimal" ' + (it.disputed ? 'disabled title="' + esc(tx('In dispute — nothing can be applied until it is settled')) + '"' : '') + ' value="' + esc(it.apply_minor ? (it.apply_minor / Math.pow(10, bkDec())) : '') + '" oninput="payLeftPaint()"></td></tr>';
+          + '<td class="num"><input class="inp" data-testid="alloc-' + i + '" id="alloc_' + i + '" style="width:110px;text-align:end" inputmode="decimal" ' + (it.disputed ? 'disabled title="' + esc(tx('In dispute · settle it first')) + '"' : '') + ' value="' + esc(it.apply_minor ? (it.apply_minor / Math.pow(10, bkDec())) : '') + '" oninput="payLeftPaint()"></td></tr>';
       }).join('') + '</tbody></table>'
     + '<div data-testid="pay_left" id="pay_left" style="font-size:var(--fs-1)"></div><div id="pay_why" data-testid="pay_why" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
   document.getElementById('pay_foot').innerHTML = '<button onclick="closeModal()">' + tx('Later') + '</button><button class="pri" data-testid="pay_confirm" onclick="payConfirm()">' + tx('Confirm') + '</button>';
@@ -260,12 +267,12 @@ async function payConfirm() {
   /* the same refusals the engine makes (check), said before the round trip — the server still decides */
   var bad = a.filter(function (x) { return x.amount_minor < 0 || !isFinite(x.amount_minor) || x.amount_minor > x.open_minor || (x.disputed && x.amount_minor > 0); })[0];
   var used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0);
-  if (bad) { if (why) why.textContent = bad.disputed ? tx('A disputed bill cannot take a payment.') : tx('An amount is more than that bill has open.'); return; }
-  if (used > PAY.amount) { if (why) why.textContent = tx('More is applied than was paid.'); return; }
+  if (bad) { if (why) why.textContent = bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open'); return; }
+  if (used > PAY.amount) { if (why) why.textContent = tx('More applied than paid'); return; }
   try {
     await api('booksPayConfirm', { params: { id: PAY.id }, body: { allocations: a.filter(function (x) { return x.amount_minor > 0; }).map(function (x) { return { against_ref: x.against_ref, amount_minor: x.amount_minor }; }) } });
     closeModal(); toast(tx('Saved')); booksAfterPay();
-  } catch (e) { if (why) why.textContent = (e && e.message) || tx('Could not confirm'); }
+  } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not confirm')); }
 }
 function booksAfterPay() {
   if (PAY) { delete BK.stmt[PAY.partyId]; }
@@ -317,7 +324,7 @@ async function bkDaybook(body) {
       return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3">' + esc(e.narration || e.event_type || '') + '</td></tr>'
         + (e.lines || []).map(function (l) { return '<tr><td></td><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     }).join('');
-    body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing posted in these dates'), ''));
+    body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 async function bkLedgers(body) {
@@ -387,46 +394,50 @@ async function bkDues(body) {
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
+var BK_MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+/** the period's status is a server enum — it becomes a word here, never shown raw */
+var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
 function bkLockView(body) {
-  var months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
+  var months = BK_MONTHS;
   body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">'
     + '<label>' + tx('Year') + '<input class="inp" id="lk_fy" data-testid="lk_fy" value="' + bkFyNow() + '"></label>'
     + '<label>' + tx('Month') + '<select class="inp" id="lk_p" data-testid="lk_p">' + months.map(function (m, i) { return '<option value="' + (i + 1) + '">' + tx(m) + '</option>'; }).join('') + '</select></label>'
     + '<label>' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why"></label>'
-    + '<div class="supacts" style="display:flex;gap:7px;flex-wrap:wrap"><button class="supact-pri" data-testid="lk_lock" onclick="bkLockDo(\'lock\')" title="' + esc(tx('Stops new entries in that month. It can be opened again, with a reason.')) + '">🔒 ' + tx('Lock') + '</button>'
+    + '<div class="supacts" style="display:flex;gap:7px;flex-wrap:wrap"><button class="supact-pri" data-testid="lk_lock" onclick="bkLockDo(\'lock\')" title="' + esc(tx('Stops entries · reopens with a reason')) + '">🔒 ' + tx('Lock') + '</button>'
     + '<button data-testid="lk_unlock" onclick="bkLockDo(\'unlock\')">🔓 ' + tx('Open again') + '</button>'
-    + '<button data-testid="lk_hard" onclick="bkLockDo(\'hard\')" title="' + esc(tx('For the year end, after the accountant signs off. It cannot be opened again.')) + '">⛔ ' + tx('Close for good') + '</button></div>'
+    + '<button data-testid="lk_hard" onclick="bkLockDo(\'hard\')" title="' + esc(tx('Year end only · never opens again')) + '">⛔ ' + tx('Close for good') + '</button></div>'
     + '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
 }
 async function bkLockDo(what) {
   var fy = (document.getElementById('lk_fy') || {}).value, p = (document.getElementById('lk_p') || {}).value, why = (document.getElementById('lk_why') || {}).value || '';
   var out = document.getElementById('lk_out');
-  if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — it is kept with the change.'); return; }
-  if (what === 'hard' && !(await new Promise(function (res) { confirmAsk(tx('Close for good?'), esc(tx('This month can never be opened again.')), tx('Close for good'), function () { res(true); }, true, function () { res(false); }); }))) return;
+  if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); return; }
+  if (what === 'hard' && !(await new Promise(function (res) { confirmAsk(tx('Close for good?'), esc(tx('This month never opens again')), tx('Close for good'), function () { res(true); }, true, function () { res(false); }); }))) return;
   try {
     var r = await api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fy, p: p }, body: { reason: why, hard: what === 'hard' } });
-    if (out) out.textContent = txf('{fy} month {p}: {s}', { fy: fy, p: p, s: (r && r.period && r.period.status) || tx('done') });
-  } catch (e) { if (out) out.textContent = (e && e.message) || tx('Could not change it'); }
+    var st = r && r.period && r.period.status;
+    if (out) out.textContent = txf('{m} {fy} · {s}', { m: BK_MONTHS[parseInt(p, 10) - 1] || p, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
+  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not change it')); }
 }
 async function bkPacks(body) {
   try {
     var r = await api('booksPacks');
     var rows = ((r && r.packs) || []).map(function (k) {
-      return '<tr data-testid="pack-' + esc(k.pack_id) + '"><td>' + esc(k.kind) + '</td><td>' + esc(k.fiscal_year || '') + (k.period ? ' · ' + esc(k.period) : '') + '</td><td>' + esc(bkDate(k.created_at)) + '</td>'
+      return '<tr data-testid="pack-' + esc(k.pack_id) + '"><td>' + esc(tx({ month: 'Month', year: 'Year', exit: 'Exit' }[k.kind] || k.kind || '')) + '</td><td>' + esc(k.fiscal_year || '') + (k.period ? ' · ' + esc(k.period) : '') + '</td><td>' + esc(bkDate(k.created_at)) + '</td>'
         + '<td class="mono" title="' + esc(k.sha256 || '') + '">' + esc(String(k.sha256 || '').slice(0, 10)) + '</td>'
         + '<td>' + (k.acknowledged_at ? '✓ ' + esc(bkDate(k.acknowledged_at)) : '<div class="supacts" style="margin:0"><button data-testid="pack-ack-' + esc(k.pack_id) + '" onclick="bkPackAck(\'' + esc(k.pack_id) + '\')">' + tx('We have it') + '</button></div>') + '</td>'
         + '<td><div class="supacts" style="margin:0"><button data-testid="pack-get-' + esc(k.pack_id) + '" onclick="bkPackGet(\'' + esc(k.pack_id) + '\')">' + tx('Download') + '</button></div></td></tr>';
     }).join('');
     body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="pk_fy" data-testid="pk_fy" value="' + bkFyNow() + '" style="width:90px"><input class="inp" id="pk_p" data-testid="pk_p" placeholder="' + esc(tx('month 1–12')) + '" style="width:90px"><button class="supact-pri" data-testid="pk_build" onclick="bkPackBuild()">' + tx('Make a pack') + '</button></div>'
       + '<div id="pk_out" data-testid="pk_out" style="font-size:var(--fs-1)"></div>'
-      + (rows ? bkTable([{ t: tx('Kind') }, { t: tx('Period') }, { t: tx('Made') }, { t: tx('Fingerprint') }, { t: tx('Handed over') }, { t: '' }], rows) : emptyState('📦', tx('No packs yet'), tx('A month pack is made after the month is locked.')));
+      + (rows ? bkTable([{ t: tx('Kind') }, { t: tx('Period') }, { t: tx('Made') }, { t: tx('Fingerprint') }, { t: tx('Handed over') }, { t: '' }], rows) : emptyState('📦', tx('No packs yet'), tx('Lock a month first')));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 async function bkPackBuild() {
   var out = document.getElementById('pk_out');
   var fy = (document.getElementById('pk_fy') || {}).value, p = parseInt((document.getElementById('pk_p') || {}).value, 10);
   try { await api('booksPackBuild', { body: { kind: p ? 'month' : 'year', fiscal_year: fy, period: p || null } }); bkTab('packs'); }
-  catch (e) { if (out) out.textContent = (e && e.message) || tx('Could not make it'); }
+  catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not make it')); }
 }
 /** ⭐ the pack comes down with its manifest — the file list and fingerprints are what make it checkable */
 async function bkPackGet(id) {
@@ -438,11 +449,11 @@ async function bkPackGet(id) {
     var blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' });
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pack-' + id + '.json'; a.setAttribute('data-testid', 'pack-download-link'); document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  } catch (e) { if (out) out.textContent = (e && e.message) || tx('Could not download it'); }
+  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not download it')); }
 }
-async function bkPackAck(id) { try { await api('booksPackAck', { params: { id: id }, body: {} }); bkTab('packs'); } catch (e) { toast((e && e.message) || tx('Could not record it')); } }
+async function bkPackAck(id) { try { await api('booksPackAck', { params: { id: id }, body: {} }); bkTab('packs'); } catch (e) { toast(bkWhy(e, tx('Could not record it'))); } }
 function bkOpeningView(body) {
-  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + tx('One line each: code, party no, debit, credit, bill, due date') + '</div>'
+  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + tx('Per line: code, party no, debit, credit, bill, due date') + '</div>'
     + '<textarea class="inp" id="op_csv" data-testid="op_csv" rows="8" style="width:100%;font-family:var(--mono)" placeholder="1300,P-00001,5000,,INV-12,2026-10-15"></textarea>'
     + '<div class="supacts" style="display:flex;gap:7px;margin-top:7px"><button class="supact-pri" data-testid="op_go" onclick="bkOpeningGo()">' + tx('Enter opening balances') + '</button></div><div id="op_out" data-testid="op_out" style="font-size:var(--fs-1);margin-top:6px"></div>';
 }
@@ -459,8 +470,8 @@ async function bkOpeningGo() {
   if (bad.length) { if (out) out.textContent = txf('Line {n}: one amount, debit or credit.', { n: bad.join(', ') }); return; }
   try {
     var r = await api('booksOpening', { body: { rows: rows } });
-    if (out) out.textContent = txf('Entered as {no}.', { no: (r && r.entry_no) || '' }) + (r && r.suspense_minor ? ' ' + txf('{amt} did not balance and sits in Suspense.', { amt: bkMoney(r.suspense_minor) }) : '');
-  } catch (e) { if (out) out.textContent = (e && e.message) || tx('Could not enter them'); }
+    if (out) out.textContent = txf('Entered as {no}.', { no: (r && r.entry_no) || '' }) + (r && r.suspense_minor ? ' ' + txf('{amt} did not balance — held in Suspense', { amt: bkMoney(r.suspense_minor) }) : '');
+  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not enter them')); }
 }
 async function bkAccounts(body) {
   try {
@@ -475,5 +486,5 @@ async function bkAccountAdd() {
   var out = document.getElementById('ac_out');
   if (!n) { if (out) out.textContent = tx('Type a name'); return; }
   try { var r = await api('booksAccountAdd', { body: { name: n, parent_code: p } }); toast(txf('Added as {code}', { code: (r && r.account && r.account.code) || '' })); bkTab('accounts'); }
-  catch (e) { if (out) out.textContent = (e && e.message) || tx('Could not add it'); }
+  catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not add it')); }
 }

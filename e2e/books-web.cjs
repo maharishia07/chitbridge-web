@@ -265,7 +265,7 @@ async function route(S, r) {
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
   await p.selectOption('[data-testid="lk_p"]', sep);
   await p.click('[data-testid="lk_lock"]');
-  await p.waitForFunction(() => /soft_locked/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
+  await p.waitForFunction(() => /Locked/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true, 'this month locked');
   await p.click('[data-testid="nav-customers"]');
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
@@ -281,7 +281,7 @@ async function route(S, r) {
   ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk_out"]')), 'opening a month again without a reason is refused before sending');
   await p.fill('[data-testid="lk_why"]', 'late bill from Agro Mills');
   await p.click('[data-testid="lk_unlock"]');
-  await p.waitForFunction(() => /open/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
+  await p.waitForFunction(() => /Open/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 
   /* close for good: asks first; Cancel sends nothing, Yes sends hard */
@@ -291,7 +291,7 @@ async function route(S, r) {
   ok(S.lastLock === b4, 'close for good: Cancel sends nothing');
   await p.click('[data-testid="lk_hard"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
   await p.click('[data-testid="confirm-ok"]');
-  await p.waitForFunction(() => /hard_locked/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
+  await p.waitForFunction(() => /Closed for good/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
   ok(S.lastLock !== b4 && S.lastLock.body.hard === true, 'close for good: asked, then sent as a hard lock');
   S.locked[+sep] = false;
 
