@@ -1,0 +1,52 @@
+# ChitBridge — the design system (the pass mark for every screen)
+
+A screen is "according to standard" when it meets every line here. Cloud design sessions build against this file and
+prove it with the checks at the end; Athi judges the screenshots by eye; the prototype he accepts becomes the spec.
+
+## 1 · Who it is for
+A shopkeeper at a counter, often on a phone, often unable or unwilling to read a paragraph. Every screen says **what
+happened · what it means · what to do**, in that order, in the fewest words. A symbol, a digit or a colour beats a
+sentence. Never the words "accounting" or "books of account" — it is the **Ledger**.
+
+## 2 · Tokens (fixed — copy, never restyle)
+```css
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6;
+  --line:#DDD6C6; --line-soft:#E6E0D2; --hair:#F0ECE2;
+  --ink:#1D1B16; --muted:#5E594D; --faint:#8A8374; --ghost:#A8A295;
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+}
+```
+Type: **Bricolage Grotesque** (700/800) for display, **IBM Plex Sans** for UI, **IBM Plex Mono** with
+`font-variant-numeric: tabular-nums` for every figure. Base 15 px, line-height 1.45. Radius 12–16 px on cards, 9 px on
+buttons. Green = live/good, amber = needs a hand, red = wrong now, blue = a draft or a link.
+
+## 3 · The interface rules
+1. **Only a failing thing earns a row.** Everything that is fine collapses into one line; an empty alert block renders
+   nothing — no container, no border.
+2. **Every warning carries the button that fixes it.**
+3. **The same string never appears twice on one screen.**
+4. **`error.message` never reaches a user.** The screen says what happened in its own words.
+5. **Truncation is a bug.** Shorten the string; never widen the box; an inner scrollbar is truncation by another name.
+6. **One value, one control.** Preset buttons write into the field beside them and light up only while they match.
+7. **Maximum three columns**, anywhere. A fourth is refused, not scrolled.
+8. **Phone first.** Every screen works at 390 px with `document.scrollWidth === 390`; tables become one card per row
+   below 620 px and never scroll sideways; a 16 px side gutter.
+9. **More panes, not denser.** When a screen fills, split it; never shrink the type.
+10. **Hierarchy explains.** The arrangement carries the model (three boxes you live in, four Labs you visit); no
+    paragraph about the product on any screen.
+11. **A number is a reason to come back.** A tile with only a name is a menu item; give it one live fact. A fact that is
+    a problem is amber and is the same number as the alert above it.
+12. **Logic lives in engines.** The page paints; it computes nothing a counter or another page also computes.
+
+## 4 · The checks (all must pass; a cloud session runs them and commits the output)
+- `node scripts/check-syntax.js` and `node scripts/check-app-parses.cjs` exit 0.
+- `node e2e/a11y-contrast.cjs <page>` — WCAG AA on every text/background pair.
+- A harness for the screen (Playwright, a stand-in API on a free port, never the live site) that asserts:
+  `document.scrollWidth === 390` at 390 px; no horizontal scroll at 1080 px; the word count budget the design states;
+  every alert has a fix button; no `alert()`; the strings "accounting" / "books of account" absent.
+- Screenshots committed under `e2e/shots/<screen>-{laptop,phone,alerts}.png`, taken by the harness.
+- The copy pass: strings fit the budget in `feedback-text-budget` (short, what happened · means · to do).
