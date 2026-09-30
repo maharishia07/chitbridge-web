@@ -131,6 +131,8 @@ const HARNESSES = [
   ['till-category.cjs',    'categories are shown the way quick keys are'],
   ['till-contrast.cjs',    'the counter’s own palette, measured'],
   ['till-pay-shot.cjs',    'pay is a card that comes to you, and there is still one way to take money'],
+  /* ⭐⭐⭐ BOOKS v2 (2026-09-29): Athi — "we are running offline and we have to have a bullet proof system". */
+  ['till-books-offline.cjs', 'a day at two counters taken OFFLINE arrives exactly once, balanced to the paisa; late bill = supplementary; restart and replay lose and double nothing'],
 ];
 
 /**
