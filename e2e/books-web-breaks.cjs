@@ -30,7 +30,7 @@ const BREAKS = [
   ['M12 bounce does not ask', CAP, `  if (to === 'bounced') {`, `  if (false) {`],
   ['M12 server cheques not listed', CAP, `  ((r && r.cheques) || []).forEach(bkChequeKeep);`, ``],
   ['M12 refused step swallowed', CAP, `    } catch (e) { say(bkWhy(e, tx('Could not change it'))); }`, `    } catch (e) { c.status = to; }`],
-  ['M12 waiting reason not shown', CAP, `esc(w.why || tx('No reason given'))`, `esc(tx('No reason given'))`],
+  ['M12 waiting reason not shown', CAP, `esc(w.reason || w.why || tx('No reason given'))`, `esc(tx('No reason given'))`],
   ['M12 retry not sent', CAP, `      await api('booksRetry', { body: {} });`, ``],
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
   ['F11 payable buckets have no column', CAP, `var cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,`, `var cols = BK_BUCKETS,`],
