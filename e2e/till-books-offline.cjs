@@ -194,7 +194,8 @@ function receive(body, line) {
 
 /* ══ one API front per counter, so each counter's line can be cut on its own ══════════════════════════════════ */
 function apiFront(name, tillId) {
-  const line = { name, dead: false, lossy: 0, lost: 0 };
+  /* books = the shop's ledger is ON (the snapshot says so, review M5) · hold = the line is up but no chit gets through */
+  const line = { name, dead: false, lossy: 0, lost: 0, books: true, hold: false };
   const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' };
   line.server = http.createServer(async (q, r) => {
     if (line.dead) return q.socket.destroy();                 /* ⚠️ the line is DOWN — no answer at all, as a real outage */
@@ -205,15 +206,16 @@ function apiFront(name, tillId) {
     const b = raw ? (() => { try { return JSON.parse(raw); } catch (_) { return {}; } })() : {};
     if (u === '/api/entities/register') return j(200, { message: 'sent', dev_otp: '123456' });
     if (u === '/api/entities/verify') return j(200, { token: 'T', identity: { identity_id: 'p-x', user_id: 'xclerk', display_name: 'X Clerk', identity_type: 'actor', entity_id: 'ent-x' } });
-    if (u === '/api/till/snapshot') return j(200, { at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
+    if (u === '/api/till/snapshot') return j(200, Object.assign(line.books ? { books: true } : {}, { at: new Date().toISOString(), version: 'x-1', entity_id: 'ent-x',
       shop: { name: 'Shop X', bridge_id: 'CB-X', currency: 'INR', pay: [{ id: 'cash', label: 'Cash' }, { id: 'upi', label: 'UPI' }, { id: 'card', label: 'Card' }] },
-      till: { suggested_id: tillId, assigned_id: tillId }, items: ITEMS, customers: CUSTOMERS });
+      till: { suggested_id: tillId, assigned_id: tillId }, items: ITEMS, customers: CUSTOMERS }));
     if (u.indexOf('/api/till/engine/') === 0) {
       const f = path.join(ENG, u.split('/').pop().replace(/\.js$/, '') + '.js');
       if (!fs.existsSync(f)) return j(404, {});
       r.writeHead(200, Object.assign({ 'content-type': 'application/javascript' }, cors)); return r.end(fs.readFileSync(f));
     }
     if (u === '/api/chits/send') {
+      if (line.hold) return q.socket.destroy();               /* never reached the server at all */
       const got = receive(b, line);
       if (line.lossy > 0 && !(got.out && got.out.duplicate)) { line.lossy--; line.lost++; return q.socket.destroy(); }  /* KEPT, answer lost */
       return j(got.code, got.out);
@@ -372,21 +374,49 @@ function apiFront(name, tillId) {
   try {
     await pc.goto('http://127.0.0.1:' + PORT + '/');
     await pc.waitForFunction(() => typeof AgentHost !== 'undefined' && S && S.shop && S.shop.name === 'Shop X' && (S.customers || []).length === 4, null, { timeout: 60000 });
+    L2.books = false;                                        /* ⚠️ C2 first reads a shop whose ledger is OFF */
     await br.goto('http://127.0.0.1:' + web.address().port + '/till.html');
     await br.waitForFunction(() => typeof refresh === 'function', null, { timeout: 30000 });
     await br.evaluate(() => refresh().catch(function(){}));
     await br.waitForFunction(() => S && S.shop && S.shop.name === 'Shop X' && (S.customers || []).length === 4 && (S.items || []).length === 3, null, { timeout: 30000 });
-    await signIn(pc); await signIn(br);
-    /* the owner's counter PIN on the browser counter (G2's book; kind 'entity' = the owner) */
-    await br.evaluate(async () => { var bk = pinBook(); bk['own-1'] = Object.assign({ id: 'own-1', kind: 'entity', name: 'Owner' }, await pinMake('4321'), { tries: 0 }); pinBookSave(bk); });
-
-    console.log('\n── ⭐ WHO IS KNOWN, and what the counter offers ' + '─'.repeat(0));
     const offer = async (p, name, phone) => p.evaluate(({ name, phone }) => {
       document.getElementById('cname').value = name; document.getElementById('cphone').value = phone; paintPays(); paintRcvPayBtn();
       var r = { credit: !!document.querySelector('[data-testid="till-pay-credit"]'), receive: !document.getElementById('rcvpaybtn').hidden };
       document.getElementById('cname').value = ''; document.getElementById('cphone').value = ''; paintPays(); paintRcvPayBtn();
       return r;
     }, { name, phone });
+    const shopRead = (n) => br.waitForFunction((k) => S && S.shop && S.shop.name === 'Shop X' && (S.customers || []).length === 4 && (S.items || []).length === 3 && (k == null || (S.books === true) === k), n, { timeout: 30000 });
+    console.log('\n── ⚠️⚠️ THE LEDGER IS OFF FOR THIS SHOP: no credit, no "Received" — online or not (review M5) ' + '─'.repeat(0));
+    const off1 = await offer(br, 'Latha', ''), off2 = await offer(br, '', '98765 00001');
+    say('⚠️⚠️ ledger OFF: a known customer is offered neither On credit nor Received', !off1.credit && !off1.receive && !off2.credit && !off2.receive, JSON.stringify([off1, off2]));
+    const offForced = await br.evaluate(async () => { document.getElementById('cname').value = 'Latha'; rcvPayOpen();
+      var d = document.getElementById('askdlg'), t = d && d.open ? d.innerText.replace(/\s+/g, ' ') : '', o = !!document.getElementById('rcvpaydlg').open;
+      try { d.close(); } catch (_) {} try { document.getElementById('rcvpaydlg').close(); } catch (_) {} document.getElementById('cname').value = ''; return { said: t, open: o }; });
+    say('and asking for Received anyway is refused in words, nothing opened', /Ledger is off/.test(offForced.said) && !offForced.open, offForced.said.slice(0, 70));
+    L2.dead = true; await br.reload(); await shopRead(false);
+    const off3 = await offer(br, 'Latha', '');
+    say('ledger OFF with the line down (the kept copy): still neither', !off3.credit && !off3.receive, JSON.stringify(off3));
+    L2.dead = false; L2.books = true;                        /* the owner turns the ledger on; the counter reads the shop again */
+    await br.evaluate(() => refresh().catch(function(){})); await shopRead(true);
+    const on1 = await offer(br, 'Latha', '');
+    say('ledger ON: the same customer now gets both', on1.credit && on1.receive, JSON.stringify(on1));
+    L2.dead = true; await br.reload(); await shopRead(true);
+    const on2 = await offer(br, 'Latha', '');
+    say('⭐ and the flag is KEPT with the snapshot: both are still there with the line down', on2.credit && on2.receive, JSON.stringify(on2));
+    L2.dead = false;
+    /* the line is back: open the counter afresh (its record of failed tries is per page-load, and sign-in asks
+       lineUp()), then wait for a snapshot NEWER than the kept copy */
+    const keptAt = await br.evaluate(() => S.at);
+    await br.reload();
+    await br.waitForFunction(() => typeof refresh === 'function' && typeof S !== 'undefined' && S && S.at, null, { timeout: 30000 });
+    await br.evaluate(() => refresh().catch(function(){}));
+    await br.waitForFunction((t) => S && S.at && S.at > t, keptAt, { timeout: 30000 });
+    await signIn(pc); await signIn(br);
+    /* the owner's counter PIN on the browser counter (G2's book; kind 'entity' = the owner) */
+    await br.evaluate(async () => { var bk = pinBook(); bk['own-1'] = Object.assign({ id: 'own-1', kind: 'entity', name: 'Owner' }, await pinMake('4321'), { tries: 0 }); pinBookSave(bk); });
+
+    console.log('\n── ⭐ WHO IS KNOWN, and what the counter offers ' + '─'.repeat(0));
+    /* (offer() itself moved up, to the ledger-off block — the four assertions below are unchanged) */
     const o1 = await offer(br, '', ''), o2 = await offer(br, 'Mani', ''), o3 = await offer(br, 'Latha', ''), o4 = await offer(br, '', '98765 00001');
     say('a walk-in is offered no credit and no "Received"', !o1.credit && !o1.receive, JSON.stringify(o1));
     say('⚠️ two customers called Mani = nobody: no credit', !o2.credit && !o2.receive, JSON.stringify(o2));
@@ -436,6 +466,19 @@ function apiFront(name, tillId) {
     const p22 = await receivePay(br, chq1);
     say('a cheque WITH its number is recorded, "received, not cleared"', /^R\/C2\//.test(p22) && /applied when it clears/.test(chq1.proposal) && /not cleared/.test(chq1.note), p22 || (chq1.said + ' | ' + chq1.note));
 
+    /* ⚠️⚠️ review F4: the line returns, the SNAPSHOT is read again, and the queue has not gone yet (no chit gets through) */
+    const owedOf = (p, id) => p.evaluate(async (id) => { var c = (S.customers || []).filter(function(x){ return x.identity_id === id; })[0];
+      var since = await creditSinceRefresh(c), k = creditLimitCheck(c, 0); return { since: since, owed: k.owed, at: S.at }; }, id);
+    const atWas = await br.evaluate(() => S.at);
+    L2.hold = true; L2.dead = false;
+    await br.evaluate(() => refresh().catch(function(){}));
+    await br.waitForFunction((t) => S && S.at && S.at > t, atWas, { timeout: 30000 });
+    const f4 = await owedOf(br, 'id-kumar'), f4q = await br.evaluate(async () => (await DB.all('queue')).length);
+    L2.dead = true; L2.hold = false;
+    /* ₹200 at the snapshot (the server has seen none of today's bills) + ₹91.50 + ₹840 still in the queue */
+    say('⚠️⚠️ a NEWER snapshot does not hide the credit bills still waiting to be sent', f4q >= 2 && Math.round(f4.owed * 100) === 113150 && Math.round(f4.since * 100) === 93150 && LEDGER.kept.size === 0,
+      'owes ₹' + f4.owed + ' (₹' + f4.since + ' unsent) · queue ' + f4q + ' · snapshot ' + String(f4.at).slice(11, 19) + ' > ' + String(atWas).slice(11, 19));
+
     /* C1 — the shop PC */
     const w11 = await sell(pc, { items: ['RICE'], pay: 'cash', tendered: 60 });
     const w12 = await sell(pc, { items: ['SOAP', 'MILK'], pay: 'upi' });
@@ -460,6 +503,15 @@ function apiFront(name, tillId) {
     const p11o = { phone: '9876500001', amount: 30, mode: 'upi' };
     const p11 = await receivePay(pc, p11o);
     say('money received on the shop PC: the program\'s own R series', /^R\/C1\//.test(p11), p11);
+    /* the same on the shop PC: its program reads the shop again with the queue still full — Latha's bill is unsent */
+    const at1 = await pc.evaluate(() => S.at);
+    L1.hold = true; L1.dead = false;
+    await fetch('http://127.0.0.1:' + PORT + '/api/refresh', { method: 'POST' }).catch(() => {});
+    await pc.evaluate(() => refresh().catch(function(){}));
+    await pc.waitForFunction((t) => S && S.at && S.at > t, at1, { timeout: 30000 });
+    const f4pc = await owedOf(pc, 'id-latha');
+    L1.dead = true; L1.hold = false;
+    say('⚠️⚠️ and on the shop PC: the program\'s unsent credit bill still counts after a newer snapshot', Math.round(f4pc.since * 100) === 5400 && LEDGER.kept.size === 0, '₹' + f4pc.since + ' unsent for Latha');
     await pc.screenshot({ path: path.join(SHOTS, '1-c1-offline.png') });
     await br.screenshot({ path: path.join(SHOTS, '1-c2-offline.png') });
 
