@@ -43,7 +43,7 @@ function standIn() {
     waiting: [{ id: 1, chit_id: 'ch7', ref: 'bill:ch7', why: 'Paid by Points — there is no ledger for Points yet.', tries: 3, since: '2026-09-28T10:00:00Z' },
               { id: 2, chit_id: 'ch8', ref: 'chit:ch8', why: 'September is locked. Open it again to record this bill.', tries: 1, since: '2026-09-29T09:00:00Z', stuck: true }],
     /* a cheque the server itself lists as held (recorded at the counter, or in an earlier session) */
-    serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' }],
+    chequeLists: 0, serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' }],
   };
   S.balance = (id) => S.items[id].reduce((a, x) => a + x.open_minor, 0);
   S.statement = (id) => {
@@ -78,7 +78,8 @@ async function route(S, r) {
   if (p.startsWith('/api/books')) {
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
-    if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, why: w.why, tries: w.tries, since: w.since })), cheques: S.serverCheques });
+    if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, job: 'chit' })) });   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
+    if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; return J(r, 200, { currency: 'INR', cheques: S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c)) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
     if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries++; const n = S.waiting.length; S.waiting = S.waiting.filter((w) => w.stuck); return J(r, 200, { ok: true, tried: n, posted: n - S.waiting.length }); }
     if ((x = p.match(/^\/api\/books\/cheques\/([^/]+)\/status$/)) && m === 'POST') {
       S.chequeSteps.push({ id: x[1], body });
@@ -299,8 +300,8 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="pay_cheque_note"]', { timeout: 8000 }).catch(() => {});
   const chqId = Object.keys(S.payments).find((k) => S.payments[k].mode === 'cheque');
   ok(!!chqId && S.payPosts[S.payPosts.length - 1].client_ref !== S.payPosts[0].client_ref, 'a new form has a NEW client_ref, so the cheque is its own payment');
-  ok(await p.locator('[data-testid="chq-deposited-' + chqId + '"]').count() === 1 && await p.locator('[data-testid="chq-bounced-' + chqId + '"]').count() === 1
-    && await p.locator('[data-testid="chq-cleared-' + chqId + '"]').count() === 0, 'a cheque just received offers Deposited and Bounced (not Cleared yet)');
+  ok(await p.locator('[data-testid="chq-deposited-' + chqId + '"]').count() === 1 && await p.locator('[data-testid="chq-bounced-' + chqId + '"]').count() === 0
+    && await p.locator('[data-testid="chq-cleared-' + chqId + '"]').count() === 0, 'a cheque just received offers Deposited only — it is deposited before it can clear or bounce (engines v1.8.1)');
   await p.click('[data-testid="chq-deposited-' + chqId + '"]');
   await p.waitForSelector('[data-testid="chq-cleared-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
   const st0 = S.chequeSteps[0] || {};
@@ -345,6 +346,18 @@ async function route(S, r) {
   await p.waitForFunction((id) => /Cleared/.test((document.querySelector('[data-testid="chq-status-' + id + '"]') || {}).textContent || ''), chqId, { timeout: 8000 }).catch(() => {});
   const st1 = S.chequeSteps[1] || {};
   ok(st1.id === chqId && JSON.stringify(st1.body) === JSON.stringify({ status: 'cleared' }) && /Cleared/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cleared → POST …/cheques/' + chqId + '/status {status:"cleared"}; the row says Cleared');
+  /* a cleared cheque offers no step at all — a later dishonour is an owner reversal, not a step (engines v1.8.1) */
+  ok(await p.locator('[data-testid^="chq-"][data-testid$="-' + chqId + '"]:is(button)').count() === 0, 'a cleared cheque offers no further step');
+  /* the server refuses a step: its words are shown, the row does not move (the button offered came from the server\'s `next`) */
+  S.refuseCheque = true;
+  await p.click('[data-testid="chq-deposited-chq9"]').catch(() => {});
+  await p.waitForFunction(() => ((document.querySelector('[data-testid="chq_out"]') || {}).textContent || '').trim() !== '', null, { timeout: 8000 }).catch(() => {});
+  ok(/cannot be/.test(await p.textContent('[data-testid="chq_out"]').catch(() => '')) && /Received/.test(await p.textContent('[data-testid="chq-status-chq9"]').catch(() => '')), 'a refused step shows the server\'s words and the row stays Received');
+  S.refuseCheque = false;
+  /* the held one from the server: only Deposited is offered (the server\'s `next`), then Cleared or Bounced */
+  ok(await p.locator('[data-testid="chq-bounced-chq9"]').count() === 0 && await p.locator('[data-testid="chq-deposited-chq9"]').count() === 1, 'a received cheque offers Deposited only — the steps come from the server');
+  await p.click('[data-testid="chq-deposited-chq9"]').catch(() => {});
+  await p.waitForFunction(() => /Deposited/.test((document.querySelector('[data-testid="chq-status-chq9"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   /* Bounced asks first: Cancel sends nothing, Yes sends it */
   const nSteps = S.chequeSteps.length;
   await p.click('[data-testid="chq-bounced-chq9"]').catch(() => {});
@@ -357,14 +370,7 @@ async function route(S, r) {
   await p.waitForFunction(() => /Bounced/.test((document.querySelector('[data-testid="chq-status-chq9"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   const st2 = S.chequeSteps[S.chequeSteps.length - 1] || {};
   ok(S.chequeSteps.length === nSteps + 1 && st2.id === 'chq9' && st2.body.status === 'bounced' && await p.locator('[data-testid^="chq-"][data-testid$="-chq9"]:is(button)').count() === 0, 'Bounced, confirmed → sent; a bounced cheque offers no further step');
-  /* the server refuses a step: its words are shown, the row does not move */
-  S.refuseCheque = true;
-  await p.click('[data-testid="chq-bounced-' + chqId + '"]').catch(() => {});
-  await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
-  await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
-  await p.waitForFunction(() => ((document.querySelector('[data-testid="chq_out"]') || {}).textContent || '').trim() !== '', null, { timeout: 8000 }).catch(() => {});
-  ok(/cannot be bounced/.test(await p.textContent('[data-testid="chq_out"]').catch(() => '')) && /Cleared/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'a refused step shows the server\'s words and the row stays Cleared');
-  S.refuseCheque = false;
+  ok(S.chequeLists >= 1, 'the Cheques view reads GET /api/books/cheques (' + S.chequeLists + ' reads)');
   await shot(p, '4b-cheques');
   await noAccounting(p, 'cheques');
 

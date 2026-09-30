@@ -29,6 +29,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksPackGet:    { m: 'GET',  p: '/api/books/packs/:id' },
   booksPackFile:   { m: 'GET',  p: '/api/books/packs/:id/file' },   /* the zip itself — fetched as bytes (bkPackGet), never through api() */
   booksPackAck:    { m: 'POST', p: '/api/books/packs/:id/ack' },
+  booksCheques:    { m: 'GET',  p: '/api/books/cheques' },           /* the cheques still held, each with the steps it may take next */
   booksChequeStep: { m: 'POST', p: '/api/books/cheques/:id/status' },
   booksRetry:      { m: 'POST', p: '/api/books/outbox/retry' },
 }); }
@@ -617,31 +618,35 @@ async function bkOpeningGo() {
  * screen ever called the step, so the customer's balance never moved. The steps are offered wherever a held cheque
  * is listed: in the Receive form the moment it is recorded, and on the Ledger's Cheques view.
  * ⭐ The server decides every step (a refusal is shown in its own words); this only remembers what it was told.
- * ⚠️ WHAT IS LISTED: the cheques recorded in this session, plus whatever /api/books/health sends as `cheques[]`. The
- * server does not list held cheques yet — until it does, one recorded earlier or at the counter is not reachable here.
+ * ⚠️ WHAT IS LISTED: GET /api/books/cheques (the cheques still held, from any session or the counter), plus the ones
+ * recorded in this session. Each server row carries `next` — the steps the engine accepts NOW; BK_CHQ_NEXT is only
+ * the fallback for a row that came without it, and says what the engine says: received → deposited → cleared or
+ * bounced; a cleared cheque later dishonoured is an owner reversal, not a step (engines v1.8.1).
  */
 BK.cheques = BK.cheques || {};
 var BK_CHQ_WORD = { received: 'Received', deposited: 'Deposited', cleared: 'Cleared', bounced: 'Bounced' };
-var BK_CHQ_NEXT = { received: ['deposited', 'bounced'], deposited: ['cleared', 'bounced'], cleared: ['bounced'], bounced: [] };
+var BK_CHQ_NEXT = { received: ['deposited'], deposited: ['cleared', 'bounced'], cleared: [], bounced: [] };
 function bkChequeStatus(s) { s = String(s || '').replace(/^cheque_/, ''); return BK_CHQ_WORD[s] ? s : 'received'; }
+function bkChequeNext(c) { return c && Array.isArray(c.next) ? c.next : (BK_CHQ_NEXT[c && c.status] || []); }
 function bkChequeKeep(c) {
   var id = c && (c.payment_id || c.id); if (!id) return null;
   var was = BK.cheques[id] || {};
   BK.cheques[id] = { payment_id: id, party_id: c.party_id || was.party_id || null, name: c.name || c.party_name || was.name || '',
     amount_minor: c.amount_minor != null ? c.amount_minor : was.amount_minor, currency: c.currency || was.currency || null,
     cheque_no: c.cheque_no || c.number || was.cheque_no || '', cheque_bank: c.cheque_bank || c.bank || was.cheque_bank || '',
-    cheque_date: c.cheque_date || c.date || was.cheque_date || null, status: bkChequeStatus(c.status || was.status) };
+    cheque_date: c.cheque_date || c.date || was.cheque_date || null, status: bkChequeStatus(c.status || was.status),
+    next: Array.isArray(c.next) ? c.next : (c.status ? null : (was.next || null)) };
   return BK.cheques[id];
 }
 function bkChequeStepsHTML(c) {
   if (!c) return '';
-  var id = esc(c.payment_id), next = BK_CHQ_NEXT[c.status] || [];
+  var id = esc(c.payment_id), next = bkChequeNext(c);
   return '<span data-testid="chq-status-' + id + '" style="font-weight:600">' + tx(BK_CHQ_WORD[c.status]) + '</span>'
     + (next.length ? ' <span class="supacts" style="display:inline-flex;gap:6px;margin:0 0 0 8px">' + next.map(function (s) {
         return '<button data-testid="chq-' + s + '-' + id + '" onclick="bkChequeStep(\'' + id + '\',\'' + s + '\')">' + tx(BK_CHQ_WORD[s]) + '</button>'; }).join('') + '</span>' : '');
 }
 async function bkChequeStep(id, to) {
-  var c = BK.cheques[id]; if (!c || (BK_CHQ_NEXT[c.status] || []).indexOf(to) < 0) return;
+  var c = BK.cheques[id]; if (!c || bkChequeNext(c).indexOf(to) < 0) return;
   /* a bounce puts the debt back (and reverses a cleared one) — asked first */
   var inForm = !!document.getElementById('pay_chq_steps');
   if (to === 'bounced') {
@@ -654,7 +659,7 @@ async function bkChequeStep(id, to) {
     document.querySelectorAll('[data-testid^="chq-"][data-testid$="-' + id + '"]').forEach(function (b) { if (b.tagName === 'BUTTON') b.disabled = true; });
     try {
       await api('booksChequeStep', { params: { id: id }, body: { status: to } });
-      c.status = to; say('');
+      c.status = to; c.next = null; say('');   /* the next steps are the engine's to say — the fallback table until the list is read again */
       if (to === 'cleared' || to === 'bounced') { delete BK.stmt[c.party_id]; booksDuesLoad(true); }
     } catch (e) { say(bkWhy(e, tx('Could not change it'))); }
     bkChequeRepaint(id);
@@ -666,12 +671,17 @@ function bkChequeRepaint(id) {
   var cell = document.querySelector('[data-testid="chq-steps-' + id + '"]'); if (cell) cell.innerHTML = bkChequeStepsHTML(c);
   var inForm = document.getElementById('pay_chq_steps'); if (inForm && PAY && PAY.id === id) inForm.innerHTML = bkChequeStepsHTML(c);
 }
-/** ONE read of /health for both views: the held cheques the server lists (if it does) and what is waiting */
+/** ONE read of /health: what is waiting (each row's `reason` is the server's sentence) */
 async function bkHealthLoad() {
   var r = await api('booksHealth');
-  ((r && r.cheques) || []).forEach(bkChequeKeep);
   BK.waiting = (r && r.waiting) || [];
   bkWaitingCount();
+  return r;
+}
+/** the cheques still held, from any session or the counter — the server's row wins over what this session remembers */
+async function bkChequesLoad() {
+  var r = await api('booksCheques');
+  ((r && r.cheques) || []).forEach(bkChequeKeep);
   return r;
 }
 function bkWaitingCount() {
@@ -681,7 +691,7 @@ function bkWaitingCount() {
 }
 async function bkChequesView(body) {
   try {
-    await bkHealthLoad();
+    await bkChequesLoad();
     var list = Object.keys(BK.cheques).map(function (k) { return BK.cheques[k]; });
     var rows = list.map(function (c) {
       var id = esc(c.payment_id);
@@ -701,7 +711,7 @@ async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
     var rows = (BK.waiting || []).map(function (w, i) {
-      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.why || tx('No reason given')) + '</td>'
+      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.reason || w.why || tx('No reason given')) + '</td>'
         + '<td class="mono">' + esc(w.ref || '') + '</td><td>' + esc(bkDate(w.since)) + '</td><td class="num">' + (w.tries ? txf('{n} tries', { n: w.tries }) : '') + '</td></tr>';
     }).join('');
     body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
