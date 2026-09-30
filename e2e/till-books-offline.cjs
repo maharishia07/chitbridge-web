@@ -446,7 +446,13 @@ function apiFront(name, tillId) {
     const r11 = await returnAll(pc, w12);
     say('a return on the shop PC', /^CN\/C1\//.test(r11), r11);
     await pc.evaluate(() => expOpen());
-    await pc.fill('#expamt', '20'); await pc.fill('#expwhat', 'Delivery boy');
+    /* the sheet repaints once after opening; a fill that lands before that repaint is lost and the button stays
+       disabled (seen 1 run in 2 on 2026-09-30) — fill until the button is live, then press it */
+    for (let i = 0; i < 5; i++) {
+      await pc.fill('#expamt', '20'); await pc.fill('#expwhat', 'Delivery boy');
+      if (await pc.evaluate(() => !document.getElementById('expgo').disabled)) break;
+      await pc.waitForTimeout(200);
+    }
     await pc.click('[data-testid="till-expense-go"]');
     await pc.waitForSelector('#askdlg[open]', { timeout: 10000 }); await pc.click('#askok');
     await pc.waitForSelector('[data-testid="till-expense-done"]', { timeout: 15000 });
