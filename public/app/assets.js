@@ -195,6 +195,7 @@ window.CBASSETS = {
     "lib/adopt.js",
     "lib/amend.js",
     "lib/assign.js",
+    "lib/books-hooks.js",
     "lib/catalogue-view.js",
     "lib/cost.js",
     "lib/deliverline.js",
@@ -645,6 +646,7 @@ window.CBASSETS = {
     "lib/measure.js",
     "lib/offers-engine.js",
     "lib/order-input.js",
+    "lib/party-fields.js",
     "lib/policy.js",
     "lib/public-facts.js",
     "lib/respond.js",
@@ -765,6 +767,8 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
+    "lib/books-engines.js",
+    "lib/books-hooks.js",
     "lib/catalogue-blueprint.js",
     "lib/catalogue-build.js",
     "lib/catalogue-read.js",
@@ -898,6 +902,7 @@ window.CBASSETS = {
    "stage": null,
    "draws": [],
    "uses": [
+    "lib/books-nightly.js",
     "lib/dev-otp.js",
     "lib/knownerr.js",
     "lib/logger.js",
@@ -907,6 +912,7 @@ window.CBASSETS = {
     "routes/adopt.js",
     "routes/assist.js",
     "routes/attachments.js",
+    "routes/books.js",
     "routes/capture.js",
     "routes/catalogue-face.js",
     "routes/catalogue.js",
@@ -1032,6 +1038,26 @@ window.CBASSETS = {
    "draws": [],
    "uses": [
     "lib/quick-keys.js",
+    "middleware/auth.js"
+   ]
+  },
+  {
+   "code": "API050",
+   "type": "API",
+   "kind": "Route",
+   "name": "books.js",
+   "path": "chitbridge-api/routes/books.js",
+   "group": "api.route",
+   "stage": "built",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-hooks.js",
+    "lib/books-nightly.js",
+    "lib/books-pack.js",
+    "lib/books-store.js",
+    "lib/books.js",
+    "lib/money.js",
     "middleware/auth.js"
    ]
   },
@@ -1363,6 +1389,19 @@ window.CBASSETS = {
     "RAL006",
     "WRK002",
     "APP001"
+   ],
+   "uses": []
+  },
+  {
+   "code": "CAP026",
+   "type": "CAP",
+   "kind": "Capability",
+   "name": "cap-books.js",
+   "path": "chitbridge-web/public/app/cap-books.js",
+   "group": "web.capability",
+   "stage": null,
+   "draws": [
+    "BUS014"
    ],
    "uses": []
   },
@@ -3524,6 +3563,192 @@ window.CBASSETS = {
    "uses": []
   },
   {
+   "code": "ENG175",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "accounts-packs.js",
+   "path": "chitbridge-api/lib/accounts-packs.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG176",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "bookpack.js",
+   "path": "chitbridge-api/lib/bookpack.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG177",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-engines.js",
+   "path": "chitbridge-api/lib/books-engines.js",
+   "group": "engine.adopted",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG178",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-hooks.js",
+   "path": "chitbridge-api/lib/books-hooks.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-store.js",
+    "lib/books.js",
+    "lib/logger.js",
+    "lib/money.js",
+    "lib/tax-copy.js"
+   ]
+  },
+  {
+   "code": "ENG179",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-nightly.js",
+   "path": "chitbridge-api/lib/books-nightly.js",
+   "group": "engine.infra",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-hooks.js",
+    "lib/books-store.js",
+    "lib/books.js",
+    "lib/logger.js",
+    "lib/party-fields.js"
+   ]
+  },
+  {
+   "code": "ENG180",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-pack.js",
+   "path": "chitbridge-api/lib/books-pack.js",
+   "group": "engine.infra",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-hooks.js",
+    "lib/books-store.js",
+    "lib/books-tally.js",
+    "lib/books.js",
+    "lib/money.js",
+    "lib/storage-object.js",
+    "lib/tax-copy.js",
+    "lib/tax-lines.js",
+    "lib/zip-store.js"
+   ]
+  },
+  {
+   "code": "ENG181",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-store.js",
+   "path": "chitbridge-api/lib/books-store.js",
+   "group": "engine.infra",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG182",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books-tally.js",
+   "path": "chitbridge-api/lib/books-tally.js",
+   "group": "engine.infra",
+   "stage": "tested",
+   "draws": [],
+   "uses": []
+  },
+  {
+   "code": "ENG183",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "books.js",
+   "path": "chitbridge-api/lib/books.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-hooks.js",
+    "lib/books-store.js",
+    "lib/logger.js",
+    "lib/money.js",
+    "lib/party-fields.js"
+   ]
+  },
+  {
+   "code": "ENG184",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "ledger.js",
+   "path": "chitbridge-api/lib/ledger.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/accounts-packs.js"
+   ]
+  },
+  {
+   "code": "ENG185",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "party-fields.js",
+   "path": "chitbridge-api/lib/party-fields.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/books-engines.js",
+    "lib/books-store.js",
+    "lib/money.js"
+   ]
+  },
+  {
+   "code": "ENG186",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "posting.js",
+   "path": "chitbridge-api/lib/posting.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/accounts-packs.js",
+    "lib/money.js"
+   ]
+  },
+  {
+   "code": "ENG187",
+   "type": "ENG",
+   "kind": "Engine",
+   "name": "receivables.js",
+   "path": "chitbridge-api/lib/receivables.js",
+   "group": "engine.other",
+   "stage": "tested",
+   "draws": [],
+   "uses": [
+    "lib/money.js"
+   ]
+  },
+  {
    "code": "WEB001",
    "type": "WEB",
    "kind": "Web part",
@@ -4231,8 +4456,10 @@ window.CBASSETS = {
   "CAT002": "chitbridge-web/public/app/cap-selfbill.js",
   "CAT003": "chitbridge-web/public/app/cap-categories.js",
   "CAT004": "chitbridge-web/public/app/cap-catsetup.js",
+  "BUS013": "chitbridge-web/public/app/cap-platform.js",
   "BUS001": "chitbridge-web/public/app/cap-customers.js",
   "BUS002": "chitbridge-web/public/app/cap-suppliers.js",
+  "BUS014": "chitbridge-web/public/app/cap-books.js",
   "BUS003": "chitbridge-web/public/app/cap-match.js",
   "BUS004": "chitbridge-web/public/app/cap-network.js",
   "BUS005": "chitbridge-web/public/app/cap-workforce.js",
