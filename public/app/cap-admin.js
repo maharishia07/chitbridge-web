@@ -5699,7 +5699,53 @@ function businessSettingsHTML(s){
         ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:-8px 0 var(--sp-4)">'
           + tx('If that is not right, change it — it was filled in for you, not chosen by you.') + '</div>'
         : '')
-    + '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div></div>';
+    + '<div id="biz_said" style="font-size:var(--fs-1);color:var(--grey);min-height:18px"></div>'
+    /* ⭐ THE LEDGER'S SWITCH (Athi, 2026-10-01: "add the switch-on control in settings"). Owner only — the server
+       refuses everyone else. Painted from GET /api/books/status once the card is on the screen (bizLedgerLoad), so
+       the card never asserts a state it has not read. */
+    + (SESSION.role === 'entity'   /* the shop's own session is its owner (routes/books.js isOwner: no api key, no parent entity); an actor is not */
+        ? card('Ledger', 'A record of what is owed and paid, kept by double-entry.',
+               '<div id="biz_ledger" data-testid="biz-ledger" style="padding:0 13px 12px;font-size:var(--fs-1);color:var(--grey)">' + esc(tx('Reading…')) + '</div>')
+        : '')
+    + '</div>';
+}
+/** the Ledger card's one read — nothing is shown until the server has answered */
+async function bizLedgerLoad(){
+  var box = document.getElementById('biz_ledger'); if (!box) return;
+  try {
+    var r = await api('booksStatus');
+    box.innerHTML = bizLedgerHTML(r || {});
+  } catch (e) { box.innerHTML = esc(tx('Could not read the Ledger’s state.')); }
+}
+function bizLedgerHTML(r){
+  if (r.migrated === false) return '<span data-testid="biz-ledger-state">' + esc(tx('Not ready on this server yet.')) + '</span>';
+  if (r.enabled) {
+    return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state" style="color:var(--ok)">● ' + esc(tx('On')) + '</span>'
+      + '<span>' + esc(tx('Walk-in sales recorded per')) + ' <b>' + esc(tx(r.walkin_grain === 'bill' ? 'bill' : r.walkin_grain === 'shift' ? 'shift' : 'day')) + '</b></span>'
+      + '<button data-testid="biz-ledger-off" onclick="bizLedgerSwitch(false)">' + esc(tx('Switch off')) + '</button></div>';
+  }
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span data-testid="biz-ledger-state">○ ' + esc(tx('Off')) + '</span>'
+    + '<button class="pri" data-testid="biz-ledger-on" onclick="bizLedgerSwitch(true)">' + esc(tx('Switch on')) + '</button>'
+    + '<span>' + esc(tx('From today. What people owed before goes in as opening balances.')) + '</span></div>';
+}
+/** on: POST /api/books/enable (seeds the chart, this year’s months, a number for every party) · off: POST /setting */
+function bizLedgerSwitch(on){
+  var box = document.getElementById('biz_ledger'); if (!box) return;
+  var title = on ? tx('Switch the Ledger on?') : tx('Switch the Ledger off?');
+  var body = on ? esc(tx('From today every bill, payment and expense is recorded. Nothing before today is.'))
+                : esc(tx('Nothing is deleted. Recording stops until it is switched on again.'));
+  confirmAsk(title, body, on ? tx('Switch on') : tx('Switch off'), async function(){
+    box.innerHTML = esc(tx('Working…'));
+    try {
+      if (on) await api('booksEnable', { body: {} });
+      else await api('booksSetting', { body: { enabled: false } });
+      SESSION.booksOn = on;
+      if (on) { try { await ensureCap('books'); } catch (_) {} }
+      bgRenderApp();   /* the Ledger door appears (or goes) on the menu */
+      await bizLedgerLoad();
+      toast(on ? tx('The Ledger is on.') : tx('The Ledger is off.'));
+    } catch (e) { box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : ''); }
+  }, !on);
 }
 
 /** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */
@@ -5932,6 +5978,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
     h.innerHTML = out + (out ? _capEnd() : '');
+    if (k === 'business') bizLedgerLoad();   /* the Ledger card reads its state after it is on the screen */
   } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }

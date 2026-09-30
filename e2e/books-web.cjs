@@ -76,6 +76,9 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   if (p.startsWith('/api/books')) {
+    /* routes/books.js: only GET /status and POST /enable (the owner's switch) answer while off */
+    if (p === '/api/books/status' && m === 'GET') return J(r, 200, { migrated: true, enabled: !!S.enabled, walkin_grain: S.enabled ? 'day' : null });
+    if (p === '/api/books/enable' && m === 'POST') { S.enables = (S.enables || 0) + 1; S.enabled = true; return J(r, 200, { ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: 3 }); }
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
     if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, job: 'chit' })) });   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
@@ -194,6 +197,23 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 15000 });
     await p.waitForTimeout(600);
     ok(await p.locator('[data-testid^="party-books-"]').count() === 0 && await p.locator('[data-testid^="party-due-"]').count() === 0, 'off: no party block and no due chip on Customers');
+    /* the switch (Athi, 2026-10-01): Settings › Your business › Ledger — owner only, read from /status, one confirm */
+    await p.evaluate(() => navTo('settings')); await p.waitForSelector('[data-testid="set-sec-business"]', { timeout: 15000 }); await p.click('[data-testid="set-sec-business"]');
+    await p.waitForSelector('[data-testid="biz-ledger-on"]', { timeout: 10000 }).catch(() => {});
+    ok(/Off/.test(await p.textContent('[data-testid="biz-ledger-state"]').catch(() => '')) && await p.locator('[data-testid="biz-ledger-on"]').count() === 1, 'Settings › Your business: the Ledger card says Off and offers Switch on');
+    await p.click('[data-testid="biz-ledger-on"]');
+    await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 4000 }).catch(() => {});
+    await p.click('[data-testid="confirm-cancel"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(300);
+    ok(!S.enables && !S.enabled, 'Switch on asks first — Cancel sends nothing');
+    await p.click('[data-testid="biz-ledger-on"]');
+    await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
+    await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
+    await p.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 }).catch(() => {});
+    ok(S.enables === 1 && await p.locator('[data-testid="nav-ledger"]').count() === 1, 'confirmed → POST /api/books/enable once; the Ledger door appears on the menu without a reload');
+    await p.evaluate(() => navTo('settings')); await p.waitForSelector('[data-testid="set-sec-business"]', { timeout: 15000 }); await p.click('[data-testid="set-sec-business"]');
+    await p.waitForFunction(() => /On/.test((document.querySelector('[data-testid="biz-ledger-state"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(/On/.test(await p.textContent('[data-testid="biz-ledger-state"]').catch(() => '')) && await p.locator('[data-testid="biz-ledger-off"]').count() === 1, 'the card now says On (per day) and offers Switch off');
+    await shot(p, '0-ledger-switch');
     await ctx.close();
   }
 

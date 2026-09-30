@@ -1829,6 +1829,9 @@ const EP = {
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},
   booksHealth:     {m:"GET",  p:"/api/books/health",                      ok:"y"},   // 404 = the Ledger is off for this shop → the door stays hidden
+  booksStatus:     {m:"GET",  p:"/api/books/status",                      ok:"y"},   // owner: { migrated, enabled, walkin_grain } — answers while off
+  booksEnable:     {m:"POST", p:"/api/books/enable",                      ok:"y"},   // owner: the switch (Settings › Your business › Ledger)
+  booksSetting:    {m:"POST", p:"/api/books/setting",                     ok:"y"},   // owner: { enabled:false } switches it off; nothing deleted
   booksDues:       {m:"GET",  p:"/api/books/dues",                        ok:"y"},   // every party's balance + oldest due in one read (the row chips)
   booksStatement:  {m:"GET",  p:"/api/books/party/:id/statement",         ok:"y"},
   platMis:         {m:"GET",  p:"/api/entities/mis",                       ok:"✓"},

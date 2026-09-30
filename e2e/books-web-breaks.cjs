@@ -1,8 +1,10 @@
 /* books-web-breaks.cjs — */ // break each Ledger guard once, run the harness, restore FROM A COPY (never git checkout)
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
-const CAP = 'public/app/cap-books.js', APP = 'public/app.html';
+const CAP = 'public/app/cap-books.js', APP = 'public/app.html', ADMIN = 'public/app/cap-admin.js';
 const BREAKS = [
+  ['switch sends nothing', ADMIN, `if (on) await api('booksEnable', { body: {} });`, `if (on) {}`],
+  ['switch shown to an actor', ADMIN, `(SESSION.role === 'entity'`, `(true`],
   ['door gate', APP, `if (it[0] === 'ledger' && SESSION.booksOn !== true) return false; `, ''],
   ['duplicate warning', CAP, `box.textContent = hit ? txf(`, `box.textContent = false ? txf(`],
   ['disputed refusal', CAP, ` || (x.disputed && x.amount_minor > 0);`, `;`],
