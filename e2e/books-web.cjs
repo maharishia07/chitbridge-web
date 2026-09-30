@@ -37,6 +37,13 @@ function standIn() {
            { against_ref: 'b9', bill_no: 'INV-9', due_date: '2026-07-15', open_minor: 100000, date: '2026-06-15', chit: 'ch9', disputed: true }],
       c2: [], s1: [{ against_ref: 'p1', bill_no: 'AM-77', due_date: '2026-09-10', open_minor: -250000, date: '2026-08-10', chit: 'pc1' }] },
     receipts: { c1: [], c2: [], s1: [] },
+    /* ── the 2026-09-30 fix pass (review M10–M12, F11): what the stand-in now keeps, as the server does ── */
+    payPosts: [], byRef: {}, openingPosts: [], openingByRef: {}, chequeSteps: [], retries: 0, fileGets: 0, acks: [],
+    /* /health names what could not be recorded, each with its reason sentence (routes/books.js GET /health) */
+    waiting: [{ id: 1, chit_id: 'ch7', ref: 'bill:ch7', why: 'Paid by Points — there is no ledger for Points yet.', tries: 3, since: '2026-09-28T10:00:00Z' },
+              { id: 2, chit_id: 'ch8', ref: 'chit:ch8', why: 'September is locked. Open it again to record this bill.', tries: 1, since: '2026-09-29T09:00:00Z', stuck: true }],
+    /* a cheque the server itself lists as held (recorded at the counter, or in an earlier session) */
+    serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' }],
   };
   S.balance = (id) => S.items[id].reduce((a, x) => a + x.open_minor, 0);
   S.statement = (id) => {
@@ -50,15 +57,20 @@ function standIn() {
   S.dues = () => ({ currency: 'INR', as_of: '2026-09-29', parties: Object.keys(S.items).map((id) => {
     const open = S.items[id].filter((x) => !x.disputed && x.open_minor);
     const who = S.customers.find((c) => c.customer_identity_id === id) || S.suppliers.find((s) => s.supplier_entity_id === id);
-    return { party_id: id, party_no: who.party_no, name: who.display_name, balance_minor: S.balance(id),
+    /* ⚠️ as routes/books.js sends it: a supplier's buckets are the PAYABLE ones (not_due · lt_1y · y1_2 · y2_3 · gt_3y),
+       signed minus (you owe them); a customer's are the six receivable ones. `side` says which. */
+    const sup = !!who.supplier_entity_id, sum = open.reduce((a, x) => a + x.open_minor, 0);
+    return { party_id: id, party_no: who.party_no, name: who.display_name, side: sup ? 'supplier' : 'customer', balance_minor: S.balance(id),
       oldest_due: open.map((x) => x.due_date).sort()[0] || null, disputed_minor: S.items[id].filter((x) => x.disputed).reduce((a, x) => a + x.open_minor, 0),
-      buckets: { not_due: 0, lt_6m: open.reduce((a, x) => a + x.open_minor, 0) } };
+      buckets: sup ? { not_due: 0, lt_1y: sum } : { not_due: 0, lt_6m: sum } };
   }) });
   return S;
 }
 /* BOOKS_SHOTS=<dir> keeps a picture of each screen to LOOK at (not a golden file; nothing compares them) */
 const shot = async (p, name) => { if (process.env.BOOKS_SHOTS) await p.screenshot({ path: path.join(process.env.BOOKS_SHOTS, name + '.png') }).catch(() => {}); };
 const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+/* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
+const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
 
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -66,16 +78,28 @@ async function route(S, r) {
   if (p.startsWith('/api/books')) {
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
-    if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true } });
+    if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, why: w.why, tries: w.tries, since: w.since })), cheques: S.serverCheques });
+    if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries++; const n = S.waiting.length; S.waiting = S.waiting.filter((w) => w.stuck); return J(r, 200, { ok: true, tried: n, posted: n - S.waiting.length }); }
+    if ((x = p.match(/^\/api\/books\/cheques\/([^/]+)\/status$/)) && m === 'POST') {
+      S.chequeSteps.push({ id: x[1], body });
+      if (S.refuseCheque) return J(r, 422, { error: 'A cleared cheque cannot be bounced here.' });
+      return J(r, 200, { ok: true });
+    }
     if (p === '/api/books/dues') return J(r, 200, S.dues());
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, S.statement(x[1]));
     if (p === '/api/books/payments' && m === 'POST') {
+      S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
       const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
       if (S.locked[per]) return J(r, 409, { error: 'That month is locked. Open it again (with a reason) to record this.' });
+      /* the server keeps a client_ref ONCE (the unique index): a repeat is answered with the payment it already has */
+      if (body.client_ref && S.byRef[body.client_ref]) { const was = S.byRef[body.client_ref]; return J(r, 200, { payment: { payment_id: was, status: S.payments[was].mode === 'cheque' ? 'cheque_received' : 'recorded', duplicate: true } }); }
       const id = 'pay' + (Object.keys(S.payments).length + 1); S.payments[id] = body;
+      if (body.client_ref) S.byRef[body.client_ref] = id;
       return J(r, 200, { payment: { payment_id: id, status: body.mode === 'cheque' ? 'cheque_received' : 'recorded' } });
     }
     if ((x = p.match(/^\/api\/books\/payments\/([^/]+)\/propose$/))) {
+      if (S.failProposeOnce) { S.failProposeOnce = false; return J(r, 500, { error: 'Try again in a moment.' }); }
+      if (S.slowPropose) await new Promise((res) => setTimeout(res, S.slowPropose));
       const pay = S.payments[x[1]]; let left = pay.amount_minor;
       const proposal = S.items[pay.party_id].filter((i) => i.open_minor > 0).slice().sort((a, b) => a.due_date < b.due_date ? -1 : 1)
         .map((i) => { const a = i.disputed ? 0 : Math.min(left, i.open_minor); left -= a; return { against_ref: i.against_ref, bill_no: i.bill_no, due_date: i.due_date, open_minor: i.open_minor, apply_minor: a, disputed: !!i.disputed }; });
@@ -101,11 +125,25 @@ async function route(S, r) {
       S.locked[+x[2]] = x[3] === 'lock'; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
       return J(r, 200, { period: { status: x[3] === 'lock' ? (body.hard ? 'hard_locked' : 'soft_locked') : 'open' } });
     }
-    if (p === '/api/books/packs' && m === 'GET') return J(r, 200, { packs: S.packs });
-    if (p === '/api/books/packs' && m === 'POST') { const k = { pack_id: 'pk' + (S.packs.length + 1), kind: body.kind, fiscal_year: body.fiscal_year, period: body.period, created_at: '2026-09-29', sha256: 'ab12cd34ef56ab12cd34ef56' }; S.packs.push(k); return J(r, 200, { pack: k }); }
-    if ((x = p.match(/^\/api\/books\/packs\/([^/]+)\/ack$/))) { const k = S.packs.find((z) => z.pack_id === x[1]); k.acknowledged_at = '2026-09-29'; return J(r, 200, { pack: k }); }
-    if ((x = p.match(/^\/api\/books\/packs\/([^/]+)$/))) { const k = S.packs.find((z) => z.pack_id === x[1]); return J(r, 200, { pack: k, manifest: { files: [{ name: 'gl.json', sha256: 'aa11bb22cc33dd44', bytes: 1200 }, { name: 'tally.xml', sha256: 'ee55ff66', bytes: 900 }, { name: 'trial-balance.csv', sha256: '0099', bytes: 300 }], controls: { dr: 600000, cr: 600000 } } }); }
-    if (p === '/api/books/opening') { S.opening = body; return J(r, 200, { entry_no: 'JV/2026-27/000002', suspense_minor: 0 }); }
+    /* ⚠️ a pack row says whether it HAS a file (has_file); `hide` = an older list that does not say, so GET /packs/:id is asked */
+    if (p === '/api/books/packs' && m === 'GET') return J(r, 200, { packs: S.packs.map((k) => { const o = Object.assign({}, k); delete o.hide; if (k.hide) delete o.has_file; return o; }) });
+    if (p === '/api/books/packs' && m === 'POST') { const k = { pack_id: 'pk' + (S.packs.length + 1), kind: body.kind, fiscal_year: body.fiscal_year, period: body.period, created_at: '2026-09-29', sha256: 'ab12cd34ef56ab12cd34ef56', has_file: !S.nextPackNoFile, hide: !!S.nextPackHide }; S.packs.push(k); return J(r, 200, { pack: k }); }
+    if ((x = p.match(/^\/api\/books\/packs\/([^/]+)\/ack$/))) { const k = S.packs.find((z) => z.pack_id === x[1]); S.acks.push(x[1]); k.acknowledged_at = '2026-09-29'; return J(r, 200, { pack: k }); }
+    /* the pack ITSELF: the zip, as bytes — 409 when it was made while storage was not connected (routes/books.js) */
+    if ((x = p.match(/^\/api\/books\/packs\/([^/]+)\/file$/))) {
+      const k = S.packs.find((z) => z.pack_id === x[1]); S.fileGets++;
+      if (!k || !k.has_file) return J(r, 409, { error: 'This pack was built while storage was not connected — build it again to download it.' });
+      return r.fulfill({ status: 200, contentType: 'application/zip', headers: { 'content-disposition': 'attachment; filename="ledger-pack-' + k.kind + '-' + k.fiscal_year + '-' + k.period + '.zip"', 'access-control-expose-headers': 'Content-Disposition' }, body: ZIP });
+    }
+    if ((x = p.match(/^\/api\/books\/packs\/([^/]+)$/))) { const k = S.packs.find((z) => z.pack_id === x[1]); return J(r, 200, { pack: k, has_file: !!k.has_file, file: k.has_file ? '/api/books/packs/' + k.pack_id + '/file' : null, manifest: { files: [{ name: 'gl.json', sha256: 'aa11bb22cc33dd44', bytes: 1200 }, { name: 'tally.xml', sha256: 'ee55ff66', bytes: 900 }, { name: 'trial-balance.csv', sha256: '0099', bytes: 300 }], controls: { dr: 600000, cr: 600000 } } }); }
+    if (p === '/api/books/opening') {
+      S.openingPosts.push(body);
+      if (S.failOpeningOnce) { S.failOpeningOnce = false; return J(r, 500, { error: 'Try again in a moment.' }); }
+      if (body.client_ref && S.openingByRef[body.client_ref]) return J(r, 200, { entry_no: S.openingByRef[body.client_ref], suspense_minor: 0, duplicate: true });
+      S.opening = body; const no = 'JV/2026-27/00000' + (1 + S.openingPosts.length);
+      if (body.client_ref) S.openingByRef[body.client_ref] = no;
+      return J(r, 200, { entry_no: no, suspense_minor: 0 });
+    }
     return J(r, 404, { error: 'no stand-in for ' + p });
   }
   if (p === '/api/relationships/customers' && m === 'GET') return J(r, 200, { customers: S.customers });
@@ -214,8 +252,22 @@ async function route(S, r) {
   ok(/Receive/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-pay"]')), 'a customer\'s action says Receive');
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
   await p.fill('[data-testid="pay_amt"]', '4000');
+  /* ⚠️⚠️ review M11 — ONE TAP, ONE PAYMENT. The record lands, the proposal read fails, the form still says Next:
+     a second press must ask for the proposal again and must NOT record the payment a second time. */
+  S.failProposeOnce = true;
   await p.click('[data-testid="pay_record"]');
+  await p.waitForFunction(() => ((document.querySelector('[data-testid="pay_why"]') || {}).textContent || '').trim() !== '', null, { timeout: 8000 }).catch(() => {});
+  ok(S.payPosts.length === 1 && Object.keys(S.payments).length === 1 && await p.locator('[data-testid="alloc-0"]').count() === 0, 'recorded once; the proposal could not be read, and the form says so');
+  ok(/^web-[a-z0-9]+-[0-9a-f]+$/.test(String(S.payPosts[0].client_ref || '')), 'the payment carries a client_ref made when the form opened (' + S.payPosts[0].client_ref + ')');
+  S.slowPropose = 900;
+  await p.click('[data-testid="pay_record"]');
+  await p.waitForTimeout(250);
+  const deadNow = await p.evaluate(() => { const b = document.querySelector('[data-testid="pay_record"]'); return !!(b && b.disabled); });
+  await p.evaluate(() => { payRecord(); });                  /* a third press, while that call is still out */
+  ok(deadNow, 'the button is dead while its call is out');
   await p.waitForSelector('[data-testid="alloc-0"]', { timeout: 8000 });
+  S.slowPropose = 0;
+  ok(S.payPosts.length === 1 && Object.keys(S.payments).length === 1, '⚠️⚠️ pressing Next again did NOT record the payment again (' + S.payPosts.length + ' POST, ' + Object.keys(S.payments).length + ' payment)');
   const rows = await p.$$eval('[data-testid^="alloc-row-"]', (els) => els.map((e) => e.textContent));
   const vals = await p.$$eval('[data-testid^="alloc-"]:not([data-testid^="alloc-row"])', (els) => els.map((e) => ({ v: e.value, d: e.disabled })));
   await shot(p, '2-receive-proposal');
@@ -238,6 +290,25 @@ async function route(S, r) {
   await p.waitForFunction(() => /3,500/.test((document.querySelector('[data-testid="party-books-c1"] [data-testid="party-balance"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/3,500/.test(await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]')), 'balance repainted after the payment: 3,500');
 
+  /* 5b · ⚠️⚠️ review M12 — a cheque: held, and its steps are offered the moment it is recorded */
+  await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
+  await p.fill('[data-testid="pay_amt"]', '500');
+  await p.selectOption('[data-testid="pay_mode"]', 'cheque');
+  await p.fill('[data-testid="pay_chqno"]', '004512');
+  await p.click('[data-testid="pay_record"]');
+  await p.waitForSelector('[data-testid="pay_cheque_note"]', { timeout: 8000 }).catch(() => {});
+  const chqId = Object.keys(S.payments).find((k) => S.payments[k].mode === 'cheque');
+  ok(!!chqId && S.payPosts[S.payPosts.length - 1].client_ref !== S.payPosts[0].client_ref, 'a new form has a NEW client_ref, so the cheque is its own payment');
+  ok(await p.locator('[data-testid="chq-deposited-' + chqId + '"]').count() === 1 && await p.locator('[data-testid="chq-bounced-' + chqId + '"]').count() === 1
+    && await p.locator('[data-testid="chq-cleared-' + chqId + '"]').count() === 0, 'a cheque just received offers Deposited and Bounced (not Cleared yet)');
+  await p.click('[data-testid="chq-deposited-' + chqId + '"]');
+  await p.waitForSelector('[data-testid="chq-cleared-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
+  const st0 = S.chequeSteps[0] || {};
+  ok(S.chequeSteps.length === 1 && st0.id === chqId && JSON.stringify(st0.body) === JSON.stringify({ status: 'deposited' }), 'Deposited → POST /api/books/cheques/' + chqId + '/status {status:"deposited"}');
+  ok(/Deposited/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'and the form now says Deposited, with Cleared offered');
+  await noAccounting(p, 'cheque form');
+  await p.evaluate(() => { closeModal(); booksAfterPay(); });
+
   /* 6 · the Ledger screen */
   await p.click('[data-testid="nav-ledger"]');
   await p.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
@@ -258,7 +329,56 @@ async function route(S, r) {
   await p.click('[data-testid="bk-tab-dues"]'); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
   await shot(p, '4-dues');
   ok(/1,000/.test(await p.textContent('[data-testid="dues-c1"]')), 'dues: the disputed amount has its own column');
+  /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS column, not only Balance */
+  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="' + row + '"] [data-b="' + b + '"]'); return e ? e.textContent.trim() : null; }, { row, b });
+  ok(/2,500/.test(String(await cellOf('dues-s1', 'lt_1y'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "< 1 year" in its own table (' + await cellOf('dues-s1', 'lt_1y') + ')');
+  ok(String(await cellOf('dues-c1', 'lt_6m') || '').length > 0 && await cellOf('dues-c1', 'lt_1y') === null, 'dues: a customer keeps the six receivable columns');
   await noAccounting(p, 'ledger');
+
+  /* ⚠️⚠️ review M12 — the cheques held, and their steps */
+  ok(/2/.test(await p.textContent('[data-testid="bk-tab-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="bk-tab-waiting"]')).trim() + ')');
+  await p.click('[data-testid="bk-tab-cheques"]');
+  await p.waitForSelector('[data-testid="chq-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.locator('[data-testid="chq-' + chqId + '"]').count() === 1 && /Deposited/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cheques: the one recorded here is listed, Deposited');
+  ok(await p.locator('[data-testid="chq-chq9"]').count() === 1 && /Received/.test(await p.textContent('[data-testid="chq-status-chq9"]').catch(() => '')), 'Cheques: one the server lists as held is there too, Received');
+  await p.click('[data-testid="chq-cleared-' + chqId + '"]').catch(() => {});
+  await p.waitForFunction((id) => /Cleared/.test((document.querySelector('[data-testid="chq-status-' + id + '"]') || {}).textContent || ''), chqId, { timeout: 8000 }).catch(() => {});
+  const st1 = S.chequeSteps[1] || {};
+  ok(st1.id === chqId && JSON.stringify(st1.body) === JSON.stringify({ status: 'cleared' }) && /Cleared/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cleared → POST …/cheques/' + chqId + '/status {status:"cleared"}; the row says Cleared');
+  /* Bounced asks first: Cancel sends nothing, Yes sends it */
+  const nSteps = S.chequeSteps.length;
+  await p.click('[data-testid="chq-bounced-chq9"]').catch(() => {});
+  await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 4000 }).catch(() => {});
+  await p.click('[data-testid="confirm-cancel"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(300);
+  ok(S.chequeSteps.length === nSteps, 'Bounced asks first — Cancel sends nothing');
+  await p.click('[data-testid="chq-bounced-chq9"]').catch(() => {});
+  await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
+  await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
+  await p.waitForFunction(() => /Bounced/.test((document.querySelector('[data-testid="chq-status-chq9"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  const st2 = S.chequeSteps[S.chequeSteps.length - 1] || {};
+  ok(S.chequeSteps.length === nSteps + 1 && st2.id === 'chq9' && st2.body.status === 'bounced' && await p.locator('[data-testid^="chq-"][data-testid$="-chq9"]:is(button)').count() === 0, 'Bounced, confirmed → sent; a bounced cheque offers no further step');
+  /* the server refuses a step: its words are shown, the row does not move */
+  S.refuseCheque = true;
+  await p.click('[data-testid="chq-bounced-' + chqId + '"]').catch(() => {});
+  await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 4000 }).catch(() => {});
+  await p.click('[data-testid="confirm-ok"]', { timeout: 2000 }).catch(() => {});
+  await p.waitForFunction(() => ((document.querySelector('[data-testid="chq_out"]') || {}).textContent || '').trim() !== '', null, { timeout: 8000 }).catch(() => {});
+  ok(/cannot be bounced/.test(await p.textContent('[data-testid="chq_out"]').catch(() => '')) && /Cleared/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'a refused step shows the server\'s words and the row stays Cleared');
+  S.refuseCheque = false;
+  await shot(p, '4b-cheques');
+  await noAccounting(p, 'cheques');
+
+  /* ⚠️⚠️ review M12 — what could not be recorded is ON A SCREEN, in the server's words, with Try again */
+  await p.click('[data-testid="bk-tab-waiting"]');
+  await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
+  const waitTxt = await p.textContent('[data-testid="bk-body"]');
+  ok(/Waiting to be recorded/.test(waitTxt) && /Paid by Points — there is no ledger for Points yet\./.test(waitTxt) && /September is locked\. Open it again to record this bill\./.test(waitTxt), 'Waiting to be recorded: each one with the server\'s own sentence');
+  await shot(p, '4c-waiting');
+  await p.click('[data-testid="wait-retry"]').catch(() => {});
+  await p.waitForFunction(() => /still waiting|All recorded/.test((document.querySelector('[data-testid="wait_out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  ok(S.retries === 1 && /1 recorded · 1 still waiting/.test(await p.textContent('[data-testid="wait_out"]').catch(() => '')) && await p.locator('[data-testid="wait-1"]').count() === 0 && await p.locator('[data-testid="wait-0"]').count() === 1,
+    'Try again → POST /api/books/outbox/retry; the list is read again: 1 recorded, 1 still waiting');
+  await noAccounting(p, 'waiting');
 
   /* month lock blocks a payment in that month; opening again needs a reason */
   await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_lock"]');
@@ -273,6 +393,11 @@ async function route(S, r) {
   await p.fill('[data-testid="pay_amt"]', '100'); await p.click('[data-testid="pay_record"]');
   await p.waitForFunction(() => /locked/.test((document.querySelector('[data-testid="pay_why"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
   ok(/locked/.test(await p.textContent('[data-testid="pay_why"]')) && await p.locator('[data-testid="alloc-0"]').count() === 0, 'a payment in a locked month is refused, and the form says why');
+  /* M11: pressing Next again on the SAME form is a retry — it carries the same client_ref, so the server can answer with what it kept */
+  const nPosts = S.payPosts.length;
+  await p.click('[data-testid="pay_record"]');
+  for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
+  ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
   await p.click('[data-testid="nav-ledger"]'); await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
   await p.selectOption('[data-testid="lk_p"]', sep);
@@ -299,13 +424,41 @@ async function route(S, r) {
   await p.click('[data-testid="bk-tab-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
   await p.fill('[data-testid="pk_p"]', '5'); await p.click('[data-testid="pk_build"]');
   await p.waitForSelector('[data-testid="pack-get-pk1"]', { timeout: 8000 });
-  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="pack-get-pk1"]')]);
-  const dlPath = await dl.path(); const dlBody = JSON.parse(fs.readFileSync(dlPath, 'utf8'));
-  ok(dl.suggestedFilename() === 'pack-pk1.json' && dlBody.manifest && dlBody.manifest.files.length === 3, 'pack downloads with its manifest (3 files)');
-  ok(/gl\.json/.test(await p.textContent('[data-testid="pack-manifest"]')), 'the manifest is shown: file names and fingerprints');
+  /* ⚠️⚠️ review M10 — "We have it" before anything came down in this session: the owner is asked; Cancel sends nothing */
+  await p.click('[data-testid="pack-ack-pk1"]');
+  await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 4000 }).catch(() => {});
+  const asked = await p.locator('[data-testid="confirm-cancel"]').count() === 1;
+  await p.click('[data-testid="confirm-cancel"]', { timeout: 2000 }).catch(() => {}); await p.waitForTimeout(300);
+  ok(asked && S.acks.length === 0 && !S.packs[0].acknowledged_at, '"We have it" with nothing downloaded asks first — Cancel acknowledges nothing');
+  let dl = null, dlBytes = Buffer.alloc(0);
+  try { [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="pack-get-pk1"]')]); dlBytes = fs.readFileSync(await dl.path()); } catch (_) {}
+  /* MOVED (2026-09-30): this asserted that Download saved the MANIFEST as pack-pk1.json — the fault itself (M10).
+     Download now brings the pack FILE from /api/books/packs/:id/file; the manifest is still shown on the screen (next line). */
+  ok(!!dl && /\.zip$/.test(dl.suggestedFilename()) && dlBytes.equals(ZIP) && S.fileGets === 1, 'Download brings the pack FILE — the zip at /api/books/packs/pk1/file, byte for byte (' + (dl ? dl.suggestedFilename() : 'no download') + ')');
+  ok(/gl\.json/.test(await p.textContent('[data-testid="pack-manifest"]').catch(() => '')), 'the manifest is shown: file names and fingerprints');
   await p.click('[data-testid="pack-ack-pk1"]');
   await p.waitForFunction(() => !document.querySelector('[data-testid="pack-ack-pk1"]'), null, { timeout: 8000 }).catch(() => {});
   ok(!!S.packs[0].acknowledged_at && await p.locator('[data-testid="pack-ack-pk1"]').count() === 0, 'acknowledged: the button becomes the date');
+  ok(S.acks.length === 1 && await p.locator('[data-testid="confirm-ok"]').count() === 0, 'after the download in this session, "We have it" is a plain yes — no question');
+  await p.evaluate(() => { try { closeModal(); } catch (_) {} });
+  /* a pack made while storage was not connected has NO file: it says so, and offers neither Download nor We have it */
+  S.nextPackNoFile = true;
+  await p.fill('[data-testid="pk_p"]', '6'); await p.click('[data-testid="pk_build"]');
+  await p.waitForSelector('[data-testid="pack-pk2"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.locator('[data-testid="pack-nofile-pk2"]').count() === 1 && await p.locator('[data-testid="pack-get-pk2"]').count() === 0 && await p.locator('[data-testid="pack-ack-pk2"]').count() === 0,
+    'a pack with no file says "' + (await p.textContent('[data-testid="pack-nofile-pk2"]').catch(() => '—')).trim() + '" and offers neither button');
+  /* an older list that does not say: the question is asked of GET /packs/:id before anything is acknowledged */
+  S.nextPackHide = true;
+  await p.fill('[data-testid="pk_p"]', '7'); await p.click('[data-testid="pk_build"]');
+  await p.waitForSelector('[data-testid="pack-ack-pk3"]', { timeout: 8000 }).catch(() => {});
+  await p.click('[data-testid="pack-ack-pk3"]').catch(() => {});
+  await p.waitForSelector('[data-testid="pack-nofile-pk3"]', { timeout: 8000 }).catch(() => {});
+  ok(S.acks.indexOf('pk3') < 0 && await p.locator('[data-testid="pack-nofile-pk3"]').count() === 1 && await p.locator('[data-testid="pack-get-pk3"]').count() === 0 && await p.locator('[data-testid="confirm-ok"]').count() === 0,
+    'a pack whose row does not say: GET /packs/:id answers has_file false → not acknowledged, the row says so');
+  await p.evaluate(() => { try { closeModal(); } catch (_) {} });
+  S.nextPackNoFile = false; S.nextPackHide = false;
+  await shot(p, '6-packs');
+  await noAccounting(p, 'packs');
 
   /* 8 · opening balances + a shop ledger */
   await p.click('[data-testid="bk-tab-opening"]'); await p.waitForSelector('[data-testid="op_csv"]');
@@ -313,9 +466,23 @@ async function route(S, r) {
   await p.click('[data-testid="op_go"]');
   ok(S.opening === null && /Line 2/.test(await p.textContent('[data-testid="op_out"]')), 'a line with both debit and credit is refused before sending');
   await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,,5000,AM-1,');
+  /* ⚠️⚠️ review M11 — the first press fails on the way; the second is a RETRY and carries the same client_ref */
+  S.failOpeningOnce = true;
+  await p.click('[data-testid="op_go"]');
+  for (let i = 0; i < 40 && S.openingPosts.length < 1; i++) await p.waitForTimeout(100);
+  await p.waitForFunction(() => { const b = document.querySelector('[data-testid="op_go"]'); return b && !b.disabled && (document.querySelector('[data-testid="op_out"]').textContent || '').trim() !== ''; }, null, { timeout: 8000 }).catch(() => {});
   await p.click('[data-testid="op_go"]');
   await p.waitForFunction(() => /Entered/.test(document.querySelector('[data-testid="op_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
   ok(S.opening && S.opening.rows.length === 2 && S.opening.rows[0].dr_minor === 500000 && S.opening.rows[1].cr_minor === 500000, 'opening balances sent in minor units');
+  const oRef = (S.openingPosts[0] || {}).client_ref;
+  ok(S.openingPosts.length === 2 && /^web-/.test(String(oRef || '')) && S.openingPosts[1].client_ref === oRef, 'opening balances carry a client_ref, and the retry sends the SAME one');
+  /* pressed again after it went in: nothing is sent a second time */
+  await p.click('[data-testid="op_go"]'); await p.waitForTimeout(500);
+  ok(S.openingPosts.length === 2 && /at least one line/.test(await p.textContent('[data-testid="op_out"]')), '⚠️⚠️ a second press after it went in sends NOTHING (the box was emptied): ' + S.openingPosts.length + ' POSTs');
+  await p.fill('[data-testid="op_csv"]', '1400,,250,,,');
+  await p.click('[data-testid="op_go"]');
+  for (let i = 0; i < 40 && S.openingPosts.length < 3; i++) await p.waitForTimeout(100);
+  ok(S.openingPosts.length === 3 && S.openingPosts[2].client_ref && S.openingPosts[2].client_ref !== oRef, 'the next entry, after a yes, has a NEW client_ref');
   await p.click('[data-testid="bk-tab-accounts"]'); await p.waitForSelector('[data-testid="ac_add"]');
   await p.fill('[data-testid="ac_name"]', 'Shop repairs'); await p.click('[data-testid="ac_add"]');
   await p.waitForTimeout(500);

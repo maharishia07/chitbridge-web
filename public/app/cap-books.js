@@ -27,8 +27,33 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksPacks:      { m: 'GET',  p: '/api/books/packs' },
   booksPackBuild:  { m: 'POST', p: '/api/books/packs' },
   booksPackGet:    { m: 'GET',  p: '/api/books/packs/:id' },
+  booksPackFile:   { m: 'GET',  p: '/api/books/packs/:id/file' },   /* the zip itself — fetched as bytes (bkPackGet), never through api() */
   booksPackAck:    { m: 'POST', p: '/api/books/packs/:id/ack' },
+  booksChequeStep: { m: 'POST', p: '/api/books/cheques/:id/status' },
+  booksRetry:      { m: 'POST', p: '/api/books/outbox/retry' },
 }); }
+
+/**
+ * ⚠️⚠️ ONE TAP, ONE RECORD (2026-09-30, review M11). Two taps on Next recorded two payments; opening balances pressed
+ * twice doubled every balance. Two halves, both needed:
+ *   · bkOnce — the button is dead while its call is out, and a second call with the same key is dropped
+ *   · bkRef  — every form that records money carries ONE client_ref from the moment it opens: sent again on a retry
+ *              (so the server answers with what it already kept), replaced only after the server said yes
+ */
+var BK_BUSY = {};
+async function bkOnce(key, btn, fn) {
+  if (BK_BUSY[key]) return;
+  BK_BUSY[key] = true;
+  if (btn) btn.disabled = true;
+  try { return await fn(); }
+  finally { delete BK_BUSY[key]; if (btn && btn.isConnected) btn.disabled = false; }
+}
+function bkRef() {
+  var r = '';
+  try { var a = new Uint8Array(8); crypto.getRandomValues(a); r = Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+  catch (_) { r = Math.floor(Math.random() * 1e12).toString(16); }
+  return 'web-' + Date.now().toString(36) + '-' + r;
+}
 
 /* the tables' look, once, the way cap-categories does it (cbcatCss) */
 function bkCss() {
@@ -203,7 +228,7 @@ async function partyEditSave(kind, partyId) {
 var PAY = null;
 function payOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
-  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '' };
+  PAY = { kind: kind, partyId: partyId, name: r.nickname || r.display_name || '', ref: bkRef() };   /* one ref per opened form */
   modal('<div class="mhd"><div class="t">' + esc(kind === 'supplier' ? tx('Pay') : tx('Receive')) + ' · ' + esc(PAY.name) + '</div></div><div class="mbody" id="pay_body" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Amount') + '<input class="inp" id="pay_amt" data-testid="pay_amt" inputmode="decimal" style="width:100%"></label>'
     + '<label>' + tx('How') + '<select class="inp" id="pay_mode" data-testid="pay_mode" onchange="payModePaint()"><option value="cash">' + tx('Cash') + '</option><option value="upi">UPI</option><option value="bank">' + tx('Bank') + '</option><option value="card">' + tx('Card') + '</option><option value="cheque">' + tx('Cheque') + '</option></select></label>'
@@ -213,27 +238,38 @@ function payOpen(kind, partyId) {
     + '</div><div class="mfoot" id="pay_foot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pay_record" onclick="payRecord()">' + tx('Next') + '</button></div>');
 }
 function payModePaint() { var c = document.getElementById('pay_chq'); if (c) c.hidden = (document.getElementById('pay_mode') || {}).value !== 'cheque'; }
-async function payRecord() {
-  var why = document.getElementById('pay_why');
-  var amt = bkToMinor((document.getElementById('pay_amt') || {}).value);
-  if (!(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
-  var mode = (document.getElementById('pay_mode') || {}).value;
-  var body = { party_id: PAY.partyId, direction: PAY.kind === 'supplier' ? 'out' : 'in', amount_minor: amt, currency: bkCur(),
-    mode: mode, reference: (document.getElementById('pay_ref') || {}).value || null, received_at: new Date().toISOString(),
-    cheque: mode === 'cheque' ? { number: (document.getElementById('pay_chqno') || {}).value || null, bank: (document.getElementById('pay_bank') || {}).value || null, date: (document.getElementById('pay_chqdate') || {}).value || null } : null };
-  try {
-    var r = await api('booksPayRecord', { body: body });
-    PAY.id = r && r.payment && r.payment.payment_id; PAY.amount = amt;
-    /* ⭐ C3: a cheque counts on CLEARING — nothing to match yet, and it says so */
-    if (r && r.payment && r.payment.status === 'cheque_received') {
-      document.getElementById('pay_body').innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>';
-      document.getElementById('pay_foot').innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
-      return;
-    }
-    var p = await api('booksPayPropose', { params: { id: PAY.id } });
-    PAY.proposal = p;
-    payProposalPaint();
-  } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not record it')); }
+function payRecord() {
+  /* ⚠️ M11: the button is dead while the call is out; a payment already recorded is never recorded again — a second
+     press after the record only asks for the proposal; and every attempt from this form carries the SAME client_ref */
+  return bkOnce('pay', document.querySelector('[data-testid="pay_record"]'), async function () {
+    var why = document.getElementById('pay_why');
+    try {
+      if (!PAY.id) {
+        var amt = bkToMinor((document.getElementById('pay_amt') || {}).value);
+        if (!(amt > 0)) { if (why) why.textContent = tx('Type the amount'); return; }
+        var mode = (document.getElementById('pay_mode') || {}).value;
+        var body = { party_id: PAY.partyId, direction: PAY.kind === 'supplier' ? 'out' : 'in', amount_minor: amt, currency: bkCur(),
+          mode: mode, reference: (document.getElementById('pay_ref') || {}).value || null, received_at: new Date().toISOString(),
+          cheque: mode === 'cheque' ? { number: (document.getElementById('pay_chqno') || {}).value || null, bank: (document.getElementById('pay_bank') || {}).value || null, date: (document.getElementById('pay_chqdate') || {}).value || null } : null,
+          client_ref: PAY.ref };
+        var r = await api('booksPayRecord', { body: body });
+        PAY.id = r && r.payment && r.payment.payment_id; PAY.amount = amt;
+        /* ⭐ C3: a cheque counts on CLEARING — nothing to match yet, and it says so; its steps are offered right here */
+        if (r && r.payment && r.payment.status === 'cheque_received') {
+          bkChequeKeep({ payment_id: PAY.id, party_id: PAY.partyId, name: PAY.name, amount_minor: amt, cheque_no: body.cheque.number, cheque_bank: body.cheque.bank, cheque_date: body.cheque.date, status: 'received' });
+          PAY.cheque = true;
+          document.getElementById('pay_body').innerHTML = '<p data-testid="pay_cheque_note">' + tx('Counts against bills when the cheque clears') + '</p>'
+            + '<div id="pay_chq_steps" data-testid="pay_chq_steps">' + bkChequeStepsHTML(BK.cheques[PAY.id]) + '</div><div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1)"></div>';
+          document.getElementById('pay_foot').innerHTML = '<button class="pri" onclick="closeModal();booksAfterPay()">' + tx('Done') + '</button>';
+          return;
+        }
+      }
+      if (PAY.cheque) return;
+      var p = await api('booksPayPropose', { params: { id: PAY.id } });
+      PAY.proposal = p;
+      payProposalPaint();
+    } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not record it')); }
+  });
 }
 /** ⭐ D1: the rule PROPOSES (oldest due first); the person changes it if they want; a disputed bill cannot take anything */
 function payProposalPaint() {
@@ -269,10 +305,12 @@ async function payConfirm() {
   var used = a.reduce(function (s, x) { return s + (x.amount_minor > 0 ? x.amount_minor : 0); }, 0);
   if (bad) { if (why) why.textContent = bad.disputed ? tx('A disputed bill takes nothing') : tx('More than that bill has open'); return; }
   if (used > PAY.amount) { if (why) why.textContent = tx('More applied than paid'); return; }
-  try {
-    await api('booksPayConfirm', { params: { id: PAY.id }, body: { allocations: a.filter(function (x) { return x.amount_minor > 0; }).map(function (x) { return { against_ref: x.against_ref, amount_minor: x.amount_minor }; }) } });
-    closeModal(); toast(tx('Saved')); booksAfterPay();
-  } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not confirm')); }
+  await bkOnce('payconfirm', document.querySelector('[data-testid="pay_confirm"]'), async function () {
+    try {
+      await api('booksPayConfirm', { params: { id: PAY.id }, body: { allocations: a.filter(function (x) { return x.amount_minor > 0; }).map(function (x) { return { against_ref: x.against_ref, amount_minor: x.amount_minor }; }) } });
+      closeModal(); toast(tx('Saved')); booksAfterPay();
+    } catch (e) { if (why) why.textContent = bkWhy(e, tx('Could not confirm')); }
+  });
 }
 function booksAfterPay() {
   if (PAY) { delete BK.stmt[PAY.partyId]; }
@@ -284,7 +322,8 @@ function booksAfterPay() {
 /* ══ 3 · THE LEDGER SCREEN — the house layout: a list of views on the left, the view on the right ═════════════ */
 var BK_TABS = [
   ['daybook', '📖', 'Day book'], ['ledgers', '📒', 'Ledgers'], ['tb', '⚖️', 'Trial balance'], ['pl', '📈', 'P&L'],
-  ['bs', '🏛️', 'Balance sheet'], ['dues', '⏳', 'Dues'], ['lock', '🔒', 'Month lock'], ['packs', '📦', 'Packs'],
+  ['bs', '🏛️', 'Balance sheet'], ['dues', '⏳', 'Dues'], ['cheques', '🧾', 'Cheques'], ['waiting', '🕗', 'Waiting'],
+  ['lock', '🔒', 'Month lock'], ['packs', '📦', 'Packs'],
   ['opening', '📥', 'Opening balances'], ['accounts', '🗂️', 'Shop ledgers'],
 ];
 function ledgerScreen() {
@@ -292,7 +331,7 @@ function ledgerScreen() {
     + BK_TABS.map(function (t) { return '<div class="row ' + (BK.tab === t[0] ? 'sel' : '') + '" data-testid="bk-tab-' + t[0] + '" onclick="bkTab(\'' + t[0] + '\')"><div class="main2"><div class="l1"><span class="code">' + t[1] + ' ' + tx(t[2]) + '</span></div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }).join('')
     + '</div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  setTimeout(function () { bkTab(BK.tab, true); }, 0);
+  setTimeout(function () { bkTab(BK.tab, true); if (BK.tab !== 'waiting' && BK.tab !== 'cheques') bkHealthLoad().catch(function () {}); }, 0);   /* the Waiting count, on the list itself */
   return '<div class="panel" id="panel" style="--lw:' + UI.lw + 'px">' + list + divider + '<div class="detail" id="detailpane"><div class="db" id="bk_body" data-testid="bk-body">' + tx('Reading…') + '</div></div></div>';
 }
 function bkTab(t, silent) {
@@ -301,7 +340,7 @@ function bkTab(t, silent) {
   if (tabs) Array.prototype.forEach.call(tabs.children, function (el) { el.classList.toggle('sel', el.getAttribute('data-testid') === 'bk-tab-' + t); });
   var body = document.getElementById('bk_body'); if (!body) return;
   body.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + tx('Reading…') + '</div>';
-  var f = { daybook: bkDaybook, ledgers: bkLedgers, tb: bkTB, pl: bkPL, bs: bkBS, dues: bkDues, lock: bkLockView, packs: bkPacks, opening: bkOpeningView, accounts: bkAccounts }[t];
+  var f = { daybook: bkDaybook, ledgers: bkLedgers, tb: bkTB, pl: bkPL, bs: bkBS, dues: bkDues, cheques: bkChequesView, waiting: bkWaitingView, lock: bkLockView, packs: bkPacks, opening: bkOpeningView, accounts: bkAccounts }[t];
   if (f) f(body);
 }
 function bkRange(id) {
@@ -380,17 +419,46 @@ async function bkBS(body) {
 }
 /** ⭐ Schedule III: not due, then less than 6 months, 6–12 months, 1–2 years, 2–3 years, more than 3 years — disputed apart */
 var BK_BUCKETS = [['not_due', 'Not due'], ['lt_6m', '< 6 months'], ['m6_1y', '6–12 months'], ['y1_2', '1–2 years'], ['y2_3', '2–3 years'], ['gt_3y', '> 3 years']];
+/** ⚠️ what the shop OWES is aged differently (Schedule III, payables): not due · under a year · 1–2 · 2–3 · over 3 years */
+var BK_BUCKETS_PAY = [['not_due', 'Not due'], ['lt_1y', '< 1 year'], ['y1_2', '1–2 years'], ['y2_3', '2–3 years'], ['gt_3y', '> 3 years']];
+/**
+ * ⚠️⚠️ THE SERVER'S BUCKETS DECIDE THE COLUMNS (2026-09-30, review F11). One table with the six receivable columns
+ * showed a supplier's `lt_1y` amount nowhere but under Balance. So: two tables — what customers owe you, what you owe
+ * suppliers — each with the columns of its own side, and any bucket the server sends that has no column here lands in
+ * "Other" rather than vanishing (a named list of columns must never be a silent filter).
+ */
+function bkDuesSide(p) {
+  if (p.side === 'supplier') return 'pay';
+  if (p.side === 'customer') return 'rcv';
+  var b = p.buckets || {};
+  if (p.side !== 'both' && ('lt_1y' in b) && !('lt_6m' in b) && !('m6_1y' in b)) return 'pay';
+  return Number(p.balance_minor) < 0 ? 'pay' : 'rcv';
+}
+function bkDuesTable(side, list, c) {
+  if (!list.length) return '';
+  var cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, known = cols.map(function (k) { return k[0]; });
+  /* a payable is sent as a minus (they owe you +, you owe them −); under "You owe" it reads as a plain amount */
+  var amt = function (v) { return esc(bkMoney(side === 'pay' ? -Number(v) : Number(v), c)); };
+  var otherOf = function (p) { var b = p.buckets || {}; return Object.keys(b).filter(function (k) { return known.indexOf(k) < 0; }).reduce(function (s, k) { return s + Number(b[k] || 0); }, 0); };
+  var anyOther = list.some(function (p) { return otherOf(p); });
+  var rows = list.map(function (p) {
+    var b = p.buckets || {}, o = otherOf(p);
+    return '<tr data-testid="dues-' + esc(p.party_id) + '"><td class="mono">' + esc(p.party_no || '') + '</td><td>' + esc(p.name || '') + '</td>'
+      + cols.map(function (k) { return '<td class="num" data-b="' + k[0] + '">' + (b[k[0]] ? amt(b[k[0]]) : '') + '</td>'; }).join('')
+      + (anyOther ? '<td class="num" data-b="other">' + (o ? amt(o) : '') + '</td>' : '')
+      + '<td class="num" data-b="disputed">' + (p.disputed_minor ? amt(p.disputed_minor) : '') + '</td><td class="num" data-b="balance"><b>' + amt(p.balance_minor) + '</b></td></tr>';
+  }).join('');
+  return '<div class="sec" data-testid="dues-side-' + side + '">' + (side === 'pay' ? tx('You owe') : tx('They owe you')) + '</div>'
+    + bkTable([{ t: tx('No') }, { t: tx('Party') }].concat(cols.map(function (k) { return { t: tx(k[1]), num: 1 }; }))
+        .concat(anyOther ? [{ t: tx('Other'), num: 1 }] : []).concat([{ t: tx('Disputed'), num: 1 }, { t: tx('Balance'), num: 1 }]), rows);
+}
 async function bkDues(body) {
   try {
     var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency;
-    var rows = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); }).map(function (p) {
-      var b = p.buckets || {};
-      return '<tr data-testid="dues-' + esc(p.party_id) + '"><td class="mono">' + esc(p.party_no || '') + '</td><td>' + esc(p.name || '') + '</td>'
-        + BK_BUCKETS.map(function (k) { return '<td class="num">' + (b[k[0]] ? esc(bkMoney(b[k[0]], c)) : '') + '</td>'; }).join('')
-        + '<td class="num">' + (p.disputed_minor ? esc(bkMoney(p.disputed_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(p.balance_minor, c)) + '</b></td></tr>';
-    }).join('');
-    body.innerHTML = rows ? bkTable([{ t: tx('No') }, { t: tx('Party') }].concat(BK_BUCKETS.map(function (k) { return { t: tx(k[1]), num: 1 }; })).concat([{ t: tx('Disputed'), num: 1 }, { t: tx('Balance'), num: 1 }]), rows)
-      : emptyState('⏳', tx('Nothing is due'), '');
+    var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
+    var html = bkDuesTable('rcv', open.filter(function (p) { return bkDuesSide(p) === 'rcv'; }), c)
+             + bkDuesTable('pay', open.filter(function (p) { return bkDuesSide(p) === 'pay'; }), c);
+    body.innerHTML = html || emptyState('⏳', tx('Nothing is due'), '');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
@@ -419,14 +487,36 @@ async function bkLockDo(what) {
     if (out) out.textContent = txf('{m} {fy} · {s}', { m: BK_MONTHS[parseInt(p, 10) - 1] || p, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
   } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not change it')); }
 }
+/**
+ * ⚠️⚠️ A PACK IS ITS FILE (2026-09-30, review M10). Download saved the manifest — a list of names and fingerprints —
+ * and "We have it" then told the server the shop holds its ledger files, which is the fact that later allows old
+ * detail to be summarised away. So: Download fetches the real zip; "We have it" exists only for a pack that HAS a
+ * file, and unless that file came down in this session the owner is asked first; a pack with no file says so and
+ * offers neither.
+ * ⭐ ONE reader of "has it a file": has_file when the server says it (on the row, or on GET /packs/:id beside `file`),
+ * else the older `stored` / `download`. null = the row does not say — GET /packs/:id is asked before anything is offered.
+ */
+function bkPackHasFile(k, r) {
+  var pick = function (o) { return !o ? null : typeof o.has_file === 'boolean' ? o.has_file : typeof o.stored === 'boolean' ? o.stored : null; };
+  var v = pick(r); if (v == null && r) v = pick(r.pack);
+  if (v == null && r && ('file' in r || 'download' in r)) v = !!(r.file || r.download);
+  if (v == null) v = pick(k);
+  return v;
+}
 async function bkPacks(body) {
   try {
     var r = await api('booksPacks');
+    BK.packRows = {}; BK.packGot = BK.packGot || {};
     var rows = ((r && r.packs) || []).map(function (k) {
-      return '<tr data-testid="pack-' + esc(k.pack_id) + '"><td>' + esc(tx({ month: 'Month', year: 'Year', exit: 'Exit' }[k.kind] || k.kind || '')) + '</td><td>' + esc(k.fiscal_year || '') + (k.period ? ' · ' + esc(k.period) : '') + '</td><td>' + esc(bkDate(k.created_at)) + '</td>'
+      BK.packRows[k.pack_id] = k;
+      var has = bkPackHasFile(k, null), id = esc(k.pack_id);
+      var ack = k.acknowledged_at ? '✓ ' + esc(bkDate(k.acknowledged_at))
+        : has === false ? '<span data-testid="pack-nofile-' + id + '" style="color:var(--warn-2)">' + tx('No file · make it again') + '</span>'
+        : '<div class="supacts" style="margin:0"><button data-testid="pack-ack-' + id + '" onclick="bkPackAck(\'' + id + '\')">' + tx('We have it') + '</button></div>';
+      var get = has === false ? '' : '<div class="supacts" style="margin:0"><button data-testid="pack-get-' + id + '" onclick="bkPackGet(\'' + id + '\')">' + tx('Download') + '</button></div>';
+      return '<tr data-testid="pack-' + id + '"><td>' + esc(tx({ month: 'Month', year: 'Year', exit: 'Exit' }[k.kind] || k.kind || '')) + '</td><td>' + esc(k.fiscal_year || '') + (k.period ? ' · ' + esc(k.period) : '') + '</td><td>' + esc(bkDate(k.created_at)) + '</td>'
         + '<td class="mono" title="' + esc(k.sha256 || '') + '">' + esc(String(k.sha256 || '').slice(0, 10)) + '</td>'
-        + '<td>' + (k.acknowledged_at ? '✓ ' + esc(bkDate(k.acknowledged_at)) : '<div class="supacts" style="margin:0"><button data-testid="pack-ack-' + esc(k.pack_id) + '" onclick="bkPackAck(\'' + esc(k.pack_id) + '\')">' + tx('We have it') + '</button></div>') + '</td>'
-        + '<td><div class="supacts" style="margin:0"><button data-testid="pack-get-' + esc(k.pack_id) + '" onclick="bkPackGet(\'' + esc(k.pack_id) + '\')">' + tx('Download') + '</button></div></td></tr>';
+        + '<td>' + ack + '</td><td>' + get + '</td></tr>';
     }).join('');
     body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="pk_fy" data-testid="pk_fy" value="' + bkFyNow() + '" style="width:90px"><input class="inp" id="pk_p" data-testid="pk_p" placeholder="' + esc(tx('month 1–12')) + '" style="width:90px"><button class="supact-pri" data-testid="pk_build" onclick="bkPackBuild()">' + tx('Make a pack') + '</button></div>'
       + '<div id="pk_out" data-testid="pk_out" style="font-size:var(--fs-1)"></div>'
@@ -439,21 +529,60 @@ async function bkPackBuild() {
   try { await api('booksPackBuild', { body: { kind: p ? 'month' : 'year', fiscal_year: fy, period: p || null } }); bkTab('packs'); }
   catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not make it')); }
 }
-/** ⭐ the pack comes down with its manifest — the file list and fingerprints are what make it checkable */
+/** the one sentence for a pack with nothing to download — said, and the row stops offering Download / We have it */
+function bkPackNoFile(id) {
+  if (BK.packRows && BK.packRows[id]) BK.packRows[id].has_file = false;
+  var out = document.getElementById('pk_out');
+  if (out) out.innerHTML = '<span data-testid="pack-nofile-said" style="color:var(--warn-2)">' + esc(tx('No file for this pack · make it again')) + '</span>';
+  var tr = document.querySelector('[data-testid="pack-' + id + '"]');
+  if (tr && !tr.querySelector('[data-testid^="pack-nofile-"]')) {   /* flip the ROW, never the whole list */
+    tr.children[4].innerHTML = '<span data-testid="pack-nofile-' + esc(id) + '" style="color:var(--warn-2)">' + tx('No file · make it again') + '</span>';
+    tr.children[5].innerHTML = '';
+  }
+}
+/**
+ * ⭐ THE PACK ITSELF comes down — the zip at /packs/:id/file, as bytes, with the session (api() speaks JSON only). The
+ * manifest is still shown beside it: the file list and fingerprints are what make the zip checkable.
+ */
 async function bkPackGet(id) {
   var out = document.getElementById('pk_out');
-  try {
-    var r = await api('booksPackGet', { params: { id: id } });
-    var files = (r && r.manifest && r.manifest.files) || [];
-    if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>') + '</div>';
-    var blob = new Blob([JSON.stringify(r, null, 2)], { type: 'application/json' });
-    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pack-' + id + '.json'; a.setAttribute('data-testid', 'pack-download-link'); document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not download it')); }
+  await bkOnce('packget:' + id, document.querySelector('[data-testid="pack-get-' + id + '"]'), async function () {
+    try {
+      var r = await api('booksPackGet', { params: { id: id } });
+      if (bkPackHasFile(BK.packRows && BK.packRows[id], r) === false) { bkPackNoFile(id); return; }
+      var base = (typeof CFG !== 'undefined' && CFG.API_BASE) || '';
+      var res = await fetch(base + EP.booksPackFile.p.replace(':id', encodeURIComponent(id)), { cache: 'no-store', headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {} });
+      if (res.status === 409 || res.status === 404) { bkPackNoFile(id); return; }   /* made while storage was not connected */
+      if (!res.ok) throw new Error('');
+      var blob = await res.blob();
+      if (!blob || !blob.size) { bkPackNoFile(id); return; }
+      var cd = ''; try { cd = res.headers.get('Content-Disposition') || ''; } catch (_) {}
+      var m = /filename="?([^";]+)"?/.exec(cd);
+      var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = (m && m[1]) || ('ledger-pack-' + id + '.zip'); a.setAttribute('data-testid', 'pack-download-link'); document.body.appendChild(a); a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      BK.packGot = BK.packGot || {}; BK.packGot[id] = true;   /* this session holds the file — "We have it" is now a plain yes */
+      var files = (r && r.manifest && r.manifest.files) || [];
+      if (out) out.innerHTML = '<div data-testid="pack-manifest"><b>' + esc(tx('Manifest')) + '</b> · ' + files.length + ' ' + tx('files') + '<br>' + files.map(function (f) { return '<span class="mono">' + esc(f.name) + ' · ' + esc(String(f.sha256 || '').slice(0, 12)) + '</span>'; }).join('<br>') + '</div>';
+    } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not download it')); }
+  });
 }
-async function bkPackAck(id) { try { await api('booksPackAck', { params: { id: id }, body: {} }); bkTab('packs'); } catch (e) { toast(bkWhy(e, tx('Could not record it'))); } }
+async function bkPackAck(id) {
+  await bkOnce('packack:' + id, document.querySelector('[data-testid="pack-ack-' + id + '"]'), async function () {
+    try {
+      if (!(BK.packGot && BK.packGot[id])) {
+        /* not downloaded in this session: is there a file at all? then the owner says so themselves */
+        var r = await api('booksPackGet', { params: { id: id } });
+        if (bkPackHasFile(BK.packRows && BK.packRows[id], r) !== true) { bkPackNoFile(id); return; }
+        var yes = await new Promise(function (res) { confirmAsk(tx('Saved this pack?'), esc(tx('Download it first if you have not')), tx('We have it'), function () { res(true); }, false, function () { res(false); }); });
+        if (!yes) return;
+      }
+      await api('booksPackAck', { params: { id: id }, body: {} }); bkTab('packs');
+    } catch (e) { toast(bkWhy(e, tx('Could not record it'))); }
+  });
+}
 function bkOpeningView(body) {
-  body.innerHTML = '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + tx('Per line: code, party no, debit, credit, bill, due date') + '</div>'
+  BK.openingRef = BK.openingRef || bkRef();   /* one ref for this form until the server has said yes (M11) */
+  body.innerHTML ='<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">' + tx('Per line: code, party no, debit, credit, bill, due date') + '</div>'
     + '<textarea class="inp" id="op_csv" data-testid="op_csv" rows="8" style="width:100%;font-family:var(--mono)" placeholder="1300,P-00001,5000,,INV-12,2026-10-15"></textarea>'
     + '<div class="supacts" style="display:flex;gap:7px;margin-top:7px"><button class="supact-pri" data-testid="op_go" onclick="bkOpeningGo()">' + tx('Enter opening balances') + '</button></div><div id="op_out" data-testid="op_out" style="font-size:var(--fs-1);margin-top:6px"></div>';
 }
@@ -468,10 +597,130 @@ async function bkOpeningGo() {
     else rows.push({ code: c[0], party_no: c[1] || null, dr_minor: dr, cr_minor: cr, bill_ref: c[4] || null, due_date: c[5] || null });
   });
   if (bad.length) { if (out) out.textContent = txf('Line {n}: one amount, debit or credit.', { n: bad.join(', ') }); return; }
+  if (!rows.length) { if (out) out.textContent = tx('Type at least one line'); return; }
+  /* ⚠️ M11: pressed twice, every balance doubled. The button is dead while the call is out; a retry carries the SAME
+     client_ref; and once the server has said yes the box is emptied and the ref replaced — the next press is a new entry */
+  await bkOnce('opening', document.querySelector('[data-testid="op_go"]'), async function () {
+    try {
+      BK.openingRef = BK.openingRef || bkRef();
+      var r = await api('booksOpening', { body: { rows: rows, client_ref: BK.openingRef } });
+      BK.openingRef = bkRef();
+      var box = document.getElementById('op_csv'); if (box) box.value = '';
+      if (out) out.textContent = txf('Entered as {no}.', { no: (r && r.entry_no) || '' }) + (r && r.suspense_minor ? ' ' + txf('{amt} did not balance — held in Suspense', { amt: bkMoney(r.suspense_minor) }) : '');
+    } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not enter them')); }
+  });
+}
+
+/* ══ 4 · CHEQUES AND WHAT IS WAITING — the two things that were on no screen (2026-09-30, review M12) ═════════ */
+/**
+ * ⚠️⚠️ A CHEQUE COULD NEVER CLEAR. Both screens record one, the server holds it correctly until it clears — and no
+ * screen ever called the step, so the customer's balance never moved. The steps are offered wherever a held cheque
+ * is listed: in the Receive form the moment it is recorded, and on the Ledger's Cheques view.
+ * ⭐ The server decides every step (a refusal is shown in its own words); this only remembers what it was told.
+ * ⚠️ WHAT IS LISTED: the cheques recorded in this session, plus whatever /api/books/health sends as `cheques[]`. The
+ * server does not list held cheques yet — until it does, one recorded earlier or at the counter is not reachable here.
+ */
+BK.cheques = BK.cheques || {};
+var BK_CHQ_WORD = { received: 'Received', deposited: 'Deposited', cleared: 'Cleared', bounced: 'Bounced' };
+var BK_CHQ_NEXT = { received: ['deposited', 'bounced'], deposited: ['cleared', 'bounced'], cleared: ['bounced'], bounced: [] };
+function bkChequeStatus(s) { s = String(s || '').replace(/^cheque_/, ''); return BK_CHQ_WORD[s] ? s : 'received'; }
+function bkChequeKeep(c) {
+  var id = c && (c.payment_id || c.id); if (!id) return null;
+  var was = BK.cheques[id] || {};
+  BK.cheques[id] = { payment_id: id, party_id: c.party_id || was.party_id || null, name: c.name || c.party_name || was.name || '',
+    amount_minor: c.amount_minor != null ? c.amount_minor : was.amount_minor, currency: c.currency || was.currency || null,
+    cheque_no: c.cheque_no || c.number || was.cheque_no || '', cheque_bank: c.cheque_bank || c.bank || was.cheque_bank || '',
+    cheque_date: c.cheque_date || c.date || was.cheque_date || null, status: bkChequeStatus(c.status || was.status) };
+  return BK.cheques[id];
+}
+function bkChequeStepsHTML(c) {
+  if (!c) return '';
+  var id = esc(c.payment_id), next = BK_CHQ_NEXT[c.status] || [];
+  return '<span data-testid="chq-status-' + id + '" style="font-weight:600">' + tx(BK_CHQ_WORD[c.status]) + '</span>'
+    + (next.length ? ' <span class="supacts" style="display:inline-flex;gap:6px;margin:0 0 0 8px">' + next.map(function (s) {
+        return '<button data-testid="chq-' + s + '-' + id + '" onclick="bkChequeStep(\'' + id + '\',\'' + s + '\')">' + tx(BK_CHQ_WORD[s]) + '</button>'; }).join('') + '</span>' : '');
+}
+async function bkChequeStep(id, to) {
+  var c = BK.cheques[id]; if (!c || (BK_CHQ_NEXT[c.status] || []).indexOf(to) < 0) return;
+  /* a bounce puts the debt back (and reverses a cleared one) — asked first */
+  var inForm = !!document.getElementById('pay_chq_steps');
+  if (to === 'bounced') {
+    var yes = await new Promise(function (res) { confirmAsk(tx('Cheque bounced?'), esc(tx('They owe this amount again')), tx('Bounced'), function () { res(true); }, true, function () { res(false); }); });
+    if (inForm) booksAfterPay();   /* the question took the Receive form's place — repaint the party behind it */
+    if (!yes) return;
+  }
+  await bkOnce('chq:' + id, null, async function () {
+    var say = function (t) { var o = document.getElementById('chq_out'); if (o) o.textContent = t; else if (t) toast(t); };
+    document.querySelectorAll('[data-testid^="chq-"][data-testid$="-' + id + '"]').forEach(function (b) { if (b.tagName === 'BUTTON') b.disabled = true; });
+    try {
+      await api('booksChequeStep', { params: { id: id }, body: { status: to } });
+      c.status = to; say('');
+      if (to === 'cleared' || to === 'bounced') { delete BK.stmt[c.party_id]; booksDuesLoad(true); }
+    } catch (e) { say(bkWhy(e, tx('Could not change it'))); }
+    bkChequeRepaint(id);
+  });
+}
+/** flip the ROW (and the Receive form's line) — never the whole view */
+function bkChequeRepaint(id) {
+  var c = BK.cheques[id]; if (!c) return;
+  var cell = document.querySelector('[data-testid="chq-steps-' + id + '"]'); if (cell) cell.innerHTML = bkChequeStepsHTML(c);
+  var inForm = document.getElementById('pay_chq_steps'); if (inForm && PAY && PAY.id === id) inForm.innerHTML = bkChequeStepsHTML(c);
+}
+/** ONE read of /health for both views: the held cheques the server lists (if it does) and what is waiting */
+async function bkHealthLoad() {
+  var r = await api('booksHealth');
+  ((r && r.cheques) || []).forEach(bkChequeKeep);
+  BK.waiting = (r && r.waiting) || [];
+  bkWaitingCount();
+  return r;
+}
+function bkWaitingCount() {
+  var el = document.querySelector('[data-testid="bk-tab-waiting"] .code'); if (!el) return;
+  var n = (BK.waiting || []).length;
+  el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');
+}
+async function bkChequesView(body) {
   try {
-    var r = await api('booksOpening', { body: { rows: rows } });
-    if (out) out.textContent = txf('Entered as {no}.', { no: (r && r.entry_no) || '' }) + (r && r.suspense_minor ? ' ' + txf('{amt} did not balance — held in Suspense', { amt: bkMoney(r.suspense_minor) }) : '');
-  } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not enter them')); }
+    await bkHealthLoad();
+    var list = Object.keys(BK.cheques).map(function (k) { return BK.cheques[k]; });
+    var rows = list.map(function (c) {
+      var id = esc(c.payment_id);
+      return '<tr data-testid="chq-' + id + '"><td>' + esc(c.name || '') + '</td><td class="mono">' + esc(c.cheque_no || '') + (c.cheque_bank ? ' · ' + esc(c.cheque_bank) : '') + '</td><td>' + (c.cheque_date ? esc(bkDate(c.cheque_date)) : '') + '</td>'
+        + '<td class="num">' + esc(bkMoney(c.amount_minor, c.currency)) + '</td><td data-testid="chq-steps-' + id + '">' + bkChequeStepsHTML(c) + '</td></tr>';
+    }).join('');
+    body.innerHTML = '<div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1);margin-bottom:6px"></div>'
+      + (rows ? bkTable([{ t: tx('Party') }, { t: tx('Cheque') }, { t: tx('Dated') }, { t: tx('Amount'), num: 1 }, { t: tx('Status') }], rows) : emptyState('🧾', tx('No cheques held'), ''));
+  } catch (e) { body.innerHTML = bkErr(e); }
+}
+/**
+ * ⚠️⚠️ A SALE THE LEDGER COULD NOT RECORD WAS VISIBLE ONLY TO SOMEONE CALLING THE API BY HAND. /health has always
+ * named them (`waiting[]`, each with the reason); this is the list, in the server's own words, with the one control
+ * that helps — try them again.
+ */
+async function bkWaitingView(body) {
+  try {
+    await bkHealthLoad();
+    var rows = (BK.waiting || []).map(function (w, i) {
+      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.why || tx('No reason given')) + '</td>'
+        + '<td class="mono">' + esc(w.ref || '') + '</td><td>' + esc(bkDate(w.since)) + '</td><td class="num">' + (w.tries ? txf('{n} tries', { n: w.tries }) : '') + '</td></tr>';
+    }).join('');
+    body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
+      + (rows ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' + tx('Try again') + '</button></div>'
+          + '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>'
+          + bkTable([{ t: tx('Why') }, { t: tx('What') }, { t: tx('Since') }, { t: '', num: 1 }], rows)
+        : '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + emptyState('✓', tx('Nothing is waiting'), ''));
+  } catch (e) { body.innerHTML = bkErr(e); }
+}
+async function bkWaitingRetry() {
+  await bkOnce('retry', document.querySelector('[data-testid="wait-retry"]'), async function () {
+    var before = (BK.waiting || []).length;
+    try {
+      await api('booksRetry', { body: {} });
+      var body = document.getElementById('bk_body'); if (body && BK.tab === 'waiting') await bkWaitingView(body);
+      var left = (BK.waiting || []).length, out = document.getElementById('wait_out');
+      if (out) out.textContent = left ? txf('{n} recorded · {m} still waiting', { n: Math.max(0, before - left), m: left }) : tx('All recorded');
+    } catch (e) { var o = document.getElementById('wait_out'); if (o) o.textContent = bkWhy(e, tx('Could not try again')); }
+  });
 }
 async function bkAccounts(body) {
   try {
