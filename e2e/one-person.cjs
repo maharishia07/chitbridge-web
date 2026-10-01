@@ -281,8 +281,8 @@ function route(S, r) {
       '10 · the screen offers "Start with a clean browser", and says a private window starts clean too');
     await b1.click('[data-testid="gate-start-clean"]');
     await b1.waitForFunction(() => (document.querySelector('[data-testid="gate-clean-why"]') || {}).textContent, null, { timeout: 10000 }).catch(() => {});
-    ok(/^The counter still holds 2 unsent bills\. Open the counter and let it send them first\.$/.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()),
-      '10 · 2 bills in the counter\'s queue → refused, and it says how many');
+    ok(/^The counter still holds 2 unsent bills for Mayuri123\. Open the counter and let it send them first\.$/.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()),
+      '10 · 2 bills in the counter\'s queue → refused, and it says how many AND whose');
     ok(await sessEnt(b1) === 'ent-A' && await opened(a1, 500) && await ls(b1, 'cb_till_key') === 'k-q1', '10 · and nothing was signed out or wiped');
     /* the counter sent them (simulated: its queue is empty) */
     await b1.evaluate(() => new Promise((res) => { const rq = indexedDB.open('cb-till-q1'); rq.onsuccess = () => { const db = rq.result, tx = db.transaction('queue', 'readwrite'); tx.objectStore('queue').clear(); tx.oncomplete = () => { db.close(); res(); }; }; }));
