@@ -36,6 +36,24 @@ const BREAKS = [
   ['M12 retry not sent', CAP, `      await api('booksRetry', { body: {} });`, ``],
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
   ['F11 payable buckets have no column', CAP, `var cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,`, `var cols = BK_BUCKETS,`],
+  /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
+  ['SRC source not shown', CAP, `return [head].concat(bkSourceParts(s, tid, cur)).join(' · ')`, `return head`],
+  ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
+  ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChit(\\''`, `onclick="openChit(\\''`],
+  ['SRC day count missing', CAP, `if (s.count != null) out.push(`, `if (false) out.push(`],
+  ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));`, ``],
+  ['SRC seller missing', CAP, `  if (s.by) out.push(esc(s.by));`, ``],
+  ['SRC day reads its long narration', CAP, `s && s.kind === 'day' ? esc(tx('Walk-in day'))`, `false ? esc(tx('Walk-in day'))`],
+  ['SRC ledger lines lose their source', CAP, `bkEntryHead(l, 'stmt-src-' + i, c)`, `esc(l.what || '')`],
+  /* ── how it was paid (Athi, 2026-10-01: "clearly segregate credit, cash, UPI (UPI id)") ── */
+  ['HOW tender not shown', CAP, `  else if (s.how) out.push(`, `  else if (false) out.push(`],
+  ['HOW day split not shown', CAP, `if (s.kind === 'day' && s.split && s.split.length) out.push(`, `if (false) out.push(`],
+  ['HOW payment reference dropped', CAP, `(s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref))`, `(false ? ' <span class="mono">' + esc(bkShortRef(s.how_ref))`],
+  /* ── both times (Athi, 2026-10-01: "the time the bill was made or the time the entry was accepted? both should be there") ── */
+  ['TIME bill time not shown', CAP, `link + (s.doc_at ? ' <span`, `link + (false ? ' <span`],
+  ['TIME late entry not marked', CAP, `  if (!late) return '';`, `  return '';`],
+  ['TIME same-day entry marked anyway', CAP, `  if (!late) return '';`, `  if (false) return '';`],
+  ['HOW receipt not called Received', CAP, `s && s.kind === 'receipt' ? esc(tx('Received'))`, `false ? esc(tx('Received'))`],
 ];
 /* BREAK_ONLY=M1 runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
