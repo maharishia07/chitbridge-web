@@ -164,6 +164,7 @@ button{cursor:pointer}
 .live .v.dn{color:var(--red-i)} .live .v.up{color:var(--green-d)}
 
 .note{padding:11px 13px;border-radius:11px;font-size:13px;line-height:1.4;display:flex;gap:9px;align-items:flex-start}
+.note[hidden]{display:none}   /* ⚠️ an author rule beats the browser's [hidden] at equal specificity — without this the sample banner never hid */
 .note .ic{flex:0 0 auto}
 .n-ok{background:var(--green-t);border:1px solid var(--green-b);color:var(--green-d)}
 .n-warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
@@ -1103,7 +1104,8 @@ function modLabModsSplit(){
 function closeModLab(){
   var el=document.getElementById('modLabOverlay'); if(el) el.classList.remove('on');
   try { window.close(); } catch (_) {}
-  setTimeout(function(){ toastSay('You can close this tab now.'); }, 50);
+  /* ⭐ window.close() is refused on a tab the person opened themselves; then the page underneath IS the next screen,
+     so nothing is said (the labs-flow test, 2026-10-01: "You can close this tab now" over a page still in use) */
 }
 function modLabSearch(v){ MODLAB.q=v; paintModLab(); }
 function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLAB.templateId=null; MODLABPREV=[]; paintModLab(); }

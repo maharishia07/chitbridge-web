@@ -20,7 +20,7 @@
     --fs-1:11px; --fs-2:12.5px; --fs-3:14px; --fs-4:16px; --fs-5:20px; --cbpick-gap:8px; }
   *{ box-sizing:border-box; }
   body{ margin:0; font-family:var(--font-ui); color:var(--ink); background:var(--paper); font-size:var(--fs-3); font-variant-numeric:tabular-nums; }
-  header{ display:flex; align-items:center; gap:14px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--card); }
+  header{ display:flex; flex-wrap:wrap; align-items:center; gap:14px; padding:10px 18px; border-bottom:1px solid var(--line); background:var(--card); }
   header h1{ font-size:var(--fs-4); margin:0; letter-spacing:.01em; } header .sub{ color:var(--grey-2); font-size:var(--fs-2); }
   .lab{ display:grid; grid-template-columns:1fr 1fr; min-height:calc(100vh - 52px); }
   .pane{ padding:12px 16px; overflow:auto; min-width:0; }
@@ -97,7 +97,7 @@
 <header>
   <a data-testid="nav-home" href="/" title="The index — the whole shop on one page" style="color:inherit;opacity:.8;text-decoration:none;font-size:13px;margin-right:4px">⌂ Home</a>
   <div><h1>Offer lab</h1><div class="sub">One line per offer. Switch it on and the right half shows what the customer sees — the same engine and the same cart as the shop.</div></div>
-  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;font-size:var(--fs-2)">
+  <div style="margin-left:auto;display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:var(--fs-2)">
     <span id="src" class="chip">reading your catalogue…</span>
     <!-- ⭐ THE SCOPE, PICKED NOT TYPED. A category that does not exist matches nothing and the offer simply never
          fires — a list cannot be misspelt. Empty = the offers reach whatever is ticked on the right, as before. -->
@@ -503,8 +503,9 @@ function paintMarkup() {
 async function labLoadMine(quiet) {
   var sess = null; try { sess = JSON.parse(localStorage.getItem('cb_sess') || 'null'); } catch (_) {}
   if (!sess || !sess.token) {
-    if (!quiet) alert('Sign in to the app on this browser first, then press again.');
-    labSaySource('example products — sign in to use your own catalogue');
+    /* ⭐ never a native alert() (the labs-flow test, 2026-10-01) — said where the page names its catalogue's source */
+    labSaySource(quiet ? 'example products — sign in to use your own catalogue'
+                       : 'Not signed in — sign in to the app on this browser, then press Re-read again');
     return false;
   }
   try {
@@ -561,7 +562,8 @@ async function labLoadMine(quiet) {
     paintCards(); labRepaint(true);
     return true;
   } catch (e) {
-    if (!quiet) alert('Could not read your catalogue: ' + (e && e.message));
+    /* ⭐ no alert(), and never error.message on screen — the line that names the source says it (2026-10-01) */
+    if (!quiet) labSaySource('Could not read your catalogue just now — still showing what was here. Press Re-read to try again.');
     labSaySource('example products — your catalogue could not be read');
     return false;
   }
