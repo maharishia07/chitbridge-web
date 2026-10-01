@@ -3986,9 +3986,21 @@ function gateRun(){
   CBOnePerson.traces(m).then(function(r){
     GATE.busy=false;
     var now=sessMine(); if(!now || now.ent!==m.ent) return;      /* signed out or changed while it looked */
-    if(r.clean){ GATE.ent=m.ent; GATE.last=null; CBOnePerson.claim(m); sessPersist(); return route(); }
+    if(r.clean){ GATE.ent=m.ent; GATE.last=null; CBOnePerson.claim(m); sessPersist(); noticePaint(r.notice); return route(); }
     GATE.last=r; gatePaint(r);
-  }, function(){ GATE.busy=false; gatePaint({ others:[], counter:null, failed:true }); });
+  }, function(){ GATE.busy=false; gatePaint({ others:[], failed:true }); });
+}
+/* another shop's counter still holds unsent bills: one dismissible line over the opened shop — nothing to fix here */
+function noticePaint(n){
+  var old=document.getElementById('gate-notice'); if(old) old.remove();
+  if(!n) return;
+  var k='cb_notice_seen', sig=n.ent+':'+n.unsent;
+  try{ if(sessionStorage.getItem(k)===sig) return; }catch(_){}
+  var d=document.createElement('div'); d.id='gate-notice'; d.setAttribute('data-testid','gate-notice');
+  d.style.cssText='position:fixed;left:50%;transform:translateX(-50%);top:12px;z-index:9999;width:min(560px,calc(100vw - 32px));box-sizing:border-box;display:flex;gap:12px;align-items:center;padding:10px 14px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--warn-2);font-size:var(--fs-2);line-height:1.45;box-shadow:0 4px 18px rgba(0,0,0,.14)';
+  d.innerHTML='<span style="flex:1 1 auto;min-width:0">'+esc(tx(CBOnePerson.noticeSentence(n)))+'</span><button class="btn" data-testid="gate-notice-x" style="flex:none;width:auto;min-width:0;margin:0;padding:6px 12px;background:var(--card);color:var(--ink);border:1px solid var(--line)">'+esc(tx('Dismiss'))+'</button>';
+  d.querySelector('button').onclick=function(){ try{ sessionStorage.setItem(k,sig); }catch(_){} d.remove(); };
+  document.body.appendChild(d);
 }
 /* the one screen: what is still here, and the one thing to press */
 function gatePaint(r){
@@ -3999,12 +4011,10 @@ function gatePaint(r){
       +(o.drafts?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">'+esc(tx('Unsent drafts are removed.'))+'</div>':'')
       +'<button class="btn" data-testid="gate-clear" '+btn+' onclick="gateClear('+i+')">'+esc(tx(P.buttonLabel(o)))+'</button></div>';
   }).join('');
-  var ctr=r.counter ? '<div data-testid="gate-counter" style="margin:0 0 14px"><div style="line-height:1.5">'+esc(tx(P.counterSentence(r.counter)))+'</div>'
-      +'<button class="btn" data-testid="gate-counter-open" '+btn+' onclick="window.open(\'/till.html\',\'_blank\',\'noopener\')">'+esc(tx('Open the counter to switch it'))+'</button></div>' : '';
   document.getElementById('root').innerHTML='<div class="auth"><div class="card"><div class="body" data-testid="gate">'
     +'<h2 style="margin:0 0 12px">'+esc(tx('Close the other shop first'))+'</h2>'
     +(r.failed?'<div>'+esc(tx('Could not check this browser. Press Check again.'))+'</div>':'')
-    +rows+ctr
+    +rows
     /* ⭐ the clean slate (CBOnePerson.startClean): everything ChitBridge keeps in this browser, gone */
     +'<div style="margin:4px 0 12px;padding-top:12px;border-top:1px solid var(--line)">'
     +'<button class="btn" data-testid="gate-start-clean" style="background:var(--card);color:var(--ink);border:1px solid var(--line)" onclick="gateClean()">'+esc(tx('Start with a clean browser'))+'</button>'
@@ -4026,7 +4036,7 @@ function gateClean(){
   var done=function(r){
     if(r && r.ok){
       /* the reload carries its one line in the address; this tab holds nothing else to carry it in */
-      location.replace('/app.html?clean=1'+(r.counter?'&ctr='+encodeURIComponent(r.counter):'')+'#/login');
+      location.replace('/app.html?clean=1'+(r.counter?'&ctr='+encodeURIComponent(r.counter):'')+(r.kept?'&kept='+r.kept.unsent+'&keptname='+encodeURIComponent(r.kept.name||''):'')+'#/login');
       return;
     }
     if(b){ b.disabled=false; b.textContent=tx('Start with a clean browser'); }
@@ -5198,7 +5208,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-01a';   /* ⚠️ bumped 2026-10-01 (a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-01b';   /* ⚠️ bumped 2026-10-01 (a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -19495,7 +19505,7 @@ function paintLB(){
 /* ⭐ just cleaned (gateClean): one line on the sign-in screen, then the address forgets it */
 var CLEAN_LOAD=false;
 try{ var _q=new URLSearchParams(location.search); if(_q.get('clean')==='1'){ CLEAN_LOAD=true;
-  LOGIN.gone=CBOnePerson.cleanSentence({ ok:true, counter:_q.get('ctr')||'' });
+  LOGIN.gone=CBOnePerson.cleanSentence({ ok:true, counter:_q.get('ctr')||'', kept:(+_q.get('kept')>0 ? { name:_q.get('keptname')||'', unsent:+_q.get('kept') } : null) });
   history.replaceState(null,'',location.pathname+location.hash); } }catch(_){}
 applyPrefs();
 restoreSession();
