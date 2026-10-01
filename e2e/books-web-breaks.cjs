@@ -49,7 +49,9 @@ for (const [name, rel, a, b] of BREAKS) {
   fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));
-    const r = cp.spawnSync(process.execPath, ['e2e/books-web.cjs'], { cwd: W, encoding: 'utf8', timeout: 300000 });
+    /* ⚠️ 600s, not 300: a break that strands the harness on its catch-all waits runs long, and on a loaded
+       Windows machine 'M10 download not remembered' crossed 300s — reported NOT caught when it was only slow. */
+    const r = cp.spawnSync(process.execPath, ['e2e/books-web.cjs'], { cwd: W, encoding: 'utf8', timeout: 600000 });
     const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
     const caught = r.status !== 0 && xx.length > 0;
     if (caught) good++;

@@ -17,7 +17,7 @@ const BREAKS = [
   ['the deep link is dropped', APP, `var _deep = /^#\\/app\\/([a-z][a-z0-9-]*)$/.exec(h);`, `var _deep = null;`],
   ['home leaves the top bar', APP, `<a data-testid="nav-home" href="/"`, `<a data-testid="nav-home-gone" href="/"`],
   ['people band takes everything', CAP, `if (/^(1300|2100)/.test(c)) return 'people';`, `if (false) return 'people';`],
-  ['the results band vanishes', CAP, `      + '<div class="sec" data-testid="bk-band-results">' + tx('Results') + '</div>'\n`, ``],
+  ['the results band vanishes', CAP, `data-testid="bk-band-results">' + tx('Results')`, `data-testid="bk-band-gone">' + tx('Results')`],
 ];
 /* BREAK_ONLY=<text> runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
