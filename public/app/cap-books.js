@@ -367,17 +367,60 @@ async function bkDaybook(body) {
     body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
+/**
+ * ⭐ THE LEDGERS, GROUPED THE WAY A SHOPKEEPER THINKS (index page, 2026-09-30): four bands, the plain word first
+ * and the classical word after. The CODES decide the band — 1300/2100 and their parties are People (Debtors and
+ * Creditors as the control lines, shown first), the other 1xxx/2xxx/3xxx are things you hold, 4xxx–6xxx are
+ * income and expenses — and Results is three doors to the statements. Nothing is computed here: the page only
+ * groups what GET /api/books/accounts returns.
+ */
+var BK_BANDS = [
+  ['people', 'People', 'personal — customers and suppliers'],
+  ['things', 'Things you hold', 'real — cash, bank, stock, and what you owe on them'],
+  ['income', 'Income and expenses', 'nominal'],
+];
+function bkBandOf(code) {
+  var c = String(code == null ? '' : code);
+  if (/^(1300|2100)/.test(c)) return 'people';
+  if (/^[456]/.test(c)) return 'income';
+  return 'things';
+}
 async function bkLedgers(body) {
   try {
     var r = await api('booksAccounts'); var acc = ((r && r.accounts) || []).filter(function (a) { return !a.is_group; });
-    body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><select class="inp" id="lg_acc" data-testid="lg_acc">' + acc.map(function (a) { return '<option value="' + esc(a.code) + '"' + (BK.lgAcc === a.code ? ' selected' : '') + '>' + esc(a.code + ' · ' + a.name) + '</option>'; }).join('') + '</select></div>'
-      + bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>';
-    bkLedgerShow();
+    var by = { people: [], things: [], income: [] };
+    acc.forEach(function (a) { by[bkBandOf(a.code)].push(a); });
+    by.people.sort(function (a, b) {
+      var ax = (a.code === '1300' || a.code === '2100') ? 0 : 1, bx = (b.code === '1300' || b.code === '2100') ? 0 : 1;
+      return ax - bx || String(a.code).localeCompare(String(b.code));
+    });
+    var row = function (a) {
+      var on = BK.lgAcc === a.code;
+      return '<button class="optchip" data-testid="lg-acc-' + esc(a.code) + '" style="margin:0 6px 6px 0;cursor:pointer' + (on ? ';color:var(--blue-d);border-color:var(--blue-d);font-weight:700' : '') + '" onclick="bkLedgerPick(\'' + esc(a.code) + '\')">' + esc(a.code) + ' · ' + esc(a.name) + '</button>';
+    };
+    var band = function (b) {
+      return '<div class="sec" data-testid="bk-band-' + b[0] + '">' + tx(b[1]) + ' <span style="color:var(--grey);font-weight:400;text-transform:none">· ' + tx(b[2]) + '</span></div>'
+        + '<div style="margin-bottom:6px">' + (by[b[0]].length ? by[b[0]].map(row).join('') : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('None yet') + '</span>') + '</div>';
+    };
+    body.innerHTML = BK_BANDS.map(band).join('')
+      + '<div class="sec" data-testid="bk-band-results">' + tx('Results') + '</div>'
+      + '<div class="supacts" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px">'
+      + '<button data-testid="lg-go-tb" onclick="bkTab(\'tb\')">⚖️ ' + tx('Trial balance') + '</button>'
+      + '<button data-testid="lg-go-pl" onclick="bkTab(\'pl\')">📈 ' + tx('P&L') + '</button>'
+      + '<button data-testid="lg-go-bs" onclick="bkTab(\'bs\')">🏛️ ' + tx('Balance sheet') + '</button></div>'
+      + '<div id="lg_view">' + (BK.lgAcc ? bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>' : '') + '</div>';
+    if (BK.lgAcc) bkLedgerShow();
   } catch (e) { body.innerHTML = bkErr(e); }
+}
+function bkLedgerPick(code) {
+  BK.lgAcc = code;
+  var v = document.getElementById('lg_view');
+  if (v && !document.getElementById('lg_out')) v.innerHTML = bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>';
+  if (BK.tab === 'ledgers') bkTab('ledgers'); else bkLedgerShow();
 }
 async function bkLedgerShow() {
   var out = document.getElementById('lg_out'); if (!out) return;
-  BK.lgAcc = (document.getElementById('lg_acc') || {}).value; if (!BK.lgAcc) { out.innerHTML = ''; return; }
+  if (!BK.lgAcc) { out.innerHTML = ''; return; }
   try {
     var q = bkRange('lg'); var r = await api('booksLedger', { params: { account: BK.lgAcc }, query: q });
     out.innerHTML = statementHTML(r);

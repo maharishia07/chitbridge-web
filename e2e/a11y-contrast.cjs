@@ -31,6 +31,55 @@ const src = fs.readFileSync(APP, 'utf8');
 /* ⭐ ONE COPY, shared with till-contrast.cjs — see e2e/lib/contrast.cjs for why it moved out of this file. */
 const { hex, lum, ratio } = require('./lib/contrast.cjs');
 
+/* ── PAGE MODE (index page, 2026-09-30): `node e2e/a11y-contrast.cjs <page.html>` measures a standalone page's
+ * own tokens instead of the app's themes — the same reason till-contrast.cjs exists: a page with its own :root
+ * is a page nobody has measured. It measures WHAT THE PAGE'S READER ACTUALLY READS (the till tool's discipline),
+ * at WCAG AA body text 4.5:1 — no large-text allowance taken — and 3:1 for the non-text marks. The hairline
+ * dividers stay advisory here exactly as they are for the app's ordinary themes below (see that note).
+ * With no argument, everything below this block runs unchanged. */
+if (process.argv[2] && /\.html?$/i.test(process.argv[2])) {
+  const file = path.resolve(process.argv[2]);
+  const page = fs.readFileSync(file, 'utf8');
+  const rootAt = page.indexOf(':root');
+  const open = page.indexOf('{', rootAt), close = page.indexOf('}', open);
+  if (rootAt < 0 || close < 0) { console.error('a11y-contrast: no :root token block in ' + file); process.exit(1); }
+  const toks = {};
+  page.slice(open + 1, close).replace(/(--[a-z0-9-]+)\s*:\s*([^;]+)/gi, (_, k, v) => { toks[k] = v.trim(); });
+  /* [foreground, background, minimum, what it is on this page] */
+  const PAIRS = [
+    ['--ink', '--page', 4.5, 'names and figures on the page'],
+    ['--ink', '--card', 4.5, 'names and figures on a box'],
+    ['--muted', '--page', 4.5, 'the idea line, captions, the footer'],
+    ['--muted', '--card', 4.5, 'the what-lines and quiet facts'],
+    ['--muted', '--panel', 4.5, 'the Labs caption on the tinted band'],
+    ['--green-d', '--card', 4.5, 'the live counter line'],
+    ['--amber-i', '--card', 4.5, 'an amber fact on a box'],
+    ['--amber-i', '--amber-t', 4.5, 'an amber alert and its fix button'],
+    ['--red-i', '--red-t', 4.5, 'a red alert and its fix button'],
+    ['--blue-i', '--card', 4.5, 'a blue lab status'],
+    ['--blue-i', '--blue-t', 4.5, 'blue text on its tint'],
+    ['#FFFFFF', '--green', 4.5, 'the sign-in door\'s label'],
+    ['#FFFFFF', '--red-i', 4.5, 'the red alert\'s mark'],
+    ['#FFFFFF', '--amber-i', 4.5, 'the amber alert\'s mark'],
+    ['--green', '--card', 3, 'the live dot and the hover edge (non-text, 1.4.11)'],
+  ];
+  let bad = 0, n = 0;
+  console.log('\n══ PAGE CONTRAST — ' + path.relative(path.join(__dirname, '..'), file) + ' against WCAG AA ══');
+  PAIRS.forEach(([f, b, min, what]) => {
+    const fg = f[0] === '#' ? f : toks[f], bg = b[0] === '#' ? b : toks[b];
+    if (!fg || !bg) { bad++; console.log('  ✗ ' + f + ' on ' + b + '  — token missing from the page'); return; }
+    n++;
+    const got = ratio(fg, bg);
+    const ok = got != null && got >= min;
+    if (!ok) bad++;
+    console.log('  ' + (ok ? '✓' : '✗') + ' ' + (f + ' on ' + b).padEnd(26) + (got == null ? '  n/a' : got.toFixed(2).padStart(6)) + ' / ' + String(min).padEnd(4) + '  ' + what);
+  });
+  const lineR = ratio(toks['--line'], toks['--card']);
+  console.log('  · --line on --card          ' + (lineR == null ? '  n/a' : lineR.toFixed(2).padStart(6)) + ' / 3     divider, not a control boundary — advisory');
+  console.log('\n══ ' + n + ' checks · ' + bad + ' failure(s) ══\n');
+  process.exit(bad ? 1 : 0);
+}
+
 /* ── read the themes out of the app ──────────────────────────────────────────────────────────────────────── */
 
 /**

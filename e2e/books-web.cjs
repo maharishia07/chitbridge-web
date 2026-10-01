@@ -213,6 +213,16 @@ async function route(S, r) {
     await p.evaluate(() => navTo('settings')); await p.waitForSelector('[data-testid="set-sec-business"]', { timeout: 15000 }); await p.click('[data-testid="set-sec-business"]');
     await p.waitForFunction(() => /On/.test((document.querySelector('[data-testid="biz-ledger-state"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(/On/.test(await p.textContent('[data-testid="biz-ledger-state"]').catch(() => '')) && await p.locator('[data-testid="biz-ledger-off"]').count() === 1, 'the card now says On (per day) and offers Switch off');
+    /* ⚠️ the switch is the OWNER's. The break 'switch shown to an actor' (books-web-breaks.cjs) flips the role
+       gate in businessSettingsHTML and, until 2026-10-01, NOTHING here looked — the harness only ever opens as
+       the entity, so the broken gate sailed through green. This asks the painter itself, as an actor. */
+    const actorCard = await p.evaluate(() => {
+      var was = SESSION.role; SESSION.role = 'actor';
+      var html = ''; try { html = businessSettingsHTML({}); } catch (e) { html = 'threw: ' + e.message; }
+      SESSION.role = was;
+      return /biz-ledger/.test(html) ? 'offered' : (/^threw/.test(html) ? html : 'not offered');
+    });
+    ok(actorCard === 'not offered', 'an actor is never offered the Ledger switch (' + actorCard + ')');
     await shot(p, '0-ledger-switch');
     await ctx.close();
   }
