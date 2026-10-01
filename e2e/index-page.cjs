@@ -41,7 +41,7 @@ function standIn() {
   return {
     calls: [],                                        /* every /api path asked, in order */
     me: { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR', gstn: null } },
-    counters: [{ id: 'C1', name: 'Counter 1', open: true }],
+    counters: [{ id: 'C1', name: 'Counter 1', state: 'open' }],   /* GET /api/counters view(): state open|break|opening|closed */
     summary: { rows: [{ key: today, count: 12, total: 4280 }],
       prices_read_at: new Date(Date.now() - 3600 * 1000).toISOString(), unsent: 0 },
     items,
@@ -63,7 +63,7 @@ function route(S, r) {
   const u = new URL(r.request().url()), p = u.pathname;
   S.calls.push(p);
   if (p === '/api/entities/me') return J(r, 200, S.me);
-  if (p === '/api/till/counters') return J(r, 200, { ok: true, counters: S.counters });
+  if (p === '/api/counters') return J(r, 200, { ok: true, counters: S.counters, free: 0 });
   if (p === '/api/till/summary') return J(r, 200, S.summary);
   if (p === '/api/products') return J(r, 200, { items: S.items });
   if (p === '/api/combo-templates') return J(r, 200, { templates: S.combos });
