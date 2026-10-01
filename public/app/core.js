@@ -993,10 +993,13 @@ async function apiOnce(key, {params, query, body}={}){
       }catch(_){}
       if(j && j.offline){ throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — your work is saved and will sync when you reconnect."); }
       cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
-      if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
-      if(res.status===422){ throw new Error(msg||"Please check the form and try again."); }          // validation
-      if(res.status>=500){ throw new Error(msg||"Server error — please try again."); }                 // generic
-      throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p));
+      /* ⭐ the status rides on the error (e.status): a page that must tell "this shop has the Ledger off" (404) from "the network
+         failed" (no status) — CB Accounts — can, without parsing words. The message itself is unchanged. */
+      const _fail=function(m){ const er=new Error(m); er.status=res.status; return er; };
+      if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw _fail(msg||"Session expired — please sign in again."); }
+      if(res.status===422){ throw _fail(msg||"Please check the form and try again."); }          // validation
+      if(res.status>=500){ throw _fail(msg||"Server error — please try again."); }                 // generic
+      throw _fail(msg||("API "+res.status+" "+ep.m+" "+ep.p));
     }
     /**
      * ⭐⭐ THE SPEC RECORDS WHAT ACTUALLY HAPPENED. Athi, 2026-08-22: *"possibly we can use spec mode to see

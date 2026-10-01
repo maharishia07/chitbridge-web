@@ -11,9 +11,10 @@
  *  5  document.scrollWidth === 390 at phone width (and no horizontal scroll at 1080)
  *  6  under 250 words on the page
  *  +  every tile's link target · signed out = the one sign-in door and NO facts, no reads · Ledger off →
- *     "Not switched on" · the strings "accounting"/"books of account" absent · no alert() · the four bands on
- *     the Ledgers view (reached through the new deep link app.html#/app/ledger)
- * Screenshots: e2e/shots/index-{laptop,phone,alerts,all-well}.png and e2e/shots/ledgers-bands.png
+ *     the third box is CB ACCOUNTS (2026-10-01): off → the owner's Switch on (one confirm, one POST /api/books/enable),
+ *     "Not switched on yet" for anyone else; on → an Active badge and a lit tile · the strings "accounting"/"books of
+ *     account" absent · no alert() · the four bands on the app's Ledgers view (still reached through app.html#/app/ledger)
+ * Screenshots: e2e/shots/index-{laptop,phone,alerts,all-well}.png, index-cb-accounts-{off,active}.png and e2e/shots/ledgers-bands.png
  */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -69,6 +70,7 @@ function route(S, r) {
   if (p === '/api/combo-templates') return J(r, 200, { templates: S.combos });
   if (p === '/api/definitions') return J(r, 200, { definitions: S.drafts });
   if (p.startsWith('/api/books')) {
+    if (p === '/api/books/enable' && r.request().method() === 'POST') { S.enables = (S.enables || 0) + 1; S.booksOn = true; return J(r, 200, { ok: true }); }
     if (!S.booksOn) return J(r, 404, { error: 'Not found' });
     if (p === '/api/books/health') return J(r, 200, S.health);
     if (p === '/api/books/accounts') return J(r, 200, { accounts: S.accounts });
@@ -98,10 +100,10 @@ function route(S, r) {
     const ctx = await b.newContext({ viewport: opts.viewport || { width: 1360, height: 900 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     await ctx.route('**/api/**', (r) => route(S, r));
-    if (!opts.signedOut) await ctx.addInitScript(() => { try {
+    if (!opts.signedOut) await ctx.addInitScript((roleOf) => { try {
       const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
       const tok = b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', identity_type: 'entity', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x';
-      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' })); } catch (_) {} });
+      localStorage.setItem('cb_sess', JSON.stringify({ token: tok, role: roleOf, name: 'Mayur', entity: 'Mayur Bhavan' })); } catch (_) {} }, opts.role || 'entity');
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + (opts.path || '/'));
@@ -172,7 +174,14 @@ function route(S, r) {
     const href = (t) => p.getAttribute('[data-testid="' + t + '"]', 'href');
     ok(await href('box-till') === '/till.html' && await p.getAttribute('[data-testid="box-till"]', 'target') === '_blank', 'Till → /till.html, its own tab');
     ok(await href('box-catalogue') === 'app.html#/app/catalogue', 'Catalogue → app.html#/app/catalogue');
-    ok(await href('box-ledger') === 'app.html#/app/ledger', 'Ledger → app.html#/app/ledger');
+    ok(/^CB Accounts/.test((await p.textContent('[data-testid="box-ledger"] h3')).trim()), 'the third box is called CB Accounts');
+    ok(await href('box-ledger-link') === '/accounts.html', 'CB Accounts → /accounts.html, the same tab');
+    ok(await p.getAttribute('[data-testid="box-ledger-link"]', 'target') === null, 'CB Accounts opens in the same tab');
+    ok(await p.locator('[data-testid="ledger-active"]').isVisible() && (await p.textContent('[data-testid="ledger-active"]')).trim() === 'Active', 'on → an Active badge');
+    const lit = await p.evaluate(() => { const b = document.getElementById('box_bk'), cs = getComputedStyle(b), g = getComputedStyle(document.documentElement); return { lit: b.classList.contains('lit'), edge: cs.borderTopColor, glow: cs.boxShadow, green: g.getPropertyValue('--green').trim() }; });
+    ok(lit.lit && /rgb\(22, 105, 63\)/.test(lit.edge) && lit.glow !== 'none', 'on → the tile is lit: a green edge (' + lit.edge + ') and a glow');
+    ok(await p.locator('[data-testid="ledger-switch-on"]').count() === 0 && await p.locator('[data-testid="ledger-not-on"]').count() === 0, 'on → no Switch on, no "not switched on"');
+    await p.screenshot({ path: path.join(SHOTS, 'index-cb-accounts-active.png'), fullPage: true });
     ok(await href('lab-product') === 'product-lab.html' && await href('lab-offer') === 'offer-lab-next.html' && await href('lab-combo') === 'combo-lab.html', 'each Lab tile → its own page');
     ok(await p.evaluate(() => { const t = document.querySelector('[data-testid="lab-tax"]'); return t.tagName !== 'A' && !t.getAttribute('href'); }), 'Tax Lab is not a link — the page does not exist yet');
     ok(await href('foot-shop') === 'app.html#/app/settings' && await href('foot-coassists') === 'app.html#/app/coassists'
@@ -219,7 +228,7 @@ function route(S, r) {
     ok(n === 3, 'a failing thing earns a row — three failing things, three rows (' + n + ')');
     ok(await p.locator('#alerts .al .fix').count() === n, 'every alert carries the button that fixes it');
     const fixes = await p.$$eval('#alerts .al .fix', (els) => els.map((e) => e.getAttribute('href')));
-    ok(fixes.every(Boolean) && fixes.filter((f) => f === '/till.html').length === 2 && fixes.indexOf('app.html#/app/ledger') >= 0,
+    ok(fixes.every(Boolean) && fixes.filter((f) => f === '/till.html').length === 2 && fixes.indexOf('/accounts.html#waiting') >= 0,
       'each fix button opens the place that fixes it (' + fixes.join(' · ') + ')');
     ok(await p.evaluate(() => document.querySelector('#alerts .al').classList.contains('bad')), 'what is wrong now sits first');
     ok(/Prices are 38 hours old/.test(await p.textContent('#alerts')), 'the price alert says how old, in hours');
@@ -250,15 +259,53 @@ function route(S, r) {
     await ctx.close();
   }
 
-  /* ── 4 · THE LEDGER IS OFF: 404 → "Not switched on", and the box still opens the app's Ledger ───────────── */
+  /* ── 4 · CB ACCOUNTS IS OFF: 404 → the owner's Switch on · anyone else "Not switched on yet" · the tile is not lit ── */
   {
     const S = standIn();
     S.booksOn = false;
     const { ctx, p } = await open(S);
-    await p.waitForFunction(() => /Not switched on/.test((document.getElementById('f_bk') || {}).textContent || ''), null, { timeout: 15000 }).catch(() => {});
-    ok(/Not switched on/.test(await p.textContent('#f_bk')), 'Ledger off: the box says "Not switched on"');
-    ok(await p.getAttribute('[data-testid="box-ledger"]', 'href') === 'app.html#/app/ledger', 'and still opens the app\'s Ledger section, which explains');
+    await p.waitForSelector('[data-testid="ledger-switch-on"]', { timeout: 15000 });
+    await settle(p);
+    ok(await p.locator('[data-testid="ledger-active"]').isVisible() === false, 'off → no Active badge');
+    ok(await p.evaluate(() => !document.getElementById('box_bk').classList.contains('lit')), 'off → the tile is not lit');
+    ok(await p.locator('[data-testid="ledger-switch-on"]').isVisible(), 'off → the owner sees Switch on on the tile');
+    ok(await p.getAttribute('[data-testid="box-ledger-link"]', 'href') === '/accounts.html', 'and the tile still opens CB Accounts, which explains');
     ok(!/404|error/i.test(await p.evaluate(() => document.body.innerText)), 'the 404 never reaches the screen');
+    await noBadWords(p, 'CB Accounts off');
+    await p.screenshot({ path: path.join(SHOTS, 'index-cb-accounts-off.png'), fullPage: true });
+    await p.click('[data-testid="ledger-switch-on"]');
+    await p.waitForSelector('[data-testid="confirm-ok"]');
+    ok(/Switch the Ledger on\?/.test(await p.textContent('[data-testid="confirm"]')), 'Switch on asks first (the same words as Settings)');
+    ok((S.enables || 0) === 0, 'nothing is sent before the owner confirms');
+    await p.click('[data-testid="confirm-ok"]');
+    await p.waitForSelector('[data-testid="ledger-active"]:not([hidden])', { timeout: 10000 });
+    await settle(p);
+    ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
+    ok(await p.locator('[data-testid="ledger-switch-on"]').count() === 0 && await p.evaluate(() => document.getElementById('box_bk').classList.contains('lit')), 'switched on → Active, lit, and the button is gone');
+    ok(/Ledger up to/.test(await p.textContent('#f_bk')), 'and its facts arrive');
+    await ctx.close();
+  }
+  {
+    const S = standIn();
+    S.booksOn = false;
+    const { ctx, p } = await open(S, { role: 'actor' });
+    await p.waitForSelector('[data-testid="ledger-not-on"]', { timeout: 15000 });
+    ok(/Not switched on yet/.test(await p.textContent('[data-testid="ledger-not-on"]')) && await p.locator('[data-testid="ledger-switch-on"]').count() === 0, 'anyone but the owner: "Not switched on yet", no button');
+    await ctx.close();
+  }
+  {
+    /* a reader who asks for less motion gets the same lit tile, standing still */
+    const S = standIn();
+    const ctx = await b.newContext({ viewport: { width: 1360, height: 900 }, reducedMotion: 'reduce', serviceWorkers: 'block' });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await ctx.route('**/api/**', (r) => route(S, r));
+    await ctx.addInitScript(() => { try { const b64 = (o) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+      localStorage.setItem('cb_sess', JSON.stringify({ token: b64({ alg: 'none' }) + '.' + b64({ identity_id: 'ent-idx', exp: Math.floor(Date.now() / 1000) + 3600 }) + '.x', role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' })); } catch (_) {} });
+    const p = await ctx.newPage(); p.on('pageerror', (e) => threw.push(e.message));
+    await p.goto(base + '/');
+    await p.waitForSelector('[data-testid="ledger-active"]:not([hidden])', { timeout: 15000 });
+    const anim = await p.evaluate(() => getComputedStyle(document.getElementById('box_bk')).animationName);
+    ok(anim === 'none' && await p.evaluate(() => document.getElementById('box_bk').classList.contains('lit')), 'reduced motion: the tile is lit and does not pulse (animation: ' + anim + ')');
     await ctx.close();
   }
 
@@ -299,4 +346,4 @@ function route(S, r) {
   await b.close(); srv.close();
   console.log('\n  index-page: ' + pass + ' passed, ' + fail + ' failed');
   process.exitCode = fail ? 1 : 0;
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => { console.error(e); console.log('  XX  the harness stopped: ' + e.message.split('\n')[0]); process.exit(1); });
