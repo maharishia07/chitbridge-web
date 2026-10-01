@@ -1,12 +1,378 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chit and Bridge</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChitBridge</title>
+<!-- ⭐ THE INDEX PAGE (Athi, 2026-09-30) — docs/design/index-page/cb-index.md is the design; docs/design/SYSTEM.md is
+     the pass mark; e2e/index-page.cjs proves both. The frozen React app that lived at / is retired (src/FROZEN.md).
+     The arrangement carries the model — three boxes you live in, four Labs you visit — and every figure on it is the
+     server's, read through the same API app.html uses. A box with no fact is fine; an error string never is. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* tokens — docs/design/SYSTEM.md §2, copied, never restyled */
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6;
+  --line:#DDD6C6; --line-soft:#E6E0D2; --hair:#F0ECE2;
+  --ink:#1D1B16; --muted:#5E594D; --faint:#8A8374; --ghost:#A8A295;
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+button,a{font:inherit;color:inherit} button{cursor:pointer}
+a.box,a.lab{text-decoration:none;cursor:pointer}
+.wrap{max-width:1080px;margin:0 auto;padding:26px 22px 60px}
+
+/* ── head ─────────────────────────────────────────────────────────────── */
+.top{display:flex;align-items:center;gap:13px;margin-bottom:6px;flex-wrap:wrap}
+.brand{font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;
+  letter-spacing:-.025em;margin:0}
+/* ⚠️ --muted, not the mock's --faint: this is read text and the pass mark is WCAG AA (--faint is 3.6:1 on the page) */
+.shop{font-size:13.5px;color:var(--muted)}
+.grow{flex:1}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);
+  display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--muted)}
+/* the one door in when signed out */
+.signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;
+  background:var(--green);color:#fff;font-size:13.5px;font-weight:700;text-decoration:none}
+/* one sentence. The arrangement does the rest of the explaining. */
+.idea{font-size:14.5px;color:var(--muted);margin:0 0 20px;max-width:56ch}
+
+/* ── anything wrong, before anything else ─────────────────────────────── */
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+.alerts:empty{display:none;margin:0;border:0}
+.al{display:flex;align-items:center;gap:11px;padding:11px 15px;border-radius:12px;font-size:13.5px}
+.al .ic{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;
+  font-size:12px;font-weight:800;color:#fff;flex:0 0 auto}
+.al b{font-weight:700}
+.al .fix{margin-left:auto;display:inline-flex;align-items:center;height:32px;padding:0 13px;border-radius:9px;
+  border:1px solid currentColor;background:rgba(255,255,255,.55);font-size:12.5px;font-weight:700;
+  white-space:nowrap;text-decoration:none}
+.al.bad{background:var(--red-t);border:1px solid var(--red-b);color:var(--red-i)}
+.al.bad .ic{background:var(--red-i)}
+.al.warn{background:var(--amber-t);border:1px solid var(--amber-b);color:var(--amber-i)}
+.al.warn .ic{background:var(--amber-i)}
+
+/* ── the three you work in ────────────────────────────────────────────── */
+.cap{display:flex;align-items:center;gap:11px;margin:0 0 11px}
+.cap b{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.cap i{flex:1;height:1px;background:var(--line-soft);font-style:normal}
+.cap span{font-size:12.5px;color:var(--muted)}
+
+.main{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.box{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:15px;padding:18px 19px;position:relative;transition:border-color .12s,transform .12s}
+.box:hover{border-color:var(--green);transform:translateY(-1px)}
+.box .g{width:42px;height:42px;border-radius:12px;background:var(--panel);display:grid;
+  place-items:center;font-size:19px;color:var(--muted);margin-bottom:13px}
+.box h3{font-family:'Bricolage Grotesque',sans-serif;font-size:19px;font-weight:800;
+  letter-spacing:-.015em;margin:0}
+.box .what{font-size:13.5px;color:var(--muted);margin:3px 0 0;line-height:1.35}
+.box .facts{display:flex;flex-direction:column;gap:3px;margin-top:15px;padding-top:13px;
+  border-top:1px solid var(--hair)}
+.box .facts[hidden]{display:none}
+.box .f{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--muted)}
+.box .f b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;
+  font-size:15px;font-weight:700;color:var(--ink)}
+.box .f.dn b,.box .f.dn{color:var(--amber-i)}
+.box .f.live{color:var(--green-d)} .box .f.live .dot{width:7px;height:7px;border-radius:50%;
+  background:var(--green);display:inline-block}
+.box .go{position:absolute;top:18px;right:18px;color:var(--ghost);font-size:17px}
+.box:hover .go{color:var(--green)}
+
+/* ── the labs, a family, visibly different from the three ─────────────── */
+.labs{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:17px 18px}
+.lgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-top:12px}
+.lab{display:block;text-align:left;background:var(--card);border:1px solid var(--line);
+  border-radius:13px;padding:15px 16px;transition:border-color .12s,transform .12s}
+a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
+.lab .g{font-size:17px;color:var(--faint);margin-bottom:9px;display:block}
+.lab b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em}
+.lab span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.35}
+.lab .st{display:inline-flex;align-items:center;gap:6px;margin-top:11px;font-size:12px;
+  font-weight:600;color:var(--muted);font-family:'IBM Plex Mono',monospace}
+.lab .st:empty{display:none}
+.lab .st.on{color:var(--blue-i)}
+.lab .st.dn{color:var(--amber-i)}
+
+.foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--hair);
+  display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.foot a{color:var(--muted);text-decoration:none;font-weight:600}
+.foot a:hover{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+
+@media(max-width:860px){ .main{grid-template-columns:1fr} .lgrid{grid-template-columns:1fr 1fr} }
+@media(max-width:520px){
+  .wrap{padding:16px 14px 44px}
+  .brand{font-size:22px}
+  .lgrid{grid-template-columns:1fr}
+  .al{flex-wrap:wrap} .al .fix{margin-left:33px;width:auto}
+}
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
+<div class="wrap">
+
+  <div class="top">
+    <h1 class="brand">ChitBridge</h1>
+    <span class="shop" id="shop" data-testid="shop-name"></span>
+    <span class="grow"></span>
+    <span id="who"></span>
+  </div>
+  <p class="idea">One shop, one set of numbers. The counter sells it, the catalogue
+    describes it, the ledger records it — and the Labs are where you work a number out
+    before any of them see it.</p>
+
+  <div class="alerts" id="alerts" data-testid="alerts"></div>
+
+  <div class="cap"><b>Day to day</b><i></i></div>
+  <div class="main" data-testid="day-to-day">
+
+    <a class="box" data-testid="box-till" href="/till.html" target="_blank" rel="noopener">
+      <span class="go">›</span>
+      <span class="g">▤</span>
+      <h3>Till</h3>
+      <p class="what">Take money at the counter.</p>
+      <span class="facts" id="f_till" hidden></span>
+    </a>
+
+    <a class="box" data-testid="box-catalogue" href="app.html#/app/catalogue">
+      <span class="go">›</span>
+      <span class="g">▦</span>
+      <h3>Catalogue</h3>
+      <p class="what">What this shop sells, and at what price.</p>
+      <span class="facts" id="f_cat" hidden></span>
+    </a>
+
+    <a class="box" data-testid="box-ledger" href="app.html#/app/ledger">
+      <span class="go">›</span>
+      <span class="g">₹</span>
+      <h3>Ledger</h3>
+      <p class="what">What the shop made, and what it owes.</p>
+      <span class="facts" id="f_bk" hidden></span>
+    </a>
+
+  </div>
+
+  <div class="labs" data-testid="labs-band">
+    <div class="cap" style="margin:0">
+      <b>Labs</b><span>Work the number out first. Nothing changes until you say so.</span><i></i>
+    </div>
+    <div class="lgrid">
+
+      <a class="lab" data-testid="lab-product" href="product-lab.html">
+        <span class="g">◈</span>
+        <b>Product Lab</b>
+        <span>Cost, price, and what each one leaves you.</span>
+        <span class="st" id="st_prod"></span>
+      </a>
+
+      <a class="lab" data-testid="lab-offer" href="offer-lab.html">
+        <span class="g">%</span>
+        <b>Offer Lab</b>
+        <span>Discounts, and whether they clear your margin.</span>
+        <span class="st" id="st_offer"></span>
+      </a>
+
+      <a class="lab" data-testid="lab-combo" href="combo-lab.html">
+        <span class="g">▣</span>
+        <b>Combo Lab</b>
+        <span>Two things at one price, and the choices before a bill.</span>
+        <span class="st" id="st_combo"></span>
+      </a>
+
+      <!-- tax-lab.html does not exist yet — not a link until it does -->
+      <div class="lab" data-testid="lab-tax">
+        <span class="g">§</span>
+        <b>Tax Lab</b>
+        <span>GST slabs, and what prints on a bill.</span>
+        <span class="st" id="st_tax">coming</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot">
+    <a href="app.html#/app/settings" data-testid="foot-shop">Your shop</a>
+    <a href="app.html#/app/settings" data-testid="foot-counters">Counters &amp; keys</a>
+    <a href="app.html#/app/coassists" data-testid="foot-coassists">Co-assists</a>
+    <a href="app.html#/app/suppliers" data-testid="foot-suppliers">Suppliers</a>
+    <a href="app.html#/app/connectors" data-testid="foot-connectors">Connectors</a>
+    <span class="grow"></span>
+    <span id="prices_read" data-testid="prices-read"></span>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+/* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
+   below is one read of the existing API. A failed read leaves its line out — never an error string (rule 4). */
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+/* the API base, decided the same way app.html decides it (CFG.API_BASE) */
+function apiBase(){
+  try{
+    var forced = localStorage.getItem('cb_api_base');
+    if (forced) return forced === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : forced;
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  }catch(_){}
+  return 'https://chitbridge-api-production.up.railway.app';
+}
+
+/* the app's session, read the way app.html restores it — an expired token counts as signed out */
+function session(){
+  try{
+    var s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    if (!s || !s.token) return null;
+    var p = JSON.parse(atob(String(s.token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
+    if (p && p.exp && p.exp * 1000 < Date.now()) return null;
+    return s;
+  }catch(_){ return null; }
+}
+
+var SESS = session();
+var CUR = 'INR';
+function money(n){
+  var v = Number(n) || 0;
+  try{ return new Intl.NumberFormat('en-IN', { style:'currency', currency:CUR,
+    minimumFractionDigits:0, maximumFractionDigits: v % 1 ? 2 : 0 }).format(v); }
+  catch(_){ return String(v); }
+}
+function day(d){ try{ return new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short'}); }catch(_){ return ''; } }
+
+/* one read; the {ok,data,error} envelope unwrapped; any failure is null, and null paints nothing */
+async function read(path){
+  var r = await fetch(apiBase() + path, { cache:'no-store', headers:{ Authorization:'Bearer ' + SESS.token } });
+  if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; }
+  var j = await r.json();
+  return (j && typeof j === 'object' && 'ok' in j && ('data' in j || 'error' in j)) ? (j.ok ? j.data : null) : j;
+}
+function quiet(p){ return read(p).catch(function(){ return null; }); }
+
+/**
+ * ⭐ ONE FUNCTION for "no cost": the Catalogue box's "with no cost written down" and the Product Lab tile's
+ * "without a cost" are one fact seen from two doors, and this is its only counter. They can never disagree.
+ * A price/cost is stamped money ({amount,currency}) or a number — both are read.
+ */
+function amountOf(v){ if (v == null) return 0; if (typeof v === 'object') v = v.amount; var n = Number(v); return isFinite(n) ? n : 0; }
+function noCostCount(items){ return (items || []).filter(function(p){ return p && p.item_data && !(amountOf(p.item_data.cost) > 0); }).length; }
+
+function factLine(hostId, html, cls){
+  var host = document.getElementById(hostId); if (!host) return;
+  var s = document.createElement('span'); s.className = 'f' + (cls ? ' ' + cls : ''); s.innerHTML = html;
+  host.appendChild(s); host.hidden = false;
+}
+function labFact(id, text, cls){
+  var el = document.getElementById(id); if (!el || !text) return;
+  el.textContent = text; if (cls) el.className = 'st ' + cls;
+}
+var ALERTS = [];
+function alert_(lvl, ic, t, s, fixText, fixHref, fixBlank){
+  ALERTS.push({ lvl: lvl, html: '<div class="al ' + lvl + '"><span class="ic">' + ic + '</span><span><b>' + esc(t) + '</b> &nbsp;' + esc(s) + '</span>'
+    + '<a class="fix" href="' + esc(fixHref) + '"' + (fixBlank ? ' target="_blank" rel="noopener"' : '') + '>' + esc(fixText) + '</a></div>' });
+}
+/* Only a failing thing earns a row; with nothing wrong this block renders nothing at all (SYSTEM rule 1).
+   What is wrong NOW (red) sits above what needs a hand (amber), whatever order the answers arrived in. */
+function alertsPaint(){
+  document.getElementById('alerts').innerHTML =
+    ALERTS.filter(function(a){ return a.lvl === 'bad'; }).concat(ALERTS.filter(function(a){ return a.lvl !== 'bad'; }))
+      .map(function(a){ return a.html; }).join('');
+}
+
+function n1(v){ var n = Number(v); return isFinite(n) ? n : null; }
+
+async function facts(){
+  document.getElementById('who').innerHTML =
+    '<span class="avatar" data-testid="avatar" title="' + esc(SESS.entity || SESS.name || '') + '">'
+    + esc(String(SESS.entity || SESS.name || '?').slice(0,2).toUpperCase()) + '</span>';
+  if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
+
+  /* who we are — the shop's name, its currency, and whether it holds a GSTIN */
+  quiet('/api/entities/me').then(function(r){
+    var e = (r && (r.entity || r)) || {};
+    if (e.currency_code) CUR = e.currency_code;
+    var nm = e.display_name || e.name;
+    if (nm) document.getElementById('shop').textContent = nm;
+    var g = e.gstn || e.gstin || null;
+    labFact('st_tax', g ? 'GST invoices' : 'no GSTIN — cash memos', g ? '' : 'dn');
+  });
+
+  /* Till — the counter summary the app already reads, folded across counters */
+  quiet('/api/till/counters').then(function(r){
+    var open = ((r && r.counters) || []).filter(function(c){ return c && (c.open === true || c.status === 'open'); })[0];
+    if (open) factLine('f_till', '<span class="dot"></span>' + esc(open.name || open.id || 'Counter') + ' open', 'live');
+  });
+  quiet('/api/till/summary?period=day&n=1').then(function(r){
+    var row = ((r && (r.rows || r.summaries)) || [])[0] || {};
+    var bills = n1(row.count != null ? row.count : row.bills), take = n1(row.total != null ? row.total : row.takings);
+    if (bills != null && take != null)
+      factLine('f_till', '<b>' + bills + '</b> bills · <b>' + esc(money(take)) + '</b> today');
+    /* the two counter alerts ride the same summary — prices read over 24 h ago, and bills still to go up */
+    var at = r && (r.prices_read_at || r.snapshot_at);
+    if (at){
+      var ms = Date.now() - new Date(at).getTime();
+      if (isFinite(ms) && ms > 24 * 3600 * 1000)
+        alert_('bad', '!', 'Prices are ' + Math.round(ms / 3600000) + ' hours old',
+          'Read ' + day(at) + '. Bills may be wrong.', 'Re-read the shop', '/till.html', true);
+      else {
+        var hm = ''; try{ hm = new Date(at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:false}); }catch(_){}
+        if (hm) document.getElementById('prices_read').textContent = 'Prices read ' + hm + ' today';
+      }
+    }
+    var unsent = n1(r && (r.unsent != null ? r.unsent : r.queued));
+    if (unsent) alert_('warn', '↑', unsent + ' bills not sent up', 'Still on the counter.', 'Send them', '/till.html', true);
+    alertsPaint();
+  });
+
+  /* Catalogue (and the Product Lab and Combo Lab tiles ride the same one read) */
+  quiet('/api/products?limit=500').then(function(j){
+    var items = (j && (j.items || j.products || j.rows)) || (Array.isArray(j) ? j : null);
+    if (!items) return;
+    var shelves = {};
+    items.forEach(function(p){ var c = p && p.item_data && (p.item_data.category || (p.item_data.categories || [])[0]); if (c) shelves[c] = 1; });
+    factLine('f_cat', '<b>' + items.length + '</b> products · <b>' + Object.keys(shelves).length + '</b> shelves');
+    var none = noCostCount(items);
+    if (none){
+      factLine('f_cat', '<b data-testid="nocost-cat">' + none + '</b> with no cost written down', 'dn');
+      labFact('st_prod', none + ' without a cost', 'dn');
+    }
+    var mods = items.reduce(function(s, p){ return s + ((p && p.item_data && p.item_data.modifiers) || []).length; }, 0);
+    quiet('/api/combo-templates').then(function(r){
+      var combos = (r && r.templates || []).length;
+      labFact('st_combo', combos + ' combos · ' + mods + ' modifiers');
+    });
+  });
+
+  /* Ledger — /api/books/health; a 404 means the shop's ledger is off */
+  read('/api/books/health').then(function(r){
+    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
+    if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
+    var w = ((r && r.waiting) || []).length;
+    if (w){
+      factLine('f_bk', '<b>' + w + '</b> waiting', 'dn');
+      alert_('warn', '🕗', w + ' waiting for the ledger', 'The Ledger names each one.', 'See them', 'app.html#/app/ledger');
+      alertsPaint();
+    }
+  }).catch(function(e){
+    if (e && e.status === 404) factLine('f_bk', 'Not switched on', 'dn');
+  });
+
+  /* Offer Lab — the drafts on the shelf */
+  quiet('/api/definitions?kind=offer&status=draft').then(function(r){
+    var n = ((r && r.definitions) || []).length;
+    if (n) labFact('st_offer', n + (n === 1 ? ' draft waiting' : ' drafts waiting'), 'on');
+  });
+}
+
+if (SESS) facts();
+else document.getElementById('who').innerHTML =
+  '<a class="signin" data-testid="signin-door" href="app.html#/login">Sign in</a>';
+</script>
 </body>
 </html>
