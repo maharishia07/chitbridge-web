@@ -207,6 +207,7 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 
 </div>
 
+<script src="/app/one-person.js"></script>
 <script>
 'use strict';
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
@@ -225,18 +226,19 @@ function apiBase(){
   return 'https://chitbridge-api-production.up.railway.app';
 }
 
-/* the app's session, read the way app.html restores it — an expired token counts as signed out */
+/* the app's session, read the way app.html restores it — an expired token counts as signed out. WHO it is (the
+   shop's id from the signed token) is CBOnePerson's one answer, the same one the app's gate compares. */
 function session(){
   try{
     var s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
-    if (!s || !s.token) return null;
-    var p = JSON.parse(atob(String(s.token).split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));
-    if (p && p.exp && p.exp * 1000 < Date.now()) return null;
-    return s;
+    return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
   }catch(_){ return null; }
 }
 
 var SESS = session();
+var MINE = SESS ? CBOnePerson.who(SESS) : null;
+/* every repaint starts a new generation; a read that lands for an older one paints nothing */
+var GEN = 0;
 var CUR = 'INR';
 function money(n){
   var v = Number(n) || 0;
@@ -248,9 +250,12 @@ function day(d){ try{ return new Date(d).toLocaleDateString('en-IN',{day:'numeri
 
 /* one read; the {ok,data,error} envelope unwrapped; any failure is null, and null paints nothing */
 async function read(path){
+  var g = GEN, never = function(){ return new Promise(function(){}); };
   var r = await fetch(apiBase() + path, { cache:'no-store', headers:{ Authorization:'Bearer ' + SESS.token } });
+  if (g !== GEN) return never();
   if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; }
   var j = await r.json();
+  if (g !== GEN) return never();
   return (j && typeof j === 'object' && 'ok' in j && ('data' in j || 'error' in j)) ? (j.ok ? j.data : null) : j;
 }
 function quiet(p){ return read(p).catch(function(){ return null; }); }
@@ -288,9 +293,6 @@ function alertsPaint(){
 function n1(v){ var n = Number(v); return isFinite(n) ? n : null; }
 
 async function facts(){
-  document.getElementById('who').innerHTML =
-    '<span class="avatar" data-testid="avatar" title="' + esc(SESS.entity || SESS.name || '') + '">'
-    + esc(String(SESS.entity || SESS.name || '?').slice(0,2).toUpperCase()) + '</span>';
   if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
 
   /* who we are — the shop's name, its currency, and whether it holds a GSTIN */
@@ -370,9 +372,95 @@ async function facts(){
   });
 }
 
-if (SESS) facts();
-else document.getElementById('who').innerHTML =
-  '<a class="signin" data-testid="signin-door" href="app.html#/login">Sign in</a>';
+/* ── ONE BROWSER, ONE SHOP (2026-10-01) — the page asks CBOnePerson the same question the app's gate asks ── */
+
+/* the Till tile says which shop this browser's counter is paired to — read from the counter's own keys, never
+   written. Another shop's counter is amber, and the tile still opens it: the counter's own sign-in switches it. */
+function pairPaint(p){
+  var host = document.getElementById('f_till'); if (!host || !MINE) return;
+  var old = host.querySelector('[data-testid="till-paired"]'); if (old) old.remove();
+  var s = document.createElement('span'); s.className = 'f'; s.setAttribute('data-testid', 'till-paired');
+  if (!p || !p.paired) s.textContent = 'Not paired yet';
+  else if (p.ent === MINE.ent) s.textContent = p.counter + ' · paired to ' + (p.name || MINE.name || 'this shop');
+  else { s.className = 'f dn'; s.textContent = p.counter + ' · paired to ' + CBOnePerson.shopName(p) + ', not this shop'; }
+  host.insertBefore(s, host.firstChild); host.hidden = false;
+}
+
+function clearFacts(){
+  GEN++;
+  ['f_till','f_cat','f_bk'].forEach(function(id){ var h = document.getElementById(id); h.innerHTML = ''; h.hidden = true; });
+  ['st_prod','st_offer','st_combo'].forEach(function(id){ var el = document.getElementById(id); el.textContent = ''; el.className = 'st'; });
+  var t = document.getElementById('st_tax'); t.textContent = 'coming'; t.className = 'st';
+  document.getElementById('shop').textContent = '';
+  document.getElementById('prices_read').textContent = '';
+  ALERTS = []; document.getElementById('alerts').innerHTML = '';
+  CUR = 'INR';
+}
+
+/* signed out — the one door in, and (when another tab did it) one line saying why */
+function signedOut(why){
+  SESS = null; MINE = null;
+  clearFacts();
+  document.getElementById('who').innerHTML = '<a class="signin" data-testid="signin-door" href="app.html#/login">Sign in</a>';
+  if (why) document.getElementById('alerts').innerHTML = '<div class="al warn" data-testid="signed-out-why"><span class="ic">!</span><span>'
+    + esc(why) + '</span><a class="fix" href="app.html#/login">Sign in</a></div>';
+}
+
+/* another shop still here (an app tab, its unsent drafts) → the facts wait; one row each, one button each */
+function closeFirst(r){
+  var host = document.getElementById('alerts');
+  host.innerHTML = r.others.map(function(o, i){
+    return '<div class="al bad" data-testid="close-first"><span class="ic">!</span><span>' + esc(CBOnePerson.sentence(o)) + '</span>'
+      + '<button class="fix" data-testid="close-first-go" data-i="' + i + '">' + esc(CBOnePerson.buttonLabel(o)) + '</button></div>';
+  }).join('');
+  host.querySelectorAll('[data-testid="close-first-go"]').forEach(function(b){
+    b.onclick = function(){
+      host.querySelectorAll('button').forEach(function(x){ x.disabled = true; });
+      b.textContent = 'Signing it out…';
+      CBOnePerson.clearOut(r.others[+b.getAttribute('data-i')], MINE.name).then(open_, open_);
+    };
+  });
+}
+
+function open_(){
+  if (!SESS) return signedOut('');
+  clearFacts();
+  var g = GEN;
+  document.getElementById('who').innerHTML =
+    '<span class="avatar" data-testid="avatar" title="' + esc(SESS.entity || SESS.name || '') + '">'
+    + esc(String(SESS.entity || SESS.name || '?').slice(0,2).toUpperCase()) + '</span>';
+  if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
+  CBOnePerson.traces(MINE).then(function(r){
+    if (g !== GEN || !MINE) return;
+    if (r.others.length) closeFirst(r); else facts();
+    pairPaint(r.pair);
+  });
+}
+
+/* ⭐ THE ONLY READER OF THE `storage` EVENT HERE. It never adopts anyone: a session gone, or now another SHOP's,
+   signs this page out and says why. A page already signed out stays so until it is reloaded. */
+function onStore(e){
+  var k = e ? e.key : null;
+  if (k === null || k === 'cb_sess'){
+    if (!MINE) return;
+    var next = CBOnePerson.stored();
+    if (next && next.ent === MINE.ent) return;
+    signedOut(next ? 'Signed out — ' + CBOnePerson.shopName(next) + ' opened in another tab.' : 'Signed out — you signed out in another tab.');
+    return;
+  }
+  if (MINE && /^cb_till_(lastslot|key|entity)$/.test(k)) CBOnePerson.counterPair().then(pairPaint);
+}
+window.addEventListener('storage', onStore);
+CBOnePerson.attach({ quiet: true, who: function(){ return MINE; }, label: function(){ return 'The home page'; },
+  onLeave: function(by){ signedOut('Signed out — ' + (by || 'another shop') + ' opened in another tab.'); },
+  onWipe: function(){ signedOut('Signed out — this browser is being cleaned.'); } });
+
+/* a Lab sent here because its shop was signed out, or the browser is being cleaned, reads nothing — whatever is
+   still in storage at this moment is on its way out */
+var Q = new URLSearchParams(location.search);
+if (Q.get('cleaned') === '1') signedOut('Signed out — this browser is being cleaned.');
+else if (Q.has('left')) signedOut('Signed out — ' + (Q.get('left') || 'another shop') + ' opened in another tab.');
+else open_();
 </script>
 </body>
 </html>

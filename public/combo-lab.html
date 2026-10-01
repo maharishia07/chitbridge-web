@@ -3074,5 +3074,14 @@ labDrainOutbox();
 if (savedLive()) labUseMine(true);
 
 </script>
+<!-- ONE BROWSER, ONE SHOP (2026-10-01): this page answers the roll, sends what its outbox holds, and leaves when
+     its shop is signed out or the browser is cleaned — to the home page, which reads nothing while that runs -->
+<script src="app/one-person.js"></script>
+<script>
+CBOnePerson.attach({ quiet: true, who: (function(){ var w = CBOnePerson.stored(); return function(){ return w; }; })(),
+  label: function(){ return 'The Combo Lab'; },
+  onLeave: function(by){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?left=' + encodeURIComponent(by || '')); }); },
+  onWipe: function(){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?cleaned=1'); }); } });
+</script>
 </body>
 </html>
