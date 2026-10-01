@@ -29,8 +29,21 @@ if (typeof EP !== 'undefined') {
     scorecardOne:      {m:'GET',    p:'/api/relationships/scorecard/:entity_id', ok:'y'},
   });
 }
+/**
+ * ⭐ THE FOLDER LIST NOW CARRIES THE SYSTEM FOLDERS TOO (API 2026-10-01: B-2100 Bills · Received, B-1300 Bills · Issued,
+ * R-1400 Receipts … — each a VIEW whose contents are its rule's matches, plus a shop's own view folders). They are not
+ * places: nothing is moved into them, and they are not sub-lists of Task or Order. So they are kept APART here, at the one
+ * place the list arrives — UI.folders stays the filed folders every existing screen already reads (the rail under Task and
+ * Order, Move, the rules panes, the tree) and UI.sysFolders holds the views for the Bills screen (designed first; not built).
+ */
+function _foldersFrom(r){
+  var all=(r&&r.folders)||[];
+  var view=function(f){ return !!(f.system || f.kind==='view'); };
+  UI.sysFolders=all.filter(view);
+  return all.filter(function(f){ return !view(f); });
+}
 async function loadFolders(){
-  try{ var r=await api('foldersList'); UI.folders=(r&&r.folders)||[]; }catch(e){ UI.folders=[]; }
+  try{ var r=await api('foldersList'); UI.folders=_foldersFrom(r); }catch(e){ UI.folders=[]; }
   /* ⚠️ bgRenderApp, NOT renderApp. This runs on STARTUP as well as after a user action, and renderApp rebuilds
      the shell — including the empty #modalhost — so a folder list arriving while someone is in Compose deleted
      their draft. Measured 2026-08-18: this was the last of seven such callers. The user-initiated callers
@@ -120,7 +133,7 @@ function deleteFolder(id){
   else if(window.confirm('Delete folder? Its chits return to the mailbox.')) run();
 }
 async function moveChit(chitId){
-  if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=(rr&&rr.folders)||[]; }catch(e){ UI.folders=[]; } }   // self-load so Move works from Task, not just the Folders screen
+  if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=_foldersFrom(rr); }catch(e){ UI.folders=[]; } }   /* the filed folders only — a view is not a place to move into */   // self-load so Move works from Task, not just the Folders screen
   var opts=(UI.folders||[]).map(function(f){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+f.folder_id+'\')">📁 '+esc(f.name)+'</div>'; }).join('');
   var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:var(--fs-2)">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">' + tx('↩ Remove from folder (back to mailbox)') + '</div></div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">' + tx('📁 Move to folder') + '</div></div><div class="mbody" style="padding:0">'+body+'</div>');
