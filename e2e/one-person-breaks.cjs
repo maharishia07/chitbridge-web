@@ -36,7 +36,7 @@ const BREAKS = [
   ['the clean load registers a worker again', [[APP, `if(!(typeof CLEAN_LOAD!=='undefined'&&CLEAN_LOAD)) CBOffline.registerSW`, `CBOffline.registerSW`]]],
   ['the clean load says nothing', [[APP, `LOGIN.gone=CBOnePerson.cleanSentence(`, `void CBOnePerson.cleanSentence(`]]],
   ['a cleaned app tab says nothing', [[APP, `onWipe: function(){ return personLeave('', tx('Signed out — this browser is being cleaned.')); }`, `onWipe: function(){ return personLeave('', ' '); }`]]],
-  ['a Lab ignores the clean-up', [['public/offer-lab.html', `onWipe: function(){ location.replace('/?cleaned=1'); }`, `onWipe: function(){}`]]],
+  ['a Lab ignores the clean-up', [['public/offer-lab-next.html', `onWipe: function(){ return Promise.resolve(labDrainOutbox()).catch(function(){}).then(function(){ location.replace('/?cleaned=1'); }); }`, `onWipe: function(){}`]]],
   /* index.html */
   ['index shows facts with another shop here', [[IDX, `if (r.others.length) closeFirst(r); else facts();`, `facts();`]]],
   ['index: mismatch not amber', [[IDX, `else { s.className = 'f dn';`, `else { s.className = 'f';`]]],

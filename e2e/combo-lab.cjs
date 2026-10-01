@@ -358,16 +358,15 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
   say('a refused PATCH shows "NOT in your catalogue", not "saved"', /NOT in your catalogue/.test(refusedApply.toast) && /too many groups/.test(refusedApply.toast),
     refusedApply.toast);
 
-  console.log('\n── going back to the picker and closing the lab both work ' + '─'.repeat(20));
+  console.log('\n── going back to the picker works (closing the lab is its own test, below — closeModLab() now' + '─'.repeat(0));
+  console.log('   navigates Home, so nothing after it can still assume this page) ' + '─'.repeat(0));
   const backAndClose = await p.evaluate(() => {
     modLabBack();
     const backAtPicker = !!document.querySelector('#modLabBody .modlist')
       || /Nothing here yet|No modifiers yet/.test(document.getElementById('modLabBody').innerText);
-    closeModLab();
-    return { backAtPicker: backAtPicker, closed: !document.getElementById('modLabOverlay').classList.contains('on') };
+    return { backAtPicker: backAtPicker };
   });
   say('"← All products" returns to the list', backAndClose.backAtPicker, 'back at the Modifiers tab');
-  say('close really closes', backAndClose.closed, 'modLabOverlay.on removed');
 
   console.log('\n── ⭐⭐⭐ A PRODUCT THAT ALREADY HAS MODIFIERS OPENS SHOWING THEM, READY TO EDIT (Athi: "i assume we' + '─'.repeat(0));
   console.log('   already have some products with modifiers we should be able to open those... and edit as well") ' + '─'.repeat(0));
@@ -422,19 +421,27 @@ const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(58) + '· ' + d 
     cardFresh.afterApply > cardFresh.beforeApply,
     'render() called ' + (cardFresh.afterApply - cardFresh.beforeApply) + ' time(s) by modLabApply()');
 
-  console.log('\n── ⭐⭐⭐ [Labs split] CLOSING THIS PAGE CLOSES THE TAB, NOT A SCREEN UNDERNEATH ' + '─'.repeat(0));
-  const closed = await p.evaluate(() => {
-    openModLab();   /* a prior section already closed it — reopen so this test starts from a known state */
-    var before = document.getElementById('modLabOverlay').classList.contains('on');
-    var threw = null;
-    try { closeModLab(); } catch (e) { threw = e.message; }
-    var after = document.getElementById('modLabOverlay').classList.contains('on');
-    return { before: before, after: after, threw: threw };
+  console.log('\n── ⭐⭐⭐ [found live, 2026-10-01] CLOSING THIS LAB GOES HOME, NEVER THE INERT SHELL UNDERNEATH ' + '─'.repeat(0));
+  console.log('   ("if i open the combo lab, something else is happening and then the current offer lab is' + '─'.repeat(0));
+  console.log('   opening") — window.close() is refused on a tab the person opened themselves, so closeModLab()' + '─'.repeat(0));
+  console.log('   now leaves for Home (location.href=\'/\') instead. THE LAST TEST IN THIS FILE — the page is' + '─'.repeat(0));
+  console.log('   gone once this runs, so nothing after it may still assume combo-lab.html. ' + '─'.repeat(0));
+  const before = await p.evaluate(() => {
+    openModLab();   /* a prior section already navigated this page back to combo-lab's picker — reopen so this
+                        test starts from a known, showing state */
+    return document.getElementById('modLabOverlay').classList.contains('on');
   });
-  say('the overlay was showing before the close', closed.before, 'confirmed');
-  say('closeModLab() never throws, even though window.close() can’t actually close a Playwright page', closed.threw === null, closed.threw || 'confirmed');
-  say('the overlay class comes off either way — a fallback toast (see the page’s own comment) covers the rest', closed.after === false, 'confirmed');
-  await p.evaluate(() => { openModLab(); });   /* put it back for anything after this that expects the lab open */
+  say('the overlay was showing before the close', before, 'confirmed');
+  let threw = null;
+  try {
+    await Promise.all([
+      p.waitForURL((u) => u.pathname === '/' || u.pathname === '/index.html', { timeout: 8000 }),
+      p.evaluate(() => { closeModLab(); }),
+    ]);
+  } catch (e) { threw = e.message; }
+  say('closeModLab() never throws, even though window.close() can’t actually close a Playwright page', threw === null, threw || 'confirmed');
+  const landed = (await p.url()).replace('http://127.0.0.1:' + srv.address().port, '').split('?')[0].split('#')[0];
+  say('it leaves for Home — never reveals the inert Offer Lab shell this page carries under the modal', landed === '/' || landed === '/index.html', 'landed on "' + landed + '"');
 
   console.log('\nconsole/page errors:', errs.length ? errs.join(' | ') : 'none');
   await b.close(); srv.close();

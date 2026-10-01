@@ -35,6 +35,24 @@ function ok(lab, c, step, m, shot) { if (c) { pass++; row(lab, step, 'OK', '', s
 function note(lab, step, m, severity) { problems.push({ lab, step, problem: m, severity: severity || 'minor' }); console.log('  !!  [' + lab + '] ' + step + ' — ' + m); }
 const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 
+/* ⭐⭐⭐ [found live, 2026-10-01] a real shop's own item_data.categories/.category holds a category DEFINITION's
+ * id (kind:'category' — app.html's own catName(), app.html:13209) — never a readable name on its own. These
+ * seven look like the real thing (UUID-shaped) on purpose, so Combo Lab's picker is proven against the actual
+ * shape that broke live ("55e14791-27cb-…" on screen), not a stand-in that was never UUID-shaped to begin with. */
+const SHELF_CATS = [
+  { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Shelf 1' },
+  { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Shelf 2' },
+  { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Shelf 3' },
+  { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Shelf 4' },
+  { id: '550e8400-e29b-41d4-a716-446655440005', name: 'Shelf 5' },
+  { id: '550e8400-e29b-41d4-a716-446655440006', name: 'Shelf 6' },
+  { id: '550e8400-e29b-41d4-a716-446655440007', name: 'Shelf 7' },
+];
+/* ⚠️ no \b anchors — adjacent table cells concatenate with no separator in .textContent ("Product 0" +
+   "550e8400-…" reads as "...0550e8400-…", where \b never matches between two word characters), so a
+   boundary-anchored regex would silently never catch the very table-cell case this exists to catch. */
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
 /* ── the stand-in: one shop's day, one figure per source — extends index-page.cjs's own shape with what the
    three Labs ask for that the index page never does (product lists, combo templates, definitions, modifiers) */
 function standIn() {
@@ -42,7 +60,7 @@ function standIn() {
   const items = [];
   for (let i = 0; i < 112; i++) {
     const d = { price: { amount: 10 + i, currency: 'INR' }, cost: { amount: 6 + i, currency: 'INR' },
-      category: 'Shelf ' + (i % 7 + 1) };
+      category: SHELF_CATS[i % 7].id };
     if (i === 5) delete d.cost;
     if (i < 5) d.modifiers = [{ name: 'M' + i }, { name: 'N' + i }];
     items.push({ id: 'p' + i, item_id: 'p' + i, item_data: Object.assign({ name: 'Product ' + i, unit: 'pc' }, d) });
@@ -57,7 +75,8 @@ function standIn() {
     combos: [],                                        /* POST /api/combo-templates fills this in */
     comboSeq: 0,
     definitions: [{ definition_id: 'd1', status: 'draft', kind: 'offer', sub_kind: 'percent_off', name: 'seed draft',
-      created_at: new Date().toISOString(), rules: { _lab: { title: 'seed', detail: '', n: '10%', k: 'draft' } } }],
+      created_at: new Date().toISOString(), rules: { _lab: { title: 'seed', detail: '', n: '10%', k: 'draft' } } }]
+      .concat(SHELF_CATS.map((c) => ({ definition_id: c.id, status: 'live', kind: 'category', name: c.name, created_at: new Date().toISOString() }))),
     defSeq: 1,
     booksOn: true,
     health: { enabled: true, last_posted_day: '2026-09-26', waiting: [] },
@@ -244,7 +263,7 @@ function route(S, r) {
 
   const LABS = [
     { key: 'product', title: 'Product Lab', tile: 'lab-product', fact: 'st_prod', href: 'product-lab.html' },
-    { key: 'offer', title: 'Offer Lab', tile: 'lab-offer', fact: 'st_offer', href: 'offer-lab.html' },
+    { key: 'offer', title: 'Offer Lab', tile: 'lab-offer', fact: 'st_offer', href: 'offer-lab-next.html' },
     { key: 'combo', title: 'Combo Lab', tile: 'lab-combo', fact: 'st_combo', href: 'combo-lab.html' },
   ];
   const VIEWPORTS = [{ w: 1280, label: '1280' }, { w: 390, label: '390' }];
@@ -329,10 +348,15 @@ function route(S, r) {
           ok(lab.key, !/\bundefined\b/.test(tnow), lab.title + ': no "undefined" on screen (' + state + ')', '"undefined" is visible');
           ok(lab.key, !/error\.message|\[object Object\]/.test(tnow), lab.title + ': no technical error text on screen (' + state + ')', 'raw error text is visible');
 
-          /* 3 · Home back to the index — same person, same figures */
-          await p.click('[data-testid="nav-home"]');
-          await p.waitForLoadState('load').catch(() => {});
-          await settle(p);
+          /* 3 · Home back to the index — same person, same figures. Combo Lab's own flow (below) already
+             leaves for Home as its last step — closing its builder modal — since its header's own Home link
+             sits behind that modal, permanently, and is never the documented way out any more. */
+          const alreadyHome = (() => { const u = (p.url() || '').replace(base, '').split('?')[0].split('#')[0]; return u === '/' || u === '/index.html' || u === ''; })();
+          if (!alreadyHome) {
+            await p.click('[data-testid="nav-home"]');
+            await p.waitForLoadState('load').catch(() => {});
+            await settle(p);
+          }
           const backOnIndex = (await p.url()).replace(base, '').split('?')[0].split('#')[0];
           ok(lab.key, backOnIndex === '/' || backOnIndex === '/index.html' || backOnIndex === '', lab.title + ': Home returns to the index (' + state + ')', 'landed on "' + backOnIndex + '"');
           if (!st.signedOut) {
@@ -350,6 +374,22 @@ function route(S, r) {
         await h.ctx.close();
       }
     }
+  }
+
+  /* ═══ the retired page: offer-lab.html only forwards to offer-lab-next.html ═════════════════════════════════
+   * [RETIRED, 2026-10-01] — see RETIRED.md. A saved or shared link to the old page must still land on the real
+   * Offer Lab, query string and hash carried through, not on a dead end. */
+  {
+    const h = await openCtx({ viewport: { width: 1280, height: 900 } });
+    const { p } = h;
+    await p.goto(base + '/offer-lab.html?ref=saved-link#frag');
+    await p.waitForURL(/offer-lab-next\.html/, { timeout: 5000 }).catch(() => {});
+    await settle(p);
+    const landed = await p.url();
+    ok('offer', /\/offer-lab-next\.html/.test(landed), 'offer-lab.html forwards to offer-lab-next.html', 'landed on "' + landed + '"');
+    ok('offer', /[?&]ref=saved-link/.test(landed) && /#frag$/.test(landed), 'offer-lab.html carries the query string and hash through (' + landed + ')', 'query/hash was dropped — landed on "' + landed + '"');
+    await p.screenshot({ path: path.join(SHOTS, 'labs-flow-offer-retired-redirect.png'), fullPage: true });
+    await h.ctx.close();
   }
 
   /* ── Product Lab's own flow: choose from a list, price & shelf, adopt ──────────────────────────────────── */
@@ -412,67 +452,123 @@ function route(S, r) {
     }
   }
 
-  /* ── Offer Lab's own flow: make an offer, see the price/margin effect, try the advisor ─────────────────── */
+  /* ── Offer Lab's own flow (offer-lab-next.html): Settings → "Create an offer" → pick a shape → "Work it
+   * out" → "Save for review" ─────────────────────────────────────────────────────────────────────────────
+   * ⚠️ This page carries no data-testid attributes (unlike Product/Combo Lab) — its own e2e/offer-lab-next-*.cjs
+   * harnesses drive it through its JS globals (pickGoal/apply/S) instead. labs-flow.cjs stays a real click-
+   * through (it is testing the PERSON'S path from the index tile onward), so it drives the same onclick
+   * handlers and button text the page itself renders — read from offer-lab-next.html's own render functions
+   * (renderS0 → "Create an offer"/go(1); renderS1 → pickGoal(id); renderS2 → apply(); paintWork/#workScrim →
+   * #workSave → saveOffer() → go(3)/renderS3).
+   */
   async function offerFlow(p, S, st, vp, state, h) {
-    await p.waitForSelector('[data-testid="lab-design"]', { timeout: 10000 }).catch(() => {});
-    const src = (await p.textContent('#src').catch(() => '')) || '';
+    await p.waitForSelector('#s0.on', { timeout: 10000 }).catch(() => {});
+    const sampleHidden = await p.evaluate(() => { const el = document.getElementById('labSampleNote'); return el ? el.hidden : null; }).catch(() => null);
     if (st.signedOut) {
-      ok('offer', /example products/.test(src), 'signed out: the lab opens on example products (' + state + ')', 'src chip read "' + src + '"');
-      /* pressing "Re-read my catalogue" signed out — the main control a shopkeeper would actually press */
+      ok('offer', sampleHidden === false, 'signed out: the sample-data banner is shown (' + state + ')', 'labSampleNote.hidden read ' + sampleHidden);
+      /* pressing "Use my catalogue" signed out — the main control a shopkeeper would actually press from the banner */
       const before = h.dialogs.length;
-      await p.click('[data-testid="lab-load-mine"]').catch(() => {});
+      await p.click('#labSampleNote button').catch(() => {});
       await settle(p);
-      row('offer', 'press "Re-read my catalogue" signed out (' + state + ')', h.dialogs.length > before ? 'NATIVE ALERT' : 'no dialog', h.dialogs.length > before ? h.dialogs[h.dialogs.length - 1] : '');
-      if (h.dialogs.length > before) note('offer', state + ': "Re-read my catalogue" (signed out)', 'pressing it raises a native alert() — "' + h.dialogs[h.dialogs.length - 1] + '"', 'major');
+      row('offer', 'press "Use my catalogue" signed out (' + state + ')', h.dialogs.length > before ? 'NATIVE ALERT' : 'no dialog', h.dialogs.length > before ? h.dialogs[h.dialogs.length - 1] : '');
+      if (h.dialogs.length > before) note('offer', state + ': "Use my catalogue" (signed out)', 'pressing it raises a native alert() — "' + h.dialogs[h.dialogs.length - 1] + '"', 'major');
     } else {
-      await p.waitForFunction(() => { const el = document.getElementById('src'); return el && /products ·/.test(el.textContent || ''); }, null, { timeout: 8000 }).catch(() => {});
-      const src2 = (await p.textContent('#src').catch(() => '')) || '';
-      ok('offer', /products ·/.test(src2), 'signed in: the lab opens on the real catalogue (' + state + ')', 'src chip read "' + src2 + '"');
+      await p.waitForFunction(() => { const el = document.getElementById('bizName'); return el && /Mayur/.test(el.textContent || ''); }, null, { timeout: 8000 }).catch(() => {});
+      const bizName = (await p.textContent('#bizName').catch(() => '')) || '';
+      ok('offer', /Mayur/.test(bizName), 'signed in: the lab opens on the real catalogue (' + state + ')', 'bizName chip read "' + bizName + '"');
+      const sampleHidden2 = await p.evaluate(() => { const el = document.getElementById('labSampleNote'); return el ? el.hidden : null; }).catch(() => null);
+      ok('offer', sampleHidden2 === true, 'signed in: the sample-data banner is gone (' + state + ')', 'labSampleNote.hidden read ' + sampleHidden2);
     }
 
-    /* toggle the plain "% off" offer, add a product to the basket, read the money block */
-    const pctOn = p.locator('[data-testid="lab-on-pct"]');
-    if (await pctOn.count()) { await pctOn.check().catch(() => {}); await settle(p); }
-    const firstPlus = p.locator('#p_list button:has-text("+")').first();
-    if (await firstPlus.count()) { await firstPlus.click().catch(() => {}); await settle(p); }
-    else {
-      const anyRow = p.locator('#p_list').locator('button, [role="button"]').first();
-      if (await anyRow.count()) await anyRow.click().catch(() => {});
-    }
+    /* 1 · Settings → "Create an offer" → screen 1, the eight shapes */
+    await p.click('button:has-text("Create an offer")').catch(() => {});
     await settle(p);
-    const money = (await p.textContent('[data-testid="lab-money"]').catch(() => '')) || '';
-    ok('offer', money.trim().length > 0, 'the money block shows an outcome once an offer is on and a product is added (' + state + ')', 'the money block stayed empty');
-    ok('offer', !/NaN|undefined/.test(money), 'the money block has no NaN/undefined (' + state + ')', 'money block read "' + money.replace(/\s+/g, ' ').trim().slice(0, 150) + '"');
+    ok('offer', await p.locator('#s1.on').count() > 0, '"Create an offer" opens the shape picker (' + state + ')', 'screen 1 (#s1) never carried class "on"');
 
-    /* the advisor: pick a goal, read a suggestion, try it */
-    const goalSel = p.locator('[data-testid="lab-goal"]');
-    if (await goalSel.count()) { await goalSel.selectOption('move').catch(() => {}); await settle(p); }
-    const tryBtn = p.locator('#adv-out button:has-text("Try it")').first();
-    if (await tryBtn.count()) {
-      await tryBtn.click();
-      await settle(p);
-      const money2 = (await p.textContent('[data-testid="lab-money"]').catch(() => '')) || '';
-      ok('offer', money2.trim().length > 0, 'the advisor\'s "Try it" repaints the money block (' + state + ')', 'the money block stayed empty after Try it');
-    } else note('offer', state + ': advisor', 'no "Try it" suggestion appeared for the "move this product quickly" goal', 'minor');
+    /* 2 · pick "A percentage off" → screen 2, its controls */
+    await p.click(`button[onclick="pickGoal('percent')"]`).catch(() => {});
+    await settle(p);
+    ok('offer', await p.locator('#s2.on').count() > 0, 'picking "A percentage off" opens its controls (' + state + ')', 'screen 2 (#s2) never carried class "on"');
+
+    /* 3 · "Work it out" — the result opens as a modal over the controls, never pushed in below them */
+    await p.click('button[onclick="apply()"]').catch(() => {});
+    await settle(p);
+    const open = await p.locator('#workScrim.on').count();
+    ok('offer', open > 0, '"Work it out" opens the result (' + state + ')', '#workScrim never carried class "on"');
+    const body = (await p.textContent('#workBody').catch(() => '')) || '';
+    ok('offer', body.trim().length > 0, 'the result shows a worked-out table (' + state + ')', '#workBody stayed empty');
+    ok('offer', !/NaN|undefined/.test(body), 'the worked-out result has no NaN/undefined (' + state + ')', 'result body read "' + body.replace(/\s+/g, ' ').trim().slice(0, 150) + '"');
+
+    /* 4 · "Save for review" — lands on the shelf (screen 3), signed in posts to /api/definitions */
+    const before = S.definitions.length;
+    await p.click('#workSave').catch(() => {});
+    await settle(p);
+    ok('offer', await p.locator('#s3.on').count() > 0, '"Save for review" lands on Saved offers (' + state + ')', 'screen 3 (#s3) never carried class "on"');
+    const savedRows = await p.locator('#s3 .sv').count();
+    ok('offer', savedRows > 0, 'the saved offer is listed on the shelf (' + state + ')', 'no .sv row found on the Saved offers screen');
+    if (!st.signedOut) {
+      ok('offer', S.definitions.length > before, 'signed in: Save for review posts to /api/definitions (' + state + ')', 'no new definition was created on the stand-in');
+    }
   }
 
   /* ── Combo Lab's own flow ─────────────────────────────────────────────────────────────────────────────────
    * ⚠️ THE PAGE BOOTS STRAIGHT INTO THE "Combos and modifiers" MODAL (combo-lab.html's own boot script calls
    * openModLab() unconditionally, right after its one render() — see that file's own comment above the call:
    * "this page boots straight into the modifier/combo builder and there is nothing behind it a person could
-   * reach"). So the Settings screen, the 8 offer goals (including "Two things at one price"), and Saved
-   * offers are NOT the first thing a shopkeeper sees — the modal is. Its own ✕ button (closeModLab()) DOES
-   * remove the modal (classList.remove('on') runs unconditionally) and reveal Settings underneath, but it
-   * ALSO tries window.close() and then shows a toast reading "You can close this tab now" — which is wrong
-   * the moment window.close() is a no-op (true for every normally-opened tab), since the modal has in fact
-   * just closed onto a fully usable page, not a tab that is going away. Tested below as a real finding.
+   * reach"). Everything a shopkeeper can actually do lives inside that one modal, on its two tabs — Modifiers
+   * (the default) and Combos — never on the Settings/goal-wizard screens underneath, which are an INERT copy
+   * of offer-lab-next.html's own shell (combo-lab.html's own header comment) that nothing reaches any more.
+   * ⚠️ [found live, 2026-10-01] "if i open the combo lab, something else is happening and then the current
+   * offer lab is opening" — closeModLab() used to reveal exactly that inert shell the moment window.close()
+   * was refused (true for every normally-opened tab). Fixed: closing now leaves for Home (location.href='/')
+   * instead — tested below as the one documented way out of this Lab.
    */
   async function comboFlow(p, S, st, vp, state, h) {
     await p.waitForSelector('#modLabOverlay.on', { timeout: 10000 }).catch(() => {});
-    const defaultTab = (await bodyText(p));
     ok('combo', /Modifiers/.test(await p.textContent('#modLabTabs').catch(() => '')), 'the Lab boots straight into the "Combos and modifiers" modal, Modifiers tab first (' + state + ')', 'modal tabs not found on load');
 
-    /* the "Combos" tab, inside the modal: build a combo (pre-filled example) and save it to the library */
+    /* the "Modifiers" tab (the default): add a modifier group to a product, all inside the one modal */
+    const addToProduct = p.locator('button:has-text("Add one to a product")');
+    const addMore = p.locator('button:has-text("+ Add to another product")');
+    const addBtn = (await addToProduct.count()) ? addToProduct : addMore;
+    if (await addBtn.count()) {
+      await addBtn.click();
+      await settle(p);
+      /* [found live, 2026-10-01] "Choose a product" showed category CHIPS and a middle column of raw category
+         UUIDs instead of names — real products carry a category DEFINITION's id, not a readable string; the
+         stand-in's own categories (SHELF_CATS, above) are UUID-shaped on purpose so this actually proves it. */
+      const pickerTxt = (await p.textContent('#priceOverlay').catch(() => '')) || '';
+      ok('combo', !UUID_RE.test(pickerTxt), 'the "Choose a product" picker shows category names, never a raw UUID (' + state + ')', 'UUID-shaped text found: "' + (pickerTxt.match(UUID_RE) || [''])[0] + '"');
+      const pickRow = p.locator('.ovlpickrow').first();
+      if (await pickRow.count()) {
+        await pickRow.click();
+        await settle(p);
+        const addGroup = p.locator('button:has-text("+ Add a group")');
+        ok('combo', await addGroup.count() > 0, 'the modifier editor opens for a picked product (' + state + ')', '"+ Add a group" not found');
+        if (await addGroup.count()) {
+          await addGroup.click();
+          await settle(p);
+          const applyBtn = p.locator('button:has-text("Apply to ")');
+          ok('combo', await applyBtn.count() > 0, 'an "Apply to <product>" button appears after adding a group (' + state + ')', 'Apply button not found');
+          if (await applyBtn.count()) {
+            const beforePatch = S.calls.filter((c) => /^\/api\/products\//.test(c)).length;
+            await applyBtn.click();
+            await settle(p);
+            if (!st.signedOut) {
+              const afterPatch = S.calls.filter((c) => /^\/api\/products\//.test(c)).length;
+              ok('combo', afterPatch > beforePatch, 'Apply (signed in, own catalogue) PATCHes the real product (' + state + ')', 'no PATCH /api/products/:id was observed');
+            } else ok('combo', true, 'Apply (signed out / sample catalogue) stays local, no server call (' + state + ')');
+          }
+        }
+      } else note('combo', state + ': modifier picker', 'the price-list overlay opened but no pickable row was found', 'major');
+    } else note('combo', state + ': modifier lab', 'neither "Add one to a product" nor "Add to another product" was on screen', 'minor');
+
+    /* back to the tab bar — a picked product's own editor (modLabBack()'s "← All products") hides #modLabTabs
+       entirely (paintModLab()'s own rule), so the Combos tab below is unreachable until this runs */
+    const allProducts = p.locator('button:has-text("← All products")');
+    if (await allProducts.count()) { await allProducts.click(); await settle(p); }
+
+    /* the "Combos" tab, inside the same modal: build a combo (pre-filled example) and save it to the library */
     const combosTab = p.locator('#modLabTabs button:has-text("Combos")');
     if (await combosTab.count()) { await combosTab.click(); await settle(p); }
     const buildBtn = p.locator('button:has-text("+ Build a combo")').first();
@@ -509,118 +605,31 @@ function route(S, r) {
       } else note('combo', state + ': Combos tab', '"Save as…" was not offered after "+ Build a combo"', 'major');
     } else note('combo', state + ': Combos tab', '"+ Build a combo" was not on screen', 'major');
 
-    /* close the modal — the one documented way back to Settings — and check what it tells the shopkeeper */
+    /* the Lab's own screen, still inside the modal, before leaving it — scrollWidth/NaN/undefined/error-text
+       checked HERE because closing (below) leaves this page for good; the outer loop's generic post-flow
+       checks run against whatever is on screen by then, which for Combo Lab is already the index. */
+    const comboShot = 'labs-flow-combo-before-close-' + state + '.png';
+    await p.screenshot({ path: path.join(SHOTS, comboShot), fullPage: true });
+    const comboSw = await scrollWidthOk(p, vp.w);
+    ok('combo', comboSw, 'Combo Lab: no horizontal scroll at ' + vp.label + 'px (' + state + ')', 'document.scrollWidth exceeded ' + vp.w);
+    const comboBody = await bodyText(p);
+    ok('combo', !/\bNaN\b/.test(comboBody), 'Combo Lab: no NaN on screen (' + state + ')', 'the word "NaN" is visible');
+    ok('combo', !/\bundefined\b/.test(comboBody), 'Combo Lab: no "undefined" on screen (' + state + ')', '"undefined" is visible');
+    ok('combo', !/error\.message|\[object Object\]/.test(comboBody), 'Combo Lab: no technical error text on screen (' + state + ')', 'raw error text is visible');
+
+    /* close the modal — the ONE documented way out of this Lab now — and check it actually leaves, rather
+       than revealing the inert shell underneath (the 2026-10-01 finding this whole Lab exists to not repeat) */
     const closeBtn = p.locator('#modLabOverlay .ovlx');
     ok('combo', await closeBtn.count() > 0, 'the modal has its own close (✕) button (' + state + ')', 'no .ovlx close button found');
     if (await closeBtn.count()) {
-      const beforeDialogs = h.dialogs.length;
-      await closeBtn.click();
-      await p.waitForTimeout(300);
-      const stillOpen = await p.locator('#modLabOverlay.on').count();
-      ok('combo', stillOpen === 0, 'closing the modal actually closes it (' + state + ')', 'modLabOverlay still carries class "on" after ✕');
-      const toastAfterClose = (await p.textContent('#labtoast').catch(() => '')) || '';
-      if (/close this tab/i.test(toastAfterClose)) note('combo', state + ': closing the modal', 'the close button says "You can close this tab now" — but the modal just closed onto a fully usable page (window.close() is a no-op on a normally-opened tab); the message tells a shopkeeper mid-flow to leave', 'major');
-    }
-
-    /* now Settings (Screen 0) is reachable: Use my catalogue, then the goal wizard, then a modifier */
-    if (!st.signedOut) {
-      const useMine = p.locator('#labMineBtn');
-      if (await useMine.count()) {
-        await useMine.click();
-        await p.waitForFunction(() => { const el = document.getElementById('bizName'); return el && /Mayur/.test(el.textContent || ''); }, null, { timeout: 8000 }).catch(() => {});
-        await settle(p);
-        const bizName = (await p.textContent('#bizName').catch(() => '')) || '';
-        ok('combo', /Mayur/.test(bizName), '"Use my catalogue" loads the real catalogue, once the modal is out of the way (' + state + ')', 'bizName chip read "' + bizName + '"');
-        /* ⚠️ public/combo-lab.html:166 and :281 both declare `.note{display:flex}`; the browser's own
-           [hidden]{display:none} rule has the same specificity and the author stylesheet always wins, so
-           `element.hidden = true` has NO visual effect on any element carrying class="note ..." — confirmed
-           by reading the rendered screenshot, not just the DOM. Affects #labSampleNote (542), #labqueue
-           (543) and #labtoast (553): once shown, none of them can ever be hidden again, by any means. */
-        const noteBug = await p.evaluate(() => {
-          const el = document.getElementById('labSampleNote');
-          return el && el.hidden && getComputedStyle(el).display !== 'none';
-        }).catch(() => false);
-        ok('combo', !noteBug, 'the "Showing sample data" banner actually disappears once your own catalogue is in use (' + state + ')', '.note{display:flex} (public/combo-lab.html:166,281) overrides the [hidden] attribute — the banner stays on screen, saying "Showing sample data (Sample Tiffin Corner)" over your REAL catalogue, forever');
-      } else note('combo', state + ': Settings', '#labMineBtn was not reachable even after closing the modal', 'critical');
-    }
-
-    const done0 = p.locator('button:has-text("Done — pick an offer")');
-    if (await done0.count()) { await done0.click(); await settle(p); }
-    const bundleGoal = p.locator('button.goal:has-text("Two things at one price")');
-    const hasBundle = await bundleGoal.count();
-    ok('combo', hasBundle > 0, 'Screen 1 lists the "Two things at one price" goal (' + state + ')', 'goal card not found');
-    if (hasBundle) {
-      await bundleGoal.first().click();
+      await Promise.all([
+        p.waitForURL((u) => u.pathname === '/' || u.pathname === '/index.html', { timeout: 8000 }).catch(() => {}),
+        closeBtn.click(),
+      ]);
       await settle(p);
-      const priceBox = p.locator('[data-key="bunPrice"]');
-      if (await priceBox.count()) { await priceBox.fill('80'); await settle(p); }
-      /* onclick="apply()", not a text match — the steps strip's own 3rd step is also labelled "Work it out" */
-      const workBtn = p.locator('button[onclick="apply()"]');
-      ok('combo', await workBtn.count() > 0, '"Work it out" is on screen (' + state + ')', 'button not found');
-      if (await workBtn.count()) {
-        await workBtn.click();
-        await settle(p);
-        const bodyTxt = await bodyText(p);
-        ok('combo', !/NaN|undefined/.test(bodyTxt.slice(0, 4000)), 'the worked-out combo has no NaN/undefined (' + state + ')', 'NaN/undefined visible after Work it out');
-        const saveBtn = p.locator('button:has-text("Save for review")');
-        if (await saveBtn.count()) {
-          const before = S.definitions.length;
-          await saveBtn.click();
-          await p.waitForFunction(() => /Saved offers/i.test(document.body.innerText), null, { timeout: 8000 }).catch(() => {});
-          await settle(p);
-          if (!st.signedOut) {
-            ok('combo', S.definitions.length > before, '"Save for review" (signed in, own catalogue) posts to /api/definitions (' + state + ')', 'no new definition was created on the stand-in');
-          } else {
-            ok('combo', true, '"Save for review" (signed out) saves locally without a server call (' + state + ')');
-          }
-          const bucket = (await p.textContent('#bucketChip').catch(() => '')) || '';
-          ok('combo', /\d/.test(bucket) && !/Saved offers\s*0\s*$/.test(bucket.trim()), 'the "Saved offers" counter moved off zero (' + state + ')', 'bucket chip read "' + bucket + '"');
-        }
-      }
+      const landed = (await p.url()).replace(base, '').split('?')[0].split('#')[0];
+      ok('combo', landed === '/' || landed === '/index.html' || landed === '', 'closing the modal leaves for Home, never the inert Offer Lab shell underneath (' + state + ')', 'landed on "' + landed + '"');
     }
-
-    /* a modifier: the "Modifiers" card lives on Screen 0 only — "Change" (on the strip) gets back there */
-    const changeBtn = p.locator('.strip button:has-text("Change")');
-    if (await changeBtn.count()) { await changeBtn.click(); await settle(p); }
-    const modBtn = p.locator('button:has-text("🧩 Open the modifier lab")');
-    if (await modBtn.count()) {
-      await modBtn.click();
-      await settle(p);
-      const addToProduct = p.locator('button:has-text("Add one to a product")');
-      const addMore = p.locator('button:has-text("+ Add to another product")');
-      const btn = (await addToProduct.count()) ? addToProduct : addMore;
-      if (await btn.count()) {
-        await btn.click();
-        await settle(p);
-        const pickRow = p.locator('.ovlpickrow').first();
-        if (await pickRow.count()) {
-          await pickRow.click();
-          await settle(p);
-          const addGroup = p.locator('button:has-text("+ Add a group")');
-          ok('combo', await addGroup.count() > 0, 'the modifier editor opens for a picked product (' + state + ')', '"+ Add a group" not found');
-          if (await addGroup.count()) {
-            await addGroup.click();
-            await settle(p);
-            const applyBtn = p.locator('button:has-text("Apply to ")');
-            ok('combo', await applyBtn.count() > 0, 'an "Apply to <product>" button appears after adding a group (' + state + ')', 'Apply button not found');
-            if (await applyBtn.count()) {
-              const beforePatch = S.calls.filter((c) => /^\/api\/products\//.test(c)).length;
-              await applyBtn.click();
-              await settle(p);
-              if (!st.signedOut) {
-                const afterPatch = S.calls.filter((c) => /^\/api\/products\//.test(c)).length;
-                ok('combo', afterPatch > beforePatch, 'Apply (signed in, own catalogue) PATCHes the real product (' + state + ')', 'no PATCH /api/products/:id was observed');
-              } else ok('combo', true, 'Apply (signed out / sample catalogue) stays local, no server call (' + state + ')');
-            }
-          }
-        } else note('combo', state + ': modifier picker', 'the price-list overlay opened but no pickable row was found', 'major');
-      } else note('combo', state + ': modifier lab', 'neither "Add one to a product" nor "Add to another product" was on screen', 'minor');
-      /* reopening the modifier lab re-adds class "on" to #modLabOverlay — close it again or the page's own
-         Home link (outside the modal) is unclickable and every later step on this page times out */
-      const closeBtn2 = p.locator('#modLabOverlay .ovlx');
-      if (await closeBtn2.count()) await closeBtn2.click().catch(() => {});
-      await settle(p);
-    } else note('combo', state + ': modifier lab', '"Open the modifier lab" button was not reachable from where the flow left off', 'minor');
   }
 
   await b.close(); srv.close();

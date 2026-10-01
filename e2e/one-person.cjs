@@ -272,7 +272,7 @@ function route(S, r) {
           sessionStorage.setItem('cb_stay_in_app', '1');
           caches.open('cb-test').then((c) => c.put('/x', new Response('x'))).then(res); }; };
     }));
-    const lab = await tabC('/offer-lab.html');
+    const lab = await tabC('/offer-lab-next.html');
     await lab.waitForTimeout(800);
     const b1 = await tabC('/app.html#/login');
     await signIn(b1, 'tallytest', '222222');

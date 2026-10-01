@@ -798,6 +798,36 @@ function num(v){var n=parseFloat(v); return isFinite(n)?n:0;}
 function R2(n){return Math.round(n*100)/100;}
 function byId(id){for(var i=0;i<P.length;i++) if(P[i].id===id) return P[i]; return null;}
 function catName(id){for(var i=0;i<CATS.length;i++) if(CATS[i].id===id) return CATS[i].name; return '';}
+/**
+ * ⭐⭐⭐ [found live, 2026-10-01] "the Choose a product picker shows category CHIPS and a middle column of raw
+ * category UUIDs (e.g. 55e14791-27cb-…) instead of category names." Real cause: a REAL product's own
+ * item_data.categories holds a category DEFINITION's id (kind:'category', the same definitions app.html's
+ * own catName() resolves through cbDefsCached('category') — see app.html:13209), never a human name — but
+ * buildBiz(), below, only ever grouped products by whatever that raw value was, so for 'mine' it built
+ * cats:[[uuid,uuid],…] and this page's OWN catName() (just above) faithfully echoed the uuid straight back as
+ * the "name". CATNAMES is the one lookup map (loadCatNames(), called alongside the real catalogue read) that
+ * resolves it properly; catDisplayName() falls back to 'Other' — never the raw id — only when the value is
+ * actually UUID-shaped, so the sample books and a spreadsheet import (whose "categories" are already plain
+ * words like "Vegetables") are untouched.
+ */
+var CATNAMES={};
+function catDisplayName(id){
+  if(CATNAMES[id]) return CATNAMES[id];
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return 'Other';
+  return id;
+}
+async function loadCatNames(){
+  try {
+    var r=await fetch(API+'/api/definitions?kind=category&all=1', {headers:{Authorization:'Bearer '+savedToken()}});
+    if(r.ok){
+      var j=await r.json();
+      var defs=j.definitions||j.rows||(Array.isArray(j)?j:[]);
+      var m={};
+      defs.forEach(function(d){ var id=d.definition_id||d.id; if(id) m[id]=d.name||''; });
+      CATNAMES=m;
+    }
+  } catch(_){ /* stays whatever it already had — a stale name beats a UUID on screen */ }
+}
 function M0(n){ if(n==null||isNaN(n)) return '—';
   var neg=n<-0.004; n=Math.abs(n);
   return (neg?'−₹':'₹')+Math.round(n).toLocaleString('en-IN'); }
@@ -1104,8 +1134,14 @@ function modLabModsSplit(){
 function closeModLab(){
   var el=document.getElementById('modLabOverlay'); if(el) el.classList.remove('on');
   try { window.close(); } catch (_) {}
-  /* ⭐ window.close() is refused on a tab the person opened themselves; then the page underneath IS the next screen,
-     so nothing is said (the labs-flow test, 2026-10-01: "You can close this tab now" over a page still in use) */
+  /* ⭐⭐⭐ [found live, 2026-10-01] "if i open the combo lab, something else is happening and then the current
+     offer lab is opening" — real cause: window.close() is refused on a tab the person opened themselves (true
+     for every normal entry point, not only this harness), and removing the modal class above then reveals the
+     INERT copy of Offer Lab's own screens this page carries under its builder modal (see this file's own
+     header comment on why they exist and are never meant to be reached). "Closed" still has to mean something:
+     Home, the one place with nothing inert behind it. Runs the same tick window.close() returns on, so nothing
+     renders in between. */
+  location.href = '/';
 }
 function modLabSearch(v){ MODLAB.q=v; paintModLab(); }
 function modLabPick(id){ MODLAB.pid=id; MODLAB.savingAs=false; MODLAB.templateId=null; MODLABPREV=[]; paintModLab(); }
@@ -2754,6 +2790,7 @@ async function labUseMine(quiet){
   var sess=null; try{ sess=JSON.parse(localStorage.getItem('cb_sess')||'null'); }catch(_){}
   var who=(sess&&(sess.entity||sess.name))||'your shop';
   loadCostAccess();   /* alongside, not blocking — the catalogue read matters more and must not wait on this */
+  var catNamesReady=loadCatNames();   /* same: runs alongside, awaited below, right before names are actually used */
   try {
     var r=await fetch(API+'/api/products?limit=500', {headers:{Authorization:'Bearer '+savedToken()}});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -2761,6 +2798,7 @@ async function labUseMine(quiet){
     var amountOf=function(v){ return (v&&typeof v==='object'&&v.amount!=null)?Number(v.amount):Number(v)||0; };
     var items=(j.items||j.products||j.rows||(Array.isArray(j)?j:[])).filter(function(p){ return p&&p.item_data&&amountOf(p.item_data.price)>0; });
     if(!items.length) return labUseCache(who,'no priced products yet');
+    await catNamesReady;   /* CATNAMES must be filled before buildBiz() (inside labApplyCatalogue) reads it */
     await LabDB.set('catalogue', {items:items, who:who, at:Date.now()});
     labApplyCatalogue(items, who, false);
     return true;
@@ -2780,7 +2818,7 @@ async function labUseCache(who,why){
  */
 function buildBiz(key, rows, who){
   var byCat={}; rows.forEach(function(p){ byCat[p[2]]=(byCat[p[2]]||0)+1; });
-  var cats=Object.keys(byCat).map(function(c){ return [c,c]; });
+  var cats=Object.keys(byCat).map(function(c){ return [c,catDisplayName(c)]; });
   var firstItem=(rows[0]||[])[0], secondItem=(rows[1]||rows[0]||[])[0];
   BIZ[key]={ name:who, cats:cats, prods:rows, margin:25, cap:10,
     d:{ catId:(cats[0]||[])[0]||'', itemId:firstItem||'', pctOff:10, rsOff:10, tiers:[[2,5],[5,10],[10,15]], tierView:2,

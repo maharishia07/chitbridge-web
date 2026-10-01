@@ -173,7 +173,7 @@ function route(S, r) {
     ok(await href('box-till') === '/till.html' && await p.getAttribute('[data-testid="box-till"]', 'target') === '_blank', 'Till → /till.html, its own tab');
     ok(await href('box-catalogue') === 'app.html#/app/catalogue', 'Catalogue → app.html#/app/catalogue');
     ok(await href('box-ledger') === 'app.html#/app/ledger', 'Ledger → app.html#/app/ledger');
-    ok(await href('lab-product') === 'product-lab.html' && await href('lab-offer') === 'offer-lab.html' && await href('lab-combo') === 'combo-lab.html', 'each Lab tile → its own page');
+    ok(await href('lab-product') === 'product-lab.html' && await href('lab-offer') === 'offer-lab-next.html' && await href('lab-combo') === 'combo-lab.html', 'each Lab tile → its own page');
     ok(await p.evaluate(() => { const t = document.querySelector('[data-testid="lab-tax"]'); return t.tagName !== 'A' && !t.getAttribute('href'); }), 'Tax Lab is not a link — the page does not exist yet');
     ok(await href('foot-shop') === 'app.html#/app/settings' && await href('foot-coassists') === 'app.html#/app/coassists'
       && await href('foot-suppliers') === 'app.html#/app/suppliers' && await href('foot-connectors') === 'app.html#/app/connectors'
@@ -289,7 +289,7 @@ function route(S, r) {
   }
 
   /* ── 6 · each Lab page's header carries Home → / ────────────────────────────────────────────────────────── */
-  for (const page of ['product-lab.html', 'offer-lab.html', 'combo-lab.html']) {
+  for (const page of ['product-lab.html', 'offer-lab-next.html', 'combo-lab.html']) {
     const src = fs.readFileSync(path.join(PUB, page), 'utf8');
     ok(/data-testid="nav-home" href="\/"/.test(src), page + ': the header carries Home → /');
   }
