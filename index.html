@@ -355,6 +355,9 @@ async function facts(){
   read('/api/books/health').then(function(r){
     var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
     if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
+    /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
+       must still say SOMETHING, or the box reads exactly like one that is off */
+    else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');
     var w = ((r && r.waiting) || []).length;
     if (w){
       factLine('f_bk', '<b>' + w + '</b> waiting', 'dn');

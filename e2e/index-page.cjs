@@ -208,8 +208,10 @@ function route(S, r) {
     const S = standIn();
     S.summary.prices_read_at = new Date(Date.now() - 38 * 3600 * 1000).toISOString();
     S.summary.unsent = 3;
-    S.health.waiting = [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' },
-                        { id: 2, reason: 'September is locked.' }];
+    /* the live /health shape (2026-10-01): enabled, no last-posted field at all — the box must still say ON */
+    S.health = { enabled: true, currency: 'INR', last_check: null,
+      waiting: [{ id: 1, reason: 'Paid by Points — there is no ledger for Points yet.' },
+                { id: 2, reason: 'September is locked.' }] };
     const { ctx, p } = await open(S);
     await p.waitForFunction(() => document.querySelectorAll('#alerts .al').length === 3, null, { timeout: 15000 });
     await settle(p);
@@ -223,6 +225,7 @@ function route(S, r) {
     ok(/Prices are 38 hours old/.test(await p.textContent('#alerts')), 'the price alert says how old, in hours');
     /* rule 11: the amber fact is the SAME number as the alert above it */
     const bk = await p.textContent('#f_bk');
+    ok(/Ledger on/.test(bk), 'a ledger that is enabled but has no posted-day field still says "Ledger on" (' + bk.replace(/\s+/g, ' ').trim() + ')');
     ok(/2/.test(bk) && /2 waiting/.test(await p.textContent('#alerts')), 'the Ledger box\'s amber "2 waiting" is the alert\'s own number');
     ok(!/error|failed|exception/i.test(await p.evaluate(() => document.body.innerText)), 'no error string reaches the screen');
     const w = await words(p);
