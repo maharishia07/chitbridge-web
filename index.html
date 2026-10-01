@@ -429,6 +429,7 @@ function open_(){
   document.getElementById('who').innerHTML =
     '<span class="avatar" data-testid="avatar" title="' + esc(SESS.entity || SESS.name || '') + '">'
     + esc(String(SESS.entity || SESS.name || '?').slice(0,2).toUpperCase()) + '</span>';
+  if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
   CBOnePerson.traces(MINE).then(function(r){
     if (g !== GEN || !MINE) return;
     if (r.others.length) closeFirst(r); else facts();

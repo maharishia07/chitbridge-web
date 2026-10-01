@@ -128,6 +128,7 @@
       waits[q] = function (m) { got.push(m); if (enough && enough(got)) end(); };
       t = setTimeout(end, ms);
       msg.q = q; bc.postMessage(msg);
+      if (enough && enough(got)) end();          /* nobody to wait for (no tab answered 'who') — the message still went */
     });
   }
   /** a page says who it holds and what to do when told to leave. quiet: it answers 'leave' but not 'who' (the
