@@ -67,6 +67,15 @@ function bkCss() {
     '.bktab tfoot td{border-top:1px solid var(--ink);border-bottom:0}',
     '.bktab tr.bkentry td{border-top:1px solid var(--line);font-weight:600}',
     '#bk_body input[type=date].inp,#bk_body select.inp,#bk_body .supacts .inp{width:auto}',
+    /* the strip's chips: .optchip is inline-flex, which swallows the whitespace between its text and the figure */
+    '.bkchip{gap:4px}',
+    /* the day's to-do: one card per line on a narrow pane (flex-basis folds them at ~620px), tappable, phone first */
+    '.bktodo{flex:1 1 240px;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);font-weight:600;cursor:pointer;text-align:start;color:inherit}',
+    '.bktodo b{font-variant-numeric:tabular-nums;font-size:var(--fs-3);color:var(--warn-2)}',
+    '.bktodo .bkgo{margin-inline-start:auto;color:var(--grey)}',
+    /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
+    '#bk_back{display:none}',
+    '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}',
   ].join('\n');
   document.head.appendChild(s);
 }
@@ -379,10 +388,13 @@ function ledgerScreen() {
     + '</div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   setTimeout(function () { bkTab(BK.tab, true); if (BK.tab !== 'waiting' && BK.tab !== 'cheques') bkHealthLoad().catch(function () {}); }, 0);   /* the Waiting count, on the list itself */
-  return '<div class="panel" id="panel" style="--lw:' + UI.lw + 'px">' + list + divider + '<div class="detail" id="detailpane"><div class="db" id="bk_body" data-testid="bk-body">' + tx('Reading…') + '</div></div></div>';
+  return '<div class="panel" id="panel" style="--lw:' + UI.lw + 'px">' + list + divider + '<div class="detail" id="detailpane"><div id="bk_back"><button class="supback" data-testid="bk-back" onclick="bkBack()">‹ ' + tx('Ledger') + '</button></div><div class="db" id="bk_body" data-testid="bk-body">' + tx('Reading…') + '</div></div></div>';
 }
+function bkBack() { UI.mdetail = false; var p = document.getElementById('panel'); if (p) p.classList.remove('showdetail'); }
 function bkTab(t, silent) {
   BK.tab = t;
+  /* on a phone the tapped view replaces the rail (the way selectCust does it — cap-admin's helper may not be loaded) */
+  if (!silent && UI.vp === 'mob') { UI.mdetail = true; var pn = document.getElementById('panel'); if (pn) pn.classList.add('showdetail'); }
   var tabs = document.getElementById('bk_tabs');
   if (tabs) Array.prototype.forEach.call(tabs.children, function (el) { el.classList.toggle('sel', el.getAttribute('data-testid') === 'bk-tab-' + t); });
   var body = document.getElementById('bk_body'); if (!body) return;
@@ -402,15 +414,94 @@ function bkRangeHTML(id, again) {
 function bkTable(head, rows, foot) {
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' + head.map(function (h) { return '<th' + (h.num ? ' class="num"' : '') + '>' + h.t + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody>' + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table>';
 }
+/**
+ * ⭐ THE DAY'S STRIP (Athi, 2026-10-01: "in the daybook, you should be able to see the total sale in different
+ * counters, sellers' pending invoices and so on, so you can act one by one"). ONE function adds up the day's sales;
+ * the per-counter row and the by-tender row both read ITS answer — never the entries a second way. A walk-in day
+ * entry counts `source.count` bills with its `split`; a per-bill entry counts 1 with its `how` and the entry's own
+ * total (the server's lines, summed once — not a second opinion, the same figure the entry already shows).
+ */
+function bkDaySales(entries, day) {
+  var counters = {}, tenders = {}, corder = [], torder = [], hasDay = false;
+  (entries || []).forEach(function (e) {
+    if (String(e.posting_date || '').slice(0, 10) !== day) return;
+    var s = e.source; if (!s) return;
+    if (s.kind === 'day') hasDay = true;                      /* the counter closed its day — walk-ins are in */
+    if (s.kind !== 'day' && s.kind !== 'bill') return;        /* sales only: a bill, or a walk-in day */
+    var total = s.kind === 'day'
+      ? (s.split || []).reduce(function (a, x) { return a + Number(x.amount_minor || 0); }, 0)
+      : (e.lines || []).reduce(function (a, l) { return a + Number(l.dr_minor || 0); }, 0);
+    var bills = s.kind === 'day' ? Number(s.count || 0) : 1;
+    var c = s.counter || '—';
+    if (!counters[c]) { counters[c] = { counter: c, amount_minor: 0, bills: 0 }; corder.push(c); }
+    counters[c].amount_minor += total; counters[c].bills += bills;
+    var add = function (how, amt) { if (!tenders[how]) { tenders[how] = { how: how, amount_minor: 0 }; torder.push(how); } tenders[how].amount_minor += amt; };
+    if (s.kind === 'day') (s.split || []).forEach(function (x) { add(x.how, Number(x.amount_minor || 0)); });
+    else if (s.how) add(s.how, total);
+  });
+  corder.sort();
+  return { counters: corder.map(function (k) { return counters[k]; }), tenders: torder.map(function (k) { return tenders[k]; }), day_closed: hasDay };
+}
+function bkStripHTML(r, day) {
+  var c = r && r.currency;
+  var t = bkDaySales((r && r.entries) || [], day);
+  var row1 = t.counters.map(function (x) {
+    return '<span class="optchip bkchip" data-testid="strip-counter-' + esc(x.counter) + '">' + esc(x.counter) + ' <b>' + esc(bkMoney(x.amount_minor, c)) + '</b> · ' + esc(txf(x.bills === 1 ? '{n} bill' : '{n} bills', { n: x.bills })) + '</span>';
+  }).join('');
+  var row2 = t.tenders.map(function (x) {
+    return '<span class="optchip bkchip" data-testid="strip-tender-' + esc(x.how) + '">' + esc(tx(x.how)) + ' <b>' + esc(bkMoney(x.amount_minor, c)) + '</b></span>';
+  }).join('');
+  /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the
+     strip is not the whole day yet, and says so, muted (the counter holds the fix; this screen cannot close a day) */
+  var note = t.day_closed ? '' : '<div data-testid="strip-noclose" style="color:var(--grey);font-size:var(--fs-1)">' + tx('Walk-ins not closed yet — close the day on the counter') + '</div>';
+  if (!row1 && !note) return '';
+  return '<div id="bk_strip" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'
+    + (row1 ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + row1 + '</div>' : '')
+    + (row2 ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + row2 + '</div>' : '')
+    + note + '</div>';
+}
+/**
+ * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
+ * all quiet collapses into one line. Every count is the server's: /health waiting[] (a received supplier bill waits
+ * as "Waiting for you to confirm …" — those are the Intake's; the rest are the ledger's to record), /dues (a
+ * customer with any bucket past "Not due"), /cheques (a held cheque with a step still open).
+ */
+function bkTodoCounts(dues, cheques, health) {
+  var waiting = (health && health.waiting) || [];
+  var confirm = waiting.filter(function (w) { return /^Waiting for you to confirm/.test(String(w.reason || w.why || '')); });
+  var overdue = ((dues && dues.parties) || []).filter(function (p) {
+    if (bkDuesSide(p) !== 'rcv') return false;
+    var b = p.buckets || {};
+    return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });
+  });
+  var chq = ((cheques && cheques.cheques) || []).filter(function (x) { return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0; });
+  return { accept: confirm.length, overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
+}
+function bkTodoHTML(n) {
+  var card = function (tid, count, label, go) {
+    return '<button class="bktodo" data-testid="' + tid + '" onclick="' + go + '"><b>' + count + '</b> ' + esc(label) + '<span class="bkgo" aria-hidden="true">›</span></button>';
+  };
+  var items = [];
+  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'), "navTo('intake')"));
+  if (n.overdue) items.push(card('todo-overdue', n.overdue, tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), "bkTab('dues')"));
+  if (n.cheques) items.push(card('todo-cheques', n.cheques, tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), "bkTab('cheques')"));
+  if (n.waiting) items.push(card('todo-waiting', n.waiting, tx('waiting to be recorded'), "bkTab('waiting')"));
+  if (!items.length) return '<div data-testid="todo-none" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:10px">' + tx('Nothing waiting on you') + '</div>';
+  return '<div id="bk_todo" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">' + items.join('') + '</div>';
+}
 async function bkDaybook(body) {
   var q = bkRange('db');
   try {
-    var r = await api('booksDaybook', { query: q }); var c = r && r.currency;
+    /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
+    var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
+    var r = rr[0]; var c = r && r.currency;
     var rows = ((r && r.entries) || []).map(function (e) {
       return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3" data-testid="db-head-' + esc(e.entry_no) + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c) + '</td></tr>'
         + (e.lines || []).map(function (l) { return '<tr><td></td><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     }).join('');
-    body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));
+    /* the strip and the to-do sit above the entries; the strip reads the range's LAST day — today, by default */
+    body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + bkStripHTML(r, q.to) + bkTodoHTML(bkTodoCounts(rr[1], rr[2], rr[3]))
+      + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 /**

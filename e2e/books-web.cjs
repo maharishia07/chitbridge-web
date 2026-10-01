@@ -39,11 +39,19 @@ function standIn() {
     receipts: { c1: [], c2: [], s1: [] },
     /* ── the 2026-09-30 fix pass (review M10–M12, F11): what the stand-in now keeps, as the server does ── */
     payPosts: [], byRef: {}, openingPosts: [], openingByRef: {}, chequeSteps: [], retries: 0, fileGets: 0, acks: [],
-    /* /health names what could not be recorded, each with its reason sentence (routes/books.js GET /health) */
+    /* /health names what could not be recorded, each with its reason sentence (routes/books.js GET /health).
+       The three "Waiting for you to confirm …" rows are received supplier bills — the Day book's to-do counts them
+       as "supplier bills to accept" (they wait on a person, so retry keeps them: stuck) and the other two as
+       "waiting to be recorded". */
     waiting: [{ id: 1, chit_id: 'ch7', ref: 'bill:ch7', why: 'Paid by Points — there is no ledger for Points yet.', tries: 3, since: '2026-09-28T10:00:00Z' },
-              { id: 2, chit_id: 'ch8', ref: 'chit:ch8', why: 'September is locked. Open it again to record this bill.', tries: 1, since: '2026-09-29T09:00:00Z', stuck: true }],
-    /* a cheque the server itself lists as held (recorded at the counter, or in an earlier session) */
-    chequeLists: 0, serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' }],
+              { id: 2, chit_id: 'ch8', ref: 'chit:ch8', why: 'September is locked. Open it again to record this bill.', tries: 1, since: '2026-09-29T09:00:00Z', stuck: true },
+              { id: 3, chit_id: 'sb1', ref: 'bill:sb1', why: 'Waiting for you to confirm Agro Mills’ bill AM-81.', tries: 0, since: '2026-09-30T08:00:00Z', stuck: true },
+              { id: 4, chit_id: 'sb2', ref: 'bill:sb2', why: 'Waiting for you to confirm Agro Mills’ bill AM-82.', tries: 0, since: '2026-09-30T09:00:00Z', stuck: true },
+              { id: 5, chit_id: 'sb3', ref: 'bill:sb3', why: 'Waiting for you to confirm a counter bill from Meena Traders.', tries: 0, since: '2026-09-30T10:00:00Z', stuck: true }],
+    /* a cheque the server itself lists as held (recorded at the counter, or in an earlier session) — and one already
+       cleared (`next` empty), which the to-do must NOT count */
+    chequeLists: 0, serverCheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received' },
+      { payment_id: 'chq8', party_id: 'c1', name: 'Ravi Stores', amount_minor: 10000, cheque_no: '112233', cheque_bank: 'SBI', status: 'cleared', next: [] }],
   };
   S.balance = (id) => S.items[id].reduce((a, x) => a + x.open_minor, 0);
   S.statement = (id) => {
@@ -71,6 +79,8 @@ const shot = async (p, name) => { if (process.env.BOOKS_SHOTS) await p.screensho
 const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
 const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
+/* "today" the way the page computes it (bkToday: toISOString) — the strip reads the range's last day */
+const TODAY = new Date().toISOString().slice(0, 10);
 
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -135,7 +145,22 @@ async function route(S, r) {
       { entry_id: 'e4', entry_no: 'JV/2026-27/000004', posting_date: '2026-07-03', doc_date: '2026-07-03', event_type: 'payment_received', source_chit_id: 'ch4', narration: 'Payment received',
         source: { chit_id: 'ch4', ref: 'R/C2/0001', kind: 'receipt', counter: 'C2', by: 'Athi', count: null, how: 'UPI', how_ref: '4421000000009931', split: null,
           doc_at: '2026-07-03T06:00:00.000Z', recorded_at: '2026-10-01T05:00:00.000Z' },
-        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 20000, cr_minor: 0 }, { code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 0, cr_minor: 20000 }] }] });
+        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 20000, cr_minor: 0 }, { code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 0, cr_minor: 20000 }] }].concat(S.noToday ? [] : [
+      /* ⭐ TODAY's sales, for the strip: a closed walk-in day and a credit bill on C1, a UPI bill on C2.
+         C1 = 1,240 + 860 + 300 (the day's split) + 1,880 (the bill) = ₹4,280.00 · 11 + 1 = 12 bills; C2 = ₹6,909.00 · 1 bill.
+         Tenders: Cash 1,240 · UPI 860 + 6,909 = 7,769 · Card 300 · On credit 1,880. */
+      { entry_id: 'e5', entry_no: 'JV/2026-27/000005', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales, counter C1, ' + TODAY + ' (11 bills)',
+        source: { chit_id: null, ref: null, kind: 'day', counter: 'C1', by: null, count: 11, how: 'Cash · UPI · Card', how_ref: null,
+          split: [{ how: 'Cash', amount_minor: 124000 }, { how: 'UPI', amount_minor: 86000 }, { how: 'Card', amount_minor: 30000 }] },
+        lines: [{ code: '1400', name: 'Cash', dr_minor: 240000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 240000 }] },
+      { entry_id: 'e6', entry_no: 'JV/2026-27/000006', posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: 'ch6', narration: 'Sale',
+        source: { chit_id: 'ch6', ref: 'C1/26-27/0031', kind: 'bill', counter: 'C1', by: 'Mani', count: null, how: 'On credit', how_ref: null, split: null,
+          doc_at: TODAY + 'T05:10:00.000Z', recorded_at: TODAY + 'T05:10:04.000Z' },
+        lines: [{ code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 188000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 188000 }] },
+      { entry_id: 'e7', entry_no: 'JV/2026-27/000007', posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: 'ch71', narration: 'Sale',
+        source: { chit_id: 'ch71', ref: 'C2/26-27/0045', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'UPI', how_ref: '9988776655443322', split: null,
+          doc_at: TODAY + 'T06:20:00.000Z', recorded_at: TODAY + 'T06:20:03.000Z' },
+        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 690900, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 690900 }] }]) });
     if (p === '/api/books/ledger/1300') return J(r, 200, { account: { code: '1300', name: 'Debtors' }, currency: 'INR', opening_minor: 0, closing_minor: 250000, lines: [
       { date: '2026-07-02', doc_date: '2026-07-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: 'ch1', source: { chit_id: 'ch1', ref: 'C2/26-27/0002', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'On credit', how_ref: null, split: null,
         doc_at: '2026-07-02T08:42:00.000Z', recorded_at: '2026-10-01T05:00:00.000Z' }, dr_minor: 300000, cr_minor: 0, running_minor: 300000 },
@@ -384,6 +409,47 @@ async function route(S, r) {
   });
   ok(opened === 'ch1', 'day book: the bill number is a link that opens that chit, once (' + opened + ')');
   ok(await p.locator('[data-testid="db-src-JV/2026-27/000002"]').count() === 0, 'day book: a walk-in day has no single bill to link');
+
+  /* ⭐ 6b · THE STRIP — today's sales per counter and by tender, both rows from ONE function (bkDaySales) */
+  const stripC1 = await headOf('strip-counter-C1'), stripC2 = await headOf('strip-counter-C2');
+  ok(/4,280\.00/.test(stripC1) && /12 bills/.test(stripC1), 'strip: C1 adds the walk-in day and the credit bill — 4,280.00 · 12 bills ("' + stripC1 + '")');
+  ok(/6,909\.00/.test(stripC2) && /1 bill$/.test(stripC2), 'strip: C2 — 6,909.00 · 1 bill, singular ("' + stripC2 + '")');
+  const tCash = await headOf('strip-tender-Cash'), tUpi = await headOf('strip-tender-UPI'), tCard = await headOf('strip-tender-Card'), tCred = await headOf('strip-tender-On credit');
+  ok(/1,240\.00/.test(tCash) && /300\.00/.test(tCard), 'strip: the day\'s split — Cash 1,240.00 · Card 300.00 ("' + tCash + '" · "' + tCard + '")');
+  ok(/7,769\.00/.test(tUpi), 'strip: UPI adds the day\'s split AND the per-bill sale — 7,769.00 ("' + tUpi + '")');
+  ok(/1,880\.00/.test(tCred), 'strip: On credit carries the bill\'s total ("' + tCred + '")');
+  ok(await p.locator('[data-testid="strip-noclose"]').count() === 0, 'a walk-in day entry for today → no "not closed yet" note');
+
+  /* ⭐ 6c · THE TO-DO — a count and a verb each; each line counted from its own route */
+  const todoAccept = await headOf('todo-accept'), todoOver = await headOf('todo-overdue'), todoChq = await headOf('todo-cheques'), todoWait = await headOf('todo-waiting');
+  ok(/^3 supplier bills to accept/.test(todoAccept), 'to-do: 3 supplier bills to accept — the health rows "Waiting for you to confirm …" ("' + todoAccept + '")');
+  ok(/^1 customer overdue/.test(todoOver), 'to-do: 1 customer overdue — a bucket past "Not due", customers only ("' + todoOver + '")');
+  ok(/^1 cheque to deposit \/ clear/.test(todoChq), 'to-do: 1 cheque to deposit / clear — held, with a step still open; the cleared one not counted ("' + todoChq + '")');
+  ok(/^2 waiting to be recorded/.test(todoWait), 'to-do: 2 waiting to be recorded — the health rows that are not supplier bills ("' + todoWait + '")');
+  ok(await p.locator('[data-testid="todo-none"]').count() === 0, 'something waits → no quiet line');
+  await noAccounting(p, 'day book strip and to-do');
+  fs.mkdirSync(path.join(__dirname, 'shots'), { recursive: true });
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-laptop.png') });
+
+  /* ⭐ 6d · each line is a TAP to the screen that does it */
+  await p.click('[data-testid="todo-overdue"]');
+  await p.waitForSelector('[data-testid="dues-side-pay"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'tap: customers overdue opens Ledger › Dues');
+  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-cheques"]', { timeout: 8000 });
+  await p.click('[data-testid="todo-cheques"]');
+  await p.waitForSelector('[data-testid="chq-chq9"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.locator('[data-testid="chq-chq9"]').count() === 1, 'tap: cheques opens Ledger › Cheques');
+  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-waiting"]', { timeout: 8000 });
+  await p.click('[data-testid="todo-waiting"]');
+  await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
+  ok(/Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: waiting opens Ledger › Waiting');
+  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
+  await p.click('[data-testid="todo-accept"]');
+  await p.waitForFunction(() => UI.nav === 'intake', null, { timeout: 8000 }).catch(() => {});
+  ok(await p.evaluate(() => UI.nav) === 'intake', 'tap: supplier bills opens Intake (the rail folder)');
+  await p.click('[data-testid="nav-ledger"]');
+  await p.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 });
+
   await p.click('[data-testid="bk-tab-ledgers"]');
   await p.click('[data-testid="lg-acc-1300"]');
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
@@ -418,7 +484,7 @@ async function route(S, r) {
   await noAccounting(p, 'ledger');
 
   /* ⚠️⚠️ review M12 — the cheques held, and their steps */
-  ok(/2/.test(await p.textContent('[data-testid="bk-tab-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="bk-tab-waiting"]')).trim() + ')');
+  ok(/5/.test(await p.textContent('[data-testid="bk-tab-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="bk-tab-waiting"]')).trim() + ')');
   await p.click('[data-testid="bk-tab-cheques"]');
   await p.waitForSelector('[data-testid="chq-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="chq-' + chqId + '"]').count() === 1 && /Deposited/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cheques: the one recorded here is listed, Deposited');
@@ -463,8 +529,8 @@ async function route(S, r) {
   await shot(p, '4c-waiting');
   await p.click('[data-testid="wait-retry"]').catch(() => {});
   await p.waitForFunction(() => /still waiting|All recorded/.test((document.querySelector('[data-testid="wait_out"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
-  ok(S.retries === 1 && /1 recorded · 1 still waiting/.test(await p.textContent('[data-testid="wait_out"]').catch(() => '')) && await p.locator('[data-testid="wait-1"]').count() === 0 && await p.locator('[data-testid="wait-0"]').count() === 1,
-    'Try again → POST /api/books/outbox/retry; the list is read again: 1 recorded, 1 still waiting');
+  ok(S.retries === 1 && /1 recorded · 4 still waiting/.test(await p.textContent('[data-testid="wait_out"]').catch(() => '')) && await p.locator('[data-testid="wait-4"]').count() === 0 && await p.locator('[data-testid="wait-3"]').count() === 1,
+    'Try again → POST /api/books/outbox/retry; the list is read again: 1 recorded, 4 still waiting (the supplier bills wait on a person, not a retry)');
   await noAccounting(p, 'waiting');
 
   /* month lock blocks a payment in that month; opening again needs a reason */
@@ -583,6 +649,43 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="party-books-s1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.waitForTimeout(700); await shot(p, '5-supplier-record');
   ok(/Pay/.test(await p.textContent('[data-testid="party-books-s1"] [data-testid="party-pay"]')), 'a supplier\'s action says Pay');
+
+  /* 10 · phone first: the Day book at 390 — the tapped view replaces the rail, nothing scrolls sideways */
+  {
+    const S2 = standIn();
+    const { ctx: c2, p: p2 } = await open(S2, 390);
+    await p2.evaluate(() => navTo('ledger'));
+    await p2.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
+    await p2.click('[data-testid="bk-tab-daybook"]');
+    await p2.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 }).catch(() => {});
+    ok(await p2.locator('[data-testid="strip-counter-C1"]').isVisible().catch(() => false) && await p2.locator('[data-testid="todo-accept"]').isVisible().catch(() => false), 'phone: tapping Day book shows the strip and the to-do (the detail replaces the rail)');
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth) === 390, 'document.scrollWidth === 390 at phone width');
+    ok(await p2.locator('[data-testid="bk-back"]').isVisible().catch(() => false), 'phone: the view carries a visible way back to the Ledger\'s list');
+    await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-phone.png') });
+    await p2.click('[data-testid="bk-back"]', { timeout: 3000 }).catch(() => {});
+    ok(await p2.locator('[data-testid="bk-tab-daybook"]').isVisible().catch(() => false), 'phone: back shows the list again');
+    await c2.close();
+  }
+
+  /* 11 · the zero day: no sales today, nothing waiting — one quiet line, and the walk-in note */
+  {
+    const S0 = standIn();
+    S0.noToday = true; S0.waiting = []; S0.serverCheques = []; S0.items.c1 = [];
+    const { ctx: c0, p: p0 } = await open(S0);
+    await p0.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
+    await p0.click('[data-testid="nav-ledger"]');
+    await p0.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 15000 });
+    await p0.waitForSelector('[data-testid="todo-none"]', { timeout: 8000 }).catch(() => {});
+    ok(/Nothing waiting on you/.test(await p0.textContent('[data-testid="todo-none"]').catch(() => '')), 'all zero → one quiet line: Nothing waiting on you');
+    ok(await p0.locator('[data-testid="todo-accept"]').count() === 0 && await p0.locator('[data-testid="todo-overdue"]').count() === 0
+      && await p0.locator('[data-testid="todo-cheques"]').count() === 0 && await p0.locator('[data-testid="todo-waiting"]').count() === 0, 'a count at zero earns no row');
+    ok(await p0.locator('[data-testid^="strip-counter-"]').count() === 0, 'no sales today → no counter chips');
+    ok(await p0.locator('[data-testid="strip-noclose"]').count() === 1 && /close the day on the counter/.test(await p0.textContent('[data-testid="strip-noclose"]').catch(() => '')),
+      'no walk-in day entry for today → the muted sentence: Walk-ins not closed yet');
+    await p0.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-empty.png') });
+    await noAccounting(p0, 'day book, zero day');
+    await c0.close();
+  }
 
   const mine = threw.filter((m) => /bk|party|pay|books|ledger/i.test(m));
   ok(mine.length === 0, 'no page error from the Ledger code' + (mine.length ? ' — ' + mine.join(' | ') : ''));

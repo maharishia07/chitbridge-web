@@ -54,6 +54,24 @@ const BREAKS = [
   ['TIME late entry not marked', CAP, `  if (!late) return '';`, `  return '';`],
   ['TIME same-day entry marked anyway', CAP, `  if (!late) return '';`, `  if (false) return '';`],
   ['HOW receipt not called Received', CAP, `s && s.kind === 'receipt' ? esc(tx('Received'))`, `false ? esc(tx('Received'))`],
+  /* ── the Day book's strip and to-do (Athi, 2026-10-01: "see the total sale in different counters … act one by one") ── */
+  ['TODO strip counter amount dropped', CAP, `counters[c].amount_minor += total; counters[c].bills += bills;`, `counters[c].bills += bills;`],
+  ['TODO strip per-bill does not count one', CAP, `var bills = s.kind === 'day' ? Number(s.count || 0) : 1;`, `var bills = s.kind === 'day' ? Number(s.count || 0) : 0;`],
+  ['TODO strip day split not in tenders', CAP, `if (s.kind === 'day') (s.split || []).forEach(function (x) { add(x.how, Number(x.amount_minor || 0)); });`, `if (false) (s.split || []).forEach(function (x) { add(x.how, Number(x.amount_minor || 0)); });`],
+  ['TODO strip bill tender dropped', CAP, `    else if (s.how) add(s.how, total);`, ``],
+  ['TODO walk-in note never said', CAP, `var note = t.day_closed ? ''`, `var note = true ? ''`],
+  ['TODO note said though the day closed', CAP, `var note = t.day_closed ? ''`, `var note = false ? ''`],
+  ['TODO accept filter counts everything', CAP, `/^Waiting for you to confirm/.test(String(w.reason || w.why || ''))`, `true`],
+  ['TODO overdue counts the settled too', CAP, `return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });`, `return true;`],
+  ['TODO cheque without a step counted', CAP, `bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0`, `true`],
+  ['TODO waiting double-counts the supplier bills', CAP, `waiting: waiting.length - confirm.length`, `waiting: waiting.length`],
+  ['TODO a zero still earns a row', CAP, `if (n.accept) items.push(`, `if (true) items.push(`],
+  ['TODO quiet line missing', CAP, `if (!items.length) return '<div data-testid="todo-none"`, `if (false) return '<div data-testid="todo-none"`],
+  ['TODO intake tap dead', CAP, `"navTo('intake')"`, `""`],
+  ['TODO dues tap dead', CAP, `"bkTab('dues')"`, `""`],
+  ['TODO cheques tap dead', CAP, `"bkTab('cheques')"`, `""`],
+  ['TODO waiting tap dead', CAP, `"bkTab('waiting')"`, `""`],
+  ['TODO phone tap shows nothing', CAP, `  if (!silent && UI.vp === 'mob') { UI.mdetail = true; var pn = document.getElementById('panel'); if (pn) pn.classList.add('showdetail'); }`, ``],
 ];
 /* BREAK_ONLY=M1 runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
