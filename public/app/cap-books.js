@@ -697,7 +697,7 @@ document.addEventListener('click', function (ev) {
 });
 document.addEventListener('keydown', function (ev) {
   if (!bkDvOn()) return;
-  if (ev.key === 'Escape') { var sh = document.getElementById('chitsheet'); if (sh && sh.open) sh.close(); return; }
+  if (ev.key === 'Escape') return;   /* the sheet's own dialog closes on Esc — this screen must not swallow it */
   var typing = /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test((ev.target && ev.target.tagName) || '');
   if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
     var rows = Array.prototype.slice.call(document.querySelectorAll('#bk_dvlist .bkdv-row')); if (!rows.length) return;

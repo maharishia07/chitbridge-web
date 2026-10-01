@@ -508,6 +508,8 @@ async function route(S, r) {
     ok(/^1 entry · /.test(headToday) && cents(headToday.match(/Dr (\S+)/)[1]) === 188000, 'views: the day head follows the search — "' + headToday + '"');
     await p.fill('[data-testid="db-search"]', '3000.00'); await settle();
     ok(JSON.stringify(await shownNos()) === JSON.stringify(byAmt('3000.00')) && (await shownNos()).length === 1, 'views: search 3000.00 (with paise) finds exactly that entry');
+    await p.fill('[data-testid="db-search"]', '3000.50'); await settle();
+    ok((await shownNos()).length === 0 && JSON.stringify(byAmt('3000.50')) === '[]', 'views: search 3000.50 finds nothing — paise are matched exactly, not rounded to the rupee');
     await p.fill('[data-testid="db-search"]', 'ravi'); await settle();
     const wantRavi = ents.filter((e) => e.lines.some((l) => /ravi/i.test(l.party_name || ''))).map((e) => e.entry_no);
     ok(JSON.stringify(await shownNos()) === JSON.stringify(wantRavi) && wantRavi.length >= 2, 'views: search by party name — ' + wantRavi.length + ' of ' + ents.length + ' entries');
