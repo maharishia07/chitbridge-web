@@ -456,5 +456,13 @@ async function adopt(){
 
 load();
 </script>
+<!-- ONE BROWSER, ONE SHOP (2026-10-01): this page answers the roll, and leaves when its shop is signed out or the
+     browser is cleaned — to the home page, which reads nothing while the clean-up runs -->
+<script src="app/one-person.js"></script>
+<script>
+CBOnePerson.attach({ quiet: true, who: (function(){ var w = CBOnePerson.stored(); return function(){ return w; }; })(),
+  label: function(){ return 'The Product Lab'; },
+  onLeave: function(by){ location.replace('/?left=' + encodeURIComponent(by || '')); }, onWipe: function(){ location.replace('/?cleaned=1'); } });
+</script>
 </body>
 </html>

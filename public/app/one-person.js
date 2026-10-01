@@ -59,32 +59,56 @@
   /* the counter's own copy of the shop (S, as the server answered its key). ⚠️ indexedDB.open() on a name that does
      not exist CREATES it — an empty database the counter would then open at version 1 with no stores. So: only a
      name the browser already lists, and an upgrade (= it did not exist) is aborted. */
-  function snapshot(sl) {
-    if (!sl) return Promise.resolve(null);
-    var mem = json(sl + '-kv-snapshot');                  /* the counter's own fallback when IndexedDB refused */
-    if (mem) return Promise.resolve(mem);
+  /** the names of this origin's IndexedDB databases, or null where the browser cannot list them */
+  function dbNames() {
     var idb = root.indexedDB;
     if (!idb || typeof idb.databases !== 'function') return Promise.resolve(null);
-    return idb.databases().then(function (list) {
-      if (!(list || []).some(function (d) { return d && d.name === sl; })) return null;
+    return idb.databases().then(function (l) { return (l || []).map(function (d) { return d && d.name; }).filter(Boolean); },
+                                function () { return null; });
+  }
+  /** read one store of a database that ALREADY exists: fn(store) → a request; resolves its result, or null */
+  function readExisting(name, storeName, fn) {
+    var idb = root.indexedDB;
+    return dbNames().then(function (names) {
+      if (!names || names.indexOf(name) < 0) return null;
       return new Promise(function (res) {
         var done = false, fin = function (v) { if (!done) { done = true; res(v); } };
-        var rq; try { rq = idb.open(sl); } catch (_) { return fin(null); }
+        var rq; try { rq = idb.open(name); } catch (_) { return fin(null); }
         rq.onupgradeneeded = function () { try { rq.transaction.abort(); } catch (_) {} fin(null); };
         rq.onerror = function () { fin(null); };
         rq.onblocked = function () { fin(null); };
         rq.onsuccess = function () {
           var db = rq.result;
           try {
-            if (!db.objectStoreNames.contains('kv')) { db.close(); return fin(null); }
-            var g = db.transaction('kv', 'readonly').objectStore('kv').get('snapshot');
-            g.onsuccess = function () { db.close(); fin(g.result || null); };
+            if (!db.objectStoreNames.contains(storeName)) { db.close(); return fin(null); }
+            var g = fn(db.transaction(storeName, 'readonly').objectStore(storeName));
+            g.onsuccess = function () { db.close(); fin(g.result == null ? null : g.result); };
             g.onerror = function () { db.close(); fin(null); };
           } catch (_) { try { db.close(); } catch (_e) {} fin(null); }
         };
         setTimeout(function () { fin(null); }, 1500);
       });
-    }).catch(function () { return null; });
+    });
+  }
+  function snapshot(sl) {
+    if (!sl) return Promise.resolve(null);
+    var mem = json(sl + '-kv-snapshot');                  /* the counter's own fallback when IndexedDB refused */
+    if (mem) return Promise.resolve(mem);
+    return readExisting(sl, 'kv', function (st) { return st.get('snapshot'); }).catch(function () { return null; });
+  }
+  /** how many rows wait in the counter's queues — every counter copy in this browser, IndexedDB and its
+   *  localStorage fallback (<slot>-queue-<no>). Read-only. A queued row is a sale not yet at the shop. */
+  function counterUnsent() {
+    var mem = lsKeys().filter(function (k) { return k && /^cb-till[A-Za-z0-9_-]*-queue-/.test(k); }).length;
+    return dbNames().then(function (names) {
+      var slots = (names || []).filter(function (n) { return /^cb-till/.test(n); });
+      return Promise.all(slots.map(function (n) { return readExisting(n, 'queue', function (st) { return st.count(); }); }));
+    }).then(function (counts) { return mem + counts.reduce(function (a, c) { return a + (Number(c) || 0); }, 0); },
+            function () { return mem; });
+  }
+  /** saves the Labs could not send yet (the 'offerlab' database's outbox, drained by combo-lab.html) — read-only */
+  function labUnsent() {
+    return readExisting('offerlab', 'outbox', function (st) { return st.count(); }).then(function (n) { return Number(n) || 0; }, function () { return 0; });
   }
   /** { paired:false } or { paired:true, ent, name, counter } — the shop this browser's counter is paired to.
    *  The server's answer (the snapshot) first; then the shop the counter was opened for; then the id the app
@@ -106,11 +130,16 @@
 
   /* ── the other tabs ────────────────────────────────────────────────────────────────────────────────────────── */
   var bc = null; try { bc = new root.BroadcastChannel(CHANNEL); } catch (_) { bc = null; }
-  var me = { tab: Math.random().toString(36).slice(2), who: null, onLeave: null, quiet: false };
+  var me = { tab: Math.random().toString(36).slice(2), who: null, onLeave: null, quiet: false, label: null, onWipe: null };
   var waits = {};
   if (bc) bc.onmessage = function (e) {
     var m = (e && e.data) || {};
-    if (m.t === 'who') {
+    if (m.t === 'roll') {                              /* every ChitBridge page answers, by the name a person knows it by */
+      bc.postMessage({ t: 'present', q: m.q, tab: me.tab, label: (me.label && me.label()) || 'A ChitBridge tab' });
+    } else if (m.t === 'wipe') {
+      Promise.resolve().then(function () { return me.onWipe && me.onWipe(); }).catch(function () {})
+        .then(function () { bc.postMessage({ t: 'wiped', q: m.q, tab: me.tab }); });
+    } else if (m.t === 'who') {
       var w = !me.quiet && me.who && me.who();
       if (w) bc.postMessage({ t: 'here', q: m.q, tab: me.tab, ent: w.ent, uid: w.uid, name: w.name });
     } else if (m.t === 'leave') {
@@ -118,7 +147,7 @@
       if (!mine || mine.ent !== m.ent || !me.onLeave) return;
       Promise.resolve().then(function () { return me.onLeave(m.by || ''); }).catch(function () {})
         .then(function () { bc.postMessage({ t: 'left', q: m.q, tab: me.tab }); });
-    } else if ((m.t === 'here' || m.t === 'left') && waits[m.q]) waits[m.q](m);
+    } else if (/^(here|left|present|wiped)$/.test(m.t) && waits[m.q]) waits[m.q](m);
   };
   function ask(msg, ms, enough) {
     return new Promise(function (res) {
@@ -133,7 +162,8 @@
   }
   /** a page says who it holds and what to do when told to leave. quiet: it answers 'leave' but not 'who' (the
    *  index page holds no work, so it never stops a sign-in; it still signs out when its shop is cleared) */
-  function attach(o) { me.who = o.who || null; me.onLeave = o.onLeave || null; me.quiet = !!o.quiet; }
+  function attach(o) { me.who = o.who || null; me.onLeave = o.onLeave || null; me.quiet = !!o.quiet;
+                       me.label = o.label || null; me.onWipe = o.onWipe || null; }
 
   /* ── the check ─────────────────────────────────────────────────────────────────────────────────────────────── */
   /** everything in this browser that belongs to a shop other than `mine` ({ent}). Resolves
@@ -209,7 +239,62 @@
     lsSet(OWNER, JSON.stringify({ ent: mine.ent, name: mine.name || (same && own.name) || '', ids: ids }));
   }
 
+  /* ── ⭐⭐ START WITH A CLEAN BROWSER (Athi, 2026-10-01: *"offer to open a new browser with clean slate, so it has
+     no session information held anywhere across the board."*) A page cannot open a private window; this is the
+     same slate, made here. In this order, and it stops at the first thing that is not safe:
+       1  the counter's queue holds unsent bills → refuse, and say how many. A counter key is the one thing never
+          wiped with work behind it. (Checked FIRST, so nobody is signed out for a clean-up that cannot happen.)
+       2  every ChitBridge tab is told to send what it holds and sign out; a tab that does not answer is NAMED,
+          and nothing is wiped
+       3  every database on this origin is deleted — a delete that stays blocked means a page still holds it open
+          (the counter page cannot be told: it is the counter's own) → named, and the keys are left as they are
+       4  every cb* key in localStorage and sessionStorage, every cache, every service worker
+     Resolves { ok:true, counter:'Counter 1' | '' } or { ok:false, unsent:n | silent:[labels] | blocked:[labels] } */
+  var CB_KEY = /^cb[_.\-]/;              /* cb_sess, cb_till_*, cb_nav@<id>, cb.draft.*, cb.outbox.v1, cb-till-*-queue-* … */
+  function cbKeys(store) { var out = []; try { for (var i = 0; i < store.length; i++) { var k = store.key(i); if (k && CB_KEY.test(k)) out.push(k); } } catch (_) {} return out; }
+  function dbLabel(n) { return /^cb-till/.test(n) ? 'the counter tab' : (n === 'offerlab' ? 'a Lab tab' : 'a tab using ' + n); }
+  function dropDb(name) {
+    return new Promise(function (res) {
+      var done = false, fin = function (v) { if (!done) { done = true; res(v); } };
+      var rq; try { rq = root.indexedDB.deleteDatabase(name); } catch (_) { return fin(''); }
+      rq.onsuccess = rq.onerror = function () { fin(''); };
+      rq.onblocked = function () { setTimeout(function () { fin(dbLabel(name)); }, 2000); };
+    });
+  }
+  function startClean() {
+    return Promise.all([counterUnsent(), labUnsent()]).then(function (u) {
+      if (u[0]) return { ok: false, unsent: u[0] };
+      if (u[1]) return { ok: false, labUnsent: u[1] };
+      return ask({ t: 'roll' }, ASK_MS).then(function (tabs) {
+        return ask({ t: 'wipe' }, LEAVE_MS, function (got) { return got.length >= tabs.length; }).then(function (got) {
+          var silent = tabs.filter(function (t) { return !got.some(function (g) { return g.tab === t.tab; }); }).map(function (t) { return t.label; });
+          if (silent.length) return { ok: false, silent: silent };
+          return counterPair().then(function (pair) {
+            var known = [slot(), 'offerlab'].filter(Boolean);
+            return dbNames().then(function (names) { return Promise.all((names || known).map(dropDb)); }).then(function (blocked) {
+              blocked = blocked.filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; });
+              if (blocked.length) return { ok: false, blocked: blocked };
+              cbKeys(root.localStorage).forEach(lsDel);
+              try { cbKeys(root.sessionStorage).forEach(function (k) { root.sessionStorage.removeItem(k); }); } catch (_) {}
+              var caches = root.caches ? root.caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return root.caches.delete(k); })); }).catch(function () {}) : null;
+              var sw = (root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.getRegistrations)
+                ? root.navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }).catch(function () {}) : null;
+              return Promise.all([caches, sw]).then(function () { return { ok: true, counter: pair.paired ? pair.counter : '' }; });
+            });
+          });
+        });
+      });
+    });
+  }
+  function cleanSentence(r) {
+    if (r.unsent) return 'The counter still holds ' + r.unsent + (r.unsent === 1 ? ' unsent bill' : ' unsent bills') + '. Open the counter and let it send them first.';
+    if (r.labUnsent) return 'The Labs still hold ' + r.labUnsent + (r.labUnsent === 1 ? ' unsent save' : ' unsent saves') + '. Open the Combo Lab while online and let it send them first.';
+    if (r.silent) return 'No answer from: ' + r.silent.join(', ') + '. Close ' + (r.silent.length === 1 ? 'it' : 'them') + ', then press again.';
+    if (r.blocked) return 'Still open: ' + r.blocked.join(', ') + '. Close ' + (r.blocked.length === 1 ? 'it' : 'them') + ', then press again.';
+    return 'This browser is clean.' + (r.counter ? ' ' + r.counter + ' will need pairing again.' : '');
+  }
+
   root.CBOnePerson = { who: who, stored: stored, counterPair: counterPair, traces: traces, clearOut: clearOut,
     claim: claim, attach: attach, sentence: sentence, counterSentence: counterSentence, buttonLabel: buttonLabel,
-    shopName: shopName };
+    shopName: shopName, counterUnsent: counterUnsent, startClean: startClean, cleanSentence: cleanSentence };
 })(typeof window !== 'undefined' ? window : this);

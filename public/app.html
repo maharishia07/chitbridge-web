@@ -4004,6 +4004,11 @@ function gatePaint(r){
     +'<h2 style="margin:0 0 12px">'+esc(tx('Close the other shop first'))+'</h2>'
     +(r.failed?'<div>'+esc(tx('Could not check this browser. Press Check again.'))+'</div>':'')
     +rows+ctr
+    /* ⭐ the clean slate (CBOnePerson.startClean): everything ChitBridge keeps in this browser, gone */
+    +'<div style="margin:4px 0 12px;padding-top:12px;border-top:1px solid var(--line)">'
+    +'<button class="btn" data-testid="gate-start-clean" style="background:var(--card);color:var(--ink);border:1px solid var(--line)" onclick="gateClean()">'+esc(tx('Start with a clean browser'))+'</button>'
+    +'<div data-testid="gate-clean-why" style="font-size:var(--fs-2);color:var(--warn-2);margin-top:6px;line-height:1.5"></div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'+esc(tx('Or open a private window — it starts clean by itself.'))+'</div></div>'
     +'<div style="display:flex;gap:14px;align-items:center;margin-top:6px"><a data-testid="gate-recheck" onclick="gateRun()">'+esc(tx('Check again'))+'</a>'
     +'<a data-testid="gate-signout" onclick="logoutNow()">'+esc(tx('Sign out instead'))+'</a></div>'
     +'</div></div></div>';
@@ -4013,12 +4018,27 @@ function gateClear(i){
   document.querySelectorAll('[data-testid="gate-clear"]').forEach(function(b){ b.disabled=true; b.textContent=tx('Signing it out…'); });
   CBOnePerson.clearOut(o, m.name).then(gateRun, gateRun);
 }
+function gateClean(){
+  var b=document.querySelector('[data-testid="gate-start-clean"]'), why=document.querySelector('[data-testid="gate-clean-why"]');
+  if(b){ b.disabled=true; b.textContent=tx('Cleaning this browser…'); }
+  if(why) why.textContent='';
+  var done=function(r){
+    if(r && r.ok){
+      /* the reload carries its one line in the address; this tab holds nothing else to carry it in */
+      location.replace('/app.html?clean=1'+(r.counter?'&ctr='+encodeURIComponent(r.counter):'')+'#/login');
+      return;
+    }
+    if(b){ b.disabled=false; b.textContent=tx('Start with a clean browser'); }
+    if(why) why.textContent=tx(CBOnePerson.cleanSentence(r||{ silent:[tx('this browser')] }));
+  };
+  CBOnePerson.startClean().then(done, function(){ done(null); });
+}
 /* told by another tab that a different shop is opening here: send what this tab holds, then sign out — visibly */
-function personLeave(by){
+function personLeave(by, why){
   var send=(window.CBOffline && CBOffline.pending && CBOffline.pending()) ? CBOffline.flush().catch(function(){}) : Promise.resolve();
   return send.then(function(){
-    logoutNow();
-    LOGIN.gone=txf('Signed out — {shop} opened in another tab.', { shop: by || tx('another shop') });
+    if(SESSION.token) logoutNow();
+    LOGIN.gone=why || txf('Signed out — {shop} opened in another tab.', { shop: by || tx('another shop') });
     renderLogin();
   });
 }
@@ -4037,7 +4057,9 @@ function sessFollow(e){
   renderLogin();
 }
 try{ window.addEventListener('storage', sessFollow); }catch(_){}
-try{ if(window.CBOnePerson) CBOnePerson.attach({ who: sessMine, onLeave: personLeave }); }catch(_){}
+try{ if(window.CBOnePerson) CBOnePerson.attach({ who: sessMine, onLeave: personLeave,
+  label: function(){ var m=sessMine(); return tx('An app tab')+(m&&m.name?' ('+m.name+')':''); },
+  onWipe: function(){ return personLeave('', tx('Signed out — this browser is being cleaned.')); } }); }catch(_){}
 // The logged-in actor's real id, from the JWT.
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
@@ -19432,6 +19454,11 @@ function paintLB(){
 }
 
 /* boot */
+/* ⭐ just cleaned (gateClean): one line on the sign-in screen, then the address forgets it */
+var CLEAN_LOAD=false;
+try{ var _q=new URLSearchParams(location.search); if(_q.get('clean')==='1'){ CLEAN_LOAD=true;
+  LOGIN.gone=CBOnePerson.cleanSentence({ ok:true, counter:_q.get('ctr')||'' });
+  history.replaceState(null,'',location.pathname+location.hash); } }catch(_){}
 applyPrefs();
 restoreSession();
 try{ const _cw=JSON.parse(localStorage.getItem(uk("cb_colw"))||"null"); if(_cw) UI.colW=_cw; const _so=JSON.parse(localStorage.getItem(uk("cb_sort"))||"null"); if(_so&&_so.sort){ UI.sort=_so.sort; UI.dir=_so.dir||"desc"; } }catch(_){ }
@@ -19444,7 +19471,7 @@ route();
   function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;inset-inline-end:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
     if(s.online){ p.style.background="#fff"; p.style.color="var(--ok-2)"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
     else { p.style.background="var(--warn-tint)"; p.style.color="var(--warn-2)"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
-  try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}
+  try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); /* not on the load right after a clean-up: the slate stays clean until the next visit */ if(!(typeof CLEAN_LOAD!=='undefined'&&CLEAN_LOAD)) CBOffline.registerSW("/cb-sw.js"); }catch(e){}
 })();
 </script>
 </body>

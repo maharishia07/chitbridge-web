@@ -451,10 +451,16 @@ function onStore(e){
   if (MINE && /^cb_till_(lastslot|key|entity)$/.test(k)) CBOnePerson.counterPair().then(pairPaint);
 }
 window.addEventListener('storage', onStore);
-CBOnePerson.attach({ quiet: true, who: function(){ return MINE; },
-  onLeave: function(by){ signedOut('Signed out — ' + (by || 'another shop') + ' opened in another tab.'); } });
+CBOnePerson.attach({ quiet: true, who: function(){ return MINE; }, label: function(){ return 'The home page'; },
+  onLeave: function(by){ signedOut('Signed out — ' + (by || 'another shop') + ' opened in another tab.'); },
+  onWipe: function(){ signedOut('Signed out — this browser is being cleaned.'); } });
 
-open_();
+/* a Lab sent here because its shop was signed out, or the browser is being cleaned, reads nothing — whatever is
+   still in storage at this moment is on its way out */
+var Q = new URLSearchParams(location.search);
+if (Q.get('cleaned') === '1') signedOut('Signed out — this browser is being cleaned.');
+else if (Q.has('left')) signedOut('Signed out — ' + (Q.get('left') || 'another shop') + ' opened in another tab.');
+else open_();
 </script>
 </body>
 </html>

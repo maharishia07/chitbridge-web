@@ -120,6 +120,9 @@ function route(S, r) {
   ok(await sessEnt(t2) === 'ent-A', '2 · cb_sess is NOT written for B before the browser is clean');
   /* the back doors: an async loader calling renderApp(), and a deep link, from behind the screen */
   await t2.evaluate(() => { try { renderApp(); } catch (_) {} });
+  await t2.waitForTimeout(200);
+  ok(await t2.locator('[data-testid="nav-home"]').count() === 0, '2 · a renderApp() from behind the screen paints no shop');
+  await t2.waitForSelector('[data-testid="gate"]', { timeout: 5000 }).catch(() => {});
   await t2.evaluate(() => { location.hash = '#/app/ledger'; });
   await t2.waitForTimeout(700);
   ok(await t2.locator('[data-testid="gate"]').count() === 1 && !(await opened(t2, 300)), '2 · renderApp() and a deep link from behind the screen open nothing');
@@ -246,6 +249,89 @@ function route(S, r) {
   await t6.waitForFunction(() => /7/.test((document.getElementById('f_cat') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
   ok(await fake.evaluate(() => window.__left) === 1, '9 · the A tab was told to leave');
   ok(/\b7\b/.test(await t6.textContent('#f_cat')) && await t6.locator('[data-testid="close-first"]').count() === 0, '9 · cleared → the index shows Tally Test\'s facts');
+
+  /* ── 10 · START WITH A CLEAN BROWSER — a fresh context where service workers may register, as in a real one ── */
+  {
+    const c2 = await b.newContext({ viewport: { width: 1280, height: 860 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata' });
+    await c2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await c2.route('**/api/**', (r) => route(S, r));
+    const tabC = async (url) => { const p = await c2.newPage(); p.on('pageerror', (e) => threw.push(e.message)); await p.goto(base + url); return p; };
+    const a1 = await tabC('/app.html#/login');
+    await signIn(a1, 'alpha', '111111');
+    ok(await opened(a1), '10 · Alpha Timers opens in a fresh browser');
+    await a1.waitForFunction(() => navigator.serviceWorker.getRegistrations().then((r) => r.length > 0), null, { timeout: 10000 }).catch(() => {});
+    /* what a used browser holds: a counter paired to Mayuri123 with 2 bills in its queue, a Lab database, a cache,
+       a session flag — and an Offer Lab tab open */
+    await a1.evaluate(() => new Promise((res) => {
+      const rq = indexedDB.open('cb-till-q1', 1);
+      rq.onupgradeneeded = () => { ['kv'].forEach((n) => rq.result.createObjectStore(n)); rq.result.createObjectStore('queue', { keyPath: 'no' }); rq.result.createObjectStore('bills', { keyPath: 'no' }); };
+      rq.onsuccess = () => { const db = rq.result, tx = db.transaction(['kv', 'queue'], 'readwrite');
+        tx.objectStore('kv').put({ entity_id: 'ent-C', shop: { name: 'Mayuri123' }, items: [] }, 'snapshot');
+        tx.objectStore('queue').put({ no: 'C1/1' }); tx.objectStore('queue').put({ no: 'C1/2' });
+        tx.oncomplete = () => { db.close(); localStorage.setItem('cb_till_key', 'k-q1'); localStorage.setItem('cb_till_lastslot', 'cb-till-q1');
+          sessionStorage.setItem('cb_stay_in_app', '1');
+          caches.open('cb-test').then((c) => c.put('/x', new Response('x'))).then(res); }; };
+    }));
+    const lab = await tabC('/offer-lab.html');
+    await lab.waitForTimeout(800);
+    const b1 = await tabC('/app.html#/login');
+    await signIn(b1, 'tallytest', '222222');
+    ok(await gated(b1), '10 · Tally Test is stopped (A\'s tab, and the counter paired to Mayuri123)');
+    ok(await b1.locator('[data-testid="gate-start-clean"]').count() === 1 && /Or open a private window — it starts clean by itself\./.test(await b1.textContent('[data-testid="gate"]')),
+      '10 · the screen offers "Start with a clean browser", and says a private window starts clean too');
+    await b1.click('[data-testid="gate-start-clean"]');
+    await b1.waitForFunction(() => (document.querySelector('[data-testid="gate-clean-why"]') || {}).textContent, null, { timeout: 10000 }).catch(() => {});
+    ok(/^The counter still holds 2 unsent bills\. Open the counter and let it send them first\.$/.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()),
+      '10 · 2 bills in the counter\'s queue → refused, and it says how many');
+    ok(await sessEnt(b1) === 'ent-A' && await opened(a1, 500) && await ls(b1, 'cb_till_key') === 'k-q1', '10 · and nothing was signed out or wiped');
+    /* the counter sent them (simulated: its queue is empty) */
+    await b1.evaluate(() => new Promise((res) => { const rq = indexedDB.open('cb-till-q1'); rq.onsuccess = () => { const db = rq.result, tx = db.transaction('queue', 'readwrite'); tx.objectStore('queue').clear(); tx.oncomplete = () => { db.close(); res(); }; }; }));
+    /* a Lab save that could not be sent yet is work too */
+    /* the Labs' own schema (combo-lab.html LabDB): kv + an autoIncrement outbox, version 1 */
+    const labRow = (add) => b1.evaluate((add) => new Promise((res) => { const rq = indexedDB.open('offerlab', 1);
+      rq.onupgradeneeded = () => { const db = rq.result; if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+        if (!db.objectStoreNames.contains('outbox')) db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true }); };
+      rq.onsuccess = () => { const db = rq.result;
+      if (!db.objectStoreNames.contains('outbox')) { db.close(); return res('no outbox'); }
+      const tx = db.transaction('outbox', 'readwrite'); if (add) tx.objectStore('outbox').put({ url: '/api/x', method: 'POST' }); else tx.objectStore('outbox').clear();
+      tx.oncomplete = () => { db.close(); res('ok'); }; }; }), add);
+    const lr = await labRow(true);
+    await b1.click('[data-testid="gate-start-clean"]');
+    await b1.waitForFunction(() => /Labs/.test((document.querySelector('[data-testid="gate-clean-why"]') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
+    ok(lr === 'ok' && /^The Labs still hold 1 unsent save\./.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()), '10 · a Lab save not sent yet → refused, and it says so (' + lr + ')');
+    await labRow(false);
+    /* a tab that answers the roll but never the wipe */
+    const mute = await tabC('/app.html#/login');
+    await mute.evaluate(() => { const c = new BroadcastChannel('cb-one-person'); c.onmessage = (e) => { const m = e.data || {}; if (m.t === 'roll') c.postMessage({ t: 'present', q: m.q, tab: 'mute', label: 'The stuck tab' }); }; window.__c = c; });
+    await b1.click('[data-testid="gate-start-clean"]');
+    await b1.waitForFunction(() => /No answer/.test((document.querySelector('[data-testid="gate-clean-why"]') || {}).textContent || ''), null, { timeout: 10000 }).catch(() => {});
+    ok(/^No answer from: The stuck tab\. Close it, then press again\.$/.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()), '10 · a tab that does not answer is NAMED, and nothing is wiped');
+    ok(await ls(b1, 'cb_till_key') === 'k-q1', '10 · (the counter key is still there)');
+    await mute.close();
+    await b1.click('[data-testid="gate-start-clean"]');
+    await b1.waitForURL(/\/app\.html#\/login$/, { timeout: 15000 }).catch(() => {});
+    await b1.waitForSelector('[data-testid="signed-out-why"]', { timeout: 10000 }).catch(() => {});
+    ok(/^This browser is clean\. Counter 1 will need pairing again\.$/.test((await b1.textContent('[data-testid="signed-out-why"]').catch(() => '')).trim()), '10 · reloaded into sign-in: "This browser is clean. Counter 1 will need pairing again."');
+    ok(/Signed out — this browser is being cleaned\./.test(await a1.textContent('[data-testid="signed-out-why"]').catch(() => '')), '10 · the other app tab signed out and says why');
+    await lab.waitForURL(/cleaned=1/, { timeout: 5000 }).catch(() => {});
+    ok(/cleaned=1/.test(lab.url()) && /this browser is being cleaned/.test(await lab.textContent('#alerts').catch(() => '')), '10 · the Offer Lab tab left for the home page, which says so');
+    await b1.waitForTimeout(800);
+    const left = await b1.evaluate(async () => ({
+      ls: Object.keys(localStorage).filter((k) => /^cb/.test(k)), ss: Object.keys(sessionStorage).filter((k) => /^cb/.test(k)),
+      db: (await indexedDB.databases()).map((d) => d.name), sw: (await navigator.serviceWorker.getRegistrations()).length, caches: await caches.keys() }));
+    ok(left.ls.length === 0 && left.ss.length === 0, '10 · no cb* key in localStorage or sessionStorage (' + JSON.stringify(left.ls.concat(left.ss)) + ')');
+    ok(left.db.length === 0, '10 · no IndexedDB database left (' + JSON.stringify(left.db) + ')');
+    ok(left.sw === 0, '10 · no service worker registered (' + left.sw + ')');
+    ok(left.caches.length === 0, '10 · no cache left (' + JSON.stringify(left.caches) + ')');
+    /* the counter itself (the real page, not a stand-in) opens as never paired */
+    const till = await c2.newPage();
+    await till.goto(base + '/till.html').catch(() => {});
+    await till.waitForTimeout(2500);
+    const never = await till.evaluate(() => ({ key: localStorage.getItem('cb_till_key'), store: typeof tillStore === 'function' ? tillStore() : '?' })).catch(() => ({}));
+    ok(never.key === null && never.store === 'cb-till', '10 · the counter page opens as never paired (no key, its unscoped store: ' + never.store + ')');
+    await b1.screenshot({ path: path.join(__dirname, 'shots', 'one-person-clean.png') }).catch(() => {});
+    await c2.close();
+  }
 
   /* ── the words ── */
   const src = fs.readFileSync(path.join(PUB, 'app', 'one-person.js'), 'utf8') + fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
