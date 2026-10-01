@@ -404,10 +404,10 @@ async function route(S, r) {
   const t4 = await headOf('db-src-JV/2026-27/000004-at');
   ok(/\d{1,2}:\d{2}/.test(t4) && h4 === 'Received · Receipt R/C2/0001 ' + t4 + ' · UPI 4421…9931 · Counter C2 · Athi recorded 01 Oct', 'day book: money received says Received, its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + h4 + '")');
   const opened = await p.evaluate(async () => {
-    const was = window.openChit, got = []; window.openChit = function (id) { got.push(id); };
-    try { const a = document.querySelector('[data-testid="db-src-JV/2026-27/000001"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChit = was; }
+    const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
+    try { const a = document.querySelector('[data-testid="db-src-JV/2026-27/000001"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }
   });
-  ok(opened === 'ch1', 'day book: the bill number is a link that opens that chit, once (' + opened + ')');
+  ok(opened === 'ch1', 'day book: the bill number opens that chit\'s sheet, once (' + opened + ')');
   ok(await p.locator('[data-testid="db-src-JV/2026-27/000002"]').count() === 0, 'day book: a walk-in day has no single bill to link');
 
   /* ⭐ 6b · THE STRIP — today's sales per counter and by tender, both rows from ONE function (bkDaySales) */
@@ -457,8 +457,8 @@ async function route(S, r) {
   const lt0 = await headOf('stmt-src-0-at');
   ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' · On credit · Counter C2 · Athi recorded 01 Oct JV/2026-27/000001' && l1 === 'Payment received JV/2026-27/000003', 'ledger: each line names its bill, counter and seller ("' + l0 + '" · "' + l1 + '")');
   const opened2 = await p.evaluate(async () => {
-    const was = window.openChit, got = []; window.openChit = function (id) { got.push(id); };
-    try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChit = was; }
+    const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
+    try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }
   });
   ok(opened2 === 'ch1', 'ledger: the bill number opens that chit (' + opened2 + ')');
   await noAccounting(p, 'day book and ledger sources');
