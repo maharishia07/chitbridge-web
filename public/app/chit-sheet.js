@@ -134,14 +134,22 @@
     return '<div class="cs-sec">' + E(T('Paid by')) + '</div>' + parts.map(function (x, i) {
       var k = String(x.how || '').toLowerCase();
       return '<div class="cs-row" data-testid="cs-tender-' + i + '"><span>' + E(T(HOW[k] || x.how || '')) + '</span><b>' + E(money(x.amount, m.cur)) + '</b></div>';
-    }).join('') + (p.change > 0 ? '<div class="cs-row cs-mute"><span>' + E(T('Change')) + '</span><span>' + E(money(p.change, m.cur)) + '</span></div>' : '');
+    }).join('') + (p.change > 0 ? '<div class="cs-row cs-mute" data-testid="cs-change"><span>' + E(T('Change')) + '</span><span>' + E(money(p.change, m.cur)) + '</span></div>' : '');
   }
   var STEP = { pending: 'To accept', delivered: 'To accept', read: 'To accept', accepted: 'Accepted', in_progress: 'In hand', partial: 'Part done', completed: 'Done', cancelled: 'Cancelled', rejected: 'Rejected' };
+  /* the sheet's title is the document: a counter bill is "Bill", a bill received "Supplier bill", the rest the purpose word — never "Chit" */
+  var TITLE = { order: 'Order', invoice: 'Invoice', general: 'Task', task: 'Task', quote: 'Quote', payment: 'Payment', receipt: 'Receipt', dispute: 'Dispute', request: 'Request', delivery: 'Delivery' };
+  function titleFor(m) {
+    if (m.counterBill) return 'Bill';
+    if (m.billRx) return 'Supplier bill';
+    return TITLE[m.purpose] || (m.purpose ? m.purpose.charAt(0).toUpperCase() + m.purpose.slice(1).replace(/_/g, ' ') : 'Task');
+  }
   function kindWord(m) { return m.counterBill ? 'Counter bill' : (m.billRx ? 'Supplier bill' : 'Task'); }
 
   function paint() {
     var d = document.getElementById('chitsheet'); if (!d) return;
-    var m = CS.view;
+    var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
+    if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
     if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + E(CS.err) + '</div>' : '<div class="cs-mute">' + E(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
     var head = [T(kindWord(m)), m.no, when(m.at), m.counter ? (/^counter/i.test(m.counter) ? m.counter : T('Counter') + ' ' + m.counter) : '', m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + E(x) + '</b>' : E(x); }).join(' · ');
     d.querySelector('.cs-body').innerHTML =
@@ -177,8 +185,8 @@
   function ensureDlg() {
     var d = document.getElementById('chitsheet'); if (d) return d;
     var st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    d = document.createElement('dialog'); d.id = 'chitsheet'; d.setAttribute('aria-label', T('Chit'));
-    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Chit')) + '</span><button type="button" data-testid="cs-close" aria-label="' + E(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
+    d = document.createElement('dialog'); d.id = 'chitsheet'; d.setAttribute('aria-label', T('Bill'));
+    d.innerHTML = '<div class="cs-top"><span data-testid="cs-title">' + E(T('Bill')) + '</span><button type="button" data-testid="cs-close" aria-label="' + E(T('Close')) + '" onclick="CBSheet.close()">✕</button></div><div class="cs-body"></div><div class="cs-acts" data-testid="cs-acts"></div>';
     d.addEventListener('close', function () { lock(false); CS.id = null; });
     d.addEventListener('click', function (e) { if (e.target === d) CBSheet.close(); });
     document.body.appendChild(d);
@@ -234,6 +242,6 @@
     if (k === 'page') { close(); if (typeof openChit === 'function') openChit(id); }
   }
 
-  root.CBSheet = { open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model };
+  root.CBSheet = { open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);

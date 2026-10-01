@@ -22,6 +22,12 @@ const BREAKS = [
   ['Open page keeps the sheet', SHEET, `if (k === 'page') { close(); if`, `if (k === 'page') { if`],
   ['page scrolls behind the sheet / close moves it', SHEET, `d.addEventListener('close', function () { lock(false); CS.id = null; });`, `d.addEventListener('close', function () { lock(false); CS.id = null; window.scrollTo(0, 0); var s = document.querySelector('.bkentry'); if (s && s.scrollIntoView) s.scrollIntoView(); });`],
   ['sheet runs sideways on a phone', SHEET, `width:min(560px,100vw);max-width:100vw;`, `width:600px;max-width:none;`],
+  ['to-do goes back to Intake', BOOKS, `(n.accept === 1 && (n.acceptIds || []).length === 1) ? "openChitSheet('" + esc(n.acceptIds[0]) + "')" : "bkTab('waiting')"`, `"navTo('intake')"`],
+  ['to-do with several bills goes to Intake', BOOKS, `: "bkTab('waiting')"));`, `: "navTo('intake')"));`],
+  ['title back to "Chit"', SHEET, `if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');`, `if (ttl) ttl.textContent = T('Chit');`],
+  ['supplier bill titled as a counter bill', SHEET, `if (m.billRx) return 'Supplier bill';`, `if (m.billRx) return 'Bill';`],
+  ['tender sum wrong', SHEET, `E(money(x.amount, m.cur)) + '</b></div>';`, `E(money(Number(x.amount) + 1, m.cur)) + '</b></div>';`],
+  ['change line dropped', SHEET, `(p.change > 0 ? '<div class="cs-row cs-mute" data-testid="cs-change">`, `(false ? '<div class="cs-row cs-mute" data-testid="cs-change">`],
   ['owner suffix missing', BOOKS, `(bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '')`, `''`],
   ['owner suffix on everyone', BOOKS, `(bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '')`, `' ' + esc(tx('(owner)'))`],
 ];
@@ -33,9 +39,11 @@ for (const [name, rel, a, b] of BREAKS) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'chs-'));
   try {
     fs.cpSync(path.join(W, 'public'), path.join(tmp, 'public'), { recursive: true });
-    const f = path.join(tmp, 'public', rel), s = fs.readFileSync(f, 'utf8'), n = s.split(a).length - 1;
+    /* a CRLF checkout (Windows) must match the same anchors: match on LF text, write back in the file's own endings */
+    const f = path.join(tmp, 'public', rel), raw = fs.readFileSync(f, 'utf8'), crlf = raw.indexOf('\r\n') >= 0, s = raw.replace(/\r\n/g, '\n'), n = s.split(a).length - 1;
     if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
-    fs.writeFileSync(f, s.split(a).join(b));
+    const out = s.split(a).join(b);
+    fs.writeFileSync(f, crlf ? out.replace(/\n/g, '\r\n') : out);
     const r = cp.spawnSync(process.execPath, ['e2e/chit-sheet.cjs'], { cwd: W, encoding: 'utf8', timeout: 600000, env: Object.assign({}, process.env, { CHS_ROOT: path.join(tmp, 'public') }) });
     const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
     const caught = r.status !== 0;

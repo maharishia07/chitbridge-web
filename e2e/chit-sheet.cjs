@@ -7,7 +7,9 @@
  *  3  a received supplier bill: Accept · Dispute · Goods in · Open page; a task: Accept · Dispute · Open page (Done once in hand)
  *  4  Accept calls the status route once; the sheet repaints with the new step and the row changes
  *  5  Esc / Close returns to the Day book, scroll position kept; the page never navigated
- *  6  scrollWidth === 390 at phone width; no "accounting"; "(owner)" when by == the shop's own name
+ *  6  the to-do "supplier bill to accept": one bill → its sheet over the Day book (no navigation); several → Ledger › Waiting
+ *  7  the title is the document (Bill · Supplier bill · Task), never "Chit"; tender parts add up to the total, change is apart
+ *  8  scrollWidth === 390 at phone width; no "accounting"; "(owner)" when by == the shop's own name
  *  Env CHS_ROOT = a COPY of public/ (used by chit-sheet-breaks.cjs); screenshots to e2e/shots/chit-sheet-*.png
  */
 'use strict';
@@ -29,7 +31,7 @@ function standIn() {
     all_recipients: [me, { role: 'receiver', display_name: 'self' }],
     summary_json: { currency_code: 'INR', money: { total: 682.01, tax: 82.01 } },
     business_json: { bill_no: 'C2/26-27/0002', billed_at: TODAY + 'T05:10:00.000Z', till: { id: 't2', name: 'Counter 2', by: { name: SHOP } }, customer: { name: 'Walk-in' },
-      payment: { mode: 'cash+upi', paid: 700, change: 17.99, parts: [{ how: 'cash', amount: 500 }, { how: 'upi', amount: 182.01 }] },
+      payment: { mode: 'cash+upi', paid: 682.01, change: 17.99, parts: [{ how: 'cash', amount: 500 }, { how: 'upi', amount: 182.01 }] },
       by_rate: { 5: { base: 200, tax: 10.01, cgst: 5.00 }, 18: { base: 390, tax: 70.2, cgst: 35.1 } }, total: 682.01, supply: 'intra' } },
     detail: { line_items: [{ particulars: 'Rice 5kg', quantity: 2, unit: 'piece', price: 105, total: 200, gst_rate: 5, offer: { off: 10, label: 'Festival offer' } },
                            { particulars: 'Soap', quantity: 3, unit: 'piece', price: 130, total: 390, gst_rate: 18 }] } };
@@ -126,6 +128,12 @@ async function route(S, r) {
     ok(/682\.01/.test(await p.textContent('[data-testid="cs-total"]')), 'the total is the chit\'s own 682.01');
     const t0 = await p.textContent('[data-testid="cs-tender-0"]'), t1 = await p.textContent('[data-testid="cs-tender-1"]');
     ok(/Cash/.test(t0) && /500/.test(t0) && /UPI/.test(t1) && /182\.01/.test(t1), 'tender: Cash 500.00 · UPI 182.01');
+    /* as the counter's slip prints it: each tender, then Change when there is some; the tenders add up to the total */
+    const tenders = await p.$$eval('#chitsheet [data-testid^="cs-tender-"] b', (els) => els.map((e) => e.textContent));
+    const tsum = Math.round(tenders.reduce((a, x) => a + Number(x.replace(/[^0-9.]/g, '')), 0) * 100) / 100;
+    ok(tenders.length === 2 && tsum === Number((await p.textContent('[data-testid="cs-total"]')).replace(/[^0-9.]/g, '')), 'tender parts add up to the total (' + tenders.join(' + ') + ' = ' + tsum + ')');
+    ok(/17\.99/.test(await p.textContent('[data-testid="cs-change"]')) && (S.chits.ch1.header.business_json.payment.paid === tsum), 'Change 17.99 is its own line, and the chit\'s paid figure is the tenders\' sum');
+    ok(await p.textContent('[data-testid="cs-title"]') === 'Bill' && !/\bChit\b/.test(await p.textContent('#chitsheet')), 'the title of a counter bill is "Bill" — "Chit" is nowhere on the sheet');
     ok(/Walk-in/.test(await p.textContent('[data-testid="cs-who"]')) && /Done/.test(await p.textContent('[data-testid="cs-step"]')), 'the customer and the step word (Done)');
     const a = await acts(p);
     ok(JSON.stringify(a) === JSON.stringify(['print', 'return', 'page']), 'cart bill icon row = Print · Return · Open page — got ' + a.join(' · '));
@@ -154,6 +162,7 @@ async function route(S, r) {
     ok(JSON.stringify(a) === JSON.stringify(['accept', 'dispute', 'goodsin', 'page']), 'supplier bill icon row = Accept · Dispute · Goods in · Open page — got ' + a.join(' · '));
     ok(/Supplier bill/.test(await p.textContent('[data-testid="cs-head"]')) && /Agro Mills/.test(await p.textContent('[data-testid="cs-who"]')) && /To accept/.test(await p.textContent('[data-testid="cs-step"]')), 'a supplier bill: who is Agro Mills, step "To accept"');
     ok(/2,?380\.95/.test(await p.textContent('[data-testid="cs-gst-5"]')) && /59\.52/.test(await p.textContent('[data-testid="cs-gst-5"]')) && /59\.53/.test(await p.textContent('[data-testid="cs-gst-5"]')), 'its GST row is the chit\'s own (taxable 2,380.95 · CGST 59.52 · SGST 59.53)');
+    ok(await p.textContent('[data-testid="cs-title"]') === 'Supplier bill', 'the title of a bill received is "Supplier bill"');
     await shot(p, 'chit-sheet-supplier-bill');
     await p.click('[data-testid="cs-act-accept"]');
     await p.waitForFunction(() => /Accepted/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
@@ -182,6 +191,7 @@ async function route(S, r) {
     const { ctx, p } = await open(S);
     await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
     await p.click('[data-testid="wait-0"]'); await waitSheet(p, 'Fix the shutter');
+    ok(await p.textContent('[data-testid="cs-title"]') === 'Task' && !/\bChit\b/.test(await p.textContent('#chitsheet')), 'the title of a task is the purpose word, "Task" — never "Chit"');
     const a = await acts(p);
     ok(JSON.stringify(a) === JSON.stringify(['accept', 'dispute', 'page']), 'a task icon row = Accept · Dispute · Open page — got ' + a.join(' · '));
     await p.click('[data-testid="cs-act-accept"]');
@@ -191,6 +201,31 @@ async function route(S, r) {
     await p.click('[data-testid="cs-act-done"]');
     await p.waitForFunction(() => /Done/.test((document.querySelector('[data-testid="cs-step"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
     ok(S.statusCalls.length === 2 && S.statusCalls[1].body.status === 'completed', 'Done → completed');
+    await ctx.close();
+  }
+  /* ── 3b · the to-do "supplier bill to accept": one → its sheet over the Day book; several → Waiting. Never Intake ── */
+  {
+    const S = standIn(); const { ctx, p } = await open(S);
+    await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
+    const href = await p.evaluate(() => location.href), nav = await p.evaluate(() => UI.nav);
+    ok(/^1 supplier bill to accept/.test(await p.textContent('[data-testid="todo-accept"]')), 'to-do: 1 supplier bill to accept');
+    const reads0 = S.chitReads;
+    await p.click('[data-testid="todo-accept"]'); await waitSheet(p, 'AM-81');
+    ok(await sheetOpen(p) && await p.evaluate(() => document.getElementById('chitsheet').tagName) === 'DIALOG', 'the one-bill to-do opens the sheet (a <dialog>) for that chit');
+    ok(S.chitReads === reads0 + 1 && /AM-81/.test(await p.textContent('[data-testid="cs-no"]')) && await p.evaluate(() => location.href) === href && await p.evaluate(() => UI.nav) === nav && nav !== 'intake', 'it read that chit once and never navigated (not Intake)');
+    ok(await p.locator('[data-testid="db-entry-JV/2026-27/000001"]').isVisible(), 'the Day book is still there behind the sheet');
+    await shot(p, 'chit-sheet-todo');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+    await ctx.close();
+  }
+  {
+    const S = standIn(); S.waiting.push({ id: 2, chit_id: 'sb2', ref: 'bill:sb2', reason: 'Waiting for you to confirm Agro Mills’ bill AM-82.', tries: 0, since: TODAY + 'T04:30:00Z', stuck: true });
+    const { ctx, p } = await open(S);
+    await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
+    ok(/^2 supplier bills to accept/.test(await p.textContent('[data-testid="todo-accept"]')), 'to-do: 2 supplier bills to accept');
+    await p.click('[data-testid="todo-accept"]');
+    await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
+    ok(!(await sheetOpen(p)) && await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'the several-bills to-do opens Ledger › Waiting, not a sheet and not Intake');
     await ctx.close();
   }
   /* ── 4 · phone width ────────────────────────────────────────────────────────────────────────────── */

@@ -469,7 +469,7 @@ function bkStripHTML(r, day) {
 /**
  * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
  * all quiet collapses into one line. Every count is the server's: /health waiting[] (a received supplier bill waits
- * as "Waiting for you to confirm …" — those are the Intake's; the rest are the ledger's to record), /dues (a
+ * as "Waiting for you to confirm …" — one opens its sheet, several open Waiting; the rest are the ledger's to record), /dues (a
  * customer with any bucket past "Not due"), /cheques (a held cheque with a step still open).
  */
 function bkTodoCounts(dues, cheques, health) {
@@ -481,14 +481,16 @@ function bkTodoCounts(dues, cheques, health) {
     return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) { return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0; });
-  return { accept: confirm.length, overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
+  return { accept: confirm.length, acceptIds: confirm.map(function (w) { return w.chit_id; }).filter(Boolean), overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
 }
 function bkTodoHTML(n) {
   var card = function (tid, count, label, go) {
     return '<button class="bktodo" data-testid="' + tid + '" onclick="' + go + '"><b>' + count + '</b> ' + esc(label) + '<span class="bkgo" aria-hidden="true">›</span></button>';
   };
   var items = [];
-  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'), "navTo('intake')"));
+  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
+    /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
+    (n.accept === 1 && (n.acceptIds || []).length === 1) ? "openChitSheet('" + esc(n.acceptIds[0]) + "')" : "bkTab('waiting')"));
   if (n.overdue) items.push(card('todo-overdue', n.overdue, tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), "bkTab('dues')"));
   if (n.cheques) items.push(card('todo-cheques', n.cheques, tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), "bkTab('cheques')"));
   if (n.waiting) items.push(card('todo-waiting', n.waiting, tx('waiting to be recorded'), "bkTab('waiting')"));
