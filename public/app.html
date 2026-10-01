@@ -1670,6 +1670,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/app/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <!-- ⭐ THE FIVE LIST CONTROLS, WRITTEN ONCE — search · filters · sort · count · lazy rows, for a list the browser
      already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
      screen as well as the first. NOT lazy-loaded: the screens that need it are the ordinary ones. -->
@@ -3399,6 +3400,8 @@ function route(){
   
   const h=location.hash||"#/";
   if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome") && !h.startsWith("#/legend")) return go("#/login");
+  /* ⭐⭐⭐ THE ONE GATE (gateRun, beside setSession): no shop opens in a browser that still holds another shop */
+  if(SESSION.token && !/^#\/(login|register|welcome|legend)/.test(h) && !gateOpen()) return gateRun();
   /**
    * ⭐⭐ A PAIRED COUNTER OPENS ITS TILL ([REG-4]). Here, and not at any of the five places a session begins,
    * because the router is the one place all of them arrive at.
@@ -3735,7 +3738,7 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
        <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> ${tx('Back to sign in')}</a></div>`;
   } else if(L.step==="id"){
-    form = `<label class="fl">${tx("User ID")}</label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
+    form = `${L.gone?`<div data-testid="signed-out-why" style="font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:0 0 10px;line-height:1.5">${esc(L.gone)}</div>`:''}<label class="fl">${tx("User ID")}</label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
        <div style="font-size:var(--fs-1);color:var(--grey);margin:5px 0 2px;line-height:1.5">${tx("An email, or an 8+ character User ID. A co-assist signs in as key@user-id.")}</div>
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue <span class=arw>→</span>"}</button>`;
   } else if(L.step==="otp"){
@@ -3934,13 +3937,107 @@ function setSession(s){ SESSION={...SESSION,...s};
   // survived exactly until the first reload — after which anything that identifies this entity to the network
   // (netLookup, "your place in the network") asked with an empty id and got back "not part of a network". A store
   // that IS in a network was shown the Design-your-network screen instead of its own tree.
-  try{ if(SESSION.token) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, bridgeId:SESSION.bridgeId, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
+  sessPersist();
   /* ⭐ THE ONE CHOKE POINT — sign-in AND restoreSession() both land here, so a browser refresh gets the warm
      start too. Not awaited: the shell paints while it flies. */
   try { mePrefetchStart(); } catch (_) {}
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }
+/**
+ * ⭐⭐⭐ ONE BROWSER, ONE SHOP — THE GATE (Athi, 2026-10-01). *"i have signed in as tallytest in one page, and in the
+ * next page, i opened the index page and it says alpha timers, and when i clicked the till … it went to mayuri123."*
+ * Then the rule: *"the very first check is to see any fingerprint of any other entity here. if so make sure that it
+ * logs out and very clear. do not allow the shop to open until the browser or session is clear out of danger."*
+ *
+ * SESSION lived per tab, cb_sess was shared and written at the first moment of every sign-in, and nothing listened —
+ * so three tabs of one browser were three shops. Now:
+ *   · route() is the ONE door a shop opens through. Every sign-in (OTP, PIN, registration) and a refresh
+ *     (restoreSession) arrive there; until gateRun() finds this browser clean of every OTHER shop, the shop
+ *     does not open and cb_sess is not written (sessPersist asks gateOpen()).
+ *   · the check and the clear-out are CBOnePerson's (public/app/one-person.js) — the index page asks the same.
+ *   · the same shop passes cleanly: an owner and a co-assist of ONE entity are not "another shop".
+ * ⚠️ NO SECOND PATH. Anything that writes cb_sess goes through sessPersist(); anything that opens the app's
+ *    screens goes through route(). e2e/one-person.cjs proves it; one-person-breaks.cjs breaks each guard once.
+ */
+var GATE={ ent:null, busy:false, last:null };
+/* this tab's shop and person, as the check compares them — the ids from the signed token, never a name */
+function sessMine(){
+  if(!SESSION.token) return null;
+  return { ent:String(SESSION.entityId||''), uid:String(SESSION.actorId||SESSION.entityId||''), name:String(SESSION.entity||SESSION.name||'') };
+}
+/* open = this tab's shop passed the check. A session with no entity in its token (the storefront's customer stub)
+   has nothing to compare and passes. */
+function gateOpen(){ var m=sessMine(); return !!m && (!m.ent || GATE.ent===m.ent); }
+function sessPersist(){
+  try{ if(SESSION.token && gateOpen()) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, bridgeId:SESSION.bridgeId, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
+}
+function gateRun(){
+  var m=sessMine(); if(!m) return go("#/login");
+  if(GATE.busy) return;
+  var root=document.getElementById('root');
+  if(!window.CBOnePerson){   /* fail closed: a shop is never opened unchecked */
+    root.innerHTML='<div class="auth"><div class="card"><div class="body" data-testid="gate">'+esc(tx('Could not check this browser. Reload the page.'))+'</div></div></div>';
+    return;
+  }
+  GATE.busy=true;
+  if(!GATE.last) root.innerHTML='<div class="auth"><div class="card"><div class="body" data-testid="gate-checking" style="color:var(--grey)">'+esc(tx('Checking this browser…'))+'</div></div></div>';
+  CBOnePerson.traces(m).then(function(r){
+    GATE.busy=false;
+    var now=sessMine(); if(!now || now.ent!==m.ent) return;      /* signed out or changed while it looked */
+    if(r.clean){ GATE.ent=m.ent; GATE.last=null; CBOnePerson.claim(m); sessPersist(); return route(); }
+    GATE.last=r; gatePaint(r);
+  }, function(){ GATE.busy=false; gatePaint({ others:[], counter:null, failed:true }); });
+}
+/* the one screen: what is still here, and the one thing to press */
+function gatePaint(r){
+  var P=window.CBOnePerson, btn='style="margin-top:8px"';
+  var rows=(r.others||[]).map(function(o,i){
+    return '<div data-testid="gate-other" style="margin:0 0 14px">'
+      +'<div style="line-height:1.5">'+esc(tx(P.sentence(o)))+'</div>'
+      +(o.drafts?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">'+esc(tx('Unsent drafts are removed.'))+'</div>':'')
+      +'<button class="btn" data-testid="gate-clear" '+btn+' onclick="gateClear('+i+')">'+esc(tx(P.buttonLabel(o)))+'</button></div>';
+  }).join('');
+  var ctr=r.counter ? '<div data-testid="gate-counter" style="margin:0 0 14px"><div style="line-height:1.5">'+esc(tx(P.counterSentence(r.counter)))+'</div>'
+      +'<button class="btn" data-testid="gate-counter-open" '+btn+' onclick="window.open(\'/till.html\',\'_blank\',\'noopener\')">'+esc(tx('Open the counter to switch it'))+'</button></div>' : '';
+  document.getElementById('root').innerHTML='<div class="auth"><div class="card"><div class="body" data-testid="gate">'
+    +'<h2 style="margin:0 0 12px">'+esc(tx('Close the other shop first'))+'</h2>'
+    +(r.failed?'<div>'+esc(tx('Could not check this browser. Press Check again.'))+'</div>':'')
+    +rows+ctr
+    +'<div style="display:flex;gap:14px;align-items:center;margin-top:6px"><a data-testid="gate-recheck" onclick="gateRun()">'+esc(tx('Check again'))+'</a>'
+    +'<a data-testid="gate-signout" onclick="logoutNow()">'+esc(tx('Sign out instead'))+'</a></div>'
+    +'</div></div></div>';
+}
+function gateClear(i){
+  var o=GATE.last && GATE.last.others && GATE.last.others[i], m=sessMine(); if(!o||!m) return;
+  document.querySelectorAll('[data-testid="gate-clear"]').forEach(function(b){ b.disabled=true; b.textContent=tx('Signing it out…'); });
+  CBOnePerson.clearOut(o, m.name).then(gateRun, gateRun);
+}
+/* told by another tab that a different shop is opening here: send what this tab holds, then sign out — visibly */
+function personLeave(by){
+  var send=(window.CBOffline && CBOffline.pending && CBOffline.pending()) ? CBOffline.flush().catch(function(){}) : Promise.resolve();
+  return send.then(function(){
+    logoutNow();
+    LOGIN.gone=txf('Signed out — {shop} opened in another tab.', { shop: by || tx('another shop') });
+    renderLogin();
+  });
+}
+/**
+ * ⭐ THE ONLY READER OF THE `storage` EVENT FOR cb_sess. It never adopts anyone: if the browser's session is gone,
+ * or is now another SHOP's, this tab signs out and says why. The same shop (an owner, then a co-assist) → nothing.
+ */
+function sessFollow(e){
+  if(e && e.key!==null && e.key!=='cb_sess') return;          /* null = storage cleared: same rule */
+  var m=sessMine(); if(!m || !m.ent || !gateOpen()) return;   /* a tab still at the gate re-checks on its own */
+  var next=window.CBOnePerson ? CBOnePerson.stored() : null;
+  if(next && next.ent===m.ent) return;
+  logoutNow();
+  LOGIN.gone = next ? txf('Signed out — {shop} opened in another tab.', { shop: next.name || tx('another shop') })
+                    : tx('Signed out — you signed out in another tab.');
+  renderLogin();
+}
+try{ window.addEventListener('storage', sessFollow); }catch(_){}
+try{ if(window.CBOnePerson) CBOnePerson.attach({ who: sessMine, onLeave: personLeave }); }catch(_){}
 // The logged-in actor's real id, from the JWT.
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
@@ -4845,7 +4942,7 @@ function testModeToggle(){
   ensureCap("testing").then(function(){ testModeSet(true); if(typeof testWaitingLoad==="function") testWaitingLoad(); })
     .catch(function(){ if (typeof toast === "function") toast(tx("Could not load the testing panel."), true); });
 }
-function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}/* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */try{localStorage.removeItem('cb_sess');localStorage.removeItem(uk('cb_nav'));}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
+function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}/* the wizard face autosave is gone - the hub saves each control synchronously, nothing to flush */try{localStorage.removeItem('cb_sess');localStorage.removeItem(uk('cb_nav'));}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};/* ⚠️ the gate closes with the session, and the old person's /me (warm or in flight) is not the next person's */GATE={ent:null,busy:false,last:null};_mePrefetch=null;_meReq=null;STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();/* ⚠️ RESET THE LOGIN STEP. LOGIN.step survives a sign-out, and renderLogin paints whatever step it holds — so leaving a session mid-PIN put the next person straight on the PIN screen with no way back to User ID. Athi, 2026-09-01: "when we come out of the session, the screen goes to password screen, it should go to login screen." loginReset() is the same call the "change" link uses. */if(typeof loginReset==="function"){LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};}go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -5209,6 +5306,9 @@ function renderApp(){
    * the guard at the thing being protected, so it holds however it is reached.
    */
   if(!SESSION.token){ stopAutoRefresh(); return go("#/login"); }
+  /* ⚠️ AND NEVER BEFORE THE GATE — the same back-door rule: a loader landing while this tab is still at
+     "Close the other shop first" must not paint the shop over it (gateRun, beside setSession) */
+  if(!gateOpen()) return gateRun();
   /**
    * ⚠️⚠️ RE-ENTRANCY GUARD — A RENDER HOOK MUST NEVER BE ABLE TO FREEZE THE BROWSER.
    *
