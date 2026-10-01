@@ -159,11 +159,57 @@ async function partyStatementLoad(partyId) {
     box.style.color = ''; box.innerHTML = statementHTML(r);
   } catch (e) { box = document.getElementById('bk_stmt_' + partyId); if (box) box.innerHTML = bkErr(e); }
 }
+/**
+ * ⭐ WHERE AN ENTRY CAME FROM (Athi, 2026-10-01, the first real entry: "where is it referenced to the sale record, how do I
+ * connect to the sale record, who has done it?"). The server's `source` (routes/books.js sourceOf) becomes the parts after
+ * the entry's word: "Bill C2/26-27/0002 · Counter C2 · Athi" — the number is a link that opens the chit; a walk-in day
+ * reads "12 bills · Counter C2". A part the server did not know is left out, never guessed. No source → ''.
+ */
+/** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
+function bkShortRef(r) { var t = String(r == null ? '' : r).trim(); return t.length > 10 ? t.slice(0, 4) + '…' + t.slice(-4) : t; }
+var BK_SRC_WORD = { bill: 'Bill', purchase: 'Bill', receipt: 'Receipt', payment: 'Payment', credit_note: 'Credit note', expense: 'Expense', income: 'Income' };
+function bkSourceParts(s, tid, cur) {
+  if (!s) return [];
+  var out = [];
+  if (s.kind === 'day') { if (s.count != null) out.push(esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }))); }
+  else if (s.ref || s.chit_id) {
+    var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
+    var link = s.chit_id ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChit(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>' : no;
+    out.push((BK_SRC_WORD[s.kind] ? esc(tx(BK_SRC_WORD[s.kind])) + ' ' : '') + link + (s.doc_at ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : ''));
+  }
+  /* ⭐ HOW IT WAS PAID (Athi, 2026-10-01: "clearly segregate credit, cash, UPI") — a day: each tender with its amount */
+  if (s.kind === 'day' && s.split && s.split.length) out.push(s.split.map(function (x) { return esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, cur)); }).join(' · '));
+  else if (s.how) out.push('<span data-testid="' + esc(tid) + '-how">' + esc(tx(s.how)) + (s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref)) + '</span>' : '') + '</span>');
+  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));
+  if (s.by) out.push(esc(s.by));
+  return out;
+}
+/** the entry's own word, then its source: "Sale · Bill … · Counter C2 · Athi" — a walk-in day says "Walk-in day" */
+function bkEntryHead(e, tid, cur) {
+  var s = e && e.source;
+  var head = s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
+  return [head].concat(bkSourceParts(s, tid, cur)).join(' · ') + bkRecordedHTML(e, tid);
+}
+/** the bill's own time of day, in the shop's zone (CBLocale.time) — "beside the bill number" */
+function bkTime(ts) { try { return CBLocale.time(ts) || ''; } catch (_) { return ''; } }
+/**
+ * ⭐ BOTH TIMES (Athi, 2026-10-01: "the time the bill was made or the time the entry was accepted? both should be there").
+ * The row is the bill's (its date, its time beside the number); when the ledger took it on ANOTHER day — a late bill, a
+ * buyer's acceptance days after the invoice — "recorded 01 Oct" follows, muted. Same day → nothing more to say.
+ */
+function bkRecordedHTML(e, tid) {
+  if (!e) return '';
+  var s = e.source || {}, doc = e.doc_date || null, post = e.posting_date || e.date || null, rec = s.recorded_at || null;
+  var day = function (v, o) { try { return CBLocale.date(v, o); } catch (_) { return String(v).slice(0, 10); } };
+  var late = (doc && post && doc !== post) || (doc && rec && day(rec) !== day(doc));
+  if (!late) return '';
+  return ' <span data-testid="' + esc(tid) + '-rec" style="color:var(--grey);font-weight:400">' + esc(txf('recorded {date}', { date: day(rec || post, { day: '2-digit', month: 'short' }) })) + '</span>';
+}
 /** opening · each movement with its running balance · closing — the shape every statement has */
 function statementHTML(r) {
   var c = r && r.currency;
-  var rows = ((r && r.lines) || []).map(function (l) {
-    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td>' + esc(l.what || '') + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
+  var rows = ((r && r.lines) || []).map(function (l, i) {
+    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
       + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
@@ -361,7 +407,7 @@ async function bkDaybook(body) {
   try {
     var r = await api('booksDaybook', { query: q }); var c = r && r.currency;
     var rows = ((r && r.entries) || []).map(function (e) {
-      return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3">' + esc(e.narration || e.event_type || '') + '</td></tr>'
+      return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3" data-testid="db-head-' + esc(e.entry_no) + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c) + '</td></tr>'
         + (e.lines || []).map(function (l) { return '<tr><td></td><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     }).join('');
     body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));

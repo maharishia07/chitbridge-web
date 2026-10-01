@@ -118,7 +118,28 @@ async function route(S, r) {
     }
     if (p === '/api/books/trial-balance' && S.tbOff) return J(r, 200, { currency: 'INR', rows: [{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }], total_dr_minor: 600000, total_cr_minor: 599999 });
     if (p === '/api/books/trial-balance') return J(r, 200, { currency: 'INR', rows: [{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 508475 }, { code: '2201', name: 'Output GST', dr_minor: 0, cr_minor: 91525 }], total_dr_minor: 600000, total_cr_minor: 600000 });
-    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: '2026-07-02', event_type: 'credit_sale', source_chit_id: 'ch1', narration: 'INV-1 · Ravi Stores', lines: [{ code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 300000 }] }] });
+    /* ⭐ each entry carries `source` (routes/books.js sourceOf, 2026-10-01): a bill names its number, counter and seller; a
+       walk-in day its count; an entry with no chit has source null */
+    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [
+      { entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: '2026-07-02', doc_date: '2026-07-02', event_type: 'sale_bill', source_chit_id: 'ch1', narration: 'Sale',
+        source: { chit_id: 'ch1', ref: 'C2/26-27/0002', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'On credit', how_ref: null, split: null,
+          doc_at: '2026-07-02T08:42:00.000Z', recorded_at: '2026-07-02T08:42:05.000Z' },
+        lines: [{ code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 300000 }] },
+      { entry_id: 'e2', entry_no: 'JV/2026-27/000002', posting_date: '2026-07-02', event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales, counter C2, 2026-07-02 (12 bills)',
+        source: { chit_id: null, ref: null, kind: 'day', counter: 'C2', by: null, count: 12, how: 'Cash · UPI · Card', how_ref: null,
+          split: [{ how: 'Cash', amount_minor: 124000 }, { how: 'UPI', amount_minor: 86000 }, { how: 'Card', amount_minor: 30000 }] },
+        lines: [{ code: '1400', name: 'Cash', dr_minor: 141600, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 141600 }] },
+      { entry_id: 'e3', entry_no: 'JV/2026-27/000003', posting_date: '2026-07-03', event_type: 'payment_received', source_chit_id: null, narration: 'Payment received', source: null,
+        lines: [{ code: '1400', name: 'Cash', dr_minor: 50000, cr_minor: 0 }, { code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 0, cr_minor: 50000 }] },
+      /* a LATE one: received on 3 Jul, taken into the ledger on 1 Oct — the row says both */
+      { entry_id: 'e4', entry_no: 'JV/2026-27/000004', posting_date: '2026-07-03', doc_date: '2026-07-03', event_type: 'payment_received', source_chit_id: 'ch4', narration: 'Payment received',
+        source: { chit_id: 'ch4', ref: 'R/C2/0001', kind: 'receipt', counter: 'C2', by: 'Athi', count: null, how: 'UPI', how_ref: '4421000000009931', split: null,
+          doc_at: '2026-07-03T06:00:00.000Z', recorded_at: '2026-10-01T05:00:00.000Z' },
+        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 20000, cr_minor: 0 }, { code: '1300', name: 'Debtors', party_name: 'Ravi Stores', dr_minor: 0, cr_minor: 20000 }] }] });
+    if (p === '/api/books/ledger/1300') return J(r, 200, { account: { code: '1300', name: 'Debtors' }, currency: 'INR', opening_minor: 0, closing_minor: 250000, lines: [
+      { date: '2026-07-02', doc_date: '2026-07-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: 'ch1', source: { chit_id: 'ch1', ref: 'C2/26-27/0002', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'On credit', how_ref: null, split: null,
+        doc_at: '2026-07-02T08:42:00.000Z', recorded_at: '2026-10-01T05:00:00.000Z' }, dr_minor: 300000, cr_minor: 0, running_minor: 300000 },
+      { date: '2026-07-03', what: 'Payment received', ref: 'JV/2026-27/000003', source_chit_id: null, source: null, dr_minor: 0, cr_minor: 50000, running_minor: 250000 }] });
     if (p === '/api/books/pl') return J(r, 200, { currency: 'INR', income: [{ code: '4000', name: 'Sales', amount_minor: 508475 }], expense: [{ code: '6010', name: 'Rent', amount_minor: 100000 }], profit_minor: 408475 });
     if (p === '/api/books/bs') return J(r, 200, { currency: 'INR', assets: [{ code: '1300', name: 'Debtors', amount_minor: 600000 }], liabilities: [{ code: '2201', name: 'Output GST', amount_minor: 91525 }], equity: [{ code: '3900', name: 'Profit', amount_minor: 508475 }], total_assets_minor: 600000, total_liab_equity_minor: 600000 });
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
@@ -345,6 +366,36 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
   await p.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 8000 });
   ok(true, 'day book lists the entry with its number');
+  /* ⭐ WHERE IT CAME FROM (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") */
+  /* the bidi marks CBLocale wraps dates and times in are not text a reader sees — dropped before comparing */
+  const headOf = async (tid) => ((await p.textContent('[data-testid="' + tid + '"]').catch(() => '')) || '').replace(/[‎‏⁦-⁩]/g, '').replace(/\s+/g, ' ').trim();
+  const h1 = await headOf('db-head-JV/2026-27/000001'), h2 = await headOf('db-head-JV/2026-27/000002'), h3 = await headOf('db-head-JV/2026-27/000003');
+  const t1 = await headOf('db-src-JV/2026-27/000001-at');
+  ok(/\d{1,2}:\d{2}/.test(t1) && h1 === 'Sale · Bill C2/26-27/0002 ' + t1 + ' · On credit · Counter C2 · Athi', 'day book: a bill entry says which bill and its time, how it was paid, which counter, who sold it ("' + h1 + '")');
+  ok(!/recorded/.test(h1) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
+  ok(/^Walk-in day · 12 bills · Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00 · Counter C2$/.test(h2), 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + h2 + '")');
+  ok(h3 === 'Payment received', 'day book: an entry with no chit shows its own word only ("' + h3 + '")');
+  const h4 = await headOf('db-head-JV/2026-27/000004');
+  const t4 = await headOf('db-src-JV/2026-27/000004-at');
+  ok(/\d{1,2}:\d{2}/.test(t4) && h4 === 'Received · Receipt R/C2/0001 ' + t4 + ' · UPI 4421…9931 · Counter C2 · Athi recorded 01 Oct', 'day book: money received says Received, its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + h4 + '")');
+  const opened = await p.evaluate(async () => {
+    const was = window.openChit, got = []; window.openChit = function (id) { got.push(id); };
+    try { const a = document.querySelector('[data-testid="db-src-JV/2026-27/000001"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChit = was; }
+  });
+  ok(opened === 'ch1', 'day book: the bill number is a link that opens that chit, once (' + opened + ')');
+  ok(await p.locator('[data-testid="db-src-JV/2026-27/000002"]').count() === 0, 'day book: a walk-in day has no single bill to link');
+  await p.click('[data-testid="bk-tab-ledgers"]');
+  await p.click('[data-testid="lg-acc-1300"]');
+  await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
+  const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
+  const lt0 = await headOf('stmt-src-0-at');
+  ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' · On credit · Counter C2 · Athi recorded 01 Oct JV/2026-27/000001' && l1 === 'Payment received JV/2026-27/000003', 'ledger: each line names its bill, counter and seller ("' + l0 + '" · "' + l1 + '")');
+  const opened2 = await p.evaluate(async () => {
+    const was = window.openChit, got = []; window.openChit = function (id) { got.push(id); };
+    try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChit = was; }
+  });
+  ok(opened2 === 'ch1', 'ledger: the bill number opens that chit (' + opened2 + ')');
+  await noAccounting(p, 'day book and ledger sources');
   await p.click('[data-testid="bk-tab-tb"]');
   await p.waitForSelector('[data-testid="tb-balanced"]', { timeout: 8000 });
   ok(/balances/.test(await p.textContent('[data-testid="tb-balanced"]')) && (await p.textContent('[data-testid="tb-dr"]')) === (await p.textContent('[data-testid="tb-cr"]')), 'trial balance: debit total = credit total, and it says so');
