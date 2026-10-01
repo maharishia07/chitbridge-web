@@ -342,4 +342,5 @@ function route(S, r) {
   await b.close(); srv.close();
   console.log('\n  one-person: ' + pass + ' passed, ' + fail + ' failed');
   process.exitCode = fail ? 1 : 0;
-})().catch((e) => { console.error(e); process.exit(1); });
+/* a harness that stops part-way is a failed check, said as one — a break that strands it must still read as caught */
+})().catch((e) => { console.log('  XX  the harness stopped: ' + String((e && e.message) || e).split('\n')[0]); console.log('\n  one-person: ' + pass + ' passed, ' + (fail + 1) + ' failed'); process.exit(1); });
