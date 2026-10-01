@@ -16002,7 +16002,7 @@ function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.st
    */
   const d=UI._modalDismiss; UI._modalDismiss=null; if(typeof d==='function'){ try{ d(); }catch(_){ } } }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
-  const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
+  const opts=statusOptsFor(ids.map(function(i){ return UI.rows.find(function(x){ return x.id===i; })||(UI.detail&&UI.detail.id===i?UI.detail:null); })).map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">${tx('Change status')}</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
@@ -16025,7 +16025,7 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
   let _done=0;
   try{ for(const id of ids){
       if(ids.length>1) showBusy(txf('{done} of {total} · moving to {status}…', {done:_done+1, total:ids.length, status:cap(to)}));
-      try{ const _sr=await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; _done++; }
+      try{ const _sr=await api("status",{params:{id},body:{status:statusWordFor(to, UI.rows.find(x=>x.id===id)||(UI.detail&&UI.detail.id===id?UI.detail:null))}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; _done++; }
       catch(e){ toast(_done ? txf('Moved {done} of {total}, then: {why}', {done:_done, total:ids.length, why:MSG.fail("change status", e)}) : MSG.fail("change status", e));
         if(_done){ UI.selectMode=false; UI.selected.clear(); renderApp(); }   // the ones that moved must not look unmoved
         return; } }
@@ -16037,7 +16037,7 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
 }
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
 function pickChitStatus(id){ const c=UI.rows.find(x=>x.id===id)||UI.detail; if(!c)return; MODALS.stat={ids:[id],to:c.state};
-  const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow ${c.state===v?'sel':''}" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state===v?' · current':''}</div></div></div>`).join("");
+  const opts=statusOptsFor([c]).map(([v,l])=>`<div class="optrow ${c.state===v?'sel':''}" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state===v?' · current':''}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code||'this chit')} — any direction</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
@@ -16317,6 +16317,26 @@ function notifClearAll(){
 
 // map a LIVE API chit (chit_id/current_status/summary_json/…) into the UI row shape.
 // demo rows already have .id, so they pass straight through.
+/**
+ * ⭐⭐ A BILL I RECEIVED READS AS A BILL (Athi, 2026-10-01). A supplier's counter bill reaches me as purpose 'invoice' with
+ * summary_json.bill_received { from, no, total } (chitbridge-api routes/chits.js billCopyFor): in the list it is
+ * "Bill from Tally Test Shop · ₹481.65 · to accept" — never a task. null for anything else, which keeps its own words.
+ */
+function billRowOf(c){
+  var s=(c&&c.summary_json)||{}, b=s.bill_received;
+  if(!b || !c || c.purpose!=='invoice') return null;
+  var open=/^(pending|delivered|read)$/.test(String(c.current_status||'pending'));
+  return txf('Bill from {from}', { from: b.from || '—' }) + ' · ' + fmtMoney(b.total, s.currency_code || 'INR') + (open ? ' · ' + tx('to accept') : '');
+}
+/** the change-status picker — a received bill's move is ACCEPTANCE, in its own words; a task keeps Open · Act · Close */
+function statusOptsFor(rows){
+  var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
+  return [["open","Open"],["act", bills ? tx('Goods received · bill accepted') : "Act"],["close","Close"]];
+}
+/** …and the one status it sends: a bill's acceptance is `accepted` (the ledger posts the purchase on it), a task's Act stays in_progress */
+function statusWordFor(to, row){
+  return ({ open:'pending', act:(row && row.billRx) ? 'accepted' : 'in_progress', close:'completed' })[to] || to;
+}
 function mapApiChit(c){
   if(!c || c.id!==undefined) return c;
   const ST={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
@@ -16330,7 +16350,8 @@ function mapApiChit(c){
   /* ⚠️ `detail_design` is a summary rider like clearances and via — named here or it never reaches the row, and
      the list would then have no idea which detail page each chit belongs to. Absent = Order level. */
   return { clearances:sum.clearances||null, commercial:sum.commercial||null, via:sum.via||null,
-           detail_design:sum.detail_design||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+           detail_design:sum.detail_design||null, id:c.chit_id, created_at:c.created_at, code:billRowOf(c)||c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+           billRx:!!billRowOf(c),   /* ⭐ a bill I received — its move is "Goods received · bill accepted" (statusOptsFor) */
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     /* ⭐ the five figures the header records at send (summary_json.money, 2026-09-07): gross · savings · net · tax · total.
        Absent on every chit sent before that, and absent is NOT zero — the columns print "—" rather than invent a figure. */
