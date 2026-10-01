@@ -262,8 +262,10 @@
     });
   }
   function startClean() {
-    return Promise.all([counterUnsent(), labUnsent()]).then(function (u) {
-      if (u[0]) return { ok: false, unsent: u[0] };
+    /* ⚠️ the pair is read UP FRONT so a refusal can say WHOSE bills these are (Athi, live, 2026-10-01: "it is
+       not stating for which shop the bills are pending") — a count with no shop is a number nobody can act on */
+    return Promise.all([counterUnsent(), labUnsent(), counterPair()]).then(function (u) {
+      if (u[0]) return { ok: false, unsent: u[0], shop: (u[2] && u[2].paired && shopName(u[2])) || '' };
       if (u[1]) return { ok: false, labUnsent: u[1] };
       return ask({ t: 'roll' }, ASK_MS).then(function (tabs) {
         return ask({ t: 'wipe' }, LEAVE_MS, function (got) { return got.length >= tabs.length; }).then(function (got) {
@@ -287,7 +289,7 @@
     });
   }
   function cleanSentence(r) {
-    if (r.unsent) return 'The counter still holds ' + r.unsent + (r.unsent === 1 ? ' unsent bill' : ' unsent bills') + '. Open the counter and let it send them first.';
+    if (r.unsent) return 'The counter still holds ' + r.unsent + (r.unsent === 1 ? ' unsent bill' : ' unsent bills') + (r.shop ? ' for ' + r.shop : '') + '. Open the counter and let it send them first.';
     if (r.labUnsent) return 'The Labs still hold ' + r.labUnsent + (r.labUnsent === 1 ? ' unsent save' : ' unsent saves') + '. Open the Combo Lab while online and let it send them first.';
     if (r.silent) return 'No answer from: ' + r.silent.join(', ') + '. Close ' + (r.silent.length === 1 ? 'it' : 'them') + ', then press again.';
     if (r.blocked) return 'Still open: ' + r.blocked.join(', ') + '. Close ' + (r.blocked.length === 1 ? 'it' : 'them') + ', then press again.';

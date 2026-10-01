@@ -25,7 +25,7 @@ const BREAKS = [
   ['drafts left behind', [[OP, `if (owned && k.indexOf(DRAFT) === 0) return lsDel(k);`, ``]]],
   ['saved settings left behind', [[OP, `if (ids[i] && k.slice(-(ids[i].length + 1)) === '@' + ids[i]) return lsDel(k);`, `if (false) return lsDel(k);`]]],
   /* start with a clean browser */
-  ['clean wipes past the counter\'s unsent bills', [[OP, `      if (u[0]) return { ok: false, unsent: u[0] };\n`, ``]]],
+  ['clean wipes past the counter\'s unsent bills', [[OP, `      if (u[0]) return { ok: false, unsent: u[0], shop: (u[2] && u[2].paired && shopName(u[2])) || '' };\n`, ``]]],
   ['clean wipes past the Labs\' unsent saves', [[OP, `      if (u[1]) return { ok: false, labUnsent: u[1] };\n`, ``]]],
   ['a tab that did not answer is not named', [[OP, `          if (silent.length) return { ok: false, silent: silent };\n`, ``]]],
   ['clean leaves localStorage', [[OP, `              cbKeys(root.localStorage).forEach(lsDel);\n`, ``]]],
