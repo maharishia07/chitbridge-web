@@ -1887,6 +1887,7 @@ const EP = {
   svcPauseAnswer:  {m:"POST", p:"/api/service/:id/pause/:pid/answer",   ok:"✓"},  // ⭐ accept or REJECT the other side's pause — the disagreement, made into a fact
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
+  billUse:         {m:"PUT",  p:"/api/chits/:id/use",            ok:"✓"},  // a bill I received: resale · use · asset (lib/bill-use), until accepted
   chitPay:         {m:"POST", p:"/api/chits/:id/payment",        ok:"✓"},
   chitBooks:       {m:"POST", p:"/api/chits/:id/books-request",  ok:"✓"},   // "Send to books": the connector books this order now (Athi, 2026-09-06)   // the seller records a payment on their copy (level 1)
   chitUnpay:       {m:"DELETE",p:"/api/chits/:id/payment",       ok:"✓"},
@@ -16003,10 +16004,10 @@ function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.st
   const d=UI._modalDismiss; UI._modalDismiss=null; if(typeof d==='function'){ try{ d(); }catch(_){ } } }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=statusOptsFor(ids.map(function(i){ return UI.rows.find(function(x){ return x.id===i; })||(UI.detail&&UI.detail.id===i?UI.detail:null); })).map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
-  modal(`<div class="mhd"><div class="t">${tx('Change status')}</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`);
+  modal(`<div class="mhd"><div class="t">${tx('Change status')}</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}${billUseChoiceHTML(ids.map(function(i){ return UI.rows.find(function(x){ return x.id===i; })||(UI.detail&&UI.detail.id===i?UI.detail:null); }))}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
-async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
+async function confirmStatus(){ const {ids,to,use}=MODALS.stat; if(!to)return; closeModal();
   const single = ids.length===1 ? ids[0] : null; const pos = single ? chitPos(single) : null;
   if(ids.length>1) showBusy(txn('Moving {count} record to {status}…', 'Moving {count} records to {status}…',
                               ids.length, { status: cap(to) }));
@@ -16025,7 +16026,10 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
   let _done=0;
   try{ for(const id of ids){
       if(ids.length>1) showBusy(txf('{done} of {total} · moving to {status}…', {done:_done+1, total:ids.length, status:cap(to)}));
-      try{ const _sr=await api("status",{params:{id},body:{status:statusWordFor(to, UI.rows.find(x=>x.id===id)||(UI.detail&&UI.detail.id===id?UI.detail:null))}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; _done++; }
+      const _row=UI.rows.find(x=>x.id===id)||(UI.detail&&UI.detail.id===id?UI.detail:null);
+      /* ⭐ what the goods are for is said BEFORE the acceptance it decides (PUT /use refuses once accepted) */
+      try{ if(use && to==='act' && _row && _row.billRx) await api("billUse",{params:{id},body:{use:use}});
+           const _sr=await api("status",{params:{id},body:{status:statusWordFor(to, _row)}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; _done++; }
       catch(e){ toast(_done ? txf('Moved {done} of {total}, then: {why}', {done:_done, total:ids.length, why:MSG.fail("change status", e)}) : MSG.fail("change status", e));
         if(_done){ UI.selectMode=false; UI.selected.clear(); renderApp(); }   // the ones that moved must not look unmoved
         return; } }
@@ -16038,7 +16042,7 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
 function pickChitStatus(id){ const c=UI.rows.find(x=>x.id===id)||UI.detail; if(!c)return; MODALS.stat={ids:[id],to:c.state};
   const opts=statusOptsFor([c]).map(([v,l])=>`<div class="optrow ${c.state===v?'sel':''}" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state===v?' · current':''}</div></div></div>`).join("");
-  modal(`<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code||'this chit')} — any direction</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`);
+  modal(`<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code||'this chit')} — any direction</div></div><div class="mbody">${opts}${billUseChoiceHTML([c])}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
@@ -16333,6 +16337,19 @@ function statusOptsFor(rows){
   var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
   return [["open","Open"],["act", bills ? tx('Goods received · bill accepted') : "Act"],["close","Close"]];
 }
+/**
+ * ⭐ WHAT THE GOODS ARE FOR — one tap before Accept (Athi, 2026-10-01). Nothing tapped: the shop's own catalogue decides
+ * line by line (resale if it sells the product, else for the shop). Shown only when every chosen row is a bill received.
+ */
+var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];
+function billUseChoiceHTML(rows){
+  var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
+  if(!bills) return '';
+  return '<div data-testid="bill-use-choice" style="margin-top:10px"><div class="s">' + tx('What is it for?') + '</div>'
+    + BILL_USES.map(function(u){ return '<button type="button" class="optchip" data-testid="bill-use-' + u[0] + '" data-use="' + u[0] + '" onclick="pickBillUse(this.dataset.use)">' + tx(u[1]) + '</button>'; }).join(' ')
+    + '<div class="s">' + tx('Not tapped: your catalogue decides') + '</div></div>';
+}
+function pickBillUse(v){ MODALS.stat.use=v; document.querySelectorAll('[data-use]').forEach(function(b){ b.classList.toggle('sel', b.getAttribute('data-use')===v); }); }
 /** …and the one status it sends: a bill's acceptance is `accepted` (the ledger posts the purchase on it), a task's Act stays in_progress */
 function statusWordFor(to, row){
   return ({ open:'pending', act:(row && row.billRx) ? 'accepted' : 'in_progress', close:'completed' })[to] || to;

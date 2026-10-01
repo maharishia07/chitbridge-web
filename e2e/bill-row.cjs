@@ -23,7 +23,8 @@ function fnSource(name) {
 }
 const ctx = { fmtMoney: (n, cur) => '₹' + Number(n).toFixed(2), tx: (s) => s, txf: (s, v) => String(s).replace(/\{(\w+)\}/g, (_, k) => v[k]) };
 vm.createContext(ctx);
-for (const n of ['billRowOf', 'statusOptsFor', 'statusWordFor', 'mapApiChit']) {
+vm.runInContext("var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];", ctx);
+for (const n of ['billRowOf', 'statusOptsFor', 'statusWordFor', 'mapApiChit', 'billUseChoiceHTML']) {
   const s = fnSource(n);
   if (!s) { say('app.html defines ' + n + '()', false, 'not found'); continue; }
   vm.runInContext(s + '\nthis.' + n + ' = ' + n + ';', ctx);
@@ -46,6 +47,13 @@ if (!bad) {
   say('…a task keeps Open · Act · Close; a mixed selection too', ot.map((x) => x[1]).join('|') === 'Open|Act|Close' && om[1][1] === 'Act', JSON.stringify([ot, om[1]]));
   say('…and it sends the one transition the ledger listens for: accepted (a task\'s Act stays in_progress)', ctx.statusWordFor('act', row) === 'accepted' && ctx.statusWordFor('act', trow) === 'in_progress'
     && ctx.statusWordFor('open', row) === 'pending' && ctx.statusWordFor('close', row) === 'completed', [ctx.statusWordFor('act', row), ctx.statusWordFor('act', trow)].join(' / '));
+  /* ⭐ what the goods are for — one tap before Accept, only for bills (lib/bill-use on the server) */
+  const ch = ctx.billUseChoiceHTML([row]);
+  say('a bill\'s picker offers the one-tap choice: For resale · For the shop · An asset', /data-use="resale"[^>]*>For resale</.test(ch) && /data-use="use"[^>]*>For the shop</.test(ch) && /data-use="asset"[^>]*>An asset</.test(ch) && /your catalogue decides/.test(ch),
+    (ch.match(/>[^<]+<\/button>/g) || []).join(' '));
+  say('…a task\'s picker does not', ctx.billUseChoiceHTML([trow]) === '' && ctx.billUseChoiceHTML([row, trow]) === '', 'empty');
+  const src2 = fnSource('confirmStatus') || '';
+  say('…and the choice is sent (PUT /use) BEFORE the acceptance it decides', /api\("billUse"[\s\S]*api\("status"/.test(src2) && /"\/api\/chits\/:id\/use"/.test(src), 'order in confirmStatus');
 }
 console.log('\n' + (bad ? '✗ ' + bad + ' FAILED' : '✓ all passed') + '\n');
 process.exit(bad ? 1 : 0);
