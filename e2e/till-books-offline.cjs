@@ -486,6 +486,24 @@ function apiFront(name, tillId) {
     const c11 = await sell(pc, lt);
     say('C1 (the shop PC) walk-ins, numbered in C1\'s run', [w11, w12].every((n) => /^C1\//.test(n)), [w11, w12].join(' '));
     say('credit for Latha, whose terms the shop never set: "shop\'s terms", no invented date', /^C1\//.test(c11) && /ON CREDIT/.test(lt.slip) && !/Due by/.test(lt.slip), (lt.slip.match(/ON CREDIT.{0,20}/) || ['—'])[0]);
+    /* ⭐ the Today sheet SEGREGATES the bills by tender (Athi, 2026-10-01): each row says how it was paid, the
+       totals are chips that filter, and "view" brings the bill up with Print on it */
+    await pc.evaluate(() => { TODAY_HOW = ''; return openBills(); });
+    await pc.waitForSelector('[data-testid="till-bill-how-' + c11 + '"]', { timeout: 15000 });
+    const howOf = async (no) => (await pc.textContent('[data-testid="till-bill-how-' + no + '"]').catch(() => '')).trim();
+    say('every row says how it was paid: cash · UPI · on credit', (await howOf(w11)) === 'Cash' && (await howOf(w12)) === 'UPI' && (await howOf(c11)) === 'On credit', [await howOf(w11), await howOf(w12), await howOf(c11)].join(' / '));
+    say('the totals are chips, one per tender', await pc.locator('[data-testid="till-today-how-on-credit"]').count() === 1 && await pc.locator('[data-testid="till-today-how-cash"]').count() === 1, 'chips');
+    await pc.click('[data-testid="till-today-how-on-credit"]');
+    await pc.waitForSelector('[data-testid="till-today-how-on"]', { timeout: 10000 });
+    say('tap "On credit" → only the credit bills are listed', await pc.locator('[data-testid="till-bill-view-' + c11 + '"]').count() === 1 && await pc.locator('[data-testid="till-bill-view-' + w11 + '"]').count() === 0, 'filtered');
+    await pc.click('[data-testid="till-today-how-on-credit"]');
+    await pc.waitForSelector('[data-testid="till-bill-view-' + w11 + '"]', { timeout: 10000 });
+    say('tap it again → every bill is back, and the row says "view", not "print"', (await pc.textContent('[data-testid="till-bill-view-' + w11 + '"]')).trim() === 'view', 'view');
+    await pc.click('[data-testid="till-bill-view-' + w11 + '"]');
+    await pc.waitForFunction(() => { var d = document.getElementById('slipdlg'); return d && d.open; }, null, { timeout: 10000 });
+    say('"view" brings the bill up, with Print on the bill itself', /Print/.test(await pc.evaluate(() => (document.getElementById('slipdlg') || {}).innerText || '')), 'bill shown');
+    await closeSlip(pc);
+    await pc.evaluate(() => { try { document.querySelectorAll('dialog[open]').forEach(function(d){ d.close(); }); } catch (_) {} });
     const r11 = await returnAll(pc, w12);
     say('a return on the shop PC', /^CN\/C1\//.test(r11), r11);
     await pc.evaluate(() => expOpen());
