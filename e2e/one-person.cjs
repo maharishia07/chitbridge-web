@@ -308,6 +308,8 @@ function route(S, r) {
     ok(/^No answer from: The stuck tab\. Close it, then press again\.$/.test((await b1.textContent('[data-testid="gate-clean-why"]')).trim()), '10 · a tab that does not answer is NAMED, and nothing is wiped');
     ok(await ls(b1, 'cb_till_key') === 'k-q1', '10 · (the counter key is still there)');
     await mute.close();
+    /* a per-tab key must go too — without one here, a wipe that skips sessionStorage looks the same as one that does it */
+    await b1.evaluate(() => { sessionStorage.setItem('cb_stay_in_app', '1'); });
     await b1.click('[data-testid="gate-start-clean"]');
     await b1.waitForURL(/\/app\.html#\/login$/, { timeout: 15000 }).catch(() => {});
     await b1.waitForSelector('[data-testid="signed-out-why"]', { timeout: 10000 }).catch(() => {});
