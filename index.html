@@ -305,9 +305,9 @@ async function facts(){
     labFact('st_tax', g ? 'GST invoices' : 'no GSTIN — cash memos', g ? '' : 'dn');
   });
 
-  /* Till — the counter summary the app already reads, folded across counters */
-  quiet('/api/till/counters').then(function(r){
-    var open = ((r && r.counters) || []).filter(function(c){ return c && (c.open === true || c.status === 'open'); })[0];
+  /* Till — the shop's counters as the server holds them (GET /api/counters: each row carries its state) */
+  quiet('/api/counters').then(function(r){
+    var open = ((r && r.counters) || []).filter(function(c){ return c && (c.state === 'open' || c.open === true || c.status === 'open'); })[0];
     if (open) factLine('f_till', '<span class="dot"></span>' + esc(open.name || open.id || 'Counter') + ' open', 'live');
   });
   quiet('/api/till/summary?period=day&n=1').then(function(r){
