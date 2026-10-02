@@ -120,7 +120,7 @@ function enGridHTML() {
   groups.forEach(function (g) { by[g] = by[g].filter(function (e) { if (e.kind === 'journal') { last = e; return false; } return true; }); });
   return groups.map(function (g, gi) {
     var tiles = by[g].concat(gi === groups.length - 1 && last ? [last] : []);
-    return (g ? '<div class="en-sec">' + enE(tx(g)) + '</div>' : '') + '<div class="en-grid">' + tiles.map(function (ev) {
+    return '<div class="en-sec">' + enE(g ? tx(g) : tx('Your own journal')) + '</div>' + '<div class="en-grid">' + tiles.map(function (ev) {
       return '<button type="button" class="en-tile" data-testid="en-event-' + enE(ev.id) + '" onclick="enPick(\'' + enE(ev.id) + '\')"><span class="ic" aria-hidden="true">' + enE(ev.icon || '＋') + '</span><span>' + enE(tx(ev.label)) + '</span></button>';
     }).join('') + '</div>';
   }).join('');
@@ -159,7 +159,7 @@ function enLedgerSelect(id, cur, onch, onlyGroup) {
   return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
 function enFieldHTML(f) {
-  var k = f.key, v = EN.v[k] == null ? '' : EN.v[k], lab = tx(f.label || ({ party: 'Who', ledger: 'Which ledger', bank: 'Which bank', asset_class: 'What kind', loan: 'Which loan', amount: 'How much', date: 'Date', paid_by: 'Paid by', doc_no: 'Bill / receipt no.', photo: 'Photo of the paper', narration: 'Note', text: k })), tid = 'en-f-' + k;
+  var k = f.key, v = EN.v[k] == null ? '' : EN.v[k], lab = tx(f.label || ({ party: 'Who', ledger: 'Which ledger', bank: 'Which bank', asset_class: 'What kind', loan: 'Which loan', amount: 'How much', date: 'Date', paid_by: 'Paid by', doc_no: 'Bill / receipt no.', photo: 'Photo of the paper', narration: 'Note', text: k })[f.kind] || k), tid = 'en-f-' + k;
   var wrap = function (inner) { return '<label class="en-f"><span>' + enE(lab) + '</span>' + inner + '</label>'; };
   var on = 'enSet(\'' + enE(k) + '\',this.value)';
   if (f.kind === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>';
@@ -209,6 +209,8 @@ function enLineAdd() { EN.lines.push({ code: '', side: 'dr', amt: '' }); enPaint
 function enLineDel(i) { if (EN.lines.length > 2) EN.lines.splice(i, 1); enPaint(); }
 
 /* ── the server's journal ── */
+/* the app's api() refuses a second POST to the same route while one is out, so the page asks one preview at a time and the newest answer wins (EN.seq) */
+function enAsk(body) { var go = function () { return api('booksPreview', { body: body }); }; var p = (EN.q || Promise.resolve()).then(go, go); EN.q = p.catch(function () {}); return p; }
 function enBody() {
   var b = { event: EN.ev.id };
   Object.keys(EN.v).forEach(function (k) { if (EN.v[k] !== '' && EN.v[k] != null) b[k] = EN.v[k]; });
@@ -218,7 +220,7 @@ function enBody() {
 }
 async function enPreview() {
   var seq = ++EN.seq; EN.pvBusy = true; EN.err = null; enPaint2();
-  try { var r = await api('booksPreview', { body: enBody() }); if (seq !== EN.seq) return; EN.pv = r || {}; }
+  try { var r = await enAsk(enBody()); if (seq !== EN.seq) return; EN.pv = r || {}; }
   catch (e) { if (seq !== EN.seq) return; EN.pv = { balanced: false, refusals: [{ code: 'READ', message: bkWhy(e, tx('Could not check this entry')), fix: { label: tx('Try again'), retry: true } }], lines: [] }; }
   EN.pvBusy = false; enPaint2();
 }
@@ -227,7 +229,7 @@ function enPaint2() { var b = document.getElementById('en_body'); if (!b) return
 async function enCheckDate() {
   var seq = ++EN.seq, d = EN.v.date; EN.dateRef = null;
   if (!EN.ev || !d) return;
-  try { var r = await api('booksPreview', { body: { event: EN.ev.id, date: d, check: 'date' } }); if (seq !== EN.seq) return; EN.dateRef = (r && r.refusals) || []; }
+  try { var r = await enAsk({ event: EN.ev.id, date: d, check: 'date' }); if (seq !== EN.seq) return; EN.dateRef = (r && r.refusals) || []; }
   catch (e) { if (seq !== EN.seq) return; EN.dateRef = [{ code: 'READ', message: bkWhy(e, tx('Could not check this date')), fix: { label: tx('Try again'), retry: true } }]; }
   var el = document.getElementById('en_dateref'); if (el) el.innerHTML = enRefusalHTML(EN.dateRef); var n = document.getElementById('en_next'); if (n) n.disabled = !enStepReady(EN.step);
 }

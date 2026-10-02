@@ -56,7 +56,8 @@ function compose(b, S) {
   else lines = [L('1500', a, 0, 'Bank: real, comes in → Dr'), L('2100', 0, a, 'Lender: personal, gives → Cr')];
   if (S.skew) lines[0].dr_minor += 100;
   const pv = { currency: 'INR', voucher: { series: 'MJ', kind }, narration: b.narration || '', lines, balanced: !S.skew, refusals: [], warnings: [] };
-  if (S.skew) pv.refusals.push({ code: 'UNBALANCED', message: 'Debit and credit are not the same.', fix: { label: 'Change the amount', step: 3, focus: 'amount' } });
+  if (S.skew && !S.quiet) pv.refusals.push({ code: 'UNBALANCED', message: 'Debit and credit are not the same.', fix: { label: 'Change the amount', step: 3, focus: 'amount' } });
+  if (S.refuse) pv.refusals.push({ code: 'NOT_ALLOWED', message: 'This ledger cannot take this entry.', fix: { label: 'Change the ledger', step: 2, focus: 'ledger' } });
   if (b.event === 'expense_gst') pv.warnings.push({ code: 'CREDIT_BLOCKED', message: 'GST credit is not allowed on this bill.', fix: { label: 'Change the ledger', step: 2, focus: 'ledger' } });
   return pv;
 }
@@ -67,7 +68,7 @@ const ENTRIES = [
 ];
 
 function standIn() {
-  return { calls: [], saves: [], reverses: [], previews: [], skew: false, failSave: false, delay: 0 };
+  return { calls: [], saves: [], reverses: [], previews: [], skew: false, quiet: false, refuse: false, failSave: false, delay: 0 };
 }
 async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
@@ -123,7 +124,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="db-add"]', { timeout: 15000 });
     return { ctx, p };
   }
-  const sw = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, dlg: (document.getElementById('entrysheet') || {}).scrollWidth || 0, dcw: (document.getElementById('entrysheet') || {}).clientWidth || 0 }));
+  const sw = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, dlg: (document.getElementById('en_body') || {}).scrollWidth || 0, dcw: (document.getElementById('en_body') || {}).clientWidth || 0 }));
   const shot = (p, n, tag) => p.screenshot({ path: path.join(SHOTS, 'manual-entry-' + n + '-' + tag + '.png') });
   const t = (p, id) => p.locator('[data-testid="' + id + '"]');
   const VAL = { bank: '1500', ledger: '6010', party: 's1', loan: 'L1', paid_by: 'cash', amount: '1500', date: TODAY, doc_no: 'BILL-77', narration: null, photo: null };
@@ -142,8 +143,9 @@ async function route(S, r) {
     o = o || {};
     await t(p, 'en-event-' + ev.id).click();
     const has2 = ev.fields.some((f) => ['party', 'ledger', 'bank', 'asset_class', 'loan'].includes(f.kind));
-    if (has2) { await t(p, 'en-step-2').waitFor(); await fillStep(p, ev, 2); if (o.shot) await shot(p, 'form', o.tag); await t(p, 'en-next').click(); }
+    if (has2) { await t(p, 'en-step-2').waitFor(); await fillStep(p, ev, 2); ok(!/\[object|undefined|NaN/.test(await p.evaluate(() => document.getElementById('en_body').innerText)), ev.id + ': step 2 prints no stray [object Object] / undefined / NaN'); if (o.shot) await shot(p, 'form', o.tag); await t(p, 'en-next').click(); }
     await t(p, 'en-step-3').waitFor(); await fillStep(p, ev, 3);
+    ok(!/\[object|undefined|NaN/.test(await p.evaluate(() => document.getElementById('en_body').innerText)), ev.id + ': step 3 prints no stray [object Object] / undefined / NaN');
     if (!has2 && o.shot) await shot(p, 'form', o.tag);
     await t(p, 'en-next').click();
     await t(p, 'en-step-4').waitFor(); await p.waitForSelector('[data-testid^="en-pline-"]');
@@ -175,6 +177,7 @@ async function route(S, r) {
       await flow(p, ev, { shot: ev.id === 'rent_paid', tag: 'laptop' });
       const rows = await p.$$eval('[data-testid^="en-pline-"]', (e) => e.map((x) => x.innerText));
       ok(rows.length === 2 && rows.every((r) => /\d{4}/.test(r)), ev.id + ': the preview shows two lines, each with its code and ledger (' + rows.length + ')');
+      ok(rows.every((r) => r.includes('1,500.00')) && rows.filter((r) => r.includes('1,500.00')).length === 2, ev.id + ': every figure is the one the server sent (₹1,500.00 on each line)');
       ok(await p.$$eval('[data-testid^="en-ptype-"]', (e) => e.every((x) => /personal|real|nominal/.test(x.textContent))), ev.id + ': every line names its type (personal / real / nominal)');
       ok(await p.$$eval('[data-testid^="en-prule-"]', (e) => e.every((x) => /→ (Dr|Cr)/.test(x.textContent))), ev.id + ': every line names the golden rule that placed it');
       ok(/^MJ · /.test(await t(p, 'en-voucher').innerText()) && (await t(p, 'en-voucher').innerText()).includes(ev.kind_word), ev.id + ': the voucher is MJ with its kind (' + (await t(p, 'en-voucher').innerText()) + ')');
@@ -208,8 +211,21 @@ async function route(S, r) {
     await t(p, 'db-add').click(); await flow(p, EVENTS[0], {});
     ok(await t(p, 'en-unbalanced').count() === 1 && await t(p, 'en-save').isDisabled(), 'unbalanced: the server says so and Save is OFF');
     ok(await t(p, 'en-fix-UNBALANCED').count() === 1, 'the refusal has its fix button');
-    await t(p, 'en-save').click({ force: true }).catch(() => {});
+    await t(p, 'en-save').click({ force: true, timeout: 1500 }).catch(() => {});
     ok(S.saves.length === 0, 'unbalanced: nothing was posted');
+    await ctx.close();
+  }
+  /* the server may say "not balanced" WITHOUT a refusal, or refuse a balanced journal: either one alone keeps Save off */
+  {
+    const S = standIn(); S.skew = true; S.quiet = true; const { ctx, p } = await open(S);
+    await t(p, 'db-add').click(); await flow(p, EVENTS[0], {});
+    ok(await t(p, 'en-unbalanced').count() === 1 && await t(p, 'en-save').isDisabled(), 'unbalanced with no refusal named: Save is still OFF');
+    await ctx.close();
+  }
+  {
+    const S = standIn(); S.refuse = true; const { ctx, p } = await open(S);
+    await t(p, 'db-add').click(); await flow(p, EVENTS[0], {});
+    ok(await t(p, 'en-balanced').count() === 1 && await t(p, 'en-save').isDisabled() && await t(p, 'en-fix-NOT_ALLOWED').count() === 1, 'balanced but refused: Save is OFF and the refusal has its fix button');
     await ctx.close();
   }
 
@@ -233,7 +249,8 @@ async function route(S, r) {
   {
     const S = standIn(); S.delay = 500; const { ctx, p } = await open(S);
     await t(p, 'db-add').click(); await flow(p, EVENTS[1], {});
-    await t(p, 'en-save').dblclick(); await t(p, 'en-saved').waitFor();
+    /* two taps in the same instant — the button's own disabling must not be the only thing standing in the way */
+    await p.evaluate(() => { const b = document.querySelector('[data-testid="en-save"]'); b.click(); b.click(); }); await t(p, 'en-saved').waitFor();
     ok(S.saves.length === 1, 'a double tap on Save posted once (' + S.saves.length + ')');
     /* a failed save says so, and Try again posts with the SAME client_ref */
     await t(p, 'en-done').click();
@@ -287,7 +304,7 @@ async function route(S, r) {
     const S = standIn(); const { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
     let w = await sw(p); ok(w.sw === 390, 'phone: the Day book itself is 390 px (' + w.sw + ')');
     await t(p, 'db-add').click(); await p.waitForSelector('[data-testid^="en-event-"]'); await p.waitForTimeout(150);
-    w = await sw(p); ok(w.sw === 390 && w.dlg <= w.dcw + 1, 'phone: the grid, scrollWidth === 390 (' + w.sw + ', sheet ' + w.dlg + '/' + w.dcw + ')');
+    w = await sw(p); ok(w.sw === 390 && w.dlg <= w.dcw + 1, 'phone: the grid, scrollWidth === 390 (' + w.sw + ', sheet body ' + w.dlg + '/' + w.dcw + ')');
     ok(await p.$$eval('[data-testid^="en-event-"]', (e) => e.every((x) => x.getBoundingClientRect().height >= 44 && x.getBoundingClientRect().right <= 390)), 'phone: every tile is a 44 px+ target inside the screen');
     await shot(p, 'grid', 'phone');
     await t(p, 'en-event-rent_paid').click(); await t(p, 'en-step-2').waitFor(); w = await sw(p); ok(w.sw === 390, 'phone: step 2, scrollWidth === 390');
