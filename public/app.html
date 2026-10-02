@@ -1674,7 +1674,6 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/app/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
-<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <!-- ⭐ THE FIVE LIST CONTROLS, WRITTEN ONCE — search · filters · sort · count · lazy rows, for a list the browser
      already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
@@ -1730,6 +1729,7 @@ body.lab-only #cbtestpanel{
      determination; a lookalike would agree on every example anyone tries and diverge on the one that matters.
      Eager, not lazy: the product's Pricing & tax pane lives in app.html itself. -->
 <script src="/app/tax.js"></script>
+<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/tax-slab.js"></script>
 <script src="/app/barcode.js"></script>  <!-- Code 128 of the SKU for the product page (Barcode tab); pure, no network -->
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
@@ -1873,7 +1873,6 @@ const EP = {
   catEnrich:       {m:"POST", p:"/api/governance/ai-draft",              ok:"✓"},  // reuse the deployed invokeSkill endpoint for catalogue-enrich (b113 skill)
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
   sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
-  chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
   amend:           {m:"POST", p:"/api/chits/:id/amend",          ok:"✓"},  // b137 — records a correction ALONGSIDE the reading; never edits line_items
   catOverlay:      {m:"GET",  p:"/api/chits/:id/catalogue-overlay", ok:"✓"},  // ?q= — pull the full catalogue row so one fix carries unit+size+price too
   // b147 — a chit AS A SERVICE REQUEST. The clock, and the pause both parties can dispute.
@@ -1885,8 +1884,6 @@ const EP = {
   svcPauseEnd:     {m:"POST", p:"/api/service/:id/pause/:pid/end",      ok:"✓"},
   svcPauseAnswer:  {m:"POST", p:"/api/service/:id/pause/:pid/answer",   ok:"✓"},  // ⭐ accept or REJECT the other side's pause — the disagreement, made into a fact
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
-  status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
-  billUse:         {m:"PUT",  p:"/api/chits/:id/use",            ok:"✓"},  // a bill I received: resale · use · asset (lib/bill-use), until accepted
   chitPay:         {m:"POST", p:"/api/chits/:id/payment",        ok:"✓"},
   chitBooks:       {m:"POST", p:"/api/chits/:id/books-request",  ok:"✓"},   // "Send to books": the connector books this order now (Athi, 2026-09-06)   // the seller records a payment on their copy (level 1)
   chitUnpay:       {m:"DELETE",p:"/api/chits/:id/payment",       ok:"✓"},
@@ -2091,7 +2088,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP);   /* the Ledger's boot endpoints — declared once, in app/accounts-shell.js, shared with accounts.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP);   /* the Ledger's boot endpoints — declared once, in app/accounts-shell.js, shared with accounts.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -3379,6 +3376,13 @@ document.addEventListener('keydown', function (e) {
   }
 });
 
+/** the Ledger lives on /accounts.html; the app no longer draws it. The view asked for (or the one last open here) goes with the redirect, and a remembered 'ledger' is forgotten so Back does not loop. */
+function ledgerDoorClosed(view){
+  try{ if(localStorage.getItem(uk("cb_nav"))==="ledger") localStorage.setItem(uk("cb_nav"),"task"); }catch(_){}
+  if(UI.nav==="ledger") UI.nav="task";
+  var v=view||((typeof BK!=="undefined"&&BK&&BK.tab)||"");
+  location.replace('/accounts.html'+(v?'#'+v:''));
+}
 window.addEventListener("hashchange", route);
 function route(){
   try{ mountAssist(); }catch(_){}   // floating assistant on every page (auth + pre-auth)
@@ -3399,6 +3403,10 @@ function route(){
   /* ⭐ THE SMALLEST DEEP LINK (index page, 2026-09-30): #/app/<nav> sets UI.nav on arrival, and nothing else —
      the app still routes by UI.nav, never by hash. Exact #/app keeps the counter jump above: a deep link is a
      deliberate ask for one screen, and answering a specific request with the till is its own bug. */
+  /* ⭐ THE OLD LEDGER DOOR IS CLOSED (Athi, 2026-10-02): the Ledger lives on /accounts.html. A nav to 'ledger' — typed #/app/ledger,
+     bookmarked, or remembered in cb_nav@<id> — goes there, to the same view. cap-books.js stays: accounts.html runs it. */
+  var _lg = /^#\/app\/ledger(?:\/([a-z]+))?$/.exec(h);
+  if(SESSION.token && _lg) return ledgerDoorClosed(_lg[1]);
   var _deep = /^#\/app\/([a-z][a-z0-9-]*)$/.exec(h);
   if(_deep && SESSION.token){
     UI.nav=_deep[1];
@@ -3411,6 +3419,8 @@ function route(){
      is decided here. "For now": the chit sheet may replace the way a bill opens. */
   var _bill = /^#\/app\/chit\/([A-Za-z0-9_-]+)$/.exec(h);
   if(_bill && SESSION.token){ UI.nav="task"; UI.folder="task"; renderApp(); try{ openChit(decodeURIComponent(_bill[1])); }catch(_){} return; }
+  /* …or remembered: cb_nav@<id> held 'ledger' from before the door closed (boot puts it in UI.nav) */
+  if(SESSION.token && UI.nav==="ledger" && /^#\/app$|^#\/?$/.test(h)) return ledgerDoorClosed();
   if(h.startsWith("#/welcome")) return renderWelcome();
   if(h.startsWith("#/legend")){ renderWelcome(); return openLegend(); }
   if(h.startsWith("#/register")) return renderRegister();
@@ -5063,7 +5073,7 @@ const MENUS = {
     /* ⚠️ MESSAGES MOVED OUT OF THE RAIL (Athi, 2026-08-18: *"messages can come under work in the panel rather
        than rail"*). The RAIL is the chit lifecycle — task, order, drafts, archive, trash: places a CHIT is. A
        message is not a place a chit sits, it is work someone has to do about one, which is what this group is. */
-    ["Work",    [["messages","💬","Messages"],["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
+    ["Work",    [["messages","💬","Messages"],["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["bills","🧾","Bills"],["disputes","⚖️","Disputes"]]],
     /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
        panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
        still LISTS categories, but authoring now has one home and Definitions points at it. */
@@ -5196,7 +5206,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02c';   /* ⚠️ bumped 2026-10-02 (c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02d';   /* ⚠️ bumped 2026-10-02 (d: the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -5772,7 +5782,7 @@ function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMa
  * signed-in user with no way to move. One role changed; the others keep working untouched.
  */
 function menuBody(M, role){
-  var gate = function(it){ if (it[0] === 'ledger' && SESSION.booksOn !== true) return false; var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
+  var gate = function(it){ if ((it[0] === 'ledger' || it[0] === 'bills') && SESSION.booksOn !== true) return false; var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
   if (!M.groups) {
     return '<div class="grp">' + tx('Mailbox') + '</div>' + M.top.map(menuBtn).join('')
       + '<div class="grp">' + (role === 'customer' ? 'More' : 'Manage') + '</div>'
@@ -6142,7 +6152,9 @@ function menuBtn(x){
       + `</button>`;
   }
   /* ⭐ THE LEDGER HAS ITS OWN PAGE (Athi, 2026-10-01: CB Accounts — "its own identity, its own menu"). Its rail item is one
-     link, same tab. The in-app Ledger screen (UI.nav==='ledger', #/app/ledger) stays reachable by URL for now. */
+     link, same tab. A nav to 'ledger' (#/app/ledger, a remembered cb_nav) is redirected there by route(). */
+  /* ⭐ BILLS HAS A DOOR TOO (Athi, 2026-10-02): the received and issued bills live in CB Accounts › Bills — the same link, the same tab. */
+  if(key==='bills') return `<a class="navlink" href="/accounts.html#bills" data-testid="nav-bills"><span class="ic">${ic}</span>${tx('Bills')} ↗</a>`;
   if(key==='ledger') return `<a class="navlink" href="/accounts.html" data-testid="nav-ledger"><span class="ic">${ic}</span>${tx('CB Accounts')} ↗</a>`;
   if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
   const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===key);
@@ -6469,7 +6481,7 @@ async function selfBillSend(btn){
   }
 }
 
-function navTo(k){try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTimeout(CBCart.floatsSync,0); }catch(_){}if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem(uk("cb_nav"),k);}catch(_){}renderApp();}
+function navTo(k){if(k==="ledger") return ledgerDoorClosed();try{ if(typeof CBCart!=='undefined'&&CBCart.floatsSync) setTimeout(CBCart.floatsSync,0); }catch(_){}if(k==="raida"){UI.drawer=false;renderApp();if(typeof openRaidReport==="function")openRaidReport();return;}UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem(uk("cb_nav"),k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
@@ -16276,23 +16288,7 @@ function statusOptsFor(rows){
   var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
   return [["open","Open"],["act", bills ? tx('Goods received · bill accepted') : "Act"],["close","Close"]];
 }
-/**
- * ⭐ WHAT THE GOODS ARE FOR — one tap before Accept (Athi, 2026-10-01). Nothing tapped: the shop's own catalogue decides
- * line by line (resale if it sells the product, else for the shop). Shown only when every chosen row is a bill received.
- */
-var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];
-function billUseChoiceHTML(rows){
-  var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
-  if(!bills) return '';
-  return '<div data-testid="bill-use-choice" style="margin-top:10px"><div class="s">' + tx('What is it for?') + '</div>'
-    + BILL_USES.map(function(u){ return '<button type="button" class="optchip" data-testid="bill-use-' + u[0] + '" data-use="' + u[0] + '" onclick="pickBillUse(this.dataset.use)">' + tx(u[1]) + '</button>'; }).join(' ')
-    + '<div class="s">' + tx('Not tapped: your catalogue decides') + '</div></div>';
-}
 function pickBillUse(v){ MODALS.stat.use=v; document.querySelectorAll('[data-use]').forEach(function(b){ b.classList.toggle('sel', b.getAttribute('data-use')===v); }); }
-/** …and the one status it sends: a bill's acceptance is `accepted` (the ledger posts the purchase on it), a task's Act stays in_progress */
-function statusWordFor(to, row){
-  return ({ open:'pending', act:(row && row.billRx) ? 'accepted' : 'in_progress', close:'completed' })[to] || to;
-}
 function mapApiChit(c){
   if(!c || c.id!==undefined) return c;
   const ST={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
@@ -17959,7 +17955,6 @@ function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.le
 function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
 function busyHide(){ var h=document.getElementById('busyhost'); if(h)h.innerHTML=''; }
-function chitIsSelf(e,n){ return (SESSION.entityId&&e===SESSION.entityId)||(SESSION.entity&&String(n||"")===String(SESSION.entity)); }
 function recipTo(c, isDispute){ c=c||{}; var _self=chitIsSelf; var seen={}; var all=(((c.recips)||[]).filter(function(r){return r&&r.entity_id&&!_self(r.entity_id,r.display_name)&&!seen[r.entity_id]&&(seen[r.entity_id]=1);}).map(function(r){return r.display_name||"party";})); var rn=all; if(isDispute){ var od=((c.disputes)||[]).find(function(d){return (d.status||"open")==="open";}); var dp=(((od&&od.participants)||[]).filter(function(p){return p&&!_self(p.entity_id,p.display_name);}).map(function(p){return p.display_name||"party";})); if(dp.length) rn=dp; } return rn.length?rn.join(", "):(c.party||"the other party"); }
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }

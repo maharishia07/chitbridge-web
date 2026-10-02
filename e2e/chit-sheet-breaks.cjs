@@ -2,7 +2,7 @@
  * Nothing in the working tree is ever edited (never git checkout to restore). Each break must make the harness exit non-zero with an XX line. */
 const fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 const W = path.join(__dirname, '..');
-const SHEET = 'app/chit-sheet.js', BOOKS = 'app/cap-books.js';
+const SHEET = 'app/chit-sheet.js', BOOKS = 'app/cap-books.js', APP = 'app.html', ACCOUNTS = 'accounts.html';
 const BREAKS = [
   ['Dispute offered on a cart bill', SHEET, `if (m.counterBill) { a.push('print'); if (!dead) a.push('return'); }`, `if (m.counterBill) { a.push('print'); a.push('dispute'); if (!dead) a.push('return'); }`],
   ['Accept offered on a cart bill', SHEET, `if (m.counterBill) { a.push('print');`, `if (m.counterBill) { a.push('accept'); a.push('print');`],
@@ -10,7 +10,27 @@ const BREAKS = [
   ['accepted bill still offers Accept', SHEET, `else if (!dead) a.push('dispute');\n    } else {`, `else if (!dead) { a.push('accept'); a.push('dispute'); }\n    } else {`],
   ['navigation instead of the sheet', BOOKS, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="event.stopPropagation();openChit(\\''`],
   ['Waiting row navigates', BOOKS, `(w.chit_id ? ' style="cursor:pointer" onclick="openChitSheet(`, `(w.chit_id ? ' style="cursor:pointer" onclick="openChit(`],
-  ['a recomputed GST row', SHEET, `c = v.cgst != null ? Number(v.cgst) : (inter ? tx_ : Math.round(tx_ * 50) / 100)`, `c = Math.round(tx_ * 50) / 100`],
+  /* ── web-reads-invoice (2026-10-02): the four breaks the task names, and the guards around them ── */
+  ['hand arithmetic back: a hand-halved CGST', SHEET, `E(money(inter ? v.igst : v.cgst, m.cur))`, `E(money(inter ? v.igst : Math.round(Number(v.tax) * 50) / 100, m.cur))`],
+  ['hand arithmetic back: SGST worked out as tax − half', SHEET, `(inter ? '' : E(money(v.sgst, m.cur)))`, `(inter ? '' : E(money(Math.round((Number(v.tax) - Math.round(Number(v.tax) * 50) / 100) * 100) / 100, m.cur)))`],
+  ['hand arithmetic back: the total summed from the lines', SHEET, `var mo = m.money || {}, t = mo.total;`, `var mo = m.money || {}, t = m.lines.reduce(function (a, l) { return a + Number(l.total || 0); }, 0);`],
+  ['the frozen invoice ignored (the header read instead)', SHEET, `if (bj && bj.invoice && root.CBTax && root.CBTax.moneyOf) return`, `if (false) return`],
+  ['line totals from the chit lines, not the invoice', SHEET, `money(f ? f.total : (l.total != null ? l.total : l.net), m.cur)`, `money(l.total != null ? l.total : l.net, m.cur)`],
+  ['an invented total when none is recorded', SHEET, `E(t == null ? T('not recorded') : money(t, m.cur))`, `E(t == null ? money(0, m.cur) : money(t, m.cur))`],
+  ['Accept without the choice', SHEET, `if (m.billRx) { CS.useAsk = true; CS.note = null; return paint(); } return move('act'); }`, `return move('act'); }`],
+  ['Accept: the status first, the use after', SHEET, `if (use && to === 'act' && m.billRx) await api('billUse', { params: { id: id }, body: { use: use } });\n      var word`, `var word`],
+  ['the step read from the shared status', SHEET, `status: billRx ? billStepStatus(log) : String(h.current_status || h.status || 'pending')`, `status: String(h.current_status || h.status || 'pending')`],
+  ['the to-do and Waiting not re-read after Accept', SHEET, `try { if (typeof bkHealthLoad === 'function') bkHealthLoad()`, `try { if (false) bkHealthLoad()`],
+  ['the counter named by the till, not the series', SHEET, `counter: counterOfBill(bill, bj.till),`, `counter: bj.till && (bj.till.name || bj.till.id) || '',`],
+  ['the ledger route not redirected (#/app/ledger)', APP, `if(SESSION.token && _lg) return ledgerDoorClosed(_lg[1]);`, ``],
+  ['a remembered cb_nav of ledger not redirected', APP, `if(SESSION.token && UI.nav==="ledger" && /^#\\/app$|^#\\/?$/.test(h)) return ledgerDoorClosed();`, ``],
+  ['navTo("ledger") not redirected', APP, `function navTo(k){if(k==="ledger") return ledgerDoorClosed();`, `function navTo(k){`],
+  ['the redirect drops the view', APP, `var v=view||((typeof BK!=="undefined"&&BK&&BK.tab)||"");`, `var v="";`],
+  ['no Bills door in the app menu', APP, `["intake","📨","Intake"],["bills","🧾","Bills"],`, `["intake","📨","Intake"],`],
+  ['CB Accounts does not load the sheet', ACCOUNTS, `<script src="/app/chit-sheet.js"></script>`, ``],
+  ['CB Accounts does not load tax.js', ACCOUNTS, `<script src="/app/tax.js"></script>`, ``],
+  ['a Bills row opens a new tab, not the sheet', ACCOUNTS, `if (bill) openChitSheet(bill.dataset.id);`, `if (bill) openChit(bill.dataset.id);`],
+  ['Bills shows the handle, not the name', ACCOUNTS, `\${by ? ' · ' + esc(by) : ''}`, `\${b.by ? ' · ' + esc(b.by) : ''}`],
   ['GST rate rows dropped', SHEET, `+ linesHTML(m) + gstHTML(m) + totalHTML(m)`, `+ linesHTML(m) + totalHTML(m)`],
   ['total not shown', SHEET, `+ linesHTML(m) + gstHTML(m) + totalHTML(m) + tenderHTML(m)`, `+ linesHTML(m) + gstHTML(m) + tenderHTML(m)`],
   ['tender not shown', SHEET, `+ linesHTML(m) + gstHTML(m) + totalHTML(m) + tenderHTML(m)`, `+ linesHTML(m) + gstHTML(m) + totalHTML(m)`],
