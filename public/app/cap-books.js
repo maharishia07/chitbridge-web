@@ -23,6 +23,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksPayConfirm: { m: 'POST', p: '/api/books/payments/:id/confirm' },
   booksLock:       { m: 'POST', p: '/api/books/periods/:fy/:p/lock' },
   booksUnlock:     { m: 'POST', p: '/api/books/periods/:fy/:p/unlock' },
+  booksPeriods:    { m: 'GET',  p: '/api/books/periods' },   /* every month of every year, with its status — the twelve rows of Month lock */
   booksOpening:    { m: 'POST', p: '/api/books/opening' },
   booksPacks:      { m: 'GET',  p: '/api/books/packs' },
   booksPackBuild:  { m: 'POST', p: '/api/books/packs' },
@@ -1123,26 +1124,62 @@ function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYe
 var BK_MONTHS = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'];
 /** the period's status is a server enum — it becomes a word here, never shown raw */
 var BK_PERIOD_WORD = { open: 'Open', soft_locked: 'Locked', hard_locked: 'Closed for good' };
-function bkLockView(body) {
-  var months = BK_MONTHS;
-  body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">'
-    + '<label>' + tx('Year') + '<input class="inp" id="lk_fy" data-testid="lk_fy" value="' + bkFyNow() + '"></label>'
-    + '<label>' + tx('Month') + '<select class="inp" id="lk_p" data-testid="lk_p">' + months.map(function (m, i) { return '<option value="' + (i + 1) + '">' + tx(m) + '</option>'; }).join('') + '</select></label>'
-    + '<label>' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why"></label>'
-    + '<div class="supacts" style="display:flex;gap:7px;flex-wrap:wrap"><button class="supact-pri" data-testid="lk_lock" onclick="bkLockDo(\'lock\')" title="' + esc(tx('Stops entries · reopens with a reason')) + '">🔒 ' + tx('Lock') + '</button>'
-    + '<button data-testid="lk_unlock" onclick="bkLockDo(\'unlock\')">🔓 ' + tx('Open again') + '</button>'
-    + '<button data-testid="lk_hard" onclick="bkLockDo(\'hard\')" title="' + esc(tx('Year end only · never opens again')) + '">⛔ ' + tx('Close for good') + '</button></div>'
-    + '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
+function bkIsOwner() { return typeof SESSION !== 'undefined' && !!SESSION && SESSION.role === 'entity'; }   /* the server enforces it; this only decides who is offered the buttons */
+var BK_PERIOD_SYM = { open: '○', soft_locked: '🔒', hard_locked: '⛔' };
+/**
+ * ⭐ ONE READ of the twelve months: GET /api/books/periods (no fy) answers every month of every year the data holds, with its
+ * status. BK.lk = { rows: { 'fy|p': status }, years: [newest first], fy: the year on screen }. A month with no row is open (the
+ * server makes a year's months the first time an entry lands in it). Month lock and Packs both read it; the year they show is one.
+ */
+async function bkPeriodsLoad() {
+  var r = await api('booksPeriods'), rows = {}, yrs = {};
+  ((r && r.periods) || []).forEach(function (x) { var p = Number(x.period); if (p >= 1 && p <= 12) { rows[x.fiscal_year + '|' + p] = x.status; yrs[x.fiscal_year] = 1; } });
+  yrs[bkFyNow()] = 1;
+  var L = BK.lk = BK.lk || {}; L.rows = rows; L.years = Object.keys(yrs).sort().reverse();
+  if (!L.fy || !yrs[L.fy]) L.fy = bkFyNow();
+  return L;
 }
-async function bkLockDo(what) {
-  var fy = (document.getElementById('lk_fy') || {}).value, p = (document.getElementById('lk_p') || {}).value, why = (document.getElementById('lk_why') || {}).value || '';
-  var out = document.getElementById('lk_out');
-  if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); return; }
-  if (what === 'hard' && !(await new Promise(function (res) { confirmAsk(tx('Close for good?'), esc(tx('This month never opens again')), tx('Close for good'), function () { res(true); }, true, function () { res(false); }); }))) return;
+function bkFyPicker(id, tid, sty) {
+  return '<select class="inp" id="' + id + '" data-testid="' + tid + '" onchange="bkFyPick(this.value)" style="' + (sty || 'flex:1 1 110px;min-width:0') + '">'
+    + BK.lk.years.map(function (y) { return '<option value="' + esc(y) + '"' + (y === BK.lk.fy ? ' selected' : '') + '>' + esc(y) + '</option>'; }).join('') + '</select>';
+}
+function bkFyPick(v) { BK.lk.fy = v; if (BK.tab === 'lock') bkLockRowsPaint(); else bkPackCtlPaint(); }
+async function bkLockView(body) {
+  try { await bkPeriodsLoad(); } catch (e) { body.innerHTML = bkErr(e); return; }
+  var own = bkIsOwner();
+  body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;max-width:420px">'
+    + '<label>' + tx('Financial year') + bkFyPicker('lk_fy', 'lk_fy', 'width:100%') + '</label>'
+    + (own ? '<label>' + tx('Reason') + '<input class="inp" id="lk_why" data-testid="lk_why" placeholder="' + esc(tx('Needed to open a month again')) + '"></label>' : '')
+    + '<div id="lk_rows" data-testid="lk_rows"></div>'
+    + (own ? '<div data-testid="lk_note" style="color:var(--grey);font-size:var(--fs-1)">' + tx('Close for good: the month never opens again. Corrections go into an open month as an adjusting entry.') + '</div>' : '')
+    + '<div id="lk_out" data-testid="lk_out" style="font-size:var(--fs-1)"></div></div>';
+  bkLockRowsPaint();
+}
+/** the twelve months, April to March: state as a word and a symbol, and the one or two actions that state allows (owner only) */
+function bkLockRowsPaint() {
+  var el = document.getElementById('lk_rows'), L = BK.lk, own = bkIsOwner(); if (!el) return;
+  el.innerHTML = BK_MONTHS.map(function (m, i) {
+    var p = i + 1, st = L.rows[L.fy + '|' + p] || 'open', b = '';
+    if (own && st === 'open') b = '<button class="supact-pri" data-testid="lk-lock-' + p + '" onclick="bkLockDo(\'lock\',' + p + ')" title="' + esc(tx('Stops entries · reopens with a reason')) + '">🔒 ' + tx('Lock') + '</button>';
+    if (own && st === 'soft_locked') b = '<button data-testid="lk-unlock-' + p + '" onclick="bkLockDo(\'unlock\',' + p + ')">🔓 ' + tx('Open again') + '</button>'
+      + '<button data-testid="lk-hard-' + p + '" onclick="bkLockDo(\'hard\',' + p + ')">⛔ ' + tx('Close for good') + '</button>';
+    return '<div data-testid="lk-row-' + p + '" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 0;border-bottom:1px solid var(--line)">'
+      + '<b style="flex:1 1 52px">' + tx(m) + '</b>'
+      + '<span data-testid="lk-state-' + p + '" data-state="' + esc(st) + '">' + (BK_PERIOD_SYM[st] || '') + ' ' + esc(tx(BK_PERIOD_WORD[st] || st)) + '</span>'
+      + (b ? '<span class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin:0">' + b + '</span>' : '') + '</div>';
+  }).join('');
+}
+async function bkLockDo(what, p) {
+  var L = BK.lk, fy = L.fy, why = (document.getElementById('lk_why') || {}).value || '', out = document.getElementById('lk_out');
+  var m = tx(BK_MONTHS[p - 1] || String(p));
+  if (what !== 'lock' && !why.trim()) { if (out) out.textContent = tx('Say why — the reason is kept'); var w = document.getElementById('lk_why'); if (w) w.focus(); return; }
+  if (what === 'hard' && !(await new Promise(function (res) { confirmAsk(tx('Close for good?'), esc(txf('{m} {fy} will never open again.', { m: m, fy: fy })), tx('Close for good'), function () { res(true); }, true, function () { res(false); }); }))) return;
   try {
     var r = await api(what === 'unlock' ? 'booksUnlock' : 'booksLock', { params: { fy: fy, p: p }, body: { reason: why, hard: what === 'hard' } });
     var st = r && r.period && r.period.status;
-    if (out) out.textContent = txf('{m} {fy} · {s}', { m: BK_MONTHS[parseInt(p, 10) - 1] || p, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
+    if (st) L.rows[fy + '|' + p] = st;   /* flip the ROW, never the whole list */
+    if (L.fy === fy) bkLockRowsPaint();
+    if (out) out.textContent = txf('{m} {fy} · {s}', { m: m, fy: fy, s: tx(BK_PERIOD_WORD[st] || 'Done') });
   } catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not change it')); }
 }
 /**
@@ -1163,7 +1200,7 @@ function bkPackHasFile(k, r) {
 }
 async function bkPacks(body) {
   try {
-    var r = await api('booksPacks');
+    var rr = await Promise.all([api('booksPacks'), bkPeriodsLoad()]), r = rr[0];
     BK.packRows = {}; BK.packGot = BK.packGot || {};
     var rows = ((r && r.packs) || []).map(function (k) {
       BK.packRows[k.pack_id] = k;
@@ -1176,15 +1213,28 @@ async function bkPacks(body) {
         + '<td class="mono" title="' + esc(k.sha256 || '') + '">' + esc(String(k.sha256 || '').slice(0, 10)) + '</td>'
         + '<td>' + ack + '</td><td>' + get + '</td></tr>';
     }).join('');
-    body.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px"><input class="inp" id="pk_fy" data-testid="pk_fy" value="' + bkFyNow() + '" style="width:90px"><input class="inp" id="pk_p" data-testid="pk_p" placeholder="' + esc(tx('month 1–12')) + '" style="width:90px"><button class="supact-pri" data-testid="pk_build" onclick="bkPackBuild()">' + tx('Make a pack') + '</button></div>'
+    body.innerHTML = '<div id="pk_ctl" data-testid="pk_ctl"></div>'
       + '<div id="pk_out" data-testid="pk_out" style="font-size:var(--fs-1)"></div>'
-      + (rows ? bkTable([{ t: tx('Kind') }, { t: tx('Period') }, { t: tx('Made') }, { t: tx('Fingerprint') }, { t: tx('Handed over') }, { t: '' }], rows) : emptyState('📦', tx('No packs yet'), tx('Lock a month first')));
+      + (rows ? bkTable([{ t: tx('Kind') }, { t: tx('Period') }, { t: tx('Made') }, { t: tx('Fingerprint') }, { t: tx('Handed over') }, { t: '' }], rows) : emptyState('📦', tx('No packs yet'), ''));
+    bkPackCtlPaint();
   } catch (e) { body.innerHTML = bkErr(e); }
 }
+/** the pack controls: the year, then a month that IS locked (a pack is made from a locked month). No locked month → the sentence is the button to Month lock */
+function bkPackCtlPaint() {
+  var el = document.getElementById('pk_ctl'), L = BK.lk; if (!el) return;
+  var locked = BK_MONTHS.map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
+  el.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + bkFyPicker('pk_fy', 'pk_fy')
+    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + (locked.length ? '' : ' disabled') + '><option value="">' + esc(tx('Month')) + '</option>'
+    + locked.map(function (x) { return '<option value="' + x[0] + '">' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
+    + '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' + tx('Make a pack') + '</button></div>'
+    + (locked.length ? '' : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' + tx('Lock a month first') + '</button></div>');
+}
+function bkPackPick() { var b = document.getElementById('pk_build'); if (b) b.disabled = !parseInt((document.getElementById('pk_p') || {}).value, 10); }
 async function bkPackBuild() {
   var out = document.getElementById('pk_out');
   var fy = (document.getElementById('pk_fy') || {}).value, p = parseInt((document.getElementById('pk_p') || {}).value, 10);
-  try { await api('booksPackBuild', { body: { kind: p ? 'month' : 'year', fiscal_year: fy, period: p || null } }); bkTab('packs'); }
+  if (!p) return;   /* the button is off until a locked month is chosen; this is the same fence for a key press */
+  try { await api('booksPackBuild', { body: { kind: 'month', fiscal_year: fy, period: p } }); bkTab('packs'); }
   catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not make it')); }
 }
 /** the one sentence for a pack with nothing to download — said, and the row stops offering Download / We have it */

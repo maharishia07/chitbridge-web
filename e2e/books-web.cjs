@@ -75,6 +75,7 @@ function standIn() {
   return S;
 }
 /* BOOKS_SHOTS=<dir> keeps a picture of each screen to LOOK at (not a golden file; nothing compares them) */
+const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 const shot = async (p, name) => { if (process.env.BOOKS_SHOTS) await p.screenshot({ path: path.join(process.env.BOOKS_SHOTS, name + '.png') }).catch(() => {}); };
 const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
@@ -173,9 +174,10 @@ async function route(S, r) {
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
     if (p === '/api/books/accounts' && m === 'POST') { const a = { code: '6011', name: body.name, parent_code: body.parent_code, is_group: false }; S.accounts.push(a); S.addedAccount = body; return J(r, 200, { account: a }); }
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: x[1], currency: 'INR', opening_minor: 0, lines: [], closing_minor: 0 });
+    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, { periods: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ fiscal_year: FYNOW, period: n, status: S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open' })) });
     if ((x = p.match(/^\/api\/books\/periods\/([^/]+)\/(\d+)\/(lock|unlock)$/))) {
       if (x[3] === 'unlock' && !String(body.reason || '').trim()) return J(r, 422, { error: 'A reason is needed' });
-      S.locked[+x[2]] = x[3] === 'lock'; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
+      S.locked[+x[2]] = x[3] === 'lock'; S.hard = S.hard || {}; S.hard[+x[2]] = x[3] === 'lock' && !!body.hard; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
       return J(r, 200, { period: { status: x[3] === 'lock' ? (body.hard ? 'hard_locked' : 'soft_locked') : 'open' } });
     }
     /* ⚠️ a pack row says whether it HAS a file (has_file); `hide` = an older list that does not say, so GET /packs/:id is asked */
@@ -762,12 +764,14 @@ async function route(S, r) {
   await noAccounting(p, 'waiting');
 
   /* month lock blocks a payment in that month; opening again needs a reason */
-  await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk_lock"]');
+  await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk-row-12"]');
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
-  await p.selectOption('[data-testid="lk_p"]', sep);
-  await p.click('[data-testid="lk_lock"]');
-  await p.waitForFunction(() => /Locked/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
-  ok(S.locked[+sep] === true, 'this month locked');
+  ok(await p.locator('[data-testid^="lk-row-"]').count() === 12 && await p.inputValue('[data-testid="lk_fy"]') === FYNOW, 'Month lock: the financial year is a picker on the current year, and the twelve months are rows');
+  ok(await p.locator('[data-testid="lk-state-' + sep + '"][data-state="open"]').count() === 1 && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0 && await p.locator('[data-testid="lk-lock-' + sep + '"]').count() === 1, 'an open month offers Lock, not Open again');
+  ok(/Close for good/.test(await p.textContent('[data-testid="lk_note"]')) && /never opens again/.test(await p.textContent('[data-testid="lk_note"]')), 'Close for good is explained in one line');
+  await p.click('[data-testid="lk-lock-' + sep + '"]');
+  await p.waitForFunction((n) => /Locked/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
+  ok(S.locked[+sep] === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 1 && await p.locator('[data-testid="lk-hard-' + sep + '"]').count() === 1, 'this month locked: its row now says Locked and offers Open again and Close for good');
   await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });   /* back from CB Accounts to the app */
   await p.click('[data-testid="nav-customers"]');
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
@@ -781,30 +785,40 @@ async function route(S, r) {
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
-  await ledgerGo(p); await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
-  await p.selectOption('[data-testid="lk_p"]', sep);
+  await ledgerGo(p); await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk-unlock-' + sep + '"]');
+  ok(/Locked/.test(await p.textContent('[data-testid="lk-state-' + sep + '"]')), 'a locked month\'s row says Locked after coming back to the screen (read from the server)');
   const before = S.lastLock;
-  await p.click('[data-testid="lk_unlock"]');
+  await p.click('[data-testid="lk-unlock-' + sep + '"]');
   ok(S.lastLock === before && /Say why/.test(await p.textContent('[data-testid="lk_out"]')), 'opening a month again without a reason is refused before sending');
   await p.fill('[data-testid="lk_why"]', 'late bill from Agro Mills');
-  await p.click('[data-testid="lk_unlock"]');
-  await p.waitForFunction(() => /Open/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
+  await p.click('[data-testid="lk-unlock-' + sep + '"]');
+  await p.waitForFunction((n) => document.querySelector('[data-testid="lk-state-' + n + '"]').getAttribute('data-state') === 'open', sep, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === false && S.lastLock.body.reason === 'late bill from Agro Mills', 'opened again, with the reason sent');
 
   /* close for good: asks first; Cancel sends nothing, Yes sends hard */
+  await p.click('[data-testid="lk-lock-' + sep + '"]');
+  await p.waitForSelector('[data-testid="lk-hard-' + sep + '"]', { timeout: 8000 });
   const b4 = S.lastLock;
-  await p.click('[data-testid="lk_hard"]'); await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 5000 });
+  await p.click('[data-testid="lk-hard-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-cancel"]', { timeout: 5000 });
   await p.click('[data-testid="confirm-cancel"]'); await p.waitForTimeout(300);
   ok(S.lastLock === b4, 'close for good: Cancel sends nothing');
-  await p.click('[data-testid="lk_hard"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
+  await p.click('[data-testid="lk-hard-' + sep + '"]'); await p.waitForSelector('[data-testid="confirm-ok"]', { timeout: 5000 });
   await p.click('[data-testid="confirm-ok"]');
-  await p.waitForFunction(() => /Closed for good/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
-  ok(S.lastLock !== b4 && S.lastLock.body.hard === true, 'close for good: asked, then sent as a hard lock');
-  S.locked[+sep] = false;
+  await p.waitForFunction((n) => /Closed for good/.test(document.querySelector('[data-testid="lk-state-' + n + '"]').textContent), sep, { timeout: 8000 }).catch(() => {});
+  ok(S.lastLock !== b4 && S.lastLock.body.hard === true && await p.locator('[data-testid="lk-unlock-' + sep + '"]').count() === 0, 'close for good: asked, then sent as a hard lock; a closed month offers nothing more');
+  S.locked[+sep] = false; S.hard[+sep] = false;
 
   /* 7 · packs */
   await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
-  await p.fill('[data-testid="pk_p"]', '5'); await p.click('[data-testid="pk_build"]');
+  ok(await p.isDisabled('[data-testid="pk_build"]') && await p.locator('[data-testid="pk_lockfirst"]').count() === 1, 'Packs with no locked month: Make a pack is disabled and "Lock a month first" is a button');
+  await p.click('[data-testid="pk_lockfirst"]'); await p.waitForSelector('[data-testid="lk-row-12"]', { timeout: 8000 });
+  ok(await p.locator('[data-testid="lk_rows"]').count() === 1, 'the sentence-button opens Month lock');
+  S.locked[5] = true; S.locked[6] = true; S.locked[7] = true;
+  await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
+  ok(await p.isDisabled('[data-testid="pk_build"]') && await p.locator('[data-testid="pk_lockfirst"]').count() === 0 && await p.locator('[data-testid="pk_p"] option').count() === 4, 'with locked months the month list holds only them (and a placeholder); Make a pack stays off until one is chosen');
+  await p.selectOption('[data-testid="pk_p"]', '5');
+  ok(!(await p.isDisabled('[data-testid="pk_build"]')), 'choosing a locked month turns Make a pack on');
+  await p.click('[data-testid="pk_build"]');
   await p.waitForSelector('[data-testid="pack-get-pk1"]', { timeout: 8000 });
   /* ⚠️⚠️ review M10 — "We have it" before anything came down in this session: the owner is asked; Cancel sends nothing */
   await p.click('[data-testid="pack-ack-pk1"]');
@@ -825,13 +839,13 @@ async function route(S, r) {
   await p.evaluate(() => { try { closeModal(); } catch (_) {} });
   /* a pack made while storage was not connected has NO file: it says so, and offers neither Download nor We have it */
   S.nextPackNoFile = true;
-  await p.fill('[data-testid="pk_p"]', '6'); await p.click('[data-testid="pk_build"]');
+  await p.selectOption('[data-testid="pk_p"]', '6'); await p.click('[data-testid="pk_build"]');
   await p.waitForSelector('[data-testid="pack-pk2"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="pack-nofile-pk2"]').count() === 1 && await p.locator('[data-testid="pack-get-pk2"]').count() === 0 && await p.locator('[data-testid="pack-ack-pk2"]').count() === 0,
     'a pack with no file says "' + (await p.textContent('[data-testid="pack-nofile-pk2"]').catch(() => '—')).trim() + '" and offers neither button');
   /* an older list that does not say: the question is asked of GET /packs/:id before anything is acknowledged */
   S.nextPackHide = true;
-  await p.fill('[data-testid="pk_p"]', '7'); await p.click('[data-testid="pk_build"]');
+  await p.selectOption('[data-testid="pk_p"]', '7'); await p.click('[data-testid="pk_build"]');
   await p.waitForSelector('[data-testid="pack-ack-pk3"]', { timeout: 8000 }).catch(() => {});
   await p.click('[data-testid="pack-ack-pk3"]').catch(() => {});
   await p.waitForSelector('[data-testid="pack-nofile-pk3"]', { timeout: 8000 }).catch(() => {});

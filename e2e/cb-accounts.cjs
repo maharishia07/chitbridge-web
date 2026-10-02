@@ -26,6 +26,7 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
 const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
 const TODAY = new Date().toISOString().slice(0, 10);
+const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 
 /* the designer's twelve views, Bills after Dues — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
@@ -126,6 +127,7 @@ async function route(S, r) {
     if (p === '/api/books/pl') return J(r, 200, { currency: 'INR', income: [{ code: '4000', name: 'Sales', amount_minor: 1590000 }], expense: [{ code: '6010', name: 'Rent', amount_minor: 100000 }], profit_minor: 1490000 });
     if (p === '/api/books/bs') return J(r, 200, { currency: 'INR', assets: [{ code: '1300', name: 'Debtors', amount_minor: 600000 }], liabilities: [], equity: [], total_assets_minor: 600000, total_liab_equity_minor: 600000 });
     if (p === '/api/books/packs') return J(r, 200, { packs: [] });
+    if (p === '/api/books/periods') return J(r, 200, { periods: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ fiscal_year: FYNOW, period: n, status: n === 5 ? 'soft_locked' : 'open' })) });
     return J(r, 404, { error: 'no stand-in for ' + p });
   }
   if (m === 'GET') return J(r, 200, {});
@@ -171,6 +173,22 @@ async function route(S, r) {
     ok(!/accounting|books of account/i.test(t), where + ': "accounting" / "books of account" appear nowhere');
   };
   const nav = (p, id) => p.click('[data-testid="acc-nav-' + id + '"]');
+  /* Dues · Month lock · Packs, looked at on a laptop and at 390 px (PR: ledger panels): at most three columns, nothing cut off, no sideways scroll */
+  async function panelShots(p, tag, w) {
+    await nav(p, 'dues'); await p.waitForSelector('[data-testid="dues-side-rcv"]'); await p.waitForTimeout(350);
+    const d = await p.evaluate(() => { const h = document.querySelector('#bkl_dues .lhead') || document.querySelector('#bkt_dues .lhead'); const cells = h ? Array.from(h.children).filter((c) => c.getBoundingClientRect().width > 0 && getComputedStyle(c).display !== 'none') : []; return { n: cells.length, found: !!h, sw: document.documentElement.scrollWidth, over: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length }; });
+    console.log('  dues header found=' + d.found + ' cells=' + d.n);
+    ok(d.n <= 3 && d.over === 0 && d.sw <= w, 'Dues ' + tag + ': ' + d.n + ' columns by default (at most 3), nothing past the right edge (' + d.over + '), no sideways scroll (' + d.sw + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'dues-' + tag + '.png') });
+    await nav(p, 'lock'); await p.waitForSelector('[data-testid="lk-row-12"]'); await p.waitForTimeout(250);
+    const l = await p.evaluate(() => ({ rows: document.querySelectorAll('[data-testid^="lk-row-"]').length, aug: document.querySelector('[data-testid="lk-state-5"]').textContent, off: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length, sw: document.documentElement.scrollWidth }));
+    ok(l.rows === 12 && /Locked/.test(l.aug) && l.off === 0 && l.sw <= w, 'Month lock ' + tag + ': twelve rows, August says Locked, nothing cut off or sideways');
+    await p.screenshot({ path: path.join(SHOTS, 'month-lock-' + tag + '.png') });
+    await nav(p, 'packs'); await p.waitForSelector('[data-testid="pk_build"]'); await p.waitForTimeout(250);
+    const k = await p.evaluate(() => { const f = document.querySelector('[data-testid="pk_fy"]'), m = document.querySelector('[data-testid="pk_p"]'); return { fy: f.clientWidth > 60, mo: m.clientWidth > 60, dis: document.querySelector('[data-testid="pk_build"]').disabled, off: Array.from(document.querySelectorAll('#bk_body *')).filter((e) => e.getBoundingClientRect().right > window.innerWidth + 1).length, sw: document.documentElement.scrollWidth }; });
+    ok(k.fy && k.mo && k.dis && k.off === 0 && k.sw <= w, 'Packs ' + tag + ': year and month boxes are whole, nothing sideways');
+    await p.screenshot({ path: path.join(SHOTS, 'packs-' + tag + '.png') });
+  }
   const width = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
 
   /* ── the page's own source ── */
@@ -350,6 +368,7 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="nav-signout"]').isVisible(), 'Sign out is in the menu');
     await p.keyboard.press('Escape');
     ok(!(await p.locator('[data-testid="avatar-menu"]').isVisible()), 'Escape closes the menu');
+    await panelShots(p, 'laptop', 1360);
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-laptop.png') });
     ok(await p.getAttribute('[data-testid="acc-home"]', 'href') === '/', '⌂ Home links to /');
     await Promise.all([p.waitForURL(base + '/'), p.click('[data-testid="acc-home"]')]);
@@ -476,6 +495,7 @@ async function route(S, r) {
       const m = await p.evaluate(() => { const e = document.querySelector('.main'); return { sw: e.scrollWidth, cw: e.clientWidth }; });
       ok(m.sw <= m.cw, label + ' at 390 px: nothing scrolls sideways inside the page either (' + m.sw + ' ≤ ' + m.cw + ')');
     }
+    await panelShots(p, 'phone', 390);
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
     const w2 = await width(p);
