@@ -10501,7 +10501,9 @@ function custToggleNamedGroup(id, g, on){ var c=(UI.custs||[]).find(function(x){
 function custAddNamedGroup(id){ var el=document.getElementById('cu_ngroup_'+id); var g=(el&&el.value||'').replace(/\s+/g,' ').trim(); if(!g){ toast(tx('Type a group name')); return; } var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); set.push(g); custSaveNamedGroups(id, set); }
 /* ⭐ ADD BY HAND (Athi, 2026-09-06: "can we add a + icon to include a customer?") — the list used to fill itself only from trades */
 async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(el&&el.value||'').trim(); if(!h){ toast(tx('Type a User ID or email')); return; }
-  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
+  /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox) */
+  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; var os=r&&r.customer&&r.customer.one_sided;
+    toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)+(os?' — '+tx('bills to them stay here only')+': '+os.why:'')); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
   catch(e){ toast((e&&e.message)||tx('Could not add')); } }
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
@@ -11293,7 +11295,8 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=d
   confirmAsk('Add '+(e.display_name||e.bridge_id)+' as your supplier?',
     '<b>'+esc(e.user_id||e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
-      try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id, supply_kind:supKind()}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
+      try{ var ra=await api("supAdd",{body:{supplier_bridge_id:e.bridge_id, supply_kind:supKind()}}); var os=ra&&ra.supplier&&ra.supplier.one_sided;
+        toast('Supplier added ✓'+(os?' — '+tx('orders to them stay here only')+': '+os.why:'')); if(a)a.value=''; await loadSuppliers(); }
       catch(ex){ if(err)err.textContent=ex.message; }
     }); }
 /**
