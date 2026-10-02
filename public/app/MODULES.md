@@ -78,7 +78,7 @@ old duplicate `networkScreen()` in app.html was safe to delete.
 | `strings-ta.js` | — |  |
 | `table-resize.js` | — | drag a column edge; the width is yours and it is remembered |
 | `tax-slab.js` | eager | ADOPTED from chitbridge-engines v1.2.0 · tax-slab · sha256 439500a95910ff8bd55d4a1c422e2c4e810f509c7a6af2f1cd4e34aa239bc98d — DO NOT EDIT HERE. Change |
-| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · tax-packs v1.2.0 + tax v1.9.0 — DO NOT EDIT HERE. Each part below is a release, unchanged |
+| `tax.js` | eager | ADOPTED BUNDLE from chitbridge-engines · tax-packs v1.10.0 + tax v1.12.0 — DO NOT EDIT HERE. Each part below is a release, unchanged |
 | `test-menu-tree.js` | — | the product as a menu. ONE shape, two surfaces |
 | `test-verdict.js` | — | what would make this red green. ONE judgement, two surfaces |
 | `units.js` | eager | vendored VERBATIM from chitbridge-api/lib/units.js (one unit · three names: ours · UN/ECE Rec 20 · GST UQC) |

@@ -3,11 +3,11 @@
  * the copy is read as LF text and written back in the file's own line endings (the way chit-sheet-breaks.cjs does it). */
 const fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 const W = path.join(__dirname, '..');
-const CAP = 'public/app/cap-books.js', APP = 'public/app.html', ADMIN = 'public/app/cap-admin.js';
+const CAP = 'public/app/cap-books.js', APP = 'public/app.html', ADMIN = 'public/app/cap-admin.js', SHELL = 'public/app/accounts-shell.js', LISTCTL = 'public/app/list-ctl.js';
 const BREAKS = [
-  ['switch sends nothing', ADMIN, `if (on) await api('booksEnable', { body: {} });`, `if (on) {}`],
+  ['switch sends nothing', SHELL, `return on ? host.api('booksEnable', { body: {} })`, `return on ? Promise.resolve({})`],
   ['switch shown to an actor', ADMIN, `(SESSION.role === 'entity'`, `(true`],
-  ['door gate', APP, `if (it[0] === 'ledger' && SESSION.booksOn !== true) return false; `, ''],
+  ['door gate', APP, `if ((it[0] === 'ledger' || it[0] === 'bills') && SESSION.booksOn !== true) return false; `, ''],
   ['duplicate warning', CAP, `box.textContent = hit ? txf(`, `box.textContent = false ? txf(`],
   ['disputed refusal', CAP, ` || (x.disputed && x.amount_minor > 0);`, `;`],
   ['over-open refusal', CAP, ` || x.amount_minor > x.open_minor || (x.disputed`, ` || (x.disputed`],
@@ -37,25 +37,24 @@ const BREAKS = [
   ['M12 waiting reason not shown', CAP, `esc(w.reason || w.why || tx('No reason given'))`, `esc(tx('No reason given'))`],
   ['M12 retry not sent', CAP, `      await api('booksRetry', { body: {} });`, ``],
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
-  ['F11 payable buckets have no column', CAP, `var cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,`, `var cols = BK_BUCKETS,`],
+  ['F11 payable buckets have no column', CAP, `cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, known`, `cols = BK_BUCKETS, known`],
   /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
-  ['SRC source not shown', CAP, `return [head].concat(party ? [esc(party)] : [], bkSourceParts(s, tid, cur)).join(' · ')`, `return head`],
   ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
   ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],
-  ['SRC day count missing', CAP, `if (s.count != null) out.push(`, `if (false) out.push(`],
-  ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));`, ``],
-  ['SRC seller missing', CAP, `  if (s.by) out.push(esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));`, ``],
-  ['SRC day reads its long narration', CAP, `s && s.kind === 'day' ? esc(tx('Walk-in day'))`, `false ? esc(tx('Walk-in day'))`],
-  ['SRC ledger lines lose their source', CAP, `bkEntryHead(l, 'stmt-src-' + i, c)`, `esc(l.what || '')`],
+  ['SRC day count missing', CAP, `(s.count != null ? ' · ' + esc(txf(`, `(false ? ' · ' + esc(txf(`],
+  ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(counterWord(s.counter)));`, ``],
+  ['SRC seller missing', CAP, `function bkRungPart(s) { return s && s.by ?`, `function bkRungPart(s) { return false ?`],
+  ['SRC day reads its long narration', CAP, `return s && s.kind === 'day' ? esc(tx('Walk-in day'))`, `return false ? esc(tx('Walk-in day'))`],
+  ['SRC ledger lines lose their source', CAP, `var parts = bkSourceParts(l.source, 'stmt-src-' + idx(l), c);`, `var parts = [];`],
   /* ── how it was paid (Athi, 2026-10-01: "clearly segregate credit, cash, UPI (UPI id)") ── */
-  ['HOW tender not shown', CAP, `  else if (s.how) out.push(`, `  else if (false) out.push(`],
-  ['HOW day split not shown', CAP, `if (s.kind === 'day' && s.split && s.split.length) out.push(`, `if (false) out.push(`],
+  ['HOW tender not shown', CAP, `  if (s.how) return '<span data-testid="'`, `  if (false) return '<span data-testid="'`],
+  ['HOW day split not shown', CAP, `if (s.kind === 'day' && s.split && s.split.length) return s.split.map(function (x) { return esc(tx(x.how))`, `if (false) return s.split.map(function (x) { return esc(tx(x.how))`],
   ['HOW payment reference dropped', CAP, `(s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref))`, `(false ? ' <span class="mono">' + esc(bkShortRef(s.how_ref))`],
   /* ── both times (Athi, 2026-10-01: "the time the bill was made or the time the entry was accepted? both should be there") ── */
   ['TIME bill time not shown', CAP, `link + (s.doc_at ? ' <span`, `link + (false ? ' <span`],
   ['TIME late entry not marked', CAP, `  if (!late) return '';`, `  return '';`],
   ['TIME same-day entry marked anyway', CAP, `  if (!late) return '';`, `  if (false) return '';`],
-  ['HOW receipt not called Received', CAP, `s && s.kind === 'receipt' ? esc(tx('Received'))`, `false ? esc(tx('Received'))`],
+  ['HOW receipt not called Received', CAP, `return s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received'))`, `return s && s.kind === 'day' ? esc(tx('Walk-in day')) : false ? esc(tx('Received'))`],
   /* ── the Day book's strip and to-do (Athi, 2026-10-01: "see the total sale in different counters … act one by one") ── */
   ['TODO strip counter amount dropped', CAP, `counters[c].amount_minor += total; counters[c].bills += bills;`, `counters[c].bills += bills;`],
   ['TODO strip per-bill does not count one', CAP, `var bills = s.kind === 'day' ? Number(s.count || 0) : 1;`, `var bills = s.kind === 'day' ? Number(s.count || 0) : 0;`],
@@ -63,7 +62,7 @@ const BREAKS = [
   ['TODO strip bill tender dropped', CAP, `    else if (s.how) add(s.how, total);`, ``],
   ['TODO walk-in note never said', CAP, `var note = t.day_closed ? ''`, `var note = true ? ''`],
   ['TODO note said though the day closed', CAP, `var note = t.day_closed ? ''`, `var note = false ? ''`],
-  ['TODO accept filter counts everything', CAP, `/^Waiting for you to confirm/.test(String(w.reason || w.why || ''))`, `true`],
+  ['TODO accept filter counts everything', CAP, `{ return /^Waiting for you to confirm/.test(String(w.reason || w.why || '')); });`, `{ return true; });`],
   ['TODO overdue counts the settled too', CAP, `return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });`, `return true;`],
   ['TODO cheque without a step counted', CAP, `bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0`, `true`],
   ['TODO waiting double-counts the supplier bills', CAP, `waiting: waiting.length - confirm.length`, `waiting: waiting.length`],
@@ -76,14 +75,14 @@ const BREAKS = [
   /* ── the Day book's views (Athi, 2026-10-01: "expand all, collapse all, search, filter, daily view, weekly view … the gist as a summary") ── */
   ['VIEW gist from a second formula', CAP, `m[key].amt += Number(l.dr_minor || 0) + Number(l.cr_minor || 0);`, `m[key].amt += Math.round(Number(l.dr_minor || 0) * 1.01) + Number(l.cr_minor || 0);`],
   ['VIEW GST rate lines not merged', CAP, `key = gst ? 'GST' : String(l.code);`, `key = String(l.code);`],
-  ['VIEW filter ignored', CAP, `return bkDvVals(e, x[0]).some(function (v) { return on.indexOf(v) >= 0; });`, `return true;`],
-  ['VIEW search ignored', CAP, `if (!bkDvMatch(e, d.q, c)) return false;`, ``],
-  ['VIEW search skips amounts', CAP, `return amts.some(function (a) { return dec ? a === minor : Math.floor(a / pow) === n; });`, `return false;`],
-  ['VIEW paise search matches the whole rupee', CAP, `return dec ? a === minor : Math.floor(a / pow) === n;`, `return Math.floor(a / pow) === Math.floor(n);`],
-  ['VIEW collapse-all leaves one open', CAP, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; }); else d.open = {};`, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; }); else { var k0 = Object.keys(d.open)[0]; d.open = {}; if (k0) d.open[k0] = true; }`],
-  ['VIEW expand-all misses some', CAP, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; });`, `if (on) bkDvShown().slice(1).forEach(function (e) { d.open[e.entry_no] = true; });`],
-  ['VIEW open by default', CAP, `var no = esc(e.entry_no), open = !!BK.dv.open[e.entry_no];`, `var no = esc(e.entry_no), open = true;`],
-  ['VIEW group heads ignore the filter', CAP, `bkDvGroups(list, d.group).map(function (g) {`, `bkDvGroups(d.r.entries, d.group).map(function (g) {`],
+  ['VIEW filter ignored', CAP, `match: function (e, v) { return bkDvVals(e, x[0]).indexOf(v) >= 0; },`, `match: function (e, v) { return true; },`],
+  ['VIEW search ignored', LISTCTL, `if (q && String((c.text && c.text(row)) || '').toLowerCase().indexOf(q) < 0) return false;`, ``],
+  ['VIEW search skips amounts', CAP, `[(tot / pow).toFixed(bkDec(c)), String(Math.floor(tot / pow)), bkMoney(tot, c)], bkDvGist(e).map(function (x) { return (x.amt / pow).toFixed(bkDec(c)); })`, `[], []`],
+  ['VIEW paise search matches the whole rupee', CAP, `[(tot / pow).toFixed(bkDec(c)), String(Math.floor(tot / pow)), bkMoney(tot, c)], bkDvGist(e).map(function (x) { return (x.amt / pow).toFixed(bkDec(c)); })`, `[String(Math.floor(tot / pow))], bkDvGist(e).map(function (x) { return String(Math.floor(x.amt / pow)); })`],
+  ['VIEW collapse-all leaves one open', CAP, `Object.keys(TBL_OPEN).forEach(function (k) { if (k.indexOf('daybook:') === 0)`, `Object.keys(TBL_OPEN).slice(1).forEach(function (k) { if (k.indexOf('daybook:') === 0)`],
+  ['VIEW expand-all misses some', CAP, `if (on) bkDvShown().forEach(function (e) { TBL_OPEN['daybook:' + e.entry_no] = true; });`, `if (on) bkDvShown().slice(1).forEach(function (e) { TBL_OPEN['daybook:' + e.entry_no] = true; });`],
+  ['VIEW open by default', LISTCTL, `+ (tblIsOpen(key, id) && next ?`, `+ (true && next ?`],
+  ['VIEW group heads ignore the filter', CAP, `bkDvGroups(list, d.group).forEach(function (g) { flat.push({ g: g });`, `bkDvGroups(d.r.entries, d.group).forEach(function (g) { flat.push({ g: g });`],
   ['VIEW week starts on Sunday', CAP, `new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5)`, `new Date(t.getTime() - t.getUTCDay() * 864e5)`],
   ['VIEW week number missing', CAP, `label: txf('Week {n}', { n: wk }) + ' · ' + `, `label: `],
   ['VIEW month head not grouped', CAP, `if (mode === 'month') return { key: day.slice(0, 7),`, `if (mode === 'month') return { key: day,`],
@@ -93,14 +92,27 @@ const BREAKS = [
   ['VIEW Esc swallowed', CAP, `if (ev.key === 'Escape') return;`, `if (ev.key === 'Escape') { ev.preventDefault(); return; }`],
   ['VIEW CSV drops a row', CAP, `    rows.push([String(e.posting_date).slice(0, 10), e.entry_no,`, `    if (e.entry_no !== 'JV/2026-27/000001') rows.push([String(e.posting_date).slice(0, 10), e.entry_no,`],
   ['VIEW CSV ignores the filter', CAP, `new Blob(['\ufeff' + bkDvCsv(bkDvShown(), d.r.currency)]`, `new Blob(['\ufeff' + bkDvCsv(d.r.entries, d.r.currency)]`],
-  ['VIEW chip for a value not in range', CAP, `if (seen.indexOf(v) < 0) seen.push(v); }); });`, `if (seen.indexOf(v) < 0) seen.push(v); }); }); if (x[0] === 'kind') seen.push('Purchases');`],
-  ['VIEW lit chip not marked', CAP, `'" aria-pressed="' + on + '" data-dim="'`, `'" aria-pressed="false" data-dim="'`],
+  ['VIEW filter offers a value not in range', CAP, `if (seen.indexOf(v) < 0) seen.push(v); }); });\n    if (x[0] === 'kind') seen.sort(`, `if (seen.indexOf(v) < 0) seen.push(v); }); }); if (x[0] === 'kind') seen.push('Purchases');\n    if (x[0] === 'kind') seen.sort(`],
   ['VIEW bill link also toggles the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],
-  ['VIEW phone chips wrap', CAP, `.bkdv-chips{flex-wrap:nowrap;overflow-x:auto;`, `.bkdv-chips{flex-wrap:wrap;overflow-x:auto;`],
-  ['VIEW phone rows not cards', CAP, `.bkdv-row{border:1px solid var(--line);border-radius:12px;`, `.bkdv-row{border:0;border-radius:0;`],
+  ['VIEW phone rows are not flex cards', LISTCTL, `.tblx .lrow{display:flex;flex-wrap:wrap;`, `.tblx .lrow{display:grid;flex-wrap:wrap;`],
+  ['VIEW phone rows have no card edge', LISTCTL, `border:1px solid var(--line);border-radius:12px;margin:6px 0;padding:9px 10px}.tblx .lrow .lcell{`, `border:0;border-radius:0;margin:0;padding:9px 10px}.tblx .lrow .lcell{`],
+  /* ── ONE TABLE (docs/design/one-table): a ledger screen draws its OWN rows, or loses what the Task table gives it ── */
+  ['ONE a ledger screen draws its own rows', CAP, `return tblRowFor('daybook', fit, e, e.entry_no, {`, `return '<div class="bkdv-row" data-no="' + esc(e.entry_no) + '" data-testid="db-entry-' + esc(e.entry_no) + '" aria-expanded="false" onclick="bkDvToggle(\\'' + esc(e.entry_no) + '\\')">' + esc(e.entry_no) + '</div>'; var own = tblRowFor('daybook', fit, e, e.entry_no, {`],
+  ['ONE the bill number opens no sheet', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="event.stopPropagation();void(\\''`],
+  ['ONE a heading does not sort', LISTCTL, `  if (s.sort === i) s.rev = !s.rev; else { s.sort = i; s.rev = false; }`, ``],
+  ['ONE a rail row opens no next level', LISTCTL, `+ (tblIsOpen(key, id) && next ?`, `+ (false && next ?`],
 ];
 /* BREAK_ONLY=M1 runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
+/* BREAK_CHECK=1 only checks that every anchor still matches the source exactly once (fast — nothing is run) */
+if (process.env.BREAK_CHECK) {
+  let bad = 0;
+  for (const [name, rel, a2] of BREAKS) {
+    const n = fs.readFileSync(path.join(W, rel), 'utf8').replace(/\r\n/g, '\n').split(a2).length - 1;
+    if (n !== 1) { bad++; console.log('  ??  ' + name + ': anchor x' + n); }
+  }
+  console.log('\n  ' + (BREAKS.length - bad) + '/' + BREAKS.length + ' anchors match once'); process.exit(bad ? 1 : 0);
+}
 let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;

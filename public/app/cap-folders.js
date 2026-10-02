@@ -50,23 +50,39 @@ async function loadFolders(){
      (folderCreate, rename, move) repaint themselves or navigate, so nothing loses a refresh it needed. */
   if(typeof bgRenderApp==='function') bgRenderApp(); else if(typeof renderApp==='function') bgRenderApp();
 }
+/**
+ * ⭐ ONE NODE OF A FOLDER TREE — the look _folderTree has always drawn (a glyph, the name, a figure at the far end, the
+ * chosen one tinted), taking its words as arguments so the Ledgers tree in CB Accounts (cap-books.js bkLedgers) draws the
+ * very same node: `o.depth` · `o.sel` · `o.onclick` (JS body) · `o.icon` · `o.label` (HTML) · `o.tail` (HTML, the far end) ·
+ * `o.tid` (data-testid) · `o.style` (extra style, e.g. a taller tap target on a phone).
+ */
+function _folderNode(o){
+  return '<div'+(o.tid?' data-testid="'+o.tid+'"':'')+' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+(o.depth||0)*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(o.sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+(o.style?';'+o.style:'')+'" onclick="'+o.onclick+'">'+o.icon+' '+o.label+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+o.tail+'</span></div>';
+}
+/**
+ * ⭐ THE TWO-PANE LAYOUT OF A FOLDER SCREEN — tree on the left (250px), the chosen thing on the right — taking its two halves
+ * as HTML. foldersScreen() and the Ledgers screen both call it; `o.cls` / `o.id` let a caller carry its own container query.
+ */
+function _folderPanes(treeHTML, rightHTML, o){
+  o=o||{};
+  return '<div'+(o.id?' id="'+o.id+'"':'')+' class="'+(o.cls||'')+'" style="display:flex;height:100%;min-height:0">'
+    +'<div class="'+(o.treeCls||'')+'" style="width:var(--ftw,250px);border-inline-end:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'+treeHTML+'</div>'
+    +'<div class="'+(o.paneCls||'')+'" style="flex:1;overflow:auto;min-width:0" id="'+(o.paneId||'detailpane')+'">'+rightHTML+'</div></div>';
+}
 // recursive tree render — parent_id makes it nestable (same pattern as the Network tree)
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
-  return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+  return kids.map(function(f){
+    return _folderNode({ depth:depth, sel:UI.folderSel===f.folder_id, onclick:"selectFolder('"+f.folder_id+"')", icon:'📁', label:esc(f.name), tail:String(f.count||0) })+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
   if(UI.folders===undefined){ loadFolders(); return loader('Loading folders…'); }
   var tree=_folderTree(null,0)||'<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">No folders yet — create one below.</div>';
   var right= UI.folderSel ? _folderView() : emptyState('📁','Pick a folder','Or create one, then file chits into it with 📁 Move.');
-  return '<div style="display:flex;height:100%;min-height:0">'
-    +'<div style="width:250px;border-inline-end:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
-      +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">' + tx('FOLDERS') + '</div>'
+  return _folderPanes('<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">' + tx('FOLDERS') + '</div>'
       +tree
-      +'<div style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div></div>'
-    +'<div style="flex:1;overflow:auto;min-width:0" id="detailpane">'+right+'</div></div>';
+      +'<div style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div>', right);
 }
 function selectFolder(id){ UI.folderSel=id; UI.folderArch=false; UI.folderChits=undefined; if(typeof renderApp==='function')renderApp(); loadFolderChits(); }
 function setFolderArch(a){ UI.folderArch=a; UI.folderChits=undefined; var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView(); loadFolderChits(); }
@@ -435,8 +451,8 @@ function _groupSumPane(){
         + '<span style="width:74px;text-align:end;color:var(--grey);font-size:var(--fs-1)">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
-      var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
-        + (l.breakdown || []).map(function(s){
+      var rows = open ? tblNextHTML(
+        (l.breakdown || []).map(function(s){
             return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
               /* ⚠️ WHAT THEY ACTUALLY WROTE, when it differs from the canonical name. "thakkali → Tomato" is the
@@ -447,7 +463,7 @@ function _groupSumPane(){
               + '<span style="width:130px;text-align:end">' + (s.value == null ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>' : esc((s.currency || '') + ' ' + s.value)) + '</span>'
               + '<span style="width:74px"></span></div>';
           }).join('')
-        + '</div>' : '';
+        ) : '';
       var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — ' + txf('the cost above is the priced part only, {not} the cost of this line.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '';
       var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
