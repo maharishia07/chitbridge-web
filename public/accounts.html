@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,28 +16,32 @@
 /* the designer's tokens, as handed over (docs/design/ledgers-page/styles.css) … */
 :root{
   --ground:#fbf6ec; --surface:#fffdf8; --side:#f4ecdc; --sub:#fbf6ec;
-  --ink:#2a2418; --ink-2:#3d3527; --muted:#6f6450; --muted-2:#5c5240;
+  --ink:#2a2418; --ink-2:#3d3527; --muted:var(--grey); --muted-2:#5c5240;
   --line:#e6dcc6; --line-2:#efe6d3; --line-3:#d8ccb0; --hover:#f3ead7;
   --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --personal:#1f5f5b; --real:#a0661a; --nominal:#6b4e9b;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
   --serif:'Source Serif 4',Georgia,serif;
-  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --sans:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);   /* --f-ui is the reading font the avatar chooses */
   /* … beside SYSTEM.md's status colours (green live · amber needs a hand · red wrong now · blue a link) */
   --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
   --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
   /* the names app/cap-books.js paints its tables, chips and buttons with, mapped onto this page's palette */
-  --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:var(--muted);
+  --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:#6f6450;   /* = the --muted below; --muted reads it, so a chosen theme's --grey reaches both */
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;   /* SYSTEM's neutrals, literal so e2e/a11y-contrast.cjs <page> can measure them */
   /* … and the names the app's search box (.srch) and the Ledgers tree's search paint with — CBList (list-ctl.js) carries its own look */
   --paper:var(--sub); --sel:var(--hover); --blue-tint-bg:var(--blue-t); --on-card:var(--ink); --blue-2:var(--blue-i); --ink-2:#3d3527; --on-accent:var(--accent-ink);
   --warn-2:var(--amber-i); --ok-2:var(--green-d); --blue-d:var(--blue-i); --warn-tint:var(--amber-t); --blue-tint:var(--blue-t);
 }
+/* ⭐ A THEME CHOSEN IN THE AVATAR (tokens inline on <html>, data-theme stamped) re-points THIS page's own names at the theme's. The fallbacks are
+   the values above, and Cream is left alone, so a page nobody themed is exactly what it was. */
+:root[data-themed]{--ground:var(--paper,#fbf6ec);--sub:var(--paper,#fbf6ec);--surface:var(--card,#fffdf8);--side:var(--gold-soft,#f4ecdc);
+  --muted-2:var(--grey,#5c5240);--line-2:var(--line,#efe6d3);--line-3:var(--line,#d8ccb0)}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:calc(15px * var(--k,1));line-height:1.45}
 button{font-family:inherit;cursor:pointer}
 a{color:inherit}
 svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
@@ -77,15 +81,7 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .shop{font-size:13.5px;color:var(--muted)}
 .home{display:inline-flex;align-items:center;height:40px;padding:0 14px;border:1px solid var(--line-3);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;text-decoration:none}
 .home:hover{background:var(--hover)}
-.avatar{width:40px;height:40px;border-radius:50%;border:1px solid var(--line-3);background:var(--surface);color:var(--muted-2);font-size:13px;font-weight:700}
-.avatar:hover{background:var(--hover)}
-.avmenu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:200px;max-width:min(300px,86vw);background:var(--surface);border:1px solid var(--line-3);border-radius:12px;box-shadow:0 10px 24px rgba(42,36,24,.16);overflow:hidden}
-.avmenu[hidden]{display:none}
-.avmenu .me{padding:10px 14px;border-bottom:1px solid var(--line-2)}
-.avmenu .me b{display:block;font-size:14px}
-.avmenu .me span{font-size:12.5px;color:var(--muted)}
-.avmenu a,.avmenu button{display:flex;align-items:center;width:100%;min-height:44px;padding:0 14px;border:none;background:none;color:var(--ink);font-size:14px;text-align:left;text-decoration:none}
-.avmenu a:hover,.avmenu button:hover{background:var(--hover)}
+/* the avatar and its menu are CBAvatar (app/avatar.js) — nothing of them is drawn or styled here */
 
 .content{padding:24px 40px 120px;display:flex;flex-direction:column;gap:16px;max-width:1400px}
 .empty{padding:48px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
@@ -226,6 +222,8 @@ const EP = {};                       /* the Ledger's boot rows come from account
 let UI = { vp: 'lap', lw: 340 };     /* the two fields cap-books.js reads */
 function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → the app's sign-in */
 </script>
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
 <script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP);</script>
@@ -289,27 +287,9 @@ $('toggleNav').addEventListener('click', () => {
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
   $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
-    <a class="home" href="/" data-testid="acc-home">⌂ Home</a>
-    <button type="button" class="avatar" data-testid="avatar" aria-haspopup="true" aria-expanded="false" title="${esc(nm)}">${esc(String(SESS && (SESS.name || SESS.entity) || '?').slice(0, 1).toUpperCase())}</button>
-    <div class="avmenu" id="avmenu" data-testid="avatar-menu" hidden>
-      <div class="me"><b>${esc(SESS ? SESS.name || '' : '')}</b><span>${esc(isOwner() ? 'Owner' : 'Co-assist')} · ${esc(nm)}</span></div>
-      <a href="/app.html#/app/profile" data-testid="nav-profile">👤 Profile</a>
-      <button type="button" data-testid="nav-signout" id="signout">Sign out</button>
-    </div>`;
-  const av = $('who').querySelector('.avatar'), menu = $('avmenu');
-  av.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; av.setAttribute('aria-expanded', String(!menu.hidden)); };
-  $('signout').onclick = signOut;
-}
-document.addEventListener('click', (e) => { const m = $('avmenu'); if (m && !m.hidden && !e.target.closest('.who')) { m.hidden = true; } });
-document.addEventListener('keydown', (e) => { const m = $('avmenu'); if (e.key === 'Escape' && m && !m.hidden) { m.hidden = true; } });
-/* the app's sign-out (logoutNow): the session and the per-person nav memory go, then the app's sign-in opens. The app's
-   other tabs hear cb_sess go (its one `storage` reader) and sign out with it. */
-function signOut(){
-  try{
-    localStorage.removeItem('cb_sess');
-    Object.keys(localStorage).filter((k) => /^cb_nav(@|$)/.test(k)).forEach((k) => localStorage.removeItem(k));
-  }catch(_){}
-  location.href = '/app.html#/login';
+    <a class="home" href="/" data-testid="acc-home">⌂ Home</a><span id="cbav"></span>`;
+  /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
+  CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
 /* the pages of the app this page hands over to (the Day book's to-do cards, a bill) */
 function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }

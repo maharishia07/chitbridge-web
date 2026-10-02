@@ -28,16 +28,14 @@ const defined = new Set();
   const css = app.slice(0, app.indexOf('</style>'));
   let m; const re = /(--[a-z0-9-]+)\s*:/gi;
   while ((m = re.exec(css))) defined.add(m[1]);
-  const at = app.indexOf('var THEMES = {');
-  if (at > 0) {
-    let d = 0, i = app.indexOf('{', at), e = -1;
-    for (; i < app.length; i++) { if (app[i] === '{') d++; else if (app[i] === '}') { d--; if (!d) { e = i + 1; break; } } }
-    const themes = app.slice(at, e);
+  /* the themes are the engine's now (screen v1.15.0 APP_THEMES), no longer a literal in app.html */
+  {
+    const themes = fs.readFileSync(path.join(WEB, 'engine', 'screen.js'), 'utf8');
     let mm; const r2 = /'(--[a-z0-9-]+)'\s*:/g;
     while ((mm = r2.exec(themes))) defined.add(mm[1]);
   }
   /* Tokens written at runtime by the appearance module (the --fs scale) count as defined. */
-  const fsb = /var FS_BASE = \{([^}]*)\}/.exec(app);
+  const fsb = /var FS_BASE = \{([^}]*)\}/.exec(fs.readFileSync(path.join(WEB, 'app', 'avatar.js'), 'utf8'));   /* FS_BASE moved to CBAvatar */
   if (fsb) { let mm; const r3 = /'(--[a-z0-9-]+)'/g; while ((mm = r3.exec(fsb[1]))) defined.add(mm[1]); }
 }
 

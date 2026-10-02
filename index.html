@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +22,7 @@
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
-  font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+  font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:calc(15px * var(--k,1));line-height:1.45}
 button,a{font:inherit;color:inherit} button{cursor:pointer}
 a.box,a.lab{text-decoration:none;cursor:pointer}
 .wrap{max-width:1080px;margin:0 auto;padding:26px 22px 60px}
@@ -34,11 +34,6 @@ a.box,a.lab{text-decoration:none;cursor:pointer}
 /* ⚠️ --muted, not the mock's --faint: this is read text and the pass mark is WCAG AA (--faint is 3.6:1 on the page) */
 .shop{font-size:13.5px;color:var(--muted)}
 .grow{flex:1}
-.avatar{width:34px;height:34px;border-radius:50%;background:var(--panel);border:1px solid var(--line);
-  display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--muted)}
-/* the one door in when signed out */
-.signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;
-  background:var(--green);color:#fff;font-size:13.5px;font-weight:700;text-decoration:none}
 /* one sentence. The arrangement does the rest of the explaining. */
 .idea{font-size:14.5px;color:var(--muted);margin:0 0 20px;max-width:56ch}
 
@@ -229,6 +224,8 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 
 </div>
 
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar — signed out it is the Sign in door -->
 <script src="/app/one-person.js"></script>
 <script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
 <script>
@@ -471,11 +468,16 @@ function clearFacts(){
   CUR = 'INR';
 }
 
+/* THE AVATAR is CBAvatar (app/avatar.js) — the same control as the app and CB Accounts; signed out it draws the Sign in door */
+function avatarPaint(){
+  CBAvatar.mount(document.getElementById('who'), { person: SESS ? CBAvatar.personOf(SESS) : null, items: ['profile', 'support', 'signout'], apiBase: apiBase(), token: SESS && SESS.token });
+}
+
 /* signed out — the one door in, and (when another tab did it) one line saying why */
 function signedOut(why){
   SESS = null; MINE = null;
   clearFacts();
-  document.getElementById('who').innerHTML = '<a class="signin" data-testid="signin-door" href="app.html#/login">Sign in</a>';
+  avatarPaint();
   if (why) document.getElementById('alerts').innerHTML = '<div class="al warn" data-testid="signed-out-why"><span class="ic">!</span><span>'
     + esc(why) + '</span><a class="fix" href="app.html#/login">Sign in</a></div>';
 }
@@ -512,9 +514,7 @@ function open_(){
   if (!SESS) return signedOut('');
   clearFacts();
   var g = GEN;
-  document.getElementById('who').innerHTML =
-    '<span class="avatar" data-testid="avatar" title="' + esc(SESS.entity || SESS.name || '') + '">'
-    + esc(String(SESS.entity || SESS.name || '?').slice(0,2).toUpperCase()) + '</span>';
+  avatarPaint();
   if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
   CBOnePerson.traces(MINE).then(function(r){
     if (g !== GEN || !MINE) return;

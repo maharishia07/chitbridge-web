@@ -1,4 +1,4 @@
-/* ADOPTED from chitbridge-engines v1.5.0 · screen · sha256 6ca7e55a964373b19a97db139d4130ab9b91469def89e263eac34c73ca5ca151 — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
+/* ADOPTED from chitbridge-engines v1.15.0 · screen · sha256 9d6094dd0928a90df2c818bfa441f28f49c461a60ce2dfbefe53ddeb7f80b4ef — DO NOT EDIT HERE. Change it in chitbridge-engines, release a version, then run tools/adopt.cjs. */
 /* chitbridge-engines · screen. Edited ONLY in chitbridge-engines/src/screen.js; every platform adopts a released version of it. */
 // @stage tested
 // @stage-note The screen library: colour schemes, key tiles, pickers, layouts and presets a counter (or any system) picks from.
@@ -77,6 +77,382 @@
       '--ink': '#EAF2FA', '--dim': '#9FB2C6', '--on-accent': '#08201A', '--ok': '#6FE3C1', '--ok-tint': '#12322E', '--warn': '#F5A38A',
       '--warn-tint': '#3A2420', '--blue': '#8CC2FF', '--accent': '#6FE3C1', '--accent-ink': '#1D1B16' } },
   };
+
+  /**
+   * ── APP_THEMES ── ⭐⭐ ONE THEME LIBRARY FOR EVERY CHITBRIDGE PAGE (v1.13.0, 2026-10-02). Athi: *"we have to have the same
+   * avatar in every application, so the profile and theme and other details can be used across all the applications"* and,
+   * of the counter, *"at least the theme? can it be made possible?"*. These are the app's fifteen themes MOVED here from
+   * chitbridge-web public/app.html (`var THEMES`), unchanged, so the app, CB Accounts, the index page and the counter read
+   * ONE list. Their variables are the APP's tokens (--paper, --card, --line, --ink, --grey, --gold-*, --blue, --ok …), which
+   * are not the counter's (THEMES above: --panel, --edge, --dim, --accent …) — so a theme is not automatically the same
+   * on both surfaces. THEME_PAIRS says which ones ARE; the rest need a designer's counter version (and Paper and Navy an
+   * app version) — never an invented palette.
+   */
+  const APP_THEMES = {
+  cream:  { name: 'Cream',   dot: 'var(--paper)', vars: {} },   // the default; no overrides at all
+  /* Cooler and flatter — the closest thing to a "plain white app", for anyone who finds the cream warm. */
+  cool:   { name: 'Cool',    dot: '#F4F6F8', vars: {
+            '--paper':'#F4F6F8', '--card':'#ffffff', '--line':'#DEE3E8',
+            '--gold-soft':'#EEF2F6', '--gold-line':'#D6DEE6' } },
+  /* Higher separation between page, card and rule — for a bright counter or an older screen. */
+  contrast:{ name: 'Contrast', dot: '#ffffff', vars: {
+            '--paper':'#ffffff', '--card':'#ffffff', '--line':'#B9C2CB',
+            '--ink':'#0A1E29', '--grey':'#4E555C' } },
+  /* Warmer and softer than cream, less glare under strong light. */
+  sand:   { name: 'Sand',    dot: '#F3EDE1', vars: {
+            '--paper':'#F3EDE1', '--card':'#FFFDF8', '--line':'#DED3BF',
+            '--gold-soft':'#F6EFE0', '--gold-line':'#E0D2B4',
+            /* ⚠️ WARM steps, not the default blue ones. A blue selection band on a warm sand ground reads as a
+               foreign element pasted onto the theme — the row states have to belong to the palette they sit in.
+               `picked` is deliberately softer than sand's natural next step: #E7DCC6 looked right and put --grey
+               at 4.26:1, so the GROUND yields to the text, never the other way round. */
+            '--hover':'#F7F2E8', '--sel-2':'#F1EADC', '--picked':'#F0E9DA' } },  /* ⚠️ lifted a step: the old #EBE2CE was the darkest ground in the whole product and alone set the ceiling for the muted greys everywhere */
+  /**
+   * ⭐ VIBRANT — the same layout, stronger accents. For a counter screen in daylight where the muted palette
+   * washes out. ⚠️ Only the ACCENTS move; the ground stays near-white, because raising both is how a screen
+   * becomes tiring rather than clearer.
+   */
+  vibrant:{ name: 'Vibrant', dot: '#1F5FD0', vars: {
+            '--paper':'#FBFCFE', '--card':'#ffffff', '--line':'#D8E0EA',
+            '--blue':'#1F5FD0', '--blue-d':'#164AA8', '--blue-2':'#1B4FB5',
+            '--ok':'#0F8749', '--ok-2':'#0E7C43', '--ok-3':'#17A45C',
+            '--disp':'#C7352B', '--disp-2':'#B32C23', '--prog':'#A4690A',
+            '--warn-2':'#935F09', '--purple':'#6B3FE0', '--purple-2':'#5A2FC4',
+            '--blue-tint':'#E8F0FE', '--blue-tint-line':'#BBD3F7',
+            '--gold':'#E0A82E', '--gold-soft':'#FDF4E0', '--gold-line':'#F0DCA8' } },
+  /**
+   * ⭐ FLOWERY — warm and soft, a rose/plum ground with a green accent. The furthest from the default while
+   * staying legible; ⚠️ the SEMANTIC colours (dispute red, done green) keep their meaning and are only shifted
+   * enough to sit on the warmer ground — a theme that recoloured "disputed" into something friendly would be
+   * changing what the screen SAYS, not how it looks.
+   */
+  flowery:{ name: 'Flowery', dot: '#F6EAF0', vars: {
+            '--paper':'#FBF3F6', '--card':'#FFFCFD', '--line':'#EBD9E2',
+            '--ink':'#3A2430', '--ink-2':'#5A3A48', '--grey':'#513E47',
+            '--grey-2':'#5A4750', '--grey-3':'#5F5258', '--grey-4':'#665A60',
+            '--blue':'#8A4E8F', '--blue-d':'#6F3E74', '--blue-2':'#7A4480',
+            '--blue-tint':'#F7EDF7', '--blue-tint-line':'#E4CDE6',
+            '--gold':'#D79A5B', '--gold-soft':'#FBF0E6', '--gold-line':'#EED9C2',
+            '--ok':'#3E7D53', '--ok-2':'#3C7850', '--ok-3':'#4C9364',
+            '--disp':'#B8465A', '--disp-2':'#9A3549', '--prog':'#9A6B2E',
+            '--purple':'#8A5CC4', '--purple-2':'#74469F',
+            /* Rose steps, for the same reason sand gets warm ones — a selection belongs to its own palette. */
+            '--hover':'#F9F0F4', '--sel-2':'#F2E2EB', '--picked':'#EBD4E0' } },
+  /**
+   * ⭐⭐ DARK — the one that needed the token work first (backlog 27).
+   *
+   * ⚠️ IT IS HONEST ABOUT ITS LIMITS. ~1,500 hex values are still hardcoded outside the token set, so a handful
+   * of small surfaces stay light in this theme. The ones that MATTERED — every `background:#fff`, every text
+   * colour, every rule and tint — are tokens now, so the page is coherent rather than the half-dark mess this
+   * would have been a day ago. Where it is imperfect it is imperfect in a spot, not in a screen.
+   *
+   * ⚠️ THE SEMANTIC COLOURS ARE LIFTED, NOT INVERTED. Dispute red and done green must still read as red and
+   * green — brightened enough to clear the dark ground, never swapped, because their meaning is the point.
+   *
+   * ⚠️⚠️ EVERY ACCENT HERE SATISFIES **TWO** CONTRASTS, and that is the constraint that decides the values.
+   * An accent is used BOTH as a fill with white text on it (a primary button) AND as text on the page (a link,
+   * a status word). Lighten it until it reads as text and white-on-it fails; darken it until white works and it
+   * disappears as text. Measured, not eyeballed — each of these clears 3:1 in both directions:
+   *     blue #5A87D8  white-on-fill 3.56 · as-text 5.00      ok    #2E9E5E  3.40 · 5.24
+   *     disp #E05A50  white-on-fill 3.65 · as-text 4.88      prog  #B07F20  3.56 · 5.01
+   * The first attempt used lighter, prettier values (#6C9BEA, #4FBF7E) and every white button label failed at
+   * ~2.4–2.8:1 — legible-looking in a screenshot, unreadable on a real screen.
+   * ⚠️ `--card` is LIGHTER than `--paper`, not darker: on a dark ground a raised surface catches more light, and
+   * inverting that relationship is what makes a dark theme feel inside-out.
+   */
+  dark:   { name: 'Dark',    dot: '#161A1F', scheme: 'dark', vars: {
+            '--paper':'#14181D', '--card':'#1C2128', '--line':'#2E353E',
+            '--ink':'#E6EAEF', '--ink-2':'#C4CCD6',
+            /* ⚠️ THE MUTED GREYS WERE TUNED BY EYE AND THEY WERE TOO DARK. A light theme's muted grey only has to
+               fall AWAY from near-black text on a pale card, so a fairly dark grey still reads. Inverted naively
+               for dark, the same relationship puts the dimmest greys within 3.6:1 of --card — section labels like
+               "YOUR PRODUCTS" and every secondary line went hazy, which is Athi's "the text color is not visible
+               in the background". Measured against --card #1C2128 and lifted until each clears 4.5:1:
+                   --grey 7.48:1   --grey-2 6.56:1   --grey-3 5.89:1   --grey-4 5.18:1
+               ⚠️ THE WHOLE SCALE MOVES, NOT JUST THE FAILING END. Lifting only --grey-3/-4 would have pushed them
+               PAST --grey-2 and inverted the ramp — four greys that no longer descend are not a scale, and every
+               "this line is less important than that one" built on them would have started lying. Four distinct
+               steps, still ordered, all now clearing 4.5:1. Collapsing them onto one legible grey would fix
+               contrast by deleting the hierarchy the greys exist to express. */
+            '--grey':'#D4D9DF', '--grey-2':'#C5CBD2', '--grey-3':'#B7BEC6', '--grey-4':'#ABB3BB',
+            '--blue':'#6892DB', '--blue-d':'#7BA2E4', '--blue-2':'#6A8FD1',
+            '--blue-tint':'#1E2A3C', '--blue-tint-line':'#31445F',
+            '--gold':'#D4B074', '--gold-soft':'#2A2418', '--gold-line':'#463A22',
+            '--ok':'#2E9E5E', '--ok-2':'#2E9E5E', '--ok-3':'#3BB06E',
+            '--prog':'#B07F20', '--warn-2':'#B3852A', '--warn-3':'#C08F35',
+            '--disp':'#E15E54', '--disp-2':'#C9463D',
+            '--purple':'#8E77E5', '--purple-2':'#8F7BDB',
+            /* ⚠️ The chrome stays DARK and gains a touch of separation from the page, rather than inverting
+               with --ink. In light themes the nav is darker than the page; in dark it must be lighter, or the
+               navigation dissolves into the background and the shell loses its edges. */
+            '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff', '--sel':'#2A3647', '--hover':'#262D36', '--sel-2':'#2B3646', '--picked':'#35435A',
+            /* The pale tints go DARK, keeping the same relationship to their semantic: a faint ground the
+               semantic's text can still sit on. Inverting them to light would put dark chips on a dark page. */
+            '--blue-tint-bg':'#1B2739', '--ok-tint':'#16281E', '--danger-tint':'#2E1A18',
+            '--warn-tint':'#2A2418', '--purple-tint':'#221E33', '--neutral-tint':'#20262E',
+            '--on-gold':'#2C2410', '--on-purple':'#ffffff',
+            '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
+  /**
+   * ⭐⭐ SLATE — added 2026-08-17 as a TEST OF THE SYSTEM, not because the app needed an eighth theme.
+   *
+   * Athi: "just to prove our theory, can you add one more theme and check all holds good?"
+   *
+   * ⚠️ THE POINT IS WHAT IS *NOT* HERE. No CSS file was touched, no capability JS, no screen. This block is the
+   * entire theme. If the token work holds, adding it costs one object literal and the guards stay green; if it
+   * does not, this is exactly where that shows up.
+   *
+   * ⚠️ EVERY ACCENT IS MEASURED FOR **BOTH** ROLES — as a fill with white text on it, and as text on --card.
+   * Values were chosen from a candidate sweep, not by eye. The near-misses are instructive and are recorded
+   * here so the next person does not re-try them:
+   *     teal   #35A79E  as-text 5.73 but white-on-fill 2.93  → REJECTED, every button label fails
+   *     teal   #2A8F88  white-on-fill 3.90 but as-text 4.30  → REJECTED, links go muddy
+   *     violet #8A72E4  fill 3.74, text 4.48                 → REJECTED by 0.02, took #9280E8
+   *   accepted:  teal #2E9E96  3.26 / 5.15      ok #33A866  3.03 / 5.54
+   *              amber #BA8926 3.14 / 5.34      disp #E05A50 3.65 / 4.59      violet #9280E8 3.24 / 5.17
+   *
+   * ⚠️ ROW STATES take the same measured steps as dark: hover 1.158, sel-2 1.290, picked 1.535 against --card,
+   * each keeping --grey above 4.5:1 (6.65 / 5.97 / 5.01).
+   */
+  slate:  { name: 'Slate',   dot: '#1D2A2C', scheme: 'dark', vars: {
+            '--paper':'#101418', '--card':'#191E24', '--line':'#2B323A',
+            '--ink':'#E7EBEF', '--ink-2':'#C6CDD4',
+            '--grey':'#C9D0D5', '--grey-2':'#BCC3C9', '--grey-3':'#AEB6BD', '--grey-4':'#A4ABB2',
+            '--blue':'#2E9E96', '--blue-d':'#45B3AB', '--blue-2':'#479B95',
+            '--blue-tint':'#16292C', '--blue-tint-line':'#27453F',
+            '--gold':'#D4B074', '--gold-soft':'#262117', '--gold-line':'#423A24',
+            '--ok':'#33A866', '--ok-2':'#33A866', '--ok-3':'#3EB673',
+            '--prog':'#BA8926', '--warn-2':'#BA8926', '--warn-3':'#C99738',
+            '--disp':'#E05A50', '--disp-2':'#C9463D',
+            '--purple':'#9280E8', '--purple-2':'#8C7CDB',
+            '--chrome':'#0C1418', '--chrome-ink':'#A8BCC0', '--chrome-on':'#ffffff',
+            '--sel':'#28323E', '--hover':'#232A33', '--sel-2':'#28323E', '--picked':'#2F3E4F',
+            '--blue-tint-bg':'#16292C', '--ok-tint':'#16281E', '--danger-tint':'#2E1A18',
+            '--warn-tint':'#262117', '--purple-tint':'#221E33', '--neutral-tint':'#1E242B',
+            '--on-gold':'#2C2410', '--on-purple':'#ffffff',
+            '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
+  /**
+   * ⭐⭐ AZURE and RUBY — added 2026-08-17 to TEST THE SYSTEM, at Athi's ask: "completely contrast to what we
+   * have, for example, blue scheme, red scheme". Deliberately the hardest case available: not another neutral
+   * with a different accent, but a fully HUED GROUND, which is where a token system either holds or falls over.
+   *
+   * ⚠️ RUBY IS THE REAL TEST, AND THE REASON IS THE DISPUTE RED. On a rose ground the accent wants to be red —
+   * and "disputed" is ALSO red. If those collapse into one colour the screen stops saying what it means, so the
+   * accent is pushed to ROSE/MAGENTA (#A81F4A) and the dispute semantic stays ORANGE-red (#B4453F). They are
+   * separated by HUE, not by lightness, so they remain distinct to a colourblind reader too. The rule flowery
+   * established holds: a theme may move a semantic to sit on its ground, never REPLACE what it means.
+   *
+   * ⚠️ THESE TWO NEEDED THEIR OWN --grey, AND THAT IS THE ONE REAL FINDING FROM THE EXERCISE. With the shared
+   * grey (#5F6B70), a selection band bold enough to see on a hued ground put secondary text at 4.43 (azure) and
+   * 4.34 (ruby). The choice was a weaker selection or a darker grey; a hued theme should tune its own greys, so:
+   *     azure --grey #4F5A63   card 7.06  paper 6.32  hover 6.09  sel 5.69  picked 5.11
+   *     ruby  --grey #63505A   card 7.19  paper 6.62  hover 6.28  sel 5.76  picked 4.99
+   * Both then carry BOLDER row states than cream: azure 1.159/1.240/1.383, ruby 1.143/1.248/1.439.
+   */
+  azure:  { name: 'Azure',   dot: '#1857B8', vars: {
+            '--paper':'#EDF3FB', '--card':'#ffffff', '--line':'#CDDCEF',
+            '--ink':'#0D2440', '--ink-2':'#2B4568',
+            '--grey':'#3D454C', '--grey-2':'#464E56', '--grey-3':'#4F575F', '--grey-4':'#585E66',
+            '--blue':'#1857B8', '--blue-d':'#11408C', '--blue-2':'#1550A8',
+            '--blue-tint':'#E4EDFA', '--blue-tint-line':'#BFD4EF',
+            '--gold':'#C08A2E', '--gold-soft':'#FAF2E2', '--gold-line':'#E8D6B4',
+            '--ok':'#1F7A4D', '--ok-2':'#1F7A4D', '--ok-3':'#268C5A',
+            '--prog':'#8A5F14', '--warn-2':'#8A5F14', '--warn-3':'#7A5412',
+            '--disp':'#B4453F', '--disp-2':'#93332E',
+            '--purple':'#6B3FE0', '--purple-2':'#5A2FC4',
+            '--hover':'#E7EFFA', '--sel-2':'#DCE8F8', '--picked':'#CBDDF4', '--sel':'#CBDDF4' } },
+  ruby:   { name: 'Ruby',    dot: '#A81F4A', vars: {
+            '--paper':'#FBEFF0', '--card':'#FFFAFA', '--line':'#EBD3D7',
+            '--ink':'#33161C', '--ink-2':'#5A3038',
+            '--grey':'#4A3B43', '--grey-2':'#54444C', '--grey-3':'#5D4D55', '--grey-4':'#64555D',
+            '--blue':'#A81F4A', '--blue-d':'#84163A', '--blue-2':'#961B42',
+            '--blue-tint':'#F8E6EB', '--blue-tint-line':'#E7C2CE',
+            '--gold':'#B8862F', '--gold-soft':'#FAF1E4', '--gold-line':'#E6D3B6',
+            '--ok':'#1F7A4D', '--ok-2':'#1F7A4D', '--ok-3':'#268C5A',
+            '--prog':'#8A5F14', '--warn-2':'#8A5F14', '--warn-3':'#7A5412',
+            /* ⚠️ ORANGE-red, deliberately NOT the rose accent — see the note above. */
+            '--disp':'#B4453F', '--disp-2':'#93332E',
+            '--purple':'#7A4BC0', '--purple-2':'#663CA4',
+            '--hover':'#F9E8EA', '--sel-2':'#F4DDE1', '--picked':'#EECBD2', '--sel':'#EECBD2' } },
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   * ⭐⭐ THE ACCESSIBILITY THEMES — designed for a specific need, and SAYING SO.
+   *
+   * Athi, 2026-08-18: *"can we build theme related to special needs so it can be spelt loud and clear?"*
+   *
+   * ⚠️⚠️ THE FIRST THING TO UNDERSTAND IS THAT "ACCESSIBLE" IS NOT ONE SETTING. High Contrast and Soft Paper
+   * below are OPPOSITES — one pushes text to pure black on pure white, the other deliberately refuses to. Both
+   * are correct, for different people. A reader with low vision needs maximum separation; a reader with visual
+   * stress or dyslexia is often made WORSE by it, because high-contrast black on white increases the glare and
+   * the letter-swimming they are already fighting. A single "accessibility mode" button would have to pick one
+   * of those two people and fail the other. That is why this is a set of NAMED themes and not a switch.
+   *
+   * ⚠️ EACH THEME DECLARES THE LEVEL IT MEETS, AND THE DECLARATION IS TESTED. `a11y.level` is read by
+   * e2e/a11y-contrast.cjs, which computes every pairing and fails if a claim does not hold. A card that tells
+   * someone with low vision "AAA — 7:1" is making a promise on their behalf, and a promise made by eye is a
+   * guess with a standard's name on it: nobody can look at #3A4046 on white and know whether it is 6.8 or 7.2.
+   *
+   * ⚠️ COLOUR-VISION IS NOT FIXED BY CHANGING THE BACKGROUND. The Colour Vision theme changes the SEMANTICS —
+   * the green/red pair carrying "done" and "disputed" — because that pair is exactly what a colour-blind reader
+   * cannot separate. Its replacements are not chosen by eye either: they are the Okabe–Ito colour-universal
+   * palette, published for this purpose and already standard in scientific figures. Adopting it beats inventing
+   * our own eight colours and hoping.
+   * ══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+  hc:     { name: 'High Contrast', dot: '#000000',
+            a11y: { level:'AAA', forWho:'low vision',
+                    standard:'WCAG 2.2 AAA (1.4.6) — 7:1 body text',
+                    says:'Maximum separation. Pure black on white, heavier rules, darker accents.' },
+            vars: {
+            '--paper':'#FFFFFF', '--card':'#FFFFFF', '--line':'#4A5158',
+            '--ink':'#000000', '--ink-2':'#0D1114',
+            /* All four clear 7:1 on the DEEPEST row state, not merely on the card. */
+            '--grey':'#22272C', '--grey-2':'#2B3036', '--grey-3':'#34393F', '--grey-4':'#3C4248',
+            '--blue':'#0B3C8C', '--blue-d':'#082E6D', '--blue-2':'#0B3C8C',
+            '--blue-tint':'#EAF0FA', '--blue-tint-line':'#4A5158',
+            '--gold':'#7A5F1E', '--gold-soft':'#FFFFFF', '--gold-line':'#4A5158',
+            '--ok':'#0A5A30', '--ok-2':'#0A5A30', '--ok-3':'#0A5A30',
+            '--prog':'#5A4200', '--warn-2':'#5A4200', '--warn-3':'#5A4200',
+            '--disp':'#941410', '--disp-2':'#941410',
+            '--purple':'#4B2A8C', '--purple-2':'#4B2A8C',
+            '--blue-tint-bg':'#EAF0FA', '--ok-tint':'#E6F3EB', '--danger-tint':'#FBEBEA',
+            '--warn-tint':'#F6EFDC', '--purple-tint':'#EFEBFA', '--neutral-tint':'#EFF2F5',
+            '--hover':'#F2F5F8', '--sel-2':'#E8EDF2', '--picked':'#DEE5EC',
+            '--on-gold':'#FFFFFF' } },
+
+  hcdark: { name: 'High Contrast Dark', dot: '#FFFFFF', scheme: 'dark',
+            a11y: { level:'AAA', forWho:'light sensitivity together with low vision',
+                    standard:'WCAG 2.2 AAA (1.4.6) — 7:1 body text',
+                    says:'The same separation without the glare — for photophobia, migraine and eye strain.' },
+            vars: {
+            '--paper':'#000000', '--card':'#000000', '--line':'#B6BEC6',
+            '--ink':'#FFFFFF', '--ink-2':'#F0F2F4',
+            '--grey':'#EDEFF1', '--grey-2':'#DCDFE3', '--grey-3':'#CBCFD4', '--grey-4':'#BCC1C7',
+            '--blue':'#8FBEFF', '--blue-d':'#A9CFFF', '--blue-2':'#8FBEFF',
+            '--blue-tint':'#0B1520', '--blue-tint-line':'#B6BEC6',
+            '--gold':'#F0C24E', '--gold-soft':'#14100A', '--gold-line':'#B6BEC6',
+            '--ok':'#6EE39C', '--ok-2':'#6EE39C', '--ok-3':'#6EE39C',
+            '--prog':'#F5C95A', '--warn-2':'#F5C95A', '--warn-3':'#F5C95A',
+            '--disp':'#FFA9A0', '--disp-2':'#FFA9A0',
+            '--purple':'#CBB3FF', '--purple-2':'#CBB3FF',
+            '--blue-tint-bg':'#0B1520', '--ok-tint':'#07160D', '--danger-tint':'#1A0908',
+            '--warn-tint':'#14100A', '--purple-tint':'#110C1C', '--neutral-tint':'#0D0F11',
+            '--chrome':'#000000', '--chrome-ink':'#EDEFF1', '--chrome-on':'#FFFFFF',
+            '--sel':'#1F2933', '--hover':'#141414', '--sel-2':'#1C1C1C', '--picked':'#262626',
+            /* ⚠️ THE PAIRED INK FLIPS TO BLACK, and this is the half that is easy to miss. Every accent here is
+               LIGHT so it can clear 7:1 against a black page — which means a white button label on those fills
+               would be invisible. A theme that overrides a surface must override its partner in the same edit;
+               that rule is what this block exists to honour. */
+            '--on-blue':'#000000', '--on-ok':'#000000', '--on-prog':'#000000', '--on-warn':'#000000',
+            '--on-disp':'#000000', '--on-danger':'#000000', '--on-purple':'#000000',
+            '--on-accent':'#000000', '--on-gold':'#000000',
+            '--shadow':'0 0 0 1px #B6BEC6' } },
+
+  cvd:    { name: 'Colour Vision', dot: '#0072B2',
+            a11y: { level:'AA', forWho:'colour blindness — red/green and blue/yellow',
+                    standard:'Okabe–Ito colour-universal palette · WCAG 2.2 AA',
+                    says:'Replaces the green/red status pair with blue and orange, which stay distinct under every type of colour blindness.' },
+            vars: {
+            '--paper':'#F7F8F9', '--card':'#FFFFFF', '--line':'#767F88',
+            '--ink':'#101418', '--ink-2':'#2B3138',
+            '--grey':'#3F464D', '--grey-2':'#484F57', '--grey-3':'#515861', '--grey-4':'#59616A',
+            /* ⭐ OKABE–ITO, darkened only as far as the contrast bars require — the HUES are the published ones.
+               Blue #0072B2 and vermillion #D55E00 are the pair that survives deuteranopia, protanopia AND
+               tritanopia; green-for-done with red-for-disputed is precisely the pair that does not. */
+            '--blue':'#005B8F', '--blue-d':'#00476F', '--blue-2':'#005B8F',
+            '--blue-tint':'#E4F0F7', '--blue-tint-line':'#A9CBDE',
+            '--gold':'#8A6100', '--gold-soft':'#FBF3E2', '--gold-line':'#D8C79E', '--on-gold':'#FFFFFF',
+            '--ok':'#00674B', '--ok-2':'#00674B', '--ok-3':'#00674B',
+            '--prog':'#8A5F00', '--warn-2':'#8A5F00', '--warn-3':'#8A5F00',
+            '--disp':'#A34700', '--disp-2':'#8A3C00',
+            '--purple':'#93447A', '--purple-2':'#93447A',
+            '--blue-tint-bg':'#E4F0F7', '--ok-tint':'#E0EFEA', '--danger-tint':'#F9EAE0',
+            '--warn-tint':'#F7EFDD', '--purple-tint':'#F3E9F0', '--neutral-tint':'#EEF1F4',
+            '--hover':'#F1F4F7', '--sel-2':'#E6EBF0', '--picked':'#DCE3EA' } },
+
+  calm:   { name: 'Calm', dot: '#8A9BA8',
+            a11y: { level:'AA', forWho:'migraine, sensory sensitivity, attention',
+                    standard:'WCAG 2.2 AA · reduced luminance and saturation',
+                    says:'Nothing shouts. Low saturation and low glare, for anyone who finds a bright screen tiring.' },
+            vars: {
+            '--paper':'#EFEFED', '--card':'#F8F8F6', '--line':'#7B7B76',
+            '--ink':'#23262A', '--ink-2':'#3B3F44',
+            '--grey':'#464B51', '--grey-2':'#4E535A', '--grey-3':'#565B62', '--grey-4':'#5C616A',
+            '--blue':'#456179', '--blue-d':'#374E61', '--blue-2':'#456179',
+            '--blue-tint':'#E7ECEF', '--blue-tint-line':'#C3CDD4',
+            '--gold':'#8A7642', '--gold-soft':'#F2EFE6', '--gold-line':'#D6CDB6',
+            '--ok':'#3D6B52', '--ok-2':'#3D6B52', '--ok-3':'#3D6B52',
+            '--prog':'#7A6438', '--warn-2':'#7A6438', '--warn-3':'#7A6438',
+            '--disp':'#8C4A45', '--disp-2':'#7A3F3A',
+            '--purple':'#5F5478', '--purple-2':'#5F5478',
+            '--blue-tint-bg':'#E7ECEF', '--ok-tint':'#E6EDE9', '--danger-tint':'#F0E7E6',
+            '--warn-tint':'#EFEBE1', '--purple-tint':'#EAE8EE', '--neutral-tint':'#EBEBE8',
+            '--hover':'#F2F2EF', '--sel-2':'#E8E8E4', '--picked':'#DEDEDA',
+            '--shadow':'0 1px 2px rgba(35,38,42,.04)' } },
+
+  softpaper:{ name: 'Soft Paper', dot: '#F6E8CE',
+            a11y: { level:'AA', forWho:'dyslexia and visual stress (Irlen)',
+                    standard:'WCAG 2.2 AA · tinted ground; contrast held BELOW maximum on purpose',
+                    says:'A warm tinted page instead of white. Black on white increases glare and letter-swimming for many dyslexic readers, so this deliberately does not maximise contrast.' },
+            vars: {
+            '--paper':'#F7EEDC', '--card':'#FCF6E9', '--line':'#877A62',
+            /* ⚠️ NOT #000000, AND THAT IS THE ENTIRE POINT OF THIS THEME. A soft dark brown on a tinted ground is
+               what the visual-stress reading supports; pure black on pure white is what it warns against. This
+               theme claims AA and stops there DELIBERATELY — pushing it to AAA would undo the reason it exists. */
+            '--ink':'#2E2721', '--ink-2':'#453B31',
+            '--grey':'#54483C', '--grey-2':'#5D5144', '--grey-3':'#665A4C', '--grey-4':'#6D6153',
+            '--blue':'#2F5B86', '--blue-d':'#24486B', '--blue-2':'#2F5B86',
+            '--blue-tint':'#E9EFF4', '--blue-tint-line':'#C2D2DF',
+            '--gold':'#8A6A2A', '--gold-soft':'#F6ECD6', '--gold-line':'#DCC9A4', '--on-gold':'#FFFFFF',
+            '--ok':'#3F6B45', '--ok-2':'#3F6B45', '--ok-3':'#3F6B45',
+            '--prog':'#7E5F1F', '--warn-2':'#7E5F1F', '--warn-3':'#7E5F1F',
+            '--disp':'#94413A', '--disp-2':'#7E362F',
+            '--purple':'#5F4A85', '--purple-2':'#5F4A85',
+            '--blue-tint-bg':'#E9EFF4', '--ok-tint':'#E9F0E8', '--danger-tint':'#F6E9E5',
+            '--warn-tint':'#F5EBD5', '--purple-tint':'#EDE9F2', '--neutral-tint':'#F2ECDF',
+            '--hover':'#F8F1E2', '--sel-2':'#F2E9D6', '--picked':'#EBE0C9' } },
+
+  /**
+   * ⭐⭐ TERMINAL — a mainframe green screen (v1.15.0, 2026-10-02). Athi: *"mainframe style … green monitor with white or
+   * yellow text"*; he named it "Terminal". A DARK theme: green ground, near-white text, YELLOW as the accent (the action
+   * colour --blue is yellow here, so every filled button takes the ground colour as its label — never white on yellow).
+   *
+   * ⚠️ font: 'mono' is OPTIONAL and ADDITIVE: a hint that the page should set its type in a monospace stack. No other
+   * theme carries it and none changes; a page that ignores it still gets a legible theme. Fonts stay a system stack (OFFLINE).
+   * ⚠️ NO COUNTER COUNTERPART: it is not in THEME_PAIRS, so counterThemeFor('terminal') is null until a designer draws one.
+   * ⚠️ Every pair is MEASURED (tests/theme-contrast.test.cjs), not eyeballed: text >= 4.5:1, rules >= 3:1.
+   */
+  terminal:{ name: 'Terminal', dot: '#03200F', scheme: 'dark', font: 'mono', vars: {
+            '--paper':'#021A0C', '--card':'#03200F', '--line':'#24773F',
+            '--ink':'#F2FFF2', '--ink-2':'#D8F7DE',
+            '--grey':'#B8F5C6', '--grey-2':'#A0E6B2', '--grey-3':'#88D79C', '--grey-4':'#6FC888',
+            '--blue':'#FFD84A', '--blue-d':'#FFE88A', '--blue-2':'#FFD84A',
+            '--blue-tint':'#2E2A08', '--blue-tint-line':'#8C7A1E', '--blue-tint-bg':'#2E2A08',
+            '--gold':'#FFD84A', '--gold-soft':'#06301A', '--gold-line':'#8C7A1E',
+            '--ok':'#4CFF7A', '--ok-2':'#4CFF7A', '--ok-3':'#4CFF7A',
+            '--prog':'#FFE066', '--warn-2':'#FFE066', '--warn-3':'#FFE066',
+            '--disp':'#FF7A66', '--disp-2':'#FF7A66',
+            '--purple':'#D2B4FF', '--purple-2':'#D2B4FF',
+            '--ok-tint':'#0B3A20', '--danger-tint':'#3A120C', '--warn-tint':'#2A2A08',
+            '--purple-tint':'#1E1233', '--neutral-tint':'#06301A',
+            '--chrome':'#010F07', '--chrome-ink':'#B8F5C6', '--chrome-on':'#FFD84A',
+            '--sel':'#0B3A20', '--hover':'#06301A', '--sel-2':'#0B3A20', '--picked':'#0F4526',
+            /* every filled accent is LIGHT, so its label is the dark ground — white on these would be invisible */
+            '--on-blue':'#021A0C', '--on-accent':'#021A0C', '--on-gold':'#021A0C', '--on-ok':'#021A0C',
+            '--on-prog':'#021A0C', '--on-warn':'#021A0C', '--on-disp':'#021A0C', '--on-danger':'#021A0C',
+            '--on-purple':'#021A0C',
+            '--shadow':'0 0 0 1px #24773F' } },
+};
+
+  /**
+   * ── THEME_PAIRS ── an app theme → the counter theme that IS it. Only exact counterparts: the app's default cream is the
+   * counter's light cream (both are each page's own static :root), and dark is dark. A theme not listed here leaves the
+   * counter on its own choice until its counter version is designed (docs: BACKLOG "one theme library").
+   */
+  const THEME_PAIRS = { cream: 'lightCream', dark: 'dark' };
+  /** counterThemeFor(appKey) → the counter theme id that is the same theme, or null (the counter keeps its own) */
+  function counterThemeFor(appKey) { return Object.prototype.hasOwnProperty.call(THEME_PAIRS, appKey) ? THEME_PAIRS[appKey] : null; }
+  /** appThemeFor(counterId) → the app theme id that is the same theme, or null */
+  function appThemeFor(counterId) { var k = Object.keys(THEME_PAIRS).find(function (a) { return THEME_PAIRS[a] === counterId; }); return k || null; }
 
   /** ── GROUP COLOURS ── the four the design names, then a steady hue walk for any group beyond them */
   /**
@@ -577,6 +953,6 @@
    nothing extra is needed here; the width alone (220) comes from --sk-card-min at the customer size. */
 `;
 
-  return { THEMES, GROUP_COLOURS, TILES, PICKERS, LAYOUTS, SLOTS, PRESETS, DENSITIES, DEFAULT, CSS, onColour,
+  return { THEMES, APP_THEMES, THEME_PAIRS, counterThemeFor, appThemeFor, GROUP_COLOURS, TILES, PICKERS, LAYOUTS, SLOTS, PRESETS, DENSITIES, DEFAULT, CSS, onColour,
            groupColour, initials, tile, card, picker, missingSlots, autoLayout, resolve, themeVars, themeCss, esc };
 }));

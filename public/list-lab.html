@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -28,7 +28,7 @@
   --red:#E58561; --red-t:#3A1E14; --red-b:#6E3624; --red-i:#F2A688; --blue:#7AAEEB; --blue-t:#16263A; --blue-b:#2E4B70; --blue-i:#A9CBF3;
   --shadow:0 10px 28px rgba(0,0,0,.5); --proto:#B9A2E3; --proto-t:#2A2238; color-scheme:dark }
 html,body{height:100%;margin:0}
-body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Segoe UI',system-ui,sans-serif;overflow:hidden}
+body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 var(--f-ui,'IBM Plex Sans','Segoe UI',system-ui,sans-serif);overflow:hidden}
 .proto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 16px;background:var(--proto-t);border-bottom:1px dashed var(--proto);font-size:12.5px;color:var(--proto)}
 .proto{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap}
 .proto b{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px}
@@ -50,6 +50,8 @@ body{background:var(--page);color:var(--ink);font:15px/1.45 'IBM Plex Sans','Seg
 </div>
 <div id="app"></div>
 <div class="toast" id="toast" hidden></div>
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar, mounted in the list's title row through head.slot -->
 <script src="/app/list-ctl.js"></script>
 <script>
 (function () {
@@ -177,8 +179,12 @@ function big() {
 }
 var LISTS = { daybook: ['Day book', daybook], dues: ['Dues', dues], big: ['Stock · bulk', big] };
 var current = 'daybook', pstate = 'normal', app = null;
+/* the Lab shows who is signed in the way every page does: CBAvatar (signed out it is the Sign in door) */
+function avatarSlot(el) { CBAvatar.mount(el, { person: CBAvatar.sessionPerson(), items: ['profile', 'support', 'signout'] }); }
 function mountCurrent() {
   var o = LISTS[current][1]();
+  var headOf = o.head;   /* the avatar sits in the title row's slot: the head stays three rows */
+  o.head = function () { var hd = headOf(); hd.slot = avatarSlot; return hd; };
   o.state = function () { return pstate === 'loading' || pstate === 'error' ? pstate : null; };
   o.onRetry = function () { pstate = 'loading'; app.refresh({}); setTimeout(function () { pstate = 'normal'; paintProto(); app.refresh({}); }, 700); };
   if (pstate === 'empty') o.rows = function () { return []; };

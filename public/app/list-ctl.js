@@ -12,7 +12,11 @@
  * working list (e2e/list-unit.cjs); a page that makes this file reach for one fails e2e/list-unit-breaks.cjs.
  *
  *   CBList.mount(el, { key, rows, columns, view, group, filters, sorts, search, next, actions, bulk, onOpen,
- *                      head:{ title, period, notices }, t, store, ... }) → { refresh, destroy }
+ *                      head:{ title, period, notices, slot(el) }, t, store, ... }) → { refresh, destroy }
+ *
+ * THE AVATAR SLOT: `head.slot(el)` is called with an empty span at the END of the title row (pushed to the far edge) every time the
+ * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
+ * and reads nothing from the page: what goes in it is the page's business.
  *
  * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · sort · cell(row)), its grouping, filters, sorts, notices,
  * period, what a row opens to (`next`), row actions and bulk operations. WHAT THE UNIT OWNS, FOR EVERY LIST, AND NO LIST
@@ -372,7 +376,7 @@
   function head(I) { return typeof I.o.head === 'function' ? safe(function () { return I.o.head(); }, null) : I.o.head; }
   function paintTitle(I) {
     var h = head(I), box = $(I, ':scope > .cbl-title');
-    if (!h || !(h.title || h.period || (h.notices && h.notices.length) || (h.chips && h.chips.length))) { if (box) box.remove(); return; }
+    if (!h || !(h.title || h.period || h.slot || (h.notices && h.notices.length) || (h.chips && h.chips.length))) { if (box) box.remove(); return; }
     if (!box) { box = root.document.createElement('div'); box.className = 'cbl-title'; box.setAttribute('data-cbl-part', 'title'); I.el.insertBefore(box, I.el.firstChild); }
     var out = '';
     if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
@@ -393,7 +397,9 @@
     } else {
       out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
     }
+    if (typeof h.slot === 'function') out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
     box.innerHTML = out;
+    if (typeof h.slot === 'function') { var sl = box.querySelector(':scope > .cbl-slot'); if (sl) safe(function () { h.slot(sl); }); }
   }
   function periodPop(I, p) {
     var presets = p.presets || [], val = I.pv || p.value;
