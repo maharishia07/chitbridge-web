@@ -402,7 +402,7 @@ async function route(S, r) {
     ok(S.fuQueries[0] === 'mine/0', 'a co-assist defaults to Mine (?scope=mine)');
     /* the Show filter RESTS on the default too (its "all" option is the default's name): Clear returns to it. A co-assist's rests on Mine. */
     await p.click('[data-testid="cbl-filters-crm-followups"]');
-    ok((await p.locator('[data-testid="listctl-filter-scope"] option').first().textContent()).trim() === 'Mine', 'a co-assist's Show filter rests on Mine (not Everyone)');
+    ok((await p.locator('[data-testid="listctl-filter-scope"] option').first().textContent()).trim() === 'Mine', 'the co-assist Show filter rests on Mine (not Everyone)');
     await ctx.close();
   }
   {
