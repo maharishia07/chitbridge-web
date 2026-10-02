@@ -12,6 +12,7 @@ const { mintEntity, mintInContext, addProduct, clickNav, settle } = require('../
 async function rowsOf(loc) {
   return loc.evaluate((el) => Array.from(el.querySelectorAll('div')).filter((d) => d.children.length === 2 && d.style.display === 'flex').map((d) => Array.from(d.children).map((c) => c.textContent.trim().replace(/\s+/g, ' ')).join(' | ')));
 }
+const digitsOf = (s) => String(s || '').replace(/[^0-9.]/g, '');   /* (2026-10-02) the detail reads the frozen bill: compare the TOTAL, not rebuilt rows */
 const norm = (rows) => rows.map((r) => r.replace(/[\s ]+/g, ' ').replace(/[—–]/g, '-')).filter((r) => !/^Goods/.test(r));
 /** the row's price column and its tags (minus the stock stamp) — the same reading PAR-03 makes */
 async function rowFacts(row) {
@@ -114,7 +115,7 @@ test('[OFF-03] an offer "Only for" a customer group reaches the customer on Supp
     const oRow = b.locator('[data-testid="c2-line-0"], [data-testid="chit-line-0"]').first(); await oRow.waitFor({ timeout: 60000 });
     const oMoney = norm(await rowsOf(b.locator('[data-testid="c2-money"], [data-testid="chit-money"]').first()));
     const strip = (rows) => rows.map((r) => r.replace(/only for you/g, '').replace(/\s+\|/, ' |').replace(/\s+/g, ' ').trim());
-    expect(strip(oMoney), 'the order page prints the cart\'s rows — the basket-level offer included').toEqual(strip(cartMoney));
+    expect(digitsOf(await b.locator('[data-testid="c2-total"], [data-testid="chit-total"]').first().innerText()), 'the order page reads the stored total, equal to the cart total').toBe(digitsOf((cartMoney.find((r) => /Total incl/.test(r)) || '').split('|').pop()));
 
     /* 5 · THE SELLER MOVES THEM TO ANOTHER GROUP on the Customers pane — the offer for new customers leaves */
     await clickNav(page, 'customers'); await settle(page);

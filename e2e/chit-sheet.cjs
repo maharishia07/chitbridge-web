@@ -59,10 +59,21 @@ function standIn() {
     business_json: { bill_no: 'C1/26-27/0003', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
     detail: { line_items: [{ particulars: 'Lamp', quantity: 1, unit: 'piece', price: 1180, total: 1180, gst_rate: 18 }] } };
   /* neither: nothing is invented */
-  S.chits.nr1 = { header: { chit_id: 'nr1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0004', created_at: TODAY + 'T05:30:00.000Z',
+  S.chits.nr1 = { header: { chit_id: 'nr1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0004', created_at: TODAY + 'T23:30:00.000Z',
     all_recipients: [me, { role: 'receiver', display_name: 'self' }], summary_json: { currency_code: 'INR' },
     business_json: { bill_no: 'C1/26-27/0004', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
     detail: { line_items: [{ particulars: 'Pen', quantity: 1, unit: 'piece', price: 10, total: 10 }] } };
+  /* an OLDER bill (before one computation went live, 2026-10-02 11:14 IST) with no stored figures: a KNOWN error, not the red one */
+  S.chits.old1 = { header: { chit_id: 'old1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0001', created_at: '2026-09-20T05:30:00.000Z',
+    all_recipients: [me, { role: 'receiver', display_name: 'self' }], summary_json: { currency_code: 'INR' },
+    business_json: { bill_no: 'C1/26-27/0001', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
+    detail: { line_items: [{ particulars: 'Pen', quantity: 1, unit: 'piece', price: 10, total: 10 }] } };
+  /* the stored total (999) is NOT the lines' sum (1180): a detail that recomputes would say 1,180 */
+  S.chits.dt1 = { header: { chit_id: 'dt1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0005', created_at: TODAY + 'T05:40:00.000Z',
+    all_recipients: [me, { role: 'receiver', display_name: 'self' }],
+    summary_json: { currency_code: 'INR', money: { total: 999, tax: 99, savings: 12, taxable: 900, cgst: 49.5, sgst: 49.5, igst: 0, supply: 'intra', by_rate: { 12: { taxable: 900, cgst: 49.5, sgst: 49.5, igst: 0, tax: 99 } } } },
+    business_json: { bill_no: 'C1/26-27/0005', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
+    detail: { line_items: [{ particulars: 'Lamp', quantity: 1, unit: 'piece', price: 1180, total: 1180, gst_rate: 18 }] } };
   S.chits.sb1 = { header: { chit_id: 'sb1', purpose: 'invoice', current_status: 'pending', manual_subject: 'AM-81', created_at: TODAY + 'T04:00:00.000Z',
     all_recipients: [{ role: 'sender', display_name: 'Agro Mills', entity_id: 'ent-agro' }, { role: 'receiver', display_name: SHOP, entity_id: 'ent-books' }],
     summary_json: { currency_code: 'INR', bill_received: { from: 'Agro Mills', total: 2500 }, money: { total: 2500, tax: 119.05, taxable: 2380.95, cgst: 59.52, sgst: 59.53, igst: 0, supply: 'intra', by_rate: { 5: { taxable: 2380.95, cgst: 59.52, sgst: 59.53, igst: 0, tax: 119.05 } } } },
@@ -376,6 +387,39 @@ async function route(S, r) {
     ok(await p.evaluate(() => localStorage.getItem(uk('cb_nav'))) !== 'ledger', 'the remembered "ledger" was forgotten, so Back does not loop');
     await p.evaluate(() => navTo('ledger')); await p.waitForURL(/\/accounts\.html/, { timeout: 15000 }).catch(() => {});
     ok(/\/accounts\.html/.test(p.url()), 'navTo("ledger") → /accounts.html');
+    await ctx.close();
+  }
+  /* ── 3f · THE TASK DETAIL READS THE FROZEN BILL, NEVER RECOMPUTES (Athi, 2026-10-02: "never ever recompute") ─────────────── */
+  {
+    const S = standIn(); const { ctx, p } = await open(S);
+    await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-bills"]', { timeout: 20000 });
+    const tab = async (id, t) => { await p.evaluate(([i, tt]) => { UI.dtab = tt; return openChit(i); }, [id, t]); await p.waitForFunction(() => !(UI.detail && UI.detail._loading), null, { timeout: 15000 }); await p.waitForTimeout(300); };
+    const txt = (sel) => p.locator(sel).first().textContent().then((t) => t.replace(/[₹,\s]/g, ''), () => null);
+    /* the frozen invoice: the detail's total, GST rows and round-off equal CBTax.moneyOf(invoice) to the paisa */
+    await tab('ch1', 'content');
+    ok(await txt('[data-testid="chit-total"]') === f2(EXP.total), 'Task detail › Content: the total is the frozen invoice\'s ' + f2(EXP.total) + ' (the header said 1)');
+    for (const rt of Object.keys(EXP.by_rate)) { const c = await p.$$eval('[data-testid="chit-money"] [data-testid="cs-gst-' + rt + '"] td', (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, ''))); ok(c[1] === f2(EXP.by_rate[rt].taxable) && c[2] === f2(EXP.by_rate[rt].cgst), 'Task detail › Content: GST ' + rt + '% rate-wise equals the invoice'); }
+    ok(EXP.round_off ? /roundoff|Round/i.test(await p.locator('[data-testid="chit-money"]').first().textContent()) : true, 'Task detail › Content: the round-off is the invoice\'s');
+    await tab('ch1', 'summary');
+    ok(await txt('[data-testid="chit-summary-grand"]') === f2(EXP.total) && await txt('[data-testid="chit-summary-total"]') === f2(EXP.total), 'Task detail › Summary: the tile and the block both say the frozen total');
+    ok(await txt('[data-testid="chit-summary-taxtotal"]') === f2(EXP.tax) && await txt('[data-testid="chit-summary-savings"]') === f2(EXP.savings), 'Task detail › Summary: tax and savings are the invoice\'s own');
+    /* a stored total that differs from the lines\' sum: the STORED one is shown */
+    await tab('dt1', 'content');
+    ok(await txt('[data-testid="chit-total"]') === '999.00' && !/1,?180/.test(await p.locator('[data-testid="chit-money"]').first().textContent()), 'stored total 999.00 shown, not the lines\' 1,180 (Content)');
+    await tab('dt1', 'summary');
+    ok(await txt('[data-testid="chit-summary-grand"]') === '999.00' && await txt('[data-testid="chit-summary-total"]') === '999.00', 'stored total 999.00 shown, not the lines\' 1,180 (Summary)');
+    /* no stored figures: an error line, no number */
+    for (const t of ['content', 'summary']) {
+      await tab('nr1', t);
+      const e = p.locator('[data-testid="chit-money-error"]');
+      ok(await e.count() === 1 && /No issued figures for this bill/.test(await e.textContent()) && await p.locator('[data-testid="chit-total"], [data-testid="chit-summary-total"], [data-testid="chit-summary-grand"]').count() === 0, 'no stored figures (' + t + '): "No issued figures for this bill", and no total anywhere');
+    }
+    for (const t of ['content', 'summary']) {
+      await tab('old1', t);
+      ok(await p.locator('[data-testid="chit-money-known"]').count() === 1 && /Known error/.test(await p.locator('[data-testid="chit-money-known"]').textContent()) && await p.locator('[data-testid="chit-money-error"], [data-testid="chit-total"], [data-testid="chit-summary-total"]').count() === 0, 'an older bill with no stored figures (' + t + '): a KNOWN error, no number, not the red error');
+    }
+    await p.evaluate(() => { UI.folder = 'drafts'; }); await tab('nr1', 'content');
+    ok(await p.locator('[data-testid="chit-money-none"]').count() === 1 && /Not issued yet/.test(await p.locator('[data-testid="chit-money-none"]').textContent()) && await p.locator('[data-testid="chit-money-error"]').count() === 0, 'a draft says "Not issued yet", not an error');
     await ctx.close();
   }
   /* ── 4 · phone width ────────────────────────────────────────────────────────────────────────────── */

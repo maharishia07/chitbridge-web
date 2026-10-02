@@ -208,6 +208,26 @@ function listCtlEmptyHTML(key, icon, title, sub) {
 /* the table's look — the rules app.html always carried, injected FIRST in <head> so the Task screen's own variants
    (.lrow.unread · .lrow.sel · .acc-*, which stay in app.html) still win the cascade exactly as before */
 var TBL_CSS = [
+  /* the ⚙ columns chooser — MOVED from app.html (2026-10-02): CB Accounts loads list-ctl.js but not app.html, and the chooser
+     opened unstyled there (Athi's live screenshot: arrows and checkboxes strewn down the Day book) */
+  ".colcog{border:0;background:none;cursor:pointer;font-size:var(--fs-2);color:var(--grey);justify-self:end;padding:0 2px}",
+  ".colmenu{position:absolute;inset-inline-end:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-2);text-transform:none;font-weight:400;color:var(--ink)}",
+  ".colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}",
+  ".colcog{font-size:var(--fs-1);color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}",
+  ".colcog:hover{text-decoration:underline}",
+  ".colmenu{max-height:60vh;overflow-y:auto;min-width:196px}",
+  ".colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:2px 0 1px;position:sticky;top:-8px;background:var(--card);padding:4px 0 2px}",
+  ".colmhd:first-child{margin-top:0}",
+  ".colmnone{font-size:var(--fs-1);color:var(--grey);padding:2px 0}",
+  ".colrow{display:flex;align-items:center;gap:8px}",
+  ".colrow label{flex:1;min-width:0;display:flex;align-items:center;gap:6px;cursor:pointer}",
+  ".mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}",
+  ".mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}",
+  ".mv-btn:disabled{opacity:.35;cursor:default}",
+  ".mv-sp{width:24px;flex:0 0 auto}",
+  ".colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}",
+  ".colmenu label:has(input:checked){background:var(--blue-tint-bg);color:var(--blue);font-weight:600}",
+  ".colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}",
   ".listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}",
   ".listend button{margin-inline-end:8px}",
   ".lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}",

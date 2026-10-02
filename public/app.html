@@ -1535,9 +1535,6 @@ img.attImg{object-fit:cover;display:block}
 .kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);line-height:1.5}
 .kbox .kt{font-family:'Space Grotesk';font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbox .kd{color:var(--grey)}
-.colcog{border:0;background:none;cursor:pointer;font-size:var(--fs-2);color:var(--grey);justify-self:end;padding:0 2px}
-.colmenu{position:absolute;inset-inline-end:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-2);text-transform:none;font-weight:400;color:var(--ink)}
-.colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
 .optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
    draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
@@ -1545,26 +1542,12 @@ img.attImg{object-fit:cover;display:block}
 .listtotal{display:flex;align-items:center;justify-content:space-between;position:relative;flex-wrap:wrap;gap:4px 8px}
 .listtotal .lttools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .lttools{position:relative;display:flex;align-items:center;gap:6px}
-.colcog{font-size:var(--fs-1);color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}
-.colcog:hover{text-decoration:underline}
 .lttools .colmenu{inset-inline-end:0;top:24px}
 /* The chooser is now a LIST of rows rather than bare labels, because each row carries its own move controls. */
-.colmenu{max-height:60vh;overflow-y:auto;min-width:196px}
-.colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
-        margin:2px 0 1px;position:sticky;top:-8px;background:var(--card);padding:4px 0 2px}
-.colmhd:first-child{margin-top:0}
-.colmnone{font-size:var(--fs-1);color:var(--grey);padding:2px 0}
-.colrow{display:flex;align-items:center;gap:8px}
-.colrow label{flex:1;min-width:0;display:flex;align-items:center;gap:6px;cursor:pointer}
 /* ⚠️ 24px, not the 16px these would naturally be — they are pressed repeatedly while arranging, which is exactly
    the case where a small target costs the most. */
-.mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;
-           cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}
-.mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
-.mv-btn:disabled{opacity:.35;cursor:default}
 /* ⚠️ A SPACER, NOT nothing. An unchosen row carries no arrows, and without this its label would sit 24px left of
    every other label — the list would read as ragged rather than as two tidy groups. */
-.mv-sp{width:24px;flex:0 0 auto}
 /**
  * ⭐ SPEC MODE — visibly not part of the product. The detail is true and useful, and it must never be mistaken
  * for something the reader has to act on, so it is set apart: monospace, a dashed rule, and its key shown.
@@ -1575,9 +1558,6 @@ img.attImg{object-fit:cover;display:block}
 .specnote .speck{display:inline-block;margin-inline-end:8px;padding:1px 6px;border-radius:5px;
   background:var(--line);color:var(--on-card);font-weight:700;letter-spacing:.03em}
 .sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--card);color:var(--ink);cursor:pointer;font-family:inherit}
-.colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
-.colmenu label:has(input:checked){background:var(--blue-tint-bg);color:var(--blue);font-weight:600}
-.colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
 .prichip.pri-high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
 /**
  * ⚠️ #cfd6da MEASURED 1.09–1.47:1 — the star was not recessive, it was invisible, and it is a CONTROL. WCAG
@@ -5182,7 +5162,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02k';   /* ⚠️ bumped 2026-10-02 (k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02o';   /* ⚠️ bumped 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10304,7 +10284,7 @@ function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">${txf('Your CRM — everyone who ordered from you (storefront, Suppliers, a bill), or added here. They live {only}.', { only: '<b>' + tx('only under your shop') + '</b>' })}</div>
-    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID or email')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
+    <div style="display:flex;gap:7px;margin-top:8px"><input class="inp" id="cu_add" data-testid="cust-add-input" placeholder="${tx('Add customer — User ID, email or name')}" style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')addCustomer()"><input class="inp" id="cu_add_phone" data-testid="cust-add-phone" placeholder="${tx('Phone (for a name)')}" style="width:130px" autocomplete="off" inputmode="tel" onkeydown="if(event.key==='Enter')addCustomer()"><button class="composebtn" data-testid="cust-add" onclick="addCustomer()" title="${tx('Add a customer before their first order — to give them an offer only for them')}">+ ${tx('Add')}</button></div>
     ${listCtlToolbarHTML('customers')}
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${listCtlCountHTML('customers')}</div></div>
     <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
@@ -10496,11 +10476,17 @@ async function custSaveNamedGroups(id, groups){ try{ var r=await api('custGroups
 function custToggleNamedGroup(id, g, on){ var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); if(on) set.push(g); custSaveNamedGroups(id, set); }
 function custAddNamedGroup(id){ var el=document.getElementById('cu_ngroup_'+id); var g=(el&&el.value||'').replace(/\s+/g,' ').trim(); if(!g){ toast(tx('Type a group name')); return; } var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); set.push(g); custSaveNamedGroups(id, set); }
 /* ⭐ ADD BY HAND (Athi, 2026-09-06: "can we add a + icon to include a customer?") — the list used to fill itself only from trades */
-async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(el&&el.value||'').trim(); if(!h){ toast(tx('Type a User ID or email')); return; }
-  /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox) */
-  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; var os=r&&r.customer&&r.customer.one_sided;
-    toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)+(os?' — '+tx('bills to them stay here only')+': '+os.why:'')); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
-  catch(e){ toast((e&&e.message)||tx('Could not add')); } }
+async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(el&&el.value||'').trim(); if(!h){ toast(tx('Type a User ID, email or name')); return; }
+  /* ⭐ A NAME, NOT AN ID (2026-10-02): a regular who is not on ChitBridge. Not an email and not an id shape (no spaces; letters, digits . _ - ~ only,
+     with at least one of . _ - ~ or a digit) → send {name}; the server mints the party and the counter can then give them credit. A single plain word is
+     tried as a User ID first and, if no business has it, the toast says how to add a name. */
+  var asName=!/@/.test(h) && !/^~?[A-Za-z0-9][A-Za-z0-9._-]*$/.test(h);
+  var ph=((document.getElementById('cu_add_phone')||{}).value||'').trim();
+  var body=asName?{ name:h.replace(/s+/g,' ') }:{ handle:h }; if(asName&&ph) body.phone=ph;
+  /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox, not on ChitBridge) */
+  try{ var r=await api('custAdd',{ body:body }); if(el) el.value=''; var pe=document.getElementById('cu_add_phone'); if(pe) pe.value=''; var os=r&&r.customer&&r.customer.one_sided;
+    toast(asName&&r&&r.message?tx(r.message):tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)+(os?' — '+tx('bills to them stay here only')+': '+os.why:'')); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
+  catch(e){ var m=(e&&e.message)||tx('Could not add'); toast(!asName&&e&&e.status===404&&/^[A-Za-z]+$/.test(h)?m+' — '+tx('to add someone who is not on ChitBridge, type their full name'):m); } }
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
@@ -16967,6 +16953,31 @@ function chitDesign(c){
   return (v === 'lines') ? 'lines' : 'chit';
 }
 
+/* ⭐ THE TASK DETAIL READS THE BILL, IT NEVER MAKES IT (Athi, 2026-10-02: "never ever recompute"; DECISIONS.md "Compute once, at billing;
+   everyone else reads"). The figures were computed ONCE where the bill was made; here they are only read — CBSheet.moneyFor (the frozen
+   business_json.invoice through CBTax.moneyOf, else summary_json.money, else null) and painted by CBSheet.moneyBlockHTML. No figures:
+   a draft says so; an issued bill shows an error. Never a number worked out from the lines. */
+function frozenMoney(c){
+  const bj=(c.business_json||(c.header&&c.header.business_json))||null;
+  try{ return (window.CBSheet&&CBSheet.moneyFor)?CBSheet.moneyFor(bj,c.summary_money||null,c.currency||'INR'):null; }catch(_){ return null; }
+}
+/* ⭐ OLDER BILLS ARE A KNOWN ERROR, NEWER ONES FOLLOW THE RULE (Athi, 2026-10-02: "if the older chits which were computing the value,
+   just say as a known error but the newer chits will follow the rule"). Before api #3 went live (one computation at billing,
+   2026-10-02 11:14 IST) a bill could be issued without stored figures; such a bill says so, plainly, as a KNOWN error — no number.
+   A bill issued after it with no figures is a real fault and shows the red error. */
+const ONE_COMPUTATION_SINCE='2026-10-02T05:44:00Z';
+function frozenMoneyHTML(c,wrapTid,totalTid,bare){
+  const FM=frozenMoney(c);
+  if(!FM){
+    const isDraft=!!(c.isDraft||c.role==='Draft'||UI.folder==='drafts');
+    if(isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
+    const older=!!c.issued_at&&new Date(c.issued_at)<new Date(ONE_COMPUTATION_SINCE);   /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
+    return older?`<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
+      :`<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
+  }
+  const html=CBSheet.moneyBlockHTML({money:FM,cur:c.currency||'INR',bj:(c.business_json||(c.header&&c.header.business_json))||{}},totalTid);
+  return wrapTid?`<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>`:html;
+}
 async function openChit(id, silent){
   UI.sel=id;
   /**
@@ -17042,6 +17053,8 @@ async function openChit(id, silent){
                contradicting them. */
             line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
             line_assignment:(r.line_assignment||{}),
+            /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
+            summary_money:((h.summary_json&&h.summary_json.money)||null), issued_at:(h.created_at||null),
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
             business_json:(h.business_json||(base&&base.business_json)||null)};
@@ -17457,7 +17470,7 @@ function detailInner(){
    */
   if(UI.dtab==="input" && !inputHTML) UI.dtab="content";
   if(UI.dtab==="input") body=inputHTML;
-  if(UI.dtab==="content") body=`<div class="itab">${items}${(()=>{ try { const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean); const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); return `<div data-testid="chit-money" style="margin:8px 12px 10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-total', taxTestid:'chit-tax' })}</div>`; } catch(_) { return `<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div>`; } })()}</div>
+  if(UI.dtab==="content") body=`<div class="itab">${items}${frozenMoneyHTML(c,'chit-money','chit-total')}</div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=booksBlockHTML(c)+statusTabHtml(c);
@@ -17466,12 +17479,12 @@ function detailInner(){
        knowledge… total cost, total savings, total tax, and where to deliver; commercial details only by setting — not useful for all trades").
        The supplier clearances and the commercial-cover frame built earlier were on for every trade; they now sit behind the
        `trade_cover` policy flag (Settings › Governance), off by default. */
-    const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean);
-    let M=null; try { M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); } catch(_) {}
-    const savings=M?CBMoney.round(M.gross-(M.ev&&M.ev.total!=null?M.ev.total:M.gross)):0;
+    /* ⭐ READ, NEVER WORKED OUT (Athi, 2026-10-02: "never ever recompute"): the frozen bill through CBSheet.moneyFor, or an error line. */
+    const FM=frozenMoney(c);
     const tile=(k,v,tid)=>`<div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx(k)}</div><div class="disp" data-testid="${tid}" style="font-size:var(--fs-4);font-weight:700">${v}</div></div>`;
-    const tiles=`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fmtMoney(M?M.grand:c.amt,c.currency), 'chit-summary-grand')}${tile('You save', fmtMoney(savings,c.currency), 'chit-summary-savings')}${tile('Tax', fmtMoney(M?M.taxTotal:0,c.currency), 'chit-summary-taxtotal')}</div>`;
-    const block=M?`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-summary-total', taxTestid:'chit-summary-tax' })}</div>`:'';
+    const fm=(n)=>n==null?'—':fmtMoney(n,c.currency);
+    const tiles=FM?`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fm(FM.total), 'chit-summary-grand')}${tile('You save', fm(FM.savings), 'chit-summary-savings')}${tile('Tax', fm(FM.tax), 'chit-summary-taxtotal')}</div>`:'';
+    const block=`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${frozenMoneyHTML(c,null,'chit-summary-total',true)}</div>`;
     const bj=(c.business_json||(c.header&&c.header.business_json))||{}; const sv=bj.schema_values||bj;
     const dl=[['Deliver to',sv.deliver_to],['By',sv.delivery_by],['Note',sv.note]].filter(x=>x[1]);
     const delivery=dl.length?`<div class="itab" data-testid="chit-summary-delivery" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0 0 6px">${tx('Delivery')}</div>${dl.map(x=>`<div class="ir"><span class="nm">${tx(x[0])}</span><span class="qt">${esc(String(x[1]))}</span></div>`).join('')}</div>`:'';

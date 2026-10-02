@@ -213,6 +213,17 @@ async function route(S, r) {
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, Bills after Dues: ' + labels.join(' · '));
     ok(await p.evaluate(() => document.querySelector('.top') && getComputedStyle(document.querySelector('.top')).position === 'sticky'), 'the header is pinned');
 
+    /* ⭐ THE ⚙ COLUMNS CHOOSER IS STYLED ON THIS PAGE TOO (2026-10-02, Athi's live screenshot: on CB Accounts it opened as bare
+       arrows and checkboxes strewn down the Day book, because its rules lived only in app.html). It must be a floating panel. */
+    await nav(p, 'daybook'); await p.waitForSelector('[data-testid="cols-btn-daybook"]', { timeout: 8000 });
+    await p.click('[data-testid="cols-btn-daybook"]'); await p.waitForSelector('#colbox_daybook .colmenu', { timeout: 5000 });
+    const cm = await p.evaluate(() => { const m = document.querySelector('#colbox_daybook .colmenu'), cs = getComputedStyle(m), r = m.getBoundingClientRect(),
+      b = m.querySelector('.mv-btn'); return { pos: cs.position, z: cs.zIndex, w: r.width, h: r.height, vh: innerHeight, mv: b ? b.getBoundingClientRect().width : 0 }; });
+    ok(cm.pos === 'absolute' && cm.w > 150 && cm.w < 420 && cm.h <= cm.vh * 0.62 + 2 && cm.mv > 0 && cm.mv <= 26,
+      'CB Accounts › Day book › ⚙ columns opens as a floating panel (position ' + cm.pos + ', ' + Math.round(cm.w) + '×' + Math.round(cm.h) + ', arrow ' + Math.round(cm.mv) + 'px)');
+    await p.locator('#colbox_daybook').screenshot({ path: path.join(__dirname, 'shots', 'cb-accounts-cols-open.png') }).catch(() => {});
+    await p.click('[data-testid="cols-btn-daybook"]');
+
     for (const [id, label, sel] of VIEWS) {
       await nav(p, id);
       const seen = await p.waitForSelector(sel, { timeout: 8000 }).then(() => true, () => false);

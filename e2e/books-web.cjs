@@ -202,6 +202,16 @@ async function route(S, r) {
     return J(r, 404, { error: 'no stand-in for ' + p });
   }
   if (p === '/api/relationships/customers' && m === 'GET') return J(r, 200, { customers: S.customers });
+  /* a customer added by NAME (API: POST /customers { name, phone }) — answers as the server does: minted, off-rail, one-sided */
+  if (p === '/api/relationships/customers' && m === 'POST') {
+    S.lastCustAdd = body;
+    if (body.name) {
+      const row = { customer_list_id: 'clN', customer_identity_id: 'cN', display_name: body.name, otp_contact: body.phone || null, txn_count: 0, party_no: 'P-00009', user_id: '~shop.cus-0001', on_rail: false, tax_ids: [], one_sided: { why: 'not on ChitBridge — bills stay with you' } };
+      S.customers.push(row); S.items.cN = []; S.receipts.cN = [];
+      return J(r, 200, { message: 'Customer added — not on ChitBridge — bills stay with you', customer: row });
+    }
+    return J(r, 404, { error: 'Not found', message: 'No business with that User ID, bridge ID, or email' });
+  }
   if (p === '/api/relationships/suppliers' && m === 'GET') return J(r, 200, S.suppliers);
   let x;
   if ((x = p.match(/^\/api\/relationships\/(customers|suppliers)\/([^/]+)$/)) && m === 'PATCH') {
@@ -331,6 +341,15 @@ async function route(S, r) {
   await p.fill('[data-testid="listctl-search-customers"]', 'ravi.stores'); await p.waitForTimeout(300);
   ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c1"]').count() === 1, 'the search finds a party by its ChitBridge ID');
   await p.fill('[data-testid="listctl-search-customers"]', ''); await p.waitForTimeout(300);
+  /* ⭐ ADD BY NAME: a name (with a space) goes as {name, phone}; the list then shows them off-rail; an id-shaped word still goes as {handle} */
+  await p.fill('[data-testid="cust-add-input"]', 'Kumar Tea Stall'); await p.fill('[data-testid="cust-add-phone"]', '98400 12345'); await p.click('[data-testid="cust-add"]');
+  await p.waitForSelector('[data-testid="cust-row-cN"]', { timeout: 8000 }).catch(() => {});
+  ok(S.lastCustAdd && S.lastCustAdd.name === 'Kumar Tea Stall' && S.lastCustAdd.phone === '98400 12345' && !S.lastCustAdd.handle, 'a typed name is sent as {name, phone}, not as a User ID');
+  ok(await p.locator('[data-testid="cust-row-cN"]').count() === 1 && /off-rail/.test(await p.textContent('[data-testid="cust-row-cN"]').catch(() => '')), 'the new local customer is listed, marked off-rail');
+  ok(/not on ChitBridge — bills stay with you/.test(await p.textContent('body')), 'the toast shows the API message');
+  await p.fill('[data-testid="cust-add-input"]', 'ravi.stores'); await p.click('[data-testid="cust-add"]'); await p.waitForTimeout(300);
+  ok(S.lastCustAdd && S.lastCustAdd.handle === 'ravi.stores' && !S.lastCustAdd.name, 'a User ID is still sent as {handle}');
+  S.customers = S.customers.filter((c) => c.customer_identity_id !== 'cN'); delete S.items.cN; delete S.receipts.cN; await p.evaluate(() => loadCustomers()); await p.waitForTimeout(300);
   await p.click('#tbl_customers .lhcell:has-text("Party no")'); await p.waitForTimeout(200);
   const order1 = await p.$$eval('[data-testid^="cust-row-"]', (els) => els.map((x) => x.getAttribute('data-testid')));
   await p.click('#tbl_customers .lhcell:has-text("Party no")'); await p.waitForTimeout(200);
