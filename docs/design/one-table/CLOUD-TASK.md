@@ -95,3 +95,8 @@ number), on `customer_list` / `supplier_list`, and every ledger line's `party_id
     the tree's party leaves are ordered by party no; search finds a party by its number.
 Proof additions: e2e — the CRM table shows party no and ChitBridge ID for every row; a ledger row's "P…" equals the CRM
 row's for the same party.
+
+## ⚠️ MOVED 2026-10-02 — items 6, 7 and 10 are built by `cloud/party-ledgers` (docs/design/party-ledgers/CLOUD-TASK.md)
+Do NOT rebuild them. When this task runs, rebase on main after party-ledgers has merged and REUSE what it built: the party
+table under 1300/2100 becomes the Debtors/Creditors folders' leaves in item 5's tree (same dues read, same statement), and the
+"P-0007 · Name" party part and "rung by" stay exactly as party-ledgers made them.
