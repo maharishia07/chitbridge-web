@@ -49,3 +49,15 @@ behaviour must not change (its harnesses prove it).
 `public/till.html` and `public/engine/*` (vendored), the API repo, SQL, `e2e/tests/*.spec.js`. Never call the live site,
 localhost:3000 or port 7351 (stand-in APIs on a free port, as the harnesses already do). Commit messages end with
 `Co-Authored-By: Claude <noreply@anthropic.com>`.
+
+## Added 2026-10-02 (Athi, live: "i couldn't see the folder for each of the ledger, how do i open the folders, no folder
+## symbol or something to see it as a folder, or a tree structure")
+5. **Ledgers = the folder tree + the Task table** — REUSE `foldersScreen()`'s layout and `_folderTree(parentId, depth)` from
+   `public/app/cap-folders.js` (:54 — "a per-entity TREE … tree (left, recursive/nestable) + list", the same pattern as the
+   Network tree; accounts.html already loads cap-folders.js). Left: the four bands (People · Things you hold · Income and
+   expenses · Your capital) as top folders → their groups (Debtors, Cash & bank, Duties & taxes …) → each ledger as a leaf,
+   with the folder look the tree already has. Right: the chosen ledger's entries in the Task table (rows = entries; next level
+   = the journal's lines; a bill number opens `openChitSheet`), balance carried at the top. Replaces the chip-cloud /
+   card Ledgers view for navigation; the designer's section rule lines may stay as the tree's group captions if they fit
+   the tree's existing look — no new style. Phone: the tree collapses to a breadcrumb the way foldersScreen does.
+   Proof: in e2e/cb-accounts.cjs — open a band → a group → a ledger → its entries → expand one → open its bill.
