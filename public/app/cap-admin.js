@@ -5731,21 +5731,21 @@ function bizLedgerHTML(r){
 /** on: POST /api/books/enable (seeds the chart, this year’s months, a number for every party) · off: POST /setting */
 function bizLedgerSwitch(on){
   var box = document.getElementById('biz_ledger'); if (!box) return;
-  var title = on ? tx('Switch the Ledger on?') : tx('Switch the Ledger off?');
-  var body = on ? esc(tx('From today every bill, payment and expense is recorded. Nothing before today is.'))
-                : esc(tx('Nothing is deleted. Recording stops until it is switched on again.'));
-  confirmAsk(title, body, on ? tx('Switch on') : tx('Switch off'), async function(){
-    box.innerHTML = esc(tx('Working…'));
-    try {
-      if (on) await api('booksEnable', { body: {} });
-      else await api('booksSetting', { body: { enabled: false } });
+  /* ⭐ the words, the confirm's wording and the call are CBLedger's (app/accounts-shell.js) — the CB Accounts page and
+     the index tile switch the Ledger on through the same one; only the box and what follows are this card's */
+  CBLedger.run(on, {
+    ask: confirmAsk,
+    working: function(){ box.innerHTML = esc(tx('Working…')); },
+    call: function(on){ return CBLedger.call({ api: api }, on); },
+    done: async function(on){
       SESSION.booksOn = on;
       if (on) { try { await ensureCap('books'); } catch (_) {} }
       bgRenderApp();   /* the Ledger door appears (or goes) on the menu */
       await bizLedgerLoad();
       toast(on ? tx('The Ledger is on.') : tx('The Ledger is off.'));
-    } catch (e) { box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : ''); }
-  }, !on);
+    },
+    failed: function(e){ box.innerHTML = esc(tx('Could not switch it.')) + ' ' + esc(typeof friendlyErr === 'function' ? friendlyErr(e) : ''); },
+  });
 }
 
 /** ⚠️ SAVES ON CHANGE, and says so. A Save button on two radio groups is a button people forget to press. */

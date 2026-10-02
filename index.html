@@ -83,6 +83,24 @@ a.box,a.lab{text-decoration:none;cursor:pointer}
   background:var(--green);display:inline-block}
 .box .go{position:absolute;top:18px;right:18px;color:var(--ghost);font-size:17px}
 .box:hover .go{color:var(--green)}
+/* CB Accounts is a box with TWO things in it — the link to its page, and (while it is off) the owner's Switch on — so the
+   link is the .cover inside it, not the box itself (a button may not sit inside an <a>) */
+.box .cover{display:block;color:inherit;text-decoration:none}
+.box .cover h3{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.box .ledact{margin-top:14px}
+.box .ledact:empty{display:none;margin:0}
+.box .swbtn{display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:9px;border:1px solid var(--green);
+  background:var(--green);color:#fff;font-size:13.5px;font-weight:700}
+.box .swbtn[disabled]{opacity:.6;cursor:default}
+.box .ledact .f{margin-left:10px}
+/* the Active badge, and the lit tile: a green edge and a soft glow from the page's own tokens. Still when the reader asks for less motion. */
+.badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;background:var(--green-t);
+  border:1px solid var(--green-b);color:var(--green-d);font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0}
+.badge[hidden]{display:none}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+.box.lit{border-color:var(--green);box-shadow:0 0 0 1px var(--green-b),0 8px 26px rgba(22,105,63,.16)}
+@keyframes glow{50%{box-shadow:0 0 0 1px var(--green-b),0 10px 32px rgba(22,105,63,.28)}}
+@media (prefers-reduced-motion:no-preference){.box.lit{animation:glow 3.4s ease-in-out infinite}}
 
 /* ── the labs, a family, visibly different from the three ─────────────── */
 .labs{background:var(--panel);border:1px solid var(--line-soft);border-radius:16px;padding:17px 18px}
@@ -148,13 +166,16 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
       <span class="facts" id="f_cat" hidden></span>
     </a>
 
-    <a class="box" data-testid="box-ledger" href="app.html#/app/ledger">
-      <span class="go">›</span>
-      <span class="g">₹</span>
-      <h3>Ledger</h3>
-      <p class="what">What the shop made, and what it owes.</p>
-      <span class="facts" id="f_bk" hidden></span>
-    </a>
+    <div class="box" id="box_bk" data-testid="box-ledger">
+      <a class="cover" href="/accounts.html" data-testid="box-ledger-link">
+        <span class="go">›</span>
+        <span class="g">₹</span>
+        <h3>CB Accounts<span class="badge" id="bk_active" data-testid="ledger-active" hidden>Active</span></h3>
+        <p class="what">What the shop made, and what it owes.</p>
+        <span class="facts" id="f_bk" hidden></span>
+      </a>
+      <div class="ledact" id="act_bk" data-testid="ledger-act"></div>
+    </div>
 
   </div>
 
@@ -209,6 +230,7 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 </div>
 
 <script src="/app/one-person.js"></script>
+<script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
 <script>
 'use strict';
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
@@ -293,6 +315,66 @@ function alertsPaint(){
 
 function n1(v){ var n = Number(v); return isFinite(n) ? n : null; }
 
+/* ── CB ACCOUNTS, THE THIRD BOX ──────────────────────────────────────────────────────────────────────────────
+   On → an Active badge and a lit tile, with its facts. Off → the owner gets Switch on (the same confirm and call the
+   Settings card and the CB Accounts page use: CBLedger, app/accounts-shell.js); anyone else is told it is not on yet.
+   Nothing is shown until the server has answered — a tile never asserts a state it has not read. */
+var LEDGER_ON = null;
+function ledgerState(on){
+  LEDGER_ON = on;
+  var box = document.getElementById('box_bk'), badge = document.getElementById('bk_active'), act = document.getElementById('act_bk');
+  box.classList.toggle('lit', on === true);
+  badge.hidden = on !== true;
+  act.innerHTML = '';
+  if (on !== false) return;
+  if (SESS && SESS.role === 'entity'){
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'swbtn'; b.setAttribute('data-testid', 'ledger-switch-on'); b.textContent = 'Switch on';
+    b.onclick = ledgerSwitchOn; act.appendChild(b);
+  } else {
+    var s = document.createElement('span'); s.className = 'f dn'; s.style.marginLeft = '0'; s.setAttribute('data-testid', 'ledger-not-on'); s.textContent = 'Not switched on yet'; act.appendChild(s);
+  }
+}
+function ledgerSwitchOn(){
+  var act = document.getElementById('act_bk'), btn = act.querySelector('button');
+  CBLedger.run(true, {
+    ask: CBConfirm,
+    working: function(){ btn.disabled = true; btn.textContent = 'Working…'; },
+    call: function(){
+      return fetch(apiBase() + CB_BOOKS_EP.booksEnable.p, { method: CB_BOOKS_EP.booksEnable.m, cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESS.token }, body: '{}' })
+        .then(function(r){ if (!r.ok) { var e = new Error(String(r.status)); e.status = r.status; throw e; } });
+    },
+    done: function(){ ledgerState(true); ledgerRead(); },
+    failed: function(){
+      btn.disabled = false; btn.textContent = 'Switch on';
+      var s = document.createElement('span'); s.className = 'f dn'; s.setAttribute('data-testid', 'ledger-switch-failed'); s.textContent = 'Could not switch it on';
+      act.appendChild(s);
+    },
+  });
+}
+/* the Ledger's one read: /api/books/health — its facts, its alert, and which of the two states the tile is in */
+function ledgerRead(){
+  var g = GEN;
+  return read('/api/books/health').then(function(r){
+    if (g !== GEN) return;
+    ledgerState(true);
+    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
+    var host = document.getElementById('f_bk'); host.innerHTML = ''; host.hidden = true;
+    if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
+    /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
+       must still say SOMETHING, or the box reads exactly like one that is off */
+    else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');
+    var w = ((r && r.waiting) || []).length;
+    if (w){
+      factLine('f_bk', '<b>' + w + '</b> waiting', 'dn');
+      alert_('warn', '🕗', w + ' waiting for the ledger', 'CB Accounts names each one.', 'See them', '/accounts.html#waiting');
+      alertsPaint();
+    }
+  }).catch(function(e){
+    if (g === GEN && e && e.status === 404) ledgerState(false);
+  });
+}
+
 async function facts(){
   if (SESS.entity) document.getElementById('shop').textContent = SESS.entity;
 
@@ -352,22 +434,8 @@ async function facts(){
     });
   });
 
-  /* Ledger — /api/books/health; a 404 means the shop's ledger is off */
-  read('/api/books/health').then(function(r){
-    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
-    if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
-    /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
-       must still say SOMETHING, or the box reads exactly like one that is off */
-    else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');
-    var w = ((r && r.waiting) || []).length;
-    if (w){
-      factLine('f_bk', '<b>' + w + '</b> waiting', 'dn');
-      alert_('warn', '🕗', w + ' waiting for the ledger', 'The Ledger names each one.', 'See them', 'app.html#/app/ledger');
-      alertsPaint();
-    }
-  }).catch(function(e){
-    if (e && e.status === 404) factLine('f_bk', 'Not switched on', 'dn');
-  });
+  /* CB Accounts — /api/books/health; a 404 means the shop's ledger is off */
+  ledgerRead();
 
   /* Offer Lab — the drafts on the shelf */
   quiet('/api/definitions?kind=offer&status=draft').then(function(r){
@@ -399,6 +467,7 @@ function clearFacts(){
   document.getElementById('prices_read').textContent = '';
   ALERTS = []; document.getElementById('alerts').innerHTML = '';
   document.getElementById('notice').innerHTML = '';
+  ledgerState(null);
   CUR = 'INR';
 }
 
