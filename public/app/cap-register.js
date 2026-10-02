@@ -385,7 +385,11 @@ function rgCss() {
     + '#modalhost .modal.rg-modal{width:1240px}'
     + '.rg-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}'
     + '.rg-grid{min-width:1620px}'
-    + '.rg-wrap .lhead,.rg-wrap .lrow{display:grid;align-items:start}'
+    /* ⚠️ THE ROW AND HEADER LOOK USED TO COME FROM list-ctl.js's global styles (.lhead · .lrow). list-ctl.js is CBList now and owns only its
+       own look, so the register — a hand-drawn list in a modal, NOT yet a CBList mount (see e2e/list-standard.cjs DEBT) — carries its own */
+    + '.rg-wrap .lhead,.rg-wrap .lrow{display:grid;align-items:start;gap:8px;padding:8px 12px;font-size:var(--fs-2)}'
+    + '.rg-wrap .lhead{position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}'
+    + '.rg-wrap .lrow{border-bottom:1px solid var(--line)}.rg-wrap .lrow:hover{background:var(--paper)}'
     /* ⚠️ departure 1 — a register row is READ, not opened. The chit inside it is the link. */
     + '.rg-row{cursor:default}'
     /* ⚠️ departure 2 — the description and the treatment wrap; everything else stays on one line so it scans */
