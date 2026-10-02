@@ -215,7 +215,7 @@ function crmRecordPaint(p, rec) {
   /* Ledger — cap-books.js's own block; off → one line and the owner's switch */
   if (p.kind !== 'walk-in') {
     var kind = cu ? 'customer' : 'supplier', pid = p.party_id;
-    if (true) secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
+    if (CRM.ledger) secs.push(crmSec('ledger', 'Ledger', p.balance_minor != null ? crmDueCell(p) : '', '<div id="crm_ledger" data-testid="crm-ledger"></div>', false));
     else secs.push(crmSec('ledger', 'Ledger', '', '<p style="margin:8px 0">' + esc(tx('Dues show when CB Accounts is on')) + '</p>' + (crmOwner() ? '<button type="button" class="act sm" data-crm="ledgeron" data-testid="crm-ledger-on">' + esc(tx('Switch on')) + '</button>' : ''), false));
   }
   if (crmOwner() && (rec.changes || []).length) secs.push(crmSec('changes', 'History of changes', esc(crmPlural(rec.changes.length, 'change', 'changes')), (rec.changes || []).map(function (x) { return '<div class="kv" data-testid="crm-change"><b>' + esc(bkDate(x.at)) + '</b><span>' + esc(x.line) + ' <span class="sub">· ' + esc(x.by || '') + '</span></span></div>'; }).join(''), false));

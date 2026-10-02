@@ -4,7 +4,7 @@
  * by the stand-in before it can leave the browser, and any other host is aborted and counted (the run fails if one was tried).
  * The seed is e2e/fixtures/golden-parties.json ("@-26h" = 26 hours before the run).
  *
- *  1  the page's source: named CB CRM · no "accounting" · no alert() · the gate is attached · the avatar slot is EMPTY (CBAvatar mounts there) ·
+ *  1  the page's source: named CB CRM · no "accounting" · no alert() · the gate is attached · the avatar slot is EMPTY in the source (CBAvatar mounts there at run time) ·
  *     no hand-drawn column header · the page computes no money
  *  2  HOME (a CBList mount): one row for a both-roles party (twice in the read, once on screen) · a merged party never listed · Local /
  *     On ChitBridge / Walk-in chips · the dues are the server's figure · three columns by default · the head is three rows ≤ 20% of 1366×768 ·
@@ -228,7 +228,8 @@ async function route(S, r) {
     await p.click('[data-testid="crm-nav-parties"]'); await homeReady(p);
     await p.click('[data-testid="crm-row-P-0003"]'); await recReady(p, 'Ravi Traders');
     ok(/#\/party\/P-0003/.test(p.url()), 'a row opens its record at #/party/P-0003');
-    ok(await p.evaluate(() => !!document.querySelector('#cb-avatar') && document.querySelector('#cb-avatar').children.length === 0), 'the avatar slot is still empty on the record');
+    /* INTEGRATION: the slot is no longer empty at run time - CBAvatar mounts there (the source still draws none; line above). The frozen check: it holds ONE CBAvatar control and nothing else. */
+    ok(await p.evaluate(() => { const s = document.querySelector('#cb-avatar'); return !!s && s.querySelectorAll('.cbav').length === 1 && s.querySelectorAll('[data-testid="avatar"],[data-testid="signin-door"]').length === 1; }), 'the avatar slot holds ONE CBAvatar on the record');
     await ctx.close();
   }
 
@@ -399,6 +400,9 @@ async function route(S, r) {
     const S = standIn({ me: 'Divya' }), { ctx, p } = await open(S, { session: EDITOR, hash: '#/followups' });
     await p.waitForSelector('[data-testid^="crm-fu-fu-"]', { timeout: 15000 });
     ok(S.fuQueries[0] === 'mine/0', 'a co-assist defaults to Mine (?scope=mine)');
+    /* the Show filter RESTS on the default too (its "all" option is the default's name): Clear returns to it. A co-assist's rests on Mine. */
+    await p.click('[data-testid="cbl-filters-crm-followups"]');
+    ok((await p.locator('[data-testid="listctl-filter-scope"] option').first().textContent()).trim() === 'Mine', 'a co-assist's Show filter rests on Mine (not Everyone)');
     await ctx.close();
   }
   {
