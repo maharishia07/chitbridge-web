@@ -50,3 +50,18 @@ summary_json.money's names (gross · savings · net · taxable · tax · total �
 ## Do not touch
 `public/till.html`, `public/engine/*` (vendored/adopted), the API repo, SQL, `e2e/tests/*.spec.js`. Never the live site,
 localhost:3000 or port 7351. Commit messages end with `Co-Authored-By: Claude <noreply@anthropic.com>`.
+
+## Added from Athi's live two-shop test (2026-10-02, bills C2/26-27/0010 and 0011, Tally Test → Chola)
+The data is right: both bills carry `business_json.invoice`; summary_json.money is final (0010: taxable 700.07 + tax 84.17 =
+total 784.24 = paid = detail.total_value; intra, place of supply 33); accepting 0010 "for resale" posted JV/2026-27/000003 =
+the invoice to the paisa. What drifted, all web:
+5. **CB Accounts cannot open the popup** — accounts.html does not load `/app/chit-sheet.js` (nor `/app/tax.js` for
+   `CBTax.moneyOf`): `openChitSheet is not defined` there, so a bill number in CB Accounts' Day book or Bills does nothing.
+   Load both in accounts.html (the same tags app.html uses); prove a Bills row and a Day book bill link open the sheet.
+6. **One counter, two names** — the popup's header says "Counter 1" (business_json.till.name) while the Day book says
+   "Counter C2" (the bill series) for the same bill. Show the counter the way the Day book does (one helper both read).
+7. **A handle where a name belongs** — CB Accounts › Bills shows `chola-auto-care` as who accepted 0007/0008 where the
+   other rows show "Tally Test": show the display name (the same field the other rows use).
+8. **The Bills folder has no door in the app** — received/issued bills are only reachable from CB Accounts › Bills; the
+   app's menu (where Task and Intake are) has no way there. Add it the way the menu already links CB Accounts (an existing
+   menu item style, no new look).
