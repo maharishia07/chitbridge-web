@@ -142,7 +142,7 @@ var CBLedger = (function () {
     };
   }
   /** the one call, over the host's api() ({ api: api }): on → POST enable · off → POST setting { enabled:false } */
-  function call(host, on) { return on ? host.api('booksEnable', { body: {} }) : host.api('booksSetting', { body: { enabled: false } }); }
+  function ledgerCall(host, on) { return on ? host.api('booksEnable', { body: {} }) : host.api('booksSetting', { body: { enabled: false } }); }
   function run(on, io) {
     var w = words(on), busy = false;
     io.ask(w.title, w.body, w.ok, async function () {
@@ -152,7 +152,7 @@ var CBLedger = (function () {
       finally { busy = false; }
     }, !on);
   }
-  return { words: words, call: call, run: run };
+  return { words: words, call: ledgerCall, run: run };   /* a distinct inner name: e2e/screen-reads matches functions by NAME, and a bare call() matched "call(s)" in another screen's text */
 })();
 
 /**
