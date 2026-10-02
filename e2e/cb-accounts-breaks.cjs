@@ -26,7 +26,7 @@ const BREAKS = [
   ['Home goes somewhere else', PAGE, `<a class="home" href="/" data-testid="acc-home">`, `<a class="home" href="/app.html" data-testid="acc-home">`, A],
   ['Profile goes somewhere else', PAGE, `<a href="/app.html#/app/profile" data-testid="nav-profile">`, `<a href="/app.html#/app/settings" data-testid="nav-profile">`, A],
   ['a code the design never named vanishes', CAPB, `title = g ? g[1] : 'Other';`, `title = g ? g[1] : 'Other'; if (!g) return;`, A],
-  ['the step chip is decided by the page, not the server', PAGE, `\${esc(b.label)}</span>\` : ''}`, `\${esc(b.step)}</span>\` : ''}`, A],
+  ['the step chip is decided by the page, not the server', PAGE, `data-step="\${esc(b.step || '')}">\${esc(b.label)}</span>`, `data-step="\${esc(b.step || '')}">\${esc(b.step)}</span>`, A],
   ['the phone overflows', LCTL, `.tblx{container:tblx/inline-size;min-width:0}`, `.tblx{container:tblx/inline-size;min-width:900px}`, A],
   ['the sidebar stays wide on a phone', PAGE, `  .side{width:64px}\n  .side .label,#toggleNav{display:none}`, `  .side .label,#toggleNav{display:none}`, A],
   ['a table scrolls sideways instead of folding into cards', PAGE, `#bk_body table.bktab thead{display:none}`, ``, A],
