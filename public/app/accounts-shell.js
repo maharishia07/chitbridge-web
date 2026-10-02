@@ -28,6 +28,17 @@ var CB_BOOKS_EP = {
   booksStatement:  {m:"GET",  p:"/api/books/party/:id/statement",         ok:"y"},
 };
 
+/* ── the party routes the app's Customers/Suppliers screens and CB CRM share (MOVED from app.html's EP, not copied: one name per endpoint,
+   e2e/ep-aliases.cjs) — add a party, edit its fields, remove it, look someone up on ChitBridge ── */
+var CB_PARTY_EP = {
+  custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
+  custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},   // { handle } on ChitBridge · { name, phone } a local party
+  supAdd:          {m:"POST", p:"/api/relationships/suppliers", ok:"✓"},            // { supplier_bridge_id } · { name }
+  supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
+  supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},       // Stage B — owner-side fields (nickname/preferred/notes/category)
+  entitySearch:    {m:"GET",  p:"/api/entities/search",                    ok:"✓"},   // ?q= live recipient lookup (name/bridge_id)
+};
+
 /* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —
    MOVED from app.html's EP so the app and CB Accounts open the same sheet through the same endpoints ── */
 var CB_SHEET_EP = {
