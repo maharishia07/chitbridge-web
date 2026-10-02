@@ -13,8 +13,8 @@
  *  +  every tile's link target · signed out = the one sign-in door and NO facts, no reads · Ledger off →
  *     the third box is CB ACCOUNTS (2026-10-01): off → the owner's Switch on (one confirm, one POST /api/books/enable),
  *     "Not switched on yet" for anyone else; on → an Active badge and a lit tile · the strings "accounting"/"books of
- *     account" absent · no alert() · the four bands on the app's Ledgers view (still reached through app.html#/app/ledger)
- * Screenshots: e2e/shots/index-{laptop,phone,alerts,all-well}.png, index-cb-accounts-{off,active}.png and e2e/shots/ledgers-bands.png
+ *     account" absent · no alert() · the old in-app Ledger door redirecting to CB Accounts (app.html#/app/ledger → /accounts.html)
+ * Screenshots: e2e/shots/index-{laptop,phone,alerts,all-well}.png, index-cb-accounts-{off,active}.png
  */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -309,29 +309,16 @@ function route(S, r) {
     await ctx.close();
   }
 
-  /* ── 5 · THE DEEP LINK AND THE FOUR BANDS on the app's Ledgers view ─────────────────────────────────────── */
+  /* ── 5 · THE OLD LEDGER DOOR IS CLOSED (2026-10-02, web-reads-invoice): the deep link lands on CB Accounts; the app keeps its Home ── */
   {
     const S = standIn();
     const { ctx, p } = await open(S, { path: '/app.html#/app/ledger' });
-    const landed = await p.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 20000 }).catch(() => null);
-    ok(!!landed, 'app.html#/app/ledger lands on the Ledger — the deep link sets UI.nav on arrival');
-    if (landed) await p.click('[data-testid="bk-tab-ledgers"]');
-    await p.waitForSelector('[data-testid="bk-band-people"]', { timeout: 15000 }).catch(() => {});
-    const band = (t) => p.textContent('[data-testid="' + t + '"] + div', { timeout: 3000 }).catch(() => '');
-    const people = await band('bk-band-people'), things = await band('bk-band-things'), income = await band('bk-band-income');
-    ok(/1300 · Debtors/.test(people) && /2100 · Creditors/.test(people) && /Ravi Stores/.test(people) && /Agro Mills/.test(people),
-      'People: Debtors and Creditors as the control lines, their parties beside them');
-    ok(/1400 · Cash/.test(things) && /1450 · Bank/.test(things) && /2201 · GST payable/.test(things) && /3000 · Capital/.test(things) && !/Debtors|Creditors/.test(things),
-      'Things you hold: cash, bank, GST payable — never the party lines');
-    ok(/4000 · Sales/.test(income) && /6010 · Rent/.test(income), 'Income and expenses: 4xxx–6xxx');
-    ok(await p.locator('[data-testid="bk-band-results"]').count() === 1
-      && await p.locator('[data-testid="lg-go-tb"]').count() === 1 && await p.locator('[data-testid="lg-go-pl"]').count() === 1 && await p.locator('[data-testid="lg-go-bs"]').count() === 1,
-      'Results: the three doors — Trial balance, P&L, Balance sheet');
-    const bandTxt = await p.textContent('[data-testid="bk-body"]');
-    ok(/People/.test(bandTxt) && /personal/.test(bandTxt) && /real/.test(bandTxt) && /nominal/.test(bandTxt), 'each band says the plain word first, the classical word after');
+    await p.waitForURL(/\/accounts\.html/, { timeout: 20000 }).catch(() => {});
+    ok(/\/accounts\.html/.test(p.url()), 'app.html#/app/ledger lands on /accounts.html — the Ledger is CB Accounts now (the bands are drawn there: e2e/cb-accounts.cjs)');
+    await p.goto(base + '/app.html#/app');
+    await p.waitForSelector('[data-testid="nav-home"]', { timeout: 20000 }).catch(() => {});
     ok(await p.locator('[data-testid="nav-home"]').count() === 1 && await p.getAttribute('[data-testid="nav-home"]', 'href') === '/', 'the app\'s top bar carries Home → /');
-    await noBadWords(p, 'ledgers view');
-    await p.screenshot({ path: path.join(SHOTS, 'ledgers-bands.png'), fullPage: false });
+    await noBadWords(p, 'app home');
     await ctx.close();
   }
 

@@ -28,6 +28,38 @@ var CB_BOOKS_EP = {
   booksStatement:  {m:"GET",  p:"/api/books/party/:id/statement",         ok:"y"},
 };
 
+/* ── the chit sheet's three calls (chit-sheet.js reads one chit, moves its step, says what a bill's goods are for) —
+   MOVED from app.html's EP so the app and CB Accounts open the same sheet through the same endpoints ── */
+var CB_SHEET_EP = {
+  chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
+  status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
+  billUse:         {m:"PUT",  p:"/api/chits/:id/use",            ok:"✓"},  // a bill I received: resale · use · asset (lib/bill-use), until accepted
+};
+
+/* ── the chit-sheet helpers both pages share (MOVED from app.html, not copied) ── */
+/** is this entity me? by id when the session knows it, else by the shop's name */
+function chitIsSelf(e,n){ return (SESSION.entityId&&e===SESSION.entityId)||(SESSION.entity&&String(n||"")===String(SESSION.entity)); }
+/**
+ * ⭐ WHAT THE GOODS ARE FOR — one tap before Accept (Athi, 2026-10-01). Nothing tapped: the shop's own catalogue decides
+ * line by line (resale if it sells the product, else for the shop). Shown only when every chosen row is a bill received.
+ * `pick` names the global the chips call with the chosen use (app.html's pickBillUse; the chit sheet's CBSheet.use).
+ */
+var BILL_USES=[['resale','For resale'],['use','For the shop'],['asset','An asset']];
+function billUseChoiceHTML(rows, pick){
+  var bills = rows.length > 0 && rows.every(function(r){ return r && r.billRx; });
+  if(!bills) return '';
+  return '<div data-testid="bill-use-choice" style="margin-top:10px"><div class="s">' + tx('What is it for?') + '</div>'
+    + BILL_USES.map(function(u){ return '<button type="button" class="optchip" data-testid="bill-use-' + u[0] + '" data-use="' + u[0] + '" onclick="' + (pick || 'pickBillUse') + '(this.dataset.use)">' + tx(u[1]) + '</button>'; }).join(' ')
+    + '<div class="s">' + tx('Not tapped: your catalogue decides') + '</div></div>';
+}
+/** ⭐ ONE COUNTER, ONE NAME: the bill's series is the counter ("C2/26-27/0007" → C2), as the Day book says it. The popup and the Day book both read these two. */
+function counterOfBill(no, till){ var m=/^([A-Za-z0-9]+)\//.exec(String(no||'')); return m ? m[1] : ((till && (till.name||till.id)) || ''); }
+function counterWord(c){ c=String(c==null?'':c).trim(); return c ? (/^counter\b/i.test(c) ? c : tx('Counter')+' '+c) : ''; }
+/** the one status a move sends: a bill's acceptance is `accepted` (the ledger posts the purchase on it), a task's Act stays in_progress */
+function statusWordFor(to, row){
+  return ({ open:'pending', act:(row && row.billRx) ? 'accepted' : 'in_progress', close:'completed' })[to] || to;
+}
+
 /* ── the string door ── */
 function cbLang(){ try{ return localStorage.getItem('cb_lang') || 'en'; }catch(_){ return 'en'; } }
 

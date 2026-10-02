@@ -220,6 +220,12 @@ mark{background:#f6e3a8;color:inherit;border-radius:2px}
   #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
+  /* the party table (1300 / 2100): one line a party — name · balance */
+  #bk_body table.bkparty tr{display:flex;align-items:baseline;gap:10px}
+  #bk_body table.bkparty td{width:auto}
+  #bk_body table.bkparty td.opt{display:none}
+  #bk_body table.bkparty td:nth-child(2){flex:1;text-align:left}
+  #bk_body table.bkparty td[data-l]::before{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
@@ -286,10 +292,12 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 </script>
 <script src="/app/core.js"></script>
 <script src="/app/accounts-shell.js"></script>
-<script>Object.assign(EP, CB_BOOKS_EP);</script>
+<script>Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP);</script>
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
+<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders.js"></script>
 <script src="/app/cap-books.js"></script>
 <script src="/app/one-person.js"></script>
@@ -519,7 +527,7 @@ $('content').addEventListener('click', (e) => {
   const tab = e.target.closest('.tab');
   if (tab){ ACC.billTab = tab.dataset.code; bkTab('bills', true); }
   const bill = e.target.closest('.bill');
-  if (bill) openChit(bill.dataset.id);
+  if (bill) openChitSheet(bill.dataset.id);
 });
 $('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; ACC.kind = b.dataset.kind; chipsPaint(); ledgersPaint(); });
 $('q').addEventListener('input', (e) => { ACC.q = e.target.value; ledgersPaint(); });
@@ -558,12 +566,14 @@ async function accBills(body){
     const cards = list.map((c) => {
       const b = c.bill || {};
       const sub = [c.counterparty_name, c.bill_no].filter(Boolean).map(esc).join(' · ');
+      /* who accepted: the person's NAME (the field the other rows show), never their user id — the id is the last resort */
+      const by = b.by_name || b.by_display_name || ((c.all_recipients || []).find((x) => x && [x.user_id, x.handle, x.entity_handle, x.bridge_id].indexOf(b.by) >= 0 && x.display_name) || {}).display_name || b.by;
       const when = b.at ? ' · ' + esc(bkDate(b.at)) : '';
       const amt = c.value != null && c.value !== '' ? CBLocale.money(Number(c.value), c.currency || bkCur()) : '';
       return `<button type="button" class="bill" data-testid="bill-${esc(c.chit_id)}" data-id="${esc(c.chit_id)}">
         <span class="t">${esc(c.manual_subject || c.auto_subject || c.bill_no || tx('Bill'))}</span>
         <span class="amt">${esc(amt)}</span>
-        <span class="s">${sub}${b.by ? ' · ' + esc(b.by) : ''}${when}</span>
+        <span class="s">${sub}${by ? ' · ' + esc(by) : ''}${when}</span>
         ${b.label ? `<span class="step ${STEP_TONE[b.step] || ''}" data-testid="bill-step-${esc(c.chit_id)}" data-step="${esc(b.step || '')}">${esc(b.label)}</span>` : ''}
       </button>`;
     }).join('');
@@ -630,7 +640,7 @@ async function start(){
   SESS = session();
   if (!SESS) return signedOut('');
   MINE = CBOnePerson.who(SESS);
-  SESSION = Object.assign({ token: null }, { token: SESS.token, role: SESS.role, name: SESS.name, entity: SESS.entity, bridgeId: SESS.bridgeId, duty: SESS.duty, shop: SESS.shop });
+  SESSION = Object.assign({ token: null }, { entityId: MINE && MINE.ent, token: SESS.token, role: SESS.role, name: SESS.name, entity: SESS.entity, bridgeId: SESS.bridgeId, duty: SESS.duty, shop: SESS.shop });
   whoPaint();
   const g = ++ACC.gen;
   /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
