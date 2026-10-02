@@ -6,6 +6,12 @@
  * other entity here. if so make sure that it logs out and very clear. do not allow the shop to open until the
  * browser or session is clear out of danger."*
  *
+ * ⭐ NARROWED, same day, for the COUNTER only. Athi, live, 2026-10-01: *"something pending from another store, why it
+ * affects the current login … the courtesy message is some unsent bills are there, but the new sign in must go."*
+ * So another shop's counter (paired here, or still holding its unsent bills) is a NOTICE, never a block: the new
+ * shop opens, the counter's database, queue and key are left exactly as they are, and the counter's own sign-in
+ * sends them the next time it is opened online. Sessions, other tabs, drafts and the app outbox still block.
+ *
  * This file is the LOGIC of that check, shared by app.html (whose route() is the one gate a shop opens through) and
  * the index page. It paints nothing: each page paints the answer in its own way, from the same sentences.
  *
@@ -16,6 +22,7 @@
  *     tagged with a shop, so cb_owner — written ONLY by claim(), when the gate opens a shop — says whose they are.
  *   · the browser counter paired to another shop — read from the counter's OWN keys, never written (till.html is
  *     the counter's; its sign-in is the only thing that may switch it — C:\dev\SPEC-counter-identity.md, G1).
+ *     It is a notice (traces().notice), not a trace: it never makes the browser "not clean" by itself.
  *
  * Who a shop IS = the signed id inside the token (parent_entity_id, else identity_id). Never a name: a co-assist and
  * the owner of ONE shop are one entity and pass each other cleanly; two shops called "Mayur" are two entities.
@@ -106,6 +113,16 @@
     }).then(function (counts) { return mem + counts.reduce(function (a, c) { return a + (Number(c) || 0); }, 0); },
             function () { return mem; });
   }
+  /** the same count, per counter slot: { 'cb-till-<sfx>': rows } — IndexedDB and the localStorage fallback together.
+   *  Only slots with rows are listed. Read-only. */
+  function counterSlots() {
+    var by = {}, add = function (n, c) { c = Number(c) || 0; if (n && c) by[n] = (by[n] || 0) + c; };
+    lsKeys().forEach(function (k) { var m = k && /^(cb-till[A-Za-z0-9_-]*?)-queue-/.exec(k); if (m) add(m[1], 1); });
+    return dbNames().then(function (names) {
+      var slots = (names || []).filter(function (n) { return /^cb-till/.test(n); });
+      return Promise.all(slots.map(function (n) { return readExisting(n, 'queue', function (st) { return st.count(); }).then(function (c) { add(n, c); }); }));
+    }).then(function () { return by; }, function () { return by; });
+  }
   /** saves the Labs could not send yet (the 'offerlab' database's outbox, drained by combo-lab.html) — read-only */
   function labUnsent() {
     return readExisting('offerlab', 'outbox', function (st) { return st.count(); }).then(function (n) { return Number(n) || 0; }, function () { return 0; });
@@ -167,7 +184,9 @@
 
   /* ── the check ─────────────────────────────────────────────────────────────────────────────────────────────── */
   /** everything in this browser that belongs to a shop other than `mine` ({ent}). Resolves
-   *  { clean, others:[{ent,name,tabs,sess,drafts,outbox,uids,counter}], counter, pair } */
+   *  { clean, others:[{ent,name,tabs,sess,drafts,outbox,uids,counter}], notice, pair }
+   *  notice = { ent, name, counter, unsent } — another shop's counter that still holds unsent bills: told, never a
+   *  block. A counter paired elsewhere with nothing unsent has nothing to say. */
   function traces(mine) {
     var ent = String((mine && mine.ent) || '');
     var by = {}, list = [];
@@ -189,11 +208,13 @@
         (own.ids || []).forEach(function (u) { uid(b, u); });
       }
     }
-    return Promise.all([ask({ t: 'who' }, ASK_MS), counterPair()]).then(function (r) {
+    return Promise.all([ask({ t: 'who' }, ASK_MS), counterPair(), counterSlots()]).then(function (r) {
       r[0].forEach(function (m) { if (m && m.ent && m.ent !== ent) { var c = of(m.ent, m.name); c.tabs++; uid(c, m.uid); } });
       var pair = r[1], counter = (pair.paired && pair.ent && pair.ent !== ent) ? pair : null;
       if (counter && by[counter.ent]) { by[counter.ent].counter = true; if (!by[counter.ent].name) by[counter.ent].name = counter.name; }
-      return { clean: !list.length && !counter, others: list, counter: counter, pair: pair };
+      var left = counter ? (r[2][slot()] || 0) : 0;
+      var notice = left ? { ent: counter.ent, name: counter.name, counter: counter.counter, unsent: left } : null;
+      return { clean: !list.length, others: list, notice: notice, pair: pair };
     });
   }
 
@@ -208,8 +229,11 @@
     if (o.counter) bits.push('a counter paired to it');
     return 'This browser still holds ' + shopName(o) + ': ' + bits.join(' · ') + '. Close it first.';
   }
-  function counterSentence(c) {
-    return 'The counter here is paired to ' + shopName(c) + '. Switch it on the counter itself — its sign-in sends any unsent bills first.';
+  /** the courtesy line — a notice, nothing to fix */
+  function noticeSentence(n) {
+    var c = Number(n && n.unsent) || 0;
+    return c + (c === 1 ? ' unsent bill for ' : ' unsent bills for ') + shopName(n) + (c === 1 ? ' stays' : ' stay') + ' on this browser. '
+      + (c === 1 ? 'It is' : 'They are') + ' sent when that counter is next opened online.';
   }
   function buttonLabel(o) { return 'Sync and sign ' + shopName(o) + ' out'; }
 
@@ -242,14 +266,16 @@
   /* ── ⭐⭐ START WITH A CLEAN BROWSER (Athi, 2026-10-01: *"offer to open a new browser with clean slate, so it has
      no session information held anywhere across the board."*) A page cannot open a private window; this is the
      same slate, made here. In this order, and it stops at the first thing that is not safe:
-       1  the counter's queue holds unsent bills → refuse, and say how many. A counter key is the one thing never
-          wiped with work behind it. (Checked FIRST, so nobody is signed out for a clean-up that cannot happen.)
+       1  a counter slot holding unsent bills is SPARED, never refused: its database, its localStorage rows and the
+          counter's pairing keys stay (the queue is tied to its KEY — a re-pairing once stranded bills). Everything
+          else goes. A slot with nothing unsent is wiped as before. The Labs' outbox still refuses (it carries no
+          shop; combo-lab.html would send it as whoever is signed in).
        2  every ChitBridge tab is told to send what it holds and sign out; a tab that does not answer is NAMED,
           and nothing is wiped
        3  every database on this origin is deleted — a delete that stays blocked means a page still holds it open
           (the counter page cannot be told: it is the counter's own) → named, and the keys are left as they are
        4  every cb* key in localStorage and sessionStorage, every cache, every service worker
-     Resolves { ok:true, counter:'Counter 1' | '' } or { ok:false, unsent:n | silent:[labels] | blocked:[labels] } */
+     Resolves { ok:true, counter:'Counter 1' | '', kept:{ name, unsent } | null } or { ok:false, unsent:n | silent:[labels] | blocked:[labels] } */
   var CB_KEY = /^cb[_.\-]/;              /* cb_sess, cb_till_*, cb_nav@<id>, cb.draft.*, cb.outbox.v1, cb-till-*-queue-* … */
   function cbKeys(store) { var out = []; try { for (var i = 0; i < store.length; i++) { var k = store.key(i); if (k && CB_KEY.test(k)) out.push(k); } } catch (_) {} return out; }
   function dbLabel(n) { return /^cb-till/.test(n) ? 'the counter tab' : (n === 'offerlab' ? 'a Lab tab' : 'a tab using ' + n); }
@@ -261,27 +287,40 @@
       rq.onblocked = function () { setTimeout(function () { fin(dbLabel(name)); }, 2000); };
     });
   }
+  /* what a spared counter slot keeps: its own pairing keys (for slot cb-till-<sfx>: the @<sfx> ones), the slot's
+     localStorage rows, and the device-wide pairing keys the counter opens with */
+  var PAIR_KEYS = /^cb_till_(key|lastslot|entity|name)$/;
+  function sparedKey(k, spared) {
+    if (!spared.length) return false;
+    if (PAIR_KEYS.test(k)) return true;
+    for (var i = 0; i < spared.length; i++) {
+      if (k.indexOf(spared[i] + '-') === 0) return true;
+      var sfx = spared[i].slice(8);
+      if (sfx && /^cb_till_/.test(k) && k.slice(-(sfx.length + 1)) === '@' + sfx) return true;
+    }
+    return false;
+  }
   function startClean() {
-    /* ⚠️ the pair is read UP FRONT so a refusal can say WHOSE bills these are (Athi, live, 2026-10-01: "it is
-       not stating for which shop the bills are pending") — a count with no shop is a number nobody can act on */
-    return Promise.all([counterUnsent(), labUnsent(), counterPair()]).then(function (u) {
-      if (u[0]) return { ok: false, unsent: u[0], shop: (u[2] && u[2].paired && shopName(u[2])) || '' };
+    return Promise.all([counterSlots(), labUnsent(), counterPair()]).then(function (u) {
       if (u[1]) return { ok: false, labUnsent: u[1] };
+      var spared = Object.keys(u[0]), pair = u[2];
+      var held = spared.reduce(function (a, n) { return a + u[0][n]; }, 0);
       return ask({ t: 'roll' }, ASK_MS).then(function (tabs) {
         return ask({ t: 'wipe' }, LEAVE_MS, function (got) { return got.length >= tabs.length; }).then(function (got) {
           var silent = tabs.filter(function (t) { return !got.some(function (g) { return g.tab === t.tab; }); }).map(function (t) { return t.label; });
           if (silent.length) return { ok: false, silent: silent };
-          return counterPair().then(function (pair) {
-            var known = [slot(), 'offerlab'].filter(Boolean);
-            return dbNames().then(function (names) { return Promise.all((names || known).map(dropDb)); }).then(function (blocked) {
-              blocked = blocked.filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; });
-              if (blocked.length) return { ok: false, blocked: blocked };
-              cbKeys(root.localStorage).forEach(lsDel);
-              try { cbKeys(root.sessionStorage).forEach(function (k) { root.sessionStorage.removeItem(k); }); } catch (_) {}
-              var caches = root.caches ? root.caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return root.caches.delete(k); })); }).catch(function () {}) : null;
-              var sw = (root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.getRegistrations)
-                ? root.navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }).catch(function () {}) : null;
-              return Promise.all([caches, sw]).then(function () { return { ok: true, counter: pair.paired ? pair.counter : '' }; });
+          var known = [slot(), 'offerlab'].filter(Boolean);
+          return dbNames().then(function (names) { return Promise.all((names || known).filter(function (n) { return spared.indexOf(n) < 0; }).map(dropDb)); }).then(function (blocked) {
+            blocked = blocked.filter(Boolean).filter(function (b, i, a) { return a.indexOf(b) === i; });
+            if (blocked.length) return { ok: false, blocked: blocked };
+            cbKeys(root.localStorage).filter(function (k) { return !sparedKey(k, spared); }).forEach(lsDel);
+            try { cbKeys(root.sessionStorage).forEach(function (k) { root.sessionStorage.removeItem(k); }); } catch (_) {}
+            var caches = root.caches ? root.caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return root.caches.delete(k); })); }).catch(function () {}) : null;
+            var sw = (root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.getRegistrations)
+              ? root.navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); }).catch(function () {}) : null;
+            return Promise.all([caches, sw]).then(function () {
+              return { ok: true, counter: pair.paired ? pair.counter : '',
+                       kept: held ? { name: pair.paired ? pair.name : '', unsent: held } : null };
             });
           });
         });
@@ -289,14 +328,14 @@
     });
   }
   function cleanSentence(r) {
-    if (r.unsent) return 'The counter still holds ' + r.unsent + (r.unsent === 1 ? ' unsent bill' : ' unsent bills') + (r.shop ? ' for ' + r.shop : '') + '. Open the counter and let it send them first.';
     if (r.labUnsent) return 'The Labs still hold ' + r.labUnsent + (r.labUnsent === 1 ? ' unsent save' : ' unsent saves') + '. Open the Combo Lab while online and let it send them first.';
     if (r.silent) return 'No answer from: ' + r.silent.join(', ') + '. Close ' + (r.silent.length === 1 ? 'it' : 'them') + ', then press again.';
     if (r.blocked) return 'Still open: ' + r.blocked.join(', ') + '. Close ' + (r.blocked.length === 1 ? 'it' : 'them') + ', then press again.';
+    if (r.kept) return 'This browser is clean. ' + noticeSentence(r.kept);
     return 'This browser is clean.' + (r.counter ? ' ' + r.counter + ' will need pairing again.' : '');
   }
 
   root.CBOnePerson = { who: who, stored: stored, counterPair: counterPair, traces: traces, clearOut: clearOut,
-    claim: claim, attach: attach, sentence: sentence, counterSentence: counterSentence, buttonLabel: buttonLabel,
-    shopName: shopName, counterUnsent: counterUnsent, startClean: startClean, cleanSentence: cleanSentence };
+    claim: claim, attach: attach, sentence: sentence, noticeSentence: noticeSentence, buttonLabel: buttonLabel,
+    shopName: shopName, counterUnsent: counterUnsent, counterSlots: counterSlots, startClean: startClean, cleanSentence: cleanSentence };
 })(typeof window !== 'undefined' ? window : this);

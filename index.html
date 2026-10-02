@@ -144,6 +144,7 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
     describes it, the ledger records it — and the Labs are where you work a number out
     before any of them see it.</p>
 
+  <div class="alerts" id="notice" data-testid="notice-host"></div>
   <div class="alerts" id="alerts" data-testid="alerts"></div>
 
   <div class="cap"><b>Day to day</b><i></i></div>
@@ -465,6 +466,7 @@ function clearFacts(){
   document.getElementById('shop').textContent = '';
   document.getElementById('prices_read').textContent = '';
   ALERTS = []; document.getElementById('alerts').innerHTML = '';
+  document.getElementById('notice').innerHTML = '';
   ledgerState(null);
   CUR = 'INR';
 }
@@ -494,6 +496,18 @@ function closeFirst(r){
   });
 }
 
+/* another shop's counter still holds unsent bills: one line, nothing to fix here — and the shop opens regardless.
+   Dismissed for the rest of this tab's life (sessionStorage; a page that cannot keep it just shows it again). */
+function noticePaint(n){
+  var host = document.getElementById('notice'); host.innerHTML = '';
+  if (!n) return;
+  var k = 'cb_notice_seen', sig = n.ent + ':' + n.unsent;
+  try { if (sessionStorage.getItem(k) === sig) return; } catch (_) {}
+  host.innerHTML = '<div class="al warn" data-testid="gate-notice"><span class="ic">!</span><span>' + esc(CBOnePerson.noticeSentence(n))
+    + '</span><button class="fix" data-testid="gate-notice-x">Dismiss</button></div>';
+  host.querySelector('button').onclick = function(){ try { sessionStorage.setItem(k, sig); } catch (_) {} host.innerHTML = ''; };
+}
+
 function open_(){
   if (!SESS) return signedOut('');
   clearFacts();
@@ -505,6 +519,7 @@ function open_(){
   CBOnePerson.traces(MINE).then(function(r){
     if (g !== GEN || !MINE) return;
     if (r.others.length) closeFirst(r); else facts();
+    noticePaint(r.notice);
     pairPaint(r.pair);
   });
 }
