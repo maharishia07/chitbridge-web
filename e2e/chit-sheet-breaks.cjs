@@ -37,7 +37,7 @@ const BREAKS = [
   ['offer not shown', SHEET, `offs.map(function (o) {`, `[].map(function (o) {`],
   ['Accept sends nothing', SHEET, `var sr = await api('status', { params: { id: id }, body: { status: word } });`, `var sr = null;`],
   ['Accept sent twice', SHEET, `var sr = await api('status', { params: { id: id }, body: { status: word } });`, `var sr = await api('status', { params: { id: id }, body: { status: word } }); await api('status', { params: { id: id }, body: { status: word } });`],
-  ['sheet not repainted after Accept', SHEET, `      await read(id);\n    } catch (e) { CS.note`, `    } catch (e) { CS.note`],
+  ['sheet not repainted after Accept', SHEET, `      await read(id);\n      /* the Day book's to-do`, `      /* the Day book's to-do`],
   ['Open page does not open the page', SHEET, `if (k === 'page') { close(); if (typeof openChit === 'function') openChit(id); }`, `if (k === 'page') { close(); }`],
   ['Open page keeps the sheet', SHEET, `if (k === 'page') { close(); if`, `if (k === 'page') { if`],
   ['page scrolls behind the sheet / close moves it', SHEET, `d.addEventListener('close', function () { lock(false); CS.id = null; });`, `d.addEventListener('close', function () { lock(false); CS.id = null; window.scrollTo(0, 0); var s = document.querySelector('.bkentry'); if (s && s.scrollIntoView) s.scrollIntoView(); });`],
