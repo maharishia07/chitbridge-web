@@ -14,7 +14,8 @@ const BREAKS = [
   ['Save is on while the server refuses the entry', ENT, `&& !(pv.refusals || []).length && !EN.pvBusy`, `&& !EN.pvBusy`, A],
   ['the page sends a different amount than was typed', ENT, `b.amount_minor = bkToMinor(EN.v.amount);`, `b.amount_minor = bkToMinor(EN.v.amount) + 1;`, A],
   ['a locked month is not refused at the date', ENT, `EN.dateRef = (r && r.refusals) || [];`, `EN.dateRef = [];`, A],
-  ['a double tap posts twice', ENT, `await bkOnce('entry-save', btn, async function () {\n    EN.saving = true; var body`, `await bkOnce('entry-save' + Math.random(), null, async function () {\n    var body`, A],
+  /* three layers stand in the way of a second post (the page's EN.saving, bkOnce, and api()'s own in-flight lock): the break removes all three */
+  ['a double tap posts twice', ENT, `await bkOnce('entry-save', btn, async function () {\n    EN.saving = true; var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';\n    try {\n      var r = await api(key, { body: body });`, `await (function (k, b, fn) { return fn(); })('entry-save', btn, async function () {\n    var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';\n    try {\n      var r = await api(key, { body: body, params: { n: Math.random() } });`, A],
   ['a retry loses its client_ref', ENT, `body.client_ref = EN.ref;`, `body.client_ref = bkRef();`, A],
   ['Save posts to the wrong route', ENT, `var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';`, `var key = 'booksEntrySave';`, A],
   ['Reverse posts without asking first', ENT, `if (!id) return;\n  confirmAsk(`, `if (!id) return;\n  (function (a, b, c, go) { go(); })(`, A],
