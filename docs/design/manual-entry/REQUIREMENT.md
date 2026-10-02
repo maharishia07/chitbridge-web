@@ -64,6 +64,7 @@ names the accounts' types and applies the rules, and the screen shows the journa
    **Save**: one entry (JV/…), source `manual`, by whom, idempotent by its own reference so a double tap never posts twice.
 
 ## Who chooses the numbers (Athi, 2026-10-02: *"how each entry to be posted against the designated number, who chooses, is it system or the person has to choose?"*)
+- **Manual entries number on their OWN series, MJ/** (Athi, 2026-10-02): JV/<fy>/<n> is the system's (bills, payments, day close, set-off); MJ/<fy>/<n> is a person's (every ＋ Entry, every Reverse, every correction). Both gap-free per shop per FY, never typed or reused. Tally numbers each voucher type separately; an auditor filters manual journals first (SA 240). The api already draws numbers from a named series (lib/books.js S.nextNo(…, 'JV', fy)).
 - **The entry number (JV/2026-27/000123): always the system.** Next in sequence, gap-free per shop per financial year
   (engines `accounts-packs.jvNo`). Never typed, never edited, never reused. A reversal gets its own number and names the
   entry it reverses.
