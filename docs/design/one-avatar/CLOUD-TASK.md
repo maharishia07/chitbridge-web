@@ -1,6 +1,6 @@
 # Cloud task — ONE AVATAR: the same avatar, menu, theme and font on every ChitBridge page (Sonnet)
 
-**Outcome (one):** one avatar module that every page loads — the app (`public/app.html`), CB Accounts (`public/accounts.html`),
+**Outcome (one):** one avatar module that every page loads — the app (`public/app.html`), CB Accounts (`public/accounts.html`), the counter (prepared — item 6),
 the index page (`index.html`), and the Labs and other standalone pages that show who is signed in — so the person, their
 profile, their theme and their font are the same everywhere. Branch `cloud/one-avatar` (this file is its only commit) → PR
 against `main`; never push to `main`. **First `git merge origin/main`** (web #15 lands just before this — it also touches app.html).
@@ -31,6 +31,15 @@ backend app"*.
    button where the avatar goes), and every standalone page that shows a signed-in person (grep `cb_sess` in `public/*.html`:
    the Labs, network, testing …). A page that has no signed-in person stays as it is.
 5. Same CSS tokens; no new style (rule 5). The avatar circle and menu look as the app's do today.
+
+6. **The counter too (Athi: "including the counter app") — prepared here, wired separately.** `public/till.html` is VENDORED
+   from the API repo (`tools/tally-connector/till.html` → `scripts/vendor-till.cjs`), so this task does NOT edit it. Make
+   `avatar.js` counter-ready instead: (a) **no network needed** — theme and font apply from local storage alone; the server sync
+   is optional and silent when offline; (b) **no build step, no imports, one global** (`window.CBAvatar`), so the counter can load
+   it as `/engine/`-style vendored file; (c) a `person` input that can be the counter's signed-in cashier (name + role "Cashier ·
+   Counter C2") rather than the app session; (d) items configurable, so the counter shows Appearance · Sign out of this counter ·
+   Profile ↗ (opens the app). Document the counter mount in `docs/design/one-avatar/COUNTER.md` (what to call, where, which items)
+   — the API-side wiring and vendoring follow in their own PR.
 
 ## Proof (exit codes; commit outputs)
 - NEW `e2e/one-avatar.cjs` (stand-in API on a free OS port — never localhost:3000, port 7351 or the live site): on app.html,
