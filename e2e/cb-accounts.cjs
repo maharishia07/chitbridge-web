@@ -29,7 +29,7 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 /* the designer's twelve views, Bills after Dues — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
-  ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="acc-sec-people"]'],
+  ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['dues', 'Dues', '[data-testid="dues-side-rcv"]'],
   ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
@@ -49,6 +49,11 @@ const CONTROL = {
   '1300': { account: { code: '1300', name: 'Customers (Sundry Debtors)' }, currency: 'INR', opening_minor: 0, closing_minor: 600000, lines: [L1, L2] },
   '2100': { account: { code: '2100', name: 'Suppliers (Sundry Creditors)' }, currency: 'INR', opening_minor: 0, closing_minor: -250000, lines: [P1, P2] },
 };
+/* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it */
+const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, narration: 'Sale',
+  source: { kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' },
+  lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', rate: 12, dr_minor: 0, cr_minor: 267857 },
+    { code: '2200', name: 'Output CGST', rate: 6, dr_minor: 0, cr_minor: 16072 }, { code: '2201', name: 'Output SGST', rate: 6, dr_minor: 0, cr_minor: 16071 }] }));
 const PARTY_LINES = { c1: [Object.assign({}, L1, { running_minor: 300000 })], c2: [Object.assign({}, L2, { running_minor: 300000 })], s1: [P1], s2: [Object.assign({}, P2, { running_minor: -100000 })] };
 
 /* ── the stand-in: one shop's chart, its trial balance, its two bills folders ───────────────────────────────── */
@@ -110,8 +115,8 @@ async function route(S, r) {
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: { code: x[1], name: 'Cash' }, currency: 'INR', opening_minor: 0, closing_minor: 1240000,
       lines: [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }] });
-    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
-      source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }] });
+    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
+      source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]) });
     if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
@@ -200,136 +205,121 @@ async function route(S, r) {
     }
     ok(S.calls.filter((c) => /booksAccounts|\/api\/books\/accounts/.test(c)).length >= 1, 'the Ledgers view read the accounts');
 
-    /* ── 2 · LEDGERS ── */
+    /* ── 2 · LEDGERS — a folder tree on the left, the chosen ledger's entries in the Task table on the right (docs/design/one-table, item 5) ── */
     S.calls.length = 0;
     await nav(p, 'ledgers');
-    await p.waitForSelector('[data-testid="acc-sec-people"]');
-    await p.waitForSelector('[data-testid="bal-1300"]');
-    const secs = await p.$$eval('.section', (s) => s.map((x) => x.getAttribute('data-testid')));
-    ok(JSON.stringify(secs) === JSON.stringify(['acc-sec-people', 'acc-sec-real', 'acc-sec-nominal']), 'three sections: Personal · Real · Nominal');
-    const rules = await p.$$eval('.sec-rule', (s) => s.map((x) => x.textContent));
-    ok(rules.length === 3 && /receiver/.test(rules[0]) && /comes in/.test(rules[1]) && /expenses/.test(rules[2]), 'each section carries its rule line');
-    const groups = await p.$$eval('.group-title', (s) => s.map((x) => x.textContent));
-    ok(JSON.stringify(groups) === JSON.stringify(['PARTIES', 'CASH & BANK', 'STOCK & ADVANCES', 'GST', 'TAXES & SUSPENSE', "OWNER'S EQUITY", 'OTHER', 'INCOME', 'DIRECT COSTS', 'OPERATING EXPENSES', 'ADJUSTMENTS']),
-      'groups are decided by code, in the designer\'s order (' + groups.join(' · ') + ')');
-    ok(await p.locator('[data-testid="acc-group-PARTIES"] .acct').count() === 4, 'Parties holds the control lines and the parties under them (1300, 2100 and their parties)');
-    const partyCodes = await p.$$eval('[data-testid="acc-group-PARTIES"] .code', (s) => s.map((x) => x.textContent));
-    ok(partyCodes[0] === '1300' && partyCodes[1] === '2100', 'the control lines come first (' + partyCodes.join(', ') + ')');
+    await p.waitForSelector('[data-testid="lt-band-people"]');
+    const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
+    ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top folders: People · Things you hold · Income and expenses · Your capital');
+    ok((await p.textContent('[data-testid="lt-band-people"]')).trim().startsWith('📁') && await p.locator('[data-testid^="lg-acc-"]').count() === 0, 'a closed band wears the folder glyph and shows no ledger yet');
+    ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1, 'the tree and the list are foldersScreen\'s two panes (_folderPanes)');
+    await p.click('[data-testid="lt-band-things"]');
+    ok((await p.textContent('[data-testid="lt-band-things"]')).trim().startsWith('📂'), 'opening a band opens its folder glyph');
+    const groups = await p.$$eval('[data-testid^="lt-group-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-group-', '')));
+    ok(JSON.stringify(groups) === JSON.stringify(['Cash & bank', 'Stock & advances', 'Duties & taxes', 'Taxes & suspense', 'Other']), 'its groups, decided by code: ' + groups.join(' · '));
+    await p.click('[data-testid="lt-group-Cash & bank"]');
+    ok(await p.locator('[data-testid="lg-acc-1400"]').count() === 1 && await p.locator('[data-testid="lg-acc-1500"]').count() === 1 && await p.locator('[data-testid="lg-acc-1200"]').count() === 0, 'opening a group shows its ledgers (Cash, Bank, UPI collections) as leaves, and not another group\'s');
+    for (const g of ['Stock & advances', 'Duties & taxes', 'Taxes & suspense', 'Other']) await p.click('[data-testid="lt-group-' + g + '"]');
     ok(await p.locator('[data-testid="lg-acc-7777"]').count() === 1, 'a code the design never named still appears (Other), never nowhere');
-    ok(await p.locator('[data-testid="lg-acc-6000"]').count() === 0, 'a ledger group (6000) is not a ledger row');
-    const chips = await p.$$eval('.chip', (s) => s.map((x) => x.textContent));
-    ok(chips.length === 4 && chips[0].startsWith('All') && /Personal4/.test(chips[1]) && /Real11/.test(chips[2]) && /Nominal6/.test(chips[3]), 'class chips with counts: ' + chips.join(' · '));
-    ok(/21 ledgers in 3 classes/.test(await p.textContent('#summary')), 'the summary counts the ledgers');
-
+    ok(await p.locator('[data-testid="lg-acc-6000"]').count() === 0 && await p.locator('[data-testid="lg-acc-1300-P00001"]').count() === 0, 'a ledger group (6000) and a per-party sub-account are not leaves');
+    for (const bnd of ['income', 'capital']) await p.click('[data-testid="lt-band-' + bnd + '"]');
+    for (const g of ['Income', 'Direct costs', 'Operating expenses', 'Adjustments', "Owner's equity"]) await p.click('[data-testid="lt-group-' + g + '"]');
+    ok(await p.locator('[data-testid="lg-acc-3000"]').count() === 1, 'Your capital holds the 3xxx ledgers');
     /* the balances: Dr / Cr, from ONE trial-balance read */
-    ok(/Dr/.test(await p.textContent('[data-testid="bal-1300"]')) && /6,000/.test(await p.textContent('[data-testid="bal-1300"]')), 'Customers: ₹6,000 Dr');
-    ok(/Cr/.test(await p.textContent('[data-testid="bal-2100"]')) && /2,500/.test(await p.textContent('[data-testid="bal-2100"]')), 'Suppliers: ₹2,500 Cr');
+    ok(/Dr/.test(await p.textContent('[data-testid="bal-1400"]')) && /12,400/.test(await p.textContent('[data-testid="bal-1400"]')), 'Cash: ₹12,400 Dr on its leaf');
     ok(/Cr/.test(await p.textContent('[data-testid="bal-4000"]')), 'Sales: a Cr balance');
     ok((await p.textContent('[data-testid="bal-4200"]')).trim() === '—', 'a ledger the trial balance does not list says "—", not a made-up nil');
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
-    ok(tbReads === 1, 'ONE trial-balance read for the whole list (' + tbReads + ')');
-    ok(S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)).length === 0, 'no per-row balance read');
-
-    /* chips filter, search highlights and opens everything, Expand / Collapse all */
-    await p.click('[data-testid="acc-chip-nominal"]');
-    ok(await p.locator('.section').count() === 1 && await p.locator('[data-testid="acc-sec-nominal"]').count() === 1, 'the Nominal chip shows only that class');
-    await p.click('[data-testid="acc-chip-all"]');
-    await p.click('#collapseAll');
-    ok(await p.locator('.section.open').count() === 0, 'Collapse all closes every section');
-    await p.click('#expandAll');
-    ok(await p.locator('.section.open').count() === 3, 'Expand all opens every section');
-    await p.click('#collapseAll');
-    await p.fill('#q', '6010');
-    ok(await p.locator('.section.open').count() === 1 && await p.locator('.acct').count() === 1, 'searching 6010 opens its section and shows only it');
-    ok(await p.locator('.acct mark').first().textContent() === '6010', 'the match is highlighted');
-    ok(/1 of 21 ledgers/.test(await p.textContent('#summary')), 'the summary says 1 of 21 while searching');
-    await p.fill('#q', 'bank');
-    ok(await p.locator('.acct').count() === 2 && await p.locator('.acct mark').count() === 2, 'a name search matches Bank and Bank charges, highlighted');
-    await p.fill('#q', 'zzzz');
-    ok(/No ledgers match/.test(await p.textContent('.empty')) && await p.locator('#clear').count() === 1, 'no match → one line and the button that clears it');
-    await p.click('#clear');
-    ok(await p.locator('.acct').count() === 21, 'Clear search brings every ledger back');
-    await p.click('#expandAll');
+    ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
+    ok(S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)).length === 0, 'no per-leaf balance read');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
+    await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
 
-    /* a click opens that ledger — the app's own ledger view */
-    await p.click('#expandAll');
+    /* search finds a ledger by code or name (list-ctl's box), opening every folder on the way */
+    const S1 = '[data-testid="listctl-search-ledgers"]';
+    await p.fill(S1, '6010');
+    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 1 && await p.locator('[data-testid="lg-acc-6010"]').count() === 1, 'searching 6010 leaves that one ledger, its folders open');
+    await p.fill(S1, 'bank');
+    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 2, 'a name search matches Bank and Bank charges');
+    await p.fill(S1, 'zzzz');
+    ok(/Nothing matches/.test(await p.textContent('[data-testid="lt-tree"]')), 'no match → one line');
+    await p.fill(S1, '');
+
+    /* band → group → ledger → its entries → expand one → open its bill */
     await p.click('[data-testid="lg-acc-1400"]');
-    await p.waitForSelector('[data-testid="lg_out"] table, [data-testid="lg_out"] .bktab, [data-testid="lg_out"] *', { timeout: 8000 });
-    await p.waitForTimeout(400);
-    ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)), 'clicking Cash reads that ledger (GET /api/books/ledger/1400)');
-    ok(await p.locator('[data-testid="acc-open-code"]').textContent() === '1400' && /Sale/.test(await p.textContent('[data-testid="lg_out"]')), 'the ledger opens with its statement');
-    await p.click('[data-testid="acc-back"]');
-    await p.waitForSelector('[data-testid="acc-sec-people"]');
-    ok(true, 'the back button returns to the list');
+    await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+    ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)) && /1400 · Cash/.test(await p.textContent('[data-testid="lg-title"]')) && /Sale/.test(await p.textContent('[data-testid="stmt-row-0"]')), 'clicking Cash reads that ledger (GET /api/books/ledger/1400) and its entry is a Task-table row');
+    ok(await p.locator('#lg_out .lhead').count() === 1 && await p.locator('#lg_out .lrow').count() === 1 && await p.locator('#lg_out table').count() === 0, 'the entries are the Task table (.lhead / .lrow) — no table of its own');
+    ok(/12,400\.00/.test(await p.textContent('[data-testid="stmt-closing"]')) && await p.locator('[data-testid="stmt-opening"]').count() === 1, 'the balance carried sits at the top (opening · closing)');
 
-    /* ── 2b · PARTY LEDGERS: 1300 and 2100 open into one ledger per party (docs/design/party-ledgers/CLOUD-TASK.md) ── */
-    await p.click('#expandAll');
-    const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent));
+    /* ── 2b · PARTY LEDGERS: 1300 and 2100 are FOLDERS whose leaves are the parties (docs/design/party-ledgers + one-table item 6) ── */
     const dueReads = () => S.calls.filter((c) => /\/api\/books\/dues/.test(c)).length;
     const partyReads = () => S.calls.filter((c) => /\/api\/books\/party\//.test(c)).length;
+    const rowsOf = async () => p.$$eval('[data-testid^="lg-party-c"], [data-testid^="lg-party-s"]', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const partyCells = async () => p.$$eval('#lg_out .lrow .lcell[data-l="Party"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    await p.click('[data-testid="lt-band-people"]');
+    ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0, 'People holds Customers (Sundry Debtors) and Suppliers (Sundry Creditors) as closed folders');
     S.calls.length = 0;
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-party-c1"]');
-    await p.waitForSelector('[data-testid^="stmt-what-"]');
-    const rowsOf = async () => p.$$eval('[data-testid^="lg-party-c"], [data-testid^="lg-party-s"]', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    await p.waitForSelector('[data-testid="stmt-what-0"]');
     let pr = await rowsOf();
-    ok(pr.length === 2 && /P-00001.*Ravi Stores.*3,000/.test(pr[0]) && /P-00002.*Chola Auto Care.*3,000/.test(pr[1]), '1300 lists one row per customer — party no · name · balance, by party no (' + pr.join(' | ') + ')');
-    ok(/By customer/.test(await p.textContent('[data-testid="lg-parties"]')) && /All entries/.test(await p.textContent('[data-testid="lg-all-entries"]')), '"By customer" above, the combined statement under "All entries"');
-    ok(await p.locator('[data-testid="lg-party-c1"] td').nth(3).textContent().then((t) => /Aug/.test(t)), 'each customer row carries the oldest due');
+    ok(pr.length === 2 && /P-00001.*Ravi Stores.*3,000/.test(pr[0]) && /P-00002.*Chola Auto Care.*3,000/.test(pr[1]), 'Customers opens into one leaf per customer — party no · name · balance, ordered by party no (' + pr.join(' | ') + ')');
+    ok((await p.textContent('[data-testid="lg-acc-1300"]')).trim().startsWith('📂'), 'the Customers folder is open (📂)');
     const tot = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
-    ok(tot === clo && /6,000/.test(tot), 'the parties add up to the 1300 closing (' + tot + ' = ' + clo + ')');
+    ok(tot === clo && /6,000/.test(tot), 'the control account shows BOTH figures and they agree: total of the parties ' + tot + ' = ledger closing ' + clo);
     ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no difference line while they agree');
-    ok(dueReads() === 1, 'ONE /api/books/dues request draws the table (' + dueReads() + ')');
-    ok(partyReads() === 0, 'no statement fetched per party row (' + partyReads() + ')');
-    let rt = await stmtText();
-    ok(rt.length === 2 && rt.every((t) => /^Sale · P-0000[12] · (Ravi Stores|Chola Auto Care) · /.test(t)), 'every 1300 row names its party first, right after "Sale" (' + rt.join(' || ') + ')');
-    ok(rt.every((t) => !/^Sale · (Mayur|Counter)/.test(t)), 'no row puts the owner or the counter where the party goes');
-    ok(rt.every((t) => /Counter C2 · rung by Mayur Bhavan \(owner\)\s*$/.test(t)), 'the cashier reads "rung by Mayur Bhavan (owner)", last, after the counter');
+    ok(dueReads() === 1 && partyReads() === 0, 'one /api/books/dues read names every party; no statement per party (' + dueReads() + ' / ' + partyReads() + ')');
+    let rt = await stmtText(), pc = await partyCells();
+    ok(rt.length === 2 && pc.length === 2 && /^P-00001 · Ravi Stores$/.test(pc[0]) && /^P-00002 · Chola Auto Care$/.test(pc[1]), 'every 1300 row names its party in the Party column — "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
+    ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter in the party column');
+    ok(rt.every((t) => /Counter C2 · rung by Mayur Bhavan \(owner\)/.test(t)), 'the counter and "rung by Mayur Bhavan (owner)" are the entry\'s secondary text (' + rt[0] + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
+
+    /* expand one → its journal's Dr/Cr lines, each tax and sales line with its rate; its bill number opens the sheet */
+    await p.click('[data-testid="stmt-row-0"] [role="button"]');
+    await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+    const next = (await p.textContent('[data-testid="db-lines-JV/2026-27/000011"]')).replace(/\s+/g, ' ');
+    ok(/Customers \(Sundry Debtors\)/.test(next) && /Sales @12%/.test(next) && /Output CGST 6%/.test(next) && /Output SGST 6%/.test(next), 'the next level is the journal\'s lines, each with its rate as the line carries it ("Sales @12%", "Output CGST 6%")');
+    const opened = await p.evaluate(() => { const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); }; try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; } });
+    ok(opened === 'k1' && await p.locator('[data-testid="db-lines-JV/2026-27/000011"]').count() === 1, 'the bill number opens that chit\'s sheet (' + opened + ') and does not toggle the row');
+
+    /* a customer leaf opens ITS ledger only */
     S.calls.length = 0;
     await p.click('[data-testid="lg-party-c1"]');
-    await p.waitForSelector('[data-testid="party-statement"] [data-testid="stmt-closing"]');
-    const one = await p.textContent('[data-testid="party-statement"]');
+    await p.waitForSelector('[data-testid="stmt-closing"]');
+    await p.waitForFunction(() => /Ravi/.test((document.querySelector('[data-testid="lg-title"]') || {}).textContent || ''));
+    const one = await p.textContent('[data-testid="lg_out"]');
     ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
     ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
     ok(/3,000/.test(await p.textContent('[data-testid="stmt-closing"]')) && /0\.00|^\s*₹?\s*0/.test(await p.textContent('[data-testid="stmt-opening"]')), 'opening 0 and closing ₹3,000 for the party');
-    ok((await p.textContent('[data-testid="lg-party-name"]')).trim() === 'P-00001 · Ravi Stores', 'the party is named by no · name above its ledger');
-    ok(await p.locator('[data-testid="lg-parties"]').count() === 0 && dueReads() === 0, 'the party view re-reads no dues');
+    ok((await p.textContent('[data-testid="lg-title"]')).trim() === 'P-00001 · Ravi Stores', 'the party is named by no · name above its ledger');
+    ok(await p.locator('[data-testid="lg-parties"]').count() === 0 && dueReads() === 0, 'the party view shows no control figures and re-reads no dues');
+    ok(await p.locator('[data-testid="lg-party-c1"]').count() === 1 && await p.locator('[data-testid="lg-party-c2"]').count() === 1, 'the other parties stay in the tree beside it');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-one-party.png'), fullPage: true });
-    ok(/All customers/.test(await p.textContent('[data-testid="lg-parties-back"]')), 'a "‹ All customers" link sits above the party\'s ledger');
-    await p.click('[data-testid="lg-parties-back"]');
-    await p.waitForSelector('[data-testid="lg-party-c2"]');
-    ok(await p.locator('[data-testid="lg-party-c2"]').count() === 1, 'the link returns to the table');
-    await p.click('[data-testid="acc-back"]');
-    await p.waitForSelector('[data-testid="acc-sec-people"]');
     S.calls.length = 0;
     await p.click('[data-testid="lg-acc-2100"]');
     await p.waitForSelector('[data-testid="lg-party-s1"]');
-    await p.waitForSelector('[data-testid^="stmt-what-"]');
+    await p.waitForSelector('[data-testid="stmt-what-0"]');
     pr = await rowsOf();
-    ok(pr.length === 2 && /P-00003.*Agro Mills.*1,500/.test(pr[0]) && /P-00004.*Kavi Traders.*1,000/.test(pr[1]), '2100 lists one row per supplier (' + pr.join(' | ') + ')');
-    ok(/By supplier/.test(await p.textContent('[data-testid="lg-parties"]')), '"By supplier"');
+    ok(pr.length === 4 && /P-00003.*Agro Mills.*1,500/.test(pr[2]) && /P-00004.*Kavi Traders.*1,000/.test(pr[3]), 'Suppliers opens into one leaf per supplier (' + pr.slice(2).join(' | ') + ')');
     const tot2 = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo2 = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
     ok(tot2 === clo2 && /2,500/.test(tot2), 'the suppliers add up to the 2100 closing (' + tot2 + ' = ' + clo2 + ')');
     ok(dueReads() === 1 && partyReads() === 0, 'one dues request, no per-row statement (' + dueReads() + ' / ' + partyReads() + ')');
-    rt = await stmtText();
-    ok(rt.length === 2 && rt.every((t) => /^Purchase · P-0000[34] · (Agro Mills|Kavi Traders) · /.test(t)) && rt.every((t) => /rung by Ravi\s*$/.test(t)), '2100 rows name the supplier first and end "rung by Ravi" (' + rt.join(' || ') + ')');
+    pc = await partyCells(); rt = await stmtText();
+    ok(pc.length === 2 && pc.every((t) => /^P-0000[34] · (Agro Mills|Kavi Traders)$/.test(t)) && rt.every((t) => /rung by Ravi/.test(t)), '2100 rows name the supplier in the Party column and say "rung by Ravi" apart (' + pc.join(' | ') + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-creditors.png'), fullPage: true });
     await p.click('[data-testid="lg-party-s2"]');
-    await p.waitForSelector('[data-testid="party-statement"] [data-testid="stmt-closing"]');
-    ok(/All suppliers/.test(await p.textContent('[data-testid="lg-parties-back"]')), 'a "‹ All suppliers" link sits above the supplier\'s ledger');
-    ok(/KV-12/.test(await p.textContent('[data-testid="party-statement"]')) && !/AM-81/.test(await p.textContent('[data-testid="party-statement"]')) && /1,000/.test(await p.textContent('[data-testid="stmt-closing"]')), 'a supplier opens only its own bills, closing ₹1,000');
+    await p.waitForFunction(() => /Kavi/.test((document.querySelector('[data-testid="lg-title"]') || {}).textContent || ''));
+    await p.waitForSelector('[data-testid="stmt-closing"]');
+    ok(/KV-12/.test(await p.textContent('[data-testid="lg_out"]')) && !/AM-81/.test(await p.textContent('[data-testid="lg_out"]')) && /1,000/.test(await p.textContent('[data-testid="stmt-closing"]')), 'a supplier opens only its own bills, closing ₹1,000');
     /* a control account that does not equal its parties is said in words, never hidden */
-    await p.click('[data-testid="acc-back"]');
-    await p.waitForSelector('[data-testid="acc-sec-people"]');
     S.closing = { '1300': 650000 };
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-parties-diff"]');
     ok(/₹6,000\.00.*₹6,500\.00.*₹500\.00 apart/.test(await p.textContent('[data-testid="lg-parties-diff"]')), 'when the parties and the ledger differ, the difference is said in words');
     S.closing = null;
-    await p.click('[data-testid="acc-back"]');
-    await p.waitForSelector('[data-testid="acc-sec-people"]');
 
     /* ── 3 · BILLS ── */
     await nav(p, 'bills');
@@ -487,23 +477,22 @@ async function route(S, r) {
       ok(m.sw <= m.cw, label + ' at 390 px: nothing scrolls sideways inside the page either (' + m.sw + ' ≤ ' + m.cw + ')');
     }
     await nav(p, 'ledgers');
-    await p.waitForSelector('[data-testid="bal-1300"]');
+    await p.waitForSelector('[data-testid="lt-band-people"]');
     const w2 = await width(p);
-    ok(w2.sw === 390, 'Ledgers with every section open: scrollWidth === 390');
-    /* ⚠️ a section clips what overflows it (overflow:hidden) — so scrollWidth alone cannot see a group pushed past its card */
-    const clipped = await p.evaluate(() => Array.from(document.querySelectorAll('.group')).filter((g) => { const sec = g.closest('.section').getBoundingClientRect(), r = g.getBoundingClientRect(); return r.right > sec.right + 0.5 || r.left < sec.left - 0.5; }).length);
-    ok(clipped === 0, 'at 390 px no group is pushed past its section (' + clipped + ' clipped)');
+    ok(w2.sw === 390, 'Ledgers (the tree) at 390 px: scrollWidth === 390');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
-    /* the party table is ONE LINE a party (name · balance) */
-    await nav(p, 'ledgers');
-    await p.waitForSelector('[data-testid="bal-1300"]');
+    /* on a phone the tree is the way in, a chosen ledger replaces it, and the breadcrumb is the way back */
+    await p.click('[data-testid="lt-band-people"]');
     await p.click('[data-testid="lg-acc-1300"]');
-    await p.waitForSelector('[data-testid="lg-party-c1"]');
+    await p.waitForSelector('[data-testid="stmt-row-0"]');
     await p.waitForTimeout(300);
-    const pl = await p.evaluate(() => { const tr = document.querySelector('[data-testid="lg-party-c1"]'); const v = Array.from(tr.children).filter((td) => getComputedStyle(td).display !== 'none').map((td) => td.textContent.trim()); return { h: tr.getBoundingClientRect().height, v, sw: document.documentElement.scrollWidth }; });
-    ok(pl.v.length === 2 && /Ravi Stores/.test(pl.v[0]) && /3,000/.test(pl.v[1]) && pl.h < 60, 'at 390 px a party is one line — name · balance (' + pl.v.join(' · ') + ', ' + Math.round(pl.h) + ' px high)');
-    ok(pl.sw === 390, 'the party table at 390 px: document.scrollWidth === 390 (' + pl.sw + ')');
+    const ph = await p.evaluate(() => { const tr = document.querySelector('[data-testid="stmt-row-0"]'), t = document.querySelector('.lt-tree'); return { tree: getComputedStyle(t).display, row: getComputedStyle(tr).display, rad: parseFloat(getComputedStyle(tr).borderTopLeftRadius), back: getComputedStyle(document.querySelector('[data-testid="lt-back"]')).display, sw: document.documentElement.scrollWidth, head: getComputedStyle(document.querySelector('#lg_out .lhead')).display }; });
+    ok(ph.tree === 'none' && ph.back !== 'none' && ph.row === 'flex' && ph.rad > 0 && ph.head === 'none', 'at 390 px a chosen ledger replaces the tree, entries are one card per row, a ‹ Ledgers breadcrumb is the way back');
+    ok(ph.sw === 390, 'the ledger\'s entries at 390 px: document.scrollWidth === 390 (' + ph.sw + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-phone.png'), fullPage: false });
+    await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-phone.png'), fullPage: false });
+    await p.click('[data-testid="lt-back"]');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lt-tree')).display !== 'none'), 'the breadcrumb returns to the tree');
     /* a table is one card per row below 620 px, each cell named by its column */
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');

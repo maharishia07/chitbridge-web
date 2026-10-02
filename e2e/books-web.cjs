@@ -613,6 +613,8 @@ async function route(S, r) {
   }
 
   await p.click('[data-testid="acc-nav-ledgers"]');
+  await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 8000 });
+  await p.click('[data-testid="lt-band-people"]');
   await p.click('[data-testid="lg-acc-1300"]');
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');

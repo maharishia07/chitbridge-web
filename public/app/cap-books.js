@@ -78,6 +78,10 @@ function bkCss() {
     '.bkdv-segs{display:inline-flex;gap:0}',
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
+    /* the Ledgers' tree + entries: foldersScreen's two panes (cap-folders.js _folderPanes); on a narrow pane the tree IS the way in and a chosen ledger replaces it, with a way back (cb-design: a container query, not the window's) */
+    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:250px}',
+    '.lt-crumb{display:none}',
+    '@container lt (max-width:620px){.lt-tree{--ftw:100%}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt.has-sel .lt-crumb{display:flex;margin-bottom:6px}}',
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}',
@@ -718,7 +722,8 @@ function bkDvCols(c) {
 function bkDvNext(e, c) {
   var no = esc(e.entry_no);
   var gist = bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · ');
-  var rate = function (l) { var r = l.rate != null ? l.rate : l.rate_pct; return r != null && r !== '' && !/%/.test(String(l.name)) ? ' ' + esc(String(r)) + '%' : ''; };
+  /* ⭐ THE RATE (Athi, 2026-10-02): "Output CGST 6%", "Sales @12%" — as the line (the frozen invoice's) carries it, never worked out here */
+  var rate = function (l) { var r = l.rate != null ? l.rate : l.rate_pct; return r != null && r !== '' && !/%/.test(String(l.name)) ? (/^4/.test(String(l.code)) ? ' @' : ' ') + esc(String(r)) + '%' : ''; };
   var grey = 'color:var(--grey);font-size:var(--fs-1);text-transform:uppercase';
   return tblNextHTML('<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>'
     + '<div style="' + grey + '">' + tblNextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
@@ -812,97 +817,225 @@ async function bkDaybook(body) {
 }
 
 /**
- * ⭐ THE LEDGERS, GROUPED THE WAY A SHOPKEEPER THINKS (index page, 2026-09-30): four bands, the plain word first
- * and the classical word after. The CODES decide the band — 1300/2100 and their parties are People (Debtors and
- * Creditors as the control lines, shown first), the other 1xxx/2xxx/3xxx are things you hold, 4xxx–6xxx are
- * income and expenses — and Results is three doors to the statements. Nothing is computed here: the page only
- * groups what GET /api/books/accounts returns.
+ * ══ THE LEDGERS ARE A FOLDER TREE AND THE TASK TABLE ═══════════════════════════════════════════════════════════════
+ * Athi, 2026-10-02 (live): *"i couldn't see the folder for each of the ledger, how do i open the folders, no folder symbol or
+ * something to see it as a folder, or a tree structure"*. So: on the left the tree Folders already draws (cap-folders.js
+ * `_folderNode` / `_folderPanes` — the same node, the same two panes) — four bands (People · Things you hold · Income and
+ * expenses · Your capital) as top folders, their groups (Cash & bank, Duties & taxes …), each ledger a leaf with its balance;
+ * Customers (Sundry Debtors) and Suppliers (Sundry Creditors) are FOLDERS whose leaves are the PARTIES — "P0007 · Chola Auto
+ * Care", ordered by party no, one balance each from the one /dues read. On the right, the chosen ledger's entries in the
+ * Task table (list-ctl.js tbl*): one row an entry, its journal's Dr/Cr lines the next level, a bill number opens the sheet.
+ * The classification is by CODE and decided HERE once (accounts.html no longer keeps a second copy); every figure is the server's.
  */
-var BK_BANDS = [
-  ['people', 'People', 'personal — customers and suppliers'],
-  ['things', 'Things you hold', 'real — cash, bank, stock, and what you owe on them'],
-  ['income', 'Income and expenses', 'nominal'],
+var BK_LT_BANDS = [
+  { id: 'people', title: 'People', blurb: 'personal — customers and suppliers' },
+  { id: 'things', title: 'Things you hold', blurb: 'real — cash, bank, stock, and what you owe on them' },
+  { id: 'income', title: 'Income and expenses', blurb: 'nominal' },
+  { id: 'capital', title: 'Your capital', blurb: 'what the owner has put in' },
 ];
-function bkBandOf(code) {
+/* [band, group, the codes it takes] — a code none of them claims lands in "Other" of its band, never nowhere */
+var BK_LT_GROUPS = [
+  ['things', 'Cash & bank', /^1[45]\d\d/], ['things', 'Stock & advances', /^(12|17|24)\d\d/], ['things', 'Duties & taxes', /^22[01]\d/], ['things', 'Taxes & suspense', /^(222|29)\d/],
+  ['capital', "Owner's equity", /^3\d\d\d/],
+  ['income', 'Income', /^4\d\d\d/], ['income', 'Direct costs', /^5\d\d\d/], ['income', 'Operating expenses', /^6[01]\d\d/], ['income', 'Adjustments', /^6[89]\d\d/],
+];
+/** the two control accounts open into one ledger per party: which side of /dues each takes, and its words */
+var BK_CTRL = { '1300': { side: 'rcv', by: 'By customer', all: 'All customers' }, '2100': { side: 'pay', by: 'By supplier', all: 'All suppliers' } };
+BK.lt = { open: {}, sel: null, model: null, bal: null, r: null, day: null };
+function bkLtBand(code) {
   var c = String(code == null ? '' : code);
   if (/^(1300|2100)/.test(c)) return 'people';
+  if (/^3/.test(c)) return 'capital';
   if (/^[456]/.test(c)) return 'income';
   return 'things';
 }
+/** the accounts become bands → groups → ledgers. The per-party sub-accounts (1300-P…, 2100-P…) are NOT leaves: a party is read from /dues */
+function bkLtModel(accounts) {
+  var bands = BK_LT_BANDS.map(function (b) { return { id: b.id, title: b.title, blurb: b.blurb, groups: [], ctrl: [] }; });
+  var order = BK_LT_GROUPS.map(function (g) { return g[1]; });
+  (accounts || []).filter(function (a) { return !a.is_group && !/^(1300|2100)-/.test(String(a.code)); }).forEach(function (a) {
+    var code = String(a.code), bid = bkLtBand(code), band = bands.filter(function (b) { return b.id === bid; })[0];
+    if (BK_CTRL[code]) { band.ctrl.push({ code: code, name: String(a.name || '') }); return; }
+    var g = BK_LT_GROUPS.filter(function (x) { return x[2].test(code); })[0], title = g ? g[1] : 'Other';
+    var grp = band.groups.filter(function (x) { return x.title === title; })[0];
+    if (!grp) { grp = { title: title, accts: [] }; band.groups.push(grp); }
+    grp.accts.push({ code: code, name: String(a.name || '') });
+  });
+  bands.forEach(function (b) {
+    b.groups.sort(function (x, y) { return (order.indexOf(x.title) + 100 * (x.title === 'Other')) - (order.indexOf(y.title) + 100 * (y.title === 'Other')); });
+    b.groups.forEach(function (g) { g.accts.sort(function (x, y) { return String(x.code).localeCompare(String(y.code), 'en', { numeric: true }); }); });
+    b.ctrl.sort(function (x, y) { return String(x.code).localeCompare(String(y.code)); });
+  });
+  return bands;
+}
+/** ⭐ ONE read of the trial balance gives every ledger's balance — never one read per row */
+async function bkBalances() {
+  var r = await api('booksTB', { query: { asOf: bkToday() } }), map = {};
+  ((r && r.rows) || []).forEach(function (x) { map[String(x.code)] = Number(x.dr_minor || 0) - Number(x.cr_minor || 0); });
+  return { map: map, cur: r && r.currency };
+}
+function bkLtBal(code) {
+  var b = BK.lt.bal; if (!b) return '';
+  var v = b.map[code];
+  if (v === undefined) return '<span data-testid="bal-' + esc(code) + '" title="' + esc(tx('Not on the trial balance')) + '">—</span>';
+  return '<span data-testid="bal-' + esc(code) + '">' + esc(bkMoney(Math.abs(v), b.cur)) + (v ? ' <span style="color:var(--grey)">' + (v > 0 ? 'Dr' : 'Cr') + '</span>' : '') + '</span>';
+}
+/** the parties of a control account, from the one /dues read, ordered by party no (the ledger's key on screen) */
+function bkLtParties(ctrl) {
+  return Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; }).filter(function (p) { return bkDuesSide(p) === BK_CTRL[ctrl].side; })
+    .sort(function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); });
+}
+function bkLtOpenQ() { return !!String(listCtlS('ledgers').q || '').trim(); }
+function bkLtIsOpen(id) { return bkLtOpenQ() || !!BK.lt.open[id]; }
+function bkLtToggle(id) { if (BK.lt.open[id]) delete BK.lt.open[id]; else BK.lt.open[id] = true; bkLtTreePaint(); }
+function bkLtTreeHTML() {
+  var q = String(listCtlS('ledgers').q || '').trim().toLowerCase(), sel = BK.lt.sel, tall = 'min-height:36px';
+  var hit = function () { return !q || Array.prototype.slice.call(arguments).join(' ').toLowerCase().indexOf(q) >= 0; };
+  var out = '';
+  (BK.lt.model || []).forEach(function (b) {
+    var inner = '', n = 0;
+    b.ctrl.forEach(function (c) {
+      var parties = bkLtParties(c.code).filter(function (p) { return hit(p.party_no, p.name, bkPartyLabel(p.party_id, p.name)); });
+      if (q && !hit(c.code, c.name) && !parties.length) return;
+      n++;
+      var open = bkLtIsOpen('ctrl:' + c.code);
+      inner += _folderNode({ depth: 1, tid: 'lg-acc-' + c.code, sel: !!(sel && sel.code === c.code && !sel.party), icon: open ? '📂' : '📁', onclick: "bkLtPickCtrl('" + c.code + "')", style: tall,
+        label: esc(c.code) + ' · ' + esc(c.name), tail: bkLtBal(c.code) });
+      if (open) inner += parties.map(function (p) {
+        var v = Number(p.balance_minor || 0);
+        return _folderNode({ depth: 2, tid: 'lg-party-' + p.party_id, sel: !!(sel && sel.party === p.party_id), icon: '📒', onclick: "bkLtPickParty('" + esc(p.party_id) + "','" + c.code + "')", style: tall,
+          label: esc(bkPartyLabel(p.party_id, p.name)), tail: v ? esc(bkMoney(Math.abs(v), BK.duesCur)) + ' <span style="color:var(--grey)">' + (v > 0 ? 'Dr' : 'Cr') + '</span>' : esc(tx('settled')) });
+      }).join('');
+    });
+    b.groups.forEach(function (g) {
+      var accts = g.accts.filter(function (a) { return hit(a.code, a.name); });
+      if (!accts.length) return;
+      n += accts.length;
+      var gid = 'group:' + b.id + '/' + b.groups.indexOf(g), open = bkLtIsOpen(gid);
+      inner += _folderNode({ depth: 1, tid: 'lt-group-' + g.title, icon: open ? '📂' : '📁', onclick: "bkLtToggle('" + gid + "')", style: tall, label: esc(tx(g.title)), tail: String(accts.length) });
+      if (open) inner += accts.map(function (a) {
+        return _folderNode({ depth: 2, tid: 'lg-acc-' + a.code, sel: !!(sel && sel.code === a.code && !sel.party), icon: '📒', onclick: "bkLtPick('" + a.code + "')", style: tall, label: esc(a.code) + ' · ' + esc(a.name), tail: bkLtBal(a.code) });
+      }).join('');
+    });
+    if (!inner) return;
+    var open = bkLtIsOpen('band:' + b.id);
+    out += _folderNode({ depth: 0, tid: 'lt-band-' + b.id, icon: open ? '📂' : '📁', onclick: "bkLtToggle('band:" + b.id + "')", style: tall, label: '<b>' + esc(tx(b.title)) + '</b>', tail: String(n) }) + (open ? inner : '');
+  });
+  return out || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">' + esc(q ? tx('Nothing matches') : tx('No ledgers yet')) + '</div>';
+}
+function bkLtTreePaint() { var t = document.getElementById('lt_tree'); if (t) t.innerHTML = bkLtTreeHTML(); }
+function bkLtPaneHTML() {
+  var sel = BK.lt.sel;
+  if (!sel) return emptyState('📒', tx('Pick a ledger'), esc(tx('Open a group on the left, then a ledger, to see its entries.')));
+  return '<div style="padding:12px 14px"><div class="lt-crumb"><button type="button" data-testid="lt-back" onclick="bkLtBack()">‹ ' + esc(tx('Ledgers')) + '</button></div>'
+    + '<div data-testid="lg-title" style="font-weight:700;margin-bottom:6px">' + esc(sel.title || '') + '</div>'
+    + (sel.party ? '' : bkRangeHTML('lg', 'bkLtLoad()')) + '<div id="lg_out" data-testid="lg_out"></div></div>';
+}
+function bkLtBack() { BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel'); bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML(); }
+function bkLtOpen(sel) {
+  BK.lt.sel = sel; BK.lt.r = null; BK.lt.day = null;
+  Object.keys(BK_OPEN).forEach(function (k) { if (k.indexOf('ledger:') === 0) delete BK_OPEN[k]; });   /* an open row belongs to the ledger it was opened in */
+  var el = document.getElementById('bk_lt'); if (el) el.classList.add('has-sel');
+  bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
+  bkLtLoad();
+}
+function bkLtAcct(code) { var f = null; (BK.lt.model || []).forEach(function (b) { b.ctrl.concat(b.groups.reduce(function (a, g) { return a.concat(g.accts); }, [])).forEach(function (a) { if (a.code === code) f = a; }); }); return f; }
+function bkLtPick(code) { var a = bkLtAcct(code); BK.lgAcc = code; bkLtOpen({ code: code, title: code + ' · ' + (a ? a.name : '') }); }
+/** a control account: its folder opens (its parties appear) and its own ledger shows — total of the parties beside its closing */
+function bkLtPickCtrl(code) { BK.lt.open['ctrl:' + code] = true; BK.lt.open['band:people'] = true; bkLtPick(code); }
+function bkLtPickParty(id, ctrl) { BK.lgAcc = ctrl; delete BK.stmt[id]; bkLtOpen({ code: ctrl, party: id, title: bkPartyLabel(id) }); }
+async function bkLtLoad() {
+  var sel = BK.lt.sel, out = document.getElementById('lg_out'); if (!sel || !out) return;
+  out.innerHTML = '<div class="loadwrap"><span class="spin"></span> ' + tx('Reading…') + '</div>';
+  try {
+    var r, ctrl = BK_CTRL[sel.code];
+    if (sel.party) { r = await api('booksStatement', { params: { id: sel.party } }); BK.stmt[sel.party] = r; }
+    else { var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: bkRange('lg') }), ctrl ? booksDuesLoad(true) : null]); r = rr[0]; if (ctrl) { bkLtTreePaint(); } }
+    if (BK.lt.sel !== sel) return;
+    BK.lt.r = r; BK.lt.day = null; BK.lgR = r;
+    bkLgDeclare(r); bkLtEntriesPaint();
+  } catch (e) { var o = document.getElementById('lg_out'); if (o) o.innerHTML = bkErr(e); }
+}
+/** the Task table for a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
+function bkLgCols(c) {
+  var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
+  var idx = function (l) { return (BK.lt.r && BK.lt.r.lines || []).indexOf(l); };
+  return [
+    { key: 'date', label: tx('Date'), sort: 'date', w: '84px', cell: function (l) { return bkCaret('ledger', idx(l)) + ' ' + esc(bkDate(l.date)); } },
+    { key: 'what', label: tx('What'), sort: 'what', w: 'minmax(170px,3fr)', tid: function (l) { return 'stmt-what-' + idx(l); }, cell: function (l) {
+        /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
+        var parts = bkSourceParts(l.source, 'stmt-src-' + idx(l), c);
+        return bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + idx(l)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
+    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(110px,1.3fr)', cell: function (l) { var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || ''); return pl ? esc(pl) : dash; } },
+    { key: 'dr', label: tx('Debit'), sort: 'dr', align: 'right', w: '92px', cell: function (l) { return money(l.dr_minor); } },
+    { key: 'cr', label: tx('Credit'), sort: 'cr', align: 'right', w: '92px', cell: function (l) { return money(l.cr_minor); } },
+    { key: 'bal', label: tx('Balance'), align: 'right', w: '100px', cell: function (l) { return '<b>' + esc(bkMoney(l.running_minor, c)) + '</b>'; } },
+  ];
+}
+function bkEntryWord(e) {
+  var s = e && e.source;
+  return s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
+}
+function bkLgDeclare(r) {
+  var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
+  bkDeclare('ledger', {
+    rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, noun: 'entry', plural: 'entries', paint: bkLgPaint, repaint: bkLtEntriesPaint,
+    text: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
+    sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
+      { key: 'what', label: tx('What'), cmp: by(function (l) { return l.what || l.narration || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (l) { return bkPartyLabel(l.party_id, l.party_name); }) },
+      { key: 'dr', label: tx('Debit'), cmp: by(function (l) { return l.dr_minor || 0; }, true) }, { key: 'cr', label: tx('Credit'), cmp: by(function (l) { return l.cr_minor || 0; }, true) }],
+  });
+}
+/** a ledger line's journal: the day-book entry it belongs to (by its entry number, else its chit and date) — read once, on the first open */
+function bkLgEntry(l) {
+  var es = (BK.lt.day && BK.lt.day.entries) || [], d = String(l.date || '').slice(0, 10);
+  return es.filter(function (e) { return (l.entry_no && e.entry_no === l.entry_no) || (l.entry_id && e.entry_id === l.entry_id) || (!l.entry_no && !l.entry_id && (l.source_chit_id || (l.source && l.source.chit_id)) && (e.source_chit_id || (e.source && e.source.chit_id)) === (l.source_chit_id || (l.source && l.source.chit_id)) && String(e.posting_date).slice(0, 10) === d); })[0];
+}
+async function bkLgJournal() {
+  if (BK.lt.day || BK.lt.dayBusy) return;
+  var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (l) { return String(l.date || '').slice(0, 10); }).filter(Boolean).sort();
+  BK.lt.dayBusy = true;
+  try { BK.lt.day = await api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }); } catch (_) { BK.lt.day = { entries: [], failed: true }; }
+  BK.lt.dayBusy = false; bkRepaint('ledger');
+}
+function bkLgNext(l, c) {
+  if (!BK.lt.day) { bkLgJournal(); return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the journal…')) + '</div>', 'stmt-lines-' + (BK.lt.r.lines || []).indexOf(l)); }
+  var e = bkLgEntry(l);
+  if (!e) return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('The journal lines of this entry are not on this page.')) + '</div>', 'stmt-lines-' + (BK.lt.r.lines || []).indexOf(l));
+  return bkDvNext(e, c);
+}
+function bkLgPaint() {
+  var r = BK.lt.r, c = r.currency || BK.duesCur, cols = bkLgCols(c), fit = bkFit('ledger', cols, ['date', 'what', 'party', 'dr', 'cr', 'bal'], 'bkl_ledger');
+  return tblWrapHTML(fit, bkHead('ledger', fit) + lazyWrap('ledger', listCtlView('ledger').matched, function (l) {
+    var i = r.lines.indexOf(l);
+    return bkRow('ledger', fit, l, String(i), { tid: 'stmt-row-' + i, click: "bkToggle('ledger','" + i + "')" }, function () { return bkLgNext(l, c); });
+  }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_ledger' });
+}
+/** the ledger's right-hand pane: balance carried at the top, then the entries — and for a control account both figures that must agree */
+function bkLtEntriesPaint() {
+  var out = document.getElementById('lg_out'), r = BK.lt.r, sel = BK.lt.sel; if (!out || !r || !sel) return;
+  var c = r.currency || BK.duesCur, ctrl = !sel.party && BK_CTRL[sel.code], sign = ctrl && ctrl.side === 'pay' ? -1 : 1, top = '';
+  top = '<div class="bkdv-count" style="display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkMoney(r.opening_minor, c)) + '</b></span>'
+    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkMoney(r.closing_minor, c)) + '</b></span></div>';
+  if (ctrl) {
+    var list = bkLtParties(sel.code), total = list.reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
+    top += '<div data-testid="lg-parties" style="display:flex;gap:14px;flex-wrap:wrap;margin:0 0 8px;font-size:var(--fs-1)"><span>' + esc(tx('Total of the parties')) + ' <b data-testid="lg-parties-total">' + esc(bkMoney(sign * total, c)) + '</b></span>'
+      + '<span>' + esc(tx('Ledger closing')) + ' <b data-testid="lg-parties-closing">' + esc(bkMoney(sign * closing, c)) + '</b></span></div>'
+      + (total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
+        + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>');
+  }
+  out.innerHTML = top + ((r.lines || []).length ? bkListHTML('ledger') : emptyState('📒', tx('No entries in these dates'), ''));
+  if ((r.lines || []).length) bkListPaint('ledger');
+}
 async function bkLedgers(body) {
   try {
-    var r = await api('booksAccounts'); var acc = ((r && r.accounts) || []).filter(function (a) { return !a.is_group; });
-    var by = { people: [], things: [], income: [] };
-    acc.forEach(function (a) { by[bkBandOf(a.code)].push(a); });
-    by.people.sort(function (a, b) {
-      var ax = (a.code === '1300' || a.code === '2100') ? 0 : 1, bx = (b.code === '1300' || b.code === '2100') ? 0 : 1;
-      return ax - bx || String(a.code).localeCompare(String(b.code));
-    });
-    var row = function (a) {
-      var on = BK.lgAcc === a.code;
-      return '<button class="optchip" data-testid="lg-acc-' + esc(a.code) + '" style="margin:0 6px 6px 0;cursor:pointer' + (on ? ';color:var(--blue-d);border-color:var(--blue-d);font-weight:700' : '') + '" onclick="bkLedgerPick(\'' + esc(a.code) + '\')">' + esc(a.code) + ' · ' + esc(a.name) + '</button>';
-    };
-    var band = function (b) {
-      return '<div class="sec" data-testid="bk-band-' + b[0] + '">' + tx(b[1]) + ' <span style="color:var(--grey);font-weight:400;text-transform:none">· ' + tx(b[2]) + '</span></div>'
-        + '<div style="margin-bottom:6px">' + (by[b[0]].length ? by[b[0]].map(row).join('') : '<span style="color:var(--grey);font-size:var(--fs-1)">' + tx('None yet') + '</span>') + '</div>';
-    };
-    body.innerHTML = BK_BANDS.map(band).join('')
-      + '<div class="sec" data-testid="bk-band-results">' + tx('Results') + '</div>'
-      + '<div class="supacts" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px">'
-      + '<button data-testid="lg-go-tb" onclick="bkTab(\'tb\')">⚖️ ' + tx('Trial balance') + '</button>'
-      + '<button data-testid="lg-go-pl" onclick="bkTab(\'pl\')">📈 ' + tx('P&L') + '</button>'
-      + '<button data-testid="lg-go-bs" onclick="bkTab(\'bs\')">🏛️ ' + tx('Balance sheet') + '</button></div>'
-      + '<div id="lg_view">' + (BK.lgAcc ? bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>' : '') + '</div>';
-    if (BK.lgAcc) bkLedgerShow();
+    var rr = await Promise.all([api('booksAccounts'), bkBalances().catch(function () { return null; }), booksDuesLoad(true)]);
+    BK.lt.model = bkLtModel((rr[0] && rr[0].accounts) || []); BK.lt.bal = rr[1];
+    listCtl('ledgers', { rows: function () { return []; }, text: function () { return ''; }, repaint: bkLtTreePaint });
+    var search = '<div data-testid="lt-search">' + listCtlToolbarHTML('ledgers') + '</div>';
+    body.innerHTML = '<div style="height:100%;min-height:60vh">' + _folderPanes(search + '<div id="lt_tree" data-testid="lt-tree">' + bkLtTreeHTML() + '</div>', bkLtPaneHTML(), { id: 'bk_lt', cls: BK.lt.sel ? 'has-sel' : '', treeCls: 'lt-tree', paneCls: 'lt-pane', paneId: 'lt_pane' }) + '</div>';
+    if (BK.lt.sel) bkLtLoad();
   } catch (e) { body.innerHTML = bkErr(e); }
-}
-function bkLedgerPick(code) {
-  BK.lgAcc = code;
-  var v = document.getElementById('lg_view');
-  if (v && !document.getElementById('lg_out')) v.innerHTML = bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>';
-  if (BK.tab === 'ledgers') bkTab('ledgers'); else bkLedgerShow();
-}
-/** the two control accounts open into one ledger per party: which side of /dues each takes, and its words */
-var BK_CTRL = { '1300': { side: 'rcv', by: 'By customer', all: 'All customers' }, '2100': { side: 'pay', by: 'By supplier', all: 'All suppliers' } };
-async function bkLedgerShow() {
-  var out = document.getElementById('lg_out'); if (!out) return;
-  if (!BK.lgAcc) { out.innerHTML = ''; return; }
-  try {
-    var q = bkRange('lg'), ctrl = BK_CTRL[BK.lgAcc];
-    /* ⭐ ONE dues read draws the party table AND names every row — never a statement per party */
-    var rr = await Promise.all([api('booksLedger', { params: { account: BK.lgAcc }, query: q }), ctrl ? booksDuesLoad(true) : null]);
-    BK.lgR = rr[0]; BK.lgParty = null;
-    bkLedgerPaint();
-  } catch (e) { out.innerHTML = bkErr(e); }
-}
-function bkLedgerParty(id) { BK.lgParty = id || null; if (id) delete BK.stmt[id]; bkLedgerPaint(); }
-function bkLedgerPaint() {
-  var out = document.getElementById('lg_out'), r = BK.lgR; if (!out || !r) return;
-  var ctrl = BK_CTRL[BK.lgAcc];
-  if (!ctrl) { out.innerHTML = statementHTML(r); return; }
-  if (BK.lgParty) {
-    var id = BK.lgParty;
-    out.innerHTML = '<div class="supacts" style="display:flex;gap:8px;align-items:center;margin-bottom:9px"><button type="button" data-testid="lg-parties-back" onclick="bkLedgerParty(null)">‹ ' + esc(tx(ctrl.all)) + '</button>'
-      + '<b data-testid="lg-party-name">' + esc(bkPartyLabel(id)) + '</b></div>'
-      + '<div id="bk_stmt_' + esc(id) + '" data-testid="party-statement">' + tx('Reading…') + '</div>';
-    partyStatementLoad(id); return;
-  }
-  var c = r.currency || BK.duesCur, sign = ctrl.side === 'pay' ? -1 : 1;
-  var list = Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; }).filter(function (p) { return bkDuesSide(p) === ctrl.side; })
-    .sort(function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); });
-  var total = list.reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
-  var rows = list.map(function (p) {
-    return '<tr tabindex="0" role="button" style="cursor:pointer" data-testid="lg-party-' + esc(p.party_id) + '" onclick="bkLedgerParty(\'' + esc(p.party_id) + '\')" onkeydown="if(event.key===\'Enter\')bkLedgerParty(\'' + esc(p.party_id) + '\')">'
-      + '<td class="mono opt">' + esc(p.party_no || '') + '</td><td>' + esc(p.name || '') + '</td><td class="num"><b>' + esc(bkMoney(sign * Number(p.balance_minor || 0), c)) + '</b></td>'
-      + '<td class="opt">' + (p.oldest_due ? esc(bkDate(p.oldest_due)) : '') + '</td></tr>';
-  }).join('');
-  var foot = '<tr><td class="opt"></td><td><b>' + tx('Total of the parties') + '</b></td><td class="num" data-testid="lg-parties-total"><b>' + esc(bkMoney(sign * total, c)) + '</b></td><td class="opt"></td></tr>'
-    + '<tr><td class="opt"></td><td>' + tx('Ledger closing') + '</td><td class="num" data-testid="lg-parties-closing">' + esc(bkMoney(sign * closing, c)) + '</td><td class="opt"></td></tr>';
-  var diff = total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
-    + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>';
-  out.innerHTML = '<div class="sec" data-testid="lg-parties">' + esc(tx(ctrl.by)) + '</div>'
-    + (list.length ? bkTable([{ t: tx('Party no') }, { t: tx('Name') }, { t: tx('Balance'), num: 1 }, { t: tx('Oldest due') }], rows, foot).replace('<table class="bktab"', '<table class="bktab bkparty"') : '<div style="color:var(--grey);font-size:var(--fs-1)">' + tx('None yet') + '</div>')
-    + diff + '<div class="sec" data-testid="lg-all-entries">' + tx('All entries') + '</div>' + statementHTML(r);
 }
 async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
