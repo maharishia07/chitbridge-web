@@ -5182,7 +5182,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02i';   /* ⚠️ bumped 2026-10-02 (i: app.html + chit-sheet.js + cap-chit2.js — the Task detail READS the frozen bill (CBSheet.moneyFor), never recomputes; no figures = an error; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02j';   /* ⚠️ bumped 2026-10-02 (j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; i: app.html + chit-sheet.js + cap-chit2.js — the Task detail READS the frozen bill (CBSheet.moneyFor), never recomputes; no figures = an error; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -16975,11 +16975,18 @@ function frozenMoney(c){
   const bj=(c.business_json||(c.header&&c.header.business_json))||null;
   try{ return (window.CBSheet&&CBSheet.moneyFor)?CBSheet.moneyFor(bj,c.summary_money||null,c.currency||'INR'):null; }catch(_){ return null; }
 }
+/* ⭐ OLDER BILLS ARE A KNOWN ERROR, NEWER ONES FOLLOW THE RULE (Athi, 2026-10-02: "if the older chits which were computing the value,
+   just say as a known error but the newer chits will follow the rule"). Before api #3 went live (one computation at billing,
+   2026-10-02 11:14 IST) a bill could be issued without stored figures; such a bill says so, plainly, as a KNOWN error — no number.
+   A bill issued after it with no figures is a real fault and shows the red error. */
+const ONE_COMPUTATION_SINCE='2026-10-02T05:44:00Z';
 function frozenMoneyHTML(c,wrapTid,totalTid,bare){
   const FM=frozenMoney(c);
   if(!FM){
     const isDraft=!!(c.isDraft||c.role==='Draft'||UI.folder==='drafts');
-    return isDraft?`<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`
+    if(isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
+    const older=!!c.issued_at&&new Date(c.issued_at)<new Date(ONE_COMPUTATION_SINCE);   /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
+    return older?`<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
       :`<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
   }
   const html=CBSheet.moneyBlockHTML({money:FM,cur:c.currency||'INR',bj:(c.business_json||(c.header&&c.header.business_json))||{}},totalTid);
@@ -17061,7 +17068,7 @@ async function openChit(id, silent){
             line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
             line_assignment:(r.line_assignment||{}),
             /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
-            summary_money:((h.summary_json&&h.summary_json.money)||null),
+            summary_money:((h.summary_json&&h.summary_json.money)||null), issued_at:(h.created_at||null),
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
             business_json:(h.business_json||(base&&base.business_json)||null)};

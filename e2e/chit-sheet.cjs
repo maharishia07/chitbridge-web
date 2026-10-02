@@ -59,9 +59,14 @@ function standIn() {
     business_json: { bill_no: 'C1/26-27/0003', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
     detail: { line_items: [{ particulars: 'Lamp', quantity: 1, unit: 'piece', price: 1180, total: 1180, gst_rate: 18 }] } };
   /* neither: nothing is invented */
-  S.chits.nr1 = { header: { chit_id: 'nr1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0004', created_at: TODAY + 'T05:30:00.000Z',
+  S.chits.nr1 = { header: { chit_id: 'nr1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0004', created_at: TODAY + 'T23:30:00.000Z',
     all_recipients: [me, { role: 'receiver', display_name: 'self' }], summary_json: { currency_code: 'INR' },
     business_json: { bill_no: 'C1/26-27/0004', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
+    detail: { line_items: [{ particulars: 'Pen', quantity: 1, unit: 'piece', price: 10, total: 10 }] } };
+  /* an OLDER bill (before one computation went live, 2026-10-02 11:14 IST) with no stored figures: a KNOWN error, not the red one */
+  S.chits.old1 = { header: { chit_id: 'old1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0001', created_at: '2026-09-20T05:30:00.000Z',
+    all_recipients: [me, { role: 'receiver', display_name: 'self' }], summary_json: { currency_code: 'INR' },
+    business_json: { bill_no: 'C1/26-27/0001', till: { id: 't1', name: 'Counter 1' }, customer: { name: 'Walk-in' } } },
     detail: { line_items: [{ particulars: 'Pen', quantity: 1, unit: 'piece', price: 10, total: 10 }] } };
   /* the stored total (999) is NOT the lines' sum (1180): a detail that recomputes would say 1,180 */
   S.chits.dt1 = { header: { chit_id: 'dt1', purpose: 'order', current_status: 'completed', manual_subject: 'Counter sale C1/26-27/0005', created_at: TODAY + 'T05:40:00.000Z',
@@ -408,6 +413,10 @@ async function route(S, r) {
       await tab('nr1', t);
       const e = p.locator('[data-testid="chit-money-error"]');
       ok(await e.count() === 1 && /No issued figures for this bill/.test(await e.textContent()) && await p.locator('[data-testid="chit-total"], [data-testid="chit-summary-total"], [data-testid="chit-summary-grand"]').count() === 0, 'no stored figures (' + t + '): "No issued figures for this bill", and no total anywhere');
+    }
+    for (const t of ['content', 'summary']) {
+      await tab('old1', t);
+      ok(await p.locator('[data-testid="chit-money-known"]').count() === 1 && /Known error/.test(await p.locator('[data-testid="chit-money-known"]').textContent()) && await p.locator('[data-testid="chit-money-error"], [data-testid="chit-total"], [data-testid="chit-summary-total"]').count() === 0, 'an older bill with no stored figures (' + t + '): a KNOWN error, no number, not the red error');
     }
     await p.evaluate(() => { UI.folder = 'drafts'; }); await tab('nr1', 'content');
     ok(await p.locator('[data-testid="chit-money-none"]').count() === 1 && /Not issued yet/.test(await p.locator('[data-testid="chit-money-none"]').textContent()) && await p.locator('[data-testid="chit-money-error"]').count() === 0, 'a draft says "Not issued yet", not an error');
