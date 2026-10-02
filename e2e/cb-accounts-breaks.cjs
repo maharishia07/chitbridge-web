@@ -5,6 +5,7 @@
  * BREAK_ONLY=<text> runs just the breaks whose name contains it. Exit 0 only when every break was caught. */
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
+const CAPB = 'public/app/cap-books.js';
 const PAGE = 'public/accounts.html', IDX = 'index.html', SHELL = 'public/app/accounts-shell.js';
 const A = 'e2e/cb-accounts.cjs', I = 'e2e/index-page.cjs';
 const BREAKS = [
@@ -13,6 +14,10 @@ const BREAKS = [
   ['a balance is fetched per row', PAGE, `ACC.bal = bal;`, `ACC.bal = bal; ACC.secs.forEach((s) => s.groups.forEach((g) => g.accounts.forEach((a) => { api('booksLedger', { params: { account: a[0] }, query: bkRange('lg') }).catch(() => {}); })));`, A],
   ['the Active badge is shown while the Ledger is off', IDX, `badge.hidden = on !== true;`, `badge.hidden = false;`, I],
   ['the one-shop gate is not attached', PAGE, `CBOnePerson.attach({ quiet: true, who: () => MINE,`, `void ({ quiet: true, who: () => MINE,`, A],
+  /* party ledgers (docs/design/party-ledgers/CLOUD-TASK.md) */
+  ['a statement is fetched per party row', CAPB, `  var list = Object.keys(BK.dues || {})`, `  Object.keys(BK.dues || {}).forEach(function (k) { api('booksStatement', { params: { id: k } }).catch(function () {}); });\n  var list = Object.keys(BK.dues || {})`, A],
+  ['a row does not name its party', CAPB, `bkEntryHead(l, 'stmt-src-' + i, c, bkPartyLabel(l.party_id || partyId || (r && r.party_id), l.party_name))`, `bkEntryHead(l, 'stmt-src-' + i, c)`, A],
+  ['the cashier is not marked "rung by"', CAPB, `out.push(esc(tx('rung by')) + ' ' + esc(s.by)`, `out.push(esc(s.by)`, A],
   /* the rest of the page's guards */
   ['a co-assist is offered Switch on', PAGE, `const isOwner = () => SESSION.role === 'entity';`, `const isOwner = () => true;`, A],
   ['Switch on is sent before the owner confirms', PAGE, `    ask: confirmAsk,\n    working: () => { b.disabled = true;`, `    ask: (t, bd, ok, go) => go(),\n    working: () => { b.disabled = true;`, A],

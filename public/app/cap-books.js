@@ -123,13 +123,23 @@ function bkErr(e) { return esc(bkWhy(e, tx('Could not be read'))); }
 
 /* ══ 1 · THE PANELS' HALF — a chip on each row, a block in each detail pane ═══════════════════════════════════ */
 var BK = { dues: null, duesAt: 0, stmt: {}, tab: 'daybook' };
+/** the /dues answer becomes the party map (party_id → no · name · balance) every screen reads — one place stores it */
+function bkDuesStore(r) {
+  BK.dues = {}; BK.duesCur = (r && r.currency) || null; BK.duesAt = Date.now();
+  ((r && r.parties) || []).forEach(function (p) { BK.dues[p.party_id] = p; });
+  return BK.dues;
+}
+/** ⭐ A ROW NAMES ITS PARTY (Athi, 2026-10-02): "P-0007 · Chola Auto Care" from the dues map; the name alone if there is no number; never the bare id */
+function bkPartyLabel(partyId, fallbackName) {
+  var d = partyId && BK.dues && BK.dues[partyId];
+  var name = (d && d.name) || fallbackName || '', no = d && d.party_no;
+  return no && name ? no + ' · ' + name : (name || no || '');
+}
 /** ⭐ ONE READ for every row's chip: /dues answers all parties at once (stored balances, not a scan) */
 async function booksDuesLoad(force) {
   if (!force && BK.dues && Date.now() - BK.duesAt < 30000) return BK.dues;
   try {
-    var r = await api('booksDues', { query: { asOf: bkToday() } });
-    BK.dues = {}; BK.duesCur = (r && r.currency) || null; BK.duesAt = Date.now();
-    ((r && r.parties) || []).forEach(function (p) { BK.dues[p.party_id] = p; });
+    bkDuesStore(await api('booksDues', { query: { asOf: bkToday() } }));
   } catch (_) { BK.dues = BK.dues || {}; }
   try { if (typeof paintCustList === 'function' && document.getElementById('cu_rows')) paintCustList(); } catch (_) {}
   try { if (typeof paintSupList === 'function' && document.getElementById('sup_rows')) paintSupList(); } catch (_) {}
@@ -217,7 +227,8 @@ function bkSourceParts(s, tid, cur) {
   if (s.kind === 'day' && s.split && s.split.length) out.push(s.split.map(function (x) { return esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, cur)); }).join(' · '));
   else if (s.how) out.push('<span data-testid="' + esc(tid) + '-how">' + esc(tx(s.how)) + (s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref)) + '</span>' : '') + '</span>');
   if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));
-  if (s.by) out.push(esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));
+  /* ⭐ the person who rang it up is NOT the party (2026-10-02: a 1300 row read as if the shop owed itself) — "rung by", and last */
+  if (s.by) out.push(esc(tx('rung by')) + ' ' + esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));
   return out;
 }
 /** the entry's own word, then its source: "Sale · Bill … · Counter C2 · Athi" — a walk-in day says "Walk-in day" */
@@ -242,10 +253,10 @@ function bkRecordedHTML(e, tid) {
   return ' <span data-testid="' + esc(tid) + '-rec" style="color:var(--grey);font-weight:400">' + esc(txf('recorded {date}', { date: day(rec || post, { day: '2-digit', month: 'short' }) })) + '</span>';
 }
 /** opening · each movement with its running balance · closing — the shape every statement has */
-function statementHTML(r) {
+function statementHTML(r, partyId) {
   var c = r && r.currency;
   var rows = ((r && r.lines) || []).map(function (l, i) {
-    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
+    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c, bkPartyLabel(l.party_id || partyId || (r && r.party_id), l.party_name)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
       + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
@@ -552,7 +563,7 @@ function bkDvGist(e) {
   return all.filter(function (x) { return x.cr > 0; }).concat(all.filter(function (x) { return x.cr <= 0; }));
 }
 function bkDvTotal(e) { return ((e && e.lines) || []).reduce(function (a, l) { return a + Number(l.dr_minor || 0); }, 0); }
-function bkDvParty(e) { var l = ((e && e.lines) || []).filter(function (x) { return x.party_name; })[0]; return l ? l.party_name : ''; }
+function bkDvParty(e) { var l = ((e && e.lines) || []).filter(function (x) { return x.party_name || x.party_id; })[0]; return l ? bkPartyLabel(l.party_id, l.party_name) : ''; }
 function bkDvTenders(e) {
   var s = e && e.source; if (!s) return [];
   if (s.kind === 'day' && s.split && s.split.length) return s.split.map(function (x) { return x.how; });
@@ -717,7 +728,7 @@ async function bkDaybook(body) {
   try {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
     var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
-    var r = rr[0];
+    var r = rr[0]; bkDuesStore(rr[1]);   /* the same read names each entry's party (bkPartyLabel) */
     var was = BK.dv || {};
     BK.dv = { r: r, range: q, q: was.q || '', group: was.group || 'day', f: { kind: {}, how: {}, counter: {}, by: {} }, open: {}, gcol: {}, hl: null };
     var seg = function (m, l) { return '<button type="button" class="bkdv-seg" data-testid="db-group-' + m + '" onclick="bkDvGroupBy(\'' + m + '\')">' + esc(tx(l)) + '</button>'; };
@@ -784,13 +795,47 @@ function bkLedgerPick(code) {
   if (v && !document.getElementById('lg_out')) v.innerHTML = bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out"></div>';
   if (BK.tab === 'ledgers') bkTab('ledgers'); else bkLedgerShow();
 }
+/** the two control accounts open into one ledger per party: which side of /dues each takes, and its words */
+var BK_CTRL = { '1300': { side: 'rcv', by: 'By customer', all: 'All customers' }, '2100': { side: 'pay', by: 'By supplier', all: 'All suppliers' } };
 async function bkLedgerShow() {
   var out = document.getElementById('lg_out'); if (!out) return;
   if (!BK.lgAcc) { out.innerHTML = ''; return; }
   try {
-    var q = bkRange('lg'); var r = await api('booksLedger', { params: { account: BK.lgAcc }, query: q });
-    out.innerHTML = statementHTML(r);
+    var q = bkRange('lg'), ctrl = BK_CTRL[BK.lgAcc];
+    /* ⭐ ONE dues read draws the party table AND names every row — never a statement per party */
+    var rr = await Promise.all([api('booksLedger', { params: { account: BK.lgAcc }, query: q }), ctrl ? booksDuesLoad(true) : null]);
+    BK.lgR = rr[0]; BK.lgParty = null;
+    bkLedgerPaint();
   } catch (e) { out.innerHTML = bkErr(e); }
+}
+function bkLedgerParty(id) { BK.lgParty = id || null; if (id) delete BK.stmt[id]; bkLedgerPaint(); }
+function bkLedgerPaint() {
+  var out = document.getElementById('lg_out'), r = BK.lgR; if (!out || !r) return;
+  var ctrl = BK_CTRL[BK.lgAcc];
+  if (!ctrl) { out.innerHTML = statementHTML(r); return; }
+  if (BK.lgParty) {
+    var id = BK.lgParty;
+    out.innerHTML = '<div class="supacts" style="display:flex;gap:8px;align-items:center;margin-bottom:9px"><button type="button" data-testid="lg-parties-back" onclick="bkLedgerParty(null)">‹ ' + esc(tx(ctrl.all)) + '</button>'
+      + '<b data-testid="lg-party-name">' + esc(bkPartyLabel(id)) + '</b></div>'
+      + '<div id="bk_stmt_' + esc(id) + '" data-testid="party-statement">' + tx('Reading…') + '</div>';
+    partyStatementLoad(id); return;
+  }
+  var c = r.currency || BK.duesCur, sign = ctrl.side === 'pay' ? -1 : 1;
+  var list = Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; }).filter(function (p) { return bkDuesSide(p) === ctrl.side; })
+    .sort(function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); });
+  var total = list.reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
+  var rows = list.map(function (p) {
+    return '<tr tabindex="0" role="button" style="cursor:pointer" data-testid="lg-party-' + esc(p.party_id) + '" onclick="bkLedgerParty(\'' + esc(p.party_id) + '\')" onkeydown="if(event.key===\'Enter\')bkLedgerParty(\'' + esc(p.party_id) + '\')">'
+      + '<td class="mono opt">' + esc(p.party_no || '') + '</td><td>' + esc(p.name || '') + '</td><td class="num"><b>' + esc(bkMoney(sign * Number(p.balance_minor || 0), c)) + '</b></td>'
+      + '<td class="opt">' + (p.oldest_due ? esc(bkDate(p.oldest_due)) : '') + '</td></tr>';
+  }).join('');
+  var foot = '<tr><td class="opt"></td><td><b>' + tx('Total of the parties') + '</b></td><td class="num" data-testid="lg-parties-total"><b>' + esc(bkMoney(sign * total, c)) + '</b></td><td class="opt"></td></tr>'
+    + '<tr><td class="opt"></td><td>' + tx('Ledger closing') + '</td><td class="num" data-testid="lg-parties-closing">' + esc(bkMoney(sign * closing, c)) + '</td><td class="opt"></td></tr>';
+  var diff = total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
+    + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>';
+  out.innerHTML = '<div class="sec" data-testid="lg-parties">' + esc(tx(ctrl.by)) + '</div>'
+    + (list.length ? bkTable([{ t: tx('Party no') }, { t: tx('Name') }, { t: tx('Balance'), num: 1 }, { t: tx('Oldest due') }], rows, foot).replace('<table class="bktab"', '<table class="bktab bkparty"') : '<div style="color:var(--grey);font-size:var(--fs-1)">' + tx('None yet') + '</div>')
+    + diff + '<div class="sec" data-testid="lg-all-entries">' + tx('All entries') + '</div>' + statementHTML(r);
 }
 async function bkTB(body) {
   var asOf = (document.getElementById('tb_asof') || {}).value || bkToday();
