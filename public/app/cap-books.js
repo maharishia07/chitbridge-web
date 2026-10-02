@@ -73,6 +73,27 @@ function bkCss() {
     '.bktodo{flex:1 1 240px;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);font-weight:600;cursor:pointer;text-align:start;color:inherit}',
     '.bktodo b{font-variant-numeric:tabular-nums;font-size:var(--fs-3);color:var(--warn-2)}',
     '.bktodo .bkgo{margin-inline-start:auto;color:var(--grey)}',
+    /* the Day book's views: one row per entry, its gist under it; a card on a narrow pane (the pane's width, not the window's) */
+    '#bk_dv{container:bkdv/inline-size;min-width:0}',
+    '.bkdv-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}',
+    '.bkdv-q{flex:1 1 180px;min-width:0;width:auto!important}',
+    '.bkdv-segs{display:inline-flex;gap:0}',
+    '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
+    '.bkdv-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}',
+    '.bkdv-chip{cursor:pointer;white-space:nowrap;flex:0 0 auto;font:inherit;font-size:var(--fs-1);background:var(--card);color:inherit;border:1px solid var(--line);border-radius:999px;padding:3px 10px}',
+    '.bkdv-chip.on{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
+    '.bkdv-sep{display:none}',
+    '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin-bottom:6px}',
+    '.bkdv-gh{display:flex;gap:2px 8px;flex-wrap:wrap;align-items:baseline;padding:8px 4px 6px;border-bottom:1px solid var(--ink);font-size:var(--fs-2);cursor:pointer;margin-top:8px}',
+    '.bkdv-row{border-bottom:1px dashed var(--line);padding:6px 4px;cursor:pointer}',
+    '.bkdv-row.hl{background:var(--blue-tint);outline:1px solid var(--blue-d)}',
+    '.bkdv-1{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-weight:600}',
+    '.bkdv-hd{flex:1 1 220px;min-width:0;font-weight:400;overflow-wrap:anywhere}',
+    '.bkdv-tot{margin-inline-start:auto;font-variant-numeric:tabular-nums;white-space:nowrap}',
+    '.bkdv-gist{color:var(--grey);font-size:var(--fs-1);padding-inline-start:22px;overflow-wrap:anywhere}',
+    '.bkdv-det{padding:6px 0 2px 22px;overflow-x:auto;cursor:default}',
+    '.bkdv-car{color:var(--grey);width:14px;display:inline-block}',
+    '@container bkdv (max-width:560px){.bkdv-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.bkdv-row{border:1px solid var(--line);border-radius:12px;margin:6px 0;padding:9px 10px}.bkdv-gist{padding-inline-start:0}.bkdv-det{padding-inline-start:0}}',
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
     '#bk_back{display:none}',
     '.appwrap.m .panel.showdetail #bk_back{display:block;padding:10px 13px 0}',
@@ -177,27 +198,33 @@ async function partyStatementLoad(partyId) {
 /** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
 function bkShortRef(r) { var t = String(r == null ? '' : r).trim(); return t.length > 10 ? t.slice(0, 4) + '…' + t.slice(-4) : t; }
 var BK_SRC_WORD = { bill: 'Bill', purchase: 'Bill', receipt: 'Receipt', payment: 'Payment', credit_note: 'Credit note', expense: 'Expense', income: 'Income' };
+/** the person who serviced it IS the shop itself (an owner, not a counter hand) — the shop's own name, as the session knows it */
+function bkIsShopName(n) {
+  if (typeof SESSION === 'undefined') return false;
+  var shop = SESSION.entity || (SESSION.role === 'entity' ? SESSION.name : '');
+  return !!shop && String(n || '').trim() === String(shop).trim();
+}
 function bkSourceParts(s, tid, cur) {
   if (!s) return [];
   var out = [];
   if (s.kind === 'day') { if (s.count != null) out.push(esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }))); }
   else if (s.ref || s.chit_id) {
     var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
-    var link = s.chit_id ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChit(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>' : no;
+    var link = s.chit_id ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>' : no;
     out.push((BK_SRC_WORD[s.kind] ? esc(tx(BK_SRC_WORD[s.kind])) + ' ' : '') + link + (s.doc_at ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : ''));
   }
   /* ⭐ HOW IT WAS PAID (Athi, 2026-10-01: "clearly segregate credit, cash, UPI") — a day: each tender with its amount */
   if (s.kind === 'day' && s.split && s.split.length) out.push(s.split.map(function (x) { return esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, cur)); }).join(' · '));
   else if (s.how) out.push('<span data-testid="' + esc(tid) + '-how">' + esc(tx(s.how)) + (s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref)) + '</span>' : '') + '</span>');
   if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));
-  if (s.by) out.push(esc(s.by));
+  if (s.by) out.push(esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));
   return out;
 }
 /** the entry's own word, then its source: "Sale · Bill … · Counter C2 · Athi" — a walk-in day says "Walk-in day" */
-function bkEntryHead(e, tid, cur) {
+function bkEntryHead(e, tid, cur, party) {
   var s = e && e.source;
   var head = s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
-  return [head].concat(bkSourceParts(s, tid, cur)).join(' · ') + bkRecordedHTML(e, tid);
+  return [head].concat(party ? [esc(party)] : [], bkSourceParts(s, tid, cur)).join(' · ') + bkRecordedHTML(e, tid);
 }
 /** the bill's own time of day, in the shop's zone (CBLocale.time) — "beside the bill number" */
 function bkTime(ts) { try { return CBLocale.time(ts) || ''; } catch (_) { return ''; } }
@@ -218,7 +245,7 @@ function bkRecordedHTML(e, tid) {
 function statementHTML(r) {
   var c = r && r.currency;
   var rows = ((r && r.lines) || []).map(function (l, i) {
-    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
+    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
       + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
@@ -427,7 +454,7 @@ function bkTable(head, rows, foot) {
 function bkDaySales(entries, day) {
   var counters = {}, tenders = {}, corder = [], torder = [], hasDay = false;
   (entries || []).forEach(function (e) {
-    if (String(e.posting_date || '').slice(0, 10) !== day) return;
+    if (day && String(e.posting_date || '').slice(0, 10) !== day) return;
     var s = e.source; if (!s) return;
     if (s.kind === 'day') hasDay = true;                      /* the counter closed its day — walk-ins are in */
     if (s.kind !== 'day' && s.kind !== 'bill') return;        /* sales only: a bill, or a walk-in day */
@@ -466,7 +493,7 @@ function bkStripHTML(r, day) {
 /**
  * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
  * all quiet collapses into one line. Every count is the server's: /health waiting[] (a received supplier bill waits
- * as "Waiting for you to confirm …" — those are the Intake's; the rest are the ledger's to record), /dues (a
+ * as "Waiting for you to confirm …" — one opens its sheet, several open Waiting; the rest are the ledger's to record), /dues (a
  * customer with any bucket past "Not due"), /cheques (a held cheque with a step still open).
  */
 function bkTodoCounts(dues, cheques, health) {
@@ -478,33 +505,232 @@ function bkTodoCounts(dues, cheques, health) {
     return Object.keys(b).some(function (k) { return k !== 'not_due' && Number(b[k] || 0); });
   });
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) { return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0; });
-  return { accept: confirm.length, overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
+  return { accept: confirm.length, acceptIds: confirm.map(function (w) { return w.chit_id; }).filter(Boolean), overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
 }
 function bkTodoHTML(n) {
   var card = function (tid, count, label, go) {
     return '<button class="bktodo" data-testid="' + tid + '" onclick="' + go + '"><b>' + count + '</b> ' + esc(label) + '<span class="bkgo" aria-hidden="true">›</span></button>';
   };
   var items = [];
-  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'), "navTo('intake')"));
+  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
+    /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
+    (n.accept === 1 && (n.acceptIds || []).length === 1) ? "openChitSheet('" + esc(n.acceptIds[0]) + "')" : "bkTab('waiting')"));
   if (n.overdue) items.push(card('todo-overdue', n.overdue, tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), "bkTab('dues')"));
   if (n.cheques) items.push(card('todo-cheques', n.cheques, tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), "bkTab('cheques')"));
   if (n.waiting) items.push(card('todo-waiting', n.waiting, tx('waiting to be recorded'), "bkTab('waiting')"));
   if (!items.length) return '<div data-testid="todo-none" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:10px">' + tx('Nothing waiting on you') + '</div>';
   return '<div id="bk_todo" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">' + items.join('') + '</div>';
 }
+/**
+ * ⭐ THE DAY BOOK, THE WAY A DAY BOOK READS (Athi, 2026-10-01: "expand all, collapse all, search, filter, daily view,
+ * weekly view … do we need these many lines per sale? … the gist can be showcased as a summary."). ONE row per entry,
+ * its GIST under it — the entry's own lines merged by ledger (GST = 2200–2212 together), each figure a sum of those
+ * lines, never recomputed — and the rate-wise lines on a tap. Search, chips, Day / Week / Month heads and the CSV all
+ * read the SAME shown list (bkDvShown); nothing here adds to a figure the server did not send.
+ */
+var BK_KINDS = ['Sales', 'Receipts', 'Purchases', 'Payments', 'Expenses', 'Returns', 'Other'];
+function bkDvKind(e) {
+  var t = String((e && e.event_type) || ''), k = String((e && e.source && e.source.kind) || '');
+  if (/return|credit_note|debit_note/.test(t) || k === 'credit_note') return 'Returns';
+  if (/purchase/.test(t)) return 'Purchases';
+  if (/expense/.test(t) || k === 'expense') return 'Expenses';
+  if (k === 'day' || /sale|walkin/.test(t)) return 'Sales';
+  if (/received|receipt/.test(t) || k === 'receipt') return 'Receipts';
+  if (/payment/.test(t) || k === 'payment') return 'Payments';
+  return k === 'bill' ? 'Sales' : 'Other';
+}
+/** the same-ledger lines merged, credit side first (Sales · GST · Debtors); GST = the 2200–2212 lines together */
+function bkDvGist(e) {
+  var m = {}, order = [];
+  ((e && e.lines) || []).forEach(function (l) {
+    var gst = /^22(0\d|1[0-2])$/.test(String(l.code)), key = gst ? 'GST' : String(l.code);
+    if (!m[key]) { m[key] = { name: gst ? 'GST' : l.name, amt: 0, cr: 0 }; order.push(key); }
+    m[key].amt += Number(l.dr_minor || 0) + Number(l.cr_minor || 0);
+    m[key].cr += Number(l.cr_minor || 0) - Number(l.dr_minor || 0);
+  });
+  var all = order.map(function (k) { return m[k]; });
+  return all.filter(function (x) { return x.cr > 0; }).concat(all.filter(function (x) { return x.cr <= 0; }));
+}
+function bkDvTotal(e) { return ((e && e.lines) || []).reduce(function (a, l) { return a + Number(l.dr_minor || 0); }, 0); }
+function bkDvParty(e) { var l = ((e && e.lines) || []).filter(function (x) { return x.party_name; })[0]; return l ? l.party_name : ''; }
+function bkDvTenders(e) {
+  var s = e && e.source; if (!s) return [];
+  if (s.kind === 'day' && s.split && s.split.length) return s.split.map(function (x) { return x.how; });
+  return s.how ? [s.how] : [];
+}
+function bkDvMatch(e, q, c) {
+  q = String(q || '').trim().toLowerCase(); if (!q) return true;
+  var hay = [e.entry_no, e.source && e.source.ref, e.narration].concat((e.lines || []).map(function (l) { return l.name; }), (e.lines || []).map(function (l) { return l.party_name; }));
+  if (hay.some(function (h) { return h && String(h).toLowerCase().indexOf(q) >= 0; })) return true;
+  var qq = q.replace(/,/g, '');
+  if (!/^\d+(\.\d+)?$/.test(qq)) return false;
+  var n = parseFloat(qq), pow = Math.pow(10, bkDec(c)), dec = qq.indexOf('.') >= 0, minor = Math.round(n * pow);
+  var amts = [bkDvTotal(e)].concat(bkDvGist(e).map(function (x) { return x.amt; }), (e.lines || []).map(function (l) { return Number(l.dr_minor || 0) + Number(l.cr_minor || 0); }));
+  return amts.some(function (a) { return dec ? a === minor : Math.floor(a / pow) === n; });
+}
+/** the chips' four questions, and what each entry answers to them */
+var BK_DV_DIMS = [['kind', 'Kind'], ['how', 'Tender'], ['counter', 'Counter'], ['by', 'Person']];
+function bkDvVals(e, dim) {
+  var s = (e && e.source) || {};
+  if (dim === 'kind') return [bkDvKind(e)];
+  if (dim === 'how') return bkDvTenders(e);
+  return s[dim] ? [s[dim]] : [];
+}
+function bkDvShown() {
+  var d = BK.dv; if (!d || !d.r) return [];
+  var c = d.r.currency;
+  return (d.r.entries || []).filter(function (e) {
+    if (!bkDvMatch(e, d.q, c)) return false;
+    return BK_DV_DIMS.every(function (x) {
+      var on = Object.keys(d.f[x[0]] || {}).filter(function (k) { return d.f[x[0]][k]; });
+      if (!on.length) return true;
+      return bkDvVals(e, x[0]).some(function (v) { return on.indexOf(v) >= 0; });
+    });
+  });
+}
+function bkDvFmt(day, o) { try { return CBLocale.date(day, o); } catch (_) { return String(day).slice(0, 10); } }
+/** Day = the date · Week = Mon–Sun with the ISO week number · Month = its name */
+function bkDvGroupOf(date, mode) {
+  var day = String(date || '').slice(0, 10), t = new Date(day + 'T00:00:00Z');
+  if (mode === 'month') return { key: day.slice(0, 7), label: bkDvFmt(day, { month: 'long', year: 'numeric' }) };
+  if (mode === 'week') {
+    var mon = new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5), thu = new Date(mon.getTime() + 3 * 864e5), sun = new Date(mon.getTime() + 6 * 864e5);
+    var wk = Math.ceil(((thu - Date.UTC(thu.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7), iso = function (x) { return x.toISOString().slice(0, 10); }, o = { day: '2-digit', month: 'short' };
+    return { key: iso(mon), label: txf('Week {n}', { n: wk }) + ' · ' + bkDvFmt(iso(mon), o) + ' – ' + bkDvFmt(iso(sun), o) };
+  }
+  return { key: day, label: bkDvFmt(day, { weekday: 'short', day: '2-digit', month: 'short' }) };
+}
+function bkDvGroups(list, mode) {
+  var out = [], by = {};
+  list.forEach(function (e) {
+    var g = bkDvGroupOf(e.posting_date, mode);
+    if (!by[g.key]) { by[g.key] = { key: g.key, label: g.label, entries: [] }; out.push(by[g.key]); }
+    by[g.key].entries.push(e);
+  });
+  return out;
+}
+function bkDvHeadHTML(g, c) {
+  var dr = 0, cr = 0, sales = 0;
+  g.entries.forEach(function (e) {
+    (e.lines || []).forEach(function (l) { dr += Number(l.dr_minor || 0); cr += Number(l.cr_minor || 0); });
+    if (bkDvKind(e) === 'Sales') (e.lines || []).forEach(function (l) { if (/^4/.test(String(l.code))) sales += Number(l.cr_minor || 0) - Number(l.dr_minor || 0); });
+  });
+  var tn = bkDaySales(g.entries, null).tenders;
+  var parts = [esc(txf(g.entries.length === 1 ? '{n} entry' : '{n} entries', { n: g.entries.length })), esc(tx('Dr')) + ' ' + esc(bkMoney(dr, c)), esc(tx('Cr')) + ' ' + esc(bkMoney(cr, c))];
+  if (sales) parts.push(esc(tx('Sales')) + ' ' + esc(bkMoney(sales, c)));
+  tn.forEach(function (x) { parts.push(esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, c))); });
+  var shut = BK.dv.gcol[g.key];
+  return '<div class="bkdv-gh" role="button" tabindex="0" aria-expanded="' + (shut ? 'false' : 'true') + '" data-g="' + esc(g.key) + '" data-testid="db-ghead-' + esc(g.key) + '"><span class="bkdv-car" aria-hidden="true">' + (shut ? '▸' : '▾') + '</span><b>' + esc(g.label) + '</b><span class="bkdv-sep"> · </span>'
+    + '<span data-testid="db-gsum-' + esc(g.key) + '">' + parts.join(' · ') + '</span></div>';
+}
+function bkDvRowHTML(e, c) {
+  var no = esc(e.entry_no), open = !!BK.dv.open[e.entry_no];
+  var gist = bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · ');
+  var lines = open ? '<div class="bkdv-det" data-testid="db-lines-' + no + '"><table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Code') + '</th><th>' + tx('Ledger') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th></tr></thead><tbody>'
+    + (e.lines || []).map(function (l) { return '<tr><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('')
+    + '</tbody></table></div>' : '';
+  return '<div class="bkdv-row bkentry' + (open ? ' open' : '') + (BK.dv.hl === e.entry_no ? ' hl' : '') + '" data-no="' + no + '" data-testid="db-entry-' + no + '" aria-expanded="' + open + '">'
+    + '<div class="bkdv-1"><span class="bkdv-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span><span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'
+    + '<span class="mono">' + no + '</span><span class="bkdv-hd" data-testid="db-head-' + no + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c, bkDvParty(e)) + '</span>'
+    + '<b class="bkdv-tot" data-testid="db-total-' + no + '">' + esc(bkMoney(bkDvTotal(e), c)) + '</b></div>'
+    + '<div class="bkdv-gist" data-testid="db-gist-' + no + '">' + gist + '</div>' + lines + '</div>';
+}
+function bkDvPaint() {
+  var box = document.getElementById('bk_dvlist'); if (!box || !BK.dv) return;
+  var d = BK.dv, c = d.r && d.r.currency, list = bkDvShown();
+  box.innerHTML = list.length ? bkDvGroups(list, d.group).map(function (g) {
+    return '<div class="bkdv-g" data-testid="db-group">' + bkDvHeadHTML(g, c) + (d.gcol[g.key] ? '' : g.entries.map(function (e) { return bkDvRowHTML(e, c); }).join('')) + '</div>';
+  }).join('') : emptyState('🔍', tx('Nothing matches'), '');
+  var n = document.getElementById('bk_dvcount'); if (n) n.textContent = txf(list.length === 1 ? '{n} entry shown' : '{n} entries shown', { n: list.length });
+  var chips = document.getElementById('bk_dvchips'); if (chips) chips.innerHTML = bkDvChipsHTML();
+  Array.prototype.forEach.call(document.querySelectorAll('[data-testid^="db-group-"]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-testid') === 'db-group-' + d.group)); });
+}
+function bkDvChipsHTML() {
+  var d = BK.dv, out = '';
+  BK_DV_DIMS.forEach(function (x) {
+    var seen = [];
+    (d.r.entries || []).forEach(function (e) { bkDvVals(e, x[0]).forEach(function (v) { if (seen.indexOf(v) < 0) seen.push(v); }); });
+    if (x[0] === 'kind') seen.sort(function (a, b) { return BK_KINDS.indexOf(a) - BK_KINDS.indexOf(b); }); else seen.sort();
+    seen.forEach(function (v) {
+      var on = !!(d.f[x[0]] || {})[v], label = x[0] === 'counter' ? tx('Counter') + ' ' + v : x[0] === 'by' ? v + (bkIsShopName(v) ? ' ' + tx('(owner)') : '') : tx(v);
+      out += '<button type="button" class="optchip bkchip bkdv-chip' + (on ? ' on' : '') + '" aria-pressed="' + on + '" data-dim="' + x[0] + '" data-val="' + esc(v) + '" data-testid="db-chip-' + x[0] + '-' + esc(v) + '">' + (on ? '✓ ' : '') + esc(label) + '</button>';
+    });
+  });
+  return out;
+}
+function bkDvOpenAll(on) {
+  var d = BK.dv; if (!d) return;
+  if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; }); else d.open = {};
+  bkDvPaint();
+}
+function bkDvGroupBy(m) { if (!BK.dv) return; BK.dv.group = m; BK.dv.gcol = {}; bkDvPaint(); }
+function bkDvSearch(v) {
+  clearTimeout(BK.dvTimer);
+  BK.dvTimer = setTimeout(function () { if (BK.dv) { BK.dv.q = v; bkDvPaint(); } }, 180);
+}
+function bkDvToggle(no) { var d = BK.dv; if (!d) return; d.hl = no; d.open[no] = !d.open[no]; bkDvPaint(); }
+/** the shown rows as a CSV — client-side, one line per row; a cell that starts like a formula is quoted as text */
+function bkDvCsv(list, c) {
+  var pow = Math.pow(10, bkDec(c)), amt = function (m) { return (Number(m || 0) / pow).toFixed(bkDec(c)); };
+  var cell = function (v) { var s = String(v == null ? '' : v); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  var rows = [['date', 'no', 'kind', 'party', 'ref', 'how', 'counter', 'by', 'dr', 'cr', 'gist']];
+  list.forEach(function (e) {
+    var s = e.source || {}, cr = (e.lines || []).reduce(function (a, l) { return a + Number(l.cr_minor || 0); }, 0);
+    rows.push([String(e.posting_date).slice(0, 10), e.entry_no, bkDvKind(e), bkDvParty(e), s.ref || '', bkDvTenders(e).join(' · '), s.counter || '', s.by || '',
+      '#' + amt(bkDvTotal(e)), '#' + amt(cr), bkDvGist(e).map(function (x) { return x.name + ' ' + amt(x.amt); }).join('; ')]);
+  });
+  return rows.map(function (r, i) { return r.map(function (v) { return i && typeof v === 'string' && v.charAt(0) === '#' ? v.slice(1) : cell(v); }).join(','); }).join('\r\n') + '\r\n';
+}
+function bkDvDownload() {
+  var d = BK.dv; if (!d) return;
+  var blob = new Blob(['﻿' + bkDvCsv(bkDvShown(), d.r.currency)], { type: 'text/csv;charset=utf-8' });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'day-book-' + d.range.from + '-' + d.range.to + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+}
+/* clicks, chips and keys: one listener each, on the document, live only while a Day book is on screen */
+function bkDvOn() { return !!(BK.dv && document.getElementById('bk_dvlist')); }
+document.addEventListener('click', function (ev) {
+  if (!bkDvOn() || !ev.target.closest) return;
+  var t = ev.target, chip = t.closest('.bkdv-chip'), gh = t.closest('.bkdv-gh'), row = t.closest('.bkdv-row');
+  if (chip) {
+    var dim = chip.getAttribute('data-dim'), val = chip.getAttribute('data-val'); BK.dv.f[dim] = BK.dv.f[dim] || {};
+    BK.dv.f[dim][val] = !BK.dv.f[dim][val]; bkDvPaint();
+  } else if (gh) { var k = gh.getAttribute('data-g'); BK.dv.gcol[k] = !BK.dv.gcol[k]; bkDvPaint(); }
+  else if (row && !t.closest('.bkdv-det')) bkDvToggle(row.getAttribute('data-no'));
+});
+document.addEventListener('keydown', function (ev) {
+  if (!bkDvOn()) return;
+  if (ev.key === 'Escape') return;   /* the sheet's own dialog closes on Esc — this screen must not swallow it */
+  var typing = /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test((ev.target && ev.target.tagName) || '');
+  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+    var rows = Array.prototype.slice.call(document.querySelectorAll('#bk_dvlist .bkdv-row')); if (!rows.length) return;
+    var at = rows.map(function (r) { return r.getAttribute('data-no'); }).indexOf(BK.dv.hl);
+    at = ev.key === 'ArrowDown' ? Math.min(rows.length - 1, at + 1) : Math.max(0, at < 0 ? 0 : at - 1);
+    BK.dv.hl = rows[at].getAttribute('data-no'); ev.preventDefault();
+    rows.forEach(function (r, i) { r.classList.toggle('hl', i === at); });
+    if (rows[at].scrollIntoView) rows[at].scrollIntoView({ block: 'nearest' });
+  } else if (ev.key === 'Enter' && !typing && BK.dv.hl) { ev.preventDefault(); bkDvToggle(BK.dv.hl); }
+  else if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('bkdv-gh')) { ev.target.click(); }
+});
 async function bkDaybook(body) {
   var q = bkRange('db');
   try {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
     var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
-    var r = rr[0]; var c = r && r.currency;
-    var rows = ((r && r.entries) || []).map(function (e) {
-      return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3" data-testid="db-head-' + esc(e.entry_no) + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c) + '</td></tr>'
-        + (e.lines || []).map(function (l) { return '<tr><td></td><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('');
-    }).join('');
+    var r = rr[0];
+    var was = BK.dv || {};
+    BK.dv = { r: r, range: q, q: was.q || '', group: was.group || 'day', f: { kind: {}, how: {}, counter: {}, by: {} }, open: {}, gcol: {}, hl: null };
+    var seg = function (m, l) { return '<button type="button" class="bkdv-seg" data-testid="db-group-' + m + '" onclick="bkDvGroupBy(\'' + m + '\')">' + esc(tx(l)) + '</button>'; };
     /* the strip and the to-do sit above the entries; the strip reads the range's LAST day — today, by default */
     body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + bkStripHTML(r, q.to) + bkTodoHTML(bkTodoCounts(rr[1], rr[2], rr[3]))
-      + (rows ? bkTable([{ t: tx('Date') }, { t: tx('No') }, { t: tx('Ledger') }, { t: tx('Debit'), num: 1 }, { t: tx('Credit'), num: 1 }], rows) : emptyState('📖', tx('Nothing in these dates'), ''));
+      + ((r && r.entries && r.entries.length)
+        ? '<div id="bk_dv"><div class="bkdv-bar supacts"><input type="search" class="inp bkdv-q" id="db_q" data-testid="db-search" placeholder="' + esc(tx('Search party, bill, amount')) + '" value="' + esc(BK.dv.q) + '" oninput="bkDvSearch(this.value)">'
+          + '<span class="bkdv-segs" role="group" aria-label="' + esc(tx('Group by')) + '">' + seg('day', 'Day') + seg('week', 'Week') + seg('month', 'Month') + '</span>'
+          + '<button type="button" data-testid="db-expand-all" onclick="bkDvOpenAll(true)">' + tx('Expand all') + '</button><button type="button" data-testid="db-collapse-all" onclick="bkDvOpenAll(false)">' + tx('Collapse all') + '</button>'
+          + '<button type="button" data-testid="db-csv" onclick="bkDvDownload()">' + tx('Download CSV') + '</button></div>'
+          + '<div class="bkdv-chips" id="bk_dvchips" data-testid="db-chips"></div><div class="bkdv-count" id="bk_dvcount" data-testid="db-count"></div><div id="bk_dvlist" data-testid="db-list"></div></div>'
+        : emptyState('📖', tx('Nothing in these dates'), ''));
+    bkDvPaint();
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 /**
@@ -894,7 +1120,7 @@ async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
     var rows = (BK.waiting || []).map(function (w, i) {
-      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.reason || w.why || tx('No reason given')) + '</td>'
+      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.reason || w.why || tx('No reason given')) + '</td>'
         + '<td class="mono">' + esc(w.ref || '') + '</td><td>' + esc(bkDate(w.since)) + '</td><td class="num">' + (w.tries ? txf('{n} tries', { n: w.tries }) : '') + '</td></tr>';
     }).join('');
     body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'

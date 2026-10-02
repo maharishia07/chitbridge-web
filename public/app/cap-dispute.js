@@ -340,9 +340,9 @@ async function loadDisputes(){
 
 /* ── Raise flow (FR-D1): candidates = everyone on the chit except me (chitIsSelf); ticking parties makes
  *    it a TARGETED dispute (only those parties see it, BR-D2); none ticked = chit-wide. */
-async function quickDispute(){ var ids=(typeof needTarget==='function'?needTarget():[]); if(!ids.length)return;
+async function quickDispute(idArg, opt){ var ids=idArg?[idArg]:(typeof needTarget==='function'?needTarget():[]); if(!ids.length)return;
   if(ids.length>1){ toast("Raise a dispute on one chit at a time — each is its own matter."); return; }
-  var id=ids[0]; MODALS.disp={id, parties:[]};
+  var id=ids[0]; MODALS.disp={id, parties:[], back:!!(opt&&opt.back)};
   var partyRows='';
   try{ var r=await api("chit",{params:{id}}); var h=(r&&r.header)||r||{}; var seen={};
     var parties=(h.all_recipients||[]).filter(function(x){ return x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1); });
@@ -351,13 +351,14 @@ async function quickDispute(){ var ids=(typeof needTarget==='function'?needTarge
   }catch(_){}
   modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' + tx('Raise dispute') + '</button></div>');
 }
-async function confirmDispute(){ var id=MODALS.disp.id; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
+async function confirmDispute(){ var id=MODALS.disp.id, back=!!MODALS.disp.back; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
   var parties=[].slice.call(document.querySelectorAll('.dispparty:checked')).map(function(e){return e.value;});
   closeModal();
   var body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
   try{ var _dr2=await api("dispute",{params:{id},body}); if(window.CBOffline)CBOffline.clearDraft('disp.reason.'+id); if(_dr2&&_dr2.warning)toast(_dr2.warning); var i=UI.rows.findIndex(function(x){return x.id===id;}); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
   if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); if(typeof announce==='function')announce('Dispute raised');
+  if(back && typeof openChitSheet==='function'){ openChitSheet(id); return; }   /* raised from the chit sheet: back to the sheet, the page behind untouched */
   if(UI.sel===id){ UI.dtab='messages'; await openChit(id); } else { renderApp(); }
 }
 
