@@ -1,5 +1,7 @@
-/* books-web-breaks.cjs — */ // break each Ledger guard once, run the harness, restore FROM A COPY (never git checkout)
-const fs = require('fs'), path = require('path'), cp = require('child_process');
+/* books-web-breaks.cjs — break each Ledger guard once, run e2e/books-web.cjs against a COPY of public/, throw the copy away.
+ * Nothing in the working tree is ever edited (never git checkout to restore). A CRLF checkout matches the same anchors:
+ * the copy is read as LF text and written back in the file's own line endings (the way chit-sheet-breaks.cjs does it). */
+const fs = require('fs'), path = require('path'), os = require('os'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const CAP = 'public/app/cap-books.js', APP = 'public/app.html', ADMIN = 'public/app/cap-admin.js';
 const BREAKS = [
@@ -37,12 +39,12 @@ const BREAKS = [
   ['M12 waiting count not shown', CAP, `el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');`, ``],
   ['F11 payable buckets have no column', CAP, `var cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS,`, `var cols = BK_BUCKETS,`],
   /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
-  ['SRC source not shown', CAP, `return [head].concat(bkSourceParts(s, tid, cur)).join(' · ')`, `return head`],
+  ['SRC source not shown', CAP, `return [head].concat(party ? [esc(party)] : [], bkSourceParts(s, tid, cur)).join(' · ')`, `return head`],
   ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
   ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],
   ['SRC day count missing', CAP, `if (s.count != null) out.push(`, `if (false) out.push(`],
   ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));`, ``],
-  ['SRC seller missing', CAP, `  if (s.by) out.push(esc(s.by));`, ``],
+  ['SRC seller missing', CAP, `  if (s.by) out.push(esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));`, ``],
   ['SRC day reads its long narration', CAP, `s && s.kind === 'day' ? esc(tx('Walk-in day'))`, `false ? esc(tx('Walk-in day'))`],
   ['SRC ledger lines lose their source', CAP, `bkEntryHead(l, 'stmt-src-' + i, c)`, `esc(l.what || '')`],
   /* ── how it was paid (Athi, 2026-10-01: "clearly segregate credit, cash, UPI (UPI id)") ── */
@@ -67,11 +69,35 @@ const BREAKS = [
   ['TODO waiting double-counts the supplier bills', CAP, `waiting: waiting.length - confirm.length`, `waiting: waiting.length`],
   ['TODO a zero still earns a row', CAP, `if (n.accept) items.push(`, `if (true) items.push(`],
   ['TODO quiet line missing', CAP, `if (!items.length) return '<div data-testid="todo-none"`, `if (false) return '<div data-testid="todo-none"`],
-  ['TODO intake tap dead', CAP, `"navTo('intake')"`, `""`],
   ['TODO dues tap dead', CAP, `"bkTab('dues')"`, `""`],
   ['TODO cheques tap dead', CAP, `"bkTab('cheques')"`, `""`],
-  ['TODO waiting tap dead', CAP, `"bkTab('waiting')"`, `""`],
+  ['TODO waiting tap dead', CAP, `tx('waiting to be recorded'), "bkTab('waiting')"));`, `tx('waiting to be recorded'), ""));`],
   ['TODO phone tap shows nothing', CAP, `  if (!silent && UI.vp === 'mob') { UI.mdetail = true; var pn = document.getElementById('panel'); if (pn) pn.classList.add('showdetail'); }`, ``],
+  /* ── the Day book's views (Athi, 2026-10-01: "expand all, collapse all, search, filter, daily view, weekly view … the gist as a summary") ── */
+  ['VIEW gist from a second formula', CAP, `m[key].amt += Number(l.dr_minor || 0) + Number(l.cr_minor || 0);`, `m[key].amt += Math.round(Number(l.dr_minor || 0) * 1.01) + Number(l.cr_minor || 0);`],
+  ['VIEW GST rate lines not merged', CAP, `key = gst ? 'GST' : String(l.code);`, `key = String(l.code);`],
+  ['VIEW filter ignored', CAP, `return bkDvVals(e, x[0]).some(function (v) { return on.indexOf(v) >= 0; });`, `return true;`],
+  ['VIEW search ignored', CAP, `if (!bkDvMatch(e, d.q, c)) return false;`, ``],
+  ['VIEW search skips amounts', CAP, `return amts.some(function (a) { return dec ? a === minor : Math.floor(a / pow) === n; });`, `return false;`],
+  ['VIEW paise search matches the whole rupee', CAP, `return dec ? a === minor : Math.floor(a / pow) === n;`, `return Math.floor(a / pow) === Math.floor(n);`],
+  ['VIEW collapse-all leaves one open', CAP, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; }); else d.open = {};`, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; }); else { var k0 = Object.keys(d.open)[0]; d.open = {}; if (k0) d.open[k0] = true; }`],
+  ['VIEW expand-all misses some', CAP, `if (on) bkDvShown().forEach(function (e) { d.open[e.entry_no] = true; });`, `if (on) bkDvShown().slice(1).forEach(function (e) { d.open[e.entry_no] = true; });`],
+  ['VIEW open by default', CAP, `var no = esc(e.entry_no), open = !!BK.dv.open[e.entry_no];`, `var no = esc(e.entry_no), open = true;`],
+  ['VIEW group heads ignore the filter', CAP, `bkDvGroups(list, d.group).map(function (g) {`, `bkDvGroups(d.r.entries, d.group).map(function (g) {`],
+  ['VIEW week starts on Sunday', CAP, `new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5)`, `new Date(t.getTime() - t.getUTCDay() * 864e5)`],
+  ['VIEW week number missing', CAP, `label: txf('Week {n}', { n: wk }) + ' · ' + `, `label: `],
+  ['VIEW month head not grouped', CAP, `if (mode === 'month') return { key: day.slice(0, 7),`, `if (mode === 'month') return { key: day,`],
+  ['VIEW day head loses a tender', CAP, `tn.forEach(function (x) { parts.push(`, `tn.slice(1).forEach(function (x) { parts.push(`],
+  ['VIEW arrow down does not move', CAP, `at = ev.key === 'ArrowDown' ? Math.min(rows.length - 1, at + 1) :`, `at = ev.key === 'ArrowDown' ? at :`],
+  ['VIEW Enter does nothing', CAP, `else if (ev.key === 'Enter' && !typing && BK.dv.hl) {`, `else if (false) {`],
+  ['VIEW Esc swallowed', CAP, `if (ev.key === 'Escape') return;`, `if (ev.key === 'Escape') { ev.preventDefault(); return; }`],
+  ['VIEW CSV drops a row', CAP, `    rows.push([String(e.posting_date).slice(0, 10), e.entry_no,`, `    if (e.entry_no !== 'JV/2026-27/000001') rows.push([String(e.posting_date).slice(0, 10), e.entry_no,`],
+  ['VIEW CSV ignores the filter', CAP, `new Blob(['\ufeff' + bkDvCsv(bkDvShown(), d.r.currency)]`, `new Blob(['\ufeff' + bkDvCsv(d.r.entries, d.r.currency)]`],
+  ['VIEW chip for a value not in range', CAP, `if (seen.indexOf(v) < 0) seen.push(v); }); });`, `if (seen.indexOf(v) < 0) seen.push(v); }); }); if (x[0] === 'kind') seen.push('Purchases');`],
+  ['VIEW lit chip not marked', CAP, `'" aria-pressed="' + on + '" data-dim="'`, `'" aria-pressed="false" data-dim="'`],
+  ['VIEW bill link also toggles the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],
+  ['VIEW phone chips wrap', CAP, `.bkdv-chips{flex-wrap:nowrap;overflow-x:auto;`, `.bkdv-chips{flex-wrap:wrap;overflow-x:auto;`],
+  ['VIEW phone rows not cards', CAP, `.bkdv-row{border:1px solid var(--line);border-radius:12px;`, `.bkdv-row{border:0;border-radius:0;`],
 ];
 /* BREAK_ONLY=M1 runs just the breaks whose name contains it */
 const ONLY = process.env.BREAK_ONLY || '';
@@ -79,20 +105,21 @@ let good = 0, ran = 0;
 for (const [name, rel, a, b] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
-  const f = path.join(W, rel), bak = f + '.bak';
-  const s = fs.readFileSync(f, 'utf8'); const n = s.split(a).length - 1;
-  if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
-  fs.copyFileSync(f, bak);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bkw-'));
   try {
-    fs.writeFileSync(f, s.split(a).join(b));
+    fs.cpSync(path.join(W, 'public'), path.join(tmp, 'public'), { recursive: true });
+    const f = path.join(tmp, rel), raw = fs.readFileSync(f, 'utf8'), crlf = raw.indexOf('\r\n') >= 0, s = raw.replace(/\r\n/g, '\n'), n = s.split(a).length - 1;
+    if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
+    const out = s.split(a).join(b);
+    fs.writeFileSync(f, crlf ? out.replace(/\n/g, '\r\n') : out);
     /* ⚠️ 600s, not 300: a break that strands the harness on its catch-all waits runs long, and on a loaded
        Windows machine 'M10 download not remembered' crossed 300s — reported NOT caught when it was only slow. */
-    const r = cp.spawnSync(process.execPath, ['e2e/books-web.cjs'], { cwd: W, encoding: 'utf8', timeout: 600000 });
+    const r = cp.spawnSync(process.execPath, ['e2e/books-web.cjs'], { cwd: W, encoding: 'utf8', timeout: 600000, env: Object.assign({}, process.env, { BOOKS_ROOT: path.join(tmp, 'public') }) });
     const xx = (r.stdout || '').split('\n').filter((l) => /^\s+XX/.test(l));
     const caught = r.status !== 0 && xx.length > 0;
     if (caught) good++;
     console.log((caught ? '  ok  ' : '  XX  ') + 'broken: ' + name + ' → ' + (caught ? 'caught: ' + xx[0].trim() : 'NOT caught (exit ' + r.status + ')'));
-  } finally { fs.copyFileSync(bak, f); fs.unlinkSync(bak); }
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 console.log('\n  ' + good + '/' + ran + ' breaks caught');
 process.exitCode = good === ran ? 0 : 1;
