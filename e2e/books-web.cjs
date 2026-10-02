@@ -445,9 +445,10 @@ async function route(S, r) {
   ok(/Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: waiting opens Ledger › Waiting');
   await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
   await p.click('[data-testid="todo-accept"]');
-  await p.waitForFunction(() => UI.nav === 'intake', null, { timeout: 8000 }).catch(() => {});
-  ok(await p.evaluate(() => UI.nav) === 'intake', 'tap: supplier bills opens Intake (the rail folder)');
+  await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
+  ok(await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: several supplier bills opens Ledger › Waiting (a single one opens its sheet — e2e/chit-sheet.cjs), not Intake');
   await p.click('[data-testid="nav-ledger"]');
+  await p.click('[data-testid="bk-tab-daybook"]');
   await p.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 });
 
   await p.click('[data-testid="bk-tab-ledgers"]');
