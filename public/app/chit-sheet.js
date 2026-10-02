@@ -264,6 +264,6 @@
     if (k === 'page') { close(); if (typeof openChit === 'function') openChit(id); }
   }
 
-  root.CBSheet = { open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor };
+  root.CBSheet = { open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);

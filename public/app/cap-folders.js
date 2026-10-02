@@ -435,8 +435,8 @@ function _groupSumPane(){
         + '<span style="width:74px;text-align:end;color:var(--grey);font-size:var(--fs-1)">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
-      var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
-        + (l.breakdown || []).map(function(s){
+      var rows = open ? tblNextHTML(
+        (l.breakdown || []).map(function(s){
             return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
               /* ⚠️ WHAT THEY ACTUALLY WROTE, when it differs from the canonical name. "thakkali → Tomato" is the
@@ -447,7 +447,7 @@ function _groupSumPane(){
               + '<span style="width:130px;text-align:end">' + (s.value == null ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>' : esc((s.currency || '') + ' ' + s.value)) + '</span>'
               + '<span style="width:74px"></span></div>';
           }).join('')
-        + '</div>' : '';
+        ) : '';
       var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — ' + txf('the cost above is the priced part only, {not} the cost of this line.', { not: '<b>' + tx('not') + '</b>' }) + '</div>' : '';
       var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;

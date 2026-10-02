@@ -147,7 +147,7 @@ async function route(S, r) {
   /* ── 1 · the counter bill, from the Day book ─────────────────────────────────────────────────────── */
   {
     const S = standIn(); const { ctx, p } = await open(S);
-    const head1 = await p.textContent('[data-testid="db-head-JV/2026-27/000001"]');
+    const head1 = await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]');
     ok(/Books Shop \(owner\)/.test(head1), 'by == the shop\'s own name → "Books Shop (owner)" in the source line');
     ok(!/Mani \(owner\)/.test(await p.textContent('[data-testid="db-head-JV/2026-27/000002"]')), 'another person is not marked (owner)');
     /* scroll the page down to a row far from the top, remember where */
@@ -160,7 +160,7 @@ async function route(S, r) {
     ok(await sheetOpen(p), 'tapping the bill number opens the sheet (a <dialog>) over the Day book');
     const head = await p.textContent('[data-testid="cs-head"]');
     ok(/Counter bill/.test(head) && /C2\/26-27\/0002/.test(head) && /Counter C2/.test(head) && !/Counter 2/.test(head) && /Books Shop/.test(head), 'header: kind · number · date/time · counter (C2 — the way the Day book says it, not the till\'s "Counter 2") · person — ' + head.replace(/\s+/g, ' ').trim());
-    ok(/Counter C2/.test(await p.textContent('[data-testid="db-head-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter C2');
+    ok(/Counter C2/.test(await p.textContent('[data-testid="db-entry-JV/2026-27/000001"]')), 'the Day book names the same counter: Counter C2');
     /* every figure is CBTax.moneyOf(invoice), to the paisa — read off the DOM cells, compared with the engine's own numbers */
     const nums = async (sel) => (await p.$$eval(sel, (els) => els.map((e) => e.textContent.replace(/[₹,\s]/g, ''))));
     const lineTotals = await nums('#chitsheet tbody tr[data-testid^="cs-line-"] td:last-child');
@@ -296,6 +296,39 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
     ok(!(await sheetOpen(p)) && await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'the several-bills to-do opens Ledger › Waiting, not a sheet and not Intake');
     await ctx.close();
+  }
+  /* ── 3d · THE WAITING LIST IS THE TASK TABLE (docs/design/one-table): Supplier · Bill no · Amount · Date · Step; the bill opens in the popup ── */
+  {
+    const S = standIn();
+    S.waiting.push({ id: 7, chit_id: 'ch1', ref: 'bill:ch1', reason: 'September is locked. Open it again to record this bill.', tries: 3, since: TODAY + 'T05:00:00Z' });
+    const { ctx, p } = await open(S);
+    await p.evaluate(() => bkTab('waiting')); await p.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
+    await p.waitForFunction(() => /Agro Mills/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    const heads = await p.$$eval('#bk_body .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
+    ok(JSON.stringify(heads) === JSON.stringify(['Supplier', 'Bill no', 'Amount', 'Date', 'Step']), 'Waiting is the Task table: ' + heads.join(' · '));
+    const row0 = (await p.textContent('[data-testid="wait-0"]')).replace(/\s+/g, ' ');
+    ok(/Agro Mills/.test(row0) && /AM-81/.test(row0) && /2,500\.00/.test(row0) && /To accept/.test(row0), 'a supplier bill row reads supplier · bill no · amount (summary_json.money.total) · step: "' + row0.trim() + '"');
+    const body = await p.textContent('#bk_body');
+    ok(!/sb1|bill:|\btries\b|\d tries/.test(body), 'no chit id and no "tries" on the list');
+    ok(/September is locked/.test(await p.textContent('[data-testid="wait-1"]')) && await p.locator('[data-testid="wait-retry"]').count() === 1, 'a posting that genuinely failed shows its reason in the Step column, and Try again is offered');
+    await p.click('[data-testid="wait-0"] [role="button"]');
+    await p.waitForSelector('[data-testid="wait-lines-0"]', { timeout: 5000 }).catch(() => {});
+    ok(/Basmati 25kg/.test(await p.textContent('[data-testid="wait-lines-0"]')) && !(await sheetOpen(p)), 'the caret opens the next level — the bill\'s lines — and does not open the sheet');
+    await shot(p, 'one-table-waiting-laptop');
+    await p.click('[data-testid="wait-0"] .lcell:nth-child(2)'); await waitSheet(p, 'AM-81');
+    ok(await sheetOpen(p), 'a click on the row opens the bill in the popup');
+    await p.click('[data-testid="cs-act-accept"]');
+    await p.waitForSelector('[data-testid="cs-use"]', { timeout: 5000 }).catch(() => {});
+    ok(/resale|Resale/i.test(await p.textContent('[data-testid="cs-use"]')) && /asset/i.test(await p.textContent('[data-testid="cs-use"]')), 'Accept asks what the goods are for — resale · own use · asset');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(200);
+    ok(await p.locator('.bkdv-row, .bktab').count() === 0, 'the Waiting screen draws no row or table of its own');
+    await ctx.close();
+    const S2 = standIn(); const { ctx: c2, p: p2 } = await open(S2, 390);
+    await p2.evaluate(() => bkTab('waiting')); await p2.waitForSelector('[data-testid="wait-0"]', { timeout: 8000 });
+    await p2.waitForFunction(() => /Agro Mills/.test((document.querySelector('[data-testid="wait-0"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(await p2.evaluate(() => document.documentElement.scrollWidth) === 390 && await p2.evaluate(() => getComputedStyle(document.querySelector('[data-testid="wait-0"]')).display) === 'flex', 'phone: Waiting is one card per row and scrollWidth === 390');
+    await shot(p2, 'one-table-waiting-phone');
+    await c2.close();
   }
   /* ── 3c · the other two readings: summary_json.money alone · neither (opened from the page, as a link would) ── */
   {

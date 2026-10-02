@@ -31,6 +31,8 @@
   /* the names app/cap-books.js paints its tables, chips and buttons with, mapped onto this page's palette */
   --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:var(--muted);
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;   /* SYSTEM's neutrals, literal so e2e/a11y-contrast.cjs <page> can measure them */
+  /* … and the names list-ctl.js's Task table (.lhead · .lrow · .lcell · #rowpeek) and the app's search box paint with */
+  --paper:var(--sub); --sel:var(--hover); --blue-tint-bg:var(--blue-t); --on-card:var(--ink); --ink-2:#3d3527; --on-accent:var(--accent-ink);
   --warn-2:var(--amber-i); --ok-2:var(--green-d); --blue-d:var(--blue-i); --warn-tint:var(--amber-t); --blue-tint:var(--blue-t);
 }
 *{box-sizing:border-box}
@@ -178,6 +180,10 @@ mark{background:#f6e3a8;color:inherit;border-radius:2px}
 .supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .optchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-3);border-radius:999px;padding:3px 10px;font-size:var(--fs-1);font-weight:600;background:var(--surface)}
 .bktodo{min-height:44px}
+.srch{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line-3);border-radius:9px;padding:6px 10px;font-size:var(--fs-2);color:var(--grey)}
+.srch input{border:0;background:none;outline:0;font:inherit;width:100%;color:var(--ink)}
+.composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer}
+#bk_body select.inp{width:auto}
 .loadwrap{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:var(--fs-2);padding:18px 0}
 .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-3);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
@@ -296,6 +302,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/engine/money.js"></script>
 <script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/list-ctl.js"></script>   <!-- THE TASK TABLE (tbl*) and the five list controls (listCtl*): every list here is drawn by the code the Task list is drawn by -->
 <script src="/app/tax.js"></script>        <!-- CBTax.moneyOf — what the chit sheet reads a frozen invoice with -->
 <script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: the same popup the app opens (a bill number here opens it) -->
 <script src="/app/cap-folders.js"></script>

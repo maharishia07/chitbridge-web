@@ -100,6 +100,7 @@ function listCtlView(key) {
   /* ⚠️ sort a COPY. Sorting `matched` in place is fine, but `matched` is `all` itself when nothing is filtered,
      and reordering the screen's own array is how a list silently changes under everything else reading it. */
   if (srt && srt.cmp) matched = matched.slice().sort(srt.cmp);
+  if (s.rev) matched = matched.slice().reverse();   /* a heading clicked twice (tblSortBy) */
   return { all: all, matched: matched };
 }
 
@@ -169,7 +170,7 @@ function listCtlCountHTML(key) {
    would draw the whole of a narrower answer at once — and look identical to no filtering having happened. */
 function listCtlSetQ(key, v) { var s = listCtlS(key); s.q = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
 function listCtlSetFilter(key, f, v) { var s = listCtlS(key); s.f[f] = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
-function listCtlSetSort(key, i) { var s = listCtlS(key); s.sort = Number(i) || 0; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
+function listCtlSetSort(key, i) { var s = listCtlS(key); s.sort = Number(i) || 0; s.rev = false; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
 
 /**
  * ⭐ THE EMPTY CASE IS TWO DIFFERENT SENTENCES, and telling them apart is the whole value of saying anything.
@@ -185,3 +186,219 @@ function listCtlEmptyHTML(key, icon, title, sub) {
   }
   return emptyState(icon || '📄', title, sub);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ * ⭐⭐⭐ THE TASK TABLE, WRITTEN ONCE — header · rows · column template · fit · hover peek · lazy rows · next level
+ *
+ * Athi, 2026-10-02: *"the same task header style has to be used in other places, so the information can be a proper
+ * tabular format … if you expand the header show the next level of information"* and *"do not create new style
+ * anywhere, the first question is how do i reuse."*
+ *
+ * ⚠️ MOVED, NOT COPIED, out of app.html (listHeader · rowGrid · colTemplate · fittedCols' arithmetic · rowPeek ·
+ * lazyWrap and the CSS under them). The Task screen now calls THESE, and gives them what they used to read from
+ * `UI.*` as arguments — the columns, the sort, the selection column — so CB Accounts (accounts.html, which does not
+ * load app.html) draws its Waiting, Day book, Dues, ledger and party lists with the very same code. A screen that
+ * draws its own rows is wrong even if it looks right (CLAUDE.md rule 5; e2e/books-web-breaks.cjs proves it is caught).
+ *
+ * A column is { key, label, w:'112px'|'minmax(110px,1.2fr)', align:'right'?, sort?, cell(row) → html }. Nothing here
+ * decides what a row says: the screen's `cell` paints what the server sent.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* the table's look — the rules app.html always carried, injected FIRST in <head> so the Task screen's own variants
+   (.lrow.unread · .lrow.sel · .acc-*, which stay in app.html) still win the cascade exactly as before */
+var TBL_CSS = [
+  ".listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}",
+  ".listend button{margin-inline-end:8px}",
+  ".lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}",
+  ".lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}",
+  ".lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}",
+  ".sarr{font-size:var(--fs-1);margin-inline-start:3px;color:var(--blue)}",
+  ".lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}",
+  ".lrow:hover{background:var(--paper)}",
+  "#rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:var(--fs-2);line-height:1.45}",
+  "#rowpeek .pkr{display:flex;gap:10px;padding:2px 0}",
+  "#rowpeek .pkr+.pkr{border-top:1px solid #f0f3f5}",
+  "#rowpeek .pkk{flex:0 0 84px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.3px}",
+  "#rowpeek .pkv{flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere}",
+  ".lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+  ".lcell.ra{text-align:end}",
+  ".lhcell.ra{justify-content:flex-end}",
+  ".lhcell{position:relative}",
+  ".colrz{position:absolute;inset-inline-end:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}",
+  ".colrz:hover{background:var(--blue);opacity:.5}",
+  ".lhead .lhcell:not(:last-child){border-inline-end:1px solid var(--line)}",
+  ".lrow .lcell:not(:last-child){border-inline-end:1px solid var(--line)}",
+  ".lhcell{padding-inline-end:4px}",
+  ".lcell{padding-inline-end:4px}",
+  ".colrz:hover{background:var(--blue);opacity:.35}",
+  /* the same rows on a narrow pane (or a phone): one card a row, each cell named by its column — only for tables that
+     opt in with the .tblx wrapper (CB Accounts); the Task screen's own fitting is untouched */
+  ".tblx{container:tblx/inline-size;min-width:0}",
+  "@container tblx (max-width:560px){.tblx .lhead{display:none}.tblx .lrow{display:flex;flex-wrap:wrap;gap:2px 10px;border:1px solid var(--line);border-radius:12px;margin:6px 0;padding:9px 10px}.tblx .lrow .lcell{border:0;white-space:normal;padding:0;flex:0 1 auto;max-width:100%}.tblx .lrow .lcell:first-child{flex:1 1 100%;font-weight:600}.tblx .lrow .lcell[data-l]:not(:first-child):not(:empty)::before{content:attr(data-l) \" · \";color:var(--grey);font-size:var(--fs-1)}.tblx .lrow .lcell.ra{text-align:start}}",
+].join('\n');
+(function () {
+  if (typeof document === 'undefined' || !document.head || document.getElementById('tbl_css')) return;
+  var s = document.createElement('style'); s.id = 'tbl_css'; s.textContent = TBL_CSS;
+  document.head.insertBefore(s, document.head.firstChild);
+})();
+
+/**
+ * ⚠️ THE DECLARED MINIMUM, DELIBERATELY NOT A MANUAL WIDTH. A manual column resize is a PREFERENCE — "give Subject more
+ * room" — and it was being read as a FLOOR. Athi had dragged Subject to 269px; that 269 then outranked Amount and
+ * Status in the fit and pushed both off the right edge. Dragging one column wider must never evict another.
+ */
+function colMinPx(c) { var m = /(\d+(?:\.\d+)?)px/.exec(c.w); return m ? parseFloat(m[1]) : 80; }
+
+/**
+ * ⭐ FIT THE COLUMNS TO THE PANE (Task: 1089px of columns in a 653px pane, five unreachable). `prio` lists column keys
+ * best-first; columns are dropped lowest-first until the rest fit. ⚠️ THE TOP-PRIORITY COLUMN IS UNCONDITIONAL — a row
+ * you cannot identify is not a row. Whatever is folded away is shown in full by the hover peek (tblPeekShow).
+ */
+function tblFit(chosen, avail, prio) {
+  if (!chosen.length) return chosen;
+  var order = chosen.slice().sort(function (a, b) { return prio.indexOf(a.key) - prio.indexOf(b.key); });
+  var must = order[0], keep = {}; keep[must.key] = 1; var used = colMinPx(must);
+  order.slice(1).forEach(function (c) { var need = colMinPx(c) + 8; if (used + need <= avail) { keep[c.key] = 1; used += need; } });
+  return chosen.filter(function (c) { return keep[c.key]; });
+}
+/** the grid template: an optional lead track (the Task's select box), then each column's width — a manual width map wins */
+function tblTemplate(cols, o) {
+  o = o || {};
+  return (o.lead || '') + cols.map(function (c) { return (o.w && o.w[c.key]) ? o.w[c.key] : c.w; }).join(' ');
+}
+/**
+ * the header: sortable cells call `o.onSort(key)` (a global function NAME, so the markup stays an onclick), the resize
+ * handle calls `o.onResize(event, key)`. `o.sort`/`o.dir` say which arrow is lit; `o.label(col)` renames a heading.
+ */
+function tblHeaderHTML(cols, o) {
+  o = o || {};
+  var cells = cols.map(function (c) {
+    var active = o.sort === c.sort && c.sort, arrow = active ? (o.dir === 'asc' ? ' ▲' : ' ▼') : (c.sort ? ' ⇅' : '');
+    return '<span class="lhcell' + (c.sort ? ' sortable' : '') + (c.align === 'right' ? ' ra' : '') + '" ' + (c.sort && o.onSort ? ('onclick="' + o.onSort + '(' + (o.arg ? '\'' + o.arg + '\',' : '') + '\'' + c.sort + '\')"') : '') + '>'
+      + esc(o.label ? o.label(c) : c.label) + '<span class="sarr">' + arrow + '</span>'
+      + (o.onResize ? '<span class="colrz" onmousedown="' + o.onResize + '(event,\'' + c.key + '\')" onclick="event.stopPropagation()"></span>' : '') + '</span>';
+  }).join('');
+  return '<div class="lhead" style="grid-template-columns:var(--coltpl)">' + (o.lead || '') + cells + '</div>';
+}
+/**
+ * one row. `o.cls` extra classes · `o.lead` a leading cell · `o.attrs` extra attributes (a leading space) · `o.click` the
+ * onclick body · `o.tid` a data-testid. `o.labels` puts each column's label on its cell (data-l) so a narrow pane can name it (the .tblx card fold).
+ */
+function tblRowHTML(cols, row, o) {
+  o = o || {};
+  var cells = cols.map(function (col) {
+    return '<span class="lcell' + (col.align === 'right' ? ' ra' : '') + '"' + (o.labels ? ' data-l="' + esc(col.label || '') + '"' : '') + (col.tid ? ' data-testid="' + esc(col.tid(row)) + '"' : '') + '>' + col.cell(row) + '</span>';
+  }).join('');
+  return '<div class="lrow ' + (o.cls || '') + '" style="grid-template-columns:' + (o.tpl || 'var(--coltpl)') + '"' + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + (o.attrs || '') + (o.click ? ' onclick="' + o.click + '"' : '') + '>' + (o.lead || '') + cells + '</div>';
+}
+/** ⭐ A TABLE's wrapper: carries the column template the header and rows read (--coltpl), and opts into the card fold */
+function tblWrapHTML(cols, inner, o) {
+  o = o || {};
+  return '<div class="tblx' + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
+}
+
+/**
+ * ⭐ A ROW'S NEXT LEVEL — the way Task's Group sum opens one (cap-folders.js gsToggle/_groupSumPane): a caret, and under the
+ * row an indented block on the card colour. Rows inside it are `tblNextRow(cells, widths)`: the first cell takes the room,
+ * the others are fixed-width and right-aligned, like the drill-down under a Group-sum item.
+ */
+function tblCaretHTML(open) { return open ? '▾' : '<span class=arw>▸</span>'; }
+function tblNextHTML(inner, tid) { return '<div' + (tid ? ' data-testid="' + esc(tid) + '"' : '') + ' style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">' + inner + '</div>'; }
+function tblNextRow(cells, widths) {
+  return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">' + cells.map(function (c, i) {
+    return i === 0 ? '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + c + '</span>'
+      : '<span style="width:' + ((widths && widths[i - 1]) || 110) + 'px;text-align:end">' + c + '</span>';
+  }).join('') + '</div>';
+}
+
+/* ── the hover peek: the ENTIRE line, including every column the fold dropped (rowpeek is one element for the page) ── */
+function tblPeekShow(ev, cols, row, o) {
+  o = o || {};
+  var rows = cols.map(function (col) {
+    if (o.skip && o.skip(col)) return '';
+    var v = ''; try { v = col.cell(row) || ''; } catch (_) { return ''; }
+    var plain = String(v).replace(/<[^>]*>/g, '').trim();
+    if (!plain || plain === '—') return '';                 /* the em-dash placeholder is "no value" — do not restate it */
+    return '<div class="pkr"><span class="pkk">' + esc(o.label ? o.label(col) : col.label) + '</span><span class="pkv">' + v + '</span></div>';
+  }).join('');
+  if (!rows) return;
+  var e = document.getElementById('rowpeek');
+  if (!e) { e = document.createElement('div'); e.id = 'rowpeek'; document.body.appendChild(e); }
+  e.innerHTML = rows; e.style.display = 'block';
+  var r = ev.currentTarget.getBoundingClientRect(), b = e.getBoundingClientRect();
+  e.style.top = Math.max(8, Math.min(r.top, window.innerHeight - b.height - 12)) + 'px';
+  e.style.left = Math.max(8, Math.min(r.right + 10, window.innerWidth - b.width - 12)) + 'px';
+}
+function tblPeekHide() { var e = document.getElementById('rowpeek'); if (e) e.style.display = 'none'; }
+
+/* ── a declared list drawn as a Task table: its rows, a click on a header sorts by it, the count above ── */
+/**
+ * `tblList(key, cols, rowFn)` — the table for list `key` (declared with listCtl): the header (a click on a sortable heading
+ * picks the list's sort of that key, a second click reverses it), then every matched row through `rowFn(row, i)` (which
+ * returns tblRowHTML(...) plus any open next level) handed to lazyWrap. Returns the whole table, wrapper included.
+ */
+function tblList(key, cols, rowFn, emptyHTML, o) {
+  o = o || {};
+  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
+  var head = tblHeaderHTML(cols, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key, label: o.label, lead: o.lead });
+  return tblWrapHTML(cols, head + (o.rows ? o.rows : listCtlRowsHTML(key, rowFn, emptyHTML)), o);
+}
+/** a heading was clicked: the list's sort with that key (declared by the screen), reversed when it is already the one */
+function tblSortBy(key, sortKey) {
+  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], i = -1;
+  sorts.forEach(function (x, n) { if (x.key === sortKey && i < 0) i = n; });
+  if (i < 0) return;
+  if (s.sort === i) s.rev = !s.rev; else { s.sort = i; s.rev = false; }
+  listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint();
+}
+
+
+/* ═══ ⭐ UNIVERSAL CLIENT-SIDE LAZY LIST — MOVED from app.html (the Task screen, the catalogue and every list keep calling lazyWrap) ═══ */
+/* ── universal client-side lazy list — reveals N rows at a time in ANY container ────────────
+   IntersectionObserver auto-reveal + a "Show more" button fallback (never stuck) + total/end marker.
+   For lists whose endpoint returns everything at once: lazyWrap(id, items, cardFn, emptyHtml). */
+var LAZY = {};
+/**
+ * ── ⚠️⚠️⚠️ A REPAINT MUST NOT TAKE BACK THE ROWS SOMEBODY ASKED FOR ───────────────────────────────────────────
+ *
+ * Athi, INC-260912-0XJN: *"it says 500 products but only 12 rows are listed."*
+ *
+ * ⚠️⚠️ AND THE COUNT WAS RIGHT. `shown` was reset to 50 on EVERY rebuild — and this list rebuilds constantly:
+ * the twenty-second refresh, the categories arriving, the tax slabs, the offers, every late loader calls
+ * paintProdList. So you press "Show 50 more" three times, reach row 200, a timer fires, and you are back at
+ * fifty while the header still says how many there really are. Measured on the deployed page: revealed 60,
+ * repainted, `LAZY.prodlist.shown` was 50 again.
+ *
+ * ⚠️ AND IT TOOK THE SCROLL WITH IT. paintProdList carefully restores scrollTop onto a box that just lost
+ * three quarters of its height, so the restore lands past the end and the list jumps. Two symptoms, one cause.
+ *
+ * ⭐ SO THE WINDOW IS KEPT, and it is kept HERE rather than at the one call site that complained — the same
+ * reset was under the chit history, the message thread and both dispute lists, none of which had been
+ * noticed. [[feedback-repaint-locally]]
+ *
+ * ⚠️ KEPT ONLY WHILE IT STILL FITS. If the list has shrunk below what was revealed — a filter narrowed it,
+ * rows were deleted — the window goes back to one chunk: showing "150 of 12" is a worse lie than collapsing.
+ * ⚠️ And never below `chunk`, so a list that grows never shows fewer rows than a fresh one would.
+ */
+function lazyWrap(id, items, cardFn, empty){ items = items || [];
+  const kept = LAZY[id];
+  if(kept && kept._io){ try{ kept._io.disconnect(); }catch(_){} }
+  if(!items.length) return empty || '';
+  const chunk = 50;
+  var shown = Math.min(chunk, items.length);
+  if(kept && kept.shown > shown && kept.shown <= items.length) shown = kept.shown;
+  LAZY[id] = { items, cardFn, chunk, shown: shown, total: items.length, _io:null };
+  setTimeout(function(){ lazyAttach(id); }, 0);
+  return items.slice(0, LAZY[id].shown).map(cardFn).join("") + lazyBar(id); }
+function lazyBar(id){ const s=LAZY[id]; if(!s) return ''; const left=s.total-s.shown;
+  const inner = left<=0 ? ('<div class="listend">'+s.total+' total · end of list</div>')
+    : ('<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>');
+  return '<div class="lazysent" id="lzs_'+id+'">'+inner+'</div>'; }
+function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
+  const next=s.items.slice(s.shown, s.shown+s.chunk); if(next.length){ sent.insertAdjacentHTML('beforebegin', next.map(s.cardFn).join("")); s.shown+=next.length; }
+  const left=s.total-s.shown;
+  if(left<=0){ sent.innerHTML='<div class="listend">'+s.total+' total · end of list</div>'; if(s._io){ try{s._io.disconnect();}catch(_){} s._io=null; } }
+  else sent.innerHTML='<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>'; }
+function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
+  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }

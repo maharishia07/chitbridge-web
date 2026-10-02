@@ -402,15 +402,20 @@ async function route(S, r) {
   /* ⭐ WHERE IT CAME FROM (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") */
   /* the bidi marks CBLocale wraps dates and times in are not text a reader sees — dropped before comparing */
   const headOf = async (tid) => ((await p.textContent('[data-testid="' + tid + '"]').catch(() => '')) || '').replace(/[‎‏⁦-⁩]/g, '').replace(/\s+/g, ' ').trim();
-  const h1 = await headOf('db-head-JV/2026-27/000001'), h2 = await headOf('db-head-JV/2026-27/000002'), h3 = await headOf('db-head-JV/2026-27/000003');
+  /* the Day book is the Task table now: one fact a column (date · entry no · kind · party · bill · tender · counter · amount) */
+  const dbCell = async (no, lab) => ((await p.textContent('[data-testid="db-entry-' + no + '"] .lcell[data-l="' + lab + '"]').catch(() => '')) || '').replace(/[‎‏⁦-⁩]/g, '').replace(/\s+/g, ' ').trim();
+  const E1 = 'JV/2026-27/000001', E2 = 'JV/2026-27/000002', E3 = 'JV/2026-27/000003', E4 = 'JV/2026-27/000004';
   const t1 = await headOf('db-src-JV/2026-27/000001-at');
-  ok(/\d{1,2}:\d{2}/.test(t1) && h1 === 'Sale · Ravi Stores · Bill C2/26-27/0002 ' + t1 + ' · On credit · Counter C2 · rung by Athi', 'day book: a bill entry says which bill and its time, how it was paid, which counter, who rang it up ("' + h1 + '")');
-  ok(!/recorded/.test(h1) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
-  ok(/^Walk-in day · 12 bills · Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00 · Counter C2$/.test(h2), 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + h2 + '")');
-  ok(h3 === 'Payment received · Ravi Stores', 'day book: an entry with no chit shows its own word only ("' + h3 + '")');
-  const h4 = await headOf('db-head-JV/2026-27/000004');
+  ok(await p.locator('.lhead').count() >= 1 && await p.locator('#bk_dvlist .lrow').count() > 0 && await p.locator('.bkdv-row').count() === 0, 'day book: drawn by the Task table (.lhead / .lrow), and no .bkdv-row of its own');
+  ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter C2 · rung by Athi',
+    'day book: a bill entry — its bill and time, kind, party, how it was paid, counter, and "rung by" in the secondary text, one fact a column ("' + await dbCell(E1, 'Bill') + '" · "' + await dbCell(E1, 'Counter') + '")');
+  ok(await dbCell(E1, 'Party') !== 'Athi' && !/Athi/.test(await dbCell(E1, 'Party')) && !/Counter/.test(await dbCell(E1, 'Party')), 'day book: the person who rang the bill and the counter are never in the Party column');
+  ok(!/recorded/.test(await dbCell(E1, 'Bill')) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
+  ok(await dbCell(E2, 'Bill') === 'Walk-in day · 12 bills' && /^Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00$/.test(await dbCell(E2, 'Tender')) && await dbCell(E2, 'Counter') === 'Counter C2', 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + await dbCell(E2, 'Bill') + '" · "' + await dbCell(E2, 'Tender') + '")');
+  ok(await dbCell(E3, 'Bill') === 'Payment received' && await dbCell(E3, 'Party') === 'Ravi Stores', 'day book: an entry with no chit shows its own word in the Bill column ("' + await dbCell(E3, 'Bill') + '")');
   const t4 = await headOf('db-src-JV/2026-27/000004-at');
-  ok(/\d{1,2}:\d{2}/.test(t4) && h4 === 'Received · Ravi Stores · Receipt R/C2/0001 ' + t4 + ' · UPI 4421…9931 · Counter C2 · rung by Athi recorded 01 Oct', 'day book: money received says Received, its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + h4 + '")');
+  ok(/\d{1,2}:\d{2}/.test(t4) && await dbCell(E4, 'Bill') === 'R/C2/0001 ' + t4 + ' recorded 01 Oct' && await dbCell(E4, 'Kind') === 'Receipts' && await dbCell(E4, 'Tender') === 'UPI 4421…9931' && await dbCell(E4, 'Counter') === 'Counter C2 · rung by Athi',
+    'day book: money received — its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + await dbCell(E4, 'Bill') + '")');
   const opened = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
     try { const a = document.querySelector('[data-testid="db-src-JV/2026-27/000001"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }
@@ -473,17 +478,20 @@ async function route(S, r) {
     const gistShown = async (e) => { const t = (await headOf('db-gist-' + e.entry_no)); const m = {}; t.split(' · ').forEach((part) => { const i = part.lastIndexOf(' '); m[part.slice(0, i)] = cents(part.slice(i)); }); return m; };
     const isoMon = (d) => { const t = new Date(d + 'T00:00:00Z'); return new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); };
     const uniq = (a) => a.filter((x, i) => a.indexOf(x) === i);
-    const shownNos = () => p.$$eval('#bk_dvlist .bkdv-row', (els) => els.map((x) => x.getAttribute('data-no')));
+    const shownNos = () => p.$$eval('#bk_dvlist .lrow[data-no]', (els) => els.map((x) => x.getAttribute('data-no')));
+    const DBQ = '[data-testid="listctl-search-daybook"]', pick = (dim, v) => p.selectOption('[data-testid="listctl-filter-' + dim + '"]', v), unpick = (dim) => p.selectOption('[data-testid="listctl-filter-' + dim + '"]', '');
+    const nLines = (e) => p.evaluate((no) => { const x = document.querySelector('[data-testid="db-lines-' + no + '"]'); return x ? x.children.length - 2 : -1; }, e.entry_no);   /* the next level: a gist line, a head line, then each Dr/Cr line */
     const settle = () => p.waitForTimeout(450);
-    const clear = async () => { await p.fill('[data-testid="db-search"]', ''); await settle(); };
+    const clear = async () => { await p.fill(DBQ, ''); await settle(); };
 
     /* collapsed by default: one row per entry, no rate-wise lines on screen, a gist under each */
-    await p.waitForSelector('[data-testid="db-chips"] .bkdv-chip', { timeout: 8000 });
+    await p.waitForSelector('[data-testid="listctl-filter-kind"]', { timeout: 8000 });
     ok((await shownNos()).length === ents.length && await p.locator('[data-testid^="db-lines-"]').count() === 0, 'views: collapsed by default — ' + ents.length + ' rows for ' + ents.length + ' entries, no rate-wise lines');
     let allRows = true; for (const e of ents) if (await p.getAttribute(NO(e), 'aria-expanded') !== 'false') allRows = false;
     ok(allRows, 'views: every row starts collapsed');
     await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-collapsed.png') });
-    /* the gist is the entry's own lines merged by ledger — each figure compared with a second sum */
+    /* the gist is the entry's own lines merged by ledger — each figure compared with a second sum (it sits in the row's next level, so the rows are opened first) */
+    await p.click('[data-testid="db-expand-all"]');
     let gistsOk = true, why = '';
     for (const e of ents) {
       const want = gistExpect(e), got = await gistShown(e);
@@ -491,82 +499,86 @@ async function route(S, r) {
       const tot = cents((await p.textContent('[data-testid="db-total-' + e.entry_no + '"]')));
       if (tot !== sumOf(e, 'dr_minor')) { gistsOk = false; why += ' ' + e.entry_no + ' total ' + tot; }
     }
+    await p.click('[data-testid="db-collapse-all"]');
     ok(gistsOk, 'views: each gist figure equals the sum of that entry\'s own lines, and the right-hand total is its debit sum' + why);
+    await p.click(NO(ents[0]) + ' .bkdv-dt');
     const g1 = await headOf('db-gist-' + ents[0].entry_no);
+    await p.click(NO(ents[0]) + ' .bkdv-dt');
     ok(/^Sales \S*2,542\.38 · GST \S*457\.62 · Debtors \S*3,000\.00$/.test(g1), 'views: the rate-wise GST lines read as ONE GST figure, credit side first ("' + g1 + '")');
     const e0 = ents[0];
     /* expand one → its lines; the others stay shut; tap again → shut */
     await p.click(NO(e0) + ' .bkdv-dt');
-    ok(await p.getAttribute(NO(e0), 'aria-expanded') === 'true' && await p.locator('[data-testid="db-lines-' + e0.entry_no + '"] tbody tr').count() === e0.lines.length && await p.locator('[data-testid^="db-lines-"]').count() === 1, 'views: tap a row → its ' + e0.lines.length + ' rate-wise lines, and only that row');
+    ok(await p.getAttribute(NO(e0), 'aria-expanded') === 'true' && await nLines(e0) === e0.lines.length && await p.locator('[data-testid^="db-lines-"]').count() === 1, 'views: tap a row → its ' + e0.lines.length + ' rate-wise lines, and only that row');
     await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-expanded.png') });
     await p.click(NO(e0) + ' .bkdv-dt');
     ok(await p.getAttribute(NO(e0), 'aria-expanded') === 'false' && await p.locator('[data-testid^="db-lines-"]').count() === 0, 'views: tap again → collapsed');
     await p.click('[data-testid="db-expand-all"]');
-    ok(await p.locator('[data-testid^="db-lines-"]').count() === ents.length && await p.locator('[data-testid^="db-lines-"] tbody tr').count() === ents.reduce((a, e) => a + e.lines.length, 0), 'views: Expand all → every entry\'s lines');
+    ok(await p.locator('[data-testid^="db-lines-"]').count() === ents.length && (await p.$$eval('[data-testid^="db-lines-"]', (els) => els.reduce((a, x) => a + x.children.length - 2, 0))) === ents.reduce((a, e) => a + e.lines.length, 0), 'views: Expand all → every entry\'s lines');
     await p.click('[data-testid="db-collapse-all"]');
-    ok(await p.locator('[data-testid^="db-lines-"]').count() === 0 && await p.locator('.bkdv-row[aria-expanded="true"]').count() === 0, 'views: Collapse all → none left open');
+    ok(await p.locator('[data-testid^="db-lines-"]').count() === 0 && await p.locator('#bk_dvlist .lrow[data-no][aria-expanded="true"]').count() === 0, 'views: Collapse all → none left open');
 
     /* search: by amount (whole and with paise), by party; the group heads follow */
     const byAmt = (q) => { const dec = q.indexOf('.') >= 0, n = parseFloat(q); return ents.filter((e) => [sumOf(e, 'dr_minor')].concat(Object.values(gistExpect(e)), e.lines.map((l) => (l.dr_minor || 0) + (l.cr_minor || 0))).some((a) => dec ? a === Math.round(n * 100) : Math.floor(a / 100) === n)).map((e) => e.entry_no); };
-    await p.fill('[data-testid="db-search"]', '1880'); await settle();
+    await p.fill(DBQ, '1880'); await settle();
     const s1 = await shownNos();
     ok(JSON.stringify(s1) === JSON.stringify(byAmt('1880')) && s1.length >= 1, 'views: search 1880 (no paise) finds the bill with 1,880.00 — ' + s1.length + ' row');
     const headToday = await headOf('db-gsum-' + TODAY);
     ok(/^1 entry · /.test(headToday) && cents(headToday.match(/Dr (\S+)/)[1]) === 188000, 'views: the day head follows the search — "' + headToday + '"');
-    await p.fill('[data-testid="db-search"]', '3000.00'); await settle();
+    await p.fill(DBQ, '3000.00'); await settle();
     ok(JSON.stringify(await shownNos()) === JSON.stringify(byAmt('3000.00')) && (await shownNos()).length === 1, 'views: search 3000.00 (with paise) finds exactly that entry');
-    await p.fill('[data-testid="db-search"]', '3000.50'); await settle();
+    await p.fill(DBQ, '3000.50'); await settle();
     ok((await shownNos()).length === 0 && JSON.stringify(byAmt('3000.50')) === '[]', 'views: search 3000.50 finds nothing — paise are matched exactly, not rounded to the rupee');
-    await p.fill('[data-testid="db-search"]', 'ravi'); await settle();
+    await p.fill(DBQ, 'ravi'); await settle();
     const wantRavi = ents.filter((e) => e.lines.some((l) => /ravi/i.test(l.party_name || ''))).map((e) => e.entry_no);
     ok(JSON.stringify(await shownNos()) === JSON.stringify(wantRavi) && wantRavi.length >= 2, 'views: search by party name — ' + wantRavi.length + ' of ' + ents.length + ' entries');
-    await p.fill('[data-testid="db-search"]', 'JV/2026-27/000002'); await settle();
+    await p.fill(DBQ, 'JV/2026-27/000002'); await settle();
     ok(JSON.stringify(await shownNos()) === JSON.stringify(['JV/2026-27/000002']), 'views: search by entry number');
-    await p.fill('[data-testid="db-search"]', 'C2/26-27/0002'); await settle();
+    await p.fill(DBQ, 'C2/26-27/0002'); await settle();
     ok((await shownNos()).length === 1, 'views: search by bill number');
-    await p.fill('[data-testid="db-search"]', 'zzzz'); await settle();
+    await p.fill(DBQ, 'zzzz'); await settle();
     ok((await shownNos()).length === 0 && /Nothing matches/.test(await p.textContent('[data-testid="db-list"]')), 'views: a search that finds nothing says so');
     await clear();
 
     /* chips: only values in the range; several may be on; the group heads' subtotals change */
-    ok(await p.locator('[data-testid="db-chip-kind-Sales"]').count() === 1 && await p.locator('[data-testid="db-chip-kind-Receipts"]').count() === 1 && await p.locator('[data-testid="db-chip-kind-Purchases"]').count() === 0 && await p.locator('[data-testid="db-chip-counter-C1"]').count() === 1 && await p.locator('[data-testid="db-chip-counter-C9"]').count() === 0, 'views: chips only for values present — Sales, Receipts, counter C1; no Purchases, no C9');
+    const optsOf = (dim) => p.$$eval('[data-testid="listctl-filter-' + dim + '"] option', (os) => os.map((o) => o.value).filter(Boolean));
+    ok((await optsOf('kind')).indexOf('Sales') >= 0 && (await optsOf('kind')).indexOf('Receipts') >= 0 && (await optsOf('kind')).indexOf('Purchases') < 0 && (await optsOf('counter')).indexOf('C1') >= 0 && (await optsOf('counter')).indexOf('C9') < 0, 'views: the filters (list-ctl selects) offer only values present — Sales, Receipts, counter C1; no Purchases, no C9');
     const dayRows = (nos) => ents.filter((e) => nos(e));
     const before = await headOf('db-gsum-' + TODAY);
-    await p.click('[data-testid="db-chip-how-UPI"]');
+    await pick('how', 'UPI'); await settle();
     const wantUpi = ents.filter((e) => { const s = e.source || {}; return s.kind === 'day' ? (s.split || []).some((x) => x.how === 'UPI') : s.how === 'UPI'; }).map((e) => e.entry_no);
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantUpi) && await p.getAttribute('[data-testid="db-chip-how-UPI"]', 'aria-pressed') === 'true' && /✓/.test(await headOf('db-chip-how-UPI')), 'views: the UPI chip lights (✓, pressed) and keeps the ' + wantUpi.length + ' UPI entries');
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantUpi) && await p.inputValue('[data-testid="listctl-filter-how"]') === 'UPI', 'views: the Tender filter set to UPI keeps the ' + wantUpi.length + ' UPI entries');
     const after = await headOf('db-gsum-' + TODAY), todayUpi = ents.filter((e) => e.posting_date === TODAY && wantUpi.indexOf(e.entry_no) >= 0);
-    ok(after !== before && new RegExp('^' + todayUpi.length + ' entr').test(after) && cents(after.match(/Dr (\S+)/)[1]) === todayUpi.reduce((a, e) => a + sumOf(e, 'dr_minor'), 0), 'views: the day head\'s subtotals change with the chip — "' + before.slice(0, 40) + '…" → "' + after.slice(0, 40) + '…"');
-    await p.click('[data-testid="db-chip-kind-Sales"]');
+    ok(after !== before && new RegExp('^' + todayUpi.length + ' entr').test(after) && cents(after.match(/Dr (\S+)/)[1]) === todayUpi.reduce((a, e) => a + sumOf(e, 'dr_minor'), 0), 'views: the day head\'s subtotals change with the filter — "' + before.slice(0, 40) + '…" → "' + after.slice(0, 40) + '…"');
+    await pick('kind', 'Sales'); await settle();
     const wantBoth = ents.filter((e) => wantUpi.indexOf(e.entry_no) >= 0 && (e.source.kind === 'day' || e.source.kind === 'bill')).map((e) => e.entry_no);
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantBoth), 'views: two chips together narrow further (Sales and UPI)');
-    await p.click('[data-testid="db-chip-kind-Sales"]'); await p.click('[data-testid="db-chip-how-UPI"]');
-    await p.click('[data-testid="db-chip-kind-Receipts"]');
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.kind === 'receipt' || /payment_received/.test(e.event_type)).map((e) => e.entry_no)), 'views: the Receipts chip keeps the receipts');
-    await p.click('[data-testid="db-chip-kind-Receipts"]');
-    await p.click('[data-testid="db-chip-counter-C1"]');
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.counter === 'C1').map((e) => e.entry_no)), 'views: a counter chip');
-    await p.click('[data-testid="db-chip-counter-C1"]');
-    await p.click('[data-testid="db-chip-by-Mani"]');
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.by === 'Mani').map((e) => e.entry_no)), 'views: a person chip');
-    await p.click('[data-testid="db-chip-by-Mani"]');
-    ok((await shownNos()).length === ents.length, 'views: every chip off → everything again');
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantBoth), 'views: two filters together narrow further (Sales and UPI)');
+    await unpick('kind'); await unpick('how');
+    await pick('kind', 'Receipts'); await settle();
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.kind === 'receipt' || /payment_received/.test(e.event_type)).map((e) => e.entry_no)), 'views: the Receipts filter keeps the receipts');
+    await unpick('kind');
+    await pick('counter', 'C1'); await settle();
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.counter === 'C1').map((e) => e.entry_no)), 'views: a counter filter');
+    await unpick('counter');
+    await pick('by', 'Mani'); await settle();
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(ents.filter((e) => e.source && e.source.by === 'Mani').map((e) => e.entry_no)), 'views: a person filter');
+    await unpick('by'); await settle();
+    ok((await shownNos()).length === ents.length, 'views: every filter off → everything again');
 
     /* Day / Week / Month heads */
     const days = uniq(ents.map((e) => e.posting_date)), weeks = uniq(ents.map((e) => isoMon(e.posting_date))), months = uniq(ents.map((e) => e.posting_date.slice(0, 7)));
-    ok(await p.locator('.bkdv-gh').count() === days.length && await p.getAttribute('[data-testid="db-group-day"]', 'aria-pressed') === 'true', 'views: Day is the default — ' + days.length + ' day heads');
+    ok(await p.locator('#bk_dvlist [data-g]').count() === days.length && await p.getAttribute('[data-testid="db-group-day"]', 'aria-pressed') === 'true', 'views: Day is the default — ' + days.length + ' day heads');
     const dh = await headOf('db-ghead-2026-07-02');
     ok(/^\S?\s?[A-Za-z]{3},? 02 Jul · 2 entries · Dr \S+ · Cr \S+ · Sales \S+ · On credit \S+ · Cash \S+ · UPI \S+ · Card \S+$/.test(dh), 'views: a day head reads weekday, date, entries, Dr, Cr, Sales and each tender ("' + dh + '")');
     const j2 = ents.filter((e) => e.posting_date === '2026-07-02'), drJ2 = j2.reduce((a, e) => a + sumOf(e, 'dr_minor'), 0), crJ2 = j2.reduce((a, e) => a + sumOf(e, 'cr_minor'), 0);
     const sm = await headOf('db-gsum-2026-07-02');
     ok(cents(sm.match(/Dr (\S+)/)[1]) === drJ2 && cents(sm.match(/Cr (\S+)/)[1]) === crJ2 && drJ2 === crJ2, 'views: the day head\'s Dr and Cr are the entries\' own lines, and they match');
     await p.click('[data-testid="db-group-week"]');
-    ok(await p.locator('.bkdv-gh').count() === weeks.length && /Week 27/.test(await headOf('db-ghead-2026-06-29')), 'views: Week → ' + weeks.length + ' heads, Mon–Sun, with the ISO week number ("' + await headOf('db-ghead-2026-06-29') + '")');
+    ok(await p.locator('#bk_dvlist [data-g]').count() === weeks.length && /Week 27/.test(await headOf('db-ghead-2026-06-29')), 'views: Week → ' + weeks.length + ' heads, Mon–Sun, with the ISO week number ("' + await headOf('db-ghead-2026-06-29') + '")');
     const wk = ents.filter((e) => isoMon(e.posting_date) === '2026-06-29');
     ok(new RegExp('· ' + wk.length + ' entries · Dr ').test(await headOf('db-ghead-2026-06-29')), 'views: the week head counts its ' + wk.length + ' entries');
     await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-week.png') });
     await p.click('[data-testid="db-group-month"]');
-    ok(await p.locator('.bkdv-gh').count() === months.length && /July 2026 · 4 entries/.test(await headOf('db-ghead-2026-07')), 'views: Month → ' + months.length + ' heads, named ("' + await headOf('db-ghead-2026-07') + '")');
+    ok(await p.locator('#bk_dvlist [data-g]').count() === months.length && /July 2026 · 4 entries/.test(await headOf('db-ghead-2026-07')), 'views: Month → ' + months.length + ' heads, named ("' + await headOf('db-ghead-2026-07') + '")');
     await p.click('[data-testid="db-ghead-2026-07"]');
     ok((await shownNos()).indexOf('JV/2026-27/000001') < 0, 'views: a group head collapses its rows');
     await p.click('[data-testid="db-ghead-2026-07"]');
@@ -577,9 +589,9 @@ async function route(S, r) {
     await p.click('[data-testid="db-entry-' + all[0] + '"] .bkdv-dt'); await p.click('[data-testid="db-entry-' + all[0] + '"] .bkdv-dt');   /* the highlight starts on the row last tapped */
     await p.evaluate(() => document.activeElement && document.activeElement.blur());
     await p.keyboard.press('ArrowDown');
-    ok(await p.locator('.bkdv-row.hl').count() === 1 && await p.getAttribute('.bkdv-row.hl', 'data-no') === all[1], 'keys: ↓ moves the highlight to the next row');
+    ok(await p.locator('#bk_dvlist .lrow.sel[data-no]').count() === 1 && await p.getAttribute('#bk_dvlist .lrow.sel[data-no]', 'data-no') === all[1], 'keys: ↓ moves the highlight to the next row');
     await p.keyboard.press('ArrowDown'); await p.keyboard.press('ArrowUp');
-    ok(await p.getAttribute('.bkdv-row.hl', 'data-no') === all[1], 'keys: ↓ then ↑ comes back');
+    ok(await p.getAttribute('#bk_dvlist .lrow.sel[data-no]', 'data-no') === all[1], 'keys: ↓ then ↑ comes back');
     await p.keyboard.press('Enter');
     ok(await p.getAttribute('[data-testid="db-entry-' + all[1] + '"]', 'aria-expanded') === 'true', 'keys: Enter expands the highlighted row');
     await p.keyboard.press('Enter');
@@ -591,7 +603,7 @@ async function route(S, r) {
     ok(sheetOpen && await p.evaluate(() => { const d = document.getElementById('chitsheet'); return !d.open; }), 'keys: Esc closes the open sheet');
 
     /* CSV: the shown rows, one line each */
-    await p.fill('[data-testid="db-search"]', 'ravi'); await settle();
+    await p.fill(DBQ, 'ravi'); await settle();
     const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.click('[data-testid="db-csv"]')]);
     const csv = fs.readFileSync(await dl.path(), 'utf8').replace(/^﻿/, '').split('\r\n').filter(Boolean);
     ok(csv[0] === 'date,no,kind,party,ref,how,counter,by,dr,cr,gist' && csv.length === 1 + wantRavi.length, 'views: Download CSV — a header and one line per shown row (' + (csv.length - 1) + ' of ' + wantRavi.length + ')');
@@ -626,11 +638,16 @@ async function route(S, r) {
   ok(/balances/.test(await p.textContent('[data-testid="bs-balanced"]')), 'balance sheet balances');
   await p.click('[data-testid="acc-nav-dues"]'); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
   await shot(p, '4-dues');
-  ok(/1,000/.test(await p.textContent('[data-testid="dues-c1"]')), 'dues: the disputed amount has its own column');
-  /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS column, not only Balance */
-  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="' + row + '"] [data-b="' + b + '"]'); return e ? e.textContent.trim() : null; }, { row, b });
-  ok(/2,500/.test(String(await cellOf('dues-s1', 'lt_1y'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "< 1 year" in its own table (' + await cellOf('dues-s1', 'lt_1y') + ')');
-  ok(String(await cellOf('dues-c1', 'lt_6m') || '').length > 0 && await cellOf('dues-c1', 'lt_1y') === null, 'dues: a customer keeps the six receivable columns');
+  /* Dues is the Task table: a party · its total due · its oldest due; the age buckets and the disputed amount are the row's next level */
+  ok(await p.locator('.lhead').count() >= 1 && await p.locator('[data-testid="dues-c1"].lrow').count() === 1, 'dues: drawn by the Task table — a party a row, not eight columns cut off at the right edge');
+  await p.click('[data-testid="dues-c1"]'); await p.click('[data-testid="dues-s1"]');
+  await p.waitForSelector('[data-testid="dues-next-c1"]', { timeout: 5000 }).catch(() => {});
+  ok(/1,000/.test(await p.textContent('[data-testid="dues-next-c1"]')), 'dues: the disputed amount is on the party\'s next level');
+  /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS bucket, not only the total */
+  const cellOf = (row, b) => p.evaluate(({ row, b }) => { const e = document.querySelector('[data-testid="dues-next-' + row + '"] [data-b="' + b + '"]'); return e ? e.closest('div').textContent.trim() : null; }, { row, b });
+  ok(/2,500/.test(String(await cellOf('s1', 'lt_1y'))) && await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'dues: what you owe a supplier sits under "< 1 year" in its own group (' + await cellOf('s1', 'lt_1y') + ')');
+  ok(String(await cellOf('c1', 'lt_6m') || '').length > 0 && await cellOf('c1', 'lt_1y') === null, 'dues: a customer keeps the six receivable buckets');
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-laptop.png') });
   await noAccounting(p, 'ledger');
 
   /* ⚠️⚠️ review M12 — the cheques held, and their steps */
@@ -815,11 +832,12 @@ async function route(S, r) {
     /* (the "way back to the list" was the in-app panel's; CB Accounts is an icon rail at 390 — e2e/cb-accounts.cjs proves it) */
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-phone.png') });
     /* the views on a phone: cards, one row of chips that scrolls on its own, the gist wrapping, nothing sideways */
-    await p2.waitForSelector('[data-testid="db-chips"] .bkdv-chip', { timeout: 8000 });
-    const ph = await p2.evaluate(() => { const r = document.querySelector('.bkdv-row'), c = document.getElementById('bk_dvchips'), g = document.querySelector('.bkdv-gist');
-      return { sw: document.documentElement.scrollWidth, wrap: getComputedStyle(c).flexWrap, ox: getComputedStyle(c).overflowX, rad: parseFloat(getComputedStyle(r).borderTopLeftRadius), gw: g.scrollWidth <= g.clientWidth + 1 }; });
-    ok(ph.sw === 390 && ph.wrap === 'nowrap' && ph.ox === 'auto' && ph.rad > 0 && ph.gw, 'phone: the views — rows are cards, chips in one scrolling row, the gist wraps, scrollWidth === ' + ph.sw);
+    await p2.waitForSelector('#bk_dvlist .lrow[data-no]', { timeout: 8000 });
+    const ph = await p2.evaluate(() => { const r = document.querySelector('#bk_dvlist .lrow[data-no]'), h = document.querySelector('#bk_dvlist .lhead');
+      return { sw: document.documentElement.scrollWidth, rad: parseFloat(getComputedStyle(r).borderTopLeftRadius), head: getComputedStyle(h).display, disp: getComputedStyle(r).display }; });
+    ok(ph.sw === 390 && ph.rad > 0 && ph.head === 'none' && ph.disp === 'flex', 'phone: the views — one card per row (the Task row, folded), scrollWidth === ' + ph.sw);
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-phone.png') });
+    await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-phone.png') });
     await c2.close();
   }
 
