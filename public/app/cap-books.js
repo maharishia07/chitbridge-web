@@ -1224,17 +1224,17 @@ function bkPackCtlPaint() {
   var el = document.getElementById('pk_ctl'), L = BK.lk; if (!el) return;
   var locked = BK_MONTHS.map(function (m, i) { return [i + 1, m, L.rows[L.fy + '|' + (i + 1)]]; }).filter(function (x) { return x[2] === 'soft_locked' || x[2] === 'hard_locked'; });
   el.innerHTML = '<div class="supacts" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' + bkFyPicker('pk_fy', 'pk_fy')
-    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + (locked.length ? '' : ' disabled') + '><option value="">' + esc(tx('Month')) + '</option>'
+    + '<select class="inp" id="pk_p" data-testid="pk_p" onchange="bkPackPick()" style="flex:1 1 110px;min-width:0"' + '><option value="">' + esc(tx('Month')) + '</option><option value="year">' + esc(tx('Whole year (Apr–Mar)')) + '</option>'
     + locked.map(function (x) { return '<option value="' + x[0] + '">' + esc(tx(x[1])) + '</option>'; }).join('') + '</select>'
     + '<button class="supact-pri" data-testid="pk_build" id="pk_build" onclick="bkPackBuild()" disabled>' + tx('Make a pack') + '</button></div>'
     + (locked.length ? '' : '<div class="supacts" style="margin-bottom:9px"><button data-testid="pk_lockfirst" onclick="bkTab(\'lock\')">🔒 ' + tx('Lock a month first') + '</button></div>');
 }
-function bkPackPick() { var b = document.getElementById('pk_build'); if (b) b.disabled = !parseInt((document.getElementById('pk_p') || {}).value, 10); }
+function bkPackPick() { var b = document.getElementById('pk_build'); if (b) b.disabled = !(document.getElementById('pk_p') || {}).value; }
 async function bkPackBuild() {
   var out = document.getElementById('pk_out');
-  var fy = (document.getElementById('pk_fy') || {}).value, p = parseInt((document.getElementById('pk_p') || {}).value, 10);
-  if (!p) return;   /* the button is off until a locked month is chosen; this is the same fence for a key press */
-  try { await api('booksPackBuild', { body: { kind: 'month', fiscal_year: fy, period: p } }); bkTab('packs'); }
+  var fy = (document.getElementById('pk_fy') || {}).value, v = (document.getElementById('pk_p') || {}).value, p = parseInt(v, 10);
+  if (!p && v !== 'year') return;   /* the button is off until a month or the whole year is chosen; this is the same fence for a key press */
+  try { await api('booksPackBuild', { body: p ? { kind: 'month', fiscal_year: fy, period: p } : { kind: 'year', fiscal_year: fy, period: null } }); bkTab('packs'); }
   catch (e) { if (out) out.textContent = bkWhy(e, tx('Could not make it')); }
 }
 /** the one sentence for a pack with nothing to download — said, and the row stops offering Download / We have it */

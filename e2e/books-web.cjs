@@ -815,7 +815,7 @@ async function route(S, r) {
   ok(await p.locator('[data-testid="lk_rows"]').count() === 1, 'the sentence-button opens Month lock');
   S.locked[5] = true; S.locked[6] = true; S.locked[7] = true;
   await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
-  ok(await p.isDisabled('[data-testid="pk_build"]') && await p.locator('[data-testid="pk_lockfirst"]').count() === 0 && await p.locator('[data-testid="pk_p"] option').count() === 4, 'with locked months the month list holds only them (and a placeholder); Make a pack stays off until one is chosen');
+  ok(await p.isDisabled('[data-testid="pk_build"]') && await p.locator('[data-testid="pk_lockfirst"]').count() === 0 && await p.locator('[data-testid="pk_p"] option').count() === 5, 'with locked months the month list holds a placeholder, Whole year and only the locked months; Make a pack stays off until one is chosen');
   await p.selectOption('[data-testid="pk_p"]', '5');
   ok(!(await p.isDisabled('[data-testid="pk_build"]')), 'choosing a locked month turns Make a pack on');
   await p.click('[data-testid="pk_build"]');
@@ -853,6 +853,13 @@ async function route(S, r) {
     'a pack whose row does not say: GET /packs/:id answers has_file false → not acknowledged, the row says so');
   await p.evaluate(() => { try { closeModal(); } catch (_) {} });
   S.nextPackNoFile = false; S.nextPackHide = false;
+  /* the Whole year option: the API needs no locked month for a year pack, so it is always on offer and sends kind year */
+  const nP = S.packs.length;
+  await p.selectOption('[data-testid="pk_p"]', 'year');
+  ok(!(await p.isDisabled('[data-testid="pk_build"]')), 'Whole year turns Make a pack on');
+  await p.click('[data-testid="pk_build"]');
+  await p.waitForFunction((n) => true, nP).catch(() => {}); for (let i = 0; i < 40 && S.packs.length === nP; i++) await p.waitForTimeout(100);
+  ok(S.packs.length === nP + 1 && S.packs[nP].kind === 'year' && !S.packs[nP].period, 'Whole year sends a year pack (kind year, no month)');
   await shot(p, '6-packs');
   await noAccounting(p, 'packs');
 
