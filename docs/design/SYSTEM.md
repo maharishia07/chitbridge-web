@@ -31,8 +31,11 @@ buttons. Green = live/good, amber = needs a hand, red = wrong now, blue = a draf
 3. **The same string never appears twice on one screen.**
 4. **`error.message` never reaches a user.** The screen says what happened in its own words.
 5. **Truncation is a bug.** Shorten the string; never widen the box; an inner scrollbar is truncation by another name.
+   *Except the list's own rows area* (2026-10-02): a list's tools and column header stay fixed and its rows scroll in an area
+   that fills the rest of the window. That is the page's scroll moved under the header, not a small box.
 6. **One value, one control.** Preset buttons write into the field beside them and light up only while they match.
 7. **Maximum three columns**, anywhere. A fourth is refused, not scrolled.
+   *Lists* (2026-10-02): a list SHOWS its top three; every other column is kept and chosen with ⚙ columns.
 8. **Phone first.** Every screen works at 390 px with `document.scrollWidth === 390`; tables become one card per row
    below 620 px and never scroll sideways; a 16 px side gutter.
 9. **More panes, not denser.** When a screen fills, split it; never shrink the type.
@@ -41,6 +44,15 @@ buttons. Green = live/good, amber = needs a hand, red = wrong now, blue = a draf
 11. **A number is a reason to come back.** A tile with only a name is a menu item; give it one live fact. A fact that is
     a problem is amber and is the same number as the alert above it.
 12. **Logic lives in engines.** The page paints; it computes nothing a counter or another page also computes.
+
+## 3a · FROZEN: the list standard and the avatar (2026-10-02)
+The look and feel is frozen. The pass mark is `docs/design/list-standard/index.html` (open it in a browser; the 📐 panel
+lists every rule). Every list with column headers is a `CBList` mount (`docs/design/list-control/PLAN.md`). It has a
+three-row head that takes ≤ 20% of the window, adjustable columns, only the rows scroll, ⚙ columns, ▤ grid / ☰ lines, and
+expand. Every page carries the ONE avatar, `CBAvatar`, with the simple menu: 16 themes (the 15 app themes plus Terminal,
+and My device), text size (Small 92% · Medium 100% · Large 115% · Extra large 132%), Normal / Bold, Less motion, and the
+five reading fonts. A screen that draws its own list header or its own avatar fails the guards. A change to the frozen
+look is a new decision (DECISIONS.md), not a build choice.
 
 ## 4 · The checks (all must pass; a cloud session runs them and commits the output)
 - `node scripts/check-syntax.js` and `node scripts/check-app-parses.cjs` exit 0.
