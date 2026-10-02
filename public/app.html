@@ -1809,8 +1809,6 @@ const EP = {
   /* ⭐ where WOULD it go — the send’s own resolver, asked not to write */
   workRoutePreview: {m:"GET",  p:"/api/entities/routing/preview",           ok:"✓"},
   workRoutingSet:   {m:"PUT",  p:"/api/entities/routing",                   ok:"✓"},
-  custGroup:       {m:"PATCH",p:"/api/relationships/customers/:id",       ok:"✓"},
-  custAdd:         {m:"POST", p:"/api/relationships/customers",           ok:"✓"},
   custGroupNames:  {m:"GET",  p:"/api/relationships/customers/groups",    ok:"✓"},  // the seller's NAMED groups (decision 2, 2026-09-06)
   custRewards:     {m:"GET",  p:"/api/relationships/customers/:id/rewards"},   // what this customer holds, and what it means
   custGroupsSet:   {m:"POST", p:"/api/relationships/customers/:id/groups", ok:"✓"},  // place a customer in named groups  // add a customer by hand (User ID · bridge id · email) — before their first order  // the seller places a customer in a group (segment_override) — offers "Only for" that group reach them  // the shop's CRM — end-customers locked under it
@@ -1933,9 +1931,6 @@ const EP = {
   connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
   connRespond:     {m:"PUT",   p:"/api/connections/:id/respond", ok:"✓"},  // {action:accept|reject}
   supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
-  supAdd:          {m:"POST",  p:"/api/relationships/suppliers", ok:"✓"},  // {supplier_bridge_id}
-  supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
-  supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},           // Stage B — owner-side fields (nickname/preferred/notes/category)
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
      separately, so "the endpoint is not there yet" is a normal state, not an error. */
@@ -2038,7 +2033,6 @@ const EP = {
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
   /* ⭐ ONE call for "where do I sit + the whole network", replacing a four-hop dependent chain. See the route. */
   netPlace:       {m:"GET",  p:"/api/network/place",                       ok:"✓"},
-  entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
   netSubtree:     {m:"GET",  p:"/api/network/entities/:id/subtree",       ok:"✓"},
   netConnections: {m:"GET",  p:"/api/network/entities/:id/connections",   ok:"✓"},
   netRegister:    {m:"POST", p:"/api/network/entities",                   ok:"✓"},
@@ -2050,7 +2044,7 @@ const EP = {
   netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
-Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP);   /* the Ledger's boot endpoints — declared once, in app/accounts-shell.js, shared with accounts.html */
+Object.assign(EP, CB_BOOKS_EP, CB_SHEET_EP, CB_PARTY_EP);   /* the Ledger's boot endpoints and the party add/edit/remove/search routes — declared once, in app/accounts-shell.js, shared with accounts.html and crm.html */
 
 /* deepClone → app/helpers.js */
 /* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
@@ -5168,7 +5162,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-03a';   /* ⚠️ bumped 2026-10-03 (a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-03b';   /* ⚠️ bumped 2026-10-03 (b: CB CRM — crm.html, cap-crm.js, cap-crm-record.js; accounts-shell.js now holds CB_PARTY_EP (the party add/edit/remove/search routes, moved out of this file's EP); cap-books.js — partyEditOpen edits a list of tax ids, partyDueChipHTML takes {noNo}; a: CBList — list-ctl.js is the list control as a self-sustaining unit, list-legacy.js keeps the thin card-list names, and every list (Task · Waiting · Day book · Dues · Ledgers · Cheques · Customers · Suppliers · Platform) is mounted on it: cap-books.js, cap-folders.js, cap-register.js, app.html, accounts.html); 2026-10-02 (o: merge of main into this branch; k: cap-books.js — Month lock lists the twelve months with their state, Packs waits for a locked month; n: merge of main into this branch; i: app.html — a customer can be added by NAME, not on ChitBridge; m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their

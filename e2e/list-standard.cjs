@@ -85,10 +85,10 @@ const MARKERS = [
 ];
 function walk(d, out) { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (!/^(docs|vendor|cmdb|illustrations|pics|engine)$/.test(e.name)) walk(p, out); } else out.push(p); } return out; }
 
-/* the files in scope: the app shell, CB Accounts, every module they load, and the Labs */
+/* the files in scope: the app shell, CB Accounts, CB CRM, every module they load, and the Labs */
 function scope() {
   const files = [];
-  for (const f of ['app.html', 'accounts.html']) files.push(f);
+  for (const f of ['app.html', 'accounts.html', 'crm.html']) files.push(f);
   for (const e of fs.readdirSync(path.join(ROOT, 'app'))) if (/\.js$/.test(e)) files.push('app/' + e);
   for (const e of fs.readdirSync(ROOT)) if (/lab.*\.html$/.test(e)) files.push(e);
   return files.filter((f) => fs.existsSync(path.join(ROOT, f)));

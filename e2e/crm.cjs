@@ -148,7 +148,8 @@ async function route(S, r) {
   const text = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
   const homeReady = async (p) => { await p.waitForSelector('[data-testid^="crm-row-"]', { timeout: 15000 }); await p.waitForTimeout(150); };
   const recReady = async (p, name) => { await p.waitForSelector('[data-testid="crm-rec-name"]', { timeout: 15000 }); await p.waitForSelector('[data-testid="crm-ident"]', { timeout: 15000 }); await p.waitForTimeout(150); if (name) ok((await text(p, '[data-testid="crm-rec-name"]')).trim() === name, 'the record opens for ' + name); };
-  const sw = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+  /* the screen is its own scroller, so the page can look 390 wide while the screen scrolls sideways: both are measured */
+  const sw = (p) => p.evaluate(() => { const s = document.getElementById('screen'); return { sw: document.documentElement.scrollWidth, iw: window.innerWidth, over: s.scrollWidth - s.clientWidth }; });
   const hash = (p, h) => p.evaluate((x) => { location.hash = x; }, h);
   const bad = async (p, where) => { const t = await p.evaluate(() => document.body.innerText); ok(!/accounting|books of account/i.test(t), where + ': "accounting" / "books of account" appear nowhere'); };
 
@@ -357,7 +358,8 @@ async function route(S, r) {
     ok(opts.indexOf('Messages') < 0 && opts.indexOf('Bills') < 0 && opts.indexOf('Mail') >= 0, 'a local party: the kinds with nothing (Messages, Bills) are not offered: ' + opts.join(' | '));
     await p.keyboard.press('Escape'); await p.click('h1').catch(() => {});
     await p.click('[data-testid="crm-tl-r2"] [data-caret]');
-    ok(/cash discount/.test(await text(p, '[data-testid="crm-entry-next-r2"]')), 'a long call expands in place to its whole text');
+    ok(!/cash discount/.test(await text(p, '[data-testid="crm-entry-r2"]')) && /…/.test(await text(p, '[data-testid="crm-entry-r2"]')), 'a long call ends "…" in its row …');
+    ok(/cash discount/.test(await text(p, '[data-testid="crm-entry-full-r2"]')), '… and expands in place to its whole text');
     await p.screenshot({ path: path.join(SHOTS, 'crm-timeline-laptop.png') });
     await ctx.close();
   }
@@ -532,7 +534,7 @@ async function route(S, r) {
   {
     const S = standIn(), { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
     await homeReady(p);
-    let w = await sw(p); ok(w.sw === 390, 'phone home: document.scrollWidth === ' + w.sw + ' (390)');
+    let w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone home: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
     const hd = await p.evaluate(() => document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight);
     ok(hd <= 0.32, 'phone: everything above the rows is ' + Math.round(100 * hd) + '% of the window (≤ 30% + the bar)');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('#crm_list [data-row]')).display !== 'none') && (await p.locator('#crm_list [data-row]').count()) === 7, 'phone: one card per party');
@@ -540,14 +542,14 @@ async function route(S, r) {
     await p.screenshot({ path: path.join(SHOTS, 'crm-home-phone.png') });
     for (const [h, sel, tag] of [['#/party/P-0002', '[data-testid="crm-ident"]', 'record'], ['#/party/P-0003/timeline', '[data-testid^="crm-tl-r"]', 'timeline'], ['#/followups', '[data-testid^="crm-fu-fu-"]', 'followups']]) {
       await hash(p, h); await p.waitForSelector(sel, { timeout: 10000 }); await p.waitForTimeout(350);
-      w = await sw(p); ok(w.sw === 390, 'phone ' + tag + ': document.scrollWidth === ' + w.sw + ' (390)');
+      w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone ' + tag + ': document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
       await p.screenshot({ path: path.join(SHOTS, 'crm-' + tag + '-phone.png') });
     }
     await hash(p, '#/party/P-0002'); await p.waitForSelector('[data-testid="crm-actions"]');
     const bar = await p.evaluate(() => { const b = document.querySelector('[data-testid="crm-actions"]').getBoundingClientRect(); return { bottom: b.bottom, ih: innerHeight, pos: getComputedStyle(document.querySelector('[data-testid="crm-actions"]')).position }; });
     ok(bar.pos === 'fixed' && Math.abs(bar.bottom - bar.ih) < 2, 'phone record: the action bar is pinned to the bottom of the screen (primary + Log + More)');
     await hash(p, '#/parties/add'); await p.waitForSelector('[data-testid="crm-addq"]', { timeout: 8000 }); await p.fill('[data-testid="crm-addq"]', 'ravi'); await p.waitForTimeout(500);
-    w = await sw(p); ok(w.sw === 390, 'phone Add party sheet: document.scrollWidth === ' + w.sw + ' (390)');
+    w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone Add party sheet: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
     await p.screenshot({ path: path.join(SHOTS, 'crm-add-phone.png') });
     await ctx.close();
   }

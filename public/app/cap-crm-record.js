@@ -28,11 +28,17 @@ var CRM_ADDED = { counter: 'At the counter', storefront: 'Storefront', handle: '
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
 
 /* ═══ THE TIMELINE ENTRY — one grammar for every kind: mark · line · by · time · chip (REQUIREMENT-timeline §4) ═══════ */
+var CRM_LONG = 110;
+/** a long call / visit / WhatsApp / note ends "…" and opens in place to its whole text (REQUIREMENT-timeline §4) */
+function crmEntryLine(e) {
+  var l = String(e.line || '');
+  return /^(call|visit|whatsapp|note)$/.test(e.kind) && l.length > CRM_LONG ? l.slice(0, Math.max(l.lastIndexOf(' ', CRM_LONG), 40)) + '…' : l;
+}
 function crmEntryWhat(e) {
   var k = CRM_KIND[e.kind] || CRM_KIND.note, tone = (e.state && e.state.tone) || k[1] || '';
   var unread = e.thread && e.thread.unread;
   return '<div class="entry' + (e.theirs ? ' theirs' : '') + '" data-testid="crm-entry-' + esc(e.id) + '" data-kind="' + esc(e.kind) + '"><span class="mk ' + esc(tone) + '" title="' + esc(tx(k[2])) + '">' + crmIcon(k[0]) + '<span class="sr-only">' + esc(tx(k[2])) + '</span></span>'
-    + '<span class="tx"><span' + (unread ? ' class="unread-line"' : '') + '>' + (unread ? '<span class="udot" title="' + esc(tx('Unread')) + '"></span> ' : '') + esc(e.line) + '</span>' + (e.kind === 'message_internal' ? '<span class="tagi">' + esc(tx('internal')) + '</span>' : '')
+    + '<span class="tx"><span' + (unread ? ' class="unread-line"' : '') + '>' + (unread ? '<span class="udot" title="' + esc(tx('Unread')) + '"></span> ' : '') + esc(crmEntryLine(e)) + '</span>' + (e.kind === 'message_internal' ? '<span class="tagi">' + esc(tx('internal')) + '</span>' : '')
     + (e.thread && e.thread.count > 1 ? ' <span class="sub">+' + (e.thread.count - 1) + ' ' + esc(tx('more')) + '</span>' : '')
     + '<span class="by">' + (e.theirs ? '<span style="color:var(--blue-i)">↙</span> ' : '') + esc(e.by || '') + (e.direction ? ' · ' + esc(tx(e.direction === 'in' ? 'in' : 'out')) : '') + '</span></span></div>';
 }
@@ -50,7 +56,7 @@ function crmTlCols() {
 }
 function crmEntryNext(e) {
   var long = /^(call|visit|whatsapp|note)$/.test(e.kind);
-  return '<div data-testid="crm-entry-next-' + esc(e.id) + '">' + (long ? '<div style="white-space:pre-wrap">' + esc(e.line) + '</div>' : '') + CBList.nextRow(['<span style="color:var(--muted)">' + esc(tx('By')) + '</span> ' + esc(e.by || '—') + ' · ' + esc(bkDate(e.at)) + ' ' + esc(bkTime(e.at))], []) + '</div>';
+  return '<div data-testid="crm-entry-next-' + esc(e.id) + '">' + (long ? '<div style="white-space:pre-wrap;max-width:72ch;overflow-wrap:anywhere" data-testid="crm-entry-full-' + esc(e.id) + '">' + esc(e.line) + '</div>' : '') + CBList.nextRow(['<span style="color:var(--muted)">' + esc(tx('By')) + '</span> ' + esc(e.by || '—') + ' · ' + esc(bkDate(e.at)) + ' ' + esc(bkTime(e.at))], []) + '</div>';
 }
 function crmEntryOpen(e) {
   if (e.chit_id) return openChitSheet(e.chit_id);
@@ -218,7 +224,7 @@ function crmRecordPaint(p, rec) {
   /* the mounts */
   crmEditPrep(p, rec);
   var head = document.getElementById('crm_tlhead');
-  if (head) { if (CRMR.headApi) { try { CRMR.headApi.destroy(); } catch (_) {} } CRMR.headApi = CBList.mount(head, { key: 'crm-tl-head', t: tx, fill: false, view: 'lines', tools: { search: false, csv: false }, rows: function () { return rec.timeline_head || []; }, id: function (e) { return e.id; },
+  if (head) { if (CRMR.headApi) { try { CRMR.headApi.destroy(); } catch (_) {} } CRMR.headApi = CBList.mount(head, { key: 'crm-tl-head', t: tx, fill: false, view: 'grid', tools: { search: false, csv: false }, rows: function () { return rec.timeline_head || []; }, id: function (e) { return e.id; },
     columns: crmTlCols, rowTid: function (e) { return 'crm-tl-' + e.id; }, onOpen: crmEntryOpen, next: crmEntryNext, empty: { title: tx('Nothing yet with this party.'), sub: tx('Use Log to record a call or note.') } }); }
   var led = document.getElementById('crm_ledger');
   if (led) led.innerHTML = partyBooksHTML(cu ? 'customer' : 'supplier', p.party_id, crmLedgerRow(p, rec));

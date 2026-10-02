@@ -15,7 +15,7 @@
  */
 'use strict';
 
-/* ── the CRM API (chitbridge-api PR #15) + the three existing rows the Add party sheet needs, spelt as app.html spells them ── */
+/* ── the CRM API (chitbridge-api PR #15). The party routes it also calls (custAdd · supAdd · custGroup · supPatch · supDel · entitySearch) are CB_PARTY_EP in accounts-shell.js ── */
 var CRM_EP = {
   crmParties:    { m: 'GET',    p: '/api/crm/parties',                     ok: 'y' },   // { parties:[…], alerts:{…} } — one read, no per-row fetch
   crmParty:      { m: 'GET',    p: '/api/crm/parties/:id',                 ok: 'y' },   // the list row + contacts · prefs · followups · timeline_head …
@@ -25,13 +25,7 @@ var CRM_EP = {
   crmFollowAdd:  { m: 'POST',   p: '/api/crm/followups',                   ok: 'y' },
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
-  custAdd:       { m: 'POST',   p: '/api/relationships/customers',         ok: '✓' },   // { name, phone } local · { handle } on ChitBridge
-  supAdd:        { m: 'POST',   p: '/api/relationships/suppliers',         ok: '✓' },   // { name } local · { supplier_bridge_id } on ChitBridge
-  custGroup:     { m: 'PATCH',  p: '/api/relationships/customers/:id',     ok: '✓' },   // the app's own name for the customer PATCH (cap-books.js's party editor calls it)
-  supPatch:      { m: 'PATCH',  p: '/api/relationships/suppliers/:id',     ok: 'y' },
   custDel:       { m: 'DELETE', p: '/api/relationships/customers/:id',     ok: 'y' },   // new: customers had no remove route (same shape as supDel)
-  supDel:        { m: 'DELETE', p: '/api/relationships/suppliers/:id',     ok: '✓' },
-  entitySearch:  { m: 'GET',    p: '/api/entities/search',                 ok: '✓' },   // ?q= — on-ChitBridge matches only
 };
 
 var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR', state: 'loading', err: null, loaded: false, api: null,
@@ -93,7 +87,7 @@ function crmSegChip(p) { return p.segment ? '<span class="tag seg">' + esc(tx(CR
 /** the dues chip is cap-books.js's own (partyDueChipHTML); the CRM row's stored balance is mapped into its map by crmDuesMap() — the number is never summed here */
 function crmDueCell(p) {
   if (!CRM.ledger || p.balance_minor == null) return '<span class="sub">—</span>';
-  return partyDueChipHTML(p.party_id, { noNo: true }) + (p.dues_overdue ? ' <span class="late">· ' + esc(tx('late')) + '</span>' : '');
+  return '<span style="white-space:nowrap">' + partyDueChipHTML(p.party_id, { noNo: true }) + (p.dues_overdue ? ' <span class="late">· ' + esc(tx('late')) + '</span>' : '') + '</span>';
 }
 function crmFuCell(p) {
   if (!p.next_followup_at) return '<span class="sub">—</span>';
@@ -194,7 +188,7 @@ function crmRoute() {
 }
 
 /* ═══ 1 · HOME — the parties list (a CBList mount: the Task table's look, one row per party) ═════════════════════ */
-function crmCols() {
+function crmPartyCols() {
   var cols = [{ key: 'party', label: 'Party', prio: 1, w: 320, sort: 'name', html: true, cell: crmPartyCell, value: function (p) { return p.display_name; } }];
   if (CRM.ledger) cols.push({ key: 'dues', label: 'Dues', prio: 2, w: 180, sort: 'dues', html: true, cell: crmDueCell, value: function (p) { return p.balance_minor == null ? '' : p.balance_minor; } });
   cols.push(
@@ -219,7 +213,7 @@ function crmFilters() {
   f.push({ key: 'fu', label: tx('Follow-up'), all: tx('Any'), options: [{ v: 'due', label: tx('Follow-up due') }, { v: 'late', label: tx('Follow-up late') }], match: function (p, v) { return v === 'late' ? !!p.next_followup_late : !!p.next_followup_at; } });
   return f;
 }
-function crmSorts() {
+function crmPartySorts() {
   var by = function (f, rev) { return function (a, b) { var x = f(a), y = f(b); return rev ? (y > x ? 1 : y < x ? -1 : 0) : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: 'base' }); }; };
   return [{ key: 'name', label: tx('Name'), cmp: by(function (p) { return p.display_name; }) },
     { key: 'last', label: tx('Last activity'), cmp: by(function (p) { return p.last_at || ''; }, true) },
@@ -246,13 +240,13 @@ function crmHome() {
   if (CRM.api && CRM.api.destroy) { try { CRM.api.destroy(); } catch (_) {} }
   CRM.api = CBList.mount(document.getElementById('crm_list'), {
     key: 'crm-parties', t: tx, rows: function () { return CRM.rows; }, id: function (p) { return p.party_id; }, rowTid: function (p) { return 'crm-row-' + crmKey(p); },
-    columns: crmCols, defaultCols: CRM.ledger ? ['party', 'dues', 'next'] : ['party', 'last', 'next'], cardMax: 3,
+    columns: crmPartyCols, defaultCols: CRM.ledger ? ['party', 'dues', 'next'] : ['party', 'last', 'next'], cardMax: 3,
     head: function () { return { title: tx('Parties'), notices: CRM.state === 'ready' ? crmNotices() : [] }; },
     state: function () { return CRM.state; }, error: function () { return crmErrWords(CRM.err, 'your parties'); }, onRetry: function () { crmLoad(); },
     empty: { title: tx('No parties yet'), sub: tx('Customers appear when you bill them; suppliers when you add them. Use + Add party.') },
     search: function (p) { return [p.display_name, p.nickname, p.legal_name, p.party_no, p.user_id, p.phone, p.email, (p.tax_ids || []).map(function (t) { return t.value; }).join(' '), (p.groups || []).join(' ')].join(' '); },
     searchHint: tx('Name, User ID, phone or e-mail'),
-    filters: crmFilters(), sorts: crmSorts(),
+    filters: crmFilters(), sorts: crmPartySorts(),
     group: { options: [['none', 'None'], ['rail', 'ChitBridge'], ['role', 'Role'], ['seg', 'Segment']], default: 'none', tid: 'crm-parties',
       by: function (p, mode) {
         if (mode === 'rail') { var k = p.kind === 'walk-in' ? 'walk' : p.on_chitbridge ? 'on' : 'local'; return [{ on: tx('On ChitBridge'), local: tx('Local'), walk: tx('Walk-in') }[k], k]; }
