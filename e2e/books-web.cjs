@@ -28,9 +28,9 @@ function standIn() {
       { code: '1300', name: 'Debtors', is_group: false }, { code: '1400', name: 'Cash', is_group: false },
       { code: '6000', name: 'Expenses', is_group: true }, { code: '6010', name: 'Rent', is_group: false }],
     customers: [
-      { customer_list_id: 'cl1', customer_identity_id: 'c1', display_name: 'Ravi Stores', otp_contact: '9800000001', txn_count: 3, party_no: 'P-00001', nickname: 'Ravi', tax_ids: [{ scheme: 'GSTIN', value: '33AAAAA0000A1Z5' }], credit_days: 30 },
+      { customer_list_id: 'cl1', customer_identity_id: 'c1', display_name: 'Ravi Stores', otp_contact: '9800000001', txn_count: 3, party_no: 'P-00001', user_id: 'ravi.stores', nickname: 'Ravi', tax_ids: [{ scheme: 'GSTIN', value: '33AAAAA0000A1Z5' }], credit_days: 30 },
       { customer_list_id: 'cl2', customer_identity_id: 'c2', display_name: 'Meena Traders', otp_contact: '9800000002', txn_count: 1, party_no: 'P-00002', tax_ids: [] }],
-    suppliers: [{ supplier_list_id: 'sl1', supplier_entity_id: 's1', display_name: 'Agro Mills', on_rail: false, party_no: 'P-00003', tax_ids: [] }],
+    suppliers: [{ supplier_list_id: 'sl1', supplier_entity_id: 's1', display_name: 'Agro Mills', on_rail: false, party_no: 'P-00003', tax_ids: [], one_sided: { why: 'Agro Mills is not on ChitBridge, so their bills reach you only when you enter them' } }],
     items: {   /* open bills per party, minor units */
       c1: [{ against_ref: 'b1', bill_no: 'INV-1', due_date: '2026-08-01', open_minor: 300000, date: '2026-07-02', chit: 'ch1' },
            { against_ref: 'b2', bill_no: 'INV-2', due_date: '2026-09-01', open_minor: 200000, date: '2026-08-02', chit: 'ch2' },
@@ -284,13 +284,41 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
   ok(true, 'on: the Ledger door appears once /api/books/health answers');
 
+  let crmNo = '';
   /* 2 · customers: chip + party block + statement */
   await p.click('[data-testid="nav-customers"]');
   await p.waitForSelector('[data-testid="party-due-c1"]', { timeout: 15000 });
   const chip = await p.textContent('[data-testid="party-due-c1"]');
-  ok(/P-00001/.test(chip) && /6,000/.test(chip), 'row chip: party no · balance (' + chip.trim() + ')');
+  ok(/P-00001/.test(await p.textContent('[data-testid="party-no-c1"]')) && /6,000/.test(chip), 'the Customers table: the Party no column (P-00001) and the Balance column (' + chip.trim() + ')');
   const chipTitle = await p.getAttribute('[data-testid="party-due-c1"]', 'title');
   ok(/owe you/.test(chipTitle) && /oldest due/.test(chipTitle), 'row chip says who owes whom and the oldest due (' + chipTitle + ')');
+  /* ⭐ THE CRM IS THE TASK TABLE (docs/design/one-table item 9): Party no · Name · ChitBridge ID · Balance · Oldest due · Credit terms · GSTIN */
+  crmNo = ((await p.textContent('[data-testid="party-no-c1"]')) || '').trim();
+  ok(await p.locator('#tbl_customers .lhead').count() === 1 && await p.locator('[data-testid="cust-row-c1"].lrow').count() === 1 && await p.locator('.row[data-testid^="cust-row-"]').count() === 0, 'the Customers list is the Task table (.lhead / .lrow) — no row of its own');
+  await p.evaluate(() => { UI[lwKey()] = 1100; document.getElementById('panel').style.setProperty('--lw', '1100px'); paintCustList(); });
+  await p.waitForSelector('#tbl_customers .lhcell:nth-child(7)', { timeout: 5000 }).catch(() => {});
+  const crmHeads = await p.$$eval('#tbl_customers .lhead .lhcell', (els) => els.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()));
+  ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'ChitBridge ID', 'Balance', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-laptop.png') });
+  const crmRow = async (id) => (await p.$$eval('[data-testid="cust-row-' + id + '"] .lcell', (els) => els.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
+  const r1 = await crmRow('c1'), r2 = await crmRow('c2');
+  ok(r1[0] === 'P-00001' && r2[0] === 'P-00002' && r1[2] === 'ravi.stores' && /not on ChitBridge/.test(r2[2]), 'every row shows its party no and its ChitBridge ID (user id, or "not on ChitBridge" for a local party): ' + r1.slice(0, 3).join(' | ') + ' // ' + r2.slice(0, 3).join(' | '));
+  ok(/6,000/.test(r1[3]) && /Aug/.test(r1[4]) && /30 days/.test(r1[5]) && r1[6] === '33AAAAA0000A1Z5', 'Balance · Oldest due · Credit terms · GSTIN come from the row\'s own fields: ' + r1.slice(3).join(' | '));
+  await p.fill('[data-testid="listctl-search-customers"]', 'P-00002'); await p.waitForTimeout(300);
+  ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c2"]').count() === 1, 'the search finds a party by its number (P-00002)');
+  await p.fill('[data-testid="listctl-search-customers"]', 'ravi.stores'); await p.waitForTimeout(300);
+  ok(await p.locator('[data-testid^="cust-row-"]').count() === 1 && await p.locator('[data-testid="cust-row-c1"]').count() === 1, 'the search finds a party by its ChitBridge ID');
+  await p.fill('[data-testid="listctl-search-customers"]', ''); await p.waitForTimeout(300);
+  await p.click('#tbl_customers .lhcell:has-text("Party no")'); await p.waitForTimeout(200);
+  const order1 = await p.$$eval('[data-testid^="cust-row-"]', (els) => els.map((x) => x.getAttribute('data-testid')));
+  await p.click('#tbl_customers .lhcell:has-text("Party no")'); await p.waitForTimeout(200);
+  const order2 = await p.$$eval('[data-testid^="cust-row-"]', (els) => els.map((x) => x.getAttribute('data-testid')));
+  ok(JSON.stringify(order1) === JSON.stringify(['cust-row-c1', 'cust-row-c2']) && JSON.stringify(order2) === JSON.stringify(['cust-row-c2', 'cust-row-c1']), 'a click on the Party no heading sorts by it, a second click reverses it');
+  await p.click('[data-testid="cust-row-c1"] [role="button"]'); await p.waitForSelector('[data-testid="crm-next-c1"]', { timeout: 8000 }).catch(() => {});
+  await p.waitForFunction(() => /INV-1/.test((document.querySelector('[data-testid="crm-next-c1"]') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+  ok(/INV-1/.test(await p.textContent('[data-testid="crm-next-c1"]')) && /3 orders/.test(await p.textContent('[data-testid="crm-next-c1"]')), 'a customer\'s next level: its orders and its bills (read once, on the first open)');
+  await p.click('[data-testid="cust-row-c1"] [role="button"]');
+  await p.evaluate(() => { UI[lwKey()] = 340; document.getElementById('panel').style.setProperty('--lw', '340px'); paintCustList(); });
   await p.click('[data-testid="cust-row-c1"]');
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="stmt-closing"]', { timeout: 15000 });
   const bal = await p.textContent('[data-testid="party-books-c1"] [data-testid="party-balance"]');
@@ -444,6 +472,7 @@ async function route(S, r) {
   await noAccounting(p, 'day book strip and to-do');
   fs.mkdirSync(path.join(__dirname, 'shots'), { recursive: true });
   await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-laptop.png') });
+  await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-laptop.png') });
 
   /* ⭐ 6d · each line is a TAP to the screen that does it */
   await p.click('[data-testid="todo-overdue"]');
@@ -616,6 +645,8 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="lt-band-people"]', { timeout: 8000 });
   await p.click('[data-testid="lt-band-people"]');
   await p.click('[data-testid="lg-acc-1300"]');
+  await p.waitForSelector('[data-testid="lg-party-c1"]', { timeout: 8000 });
+  ok(crmNo && (await p.textContent('[data-testid="lg-party-c1"]')).indexOf(crmNo) >= 0, 'the ledger\'s party leaf carries the same party no as the CRM row (' + crmNo + ')');
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
@@ -816,6 +847,8 @@ async function route(S, r) {
   await p.click('[data-testid="nav-suppliers"]');
   await p.waitForSelector('[data-testid="party-due-s1"]', { timeout: 15000 });
   ok(/2,500/.test(await p.textContent('[data-testid="party-due-s1"]')) && /You owe/.test(await p.getAttribute('[data-testid="party-due-s1"]', 'title')), 'supplier row: you owe 2,500');
+  ok(await p.locator('#tbl_suppliers .lhead').count() === 1 && await p.locator('[data-testid="sup-row-sl1"].lrow').count() === 1 && /P-00003/.test(await p.textContent('[data-testid="party-no-s1"]')), 'the Suppliers list is the Task table too, with the Party no (P-00003)');
+  ok(/Agro Mills is not on ChitBridge/.test(await p.getAttribute('[data-testid="sup-row-sl1"] [data-testid="party-onesided"]', 'title').catch(() => '')), 'a one-sided supplier shows it quietly, the reason on hover');
   await p.click('[data-testid="sup-details-sl1"]');
   await p.waitForSelector('[data-testid="party-books-s1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.waitForTimeout(700); await shot(p, '5-supplier-record');
@@ -840,6 +873,11 @@ async function route(S, r) {
     ok(ph.sw === 390 && ph.rad > 0 && ph.head === 'none' && ph.disp === 'flex', 'phone: the views — one card per row (the Task row, folded), scrollWidth === ' + ph.sw);
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-phone.png') });
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-phone.png') });
+    await p2.evaluate(() => bkTab('dues')); await p2.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
+    await p2.click('[data-testid="dues-c1"]'); await p2.waitForSelector('[data-testid="dues-next-c1"]', { timeout: 5000 }).catch(() => {});
+    const pd = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, row: getComputedStyle(document.querySelector('[data-testid="dues-c1"]')).display, head: getComputedStyle(document.querySelector('#bkl_dues .lhead')).display }));
+    ok(pd.sw === 390 && pd.row === 'flex' && pd.head === 'none', 'phone: Dues is one card per party, its next level under it, scrollWidth === ' + pd.sw);
+    await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-dues-phone.png') });
     await c2.close();
   }
 
@@ -869,4 +907,4 @@ async function route(S, r) {
   await ctx.close(); await b.close(); srv.close();
   console.log('\n  books-web: ' + pass + ' passed, ' + fail + ' failed');
   process.exitCode = fail ? 1 : 0;
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => { console.error(e); console.log('  XX  the harness stopped: ' + String(e.message).split('\n')[0]); console.log('\n  books-web: ' + pass + ' passed, ' + (fail + 1) + ' failed'); process.exit(1); });

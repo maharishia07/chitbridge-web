@@ -295,7 +295,7 @@ function tblRowHTML(cols, row, o) {
 /** ⭐ A TABLE's wrapper: carries the column template the header and rows read (--coltpl), and opts into the card fold */
 function tblWrapHTML(cols, inner, o) {
   o = o || {};
-  return '<div class="tblx' + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
+  return '<div class="' + (o.plain ? '' : 'tblx') + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
 }
 
 /**
@@ -351,6 +351,68 @@ function tblSortBy(key, sortKey) {
   if (i < 0) return;
   if (s.sort === i) s.rev = !s.rev; else { s.sort = i; s.rev = false; }
   listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint();
+}
+
+
+/**
+ * ══ A SCREEN'S LIST AS THE TASK TABLE — declare it once, paint it, open a row's next level ═══════════════════════════
+ * What the Ledger's lists (Waiting · Day book · Dues · the ledgers) and the CRM's Customers and Suppliers all do the same way:
+ * `tblDeclare(key, {rows, text, sorts, filters, paint})` declares the list (listCtl*: search · filters · sort · count),
+ * `tblListHTML(key)` is its controls and the box it paints into, `tblListPaint(key)` paints it. A screen's `paint()` fits the
+ * columns to the box (`tblFitBox`), draws the header (`tblHeadFor`) and each row (`tblRowFor`: the Task row, its hover peek,
+ * and — when the row is open — its next level under it). The screen declares columns and says what a next level holds; it draws
+ * no row, card or expander of its own (e2e/books-web-breaks.cjs proves a screen that does is caught).
+ */
+var TBL_OPEN = {};   /* 'list:id' → its next level is open */
+function tblIsOpen(list, id) { return !!TBL_OPEN[list + ':' + id]; }
+function tblRepaint(list) { var c = listCtlS(list).cfg; if (c && c.repaint) c.repaint(); }
+function tblToggle(list, id) { var k = list + ':' + id; if (TBL_OPEN[k]) delete TBL_OPEN[k]; else TBL_OPEN[k] = true; tblRepaint(list); }
+/** the caret of a row — Task's Group sum draws ▸ / ▾ the same way (tblCaretHTML) */
+function tblCaret(list, id) {
+  var open = tblIsOpen(list, id);
+  return '<span role="button" aria-label="' + esc(tx(open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + open + '" style="cursor:pointer;display:inline-block;width:14px;color:var(--grey)" onclick="event.stopPropagation();tblToggle(\'' + list + '\',\'' + esc(id) + '\')">' + tblCaretHTML(open) + '</span>';
+}
+/** the pane's width for fitting columns: a card per row (no fitting) below 560px, else what the box holds */
+function tblAvail(id, plain) {
+  var el = document.getElementById(id), w;
+  if (el) w = el.clientWidth;
+  /* not on screen yet (the first paint is a string): a rail is as wide as the screen says its pane is — the Task list reads UI.lw the same way */
+  else if (plain && typeof UI !== 'undefined') w = (UI.vp === 'mob') ? window.innerWidth : (UI[typeof lwKey === 'function' ? lwKey() : 'lw'] || UI.lw || 340);
+  else w = (document.getElementById('bk_body') || document.body).clientWidth || 900;
+  return (w <= 560 && !plain) ? 9999 : w - 24;
+}
+/** the pane was dragged: every rail-style table (the CRM's) that is on screen is fitted again, as applyColTpl does for Task */
+function tblRefitRails() { Object.keys(TBL_PEEK).forEach(function (k) { if (TBL_PEEK[k].plain && document.getElementById(TBL_PEEK[k].box)) tblRepaint(k); }); }
+/** a declared list's markup: its controls, its count, and the box its table is painted into (tblListPaint) */
+function tblListHTML(key, extra) {
+  return listCtlToolbarHTML(key) + (extra || '') + '<div class="bkdv-count" id="bkc_' + key + '" data-testid="' + key + '-count"></div><div id="bkl_' + key + '" data-testid="' + key + '-list"></div>';
+}
+function tblListPaint(key) {
+  var c = listCtlS(key).cfg, box = document.getElementById('bkl_' + key); if (!c || !box) return;
+  box.innerHTML = c.paint();
+  var n = document.getElementById('bkc_' + key); if (n) n.innerHTML = listCtlCountHTML(key);
+}
+/** declare a list once: the screen's rows, text, sorts, filters, and `paint()` (its table); the repaint is the same for all */
+function tblDeclare(key, cfg) {
+  cfg.repaint = cfg.repaint || function () { tblListPaint(key); };
+  return listCtl(key, cfg);
+}
+/* a table's fitted columns, its header and its hover peek (the peek shows every column, the fitted ones and the folded) */
+var TBL_PEEK = {};
+/* `plain` = a rail (the CRM's lists, like the Task list): the columns that do not fit are folded away and the hover peek shows them — no card fold */
+function tblFitBox(key, cols, prio, boxId, plain) { TBL_PEEK[key] = { cols: cols, by: {}, plain: !!plain, box: boxId }; return tblFit(cols, tblAvail(boxId, plain), prio || cols.map(function (c) { return c.key; })); }
+function tblWrapFor(key, fit, inner, o) { o = o || {}; o.plain = !!(TBL_PEEK[key] && TBL_PEEK[key].plain); return tblWrapHTML(fit, inner, o); }
+function tblHeadFor(key, fit) {
+  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
+  return tblHeaderHTML(fit, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key });
+}
+function tblPeek(ev, key, id) { var p = TBL_PEEK[key], row = p && p.by[id]; if (p && row) tblPeekShow(ev, p.cols, row); }
+/** one row of list `key`: the Task row, its hover peek, and (open) its next level under it */
+function tblRowFor(key, fit, row, id, o, next) {
+  o = o || {}; TBL_PEEK[key].by[id] = row;
+  return tblRowHTML(fit, row, { cls: o.cls, tid: o.tid, labels: !TBL_PEEK[key].plain, click: o.click, lead: o.lead,
+    attrs: ' data-id="' + esc(id) + '" onmouseenter="tblPeek(event,\'' + key + '\',\'' + esc(id) + '\')" onmouseleave="tblPeekHide()"' + (o.attrs || '') })
+    + (tblIsOpen(key, id) && next ? (typeof next === 'function' ? next() : next) : '');
 }
 
 

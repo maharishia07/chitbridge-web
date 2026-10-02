@@ -452,57 +452,10 @@ function bkRangeHTML(id, again) {
 function bkTable(head, rows, foot) {
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr>' + head.map(function (h) { return '<th' + (h.num ? ' class="num"' : '') + '>' + h.t + '</th>'; }).join('') + '</tr></thead><tbody>' + rows + '</tbody>' + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table>';
 }
-/**
- * ══ THE LEDGER'S LISTS ARE THE TASK TABLE ═══════════════════════════════════════════════════════════════════════════
- * Athi, 2026-10-02: *"the same task header style has to be used in other places … if you expand the header show the next
- * level of information"*. Waiting, the Day book, Dues and the ledgers are drawn by list-ctl.js's `tbl*` (the code the Task
- * list is drawn by) and controlled by its `listCtl*` (search · filters · sort · count · lazy rows). THIS file declares each
- * list's columns and says what a row's next level holds; it draws no row, card or expander of its own (e2e/books-web-breaks).
- */
-var BK_OPEN = {};   /* 'list:id' → its next level is open */
-function bkIsOpen(list, id) { return !!BK_OPEN[list + ':' + id]; }
-function bkRepaint(list) { var c = listCtlS(list).cfg; if (c && c.repaint) c.repaint(); }
-function bkToggle(list, id) { var k = list + ':' + id; if (BK_OPEN[k]) delete BK_OPEN[k]; else BK_OPEN[k] = true; bkRepaint(list); }
-/** the caret of a row — Task's Group sum draws ▸ / ▾ the same way (tblCaretHTML) */
-function bkCaret(list, id) {
-  var open = bkIsOpen(list, id);
-  return '<span role="button" aria-label="' + esc(tx(open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + open + '" style="cursor:pointer;display:inline-block;width:14px;color:var(--grey)" onclick="event.stopPropagation();bkToggle(\'' + list + '\',\'' + esc(id) + '\')">' + tblCaretHTML(open) + '</span>';
-}
 /** a money figure the server holds in MAJOR units (a chit's frozen total) — through the same formatter the chit sheet uses */
 function bkMajor(n, cur) {
   if (n == null || n === '' || isNaN(Number(n))) return '';
   try { return fmtMoney(Number(n), cur || bkCur()); } catch (_) { return bkMoney(Math.round(Number(n) * Math.pow(10, bkDec(cur))), cur); }
-}
-/** the pane's width for fitting columns: a card per row (no fitting) below 560px, else what the box holds */
-function bkAvail(id) { var el = document.getElementById(id) || document.getElementById('bk_body'); var w = el ? el.clientWidth : 900; return w <= 560 ? 9999 : w - 24; }
-/** a declared list's markup: its controls, its count, and the box its table is painted into (bkListPaint) */
-function bkListHTML(key, extra) {
-  return listCtlToolbarHTML(key) + (extra || '') + '<div class="bkdv-count" id="bkc_' + key + '" data-testid="' + key + '-count"></div><div id="bkl_' + key + '" data-testid="' + key + '-list"></div>';
-}
-function bkListPaint(key) {
-  var c = listCtlS(key).cfg, box = document.getElementById('bkl_' + key); if (!c || !box) return;
-  box.innerHTML = c.paint();
-  var n = document.getElementById('bkc_' + key); if (n) n.innerHTML = listCtlCountHTML(key);
-}
-/** declare a list once: the screen's rows, text, sorts, filters, and `paint()` (its table); the repaint is the same for all */
-function bkDeclare(key, cfg) {
-  cfg.repaint = cfg.repaint || function () { bkListPaint(key); };
-  return listCtl(key, cfg);
-}
-/* a table's fitted columns, its header and its hover peek (the peek shows every column, the fitted ones and the folded) */
-var BK_PEEK = {};
-function bkFit(key, cols, prio, boxId) { BK_PEEK[key] = { cols: cols, by: {} }; return tblFit(cols, bkAvail(boxId), prio || cols.map(function (c) { return c.key; })); }
-function bkHead(key, fit) {
-  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
-  return tblHeaderHTML(fit, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key });
-}
-function bkPeek(ev, key, id) { var p = BK_PEEK[key], row = p && p.by[id]; if (p && row) tblPeekShow(ev, p.cols, row); }
-/** one row of list `key`: the Task row, its hover peek, and (open) its next level under it */
-function bkRow(key, fit, row, id, o, next) {
-  o = o || {}; BK_PEEK[key].by[id] = row;
-  return tblRowHTML(fit, row, { cls: o.cls, tid: o.tid, labels: true, click: o.click,
-    attrs: ' data-id="' + esc(id) + '" onmouseenter="bkPeek(event,\'' + key + '\',\'' + esc(id) + '\')" onmouseleave="tblPeekHide()"' + (o.attrs || '') })
-    + (bkIsOpen(key, id) && next ? (typeof next === 'function' ? next() : next) : '');
 }
 
 /**
@@ -700,8 +653,8 @@ function bkDvCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>';
   var no = function (e) { return esc(e.entry_no); };
   return [
-    { key: 'date', label: tx('Date'), sort: 'date', w: '96px', cell: function (e) { return bkCaret('daybook', e.entry_no) + ' <span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'; } },
-    { key: 'no', label: tx('Entry'), sort: 'no', w: 'minmax(104px,1fr)', cell: function (e) { return '<span class="mono">' + no(e) + '</span>'; } },
+    { key: 'date', label: tx('Date'), sort: 'date', w: '96px', cell: function (e) { return tblCaret('daybook', e.entry_no) + ' <span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'; } },
+    { key: 'no', label: tx('Entry'), sort: 'no', w: 'minmax(136px,1fr)', cell: function (e) { return '<span class="mono">' + no(e) + '</span>'; } },
     { key: 'kind', label: tx('Kind'), sort: 'kind', w: '88px', cell: function (e) { return esc(tx(bkDvKind(e))); } },
     { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(130px,1.6fr)', cell: function (e) { return esc(bkDvParty(e)) || dash; } },
     { key: 'bill', label: tx('Bill'), w: 'minmax(140px,1.5fr)', tid: function (e) { return 'db-head-' + e.entry_no; }, cell: function (e) {
@@ -735,24 +688,24 @@ function bkDvNext(e, c) {
 function bkDvPaint() {
   var box = document.getElementById('bk_dvlist'); if (!box || !BK.dv) return;
   var d = BK.dv, c = d.r && d.r.currency, list = bkDvShown(), cols = bkDvCols(c);
-  var fit = bkFit('daybook', cols, ['date', 'amount', 'party', 'bill', 'kind', 'no', 'how', 'counter'], 'bk_dvlist'), flat = [];
+  var fit = tblFitBox('daybook', cols, ['date', 'amount', 'party', 'bill', 'kind', 'no', 'how', 'counter'], 'bk_dvlist'), flat = [];
   bkDvGroups(list, d.group).forEach(function (g) { flat.push({ g: g }); if (!d.gcol[g.key]) g.entries.forEach(function (e) { flat.push({ e: e }); }); });
-  box.innerHTML = list.length ? tblWrapHTML(fit, bkHead('daybook', fit) + lazyWrap('daybook', flat, function (it) {
+  box.innerHTML = list.length ? tblWrapFor('daybook', fit, tblHeadFor('daybook', fit) + lazyWrap('daybook', flat, function (it) {
     if (it.g) return bkDvGroupRow(it.g, c);
     var e = it.e;
-    return bkRow('daybook', fit, e, e.entry_no, { tid: 'db-entry-' + e.entry_no, cls: d.hl === e.entry_no ? 'sel' : '', click: "bkDvToggle('" + esc(e.entry_no) + "')",
-      attrs: ' data-no="' + esc(e.entry_no) + '" aria-expanded="' + bkIsOpen('daybook', e.entry_no) + '"' }, bkDvNext(e, c));
+    return tblRowFor('daybook', fit, e, e.entry_no, { tid: 'db-entry-' + e.entry_no, cls: d.hl === e.entry_no ? 'sel' : '', click: "bkDvToggle('" + esc(e.entry_no) + "')",
+      attrs: ' data-no="' + esc(e.entry_no) + '" aria-expanded="' + tblIsOpen('daybook', e.entry_no) + '"' }, bkDvNext(e, c));
   }, ''), { id: 'bkt_daybook' }) : emptyState('🔍', tx('Nothing matches'), '');
   var n = document.getElementById('bkc_daybook'); if (n) n.innerHTML = listCtlCountHTML('daybook');
   Array.prototype.forEach.call(document.querySelectorAll('[data-testid^="db-group-"]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-testid') === 'db-group-' + d.group)); });
 }
 function bkDvOpenAll(on) {
   var d = BK.dv; if (!d) return;
-  if (on) bkDvShown().forEach(function (e) { BK_OPEN['daybook:' + e.entry_no] = true; }); else Object.keys(BK_OPEN).forEach(function (k) { if (k.indexOf('daybook:') === 0) delete BK_OPEN[k]; });
+  if (on) bkDvShown().forEach(function (e) { TBL_OPEN['daybook:' + e.entry_no] = true; }); else Object.keys(TBL_OPEN).forEach(function (k) { if (k.indexOf('daybook:') === 0) delete TBL_OPEN[k]; });
   bkDvPaint();
 }
 function bkDvGroupBy(m) { if (!BK.dv) return; BK.dv.group = m; BK.dv.gcol = {}; bkDvPaint(); }
-function bkDvToggle(no) { var d = BK.dv; if (!d) return; d.hl = no; bkToggle('daybook', no); }
+function bkDvToggle(no) { var d = BK.dv; if (!d) return; d.hl = no; tblToggle('daybook', no); }
 /* keys: ↑ ↓ move the highlighted row, Enter opens it (its next level); Esc is the sheet's, never swallowed here */
 function bkDvOn() { return !!(BK.dv && document.getElementById('bk_dvlist')); }
 document.addEventListener('keydown', function (ev) {
@@ -781,7 +734,7 @@ function bkDvDeclare() {
       options: seen.map(function (v) { return { v: v, label: x[0] === 'counter' ? tx('Counter') + ' ' + v : x[0] === 'by' ? v + (bkIsShopName(v) ? ' ' + tx('(owner)') : '') : tx(v) }; }) };
   });
   var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  bkDeclare('daybook', {
+  tblDeclare('daybook', {
     rows: function () { return d.r.entries || []; }, noun: 'entry', plural: 'entries', repaint: bkDvPaint, filters: filters, text: function (e) { return bkDvText(e, c); },
     sorts: [
       { key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } },
@@ -934,7 +887,7 @@ function bkLtPaneHTML() {
 function bkLtBack() { BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel'); bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML(); }
 function bkLtOpen(sel) {
   BK.lt.sel = sel; BK.lt.r = null; BK.lt.day = null;
-  Object.keys(BK_OPEN).forEach(function (k) { if (k.indexOf('ledger:') === 0) delete BK_OPEN[k]; });   /* an open row belongs to the ledger it was opened in */
+  Object.keys(TBL_OPEN).forEach(function (k) { if (k.indexOf('ledger:') === 0) delete TBL_OPEN[k]; });   /* an open row belongs to the ledger it was opened in */
   var el = document.getElementById('bk_lt'); if (el) el.classList.add('has-sel');
   bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
   bkLtLoad();
@@ -961,7 +914,7 @@ function bkLgCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
   var idx = function (l) { return (BK.lt.r && BK.lt.r.lines || []).indexOf(l); };
   return [
-    { key: 'date', label: tx('Date'), sort: 'date', w: '84px', cell: function (l) { return bkCaret('ledger', idx(l)) + ' ' + esc(bkDate(l.date)); } },
+    { key: 'date', label: tx('Date'), sort: 'date', w: '84px', cell: function (l) { return tblCaret('ledger', idx(l)) + ' ' + esc(bkDate(l.date)); } },
     { key: 'what', label: tx('What'), sort: 'what', w: 'minmax(170px,3fr)', tid: function (l) { return 'stmt-what-' + idx(l); }, cell: function (l) {
         /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
         var parts = bkSourceParts(l.source, 'stmt-src-' + idx(l), c);
@@ -978,7 +931,7 @@ function bkEntryWord(e) {
 }
 function bkLgDeclare(r) {
   var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  bkDeclare('ledger', {
+  tblDeclare('ledger', {
     rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, noun: 'entry', plural: 'entries', paint: bkLgPaint, repaint: bkLtEntriesPaint,
     text: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
     sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
@@ -996,7 +949,7 @@ async function bkLgJournal() {
   var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (l) { return String(l.date || '').slice(0, 10); }).filter(Boolean).sort();
   BK.lt.dayBusy = true;
   try { BK.lt.day = await api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }); } catch (_) { BK.lt.day = { entries: [], failed: true }; }
-  BK.lt.dayBusy = false; bkRepaint('ledger');
+  BK.lt.dayBusy = false; tblRepaint('ledger');
 }
 function bkLgNext(l, c) {
   if (!BK.lt.day) { bkLgJournal(); return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the journal…')) + '</div>', 'stmt-lines-' + (BK.lt.r.lines || []).indexOf(l)); }
@@ -1005,10 +958,10 @@ function bkLgNext(l, c) {
   return bkDvNext(e, c);
 }
 function bkLgPaint() {
-  var r = BK.lt.r, c = r.currency || BK.duesCur, cols = bkLgCols(c), fit = bkFit('ledger', cols, ['date', 'what', 'party', 'dr', 'cr', 'bal'], 'bkl_ledger');
-  return tblWrapHTML(fit, bkHead('ledger', fit) + lazyWrap('ledger', listCtlView('ledger').matched, function (l) {
+  var r = BK.lt.r, c = r.currency || BK.duesCur, cols = bkLgCols(c), fit = tblFitBox('ledger', cols, ['date', 'what', 'party', 'dr', 'cr', 'bal'], 'bkl_ledger');
+  return tblWrapFor('ledger', fit, tblHeadFor('ledger', fit) + lazyWrap('ledger', listCtlView('ledger').matched, function (l) {
     var i = r.lines.indexOf(l);
-    return bkRow('ledger', fit, l, String(i), { tid: 'stmt-row-' + i, click: "bkToggle('ledger','" + i + "')" }, function () { return bkLgNext(l, c); });
+    return tblRowFor('ledger', fit, l, String(i), { tid: 'stmt-row-' + i, click: "tblToggle('ledger','" + i + "')" }, function () { return bkLgNext(l, c); });
   }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_ledger' });
 }
 /** the ledger's right-hand pane: balance carried at the top, then the entries — and for a control account both figures that must agree */
@@ -1024,8 +977,8 @@ function bkLtEntriesPaint() {
       + (total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
         + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>');
   }
-  out.innerHTML = top + ((r.lines || []).length ? bkListHTML('ledger') : emptyState('📒', tx('No entries in these dates'), ''));
-  if ((r.lines || []).length) bkListPaint('ledger');
+  out.innerHTML = top + ((r.lines || []).length ? tblListHTML('ledger') : emptyState('📒', tx('No entries in these dates'), ''));
+  if ((r.lines || []).length) tblListPaint('ledger');
 }
 async function bkLedgers(body) {
   try {
@@ -1094,15 +1047,29 @@ async function bkStmtRead(pid, list) {
   if (BK.stmt[pid] || (BK.stmtBusy || {})[pid]) return;
   BK.stmtBusy = BK.stmtBusy || {}; BK.stmtBusy[pid] = true;
   try { BK.stmt[pid] = await api('booksStatement', { params: { id: pid } }); } catch (_) { BK.stmt[pid] = { lines: [], failed: true }; }
-  delete BK.stmtBusy[pid]; bkRepaint(list);
+  delete BK.stmtBusy[pid]; tblRepaint(list);
 }
 function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(bkDuesSide(p) === 'pay' ? -Number(v) : Number(v), c)); };
   return [
-    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(160px,2.4fr)', cell: function (p) { return bkCaret('dues', p.party_id) + ' ' + esc(bkPartyLabel(p.party_id, p.name)); } },
+    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(160px,2.4fr)', cell: function (p) { return tblCaret('dues', p.party_id) + ' ' + esc(bkPartyLabel(p.party_id, p.name)); } },
     { key: 'due', label: tx('Total due'), sort: 'due', align: 'right', w: '120px', cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
     { key: 'oldest', label: tx('Oldest due'), sort: 'oldest', w: '110px', cell: function (p) { return p.oldest_due ? esc(bkDate(p.oldest_due)) : dash; } },
   ];
+}
+/**
+ * the bills on a party's statement, as a next level's rows — read once, on the first time its row opens (the party's own
+ * statement route). `list` is the table that asked (it paints again when the read lands); a bill's amount is the line's own.
+ * Shared by Dues and the CRM's Customers and Suppliers (app.html), so a party's bills read the same wherever its row opens.
+ */
+function bkPartyBillsHTML(pid, list, c) {
+  var st = BK.stmt[pid], amt = function (v) { return esc(bkMoney(Number(v), c)); };
+  if (!st) { bkStmtRead(pid, list); return '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the bills…')) + '</div>'; }
+  /* a bill is a line that points at a chit and is not a receipt or a payment */
+  var chitOf = function (l) { return l.source_chit_id || (l.source && l.source.chit_id); };
+  var ls = (st.lines || []).filter(function (l) { return chitOf(l) && !(l.source && /receipt|payment/.test(String(l.source.kind))); });
+  return ls.length ? ls.map(function (l, i) { return tblNextRow([esc(bkDate(l.date)) + ' ' + bkBillPart(l.source || { ref: l.ref, chit_id: chitOf(l) }, 'bills-' + pid + '-' + i), amt(l.dr_minor || l.cr_minor || 0)], [120]); }).join('')
+    : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
 /** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement */
 function bkDuesNext(p, c) {
@@ -1112,28 +1079,21 @@ function bkDuesNext(p, c) {
   var rows = cols.filter(function (k) { return b[k[0]]; }).map(function (k) { return tblNextRow(['<span data-b="' + k[0] + '">' + esc(tx(k[1])) + '</span>', amt(b[k[0]])], [120]); }).join('')
     + (other ? tblNextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amt(other)], [120]) : '')
     + (p.disputed_minor ? tblNextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amt(p.disputed_minor)], [120]) : '');
-  var st = BK.stmt[p.party_id], bills = '';
-  if (!st) { bkStmtRead(p.party_id, 'dues'); bills = '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the bills…')) + '</div>'; }
-  else {
-    var ls = (st.lines || []).filter(function (l) { return l.source && (l.source.kind === 'bill' || l.source.kind === 'purchase'); });
-    bills = ls.length ? ls.map(function (l, i) { return tblNextRow([esc(bkDate(l.date)) + ' ' + bkBillPart(l.source, 'dues-bill-' + p.party_id + '-' + i), amt(l.dr_minor || l.cr_minor || 0)], [120]); }).join('')
-      : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
-  }
   return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Age')) + '</div>' + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing is overdue')) + '</div>')
-    + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' + esc(tx('Bills')) + '</div>' + bills, 'dues-next-' + esc(p.party_id));
+    + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' + esc(tx('Bills')) + '</div>' + bkPartyBillsHTML(p.party_id, 'dues', c), 'dues-next-' + esc(p.party_id));
 }
 function bkDuesPaint() {
-  var c = BK.duesCur, cols = bkDuesCols(c), fit = bkFit('dues', cols, ['party', 'due', 'oldest'], 'bkl_dues'), flat = [], by = { rcv: [], pay: [] };
+  var c = BK.duesCur, cols = bkDuesCols(c), fit = tblFitBox('dues', cols, ['party', 'due', 'oldest'], 'bkl_dues'), flat = [], by = { rcv: [], pay: [] };
   listCtlView('dues').matched.forEach(function (p) { by[bkDuesSide(p)].push(p); });
   [['rcv', 'They owe you'], ['pay', 'You owe']].forEach(function (s) {
     if (!by[s[0]].length) return;
     flat.push({ side: s[0], label: s[1], n: by[s[0]].length });
     by[s[0]].forEach(function (p) { flat.push({ p: p }); });
   });
-  return flat.length ? tblWrapHTML(fit, bkHead('dues', fit) + lazyWrap('dues', flat, function (it) {
+  return flat.length ? tblWrapFor('dues', fit, tblHeadFor('dues', fit) + lazyWrap('dues', flat, function (it) {
     if (it.side) return tblRowHTML([{ key: 'g', label: '', w: '1fr', cell: function () { return '<b>' + esc(tx(it.label)) + '</b> · ' + esc(txf(it.n === 1 ? '{n} party' : '{n} parties', { n: it.n })); } }], it, { tpl: '1fr', tid: 'dues-side-' + it.side });
     var p = it.p;
-    return bkRow('dues', fit, p, p.party_id, { tid: 'dues-' + p.party_id, click: "bkToggle('dues','" + esc(p.party_id) + "')" }, function () { return bkDuesNext(p, c); });
+    return tblRowFor('dues', fit, p, p.party_id, { tid: 'dues-' + p.party_id, click: "tblToggle('dues','" + esc(p.party_id) + "')" }, function () { return bkDuesNext(p, c); });
   }, ''), { id: 'bkt_dues' }) : emptyState('🔍', tx('Nothing matches'), '');
 }
 async function bkDues(body) {
@@ -1141,7 +1101,7 @@ async function bkDues(body) {
     var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
     var num = function (f) { return function (a, b) { return Number(f(a)) - Number(f(b)); }; };
-    bkDeclare('dues', {
+    tblDeclare('dues', {
       rows: function () { return open; }, noun: 'party', plural: 'parties', paint: bkDuesPaint,
       text: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
       sorts: [
@@ -1152,8 +1112,8 @@ async function bkDues(body) {
       ],
       filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('They owe you') }, { v: 'pay', label: tx('You owe') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
     });
-    body.innerHTML = open.length ? bkListHTML('dues') : emptyState('⏳', tx('Nothing is due'), '');
-    if (open.length) bkListPaint('dues');
+    body.innerHTML = open.length ? tblListHTML('dues') : emptyState('⏳', tx('Nothing is due'), '');
+    if (open.length) tblListPaint('dues');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
@@ -1410,7 +1370,7 @@ function bkWaitModel(w) { var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_
 function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'who', label: tx('Supplier'), sort: 'who', w: 'minmax(140px,2fr)', cell: function (w) { var m = bkWaitModel(w); return bkCaret('waiting', bkWaitId(w)) + ' ' + (m && m.who ? esc(m.who) : dash); } },
+    { key: 'who', label: tx('Supplier'), sort: 'who', w: 'minmax(140px,2fr)', cell: function (w) { var m = bkWaitModel(w); return tblCaret('waiting', bkWaitId(w)) + ' ' + (m && m.who ? esc(m.who) : dash); } },
     { key: 'no', label: tx('Bill no'), sort: 'no', w: 'minmax(110px,1.2fr)', cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
     { key: 'amount', label: tx('Amount'), sort: 'amount', align: 'right', w: '112px', cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
     { key: 'date', label: tx('Date'), sort: 'date', w: '92px', cell: function (w) { var m = bkWaitModel(w); return esc(bkDate((m && m.at) || w.since)); } },
@@ -1434,10 +1394,10 @@ function bkWaitNext(w) {
   return tblNextHTML(lines || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No lines on this bill')) + '</div>', 'wait-lines-' + (BK.waiting || []).indexOf(w));
 }
 function bkWaitPaint() {
-  var list = BK.waiting || [], cols = bkWaitCols(), fit = bkFit('waiting', cols, ['who', 'amount', 'step', 'no', 'date'], 'bkl_waiting'), view = listCtlView('waiting').matched;
-  return tblWrapHTML(fit, bkHead('waiting', fit) + lazyWrap('waiting', view, function (w) {
+  var list = BK.waiting || [], cols = bkWaitCols(), fit = tblFitBox('waiting', cols, ['who', 'amount', 'step', 'no', 'date'], 'bkl_waiting'), view = listCtlView('waiting').matched;
+  return tblWrapFor('waiting', fit, tblHeadFor('waiting', fit) + lazyWrap('waiting', view, function (w) {
     var i = list.indexOf(w), id = bkWaitId(w);
-    return bkRow('waiting', fit, w, id, { tid: 'wait-' + i, click: w.chit_id ? "openChitSheet('" + esc(w.chit_id) + "')" : '' }, function () { return bkWaitNext(w); });
+    return tblRowFor('waiting', fit, w, id, { tid: 'wait-' + i, click: w.chit_id ? "openChitSheet('" + esc(w.chit_id) + "')" : '' }, function () { return bkWaitNext(w); });
   }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_waiting' });
 }
 /** one chit read per waiting row (four at a time); each row paints again when its bill arrives — the list never waits for them */
@@ -1450,7 +1410,7 @@ async function bkWaitReads() {
     while (next < todo.length) {
       var w = todo[next++];
       try { BK.wchit[w.chit_id] = await api('chit', { params: { id: w.chit_id } }); } catch (_) { BK.wchit[w.chit_id] = false; }
-      if (BK.tab === 'waiting') bkRepaint('waiting');
+      if (BK.tab === 'waiting') tblRepaint('waiting');
     }
   }
   await Promise.all([worker(), worker(), worker(), worker()]);
@@ -1459,7 +1419,7 @@ async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
     var list = BK.waiting || [];
-    bkDeclare('waiting', {
+    tblDeclare('waiting', {
       rows: function () { return BK.waiting || []; }, noun: 'bill', plural: 'bills', paint: bkWaitPaint,
       text: function (w) { var m = bkWaitModel(w); return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' '); },
       sorts: [
@@ -1475,9 +1435,9 @@ async function bkWaitingView(body) {
     var failed = list.some(bkWaitFailed);
     body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
       + (list.length ? (failed ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' + tx('Try again') + '</button></div>' : '')
-          + '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + bkListHTML('waiting')
+          + '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + tblListHTML('waiting')
         : '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + emptyState('✓', tx('Nothing is waiting'), ''));
-    if (list.length) { bkListPaint('waiting'); bkWaitReads(); }
+    if (list.length) { tblListPaint('waiting'); bkWaitReads(); }
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 async function bkWaitingRetry() {

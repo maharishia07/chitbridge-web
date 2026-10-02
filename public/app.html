@@ -5182,7 +5182,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02e';   /* ⚠️ bumped 2026-10-02 (e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02f';   /* ⚠️ bumped 2026-10-02 (f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -8529,7 +8529,7 @@ function supCtl(){
   cats.sort();
   return listCtl('suppliers', {
     rows: function(){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); }); },
-    text: function(x){ return [x.nickname,x.display_name,x.category,x.bridge_id,x.user_id].filter(Boolean).join(' '); },
+    text: function(x){ return [x.nickname,x.display_name,x.category,x.bridge_id,x.user_id,x.party_no,(typeof BK!=='undefined' && BK.dues && BK.dues[x.supplier_entity_id] || {}).party_no].filter(Boolean).join(' '); },
     noun: tx('supplier'), plural: tx('suppliers'),
     filters: [
       { key:'pref', label: tx('Preferred'), all: tx('Preferred or not'),
@@ -8557,33 +8557,13 @@ function supCtl(){
       { key:'cat', label: tx('By category'),
         cmp: function(a,b){ return String(a.category||'~').localeCompare(String(b.category||'~'))
           || String(supName(a)).localeCompare(String(supName(b))); } },
-    ],
+    ].concat(crmSorts('supplier')),
     repaint: function(){ paintSupList(); },
   });
 }
 /* ⭐ ONE ANSWER to "which suppliers am I looking at" — the engine's, not a second filter written out again. */
 function supCount(){ supCtl(); return listCtlView('suppliers').matched.length; }
-function supRowHTML(x){
-  const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  /**
-   * ⭐⭐ THE CHIP SAYS WHAT THE ROW CAN DO, not what it is called. A supplier who is not on ChitBridge has no
-   * catalogue to call, cannot be sent an order and cannot send a delivery chit — so "no catalogue" would be a
-   * misleading way to put it: it reads as an empty shelf they might fill, when the truth is there is nobody to
-   * ask. ⚠️ Saying it plainly is kinder than hiding it and letting someone hunt for a button that cannot exist.
-   */
-  const offRail = x.on_rail===false;
-  const cat = offRail
-    ? '<span class="optchip" style="background:var(--card);color:var(--grey);border-color:var(--line)" title="'
-      + esc(tx('Your own record of them. Purchases are entered by hand.')) + '">' + tx('🧾 not on ChitBridge') + '</span>'
-    : (x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">' + tx('📕 catalogue') + '</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>');
-  return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
-    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
-    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span>${typeof partyDueChipHTML==='function'?partyDueChipHTML(x.supplier_entity_id):''}</div>
-    ${supForYouHTML(x)}
-      <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.user_id||x.bridge_id||'')}</span>`:''}</div></div>
-    <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
-    <div class="rowgo" aria-hidden="true">›</div></div>`;
-}
+/* a supplier's row is crmCols('supplier') — Party no · Name (★ · category · ⓘ) · ChitBridge ID · Balance · Oldest due · Credit terms · GSTIN — drawn by crmTable() through list-ctl.js's Task table */
 /**
  * ⭐ THE SUPPLIER'S FULL RECORD, ON THE LEFT (Athi, 2026-08-16: *"left hand side panel should show max information
  * about the supplier, if they want to edit, a click button to edit information. right hand side only to show the
@@ -8699,7 +8679,7 @@ function supRowsHTML(){ supCtl(); const rows=listCtlView('suppliers').matched;
      its parent business); only the screen was missing. */
   /* ⭐ lazyWrap draws 50 and reveals the rest at its own sentinel. The own-stock row sits OUTSIDE it: it is
      not one of the suppliers, it is the door to your own shelf, and it must not scroll away with them. */
-  return own + listCtlRowsHTML('suppliers', supRowHTML, ''); }
+  return own + crmTable('suppliers','supplier',''); }
 function supSlideHTML(){
   const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===UI.supSel; });
   if(!x || !UI.supPanel) return '';
@@ -10291,7 +10271,7 @@ function custCtl(){
   return listCtl('customers', {
     rows: function(){ return UI.custs||[]; },
     /* searched by everything a shopkeeper would type: the name, the contact, the id, the group */
-    text: function(c){ return [c.display_name, custContact(c), c.phone, c.user_id, c.bridge_id, c.email, c.segment]
+    text: function(c){ return [c.display_name, custContact(c), c.phone, c.user_id, c.bridge_id, c.email, c.segment, c.party_no, (typeof BK!=='undefined' && BK.dues && BK.dues[c.customer_identity_id] || {}).party_no]
       .filter(Boolean).join(' '); },
     noun: tx('customer'), plural: tx('customers'),
     filters: [
@@ -10313,7 +10293,7 @@ function custCtl(){
         cmp: function(a,b){ return String(a.display_name||custContact(a)).localeCompare(String(b.display_name||custContact(b))); } },
       { key:'joined', label: tx('Newest customer'),
         cmp: function(a,b){ return (b.customer_since?Date.parse(b.customer_since):0) - (a.customer_since?Date.parse(a.customer_since):0); } },
-    ],
+    ].concat(crmSorts('customer')),
     repaint: function(){ paintCustList(); },
   });
 }
@@ -10331,17 +10311,86 @@ function customersScreen(){
   const showDetail=(UI.vp==='mob')&&UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_count||0);
-  return '<div class="row '+(sel?'sel':'')+'" data-testid="cust-row-'+esc(c.customer_identity_id)+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+(typeof partyDueChipHTML==='function'?partyDueChipHTML(c.customer_identity_id):'')+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+/**
+ * ══ THE CRM'S TWO LISTS ARE THE TASK TABLE — Customers and Suppliers (Athi, 2026-10-02: *"each customer / supplier will have a
+ * customer id … and this id to be linked to system user id, so better we showcase a table in the CRM"*) ═══════════════════════
+ * Columns: Party no · Name · ChitBridge ID · Balance · Oldest due · Credit terms · GSTIN — drawn by list-ctl.js's `tbl*`, the code
+ * the Task list is drawn by, and controlled by its `listCtl*` (search and sort by party no, name or ChitBridge ID). A row's click is
+ * the party's existing detail pane; its next level is the party's bills. Every figure is a field the list API sends with the row
+ * (party_no · balance_minor · oldest_due · tax_ids · user_id · bridge_id · on_rail · one_sided) — or, for the balance, the dues read
+ * the Ledger already holds — never computed here. A party whose bills or orders stay one-sided shows it quietly, the reason on hover.
+ */
+function crmFacts(r, pid){
+  var d=(typeof BK!=='undefined' && BK.dues && BK.dues[pid]) || {};
+  return { no: r.party_no||d.party_no||'', bal: r.balance_minor!=null?r.balance_minor:d.balance_minor, oldest: r.oldest_due||d.oldest_due||'' };
+}
+function crmBooks(){ return SESSION.booksOn===true && typeof bkMoney==='function'; }
+function crmGstin(r){ var t=(r.tax_ids||[]).filter(function(x){ return x.scheme==='GSTIN'; })[0]||(r.tax_ids||[])[0]; return t?t.value:''; }
+function crmOneSided(r){ var o=r.one_sided; if(!o) return ''; var why=(o&&o.why)||(typeof o==='string'?o:'')||tx('Their side of this does not reach you');
+  return ' <span data-testid="party-onesided" title="'+esc(why)+'" style="color:var(--grey);font-size:var(--fs-1);font-weight:400">◐ '+esc(tx('one-sided'))+'</span>'; }
+/** the seven columns; `kind` says whose id the party is. Balance and Oldest due need the Ledger (they are its figures). */
+function crmCols(kind){
+  var dash='<span style="color:var(--grey)">—</span>', pidOf=function(r){ return kind==='supplier'?r.supplier_entity_id:r.customer_identity_id; };
+  var list=kind==='supplier'?'suppliers':'customers', facts=function(r){ return crmFacts(r, pidOf(r)); };
+  var cols=[
+    { key:'no', label:tx('Party no'), sort:'no', w:'76px', tid:function(r){ return 'party-no-'+pidOf(r); }, cell:function(r){ var f=facts(r); return f.no?'<span class="mono">'+esc(f.no)+'</span>':dash; } },
+    { key:'name', label:tx('Name'), sort:kind==='supplier'?'az':'name', w:'minmax(110px,2fr)', cell:function(r){
+        var lead=crmBooks()?tblCaret(list, kind==='supplier'?r.supplier_list_id:r.customer_identity_id)+' ':'';
+        if(kind==='supplier') return lead+'<button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref(\''+r.supplier_list_id+'\')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;margin-inline-end:2px;color:'+(r.preferred?'var(--warn-2)':'var(--grey-2)')+'">'+(r.preferred?'★':'☆')+'</button>'
+          +'<button class="rowinfo" data-testid="sup-details-'+r.supplier_list_id+'" title="Their full record" onclick="event.stopPropagation();supOpenPanel(\''+r.supplier_list_id+'\')">ⓘ</button> '
+          +esc(supName(r))+(r.category?' <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">'+esc(r.category)+'</span>':'')+crmOneSided(r);
+        return lead+esc(r.display_name||custContact(r))+' '+custSeg(r.segment)+crmOneSided(r); } },
+    { key:'cbid', label:tx('ChitBridge ID'), sort:'cbid', w:'minmax(110px,1.3fr)', cell:function(r){ var id=r.user_id||r.bridge_id;
+        return (id && r.on_rail!==false) ? '<span class="mono">'+esc(id)+'</span>' : '<span style="color:var(--grey)" title="'+esc(tx('Your own record of them. Purchases are entered by hand.'))+'">🧾 '+esc(tx('not on ChitBridge'))+'</span>'; } },
+  ];
+  if(crmBooks()) cols.push(
+    { key:'bal', label:tx('Balance'), sort:'bal', align:'right', w:'104px', cell:function(r){ var f=facts(r), b=Number(f.bal||0); if(f.bal==null) return dash;
+        if(!b) return '<span data-testid="party-due-'+esc(pidOf(r))+'" style="color:var(--grey)">'+esc(tx('settled'))+'</span>';
+        var owes=b>0;
+        return '<span data-testid="party-due-'+esc(pidOf(r))+'" title="'+esc(owes?tx('They owe you'):tx('You owe them'))+(f.oldest?' · '+esc(tx('oldest due'))+' '+esc(bkDate(f.oldest)):'')+'" style="color:'+(owes?'var(--warn-2)':'var(--blue-d)')+'">'+(owes?'↓ ':'↑ ')+esc(bkMoney(Math.abs(b), BK.duesCur))+'</span>'; } },
+    { key:'oldest', label:tx('Oldest due'), sort:'oldest', w:'100px', cell:function(r){ var f=facts(r); return f.oldest?esc(bkDate(f.oldest)):dash; } });
+  cols.push(
+    { key:'credit', label:tx('Credit terms'), w:'104px', cell:function(r){ return r.credit_days!=null ? esc(txf('{n} days',{n:r.credit_days}))+(r.credit_limit_minor!=null&&crmBooks()?' · '+esc(bkMoney(r.credit_limit_minor, BK.duesCur)):'') : dash; } },
+    { key:'gstin', label:tx('GSTIN'), w:'minmax(130px,1.2fr)', cell:function(r){ var g=crmGstin(r); return g?'<span class="mono">'+esc(g)+'</span>':dash; } });
+  return cols;
+}
+/** a party's next level: what the row cannot hold — orders (a customer) or how you order (a supplier) — then its bills (one statement read, on the first open) */
+function crmNext(kind, r){
+  var pid=kind==='supplier'?r.supplier_entity_id:r.customer_identity_id, list=kind==='supplier'?'suppliers':'customers', muted='color:var(--grey);font-size:var(--fs-1)';
+  var head=kind==='customer'
+    ? '<div style="'+muted+';padding:2px 0">'+esc(txf((r.txn_count||0)===1?'{n} order':'{n} orders',{n:r.txn_count||0}))+(r.last_txn_at?' · '+esc(tx('last'))+' '+esc(custDate(r.last_txn_at)):'')+'</div>'
+    : '<div style="'+muted+';padding:2px 0">'+(r.on_rail===false?esc(tx('not on ChitBridge')):(r.has_catalogue?esc(tx('📕 catalogue')):esc(tx('On ChitBridge, no catalogue'))))+'</div>'+supForYouHTML(r);
+  var bills=(pid && typeof bkPartyBillsHTML==='function' && crmBooks()) ? '<div style="'+muted+';text-transform:uppercase;padding:6px 0 2px">'+esc(tx('Bills'))+'</div>'+bkPartyBillsHTML(pid, list, BK.duesCur) : '';
+  return tblNextHTML(head+bills, 'crm-next-'+esc(pid||''));
+}
+/** the table: header, then each matched row (fitted to the rail, like Task) — "no customers yet" / "nothing matches" are the screen's own words */
+function crmTable(key, kind, empty){
+  var cols=crmCols(kind), idOf=function(r){ return kind==='supplier'?r.supplier_list_id:r.customer_identity_id; };
+  var fit=tblFitBox(key, cols, ['name','bal','no','cbid','oldest','credit','gstin'], key==='customers'?'cu_rows':'sup_rows', true);
+  if(!listCtlView(key).matched.length) return empty;
+  return tblWrapFor(key, fit, tblHeadFor(key, fit)+listCtlRowsHTML(key, function(r){
+    var id=idOf(r), sel=kind==='supplier'?(id===UI.supSel):(id===UI.custSel);
+    return tblRowFor(key, fit, r, id, { tid:(kind==='supplier'?'sup-row-':'cust-row-')+esc(id), cls:sel?'sel':'',
+      click:(kind==='supplier'?'selectSupplier':'selectCust')+"('"+id+"')" }, function(){ return crmNext(kind, r); });
+  }, empty), { id:'tbl_'+key });
+}
+/** the sorts the column headings click on (party no · ChitBridge ID · balance · oldest due) — added to each list's own */
+function crmSorts(kind){
+  var pidOf=function(r){ return kind==='supplier'?r.supplier_entity_id:r.customer_identity_id; }, f=function(r){ return crmFacts(r, pidOf(r)); };
+  return [
+    { key:'no', label:tx('Party no'), cmp:function(a,b){ return String(f(a).no||'~').localeCompare(String(f(b).no||'~'), undefined, {numeric:true}); } },
+    { key:'cbid', label:tx('ChitBridge ID'), cmp:function(a,b){ return String(a.user_id||a.bridge_id||'~').localeCompare(String(b.user_id||b.bridge_id||'~')); } },
+    { key:'bal', label:tx('Balance'), cmp:function(a,b){ return Math.abs(Number(f(b).bal||0))-Math.abs(Number(f(a).bal||0)); } },
+    { key:'oldest', label:tx('Oldest due'), cmp:function(a,b){ return String(f(a).oldest||'9999').localeCompare(String(f(b).oldest||'9999')); } },
+  ];
+}
 function custRowsHTML(){
   custCtl();
   /* ⚠️ "No customers yet" and "nothing matches ravi" are different sentences, and showing the first when the
      second is true tells a shopkeeper their customers are gone. listCtlEmptyHTML picks. */
   var empty=listCtlEmptyHTML('customers','🛍️',tx('No customers yet'),
     tx('When someone orders from your storefront they appear here — your CRM.'));
-  /* ⭐ lazyWrap draws 50 and reveals the rest at its own sentinel — the one lazy renderer this app has had
-     since August, doing this job for the catalogue and the message thread. */
-  return listCtlRowsHTML('customers', custRowHTML, empty);
+  return crmTable('customers','customer',empty);
 }
 /* ⚠️ the count is innerHTML, not textContent — it carries the greyed "of 812", and textContent would print the
    markup. It said `812 customer(s)` before, which is the drawn number and the matched number conflated. */
@@ -18558,7 +18607,7 @@ function onDrag(e){
   if(UI.vp==='mob'){let h=pt.clientY-r.top;h=Math.max(120,Math.min(r.height-150,h));UI.lh=Math.round(h);panel.style.setProperty('--lh',UI.lh+'px');}
   /* applyColTpl() re-fits the column set to the new pane width — without it the list keeps rendering the
      column set from whatever width the pane happened to have when it was last painted. */
-  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI[lwKey()]=Math.round(w);panel.style.setProperty('--lw',UI[lwKey()]+'px');applyColTpl();}
+  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI[lwKey()]=Math.round(w);panel.style.setProperty('--lw',UI[lwKey()]+'px');applyColTpl();if(typeof tblRefitRails==='function')tblRefitRails();}
 }
 function endDrag(){if(!DRAG)return;DRAG=false;document.body.style.userSelect='';/* persist under the SAME key the screen reads, so a width set on one screen never lands on another */lsSet('cb_'+lwKey(),UI[lwKey()]);lsSet('cb_lh',UI.lh);}
 document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
