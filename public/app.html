@@ -5206,7 +5206,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02d';   /* ⚠️ bumped 2026-10-02 (d: the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02e';   /* ⚠️ bumped 2026-10-02 (e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -10513,7 +10513,9 @@ function custToggleNamedGroup(id, g, on){ var c=(UI.custs||[]).find(function(x){
 function custAddNamedGroup(id){ var el=document.getElementById('cu_ngroup_'+id); var g=(el&&el.value||'').replace(/\s+/g,' ').trim(); if(!g){ toast(tx('Type a group name')); return; } var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(!c) return; var set=(c.groups||[]).filter(function(x){return x!==g;}); set.push(g); custSaveNamedGroups(id, set); }
 /* ⭐ ADD BY HAND (Athi, 2026-09-06: "can we add a + icon to include a customer?") — the list used to fill itself only from trades */
 async function addCustomer(){ var el=document.getElementById('cu_add'); var h=(el&&el.value||'').trim(); if(!h){ toast(tx('Type a User ID or email')); return; }
-  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
+  /* ⭐ one_sided (2026-10-02): added, but bills to them stay here only — the server says why (inactive, another sandbox) */
+  try{ var r=await api('custAdd',{ body:{ handle:h } }); if(el) el.value=''; var os=r&&r.customer&&r.customer.one_sided;
+    toast(tx('Customer added')+': '+((r&&r.customer&&r.customer.display_name)||h)+(os?' — '+tx('bills to them stay here only')+': '+os.why:'')); await loadCustomers(); if(r&&r.customer) selectCust(r.customer.customer_identity_id); }
   catch(e){ toast((e&&e.message)||tx('Could not add')); } }
 /* ⭐ the seller places a customer in a group (Athi, 2026-09-06: "each customer gets a personalised discount") — the row repaints, the pane stays */
 async function custSetGroup(id,v){ try{ await api('custGroup',{ params:{ id:id }, body:{ segment_override:v } }); var c=(UI.custs||[]).find(function(x){return x.customer_list_id===id;}); if(c) c.segment=v; paintCustList(); paintCustDetail(); toast(tx('Group saved')); }catch(e){ toast(tx('Could not save the group')+': '+(e&&e.message||e)); } }
@@ -11305,7 +11307,8 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=d
   confirmAsk('Add '+(e.display_name||e.bridge_id)+' as your supplier?',
     '<b>'+esc(e.user_id||e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
-      try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id, supply_kind:supKind()}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
+      try{ var ra=await api("supAdd",{body:{supplier_bridge_id:e.bridge_id, supply_kind:supKind()}}); var os=ra&&ra.supplier&&ra.supplier.one_sided;
+        toast('Supplier added ✓'+(os?' — '+tx('orders to them stay here only')+': '+os.why:'')); if(a)a.value=''; await loadSuppliers(); }
       catch(ex){ if(err)err.textContent=ex.message; }
     }); }
 /**

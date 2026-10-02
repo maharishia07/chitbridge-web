@@ -38,6 +38,19 @@ const VIEWS = [
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
 ];
 
+/* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
+const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', narration: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
+  source: { kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by } });
+const L1 = LINE('k1', '2026-09-05', 'C2/26-27/0016', 'c1', 300000, 0, 300000, 'bill', 'Mayur Bhavan');
+const L2 = LINE('k2', '2026-09-06', 'C2/26-27/0017', 'c2', 300000, 0, 600000, 'bill', 'Mayur Bhavan');
+const P1 = LINE('k3', '2026-09-03', 'AM-81', 's1', 0, 150000, -150000, 'purchase', 'Ravi');
+const P2 = LINE('k4', '2026-09-04', 'KV-12', 's2', 0, 100000, -250000, 'purchase', 'Ravi');
+const CONTROL = {
+  '1300': { account: { code: '1300', name: 'Customers (Sundry Debtors)' }, currency: 'INR', opening_minor: 0, closing_minor: 600000, lines: [L1, L2] },
+  '2100': { account: { code: '2100', name: 'Suppliers (Sundry Creditors)' }, currency: 'INR', opening_minor: 0, closing_minor: -250000, lines: [P1, P2] },
+};
+const PARTY_LINES = { c1: [Object.assign({}, L1, { running_minor: 300000 })], c2: [Object.assign({}, L2, { running_minor: 300000 })], s1: [P1], s2: [Object.assign({}, P2, { running_minor: -100000 })] };
+
 /* ── the stand-in: one shop's chart, its trial balance, its two bills folders ───────────────────────────────── */
 function standIn(over) {
   return Object.assign({
@@ -93,11 +106,17 @@ async function route(S, r) {
     if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, { enabled: true, last_posted_day: '2026-09-26', waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) }); }
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, { currency: 'INR', rows: S.tb, total_dr_minor: 1940000, total_cr_minor: 1840000 }); }
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, { currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl }); }
+    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: { code: x[1], name: 'Cash' }, currency: 'INR', opening_minor: 0, closing_minor: 1240000,
       lines: [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }] });
     if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
       source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }] });
-    if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [{ party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } }] });
+    if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [
+      { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
+      { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
+      { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }] });
     if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] });
     if (p === '/api/books/pl') return J(r, 200, { currency: 'INR', income: [{ code: '4000', name: 'Sales', amount_minor: 1590000 }], expense: [{ code: '6010', name: 'Rent', amount_minor: 100000 }], profit_minor: 1490000 });
     if (p === '/api/books/bs') return J(r, 200, { currency: 'INR', assets: [{ code: '1300', name: 'Debtors', amount_minor: 600000 }], liabilities: [], equity: [], total_assets_minor: 600000, total_liab_equity_minor: 600000 });
@@ -243,6 +262,74 @@ async function route(S, r) {
     await p.click('[data-testid="acc-back"]');
     await p.waitForSelector('[data-testid="acc-sec-people"]');
     ok(true, 'the back button returns to the list');
+
+    /* ── 2b · PARTY LEDGERS: 1300 and 2100 open into one ledger per party (docs/design/party-ledgers/CLOUD-TASK.md) ── */
+    await p.click('#expandAll');
+    const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent));
+    const dueReads = () => S.calls.filter((c) => /\/api\/books\/dues/.test(c)).length;
+    const partyReads = () => S.calls.filter((c) => /\/api\/books\/party\//.test(c)).length;
+    S.calls.length = 0;
+    await p.click('[data-testid="lg-acc-1300"]');
+    await p.waitForSelector('[data-testid="lg-party-c1"]');
+    await p.waitForSelector('[data-testid^="stmt-what-"]');
+    const rowsOf = async () => p.$$eval('[data-testid^="lg-party-c"], [data-testid^="lg-party-s"]', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    let pr = await rowsOf();
+    ok(pr.length === 2 && /P-00001.*Ravi Stores.*3,000/.test(pr[0]) && /P-00002.*Chola Auto Care.*3,000/.test(pr[1]), '1300 lists one row per customer — party no · name · balance, by party no (' + pr.join(' | ') + ')');
+    ok(/By customer/.test(await p.textContent('[data-testid="lg-parties"]')) && /All entries/.test(await p.textContent('[data-testid="lg-all-entries"]')), '"By customer" above, the combined statement under "All entries"');
+    ok(await p.locator('[data-testid="lg-party-c1"] td').nth(3).textContent().then((t) => /Aug/.test(t)), 'each customer row carries the oldest due');
+    const tot = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
+    ok(tot === clo && /6,000/.test(tot), 'the parties add up to the 1300 closing (' + tot + ' = ' + clo + ')');
+    ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no difference line while they agree');
+    ok(dueReads() === 1, 'ONE /api/books/dues request draws the table (' + dueReads() + ')');
+    ok(partyReads() === 0, 'no statement fetched per party row (' + partyReads() + ')');
+    let rt = await stmtText();
+    ok(rt.length === 2 && rt.every((t) => /^Sale · P-0000[12] · (Ravi Stores|Chola Auto Care) · /.test(t)), 'every 1300 row names its party first, right after "Sale" (' + rt.join(' || ') + ')');
+    ok(rt.every((t) => !/^Sale · (Mayur|Counter)/.test(t)), 'no row puts the owner or the counter where the party goes');
+    ok(rt.every((t) => /Counter C2 · rung by Mayur Bhavan \(owner\)\s*$/.test(t)), 'the cashier reads "rung by Mayur Bhavan (owner)", last, after the counter');
+    await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
+    S.calls.length = 0;
+    await p.click('[data-testid="lg-party-c1"]');
+    await p.waitForSelector('[data-testid="party-statement"] [data-testid="stmt-closing"]');
+    const one = await p.textContent('[data-testid="party-statement"]');
+    ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
+    ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
+    ok(/3,000/.test(await p.textContent('[data-testid="stmt-closing"]')) && /0\.00|^\s*₹?\s*0/.test(await p.textContent('[data-testid="stmt-opening"]')), 'opening 0 and closing ₹3,000 for the party');
+    ok((await p.textContent('[data-testid="lg-party-name"]')).trim() === 'P-00001 · Ravi Stores', 'the party is named by no · name above its ledger');
+    ok(await p.locator('[data-testid="lg-parties"]').count() === 0 && dueReads() === 0, 'the party view re-reads no dues');
+    await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-one-party.png'), fullPage: true });
+    ok(/All customers/.test(await p.textContent('[data-testid="lg-parties-back"]')), 'a "‹ All customers" link sits above the party\'s ledger');
+    await p.click('[data-testid="lg-parties-back"]');
+    await p.waitForSelector('[data-testid="lg-party-c2"]');
+    ok(await p.locator('[data-testid="lg-party-c2"]').count() === 1, 'the link returns to the table');
+    await p.click('[data-testid="acc-back"]');
+    await p.waitForSelector('[data-testid="acc-sec-people"]');
+    S.calls.length = 0;
+    await p.click('[data-testid="lg-acc-2100"]');
+    await p.waitForSelector('[data-testid="lg-party-s1"]');
+    await p.waitForSelector('[data-testid^="stmt-what-"]');
+    pr = await rowsOf();
+    ok(pr.length === 2 && /P-00003.*Agro Mills.*1,500/.test(pr[0]) && /P-00004.*Kavi Traders.*1,000/.test(pr[1]), '2100 lists one row per supplier (' + pr.join(' | ') + ')');
+    ok(/By supplier/.test(await p.textContent('[data-testid="lg-parties"]')), '"By supplier"');
+    const tot2 = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo2 = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
+    ok(tot2 === clo2 && /2,500/.test(tot2), 'the suppliers add up to the 2100 closing (' + tot2 + ' = ' + clo2 + ')');
+    ok(dueReads() === 1 && partyReads() === 0, 'one dues request, no per-row statement (' + dueReads() + ' / ' + partyReads() + ')');
+    rt = await stmtText();
+    ok(rt.length === 2 && rt.every((t) => /^Purchase · P-0000[34] · (Agro Mills|Kavi Traders) · /.test(t)) && rt.every((t) => /rung by Ravi\s*$/.test(t)), '2100 rows name the supplier first and end "rung by Ravi" (' + rt.join(' || ') + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-creditors.png'), fullPage: true });
+    await p.click('[data-testid="lg-party-s2"]');
+    await p.waitForSelector('[data-testid="party-statement"] [data-testid="stmt-closing"]');
+    ok(/All suppliers/.test(await p.textContent('[data-testid="lg-parties-back"]')), 'a "‹ All suppliers" link sits above the supplier\'s ledger');
+    ok(/KV-12/.test(await p.textContent('[data-testid="party-statement"]')) && !/AM-81/.test(await p.textContent('[data-testid="party-statement"]')) && /1,000/.test(await p.textContent('[data-testid="stmt-closing"]')), 'a supplier opens only its own bills, closing ₹1,000');
+    /* a control account that does not equal its parties is said in words, never hidden */
+    await p.click('[data-testid="acc-back"]');
+    await p.waitForSelector('[data-testid="acc-sec-people"]');
+    S.closing = { '1300': 650000 };
+    await p.click('[data-testid="lg-acc-1300"]');
+    await p.waitForSelector('[data-testid="lg-parties-diff"]');
+    ok(/₹6,000\.00.*₹6,500\.00.*₹500\.00 apart/.test(await p.textContent('[data-testid="lg-parties-diff"]')), 'when the parties and the ledger differ, the difference is said in words');
+    S.closing = null;
+    await p.click('[data-testid="acc-back"]');
+    await p.waitForSelector('[data-testid="acc-sec-people"]');
 
     /* ── 3 · BILLS ── */
     await nav(p, 'bills');
@@ -407,6 +494,16 @@ async function route(S, r) {
     const clipped = await p.evaluate(() => Array.from(document.querySelectorAll('.group')).filter((g) => { const sec = g.closest('.section').getBoundingClientRect(), r = g.getBoundingClientRect(); return r.right > sec.right + 0.5 || r.left < sec.left - 0.5; }).length);
     ok(clipped === 0, 'at 390 px no group is pushed past its section (' + clipped + ' clipped)');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
+    /* the party table is ONE LINE a party (name · balance) */
+    await nav(p, 'ledgers');
+    await p.waitForSelector('[data-testid="bal-1300"]');
+    await p.click('[data-testid="lg-acc-1300"]');
+    await p.waitForSelector('[data-testid="lg-party-c1"]');
+    await p.waitForTimeout(300);
+    const pl = await p.evaluate(() => { const tr = document.querySelector('[data-testid="lg-party-c1"]'); const v = Array.from(tr.children).filter((td) => getComputedStyle(td).display !== 'none').map((td) => td.textContent.trim()); return { h: tr.getBoundingClientRect().height, v, sw: document.documentElement.scrollWidth }; });
+    ok(pl.v.length === 2 && /Ravi Stores/.test(pl.v[0]) && /3,000/.test(pl.v[1]) && pl.h < 60, 'at 390 px a party is one line — name · balance (' + pl.v.join(' · ') + ', ' + Math.round(pl.h) + ' px high)');
+    ok(pl.sw === 390, 'the party table at 390 px: document.scrollWidth === 390 (' + pl.sw + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-phone.png'), fullPage: false });
     /* a table is one card per row below 620 px, each cell named by its column */
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');

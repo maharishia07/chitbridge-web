@@ -404,13 +404,13 @@ async function route(S, r) {
   const headOf = async (tid) => ((await p.textContent('[data-testid="' + tid + '"]').catch(() => '')) || '').replace(/[‎‏⁦-⁩]/g, '').replace(/\s+/g, ' ').trim();
   const h1 = await headOf('db-head-JV/2026-27/000001'), h2 = await headOf('db-head-JV/2026-27/000002'), h3 = await headOf('db-head-JV/2026-27/000003');
   const t1 = await headOf('db-src-JV/2026-27/000001-at');
-  ok(/\d{1,2}:\d{2}/.test(t1) && h1 === 'Sale · Ravi Stores · Bill C2/26-27/0002 ' + t1 + ' · On credit · Counter C2 · Athi', 'day book: a bill entry says which bill and its time, how it was paid, which counter, who sold it ("' + h1 + '")');
+  ok(/\d{1,2}:\d{2}/.test(t1) && h1 === 'Sale · Ravi Stores · Bill C2/26-27/0002 ' + t1 + ' · On credit · Counter C2 · rung by Athi', 'day book: a bill entry says which bill and its time, how it was paid, which counter, who rang it up ("' + h1 + '")');
   ok(!/recorded/.test(h1) && await p.locator('[data-testid="db-src-JV/2026-27/000001-rec"]').count() === 0, 'day book: recorded the same day as the bill → no "recorded" note');
   ok(/^Walk-in day · 12 bills · Cash \S*1,240\.00 · UPI \S*860\.00 · Card \S*300\.00 · Counter C2$/.test(h2), 'day book: a walk-in day says how many bills, its cash / UPI / card split, which counter ("' + h2 + '")');
   ok(h3 === 'Payment received · Ravi Stores', 'day book: an entry with no chit shows its own word only ("' + h3 + '")');
   const h4 = await headOf('db-head-JV/2026-27/000004');
   const t4 = await headOf('db-src-JV/2026-27/000004-at');
-  ok(/\d{1,2}:\d{2}/.test(t4) && h4 === 'Received · Ravi Stores · Receipt R/C2/0001 ' + t4 + ' · UPI 4421…9931 · Counter C2 · Athi recorded 01 Oct', 'day book: money received says Received, its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + h4 + '")');
+  ok(/\d{1,2}:\d{2}/.test(t4) && h4 === 'Received · Ravi Stores · Receipt R/C2/0001 ' + t4 + ' · UPI 4421…9931 · Counter C2 · rung by Athi recorded 01 Oct', 'day book: money received says Received, its number and time, UPI and its reference, counter, who — and, taken in late, "recorded 01 Oct" ("' + h4 + '")');
   const opened = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
     try { const a = document.querySelector('[data-testid="db-src-JV/2026-27/000001"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }
@@ -605,7 +605,7 @@ async function route(S, r) {
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
-  ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' · On credit · Counter C2 · Athi recorded 01 Oct JV/2026-27/000001' && l1 === 'Payment received JV/2026-27/000003', 'ledger: each line names its bill, counter and seller ("' + l0 + '" · "' + l1 + '")');
+  ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' · On credit · Counter C2 · rung by Athi recorded 01 Oct JV/2026-27/000001' && l1 === 'Payment received JV/2026-27/000003', 'ledger: each line names its bill, counter and seller ("' + l0 + '" · "' + l1 + '")');
   const opened2 = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
     try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }

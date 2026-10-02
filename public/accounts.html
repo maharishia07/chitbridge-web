@@ -220,6 +220,12 @@ mark{background:#f6e3a8;color:inherit;border-radius:2px}
   #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
   #bk_body table.bktab td:empty{display:none}
   #bk_body .bktab tr.bkentry td{border:0}
+  /* the party table (1300 / 2100): one line a party — name · balance */
+  #bk_body table.bkparty tr{display:flex;align-items:baseline;gap:10px}
+  #bk_body table.bkparty td{width:auto}
+  #bk_body table.bkparty td.opt{display:none}
+  #bk_body table.bkparty td:nth-child(2){flex:1;text-align:left}
+  #bk_body table.bkparty td[data-l]::before{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
