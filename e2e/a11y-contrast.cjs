@@ -61,6 +61,7 @@ if (process.argv[2] && /\.html?$/i.test(process.argv[2])) {
     ['#FFFFFF', '--green', 4.5, 'the sign-in door\'s label'],
     ['#FFFFFF', '--red-i', 4.5, 'the red alert\'s mark'],
     ['#FFFFFF', '--amber-i', 4.5, 'the amber alert\'s mark'],
+    ['--green-d', '--green-t', 4.5, 'the Active badge on the CB Accounts tile'],
     ['--green', '--card', 3, 'the live dot and the hover edge (non-text, 1.4.11)'],
   ];
   let bad = 0, n = 0;

@@ -387,8 +387,10 @@ async function route(S, r) {
   await noAccounting(p, 'cheque form');
   await p.evaluate(() => { closeModal(); booksAfterPay(); });
 
+  /* the rail's Ledger item is ONE link to its own page now (2026-10-01, CB Accounts); the in-app screen stays reachable by URL / navTo */
+  ok(await p.getAttribute('[data-testid="nav-ledger"]', 'href') === '/accounts.html' && /CB Accounts/.test(await p.textContent('[data-testid="nav-ledger"]')), 'the rail\'s Ledger item is the link "CB Accounts ↗" → /accounts.html (same tab)');
   /* 6 · the Ledger screen */
-  await p.click('[data-testid="nav-ledger"]');
+  await p.evaluate(() => navTo('ledger'));
   await p.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
   await p.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 8000 });
   ok(true, 'day book lists the entry with its number');
@@ -449,7 +451,7 @@ async function route(S, r) {
   await p.click('[data-testid="todo-accept"]');
   await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
   ok(await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: several supplier bills opens Ledger › Waiting (a single one opens its sheet — e2e/chit-sheet.cjs), not Intake');
-  await p.click('[data-testid="nav-ledger"]');
+  await p.evaluate(() => navTo('ledger'));   /* the menu's Ledger item is now "CB Accounts ↗" (PR #7) — the in-app screen stays reachable by route */
   await p.click('[data-testid="bk-tab-daybook"]');
   await p.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 });
 
@@ -695,7 +697,7 @@ async function route(S, r) {
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
-  await p.click('[data-testid="nav-ledger"]'); await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
+  await p.evaluate(() => navTo('ledger')); await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
   await p.selectOption('[data-testid="lk_p"]', sep);
   const before = S.lastLock;
   await p.click('[data-testid="lk_unlock"]');
@@ -822,7 +824,7 @@ async function route(S, r) {
     S0.noToday = true; S0.waiting = []; S0.serverCheques = []; S0.items.c1 = [];
     const { ctx: c0, p: p0 } = await open(S0);
     await p0.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
-    await p0.click('[data-testid="nav-ledger"]');
+    await p0.evaluate(() => navTo('ledger'));
     await p0.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 15000 });
     await p0.waitForSelector('[data-testid="todo-none"]', { timeout: 8000 }).catch(() => {});
     ok(/Nothing waiting on you/.test(await p0.textContent('[data-testid="todo-none"]').catch(() => '')), 'all zero → one quiet line: Nothing waiting on you');

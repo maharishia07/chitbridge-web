@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CB Accounts</title>
+<!-- ⭐ CB ACCOUNTS — the Ledger as its own page (Athi, 2026-10-01: "split the ledger system out of the rail menu
+     and provide its own identity as CB Accounts and its own menu, profile page etc. — reuse the profile and avatar").
+     The LOOK is the designer's handoff (docs/design/ledgers-page/: sidebar, pinned header, the Ledgers view); the RULES are
+     docs/design/SYSTEM.md; e2e/cb-accounts.cjs proves both. The SCREENS are the app's own (app/cap-books.js — never a
+     second copy of them), and the floor under them (tx, toast, the Ledger switch) is app/accounts-shell.js, which app.html
+     loads too. This page is only: the shell, the Ledgers view, the Bills view, the off card and the gate.
+     ⚠️ Never the two banned words on a screen — CB Accounts, Ledger, Day book. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<style>
+/* the designer's tokens, as handed over (docs/design/ledgers-page/styles.css) … */
+:root{
+  --ground:#fbf6ec; --surface:#fffdf8; --side:#f4ecdc; --sub:#fbf6ec;
+  --ink:#2a2418; --ink-2:#3d3527; --muted:#6f6450; --muted-2:#5c5240;
+  --line:#e6dcc6; --line-2:#efe6d3; --line-3:#d8ccb0; --hover:#f3ead7;
+  --accent:#1f5f5b; --accent-ink:#fbf6ec;
+  --personal:#1f5f5b; --real:#a0661a; --nominal:#6b4e9b;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --serif:'Source Serif 4',Georgia,serif;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  /* … beside SYSTEM.md's status colours (green live · amber needs a hand · red wrong now · blue a link) */
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  /* the names app/cap-books.js paints its tables, chips and buttons with, mapped onto this page's palette */
+  --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:var(--muted);
+  --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;   /* SYSTEM's neutrals, literal so e2e/a11y-contrast.cjs <page> can measure them */
+  --warn-2:var(--amber-i); --ok-2:var(--green-d); --blue-d:var(--blue-i); --warn-tint:var(--amber-t); --blue-tint:var(--blue-t);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+a{color:inherit}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:flex;height:100vh;overflow:hidden;position:relative}
+
+/* Sidebar */
+.side{width:248px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid #e2d6bc;display:flex;flex-direction:column;transition:width .2s ease}
+.side.collapsed{width:68px}
+.side.collapsed .label{display:none}
+.side.collapsed .nav-chev{transform:rotate(180deg)}
+.brand{height:64px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2d6bc}
+.logo{width:34px;height:34px;flex-shrink:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
+.brand-text{display:flex;align-items:center;gap:8px;min-width:0}
+.brand-name{font-family:var(--serif);font-size:19px;font-weight:700;white-space:nowrap}
+.nav{flex-grow:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-btn{width:100%;height:44px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;border:none;border-radius:8px;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500;text-align:left;white-space:nowrap}
+.nav-btn:hover{background:#ece1c9}
+.nav-btn.active{background:#e6d9bd;color:var(--accent);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
+.nav-btn .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--amber-t);color:var(--amber-i)}
+.nav-chev{transition:transform .2s ease}
+.side-foot{padding:8px;border-top:1px solid #e2d6bc}
+.side-foot .nav-btn{font-size:13px;color:var(--muted-2)}
+
+/* Main */
+.main{flex-grow:1;min-width:0;height:100%;overflow-y:auto}
+.top{position:sticky;top:0;z-index:5;background:rgba(251,246,236,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:20px 40px 16px;display:flex;flex-direction:column;gap:16px}
+.top-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.titles{display:flex;flex-direction:column;gap:4px;min-width:0}
+h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.01em}
+.summary{font-size:13.5px;color:var(--muted)}
+.summary:empty{display:none}
+/* the shop, the way home, and the avatar — the app's own (Profile · Sign out) */
+.who{display:flex;align-items:center;gap:12px;position:relative}
+.shop{font-size:13.5px;color:var(--muted)}
+.home{display:inline-flex;align-items:center;height:40px;padding:0 14px;border:1px solid var(--line-3);border-radius:8px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600;text-decoration:none}
+.home:hover{background:var(--hover)}
+.avatar{width:40px;height:40px;border-radius:50%;border:1px solid var(--line-3);background:var(--surface);color:var(--muted-2);font-size:13px;font-weight:700}
+.avatar:hover{background:var(--hover)}
+.avmenu{position:absolute;top:calc(100% + 6px);right:0;z-index:20;min-width:200px;max-width:min(300px,86vw);background:var(--surface);border:1px solid var(--line-3);border-radius:12px;box-shadow:0 10px 24px rgba(42,36,24,.16);overflow:hidden}
+.avmenu[hidden]{display:none}
+.avmenu .me{padding:10px 14px;border-bottom:1px solid var(--line-2)}
+.avmenu .me b{display:block;font-size:14px}
+.avmenu .me span{font-size:12.5px;color:var(--muted)}
+.avmenu a,.avmenu button{display:flex;align-items:center;width:100%;min-height:44px;padding:0 14px;border:none;background:none;color:var(--ink);font-size:14px;text-align:left;text-decoration:none}
+.avmenu a:hover,.avmenu button:hover{background:var(--hover)}
+
+.tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tools[hidden]{display:none}
+.search{flex-grow:1;min-width:0;max-width:420px;height:44px;display:flex;align-items:center;gap:10px;padding:0 14px;border:1px solid var(--line-3);border-radius:10px;background:var(--surface);color:var(--muted)}
+.search svg{width:16px;height:16px;stroke-width:2}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(31,95,91,.15)}
+.search input{flex-grow:1;min-width:0;border:none;background:transparent;font:inherit;font-size:14px;color:var(--ink)}
+.search input:focus{outline:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{height:36px;padding:0 12px;display:flex;align-items:center;gap:8px;border-radius:999px;border:1px solid var(--line-3);background:var(--surface);color:var(--ink);font-size:13px;font-weight:600}
+.chip:hover{border-color:#a8996f}
+.chip .n{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.chip[aria-pressed="true"] .n{color:#e9dfc8}
+.bulk{margin-left:auto;display:flex;gap:4px}
+.link-btn{height:36px;padding:0 10px;border:none;border-radius:8px;background:transparent;color:var(--accent);font-size:13px;font-weight:600}
+.link-btn:hover{background:var(--hover)}
+
+.content{padding:24px 40px 120px;display:flex;flex-direction:column;gap:16px;max-width:1400px}
+.section{border:1px solid var(--line);border-radius:14px;background:var(--surface);overflow:hidden}
+.sec-head{width:100%;min-height:64px;padding:14px 20px;display:flex;align-items:center;gap:14px;border:none;background:transparent;text-align:left;color:var(--ink)}
+.sec-head:hover{background:var(--hover)}
+.sec-head .chev{color:var(--muted);stroke-width:2;transition:transform .2s ease}
+.section.open .chev{transform:rotate(90deg)}
+.dot{width:10px;height:10px;flex-shrink:0;border-radius:3px}
+.sec-text{display:flex;flex-direction:column;gap:3px;flex-grow:1;min-width:0}
+.sec-title-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec-title{font-family:var(--serif);font-size:19px;font-weight:700}
+.sec-kind{font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--muted)}
+.sec-blurb{font-size:13px;color:var(--muted)}
+.sec-rule{font-size:12.5px;font-style:italic;color:var(--muted);text-align:right;max-width:260px}
+.pill{flex-shrink:0;font-family:var(--mono);font-size:12px;font-weight:600;padding:4px 9px;border-radius:999px;background:var(--hover);color:var(--muted-2)}
+.sec-body{display:none;border-top:1px solid var(--line-2);padding:16px 20px 20px;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px;align-items:start}
+.section.open .sec-body{display:grid}
+.group{border:1px solid var(--line-2);border-radius:10px;background:var(--sub);overflow:hidden;min-width:0}
+.group-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-2)}
+.group-title{font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--muted-2)}
+.group-count{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.group-list{padding:4px;display:flex;flex-direction:column}
+.acct{width:100%;min-height:44px;padding:6px 10px;display:flex;align-items:center;gap:12px;border:none;border-radius:7px;background:transparent;text-align:left;color:var(--ink)}
+.acct:hover{background:#f6eedd}
+.acct .code{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--accent);min-width:40px;flex-shrink:0}
+.acct .name{flex-grow:1;min-width:0;font-size:14px;font-weight:500;line-height:1.3}
+/* the Dr/Cr balance — one read of the trial balance; a Dr is what the shop is owed or holds, a Cr what it owes or has earned */
+.acct .bal{flex-shrink:0;font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:12.5px;font-weight:600;color:var(--ink);text-align:right;white-space:nowrap}
+.acct .bal i{font-style:normal;font-size:11px;font-weight:600;color:var(--muted);margin-left:3px}
+.acct .bal.nil{color:var(--muted);font-weight:500}
+mark{background:#f6e3a8;color:inherit;border-radius:2px}
+.empty{padding:48px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
+.empty strong,.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
+.empty .big{font-size:26px}
+.empty button{height:44px;padding:0 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font-size:13.5px;font-weight:600}
+.openbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.openbar b{font-family:var(--mono);font-size:14px}
+
+/* the one card the page shows when something must happen first: Ledger off, signed out, another shop still here */
+.card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:22px 22px 20px;max-width:560px;display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0;font-family:var(--serif);font-size:21px;font-weight:700}
+.card p{margin:0;color:var(--muted);font-size:14px}
+.card.bad{border-color:var(--red-b);background:var(--red-t)}
+.card.bad h2,.card.bad p{color:var(--red-i)}
+.act{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;height:44px;padding:0 20px;border:1px solid var(--accent);border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:700;text-decoration:none}
+.act:hover{background:#174a47}
+.act.ghost{background:transparent;color:var(--accent)}
+.act[disabled]{opacity:.6;cursor:default}
+
+/* Bills — the two system folders as two tabs, one step chip per bill (the server decides every step) */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tab{height:40px;padding:0 14px;display:flex;align-items:center;gap:8px;border:1px solid var(--line-3);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600}
+.tab .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.tab[aria-pressed="true"] .n{color:#e9dfc8}
+.bills{display:flex;flex-direction:column;gap:8px}
+.bill{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center;width:100%;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);text-align:left;color:var(--ink)}
+.bill:hover{border-color:var(--accent)}
+.bill .t{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.bill .s{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.bill .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.step{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line-3);font-size:12px;font-weight:700;background:var(--panel,#F3EFE6);color:var(--ink-2);justify-self:end}
+.step.blue{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
+.step.amber{background:var(--amber-t);border-color:var(--amber-b);color:var(--amber-i)}
+.step.red{background:var(--red-t);border-color:var(--red-b);color:var(--red-i)}
+.step.green{background:var(--green-t);border-color:var(--green-b);color:var(--green-d)}
+
+/* ── the app's own screens (cap-books.js), dressed for this page ── */
+.sec{font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-2);margin:14px 0 8px}
+.mono{font-family:var(--mono)}
+.inp{width:100%;border:1px solid var(--line-3);border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink)}
+.supacts{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.supacts button,#bk_body button{min-height:40px;border:1px solid var(--line-3);background:var(--surface);color:var(--ink);border-radius:9px;padding:5px 12px;font-size:13.5px;font-weight:600}
+.supacts button:hover,#bk_body button:hover{background:var(--hover)}
+.supacts button.supact-pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.optchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line-3);border-radius:999px;padding:3px 10px;font-size:var(--fs-1);font-weight:600;background:var(--surface)}
+.bktodo{min-height:44px}
+.loadwrap{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:var(--fs-2);padding:18px 0}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-3);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#bk_body label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
+#bk_body table{max-width:100%}
+.statement-wrap{min-width:0}
+
+/* toast (app/accounts-shell.js writes into #toast) */
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
+#toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 24px rgba(42,36,24,.25)}
+#toast .toast.err{background:var(--red-i)}
+#toast .toast.warn{background:var(--amber-i)}
+#toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}
+
+.scroll::-webkit-scrollbar{width:10px}
+.scroll::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:10px;border:3px solid var(--ground)}
+
+/* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
+@media (max-width:760px){
+  .side{width:64px}
+  .side .label,#toggleNav{display:none}
+  .brand{padding:0 15px}
+  .top,.content{padding-left:16px;padding-right:16px}
+  .sec-rule{display:none}
+  .sec-head{padding:12px 14px;gap:10px}
+  .bulk{margin-left:0}
+  .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}
+  .nav-btn{position:relative}
+}
+@media (max-width:620px){
+  .top{padding-top:14px;gap:12px}
+  h1{font-size:24px}
+  .who{gap:8px}
+  .shop{display:none}
+  .sec-body{padding:12px}
+  #bk_body table.bktab,#bk_body table.bktab tbody,#bk_body table.bktab tfoot,#bk_body table.bktab tr,#bk_body table.bktab td{display:block;width:100%}
+  #bk_body table.bktab thead{display:none}
+  #bk_body table.bktab tr{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:8px 12px;margin-bottom:8px}
+  #bk_body table.bktab td{border:0;padding:3px 0;display:flex;gap:10px;justify-content:space-between;text-align:right;overflow-wrap:anywhere}
+  #bk_body table.bktab td[data-l]::before{content:attr(data-l);font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:var(--muted-2);text-align:left;flex-shrink:0}
+  #bk_body table.bktab td:empty{display:none}
+  #bk_body .bktab tr.bkentry td{border:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h4"/></svg></div>
+      <div class="brand-text label"><span class="brand-name">CB Accounts</span></div>
+    </div>
+    <nav class="nav scroll" id="nav" aria-label="CB Accounts"></nav>
+    <div class="side-foot">
+      <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
+        <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main scroll">
+    <header class="top">
+      <div class="top-row">
+        <div class="titles">
+          <h1 id="title">CB Accounts</h1>
+          <div class="summary" id="summary"></div>
+        </div>
+        <div class="who" id="who"></div>
+      </div>
+      <div class="tools" id="tools" hidden>
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <span class="sr-only">Search ledgers</span>
+          <input type="search" id="q" placeholder="Code or name, e.g. 6010">
+        </label>
+        <div class="chips" id="chips"></div>
+        <div class="bulk">
+          <button type="button" class="link-btn" id="expandAll">Expand all</button>
+          <button type="button" class="link-btn" id="collapseAll">Collapse all</button>
+        </div>
+      </div>
+    </header>
+    <div class="content" id="content" data-testid="acc-content"></div>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* ── the host globals the app's own files expect (app.html declares these with let/const; so does this page) ── */
+/* the API base, decided the way app.html decides it (CFG.API_BASE) and the index page decides it (apiBase) */
+const CFG = { API_BASE: (function(){
+  try{
+    var forced = localStorage.getItem('cb_api_base');
+    if (forced) return forced === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : forced;
+    var h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+  }catch(_){}
+  return 'https://chitbridge-api-production.up.railway.app';
+})() };
+let SESSION = { token: null, role: null, name: null, entity: null, bridgeId: null };
+const EP = {};                       /* the Ledger's boot rows come from accounts-shell.js; cap-folders.js and cap-books.js add the rest */
+let UI = { vp: 'lap', lw: 340 };     /* the two fields cap-books.js reads */
+function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → the app's sign-in */
+</script>
+<script src="/app/core.js"></script>
+<script src="/app/accounts-shell.js"></script>
+<script>Object.assign(EP, CB_BOOKS_EP);</script>
+<script src="/engine/money.js"></script>
+<script src="/app/locale.js"></script>
+<script src="/app/helpers.js"></script>
+<script src="/app/cap-folders.js"></script>
+<script src="/app/cap-books.js"></script>
+<script src="/app/one-person.js"></script>
+<script>
+'use strict';
+/* ═══ CB ACCOUNTS — the page. It paints; the numbers are the server's (SYSTEM rule 12). ═══════════════════════════ */
+
+/* the sidebar: the designer's NAV_ITEMS (data.js), with Bills after Dues. [id = the app's tab id, label, icon path] */
+const NAV = [
+  ['daybook', 'Day book', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5'],
+  ['ledgers', 'Ledgers', 'M5 3h14v18H5zM9 7h6M9 11h6M9 15h4'],
+  ['tb', 'Trial balance', 'M12 3v18M5 21h14M4 8h16M7 8l-3 7h6zM17 8l-3 7h6z'],
+  ['pl', 'P&L', 'M4 20V4M4 20h16M8 15l4-4 3 3 5-6'],
+  ['bs', 'Balance sheet', 'M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18'],
+  ['dues', 'Dues', 'M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9'],
+  ['bills', 'Bills', 'M6 3h9l3 3v15H6zM9 9h6M9 13h6M9 17h4'],
+  ['cheques', 'Cheques', 'M3 6h18v12H3zM7 14h5M15 10h2'],
+  ['waiting', 'Waiting', 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2'],
+  ['lock', 'Month lock', 'M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4'],
+  ['packs', 'Packs', 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10'],
+  ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
+  ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
+];
+const TITLES = { ledgers: 'Chart of accounts' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
+
+/* the Ledgers view's grouping — the designer's data.js (sections → groups), decided by the CODE, never by a name.
+   The accounts themselves, and their names, are the server's (GET /api/books/accounts). */
+const SECTIONS = [
+  { id: 'people', kind: 'personal', label: 'PERSONAL', title: 'People', blurb: 'Customers and suppliers', rule: 'Debit the receiver, credit the giver', color: 'var(--personal)' },
+  { id: 'real', kind: 'real', label: 'REAL', title: 'Things you hold', blurb: 'Cash, bank, stock, and what you owe on them', rule: 'Debit what comes in, credit what goes out', color: 'var(--real)' },
+  { id: 'nominal', kind: 'nominal', label: 'NOMINAL', title: 'Income and expenses', blurb: 'What you earn and what it costs to run the shop', rule: 'Debit expenses and losses, credit income and gains', color: 'var(--nominal)' },
+];
+/* [section, group, matches this code] — in the designer's order. A code none of them claims lands in OTHER, never nowhere. */
+const GROUPS = [
+  ['people', 'PARTIES', /^(1300|2100)/],
+  ['real', 'CASH & BANK', /^1[45]\d\d/],
+  ['real', 'STOCK & ADVANCES', /^(12|17|24)\d\d/],
+  ['real', 'GST', /^22[01]\d/],
+  ['real', 'TAXES & SUSPENSE', /^(222|29)\d/],
+  ['real', "OWNER'S EQUITY", /^3\d\d\d/],
+  ['nominal', 'INCOME', /^4\d\d\d/],
+  ['nominal', 'DIRECT COSTS', /^5\d\d\d/],
+  ['nominal', 'OPERATING EXPENSES', /^6[01]\d\d/],
+  ['nominal', 'ADJUSTMENTS', /^6[89]\d\d/],
+];
+function groupOf(code){
+  const c = String(code == null ? '' : code);
+  for (const g of GROUPS) if (g[2].test(c)) return [g[0], g[1]];
+  return [/^[456]/.test(c) ? 'nominal' : 'real', 'OTHER'];
+}
+/* the control lines (1300 Customers, 2100 Suppliers) first, then by code */
+function byCode(a, b){
+  const ax = (a[0] === '1300' || a[0] === '2100') ? 0 : 1, bx = (b[0] === '1300' || b[0] === '2100') ? 0 : 1;
+  return ax - bx || String(a[0]).localeCompare(String(b[0]), 'en', { numeric: true });
+}
+function sectionsOf(accounts){
+  const out = SECTIONS.map((s) => Object.assign({}, s, { groups: [] }));
+  const order = GROUPS.map((g) => g[1]).concat(['OTHER']);
+  accounts.filter((a) => !a.is_group).forEach((a) => {
+    const [sid, gt] = groupOf(a.code), s = out.find((x) => x.id === sid);
+    let g = s.groups.find((x) => x.title === gt);
+    if (!g) { g = { title: gt, accounts: [] }; s.groups.push(g); }
+    g.accounts.push([String(a.code), String(a.name || '')]);
+  });
+  out.forEach((s) => { s.groups.sort((a, b) => order.indexOf(a.title) - order.indexOf(b.title)); s.groups.forEach((g) => g.accounts.sort(byCode)); });
+  return out;
+}
+
+const $ = (id) => document.getElementById(id);
+const ACC = { q: '', kind: 'all', closed: new Set(), secs: null, bal: null, open: null, billTab: 'B-2100', gen: 0 };
+let SESS = null, MINE = null, ON = false;
+
+function session(){
+  try{
+    const s = JSON.parse(localStorage.getItem('cb_sess') || 'null');
+    return (window.CBOnePerson && CBOnePerson.who(s)) ? s : null;
+  }catch(_){ return null; }
+}
+const isOwner = () => SESSION.role === 'entity';   /* the shop's own session is its owner (routes/books.js isOwner); a co-assist is not */
+
+/* ── the chrome: sidebar, header, avatar menu ── */
+function navPaint(active){
+  $('nav').innerHTML = NAV.map(([id, label, d]) =>
+    `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(label)}"${id === active ? ' aria-current="page"' : ''}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(label)}</span>${id === 'waiting' && (BK.waiting || []).length ? `<span class="n" data-testid="acc-waiting-n">${(BK.waiting || []).length}</span>` : ''}</button>`).join('');
+}
+$('nav').addEventListener('click', (e) => { const b = e.target.closest('.nav-btn'); if (b) show(b.dataset.view); });
+$('toggleNav').addEventListener('click', () => {
+  const open = $('side').classList.toggle('collapsed') === false;
+  $('toggleNav').setAttribute('aria-expanded', String(open));
+  $('toggleNav').setAttribute('aria-label', open ? 'Collapse sidebar' : 'Expand sidebar');
+});
+function whoPaint(){
+  const nm = SESS ? (SESS.entity || SESS.name || '') : '';
+  $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
+    <a class="home" href="/" data-testid="acc-home">⌂ Home</a>
+    <button type="button" class="avatar" data-testid="avatar" aria-haspopup="true" aria-expanded="false" title="${esc(nm)}">${esc(String(SESS && (SESS.name || SESS.entity) || '?').slice(0, 1).toUpperCase())}</button>
+    <div class="avmenu" id="avmenu" data-testid="avatar-menu" hidden>
+      <div class="me"><b>${esc(SESS ? SESS.name || '' : '')}</b><span>${esc(isOwner() ? 'Owner' : 'Co-assist')} · ${esc(nm)}</span></div>
+      <a href="/app.html#/app/profile" data-testid="nav-profile">👤 Profile</a>
+      <button type="button" data-testid="nav-signout" id="signout">Sign out</button>
+    </div>`;
+  const av = $('who').querySelector('.avatar'), menu = $('avmenu');
+  av.onclick = (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; av.setAttribute('aria-expanded', String(!menu.hidden)); };
+  $('signout').onclick = signOut;
+}
+document.addEventListener('click', (e) => { const m = $('avmenu'); if (m && !m.hidden && !e.target.closest('.who')) { m.hidden = true; } });
+document.addEventListener('keydown', (e) => { const m = $('avmenu'); if (e.key === 'Escape' && m && !m.hidden) { m.hidden = true; } });
+/* the app's sign-out (logoutNow): the session and the per-person nav memory go, then the app's sign-in opens. The app's
+   other tabs hear cb_sess go (its one `storage` reader) and sign out with it. */
+function signOut(){
+  try{
+    localStorage.removeItem('cb_sess');
+    Object.keys(localStorage).filter((k) => /^cb_nav(@|$)/.test(k)).forEach((k) => localStorage.removeItem(k));
+  }catch(_){}
+  location.href = '/app.html#/login';
+}
+/* the pages of the app this page hands over to (the Day book's to-do cards, a bill) */
+function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+function openChit(id){ window.open('/app.html#/app/chit/' + encodeURIComponent(id), '_blank', 'noopener'); }
+
+/* the page's own confirm — the same <dialog> the index tile uses (accounts-shell.js); cap-books.js asks through this name */
+const confirmAsk = CBConfirm;
+
+/* ── which view, and its chrome ── */
+function chrome(view){
+  const nav = NAV.find((n) => n[0] === view) || NAV[0];
+  navPaint(nav[0]);
+  $('title').hidden = false;
+  $('title').textContent = TITLES[nav[0]] || nav[1];
+  $('tools').hidden = !(nav[0] === 'ledgers' && !ACC.open);
+  if (nav[0] !== 'ledgers' || ACC.open) $('summary').textContent = '';
+  try{ history.replaceState(null, '', '#' + nav[0]); }catch(_){}
+}
+BK.onTab = (t) => { if (t !== 'ledgers') ACC.open = null; chrome(t); };
+BK.views = { ledgers: (body) => accLedgers(body), bills: (body) => accBills(body) };
+function show(view){
+  if (!ON) return;
+  ACC.open = null;
+  $('content').innerHTML = '<div id="bk_body" data-testid="bk-body"></div>';
+  bkTab(view, true);
+}
+
+/* ═══ THE LEDGERS VIEW — the designer's look, the real accounts ══════════════════════════════════════════════════ */
+const hl = (text, q) => {
+  if (!q) return esc(text);
+  const i = text.toLowerCase().indexOf(q);
+  if (i < 0) return esc(text);
+  return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+};
+const countOf = (s) => s.groups.reduce((u, g) => u + g.accounts.length, 0);
+
+/* ⭐ ONE read of the trial balance gives every row's balance — never one read per row (SYSTEM rule 12). */
+async function accBalances(){
+  const r = await api('booksTB', { query: { asOf: bkToday() } });
+  const map = {};
+  ((r && r.rows) || []).forEach((x) => { map[String(x.code)] = Number(x.dr_minor || 0) - Number(x.cr_minor || 0); });
+  return { map, cur: r && r.currency };
+}
+async function accLedgers(body){
+  const g = ++ACC.gen;
+  try{
+    const [r, bal] = await Promise.all([api('booksAccounts'), accBalances().catch(() => null)]);
+    if (g !== ACC.gen) return;
+    ACC.secs = sectionsOf((r && r.accounts) || []);
+    ACC.bal = bal;                                     /* null = the read failed: no balance is shown, rather than a made-up nil */
+    ledgersPaint();
+    chipsPaint();
+  }catch(e){ body.innerHTML = bkErr(e); }
+}
+function chipsPaint(){
+  if (!ACC.secs) return;
+  const total = ACC.secs.reduce((t, s) => t + countOf(s), 0);
+  const opts = [['all', 'All', total]].concat(ACC.secs.map((s) => [s.kind, s.kind[0].toUpperCase() + s.kind.slice(1), countOf(s)]));
+  $('chips').innerHTML = opts.map(([id, label, n]) =>
+    `<button type="button" class="chip" data-testid="acc-chip-${id}" data-kind="${id}" aria-pressed="${ACC.kind === id}">${label}<span class="n">${n}</span></button>`).join('');
+}
+function balHTML(code){
+  if (!ACC.bal) return '';
+  const v = ACC.bal.map[code];
+  if (v === undefined) return `<span class="bal nil" data-testid="bal-${esc(code)}" title="${esc(tx('Not on the trial balance'))}">—</span>`;
+  if (!v) return `<span class="bal" data-testid="bal-${esc(code)}">${esc(bkMoney(0, ACC.bal.cur))}</span>`;
+  return `<span class="bal" data-testid="bal-${esc(code)}">${esc(bkMoney(Math.abs(v), ACC.bal.cur))}<i>${v > 0 ? 'Dr' : 'Cr'}</i></span>`;
+}
+function ledgersPaint(){
+  const host = $('content');
+  if (!ACC.secs || ACC.open) return;
+  const q = ACC.q.trim().toLowerCase();
+  const match = (a) => !q || a[0].toLowerCase().includes(q) || a[1].toLowerCase().includes(q);
+  const total = ACC.secs.reduce((t, s) => t + countOf(s), 0);
+  let shown = 0;
+  const html = ACC.secs.filter((s) => ACC.kind === 'all' || s.kind === ACC.kind).map((s) => {
+    const groups = s.groups.map((g) => ({ title: g.title, accounts: g.accounts.filter(match) })).filter((g) => g.accounts.length);
+    const n = groups.reduce((t, g) => t + g.accounts.length, 0);
+    if (!n) return '';
+    shown += n;
+    const open = q ? true : !ACC.closed.has(s.id);
+    return `<section class="section${open ? ' open' : ''}" data-testid="acc-sec-${s.id}">
+      <button type="button" class="sec-head" data-id="${s.id}" aria-expanded="${open}" aria-controls="body-${s.id}">
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="dot" style="background:${s.color}"></span>
+        <span class="sec-text"><span class="sec-title-row"><span class="sec-title">${esc(s.title)}</span><span class="sec-kind">${s.label}</span></span>
+        <span class="sec-blurb">${esc(s.blurb)}</span></span>
+        <span class="sec-rule">${esc(s.rule)}</span>
+        <span class="pill">${n} ${n === 1 ? 'ledger' : 'ledgers'}</span>
+      </button>
+      <div class="sec-body" id="body-${s.id}">
+        ${groups.map((g) => `<div class="group" data-testid="acc-group-${esc(g.title)}">
+          <div class="group-head"><span class="group-title">${esc(g.title)}</span><span class="group-count">${g.accounts.length}</span></div>
+          <div class="group-list">${g.accounts.map(([code, name]) =>
+            `<button type="button" class="acct" data-testid="lg-acc-${esc(code)}" data-code="${esc(code)}"><span class="code">${hl(code, q)}</span><span class="name">${hl(name, q)}</span>${balHTML(code)}</button>`).join('')}</div>
+        </div>`).join('')}
+      </div></section>`;
+  }).join('');
+  host.innerHTML = '<div id="bk_body" data-testid="bk-body">' + (html || `<div class="empty"><strong>${ACC.q ? 'No ledgers match “' + esc(ACC.q) + '”' : 'No ledgers yet'}</strong>${ACC.q ? '<button type="button" id="clear">Clear search</button>' : ''}</div>`) + '</div>';
+  $('summary').textContent = (shown === total ? `${total} ledgers` : `${shown} of ${total} ledgers`) + ' in 3 classes · personal, real and nominal';
+}
+$('content').addEventListener('click', (e) => {
+  const head = e.target.closest('.sec-head');
+  if (head){ const id = head.dataset.id; ACC.closed.has(id) ? ACC.closed.delete(id) : ACC.closed.add(id); return ledgersPaint(); }
+  if (e.target.id === 'clear'){ ACC.q = ''; $('q').value = ''; return ledgersPaint(); }
+  const acct = e.target.closest('.acct');
+  /* the designer's hook (README: "Clicking an account fires `document` event `ledger:open` with { code }") — wired below */
+  if (acct) document.dispatchEvent(new CustomEvent('ledger:open', { detail: { code: acct.dataset.code } }));
+  const back = e.target.closest('[data-testid="acc-back"]');
+  if (back) show('ledgers');
+  const tab = e.target.closest('.tab');
+  if (tab){ ACC.billTab = tab.dataset.code; bkTab('bills', true); }
+  const bill = e.target.closest('.bill');
+  if (bill) openChit(bill.dataset.id);
+});
+$('chips').addEventListener('click', (e) => { const b = e.target.closest('.chip'); if (!b) return; ACC.kind = b.dataset.kind; chipsPaint(); ledgersPaint(); });
+$('q').addEventListener('input', (e) => { ACC.q = e.target.value; ledgersPaint(); });
+$('expandAll').addEventListener('click', () => { ACC.closed.clear(); ledgersPaint(); });
+$('collapseAll').addEventListener('click', () => { (ACC.secs || []).forEach((s) => ACC.closed.add(s.id)); ledgersPaint(); });
+
+/* a ledger opens: the app's own ledger view (statement + date range), reached through its own function */
+document.addEventListener('ledger:open', (e) => {
+  const code = e.detail && e.detail.code; if (!code) return;
+  ACC.open = code; BK.lgAcc = code;
+  const a = ACC.secs && ACC.secs.reduce((f, s) => f || s.groups.reduce((g, x) => g || x.accounts.find((y) => y[0] === code), null), null);
+  $('tools').hidden = true; $('summary').textContent = '';
+  $('content').innerHTML = `<div id="bk_body" data-testid="bk-body"><div class="openbar"><button type="button" class="link-btn" data-testid="acc-back">‹ All ledgers</button><b data-testid="acc-open-code">${esc(code)}</b><span>${esc(a ? a[1] : '')}</span></div>`
+    + bkRangeHTML('lg', 'bkLedgerShow()') + '<div id="lg_out" data-testid="lg_out" class="statement-wrap"></div></div>';
+  bkLedgerShow();
+});
+
+/* ═══ BILLS — the two system folders (GET /api/folders → B-2100 Received, B-1300 Issued) as two tabs ═════════════ */
+/* the step chip's colour by the step the SERVER names (bill.step); the words are the server's label — the page never decides a step */
+const STEP_TONE = { received: '', goods_checked: 'blue', accepted: 'amber', disputed: 'red', issued: '', closed: 'green' };
+async function accBills(body){
+  try{
+    /* the folder list arrives through cap-folders.js's own splitter (_foldersFrom → UI.sysFolders), as the app reads it */
+    _foldersFrom(await api('foldersList'));
+    const sys = (UI.sysFolders || []).filter((f) => f.code === 'B-2100' || f.code === 'B-1300')
+      .sort((a, b) => (a.code === 'B-2100' ? -1 : 1) - (b.code === 'B-2100' ? -1 : 1));
+    if (!sys.length){ body.innerHTML = emptyState('🧾', tx('No bills folders'), ''); return; }
+    if (!sys.some((f) => f.code === ACC.billTab)) ACC.billTab = sys[0].code;
+    const cur = sys.find((f) => f.code === ACC.billTab);
+    const rows = await api('folderChits', { params: { id: cur.folder_id }, query: { state: 'open' } });
+    /* ⚠️ api() collapses {chits:[…]} to the array (see loadFolderChits) */
+    const list = Array.isArray(rows) ? rows : ((rows && (rows.chits || rows.rows || rows.data)) || []);
+    const word = (f) => f.code === 'B-2100' ? 'Received' : 'Issued';
+    const tabs = '<div class="tabs" role="tablist">' + sys.map((f) =>
+      `<button type="button" class="tab" role="tab" data-testid="bills-tab-${esc(f.code)}" data-code="${esc(f.code)}" aria-pressed="${f.code === ACC.billTab}">${word(f)}<span class="n">${Number(f.count) || 0}</span></button>`).join('') + '</div>';
+    const cards = list.map((c) => {
+      const b = c.bill || {};
+      const sub = [c.counterparty_name, c.bill_no].filter(Boolean).map(esc).join(' · ');
+      const when = b.at ? ' · ' + esc(bkDate(b.at)) : '';
+      const amt = c.value != null && c.value !== '' ? CBLocale.money(Number(c.value), c.currency || bkCur()) : '';
+      return `<button type="button" class="bill" data-testid="bill-${esc(c.chit_id)}" data-id="${esc(c.chit_id)}">
+        <span class="t">${esc(c.manual_subject || c.auto_subject || c.bill_no || tx('Bill'))}</span>
+        <span class="amt">${esc(amt)}</span>
+        <span class="s">${sub}${b.by ? ' · ' + esc(b.by) : ''}${when}</span>
+        ${b.label ? `<span class="step ${STEP_TONE[b.step] || ''}" data-testid="bill-step-${esc(c.chit_id)}" data-step="${esc(b.step || '')}">${esc(b.label)}</span>` : ''}
+      </button>`;
+    }).join('');
+    body.innerHTML = tabs + (cards ? '<div class="bills" data-testid="bills-list">' + cards + '</div>' : emptyState('🧾', tx('Nothing open'), ''));
+  }catch(e){ body.innerHTML = bkErr(e); }
+}
+
+/* a table becomes one card per row on a phone: each cell is named by its column head (SYSTEM rule 8) */
+function cardLabels(root){
+  root.querySelectorAll('table.bktab').forEach((t) => {
+    const heads = Array.from(t.querySelectorAll('thead th')).map((h) => h.textContent.trim());
+    t.querySelectorAll('tbody tr, tfoot tr').forEach((tr) => {
+      let col = 0;
+      Array.from(tr.children).forEach((td) => { if (!td.hasAttribute('data-l') && heads[col]) td.setAttribute('data-l', heads[col]); col += td.colSpan || 1; });
+    });
+  });
+}
+new MutationObserver(() => cardLabels($('content'))).observe($('content'), { childList: true, subtree: true });
+
+/* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
+function card(html, bad){ $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('tools').hidden = true; $('summary').textContent = ''; }
+function signedOut(why){
+  SESS = null; MINE = null; ON = false; ACC.gen++;
+  $('who').innerHTML = '';
+  navPaint(''); $('nav').innerHTML = '';
+  card(`<h2>${esc(why || 'You are signed out')}</h2><a class="act" data-testid="signin-door" href="/app.html#/login">Sign in</a>`);
+}
+/* another shop still here (an app tab, its unsent drafts) → the Ledger waits; one sentence, one button each (CBOnePerson) */
+function closeFirst(r){
+  $('nav').innerHTML = '';
+  card(r.others.map((o, i) => `<h2 data-testid="close-first">${esc(CBOnePerson.sentence(o))}</h2>
+      <button type="button" class="act" data-testid="close-first-go" data-i="${i}">${esc(CBOnePerson.buttonLabel(o))}</button>`).join(''), true);
+  $('content').querySelectorAll('[data-testid="close-first-go"]').forEach((b) => {
+    b.onclick = () => {
+      $('content').querySelectorAll('button').forEach((x) => { x.disabled = true; });
+      b.textContent = 'Signing it out…';
+      CBOnePerson.clearOut(r.others[+b.getAttribute('data-i')], MINE.name).then(start, start);
+    };
+  });
+}
+/* the Ledger is off: ONE card. The owner switches it on here (CBLedger — the same words, confirm and call as Settings and the
+   index tile); anyone else is told whom to ask. */
+function offCard(){
+  ON = false; navPaint(''); $('nav').innerHTML = '';
+  card(`<h2 data-testid="acc-off">CB Accounts is not switched on</h2>`
+    + (isOwner() ? `<button type="button" class="act" data-testid="acc-switch-on" id="switchOn">Switch on</button>`
+                 : `<p data-testid="acc-ask-owner">Ask the owner to switch it on</p>`));
+  const b = $('switchOn');
+  if (b) b.onclick = () => CBLedger.run(true, {
+    ask: confirmAsk,
+    working: () => { b.disabled = true; b.textContent = 'Working…'; },
+    call: (on) => CBLedger.call({ api: api }, on),
+    done: () => start(),
+    failed: (e) => { b.disabled = false; b.textContent = 'Switch on'; toast(tx('Could not switch it on.') + ' ' + friendlyErr(e)); },
+  });
+}
+function failedCard(){
+  card(`<h2>CB Accounts could not be read</h2><p>Check the connection, then try again.</p><button type="button" class="act" data-testid="acc-retry" id="retry">Try again</button>`, true);
+  $('retry').onclick = () => start();
+}
+
+/* ═══ START ═══════════════════════════════════════════════════════════════════════════════════════════════════ */
+async function start(){
+  SESS = session();
+  if (!SESS) return signedOut('');
+  MINE = CBOnePerson.who(SESS);
+  SESSION = Object.assign({ token: null }, { token: SESS.token, role: SESS.role, name: SESS.name, entity: SESS.entity, bridgeId: SESS.bridgeId, duty: SESS.duty, shop: SESS.shop });
+  whoPaint();
+  const g = ++ACC.gen;
+  /* ⭐ ONE BROWSER, ONE SHOP: nothing is read until this browser holds no other shop's fingerprint */
+  let t;
+  try{ t = await CBOnePerson.traces(MINE); }catch(_){ t = { others: [] }; }
+  if (g !== ACC.gen || !MINE) return;
+  if (t.others.length) return closeFirst(t);
+  try{
+    const h = await api('booksHealth');                 /* 404 = the Ledger is off for this shop */
+    BK.waiting = (h && h.waiting) || [];
+    ON = !!(h && h.enabled !== false);
+  }catch(e){
+    if (e && e.status === 404) return offCard();
+    return failedCard();
+  }
+  if (!ON) return offCard();
+  const first = (location.hash || '').replace(/^#\/?/, '');
+  show(NAV.some((n) => n[0] === first) ? first : 'daybook');
+}
+
+/* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */
+window.addEventListener('storage', (e) => {
+  if (e.key !== null && e.key !== 'cb_sess') return;
+  if (!MINE) return;
+  const next = CBOnePerson.stored();
+  if (next && next.ent === MINE.ent) return;
+  signedOut(next ? 'Signed out — ' + CBOnePerson.shopName(next) + ' opened in another tab.' : 'Signed out — you signed out in another tab.');
+});
+/* the one-shop gate, attached the way the Labs attach it (offer-lab-next.html): this tab answers the roll and leaves when
+   its shop is signed out or the browser is cleaned — to the home page, which reads nothing while that runs */
+CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB Accounts',
+  onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
+  onWipe: () => { location.replace('/?cleaned=1'); } });
+start();
+</script>
+</body>
+</html>
