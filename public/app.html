@@ -10326,6 +10326,9 @@ function crmFacts(r, pid){
 }
 function crmBooks(){ return SESSION.booksOn===true && typeof bkMoney==='function'; }
 function crmGstin(r){ var t=(r.tax_ids||[]).filter(function(x){ return x.scheme==='GSTIN'; })[0]||(r.tax_ids||[])[0]; return t?t.value:''; }
+/* which columns the rail has room for right now (set by crmTable) — a folded ChitBridge ID is still in the row for a screen reader and for find-in-page */
+var CRM_FIT={};
+function crmHiddenId(list, r){ var id=r.user_id||r.bridge_id; return (id && (CRM_FIT[list]||[]).indexOf('cbid')<0) ? '<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(id)+'</span>' : ''; }
 function crmOneSided(r){ var o=r.one_sided; if(!o) return ''; var why=(o&&o.why)||(typeof o==='string'?o:'')||tx('Their side of this does not reach you');
   return ' <span data-testid="party-onesided" title="'+esc(why)+'" style="color:var(--grey);font-size:var(--fs-1);font-weight:400">◐ '+esc(tx('one-sided'))+'</span>'; }
 /** the seven columns; `kind` says whose id the party is. Balance and Oldest due need the Ledger (they are its figures). */
@@ -10338,8 +10341,8 @@ function crmCols(kind){
         var lead=crmBooks()?tblCaret(list, kind==='supplier'?r.supplier_list_id:r.customer_identity_id)+' ':'';
         if(kind==='supplier') return lead+'<button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref(\''+r.supplier_list_id+'\')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;margin-inline-end:2px;color:'+(r.preferred?'var(--warn-2)':'var(--grey-2)')+'">'+(r.preferred?'★':'☆')+'</button>'
           +'<button class="rowinfo" data-testid="sup-details-'+r.supplier_list_id+'" title="Their full record" onclick="event.stopPropagation();supOpenPanel(\''+r.supplier_list_id+'\')">ⓘ</button> '
-          +esc(supName(r))+(r.category?' <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">'+esc(r.category)+'</span>':'')+crmOneSided(r);
-        return lead+esc(r.display_name||custContact(r))+' '+custSeg(r.segment)+crmOneSided(r); } },
+          +esc(supName(r))+crmHiddenId(list, r)+(r.category?' <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">'+esc(r.category)+'</span>':'')+crmOneSided(r);
+        return lead+esc(r.display_name||custContact(r))+crmHiddenId(list, r)+' '+custSeg(r.segment)+crmOneSided(r); } },
     { key:'cbid', label:tx('ChitBridge ID'), sort:'cbid', w:'minmax(110px,1.3fr)', cell:function(r){ var id=r.user_id||r.bridge_id;
         return (id && r.on_rail!==false) ? '<span class="mono">'+esc(id)+'</span>' : '<span style="color:var(--grey)" title="'+esc(tx('Your own record of them. Purchases are entered by hand.'))+'">🧾 '+esc(tx('not on ChitBridge'))+'</span>'; } },
   ];
@@ -10367,6 +10370,7 @@ function crmNext(kind, r){
 function crmTable(key, kind, empty){
   var cols=crmCols(kind), idOf=function(r){ return kind==='supplier'?r.supplier_list_id:r.customer_identity_id; };
   var fit=tblFitBox(key, cols, ['name','bal','no','cbid','oldest','credit','gstin'], key==='customers'?'cu_rows':'sup_rows', true);
+  CRM_FIT[key]=fit.map(function(c){ return c.key; });
   if(!listCtlView(key).matched.length) return empty;
   return tblWrapFor(key, fit, tblHeadFor(key, fit)+listCtlRowsHTML(key, function(r){
     var id=idOf(r), sel=kind==='supplier'?(id===UI.supSel):(id===UI.custSel);

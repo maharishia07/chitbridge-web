@@ -320,6 +320,7 @@ function tblPeekShow(ev, cols, row, o) {
     var v = ''; try { v = col.cell(row) || ''; } catch (_) { return ''; }
     var plain = String(v).replace(/<[^>]*>/g, '').trim();
     if (!plain || plain === '—') return '';                 /* the em-dash placeholder is "no value" — do not restate it */
+    if (o.noTid) v = String(v).replace(/ data-testid="[^"]*"/g, '');   /* the peek is a copy: a second element with the same test id would make the real one ambiguous */
     return '<div class="pkr"><span class="pkk">' + esc(o.label ? o.label(col) : col.label) + '</span><span class="pkv">' + v + '</span></div>';
   }).join('');
   if (!rows) return;
@@ -406,7 +407,7 @@ function tblHeadFor(key, fit) {
   var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
   return tblHeaderHTML(fit, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key });
 }
-function tblPeek(ev, key, id) { var p = TBL_PEEK[key], row = p && p.by[id]; if (p && row) tblPeekShow(ev, p.cols, row); }
+function tblPeek(ev, key, id) { var p = TBL_PEEK[key], row = p && p.by[id]; if (p && row) tblPeekShow(ev, p.cols, row, { noTid: true }); }
 /** one row of list `key`: the Task row, its hover peek, and (open) its next level under it */
 function tblRowFor(key, fit, row, id, o, next) {
   o = o || {}; TBL_PEEK[key].by[id] = row;

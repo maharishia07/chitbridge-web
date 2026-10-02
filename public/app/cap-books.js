@@ -1343,17 +1343,45 @@ function bkWaitingCount() {
   var n = (BK.waiting || []).length;
   el.textContent = '🕗 ' + tx('Waiting') + (n ? ' · ' + n : '');
 }
+/**
+ * the cheques held — the Task table too (Athi, 2026-10-02): Party · Cheque (number · bank) · Dated · Amount · Status, whose cell carries
+ * the steps the SERVER offers next (Deposited · Cleared · Bounced) as buttons; bkChequeRepaint flips that cell, never the view.
+ * Its next level is the party's bills (the statement route, read once on the first open).
+ */
+function bkChequeList() { return Object.keys(BK.cheques).map(function (k) { return BK.cheques[k]; }); }
+function bkChequeCols() {
+  var dash = '<span style="color:var(--grey)">—</span>';
+  return [
+    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(130px,1.6fr)', cell: function (c) { return tblCaret('cheques', c.payment_id) + ' ' + (esc(c.name || '') || dash); } },
+    { key: 'cheque', label: tx('Cheque'), sort: 'cheque', w: 'minmax(120px,1.3fr)', cell: function (c) { return '<span class="mono">' + esc(c.cheque_no || '') + '</span>' + (c.cheque_bank ? ' · ' + esc(c.cheque_bank) : ''); } },
+    { key: 'dated', label: tx('Dated'), sort: 'dated', w: '100px', cell: function (c) { return c.cheque_date ? esc(bkDate(c.cheque_date)) : dash; } },
+    { key: 'amount', label: tx('Amount'), sort: 'amount', align: 'right', w: '104px', cell: function (c) { return esc(bkMoney(c.amount_minor, c.currency)); } },
+    { key: 'status', label: tx('Status'), sort: 'status', w: 'minmax(210px,2.2fr)', tid: function (c) { return 'chq-steps-' + c.payment_id; }, cell: function (c) { return bkChequeStepsHTML(c); } },
+  ];
+}
+function bkChequesPaint() {
+  var cols = bkChequeCols(), fit = tblFitBox('cheques', cols, ['party', 'status', 'amount', 'cheque', 'dated'], 'bkl_cheques');
+  return tblWrapFor('cheques', fit, tblHeadFor('cheques', fit) + lazyWrap('cheques', listCtlView('cheques').matched, function (c) {
+    return tblRowFor('cheques', fit, c, c.payment_id, { tid: 'chq-' + c.payment_id, click: "tblToggle('cheques','" + esc(c.payment_id) + "')" }, function () {
+      return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Bills')) + '</div>' + (c.party_id ? bkPartyBillsHTML(c.party_id, 'cheques', c.currency || BK.duesCur) : ''), 'chq-next-' + esc(c.payment_id));
+    });
+  }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_cheques' });
+}
 async function bkChequesView(body) {
   try {
     await bkChequesLoad();
-    var list = Object.keys(BK.cheques).map(function (k) { return BK.cheques[k]; });
-    var rows = list.map(function (c) {
-      var id = esc(c.payment_id);
-      return '<tr data-testid="chq-' + id + '"><td>' + esc(c.name || '') + '</td><td class="mono">' + esc(c.cheque_no || '') + (c.cheque_bank ? ' · ' + esc(c.cheque_bank) : '') + '</td><td>' + (c.cheque_date ? esc(bkDate(c.cheque_date)) : '') + '</td>'
-        + '<td class="num">' + esc(bkMoney(c.amount_minor, c.currency)) + '</td><td data-testid="chq-steps-' + id + '">' + bkChequeStepsHTML(c) + '</td></tr>';
-    }).join('');
+    var list = bkChequeList(), by = function (f) { return function (a, b) { return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true }); }; };
+    tblDeclare('cheques', {
+      rows: bkChequeList, noun: 'cheque', paint: bkChequesPaint,
+      text: function (c) { return [c.name, c.cheque_no, c.cheque_bank, c.status, (Number(c.amount_minor || 0) / Math.pow(10, bkDec(c.currency))).toFixed(bkDec(c.currency))].join(' '); },
+      sorts: [{ key: 'dated', label: tx('Dated'), cmp: by(function (c) { return c.cheque_date || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (c) { return c.name; }) },
+        { key: 'cheque', label: tx('Cheque'), cmp: by(function (c) { return c.cheque_no; }) }, { key: 'amount', label: tx('Amount'), cmp: function (a, b) { return Number(a.amount_minor || 0) - Number(b.amount_minor || 0); } },
+        { key: 'status', label: tx('Status'), cmp: by(function (c) { return c.status; }) }],
+      filters: [{ key: 'status', label: tx('Status'), all: tx('Every status'), options: Object.keys(BK_CHQ_WORD).map(function (k) { return { v: k, label: tx(BK_CHQ_WORD[k]) }; }), match: function (c, v) { return c.status === v; } }],
+    });
     body.innerHTML = '<div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1);margin-bottom:6px"></div>'
-      + (rows ? bkTable([{ t: tx('Party') }, { t: tx('Cheque') }, { t: tx('Dated') }, { t: tx('Amount'), num: 1 }, { t: tx('Status') }], rows) : emptyState('🧾', tx('No cheques held'), ''));
+      + (list.length ? tblListHTML('cheques') : emptyState('🧾', tx('No cheques held'), ''));
+    if (list.length) tblListPaint('cheques');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 /**

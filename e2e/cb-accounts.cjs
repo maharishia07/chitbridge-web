@@ -259,7 +259,7 @@ async function route(S, r) {
     const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     const partyCells = async () => p.$$eval('#lg_out .lrow .lcell[data-l="Party"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     await p.click('[data-testid="lt-band-people"]');
-    ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0, 'People holds Customers (Sundry Debtors) and Suppliers (Sundry Creditors) as closed folders');
+    ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0 && await p.locator('[data-testid="lt-group-Other"]').count() === 1, 'People holds Customers (Sundry Debtors) and Suppliers (Sundry Creditors) as closed folders — and nothing else (no per-party sub-account group)');
     S.calls.length = 0;
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-party-c1"]');
@@ -327,7 +327,7 @@ async function route(S, r) {
     const tabs = await p.$$eval('.tab', (s) => s.map((x) => x.textContent));
     ok(JSON.stringify(tabs) === JSON.stringify(['Received2', 'Issued1']), 'two tabs from the system folders, with the open counts: ' + tabs.join(' · '));
     ok(await p.locator('[data-testid="bills-tab-B-2100"]').getAttribute('aria-pressed') === 'true', 'Received is the first tab');
-    ok(await p.locator('.bill').count() === 2, 'the Received tab lists its two bills');
+    ok(await p.locator('#bkl_bills .lrow').count() === 2 && await p.locator('#bkl_bills .lhead').count() === 1 && await p.locator('.bill').count() === 0, 'the Received tab lists its two bills as Task-table rows (Supplier · Bill no · Amount · Date · Step)');
     ok(/Goods checked/.test(await p.textContent('[data-testid="bill-step-rb1"]')) && await p.getAttribute('[data-testid="bill-step-rb1"]', 'data-step') === 'goods_checked', 'a bill carries the server\'s step chip — "Goods checked"');
     ok(/Bill refused/.test(await p.textContent('[data-testid="bill-step-rb2"]')) && /red/.test(await p.getAttribute('[data-testid="bill-step-rb2"]', 'class')), 'a disputed bill\'s chip is red, in the server\'s words');
     ok(/481\.65/.test(await p.textContent('[data-testid="bill-rb1"]')), 'the amount is shown through the locale layer');

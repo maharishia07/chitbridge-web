@@ -346,7 +346,9 @@ async function route(S, r) {
   {
     const S = standIn(); const { ctx, p } = await open(S);
     await p.click('[data-testid="acc-nav-bills"]'); await p.waitForSelector('[data-testid="bills-list"]', { timeout: 8000 });
-    const sub = await p.textContent('[data-testid="bill-sb1"]');
+    await p.click('[data-testid="bill-sb1"] [role="button"]');   /* who took it is the row's next level */
+    await p.waitForSelector('[data-testid="bill-next-sb1"]', { timeout: 5000 }).catch(() => {});
+    const sub = await p.textContent('[data-testid="bill-next-sb1"]').catch(() => '');
     ok(/Books Shop/.test(sub) && !/books-shop/.test(sub), 'Bills: who accepted is the display name ("Books Shop"), not the handle — ' + sub.replace(/\s+/g, ' ').trim());
     const pages0 = ctx.pages().length;
     await p.click('[data-testid="bill-sb1"]'); await waitSheet(p, 'AM-81');
