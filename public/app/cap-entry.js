@@ -20,7 +20,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
 }); }
 
 var EN = { step: 1, events: null, ev: null, v: {}, lines: [], pv: null, pvBusy: false, dateRef: null, ref: null, saved: null, err: null, denied: false, photo: null, rev: {}, seq: 0 };
-/* the four kinds of "who / what" field live on step 2; the rest are step 3 — a layout choice, never an accounting one. A field may name its own step. */
+/* the four kinds of "who / what" field live on step 2; the rest are step 3 — a layout choice, never a rule of the books. A field may name its own step. */
 var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, text: 1, lines: 1, choice: 1 };
 
 function enE(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
@@ -143,8 +143,9 @@ function enNext() { var o = enSteps(), i = o.indexOf(EN.step); if (!enStepReady(
 function enOptions(f) {
   if (f.options && f.options.length) return f.options.map(function (o) { return typeof o === 'object' ? o : { v: o, l: o }; }).map(function (o) { return { v: o.v != null ? o.v : o.code, l: o.l || o.label || o.name || o.v }; });
   if (f.kind === 'party') {
-    var ps = ((typeof BK !== 'undefined' && BK.dues && BK.dues.parties) || (BK.dues && BK.dues.list) || []);
-    return ps.filter(function (p) { return !f.side || p.side === f.side; }).map(function (p) { return { v: p.party_id, l: (p.party_no ? p.party_no + ' · ' : '') + p.name }; });
+    /* the one /dues read the whole page shares (cap-books.js booksDuesLoad → BK.dues, party_id → party) */
+    var ps = Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; });
+    return ps.filter(function (p) { return !f.side || p.side === f.side; }).map(function (p) { return { v: p.party_id, l: bkPartyLabel(p.party_id, p.name) }; });
   }
   return [];
 }
