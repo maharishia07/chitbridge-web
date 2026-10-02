@@ -146,7 +146,7 @@ function listCtlToolbarHTML(key) {
     : '';
 
   return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">'
-    + search + filters + sorts + '</div>';
+    + search + filters + sorts + (c.tbl ? tblColsBoxHTML(key) : '') + '</div>';
 }
 
 /**
@@ -236,6 +236,15 @@ var TBL_CSS = [
      opt in with the .tblx wrapper (CB Accounts); the Task screen's own fitting is untouched */
   ".tblx{container:tblx/inline-size;min-width:0}",
   "@container tblx (max-width:560px){.tblx .lhead{display:none}.tblx .lrow{display:flex;flex-wrap:wrap;gap:2px 10px;border:1px solid var(--line);border-radius:12px;margin:6px 0;padding:9px 10px}.tblx .lrow .lcell{border:0;white-space:normal;padding:0;flex:0 1 auto;max-width:100%}.tblx .lrow .lcell:first-child{flex:1 1 100%;font-weight:600}.tblx .lrow .lcell[data-l]:not(:first-child):not(:empty)::before{content:attr(data-l) \" · \";color:var(--grey);font-size:var(--fs-1)}.tblx .lrow .lcell.ra{text-align:start}}",
+  /* LINES: one record a line - the ticked fields flow inline joined by " · " in the chooser's order, the amount at the end, a grey line under it */
+  ".tbllines .lhead{display:none}",
+  ".tbllines .lrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0}",
+  ".tbllines .lrow .lcell{border:0;white-space:normal;padding:0;flex:0 1 auto;max-width:100%;overflow:visible}",
+  ".tbllines .lrow .lcell:not(:first-child):not(.ra)::before{content:' · ';white-space:pre;color:var(--grey)}",
+  ".tbllines .lrow .lcell:first-child{margin-inline-end:8px}",
+  ".tbllines .lrow .lcell:first-child+.lcell::before{content:none}",
+  ".tbllines .lrow .lcell.ra{margin-inline-start:auto;padding-inline-start:12px}",
+  ".tbllines .lrow .lsub{flex:1 1 100%;color:var(--grey);font-size:var(--fs-1);padding:2px 0 0 22px}",
 ].join('\n');
 (function () {
   if (typeof document === 'undefined' || !document.head || document.getElementById('tbl_css')) return;
@@ -262,6 +271,148 @@ function tblFit(chosen, avail, prio) {
   order.slice(1).forEach(function (c) { var need = colMinPx(c) + 8; if (used + need <= avail) { keep[c.key] = 1; used += need; } });
   return chosen.filter(function (c) { return keep[c.key]; });
 }
+/**
+ * ⭐ THE COLUMN CHOOSER — ONE CONTROL FOR EVERY TABLE (moved from app.html, where only the Task list had it).
+ * Athi, 2026-10-02 ("Maximum three columns"): a list KEEPS every column, SHOWS its top three by the priority it already
+ * declares, and the "⚙ columns" chooser shows or hides the rest and puts them in order, remembered per list. The row
+ * stays the summary. Task keeps its own default set (`def`) and its own storage (`get`/`set`); every other list takes
+ * the top three of its `prio` and stores under cb_cols_<key>.
+ *  · the top-priority column is ticked and disabled — a row you cannot identify is not a row (see tblFit)
+ *  · a tick that does not fit the pane is still dropped by tblFit, and the chooser says "hidden — no room" (silence is the bug)
+ *  · below the card breakpoint every ticked column fits (tblAvail returns 9999), so each is a label : value line
+ * `tblColsDeclare(key, {cols, prio, def?, get?, set?, repaint?, noroom?, isOpen?, setOpen?})` is called by tblFitBox on every paint.
+ */
+/**
+ * ⭐ ONE MOVE BUTTON, TWO FEATURES — reordering columns (← →) and reordering folder rules (↑ ↓). Extracted at the
+ * second call site rather than copied, because the part worth sharing is not the markup, it is the JUDGMENT
+ * baked into it:
+ *   ⚠️ DISABLED AT THE ENDS, NEVER HIDDEN. A control that vanishes at the boundary makes the row reflow under
+ *   the cursor you were about to click again — so the first press moves the item and the second lands on
+ *   whatever slid into its place.
+ *   ⚠️ THE GLYPH MUST MATCH THE AXIS. Columns move horizontally and take ← →; rules are a vertical list and take
+ *   ↑ ↓. Up/down arrows on a "Move left" button ask the reader to translate, which is how that bug first shipped.
+ * `js` is the click handler body, so each caller keeps its own action and its own stopPropagation decision.
+ */
+function mvBtn(glyph, ok, title, js){
+  return '<button type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"'
+    + ' onclick="' + js + '">' + glyph + '</button>';
+}
+var TBL_COLS = {};
+function tblPlain(plain) { return !!plain && !(typeof UI !== 'undefined' && UI.vp === 'mob'); }   /* a rail is a card on a phone */
+function tblColsDeclare(key, spec) {
+  var o = TBL_COLS[key] || (TBL_COLS[key] = { open: false, mem: null });
+  Object.keys(spec).forEach(function (k) { o[k] = spec[k]; });
+  return o;
+}
+function tblColsAllKeys(s) { return s.cols.map(function (c) { return c.key; }); }
+function tblColsTop(s) { var all = tblColsAllKeys(s); return s.prio.filter(function (k) { return all.indexOf(k) >= 0; })[0]; }
+function tblColsStoreKey(key) { return typeof uk === 'function' ? uk('cb_cols_' + key) : 'cb_cols_' + key; }
+function tblColsSaved(key) {
+  var s = TBL_COLS[key], v = null;
+  if (s.get) return s.get();
+  try { v = JSON.parse(localStorage.getItem(tblColsStoreKey(key)) || 'null'); } catch (_) { v = null; }
+  return (Array.isArray(v) && v.length) ? v : s.mem;      /* storage may throw: the session still remembers what was ticked */
+}
+function tblColsStore(key, set) {
+  var s = TBL_COLS[key]; s.mem = set;
+  if (s.set) { s.set(set); return; }
+  try { localStorage.setItem(tblColsStoreKey(key), JSON.stringify(set)); } catch (_) {}
+}
+/** the keys shown, in the person's order: what was saved (stale keys dropped), else the default (Task's own, else the top three by priority) */
+function tblColsKeys(key) {
+  var s = TBL_COLS[key], all = tblColsAllKeys(s), top = tblColsTop(s), set = null, saved = tblColsSaved(key);
+  var real = function (k) { return all.indexOf(k) >= 0; };
+  if (Array.isArray(saved) && saved.length) set = saved.filter(real);
+  if (!set || !set.length) {
+    var three = s.prio.filter(real).slice(0, 3);
+    set = s.def ? s.def.filter(real) : (tblViewGet(key) === 'lines' ? all.slice() : all.filter(function (k) { return three.indexOf(k) >= 0; }));   /* declaration order; LINES show every field, GRID the top three */
+  }
+  if (top && set.indexOf(top) < 0) set = [top].concat(set);
+  return set;
+}
+function tblColsChosen(key) {
+  var s = TBL_COLS[key];
+  return tblColsKeys(key).map(function (k) { return s.cols.filter(function (c) { return c.key === k; })[0]; }).filter(Boolean);
+}
+function tblColsCommit(key, set) {
+  tblColsStore(key, set);
+  var s = TBL_COLS[key]; if (s.repaint) s.repaint(); else tblRepaint(key);
+  tblColsRefresh(key);
+}
+function tblColsToggle(key, ck) {
+  var s = TBL_COLS[key]; if (!s || ck === tblColsTop(s)) return;
+  var set = tblColsKeys(key).slice(), i = set.indexOf(ck);
+  if (i >= 0) set.splice(i, 1); else set.push(ck);
+  tblColsCommit(key, set);
+}
+function tblColsMove(key, ck, dir) {
+  var set = tblColsKeys(key).slice(), i = set.indexOf(ck), j = i + dir;
+  if (i < 0 || j < 0 || j >= set.length) return;
+  set.splice(j, 0, set.splice(i, 1)[0]);
+  tblColsCommit(key, set);
+}
+/** ⭐ GRID or LINES - the same table and the same column choice, drawn two ways; remembered per list like the columns. A phone is always lines (the card). */
+var TBL_VIEW = {};
+function tblViewKey(key) { return typeof uk === 'function' ? uk('cb_view_' + key) : 'cb_view_' + key; }
+function tblViewGet(key) {
+  var v = null;
+  try { v = localStorage.getItem(tblViewKey(key)); } catch (_) { v = null; }
+  v = v || TBL_VIEW[key] || (listCtlS(key).cfg || {}).view || 'grid';
+  return v === 'lines' ? 'lines' : 'grid';
+}
+function tblViewSet(key, v) {
+  TBL_VIEW[key] = v;
+  try { localStorage.setItem(tblViewKey(key), v); } catch (_) {}
+  tblRepaint(key); tblColsRefresh(key);
+}
+function tblViewHTML(key) {
+  var v = tblViewGet(key), pk = TBL_PEEK[key], card = !!(pk && pk.card);
+  var b = function (m, label) {
+    var on = card ? m === 'lines' : v === m;
+    return '<button class="colcog" data-testid="view-' + m + '-' + esc(key) + '" aria-pressed="' + on + '"' + (card ? ' disabled' : '') + ' style="' + (on ? 'font-weight:700;text-decoration:underline' : '') + '" onclick="event.stopPropagation();tblViewSet(\'' + esc(key) + '\',\'' + m + '\')">' + tx(label) + '</button>';
+  };
+  return b('grid', '\u25a4 grid') + b('lines', '\u2630 lines');
+}
+function tblColsMenuToggle(key) {
+  var s = TBL_COLS[key] || tblColsDeclare(key, { cols: [], prio: [] });
+  var v = !(s.isOpen ? s.isOpen() : s.open);
+  if (s.setOpen) s.setOpen(v); else s.open = v;
+  if (s.menuRepaint) s.menuRepaint(); else tblColsRefresh(key);
+}
+/** the chooser: SHOWN — in this order (checkbox, ← →), then AVAILABLE. The Task list's markup and styles, unchanged. */
+function tblColsMenuHTML(key) {
+  var s = TBL_COLS[key]; if (!s || !s.cols.length) return '';
+  var set = tblColsKeys(key), top = tblColsTop(s), pk = TBL_PEEK[key];
+  var noroom = s.noroom ? s.noroom() : ((pk && pk.noroom) || []);
+  var col = function (k) { return s.cols.filter(function (c) { return c.key === k; })[0]; };
+  var chosen = set.map(col).filter(Boolean), rest = s.cols.filter(function (c) { return set.indexOf(c.key) < 0; });
+  var q = "'" + esc(key) + "'";
+  var row = function (c, i, n, on) {
+    var arrow = function (dir, ok, title) {
+      if (!on) return '<span class="mv-sp"></span>';
+      return mvBtn(dir < 0 ? '←' : '→', ok, title, 'event.stopPropagation();tblColsMove(' + q + ",'" + esc(c.key) + "'," + dir + ')');
+    };
+    var fixed = c.key === top, nr = on && noroom.indexOf(c.key) >= 0;
+    return '<div class="colrow">' + arrow(-1, i > 0, 'Move left')
+      + '<label' + (fixed ? ' title="' + esc(tx('Always shown — it names the row')) + '"' : '') + '><input type="checkbox" data-testid="cols-' + esc(key) + '-' + esc(c.key) + '" '
+      + (on ? 'checked ' : '') + (fixed ? 'disabled ' : '') + 'onchange="tblColsToggle(' + q + ",'" + esc(c.key) + "')\"> "
+      + esc(c.label || c.key) + (nr ? ' <span class="colmnone" data-testid="cols-noroom-' + esc(c.key) + '">' + esc(tx('hidden — no room')) + '</span>' : '') + '</label>'
+      + arrow(1, i < n - 1, 'Move right') + '</div>';
+  };
+  return '<div class="colmenu" data-testid="cols-menu-' + esc(key) + '" onclick="event.stopPropagation()">'
+    + '<div class="colmhd">' + tx('Shown — in this order') + '</div>'
+    + chosen.map(function (c, i) { return row(c, i, chosen.length, true); }).join('')
+    + (rest.length ? '<div class="colmhd">' + tx('Available') + '</div>' + rest.map(function (c) { return row(c, 0, 0, false); }).join('') : '')
+    + '</div>';
+}
+/** the button sits in the list's control bar; its menu opens under it */
+function tblColsBtnHTML(key) {
+  return '<button class="colcog" data-testid="cols-btn-' + esc(key) + '" onclick="event.stopPropagation();tblColsMenuToggle(\'' + esc(key) + '\')" title="' + esc(tx('Choose columns')) + '">' + tx('⚙ columns') + '</button>';
+}
+function tblColsInner(key) { var s = TBL_COLS[key]; return tblViewHTML(key) + tblColsBtnHTML(key) + ((s && (s.isOpen ? s.isOpen() : s.open)) ? tblColsMenuHTML(key) : ''); }
+function tblColsBoxHTML(key) { return '<span id="colbox_' + esc(key) + '" style="position:relative;display:inline-block">' + tblColsInner(key) + '</span>'; }
+function tblColsRefresh(key) { var el = document.getElementById('colbox_' + key); if (el) el.innerHTML = tblColsInner(key); }
+
 /** the grid template: an optional lead track (the Task's select box), then each column's width — a manual width map wins */
 function tblTemplate(cols, o) {
   o = o || {};
@@ -287,15 +438,18 @@ function tblHeaderHTML(cols, o) {
  */
 function tblRowHTML(cols, row, o) {
   o = o || {};
-  var cells = cols.map(function (col) {
+  var cells = cols.filter(function (col) {
+    if (!o.lines || col.tid) return true;   /* LINES leave out a field the record has no value for */
+    var t = String(col.cell(row)).replace(/<[^>]*>/g, '').trim(); return t && t !== '\u2014';
+  }).map(function (col) {
     return '<span class="lcell' + (col.align === 'right' ? ' ra' : '') + '"' + (o.labels ? ' data-l="' + esc(col.label || '') + '"' : '') + (col.tid ? ' data-testid="' + esc(col.tid(row)) + '"' : '') + '>' + col.cell(row) + '</span>';
   }).join('');
-  return '<div class="lrow ' + (o.cls || '') + '" style="grid-template-columns:' + (o.tpl || 'var(--coltpl)') + '"' + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + (o.attrs || '') + (o.click ? ' onclick="' + o.click + '"' : '') + '>' + (o.lead || '') + cells + '</div>';
+  return '<div class="lrow ' + (o.cls || '') + '" style="grid-template-columns:' + (o.tpl || 'var(--coltpl)') + '"' + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + (o.attrs || '') + (o.click ? ' onclick="' + o.click + '"' : '') + '>' + (o.lead || '') + cells + (o.lines && o.sub ? '<div class="lsub">' + o.sub + '</div>' : '') + '</div>';
 }
 /** ⭐ A TABLE's wrapper: carries the column template the header and rows read (--coltpl), and opts into the card fold */
 function tblWrapHTML(cols, inner, o) {
   o = o || {};
-  return '<div class="' + (o.plain ? '' : 'tblx') + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
+  return '<div class="' + (o.plain ? '' : 'tblx') + (o.lines ? ' tbllines' : '') + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
 }
 
 /**
@@ -380,7 +534,7 @@ function tblAvail(id, plain) {
   /* not on screen yet (the first paint is a string): a rail is as wide as the screen says its pane is — the Task list reads UI.lw the same way */
   else if (plain && typeof UI !== 'undefined') w = (UI.vp === 'mob') ? window.innerWidth : (UI[typeof lwKey === 'function' ? lwKey() : 'lw'] || UI.lw || 340);
   else w = (document.getElementById('bk_body') || document.body).clientWidth || 900;
-  return (w <= 560 && !plain) ? 9999 : w - 24;
+  return (w <= 560 && !tblPlain(plain)) ? 9999 : w - 24;
 }
 /** the pane was dragged: every rail-style table (the CRM's) that is on screen is fitted again, as applyColTpl does for Task */
 function tblRefitRails() { Object.keys(TBL_PEEK).forEach(function (k) { if (TBL_PEEK[k].plain && document.getElementById(TBL_PEEK[k].box)) tblRepaint(k); }); }
@@ -395,15 +549,27 @@ function tblListPaint(key) {
 }
 /** declare a list once: the screen's rows, text, sorts, filters, and `paint()` (its table); the repaint is the same for all */
 function tblDeclare(key, cfg) {
+  cfg.tbl = true;   /* its toolbar carries the columns button (tblColsBoxHTML) */
   cfg.repaint = cfg.repaint || function () { tblListPaint(key); };
   return listCtl(key, cfg);
 }
 /* a table's fitted columns, its header and its hover peek (the peek shows every column, the fitted ones and the folded) */
 var TBL_PEEK = {};
 /* `plain` = a rail (the CRM's lists, like the Task list): the columns that do not fit are folded away and the hover peek shows them — no card fold */
-function tblFitBox(key, cols, prio, boxId, plain) { TBL_PEEK[key] = { cols: cols, by: {}, plain: !!plain, box: boxId }; return tblFit(cols, tblAvail(boxId, plain), prio || cols.map(function (c) { return c.key; })); }
-function tblWrapFor(key, fit, inner, o) { o = o || {}; o.plain = !!(TBL_PEEK[key] && TBL_PEEK[key].plain); return tblWrapHTML(fit, inner, o); }
+function tblFitBox(key, cols, prio, boxId, plain) {
+  prio = prio || cols.map(function (c) { return c.key; });
+  tblColsDeclare(key, { cols: cols, prio: prio });
+  TBL_PEEK[key] = { cols: cols, by: {}, plain: tblPlain(plain), box: boxId };
+  var avail = tblAvail(boxId, plain), card = avail === 9999, lines = !card && tblViewGet(key) === 'lines';
+  TBL_PEEK[key].card = card; TBL_PEEK[key].lines = lines;
+  var chosen = tblColsChosen(key), fit = lines ? chosen : tblFit(chosen, avail, prio);   /* LINES wrap: every ticked field is shown */
+  /* a tick that does not fit is NOT silently ignored: the chooser names it "hidden - no room" (tblColsMenuHTML) */
+  TBL_PEEK[key].noroom = chosen.filter(function (c) { return fit.indexOf(c) < 0; }).map(function (c) { return c.key; });
+  return fit;
+}
+function tblWrapFor(key, fit, inner, o) { o = o || {}; o.plain = !!(TBL_PEEK[key] && TBL_PEEK[key].plain); o.lines = !!(TBL_PEEK[key] && TBL_PEEK[key].lines); return tblWrapHTML(fit, inner, o); }
 function tblHeadFor(key, fit) {
+  if (TBL_PEEK[key] && TBL_PEEK[key].lines) return '';
   var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
   return tblHeaderHTML(fit, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key });
 }
@@ -411,7 +577,7 @@ function tblPeek(ev, key, id) { var p = TBL_PEEK[key], row = p && p.by[id]; if (
 /** one row of list `key`: the Task row, its hover peek, and (open) its next level under it */
 function tblRowFor(key, fit, row, id, o, next) {
   o = o || {}; TBL_PEEK[key].by[id] = row;
-  return tblRowHTML(fit, row, { cls: o.cls, tid: o.tid, labels: !TBL_PEEK[key].plain, click: o.click, lead: o.lead,
+  return tblRowHTML(fit, row, { cls: o.cls, tid: o.tid, labels: !TBL_PEEK[key].plain, lines: TBL_PEEK[key].lines, sub: o.sub, click: o.click, lead: o.lead,
     attrs: ' data-id="' + esc(id) + '" onmouseenter="tblPeek(event,\'' + key + '\',\'' + esc(id) + '\')" onmouseleave="tblPeekHide()"' + (o.attrs || '') })
     + (tblIsOpen(key, id) && next ? (typeof next === 'function' ? next() : next) : '');
 }

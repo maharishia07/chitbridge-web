@@ -672,13 +672,14 @@ function bkDvCols(c) {
   ];
 }
 /** its next level: the gist (the lines merged by ledger), then the Dr/Cr lines — each tax and sales line with its rate, as the line carries it */
-function bkDvNext(e, c) {
+function bkDvGistHTML(e, c) { return bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · '); }
+function bkDvNext(e, c, lines) {
   var no = esc(e.entry_no);
-  var gist = bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · ');
+  var gist = bkDvGistHTML(e, c);
   /* ⭐ THE RATE (Athi, 2026-10-02): "Output CGST 6%", "Sales @12%" — as the line (the frozen invoice's) carries it, never worked out here */
   var rate = function (l) { var r = l.rate != null ? l.rate : l.rate_pct; return r != null && r !== '' && !/%/.test(String(l.name)) ? (/^4/.test(String(l.code)) ? ' @' : ' ') + esc(String(r)) + '%' : ''; };
   var grey = 'color:var(--grey);font-size:var(--fs-1);text-transform:uppercase';
-  return tblNextHTML('<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>'
+  return tblNextHTML((lines ? '' : '<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>')
     + '<div style="' + grey + '">' + tblNextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
     + (e.lines || []).map(function (l) {
         return tblNextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
@@ -693,8 +694,9 @@ function bkDvPaint() {
   box.innerHTML = list.length ? tblWrapFor('daybook', fit, tblHeadFor('daybook', fit) + lazyWrap('daybook', flat, function (it) {
     if (it.g) return bkDvGroupRow(it.g, c);
     var e = it.e;
-    return tblRowFor('daybook', fit, e, e.entry_no, { tid: 'db-entry-' + e.entry_no, cls: d.hl === e.entry_no ? 'sel' : '', click: "bkDvToggle('" + esc(e.entry_no) + "')",
-      attrs: ' data-no="' + esc(e.entry_no) + '" aria-expanded="' + tblIsOpen('daybook', e.entry_no) + '"' }, bkDvNext(e, c));
+    var ln = TBL_PEEK.daybook.lines;   /* LINES: the gist is the grey line under the record, always; the next level is the journal */
+    return tblRowFor('daybook', fit, e, e.entry_no, { sub: ln ? '<span data-testid="db-gist-' + esc(e.entry_no) + '">' + bkDvGistHTML(e, c) + '</span>' : '', tid: 'db-entry-' + e.entry_no, cls: d.hl === e.entry_no ? 'sel' : '', click: "bkDvToggle('" + esc(e.entry_no) + "')",
+      attrs: ' data-no="' + esc(e.entry_no) + '" aria-expanded="' + tblIsOpen('daybook', e.entry_no) + '"' }, bkDvNext(e, c, ln));
   }, ''), { id: 'bkt_daybook' }) : emptyState('🔍', tx('Nothing matches'), '');
   var n = document.getElementById('bkc_daybook'); if (n) n.innerHTML = listCtlCountHTML('daybook');
   Array.prototype.forEach.call(document.querySelectorAll('[data-testid^="db-group-"]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-testid') === 'db-group-' + d.group)); });
@@ -735,6 +737,7 @@ function bkDvDeclare() {
   });
   var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
   tblDeclare('daybook', {
+    view: 'lines',   /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */
     rows: function () { return d.r.entries || []; }, noun: 'entry', plural: 'entries', repaint: bkDvPaint, filters: filters, text: function (e) { return bkDvText(e, c); },
     sorts: [
       { key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } },

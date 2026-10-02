@@ -5182,7 +5182,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02g';   /* ⚠️ bumped 2026-10-02 (g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02h';   /* ⚠️ bumped 2026-10-02 (h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -8528,6 +8528,7 @@ function supCtl(){
   var cats=[]; mine.forEach(function(x){ if(x.category && cats.indexOf(x.category)<0) cats.push(x.category); });
   cats.sort();
   return listCtl('suppliers', {
+    tbl: true,
     rows: function(){ return (UI.sups||[]).filter(function(x){ return supKindOf(x)===supKind(); }); },
     text: function(x){ return [x.nickname,x.display_name,x.category,x.bridge_id,x.user_id,x.party_no,(typeof BK!=='undefined' && BK.dues && BK.dues[x.supplier_entity_id] || {}).party_no].filter(Boolean).join(' '); },
     noun: tx('supplier'), plural: tx('suppliers'),
@@ -10269,6 +10270,7 @@ async function loadPlatform(keepPage){
  */
 function custCtl(){
   return listCtl('customers', {
+    tbl: true,
     rows: function(){ return UI.custs||[]; },
     /* searched by everything a shopkeeper would type: the name, the contact, the id, the group */
     text: function(c){ return [c.display_name, custContact(c), c.phone, c.user_id, c.bridge_id, c.email, c.segment, c.party_no, (typeof BK!=='undefined' && BK.dues && BK.dues[c.customer_identity_id] || {}).party_no]
@@ -10344,7 +10346,7 @@ function crmCols(kind){
           +esc(supName(r))+crmHiddenId(list, r)+(r.category?' <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">'+esc(r.category)+'</span>':'')+crmOneSided(r);
         return lead+esc(r.display_name||custContact(r))+crmHiddenId(list, r)+' '+custSeg(r.segment)+crmOneSided(r); } },
     { key:'cbid', label:tx('ChitBridge ID'), sort:'cbid', w:'minmax(110px,1.3fr)', cell:function(r){ var id=r.user_id||r.bridge_id;
-        return (id && r.on_rail!==false) ? '<span class="mono">'+esc(id)+'</span>' : '<span style="color:var(--grey)" title="'+esc(tx('Your own record of them. Purchases are entered by hand.'))+'">🧾 '+esc(tx('not on ChitBridge'))+'</span>'; } },
+        return (id && r.on_rail!==false) ? '<span class="mono">'+esc(id)+'</span>' : '<span style="color:var(--grey)" title="'+esc(tx('Your own record of them. Purchases are entered by hand.'))+'">🧾 '+esc(tx('off-rail'))+'</span>'; } },
   ];
   if(crmBooks()) cols.push(
     { key:'bal', label:tx('Balance'), sort:'bal', align:'right', w:'104px', cell:function(r){ var f=facts(r), b=Number(f.bal||0); if(f.bal==null) return dash;
@@ -16711,8 +16713,7 @@ function getCols(){ try{ const s=JSON.parse(localStorage.getItem(uk('cb_cols'))|
  * filters `chosen` — which preserves this order. Priority chooses; the user arranges.
  */
 function visibleCols(){
-  const set = UI.cols || getCols();
-  return set.map(function(k){ return LISTCOLS.filter(function(c){ return c.key===k; })[0]; }).filter(Boolean);
+  return tblColsChosen('task');   /* the chooser moved to list-ctl.js (tblCols*) so every table has it; Task declares its own set below */
 }
 
 /**
@@ -16727,6 +16728,13 @@ function visibleCols(){
  * renderers the grid uses — one definition of a cell, two places it is painted.
  */
 const COLPRIO = ['subject','star','status','date','amount','from','items','att','msgs','type','priority','priext','assignto'];
+/* Task's column chooser: its own default set (DEFCOLS) and its own storage (cb_cols); the control itself is list-ctl.js's */
+tblColsDeclare('task', { cols: LISTCOLS, prio: COLPRIO, def: DEFCOLS,
+  get: function(){ return UI.cols || getCols(); },
+  set: function(set){ UI.cols = set; try{ localStorage.setItem(uk('cb_cols'), JSON.stringify(set)); }catch(_){ } },
+  repaint: function(){ paintRowsKeepScroll(); }, menuRepaint: function(){ paintRowsKeepScroll(); },
+  isOpen: function(){ return !!UI.colMenu; }, setOpen: function(v){ UI.colMenu = v; },
+  noroom: function(){ const f = fittedCols().map(function(c){ return c.key; }); return visibleCols().map(function(c){ return c.key; }).filter(function(k){ return f.indexOf(k) < 0; }); } });
 /**
  * ⚠️ THE DECLARED MINIMUM, DELIBERATELY NOT UI.colW. A manual column resize is a PREFERENCE — "give Subject more
  * room" — and it was being read as a FLOOR. Athi had dragged Subject to 269px; that 269 then outranked Amount and
@@ -16765,7 +16773,7 @@ function rowGrid(c){
     attrs:' onmouseenter="rowPeekShow(event,\''+c.id+'\')" onmouseleave="rowPeekHide()"',
     click:'rowPeekHide();'+(UI.selectMode?'toggleSel':'openChit')+'(\''+c.id+'\')' }); }
 function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = ((key==='date'||key==='priority')?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
-function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
+function toggleColMenu(){ tblColsMenuToggle('task'); }
 /**
  * ⭐ COLUMNS: CHOOSE *AND* ORDER — Athi, 2026-08-16: *"the fields, we should be able to reallign columns
  * according to user convenience."*
@@ -16782,74 +16790,7 @@ function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
  * column in a fixed order cannot show you the order you picked — which is the one question this control now
  * exists to answer.
  */
-/**
- * ⭐ ONE MOVE BUTTON, TWO FEATURES — reordering columns (← →) and reordering folder rules (↑ ↓). Extracted at the
- * second call site rather than copied, because the part worth sharing is not the markup, it is the JUDGMENT
- * baked into it:
- *   ⚠️ DISABLED AT THE ENDS, NEVER HIDDEN. A control that vanishes at the boundary makes the row reflow under
- *   the cursor you were about to click again — so the first press moves the item and the second lands on
- *   whatever slid into its place.
- *   ⚠️ THE GLYPH MUST MATCH THE AXIS. Columns move horizontally and take ← →; rules are a vertical list and take
- *   ↑ ↓. Up/down arrows on a "Move left" button ask the reader to translate, which is how that bug first shipped.
- * `js` is the click handler body, so each caller keeps its own action and its own stopPropagation decision.
- */
-function mvBtn(glyph, ok, title, js){
-  return '<button type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"'
-    + ' onclick="' + js + '">' + glyph + '</button>';
-}
-function colChooser(){
-  const set = UI.cols || getCols();
-  const chosen = set.map(function(k){ return LISTCOLS.filter(function(c){ return c.key===k; })[0]; }).filter(Boolean);
-  const rest   = LISTCOLS.filter(function(c){ return set.indexOf(c.key) < 0; });
-  /**
-   * ⭐ ONE ARROW EACH SIDE — Athi, 2026-08-16: *"can we keep up arrow one side and down arrow another side"*.
-   *
-   * ⚠️ AND THEY BECAME ← → RATHER THAN ↑ ↓, because that is what the action actually is. Columns move
-   * HORIZONTALLY; I had used up/down glyphs on buttons whose own tooltips said "Move left" and "Move right",
-   * which asks the reader to translate. Splitting them apart made the mismatch obvious.
-   *
-   * ⚠️ Separating them is not only tidier — they were 2px apart and pressed repeatedly while arranging, which is
-   * the worst case for adjacent controls that do OPPOSITE things. A mis-tap there undoes the move you just made,
-   * so it costs two presses to recover, not one.
-   */
-  const row = function(c, i, n, on){
-    /* ⚠️ Disabled at the ends rather than hidden — a control that vanishes at the boundary makes the row jump
-       under the cursor you were about to click again, and the arrow keeps the label aligned across rows.
-       That rule lives in mvBtn() now; it is shared with the folder rules pane. */
-    const arrow = function(dir, ok, title){
-      if(!on) return '<span class="mv-sp"></span>';
-      return mvBtn(dir < 0 ? '←' : '→', ok, title,
-        'event.stopPropagation();moveCol(\'' + c.key + '\',' + dir + ')');
-    };
-    return '<div class="colrow">'
-      + arrow(-1, i > 0,     'Move left')
-      + '<label><input type="checkbox" ' + (on?'checked':'') + ' onchange="toggleCol(\'' + c.key + '\')"> '
-      + esc(c.label||c.key) + '</label>'
-      + arrow(1,  i < n - 1, 'Move right')
-      + '</div>';
-  };
-  return '<div class="colmenu">'
-    + '<div class="colmhd">' + tx('Shown — in this order') + '</div>'
-    + (chosen.length ? chosen.map(function(c,i){ return row(c,i,chosen.length,true); }).join('')
-                     : '<div class="colmnone">none</div>')
-    + (rest.length ? '<div class="colmhd">' + tx('Available') + '</div>' + rest.map(function(c){ return row(c,0,0,false); }).join('') : '')
-    + '</div>';
-}
-/**
- * Move a column one place along its own order.
- * ⚠️ Repaints through paintRowsKeepScroll like every other column change, so the list does not jump to the top
- * each time you nudge one — you are usually looking at a row while deciding where its column belongs.
- */
-function moveCol(key, dir){
-  const set = (UI.cols || getCols()).slice();
-  const i = set.indexOf(key); if (i < 0) return;
-  const j = i + dir; if (j < 0 || j >= set.length) return;
-  set.splice(j, 0, set.splice(i, 1)[0]);
-  UI.cols = set;
-  try{ localStorage.setItem(uk('cb_cols'), JSON.stringify(set)); }catch(_){ }
-  paintRowsKeepScroll();
-}
-function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem(uk('cb_cols'), JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
+function colChooser(){ return tblColsMenuHTML('task'); }
 /* ── column resize + sort presets + persistence (Cluster L/M) ─────────────────────────── */
 /**
  * ⚠️ SETTING --coltpl ALONE IS NOT ENOUGH ANY MORE. The template used to be a fixed list, so a width change could
