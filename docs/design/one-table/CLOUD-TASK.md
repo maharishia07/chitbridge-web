@@ -79,3 +79,19 @@ SCREEN work only. Proven by chitbridge-engines `tests/golden-books.test.js` (bra
    read from the line / the frozen invoice, never worked out.
 Proof additions in e2e/cb-accounts.cjs: Debtors folder lists ≥ 2 parties with balances summing to the 1300 total; opening
 one shows only that party's bills; no 1300 row has an empty party; no row shows the owner/counter in the party column.
+
+## Added 2026-10-02 (Athi: "each customer / supplier will have a customer id, and it should be used in ledger? and this id
+## to be linked to system user id, so better we showcase a table in the CRM")
+The id EXISTS: `party_no` (b274 — one series per shop, customers and suppliers share it; a party on both lists keeps one
+number), on `customer_list` / `supplier_list`, and every ledger line's `party_id` is the party's ChitBridge identity (its
+`user_id`, `bridge_id`). The list APIs already decorate each row with `party_no · balance_minor · oldest_due · tax_ids`
+(lib/party-fields `decorate`). The API side (number at the moment a party is added; `user_id`, `bridge_id`, `on_rail` +
+`one_sided.why` on each list row) is done separately on the API repo — read whatever fields the rows carry; do not touch the API.
+9. **CRM Customers and Suppliers are Task tables** (same reuse as items 1–3): columns **Party no · Name · ChitBridge ID**
+   (user_id, or "not on ChitBridge" for a local party) **· Balance · Oldest due · Credit terms · GSTIN**; a party whose bills
+   or orders stay one-sided shows it quietly with the reason on hover. Next level = the party's open bills; click = the
+   party's existing detail pane. Sort and search by party no, name or ChitBridge ID (list-ctl declarations).
+10. **The party no is the ledger's key on screen:** wherever item 6/7 names a party, it reads "P0007 · Chola Auto Care";
+    the tree's party leaves are ordered by party no; search finds a party by its number.
+Proof additions: e2e — the CRM table shows party no and ChitBridge ID for every row; a ledger row's "P…" equals the CRM
+row's for the same party.
