@@ -324,7 +324,7 @@ async function route(S, r) {
     const body = await p.textContent('#bk_body');
     ok(!/sb1|bill:|\btries\b|\d tries/.test(body), 'no chit id and no "tries" on the list');
     ok(/September is locked/.test(await p.textContent('[data-testid="wait-1"]')) && await p.locator('[data-testid="wait-retry"]').count() === 1, 'a posting that genuinely failed shows its reason in the Step column, and Try again is offered');
-    await p.click('[data-testid="wait-0"] [role="button"]');
+    await p.click('[data-testid="wait-0"] [data-caret]');
     await p.waitForSelector('[data-testid="wait-lines-0"]', { timeout: 5000 }).catch(() => {});
     ok(/Basmati 25kg/.test(await p.textContent('[data-testid="wait-lines-0"]')) && !(await sheetOpen(p)), 'the caret opens the next level — the bill\'s lines — and does not open the sheet');
     await shot(p, 'one-table-waiting-laptop');

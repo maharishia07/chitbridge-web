@@ -117,6 +117,26 @@ const CONTROLS = {
 };
 
 /**
+ * ── ⭐⭐⭐ A SCREEN THAT MOUNTS A CBList (app/list-ctl.js) IS GIVEN THREE OF THE FIVE, AND MUST DECLARE THE OTHER TWO ───────────
+ *
+ * Athi, 2026-10-02: one list control everywhere. The unit's tools row carries SEARCH and the TRUE COUNT, and it draws 50 rows at a
+ * time and reveals the rest (PAGING) — a page cannot forget them because it does not write them. What a page still writes is
+ * WHAT TO NARROW BY and WHAT TO ORDER BY, so those two are held to the declaration exactly as they are for listCtl: `filters: [{`
+ * and `sorts: [{`. A SERVER-paged mount (`remote:`) keeps the page's own filter bar, so a `<select>` is its filter.
+ *
+ * ⚠️ "MOUNTS" IS READ FROM THE SCREEN AND THE PAINTERS THAT FILL ITS HOLES, NOT TWO HOPS OUT: a catalogue that calls a helper that
+ * calls a helper that repaints the Task rows has not become a CBList screen. [[feedback-silence-is-the-bug]]
+ */
+const UNIT_GIVES = {
+  search: () => true,
+  filters: (b) => /\bfilters\s*:\s*\[\s*\{/.test(b) || (/\bremote\s*:/.test(b) && /<select/.test(b)),
+  sort: CONTROLS.sort,
+  paging: () => true,
+  count: () => true,
+};
+const judge = (s, k) => s.mount && UNIT_GIVES[k] ? UNIT_GIVES[k](s.body + '\n' + s.mount) : CONTROLS[k](s.body);
+
+/**
  * ── ⭐⭐ AND WHAT A TABLE OWES ON TOP ────────────────────────────────────────────────────────────────────────────
  *
  * Athi, 2026-09-14: *"we have to have adjustable column headers and usual stuff, all cannot be explained."*
@@ -331,6 +351,17 @@ function withHelpers(body, all, depth) {
   return out;
 }
 
+/**
+ * does this screen MOUNT a CBList? Read from the screen itself and the painters it NAMES (`setTimeout(paintCustList, 0)`, `paintPlatList`),
+ * each with two hops of its own helpers (paintPlatList → paintPlatKeepScroll → platTablePaint → CBList.mount) — never from the two-hop `body`, which reaches the Task painter from the
+ * catalogue through loadList() and would make a catalogue a CBList screen it is not.
+ */
+function mountsAList(raw, helpers) {
+  let text = raw;
+  for (const m of raw.matchAll(/\b([A-Za-z0-9_$]+)\b/g)) if (helpers.has(m[1]) && /^paint|Paint$/.test(m[1])) text += '\n' + withHelpers(helpers.get(m[1]), helpers, 2);
+  return /\bCBList\.mount\(/.test(text) ? text : '';   /* the text a mount was found in: where its declaration (filters, sorts, remote) is read */
+}
+
 function screens(src, file) {
   const safe = blank(src), found = [];
   const helpers = fnBodies(safe);
@@ -378,7 +409,7 @@ function screens(src, file) {
        and holding it to "you must offer sorting" would be noise that teaches people to ignore this file. */
     if (!/class="list"|class="rows"|id="[a-z_]*rows"/.test(body)) continue;
     found.push({ name: m[1], file: path.basename(file), line: src.slice(0, m.index).split('\n').length,
-                 body, listBody });
+                 body, listBody, mount: mountsAList(raw, helpers) });
   }
   return found;
 }
@@ -388,7 +419,7 @@ for (const f of FILES) all.push(...screens(fs.readFileSync(f, 'utf8'), f));
 
 const gaps = {};
 for (const s of all) {
-  const missing = Object.keys(CONTROLS).filter((k) => !CONTROLS[k](s.body));
+  const missing = Object.keys(CONTROLS).filter((k) => !judge(s, k));
   /* ⚠️ the table test reads `listBody` — the screen and ONE hop — so a passport, a summary band or a markdown
      renderer three calls away cannot conjure a demand for a column chooser. See the note beside listBody. */
   if (/<table|<thead|<tbody/.test(s.listBody)) {
