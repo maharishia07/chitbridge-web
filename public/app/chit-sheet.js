@@ -140,11 +140,14 @@
       ? '<tr class="tot"><td></td><td class="n">' + E(money(mo.taxable, m.cur)) + '</td><td class="n">' + E(money(inter ? mo.igst : mo.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(mo.sgst, m.cur))) + '</td></tr>' : '';
     return '<div class="cs-sec">' + E(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : E(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
   }
-  function totalHTML(m) {
+  function totalHTML(m, tid) {
     var mo = m.money || {}, t = mo.total;
     return (mo.round_off ? '<div class="cs-row cs-mute" data-testid="cs-roundoff"><span>' + E(T('Round off')) + '</span><span>' + E(money(mo.round_off, m.cur)) + '</span></div>' : '')
-      + '<div class="cs-row cs-total"><span>' + E(T('Total')) + '</span><b data-testid="cs-total">' + E(t == null ? T('not recorded') : money(t, m.cur)) + '</b></div>';
+      + '<div class="cs-row cs-total"><span>' + E(T('Total')) + '</span><b data-testid="' + E(tid || 'cs-total') + '">' + E(t == null ? T('not recorded') : money(t, m.cur)) + '</b></div>';
   }
+  /* the frozen money as the sheet prints it, for any other screen that shows an issued chit (the Task detail): GST rate-wise, round-off, total.
+     m = { money: moneyFor(...), cur, bj } — the same painters the popup uses, never a second one. */
+  function moneyBlockHTML(m, totalTestid) { return gstHTML(m) + totalHTML(m, totalTestid); }
   var HOW = { cash: 'Cash', upi: 'UPI', card: 'Card', credit: 'On credit', cheque: 'Cheque', points: 'Points' };
   function tenderHTML(m) {
     var p = m.bj.payment; if (!p) return '';
@@ -264,6 +267,6 @@
     if (k === 'page') { close(); if (typeof openChit === 'function') openChit(id); }
   }
 
-  root.CBSheet = { open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
+  root.CBSheet = { moneyFor: moneyFor, moneyBlockHTML: moneyBlockHTML, open: open, close: close, act: act, use: function (u) { return move('act', u); }, actionsFor: actionsFor, model: model, titleFor: titleFor, stepWord: function (m) { return T(STEP[m.status] || m.status); } };
   root.openChitSheet = open;
 })(typeof window !== 'undefined' ? window : globalThis);
