@@ -39,7 +39,7 @@ const BREAKS = [
   /* ── where an entry came from (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") ── */
   ['SRC source not shown', CAP, `return [head].concat(bkSourceParts(s, tid, cur)).join(' · ')`, `return head`],
   ['SRC bill number not a link', CAP, `var link = s.chit_id ? '<a href="#"`, `var link = false ? '<a href="#"`],
-  ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChit(\\''`, `onclick="openChit(\\''`],
+  ['SRC link also opens the row', CAP, `onclick="event.stopPropagation();openChitSheet(\\''`, `onclick="openChitSheet(\\''`],
   ['SRC day count missing', CAP, `if (s.count != null) out.push(`, `if (false) out.push(`],
   ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));`, ``],
   ['SRC seller missing', CAP, `  if (s.by) out.push(esc(s.by));`, ``],

@@ -1670,6 +1670,7 @@ body.lab-only #cbtestpanel{
 <!-- ⭐ what we can work out about a shop without asking it — AFTER locale, whose REGIONS it reads -->
 <script src="/app/govcontext.js"></script>
 <script src="/app/helpers.js"></script>
+<script src="/app/chit-sheet.js"></script>   <!-- THE CHIT SHEET: a chit as a popup, with the actions its step allows -->
 <script src="/app/one-person.js"></script>   <!-- ONE BROWSER, ONE SHOP: the check route()'s gate asks (2026-10-01) -->
 <!-- ⭐ THE FIVE LIST CONTROLS, WRITTEN ONCE — search · filters · sort · count · lazy rows, for a list the browser
      already holds. e2e/list-controls.cjs checks the rule; this is what makes obeying it cheap on the ninth
@@ -5198,7 +5199,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-01a';   /* ⚠️ bumped 2026-10-01 (a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-01b';   /* ⚠️ bumped 2026-10-01 (a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their

@@ -177,20 +177,26 @@ async function partyStatementLoad(partyId) {
 /** a long payment reference, readable: its first and last four (4421…9931) — the full one is on the chit */
 function bkShortRef(r) { var t = String(r == null ? '' : r).trim(); return t.length > 10 ? t.slice(0, 4) + '…' + t.slice(-4) : t; }
 var BK_SRC_WORD = { bill: 'Bill', purchase: 'Bill', receipt: 'Receipt', payment: 'Payment', credit_note: 'Credit note', expense: 'Expense', income: 'Income' };
+/** the person who serviced it IS the shop itself (an owner, not a counter hand) — the shop's own name, as the session knows it */
+function bkIsShopName(n) {
+  if (typeof SESSION === 'undefined') return false;
+  var shop = SESSION.entity || (SESSION.role === 'entity' ? SESSION.name : '');
+  return !!shop && String(n || '').trim() === String(shop).trim();
+}
 function bkSourceParts(s, tid, cur) {
   if (!s) return [];
   var out = [];
   if (s.kind === 'day') { if (s.count != null) out.push(esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }))); }
   else if (s.ref || s.chit_id) {
     var no = s.ref ? '<span class="mono">' + esc(s.ref) + '</span>' : esc(tx('Open'));
-    var link = s.chit_id ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChit(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>' : no;
+    var link = s.chit_id ? '<a href="#" data-testid="' + esc(tid) + '" onclick="event.stopPropagation();openChitSheet(\'' + esc(s.chit_id) + '\');return false">' + no + '</a>' : no;
     out.push((BK_SRC_WORD[s.kind] ? esc(tx(BK_SRC_WORD[s.kind])) + ' ' : '') + link + (s.doc_at ? ' <span data-testid="' + esc(tid) + '-at">' + esc(bkTime(s.doc_at)) + '</span>' : ''));
   }
   /* ⭐ HOW IT WAS PAID (Athi, 2026-10-01: "clearly segregate credit, cash, UPI") — a day: each tender with its amount */
   if (s.kind === 'day' && s.split && s.split.length) out.push(s.split.map(function (x) { return esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, cur)); }).join(' · '));
   else if (s.how) out.push('<span data-testid="' + esc(tid) + '-how">' + esc(tx(s.how)) + (s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref)) + '</span>' : '') + '</span>');
   if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));
-  if (s.by) out.push(esc(s.by));
+  if (s.by) out.push(esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));
   return out;
 }
 /** the entry's own word, then its source: "Sale · Bill … · Counter C2 · Athi" — a walk-in day says "Walk-in day" */
@@ -218,7 +224,7 @@ function bkRecordedHTML(e, tid) {
 function statementHTML(r) {
   var c = r && r.currency;
   var rows = ((r && r.lines) || []).map(function (l, i) {
-    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
+    return '<tr' + (l.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(l.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(l.date)) + '</td><td data-testid="stmt-what-' + i + '">' + bkEntryHead(l, 'stmt-src-' + i, c) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : '') + '</td>'
       + '<td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td><td class="num"><b>' + esc(bkMoney(l.running_minor, c)) + '</b></td></tr>';
   }).join('');
   return '<table class="bktab" style="width:100%;border-collapse:collapse;font-size:var(--fs-1)"><thead><tr><th>' + tx('Date') + '</th><th>' + tx('What') + '</th><th class="num">' + tx('Debit') + '</th><th class="num">' + tx('Credit') + '</th><th class="num">' + tx('Balance') + '</th></tr></thead><tbody>'
@@ -496,7 +502,7 @@ async function bkDaybook(body) {
     var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0]; var c = r && r.currency;
     var rows = ((r && r.entries) || []).map(function (e) {
-      return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3" data-testid="db-head-' + esc(e.entry_no) + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c) + '</td></tr>'
+      return '<tr class="bkentry" data-testid="db-entry-' + esc(e.entry_no) + '"' + (e.source_chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(e.source_chit_id) + '\')"' : '') + '><td>' + esc(bkDate(e.posting_date)) + '</td><td class="mono">' + esc(e.entry_no) + '</td><td colspan="3" data-testid="db-head-' + esc(e.entry_no) + '">' + bkEntryHead(e, 'db-src-' + e.entry_no, c) + '</td></tr>'
         + (e.lines || []).map(function (l) { return '<tr><td></td><td class="mono">' + esc(l.code) + '</td><td>' + esc(l.name) + (l.party_name ? ' · ' + esc(l.party_name) : '') + '</td><td class="num">' + (l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '') + '</td><td class="num">' + (l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : '') + '</td></tr>'; }).join('');
     }).join('');
     /* the strip and the to-do sit above the entries; the strip reads the range's LAST day — today, by default */
@@ -891,7 +897,7 @@ async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
     var rows = (BK.waiting || []).map(function (w, i) {
-      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChit(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.reason || w.why || tx('No reason given')) + '</td>'
+      return '<tr data-testid="wait-' + i + '"' + (w.chit_id ? ' style="cursor:pointer" onclick="openChitSheet(\'' + esc(w.chit_id) + '\')"' : '') + '><td>' + esc(w.reason || w.why || tx('No reason given')) + '</td>'
         + '<td class="mono">' + esc(w.ref || '') + '</td><td>' + esc(bkDate(w.since)) + '</td><td class="num">' + (w.tries ? txf('{n} tries', { n: w.tries }) : '') + '</td></tr>';
     }).join('');
     body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
