@@ -61,3 +61,21 @@ localhost:3000 or port 7351 (stand-in APIs on a free port, as the harnesses alre
    card Ledgers view for navigation; the designer's section rule lines may stay as the tree's group captions if they fit
    the tree's existing look — no new style. Phone: the tree collapses to a breadcrumb the way foldersScreen does.
    Proof: in e2e/cb-accounts.cjs — open a band → a group → a ledger → its entries → expand one → open its bill.
+
+## Added 2026-10-02, later (Athi, live on Tally Test: "in the sundry debtors, all are come under tallytest as if tally test
+## is suppose to pay, it has to be for each of the debtors and its a separate ledger for each one of them")
+The books already keep every line against its party (`journal_line.party_id`) and serve each party's ledger — this is
+SCREEN work only. Proven by chitbridge-engines `tests/golden-books.test.js` (branch `test/golden-books`, Part A 13/13).
+6. **One ledger per party under the control accounts** — in item 5's tree, Customers (Sundry Debtors) and Suppliers
+   (Sundry Creditors) are FOLDERS whose leaves are the parties (name · balance), from `GET /api/books/dues` (one read, every
+   party's balance). Opening a party shows ITS ledger in the Task table from `GET /api/books/party/:id/statement` (opening ·
+   each bill · receipts · closing, running balance). The control account's own view stays (its total = the sum of its
+   parties — show both figures; they must agree).
+7. **Every ledger and day-book row names the OTHER PARTY.** Rows of 1300/2100 (and every ledger the line has a `party_id`
+   on) show the party's name in the party column. The counter and the person who rang the bill are NOT the party: show them
+   as "rung by Tally Test (owner) · Counter C2" in the secondary text, never where a party name goes. Today 1300 rows read
+   "On credit · Counter C2 · Tally Test (owner)" with no customer — read as if the shop owes itself.
+8. **The rate in the day-book expansion** — each tax and sales line carries its rate ("Output CGST 6%", "Sales @12%"),
+   read from the line / the frozen invoice, never worked out.
+Proof additions in e2e/cb-accounts.cjs: Debtors folder lists ≥ 2 parties with balances summing to the 1300 total; opening
+one shows only that party's bills; no 1300 row has an empty party; no row shows the owner/counter in the party column.
