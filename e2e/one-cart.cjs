@@ -10,7 +10,7 @@
  *     and the offer form's test panel are allowed: they preview one product, they never total a basket).
  */
 const fs = require('fs'); const path = require('path');
-const PUB = path.join(__dirname, '..', 'public');
+const PUB = process.env.ONE_CART_ROOT || path.join(__dirname, '..', 'public');   /* ONE_CART_ROOT = a COPY of public/ (e2e/one-cart-breaks.cjs) */
 const files = ['app.html', 'shop.html'].concat(fs.readdirSync(path.join(PUB, 'app')).filter((f) => f.endsWith('.js')).map((f) => 'app/' + f));
 const OWNER = 'app/cart.js';
 /* the renderer pair (cart-ui + catalogue-ui) and the engine itself may evaluate; anyone else only for ONE line ("lines:[line]") */
@@ -23,7 +23,14 @@ const stripComments = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\
 let bad = 0;
 for (const rel of files) {
   const s = stripComments(fs.readFileSync(path.join(PUB, rel), 'utf8'));
+  /* ⭐ NEVER RECOMPUTE A BILL (Athi, 2026-10-02: "never ever recompute"; DECISIONS.md "Compute once, at billing; everyone else reads"): the Task
+     detail (Content + Summary tabs, the Order tab in cap-chit2.js) and every other reader of an issued chit read the frozen figures through
+     CBSheet.moneyFor. CBCart.moneyFromLines works a total out from lines at new Date() — only the cart itself (app/cart.js) may; and app.html's one
+     CBCart.money( is the Compose cart (offers: CC.offers), where an order is being MADE. Any other call is a reader recomputing. */
+  if (rel !== OWNER && /\bmoneyFromLines\s*\(/.test(s)) { console.log('  ✗ ' + rel + ' calls moneyFromLines — a reader of an issued chit must read the frozen bill (CBSheet.moneyFor), never work its money out again'); bad++; }
   if (rel !== OWNER) {
+    const mc = (s.match(/CBCart\.money\(/g) || []).length, okc = rel === 'app.html' ? (s.match(/CBCart\.money\(\s*\w+\s*,\s*\{\s*offers\s*:\s*CC\.offers/g) || []).length : 0;
+    if (mc > okc && rel !== "shop.html") { console.log('  ✗ ' + rel + ' calls CBCart.money( outside the cart / the Compose cart — a screen that shows an issued chit reads it (CBSheet.moneyFor)'); bad++; }
     /* the MARKUP of the row (">Total incl. tax<"), not the words — the Legend and the docs may name it */
     if (/>\s*Total incl\. tax\s*</.test(s)) { console.log('  ✗ ' + rel + ' renders its own "Total incl. tax" — the cart owns that row (CBCart.moneyRowsHTML)'); bad++; }
     if (/\bbyRate\s*\[/.test(s) && !/CBCart\.money\(/.test(s)) { console.log('  ✗ ' + rel + ' builds a per-rate tax table of its own — call CBCart.money'); bad++; }

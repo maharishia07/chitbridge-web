@@ -313,7 +313,7 @@ function c2PaneOrd(d){
   /* ⭐⭐ THE CHIT IS THE CART (Athi, 2026-09-06 10:19: "it has to be the exact cart and the values and the information — ditto, including the
      format"). This pane drew its own rows ("2 bag × ₹101.00") and no money block; a buyer saw ₹676.80 on the Suppliers screen and ₹752 here.
      Now a read-only cart is built from the chit's RECORDED lines (price · discount · offer · rate, as written at send) and the rows and
-     the money block are the cart's own — CBCatUI.rowHTML and CBCart.moneyFromLines. What only this page adds — the pencil, the
+     the money block are the cart's own — CBCatUI.rowHTML; its money is read, not computed (below). What only this page adds — the pencil, the
      delivered chip, the remedy notes, their own words — comes in through the row's hooks. */
   var recLines = [], items = [];
   lines.forEach(function(e, i){
@@ -350,11 +350,11 @@ function c2PaneOrd(d){
         + (e.removed ? '' : '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line" style="cursor:pointer;font-size:var(--fs-3);color:var(--grey);padding:0 6px">✎</span>'); }
     });
   }).join('') + '</div>';
-  /* the money block, from the lines as written — the same rows the cart printed */
-  try {
-    var M = CBCart.moneyFromLines(recLines, { now: new Date(), currency: cat.shop.currency_code, money: function(n){ return c2Money(n); } });
-    out += '<div data-testid="c2-money" style="margin:8px 16px 12px">' + CBCart.moneyRowsHTML(M, { totalTestid: 'c2-total', taxTestid: 'c2-tax' }) + '</div>';
-  } catch (_) {}
+  /* ⭐ the money block is READ from the frozen bill, never worked out from the lines (Athi, 2026-10-02: "never ever recompute") — the Task
+     detail's own reader (frozenMoneyHTML → CBSheet.moneyFor), so Content, Summary and this Order tab can never disagree about one chit. */
+  var hh = (d && (d.header || d.chit)) || d || {};
+  out += frozenMoneyHTML({ business_json: hh.business_json || (d && d.business_json) || null, summary_money: (hh.summary_json && hh.summary_json.money) || null,
+    currency: cat.shop.currency_code, isDraft: /^draft$/i.test(String(hh.current_status || hh.status || '')) }, 'c2-money', 'c2-total');
   return out;
 }
 

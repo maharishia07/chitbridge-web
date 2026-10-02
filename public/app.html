@@ -5162,7 +5162,7 @@ const CAP_GATED = { connectors:'connector', disputes:'dispute' };
  * said nothing — because the browser was still running yesterday’s file. A fix that cannot be fetched is not
  * a fix, and nothing in the build would have said so.
  */
-const CB_BUILD = '2026-10-02l';   /* ⚠️ bumped 2026-10-02 (l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
+const CB_BUILD = '2026-10-02m';   /* ⚠️ bumped 2026-10-02 (m: merge of main into this branch; j: app.html — an older bill with no stored figures says "Known error", a newer one shows the red error; l: list-ctl.js + app.html — the ⚙ columns chooser's rules moved into list-ctl.js, so CB Accounts shows it styled; h: app.html + list-ctl.js + cap-books.js — ONE column chooser + grid/lines view for every table: Task's ⚙ columns moved into tblCols*, the other lists show their top three; g: cap-books.js + list-ctl.js — Cheques are a Task table too, the hover peek repeats no test id, a folded CRM row keeps its ChitBridge ID findable; f: ONE TABLE — list-ctl.js now holds the Task table (header · rows · template · fit · peek · lazyWrap) the Task screen, the Ledger's Waiting · Day book · Dues · ledger lists and the CRM's Customers · Suppliers all draw with; cap-books.js — the Ledgers are a folder tree, Customers and Suppliers folders of parties; cap-folders.js — _folderNode/_folderPanes; chit-sheet.js — stepWord; e: merge of #15 + #19 — the web reads the frozen invoice — chit-sheet.js, accounts-shell.js, accounts.html, the Ledger door closed · cap-books.js — 1300/2100 open into one ledger per party, every row names its party, the cashier reads "rung by"; c: PR #10 gate courtesy — one-person.js, the notice — merged onto main; b: PR #7 CB Accounts — accounts-shell.js, cap-admin.js, cap-books.js view hook — merged onto main; a: cap-books.js — the Day book reads like a day book, PR #9); 2026-10-01 (c: chit-sheet.js + cap-books.js — the to-do opens the sheet, the sheet is titled for its document; a: cap-books.js — the Ledgers view regrouped into four bands for the index page) — a stale stamp keeps browsers on the old copies (e2e/cb-build-guard) */
 const CAP_LOADED = {};
 /**
  * ⭐⭐ A LAZY SCREEN THAT HAS NOT ARRIVED YET MUST NOT THROW. Eleven of sixteen lazy screens called their
@@ -16947,6 +16947,31 @@ function chitDesign(c){
   return (v === 'lines') ? 'lines' : 'chit';
 }
 
+/* ⭐ THE TASK DETAIL READS THE BILL, IT NEVER MAKES IT (Athi, 2026-10-02: "never ever recompute"; DECISIONS.md "Compute once, at billing;
+   everyone else reads"). The figures were computed ONCE where the bill was made; here they are only read — CBSheet.moneyFor (the frozen
+   business_json.invoice through CBTax.moneyOf, else summary_json.money, else null) and painted by CBSheet.moneyBlockHTML. No figures:
+   a draft says so; an issued bill shows an error. Never a number worked out from the lines. */
+function frozenMoney(c){
+  const bj=(c.business_json||(c.header&&c.header.business_json))||null;
+  try{ return (window.CBSheet&&CBSheet.moneyFor)?CBSheet.moneyFor(bj,c.summary_money||null,c.currency||'INR'):null; }catch(_){ return null; }
+}
+/* ⭐ OLDER BILLS ARE A KNOWN ERROR, NEWER ONES FOLLOW THE RULE (Athi, 2026-10-02: "if the older chits which were computing the value,
+   just say as a known error but the newer chits will follow the rule"). Before api #3 went live (one computation at billing,
+   2026-10-02 11:14 IST) a bill could be issued without stored figures; such a bill says so, plainly, as a KNOWN error — no number.
+   A bill issued after it with no figures is a real fault and shows the red error. */
+const ONE_COMPUTATION_SINCE='2026-10-02T05:44:00Z';
+function frozenMoneyHTML(c,wrapTid,totalTid,bare){
+  const FM=frozenMoney(c);
+  if(!FM){
+    const isDraft=!!(c.isDraft||c.role==='Draft'||UI.folder==='drafts');
+    if(isDraft) return `<div class="ir" data-testid="chit-money-none" style="margin:8px 12px 10px">${tx('Not issued yet')}</div>`;
+    const older=!!c.issued_at&&new Date(c.issued_at)<new Date(ONE_COMPUTATION_SINCE);   /* created_at is timezone-naive (Known faults) — hours of drift at the cut-off are harmless here */
+    return older?`<div class="ir" data-testid="chit-money-known" style="margin:8px 12px 10px;color:var(--grey)">${tx('Known error: an older bill — its figures were not stored when it was made')}</div>`
+      :`<div class="err" data-testid="chit-money-error" style="margin:8px 12px 10px">${tx('No issued figures for this bill')}</div>`;
+  }
+  const html=CBSheet.moneyBlockHTML({money:FM,cur:c.currency||'INR',bj:(c.business_json||(c.header&&c.header.business_json))||{}},totalTid);
+  return wrapTid?`<div data-testid="${wrapTid}" style="margin:8px 12px 10px">${html}</div>`:html;
+}
 async function openChit(id, silent){
   UI.sel=id;
   /**
@@ -17022,6 +17047,8 @@ async function openChit(id, silent){
                contradicting them. */
             line_delivery:(r.line_delivery||{}), delivery_summary:(r.delivery_summary||null),
             line_assignment:(r.line_assignment||{}),
+            /* ⭐ THE FROZEN FIGURES RIDE ALONG (never recomputed here): the header's own summary_json.money, beside business_json.invoice below */
+            summary_money:((h.summary_json&&h.summary_json.money)||null), issued_at:(h.created_at||null),
             /* ⭐ MY copy's business data rides along (2026-09-06, [BOOKS-01] red): the books write-back, the payment, the delivery values —
                the GET has always sent header.business_json; the object dropped it, so every reader fell back to whatever the list row had */
             business_json:(h.business_json||(base&&base.business_json)||null)};
@@ -17437,7 +17464,7 @@ function detailInner(){
    */
   if(UI.dtab==="input" && !inputHTML) UI.dtab="content";
   if(UI.dtab==="input") body=inputHTML;
-  if(UI.dtab==="content") body=`<div class="itab">${items}${(()=>{ try { const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean); const M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); return `<div data-testid="chit-money" style="margin:8px 12px 10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-total', taxTestid:'chit-tax' })}</div>`; } catch(_) { return `<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div>`; } })()}</div>
+  if(UI.dtab==="content") body=`<div class="itab">${items}${frozenMoneyHTML(c,'chit-money','chit-total')}</div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=booksBlockHTML(c)+statusTabHtml(c);
@@ -17446,12 +17473,12 @@ function detailInner(){
        knowledge… total cost, total savings, total tax, and where to deliver; commercial details only by setting — not useful for all trades").
        The supplier clearances and the commercial-cover frame built earlier were on for every trade; they now sit behind the
        `trade_cover` policy flag (Settings › Governance), off by default. */
-    const L=(c.items||[]).filter(it=>!(it[3]&&it[3].removed)).map(it=>(it[3]&&(it[3].live||it[3].original))||null).filter(Boolean);
-    let M=null; try { M=CBCart.moneyFromLines(L,{ now:new Date(), currency:c.currency||'INR', money:n=>fmtMoney(n,c.currency||'INR') }); } catch(_) {}
-    const savings=M?CBMoney.round(M.gross-(M.ev&&M.ev.total!=null?M.ev.total:M.gross)):0;
+    /* ⭐ READ, NEVER WORKED OUT (Athi, 2026-10-02: "never ever recompute"): the frozen bill through CBSheet.moneyFor, or an error line. */
+    const FM=frozenMoney(c);
     const tile=(k,v,tid)=>`<div class="itab" style="padding:10px"><div class="sec" style="margin:0">${tx(k)}</div><div class="disp" data-testid="${tid}" style="font-size:var(--fs-4);font-weight:700">${v}</div></div>`;
-    const tiles=`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fmtMoney(M?M.grand:c.amt,c.currency), 'chit-summary-grand')}${tile('You save', fmtMoney(savings,c.currency), 'chit-summary-savings')}${tile('Tax', fmtMoney(M?M.taxTotal:0,c.currency), 'chit-summary-taxtotal')}</div>`;
-    const block=M?`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${CBCart.moneyRowsHTML(M,{ totalTestid:'chit-summary-total', taxTestid:'chit-summary-tax' })}</div>`:'';
+    const fm=(n)=>n==null?'—':fmtMoney(n,c.currency);
+    const tiles=FM?`<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px">${tile('Total incl. tax', fm(FM.total), 'chit-summary-grand')}${tile('You save', fm(FM.savings), 'chit-summary-savings')}${tile('Tax', fm(FM.tax), 'chit-summary-taxtotal')}</div>`:'';
+    const block=`<div data-testid="chit-summary-money" class="itab" style="margin-top:10px;padding:10px">${frozenMoneyHTML(c,null,'chit-summary-total',true)}</div>`;
     const bj=(c.business_json||(c.header&&c.header.business_json))||{}; const sv=bj.schema_values||bj;
     const dl=[['Deliver to',sv.deliver_to],['By',sv.delivery_by],['Note',sv.note]].filter(x=>x[1]);
     const delivery=dl.length?`<div class="itab" data-testid="chit-summary-delivery" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0 0 6px">${tx('Delivery')}</div>${dl.map(x=>`<div class="ir"><span class="nm">${tx(x[0])}</span><span class="qt">${esc(String(x[1]))}</span></div>`).join('')}</div>`:'';

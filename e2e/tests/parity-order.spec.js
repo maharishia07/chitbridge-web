@@ -12,6 +12,9 @@ const { mintEntity, mintInContext, addProduct, clickNav, settle } = require('../
 async function rowsOf(loc) {
   return loc.evaluate((el) => Array.from(el.querySelectorAll('div')).filter((d) => d.children.length === 2 && d.style.display === 'flex').map((d) => Array.from(d.children).map((c) => c.textContent.trim().replace(/\s+/g, ' ')).join(' | ')));
 }
+/** (2026-10-02) the detail READS the frozen bill (CBSheet.moneyFor), it does not rebuild the cart's rows: what must equal the cart is the TOTAL, to the paisa */
+const digitsOf = (s) => String(s || '').replace(/[^0-9.]/g, '');
+const cartTotal = (rows) => digitsOf((rows.find((r) => /Total incl/.test(r)) || '').split('|').pop());
 const norm = (rows) => rows.map((r) => r.replace(/[\s ]+/g, ' ').replace(/[—–]/g, '-')).filter((r) => !/^Goods/.test(r));
 /** the row's price column and its tags, minus the stock stamp (presence data, not order data) */
 async function rowFacts(row) {
@@ -87,14 +90,14 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     expect(orderRow.unit).toBe(cartRow.unit);
     expect(orderRow.tags, 'offer badge and slab').toBe(cartRow.tags);
     expect(orderRow.price, 'the price column').toBe(cartRow.price);
-    expect(oMoney, 'the money block').toEqual(cartMoney);
+    expect(digitsOf(await b.locator('[data-testid="c2-total"], [data-testid="chit-total"]').first().innerText()), 'the order page: the stored total equals the cart total').toBe(cartTotal(cartMoney));
 
     /* THE SUMMARY TAB — the cart's money again, nothing else (Athi, 2026-09-06 11:30: "nothing but the financial summary from the cart… and
        delivery summary… do not add anything without my knowledge"). Its block equals the cart's; no clearances, no commercial cover by default. */
     const sTab = b.getByTestId('dtab-summary'); if (await sTab.isVisible().catch(() => false)) {
       await sTab.click(); await settle(b);
       const sMoney = norm(await rowsOf(b.getByTestId('chit-summary-money')));
-      expect(sMoney, 'summary: the money block').toEqual(cartMoney);
+      expect(digitsOf(await b.getByTestId('chit-summary-total').innerText()), 'summary: the stored total equals the cart total').toBe(cartTotal(cartMoney));
       await expect(b.getByTestId('chit-summary-grand')).toHaveText(/378/);
       await expect(b.getByTestId('chit-summary-savings')).toHaveText(/40/);
       const extra = await b.locator('.dbody, #detail, body').first().innerText();
@@ -110,6 +113,6 @@ test('[PAR-03] the order page prints the cart — row, offer, slab, price column
     expect(taskRow.name).toBe(cartRow.name);
     expect(taskRow.tags, 'task: offer badge and slab').toBe(cartRow.tags);
     expect(taskRow.price, 'task: the price column').toBe(cartRow.price);
-    expect(tMoney, 'task: the money block').toEqual(cartMoney);
+    expect(digitsOf(await page.locator('[data-testid="c2-total"], [data-testid="chit-total"]').first().innerText()), 'task: the stored total equals the cart total').toBe(cartTotal(cartMoney));
   } finally { await buyer.context.close(); }
 });
