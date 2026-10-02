@@ -226,7 +226,7 @@ function bkSourceParts(s, tid, cur) {
   /* ⭐ HOW IT WAS PAID (Athi, 2026-10-01: "clearly segregate credit, cash, UPI") — a day: each tender with its amount */
   if (s.kind === 'day' && s.split && s.split.length) out.push(s.split.map(function (x) { return esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, cur)); }).join(' · '));
   else if (s.how) out.push('<span data-testid="' + esc(tid) + '-how">' + esc(tx(s.how)) + (s.how_ref ? ' <span class="mono">' + esc(bkShortRef(s.how_ref)) + '</span>' : '') + '</span>');
-  if (s.counter) out.push(esc(tx('Counter')) + ' ' + esc(s.counter));
+  if (s.counter) out.push(esc(counterWord(s.counter)));
   /* ⭐ the person who rang it up is NOT the party (2026-10-02: a 1300 row read as if the shop owed itself) — "rung by", and last */
   if (s.by) out.push(esc(tx('rung by')) + ' ' + esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : ''));
   return out;

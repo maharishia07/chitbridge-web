@@ -92,7 +92,9 @@ async function route(S, r) {
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
     if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, job: 'chit' })) });   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
-    if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; return J(r, 200, { currency: 'INR', cheques: S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c)) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
+    if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; /* 2026-10-02: a cheque recorded in the APP is held on the server too, and CB Accounts (a fresh page, no session memory) lists it from there */
+    const held = Object.keys(S.payments).filter((k) => S.payments[k].mode === 'cheque' && !S.chequeSteps.some((x) => x.id === k && x.body.status === 'cleared')).map((k) => ({ payment_id: k, party_id: S.payments[k].party_id, name: 'Ravi Stores', amount_minor: Math.round(Number(S.payments[k].amount || 0) * 100), cheque_no: S.payments[k].cheque_no, cheque_bank: S.payments[k].cheque_bank, status: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? 'cheque_deposited' : 'cheque_received', next: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? ['cleared'] : ['deposited'] }));
+      return J(r, 200, { currency: 'INR', cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
     if (p === '/api/books/outbox/retry' && m === 'POST') { S.retries++; const n = S.waiting.length; S.waiting = S.waiting.filter((w) => w.stuck); return J(r, 200, { ok: true, tried: n, posted: n - S.waiting.length }); }
     if ((x = p.match(/^\/api\/books\/cheques\/([^/]+)\/status$/)) && m === 'POST') {
       S.chequeSteps.push({ id: x[1], body });
@@ -216,6 +218,9 @@ async function route(S, r) {
     r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); });
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const base = 'http://127.0.0.1:' + srv.address().port;
+  /* ⭐ 2026-10-02 (web-reads-invoice): the app's own Ledger door is closed (navTo('ledger') → /accounts.html). The Ledger views are driven where they live:
+     CB Accounts, signed in by the same session the stand-in gave the app. */
+  const ledgerGo = async (pg) => { await pg.goto(base + '/accounts.html#daybook'); await pg.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 20000 }); await pg.waitForSelector('[data-testid="bk-body"]', { timeout: 20000 }); };
   const b = await chromium.launch();
   const threw = [];
   async function open(S, width) {
@@ -390,8 +395,8 @@ async function route(S, r) {
   /* the rail's Ledger item is ONE link to its own page now (2026-10-01, CB Accounts); the in-app screen stays reachable by URL / navTo */
   ok(await p.getAttribute('[data-testid="nav-ledger"]', 'href') === '/accounts.html' && /CB Accounts/.test(await p.textContent('[data-testid="nav-ledger"]')), 'the rail\'s Ledger item is the link "CB Accounts ↗" → /accounts.html (same tab)');
   /* 6 · the Ledger screen */
-  await p.evaluate(() => navTo('ledger'));
-  await p.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
+  await ledgerGo(p);
+  await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
   await p.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 8000 });
   ok(true, 'day book lists the entry with its number');
   /* ⭐ WHERE IT CAME FROM (Athi, 2026-10-01: "how do I connect to the sale record, who has done it?") */
@@ -428,7 +433,7 @@ async function route(S, r) {
   const todoAccept = await headOf('todo-accept'), todoOver = await headOf('todo-overdue'), todoChq = await headOf('todo-cheques'), todoWait = await headOf('todo-waiting');
   ok(/^3 supplier bills to accept/.test(todoAccept), 'to-do: 3 supplier bills to accept — the health rows "Waiting for you to confirm …" ("' + todoAccept + '")');
   ok(/^1 customer overdue/.test(todoOver), 'to-do: 1 customer overdue — a bucket past "Not due", customers only ("' + todoOver + '")');
-  ok(/^1 cheque to deposit \/ clear/.test(todoChq), 'to-do: 1 cheque to deposit / clear — held, with a step still open; the cleared one not counted ("' + todoChq + '")');
+  ok(/^2 cheques to deposit \/ clear/.test(todoChq), 'to-do: 2 cheques to deposit / clear — the one held at the server and the one deposited in the app (held on the server too, 2026-10-02: CB Accounts reads it from there), each with a step still open; the cleared one not counted ("' + todoChq + '")');
   ok(/^2 waiting to be recorded/.test(todoWait), 'to-do: 2 waiting to be recorded — the health rows that are not supplier bills ("' + todoWait + '")');
   ok(await p.locator('[data-testid="todo-none"]').count() === 0, 'something waits → no quiet line');
   await noAccounting(p, 'day book strip and to-do');
@@ -439,20 +444,20 @@ async function route(S, r) {
   await p.click('[data-testid="todo-overdue"]');
   await p.waitForSelector('[data-testid="dues-side-pay"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="dues-side-pay"]').count() === 1, 'tap: customers overdue opens Ledger › Dues');
-  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-cheques"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-daybook"]'); await p.waitForSelector('[data-testid="todo-cheques"]', { timeout: 8000 });
   await p.click('[data-testid="todo-cheques"]');
   await p.waitForSelector('[data-testid="chq-chq9"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="chq-chq9"]').count() === 1, 'tap: cheques opens Ledger › Cheques');
-  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-waiting"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-daybook"]'); await p.waitForSelector('[data-testid="todo-waiting"]', { timeout: 8000 });
   await p.click('[data-testid="todo-waiting"]');
   await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
   ok(/Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: waiting opens Ledger › Waiting');
-  await p.click('[data-testid="bk-tab-daybook"]'); await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-daybook"]'); await p.waitForSelector('[data-testid="todo-accept"]', { timeout: 8000 });
   await p.click('[data-testid="todo-accept"]');
   await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
   ok(await p.evaluate(() => UI.nav) !== 'intake' && /Waiting to be recorded/.test(await p.textContent('[data-testid="bk-body"]')), 'tap: several supplier bills opens Ledger › Waiting (a single one opens its sheet — e2e/chit-sheet.cjs), not Intake');
-  await p.evaluate(() => navTo('ledger'));   /* the menu's Ledger item is now "CB Accounts ↗" (PR #7) — the in-app screen stays reachable by route */
-  await p.click('[data-testid="bk-tab-daybook"]');
+  await ledgerGo(p);   /* the menu's Ledger item is now "CB Accounts ↗" (PR #7) — the in-app screen stays reachable by route */
+  await p.click('[data-testid="acc-nav-daybook"]');
   await p.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 });
 
 
@@ -595,7 +600,7 @@ async function route(S, r) {
     await noAccounting(p, 'day book views');
   }
 
-  await p.click('[data-testid="bk-tab-ledgers"]');
+  await p.click('[data-testid="acc-nav-ledgers"]');
   await p.click('[data-testid="lg-acc-1300"]');
   await p.waitForSelector('[data-testid="stmt-what-0"]', { timeout: 8000 }).catch(() => {});
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
@@ -607,19 +612,19 @@ async function route(S, r) {
   });
   ok(opened2 === 'ch1', 'ledger: the bill number opens that chit (' + opened2 + ')');
   await noAccounting(p, 'day book and ledger sources');
-  await p.click('[data-testid="bk-tab-tb"]');
+  await p.click('[data-testid="acc-nav-tb"]');
   await p.waitForSelector('[data-testid="tb-balanced"]', { timeout: 8000 });
   ok(/balances/.test(await p.textContent('[data-testid="tb-balanced"]')) && (await p.textContent('[data-testid="tb-dr"]')) === (await p.textContent('[data-testid="tb-cr"]')), 'trial balance: debit total = credit total, and it says so');
   await shot(p, '3-trial-balance');
-  S.tbOff = true; await p.click('[data-testid="bk-tab-tb"]');
+  S.tbOff = true; await p.click('[data-testid="acc-nav-tb"]');
   await p.waitForFunction(() => /does not/.test((document.querySelector('[data-testid="tb-balanced"]') || {}).textContent || ''), null, { timeout: 5000 }).catch(() => {});
   ok(/does not balance/.test(await p.textContent('[data-testid="tb-balanced"]')), 'a trial balance off by one paisa says it does not balance');
   S.tbOff = false;
-  await p.click('[data-testid="bk-tab-pl"]'); await p.waitForSelector('[data-testid="pl-profit"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-pl"]'); await p.waitForSelector('[data-testid="pl-profit"]', { timeout: 8000 });
   ok(/Profit/.test(await p.textContent('[data-testid="pl-profit"]')), 'P&L shows the profit line');
-  await p.click('[data-testid="bk-tab-bs"]'); await p.waitForSelector('[data-testid="bs-balanced"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-bs"]'); await p.waitForSelector('[data-testid="bs-balanced"]', { timeout: 8000 });
   ok(/balances/.test(await p.textContent('[data-testid="bs-balanced"]')), 'balance sheet balances');
-  await p.click('[data-testid="bk-tab-dues"]'); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
+  await p.click('[data-testid="acc-nav-dues"]'); await p.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
   await shot(p, '4-dues');
   ok(/1,000/.test(await p.textContent('[data-testid="dues-c1"]')), 'dues: the disputed amount has its own column');
   /* ⚠️ review F11 — a supplier's buckets are the payable ones; the amount must sit under ITS column, not only Balance */
@@ -629,8 +634,8 @@ async function route(S, r) {
   await noAccounting(p, 'ledger');
 
   /* ⚠️⚠️ review M12 — the cheques held, and their steps */
-  ok(/5/.test(await p.textContent('[data-testid="bk-tab-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="bk-tab-waiting"]')).trim() + ')');
-  await p.click('[data-testid="bk-tab-cheques"]');
+  ok(/5/.test(await p.textContent('[data-testid="acc-nav-waiting"]')), 'the Waiting view says how many are waiting, on the list itself (' + (await p.textContent('[data-testid="acc-nav-waiting"]')).trim() + ')');
+  await p.click('[data-testid="acc-nav-cheques"]');
   await p.waitForSelector('[data-testid="chq-' + chqId + '"]', { timeout: 8000 }).catch(() => {});
   ok(await p.locator('[data-testid="chq-' + chqId + '"]').count() === 1 && /Deposited/.test(await p.textContent('[data-testid="chq-status-' + chqId + '"]').catch(() => '')), 'Cheques: the one recorded here is listed, Deposited');
   ok(await p.locator('[data-testid="chq-chq9"]').count() === 1 && /Received/.test(await p.textContent('[data-testid="chq-status-chq9"]').catch(() => '')), 'Cheques: one the server lists as held is there too, Received');
@@ -667,7 +672,7 @@ async function route(S, r) {
   await noAccounting(p, 'cheques');
 
   /* ⚠️⚠️ review M12 — what could not be recorded is ON A SCREEN, in the server's words, with Try again */
-  await p.click('[data-testid="bk-tab-waiting"]');
+  await p.click('[data-testid="acc-nav-waiting"]');
   await p.waitForSelector('[data-testid="wait-retry"]', { timeout: 8000 }).catch(() => {});
   const waitTxt = await p.textContent('[data-testid="bk-body"]');
   ok(/Waiting to be recorded/.test(waitTxt) && /Paid by Points — there is no ledger for Points yet\./.test(waitTxt) && /September is locked\. Open it again to record this bill\./.test(waitTxt), 'Waiting to be recorded: each one with the server\'s own sentence');
@@ -679,12 +684,13 @@ async function route(S, r) {
   await noAccounting(p, 'waiting');
 
   /* month lock blocks a payment in that month; opening again needs a reason */
-  await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_lock"]');
+  await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk_lock"]');
   const sep = String((new Date().getMonth() + 9) % 12 + 1);
   await p.selectOption('[data-testid="lk_p"]', sep);
   await p.click('[data-testid="lk_lock"]');
   await p.waitForFunction(() => /Locked/.test(document.querySelector('[data-testid="lk_out"]').textContent), null, { timeout: 8000 }).catch(() => {});
   ok(S.locked[+sep] === true, 'this month locked');
+  await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-customers"]', { timeout: 20000 });   /* back from CB Accounts to the app */
   await p.click('[data-testid="nav-customers"]');
   await p.waitForSelector('[data-testid="party-books-c1"] [data-testid="party-pay"]', { timeout: 15000 });
   await p.click('[data-testid="party-books-c1"] [data-testid="party-pay"]');
@@ -697,7 +703,7 @@ async function route(S, r) {
   for (let i = 0; i < 40 && S.payPosts.length === nPosts; i++) await p.waitForTimeout(100);
   ok(S.payPosts.length === nPosts + 1 && S.payPosts[nPosts].client_ref && S.payPosts[nPosts].client_ref === S.payPosts[nPosts - 1].client_ref, 'a retry from the same form sends the SAME client_ref');
   await p.evaluate(() => closeModal());
-  await p.evaluate(() => navTo('ledger')); await p.click('[data-testid="bk-tab-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
+  await ledgerGo(p); await p.click('[data-testid="acc-nav-lock"]'); await p.waitForSelector('[data-testid="lk_unlock"]');
   await p.selectOption('[data-testid="lk_p"]', sep);
   const before = S.lastLock;
   await p.click('[data-testid="lk_unlock"]');
@@ -719,7 +725,7 @@ async function route(S, r) {
   S.locked[+sep] = false;
 
   /* 7 · packs */
-  await p.click('[data-testid="bk-tab-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
+  await p.click('[data-testid="acc-nav-packs"]'); await p.waitForSelector('[data-testid="pk_build"]');
   await p.fill('[data-testid="pk_p"]', '5'); await p.click('[data-testid="pk_build"]');
   await p.waitForSelector('[data-testid="pack-get-pk1"]', { timeout: 8000 });
   /* ⚠️⚠️ review M10 — "We have it" before anything came down in this session: the owner is asked; Cancel sends nothing */
@@ -759,7 +765,7 @@ async function route(S, r) {
   await noAccounting(p, 'packs');
 
   /* 8 · opening balances + a shop ledger */
-  await p.click('[data-testid="bk-tab-opening"]'); await p.waitForSelector('[data-testid="op_csv"]');
+  await p.click('[data-testid="acc-nav-opening"]'); await p.waitForSelector('[data-testid="op_csv"]');
   await p.fill('[data-testid="op_csv"]', '1300,P-00001,5000,,INV-0,2026-10-15\n2100,P-00003,100,200,,');
   await p.click('[data-testid="op_go"]');
   ok(S.opening === null && /Line 2/.test(await p.textContent('[data-testid="op_out"]')), 'a line with both debit and credit is refused before sending');
@@ -781,12 +787,13 @@ async function route(S, r) {
   await p.click('[data-testid="op_go"]');
   for (let i = 0; i < 40 && S.openingPosts.length < 3; i++) await p.waitForTimeout(100);
   ok(S.openingPosts.length === 3 && S.openingPosts[2].client_ref && S.openingPosts[2].client_ref !== oRef, 'the next entry, after a yes, has a NEW client_ref');
-  await p.click('[data-testid="bk-tab-accounts"]'); await p.waitForSelector('[data-testid="ac_add"]');
+  await p.click('[data-testid="acc-nav-accounts"]'); await p.waitForSelector('[data-testid="ac_add"]');
   await p.fill('[data-testid="ac_name"]', 'Shop repairs'); await p.click('[data-testid="ac_add"]');
   await p.waitForTimeout(500);
   ok(S.addedAccount && S.addedAccount.name === 'Shop repairs' && S.addedAccount.parent_code === '6000', 'shop ledger added under its group');
 
   /* 9 · supplier record: the same block, with Pay */
+  await p.goto(base + '/app.html#/app'); await p.waitForSelector('[data-testid="nav-suppliers"]', { timeout: 20000 });   /* back from CB Accounts to the app */
   await p.click('[data-testid="nav-suppliers"]');
   await p.waitForSelector('[data-testid="party-due-s1"]', { timeout: 15000 });
   ok(/2,500/.test(await p.textContent('[data-testid="party-due-s1"]')) && /You owe/.test(await p.getAttribute('[data-testid="party-due-s1"]', 'title')), 'supplier row: you owe 2,500');
@@ -799,13 +806,13 @@ async function route(S, r) {
   {
     const S2 = standIn();
     const { ctx: c2, p: p2 } = await open(S2, 390);
-    await p2.evaluate(() => navTo('ledger'));
-    await p2.waitForSelector('[data-testid="bk-tab-daybook"]', { timeout: 15000 });
-    await p2.click('[data-testid="bk-tab-daybook"]');
+    await ledgerGo(p2);
+    await p2.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
+    await p2.click('[data-testid="acc-nav-daybook"]');
     await p2.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 }).catch(() => {});
     ok(await p2.locator('[data-testid="strip-counter-C1"]').isVisible().catch(() => false) && await p2.locator('[data-testid="todo-accept"]').isVisible().catch(() => false), 'phone: tapping Day book shows the strip and the to-do (the detail replaces the rail)');
     ok(await p2.evaluate(() => document.documentElement.scrollWidth) === 390, 'document.scrollWidth === 390 at phone width');
-    ok(await p2.locator('[data-testid="bk-back"]').isVisible().catch(() => false), 'phone: the view carries a visible way back to the Ledger\'s list');
+    /* (the "way back to the list" was the in-app panel's; CB Accounts is an icon rail at 390 — e2e/cb-accounts.cjs proves it) */
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-phone.png') });
     /* the views on a phone: cards, one row of chips that scrolls on its own, the gist wrapping, nothing sideways */
     await p2.waitForSelector('[data-testid="db-chips"] .bkdv-chip', { timeout: 8000 });
@@ -813,8 +820,6 @@ async function route(S, r) {
       return { sw: document.documentElement.scrollWidth, wrap: getComputedStyle(c).flexWrap, ox: getComputedStyle(c).overflowX, rad: parseFloat(getComputedStyle(r).borderTopLeftRadius), gw: g.scrollWidth <= g.clientWidth + 1 }; });
     ok(ph.sw === 390 && ph.wrap === 'nowrap' && ph.ox === 'auto' && ph.rad > 0 && ph.gw, 'phone: the views — rows are cards, chips in one scrolling row, the gist wraps, scrollWidth === ' + ph.sw);
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-phone.png') });
-    await p2.click('[data-testid="bk-back"]', { timeout: 3000 }).catch(() => {});
-    ok(await p2.locator('[data-testid="bk-tab-daybook"]').isVisible().catch(() => false), 'phone: back shows the list again');
     await c2.close();
   }
 
@@ -824,7 +829,7 @@ async function route(S, r) {
     S0.noToday = true; S0.waiting = []; S0.serverCheques = []; S0.items.c1 = [];
     const { ctx: c0, p: p0 } = await open(S0);
     await p0.waitForSelector('[data-testid="nav-ledger"]', { timeout: 15000 });
-    await p0.evaluate(() => navTo('ledger'));
+    await ledgerGo(p0);
     await p0.waitForSelector('[data-testid="db-entry-JV/2026-27/000001"]', { timeout: 15000 });
     await p0.waitForSelector('[data-testid="todo-none"]', { timeout: 8000 }).catch(() => {});
     ok(/Nothing waiting on you/.test(await p0.textContent('[data-testid="todo-none"]').catch(() => '')), 'all zero → one quiet line: Nothing waiting on you');

@@ -42,13 +42,17 @@ const BREAKS = [
   ['the tile sends Switch on before the owner confirms', IDX, `    ask: CBConfirm,`, `    ask: function(t, b, o, go){ go(); },`, I],
 ];
 const ONLY = process.env.BREAK_ONLY || '';
-let good = 0, ran = 0;
-for (const [name, rel, a, b, harness] of BREAKS) {
+let good = 0, ran = 0, unanchored = 0;
+for (let [name, rel, a, b, harness] of BREAKS) {
   if (ONLY && name.indexOf(ONLY) < 0) continue;
   ran++;
   const f = path.join(W, rel), bak = f + '.bak';
-  const s = fs.readFileSync(f, 'utf8'); const n = s.split(a).length - 1;
-  if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n); continue; }
+  const s = fs.readFileSync(f, 'utf8');
+  /* ⚠️ CRLF-SAFE (2026-10-02): a Windows checkout (core.autocrlf) has \r\n, and a two-line anchor written with \n matched
+     nothing there — the break was skipped as "anchor x0" and the run still exited 0. Anchors follow the file's own endings. */
+  if (/\r\n/.test(s)) { a = a.replace(/\r?\n/g, '\r\n'); b = b.replace(/\r?\n/g, '\r\n'); }
+  const n = s.split(a).length - 1;
+  if (n !== 1) { console.log('  ??  ' + name + ': anchor x' + n + ' — this break measured NOTHING'); unanchored++; continue; }
   fs.copyFileSync(f, bak);
   try {
     fs.writeFileSync(f, s.split(a).join(b));

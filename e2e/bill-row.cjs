@@ -9,7 +9,8 @@
  */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const src = fs.readFileSync(path.join(__dirname, '..', 'public', 'app.html'), 'utf8');
+/* app.html, and accounts-shell.js where a function MOVED to be shared with accounts.html (statusWordFor · billUseChoiceHTML — 2026-10-02) */
+const src = ['app.html', 'app/accounts-shell.js'].map((f) => fs.readFileSync(path.join(__dirname, '..', 'public', f), 'utf8')).join('\n');
 let bad = 0;
 const say = (l, ok, d) => { console.log('  ' + String(l).padEnd(78) + '· ' + d + '  ' + (ok ? 'OK' : (bad++, '✗ FAILED'))); };
 

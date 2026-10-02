@@ -5,8 +5,11 @@
  * dispute icon, but the task will have it, so how do we bring those information here."*
  *
  * ── WHAT IT PAINTS ── the bill as the counter prints it: header · lines (qty · price · offer · line total) · the GST
- * summary rate-wise · total · tender · who · the step word. EVERY figure is what the chit holds — nothing is
- * recomputed here. A figure the chit does not hold is said so ("not recorded on this bill"), never invented.
+ * summary rate-wise · total · tender · who · the step word. EVERY figure is what the chit was frozen with — and there is
+ * NO arithmetic on money in this file (Athi, 2026-10-02: "the final computed values stored and the same has to be seen in
+ * every other place, no further computation as the chit is frozen once it become chit"). moneyFor() is the one reader:
+ * the frozen `business_json.invoice` read through CBTax.moneyOf; else `summary_json.money`; else nothing — and a figure the
+ * chit does not hold is said so ("not recorded on this bill"), never invented.
  *
  * ── WHAT IT OFFERS ── an icon row of ONLY the actions this chit allows in its current step. The rule lives in ONE
  * place — actionsFor() below — never per screen: the Day book, Dues, the Statement and the to-do all call
@@ -49,17 +52,31 @@
     var purpose = String(h.purpose || '');
     var cur = sum.currency_code || h.currency || 'INR';
     var bill = bj.bill_no || bj.printed_as || null;
+    var log = (r && r.state_log) || [];
     var counterBill = !!(bj.till && iSent && !others.length);   /* rung up at a counter and sent to nobody else */
     var billRx = purpose === 'invoice' && !iSent;
     return {
-      id: h.chit_id || (r && r.id) || null, status: String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
+      id: h.chit_id || (r && r.id) || null, status: billRx ? billStepStatus(log) : String(h.current_status || h.status || 'pending'), purpose: purpose, cur: cur,
       iSent: iSent, counterBill: counterBill, billRx: billRx, hasOther: (!iSent) || others.length > 0, hasLines: live.length > 0,
       isTask: !counterBill && !billRx,
       no: bill || h.manual_subject || h.auto_subject || '', at: bj.billed_at || h.created_at,
-      counter: bj.till && (bj.till.name || bj.till.id) || '', by: bj.till && bj.till.by && bj.till.by.name || '',
+      counter: counterOfBill(bill, bj.till), by: bj.till && bj.till.by && bj.till.by.name || '',
       who: counterBill ? ((bj.customer && bj.customer.name) || T('Walk-in')) : (billRx ? ((sum.bill_received && sum.bill_received.from) || senderName) : (others.map(function (x) { return x.display_name; }).join(', ') || senderName)),
-      lines: live, bj: bj, money: money_, rec: rec
+      lines: live, bj: bj, money: moneyFor(bj, money_, cur), rec: rec
     };
+  }
+  /* ⭐ WHAT THE CHIT IS FROZEN WITH, in one shape (summary_json.money's names + by_rate · heads · lines): the invoice the
+     counter determined, read out by CBTax.moneyOf — else the header's own summary_json.money — else null. A mapping, never a sum. */
+  function moneyFor(bj, summaryMoney, cur) {
+    if (bj && bj.invoice && root.CBTax && root.CBTax.moneyOf) return root.CBTax.moneyOf(bj.invoice, cur);
+    return summaryMoney && Object.keys(summaryMoney).length ? summaryMoney : null;
+  }
+  /* ⭐ A BILL I RECEIVED has its own step per shop: since the API's "bills-private" it is a `bill_step` row in the chit's
+     state_log (code B-2100, step 'accepted', mine:true) — NOT the shared status, which is the seller's. The latest of mine wins. */
+  function billStepStatus(log) {
+    var mine = (log || []).filter(function (x) { return x && x.action === 'bill_step' && x.mine && (!x.code || x.code === 'B-2100'); });
+    var step = mine.length ? mine[mine.length - 1].step : '';
+    return step === 'accepted' ? 'accepted' : step === 'closed' ? 'completed' : 'pending';
   }
 
   /* ── THE ONE RULE for which icons a chit gets in its step. Not hard-coded per screen. ───────────────
@@ -92,39 +109,41 @@
   /* ── the paint ───────────────────────────────────────────────────────────────────────────────────── */
   function linesHTML(m) {
     if (!m.lines.length) return '<div class="cs-mute">' + E(T('No lines on this chit')) + '</div>';
+    var ml = (m.money && m.money.lines) || [];
     return '<table class="cs-lines"><thead><tr><th>' + E(T('Item')) + '</th><th class="n">' + E(T('Qty')) + '</th><th class="n">' + E(T('Price')) + '</th><th class="n">' + E(T('Total')) + '</th></tr></thead><tbody>'
       + m.lines.map(function (l, i) {
-        var offs = (l.offers && l.offers.length) ? l.offers : (l.offer ? [{ label: l.offer.label, off: l.offer.off }] : []);
+        var f = ml[i], offs = (l.offers && l.offers.length) ? l.offers : (l.offer ? [{ label: l.offer.label, off: l.offer.off }] : []);
+        /* a frozen invoice line says what it took off; one offer on the line wears that figure, several keep their own recorded amounts */
+        if (f && offs.length === 1) offs = f.discount > 0 ? [{ label: offs[0].label, off: f.discount }] : [];
         return '<tr data-testid="cs-line-' + i + '"><td>' + E(l.particulars || l.name || '') + offs.map(function (o) {
           return '<div class="cs-off" data-testid="cs-offer-' + i + '">' + E(o.label || T('Offer')) + ' −' + E(money(o.off, m.cur)) + '</div>'; }).join('') + '</td>'
           + '<td class="n">' + E(l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '')) + (l.unit && l.unit !== 'piece' ? ' ' + E(l.unit) : '') + '</td>'
-          + '<td class="n">' + E(money(l.price, m.cur)) + '</td><td class="n">' + E(money(l.total != null ? l.total : l.net, m.cur)) + '</td></tr>';
+          + '<td class="n">' + E(money(l.price, m.cur)) + '</td><td class="n">' + E(money(f ? f.total : (l.total != null ? l.total : l.net), m.cur)) + '</td></tr>';
       }).join('') + '</tbody></table>';
   }
-  /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape), from the chit's own by_rate */
+  /* the GST summary as the counter prints it (till.html taxSummaryHTML is the reference shape): the frozen by_rate, as it is held.
+     A head the chit does not hold is "—", never worked out; the footing row is the chit's own totals, never a column sum. */
   function gstHTML(m) {
-    var bj = m.bj, by = bj.by_rate || (bj.tax && bj.tax.by_rate) || (m.money && m.money.by_rate) || null;
+    var mo = m.money || {}, by = mo.by_rate || null;
     var rates = by ? Object.keys(by).sort(function (a, b) { return Number(a) - Number(b); }) : [];
     if (!rates.length) {
-      var tot = m.money && m.money.tax;
-      return '<div class="cs-sec">' + E(T('GST')) + '</div>' + (tot != null
-        ? '<div class="cs-row"><span>' + E(T('GST total')) + '</span><b data-testid="cs-gst-total">' + E(money(tot, m.cur)) + '</b></div>'
+      return '<div class="cs-sec">' + E(T('GST')) + '</div>' + (mo.tax != null
+        ? '<div class="cs-row"><span>' + E(T('GST total')) + '</span><b data-testid="cs-gst-total">' + E(money(mo.tax, m.cur)) + '</b></div>'
         : '<div class="cs-mute" data-testid="cs-gst-none">' + E(T('Rate-wise GST is not recorded on this bill')) + '</div>');
     }
-    var inter = (bj.supply || (bj.tax && bj.tax.supply)) === 'inter';
-    var sum1 = 0, sum2 = 0, sumB = 0;
+    var inter = (mo.supply || m.bj.supply) === 'inter';
     var rows = rates.map(function (rt) {
-      var v = by[rt] || {}, b = Number(v.base || 0), tx_ = Number(v.tax || 0), c = v.cgst != null ? Number(v.cgst) : (inter ? tx_ : Math.round(tx_ * 50) / 100), s = inter ? null : Math.round((tx_ - c) * 100) / 100;
-      /* ⚠️ cgst/sgst are shown as RECORDED; the only arithmetic is the column footing, which is the sum of the rows above */
-      sumB += b; sum1 += inter ? tx_ : c; sum2 += s || 0;
-      return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(inter ? tx_ : c, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(s, m.cur))) + '</td></tr>';
+      var v = by[rt] || {}, b = v.taxable != null ? v.taxable : v.base;
+      return '<tr data-testid="cs-gst-' + E(rt) + '"><td>' + E(rt) + '%</td><td class="n">' + E(money(b, m.cur)) + '</td><td class="n">' + E(money(inter ? v.igst : v.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(v.sgst, m.cur))) + '</td></tr>';
     }).join('');
-    return '<div class="cs-sec">' + E(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : E(T('SGST'))) + '</th></tr></thead><tbody>' + rows
-      + '<tr class="tot"><td></td><td class="n">' + E(money(sumB, m.cur)) + '</td><td class="n">' + E(money(sum1, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(sum2, m.cur))) + '</td></tr></tbody></table>';
+    var foot = mo.taxable != null
+      ? '<tr class="tot"><td></td><td class="n">' + E(money(mo.taxable, m.cur)) + '</td><td class="n">' + E(money(inter ? mo.igst : mo.cgst, m.cur)) + '</td><td class="n">' + (inter ? '' : E(money(mo.sgst, m.cur))) + '</td></tr>' : '';
+    return '<div class="cs-sec">' + E(T(inter ? 'IGST summary' : 'GST summary')) + '</div><table class="cs-lines" data-testid="cs-gst"><thead><tr><th>' + E(T('Rate')) + '</th><th class="n">' + E(T('Taxable')) + '</th><th class="n">' + E(T(inter ? 'IGST' : 'CGST')) + '</th><th class="n">' + (inter ? '' : E(T('SGST'))) + '</th></tr></thead><tbody>' + rows + foot + '</tbody></table>';
   }
   function totalHTML(m) {
-    var t = m.bj.total != null ? m.bj.total : (m.money && m.money.total);
-    return '<div class="cs-row cs-total"><span>' + E(T('Total')) + '</span><b data-testid="cs-total">' + E(t == null ? T('not recorded') : money(t, m.cur)) + '</b></div>';
+    var mo = m.money || {}, t = mo.total;
+    return (mo.round_off ? '<div class="cs-row cs-mute" data-testid="cs-roundoff"><span>' + E(T('Round off')) + '</span><span>' + E(money(mo.round_off, m.cur)) + '</span></div>' : '')
+      + '<div class="cs-row cs-total"><span>' + E(T('Total')) + '</span><b data-testid="cs-total">' + E(t == null ? T('not recorded') : money(t, m.cur)) + '</b></div>';
   }
   var HOW = { cash: 'Cash', upi: 'UPI', card: 'Card', credit: 'On credit', cheque: 'Cheque', points: 'Points' };
   function tenderHTML(m) {
@@ -151,14 +170,14 @@
     var m = CS.view, ttl = d.querySelector('[data-testid="cs-title"]');
     if (ttl) ttl.textContent = T(m ? titleFor(m) : 'Bill');
     if (!m) { d.querySelector('.cs-body').innerHTML = CS.err ? '<div class="cs-mute" data-testid="cs-err">' + E(CS.err) + '</div>' : '<div class="cs-mute">' + E(T('Reading…')) + '</div>'; d.querySelector('.cs-acts').innerHTML = ''; return; }
-    var head = [T(kindWord(m)), m.no, when(m.at), m.counter ? (/^counter/i.test(m.counter) ? m.counter : T('Counter') + ' ' + m.counter) : '', m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + E(x) + '</b>' : E(x); }).join(' · ');
+    var head = [T(kindWord(m)), m.no, when(m.at), counterWord(m.counter), m.by].filter(Boolean).map(function (x, i) { return i === 1 ? '<b class="mono" data-testid="cs-no">' + E(x) + '</b>' : E(x); }).join(' · ');
     d.querySelector('.cs-body').innerHTML =
       '<div class="cs-head" data-testid="cs-head">' + head + '</div>'
       + '<div class="cs-who"><span data-testid="cs-who">' + E(m.who) + '</span> <span class="cs-step" data-testid="cs-step">' + E(T(STEP[m.status] || m.status)) + '</span></div>'
       + linesHTML(m) + gstHTML(m) + totalHTML(m) + tenderHTML(m)
       + (CS.note ? '<div class="cs-note" data-testid="cs-note">' + E(CS.note) + '</div>' : '')
-      + (CS.useAsk ? '<div class="cs-sec">' + E(T('What is it for?')) + '</div><div class="cs-use">' + [['resale', 'For resale'], ['use', 'For the shop'], ['asset', 'An asset']].map(function (u) {
-        return '<button type="button" data-testid="cs-use-' + u[0] + '" onclick="CBSheet.use(\'' + u[0] + '\')">' + E(T(u[1])) + '</button>'; }).join('') + '</div>' : '');
+      + (CS.useAsk ? '<div class="cs-use" data-testid="cs-use">' + billUseChoiceHTML([m], 'CBSheet.use')
+        + '<button type="button" class="optchip" data-testid="cs-use-auto" onclick="CBSheet.use(\'\')">' + E(T('Let my catalogue decide')) + '</button></div>' : '');
     d.querySelector('.cs-acts').innerHTML = actionsFor(m).map(function (k) {
       return '<button type="button" class="cs-act" data-testid="cs-act-' + k + '" onclick="CBSheet.act(\'' + k + '\')"' + (CS.busy ? ' disabled' : '') + ' title="' + E(T(ACT[k][1])) + '"><span class="ic" aria-hidden="true">' + ACT[k][0] + '</span><span>' + E(T(ACT[k][1])) + '</span></button>';
     }).join('');
@@ -176,7 +195,7 @@
     + '#chitsheet .cs-off{font-size:var(--fs-1,11px);color:var(--ok,#27794c)}#chitsheet .cs-sec{margin:12px 0 4px;font-size:var(--fs-1,11px);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--grey,#494F56)}'
     + '#chitsheet .cs-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0}#chitsheet .cs-total{font-size:var(--fs-4,16px);border-top:2px solid var(--ink,#0F2E3D);margin-top:8px;padding-top:6px}'
     + '#chitsheet .cs-mute{color:var(--grey,#494F56);font-size:var(--fs-1,11px);margin:6px 0}#chitsheet .cs-note{margin-top:10px;padding:8px 10px;border:1px solid var(--gold-line,#E8D9BC);background:var(--gold-soft,#F7F1E4);border-radius:8px}'
-    + '#chitsheet .cs-use{display:flex;gap:6px;flex-wrap:wrap}#chitsheet .cs-use button{cursor:pointer;min-height:44px;padding:0 12px;border:1px solid var(--line,#E7E2D8);border-radius:8px;background:var(--card,#fff)}'
+    + '#chitsheet .cs-use .optchip{cursor:pointer;min-height:44px;padding:0 12px;margin:2px 2px 2px 0}'
     + '#chitsheet .cs-acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:space-around;padding:8px 8px calc(8px + env(safe-area-inset-bottom));border-top:1px solid var(--line,#E7E2D8);background:var(--paper,#FAF8F4)}'
     + '#chitsheet .cs-act{cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;min-height:52px;padding:4px 6px;border:0;border-radius:8px;background:none;color:inherit;font-size:var(--fs-1,11px)}'
     + '#chitsheet .cs-act .ic{font-size:20px;line-height:1}#chitsheet .cs-act:disabled{opacity:.5;cursor:default}#chitsheet .cs-act:hover{background:var(--gold-soft,#F7F1E4)}'
@@ -221,6 +240,8 @@
       if (sr && sr.warning && typeof toast === 'function') toast(sr.warning);
       try { var i = (UI.rows || []).findIndex(function (x) { return x.id === id; }); if (i >= 0) UI.rows[i].state = to; } catch (_) {}
       await read(id);
+      /* the Day book's to-do and Waiting count are the server's: read them again, and repaint the tab that is showing them */
+      try { if (typeof bkHealthLoad === 'function') bkHealthLoad().then(function () { if (typeof BK !== 'undefined' && BK.tab && typeof bkTab === 'function') bkTab(BK.tab, true); }).catch(function () {}); } catch (_) {}
     } catch (e) { CS.note = (typeof MSG !== 'undefined' && MSG.fail) ? MSG.fail('change status', e) : T('Could not change it'); }
     CS.busy = false; paint();
   }
@@ -228,7 +249,8 @@
   function act(k) {
     var m = CS.view, id = CS.id; if (!m) return;
     if (actionsFor(m).indexOf(k) < 0) return;   /* a stale tap on an action this step no longer allows */
-    if (k === 'accept') return move('act');
+    /* a bill received asks what the goods are for BEFORE the acceptance it decides (the same choice Goods in shows) — a task just moves */
+    if (k === 'accept') { if (m.billRx) { CS.useAsk = true; CS.note = null; return paint(); } return move('act'); }
     if (k === 'done') return move('close');
     if (k === 'goodsin') { CS.useAsk = true; CS.note = null; return paint(); }
     if (k === 'print') { try { window.print(); } catch (_) {} return; }

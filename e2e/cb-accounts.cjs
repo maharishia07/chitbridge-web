@@ -6,7 +6,7 @@
  *  1  the page loads signed in; the sidebar lists every view (the designer's twelve, Bills after Dues) and each opens its screen
  *  2  Ledgers: the three sections, their groups (decided by CODE), search with highlight, class chips with counts, Expand /
  *     Collapse all, a Dr/Cr balance from ONE trial-balance read (never one read per row), a click opens that ledger
- *  3  Bills: the two system folders as two tabs, the server's step chip on each bill, a bill opens in a new tab
+ *  3  Bills: the two system folders as two tabs, the server's step chip on each bill, a bill opens the chit sheet in place
  *  4  the avatar menu: Profile → the app's profile · Sign out ends the session; ⌂ Home → /
  *  5  Ledger off: one card; the owner's Switch on → confirm → POST enable ONCE → the page fills; a co-assist is told to ask the owner
  *  6  the one-shop gate: another shop's fingerprint stops the page before any read; a session replaced by another shop signs it out
@@ -346,9 +346,12 @@ async function route(S, r) {
     await p.click('[data-testid="bills-tab-B-1300"]');
     await p.waitForSelector('[data-testid="bill-ib1"]');
     ok(/Issued — waiting on payment/.test(await p.textContent('[data-testid="bill-step-ib1"]')), 'the Issued tab shows its bill and its chip');
-    const [pop] = await Promise.all([ctx.waitForEvent('page'), p.click('[data-testid="bill-ib1"]')]);
-    ok(/\/app\.html#\/app\/chit\/ib1$/.test(pop.url()), 'a bill opens in a new tab on the app (' + pop.url().replace(base, '') + ')');
-    await pop.close();
+    /* 2026-10-02 (web-reads-invoice): CB Accounts loads the chit sheet, so a bill opens it in place — no new tab */
+    const tabs0 = ctx.pages().length;
+    await p.click('[data-testid="bill-ib1"]');
+    await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
+    ok(await p.evaluate(() => typeof openChitSheet === 'function' && !!document.getElementById('chitsheet') && document.getElementById('chitsheet').open) && ctx.pages().length === tabs0, 'a bill opens the chit sheet in CB Accounts (openChitSheet is defined here), not a new tab');
+    await p.keyboard.press('Escape');
 
     /* ── 4 · THE AVATAR MENU, HOME ── */
     await p.click('[data-testid="avatar"]');
