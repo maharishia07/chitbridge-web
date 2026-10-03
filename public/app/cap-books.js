@@ -81,9 +81,9 @@ function bkCss() {
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
     /* the Ledgers' tree + entries: foldersScreen's two panes (cap-folders.js _folderPanes); on a narrow pane the tree IS the way in and a chosen ledger replaces it, with a way back (cb-design: a container query, not the window's) */
-    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:330px}',
+    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:340px}',
     /* the tree: one account on ONE line, its amount aligned right with Dr/Cr; the chosen one a light tint, not a block (2026-10-03) */
-    '.ltn{white-space:nowrap}.ltn > span:last-child{flex:none;white-space:nowrap;font-family:var(--f-num,"IBM Plex Mono",monospace);font-variant-numeric:tabular-nums;text-align:end}',
+    '.ltn > span:last-child{flex:none;white-space:nowrap;font-family:var(--f-num,"IBM Plex Mono",monospace);font-variant-numeric:tabular-nums;text-align:end}',
     '.ltn.on{background:color-mix(in srgb,var(--blue-tint-bg) 45%,transparent)!important;font-weight:600!important;box-shadow:inset 3px 0 0 var(--blue-2)}',
     /* an opened entry never cuts a line short and never scrolls sideways: its words wrap */
     '.lt-pane .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}.lt-pane .cbl-next{overflow-x:hidden}',
@@ -905,20 +905,23 @@ async function bkLtLoad() {
   } catch (e) { var o = document.getElementById('lg_out'); if (o) o.innerHTML = bkErr(e); }
 }
 /** the list of a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
-function bkLgCols(c, showParty) {
+function bkLgCols(c, partyLead, avail) {
+  /* the columns FIT the pane (no sideways scroll): the date, the amounts and the balance are fixed, "What" takes the rest (never under 150 px; the person may still drag) */
+  var fixed = 100 + 104 + 104 + 136, whatW = Math.max(150, Math.min(420, (avail || 0) - fixed - 40));
   var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
   return [
-    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 96, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
-    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: 250, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
+    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 100, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
+    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: whatW, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
         /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
         var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c, bkEntryWord(l));
-        return bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
-    { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 150, html: true, cell: function (l) { var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || ''); return pl ? esc(pl) : dash; } },
+        /* a control account's rows name their party, first and apart (a party's own ledger says it once, in its title; the Party column was dropped — it did not fit beside the amounts) */
+        var pl = partyLead ? (l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '')) : '';
+        return (pl ? '<b class="lg-party">' + esc(pl) + '</b><br>' : '') + bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
     { key: 'dr', label: tx('Debit'), prio: 4, sort: 'dr', num: true, w: 104, html: true, cell: function (l) { return money(l.dr_minor); } },
     { key: 'cr', label: tx('Credit'), prio: 5, sort: 'cr', num: true, w: 104, html: true, cell: function (l) { return money(l.cr_minor); } },
     /* the running balance is pinned (always shown) and written Dr / Cr, never with a minus */
-    { key: 'bal', label: tx('Balance'), prio: 6, pin: 'end', num: true, w: 140, html: true, cell: function (l) { return '<b>' + esc(bkDrCr(l.running_minor, c)) + '</b>'; } },
-  ].filter(function (x) { return showParty || x.key !== 'party'; });   /* a party's own ledger has no Party column: it is said once, in the title */
+    { key: 'bal', label: tx('Balance'), prio: 6, pin: 'end', num: true, w: 136, html: true, cell: function (l) { return '<b>' + esc(bkDrCr(l.running_minor, c)) + '</b>'; } },
+  ];
 }
 function bkEntryWord(e) {
   var s = e && e.source;
@@ -937,9 +940,8 @@ function bkLgMount(el, r) {
   (r.lines || []).forEach(function (l, i) { l._ix = i; });   /* a line's place in the statement is its row id */
   return CBList.mount(el, {
     key: 'ledger', t: tx, rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, id: function (l) { return String(l._ix); },
-    columns: bkLgCols(c, !own), rowTid: function (l) { return 'stmt-row-' + l._ix; },
-    /* what fits: the balance is pinned; a control account (customers / suppliers) keeps its Party, any other ledger leaves it to the ⚙ */
-    defaultCols: own ? ['date', 'what', 'dr', 'cr'] : (BK_CTRL[(BK.lt.sel || {}).code] ? ['date', 'what', 'party', 'dr', 'cr'] : ['date', 'what', 'dr', 'cr']),
+    columns: bkLgCols(c, !own && !!BK_CTRL[(BK.lt.sel || {}).code], el.clientWidth), rowTid: function (l) { return 'stmt-row-' + l._ix; },
+    defaultCols: ['date', 'what', 'dr', 'cr'],   /* what fits beside the pinned balance */
     head: own ? null : bkLgHead,
     search: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
     sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
@@ -973,8 +975,8 @@ function bkLtEntriesPaint() {
   var c = r.currency || BK.duesCur, ctrl = !sel.party && BK_CTRL[sel.code], top;
   /* ⭐ ONE line (2026-10-03: the closing was shown three times with changing signs): opening · closing in Dr / Cr, and for a control account whether its parties agree.
      Every figure is the server's; the one check (the parties' sum against the ledger's closing) is the page's only sum. */
-  top = '<div class="bkdv-count" data-testid="lg-sum" style="display:flex;gap:6px 14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkDrCr(r.opening_minor, c)) + '</b></span>'
-    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkDrCr(r.closing_minor, c)) + '</b></span>';
+  top = '<div class="bkdv-count" data-testid="lg-sum" style="display:flex;gap:6px 14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkDrCr(r.opening_minor, c)) + '</b></span> '
+    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkDrCr(r.closing_minor, c)) + '</b></span> ';
   if (ctrl) {
     var total = bkLtParties(sel.code).reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
     top += total === closing ? '<span data-testid="lg-parties" style="color:var(--ok-2)">' + esc(tx('✓ parties agree')) + '</span>'

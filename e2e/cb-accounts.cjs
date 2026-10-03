@@ -30,7 +30,7 @@ const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYe
 
 /* the designer's twelve views, Bills after Dues — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
-  ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
+  ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['dues', 'Dues', '[data-testid="dues-side-rcv"]'],
   ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
@@ -113,11 +113,16 @@ async function route(S, r) {
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, { currency: 'INR', rows: S.tb, total_dr_minor: 1940000, total_cr_minor: 1840000 }); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, { currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl }); }
+    if (p === '/api/books/ledger/6010') return J(r, 200, { account: { code: '6010', name: 'Rent' }, currency: 'INR', opening_minor: 0, closing_minor: 100000,
+      lines: [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }] });
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: { code: x[1], name: 'Cash' }, currency: 'INR', opening_minor: 0, closing_minor: 1240000,
       lines: [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }] });
     if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
       source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]) });
+    if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, S.todo || [
+      { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
+      { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]);
     if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
@@ -281,12 +286,32 @@ async function route(S, r) {
     ok(await p.locator('#lg_out .lhead').count() === 1 && await p.locator('#lg_out .lrow').count() === 1 && await p.locator('#lg_out table').count() === 0, 'the entries are the Task table (.lhead / .lrow) — no table of its own');
     ok(/12,400\.00/.test(await p.textContent('[data-testid="stmt-closing"]')) && await p.locator('[data-testid="stmt-opening"]').count() === 1, 'the balance carried sits at the top (opening · closing)');
 
+    /* ── 2a · THE LEDGERS QUICK FIXES (2026-10-03): nothing repeated, Dr/Cr, nothing cut off ── */
+    const noMinus = async (sel) => !/[-−]\s?₹?\s?\d/.test((await p.$$eval(sel, (n) => n.map((x) => x.textContent).join(' | '))));
+    ok(await p.locator('#lg_from, #lg_to').count() === 0 && await p.locator('[data-testid="cbl-period-ledger"]').count() === 1, 'the head is the CBList period chip — no date boxes, no Show button');
+    ok(await p.locator('#lg_out .cbl-list').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'the ledger list does not scroll sideways (columns fit; the gear keeps the rest)');
+    S.calls.length = 0;
+    await p.click('[data-testid="cbl-period-ledger"]'); await p.click('[data-period="month"]');
+    await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+    ok(S.calls.some((c) => /\/api\/books\/ledger\/1400\?.*from=\d{4}-\d\d-01/.test(c)), 'picking This month on the chip reads the ledger again for that month');
+    await p.click('[data-testid="lg-acc-6010"]'); await p.waitForFunction(() => /Expense/.test((document.querySelector('[data-testid="stmt-what-0"]') || {}).textContent || ''), null, { timeout: 8000 });
+    const rentWhat = (await p.textContent('[data-testid="stmt-what-0"]')).replace(/\s+/g, ' ').trim();
+    ok(!/Expense · Expense/.test(rentWhat) && /^Expense · C2\/26-27\/0003/.test(rentWhat) && rentWhat.split('Expense').length === 2, 'the kind word once: "' + rentWhat + '"');
+    ok(await noMinus('#lt_tree') && await noMinus('[data-testid="lg-sum"]') && await noMinus('#lg_out .lcell[data-l="Balance"]'), 'no minus sign on the Ledgers view — balances are Dr / Cr');
+    const treeH = await p.$$eval('#lt_tree [data-testid^="lg-acc-"]', (n) => n.filter((x) => !/lg-acc-(1300|2100)$/.test(x.getAttribute('data-testid'))).map((x) => Math.round(x.getBoundingClientRect().height)));
+    ok(treeH.length > 3 && treeH.every((h) => h <= 40), 'the tree: one account on one line (row heights ' + treeH.join(',') + ')');
+    const treeCut = await p.evaluate(() => { const t = document.querySelector('#lt_tree').getBoundingClientRect(); return Array.from(document.querySelectorAll('#lt_tree .ltn')).filter((x) => x.lastElementChild.getBoundingClientRect().right > t.right + 0.5 || x.scrollWidth > x.clientWidth + 1).length; });
+    ok(treeCut === 0 && await p.locator('#lt_tree').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'the tree cuts no name or amount short, and does not scroll sideways (' + treeCut + ' cut)');
+    const selBg = await p.evaluate(() => { const e = document.querySelector('#lt_tree .ltn.on'); return e ? getComputedStyle(e).backgroundColor : ''; });
+    ok(/rgba?\(|color\(/.test(selBg) && !/^rgb\(/.test(selBg), 'the chosen ledger is a light tint (translucent), not a solid block (' + selBg + ')');
+    await p.click('[data-testid="lg-acc-1400"]'); await p.waitForFunction(() => /Sale/.test((document.querySelector('[data-testid="stmt-what-0"]') || {}).textContent || ''), null, { timeout: 8000 });
+
     /* ── 2b · PARTY LEDGERS: 1300 and 2100 are FOLDERS whose leaves are the parties (docs/design/party-ledgers + one-table item 6) ── */
     const dueReads = () => S.calls.filter((c) => /\/api\/books\/dues/.test(c)).length;
     const partyReads = () => S.calls.filter((c) => /\/api\/books\/party\//.test(c)).length;
     const rowsOf = async () => p.$$eval('[data-testid^="lg-party-c"], [data-testid^="lg-party-s"]', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    const partyCells = async () => p.$$eval('#lg_out .lrow .lcell[data-l="Party"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    const partyCells = async () => p.$$eval('#lg_out .lg-party', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     await p.click('[data-testid="lt-band-people"]');
     ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0 && await p.locator('[data-testid="lt-group-Other"]').count() === 1, 'People holds Customers (Sundry Debtors) and Suppliers (Sundry Creditors) as closed folders — and nothing else (no per-party sub-account group)');
     S.calls.length = 0;
@@ -296,13 +321,14 @@ async function route(S, r) {
     let pr = await rowsOf();
     ok(pr.length === 2 && /P-00001.*Ravi Stores.*3,000/.test(pr[0]) && /P-00002.*Chola Auto Care.*3,000/.test(pr[1]), 'Customers opens into one leaf per customer — party no · name · balance, ordered by party no (' + pr.join(' | ') + ')');
     ok((await p.textContent('[data-testid="lg-acc-1300"]')).trim().startsWith('📂'), 'the Customers folder is open (📂)');
-    const tot = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
-    ok(tot === clo && /6,000/.test(tot), 'the control account shows BOTH figures and they agree: total of the parties ' + tot + ' = ledger closing ' + clo);
-    ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no difference line while they agree');
+    const sum1 = (await p.textContent('[data-testid="lg-sum"]')).replace(/\s+/g, ' ').trim();
+    ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 Closing ₹6,000\.00 Dr ✓ parties agree$/.test(sum1), 'ONE line: opening · closing in Dr/Cr · "✓ parties agree" (' + sum1 + ')');
+    ok(await p.locator('[data-testid="lg-parties-total"]').count() === 0 && await p.locator('[data-testid="lg-parties-closing"]').count() === 0 && sum1.split('6,000.00').length === 2 && !/Total of the parties|Ledger closing/.test(await p.textContent('[data-testid="lg_out"]')), 'the closing figure is said once in the head, not three times');
+    ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no difference while they agree');
     ok(dueReads() === 1 && partyReads() === 0, 'one /api/books/dues read names every party; no statement per party (' + dueReads() + ' / ' + partyReads() + ')');
     let rt = await stmtText(), pc = await partyCells();
-    ok(rt.length === 2 && pc.length === 2 && /^P-00001 · Ravi Stores$/.test(pc[0]) && /^P-00002 · Chola Auto Care$/.test(pc[1]), 'every 1300 row names its party in the Party column — "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
-    ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter in the party column');
+    ok(rt.length === 2 && pc.length === 2 && /^P-00001 · Ravi Stores$/.test(pc[0]) && /^P-00002 · Chola Auto Care$/.test(pc[1]), 'every 1300 row leads with its party — "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
+    ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter as its party');
     ok(rt.every((t) => /Counter C2 · rung by Mayur Bhavan \(owner\)/.test(t)), 'the counter and "rung by Mayur Bhavan (owner)" are the entry\'s secondary text (' + rt[0] + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
 
@@ -322,6 +348,12 @@ async function route(S, r) {
     const one = await p.textContent('[data-testid="lg_out"]');
     ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
     ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
+    ok(await p.locator('#lg_out .lg-party').count() === 0 && (one.match(/Ravi Stores/g) || []).length === 0, 'on a party\'s own ledger the party is not repeated on any row (it is said once, in the title)');
+    await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+    const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
+    ok(!/Ravi Stores/.test(own.t) && /Output CGST/.test(own.t), 'inside the opened entry the party is not repeated either');
+    ok(own.nsw <= own.ncw + 1 && own.lsw <= own.lcw + 1, 'the opened detail and the list never scroll sideways (' + own.nsw + '/' + own.ncw + ', ' + own.lsw + '/' + own.lcw + ')');
+    ok(await p.locator('[data-testid="cbl-period-ledger"]').count() === 0, 'a party\'s statement has no period chip (it has no range)');
     ok(/3,000/.test(await p.textContent('[data-testid="stmt-closing"]')) && /0\.00|^\s*₹?\s*0/.test(await p.textContent('[data-testid="stmt-opening"]')), 'opening 0 and closing ₹3,000 for the party');
     ok((await p.textContent('[data-testid="lg-title"]')).trim() === 'P-00001 · Ravi Stores', 'the party is named by no · name above its ledger');
     ok(await p.locator('[data-testid="lg-parties"]').count() === 0 && dueReads() === 0, 'the party view shows no control figures and re-reads no dues');
@@ -333,11 +365,11 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="stmt-what-0"]');
     pr = await rowsOf();
     ok(pr.length === 4 && /P-00003.*Agro Mills.*1,500/.test(pr[2]) && /P-00004.*Kavi Traders.*1,000/.test(pr[3]), 'Suppliers opens into one leaf per supplier (' + pr.slice(2).join(' | ') + ')');
-    const tot2 = (await p.textContent('[data-testid="lg-parties-total"]')).trim(), clo2 = (await p.textContent('[data-testid="lg-parties-closing"]')).trim();
-    ok(tot2 === clo2 && /2,500/.test(tot2), 'the suppliers add up to the 2100 closing (' + tot2 + ' = ' + clo2 + ')');
+    const sum2 = (await p.textContent('[data-testid="lg-sum"]')).replace(/\s+/g, ' ').trim();
+    ok(/Closing ₹2,500\.00 Cr ✓ parties agree$/.test(sum2) && !/[-−]/.test(sum2), 'the suppliers: closing ₹2,500.00 Cr, parties agree, no minus sign (' + sum2 + ')');
     ok(dueReads() === 1 && partyReads() === 0, 'one dues request, no per-row statement (' + dueReads() + ' / ' + partyReads() + ')');
     pc = await partyCells(); rt = await stmtText();
-    ok(pc.length === 2 && pc.every((t) => /^P-0000[34] · (Agro Mills|Kavi Traders)$/.test(t)) && rt.every((t) => /rung by Ravi/.test(t)), '2100 rows name the supplier in the Party column and say "rung by Ravi" apart (' + pc.join(' | ') + ')');
+    ok(pc.length === 2 && pc.every((t) => /^P-0000[34] · (Agro Mills|Kavi Traders)$/.test(t)) && rt.every((t) => /rung by Ravi/.test(t)), '2100 rows lead with the supplier and say "rung by Ravi" apart (' + pc.join(' | ') + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-creditors.png'), fullPage: true });
     await p.click('[data-testid="lg-party-s2"]');
     await p.waitForFunction(() => /Kavi/.test((document.querySelector('[data-testid="lg-title"]') || {}).textContent || ''));
@@ -347,7 +379,7 @@ async function route(S, r) {
     S.closing = { '1300': 650000 };
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-parties-diff"]');
-    ok(/₹6,000\.00.*₹6,500\.00.*₹500\.00 apart/.test(await p.textContent('[data-testid="lg-parties-diff"]')), 'when the parties and the ledger differ, the difference is said in words');
+    ok(/^parties differ by ₹500\.00$/.test((await p.textContent('[data-testid="lg-parties-diff"]')).trim()) && /Closing ₹6,500\.00 Dr/.test(await p.textContent('[data-testid="lg-sum"]')), 'when the parties and the ledger differ, the difference is named in the same one line');
     S.closing = null;
 
     /* ── 3 · BILLS ── */
@@ -415,7 +447,7 @@ async function route(S, r) {
     await Promise.all([p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 10000 }), p.click('[data-testid="confirm-ok"]')]);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]');
     ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
-    ok(await p.locator('#nav .nav-btn').count() === 13, 'the page fills: the full menu is there');
+    ok(await p.locator('#nav .nav-btn').count() === 14, 'the page fills: the full menu is there');
     await ctx.close();
   }
   {
@@ -530,6 +562,22 @@ async function route(S, r) {
     const card = await p.evaluate(() => { const tr = document.querySelector('table.bktab tbody tr'); const cs = getComputedStyle(tr); return { disp: cs.display, labelled: tr.querySelectorAll('td[data-l]').length, head: getComputedStyle(document.querySelector('table.bktab thead')).display }; });
     ok(card.disp === 'block' && card.labelled >= 3 && card.head === 'none', 'a table is one card per row at 390 px, each cell labelled (' + card.labelled + ' labelled cells)');
     await ctx.close();
+  }
+
+  /* ── THE LEDGERS, LOOKED AT: Customers' ledger with its first entry opened, laptop and phone, Cream and Dark (e2e/shots/ledgers-{laptop,phone}-{cream,dark}.png) ── */
+  for (const theme of ['cream', 'dark']) {
+    for (const [tag, vp] of [['laptop', { width: 1360, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+      const S = standIn();
+      const { ctx, p } = await open(S, { viewport: vp, seed: 'try { localStorage.setItem("cb_theme", ' + JSON.stringify(theme) + '); } catch (_) {}' });
+      await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+      await p.waitForSelector('[data-testid="lt-band-people"]'); await p.click('[data-testid="lt-band-people"]'); await p.click('[data-testid="lg-acc-1300"]');
+      await p.waitForSelector('[data-testid="stmt-what-0"]'); await p.waitForTimeout(300);
+      await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+      const g = await p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'); return { th: document.documentElement.getAttribute('data-theme'), lsw: l.scrollWidth, lcw: l.clientWidth, nsw: n.scrollWidth, ncw: n.clientWidth, dsw: document.documentElement.scrollWidth, iw: innerWidth }; });
+      ok(g.lsw <= g.lcw + 1 && g.nsw <= g.ncw + 1 && g.dsw <= g.iw, 'Ledgers ' + tag + ' in ' + theme + ' (' + g.th + '): the list and the opened entry fit, nothing scrolls sideways (' + g.lsw + '/' + g.lcw + ', ' + g.nsw + '/' + g.ncw + ')');
+      await p.screenshot({ path: path.join(SHOTS, 'ledgers-' + tag + '-' + theme + '.png') });
+      await ctx.close();
+    }
   }
 
   /* ── no page error, nothing left the machine ── */
