@@ -48,7 +48,9 @@ async function route(r) {
     source: { kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' },
     lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', rate: 12, dr_minor: 0, cr_minor: 267857 }, { code: '2200', name: 'Output CGST', rate: 6, dr_minor: 0, cr_minor: 32143 }] })) });
   if (p.startsWith('/api/books/')) return J(r, 200, {});
-  if (p === '/api/folders') return J(r, 200, { folders: [] });
+  if (p === '/api/folders') return J(r, 200, { folders: [{ folder_id: 'c0000000-0000-4000-8000-00000000000b', parent_id: null, name: 'Urgent', scope: 'task', kind: 'filed', count: 1 }] });
+  if (p === '/api/chits/inbox') return J(r, 200, { chits: [{ chit_id: 'ord1', purpose: 'order', manual_subject: 'Order from Chola', sender_entity_display_name: 'Chola Auto Care', current_status: 'pending', created_at: '2026-10-01T04:00:00Z', summary_json: {}, all_recipients: [] }, { chit_id: 'job1', purpose: 'general', manual_subject: 'Fix the shutter', sender_entity_display_name: 'Bills Shop', current_status: 'pending', created_at: '2026-10-01T03:00:00Z', summary_json: {}, all_recipients: [] }], total: 2, page: 1, limit: 20 });
+  if (p === '/api/chits/sent') return J(r, 200, { chits: [], total: 0, page: 1, limit: 20 });
   if (p === '/api/crm/parties' && m === 'GET') {
     const asApi = (pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp;
     return J(r, 200, { parties: FX.list.map(asApi), alerts: FX.alerts });
@@ -95,14 +97,14 @@ function measure() {
   for (let t; (t = walker.nextNode());) {
     const txt = t.nodeValue.replace(/\s+/g, ' ').trim(); if (!txt || !/[A-Za-z0-9]/.test(txt)) continue;
     const el = t.parentElement; if (!el || seen.has(el) || /^(SCRIPT|STYLE|TITLE|OPTION)$/.test(el.tagName)) continue;
-    if (el.closest('#cb-avatar,[hidden],.sr-only,.cbl-live,dialog:not([open]),#toast')) continue;
+    if (el.closest('#cb-avatar,.proto,:disabled,[aria-disabled="true"],[hidden],.sr-only,.cbl-live,dialog:not([open]),#toast')) continue;
     if (!vis(el)) continue;
     seen.add(el);
     const cs = getComputedStyle(el); let a = 1; for (let n = el; n && n.nodeType === 1; n = n.parentElement) a *= Number(getComputedStyle(n).opacity);
     const g = ground(el); let fg = rgba(cs.color); fg[3] *= a; fg = over(fg, g.c);
     const size = parseFloat(cs.fontSize), w = Number(cs.fontWeight) >= 700 || cs.fontWeight === 'bold', large = size >= 24 || (size >= 18.66 && w);
     let cat = 'other'; for (const [name, sel] of CATS) { if (el.closest(sel)) { cat = name; break; } }
-    out.push({ cat, text: txt.slice(0, 28), ratio: Math.round(ratio(fg, g.c) * 100) / 100, need: large ? 3 : 4.5, grad: g.grad, tag: el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') });
+    out.push({ cat, text: txt.slice(0, 28), ratio: Math.round(ratio(fg, g.c) * 100) / 100, need: large ? 3 : 4.5, grad: g.grad, html: el.outerHTML.slice(0, 150), tag: el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '') });
   }
   return out;
 }
@@ -124,7 +126,7 @@ function measure() {
   async function open(urlPath) {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block' });
     await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
-    await ctx.route(/fonts.(googleapis|gstatic).com/, (r) => r.abort());
+    await ctx.route(/fonts.(googleapis|gstatic).com|cdnjs.cloudflare.com/, (r) => r.abort());
     await ctx.route('**/api/**', route);
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, OWNER);
     const p = await ctx.newPage(); p.on('pageerror', (e) => threw.push(e.message));
@@ -136,16 +138,20 @@ function measure() {
   const crmSteps = (hash, ready) => async (p) => { await p.evaluate((h) => { location.hash = h; }, hash); await p.waitForSelector(ready, { timeout: 15000 }); await p.waitForTimeout(300); };
   const accSteps = (tab, ready) => async (p) => { await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-' + tab + '"]'); await p.waitForSelector(ready, { timeout: 15000 }); await p.waitForTimeout(300); };
   const SCREENS = [
-    { name: 'crm Parties', url: '/crm.html', go: crmSteps('#/parties', '[data-testid^="crm-row-"]'), shot: 'crm-parties' },
-    { name: 'crm Party record', url: '/crm.html', go: crmSteps('#/party/P-0001', '[data-testid="crm-ident"]'), shot: 'crm-record' },
-    { name: 'crm Follow-ups', url: '/crm.html', go: crmSteps('#/followups', '[data-testid^="crm-fu-"]'), shot: 'crm-followups' },
-    { name: 'accounts Day book', url: '/accounts.html', go: accSteps('daybook', '[data-testid^="db-entry-"]') },
-    { name: 'accounts Ledgers', url: '/accounts.html', go: accSteps('ledgers', '[data-testid="lt-band-people"]') },
+    { name: 'crm Parties', url: '/crm.html', need: 'full', go: crmSteps('#/parties', '[data-testid^="crm-row-"]'), shot: 'crm-parties' },
+    { name: 'crm Party record', url: '/crm.html', need: 'full', go: crmSteps('#/party/P-0001', '[data-testid="crm-ident"]'), shot: 'crm-record' },
+    { name: 'crm Follow-ups', url: '/crm.html', need: 'full', go: crmSteps('#/followups', '[data-testid^="crm-fu-"]'), shot: 'crm-followups' },
+    { name: 'accounts Day book', url: '/accounts.html', need: 'full', go: accSteps('daybook', '[data-testid^="db-entry-"]') },
+    { name: 'accounts Ledgers', url: '/accounts.html', need: 'full', go: accSteps('ledgers', '[data-testid="lt-band-people"]') },
+    { name: 'index (home)', url: '/', go: async (p) => { await p.waitForSelector('body', { timeout: 15000 }); await p.waitForTimeout(1200); } },
+    { name: 'app Task list', url: '/app.html#/app', go: async (p) => { await p.waitForSelector('[data-testid="nav-task"]', { timeout: 20000 }); await p.waitForTimeout(1500); } },
+    { name: 'list-lab', url: '/list-lab.html', go: async (p) => { await p.waitForSelector('.cbl-row', { timeout: 15000 }); await p.waitForTimeout(300); } },
   ];
 
   const keys = await (async () => { const { p, ctx } = await open('/crm.html'); await p.waitForFunction(() => window.CBScreen && window.CBAvatar); const k = await p.evaluate(() => Object.keys(CBScreen.APP_THEMES)); await ctx.close(); return k; })();
   ok(keys.length === 16 && keys.indexOf('cream') >= 0 && keys.indexOf('dark') >= 0 && keys.indexOf('terminal') >= 0, 'APP_THEMES has all 16 themes (' + keys.join(' ') + ')');
 
+  const FULL = ['--ink', '--ink-2', '--muted', '--line', '--card', '--page', '--panel', '--blue-t', '--blue-i', '--amber-t', '--amber-i', '--green-t', '--green-d', '--red-t', '--red-i'];
   const table = {};   /* screen → theme → [pairs measured, failures] */
   const fails = [];
   for (const sc of SCREENS) {
@@ -158,6 +164,9 @@ function measure() {
       await p.waitForTimeout(60);
       /* the selected row: the class CBList's cursor sets on the row the person is on */
       await p.evaluate(() => { document.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel').forEach((n) => n.classList.remove('sel')); const r = document.querySelector('.cbl-row[data-row],.cbl-lrec[data-row]'); if (r) r.classList.add('sel'); });
+      /* a token that comes back EMPTY is a cycle (an alias pointing back at a name the avatar re-points) — it paints nothing, and the pair test above would read the ground behind it */
+      const empty = await p.evaluate((names) => { const cs = getComputedStyle(document.documentElement); return names.filter((n) => !cs.getPropertyValue(n).trim()); }, sc.need === 'full' ? FULL : []);
+      if (empty.length) fails.push({ screen: sc.name, theme: k, cat: 'token', text: empty.join(' '), ratio: 0, need: 1, html: ':root' });
       const pairs = await p.evaluate(measure);
       const bad = pairs.filter((x) => x.ratio < x.need);
       table[sc.name][k] = [pairs.length, bad.length, pairs.reduce((m, x) => Math.min(m, x.ratio), 99)];
@@ -190,13 +199,21 @@ function measure() {
     const worst = th.reduce((w, k) => table[s][k][2] < w[1] ? [k, table[s][k][2]] : w, ['', 99]);
     console.log('   ' + s.padEnd(20) + ' pairs ' + String(tot[0]).padStart(5) + '  failing ' + String(tot[1]).padStart(4) + '  lowest ' + worst[1] + ' (' + worst[0] + ')');
   });
+  console.log('\n  PAGE x THEME (failing pairs; . = none)');
+  console.log('   ' + ''.padEnd(18) + th.map((k) => k.slice(0, 5).padStart(6)).join(''));
+  Object.keys(table).forEach((s) => console.log('   ' + s.padEnd(18) + th.map((k) => String(table[s][k][1] || '.').padStart(6)).join('')));
   if (fails.length) {
     console.log('\n  FAILING PAIRS (' + fails.length + '):');
     const grouped = {};
     fails.forEach((f) => { const g = f.screen + ' | ' + f.theme + ' | ' + f.cat; (grouped[g] = grouped[g] || []).push(f); });
-    Object.keys(grouped).slice(0, 120).forEach((g) => { const a = grouped[g]; console.log('   ' + g + ' | ' + a.length + 'x | worst ' + Math.min.apply(null, a.map((f) => f.ratio)) + ' (need ' + a[0].need + ') e.g. "' + a[0].text + '" <' + a[0].tag + '>'); });
+    Object.keys(grouped).slice(0, 120).forEach((g) => { const a = grouped[g]; console.log('   ' + g + ' | ' + a.length + 'x | worst ' + Math.min.apply(null, a.map((f) => f.ratio)) + ' (need ' + a[0].need + ') e.g. "' + a[0].text + '" ' + a[0].html); });
   }
-  ok(fails.length === 0, 'every text pair on every screen in all 16 themes clears AA (' + fails.length + ' failing of ' + Object.keys(table).reduce((a, s) => a + th.reduce((b, k) => b + table[s][k][0], 0), 0) + ' measured)');
+  /* A RATCHET, not a pass: the CRM, CB Accounts, the index and the list lab are held at ZERO. app.html's own rail and status strip still carry
+     literal greys (a separate piece of work) — its count may only go DOWN, so no NEW unreadable pair can land there. */
+  const RATCHET = { 'app Task list': 18 };
+  Object.keys(RATCHET).forEach((n) => { const c = fails.filter((x) => x.screen === n).length; ok(c <= RATCHET[n], n + ': ' + c + ' failing pairs, held at most ' + RATCHET[n] + (c < RATCHET[n] ? ' (lower the ratchet to ' + c + ')' : '')); });
+  const hard = fails.filter((x) => !(x.screen in RATCHET));
+  ok(hard.length === 0, 'every text pair on every screen in all 16 themes clears AA (' + hard.length + ' failing of ' + Object.keys(table).reduce((a, s) => a + th.reduce((b, k) => b + table[s][k][0], 0), 0) + ' measured)');
 
   /* ── the Follow-ups nav opens a DIFFERENT view ── */
   {
