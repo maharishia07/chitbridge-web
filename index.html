@@ -220,19 +220,8 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
     </div>
   </div>
 
-  <!-- ⭐ THE STANDARDS DOOR (docs/design/standards-page): the whole box opens /standards.html; Read me opens its first sheet. The counts are the register's own
-       (cap-standards.js › stdCounts), painted below — never typed here; the box reads nothing from the API, so it is the same signed in or out. -->
-  <div class="main" data-testid="doors">
-    <div class="box door" id="box_std" data-testid="door-standards">
-      <a class="cover" href="/standards.html" data-testid="door-standards-link">
-        <span class="go" aria-hidden="true"></span>
-        <h3>Standards</h3>
-        <p class="what">The laws and standards we follow, and what is still missing.</p>
-      </a>
-      <p class="doorn" id="std_counts" data-testid="door-standards-counts" hidden></p>
-      <p class="doorf" id="std_foot" data-testid="door-standards-foot" hidden></p>
-    </div>
-  </div>
+  <!-- THE STANDARDS DOOR (docs/design/standards-page) waits: the page is at 245 of its 250 words with every alert up and the box costs 25. Until Athi picks what to trim,
+       Standards (and CRM) are one-word links in the foot row below. -->
 
   <div class="foot">
     <a href="app.html#/app/settings" data-testid="foot-shop">Your shop</a>
@@ -240,6 +229,8 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
     <a href="app.html#/app/coassists" data-testid="foot-coassists">Co-assists</a>
     <a href="app.html#/app/suppliers" data-testid="foot-suppliers">Suppliers</a>
     <a href="app.html#/app/connectors" data-testid="foot-connectors">Connectors</a>
+    <a href="crm.html" data-testid="foot-crm">CRM</a>
+    <a href="standards.html" data-testid="foot-standards">Standards</a>
     <span class="grow"></span>
     <span id="prices_read" data-testid="prices-read"></span>
   </div>
@@ -251,8 +242,6 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 <script src="/app/one-person.js"></script>
 <script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot of every CB page -->
 <script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
-<script>function tx(s){ return s; }</script>   <!-- the one helper cap-standards.js asks its page for at load (this page is English); esc() is declared below -->
-<script src="/app/cap-standards.js"></script>   <!-- the register: the door's counts and the date it was checked are its own -->
 <script>
 'use strict';
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
@@ -495,18 +484,6 @@ function clearFacts(){
   CUR = 'INR';
 }
 
-/* THE STANDARDS DOOR: the register's own counts and its checked date. If the register did not load the box is left as a plain link — a number is never guessed. */
-(function(){
-  try{
-    if (typeof stdCounts !== 'function' || typeof STD_CHECKED === 'undefined') return;
-    var n = stdCounts();
-    var when = new Date(STD_CHECKED + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-    var c = document.getElementById('std_counts'), f = document.getElementById('std_foot');
-    c.innerHTML = '<span class="c-live"><b>' + n.live + '</b> in force</span><span class="c-part"><b>' + n.part + '</b> partly</span><span class="c-plan"><b>' + n.plan + '</b> planned</span>';
-    f.innerHTML = '<span>Checked ' + esc(when) + '</span><a href="/standards.html?sheet=why" data-testid="door-standards-read">Read me</a>';
-    c.hidden = false; f.hidden = false;
-  }catch(_){}
-})();
 
 /* THE AVATAR is CBAvatar (app/avatar.js) — the same control as the app and CB Accounts; signed out it draws the Sign in door */
 function avatarPaint(){

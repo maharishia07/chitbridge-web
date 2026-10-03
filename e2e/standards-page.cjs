@@ -308,28 +308,15 @@ async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.call
     await o2.ctx.close();
   }
 
-  /* ── 6 · THE DOOR on the index page, and Settings ── */
+  /* ── 6 · THE WAY IN from the index page (a foot link while the door box waits for room in the 250-word budget), and Settings ── */
   {
-    const SI = { calls: [] };   /* the index page reads the API for its other boxes; only the Standards page is held to no reads */
-    const so = open(SI, { path: '/', noWait: true });
-    const { ctx, p } = await so;
-    await p.waitForSelector('[data-testid="door-standards-counts"]:not([hidden])', { timeout: 15000 });
-    const dn = (await p.innerText('[data-testid="door-standards-counts"]')).replace(/\s+/g, ' ').trim();
-    ok(dn === COUNT.live + ' in force ' + COUNT.part + ' partly ' + COUNT.plan + ' planned', 'the index door says the register\'s own counts: ' + dn);
-    ok(/Checked 3 Oct 2026/.test(await p.textContent('[data-testid="door-standards-foot"]')), 'and when it was checked');
-    ok(await p.getAttribute('[data-testid="door-standards-link"]', 'href') === '/standards.html', 'the whole box opens /standards.html');
-    ok(/The laws and standards we follow/.test(await p.textContent('[data-testid="door-standards"]')) && /still missing/.test(await p.textContent('[data-testid="door-standards"]')), 'with the line "the laws and standards we follow, and what is still missing"');
-    ok(await p.getAttribute('[data-testid="door-standards-read"]', 'href') === '/standards.html?sheet=why', 'Read me opens Why follow standards');
-    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3, 'the three boxes under Day to day are still three (the door sits outside them)');
-    await p.screenshot({ path: path.join(SHOTS, 'standards-door.png') });
-    await Promise.all([p.waitForURL(/standards\.html\?sheet=why/), p.click('[data-testid="door-standards-read"]')]);
-    await p.waitForSelector('dialog[open] [data-testid="std-sheet-why"]');
-    ok(true, 'following Read me lands on the open sheet');
+    const SI = { calls: [] };
+    const { ctx, p } = await open(SI, { path: '/', noWait: true });
+    await p.waitForSelector('[data-testid="foot-standards"]', { timeout: 15000 });
+    ok(await p.getAttribute('[data-testid="foot-standards"]', 'href') === 'standards.html', 'the index page links Standards from its foot row');
+    ok(await p.getAttribute('[data-testid="foot-crm"]', 'href') === 'crm.html', 'and CRM beside it');
+    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3, 'the three boxes under Day to day are still three');
     await ctx.close();
-    const so2 = await open(SI, { path: '/', noWait: true, session: null });
-    await so2.p.waitForSelector('[data-testid="door-standards-counts"]:not([hidden])', { timeout: 15000 });
-    ok(true, 'signed out the door is the same (it reads no shop)');
-    await so2.ctx.close();
   }
   {
     /* Settings › Standards: run the function as the app does, with the helpers it needs */
