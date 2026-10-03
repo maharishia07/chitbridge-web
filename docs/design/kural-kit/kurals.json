@@ -1,5 +1,5 @@
 {
-  "_about": "Thirukkural library for the app. verse = Tamil couplet (2 lines), always shown in every language. meaning.<lang> = plain-language meaning; 'ta' and 'en' are required before release, other languages optional (fallback to 'en'). translit.<lang> = optional: the Tamil verse written in that language's script. placements: hero|strip|empty|splash|print|signin.",
+  "_about": "Thirukkural library for the app. verse = Tamil couplet (2 lines), always shown in every language. meaning.<lang> = plain-language meaning; 'ta' and 'en' are required before release, other languages optional (fallback to 'en'). translit.<lang> = optional: the Tamil verse written in that language's script. placements: hero|strip|empty|splash|print|signin. group 'crm' = CB CRM pages (placement 'footer' = the CBKural footer band on CB pages).",
   "languages": {
     "required": [
       "ta",
@@ -448,6 +448,188 @@
       },
       "placements": [
         "strip"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 120,
+      "route": "crm-parties",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Parties list",
+        "ta": "வாடிக்கையாளர்கள்"
+      },
+      "verse": [
+        "வாணிகம் செய்வார்க்கு வாணிகம் பேணிப்",
+        "பிறவும் தமபோல் செயின்"
+      ],
+      "meaning": {
+        "en": "Good business guards the interests of others as carefully as its own.",
+        "ta": null
+      },
+      "why": {
+        "en": "Same verse as Ledgers › People: the two apps speak with one voice",
+        "ta": "இரு செயலிகளும் ஒரே குரலில்"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 783,
+      "route": "crm-party",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Party page & timeline",
+        "ta": "வாடிக்கையாளர் பக்கம்"
+      },
+      "verse": [
+        "நவில்தொறும் நூல்நயம் போலும் பயில்தொறும்",
+        "பண்புடை யாளர் தொடர்பு"
+      ],
+      "meaning": {
+        "en": "Friendship with good people grows sweeter with every meeting, as a fine book does with every reading.",
+        "ta": null
+      },
+      "why": {
+        "en": "A regular customer's history deepens with each visit",
+        "ta": "ஒவ்வொரு வருகையிலும் உறவு ஆழமாகும்"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 100,
+      "route": "crm-messages",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Messages & dues reminders",
+        "ta": "செய்திகள் & நினைவூட்டல்கள்"
+      },
+      "verse": [
+        "இனிய உளவாக இன்னாத கூறல்",
+        "கனியிருப்பக் காய்கவர்ந் தற்று"
+      ],
+      "meaning": {
+        "en": "Speaking harsh words when kind ones are at hand is like picking unripe fruit when ripe fruit is there.",
+        "ta": null
+      },
+      "why": {
+        "en": "Ask for the money, kindly",
+        "ta": "பணத்தை அன்புடன் கேள்"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 788,
+      "route": "crm-service",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Service & complaints",
+        "ta": "சேவை & புகார்கள்"
+      },
+      "verse": [
+        "உடுக்கை இழந்தவன் கைபோல ஆங்கே",
+        "இடுக்கண் களைவதாம் நட்பு"
+      ],
+      "meaning": {
+        "en": "True friendship rushes to remove trouble, as a hand reaches at once for a slipping garment.",
+        "ta": null
+      },
+      "why": {
+        "en": "Help comes at once",
+        "ta": "உதவி உடனே வரும்"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 108,
+      "route": "crm-disputes",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Disputes",
+        "ta": "சச்சரவுகள்"
+      },
+      "verse": [
+        "நன்றி மறப்பது நன்றன்று நன்றல்ல",
+        "தன்றே மறப்பது நன்று"
+      ],
+      "meaning": {
+        "en": "Forgetting a kindness is never good; forgetting a wrong the same day is best.",
+        "ta": null
+      },
+      "why": {
+        "en": "Close the matter, keep the relationship",
+        "ta": "விஷயத்தை முடி, உறவைக் காத்திடு"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 103,
+      "route": "crm-loyalty",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Loyalty & offers",
+        "ta": "விசுவாசம் & சலுகைகள்"
+      },
+      "verse": [
+        "பயன்தூக்கார் செய்த உதவி நயன்தூக்கின்",
+        "நன்மை கடலின் பெரிது"
+      ],
+      "meaning": {
+        "en": "Help given without weighing the return is, when weighed, greater than the sea.",
+        "ta": null
+      },
+      "why": {
+        "en": "Goodwill without counting",
+        "ta": "கணக்கிடாத நல்லெண்ணம்"
+      },
+      "placements": [
+        "footer"
+      ],
+      "translit": {}
+    },
+    {
+      "no": 94,
+      "route": "crm-leads",
+      "group": "crm",
+      "app": "CB CRM",
+      "page": {
+        "en": "Leads & enquiries",
+        "ta": "விசாரணைகள்"
+      },
+      "verse": [
+        "துன்புறூஉம் துவ்வாமை இல்லாகும் யார்மாட்டும்",
+        "இன்புறூஉம் இன்சொ லவர்க்கு"
+      ],
+      "meaning": {
+        "en": "Those who speak kindly to all will never know the sorrow of want.",
+        "ta": null
+      },
+      "why": {
+        "en": "Kind words at first contact",
+        "ta": "முதல் சந்திப்பில் இனிய சொல்"
+      },
+      "placements": [
+        "footer"
       ],
       "translit": {}
     }

@@ -37,6 +37,18 @@ Read this first in every new chat. It records what has been designed and decided
 | Suspense & reconciliation (`suspense`) | 436 | Fix your own errors first |
 | Settings & controls (`settings`) | 546 | Integrity over force |
 
+### CB CRM kurals (proposed, footer on each page)
+| CRM page (route) | Kural | Idea |
+|---|---|---|
+| Parties list (`crm-parties`) | 120 | same as Ledgers › People — one voice across apps |
+| Party page & timeline (`crm-party`) | 783 | the relationship deepens with each visit |
+| Messages & dues reminders (`crm-messages`) | 100 | ask for the money, kindly |
+| Service & complaints (`crm-service`) | 788 | help comes at once |
+| Disputes (`crm-disputes`) | 108 | close the matter, keep the relationship |
+| Loyalty & offers (`crm-loyalty`) | 103 | goodwill without counting |
+| Leads & enquiries (`crm-leads`) | 94 | kind words at first contact |
+Rule: never put a kural inside an outgoing customer message.
+
 **Excluded:** Kural 552 (over-taxation warning) — never on tax screens.
 Full Tamil text of all 17 is in `kurals.json` (kural-kit.zip).
 
