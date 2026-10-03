@@ -20,10 +20,10 @@
     "rewards": "1.5.0",
     "rollup": "1.5.0",
     "scalecode": "1.5.0",
-    "screen": "1.5.0",
+    "screen": "1.15.0",
     "search": "1.4.0",
     "signin": "1.6.0",
-    "tax": "1.10.0",
+    "tax": "1.20.0",
     "units": "1.5.0",
     "variant": "1.4.0",
     "verdict": "1.5.0"
