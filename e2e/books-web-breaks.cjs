@@ -45,7 +45,7 @@ const BREAKS = [
   ['SRC counter missing', CAP, `  if (s.counter) out.push(esc(counterWord(s.counter)));`, ``],
   ['SRC seller missing', CAP, `function bkRungPart(s) { return s && s.by ?`, `function bkRungPart(s) { return false ?`],
   ['SRC day reads its long narration', CAP, `return s && s.kind === 'day' ? esc(tx('Walk-in day'))`, `return false ? esc(tx('Walk-in day'))`],
-  ['SRC ledger lines lose their source', CAP, `var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c);`, `var parts = [];`],
+  ['SRC ledger lines lose their source', CAP, `else if (s.ref || s.chit_id) out += (said ? ' ' : ' · ' + (kw ? esc(kw) + ' ' : '')) + bkBillPart(s, tid);`, `else if (false) out += (said ? ' ' : ' · ' + (kw ? esc(kw) + ' ' : '')) + bkBillPart(s, tid);`],
   /* ── how it was paid (Athi, 2026-10-01: "clearly segregate credit, cash, UPI (UPI id)") ── */
   ['HOW tender not shown', CAP, `  if (s.how) return '<span data-testid="'`, `  if (false) return '<span data-testid="'`],
   ['HOW day split not shown', CAP, `if (s.kind === 'day' && s.split && s.split.length) return s.split.map(function (x) { return esc(tx(x.how))`, `if (false) return s.split.map(function (x) { return esc(tx(x.how))`],

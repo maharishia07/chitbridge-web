@@ -14,7 +14,7 @@
  *  7  never in a message: the band is not inside any text field, and no file that builds an outgoing message mentions it
  *  8  tokens only: right in Cream · Dark · Terminal (WCAG AA for the verse and the meaning), never amber, never blue, no italic
  *  9  other languages: Tamil and English read the English line; a language with no `meaning.<lang>` falls back to English
- * Screenshots: e2e/shots/kural-{accounts,crm,index}-laptop.png, kural-accounts-phone.png (KURAL_SHOTS=<dir> to put them elsewhere)
+ * Screenshots: e2e/shots/kural-{accounts,crm,index}-laptop.png, kural-accounts-phone.png, kural-accounts-phone-meaning.png, kural-accounts-meaning-below-1000.png (KURAL_SHOTS=<dir> to put them elsewhere)
  * Playwright is not in the cloud image: `npm i @playwright/test` in a temp dir and NODE_PATH at it (the PR says so). */
 'use strict';
 const { chromium } = require('@playwright/test');
@@ -164,6 +164,7 @@ async function route(S, r) {
     await mid.p.waitForSelector('[data-testid="kural-footer"]:not([hidden])');
     v = await view(mid.p);
     ok(v.kv.dir === 'column' && v.kv.mt >= v.kv.vb - 2, 'narrow laptop (1000): the meaning sits BELOW the couplet');
+    await mid.p.screenshot({ path: path.join(SHOTS, 'kural-accounts-meaning-below-1000.png') }).catch(() => {});
     await mid.ctx.close();
     const ph = await open(standIn(), { viewport: { width: 390, height: 844 }, clock: true });
     await ph.p.waitForSelector('[data-testid="kural-footer"]:not([hidden])');
@@ -173,6 +174,7 @@ async function route(S, r) {
     await ph.p.clock.fastForward(7100); await ph.p.waitForTimeout(700);
     v = await view(ph.p);
     ok(v.kv.mo === '1' && v.kv.vo === '0', 'phone: after 7 s the two take turns (the meaning now shows)');
+    await ph.p.screenshot({ path: path.join(SHOTS, 'kural-accounts-phone-meaning.png') }).catch(() => {});
     await ph.p.click('[data-testid="kural-body"]'); await ph.p.waitForTimeout(700);
     v = await view(ph.p);
     ok(v.kv.mo === '0' && v.kv.vo === '1', 'phone: a tap switches back');

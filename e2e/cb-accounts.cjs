@@ -276,7 +276,7 @@ async function route(S, r) {
     {
       const t = await p.evaluate(() => { const rows = Array.from(document.querySelectorAll('#lt_tree .tn')), tr = document.querySelector('#lt_tree').getBoundingClientRect();
         const am = rows.map((r) => r.querySelector('.am')).filter((a) => a && a.textContent.trim());
-        return { h: rows.map((r) => ({ id: r.getAttribute('data-testid'), name: r.querySelector('.nm').textContent.trim(), h: Math.round(r.getBoundingClientRect().height) })), rights: Array.from(new Set(am.map((a) => Math.round(a.getBoundingClientRect().right)))),
+        return { h: rows.map((r) => ({ id: r.getAttribute('data-testid'), name: r.querySelector('.nm').textContent.trim(), h: Math.round(r.getBoundingClientRect().height) })), rights: Array.from(new Set(am.map((a) => { const r = document.createRange(); r.selectNodeContents(a); return Math.round(r.getBoundingClientRect().right); }))),   /* where the TEXT ends, not the box */
           cut: rows.filter((r) => r.lastElementChild.getBoundingClientRect().right > tr.right + 0.5 || r.querySelector('.nm').scrollWidth > r.querySelector('.nm').clientWidth + 1).length, sw: document.querySelector('#lt_tree').scrollWidth <= document.querySelector('#lt_tree').clientWidth + 1 }; });
       const long = t.h.filter((x) => x.name.length > 22), oneLine = t.h.filter((x) => x.name.length <= 22);
       ok(oneLine.length > 12 && oneLine.every((x) => x.h <= 40), 'the tree: one node on one line (heights ' + oneLine.map((x) => x.h).join(',') + ')');
