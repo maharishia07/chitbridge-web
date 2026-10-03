@@ -1140,7 +1140,7 @@ function bkLgMount(el) {
   var cur = function () { return (BK.lt.r && BK.lt.r.currency) || c0; };
   var dflt = kind === 'control' ? ['date', 'party', 'what'] : kind === 'party' ? ['date', 'what', 'bal'] : ['date', 'what', 'bal'];
   return CBList.mount(el, {
-    key: 'ledger-' + kind, t: tx, view: 'grid',
+    key: 'ledger-' + kind, t: tx, view: 'grid', fill: false,   /* the pane's own layout (flex) sizes the list — it leaves room for the kural footer, which fit() (window height minus the top) would not */
     state: function () { return BK.lt.err ? 'error' : (BK.lt.r ? undefined : 'loading'); }, error: function () { return { title: tx('This ledger could not be read.'), sub: bkWhy(BK.lt.err, tx('Nothing was lost. Try again in a moment.')) }; }, onRetry: function () { BK.lt.err = null; if (BK.lt.api) BK.lt.api.refresh(); bkLtLoad(); },
     rows: function () { var ls = (BK.lt.r && BK.lt.r.lines) || []; return BK.lt.noParty ? ls.filter(function (l) { return !l.party_id && !l.party_name; }) : ls; },
     id: function (l) { return String(l._ix); }, rowTid: function (l) { return 'stmt-row-' + l._ix; },
@@ -1160,7 +1160,9 @@ function bkLgMount(el) {
     csv: function (rows) { bkLgDownload(rows); },
     /* its journal is read once, on the first open, and the row shows it when it arrives */
     next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, cur()); }); },
-    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { var e = bkLgEntry(l); return !!(e && e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal'); }, run: function (l) { var e = bkLgEntry(l); if (e) enReverse(e.entry_id, e.entry_no); } }] : undefined,
+    /* Reverse this entry (insert-only: cap-entry.js asks first). The line names its entry only through the journal, so the journal is read first and a line that cannot be reversed (already reversed, or itself a reversal) says so. */
+    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse', when: function (l) { return !!(l.entry_no || l.ref || l.source_chit_id || (l.source && l.source.chit_id)); },
+      run: function (l) { bkLgJournal().then(function () { var e = bkLgEntry(l); if (!e || !e.entry_id || e.reversed_by || e.reverses_entry_id || e.event_type === 'reversal') { if (typeof toast === 'function') toast(tx('This entry cannot be reversed here.')); return; } enReverse(e.entry_id, e.entry_no); }); } }] : undefined,
     tids: { expand: 'lg-expand-all', collapse: 'lg-collapse-all', csv: 'lg-csv', count: 'lg-count' },
     empty: { title: tx('No entries in these dates') },
   });

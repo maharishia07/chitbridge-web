@@ -349,6 +349,10 @@ async function route(S, r) {
     const noMinus = async (sel) => !/[-−]\s?₹?\s?\d/.test((await p.$$eval(sel, (n) => n.map((x) => x.textContent).join(' | '))));
     ok(await p.locator('#lg_from, #lg_to').count() === 0 && await p.locator('[data-testid="cbl-period-ledger-plain"]').count() === 1, 'the head is the CBList period chip — no date boxes, no Show button');
     ok(await p.locator('#lg_out .cbl-list').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'the ledger list does not scroll sideways (columns fit; the gear keeps the rest)');
+    {
+      const fit = await p.evaluate(() => { const l = document.querySelector('#lg_out').getBoundingClientRect(), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null; return { bottom: Math.round(l.bottom), limit: Math.round(kr ? kr.top : innerHeight), kural: !!kr, doc: document.documentElement.scrollHeight <= innerHeight + 1 }; });
+      ok(fit.bottom <= fit.limit + 1 && fit.doc, 'only the rows scroll: the list ends where the kural footer begins (' + fit.bottom + ' ≤ ' + fit.limit + '), the page itself does not scroll');
+    }
     ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'a plain ledger\'s default columns: Date · Details · Balance, and the Amount');
     S.calls.length = 0;
     await p.click('[data-testid="cbl-period-ledger-plain"]'); await p.click('[data-period="month"]');
@@ -399,6 +403,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const next = (await p.textContent('[data-testid="db-lines-JV/2026-27/000011"]')).replace(/\s+/g, ' ');
     ok(/Customers \(Sundry Debtors\)/.test(next) && /Sales @12%/.test(next) && /Output CGST 6%/.test(next) && /Output SGST 6%/.test(next), 'the next level is the journal\'s lines, each with its rate as the line carries it ("Sales @12%", "Output CGST 6%")');
+    ok(await p.locator('[data-testid="lg-reverse"]').count() === 1, 'the opened entry offers Reverse this entry (insert-only; the Day book\'s own action)');
     ok(await p.locator('[data-testid="db-lines-JV/2026-27/000011"] .lg-me').count() === 1 && /1300/.test(await p.textContent('[data-testid="db-lines-JV/2026-27/000011"] .lg-me')), 'the ledger you are in (1300) is the bold line');
     const facts = (await p.textContent('[data-testid="lg-facts-0"]')).replace(/\s+/g, ' ').trim();
     ok(/On credit/.test(facts) && /Counter C2/.test(facts) && /rung by Mayur Bhavan \(owner\)/.test(facts), 'one quiet facts line: tender · counter · rung by (and the entry no, when there is one) — what no visible column shows (' + facts + ')');
