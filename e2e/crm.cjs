@@ -73,6 +73,8 @@ async function route(S, r) {
     const asApi = (pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp;
     return J(r, 200, { parties: S.list.map(asApi), alerts: fx.alerts });
   }
+  if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, S.live.timeline);
+  if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') return S.live.recordFails ? J(r, 500, { error: 'Failed', message: 'boom' }) : J(r, 200, S.live.record);
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) {
     const id = x[1], tl = fx.timelines[id] || { counts: { all: 0 }, entries: [] }, all = tl.many || tl.entries, kind = u.searchParams.get('kind'), qq = String(u.searchParams.get('q') || '').toLowerCase();
     let rows = all.filter((e) => (!kind || (KINDS[kind] || []).indexOf(e.kind) >= 0) && (!qq || e.line.toLowerCase().indexOf(qq) >= 0));
@@ -563,6 +565,40 @@ async function route(S, r) {
     w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone Add party sheet: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
     await p.screenshot({ path: path.join(SHOTS, 'crm-add-phone.png') });
     await ctx.close();
+  }
+
+  /* ── 10 · THE RECORD AS THE REAL API SENDS IT (2026-10-03: the record sat on "Reading…" for good) ── */
+  {
+    const base0 = JSON.parse(JSON.stringify(S0.list.find((q) => q.party_id === 'pid-0002'))), roles = { customer: true, supplier: true };
+    const rowApi = Object.assign({}, base0, { roles });
+    const record = Object.assign({}, rowApi, { merged_from: { party_id: 'pid-old', party_no: 'P-0009' }, relationship: { relationship: { ok: 1 }, completion: {} }, points: { programme: 'Club', points: 340, worth: 34 }, migrated: true,
+      followups: [{ followup_id: 'f1', party_id: 'pid-0002', what: 'Ring about the rate', due_at: new Date().toISOString(), due_day: '2026-10-03', late: false, today: true, assignee_name: 'Divya', source: 'manual' }],
+      customer: { segment: 'regular', segment_override: null, txn_count: 41, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'counter' }, supplier: { category: null, preferred: false, supply_kind: null, notes: null, added_via: 'counter' } });
+    delete record.timeline_head;
+    const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, entries: [
+      { kind: 'chit', at: new Date(Date.now() - 3600e3).toISOString(), chit_id: 'ch-1', direction: 'out', status: 'accepted', purpose: 'order', doc_kind: 'bill', bill_no: 'B-12', title: 'Bill B-12', value: 125.5, currency: 'INR', open_disputes: 0 },
+      { kind: 'ledger', at: new Date(Date.now() - 7200e3).toISOString(), ref: 'R-1', ledger_kind: 'receipt', source: null, amount_minor: 5000, currency: 'INR', doc_date: '2026-10-03' },
+      { kind: 'interaction', at: new Date(Date.now() - 9000e3).toISOString(), interaction_id: 'ix-1', interaction_kind: 'call', direction: 'out', body: 'Rang about the rate', by: 'u1' },
+      { kind: 'followup', at: new Date(Date.now() - 9500e3).toISOString(), followup_id: 'f1', what: 'Ring about the rate', due_at: new Date().toISOString() },
+      { kind: 'dispute', at: new Date(Date.now() - 9900e3).toISOString(), chit_id: 'ch-1', dispute_id: 'd1', status: 'open', category: 'price' }] };
+    const S = standIn({ live: { record, timeline } }), { ctx, p } = await open(S, { hash: '#/party/P-0002' });
+    await recReady(p);
+    ok(await p.locator('[data-testid="crm-rec-loading"]').count() === 0, 'live shape: the record leaves "Reading…" (roles object, merged_from object, points.points, no contacts)');
+    const nTl = await p.locator('[data-testid^="crm-tl-"]').count();
+    ok(nTl >= 4, 'live shape: the latest entries of /timeline fill the record (' + nTl + ')');
+    ok(/125\.50/.test(await text(p, '[data-testid="crm-tl-head"]')), 'live shape: a chit value of 125.5 (MAJOR units) paints as 125.50, not 1.25');
+    ok(/Ring about the rate/.test(await text(p, '[data-testid="crm-next"]')), 'live shape: a follow-up the API marks today:true shows under Next');
+    await hash(p, '#/party/P-0002/timeline'); await p.waitForSelector('[data-testid^="crm-tl-"]', { timeout: 8000 });
+    ok(/Rang about the rate/.test(await text(p, '[data-testid="crm-timeline"]')), "live shape: the whole timeline view reads the API's entries");
+    await ctx.close();
+    const F = standIn({ live: { record, timeline, recordFails: true } }), o2 = await open(F, { hash: '#/party/P-0002' });
+    await o2.p.waitForSelector('[data-testid="crm-rec-error"]', { timeout: 8000 });
+    ok(await o2.p.locator('[data-testid="crm-rec-retry"]').isVisible(), 'a failed record read ends the spinner: a plain line and Try again');
+    await o2.ctx.close();
+    const bad2 = standIn({ live: { record: Object.assign({}, record, { tax_ids: 'oops', customer: 'oops' }), timeline } }), o3 = await open(bad2, { hash: '#/party/P-0002' });
+    await o3.p.waitForSelector('[data-testid="crm-rec-error"], [data-testid="crm-ident"]', { timeout: 8000 }); await o3.p.waitForTimeout(400);
+    ok(await o3.p.locator('[data-testid="crm-rec-loading"]').count() === 0, 'a record the painter cannot read never leaves a spinner behind');
+    await o3.ctx.close();
   }
 
   ok(threw.length === 0, 'no page error anywhere' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
