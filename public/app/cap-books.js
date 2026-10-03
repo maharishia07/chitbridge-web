@@ -872,7 +872,6 @@ function bkShort(o, name) {
   var t = n.replace(/\s*\([^)]*\)\s*$/, '').replace(/\bPrivate Limited\b/i, 'Pvt Ltd').replace(/\bLimited\b/i, 'Ltd').replace(/\s{2,}/g, ' ').trim();
   return t || n;
 }
-function bkLtDrCr(v, c) { return v ? bkDrCr(v, c) : ''; }
 /** a ledger's figure in the tree: "₹12,400.00 Dr" — from the ONE trial-balance read; "—" when the trial balance does not list it, never a made-up nil */
 function bkLtBal(code) {
   var b = BK.lt.bal; if (!b) return '';
