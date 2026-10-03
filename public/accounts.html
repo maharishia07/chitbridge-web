@@ -186,6 +186,19 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .scroll::-webkit-scrollbar{width:10px}
 .scroll::-webkit-scrollbar-thumb{background:var(--line-3);border-radius:10px;border:3px solid var(--ground)}
 
+
+/* ⭐ THE LEDGERS VIEW (docs/design/ledgers-page): full-bleed two panes, only the rows scroll. With a ledger open the list's own title row is the header — shop · Home · avatar ride in it — so this page's header steps aside. */
+body.lg-on .main{display:flex;flex-direction:column;overflow:hidden}
+body.lg-on .content{padding:0;max-width:none;flex:1 1 auto;min-height:0;gap:0}
+body.lg-on #bk_body{height:100%;min-height:0}
+body.lg-on.lg-sel .top{display:none}
+body.lg-on .cbl-slot .who{gap:8px}
+body.lg-on .cbl-slot .home{height:34px;padding:0 10px}
+body.lg-on .cbl-slot .home .hw{display:none}
+body.lg-on .cbl-slot .shop{display:none}
+/* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
+@media (min-width:761px){body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
+
 /* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
 @media (max-width:760px){
   .side{width:64px}
@@ -315,10 +328,12 @@ const NAV = [
 /* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
 const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', bank: 'suspense',
   lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts' };
-const TITLES = { ledgers: 'Chart of accounts', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
+const TITLES = { ledgers: 'Ledgers', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
 const $ = (id) => document.getElementById(id);
+const WHO = $('who');   /* the shop · Home · avatar: ONE node, held here — on a ledger it rides in the list's title row (BK.slotWho), everywhere else it is in the page header */
+const whoHome = () => { const row = document.querySelector('.top-row'); if (row && WHO.parentNode !== row) row.appendChild(WHO); };
 const ACC = { billTab: 'B-2100', gen: 0 };
 let SESS = null, MINE = null, ON = false;
 
@@ -344,8 +359,8 @@ $('toggleNav').addEventListener('click', () => {
 });
 function whoPaint(){
   const nm = SESS ? (SESS.entity || SESS.name || '') : '';
-  $('who').innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
-    <a class="home" href="/" data-testid="acc-home">⌂ Home</a><span id="cbav"></span>`;
+  WHO.innerHTML = `<span class="shop" data-testid="shop-name">${esc(nm)}</span>
+    <a class="home" href="/" data-testid="acc-home" aria-label="Home">⌂ <span class="hw">Home</span></a><span id="cbav"></span>`;
   /* the avatar is CBAvatar: Profile opens the app's profile, Sign out is the app's (session and per-person nav memory go; the app's other tabs hear cb_sess go). No Settings here — that stays in the app. */
   CBAvatar.mount($('cbav'), { person: CBAvatar.personOf(SESS), items: ['profile', 'support', 'signout'], apiBase: CFG.API_BASE, token: SESS && SESS.token });
 }
@@ -360,6 +375,8 @@ const confirmAsk = CBConfirm;
 function chrome(view){
   const nav = NAV.find((n) => n[0] === view) || NAV[0];
   navPaint(nav[0]);
+  document.body.classList.toggle('lg-on', nav[0] === 'ledgers');
+  if (nav[0] !== 'ledgers') { document.body.classList.remove('lg-sel'); whoHome(); }
   $('title').hidden = false;
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
@@ -367,11 +384,15 @@ function chrome(view){
   if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
 BK.onTab = (t) => chrome(t);
+/* the Ledgers view: when a ledger is open the list's own title row IS the page header — it carries the shop · Home · avatar (BK.slotWho), and this page's header steps aside so the head stays within 20% */
+BK.slotWho = (el) => { el.appendChild(WHO); };
+BK.onLedger = (sel) => { document.body.classList.toggle('lg-sel', !!sel); if (!sel) whoHome(); };
 BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body),
   closingstock: (b) => peStockView(b), assets: (b) => peAssetsView(b), accruals: (b) => peAccrualsView(b), gstclose: (b) => peGstView(b), yearclose: (b) => peYearView(b),
   bank: (b) => bankView(b) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
   if (!ON) return;
+  whoHome();
   $('content').innerHTML = '<div id="bk_body" data-testid="bk-body"></div>';
   bkTab(view, true);
 }
@@ -484,10 +505,10 @@ function cardLabels(root){
 new MutationObserver(() => cardLabels($('content'))).observe($('content'), { childList: true, subtree: true });
 
 /* ═══ THE STATES BEFORE THE LEDGER: signed out · another shop still here · the Ledger off ═══════════════════════ */
-function card(html, bad){ $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
+function card(html, bad){ whoHome(); document.body.classList.remove('lg-on', 'lg-sel'); $('title').hidden = true; $('content').innerHTML = `<div class="card${bad ? ' bad' : ''}" data-testid="acc-card">${html}</div>`; $('summary').textContent = ''; }
 function signedOut(why){
   SESS = null; MINE = null; ON = false; ACC.gen++;
-  $('who').innerHTML = '';
+  WHO.innerHTML = '';
   navPaint(''); $('nav').innerHTML = '';
   card(`<h2>${esc(why || 'You are signed out')}</h2><a class="act" data-testid="signin-door" href="/app.html#/login">Sign in</a>`);
 }
