@@ -69,9 +69,12 @@ function enDlg() {
 function enClose() { var d = document.getElementById('entrysheet'); if (d && d.open) d.close(); try { document.documentElement.style.overflow = ''; } catch (_) {} }
 
 /* ── the one door ── */
-async function enOpen() {
+/** enOpen() opens the sheet at "What happened?". enOpen({ kind, v, ref }) opens it with an entry already suggested (Bank → "Add missing"): kind = the event, v = its
+ *  answers (date · amount · class · paid_from …), ref = the client_ref the entry will carry. A suggestion with a kind goes straight to the server's preview; the person
+ *  still presses Save. One without a kind keeps what it knows (date, amount, note) and asks "What happened?". */
+async function enOpen(preset) {
   var d = enDlg();
-  EN.step = 1; EN.ev = null; EN.v = {}; EN.lines = []; EN.pv = null; EN.dateRef = null; EN.saved = null; EN.err = null; EN.denied = false; EN.photo = null; EN.ref = bkRef();
+  EN.step = 1; EN.ev = null; EN.v = {}; EN.lines = []; EN.pv = null; EN.dateRef = null; EN.saved = null; EN.err = null; EN.denied = false; EN.photo = null; EN.ref = (preset && preset.ref) || bkRef(); EN.pre = (preset && preset.v) || null;
   enPaint();
   try { document.documentElement.style.overflow = 'hidden'; } catch (_) {}
   if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
@@ -80,6 +83,7 @@ async function enOpen() {
     EN.picks = (rr[0] && rr[0].picks) || {}; EN.accounts = (rr[1] && rr[1].accounts) || [];
     /* the events that POST /events can preview and save; the ones with a route of their own (asset, loan …) are not offered on this sheet */
     EN.events = ((rr[0] && rr[0].events) || []).filter(function (e) { return e.preview !== false && !e.route; }).map(enNorm);
+    if (preset && preset.kind && EN.events.some(function (e) { return e.id === preset.kind; })) { enPick(preset.kind); EN.step = 4; enPaint(); enPreview(); return; }
   } catch (e) { if (e && (e.status === 403 || /not allowed|forbidden|403/i.test(String(e.message)))) EN.denied = true; else EN.err = bkWhy(e, tx('Could not be read')); }
   enPaint();
 }
@@ -142,7 +146,7 @@ function enPick(id) {
   var ev = EN.events.filter(function (e) { return e.id === id; })[0];
   if (!ev && id === 'journal') ev = enJournalEv();
   if (!ev) return;
-  EN.ev = ev; EN.v = { date: bkToday() }; EN.pv = null; EN.dateRef = null; EN.photo = null;
+  EN.ev = ev; EN.v = Object.assign({ date: bkToday() }, EN.pre || {}); EN.pv = null; EN.dateRef = null; EN.photo = null;
   if (ev.kind === 'journal') EN.lines = [{ code: '', side: 'dr', amt: '' }, { code: '', side: 'cr', amt: '' }];
   EN.step = enSteps()[1]; enPaint();
 }
@@ -303,6 +307,7 @@ async function enSave(btn) {
     try {
       var r = await api(key, { body: body });
       EN.saved = r || {}; EN.saving = false; EN.ref = null;
+      try { if (typeof BK !== 'undefined' && BK.onEntrySaved) BK.onEntrySaved(EN.saved); } catch (_) {}
       try { if (typeof bkHealthLoad === 'function') bkHealthLoad().catch(function () {}); if (typeof BK !== 'undefined' && BK.tab === 'daybook' && typeof bkTab === 'function') bkTab('daybook', true); } catch (_) {}
       enPaint();
     } catch (e) {

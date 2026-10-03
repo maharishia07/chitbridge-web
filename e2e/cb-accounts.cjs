@@ -28,13 +28,15 @@ const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json',
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 
-/* the designer's twelve views, Bills after Dues — [tab id, label, a test id that only that screen paints] */
+/* the designer's twelve views, Bills after Dues, plus Bank and the Month & year end pages — [tab id, label, a test id that only that screen paints] */
 const VIEWS = [
   ['todo', 'To do', '[data-testid="todo-list"]'], ['daybook', 'Day book', '[data-testid^="db-entry-"]'], ['ledgers', 'Ledgers', '[data-testid="lt-band-people"]'],
   ['tb', 'Trial balance', '[data-testid="tb-balanced"]'], ['pl', 'P&L', '[data-testid="pl-profit"]'],
   ['bs', 'Balance sheet', '[data-testid="bs-balanced"]'], ['dues', 'Dues', '[data-testid="dues-side-rcv"]'],
   ['bills', 'Bills', '[data-testid="bills-list"]'], ['cheques', 'Cheques', '[data-testid="chq-chq9"]'],
-  ['waiting', 'Waiting', '[data-testid="wait-0"]'], ['lock', 'Month lock', '[data-testid="lk_fy"]'],
+  ['waiting', 'Waiting', '[data-testid="wait-0"]'], ['bank', 'Bank', '[data-testid="bank-form"], [data-testid="bank-none"]'], ['lock', 'Month lock', '[data-testid="lk_fy"]'],
+  ['closingstock', 'Closing stock', '[data-testid="ps-form"]'], ['assets', 'Assets & depreciation', '[data-testid="assets-list"]'], ['accruals', 'Accruals & recurring', '[data-testid="recurring-list"]'],
+  ['gstclose', 'GST close & pay', '[data-testid="pg-form"]'], ['yearclose', 'Year close', '[data-testid="py-res"]'],
   ['packs', 'Packs', '[data-testid="pk_fy"]'], ['opening', 'Opening balances', '[data-testid="op_csv"]'],
   ['accounts', 'Shop ledgers', '[data-testid="ac_name"]'],
 ];
@@ -447,7 +449,7 @@ async function route(S, r) {
     await Promise.all([p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 10000 }), p.click('[data-testid="confirm-ok"]')]);
     await p.waitForSelector('[data-testid="acc-nav-daybook"]');
     ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
-    ok(await p.locator('#nav .nav-btn').count() === 14, 'the page fills: the full menu is there');
+    ok(await p.locator('#nav .nav-btn').count() === 20, 'the page fills: the full menu is there');
     await ctx.close();
   }
   {
