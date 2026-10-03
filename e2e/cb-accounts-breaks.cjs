@@ -62,7 +62,7 @@ const BREAKS = [
   ['LP the shop · Home · avatar are copied, not moved', PAGE, `BK.slotWho = (el) => { el.appendChild(WHO); };`, `BK.slotWho = (el) => { el.appendChild(WHO.cloneNode(true)); };`, A],
   ['LP the page header stays above the open ledger (head past 20%)', PAGE, `body.lg-on.lg-sel .top{display:none}`, `body.lg-on.lg-sel .top{display:flex}`, A],
   ['LP a balance is read per ledger (a per-leaf fetch)', CAPB, `function bkLtBal(code) {\n`, `function bkLtBal(code) {\n  api('booksLedger', { params: { account: code }, query: bkRange('lg') }).catch(function () {});\n`, A],
-  ['LP the list is sized to the window, under the kural footer', CAPB, `key: 'ledger-' + kind, t: tx, view: 'grid', fill: false,`, `key: 'ledger-' + kind, t: tx, view: 'grid',`, A],
+  ['LP the list is not held inside its pane (it runs under the kural footer)', CAPB, `'#bk_lt #lg_out{flex:1 1 auto;min-height:0}',`, `'#bk_lt #lg_out{flex:0 0 auto}',`, A],
   ['LP the opened entry offers no Reverse', CAPB, `actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse',`, `actions: false ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'lg-reverse',`, A],
   ['TODO the To do view is not first in the sidebar', PAGE, `const NAV = [\n  ['todo', 'To do',`, `const NAV = [\n  ['x', 'To do',`, A],
   ['ONE the ledger rows draw their own table', CAPB, `  return CBList.mount(el, {\n    key: 'ledger-' + kind,`, `  el.innerHTML = '<table class=bktab><tbody><tr><td>x</td></tr></tbody></table>';\n  return CBList.mount(document.createElement('div'), {\n    key: 'ledger-' + kind,`, A],

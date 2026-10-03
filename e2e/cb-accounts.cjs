@@ -116,6 +116,7 @@ async function route(S, r) {
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, books.trialBalance(S.tb, { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false })); }
     if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
+    if (p === '/api/books/ledger/4000') return J(r, 200, books.ledger('4000', 'Sales', Array.from({ length: 80 }, (_, i) => ({ date: '2026-09-' + String(1 + (i % 28)).padStart(2, '0'), what: 'Sale', ref: 'SV/2026-27/' + String(i + 1).padStart(6, '0'), source_chit_id: null, source: null, dr_minor: 0, cr_minor: 10000 + i })), { closing_minor: -1000 * 80 }));
     if (p === '/api/books/ledger/1500') return J(r, 200, books.ledger('1500', 'Bank', [], { opening_minor: 500000, closing_minor: 500000 }));
     if (p === '/api/books/ledger/6010') return J(r, 200, books.ledger('6010', 'Rent', [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }], { closing_minor: 100000 }));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat(((S.extra && S.extra[x[1]]) || []).map((l) => Object.assign({ doc_date: l.date }, l))) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
@@ -338,6 +339,7 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
     ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)) && (await p.textContent('.cbl-title h1')).trim() === 'Cash' && /Sale/.test(await p.textContent('[data-testid="stmt-row-0"]')), 'clicking Cash reads that ledger (GET /api/books/ledger/1400); its name is the title and its entry is a Task-table row');
     ok(await p.locator('#lg_out .lhead').count() === 1 && await p.locator('#lg_out .lrow').count() === 1 && await p.locator('#lg_out table').count() === 0, 'the entries are the Task table (.lhead / .lrow) — no table of its own');
+    ok(await p.locator('#who').count() === 1 && await p.locator('.cbl-title #who').count() === 1 && await p.locator('#cbav button').count() === 1, 'the shop · Home · avatar are ONE node, moved into the title row (never copied): one #who, one avatar button');
     ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 · Closing ₹12,400\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'ONE figures line: "Opening ₹0.00 · Closing ₹12,400.00 Dr"');
     await p.click('[data-testid="lg-acc-1500"]'); await p.waitForFunction(() => /Balance/.test((document.querySelector('[data-testid="lg-sum"]') || {}).textContent || ''), null, { timeout: 8000 });
     ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Balance ₹5,000\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'opening = closing → ONE word "Balance ₹5,000.00 Dr", said once');
@@ -354,6 +356,15 @@ async function route(S, r) {
       ok(fit.bottom <= fit.limit + 1 && fit.doc, 'only the rows scroll: the list ends where the kural footer begins (' + fit.bottom + ' ≤ ' + fit.limit + '), the page itself does not scroll');
     }
     ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'a plain ledger\'s default columns: Date · Details · Balance, and the Amount');
+    /* only the rows scroll: a LONG ledger (80 lines) scrolls inside the list; the page does not, and its last row is reachable above the kural footer */
+    await p.click('[data-testid="lg-acc-4000"]'); await p.waitForSelector('#lg_out .lrow', { timeout: 8000 });
+    {
+      const fit = await p.evaluate(async () => { const out = document.querySelector('#lg_out'), l = out.querySelector('.cbl-list'), k = document.querySelector('[data-testid="kural-footer"]'), kr = k && !k.hidden ? k.getBoundingClientRect() : null, limit = kr ? kr.top : innerHeight;
+        l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 400)); l.scrollTop = l.scrollHeight; await new Promise((r) => setTimeout(r, 300)); const rows = l.querySelectorAll('.lrow'), last = rows[rows.length - 1].getBoundingClientRect();
+        return { bottom: Math.round(out.getBoundingClientRect().bottom), limit: Math.round(limit), scrolls: l.scrollHeight > l.clientHeight + 40, doc: document.documentElement.scrollHeight <= innerHeight + 1, lastOk: last.bottom <= limit + 1, kural: !!kr }; });
+      ok(fit.scrolls && fit.bottom <= fit.limit + 1 && fit.doc && fit.lastOk, 'only the rows scroll: a long ledger scrolls inside its list, which ends where the kural footer begins (' + fit.bottom + ' ≤ ' + fit.limit + '), the page itself does not scroll, and the last row is reachable');
+    }
+    await p.click('[data-testid="lg-acc-1400"]'); await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
     S.calls.length = 0;
     await p.click('[data-testid="cbl-period-ledger-plain"]'); await p.click('[data-period="month"]');
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
