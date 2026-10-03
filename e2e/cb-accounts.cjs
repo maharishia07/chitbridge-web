@@ -114,10 +114,11 @@ async function route(S, r) {
     if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, { enabled: true, last_posted_day: '2026-09-26', waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) }); }
     if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
     if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, { currency: 'INR', rows: S.tb, total_dr_minor: 1940000, total_cr_minor: 1840000 }); }
-    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, { currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl }); }
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, Object.assign({ currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl }, S.agreed ? { agreed_to: S.agreed } : {})); }
+    if (p === '/api/books/ledger/1500') return J(r, 200, { account: { code: '1500', name: 'Bank' }, currency: 'INR', opening_minor: 500000, closing_minor: 500000, lines: [] });
     if (p === '/api/books/ledger/6010') return J(r, 200, { account: { code: '6010', name: 'Rent' }, currency: 'INR', opening_minor: 0, closing_minor: 100000,
       lines: [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }] });
-    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
+    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], { lines: CONTROL[x[1]].lines.concat((S.extra && S.extra[x[1]]) || []) }, S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: { code: x[1], name: 'Cash' }, currency: 'INR', opening_minor: 0, closing_minor: 1240000,
       lines: [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }] });
     if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
@@ -241,148 +242,220 @@ async function route(S, r) {
     }
     ok(S.calls.filter((c) => /booksAccounts|\/api\/books\/accounts/.test(c)).length >= 1, 'the Ledgers view read the accounts');
 
-    /* ── 2 · LEDGERS — a folder tree on the left, the chosen ledger's entries in the Task table on the right (docs/design/one-table, item 5) ── */
+    /* ── 2 · LEDGERS — the two-pane page (docs/design/ledgers-page): the tree on the left, the chosen ledger's entries (a CBList) on the right ── */
     S.calls.length = 0;
     await nav(p, 'ledgers');
     await p.waitForSelector('[data-testid="lt-band-people"]');
     const bands = await p.$$eval('[data-testid^="lt-band-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-band-', '')));
-    ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top folders: People · Things you hold · Income and expenses · Your capital');
-    ok((await p.textContent('[data-testid="lt-band-people"]')).trim().startsWith('📁') && await p.locator('[data-testid^="lg-acc-"]').count() === 0, 'a closed band wears the folder glyph and shows no ledger yet');
-    ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1, 'the tree and the list are foldersScreen\'s two panes (_folderPanes)');
-    await p.click('[data-testid="lt-band-things"]');
-    ok((await p.textContent('[data-testid="lt-band-things"]')).trim().startsWith('📂'), 'opening a band opens its folder glyph');
+    ok(JSON.stringify(bands) === JSON.stringify(['people', 'things', 'income', 'capital']), 'four bands as the tree\'s top level: People · Things you hold · Income and expenses · Your capital');
+    ok(await p.locator('#bk_lt').count() === 1 && await p.locator('.lt-tree').count() === 1 && await p.locator('.lt-pane').count() === 1 && await p.locator('[role="tree"] [role="treeitem"]').count() > 10, 'two panes — the tree (role=tree) and the list');
+    ok(await p.locator('[data-testid="lt-band-people"]').getAttribute('aria-expanded') === 'true' && await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0, 'the bands and groups are open (the tree is the way in); a control account is a closed ledger with its parties inside');
     const groups = await p.$$eval('[data-testid^="lt-group-"]', (s) => s.map((x) => x.getAttribute('data-testid').replace('lt-group-', '')));
-    ok(JSON.stringify(groups) === JSON.stringify(['Cash & bank', 'Stock & advances', 'Duties & taxes', 'Taxes & suspense', 'Other']), 'its groups, decided by code: ' + groups.join(' · '));
-    await p.click('[data-testid="lt-group-Cash & bank"]');
-    ok(await p.locator('[data-testid="lg-acc-1400"]').count() === 1 && await p.locator('[data-testid="lg-acc-1500"]').count() === 1 && await p.locator('[data-testid="lg-acc-1200"]').count() === 0, 'opening a group shows its ledgers (Cash, Bank, UPI collections) as leaves, and not another group\'s');
-    for (const g of ['Stock & advances', 'Duties & taxes', 'Taxes & suspense', 'Other']) await p.click('[data-testid="lt-group-' + g + '"]');
+    ok(JSON.stringify(groups) === JSON.stringify(['Cash & bank', 'Stock & advances', 'Duties & taxes', 'Taxes & suspense', 'Other', 'Income', 'Direct costs', 'Operating expenses', 'Adjustments', "Owner's equity"]), 'its groups, decided by code: ' + groups.join(' · '));
+    ok(await p.locator('[data-testid="lg-acc-1400"]').count() === 1 && await p.locator('[data-testid="lg-acc-1500"]').count() === 1 && await p.locator('[data-testid="lg-acc-1200"]').count() === 1, 'each group shows its ledgers (Cash, Bank, UPI collections …) as leaves');
     ok(await p.locator('[data-testid="lg-acc-7777"]').count() === 1, 'a code the design never named still appears (Other), never nowhere');
     ok(await p.locator('[data-testid="lg-acc-6000"]').count() === 0 && await p.locator('[data-testid="lg-acc-1300-P00001"]').count() === 0, 'a ledger group (6000) and a per-party sub-account are not leaves');
-    for (const bnd of ['income', 'capital']) await p.click('[data-testid="lt-band-' + bnd + '"]');
-    for (const g of ['Income', 'Direct costs', 'Operating expenses', 'Adjustments', "Owner's equity"]) await p.click('[data-testid="lt-group-' + g + '"]');
     ok(await p.locator('[data-testid="lg-acc-3000"]').count() === 1, 'Your capital holds the 3xxx ledgers');
+    await p.click('[data-testid="lt-band-income"]');
+    ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false' && await p.locator('[data-testid="lg-acc-4000"]').count() === 0, 'a band folds: its groups and ledgers go');
+    await p.click('[data-testid="lt-band-income"]');
+    ok(await p.locator('[data-testid="lg-acc-4000"]').count() === 1, 'and opens again');
+    /* the names are the shopkeeper's: the official name's bracket is dropped; the full name is the tooltip */
+    ok((await p.textContent('[data-testid="lg-acc-1300"] .nm')).trim() === 'Customers' && (await p.getAttribute('[data-testid="lg-acc-1300"]', 'title')) === 'Customers (Sundry Debtors)', 'a ledger is called "Customers", its official name "Customers (Sundry Debtors)" is the tooltip (display only)');
     /* the balances: Dr / Cr, from ONE trial-balance read */
-    ok(/Dr/.test(await p.textContent('[data-testid="bal-1400"]')) && /12,400/.test(await p.textContent('[data-testid="bal-1400"]')), 'Cash: ₹12,400 Dr on its leaf');
+    ok(/Dr/.test(await p.textContent('[data-testid="bal-1400"]')) && /12,400/.test(await p.textContent('[data-testid="bal-1400"]')), 'Cash: ₹12,400.00 Dr on its leaf');
     ok(/Cr/.test(await p.textContent('[data-testid="bal-4000"]')), 'Sales: a Cr balance');
     ok((await p.textContent('[data-testid="bal-4200"]')).trim() === '—', 'a ledger the trial balance does not list says "—", not a made-up nil');
     const tbReads = S.calls.filter((c) => /\/api\/books\/trial-balance/.test(c)).length;
     ok(tbReads === 1, 'ONE trial-balance read for the whole tree (' + tbReads + ')');
-    ok(S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)).length === 0, 'no per-leaf balance read');
+    ok(S.calls.filter((c) => /\/api\/books\/ledger\//.test(c)).length === 0, 'no per-leaf balance read, and no ledger opened on its own');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-ledgers.png'), fullPage: true });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-laptop.png'), fullPage: false });
 
-    /* search finds a ledger by code or name (list-ctl's box), opening every folder on the way */
-    const S1 = '[data-testid="listctl-search-ledgers"]';
-    await p.fill(S1, '6010');
-    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 1 && await p.locator('[data-testid="lg-acc-6010"]').count() === 1, 'searching 6010 leaves that one ledger, its folders open');
-    await p.fill(S1, 'bank');
-    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 2, 'a name search matches Bank and Bank charges');
-    await p.fill(S1, 'zzzz');
-    ok(/Nothing matches/.test(await p.textContent('[data-testid="lt-tree"]')), 'no match → one line');
-    await p.fill(S1, '');
+    /* ⭐ THE TREE ITSELF: one line per node, the figures in one aligned column, a light selection, nothing cut off */
+    {
+      const t = await p.evaluate(() => { const rows = Array.from(document.querySelectorAll('#lt_tree .tn')), tr = document.querySelector('#lt_tree').getBoundingClientRect();
+        const am = rows.map((r) => r.querySelector('.am')).filter((a) => a && a.textContent.trim());
+        return { h: rows.map((r) => ({ id: r.getAttribute('data-testid'), name: r.querySelector('.nm').textContent.trim(), h: Math.round(r.getBoundingClientRect().height) })), rights: Array.from(new Set(am.map((a) => Math.round(a.getBoundingClientRect().right)))),
+          cut: rows.filter((r) => r.lastElementChild.getBoundingClientRect().right > tr.right + 0.5 || r.querySelector('.nm').scrollWidth > r.querySelector('.nm').clientWidth + 1).length, sw: document.querySelector('#lt_tree').scrollWidth <= document.querySelector('#lt_tree').clientWidth + 1 }; });
+      const long = t.h.filter((x) => x.name.length > 22), oneLine = t.h.filter((x) => x.name.length <= 22);
+      ok(oneLine.length > 12 && oneLine.every((x) => x.h <= 40), 'the tree: one node on one line (heights ' + oneLine.map((x) => x.h).join(',') + ')');
+      ok(long.length === 1 && long[0].h > 40, 'a long name WRAPS — it is never clipped ("' + (long[0] && long[0].name) + '", ' + (long[0] && long[0].h) + ' px)');
+      ok(t.rights.length === 1 && t.cut === 0 && t.sw, 'every figure and count sits in ONE aligned column (' + t.rights.join(',') + '); nothing is cut short; no sideways scroll');
+    }
+    ok(await p.locator('#lt_tree .tn[tabindex="0"]').count() === 1, 'the tree has one tab stop');
+
+    /* the find box filters as you type and marks the match; a code finds its ledger */
+    const F1 = '[data-testid="lt-find"]';
+    await p.fill(F1, '6010');
+    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 1 && await p.locator('[data-testid="lg-acc-6010"]').count() === 1, 'typing 6010 leaves that one ledger (Rent), its folders open');
+    await p.fill(F1, 'bank');
+    ok(await p.locator('[data-testid^="lg-acc-"]').count() === 2 && await p.locator('#lt_tree [data-testid^="lg-acc-"] mark').count() === 2 && /^bank$/i.test(await p.locator('#lt_tree [data-testid^="lg-acc-"] mark').first().textContent()), 'a name search matches Bank and Bank charges, and marks the match');
+    await p.fill(F1, 'zzzz');
+    ok(/No ledger or party called/.test(await p.textContent('[data-testid="lt-tree"]')) && await p.locator('[data-testid="lt-clear"]').count() === 1, 'no match → one line and a Clear');
+    await p.click('[data-testid="lt-clear"]');
+    ok((await p.inputValue(F1)) === '' && await p.locator('[data-testid="lg-acc-1400"]').count() === 1, 'Clear brings the tree back');
+    await p.fill(F1, 'ravi');
+    ok(await p.locator('[data-testid="lg-party-c1"]').count() === 1 && await p.locator('[data-testid="lg-party-c2"]').count() === 0 && await p.locator('[data-testid="lg-acc-1300"]').getAttribute('aria-expanded') === 'true', 'typing a party\'s name finds the party, under its open control account');
+    await p.fill(F1, '');
+
+    /* keyboard: ↑ ↓ move · → opens or steps in · ← closes or steps out · Home / End · Enter opens */
+    {
+      const focused = () => p.evaluate(() => (document.activeElement && document.activeElement.getAttribute('data-testid')) || '');
+      await p.focus('[data-testid="lt-band-people"]');
+      await p.keyboard.press('ArrowDown'); const k1 = await focused();
+      await p.keyboard.press('ArrowRight'); await p.waitForTimeout(80);
+      const k2 = await p.locator('[data-testid="lg-acc-1300"]').getAttribute('aria-expanded');
+      await p.keyboard.press('ArrowRight'); const k3 = await focused();
+      await p.keyboard.press('ArrowLeft'); const k4 = await focused();
+      await p.keyboard.press('ArrowLeft'); await p.waitForTimeout(80);
+      const k5 = await p.locator('[data-testid="lg-acc-1300"]').getAttribute('aria-expanded');
+      await p.keyboard.press('End'); const k6 = await focused(); await p.keyboard.press('Home'); const k7 = await focused();
+      ok(k1 === 'lg-acc-1300' && k2 === 'true' && k3 === 'lg-party-c1' && k4 === 'lg-acc-1300' && k5 === 'false' && k6 !== k7 && k7 === 'lt-band-people', 'keyboard: ↓ moves · → opens, then steps in · ← steps out, then closes · Home and End jump (' + [k1, k2, k3, k4, k5, k6, k7].join(' · ') + ')');
+      await p.keyboard.press('ArrowDown'); S.calls.length = 0; await p.keyboard.press('Enter');
+      await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
+      ok(S.calls.some((c) => /\/api\/books\/ledger\/1300/.test(c)), 'keyboard: Enter opens the ledger (GET /api/books/ledger/1300)');
+      await p.fill(F1, 'x'); await p.press(F1, 'Escape');
+      ok((await p.inputValue(F1)) === '', 'Esc clears the find box');
+    }
+
+    /* the tree pane is resizable (drag, ← →), folds, and remembers both */
+    {
+      const w0 = await p.evaluate(() => document.querySelector('.lt-tree').getBoundingClientRect().width);
+      const rz = await p.locator('#lt_rz').boundingBox();
+      await p.mouse.move(rz.x + rz.width / 2, rz.y + 200); await p.mouse.down(); await p.mouse.move(rz.x + rz.width / 2 + 60, rz.y + 200, { steps: 4 }); await p.mouse.up();
+      const w1 = await p.evaluate(() => document.querySelector('.lt-tree').getBoundingClientRect().width);
+      await p.focus('#lt_rz'); await p.keyboard.press('ArrowLeft'); await p.keyboard.press('ArrowLeft');
+      const w2 = await p.evaluate(() => document.querySelector('.lt-tree').getBoundingClientRect().width);
+      ok(w1 > w0 + 40 && w2 < w1 - 20, 'the tree pane resizes — dragged its edge ' + Math.round(w0) + ' → ' + Math.round(w1) + ' px, then ← ← → ' + Math.round(w2));
+      await p.click('[data-testid="lt-fold"]');
+      ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1 && /Ledgers/.test(await p.textContent('[data-testid="lt-unfold"]')), 'the pane folds to a "☰ Ledgers" button in the title row');
+      await p.click('[data-testid="lt-unfold"]');
+      ok(await p.locator('.lt-tree').isVisible() && await p.locator('[data-testid="lt-unfold"]').count() === 0, 'one tap brings it back');
+    }
 
     /* band → group → ledger → its entries → expand one → open its bill */
     await p.click('[data-testid="lg-acc-1400"]');
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
-    ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)) && /1400 · Cash/.test(await p.textContent('[data-testid="lg-title"]')) && /Sale/.test(await p.textContent('[data-testid="stmt-row-0"]')), 'clicking Cash reads that ledger (GET /api/books/ledger/1400) and its entry is a Task-table row');
+    ok(S.calls.some((c) => /\/api\/books\/ledger\/1400/.test(c)) && (await p.textContent('.cbl-title h1')).trim() === 'Cash' && /Sale/.test(await p.textContent('[data-testid="stmt-row-0"]')), 'clicking Cash reads that ledger (GET /api/books/ledger/1400); its name is the title and its entry is a Task-table row');
     ok(await p.locator('#lg_out .lhead').count() === 1 && await p.locator('#lg_out .lrow').count() === 1 && await p.locator('#lg_out table').count() === 0, 'the entries are the Task table (.lhead / .lrow) — no table of its own');
-    ok(/12,400\.00/.test(await p.textContent('[data-testid="stmt-closing"]')) && await p.locator('[data-testid="stmt-opening"]').count() === 1, 'the balance carried sits at the top (opening · closing)');
+    ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 · Closing ₹12,400\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'ONE figures line: "Opening ₹0.00 · Closing ₹12,400.00 Dr"');
+    await p.click('[data-testid="lg-acc-1500"]'); await p.waitForFunction(() => /Balance/.test((document.querySelector('[data-testid="lg-sum"]') || {}).textContent || ''), null, { timeout: 8000 });
+    ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Balance ₹5,000\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'opening = closing → ONE word "Balance ₹5,000.00 Dr", said once');
+    await p.click('[data-testid="lg-acc-1400"]'); await p.waitForSelector('[data-testid="stmt-row-0"]');
+    ok(await p.locator('.lt-tree [data-testid="lg-acc-1400"] .am').evaluate((e) => !e.textContent.trim()), 'the open ledger shows no figure in the tree — the title row beside it already does');
+    await p.screenshot({ path: path.join(SHOTS, 'ledgers-plain.png') });
 
     /* ── 2a · THE LEDGERS QUICK FIXES (2026-10-03): nothing repeated, Dr/Cr, nothing cut off ── */
     const noMinus = async (sel) => !/[-−]\s?₹?\s?\d/.test((await p.$$eval(sel, (n) => n.map((x) => x.textContent).join(' | '))));
-    ok(await p.locator('#lg_from, #lg_to').count() === 0 && await p.locator('[data-testid="cbl-period-ledger"]').count() === 1, 'the head is the CBList period chip — no date boxes, no Show button');
+    ok(await p.locator('#lg_from, #lg_to').count() === 0 && await p.locator('[data-testid="cbl-period-ledger-plain"]').count() === 1, 'the head is the CBList period chip — no date boxes, no Show button');
     ok(await p.locator('#lg_out .cbl-list').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'the ledger list does not scroll sideways (columns fit; the gear keeps the rest)');
+    ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'a plain ledger\'s default columns: Date · Details · Balance, and the Amount');
     S.calls.length = 0;
-    await p.click('[data-testid="cbl-period-ledger"]'); await p.click('[data-period="month"]');
+    await p.click('[data-testid="cbl-period-ledger-plain"]'); await p.click('[data-period="month"]');
     await p.waitForSelector('[data-testid="stmt-row-0"]', { timeout: 8000 });
     ok(S.calls.some((c) => /\/api\/books\/ledger\/1400\?.*from=\d{4}-\d\d-01/.test(c)), 'picking This month on the chip reads the ledger again for that month');
     await p.click('[data-testid="lg-acc-6010"]'); await p.waitForFunction(() => /Expense/.test((document.querySelector('[data-testid="stmt-what-0"]') || {}).textContent || ''), null, { timeout: 8000 });
     const rentWhat = (await p.textContent('[data-testid="stmt-what-0"]')).replace(/\s+/g, ' ').trim();
-    ok(!/Expense · Expense/.test(rentWhat) && /^Expense · C2\/26-27\/0003/.test(rentWhat) && rentWhat.split('Expense').length === 2, 'the kind word once: "' + rentWhat + '"');
-    ok(await noMinus('#lt_tree') && await noMinus('[data-testid="lg-sum"]') && await noMinus('#lg_out .lcell[data-l="Balance"]'), 'no minus sign on the Ledgers view — balances are Dr / Cr');
-    const treeH = await p.$$eval('#lt_tree [data-testid^="lg-acc-"]', (n) => n.filter((x) => !/lg-acc-(1300|2100)$/.test(x.getAttribute('data-testid'))).map((x) => Math.round(x.getBoundingClientRect().height)));
-    ok(treeH.length > 3 && treeH.every((h) => h <= 40), 'the tree: one account on one line (row heights ' + treeH.join(',') + ')');
-    const treeCut = await p.evaluate(() => { const t = document.querySelector('#lt_tree').getBoundingClientRect(); return Array.from(document.querySelectorAll('#lt_tree .ltn')).filter((x) => x.lastElementChild.getBoundingClientRect().right > t.right + 0.5 || x.scrollWidth > x.clientWidth + 1).length; });
-    ok(treeCut === 0 && await p.locator('#lt_tree').evaluate((e) => e.scrollWidth <= e.clientWidth + 1), 'the tree cuts no name or amount short, and does not scroll sideways (' + treeCut + ' cut)');
-    const selBg = await p.evaluate(() => { const e = document.querySelector('#lt_tree .ltn.on'); return e ? getComputedStyle(e).backgroundColor : ''; });
+    ok(!/Expense · Expense/.test(rentWhat) && /^Expense C2\/26-27\/0003/.test(rentWhat) && rentWhat.split('Expense').length === 2, 'the kind word once: "' + rentWhat + '"');
+    ok(await noMinus('#lt_tree') && await noMinus('[data-testid="lg-sum"]') && await noMinus('#lg_out .lcell[data-l="Balance"]') && await noMinus('#lg_out .lcell[data-l="Amount"]'), 'no minus sign on the Ledgers view — balances and amounts are Dr / Cr');
+    ok(/Dr$/.test((await p.textContent('[data-testid="stmt-amt-0"]')).trim()), 'a row\'s amount is one figure with its side: "' + (await p.textContent('[data-testid="stmt-amt-0"]')).trim() + '"');
+    const selBg = await p.evaluate(() => { const e = document.querySelector('#lt_tree .tn.on'); return e ? getComputedStyle(e).backgroundColor : ''; });
     ok(/rgba?\(|color\(/.test(selBg) && !/^rgb\(/.test(selBg), 'the chosen ledger is a light tint (translucent), not a solid block (' + selBg + ')');
+    ok(await p.evaluate(() => { const e = document.querySelector('#lt_tree .tn.on'); return getComputedStyle(e, '::before').width === '3px'; }), 'and a 3 px bar');
     await p.click('[data-testid="lg-acc-1400"]'); await p.waitForFunction(() => /Sale/.test((document.querySelector('[data-testid="stmt-what-0"]') || {}).textContent || ''), null, { timeout: 8000 });
 
-    /* ── 2b · PARTY LEDGERS: 1300 and 2100 are FOLDERS whose leaves are the parties (docs/design/party-ledgers + one-table item 6) ── */
+    /* ── 2b · PARTY LEDGERS: 1300 and 2100 are LEDGERS whose children are the parties (docs/design/party-ledgers) ── */
     const dueReads = () => S.calls.filter((c) => /\/api\/books\/dues/.test(c)).length;
     const partyReads = () => S.calls.filter((c) => /\/api\/books\/party\//.test(c)).length;
     const rowsOf = async () => p.$$eval('[data-testid^="lg-party-c"], [data-testid^="lg-party-s"]', (r) => r.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     const stmtText = async () => p.$$eval('[data-testid^="stmt-what-"]', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
     const partyCells = async () => p.$$eval('#lg_out .lg-party', (t) => t.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    await p.click('[data-testid="lt-band-people"]');
-    ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid^="lg-party-"]').count() === 0 && await p.locator('[data-testid="lt-group-Other"]').count() === 1, 'People holds Customers (Sundry Debtors) and Suppliers (Sundry Creditors) as closed folders — and nothing else (no per-party sub-account group)');
+    ok(await p.locator('[data-testid="lg-acc-1300"]').count() === 1 && await p.locator('[data-testid="lg-acc-2100"]').count() === 1 && await p.locator('[data-testid="lg-acc-1300-P00001"]').count() === 0 && await p.locator('[data-testid="lt-group-Other"]').count() === 1, 'People holds Customers and Suppliers as ledgers — and nothing else (no per-party sub-account group)');
     S.calls.length = 0;
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-party-c1"]');
     await p.waitForSelector('[data-testid="stmt-what-0"]');
     let pr = await rowsOf();
-    ok(pr.length === 2 && /P-00001.*Ravi Stores.*3,000/.test(pr[0]) && /P-00002.*Chola Auto Care.*3,000/.test(pr[1]), 'Customers opens into one leaf per customer — party no · name · balance, ordered by party no (' + pr.join(' | ') + ')');
-    ok((await p.textContent('[data-testid="lg-acc-1300"]')).trim().startsWith('📂'), 'the Customers folder is open (📂)');
+    ok(pr.length === 2 && /^Ravi Stores.*₹3,000\.00 Dr$/.test(pr[0]) && /^Chola Auto Care.*₹3,000\.00 Dr$/.test(pr[1]), 'Customers opens into one line per customer — name · balance, ordered by party no (' + pr.join(' | ') + ')');
+    ok(await p.locator('[data-testid="lg-acc-1300"]').getAttribute('aria-expanded') === 'true', 'the Customers ledger is open (▾)');
     const sum1 = (await p.textContent('[data-testid="lg-sum"]')).replace(/\s+/g, ' ').trim();
-    ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 Closing ₹6,000\.00 Dr ✓ parties agree$/.test(sum1), 'ONE line: opening · closing in Dr/Cr · "✓ parties agree" (' + sum1 + ')');
-    ok(await p.locator('[data-testid="lg-parties-total"]').count() === 0 && await p.locator('[data-testid="lg-parties-closing"]').count() === 0 && sum1.split('6,000.00').length === 2 && !/Total of the parties|Ledger closing/.test(await p.textContent('[data-testid="lg_out"]')), 'the closing figure is said once in the head, not three times');
-    ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no difference while they agree');
+    ok(await p.locator('[data-testid="lg-sum"]').count() === 1 && /^Opening ₹0\.00 · Closing ₹6,000\.00 Dr · ✓ parties agree$/.test(sum1), 'ONE line: opening · closing in Dr/Cr · "✓ parties agree" (' + sum1 + ')');
+    ok(await p.locator('[data-testid="lg-parties-total"]').count() === 0 && await p.locator('[data-testid="lg-parties-closing"]').count() === 0 && sum1.split('6,000.00').length === 2 && !/Total of the parties|Ledger closing/.test(await p.textContent('.cbl-title')), 'the closing figure is said once in the head, not three times');
+    ok(await p.locator('[data-testid="lg-parties-diff"]').count() === 0, 'no amber chip while they agree');
     ok(dueReads() === 1 && partyReads() === 0, 'one /api/books/dues read names every party; no statement per party (' + dueReads() + ' / ' + partyReads() + ')');
+    ok(JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Party', 'Details', 'Amount']), 'a control account\'s default columns: Date · Party · Details, and the Amount (the Balance is kept in ⚙)');
     let rt = await stmtText(), pc = await partyCells();
-    ok(rt.length === 2 && pc.length === 2 && /^P-00001 · Ravi Stores$/.test(pc[0]) && /^P-00002 · Chola Auto Care$/.test(pc[1]), 'every 1300 row leads with its party — "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
+    ok(rt.length === 2 && pc.length === 2 && /^P-00002 · Chola Auto Care$/.test(pc[0]) && /^P-00001 · Ravi Stores$/.test(pc[1]), 'every 1300 row leads with its party — newest first, "P-00001 · Ravi Stores" (' + pc.join(' | ') + ')');
     ok(pc.every((t) => t && !/Mayur|Counter/.test(t)), 'no row shows the owner or the counter as its party');
-    ok(rt.every((t) => /Counter C2 · rung by Mayur Bhavan \(owner\)/.test(t)), 'the counter and "rung by Mayur Bhavan (owner)" are the entry\'s secondary text (' + rt[0] + ')');
+    ok(rt.every((t) => /^Sale · Bill C2\/26-27\/001[67]$/.test(t)), 'Details is the kind and the bill, once (' + rt[0] + ')');
+    await p.click('[data-testid="cols-btn-ledger-control"]'); await p.waitForSelector('[data-testid="cols-menu-ledger-control"]');
+    const colsOff = await p.$$eval('[data-testid="cols-menu-ledger-control"] input[type=checkbox]', (c) => c.map((x) => x.getAttribute('data-testid').replace('cols-ledger-control-', '') + ':' + (x.checked ? 1 : 0)));
+    ok(JSON.stringify(colsOff) === JSON.stringify(['date:1', 'party:1', 'what:1', 'entry:0', 'tender:0', 'counter:0', 'person:0', 'bal:0']) || colsOff.join() === ['date:1', 'party:1', 'what:1', 'bal:0', 'entry:0', 'tender:0', 'counter:0', 'person:0'].join(), 'the gear keeps Balance · Entry no. · Tender · Counter · Rung by (' + colsOff.join(' ') + ')');
+    await p.click('[data-testid="cols-btn-ledger-control"]');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-debtors.png'), fullPage: true });
 
-    /* expand one → its journal's Dr/Cr lines, each tax and sales line with its rate; its bill number opens the sheet */
+    /* expand one → its journal's Dr/Cr lines (the ledger you are in is bold), then the facts no visible column shows; its bill number opens the sheet */
     await p.click('[data-testid="stmt-row-0"] [role="button"]');
     await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const next = (await p.textContent('[data-testid="db-lines-JV/2026-27/000011"]')).replace(/\s+/g, ' ');
     ok(/Customers \(Sundry Debtors\)/.test(next) && /Sales @12%/.test(next) && /Output CGST 6%/.test(next) && /Output SGST 6%/.test(next), 'the next level is the journal\'s lines, each with its rate as the line carries it ("Sales @12%", "Output CGST 6%")');
+    ok(await p.locator('[data-testid="db-lines-JV/2026-27/000011"] .lg-me').count() === 1 && /1300/.test(await p.textContent('[data-testid="db-lines-JV/2026-27/000011"] .lg-me')), 'the ledger you are in (1300) is the bold line');
+    const facts = (await p.textContent('[data-testid="lg-facts-0"]')).replace(/\s+/g, ' ').trim();
+    ok(/On credit/.test(facts) && /Counter C2/.test(facts) && /rung by Mayur Bhavan \(owner\)/.test(facts), 'one quiet facts line: tender · counter · rung by (and the entry no, when there is one) — what no visible column shows (' + facts + ')');
     const opened = await p.evaluate(() => { const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); }; try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; } });
     ok(opened === 'k1' && await p.locator('[data-testid="db-lines-JV/2026-27/000011"]').count() === 1, 'the bill number opens that chit\'s sheet (' + opened + ') and does not toggle the row');
 
-    /* a customer leaf opens ITS ledger only */
+    /* a party leaf opens ITS ledger only — without a Party column */
     S.calls.length = 0;
     await p.click('[data-testid="lg-party-c1"]');
-    await p.waitForSelector('[data-testid="stmt-closing"]');
-    await p.waitForFunction(() => /Ravi/.test((document.querySelector('[data-testid="lg-title"]') || {}).textContent || ''));
+    await p.waitForFunction(() => /Ravi/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
+    await p.waitForSelector('[data-testid="stmt-row-0"]');
     const one = await p.textContent('[data-testid="lg_out"]');
     ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
     ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
-    ok(await p.locator('#lg_out .lg-party').count() === 0 && (one.match(/Ravi Stores/g) || []).length === 0, 'on a party\'s own ledger the party is not repeated on any row (it is said once, in the title)');
+    ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
     await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
     ok(!/Ravi Stores/.test(own.t) && /Output CGST/.test(own.t), 'inside the opened entry the party is not repeated either');
     ok(own.nsw <= own.ncw + 1 && own.lsw <= own.lcw + 1, 'the opened detail and the list never scroll sideways (' + own.nsw + '/' + own.ncw + ', ' + own.lsw + '/' + own.lcw + ')');
-    ok(await p.locator('[data-testid="cbl-period-ledger"]').count() === 0, 'a party\'s statement has no period chip (it has no range)');
-    ok(/3,000/.test(await p.textContent('[data-testid="stmt-closing"]')) && /0\.00|^\s*₹?\s*0/.test(await p.textContent('[data-testid="stmt-opening"]')), 'opening 0 and closing ₹3,000 for the party');
-    ok((await p.textContent('[data-testid="lg-title"]')).trim() === 'P-00001 · Ravi Stores', 'the party is named by no · name above its ledger');
+    ok(await p.locator('[data-testid="cbl-period-ledger-party"]').count() === 0, 'a party\'s statement has no period chip (it has no range)');
+    ok(/^Opening ₹0\.00 · Closing ₹3,000\.00 Dr$/.test((await p.textContent('[data-testid="lg-sum"]')).trim()), 'opening 0 and closing ₹3,000 Dr for the party, in the one line');
+    ok((await p.textContent('.cbl-title h1')).trim() === 'Ravi Stores', 'the party is named once, in the title');
     ok(await p.locator('[data-testid="lg-parties"]').count() === 0 && dueReads() === 0, 'the party view shows no control figures and re-reads no dues');
     ok(await p.locator('[data-testid="lg-party-c1"]').count() === 1 && await p.locator('[data-testid="lg-party-c2"]').count() === 1, 'the other parties stay in the tree beside it');
+    ok(await p.locator('[data-testid="lg-agreed"]').count() === 0 && await p.locator('#lt_tree .ck').count() === 0, 'no "✓ Agreed up to" and no ✓ in the tree while the API sends no agreement date');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-one-party.png'), fullPage: true });
+    /* Statement (designer extra #5): no API route sends it yet, so the button opens the party's own statement view — CB CRM's party record */
+    const opened2 = await p.evaluate(() => { const was = window.open, got = []; window.open = function (u) { got.push(u); return null; }; try { document.querySelector('[data-testid="lg-statement"]').click(); return got.join(','); } finally { window.open = was; } });
+    ok(/^\/crm\.html#\/party\/P-00001$/.test(opened2), 'the Statement button on a party\'s ledger opens that party\'s statement view (' + opened2 + ')');
     S.calls.length = 0;
     await p.click('[data-testid="lg-acc-2100"]');
     await p.waitForSelector('[data-testid="lg-party-s1"]');
     await p.waitForSelector('[data-testid="stmt-what-0"]');
     pr = await rowsOf();
-    ok(pr.length === 4 && /P-00003.*Agro Mills.*1,500/.test(pr[2]) && /P-00004.*Kavi Traders.*1,000/.test(pr[3]), 'Suppliers opens into one leaf per supplier (' + pr.slice(2).join(' | ') + ')');
+    ok(pr.length === 4 && /^Agro Mills.*₹1,500\.00 Cr$/.test(pr[2]) && /^Kavi Traders.*₹1,000\.00 Cr$/.test(pr[3]), 'Suppliers opens into one line per supplier (' + pr.slice(2).join(' | ') + ')');
     const sum2 = (await p.textContent('[data-testid="lg-sum"]')).replace(/\s+/g, ' ').trim();
-    ok(/Closing ₹2,500\.00 Cr ✓ parties agree$/.test(sum2) && !/[-−]/.test(sum2), 'the suppliers: closing ₹2,500.00 Cr, parties agree, no minus sign (' + sum2 + ')');
+    ok(/Closing ₹2,500\.00 Cr · ✓ parties agree$/.test(sum2) && !/[-−]/.test(sum2), 'the suppliers: closing ₹2,500.00 Cr, parties agree, no minus sign (' + sum2 + ')');
     ok(dueReads() === 1 && partyReads() === 0, 'one dues request, no per-row statement (' + dueReads() + ' / ' + partyReads() + ')');
     pc = await partyCells(); rt = await stmtText();
-    ok(pc.length === 2 && pc.every((t) => /^P-0000[34] · (Agro Mills|Kavi Traders)$/.test(t)) && rt.every((t) => /rung by Ravi/.test(t)), '2100 rows lead with the supplier and say "rung by Ravi" apart (' + pc.join(' | ') + ')');
+    ok(pc.length === 2 && pc.every((t) => /^P-0000[34] · (Agro Mills|Kavi Traders)$/.test(t)), '2100 rows lead with the supplier (' + pc.join(' | ') + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-creditors.png'), fullPage: true });
     await p.click('[data-testid="lg-party-s2"]');
-    await p.waitForFunction(() => /Kavi/.test((document.querySelector('[data-testid="lg-title"]') || {}).textContent || ''));
-    await p.waitForSelector('[data-testid="stmt-closing"]');
-    ok(/KV-12/.test(await p.textContent('[data-testid="lg_out"]')) && !/AM-81/.test(await p.textContent('[data-testid="lg_out"]')) && /1,000/.test(await p.textContent('[data-testid="stmt-closing"]')), 'a supplier opens only its own bills, closing ₹1,000');
-    /* a control account that does not equal its parties is said in words, never hidden */
-    S.closing = { '1300': 650000 };
+    await p.waitForFunction(() => /Kavi/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
+    await p.waitForSelector('[data-testid="stmt-row-0"]');
+    ok(/KV-12/.test(await p.textContent('[data-testid="lg_out"]')) && !/AM-81/.test(await p.textContent('[data-testid="lg_out"]')) && /Closing ₹1,000\.00 Cr/.test(await p.textContent('[data-testid="lg-sum"]')), 'a supplier opens only its own bills, closing ₹1,000.00 Cr');
+    /* a control account that does not equal its parties is said in words, never hidden: an amber chip with the amount, that shows the entry with no party */
+    S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="lg-parties-diff"]');
-    ok(/^parties differ by ₹500\.00$/.test((await p.textContent('[data-testid="lg-parties-diff"]')).trim()) && /Closing ₹6,500\.00 Dr/.test(await p.textContent('[data-testid="lg-sum"]')), 'when the parties and the ledger differ, the difference is named in the same one line');
-    S.closing = null;
+    ok(/^₹500\.00 Dr with no party$/.test((await p.textContent('[data-testid="lg-parties-diff"]')).replace(/\s+/g, ' ').trim()) && /Closing ₹6,500\.00 Dr/.test(await p.textContent('[data-testid="lg-sum"]')) && !/parties agree/.test(await p.textContent('.cbl-title')), 'when the parties and the ledger differ there is NO green text — an amber chip names the amount; the figures line stays');
+    ok(await p.locator('[data-testid^="kural-footer"]:visible').count() === 0, 'and the kural is not drawn beside that warning');
+    await p.click('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(200);
+    ok(await p.locator('[data-testid^="stmt-row-"]').count() === 1 && /Showing the 1 entry with no party/.test(await p.textContent('[data-testid="lg-parties-diff"]')) && /No party/.test(await p.textContent('[data-testid="stmt-row-2"]')), 'the chip\'s fix shows the one entry that has no party (and reads "Show all" to undo it)');
+    await p.click('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(200);
+    ok(await p.locator('[data-testid^="stmt-row-"]').count() === 3, 'and Show all brings the three entries back');
+    S.closing = null; S.extra = null;
 
     /* ── 3 · BILLS ── */
     await nav(p, 'bills');
@@ -545,19 +618,30 @@ async function route(S, r) {
     await p.waitForSelector('[data-testid="lt-band-people"]');
     const w2 = await width(p);
     ok(w2.sw === 390, 'Ledgers (the tree) at 390 px: scrollWidth === 390');
+    /* the phone is TWO PAGES: page one is the tree (with its find box, the page's own "Ledgers" header and the avatar) — a ledger opens page two, ‹ comes back */
+    const pg1 = await p.evaluate(() => { const tree = document.querySelector('.lt-tree'), top = document.querySelector('.top'), l = document.querySelector('#lt_tree'); const r = l.getBoundingClientRect();
+      return { tree: getComputedStyle(tree).display, pane: getComputedStyle(document.querySelector('.lt-pane')).display, top: top && getComputedStyle(top).display, h1: (document.querySelector('#title') || {}).textContent, av: !!document.querySelector('.top [data-cb-avatar], .top #cbav button, .top #cbav *'), head: Math.round(r.top / innerHeight * 100) }; });
+    ok(pg1.tree !== 'none' && pg1.pane === 'none' && pg1.top !== 'none' && pg1.h1 === 'Ledgers' && pg1.av, 'phone page one: the tree, the page header "Ledgers" with the avatar, and no squeezed side panel');
+    ok(pg1.head <= 30, 'phone page one: the head is ' + pg1.head + '% of the window (limit 30%)');
     await p.screenshot({ path: path.join(SHOTS, 'cb-accounts-phone.png'), fullPage: false });
-    /* on a phone the tree is the way in, a chosen ledger replaces it, and the breadcrumb is the way back */
-    await p.click('[data-testid="lt-band-people"]');
     await p.click('[data-testid="lg-acc-1300"]');
     await p.waitForSelector('[data-testid="stmt-row-0"]');
     await p.waitForTimeout(300);
-    const ph = await p.evaluate(() => { const tr = document.querySelector('[data-testid="stmt-row-0"]'), t = document.querySelector('.lt-tree'); return { tree: getComputedStyle(t).display, row: getComputedStyle(tr).display, rad: parseFloat(getComputedStyle(tr).borderTopLeftRadius), back: getComputedStyle(document.querySelector('[data-testid="lt-back"]')).display, sw: document.documentElement.scrollWidth, head: getComputedStyle(document.querySelector('#lg_out .lhead')).display }; });
-    ok(ph.tree === 'none' && ph.back !== 'none' && ph.row === 'flex' && ph.rad > 0 && ph.head === 'none', 'at 390 px a chosen ledger replaces the tree, entries are one card per row, a ‹ Ledgers breadcrumb is the way back');
+    const ph = await p.evaluate(() => { const tr = document.querySelector('[data-testid="stmt-row-0"]'), t = document.querySelector('.lt-tree'), l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr');
+      return { tree: getComputedStyle(t).display, row: getComputedStyle(tr).display, rad: parseFloat(getComputedStyle(tr).borderTopLeftRadius), back: getComputedStyle(document.querySelector('[data-testid="lt-back"]')).display, sw: document.documentElement.scrollWidth, head: getComputedStyle(document.querySelector('#lg_out .lhead')).display,
+        pct: Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100), top: getComputedStyle(document.querySelector('.top')).display, who: !!document.querySelector('.cbl-title .who'), h1: document.querySelector('.cbl-title h1').textContent }; });
+    ok(ph.tree === 'none' && ph.back !== 'none' && ph.row === 'flex' && ph.rad > 0 && ph.head === 'none', 'at 390 px a chosen ledger is page two: the tree is gone, entries are one card per row, and ‹ is the way back');
+    ok(ph.top === 'none' && ph.who && ph.h1 === 'Customers', 'page two: the list\'s title row is the header (‹ Customers … home · avatar); the page header steps aside');
+    ok(ph.pct <= 30, 'phone page two: the head is ' + ph.pct + '% of the window (limit 30%)');
     ok(ph.sw === 390, 'the ledger\'s entries at 390 px: document.scrollWidth === 390 (' + ph.sw + ')');
     await p.screenshot({ path: path.join(SHOTS, 'party-ledgers-phone.png'), fullPage: false });
     await p.screenshot({ path: path.join(SHOTS, 'one-table-ledgers-phone.png'), fullPage: false });
+    await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+    const jl = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); const first = n.querySelector('.cbl-nrow > span:first-child'); return { nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth, w: first.getBoundingClientRect().width }; });
+    ok(jl.nsw <= jl.ncw + 1 && jl.lsw <= jl.lcw + 1 && jl.w >= 110, 'the opened entry on a phone: the journal does not scroll sideways, and its figures take only the room they need (ledger column ' + Math.round(jl.w) + ' px)');
     await p.click('[data-testid="lt-back"]');
-    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lt-tree')).display !== 'none'), 'the breadcrumb returns to the tree');
+    ok(await p.evaluate(() => getComputedStyle(document.querySelector('.lt-tree')).display !== 'none' && getComputedStyle(document.querySelector('.top')).display !== 'none'), 'ʻ‹ʼ returns to the tree (and the page header is back with the avatar)');
+    ok(await p.evaluate(() => !!document.querySelector('.top-row #who .home') ) && await p.locator('.top-row #who #cbav button').count() >= 1, 'the shop · Home · avatar are back in the page header (one node, moved, never copied)');
     /* a table is one card per row below 620 px, each cell named by its column */
     await nav(p, 'tb');
     await p.waitForSelector('table.bktab');
@@ -566,20 +650,97 @@ async function route(S, r) {
     await ctx.close();
   }
 
-  /* ── THE LEDGERS, LOOKED AT: Customers' ledger with its first entry opened, laptop and phone, Cream and Dark (e2e/shots/ledgers-{laptop,phone}-{cream,dark}.png) ── */
-  for (const theme of ['cream', 'dark']) {
-    for (const [tag, vp] of [['laptop', { width: 1360, height: 900 }], ['phone', { width: 390, height: 844 }]]) {
+  /* ── THE LEDGERS, LOOKED AT (docs/design/ledgers-page): the nine states, laptop 1366×768 and phone 390×844, in Cream · Dark · Terminal.
+     Every combination is MEASURED: the list and the opened entry fit with no sideways scroll, and the head (everything above the first row) stays
+     within 20% of the window on a laptop — a wide one AND a narrow one (1080) — and within 30% on a phone. LEDGERS_SHOTS=<dir> also keeps a picture of each state
+     (01 tree open · 02 tree folded · 03 control account with parties · 04 parties differ · 05 plain ledger · 06 party's ledger · 07 entry opened · 08 empty period · 09 long name). ── */
+  const headPct = (p) => p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), hdr = document.querySelector('#lg_out .cbl-hdr'); if (!l) return null;
+    return Math.round((l.getBoundingClientRect().top + (hdr && hdr.offsetParent ? hdr.offsetHeight : 0)) / innerHeight * 100); });
+  const LSHOTS = process.env.LEDGERS_SHOTS;
+  if (LSHOTS) fs.mkdirSync(LSHOTS, { recursive: true });
+  for (const theme of ['cream', 'dark', 'terminal']) {
+    for (const [tag, vp] of [['laptop', { width: 1366, height: 768 }], ['phone', { width: 390, height: 844 }]]) {
       const S = standIn();
       const { ctx, p } = await open(S, { viewport: vp, seed: 'try { localStorage.setItem("cb_theme", ' + JSON.stringify(theme) + '); } catch (_) {}' });
+      const phone = tag === 'phone', limit = phone ? 30 : 20;
+      const snap = (n) => LSHOTS ? p.screenshot({ path: path.join(LSHOTS, n + '-' + tag + '-' + theme + '.png') }) : null;
+      const pick = async (id) => { if (!(await p.locator('[data-testid="' + id + '"]').isVisible())) { if (await p.locator('[data-lt="back"]').isVisible()) await p.click('[data-lt="back"]'); else if (await p.locator('[data-lt="unfold"]').isVisible()) await p.click('[data-lt="unfold"]'); await p.waitForTimeout(200); }
+        await p.click('[data-testid="' + id + '"]'); await p.waitForFunction(() => !document.querySelector('#lg_out .cbl-skel') && document.querySelector('#lg_out .cbl-list'), null, { timeout: 8000 }); await p.waitForTimeout(250); };
       await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
-      await p.waitForSelector('[data-testid="lt-band-people"]'); await p.click('[data-testid="lt-band-people"]'); await p.click('[data-testid="lg-acc-1300"]');
-      await p.waitForSelector('[data-testid="stmt-what-0"]'); await p.waitForTimeout(300);
-      await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
+      await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
+      ok((await p.evaluate(() => document.documentElement.getAttribute('data-theme'))) === (theme === 'cream' ? 'cream' : theme) || theme === 'cream', 'Ledgers ' + tag + ' in ' + theme + ': the theme is applied');
+      await snap('01-tree-open');
+      const checks = {};
+      /* 03 · a control account with parties (Suppliers) */
+      await pick('lg-acc-2100'); checks.control = await headPct(p); await snap('03-control-parties');
+      /* 04 · the parties differ (Customers, one entry with no party) */
+      S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
+      await pick('lg-acc-1300'); await p.waitForSelector('[data-testid="lg-parties-diff"], [data-testid="cbl-notes-ledger-control"]'); checks.differ = await headPct(p);   /* on a phone CBList folds the chips and the notice into ONE chip */ await snap('04-parties-differ');
+      S.closing = null; S.extra = null;
+      /* 05 · a plain ledger (Rent) */
+      await pick('lg-acc-6010'); checks.plain = await headPct(p); await snap('05-plain-ledger');
+      /* 06 · a party's ledger, and 07 · its first entry opened */
+      await pick('lg-acc-1300'); await pick('lg-party-c1'); checks.party = await headPct(p); await snap('06-party-ledger');
+      await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 }); await p.waitForTimeout(250);
       const g = await p.evaluate(() => { const l = document.querySelector('#lg_out .cbl-list'), n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'); return { th: document.documentElement.getAttribute('data-theme'), lsw: l.scrollWidth, lcw: l.clientWidth, nsw: n.scrollWidth, ncw: n.clientWidth, dsw: document.documentElement.scrollWidth, iw: innerWidth }; });
       ok(g.lsw <= g.lcw + 1 && g.nsw <= g.ncw + 1 && g.dsw <= g.iw, 'Ledgers ' + tag + ' in ' + theme + ' (' + g.th + '): the list and the opened entry fit, nothing scrolls sideways (' + g.lsw + '/' + g.lcw + ', ' + g.nsw + '/' + g.ncw + ')');
-      await p.screenshot({ path: path.join(SHOTS, 'ledgers-' + tag + '-' + theme + '.png') });
+      await snap('07-entry-opened');
+      /* 08 · an empty period (Bank has no entries) */
+      await pick('lg-acc-1500'); checks.empty = await headPct(p); await snap('08-empty-period');
+      /* 09 · a long name wraps, never clipped */
+      await pick('lg-acc-7777'); await snap('09-long-name');
+      /* 02 · the tree folded (laptop) / page two (phone) */
+      if (!phone) { await p.click('[data-testid="lt-fold"]').catch(() => {}); await p.waitForTimeout(200); await snap('02-tree-folded'); await p.click('[data-testid="lt-unfold"]').catch(() => {}); } else await snap('02-tree-folded');
+      const worst = Math.max.apply(null, Object.values(checks).filter((v) => v != null));
+      ok(worst <= limit, 'Ledgers ' + tag + ' in ' + theme + ': the head stays within ' + limit + '% in every state (' + Object.keys(checks).map((k) => k + ' ' + checks[k] + '%').join(' · ') + ')');
+      if (theme === 'cream' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-cream.png') });
+      if (theme === 'dark' && !phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-laptop-dark.png') });
+      if (theme === 'cream' && phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-phone-cream.png') });
+      if (theme === 'dark' && phone) await p.screenshot({ path: path.join(SHOTS, 'ledgers-phone-dark.png') });
       await ctx.close();
     }
+  }
+  /* a narrow laptop (1080 × 768): the menu rests as its rail, the tree opens OVER the list for one pick, the tools row stays one row — the head within 20% */
+  {
+    const S = standIn(); S.closing = { '1300': 650000 }; S.extra = { '1300': [LINE('k5', '2026-09-07', 'C2/26-27/0018', null, 50000, 0, 650000, 'bill', 'Mayur Bhavan')] };
+    const { ctx, p } = await open(S, { viewport: { width: 1080, height: 768 } });
+    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await p.waitForSelector('[data-testid="lt-band-people"]'); await p.waitForTimeout(250);
+    ok(await p.locator('.lt-tree').isVisible(), 'narrow laptop: with no ledger open the tree is shown (the way in)');
+    await p.click('[data-testid="lg-acc-1300"]'); await p.waitForSelector('[data-testid="lg-parties-diff"]'); await p.waitForTimeout(250);
+    ok(await p.locator('.lt-tree').isHidden() && await p.locator('[data-testid="lt-unfold"]').count() === 1, 'narrow laptop (1080): once a ledger is open the tree folds, and "☰ Ledgers" is one tap away');
+    const n1 = await headPct(p);
+    ok(n1 <= 20, 'narrow laptop (1080×768): the head is ' + n1 + '% of the window with the amber notice showing (limit 20%)');
+    await p.click('[data-testid="lt-unfold"]'); await p.waitForTimeout(200);
+    const ov = await p.evaluate(() => { const t = document.querySelector('.lt-tree'), l = document.querySelector('#lg_out .cbl-list'); return { pos: getComputedStyle(t).position, lw: l.getBoundingClientRect().width }; });
+    const n2 = await headPct(p);
+    ok(ov.pos === 'absolute' && n2 === n1, 'narrow laptop: "☰ Ledgers" brings the tree back OVER the list — the list keeps its width, the head stays ' + n2 + '%');
+    await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+    ok(await p.locator('.lt-tree').isHidden(), 'Esc puts the overlay away');
+    await p.screenshot({ path: path.join(SHOTS, 'ledgers-narrow-1080.png') }).catch(() => {});
+    await ctx.close();
+  }
+  /* what a person chose is remembered, per person: the last ledger comes back; the tree's width and what is folded too */
+  {
+    const S = standIn();
+    const { ctx, p } = await open(S, { viewport: { width: 1366, height: 768 } });
+    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await p.waitForSelector('[data-testid="lt-band-people"]');
+    await p.click('[data-testid="lg-acc-1300"]'); await p.click('[data-testid="lg-party-c2"]');
+    await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
+    await p.click('[data-testid="lt-band-income"]');
+    await p.reload();
+    await p.waitForSelector('[data-testid="acc-nav-ledgers"]'); await p.click('[data-testid="acc-nav-ledgers"]');
+    await p.waitForFunction(() => /Chola/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});
+    ok(/Chola Auto Care/.test(await p.textContent('.cbl-title h1')), 'the last ledger this person had open comes back (Chola Auto Care, a party\'s ledger)');
+    ok(await p.locator('[data-testid="lt-band-income"]').getAttribute('aria-expanded') === 'false', 'a band they folded stays folded');
+    ok(await p.evaluate(() => Object.keys(localStorage).filter((k) => /^cb_lt\./.test(k)).length === 1), 'remembered on this device under this person\'s own key (the API has no ledgers preference yet — listed in the PR)');
+    /* the agreement date, when the API sends it: a green chip in the head and a ✓ beside the party in the tree */
+    S.agreed = '2026-08-31';
+    await p.click('[data-testid="lg-party-c1"]'); await p.waitForFunction(() => /Ravi/.test((document.querySelector('.cbl-title h1') || {}).textContent || ''));
+    await p.waitForSelector('[data-testid="lg-agreed"]', { timeout: 8000 }).catch(() => {});
+    ok(/Agreed up to 31 Aug 2026/.test((await p.textContent('[data-testid="lg-agreed"]').catch(() => '')) || ''), 'when the API sends the agreement date the head says "✓ Agreed up to 31 Aug 2026"');
+    await ctx.close();
   }
 
   /* ── no page error, nothing left the machine ── */
