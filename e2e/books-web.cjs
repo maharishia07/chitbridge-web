@@ -308,7 +308,8 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const chipTitle = await p.getAttribute('[data-testid="party-due-c1"]', 'title');
   ok(/owe you/.test(chipTitle) && /oldest due/.test(chipTitle), 'row chip says who owes whom and the oldest due (' + chipTitle + ')');
   /* ⭐ THE CRM IS THE TASK TABLE (docs/design/one-table item 9): Party no · Name · ChitBridge ID · Balance · Oldest due · Credit terms · GSTIN */
-  crmNo = ((await p.textContent('[data-testid="party-no-c1"]')) || '').trim();
+  /* CBList puts its open/close caret (▸) in the FIRST cell, so the cell reads '▸P-00001': the party no is the P-nnnnn in it */
+  crmNo = ((((await p.textContent('[data-testid="party-no-c1"]')) || '').match(/P-[0-9]+/) || [''])[0]).trim();
   ok(await p.locator('#tbl_customers .lhead').count() === 1 && await p.locator('[data-testid="cust-row-c1"].lrow').count() === 1 && await p.locator('.row[data-testid^="cust-row-"]').count() === 0, 'the Customers list is the Task table (.lhead / .lrow) — no row of its own');
   await p.evaluate(() => { UI[lwKey()] = 1100; document.getElementById('panel').style.setProperty('--lw', '1100px'); paintCustList(); });
   await p.waitForSelector('#tbl_customers .lhcell:nth-child(7)', { timeout: 5000 }).catch(() => {});

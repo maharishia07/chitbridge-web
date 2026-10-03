@@ -18,8 +18,8 @@ test.describe('Theme picker · the control, not the palette', () => {
   test('[THP-01] ⭐ clicking a theme card applies that theme', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('icon-avatar').click();
-    await page.getByTestId('avsec-theme').click();
-    await expect(page.getByTestId('theme-picker'), 'the palette must open').toBeVisible();
+    /* INTEGRATION (CBAvatar, the frozen menu): the theme swatches and the language buttons are always shown in the menu - there is no Theme / Language section to open (avsec-theme / avsec-lang are gone) and no theme-picker box; the group is the 'Theme' group inside avatar-menu. */
+    await expect(page.getByTestId('avatar-menu').getByRole('group', { name: 'Theme' }), 'the palette is in the menu').toBeVisible();
 
     const before = await page.evaluate(() => ({
       attr: document.documentElement.getAttribute('data-theme'),
@@ -46,7 +46,6 @@ test.describe('Theme picker · the control, not the palette', () => {
   test('[THP-02] the choice survives a reload', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('icon-avatar').click();
-    await page.getByTestId('avsec-theme').click();
     await page.getByTestId('theme-slate').click();
     await page.waitForTimeout(500);
     await page.reload();
@@ -60,7 +59,6 @@ test.describe('Theme picker · the control, not the palette', () => {
   test('[THP-03] every registered theme has a card, and each card is clickable', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('icon-avatar').click();
-    await page.getByTestId('avsec-theme').click();
     const keys = await page.evaluate(() => Object.keys(window.THEMES || {}));
     expect(keys.length, 'themes must be readable').toBeGreaterThan(3);
     for (const k of keys) {

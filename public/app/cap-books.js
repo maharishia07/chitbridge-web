@@ -140,13 +140,14 @@ async function booksDuesLoad(force) {
   return BK.dues;
 }
 /** the row chip: what this party owes you (or you them), and the oldest due date */
-function partyDueChipHTML(partyId) {
+function partyDueChipHTML(partyId, opts) {
   var d = BK.dues && BK.dues[partyId]; if (!d) return '';
-  var b = Number(d.balance_minor || 0); if (!b) return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" style="color:var(--grey)">' + esc(d.party_no || '') + ' · ' + tx('settled') + '</span>';
+  var no = opts && opts.noNo ? '' : esc(d.party_no || '') + ' · ';   /* CB CRM names the party in the same row: its number is not said twice */
+  var b = Number(d.balance_minor || 0); if (!b) return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" style="color:var(--grey)">' + no + tx('settled') + '</span>';
   var owes = b > 0;
   return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" title="' + esc(owes ? tx('They owe you') : tx('You owe them')) + (d.oldest_due ? ' · ' + esc(tx('oldest due')) + ' ' + esc(bkDate(d.oldest_due)) : '') + '"'
     + ' style="' + (owes ? 'background:var(--warn-tint);color:var(--warn-2);border-color:var(--warn-2)' : 'background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d)') + '">'
-    + esc(d.party_no || '') + ' · ' + (owes ? '↓ ' : '↑ ') + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</span>';
+    + no + (owes ? '↓ ' : '↑ ') + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</span>';
 }
 /**
  * ⭐ THE PARTY BLOCK in the Customer detail and the Supplier record: who they are for the ledger (party no, legal
@@ -264,19 +265,35 @@ function statementHTML(r, partyId) {
 }
 
 /* ── the party's own fields, edited where the party is shown ── */
-var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'VAT', 'TRN'];
+/* the schemes the server accepts (lib/party-fields.js): a party can carry several tax ids, so the sheet edits a LIST of them */
+var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'VAT', 'TIN', 'CIN', 'UDYAM'];
 function partyRowOf(kind, partyId) {
   if (kind === 'supplier') return (UI.sups || []).find(function (s) { return s.supplier_entity_id === partyId; });
   return (UI.custs || []).find(function (c) { return c.customer_identity_id === partyId; });
 }
+/** one tax-id row of the edit sheet; the first keeps the ids the Ledger's own tests read (pe_scheme / pe_taxid) */
+function partyTaxRowHTML(kind, partyId, t, i) {
+  var sid = i === 0 ? 'pe_scheme' : 'pe_scheme' + i, vid = i === 0 ? 'pe_taxid' : 'pe_taxid' + i;
+  return '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select class="inp" id="' + sid + '" data-testid="' + sid + '" style="width:auto" aria-label="' + esc(tx('Scheme')) + '">' + TAX_SCHEMES.map(function (s) { return '<option' + (t.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>'
+    + '<input class="inp" id="' + vid + '" data-testid="' + vid + '" value="' + esc(t.value == null ? '' : t.value) + '" aria-label="' + esc(tx('Tax id')) + '" style="width:100%" oninput="partyDupCheck(\'' + kind + '\',\'' + esc(partyId) + '\')"></div>';
+}
+function partyTaxAdd(kind, partyId) {
+  var box = document.getElementById('pe_taxes'); if (!box) return;
+  var n = box.querySelectorAll('.pe_taxrow').length, d = document.createElement('div'); d.innerHTML = partyTaxRowHTML(kind, partyId, {}, n);
+  box.appendChild(d.firstChild);
+}
 function partyEditOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
-  var tid = (r.tax_ids && r.tax_ids[0]) || {};
+  var taxes = (r.tax_ids && r.tax_ids.length) ? r.tax_ids : [{}];
   var inp = function (id, v, ph, extra) { return '<input class="inp" id="' + id + '" data-testid="' + id + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(ph || '') + '" style="width:100%" ' + (extra || '') + '>'; };
+  /* a minted (local) party has no profile of its own: the shop holds its phone and e-mail, so the sheet edits them (a party on ChitBridge keeps its own) */
+  var contact = r.contacts ? '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Phone') + inp('pe_phone', r.contacts.phone, '', 'inputmode="tel"') + '</label><label style="flex:1">' + tx('E-mail') + inp('pe_email', r.contacts.email, '', 'inputmode="email"') + '</label></div>' : '';
   modal('<div class="mhd"><div class="t">' + esc(tx('Party')) + ' · ' + esc(r.display_name || r.nickname || '') + '</div></div><div class="mbody" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Legal name') + inp('pe_legal', r.legal_name, tx('as on their tax registration')) + '</label>'
     + '<label>' + tx('Nickname') + inp('pe_nick', r.nickname, tx('what you call them')) + '</label>'
-    + '<label>' + tx('Tax id') + '<div class="supacts" style="display:flex;gap:6px"><select class="inp" id="pe_scheme" data-testid="pe_scheme" style="width:auto">' + TAX_SCHEMES.map(function (s) { return '<option' + (tid.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' + inp('pe_taxid', tid.value, '', 'oninput="partyDupCheck(\'' + kind + '\',\'' + esc(partyId) + '\')"') + '</div></label>'
+    + contact
+    + '<div><div style="font-weight:600;margin-bottom:4px">' + tx('Tax ids') + '</div><div id="pe_taxes" style="display:flex;flex-direction:column;gap:6px">' + taxes.map(function (t, i) { return partyTaxRowHTML(kind, partyId, t, i); }).join('') + '</div>'
+    + '<button type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' + kind + '\',\'' + esc(partyId) + '\')">+ ' + tx('Add a tax id') + '</button></div>'
     + '<div id="pe_dup" data-testid="pe_dup" style="font-size:var(--fs-1);color:var(--warn-2)"></div>'
     + '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Credit days') + inp('pe_days', r.credit_days, '30', 'inputmode="numeric"') + '</label>'
     + '<label style="flex:1">' + tx('Credit limit') + inp('pe_limit', r.credit_limit_minor != null ? (r.credit_limit_minor / Math.pow(10, bkDec())) : '', '', 'inputmode="decimal"') + '</label></div>'
@@ -284,16 +301,22 @@ function partyEditOpen(kind, partyId) {
     + '</div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pe_save" onclick="partyEditSave(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Save') + '</button></div>');
   partyDupCheck(kind, partyId);
 }
+/** the sheet's tax-id rows → [{scheme, value}], blanks dropped */
+function partyTaxRows() {
+  return Array.prototype.slice.call(document.querySelectorAll('#pe_taxes .pe_taxrow')).map(function (row) {
+    return { scheme: (row.querySelector('select') || {}).value, value: String((row.querySelector('input') || {}).value || '').trim().toUpperCase() };
+  }).filter(function (t) { return t.value; });
+}
 /** ⚠️ duplicate parties come from free text with no tax-id check — warn before saving (the research's failure 5) */
 function partyDupCheck(kind, partyId) {
   var box = document.getElementById('pe_dup'); if (!box) return;
-  var v = String((document.getElementById('pe_taxid') || {}).value || '').trim().toUpperCase();
-  var sc = (document.getElementById('pe_scheme') || {}).value;
-  if (!v) { box.textContent = ''; return; }
+  var mine = partyTaxRows();
+  if (!mine.length) { box.textContent = ''; return; }
   var all = (UI.custs || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name, tax: c.tax_ids }; })
     .concat((UI.sups || []).map(function (s) { return { id: s.supplier_entity_id, name: s.display_name || s.nickname, tax: s.tax_ids }; }));
-  var hit = all.filter(function (p) { return p.id !== partyId && (p.tax || []).some(function (t) { return t.scheme === sc && String(t.value).toUpperCase() === v; }); })[0];
-  box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: sc }) : '';
+  var hit = null, hs = null;
+  mine.forEach(function (m) { if (hit) return; hit = all.filter(function (p) { return p.id !== partyId && (p.tax || []).some(function (t) { return t.scheme === m.scheme && String(t.value).toUpperCase() === m.value; }); })[0] || null; hs = hit ? m.scheme : hs; });
+  box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: hs }) : '';
 }
 async function partyEditSave(kind, partyId) {
   var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
@@ -302,14 +325,18 @@ async function partyEditSave(kind, partyId) {
   var lim = g('pe_limit'), days = g('pe_days');
   var body = { legal_name: g('pe_legal') || null, nickname: g('pe_nick') || null, state_code: g('pe_state') || null,
     credit_days: days === '' ? null : parseInt(days, 10), credit_limit_minor: lim === '' ? null : bkToMinor(lim),
-    tax_ids: g('pe_taxid') ? [{ scheme: g('pe_scheme'), value: g('pe_taxid').toUpperCase() }] : [] };
+    tax_ids: partyTaxRows() };
+  if (document.getElementById('pe_phone')) { body.phone = g('pe_phone') || null; body.email = g('pe_email') || null; }
   if (body.credit_days != null && !(body.credit_days >= 0)) { toast(tx('Credit days: a whole number')); return; }
   if (body.credit_limit_minor != null && !(body.credit_limit_minor >= 0)) { toast(tx('Credit limit: an amount')); return; }
   try {
     await api(kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: listId }, body: body });
+    /* a party on both lists is one party: the words and tax ids it carries are written to the other list too (its credit terms are its own) */
+    if (r.also && r.also.id) await api(r.also.kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: r.also.id }, body: { legal_name: body.legal_name, nickname: body.nickname, state_code: body.state_code, tax_ids: body.tax_ids } });
     Object.assign(r, body);
     closeModal(); toast(tx('Saved'));
     if (kind === 'supplier') { if (typeof paintSupSlide === 'function') paintSupSlide(); } else if (typeof paintCustDetail === 'function') paintCustDetail();
+    if (typeof crmAfterEdit === 'function') crmAfterEdit(kind, partyId);   /* CB CRM re-reads its list and the record */
   } catch (e) {
     /* the server's own duplicate check (409 DUPLICATE_PARTY) says the same as the warning, with authority */
     var box = document.getElementById('pe_dup'); if (box) box.textContent = bkWhy(e, tx('Could not save'));

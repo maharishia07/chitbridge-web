@@ -166,7 +166,9 @@ async function route(S, r) {
     await scroller.evaluate((e) => { e.scrollTop = 120; });
     const before = await scroller.evaluate((e) => e.scrollTop);
     const hrefBefore = await p.evaluate(() => location.href);
-    await p.click('[data-testid="db-src-JV/2026-27/000001"]');
+    /* CBList: the list scrolls INSIDE the frozen head (.cbl-list), and the first entry sits at its very top - so a Playwright click would first scroll that row
+       back into view and reset the scroll this test is measuring. The click is dispatched on the element instead (the scroll is left as the person left it). */
+    await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click());
     await waitSheet(p, 'C2/26-27/0002');
     ok(await sheetOpen(p), 'tapping the bill number opens the sheet (a <dialog>) over the Day book');
     const head = await p.textContent('[data-testid="cs-head"]');
@@ -209,7 +211,7 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)), 'Esc closes the sheet');
     ok(await scroller.evaluate((e) => e.scrollTop) === before && before > 0, 'back on the Day book at the same scroll position (' + before + ')');
-    await p.click('[data-testid="db-src-JV/2026-27/000001"]'); await waitSheet(p, 'C2/26-27/0002');
+    await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
     await ctx.close();

@@ -249,7 +249,8 @@ function route(S, r) {
     const { ctx, p } = await open(S, { signedOut: true });
     await p.waitForSelector('[data-testid="signin-door"]', { timeout: 15000 });
     await settle(p);
-    ok(await p.getAttribute('[data-testid="signin-door"]', 'href') === 'app.html#/login', 'the one sign-in door → app.html#/login');
+    /* the door is CBAvatar's own Sign in link — the frozen avatar writes it absolute (/app.html#/login), the same place as the old relative one */
+    ok(await p.getAttribute('[data-testid="signin-door"]', 'href') === '/app.html#/login', 'the one sign-in door → app.html#/login');
     ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3 && await p.locator('[data-testid="labs-band"] .lab').count() === 4, 'the three boxes and four labs are still shown');
     ok(await p.locator('.box .f').count() === 0, 'signed out: no facts');
     ok(S.calls.length === 0, 'signed out: not one API call leaves the page (' + S.calls.length + ')');
