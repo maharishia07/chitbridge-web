@@ -220,6 +220,16 @@ async function route(S, r) {
     const labels = await p.$$eval('#nav .nav-btn', (b) => b.map((x) => x.getAttribute('aria-label')));
     ok(JSON.stringify(labels) === JSON.stringify(VIEWS.map((v) => v[1])), 'the sidebar lists every view, Bills after Dues: ' + labels.join(' · '));
     ok(await p.evaluate(() => document.querySelector('.top') && getComputedStyle(document.querySelector('.top')).position === 'sticky'), 'the header is pinned');
+    /* the menu's groups (Athi, 2026-10-03): To do alone, then Books · Every day · Period end · Setup, each folds; the header's line is level with the brand's */
+    const grps = await p.$$eval('#nav .nav-grp', (g) => g.map((x) => x.textContent.trim()));
+    ok(JSON.stringify(grps) === JSON.stringify(['Books', 'Every day', 'Period end', 'Setup']), 'the menu is grouped: ' + grps.join(' · '));
+    ok(await p.$$eval('#nav .nav-sec', (s) => s[1] && Array.from(s[1].querySelectorAll('.nav-btn')).map((b) => b.dataset.view).join(',')) === 'daybook,ledgers,tb,pl,bs', 'Books holds Day book → Balance sheet');
+    await p.click('[data-testid="acc-grp-setup"]');
+    ok(await p.locator('[data-testid="acc-nav-packs"]').isHidden() && await p.getAttribute('[data-testid="acc-grp-setup"]', 'aria-expanded') === 'false', 'a group folds');
+    await p.click('[data-testid="acc-grp-setup"]');
+    ok(await p.locator('[data-testid="acc-nav-packs"]').isVisible(), 'and opens again');
+    { const hb = await p.evaluate(() => [document.querySelector('.brand').getBoundingClientRect().bottom, document.querySelector('.top').getBoundingClientRect().bottom].map(Math.round));
+      ok(hb[0] === hb[1], 'the header\'s line is level with the brand\'s (' + hb.join(' / ') + ')'); }
 
     /* ⭐ THE ⚙ COLUMNS CHOOSER IS STYLED ON THIS PAGE TOO (2026-10-02, Athi's live screenshot: on CB Accounts it opened as bare
        arrows and checkboxes strewn down the Day book, because its rules lived only in app.html). It must be a floating panel. */
@@ -502,6 +512,9 @@ async function route(S, r) {
     ok(await p.locator('[data-testid="avatar-menu"]').isVisible(), 'the avatar opens the menu');
     ok(await p.getAttribute('[data-testid="nav-profile"]', 'href') === '/app.html#/app/profile', 'Profile → the app\'s profile (app.html#/app/profile)');
     ok(await p.locator('[data-testid="nav-signout"]').isVisible(), 'Sign out is in the menu');
+    ok(await p.evaluate(() => { const m = document.querySelector('[data-testid="avatar-menu"]'), r = m.getBoundingClientRect(), miss = [];
+      for (let y = r.top + 6; y < Math.min(r.bottom, innerHeight) - 6; y += 24) for (let x = r.left + 6; x < r.right - 6; x += 40) { const e = document.elementFromPoint(x, y); if (e && !m.contains(e)) miss.push(e.className); }
+      return miss.length === 0; }), 'the menu is drawn over the page — no sticky list header shows through it');
     await p.keyboard.press('Escape');
     ok(!(await p.locator('[data-testid="avatar-menu"]').isVisible()), 'Escape closes the menu');
     await panelShots(p, 'laptop', 1360);

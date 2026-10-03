@@ -59,7 +59,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .side.collapsed{width:68px}
 .side.collapsed .label{display:none}
 .side.collapsed .nav-chev{transform:rotate(180deg)}
-.brand{height:64px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-3)}
+.brand{height:64px;flex-shrink:0;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-3)}
 .logo{width:34px;height:34px;flex-shrink:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
 .brand-text{display:flex;align-items:center;gap:8px;min-width:0}
 .brand-name{font-family:var(--serif);font-size:19px;font-weight:700;white-space:nowrap}
@@ -69,12 +69,20 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent-text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
 .nav-btn .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--amber-t);color:var(--amber-i)}
 .nav-chev{transition:transform .2s ease}
+/* the menu's groups: a small heading folds its group; on the icon rail (collapsed, a ledger open, a phone) the heading is a thin line and nothing is folded */
+.nav-sec{display:flex;flex-direction:column;gap:2px}
+.nav-sec.shut .nav-btn{display:none}
+.nav-grp{display:flex;align-items:center;gap:6px;width:100%;min-height:30px;margin-top:10px;padding:4px 12px;border:0;border-radius:6px;background:none;color:var(--muted-2);font:inherit;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;text-align:left;cursor:pointer}
+.nav-grp:hover{background:var(--hover)}
+.nav-gchev{width:14px;height:14px;margin-left:auto;fill:none;stroke:currentColor;stroke-width:2;transition:transform .2s ease}
+.nav-grp[aria-expanded="false"] .nav-gchev{transform:rotate(-90deg)}
+.side.collapsed .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}.side.collapsed .nav-gchev{display:none}.side.collapsed .nav-sec.shut .nav-btn{display:flex}
 .side-foot{padding:8px;border-top:1px solid var(--line-3)}
 .side-foot .nav-btn{font-size:13px;color:var(--muted-2)}
 
 /* Main */
 .main{flex-grow:1;min-width:0;height:100%;overflow-y:auto}
-.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);padding:20px 40px 16px;display:flex;flex-direction:column;gap:16px}
+.top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--ground) 96%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);min-height:64px;justify-content:center;padding:8px 40px;display:flex;flex-direction:column;gap:16px}
 .top-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .titles{display:flex;flex-direction:column;gap:4px;min-width:0}
 h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spacing:-.01em}
@@ -201,12 +209,13 @@ body.lg-on .cbl-slot .home{height:34px;padding:0 10px}
 body.lg-on .cbl-slot .home .hw{display:none}
 body.lg-on .cbl-slot .shop{display:none}
 /* the menu rests as its icon rail on this view (as it does on a phone), so the list keeps the room its title row and tools row need — one line each, the head within 20% */
-@media (min-width:761px){body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
+@media (min-width:761px){body.lg-on .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}body.lg-on .nav-gchev{display:none}body.lg-on .nav-sec.shut .nav-btn{display:flex}body.lg-on .side{width:68px}body.lg-on .side .label,body.lg-on #toggleNav{display:none}body.lg-on .brand{padding:0 15px}body.lg-on .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}body.lg-on .nav-btn{position:relative}}
 
 /* the sidebar is an icon rail below 760px, as designed; a table becomes one card per row below 620px (SYSTEM rule 8) */
 @media (max-width:760px){
   .side{width:64px}
   .side .label,#toggleNav{display:none}
+  .nav-grp{min-height:0;height:1px;margin:8px 10px;padding:0;background:var(--line-3);pointer-events:none}.nav-gchev{display:none}.nav-sec.shut .nav-btn{display:flex}
   .brand{padding:0 15px}
   .top,.content{padding-left:16px;padding-right:16px}
   .nav-btn .n{position:absolute;margin:0;transform:translate(12px,-12px);padding:0 5px}
@@ -350,12 +359,39 @@ function session(){
 const isOwner = () => SESSION.role === 'entity';   /* the shop's own session is its owner (routes/books.js isOwner); a co-assist is not */
 
 /* ── the chrome: sidebar, header, avatar menu ── */
+/* the menu's groups (Athi, 2026-10-03; the page never names the trade, so the first group is Books): To do alone, then four folds; the open view's group is never folded. A folded group is remembered on this device. */
+const NAV_GROUPS = [
+  ['', ['todo']],
+  ['Books', ['daybook', 'ledgers', 'tb', 'pl', 'bs']],
+  ['Every day', ['dues', 'bills', 'cheques', 'waiting', 'bank']],
+  ['Period end', ['lock', 'closingstock', 'assets', 'accruals', 'gstclose', 'yearclose']],
+  ['Setup', ['packs', 'opening', 'accounts']],
+];
+const navFolded = () => { try { return JSON.parse(localStorage.getItem('cb_acc_navfold') || '{}') || {}; } catch (_) { return {}; } };
 function navPaint(active){
-  $('nav').innerHTML = NAV.map(([id, label, d]) =>
+  const byId = Object.fromEntries(NAV.map((n) => [n[0], n])), fold = navFolded();
+  $('nav').innerHTML = NAV_GROUPS.map(([g, ids]) => {
+    const shut = !!(g && fold[g] && ids.indexOf(active) < 0);
+    const head = g ? `<button type="button" class="nav-grp" data-grp="${esc(g)}" data-testid="acc-grp-${esc(g.toLowerCase().replace(/ /g, '-'))}" aria-expanded="${!shut}"><span class="label">${esc(g)}</span><svg class="nav-gchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>` : '';
+    return '<div class="nav-sec' + (shut ? ' shut' : '') + '">' + head + navItems(ids.map((id) => byId[id]).filter(Boolean), active) + '</div>';
+  }).join('');
+}
+function navItems(items, active){
+  return items.map(([id, label, d]) =>
     `<button type="button" class="nav-btn${id === active ? ' active' : ''}" data-testid="acc-nav-${id}" data-view="${id}" aria-label="${esc(label)}"${id === active ? ' aria-current="page"' : ''}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg><span class="label">${esc(label)}</span>${id === 'waiting' && (BK.waiting || []).length ? `<span class="n" data-testid="acc-waiting-n">${(BK.waiting || []).length}</span>` : ''}</button>`).join('');
 }
-$('nav').addEventListener('click', (e) => { const b = e.target.closest('.nav-btn'); if (b) show(b.dataset.view); });
+$('nav').addEventListener('click', (e) => {
+  const g = e.target.closest('.nav-grp');
+  if (g) {
+    const f = navFolded(), on = document.querySelector('#nav .nav-btn.active');
+    f[g.dataset.grp] = !f[g.dataset.grp];
+    try { localStorage.setItem('cb_acc_navfold', JSON.stringify(f)); } catch (_) {}
+    navPaint(on ? on.dataset.view : '');
+    return;
+  }
+  const b = e.target.closest('.nav-btn'); if (b) show(b.dataset.view);
+});
 $('toggleNav').addEventListener('click', () => {
   const open = $('side').classList.toggle('collapsed') === false;
   $('toggleNav').setAttribute('aria-expanded', String(open));
