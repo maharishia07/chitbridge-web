@@ -27,6 +27,44 @@ var CRM_SUPPLY = { intra: 'Same state — CGST and SGST', inter: 'Another state 
 var CRM_ADDED = { counter: 'At the counter', storefront: 'Storefront', handle: 'By User ID', name: 'By name', chit: 'From a chit', import: 'Imported' };
 var CRM_CHAN = { chitbridge: 'ChitBridge', email: 'E-mail', phone: 'Phone', sms: 'SMS', whatsapp: 'WhatsApp' };
 
+/* ═══ THE API'S REAL SHAPES (chitbridge-api routes/crm.js) → the shapes this page paints ═════════════════════════════════
+   ⚠️ Found live 2026-10-03: GET /api/crm/parties/:id sends roles as an OBJECT, merged_from as { party_id, party_no }, points as
+   { programme, points, worth } and NO contacts / prefs / timeline_head; the old reader spread it over the list row, crmRoleChips threw on the
+   object, and the record sat on "Reading…" for good. The mapping is HERE, once, so the painter below still reads one shape. */
+function crmRecordFrom(rec, p) {
+  var r = Object.assign({}, rec || {});
+  r.roles = crmRolesList(r.roles);
+  if (r.merged_from && typeof r.merged_from === 'object') r.merged_from = r.merged_from.party_no || r.merged_from.party_id || null;
+  if (r.points && r.points.balance == null && r.points.points != null) r.points = Object.assign({}, r.points, { balance: r.points.points });
+  if (!r.contacts) { var ph = r.phone || r.otp_contact || (p && p.phone) || '', em = r.email || (p && p.email) || ''; r.contacts = { phones: ph ? [ph] : [], emails: em ? [em] : [], address: null }; }
+  if (!Array.isArray(r.prefs)) r.prefs = [];
+  if (!Array.isArray(r.followups)) r.followups = [];
+  return r;
+}
+/** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
+function crmEntryFrom(e, i) {
+  if (e && e.line != null && e.id != null) return e;   // already the page's grammar (the design stand-in's) — accepted as is
+  var at = e.at || '', k = e.kind, o = { at: at, kind: k, line: '', by: '', id: k + '-' + (e.interaction_id || e.followup_id || e.dispute_id || e.ref || e.chit_id || '') + '-' + at + '-' + i };
+  if (e.chit_id) o.chit_id = e.chit_id;
+  if (e.followup_id) o.followup_id = e.followup_id;
+  var word = function (s) { return s ? tx(String(s).replace(/_/g, ' ')) : ''; };
+  if (k === 'chit') {
+    o.kind = e.doc_kind === 'bill' ? 'bill' : 'chit'; o.line = e.title || e.bill_no || word(e.purpose) || tx('Chit');
+    if (e.status) o.state = { word: word(e.status) };
+    if (e.value != null) { o.amount_minor = bkToMinor(e.value, e.currency); o.currency = e.currency; }   // summary_json total_value is in MAJOR units, not minor
+    o.theirs = e.direction === 'in';
+  } else if (k === 'message') { o.line = e.text || ''; o.by = e.who || ''; }
+  else if (k === 'dispute') { o.line = tx('Dispute') + (e.category ? ' · ' + word(e.category) : ''); if (e.status) o.state = { word: word(e.status), tone: 'red' }; }
+  else if (k === 'ledger') { o.kind = e.ledger_kind === 'bill' ? 'bill' : 'payment'; o.line = e.ref || tx(e.ledger_kind === 'bill' ? 'Bill' : 'Payment'); o.amount_minor = e.amount_minor; o.currency = e.currency; }
+  else if (k === 'interaction') { var ik = e.interaction_kind; o.kind = ik === 'message' ? 'whatsapp' : (CRM_KIND[ik] ? ik : 'note'); o.line = e.body || ''; o.direction = e.direction || ''; }
+  else if (k === 'followup') o.line = e.what || '';
+  else if (k === 'followup_done') { o.kind = 'followup'; o.line = tx('Done') + ' · ' + (e.what || ''); }
+  else if (k === 'change') { o.line = word(e.field) + (e.old != null || e.new != null ? ': ' + (e.old == null ? '—' : e.old) + ' → ' + (e.new == null ? '—' : e.new) : ''); o.by = e.by || ''; }
+  else o.line = e.line || e.title || '';
+  return o;
+}
+function crmEntriesFrom(r) { return ((r && r.entries) || []).map(crmEntryFrom); }
+
 /* ═══ THE TIMELINE ENTRY — one grammar for every kind: mark · line · by · time · chip (REQUIREMENT-timeline §4) ═══════ */
 var CRM_LONG = 110;
 /** a long call / visit / WhatsApp / note ends "…" and opens in place to its whole text (REQUIREMENT-timeline §4) */
@@ -79,16 +117,22 @@ async function crmRecordOpen(route) {
   s.className = 'screen';
   /* header from the list row at once (no flash); the sections fill as the record read returns */
   s.innerHTML = '<div class="rec" data-testid="crm-record">' + crmHeaderHTML(p) + '<div class="loadwrap" role="status" data-testid="crm-rec-loading"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>';
-  var rec;
-  try { rec = await api('crmParty', { params: { id: p.party_id } }); }
-  catch (e) {
+  var rec, head = null;
+  try {
+    var got = await Promise.all([api('crmParty', { params: { id: p.party_id } }), api('crmTimeline', { params: { id: p.party_id }, query: { limit: 5 } }).catch(function () { return null; })]);
+    rec = got[0]; head = got[1];
     if (tok !== CRMR.tok) return;
-    s.querySelector('.loadwrap').outerHTML = '<div class="empty" data-testid="crm-rec-error"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' + esc(tx('Try again')) + '</button></div>';
+    rec = crmRecordFrom(rec, p);
+    if (!rec.timeline_head) rec.timeline_head = head ? crmEntriesFrom(head).slice(0, 5) : [];
+    CRMR.rec = rec;
+    crmRecordPaint(p, CRMR.rec);
+  } catch (e) {
+    /* ANY failure — the read or the paint — ends the spinner: a plain line and Try again, never "Reading…" for good */
+    if (tok !== CRMR.tok) return;
+    var w = s.querySelector('.loadwrap'), html = '<div class="empty" data-testid="crm-rec-error"><div class="t">' + esc(tx("Couldn't open this party.")) + '</div><button type="button" class="act ghost" data-crm="recretry" data-testid="crm-rec-retry">' + esc(tx('Try again')) + '</button></div>';
+    if (w) w.outerHTML = html; else { var rr = s.querySelector('.rec'); if (rr) rr.insertAdjacentHTML('beforeend', html); else s.innerHTML = '<div class="content">' + html + '</div>'; }
     return;
   }
-  if (tok !== CRMR.tok) return;
-  CRMR.rec = rec || {};
-  crmRecordPaint(p, CRMR.rec);
   if (route.sub === 'log') crmLogOpen(p);
   else if (route.sub === 'edit') crmEditOpen(p);
 }
@@ -99,7 +143,7 @@ async function crmRecordFold(route, tok) {
     var rec = await api('crmParty', { params: { id: route.key } });
     if (tok !== CRMR.tok) return;
     var keeper = rec && CRM.byKey[rec.party_id];
-    if (keeper) { CRMR.mergedNote = rec.merged_from || route.key; return crmGo('#/party/' + encodeURIComponent(crmKey(keeper)), true); }
+    if (keeper) { CRMR.mergedNote = (rec.merged_from && (rec.merged_from.party_no || rec.merged_from.party_id)) || (typeof rec.merged_from === 'string' ? rec.merged_from : '') || route.key; return crmGo('#/party/' + encodeURIComponent(crmKey(keeper)), true); }
   } catch (_) {}
   if (tok !== CRMR.tok) return;
   crmBar('<a href="#/parties">‹ ' + esc(tx('Parties')) + '</a>', '');
@@ -126,7 +170,7 @@ function crmNextHTML(p, rec) {
   var items = [], ed = crmEdit(), key = esc(crmKey(p));
   var btn = function (a, label, pri, extra, tid) { return ed ? '<button type="button" class="act sm' + (pri ? '' : ' ghost') + '" data-crm="' + a + '"' + (extra || '') + ' data-testid="' + tid + '">' + esc(tx(label)) + '</button>' : ''; };
   (rec.followups || []).forEach(function (f) {
-    if (!f.late && f.bucket !== 'today' && f.due_today !== true && crmDayWord(f.due_at) !== tx('Today')) return;
+    if (!f.late && f.today !== true && f.bucket !== 'today' && f.due_today !== true && crmDayWord(f.due_at) !== tx('Today')) return;
     items.push('<div class="nx" data-testid="crm-next-followup"><span class="ic">' + crmIcon('clock') + '</span><span class="tx"><b>' + (f.late ? esc(tx('Late since')) + ' ' + esc(bkDate(f.due_at)) : esc(tx('Today')) + ' ' + esc(bkTime(f.due_at))) + '</b> · ' + esc(f.what) + '<span class="s">' + esc(f.assignee_name || tx('Unassigned')) + '</span></span>'
       + '<span class="btns">' + btn('rfudone', 'Done', true, ' data-id="' + esc(f.followup_id) + '"', 'crm-next-done-' + esc(f.followup_id)) + '</span></div>');
   });
@@ -265,7 +309,7 @@ async function crmTlLoad(more) {
   try {
     var r = await api('crmTimeline', { params: { id: T.p.party_id }, query: { kind: T.kind === 'all' ? '' : T.kind, q: T.q || '', before: more ? T.next : '' } });
     if (g !== T.gen) return;
-    T.entries = (more ? T.entries : []).concat((r && r.entries) || []); T.next = (r && r.next_before) || null; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
+    T.entries = (more ? T.entries : []).concat(crmEntriesFrom(r)); T.next = (r && r.next_before) || null; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
   } catch (e) { if (g !== T.gen) return; T.state = 'error'; T.err = e; }
   T.busy = false;
   if (CRMR.tlApi) CRMR.tlApi.refresh({ filters: crmTlFilters(T) });
