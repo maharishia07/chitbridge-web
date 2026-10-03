@@ -211,7 +211,7 @@
     '.cbav-btn{width:34px;height:34px;border-radius:50%;border:1px solid var(--av-line);background:var(--av-card);color:var(--av-ink);font-weight:700;display:grid;place-items:center;padding:0;font-size:calc(14px * var(--k,1))}' +
     '.cbav-btn[aria-expanded="true"]{outline:2px solid var(--av-blue);outline-offset:1px}' +
     '.cbav-signin{display:inline-flex;align-items:center;height:34px;padding:0 15px;border-radius:9px;background:var(--green,#16693F);color:#fff;font-size:calc(13.5px * var(--k,1));font-weight:700;text-decoration:none}' +
-    '.cbav-pop{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:1000;width:min(344px,calc(100vw - 32px));max-height:min(calc(100vh - 100px),680px);overflow-y:auto;overscroll-behavior:contain;' +
+    '.cbav-pop{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:1000;width:min(344px,calc(100vw - 32px));max-height:calc(100vh - 64px);overflow-y:auto;overscroll-behavior:contain;' +
     'padding:12px 14px;background:var(--av-card);color:var(--av-ink);border:1px solid var(--av-line);border-radius:12px;box-shadow:var(--av-shadow);font-size:calc(14px * var(--k,1));line-height:1.35}' +
     '.cbav-who{display:flex;gap:10px;align-items:center;padding-bottom:10px;border-bottom:1px solid var(--av-soft)}' +
     '.cbav-who .l{width:40px;height:40px;border-radius:50%;border:1px solid var(--av-line);background:var(--av-panel);display:grid;place-items:center;font-weight:700;font-size:calc(16px * var(--k,1));flex:0 0 auto}' +
@@ -235,6 +235,9 @@
     '.cbav-toggle[aria-checked="true"]{background:var(--av-blue-t);border-color:var(--av-blue)}' +
     '.cbav-toggle[aria-checked="true"]::after{inset-inline-start:20px;background:var(--av-blue)}' +
     '.cbav-fonts{display:grid;gap:2px}' +
+    /* the menu NEVER cuts content: on a window wide enough it sets Appearance and Reading font side by side, so it is short; on a window still shorter than the menu it scrolls ITSELF (max-height above), never clipped */
+    '.cbav-cols{display:block}.cbav-c>h4:first-child{margin-top:10px}' +
+    '@media (min-width:600px){.cbav-pop{width:min(600px,calc(100vw - 32px))}.cbav-cols{display:grid;grid-template-columns:1fr 1fr;column-gap:18px}.cbav-c>h4:first-child{margin-top:8px}.cbav-items.last{margin-top:4px}.cbav-items{grid-template-columns:1fr 1fr;padding:4px 0}.cbav-items.last{padding:4px 0 0}.cbav-fonts button,.cbav-langs button{padding:3px 8px}.cbav-sizes button{height:36px}.cbav-weights button{height:32px}}' +
     '.cbav-fonts button,.cbav-langs button{display:flex;align-items:baseline;border:0;background:none;border-radius:7px;padding:5px 8px;text-align:start}' +
     '.cbav-fonts button[aria-pressed="true"],.cbav-langs button[aria-pressed="true"]{background:var(--av-blue-t);color:var(--av-blue-i);font-weight:600}' +
     '.cbav-langs{display:flex;flex-wrap:wrap;gap:2px}' +
@@ -297,8 +300,8 @@
     return '<div class="cbav-pop" role="dialog" aria-label="Your menu" data-testid="avatar-menu">' +
       '<div class="cbav-who"><span class="l">' + esc(letter(P)) + '</span><div><b>' + esc(P.name || P.entity || '') + '</b><span>' + esc(P.role || '') + '</span></div></div>' +
       (up.length ? '<div class="cbav-items">' + up.join('') + '</div>' : '') +
-      '<h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div>' +
-      '<h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
+      '<div class="cbav-cols"><div class="cbav-c"><h4>Appearance</h4><div class="cbav-sw" role="group" aria-label="Theme">' + swatches() + '</div></div>' +
+      '<div class="cbav-c"><h4>Text size</h4><div class="cbav-sizes" role="group" aria-label="Text size">' + TEXT_SIZES.map(function (x, i) {
         return '<button type="button" data-testid="fs-' + x[0] + '" data-av-fs="' + x[0] + '" aria-pressed="' + (fsNow === x[0]) + '" title="' + x[1] + ' (' + Math.round(x[2] * 100) + '%)" aria-label="' + x[1] + '" style="font-size:' + [13, 16, 20, 25][i] + 'px">A</button>';
       }).join('') + '</div>' +
       '<div class="cbav-weights" role="group" aria-label="Text weight">' +
@@ -307,7 +310,7 @@
       '<div class="cbav-motion"><span>Less motion</span><button type="button" class="cbav-toggle" role="switch" data-testid="motion-switch" data-av-motion="1" aria-checked="' + (pref('motion') === 'reduce') + '" aria-label="Less motion"></button></div>' +
       '<h4>Reading font</h4><div class="cbav-fonts" role="group" aria-label="Font">' + FONTS.map(function (x) {
         return '<button type="button" data-testid="font-' + x[0] + '" data-av-font="' + x[0] + '" aria-pressed="' + (f === x[0]) + '" style="font-family:' + esc(x[2]) + '">' + x[1] + '</button>';
-      }).join('') + '</div>' + langs +
+      }).join('') + '</div>' + langs + '</div></div>' +
       (down.length ? '<div class="cbav-items last">' + down.join('') + '</div>' : '') +
       '</div>';
   }
@@ -324,8 +327,12 @@
     }
     var label = (P.entity || P.name || 'You') + ': your menu';
     el.innerHTML = '<span class="cbav" data-testid="cbavatar"><button type="button" class="cbav-btn" data-testid="' + esc(o.testid || 'avatar') + '" aria-haspopup="dialog" aria-expanded="' + openNow + '" aria-label="' + esc(label) + '" title="' + esc(P.entity || P.name || '') + '">' + esc(letter(P)) + '</button>' + (openNow ? menuHtml(o) : '') + '</span>';
-    var np = el.querySelector('.cbav-pop'); if (np) np.scrollTop = keepTop;
+    var np = el.querySelector('.cbav-pop'); if (np) { fit(np); np.scrollTop = keepTop; }
     if (focusKey) { var f2 = el.querySelector('[data-testid="' + focusKey + '"]'); if (f2) { try { f2.focus({ preventScroll: true }); } catch (_) {} } }
+  }
+  /** the menu may be as tall as the room BELOW the button, never more: it scrolls itself only when the window is shorter than the menu, and nothing is cut */
+  function fit(pop) {
+    try { pop = pop || (M && M.el && M.el.querySelector('.cbav-pop')); if (!pop) return; pop.style.maxHeight = ''; var r = pop.getBoundingClientRect(), h = root.innerHeight || doc.documentElement.clientHeight; pop.style.maxHeight = Math.max(160, Math.floor(h - r.top - 8)) + 'px'; } catch (_) {}
   }
   function repaint() { if (M) paint(); }
   function close() { if (!openNow) return; openNow = false; paint(); }
@@ -345,6 +352,7 @@
   var wired = false;
   function wire() {
     if (wired || !doc) return; wired = true;
+    if (root.addEventListener) root.addEventListener('resize', function () { if (openNow) fit(); });
     doc.addEventListener('click', function (e) {
       if (!M || !M.el) return;
       var t = e.target; if (!t || !t.closest) return;

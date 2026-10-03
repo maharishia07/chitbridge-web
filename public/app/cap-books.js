@@ -696,7 +696,12 @@ function bkDvHead() {
   return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
       presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
       onPick: function (v, range) { if (v === 'custom' && !range) return; BK.dbp = bkDbPeriod(v, range); bkTab('daybook', true); } },
-    chips: chips, notices: notices };
+    chips: chips, notices: notices,
+    /* ＋ Entry (cap-entry.js, loaded by CB Accounts): the one door to a manual entry, in the slot CBList gives the head — the page that loads cap-entry offers it, nobody else */
+    slot: typeof enOpen === 'function' && !(typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'customer') ? function (el) {
+      el.innerHTML = '<button type="button" class="cbl-chip" data-testid="db-add" aria-label="' + esc(tx('New entry')) + '" style="cursor:pointer;min-height:44px;font-weight:700">＋ ' + esc(tx('Entry')) + '</button>';
+      el.firstChild.onclick = function () { enOpen(); };
+    } : undefined };
 }
 /** declare the Day book's list once per read: its columns, grouping, four filters (Kind · Tender · Counter · Person), sorts, search, next level, CSV — the page paints nothing else */
 function bkDvMount(el) {
@@ -729,6 +734,8 @@ function bkDvMount(el) {
       { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) },
     ],
     csv: function (rows) { bkDvDownload(rows); },
+    /* Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first) */
+    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'db-reverse', when: function (e) { return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal'; }, run: function (e) { enReverse(e.entry_id, e.entry_no); } }] : undefined,
     tids: { expand: 'db-expand-all', collapse: 'db-collapse-all', csv: 'db-csv', count: 'db-count' },
     empty: { title: tx('Nothing in these dates') },
   });
