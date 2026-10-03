@@ -48,7 +48,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-.app{display:flex;height:100vh;overflow:hidden;position:relative}
+.app{display:flex;height:calc(100vh - var(--cbk-h,0px));overflow:hidden;position:relative}   /* the kural footer (CBKural) is outside the head: it takes its height off the window */
 
 /* Sidebar */
 .side{width:248px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid var(--line-3);display:flex;flex-direction:column;transition:width .2s ease}
@@ -284,6 +284,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/cap-period.js"></script>   <!-- Month & year end: Closing stock · Assets & depreciation · Accruals & recurring · GST close & pay · Year close -->
 <script src="/app/cap-bank.js"></script>   <!-- Bank: the statement file is parsed in the browser and NEVER uploaded -->
 <script src="/app/one-person.js"></script>
+<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — ONE band at the foot of every CB page, mounted here the way CBAvatar is -->
 <script>
 'use strict';
 /* ═══ CB ACCOUNTS — the page. It paints; the numbers are the server's (SYSTEM rule 12). ═══════════════════════════ */
@@ -311,6 +312,9 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
 ];
+/* the kural of each view (docs/design/kural-kit/kurals.json routes): one per screen. The open LEDGER picks its own (cap-books.js bkKuralFor); the API does not send `ledger.kural` yet */
+const KURAL_OF = { todo: 'accounts', daybook: 'daybook', ledgers: 'accounts', tb: 'accounts', pl: 'reports', bs: 'reports', dues: 'sales', bills: 'accounts', cheques: 'daybook', waiting: 'suspense', bank: 'suspense',
+  lock: 'month-lock', closingstock: 'period-close', assets: 'period-close', accruals: 'period-close', gstclose: 'gst', yearclose: 'period-close', packs: 'accounts', opening: 'accounts', accounts: 'accounts' };
 const TITLES = { ledgers: 'Chart of accounts', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
@@ -360,6 +364,7 @@ function chrome(view){
   $('title').textContent = TITLES[nav[0]] || nav[1];
   $('summary').textContent = '';
   try{ history.replaceState(null, '', '#' + nav[0]); }catch(_){}
+  if (window.CBKural) CBKural.set(KURAL_OF[nav[0]] || 'accounts');
 }
 BK.onTab = (t) => chrome(t);
 BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body),
@@ -559,6 +564,7 @@ window.addEventListener('storage', (e) => {
 CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB Accounts',
   onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
   onWipe: () => { location.replace('/?cleaned=1'); } });
+if (window.CBKural) CBKural.mount();
 start();
 </script>
 </body>

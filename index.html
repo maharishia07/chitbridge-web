@@ -227,6 +227,7 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 <script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar — signed out it is the Sign in door -->
 <script src="/app/one-person.js"></script>
+<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot of every CB page -->
 <script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
 <script>
 'use strict';
@@ -548,6 +549,7 @@ var Q = new URLSearchParams(location.search);
 if (Q.get('cleaned') === '1') signedOut('Signed out — this browser is being cleaned.');
 else if (Q.has('left')) signedOut('Signed out — ' + (Q.get('left') || 'another shop') + ' opened in another tab.');
 else open_();
+if (window.CBKural) CBKural.mount({ route: 'planning' });   /* the sign-in page's kural (kurals.json: placement signin) */
 </script>
 </body>
 </html>

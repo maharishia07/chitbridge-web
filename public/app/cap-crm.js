@@ -176,6 +176,8 @@ function crmRoute() {
   var seg = h.split('/').filter(Boolean).map(decodeURIComponent), params = {};
   q.split('&').forEach(function (kv) { if (kv) { var a = kv.split('='); params[a[0]] = decodeURIComponent(a[1] || ''); } });
   closeModal();
+  /* one kural per page (kurals.json group `crm`); the footer is the page's, never a part of a message */
+  if (window.CBKural) CBKural.set(seg[0] === 'party' && seg[1] ? 'crm-party' : seg[0] === 'followups' ? 'crm-party' : 'crm-parties');
   if (seg[0] === 'party' && seg[1]) {
     CRM.route = { nav: 'parties', view: 'party', key: seg[1], sub: seg[2] || '', params: params };
     return crmRecordOpen(CRM.route);
