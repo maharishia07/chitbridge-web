@@ -110,7 +110,7 @@ function bkCss() {
     '#bk_lt .tn .ck{color:var(--green);font-weight:700;margin-inline-end:4px}',
     '#bk_lt .tn.band{font-size:var(--fs-1);font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--grey);margin-top:10px}',
     '#bk_lt .tn.band:first-child{margin-top:2px}',
-    '#bk_lt .tn.band .am,#bk_lt .tn.grp .am{font-family:var(--f-num,"IBM Plex Mono",monospace);letter-spacing:0;text-transform:none;font-weight:400}',
+    '#bk_lt .tn.band .am,#bk_lt .tn.grp .am{font-family:var(--f-num,"IBM Plex Mono",monospace);letter-spacing:0;text-transform:none;font-weight:400;min-width:0}',
     '#bk_lt .tn.grp{font-weight:600;color:var(--grey)}',
     '#bk_lt .tn.party .nm{color:var(--grey)}',
     '#bk_lt .tn.on{background:color-mix(in srgb,var(--blue-tint-bg,var(--blue-t,#E4EEFA)) 60%,transparent);color:var(--blue-2,var(--blue-i,#174A87));font-weight:600}',
@@ -1054,12 +1054,14 @@ function bkLgDetails(l) {
 }
 function bkLgCols(c, kind) {
   var dash = bkLgDash(), ctrl = kind === 'control';
+  /* ONE flexible column (the designer's): Details takes what the others leave, so the default columns fill the pane and never spill sideways — a bill number is not broken across two lines. A width the person dragged wins (CBList remembers it). */
+  var box = document.getElementById('lg_out'), avail = box ? box.clientWidth : 0, whatW = Math.max(240, Math.min(560, avail - (112 + (ctrl ? 250 : 160) + 160) - 12));
   var cols = [{ key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 112, html: true, cell: function (l) { return esc(bkDvFmt(String(l.date).slice(0, 10), { day: '2-digit', month: 'short' })); } }];
   if (ctrl) cols.push({ key: 'party', label: tx('Party'), prio: 2, sort: 'party', w: 250, html: true, cell: function (l) {
     var n = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '');
     return n ? '<b class="lg-party">' + esc(n) + '</b>' : '<span class="lg-noparty" style="color:var(--grey)">' + esc(tx(BK_NO_PARTY)) + '</span>'; } });
   cols.push(
-    { key: 'what', label: tx('Details'), prio: ctrl ? 3 : 2, sort: 'what', w: 240, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: bkLgDetails },
+    { key: 'what', label: tx('Details'), prio: ctrl ? 3 : 2, sort: 'what', w: whatW, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: bkLgDetails },
     { key: 'bal', label: tx('Balance'), prio: ctrl ? 9 : 3, sort: 'bal', num: true, w: 160, html: true, cell: function (l) { return esc(bkDrCr(l.running_minor, c)); } },
     { key: 'entry', label: tx('Entry no.'), prio: 5, sort: 'entry', w: 170, html: true, cell: function (l) { return l.entry_no || l.ref ? '<span class="mono">' + esc(l.entry_no || l.ref) + '</span>' : dash; } },
     { key: 'tender', label: tx('Tender'), prio: 6, w: 120, html: true, cell: function (l) { return bkHowPart(l.source, 'stmt-how-' + l._ix, c) || dash; } },
