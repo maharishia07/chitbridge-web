@@ -23,13 +23,14 @@ The prototype's purple "PROTOTYPE ONLY" strip is **deleted** from index.html, st
 | New | Why |
 |---|---|
 | `CBKural` (`kural.js`) | no band like it existed; the decision says ONE unit every page mounts, like `CBAvatar`. |
-| the tree (`bkLtNodes` · `bkLtTreeHTML` · `bkLtBind` …) | `_folderNode` is a folder row with an icon and an inline `onclick`; the design needs one-line nodes, one aligned figure column, roving focus and arrow keys. It still reads the same model (`bkLtModel`, grouping by code) the old tree did. |
+| the tree (`bkLtNodes` · `bkLtTreeHTML` · `bkLtBind` …) | `_folderNode` is a folder row with an icon and an inline `onclick`, and `gsToggle` (cap-folders.js) opens a Task group's rows, not a tree; the design needs one-line nodes, one aligned figure column, roving focus and arrow keys. It still reads the same model (`bkLtModel`, grouping by code) the old tree did. |
 | `bkShort` | the short display name (designer extra #2): the API sends none; this derives the display only. |
 | `bkLgCsv` / `bkLgDownload` | the Day book's CSV is entry-shaped; a ledger line is not an entry. Same quoting rules. |
 | `bkLgFigs` | the one figures line; the closing used to be printed three times. |
 | the `cb_lt.<person>` memory | the last ledger, the tree's width and what is folded, per person, on this device. |
 
 ## What the API lacks — kept as today's behaviour, and listed (each becomes an API task)
+(Confirmed against `e2e/fixtures/web-api.contract.json`, the API's own answers: none of `short_name`, `kural`, `parties_check`, `agreed_to` or month/day totals is in `/accounts`, `/dues`, `/ledger/:account` or `/party/:id/statement` today.)
 1. **Per ledger and party: `short_name`** (≤ 24 letters, set once in Parties). The page derives a display name (bracket and legal-form tail dropped); the full name is the tooltip.
 2. **Per ledger: `kural`** (its number). The page maps the open ledger's code to a route of kurals.json (Cash & bank → 520, GST/TDS → 733, Suspense → 436, Income and expenses → 754, Your capital → 385, else 120).
 3. **Per control account, per period: the parties check** — `parties_check: { agree: true }` or `{ agree: false, amount_minor, entries }` (entries with no party). The page reads it when sent; until then it compares the `/dues` balances with the ledger's closing — the same single sum it always made — and counts the lines that name no party.
