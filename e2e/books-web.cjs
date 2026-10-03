@@ -705,6 +705,15 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   const l0 = await headOf('stmt-what-0'), l1 = await headOf('stmt-what-1');
   const lt0 = await headOf('stmt-src-0-at');
   ok(/\d{1,2}:\d{2}/.test(lt0) && l0 === 'Sale · Bill C2/26-27/0002 ' + lt0 + ' · On credit · Counter C2 · rung by Athi recorded 01 Oct JV/2026-27/000001' && l1 === 'Payment received JV/2026-27/000003', 'ledger: each line names its bill, counter and seller ("' + l0 + '" · "' + l1 + '")');
+  /* the Ledgers quick fixes (2026-10-03): the kind word once · one opening/closing line in Dr/Cr · no minus · nothing cut off */
+  {
+    const lg = await p.evaluate(() => { const o = document.getElementById('lg_out'), l = o.querySelector('.cbl-list'), s = o.querySelectorAll('[data-testid="lg-sum"]');
+      return { text: o.textContent, tree: document.getElementById('lt_tree').textContent, sums: s.length, sum: s[0] ? s[0].textContent.replace(/\s+/g, ' ').trim() : '', sw: l ? l.scrollWidth : 0, cw: l ? l.clientWidth : 0 }; });
+    ok(!/Expense · Expense/.test(lg.text), 'ledger: the kind word is said once (Expense · Expense never appears)');
+    ok(lg.sums === 1 && /^Opening ₹0\.00 Closing ₹2,500\.00 Dr/.test(lg.sum), 'ledger: ONE opening · closing line, closing in Dr/Cr (' + lg.sum + ')');
+    ok(!/(^|[\s(|])[-−]\s?₹?\s?\d/.test(lg.text + ' ' + lg.tree), 'ledger: no minus sign anywhere on the view — Dr / Cr');
+    ok(lg.sw <= lg.cw + 1, 'ledger: the list does not scroll sideways (' + lg.sw + ' ≤ ' + lg.cw + ')');
+  }
   const opened2 = await p.evaluate(async () => {
     const was = window.openChitSheet, got = []; window.openChitSheet = function (id) { got.push(id); };
     try { const a = document.querySelector('[data-testid="stmt-src-0"]'); if (!a) return 'no link'; a.click(); return got.join(','); } finally { window.openChitSheet = was; }

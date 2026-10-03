@@ -57,7 +57,7 @@ async function loadFolders(){
  * `o.tid` (data-testid) · `o.style` (extra style, e.g. a taller tap target on a phone).
  */
 function _folderNode(o){
-  return '<div'+(o.tid?' data-testid="'+o.tid+'"':'')+' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+(o.depth||0)*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(o.sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+(o.style?';'+o.style:'')+'" onclick="'+o.onclick+'">'+o.icon+' '+o.label+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+o.tail+'</span></div>';
+  return '<div'+(o.cls?' class="'+o.cls+'"':'')+(o.tid?' data-testid="'+o.tid+'"':'')+' style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+(o.depth||0)*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(o.sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+(o.style?';'+o.style:'')+'" onclick="'+o.onclick+'">'+o.icon+' '+o.label+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+o.tail+'</span></div>';
 }
 /**
  * ⭐ THE TWO-PANE LAYOUT OF A FOLDER SCREEN — tree on the left (250px), the chosen thing on the right — taking its two halves

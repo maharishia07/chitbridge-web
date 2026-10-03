@@ -17,7 +17,7 @@ const BREAKS = [
   ['the one-shop gate is not attached', PAGE, `CBOnePerson.attach({ quiet: true, who: () => MINE,`, `void ({ quiet: true, who: () => MINE,`, A],
   /* party ledgers (docs/design/party-ledgers/CLOUD-TASK.md) */
   ['a statement is fetched per party row', CAPB, `function bkLtParties(ctrl) {\n`, `function bkLtParties(ctrl) {\n  Object.keys(BK.dues || {}).forEach(function (k) { api('booksStatement', { params: { id: k } }).catch(function () {}); });\n`, A],
-  ['a row does not name its party', CAPB, `var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '');`, `var pl = l.party_id ? '' : (l.party_name || '');`, A],
+  ['a row does not name its party', CAPB, `var pl = partyLead ? (l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '')) : '';`, `var pl = partyLead ? (l.party_id ? '' : (l.party_name || '')) : '';`, A],
   ['the cashier is not marked "rung by"', CAPB, `esc(tx('rung by')) + ' ' + esc(s.by)`, `esc(s.by)`, A],
   /* the rest of the page's guards */
   ['a co-assist is offered Switch on', PAGE, `const isOwner = () => SESSION.role === 'entity';`, `const isOwner = () => true;`, A],
@@ -34,7 +34,14 @@ const BREAKS = [
   /* ── ONE TABLE (docs/design/one-table): the Ledgers' folder tree and party leaves ── */
   ['ONE the ledger tree lists the per-party accounts as leaves', CAPB, `!/^(1300|2100)-/.test(String(a.code))`, `true`, A],
   ['ONE the control account hides its parties', CAPB, `if (open) inner += parties.map(function (p) {`, `if (false) inner += parties.map(function (p) {`, A],
-  ['ONE the parties and the ledger may disagree unsaid', CAPB, `(total === closing ? '' : '<div data-testid="lg-parties-diff"`, `(true ? '' : '<div data-testid="lg-parties-diff"`, A],
+  ['ONE the parties and the ledger may disagree unsaid', CAPB, `total === closing ? '<span data-testid="lg-parties"`, `true ? '<span data-testid="lg-parties"`, A],
+  /* the Ledgers quick fixes + the To do home (2026-10-03) */
+  ['FIX the kind word is said twice (Expense · Expense)', CAPB, `(kw && !said ? esc(kw) + ' ' : '')`, `(kw ? esc(kw) + ' ' : '')`, A],
+  ['FIX a balance is written with a minus', CAPB, `return bkMoney(Math.abs(v), c) + (v ?`, `return bkMoney(v, c) + (v ?`, A],
+  ['FIX the party is repeated inside an entry on its own ledger', CAPB, `(l.party_name && !noParty ?`, `(l.party_name ?`, A],
+  ['FIX the date boxes come back', CAPB, `+ '<div id="lg_out" data-testid="lg_out"></div></div>';`, `+ bkRangeHTML('lg', 'bkLtLoad()') + '<div id="lg_out" data-testid="lg_out"></div></div>';`, A],
+  ['FIX the sideways scroll returns (a wide What column)', CAPB, `Math.max(150, Math.min(420, (avail || 0) - fixed - 40))`, `900`, A],
+  ['TODO the To do view is not first in the sidebar', PAGE, `const NAV = [\n  ['todo', 'To do',`, `const NAV = [\n  ['x', 'To do',`, A],
   ['ONE the ledger rows draw their own table', CAPB, `  return CBList.mount(el, {
     key: 'ledger',`, `  el.innerHTML = '<table class=bktab><tbody><tr><td>x</td></tr></tbody></table>';
   return CBList.mount(document.createElement('div'), {

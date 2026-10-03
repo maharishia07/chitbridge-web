@@ -33,6 +33,7 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksCheques:    { m: 'GET',  p: '/api/books/cheques' },           /* the cheques still held, each with the steps it may take next */
   booksChequeStep: { m: 'POST', p: '/api/books/cheques/:id/status' },
   booksRetry:      { m: 'POST', p: '/api/books/outbox/retry' },
+  booksTodo:       { m: 'GET',  p: '/api/books/todo' },              /* what the owner has to do next — the API lists the checks; the To-do page only draws them */
 }); }
 
 /**
@@ -80,7 +81,12 @@ function bkCss() {
     '.bkdv-seg[aria-pressed=true]{background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d);font-weight:700}',
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
     /* the Ledgers' tree + entries: foldersScreen's two panes (cap-folders.js _folderPanes); on a narrow pane the tree IS the way in and a chosen ledger replaces it, with a way back (cb-design: a container query, not the window's) */
-    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:250px}',
+    '#bk_lt{container:lt/inline-size;min-height:0;--ftw:340px}',
+    /* the tree: one account on ONE line, its amount aligned right with Dr/Cr; the chosen one a light tint, not a block (2026-10-03) */
+    '.ltn > span:last-child{flex:none;white-space:nowrap;font-family:var(--f-num,"IBM Plex Mono",monospace);font-variant-numeric:tabular-nums;text-align:end}',
+    '.ltn.on{background:color-mix(in srgb,var(--blue-tint-bg) 45%,transparent)!important;font-weight:600!important;box-shadow:inset 3px 0 0 var(--blue-2)}',
+    /* an opened entry never cuts a line short and never scrolls sideways: its words wrap */
+    '.lt-pane .cbl-nrow > span:first-child{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere}.lt-pane .cbl-next{overflow-x:hidden}',
     '.lt-crumb{display:none}',
     '@container lt (max-width:620px){.lt-tree{--ftw:100%}#bk_lt.has-sel .lt-tree{display:none}#bk_lt:not(.has-sel) .lt-pane{display:none}#bk_lt.has-sel .lt-crumb{display:flex;margin-bottom:6px}}',
     /* on a phone the tapped view covers the rail — the way back must be visible (cb-design: .dback is desktop-hidden) */
@@ -98,6 +104,8 @@ function bkMoney(minor, c) {
   var n = Number(minor || 0) / Math.pow(10, bkDec(c));
   try { return CBLocale.money(n, bkCur(c)); } catch (_) { return n.toFixed(bkDec(c)); }
 }
+/** a balance the way a ledger writes it: the amount, then Dr or Cr — never a minus sign (the server's figure is Dr − Cr) */
+function bkDrCr(v, c) { v = Number(v || 0); return bkMoney(Math.abs(v), c) + (v ? ' ' + tx(v > 0 ? 'Dr' : 'Cr') : ''); }
 function bkToMinor(v, c) { var n = parseFloat(String(v == null ? '' : v).replace(/[^0-9.\-]/g, '')); return isFinite(n) ? Math.round(n * Math.pow(10, bkDec(c))) : NaN; }
 function bkDate(d) { if (!d) return '—'; try { return CBLocale.date(d); } catch (_) { return String(d).slice(0, 10); } }
 function bkToday() { return new Date().toISOString().slice(0, 10); }
@@ -220,11 +228,13 @@ function bkHowPart(s, tid, cur) {
 }
 /* ⭐ the person who rang it up is NOT the party (2026-10-02: a 1300 row read as if the shop owed itself) — "rung by", and last */
 function bkRungPart(s) { return s && s.by ? esc(tx('rung by')) + ' ' + esc(s.by) + (bkIsShopName(s.by) ? ' ' + esc(tx('(owner)')) : '') : ''; }
-function bkSourceParts(s, tid, cur) {
+function bkSourceParts(s, tid, cur, lead) {
   if (!s) return [];
   var out = [];
+  /* ⭐ the kind word ONCE (2026-10-03: "Expense · Expense C2/…"): when the entry's own word already says it, only the number follows */
+  var kw = BK_SRC_WORD[s.kind] ? tx(BK_SRC_WORD[s.kind]) : '', said = !!kw && String(lead || '').trim().toLowerCase() === kw.toLowerCase();
   if (s.kind === 'day') { if (s.count != null) out.push(esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count }))); }
-  else if (s.ref || s.chit_id) out.push((BK_SRC_WORD[s.kind] ? esc(tx(BK_SRC_WORD[s.kind])) + ' ' : '') + bkBillPart(s, tid));
+  else if (s.ref || s.chit_id) out.push((kw && !said ? esc(kw) + ' ' : '') + bkBillPart(s, tid));
   var how = bkHowPart(s, tid, cur); if (how) out.push(how);
   if (s.counter) out.push(esc(counterWord(s.counter)));
   var rung = bkRungPart(s); if (rung) out.push(rung);
@@ -234,7 +244,7 @@ function bkSourceParts(s, tid, cur) {
 function bkEntryHead(e, tid, cur, party) {
   var s = e && e.source;
   var head = s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
-  return [head].concat(party ? [esc(party)] : [], bkSourceParts(s, tid, cur)).join(' · ') + bkRecordedHTML(e, tid);
+  return [head].concat(party ? [esc(party)] : [], bkSourceParts(s, tid, cur, head)).join(' · ') + bkRecordedHTML(e, tid);
 }
 /** the bill's own time of day, in the shop's zone (CBLocale.time) — "beside the bill number" */
 function bkTime(ts) { try { return CBLocale.time(ts) || ''; } catch (_) { return ''; } }
@@ -469,7 +479,8 @@ function bkTab(t, silent) {
   if (f) f(body);
 }
 function bkRange(id) {
-  if (id === 'db' && BK.dbp) return { from: BK.dbp.from, to: BK.dbp.to };   /* the Day book's period chip (bkDbPeriod) */
+  if (id === 'db' && BK.dbp) return { from: BK.dbp.from, to: BK.dbp.to };
+  if (id === 'lg' && BK.lgp) return { from: BK.lgp.from, to: BK.lgp.to };   /* the Ledgers' period chip (bkLgHead) */   /* the Day book's period chip (bkDbPeriod) */
   var from = (document.getElementById(id + '_from') || {}).value, to = (document.getElementById(id + '_to') || {}).value;
   var d = new Date(); var fyStart = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
   return { from: from || fyStart, to: to || bkToday() };
@@ -653,7 +664,7 @@ function bkDvCols(c) {
 /** its next level: the gist (the lines merged by ledger), then the Dr/Cr lines — each tax and sales line with its rate, as the line carries it */
 function bkDvGistHTML(e, c) { return bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · '); }
 function bkDvGistText(e, c) { return bkDvGist(e).map(function (x) { return x.name + ' ' + bkMoney(x.amt, c); }).join(' · '); }
-function bkDvNext(e, c, lines) {
+function bkDvNext(e, c, lines, noParty) {
   var no = esc(e.entry_no);
   var gist = bkDvGistHTML(e, c);
   /* ⭐ THE RATE (Athi, 2026-10-02): "Output CGST 6%", "Sales @12%" — as the line (the frozen invoice's) carries it, never worked out here */
@@ -662,7 +673,7 @@ function bkDvNext(e, c, lines) {
   return '<div data-testid="db-lines-' + no + '">' + (lines ? '' : '<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>')
     + '<div style="' + grey + '">' + CBList.nextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
     + (e.lines || []).map(function (l) {
-        return CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
+        return CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name && !noParty ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
           l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '', l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : ''], [110, 110]);
       }).join('') + '</div>';
 }
@@ -824,6 +835,7 @@ function bkLtParties(ctrl) {
 function bkLtOpenQ() { return !!String(listCtlS('ledgers').q || '').trim(); }
 function bkLtIsOpen(id) { return bkLtOpenQ() || !!BK.lt.open[id]; }
 function bkLtToggle(id) { if (BK.lt.open[id]) delete BK.lt.open[id]; else BK.lt.open[id] = true; bkLtTreePaint(); }
+function bkLtNode(o) { o.cls = 'ltn' + (o.sel ? ' on' : ''); return _folderNode(o); }
 function bkLtTreeHTML() {
   var q = String(listCtlS('ledgers').q || '').trim().toLowerCase(), sel = BK.lt.sel, tall = 'min-height:36px';
   var hit = function () { return !q || Array.prototype.slice.call(arguments).join(' ').toLowerCase().indexOf(q) >= 0; };
@@ -835,12 +847,12 @@ function bkLtTreeHTML() {
       if (q && !hit(c.code, c.name) && !parties.length) return;
       n++;
       var open = bkLtIsOpen('ctrl:' + c.code);
-      inner += _folderNode({ depth: 1, tid: 'lg-acc-' + c.code, sel: !!(sel && sel.code === c.code && !sel.party), icon: open ? '📂' : '📁', onclick: "bkLtPickCtrl('" + c.code + "')", style: tall,
+      inner += bkLtNode({ depth: 1, tid: 'lg-acc-' + c.code, sel: !!(sel && sel.code === c.code && !sel.party), icon: open ? '📂' : '📁', onclick: "bkLtPickCtrl('" + c.code + "')", style: tall,
         label: esc(c.code) + ' · ' + esc(c.name), tail: bkLtBal(c.code) });
       if (open) inner += parties.map(function (p) {
         var v = Number(p.balance_minor || 0);
-        return _folderNode({ depth: 2, tid: 'lg-party-' + p.party_id, sel: !!(sel && sel.party === p.party_id), icon: '📒', onclick: "bkLtPickParty('" + esc(p.party_id) + "','" + c.code + "')", style: tall,
-          label: esc(bkPartyLabel(p.party_id, p.name)), tail: v ? esc(bkMoney(Math.abs(v), BK.duesCur)) + ' <span style="color:var(--grey)">' + (v > 0 ? 'Dr' : 'Cr') + '</span>' : esc(tx('settled')) });
+        return bkLtNode({ depth: 2, tid: 'lg-party-' + p.party_id, sel: !!(sel && sel.party === p.party_id), icon: '📒', onclick: "bkLtPickParty('" + esc(p.party_id) + "','" + c.code + "')", style: tall,
+          label: esc(bkPartyLabel(p.party_id, p.name)), tail: v ? esc(bkDrCr(v, BK.duesCur)) : esc(tx('settled')) });
       }).join('');
     });
     b.groups.forEach(function (g) {
@@ -848,14 +860,14 @@ function bkLtTreeHTML() {
       if (!accts.length) return;
       n += accts.length;
       var gid = 'group:' + b.id + '/' + b.groups.indexOf(g), open = bkLtIsOpen(gid);
-      inner += _folderNode({ depth: 1, tid: 'lt-group-' + g.title, icon: open ? '📂' : '📁', onclick: "bkLtToggle('" + gid + "')", style: tall, label: esc(tx(g.title)), tail: String(accts.length) });
+      inner += bkLtNode({ depth: 1, tid: 'lt-group-' + g.title, icon: open ? '📂' : '📁', onclick: "bkLtToggle('" + gid + "')", style: tall, label: esc(tx(g.title)), tail: String(accts.length) });
       if (open) inner += accts.map(function (a) {
-        return _folderNode({ depth: 2, tid: 'lg-acc-' + a.code, sel: !!(sel && sel.code === a.code && !sel.party), icon: '📒', onclick: "bkLtPick('" + a.code + "')", style: tall, label: esc(a.code) + ' · ' + esc(a.name), tail: bkLtBal(a.code) });
+        return bkLtNode({ depth: 2, tid: 'lg-acc-' + a.code, sel: !!(sel && sel.code === a.code && !sel.party), icon: '📒', onclick: "bkLtPick('" + a.code + "')", style: tall, label: esc(a.code) + ' · ' + esc(a.name), tail: bkLtBal(a.code) });
       }).join('');
     });
     if (!inner) return;
     var open = bkLtIsOpen('band:' + b.id);
-    out += _folderNode({ depth: 0, tid: 'lt-band-' + b.id, icon: open ? '📂' : '📁', onclick: "bkLtToggle('band:" + b.id + "')", style: tall, label: '<b>' + esc(tx(b.title)) + '</b>', tail: String(n) }) + (open ? inner : '');
+    out += bkLtNode({ depth: 0, tid: 'lt-band-' + b.id, icon: open ? '📂' : '📁', onclick: "bkLtToggle('band:" + b.id + "')", style: tall, label: '<b>' + esc(tx(b.title)) + '</b>', tail: String(n) }) + (open ? inner : '');
   });
   return out || '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">' + esc(q ? tx('Nothing matches') : tx('No ledgers yet')) + '</div>';
 }
@@ -865,7 +877,7 @@ function bkLtPaneHTML() {
   if (!sel) return emptyState('📒', tx('Pick a ledger'), esc(tx('Open a group on the left, then a ledger, to see its entries.')));
   return '<div style="padding:12px 14px"><div class="lt-crumb"><button type="button" data-testid="lt-back" onclick="bkLtBack()">‹ ' + esc(tx('Ledgers')) + '</button></div>'
     + '<div data-testid="lg-title" style="font-weight:700;margin-bottom:6px">' + esc(sel.title || '') + '</div>'
-    + (sel.party ? '' : bkRangeHTML('lg', 'bkLtLoad()')) + '<div id="lg_out" data-testid="lg_out"></div></div>';
+    + '<div id="lg_out" data-testid="lg_out"></div></div>';
 }
 function bkLtBack() { BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel'); bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML(); }
 function bkLtOpen(sel) {
@@ -893,31 +905,44 @@ async function bkLtLoad() {
   } catch (e) { var o = document.getElementById('lg_out'); if (o) o.innerHTML = bkErr(e); }
 }
 /** the list of a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
-function bkLgCols(c) {
+function bkLgCols(c, partyLead, avail) {
+  /* the columns FIT the pane (no sideways scroll): the date, the amounts and the balance are fixed, "What" takes the rest (never under 150 px; the person may still drag) */
+  var fixed = 100 + 104 + 104 + 136, whatW = Math.max(150, Math.min(420, (avail || 0) - fixed - 40));
   var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
   return [
-    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 110, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
-    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: 420, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
+    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 100, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
+    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: whatW, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
         /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
-        var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c);
-        return bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
-    { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 220, html: true, cell: function (l) { var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || ''); return pl ? esc(pl) : dash; } },
-    { key: 'dr', label: tx('Debit'), prio: 4, sort: 'dr', num: true, w: 120, html: true, cell: function (l) { return money(l.dr_minor); } },
-    { key: 'cr', label: tx('Credit'), prio: 5, sort: 'cr', num: true, w: 120, html: true, cell: function (l) { return money(l.cr_minor); } },
-    { key: 'bal', label: tx('Balance'), prio: 6, num: true, w: 130, html: true, cell: function (l) { return '<b>' + esc(bkMoney(l.running_minor, c)) + '</b>'; } },
+        var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c, bkEntryWord(l));
+        /* a control account's rows name their party, first and apart (a party's own ledger says it once, in its title; the Party column was dropped — it did not fit beside the amounts) */
+        var pl = partyLead ? (l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || '')) : '';
+        return (pl ? '<b class="lg-party">' + esc(pl) + '</b><br>' : '') + bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
+    { key: 'dr', label: tx('Debit'), prio: 4, sort: 'dr', num: true, w: 104, html: true, cell: function (l) { return money(l.dr_minor); } },
+    { key: 'cr', label: tx('Credit'), prio: 5, sort: 'cr', num: true, w: 104, html: true, cell: function (l) { return money(l.cr_minor); } },
+    /* the running balance is pinned (always shown) and written Dr / Cr, never with a minus */
+    { key: 'bal', label: tx('Balance'), prio: 6, pin: 'end', num: true, w: 136, html: true, cell: function (l) { return '<b>' + esc(bkDrCr(l.running_minor, c)) + '</b>'; } },
   ];
 }
 function bkEntryWord(e) {
   var s = e && e.source;
   return s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
 }
+/** a ledger's head is the CBList period chip (the Day book's presets) — picking one reads again; a party's statement has no range, so no chip */
+function bkLgHead() {
+  var p = BK.lgp || (BK.lgp = bkDbPeriod('fy')), q = bkRange('lg');
+  return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
+    presets: [['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+    onPick: function (v, range) { if (v === 'custom' && !range) return; BK.lgp = bkDbPeriod(v, range); bkLtLoad(); } } };
+}
 function bkLgMount(el, r) {
   var by = function (g, num) { return function (a, b) { var x = g(a), y = g(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  var c = r.currency || BK.duesCur;
+  var c = r.currency || BK.duesCur, own = !!(BK.lt.sel && BK.lt.sel.party);
   (r.lines || []).forEach(function (l, i) { l._ix = i; });   /* a line's place in the statement is its row id */
   return CBList.mount(el, {
     key: 'ledger', t: tx, rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, id: function (l) { return String(l._ix); },
-    columns: bkLgCols(c), rowTid: function (l) { return 'stmt-row-' + l._ix; },
+    columns: bkLgCols(c, !own && !!BK_CTRL[(BK.lt.sel || {}).code], el.clientWidth), rowTid: function (l) { return 'stmt-row-' + l._ix; },
+    defaultCols: ['date', 'what', 'dr', 'cr'],   /* what fits beside the pinned balance */
+    head: own ? null : bkLgHead,
     search: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
     sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
       { key: 'what', label: tx('What'), cmp: by(function (l) { return l.what || l.narration || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (l) { return bkPartyLabel(l.party_id, l.party_name); }) },
@@ -942,23 +967,23 @@ function bkLgJournal() {
 function bkLgNext(l, c) {
   var e = bkLgEntry(l);
   if (!e) return '<div data-testid="stmt-lines-' + l._ix + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('The journal lines of this entry are not on this page.')) + '</div>';
-  return bkDvNext(e, c);
+  return bkDvNext(e, c, null, !!(BK.lt.sel && BK.lt.sel.party));   /* on a party's own ledger the party is said once, in the title */
 }
 /** the ledger's right-hand pane: balance carried at the top, then the entries — and for a control account both figures that must agree */
 function bkLtEntriesPaint() {
   var out = document.getElementById('lg_out'), r = BK.lt.r, sel = BK.lt.sel; if (!out || !r || !sel) return;
-  var c = r.currency || BK.duesCur, ctrl = !sel.party && BK_CTRL[sel.code], sign = ctrl && ctrl.side === 'pay' ? -1 : 1, top = '';
-  top = '<div class="bkdv-count" style="display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkMoney(r.opening_minor, c)) + '</b></span>'
-    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkMoney(r.closing_minor, c)) + '</b></span></div>';
+  var c = r.currency || BK.duesCur, ctrl = !sel.party && BK_CTRL[sel.code], top;
+  /* ⭐ ONE line (2026-10-03: the closing was shown three times with changing signs): opening · closing in Dr / Cr, and for a control account whether its parties agree.
+     Every figure is the server's; the one check (the parties' sum against the ledger's closing) is the page's only sum. */
+  top = '<div class="bkdv-count" data-testid="lg-sum" style="display:flex;gap:6px 14px;flex-wrap:wrap;margin:4px 0 8px"><span>' + esc(tx('Opening')) + ' <b data-testid="stmt-opening">' + esc(bkDrCr(r.opening_minor, c)) + '</b></span> '
+    + '<span>' + esc(tx('Closing')) + ' <b data-testid="stmt-closing">' + esc(bkDrCr(r.closing_minor, c)) + '</b></span> ';
   if (ctrl) {
-    var list = bkLtParties(sel.code), total = list.reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
-    top += '<div data-testid="lg-parties" style="display:flex;gap:14px;flex-wrap:wrap;margin:0 0 8px;font-size:var(--fs-1)"><span>' + esc(tx('Total of the parties')) + ' <b data-testid="lg-parties-total">' + esc(bkMoney(sign * total, c)) + '</b></span>'
-      + '<span>' + esc(tx('Ledger closing')) + ' <b data-testid="lg-parties-closing">' + esc(bkMoney(sign * closing, c)) + '</b></span></div>'
-      + (total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
-        + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>');
+    var total = bkLtParties(sel.code).reduce(function (a, p) { return a + Number(p.balance_minor || 0); }, 0), closing = Number(r.closing_minor || 0);
+    top += total === closing ? '<span data-testid="lg-parties" style="color:var(--ok-2)">' + esc(tx('✓ parties agree')) + '</span>'
+      : '<span data-testid="lg-parties-diff" style="color:var(--warn-2)">' + esc(txf('parties differ by {d}', { d: bkMoney(Math.abs(total - closing), c) })) + '</span>';
   }
-  out.innerHTML = top + ((r.lines || []).length ? '<div id="lg_list" data-testid="ledger-list"></div>' : emptyState('📒', tx('No entries in these dates'), ''));
-  if ((r.lines || []).length) bkLgMount(document.getElementById('lg_list'), r);
+  out.innerHTML = top + '</div>' + ((r.lines || []).length || !sel.party ? '<div id="lg_list" data-testid="ledger-list"></div>' : emptyState('📒', tx('No entries in these dates'), ''));
+  if ((r.lines || []).length || !sel.party) bkLgMount(document.getElementById('lg_list'), r);
 }
 async function bkLedgers(body) {
   try {
