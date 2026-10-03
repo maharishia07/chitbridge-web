@@ -25,9 +25,9 @@ const BREAKS = [
   ['a tap does not switch', K, `function swap() { if (!EL ||`, `function swap() { return; if (!EL ||`, H],
   ['the band takes no room off the window (the page overflows)', K, `doc.documentElement.style.setProperty('--cbk-h', h + 'px');`, `void h;`, H],
   /* the look */
-  ['an italic meaning', K, `'.cbk .km{font-size:calc(15px * var(--k,1));`, `'.cbk .km{font-style:italic;font-size:calc(15px * var(--k,1));`, H],
+  ['an italic meaning', K, `'.cbk .cbk-m{font-size:calc(15px * var(--k,1));`, `'.cbk .cbk-m{font-style:italic;font-size:calc(15px * var(--k,1));`, H],
   ['a colour literal (amber) instead of a token', K, `color:var(--k-faint);white-space:nowrap}',`, `color:#E0A020;white-space:nowrap}',`, H],
-  ['the verse is too faint to read', K, `'.cbk .kv{font:600 calc(16px * var(--k,1))/1.55 "Noto Serif Tamil","Noto Sans Tamil",var(--f-ui,system-ui),sans-serif;color:var(--k-ink)}',`, `'.cbk .kv{font:600 calc(16px * var(--k,1))/1.55 "Noto Serif Tamil","Noto Sans Tamil",var(--f-ui,system-ui),sans-serif;color:var(--k-faint)}',`, H],
+  ['the verse is too faint to read', K, `'.cbk .cbk-v{font:600 calc(16px * var(--k,1))/1.55 "Noto Serif Tamil","Noto Sans Tamil",var(--f-ui,system-ui),sans-serif;color:var(--k-ink)}',`, `'.cbk .cbk-v{font:600 calc(16px * var(--k,1))/1.55 "Noto Serif Tamil","Noto Sans Tamil",var(--f-ui,system-ui),sans-serif;color:var(--k-faint)}',`, H],
   /* the data and the pages */
   ['the page copy of kurals.json drifts from the kit', DATA, `Effort brings prosperity; lack of effort brings poverty.`, `Effort brings prosperity; lack of effort brings poverty!`, H],
   ['the excluded list loses 552', DATA, `"no": 552,`, `"no": 553,`, H],

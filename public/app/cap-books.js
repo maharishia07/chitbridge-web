@@ -82,7 +82,7 @@ function bkCss() {
     '.bkdv-count{color:var(--grey);font-size:var(--fs-1);margin:6px 0}',
     /* ⭐ THE LEDGERS PAGE (docs/design/ledgers-page, 2026-10-03): two panes — the ledger tree and the list (CBList) — inside one container, so the PANE decides phone or laptop, not the window.
        Tokens only; the tree is its own pane (more panes, not denser), the list is the Task table. */
-    '#bk_lt{container:lt/inline-size;display:flex;height:100%;min-height:0}',
+    '#bk_lt{container:lt/inline-size;display:flex;height:100%;min-height:min(50vh,480px)}',
     '#bk_lt .lt-tree{width:min(var(--lt-w,320px),30%);flex:0 0 auto;display:flex;flex-direction:column;min-height:0;background:var(--page,var(--paper,#FCFAF5));border-top:1px solid var(--line)}',
     '#bk_lt.folded .lt-tree,#bk_lt.folded .lt-rz{display:none}',
     '#bk_lt .lt-tools{display:flex;gap:6px;align-items:center;padding:8px 10px 8px 16px}',
@@ -958,7 +958,7 @@ function bkLtTreeHTML() {
   function walk(n, lvl) {
     var kids = n.t === 'ledger' ? n.parties.length : (n.kids || []).length, open = kids ? bkLtOpenNow(n.id, n.t === 'ledger' ? false : true) : false;
     var tid = n.tid || (n.t === 'ledger' ? 'lg-acc-' + n.code : n.t === 'party' ? 'lg-party-' + n.party : '');
-    h += '<button type="button" class="tn ltn ' + n.t + (n.id === selId ? ' on' : '') + '" role="treeitem" data-tn="' + esc(n.id) + '"' + (n.ctrl || n.t === 'party' ? '' : '') + (n.t === 'party' ? ' data-ctrl="' + esc(n.ctrl) + '"' : '')
+    h += '<button type="button" class="tn ltn ' + n.t + (n.id === selId ? ' on' : '') + '" role="treeitem" data-tn="' + esc(n.id) + '"' + (n.t === 'party' ? ' data-ctrl="' + esc(n.ctrl) + '"' : '')
       + ' aria-level="' + (lvl + 1) + '"' + (kids ? ' aria-expanded="' + open + '"' : '') + (n.t === 'ledger' || n.t === 'party' ? ' aria-selected="' + (n.id === selId) + '"' : '') + ' tabindex="-1" data-testid="' + esc(tid) + '"'
       + (n.full && n.full !== n.name ? ' title="' + esc(n.full) + '"' : '') + ' style="--lvl:' + lvl + '"><span class="tw" aria-hidden="true">' + (kids ? (open ? '▾' : '▸') : '') + '</span><span class="nm">' + bkLtMark(n.name) + '</span>' + amt(n) + '</button>';
     if (kids && open) (n.t === 'ledger' ? n.parties : n.kids).forEach(function (k) { walk(k, lvl + 1); });

@@ -96,10 +96,10 @@ async function route(S, r) {
   const shown = async (p) => (await band(p).count()) === 1 && await band(p).isVisible();
   const view = async (p) => p.evaluate(() => { const e = document.querySelector('[data-testid="kural-footer"]'); if (!e) return null;
     const v = e.querySelector('[data-testid="kural-verse"]'), m = e.querySelector('[data-testid="kural-meaning"]'), no = e.querySelector('[data-testid="kural-no"]');
-    return { n: document.querySelectorAll('[data-testid="kural-footer"]').length, hidden: e.hidden, no: e.getAttribute('data-kural'), parent: e.parentElement && e.parentElement.tagName, verse: v ? Array.from(v.querySelectorAll('.ln')).map((x) => x.textContent.replace(/\s+/g, ' ').trim()) : null,
+    return { n: document.querySelectorAll('[data-testid="kural-footer"]').length, hidden: e.hidden, no: e.getAttribute('data-kural'), parent: e.parentElement && e.parentElement.tagName, verse: v ? Array.from(v.querySelectorAll('.cbk-ln')).map((x) => x.textContent.replace(/\s+/g, ' ').trim()) : null,
       meaning: m ? m.textContent.trim() : null, text: e.innerText, cls: e.className, top: e.getBoundingClientRect().top, bottom: e.getBoundingClientRect().bottom, vh: window.innerHeight, sw: document.documentElement.scrollWidth, ih: window.innerWidth,
       inHead: !!e.closest('header,.top,.bar,.cbl-title,.titlerow'), inField: !!e.closest('textarea,input,[contenteditable],[data-testid*="compose"],[data-testid*="message"]'),
-      kv: v ? { dir: getComputedStyle(e.querySelector('.kbody')).flexDirection || '', display: getComputedStyle(e.querySelector('.kbody')).display, vt: v.getBoundingClientRect().top, mt: m.getBoundingClientRect().top, vb: v.getBoundingClientRect().bottom, mo: getComputedStyle(m).opacity, vo: getComputedStyle(v).opacity } : null }; });
+      kv: v ? { dir: getComputedStyle(e.querySelector('.cbk-body')).flexDirection || '', display: getComputedStyle(e.querySelector('.cbk-body')).display, vt: v.getBoundingClientRect().top, mt: m.getBoundingClientRect().top, vb: v.getBoundingClientRect().bottom, mo: getComputedStyle(m).opacity, vo: getComputedStyle(v).opacity } : null }; });
   const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
 
   /* ── 1 · the data ── */
@@ -123,6 +123,8 @@ async function route(S, r) {
     ok(v && v.parent === 'BODY' && v.top >= 0 && v.bottom <= v.vh + 1 + (name === 'index' ? 4000 : 0) && !v.inHead, name + ': the band is a child of <body>, after the page shell — never in the head (' + (v && Math.round(v.top)) + ' → ' + (v && Math.round(v.bottom)) + ' of ' + (v && v.vh) + ')');
     ok(v && v.no === String(k.no) && v.verse && v.verse.map(clean).join('|') === k.verse.map(clean).join('|'), name + ': the couplet is kural ' + (k && k.no) + "'s own, both lines (route " + route_ + ')');
     ok(v && v.meaning === k.meaning.en, name + ': the meaning is the English translation, as the kit has it');
+    const st = await p.evaluate(() => { const l = Array.from(document.querySelectorAll('[data-testid="kural-verse"] .cbk-ln')).map((x) => x.getBoundingClientRect()), vv = document.querySelector('[data-testid="kural-verse"]').getBoundingClientRect(); return { n: l.length, stacked: l.length === 2 && l[1].top >= l[0].bottom - 2 && Math.abs(l[1].left - l[0].left) < 40, h: vv.height, disp: getComputedStyle(document.querySelector('[data-testid="kural-verse"] .cbk-ln')).display }; });
+    ok(st.n === 2 && st.stacked && st.disp === 'block' && st.h < 90, name + ': the couplet is two lines, one above the other (no page rule bends it: ' + Math.round(st.h) + ' px tall)');
     const rest = v ? v.text.split(k.verse[0]).join('').split(k.verse[1]).join('').split('குறள்').join('') : '';
     ok(v && !TA.test(rest.replace(k.verse.join('').replace(/[\s]/g, ''), '')) && !TA.test(rest), name + ': no Tamil prose, no transcription — the only Tamil is the couplet and the word குறள்');
     if (name !== 'index') ok(v.sw <= v.ih, name + ': nothing scrolls sideways with the band (' + v.sw + ' / ' + v.ih + ')');
@@ -263,7 +265,7 @@ async function route(S, r) {
       await p.evaluate((t) => { CBAvatar.applyTheme(t); }, th);
       await p.waitForTimeout(150);
       const m = await p.evaluate(() => { const e = document.querySelector('[data-testid="kural-footer"]'), cs = (x) => getComputedStyle(x);
-        return { bg: cs(e).backgroundColor, verse: cs(e.querySelector('.kv')).color, mean: cs(e.querySelector('.km')).color, no: cs(e.querySelector('.kno')).color, style: cs(e.querySelector('.km')).fontStyle + '/' + cs(e.querySelector('.kv')).fontStyle,
+        return { bg: cs(e).backgroundColor, verse: cs(e.querySelector('.cbk-v')).color, mean: cs(e.querySelector('.cbk-m')).color, no: cs(e.querySelector('.cbk-no')).color, style: cs(e.querySelector('.cbk-m')).fontStyle + '/' + cs(e.querySelector('.cbk-v')).fontStyle,
           amberT: cs(document.documentElement).getPropertyValue('--amber-t').trim(), blue: cs(document.documentElement).getPropertyValue('--blue').trim(), border: cs(e).borderTopColor }; });
       themeBg.push(toHex(m.bg));
       const bg = toHex(m.bg), r1 = lk.ratio(toHex(m.verse), bg), r2 = lk.ratio(toHex(m.mean), bg), r3 = lk.ratio(toHex(m.no), bg);
