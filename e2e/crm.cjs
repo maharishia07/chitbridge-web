@@ -68,7 +68,10 @@ async function route(S, r) {
   if (p.startsWith('/api/crm/') && !S.migrated) return J(r, 409, { error: 'needs migration b276' });
   if (p === '/api/crm/parties' && m === 'GET') {
     if (S.listFails > 0) { S.listFails--; return J(r, 500, { error: 'boom' }); }
-    return J(r, 200, { parties: S.list, alerts: fx.alerts });
+    /* ⚠️ the REAL API's shape: roles is an OBJECT { customer, supplier } (chitbridge-api lib/crm.js). The stand-in sent a list, so the
+       live page broke while this harness stayed green (2026-10-03). Serve what the API serves. */
+    const asApi = (pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp;
+    return J(r, 200, { parties: S.list.map(asApi), alerts: fx.alerts });
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) {
     const id = x[1], tl = fx.timelines[id] || { counts: { all: 0 }, entries: [] }, all = tl.many || tl.entries, kind = u.searchParams.get('kind'), qq = String(u.searchParams.get('q') || '').toLowerCase();

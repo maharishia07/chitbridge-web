@@ -2,62 +2,48 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ledgers – Chart of Accounts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledgers · CB Accounts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;600;700&family=Space+Grotesk:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="app">
-  <aside class="side" id="side">
-    <div class="brand">
-      <div class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h4"/></svg></div>
-      <div class="brand-text label"><span class="tag">BUS014</span><span class="brand-name">Ledger</span></div>
-    </div>
-    <nav class="nav scroll" id="nav" aria-label="Books"></nav>
-    <div class="side-foot">
-      <button type="button" class="nav-btn" id="toggleNav" aria-label="Collapse sidebar" aria-expanded="true">
-        <svg class="nav-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="label">Collapse</span>
-      </button>
-    </div>
-  </aside>
 
-  <main class="main scroll">
-    <header class="top">
-      <div class="top-row">
-        <div class="titles">
-          <div class="crumb">BOOKS / LEDGERS</div>
-          <h1>Chart of accounts</h1>
-          <div class="summary" id="summary"></div>
-        </div>
-        <div class="reports">
-          <button type="button" class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 21h14M4 8h16M7 8l-3 7h6zM17 8l-3 7h6z"/></svg>Trial balance</button>
-          <button type="button" class="btn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4M4 20h16M8 15l4-4 3 3 5-6"/></svg>P&amp;L</button>
-          <button type="button" class="btn btn-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10l9-6 9 6M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/></svg>Balance sheet</button>
-        </div>
-      </div>
-      <div class="tools">
-        <label class="search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-          <span class="sr-only">Search ledgers</span>
-          <input type="search" id="q" placeholder="Search by code or name — e.g. 6010 or GST">
-        </label>
-        <div class="chips" id="chips"></div>
-        <div class="bulk">
-          <button type="button" class="link-btn" id="expandAll">Expand all</button>
-          <button type="button" class="link-btn" id="collapseAll">Collapse all</button>
-        </div>
-      </div>
-    </header>
-    <div class="content" id="content"></div>
-  </main>
-
-  <button type="button" class="assistant">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
-    Assistant <span class="online"><i></i>Online</span>
-  </button>
+<!-- PROTOTYPE ONLY — DO NOT BUILD: jumps to each state in the brief, and three quick themes. The real theme control is the avatar. -->
+<div class="proto" id="proto" role="region" aria-label="Prototype controls, not part of the product">
+  <b>Prototype only — do not build</b>
+  <span>State:</span><span class="grp" id="pState"></span>
+  <span>Theme:</span><span class="grp" id="pTheme"></span>
+  <span>Kural:</span><span class="grp" id="pKural"></span>
+  <span class="meter" id="meter" title="How much of the window the head takes, above the first row">head —</span>
 </div>
+
+<div class="app" id="app">
+  <!-- Row 1 · title row (CBList) — spans both panes: title · period · figures · notices · shop · Home · avatar -->
+  <div class="titlerow" id="titlerow"></div>
+  <div class="body">
+    <!-- NEW: the ledger tree, a pane of its own (rule 9: more panes, not denser) -->
+    <nav class="tree" id="tree" aria-label="All ledgers">
+      <div class="tree-tools">
+        <label class="search"><span aria-hidden="true">🔍</span><input id="tq" type="search" placeholder="Find a ledger or party" aria-label="Find a ledger or party" autocomplete="off"></label>
+        <button class="tbtn ico" id="foldTree" title="Hide this list" aria-label="Hide the ledger list">⟨</button>
+      </div>
+      <div class="tree-list" id="treeList" role="tree" aria-label="Ledgers by band"></div>
+    </nav>
+    <button class="pane-rz" id="paneRz" aria-label="Resize the ledger list (arrow keys)" title="Drag to resize"></button>
+    <!-- Rows 2 and 3 · tools + column header, then only the rows scroll (CBList) -->
+    <main class="main" id="main">
+      <div class="tools" id="tools"></div>
+      <div class="list" id="list" tabindex="0" aria-label="Entries"></div>
+    </main>
+  </div>
+  <!-- NEW (proposed decision): the kural footer — one band, every size, the open ledger's verse and its meaning -->
+  <footer class="kbar" id="kbar"></footer>
+</div>
+<div class="toast" id="toast" hidden></div>
+
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>

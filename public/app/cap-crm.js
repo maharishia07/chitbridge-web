@@ -106,8 +106,9 @@ function crmNormalize(parties) {
   (parties || []).forEach(function (p) {
     if (!p || p.merged_into) return;
     var k = p.party_id, seen = by[k];
+    p.roles = crmRolesList(p.roles);
     if (seen) { (p.roles || []).forEach(function (r) { if (seen.roles.indexOf(r) < 0) seen.roles.push(r); }); return; }
-    p.roles = (p.roles || []).slice(); p.groups = p.groups || []; p.tax_ids = p.tax_ids || [];
+    p.roles = p.roles.slice(); p.groups = p.groups || []; p.tax_ids = p.tax_ids || [];
     by[k] = p; out.push(p);
   });
   return out;
@@ -130,6 +131,9 @@ function crmErrWords(e, what) {
   if (st === 503) return { title: tx('Calls and follow-ups start after an update.'), sub: tx('Nothing is lost.') };
   return { title: tx("Couldn't load " + what + "."), sub: tx('Check the connection and try again.') };
 }
+/* ⚠️ THE API SENDS ROLES AS AN OBJECT ({ customer: true, supplier: false }, chitbridge-api lib/crm.js); the stand-in sent a list.
+   Found live 2026-10-03: .indexOf on the object threw, the load's catch showed "Couldn't load your parties". Both shapes read here. */
+function crmRolesList(r) { if (Array.isArray(r)) return r.slice(); if (r && typeof r === 'object') return ['customer', 'supplier'].filter(function (k) { return !!r[k]; }); return []; }
 async function crmLoad(quiet) {
   var g = ++CRM.loadGen;
   if (!quiet || !CRM.loaded) { CRM.state = 'loading'; crmRefresh(); }
