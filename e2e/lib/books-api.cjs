@@ -9,11 +9,13 @@
 const ENGINES = { posting: 'injected', packs: 'injected', receivables: 'injected', ledger: 'injected', bookpack: 'injected', period: 'injected' };
 
 /** GET /api/books/health */
-const health = (o) => Object.assign({ enabled: true, currency: 'INR', walkin_grain: 'day', last_check: null, engines: ENGINES, waiting: [] }, o || {});
+/* only the API's keys: a harness's own bookkeeping on the row (stuck, last_posted_day …) stays in the harness, it is not part of the answer */
+const only = (defaults, o) => { const out = Object.assign({}, defaults); Object.keys(o || {}).forEach((k) => { if (k in defaults) out[k] = o[k]; }); return out; };
+const health = (o) => only({ enabled: true, currency: 'INR', walkin_grain: 'day', last_check: null, engines: ENGINES, waiting: [] }, o);
 /** GET /api/books/party/:id/statement */
-const statement = (partyId, o) => Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {});
+const statement = (partyId, o) => { const s = Object.assign({ currency: 'INR', party_id: partyId, from: '2026-04-01', to: '2026-10-03', code: '1300', opening_minor: 0, closing_minor: 0, lines: [] }, o || {}); s.lines = s.lines.map((l) => Object.assign({ ref: null, source_chit_id: null }, l, { source: l.source ? Object.assign({ chit_id: null, ref: null, kind: 'bill', counter: null, by: null, count: null, how: null, how_ref: null, split: null, doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' }, l.source) : null })); return s; };
 /** one row of GET /api/books/dues (balance_minor: + they owe you) */
-const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0, buckets: { not_due: 0, lt_6m: 0, m6_1y: 0, y1_2: 0, y2_3: 0, gt_3y: 0 } }, o || {});
+const dueRow = (o) => Object.assign({ party_no: 'P-00001', name: 'Party', party_id: 'pid', side: 'customer', balance_minor: 0, oldest_due: null, disputed_minor: 0 }, o || {}, { buckets: Object.assign({ not_due: 0, y1_2: 0, y2_3: 0, gt_3y: 0 }, (o && o.side === 'supplier') ? { lt_1y: 0 } : { lt_6m: 0, m6_1y: 0 }, (o && o.buckets) || {}) });
 /** GET /api/books/dues */
 const dues = (parties, o) => Object.assign({ currency: 'INR', asOf: '2026-10-03', parties: (parties || []).map(dueRow), total_minor: (parties || []).reduce((t, p) => t + (p.balance_minor || 0), 0) }, o || {});
 /** one row of GET /api/books/periods */
@@ -47,4 +49,29 @@ const eventsAnswer = (a) => Object.assign({ pending: [], golden: { personal: { d
 const refusal = (msg, code) => Object.assign({ error: msg, message: msg }, code ? { code } : {});
 /** GET /api/books/daybook */
 const daybook = (entries, o) => Object.assign({ currency: 'INR', from: DAY, to: DAY, entries: entries || [], count: (entries || []).length }, o || {});
-Object.assign(module.exports, { source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook });
+/** a day book entry with every key the API sends (a missing doc_date is the posting date, no reversal, a line with no party / counter / rate says so) */
+const entry = (e) => Object.assign({ doc_date: e.posting_date, reverses_entry_id: null }, e, { source: source(e.source), lines: (e.lines || []).map((l) => Object.assign({ party_id: null, party_name: null, counter: null, rate: null }, l)) });
+/** the period answer of POST /periods/:fy/:p/lock|unlock */
+const lockAnswer = (fy, period, status) => ({ ok: true, period: { fiscal_year: fy, period, status } });
+Object.assign(module.exports, { entry, lockAnswer, source, posted, ledger, assetRow, recRow, todoRow, eventsAnswer, refusal, daybook });
+
+/* ── the reads of the books ── */
+/** one post waiting for the owner (lib/books-hooks waitingRow) */
+const waitingRow = (o) => only({ id: 1, chit_id: null, ref: null, reason: 'Waiting', tries: 0, since: '2026-10-03T05:00:00.000Z', job: 'chit', source: { chit_id: null, ref: null, kind: 'chit', counter: null, by: null } }, o);
+/** GET /api/books/trial-balance */
+const trialBalance = (rows, o) => { const r = (rows || []).map((x) => Object.assign({ group: 'group' }, x)); const dr = r.reduce((t, x) => t + (x.dr_minor || 0), 0), cr = r.reduce((t, x) => t + (x.cr_minor || 0), 0);
+  return Object.assign({ currency: 'INR', asOf: DAY, rows: r, total_dr_minor: dr, total_cr_minor: cr, balanced: dr === cr }, o || {}); };
+/** GET /api/books/pl */
+const pl = (income, expense, o) => { const inc = (income || []).map((x) => Object.assign({ line: 'Revenue from operations' }, x)), exp = (expense || []).map((x) => Object.assign({ line: 'Other expenses' }, x));
+  const ti = inc.reduce((t, x) => t + x.amount_minor, 0), te = exp.reduce((t, x) => t + x.amount_minor, 0);
+  return Object.assign({ currency: 'INR', from: '2026-04-01', to: DAY, income: inc, expense: exp, total_income_minor: ti, total_expense_minor: te, profit_minor: ti - te, by_line: { income: [], expense: [] } }, o || {}); };
+/** GET /api/books/bs */
+const bs = (assets, liabilities, equity, o) => { const a = (assets || []).map((x) => Object.assign({ line: 'Trade receivables' }, x)), l = (liabilities || []).map((x) => Object.assign({ line: 'Trade payables' }, x)), e = (equity || []).map((x) => Object.assign({ line: 'Reserves and surplus' }, x));
+  const ta = a.reduce((t, x) => t + x.amount_minor, 0), tl = l.concat(e).reduce((t, x) => t + x.amount_minor, 0);
+  return Object.assign({ currency: 'INR', asOf: DAY, assets: a, liabilities: l, equity: e, total_assets_minor: ta, total_liab_equity_minor: tl, profit_to_date_minor: 0, balanced: ta === tl, by_line: { assets: [], liabilities: [] },
+    schedule_iii: { equity_and_liabilities: { heads: [], total_minor: tl }, assets: { heads: [], total_minor: ta }, balanced: ta === tl, difference_minor: ta - tl } }, o || {}); };
+/** POST /api/books/enable */
+const enable = (o) => Object.assign({ ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: null }, o || {});
+/** one account of GET /api/books/accounts */
+const accountRow = (o) => Object.assign({ account_id: 'acc', code: '1000', name: 'Account', is_group: false, tally_group: 'Group', nature: 'asset', role: null, parent_code: null, active: true }, o || {});
+Object.assign(module.exports, { waitingRow, trialBalance, pl, bs, enable, accountRow });

@@ -355,9 +355,11 @@ function ledgerRead(){
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
     ledgerState(true);
-    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
+    /* /health sends { enabled, currency, walkin_grain, last_check: { at, ok, problems, posted, engines } | null, waiting } - no day the books are posted up to: the nightly check's own time is the one date it has */
+    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to)), checkedAt = r && r.last_check && r.last_check.at;
     var host = document.getElementById('f_bk'); host.innerHTML = ''; host.hidden = true;
     if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
+    else if (checkedAt) factLine('f_bk', 'Ledger checked <b>' + esc(day(checkedAt)) + '</b>');
     /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
        must still say SOMETHING, or the box reads exactly like one that is off */
     else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');

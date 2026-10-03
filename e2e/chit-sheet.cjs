@@ -27,7 +27,7 @@ const SHOTS = process.env.CHS_ROOT ? null : path.join(__dirname, 'shots');
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const SHOP = 'Books Shop', TODAY = new Date().toISOString().slice(0, 10);
 
@@ -96,10 +96,10 @@ async function route(S, r) {
   const q = r.request(), u = new URL(q.url()), p = u.pathname, m = q.method();
   let body = {}; try { body = JSON.parse(q.postData() || '{}'); } catch (_) {}
   if (p === '/api/books/status') return J(r, 200, { migrated: true, enabled: true, walkin_grain: 'day' });
-  if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting });
+  if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow(w)) }));
   if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
-  if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [] });
-  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: S.entries });
+  if (p === '/api/books/dues') return J(r, 200, books.dues([], { asOf: TODAY }));
+  if (p === '/api/books/daybook') return J(r, 200, books.daybook(S.entries.map(books.entry)));
   if (p.startsWith('/api/books')) return J(r, 200, {});
   let x;
   if ((x = p.match(/^\/api\/chits\/([^/]+)\/status$/)) && m === 'PUT') {
