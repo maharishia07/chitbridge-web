@@ -22,8 +22,9 @@ const kind = (v) => (v === null || v === undefined ? 'null' : Array.isArray(v) ?
 const word = (k) => (k === 'array' ? 'a list' : k === 'object' ? 'an object' : 'a ' + k);
 
 /** → a list of plain problems; empty = the answer conforms to the example (rules: see the API's tests/support/contract-shape.cjs) */
-function problems(example, actual, optional, path0) {
+function problems(example, actual, optional, path0, free) {
   const opt = optional instanceof Set ? optional : new Set(optional || []);
+  const fre = free instanceof Set ? free : new Set(free || []);
   function collect(ex, ac, p) {
     const ke = kind(ex), ka = kind(ac);
     if (ke === 'null' || ka === 'null') return [];
@@ -39,6 +40,7 @@ function problems(example, actual, optional, path0) {
       return out;
     }
     if (ke === 'object') {
+      if (fre.has(p)) return [];                       /* a free-form object (a template's event): it must be an object, nothing more */
       const out = [];
       Object.keys(ac).forEach((k) => { if (!(k in ex)) out.push((p ? p + '.' : '') + k + ': the answer sends it, the contract does not list it'); });
       Object.keys(ex).forEach((k) => {
@@ -59,7 +61,7 @@ function load(file) {
   const c = JSON.parse(fs.readFileSync(file || FILE, 'utf8'));
   const routes = Object.keys(c.routes).map((k) => {
     const m = /^([A-Z]+) (\S+?)(?: #(\S+))?$/.exec(k);
-    return { key: k, method: m[1], pattern: m[2], tag: m[3] || null, status: c.routes[k].status, example: c.routes[k].example, optional: new Set((c.routes[k].optional || []).concat(c.routes[k].also_optional || [])) };
+    return { key: k, method: m[1], pattern: m[2], tag: m[3] || null, status: c.routes[k].status, example: c.routes[k].example, optional: new Set((c.routes[k].optional || []).concat(c.routes[k].also_optional || [])), free: new Set(c.routes[k].free || []) };
   });
   routes.forEach((r) => { r.re = new RegExp('^' + r.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/:[A-Za-z_]+/g, '[^/]+') + '$'); });
   const out = { raw: c, routes };
@@ -79,6 +81,7 @@ const STATE = { checked: 0, routes: new Set(), bad: [] };
 /** check ONE answer a stand-in served; returns the list of problems (also kept for finish()) */
 function check(method, pathname, status, body, who) {
   const es = entriesFor(method, pathname);
+  if (process.env.CONTRACT_DEBUG) console.log('  [contract] ' + method + ' ' + pathname + ' ' + status + ' → ' + (es.length ? es.map((e) => e.key).join(' | ') : 'not in the contract'));
   if (!es.length) return [];
   const same = es.filter((e) => e.status === status);
   if (!same.length) {
@@ -88,7 +91,7 @@ function check(method, pathname, status, body, who) {
   }
   STATE.checked++; STATE.routes.add(es[0].method + ' ' + es[0].pattern);
   let best = null;
-  for (const e of same) { const p = problems(e.example, body, e.optional); if (!p.length) return []; if (!best || p.length < best.length) best = p; }
+  for (const e of same) { const p = problems(e.example, body, e.optional, '', e.free); if (!p.length) return []; if (!best || p.length < best.length) best = p; }
   STATE.bad.push({ where: (who || '') + method + ' ' + pathname + ' → ' + status, problems: best });
   return best;
 }
@@ -115,8 +118,9 @@ function json(r, status, o) {
 
 /** [ok, message] for the harness's last check */
 function finish() {
-  const bad = STATE.bad;
+  /* the same fault served twice is one fault (route names with an id in them count once per route pattern) */
+  const seen = {}, bad = STATE.bad.filter((b) => { const k = b.where.replace(/\/[^\/ ]*\d[^\/ ]*/g, '/:x') + '|' + b.problems.join(';'); return seen[k] ? false : (seen[k] = true); });
   return [bad.length === 0, 'every answer the stand-in served for a route in the API contract has the API\'s keys, nesting and types (' + STATE.checked + ' answers over ' + STATE.routes.size + ' routes)'
-    + (bad.length ? ' - ' + bad.slice(0, 4).map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')];
+    + (bad.length ? ' - ' + bad.slice(0, process.env.CONTRACT_ALL ? 99 : 4).map((b) => b.where + ': ' + b.problems.slice(0, 3).join('; ')).join(' | ') : '')];
 }
 module.exports = { FILE, load, problems, entriesFor, check, wrap, json, finish, STATE };

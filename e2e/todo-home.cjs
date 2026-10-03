@@ -99,7 +99,6 @@ const SEVERAL = [
     await p.click('[data-testid="todo-go-gstr2b_missing"]');
     await p.waitForSelector('#toast .toast', { timeout: 3000 }).catch(() => {});
     ok(/starts after an update/i.test(await p.textContent('#toast').catch(() => '')) && await p.locator('[data-testid="todo-list"]').count() === 1, 'a screen with no page yet says it starts after an update and stays on To do');
-    ok(...C.finish());
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
   }
@@ -148,6 +147,7 @@ const SEVERAL = [
 
   ok(offHost.filter((u) => !/fonts\.g/.test(u)).length === 0, 'nothing but the stand-in was reachable' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
+  ok(...C.finish());
   console.log('\n  todo-home: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('  XX  the harness stopped: ' + e.message); process.exit(1); });

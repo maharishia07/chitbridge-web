@@ -19,7 +19,7 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
@@ -49,7 +49,7 @@ function stand(over) {
 }
 const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from: 'igst', against: 'igst', amount_minor: 1000000 }, { from: 'igst', against: 'cgst', amount_minor: 500000 }, { from: 'cgst', against: 'cgst', amount_minor: 300000 }],
   payable_minor: { cgst_minor: 0, sgst_minor: 420000, igst_minor: 0, cess_minor: 0 }, carried_minor: { cgst_minor: 0, sgst_minor: 0, igst_minor: 250000, cess_minor: 0 }, rcm_minor: { cgst: 90000, sgst: 90000, igst: 0 },
-  cash_minor: { cgst: 90000, sgst: 510000, igst: 0 }, pay_total_minor: 600000, ok: true, entry_no: 'JV/26-27/0021' };
+  cash_minor: { cgst: 90000, sgst: 510000, igst: 0 }, pay_total_minor: 600000, ok: true, entry_id: 'e21', entry_no: 'JV/26-27/0021', posting_date: '2026-09-30', doc_date: '2026-09-30', moved: false, lines: 4, items: 0, note: null };
 
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
@@ -73,48 +73,50 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method(); S.calls.push(m + ' ' + p);
       let body = null; try { body = r.request().postDataJSON(); } catch (_) {} if (m !== 'GET') S.bodies.push({ m, p, body });
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-      if (p === '/api/books/health') return J(r, 200, { enabled: true, waiting: [] });
-      if (p === '/api/books/todo') return J(r, 200, S.todo);
-      if (p === '/api/books/periods') return J(r, 200, { periods: [{ fiscal_year: PREV, period: 1, status: 'hard_locked' }, { fiscal_year: FYNOW, period: 1, status: 'soft_locked' }] });
-      if (p === '/api/books/events') return J(r, 200, EVENTS);
-      if (p === '/api/books/ledger/stock') return J(r, 200, { currency: 'INR', account: { code: '1400', name: 'Stock' }, opening_minor: 0, closing_minor: 9700000, lines: S.stock });
+      if (p === '/api/books/health') return J(r, 200, books.health());
+      if (p === '/api/books/todo') return J(r, 200, S.todo.map(books.todoRow));
+      if (p === '/api/books/periods') return J(r, 200, books.periods([books.periodRow(PREV, 1, 'hard_locked'), books.periodRow(FYNOW, 1, 'soft_locked')]));
+      if (p === '/api/books/events') return J(r, 200, books.eventsAnswer(EVENTS));
+      if (p === '/api/books/ledger/stock') return J(r, 200, books.ledger('1200', 'Stock-in-hand', S.stock, { closing_minor: 9700000 }));
       if (p === '/api/books/closing-stock' && m === 'POST') {
-        if (S.stockRefuse) return J(r, 409, { error: 'August 2026 is locked — no entry can go into it.', code: 'PERIOD_LOCKED' });
-        S.stock.push({ date: body.date, what: 'Closing stock ' + body.date, ref: 'MJ/26-27/0009', dr_minor: 100, cr_minor: 0, running_minor: 9800100 }); return J(r, 200, { ok: true, entry_no: 'MJ/26-27/0009', entry_id: 'e9', book_minor: 9700000 });
+        if (S.stockRefuse) return J(r, 409, books.refusal('August 2026 is locked — no entry can go into it.', 'PERIOD_LOCKED'));
+        S.stock.push({ date: body.date, what: 'Closing stock ' + body.date, ref: 'MJ/26-27/0009', dr_minor: 100, cr_minor: 0, running_minor: 9800100 }); return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0009', entry_id: 'e9', book_minor: 9700000 }));
       }
-      if (p === '/api/books/assets' && m === 'GET') return J(r, 200, { currency: 'INR', asOf: TODAY, assets: S.assets, total_wdv_minor: 4050000,
+      if (p === '/api/books/assets' && m === 'GET') return J(r, 200, { currency: 'INR', asOf: TODAY, assets: S.assets.map(books.assetRow), total_wdv_minor: 4050000,
         net_block: [{ asset_class: 'furniture', count: 1, cost_minor: 4500000, accumulated_minor: 450000, wdv_minor: 4050000, ledger_cost_minor: 4500000, ledger_accumulated_minor: 450000, ledger_wdv_minor: 4050000, agrees: true },
           { asset_class: 'computers', count: 1, cost_minor: 5000000, accumulated_minor: 0, wdv_minor: 5000000, ledger_cost_minor: 4900000, ledger_accumulated_minor: 0, ledger_wdv_minor: 4900000, agrees: false }] });
       if (p === '/api/books/assets' && m === 'POST') {
         if (S.assetRefuse) return J(r, 400, { error: 'How was it paid? cash, bank, upi or card — or name the supplier it is owed to.' });
-        S.assets.push({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, put_to_use: body.date, accumulated_minor: 0, wdv_minor: body.cost_minor, disposed_on: null }); return J(r, 200, { ok: true, entry_no: 'MJ/26-27/0010', asset: { asset_id: 'a3' } });
+        S.assets.push({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, put_to_use: body.date, accumulated_minor: 0, wdv_minor: body.cost_minor, disposed_on: null }); return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0010', asset: books.assetRow({ asset_id: 'a3', name: body.name, asset_class: body.class, cost_minor: body.cost_minor, wdv_minor: body.cost_minor }) }));
       }
-      if (/^\/api\/books\/assets\/[^/]+\/dispose$/.test(p)) { S.assets[0].disposed_on = body.date; S.assets[0].wdv_minor = 0; return J(r, 200, { ok: true, entry_no: 'MJ/26-27/0011' }); }
+      if (/^\/api\/books\/assets\/[^/]+\/dispose$/.test(p)) { S.assets[0].disposed_on = body.date; S.assets[0].wdv_minor = 0; return J(r, 200, books.posted({ entry_no: 'MJ/26-27/0011', asset: books.assetRow({ asset_id: 'a1', disposed_on: body.date }) })); }
       if (p === '/api/books/depreciation/run') {
         if (S.depRefuse) return J(r, 409, { error: 'Depreciation for ' + body.fy + ' runs at the year end (2027-03-31) or after — the year has not ended.' });
         return J(r, 200, { ok: true, fy: body.fy, entity_basis: 'proprietor', basis_assumed: true, basis_rule: 'it_act_wdv', entity_note: 'The entity type is not set for this shop yet, so depreciation was worked as a proprietor (Income-tax Act written-down value).',
-          by_class: [{ class: 'furniture', rate: 10, amount: 4500 }, { class: 'computers', rate: 40, amount: 20000 }], entry_no: 'JV/26-27/0020', entry_id: 'd1' });
+          by_class: [{ class: 'furniture', rate: 10, amount: 4500 }, { class: 'computers', rate: 40, amount: 20000 }], by_asset: [{ id: 'a1', class: 'furniture', amount: 4500 }], entry_no: 'JV/26-27/0020', entry_id: 'd1', posting_date: TODAY, doc_date: TODAY, moved: false, lines: 2, items: 0, note: null });
       }
-      if (p === '/api/books/recurring' && m === 'GET') return J(r, S.rec503 ? 503 : 200, S.rec503 ? { error: 'raw table detail', code: 'BOOKS_NOT_MIGRATED' } : { recurring: S.rec });
-      if (p === '/api/books/recurring' && m === 'POST') { if (S.recRefuse) return J(r, 400, { error: 'When is the first one due? Use YYYY-MM-DD.' }); S.rec.push({ recurring_id: 'r3', name: body.name, event: body.event, frequency: body.frequency, next_on: body.next_on, active: true, auto: body.auto }); return J(r, 200, S.rec[S.rec.length - 1]); }
-      if (p === '/api/books/recurring/r1/post') { S.rec[0].next_on = '2099-02-01'; return J(r, 200, { posted: { entry_no: 'MJ/26-27/0012' }, date: TODAY }); }
-      if (p === '/api/books/recurring/r1/skip') { S.rec[0].next_on = '2099-02-01'; return J(r, 200, { skipped: TODAY }); }
-      if (/^\/api\/books\/recurring\/[^/]+$/.test(p) && m === 'PATCH') { S.rec[1].auto = body.auto; return J(r, 200, S.rec[1]); }
-      if (/^\/api\/books\/recurring\/[^/]+$/.test(p) && m === 'DELETE') { S.rec[1].active = false; return J(r, 200, { stopped: true }); }
-      if (p === '/api/books/accruals') return J(r, 200, { ok: true, ref: body.ref, kind: body.kind, reverses_on: '2026-10-01', entry_no: 'JV/26-27/0022' });
-      if (/^\/api\/books\/accruals\/[^/]+\/reverse$/.test(p)) return J(r, 200, { ok: true, entry_no: 'JV/26-27/0023' });
+      if (p === '/api/books/recurring' && m === 'GET') return J(r, S.rec503 ? 503 : 200, S.rec503 ? { error: 'raw table detail', code: 'BOOKS_NOT_MIGRATED' } : { recurring: S.rec.map(books.recRow) });
+      if (p === '/api/books/recurring' && m === 'POST') { if (S.recRefuse) return J(r, 400, { error: 'When is the first one due? Use YYYY-MM-DD.' }); S.rec.push({ recurring_id: 'r3', name: body.name, event: body.event, frequency: body.frequency, next_on: body.next_on, active: true, auto: body.auto }); return J(r, 200, books.recRow(S.rec[S.rec.length - 1])); }
+      if (p === '/api/books/recurring/r1/post') { S.rec[0].next_on = '2099-02-01'; return J(r, 200, { posted: books.posted({ kind: 'expense', entry_no: 'MJ/26-27/0012' }), template: books.recRow(S.rec[0]), date: TODAY }); }
+      if (p === '/api/books/recurring/r1/skip') { S.rec[0].next_on = '2099-02-01'; return J(r, 200, { skipped: TODAY, template: books.recRow(S.rec[0]) }); }
+      if (/^\/api\/books\/recurring\/[^/]+$/.test(p) && m === 'PATCH') { S.rec[1].auto = body.auto; return J(r, 200, books.recRow(S.rec[1])); }
+      if (/^\/api\/books\/recurring\/[^/]+$/.test(p) && m === 'DELETE') { S.rec[1].active = false; return J(r, 200, Object.assign(books.recRow(S.rec[1]), { stopped: true })); }
+      if (p === '/api/books/accruals') return J(r, 200, books.posted({ ref: body.ref, kind: body.kind, reverses_on: '2026-10-01', entry_no: 'JV/26-27/0022' }));
+      if (/^\/api\/books\/accruals\/[^/]+\/reverse$/.test(p)) return J(r, 200, books.posted({ entry_no: 'JV/26-27/0023' }));
       if (p === '/api/books/gst/close') {
         if (S.gst503) return J(r, 503, { error: 'internal detail that must never reach the screen' });
         if (S.gstRefuse) return J(r, 409, { error: 'Month 6 of ' + body.fy + ' ends on 2026-09-30 — close it once it has ended.' });
         return J(r, 200, GST_CLOSED);
       }
-      if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, { ok: true, entry_no: 'JV/26-27/0024', challan_no: body.challan_no }); }
+      if (p === '/api/books/gst/pay') { if (S.payRefuse) return J(r, 409, { error: 'That is more than the tax owed — SGST owed 4200.00, paid 420000.00. Run the month close first, or correct the amount.' }); return J(r, 200, books.posted({ entry_no: 'JV/26-27/0024', challan_no: body.challan_no, paid_minor: { cgst: 0, sgst: 420000 } })); }
       let ym = /^\/api\/books\/year\/([^/]+)\/status$/.exec(p);
       if (ym) return J(r, 200, S.yearReady ? { fiscal_year: ym[1], closed: !!S.yearHas, can_close: !S.yearHas, refusals: [], months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: 'soft_locked' })), next: '2026-27' }
         : { fiscal_year: ym[1], closed: false, can_close: false, months: Array.from({ length: 12 }, (_, i) => ({ period: i + 1, status: i < 10 ? 'soft_locked' : 'open' })), next: '2026-27',
           refusals: [{ name: 'months_locked', why: 'Month 11 (Feb) and month 12 (Mar) are still open — lock every month first.' }, { name: 'suspense_nil', why: 'Suspense holds 1,200.00 — clear it with an entry first.' }] });
       ym = /^\/api\/books\/year\/([^/]+)\/close$/.exec(p);
-      if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], next: '2026-27', locked: 13, opening: { rows: 40 } }); }
+      if (ym) { S.yearHas = true; return J(r, 200, { ok: true, fiscal_year: ym[1], next: '2026-27', locked: 13, opening: { rows: 40, retained_minor: 0, profit_minor: 0, balanced: true } }); }
+      if (p === '/api/books/daybook') return J(r, 200, books.daybook([]));
+      if (p === '/api/books/dues') return J(r, 200, books.dues([]));
       if (p.startsWith('/api/books')) return J(r, 200, {});
       return J(r, 200, {});
     });
@@ -153,7 +155,6 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     ok(refs.length === 3 && refs[1] === refs[2] && refs[0] !== refs[1], 'a retry after a refusal carries the SAME client_ref; a saved one is replaced');
     await p.click('[data-testid="pe-fix"]'); await p.waitForFunction(() => document.querySelector('.nav-btn.active').getAttribute('aria-label') === 'Month lock', null, { timeout: 5000 }).catch(() => {});
     ok(await active(p) === 'Month lock', 'the fix button opens Month lock');
-    ok(...C.finish());
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
     const S2 = stand(), c2 = await open(S2, 'closingstock', RAVI);
@@ -287,7 +288,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     ok(/more than the tax owed/.test(await p.textContent('#pgp_out')), 'a slip of the finger is refused with the server\'s sentence');
     S.gstRefuse = true; await p.click('[data-testid="pg-close"]'); await p.waitForSelector('#pg_out [data-testid="pe-refused"]');
     ok(/close it once it has ended/.test(await p.textContent('#pg_out')) && await p.locator('[data-testid="pg-setoff"]').count() === 0, 'a month that has not ended is refused in plain words, and the old result is cleared');
-    S.gstRefuse = false; S.gst503 = true; await p.click('[data-testid="pg-close"]'); await p.waitForSelector('#pg_out [data-testid="pe-refused"]');
+    S.gstRefuse = false; S.gst503 = true; await p.click('[data-testid="pg-close"]'); await p.waitForFunction(() => /Starts after an update/.test((document.querySelector('#pg_out') || {}).textContent || ''), null, { timeout: 8000 }).catch(() => {});   /* the earlier refusal is still showing until the new answer lands */
     ok((await p.textContent('#pg_out [data-testid="pe-refused"]')).trim() === '⏳ Starts after an update' && !/internal detail/.test(await p.textContent('#bk_body')), 'a 503 is one calm line');
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
@@ -348,6 +349,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
 
   ok(offHost.filter((u) => !/fonts\.g/.test(u)).length === 0, 'nothing but the stand-in was reachable' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
+  ok(...C.finish());
   console.log('\n  period-end: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('  XX  the harness stopped: ' + e.message); process.exit(1); });

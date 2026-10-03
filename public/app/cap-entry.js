@@ -246,7 +246,7 @@ function enWords(list, code, dateStep) {
 }
 function enSeen(r) {
   r = r || {};
-  return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, currency: r.currency, narration: r.narration,
+  return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, narration: (EN.v && EN.v.narration) || '',   /* the API's preview echoes no note and no currency: the note is the one the person typed */
     lines: (r.lines || []).map(function (l) { return Object.assign({}, l, { name: l.ledger || l.name }); }),
     refusals: enWords(r.refusals, r.code), warnings: enWords(r.flags || r.warnings, null).map(function (w, i) { return Object.assign(w, { code: 'FLAG' + i }); }) };
 }

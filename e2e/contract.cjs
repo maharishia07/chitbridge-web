@@ -26,7 +26,7 @@ const routes = Object.keys(raw.routes || {});
 ok(routes.length > 30, 'the contract lists ' + routes.length + ' routes');
 ok(routes.every((k) => /^(GET|POST|PATCH|PUT|DELETE) \/api\/(books|crm)\//.test(k) && raw.routes[k].status > 0 && 'example' in raw.routes[k]), 'every entry is "METHOD /api/(books|crm)/…" with a status and an example');
 (raw._selftest || []).forEach((c, i) => {
-  const p = C.problems(c.example, c.actual, c.optional || []);
+  const p = C.problems(c.example, c.actual, c.optional || [], '', c.free || []);
   ok((p.length === 0) === c.conforms, 'selftest ' + (i + 1) + ': ' + c.name + (p.length ? ' [' + p[0] + ']' : ''));
 });
 ok((raw._selftest || []).length >= 8, 'the self-test has cases');

@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
@@ -82,14 +82,15 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
       const u = new URL(r.request().url()), p = u.pathname, m = r.request().method();
       let body = null; try { body = r.request().postDataJSON(); } catch (_) {} if (m !== 'GET') S.bodies.push({ m, p, body });
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-      if (p === '/api/books/health') return J(r, 200, { enabled: true, waiting: [] });
+      if (p === '/api/books/health') return J(r, 200, books.health());
       if (p === '/api/books/todo') return J(r, 200, []);
-      if (p === '/api/books/accounts') return J(r, 200, ACCOUNTS);
-      if (p === '/api/books/events' && m === 'GET') return J(r, 200, EVENTS);
-      if (p === '/api/books/ledger/1500') { S.ledgerCalls.push(u.search); return J(r, 200, { currency: 'INR', account: { code: '1500', name: 'Bank' }, from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: S.opening, lines: S.lines, closing_minor: closing(S) }); }
-      if (p === '/api/books/preview') return J(r, 200, { ok: true, kind: body.event, voucher: { series: 'MJ', type: 'Payment' }, date: body.date, balanced: true, totals: { dr_minor: body.amount_minor, cr_minor: body.amount_minor }, refusals: [], flags: [], currency: 'INR', narration: body.narration,
-        lines: [{ code: '6090', ledger: 'Bank charges', dr_minor: body.amount_minor, cr_minor: 0 }, { code: '1500', ledger: 'Bank', dr_minor: 0, cr_minor: body.amount_minor }] });
-      if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, { ok: true, entry_no: 'MJ/26-27/0030', entry_id: 'e30' }); }
+      if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.accounts.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', active: true }, a)) });
+      if (p === '/api/books/events' && m === 'GET') return J(r, 200, books.eventsAnswer(EVENTS));
+      if (p === '/api/books/ledger/1500') { S.ledgerCalls.push(u.search); return J(r, 200, books.ledger('1500', 'Bank', S.lines, { from: u.searchParams.get('from'), to: u.searchParams.get('to'), opening_minor: S.opening, closing_minor: closing(S) })); }
+      if (p === '/api/books/preview') return J(r, 200, { ok: true, kind: body.event, voucher: { series: 'MJ', type: 'Payment' }, date: body.date, balanced: true, totals: { dr_minor: body.amount_minor, cr_minor: body.amount_minor }, refusals: [], flags: [], credit: null, bill: null, code: null, duplicate: null,
+        lines: [{ code: '6090', ledger: 'Bank charges', dr_minor: body.amount_minor, cr_minor: 0, type: 'nominal', rule: 'Dr expenses and losses' }, { code: '1500', ledger: 'Bank', dr_minor: 0, cr_minor: body.amount_minor, type: 'real', rule: 'Cr what goes out' }] });
+      if (p === '/api/books/events' && m === 'POST') { S.lines.push({ date: body.date, what: body.narration, ref: 'MJ/26-27/0030', source: { how_ref: null }, dr_minor: 0, cr_minor: 2360 }); return J(r, 200, Object.assign({ kind: body.event }, books.posted({ entry_no: 'MJ/26-27/0030', entry_id: 'e30' }))); }
+      if (p === '/api/books/dues') return J(r, 200, books.dues([]));
       return J(r, 200, {});
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
@@ -148,7 +149,6 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   ok(await p.locator('[data-testid="brs-issued"] .pe-row').count() === 1 && await p.locator('[data-testid="brs-bankcr"] .pe-row').count() === 2 && await p.locator('[data-testid="brs-bankdr"] .pe-row').count() === 1, 'every reconciling item is named: 1 cheque not presented · 2 bank credits not in the books · 1 bank debit');
   ok(/Difference/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Difference'))), 'the difference is nothing');
   await p.screenshot({ path: path.join(SHOTS, 'bank-brs-laptop.png') });
-  ok(...C.finish());
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await ctx.close();
 
@@ -176,6 +176,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
 
   ok(offHost.filter((u) => !/fonts\.g/.test(u)).length === 0, 'nothing but the stand-in was reachable' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
+  ok(...C.finish());
   console.log('\n  bank-recon-page: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log('  XX  the harness stopped: ' + e.message); process.exit(1); });
