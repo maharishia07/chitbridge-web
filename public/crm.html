@@ -53,7 +53,7 @@ a{color:inherit}
 svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{display:flex;height:100vh;overflow:hidden;position:relative}
+.app{display:flex;height:calc(100vh - var(--cbk-h,0px));overflow:hidden;position:relative}   /* the kural footer (CBKural) is outside the head: it takes its height off the window */
 
 /* sidebar */
 .side{width:232px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid var(--line-side);display:flex;flex-direction:column;transition:width .2s ease}
@@ -317,6 +317,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 <script src="/app/one-person.js"></script>
 <script src="/app/cap-crm.js"></script>
 <script src="/app/cap-crm-record.js"></script>
+<script src="/app/kural.js"></script>   <!-- CBKural: the kural footer — one band at the foot, outside the head; never in a message -->
 <script>
 'use strict';
 /* ═══ CB CRM — the page: gate · chrome · router. The screens are cap-crm.js and cap-crm-record.js. ═════════════════ */
@@ -422,6 +423,7 @@ window.addEventListener('storage', (e) => {
 CBOnePerson.attach({ quiet: true, who: () => MINE, label: () => 'CB CRM',
   onLeave: (by) => { location.replace('/?left=' + encodeURIComponent(by || '')); },
   onWipe: () => { location.replace('/?cleaned=1'); } });
+if (window.CBKural) CBKural.mount();
 start();
 </script>
 </body>

@@ -12,7 +12,6 @@
   --f-display:'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
   --f-ui:'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
   --f-num:'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
-  --proto:#6B4FA0; --proto-t:#F1ECF8;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --page:#15140F; --card:#1E1C17; --panel:#26241D; --line:#3A372D; --line-soft:#322F27; --hair:#2A2721;
@@ -21,7 +20,7 @@
   --amber:#E8B04A; --amber-t:#33280F; --amber-b:#6B5320; --amber-i:#F2C977;
   --red:#E58561; --red-t:#3A1E14; --red-b:#6E3624; --red-i:#F2A688;
   --blue:#7AAEEB; --blue-t:#16263A; --blue-b:#2E4B70; --blue-i:#A9CBF3;
-  --shadow:0 10px 28px rgba(0,0,0,.5); --proto:#B9A2E3; --proto-t:#2A2238; color-scheme:dark }}
+  --shadow:0 10px 28px rgba(0,0,0,.5); color-scheme:dark }}
 :root[data-theme="dark"]{
   --page:#15140F; --card:#1E1C17; --panel:#26241D; --line:#3A372D; --line-soft:#322F27; --hair:#2A2721;
   --ink:#F1ECE0; --muted:#C2BBAA; --faint:#9A9383; --ghost:#7C7668;
@@ -29,7 +28,7 @@
   --amber:#E8B04A; --amber-t:#33280F; --amber-b:#6B5320; --amber-i:#F2C977;
   --red:#E58561; --red-t:#3A1E14; --red-b:#6E3624; --red-i:#F2A688;
   --blue:#7AAEEB; --blue-t:#16263A; --blue-b:#2E4B70; --blue-i:#A9CBF3;
-  --shadow:0 10px 28px rgba(0,0,0,.5); --proto:#B9A2E3; --proto-t:#2A2238; color-scheme:dark }
+  --shadow:0 10px 28px rgba(0,0,0,.5); color-scheme:dark }
 
 html,body{height:100%}
 body{background:var(--page);color:var(--ink);font:calc(15px * var(--k,1))/1.45 var(--f-ui);overflow:hidden}
@@ -39,18 +38,9 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 
-/* ── PROTOTYPE ONLY — DO NOT BUILD: the strip that switches examples and states ───────────────────────── */
-.proto{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:6px 16px;background:var(--proto-t);
-  border-bottom:1px dashed var(--proto);font-size:calc(12.5px * var(--k,1));color:var(--proto)}
-.proto b{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:calc(11px * var(--k,1))}
-.proto .grp{display:flex;gap:2px;flex-wrap:wrap}
-.proto button{border:1px solid transparent;background:none;border-radius:7px;padding:2px 8px;color:var(--proto)}
-.proto button[aria-pressed="true"]{border-color:var(--proto);background:var(--card);font-weight:600}
-.proto .meter{margin-inline-start:auto;font-family:var(--f-num)}
-.proto .meter.ok{color:var(--green)} .proto .meter.bad{color:var(--red)}
 
 /* ── THE SCREEN: head (3 rows) + rows that scroll ──────────────────────────────────────────────────── */
-.app{display:flex;flex-direction:column;height:calc(100% - var(--proto-h,0px));container-type:inline-size;container-name:screen}
+.app{display:flex;flex-direction:column;height:100%;container-type:inline-size;container-name:screen}
 /* Row 1 · title */
 .titlerow{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:10px 20px 8px;border-bottom:1px solid var(--line-soft);background:var(--page)}
 .titlerow h1{font:800 calc(24px * var(--k,1))/1.1 var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -220,7 +210,7 @@ button{cursor:pointer}
    ═════════════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* The page = the standard's screen, with a second pane (the ledger tree) beside the list. Rule 9: more panes, not denser. */
-.app{height:calc(100% - var(--proto-h,0px))}
+.app{height:100%}
 .body{flex:1;min-height:0;display:flex}
 .main{flex:1;min-width:0;display:flex;flex-direction:column}
 .main .tools{border-top:0}
@@ -272,7 +262,6 @@ button{cursor:pointer}
 
 /* this list fills its width with one flexible column, so it never spills sideways at its default columns */
 .list .grid{min-width:min-content}
-.proto[hidden]{display:none}
 /* list additions: the party-check marker and the opened entry's quiet facts line */
 .agreed{grid-column:1/-1;display:flex;gap:8px;align-items:center;padding:6px 12px 6px 38px;background:var(--green-t);color:var(--green);
   border-bottom:1px solid var(--green-b);font-size:calc(13px * var(--k,1));font-weight:600}

@@ -54,6 +54,21 @@ and My device), text size (Small 92% · Medium 100% · Large 115% · Extra large
 five reading fonts. A screen that draws its own list header or its own avatar fails the guards. A change to the frozen
 look is a new decision (DECISIONS.md), not a build choice.
 
+## 3b · The kural footer, `CBKural` (Athi's decision, 2026-10-03; part of the frozen look)
+Every CB page carries ONE band at the foot: `public/app/kural.js`, `window.CBKural`, mounted like `CBAvatar` (`CBKural.mount()`, then
+`CBKural.set(route)` as the screen changes). The kural of a page is its `route` in `docs/design/kural-kit/kurals.json`
+(`public/app/kurals.json` is its copy; `e2e/kural-footer.cjs` proves they are one). Rules, kept inside the unit so no page can forget one:
+- It is OUTSIDE the three-row head: it takes its height off the window (`--cbk-h`), so only the rows scroll and the head's 20% / 30% holds.
+- The original couplet and the ENGLISH translation (another language only from `meaning.<lang>`, else English). No Tamil prose meaning and no
+  transcription are shown — the `meaning.ta` slot stays empty.
+- By space: wide (> 1100 px) side by side · 641–1100 the meaning below the verse · a phone (≤ 640) the two take turns every 7 s, a tap switches;
+  with Less motion only a tap does. The verse is Noto Serif Tamil; a line breaks only at its middle.
+- ✕ puts it away until tomorrow; it returns as one small `குறள் N ›` line.
+- Never beside a warning (an amber or red chip, an alert, a bad card), never in a dialog, NEVER inside an outgoing customer message. 552 is never used.
+- Tokens only (`--panel`, `--hair`, `--line`, `--ink`, `--muted`, `--faint`); never amber (needs a hand), never blue (a link), no italic.
+`app.html` (the till-side app) does not mount it yet: its screens are repainted from one `#root` and its Messages composer sits beside the shell;
+each of its screens needs a route in `kurals.json` first.
+
 ## 4 · The checks (all must pass; a cloud session runs them and commits the output)
 - `node scripts/check-syntax.js` and `node scripts/check-app-parses.cjs` exit 0.
 - `node e2e/a11y-contrast.cjs <page>` — WCAG AA on every text/background pair.
