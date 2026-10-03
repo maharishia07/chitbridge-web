@@ -361,7 +361,7 @@ async function route(S, r) {
     await p.click('[data-testid="lg-acc-6010"]'); await p.waitForFunction(() => /Expense/.test((document.querySelector('[data-testid="stmt-what-0"]') || {}).textContent || ''), null, { timeout: 8000 });
     const rentWhat = (await p.textContent('[data-testid="stmt-what-0"]')).replace(/\s+/g, ' ').trim();
     ok(!/Expense · Expense/.test(rentWhat) && /^Expense C2\/26-27\/0003/.test(rentWhat) && rentWhat.split('Expense').length === 2, 'the kind word once: "' + rentWhat + '"');
-    ok(await noMinus('#lt_tree') && await noMinus('[data-testid="lg-sum"]') && await noMinus('#lg_out .lcell[data-l="Balance"]') && await noMinus('#lg_out .lcell[data-l="Amount"]'), 'no minus sign on the Ledgers view — balances and amounts are Dr / Cr');
+    ok(await noMinus('#lt_tree') && await noMinus('[data-testid="lg-sum"]') && !/[-−]\s?₹/.test(await p.textContent('#lg_out .cbl-list')) && await p.locator('[data-testid^="stmt-amt-"]').count() >= 1 && await noMinus('[data-testid^="stmt-amt-"]'), 'no minus sign on the Ledgers view — the tree, the figures line, the balances and every amount are Dr / Cr');
     ok(/Dr$/.test((await p.textContent('[data-testid="stmt-amt-0"]')).trim()), 'a row\'s amount is one figure with its side: "' + (await p.textContent('[data-testid="stmt-amt-0"]')).trim() + '"');
     const selBg = await p.evaluate(() => { const e = document.querySelector('#lt_tree .tn.on'); return e ? getComputedStyle(e).backgroundColor : ''; });
     ok(/rgba?\(|color\(/.test(selBg) && !/^rgb\(/.test(selBg), 'the chosen ledger is a light tint (translucent), not a solid block (' + selBg + ')');
@@ -418,6 +418,9 @@ async function route(S, r) {
     const one = await p.textContent('[data-testid="lg_out"]');
     ok(partyReads() === 1 && S.calls.some((c) => /\/party\/c1\/statement/.test(c)), 'clicking a party reads that one party\'s statement, once');
     ok(/C2\/26-27\/0016/.test(one) && !/0017/.test(one) && !/Chola/.test(one), 'only that party\'s bills');
+    await p.click('[data-testid="cols-btn-ledger-party"]'); await p.waitForSelector('[data-testid="cols-menu-ledger-party"]');
+    ok(await p.locator('[data-testid="cols-ledger-party-party"]').count() === 0 && await p.locator('[data-testid="cols-ledger-party-what"]').count() === 1, 'a party\'s ledger offers no Party column, not even in the gear');
+    await p.click('[data-testid="cols-btn-ledger-party"]');
     ok(await p.locator('#lg_out .lg-party').count() === 0 && ((await p.textContent('#lg_out .cbl-list')).match(/Ravi Stores/g) || []).length === 0 && JSON.stringify(await p.$$eval('#lg_out .cbl-hdr .cbl-hc', (h) => h.map((x) => x.textContent.replace(/[⇅▲▼]/g, '').trim()))) === JSON.stringify(['Date', 'Details', 'Balance', 'Amount']), 'on a party\'s own ledger there is NO Party column and the party is not repeated on any row (it is said once, in the title)');
     await p.click('[data-testid="stmt-row-0"] [role="button"]'); await p.waitForSelector('[data-testid="db-lines-JV/2026-27/000011"]', { timeout: 8000 });
     const own = await p.evaluate(() => { const n = document.querySelector('[data-testid="db-lines-JV/2026-27/000011"]'), l = document.querySelector('#lg_out .cbl-list'); return { t: n.textContent, nsw: n.scrollWidth, ncw: n.clientWidth, lsw: l.scrollWidth, lcw: l.clientWidth }; });
