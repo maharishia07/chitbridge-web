@@ -89,6 +89,13 @@ a.box,a.lab{text-decoration:none;cursor:pointer}
   background:var(--green);color:#fff;font-size:13.5px;font-weight:700}
 .box .swbtn[disabled]{opacity:.6;cursor:default}
 .box .ledact .f{margin-left:10px}
+/* the Standards door (2026-10-03): a box like the three above, outside Day to day; one live fact (the register's own counts), what it is, when it was checked, Read me */
+.box.door .doorn{display:flex;flex-wrap:wrap;gap:3px 14px;margin:15px 0 0;padding-top:13px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
+.box.door .go::before{content:"›"}
+.box.door .doorn .c-live::before{content:"● ";color:var(--green)} .box.door .doorn .c-part::before{content:"◐ ";color:var(--amber-i)} .box.door .doorn .c-plan::before{content:"○ "}   /* the symbol is drawn, not typed: the WORD carries the status (never colour alone) and the page stays under its word count */
+.box.door .doorn b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+.box.door .doorf{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+.box.door .doorf a{color:var(--blue-i);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
 /* the Active badge, and the lit tile: a green edge and a soft glow from the page's own tokens. Still when the reader asks for less motion. */
 .badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;background:var(--green-t);
   border:1px solid var(--green-b);color:var(--green-d);font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0}
@@ -213,6 +220,20 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
     </div>
   </div>
 
+  <!-- ⭐ THE STANDARDS DOOR (docs/design/standards-page): the whole box opens /standards.html; Read me opens its first sheet. The counts are the register's own
+       (cap-standards.js › stdCounts), painted below — never typed here; the box reads nothing from the API, so it is the same signed in or out. -->
+  <div class="main" data-testid="doors">
+    <div class="box door" id="box_std" data-testid="door-standards">
+      <a class="cover" href="/standards.html" data-testid="door-standards-link">
+        <span class="go" aria-hidden="true"></span>
+        <h3>Standards</h3>
+        <p class="what">The laws and standards we follow, and what is still missing.</p>
+      </a>
+      <p class="doorn" id="std_counts" data-testid="door-standards-counts" hidden></p>
+      <p class="doorf" id="std_foot" data-testid="door-standards-foot" hidden></p>
+    </div>
+  </div>
+
   <div class="foot">
     <a href="app.html#/app/settings" data-testid="foot-shop">Your shop</a>
     <a href="app.html#/app/settings" data-testid="foot-counters">Counters &amp; keys</a>
@@ -229,6 +250,8 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
 <script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar — signed out it is the Sign in door -->
 <script src="/app/one-person.js"></script>
 <script src="/app/accounts-shell.js"></script>   <!-- the Ledger's switch and its confirm: ONE copy, shared with accounts.html and the app's Settings card -->
+<script>function tx(s){ return s; }</script>   <!-- the one helper cap-standards.js asks its page for at load (this page is English); esc() is declared below -->
+<script src="/app/cap-standards.js"></script>   <!-- the register: the door's counts and the date it was checked are its own -->
 <script>
 'use strict';
 /* The page paints; it computes nothing a counter or another page also computes (SYSTEM rule 12). Every figure
@@ -470,6 +493,19 @@ function clearFacts(){
   ledgerState(null);
   CUR = 'INR';
 }
+
+/* THE STANDARDS DOOR: the register's own counts and its checked date. If the register did not load the box is left as a plain link — a number is never guessed. */
+(function(){
+  try{
+    if (typeof stdCounts !== 'function' || typeof STD_CHECKED === 'undefined') return;
+    var n = stdCounts();
+    var when = new Date(STD_CHECKED + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    var c = document.getElementById('std_counts'), f = document.getElementById('std_foot');
+    c.innerHTML = '<span class="c-live"><b>' + n.live + '</b> in force</span><span class="c-part"><b>' + n.part + '</b> partly</span><span class="c-plan"><b>' + n.plan + '</b> planned</span>';
+    f.innerHTML = '<span>Checked ' + esc(when) + '</span><a href="/standards.html?sheet=why" data-testid="door-standards-read">Read me</a>';
+    c.hidden = false; f.hidden = false;
+  }catch(_){}
+})();
 
 /* THE AVATAR is CBAvatar (app/avatar.js) — the same control as the app and CB Accounts; signed out it draws the Sign in door */
 function avatarPaint(){
