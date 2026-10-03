@@ -29,6 +29,20 @@ The kural is **context, not decoration**. It should feel like a quiet line of wi
 - Which kural comes from the API per record (`ledger.kural`), not from the page.
 - Reference build: ledgers-page-redesign.zip (README → "The kural footer").
 
+## 2b. CB CRM — one kural per page (group `crm` in kurals.json)
+| CRM page (route) | Kural | Idea |
+|---|---|---|
+| Parties list (`crm-parties`) | 120 | the same verse as Ledgers › People, so the two apps speak with one voice |
+| Party page & timeline (`crm-party`) | 783 | a relationship deepens with every visit |
+| Messages & dues reminders (`crm-messages`) | 100 | ask for the money, kindly |
+| Service & complaints (`crm-service`) | 788 | help comes at once |
+| Disputes (`crm-disputes`) | 108 | close the matter, keep the relationship |
+| Loyalty & offers (`crm-loyalty`) | 103 | goodwill without counting |
+| Leads & enquiries (`crm-leads`) | 94 | kind words at first contact |
+- Same footer, same rules as every CB page (section 2a): never in the head, never beside a warning, one per screen.
+- **Never inside an outgoing message.** The kural is for the shopkeeper on screen; a reminder sent to a customer carries no verse
+  unless the owner adds one himself. (A verse about kind words, pasted into a demand for money, reads as a lecture.)
+
 ## 3. Components to build
 | Component | Placement | Where | Notes |
 |---|---|---|---|
