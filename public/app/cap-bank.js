@@ -118,7 +118,9 @@ function bankBrs() {
 function bankPaint() {
   const res = bkbEl('bk_res'); if (!res) return;
   const P = BKB.parsed; if (!P) { res.innerHTML = ''; return; }
-  const warn = (P.warnings || []).length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(P.warnings.slice(0, 3).join(' · ')) + (P.warnings.length > 3 ? ' …' : '') + '</div>' : '';
+  /* the engine's note that a bank's format is not confirmed is for its builders: the shop is told what to do about it */
+  const ws = (P.warnings || []).map((w) => /verify against a real file/i.test(w) ? tx('Check the lines against your statement — this bank format is not confirmed yet.') : w);
+  const warn = ws.length ? '<div class="pe-warn" data-testid="bank-warn">⚠ ' + bkbE(ws.slice(0, 3).join(' · ')) + (ws.length > 3 ? ' …' : '') + '</div>' : '';
   res.innerHTML = warn + '<div class="tabs" role="tablist">' + [['lines', 'Lines'], ['brs', 'Statement']].map((t) => '<button type="button" class="pe-tab" role="tab" data-testid="bank-tab-' + t[0] + '" aria-pressed="' + (BKB.tab === t[0]) + '" onclick="BKB.tab=\'' + t[0] + '\';bankPaint()">' + bkbE(tx(t[1])) + '</button>').join('') + '</div>'
     + (BKB.tab === 'brs' ? '<div id="bk_brs" data-testid="bank-brs"></div>' : '<div id="bkl_bank" data-testid="bank-list"></div>');
   if (BKB.tab === 'brs') bankBrsPaint(); else bankList();

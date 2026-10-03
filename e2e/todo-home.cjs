@@ -24,6 +24,7 @@ const SEVERAL = [
   { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026. Lock each once its books are done, so nothing changes behind you.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } },
   { kind: 'closing_stock_missing', count: 1, words: 'No closing stock for September 2026 yet. Count the stock and enter its value, so profit is right.', action: { label: 'Enter closing stock', screen: 'closing-stock', call: 'POST /api/books/closing-stock' } },
   { kind: 'gst_due', count: 1, words: 'GST for September 2026 is still to pay, due by 20 Oct. Close the month, then pay by challan.', action: { label: 'Close GST', screen: 'gst', call: 'POST /api/books/gst/close' } },
+  { kind: 'gstr2b_missing', count: 2, words: '2 purchase bills are missing from GSTR-2B. Review them before you file.', action: { label: 'Review', screen: '2b-match', call: 'GET /api/books/2b' } },
   { kind: 'recurring_due', count: 1, words: '1 repeating entry is due: Rent. Accept each to post it, or skip it.', action: { label: 'Review', screen: 'recurring', call: 'POST /api/books/recurring/:id/post' } },
 ];
 
@@ -91,6 +92,10 @@ const SEVERAL = [
     ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'Month lock', '"Lock the months" opens Month lock');
     await p.click('[data-testid="acc-nav-todo"]'); await p.waitForSelector('[data-testid="todo-list"]');
     await p.click('[data-testid="todo-go-gst_due"]');
+    await p.waitForFunction(() => document.querySelector('.nav-btn.active').getAttribute('aria-label') === 'GST close & pay', null, { timeout: 5000 }).catch(() => {});
+    ok(await p.evaluate(() => document.querySelector('.nav-btn.active').getAttribute('aria-label')) === 'GST close & pay', '"Close GST" opens GST close & pay (a page now)');
+    await p.click('[data-testid="acc-nav-todo"]'); await p.waitForSelector('[data-testid="todo-list"]');
+    await p.click('[data-testid="todo-go-gstr2b_missing"]');
     await p.waitForSelector('#toast .toast', { timeout: 3000 }).catch(() => {});
     ok(/starts after an update/i.test(await p.textContent('#toast').catch(() => '')) && await p.locator('[data-testid="todo-list"]').count() === 1, 'a screen with no page yet says it starts after an update and stays on To do');
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
