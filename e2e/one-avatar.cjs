@@ -15,6 +15,7 @@
  *   7  Sign out on one page signs out the others (index, CB Accounts, the app)
  *   8  the person's appearance syncs: a choice is PATCHed to /api/entities/me/prefs/ui, and a fresh device is dressed from /me
  *   9  390 px: no sideways scroll, menu open or shut, and the menu stays inside the screen
+ *  11  a short window (1280×800, 390×700): the menu bottom is inside the window and every font row is reachable
  *  10  static: no second avatar builder anywhere; every page that reads cb_sess loads avatar.js
  * Screenshots: e2e/shots/one-avatar-{app,accounts,index}-{laptop,phone}.png · one-avatar-menu-open.png · one-avatar-terminal.png
  * Run one at a time:  NODE_PATH=e2e/node_modules node e2e/one-avatar.cjs
@@ -41,7 +42,7 @@ const PAGES = [
   { id: 'list-lab', hash: '/list-lab.html', testid: 'avatar', ready: '[data-testid="avatar"]' },
 ];
 
-/** run(site, { groups }) → { pass, fail, lines }. groups: static · present · theme · size · sync · signout · phone (default all) */
+/** run(site, { groups }) → { pass, fail, lines }. groups: static · present · theme · size · sync · signout · phone · short (default all) */
 async function run(site, o) {
   o = o || {};
   const want = (g) => !o.groups || o.groups.includes(g);
@@ -67,7 +68,7 @@ async function run(site, o) {
     const noThemes = files.filter((f) => /\.html$/.test(f) && /app\/avatar\.js/.test(fs.readFileSync(f, 'utf8')) && !/engine\/screen\.js/.test(fs.readFileSync(f, 'utf8'))).map(rel);
     ok(noThemes.length === 0, 'static · every page that loads avatar.js loads the engine themes (engine/screen.js) first' + (noThemes.length ? ' — missing on: ' + noThemes.join(', ') : ''));
   }
-  if (!['present', 'theme', 'size', 'sync', 'signout', 'phone'].some(want)) return out;
+  if (!['present', 'theme', 'size', 'sync', 'signout', 'phone', 'short'].some(want)) return out;
 
   const S = standIn(), web = await serve(site), b = await chromium.launch(), errs = [];
   S.ui = {}; S.patches = [];
@@ -265,10 +266,35 @@ async function run(site, o) {
       }
     }
 
+    /* ── 11 · a SHORT window: the menu fits, or scrolls itself; no row is ever cut ── */
+    if (want('short')) {
+      for (const [vw, vh] of [[1280, 800], [390, 700]]) {
+        for (const pg of PAGES.filter(inScope)) {
+          const ctx = await profile(vw, vh), p = await open(ctx, pg);
+          await openMenu(p, pg); await p.waitForTimeout(150);
+          const m = await p.evaluate(() => {
+            const pop = document.querySelector('[data-testid="avatar-menu"]'), r = pop.getBoundingClientRect();
+            const rows = [...pop.querySelectorAll('[data-av-font]')], last = rows[rows.length - 1];
+            const out = { sh: pop.scrollHeight, ch: pop.clientHeight, bottom: r.bottom, ih: innerHeight, fits: pop.scrollHeight <= pop.clientHeight + 1, n: rows.length, ov: getComputedStyle(pop).overflowY };
+            last.scrollIntoView({ block: 'nearest' });
+            const lr = last.getBoundingClientRect(), pr = pop.getBoundingClientRect();
+            out.lastIn = lr.top >= pr.top - 1 && lr.bottom <= pr.bottom + 1 && lr.bottom <= innerHeight + 1;
+            const so = pop.querySelector('[data-av="signout"]'); if (so) { so.scrollIntoView({ block: 'nearest' }); const q = so.getBoundingClientRect(); out.soIn = q.bottom <= innerHeight + 1 && q.bottom <= pop.getBoundingClientRect().bottom + 1; }
+            return out;
+          });
+          ok(m.bottom <= m.ih + 0.5, pg.id + ' · ' + vw + '×' + vh + ': the menu bottom ' + Math.round(m.bottom) + ' ≤ the window ' + m.ih);
+          ok(m.n >= 5 && m.lastIn, pg.id + ' · ' + vw + '×' + vh + ': every one of the ' + m.n + ' font rows is reachable');
+          ok(m.soIn !== false, pg.id + ' · ' + vw + '×' + vh + ': Sign out is reachable');
+          if (vw >= 1000) ok(m.fits, pg.id + ' · ' + vw + '×' + vh + ': nothing is hidden at all — no inner scroll needed (' + m.sh + ' of ' + m.ch + ')');
+          await ctx.close();
+        }
+      }
+    }
+
     /* ── pictures: the page with its avatar, laptop and phone; the open menu; Terminal ── */
     if (want('present') && !o.noShots) {
       fs.mkdirSync(SHOTS, { recursive: true });
-      for (const [dev, vw, vh] of [['laptop', 1366, 800], ['phone', 390, 844]]) {
+      for (const [dev, vw, vh] of [['laptop', 1280, 800], ['phone', 390, 844]]) {
         for (const pg of PAGES.slice(0, 3)) {
           const ctx = await profile(vw, vh), p = await open(ctx, pg);
           await p.waitForTimeout(400);
