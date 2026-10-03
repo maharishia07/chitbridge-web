@@ -26,7 +26,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 
 /* ── the stand-in: one shop's day, one figure per source ───────────────────────────────────────────────────── */
 function standIn() {
@@ -49,7 +50,7 @@ function standIn() {
     combos: [{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }],
     drafts: [{ definition_id: 'd1', status: 'draft' }],
     booksOn: true,
-    health: { enabled: true, last_posted_day: '2026-09-26', waiting: [] },
+    health: { enabled: true, last_check: { at: '2026-09-26T02:00:00.000Z', ok: true, problems: [], posted: {}, engines: {} }, waiting: [] },   /* what /health really sends: the check's time, no posted-to day */
     accounts: [
       { code: '1300', name: 'Debtors', is_group: false }, { code: '1300-P00001', name: 'Ravi Stores', is_group: false },
       { code: '2100', name: 'Creditors', is_group: false }, { code: '2100-P00003', name: 'Agro Mills', is_group: false },
@@ -70,10 +71,10 @@ function route(S, r) {
   if (p === '/api/combo-templates') return J(r, 200, { templates: S.combos });
   if (p === '/api/definitions') return J(r, 200, { definitions: S.drafts });
   if (p.startsWith('/api/books')) {
-    if (p === '/api/books/enable' && r.request().method() === 'POST') { S.enables = (S.enables || 0) + 1; S.booksOn = true; return J(r, 200, { ok: true }); }
+    if (p === '/api/books/enable' && r.request().method() === 'POST') { S.enables = (S.enables || 0) + 1; S.booksOn = true; return J(r, 200, books.enable()); }
     if (!S.booksOn) return J(r, 404, { error: 'Not found' });
-    if (p === '/api/books/health') return J(r, 200, S.health);
-    if (p === '/api/books/accounts') return J(r, 200, { accounts: S.accounts });
+    if (p === '/api/books/health') return J(r, 200, S.health && S.health.enabled ? books.health(Object.assign({}, S.health, { waiting: (S.health.waiting || []).map((w) => books.waitingRow(w)) })) : S.health);
+    if (p === '/api/books/accounts') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
   }
   if (r.request().method() === 'GET') return J(r, 200, {});
   return J(r, 200, { ok: true });
@@ -163,7 +164,7 @@ function route(S, r) {
     const cat = await p.textContent('#f_cat');
     ok(/112/.test(cat) && /7/.test(cat), 'Catalogue: 112 products · 7 shelves');
     const bk = await p.textContent('#f_bk');
-    ok(/Ledger up to/.test(bk) && /26 Sep/.test(bk), 'Ledger: up to 26 Sep (' + bk.replace(/\s+/g, ' ').trim() + ')');
+    ok(/Ledger checked/.test(bk) && /26 Sep/.test(bk), 'Ledger: checked 26 Sep - the only date /health sends is last_check.at (' + bk.replace(/\s+/g, ' ').trim() + ')');
     ok(/1 draft waiting/.test(await p.textContent('#st_offer')), 'Offer Lab: 1 draft waiting');
     await p.waitForFunction(() => ((document.getElementById('st_combo') || {}).textContent || '').length > 0, null, { timeout: 8000 }).catch(() => {});
     ok(/3 combos · 10 modifiers/.test(await p.textContent('#st_combo')), 'Combo Lab: 3 combos · 10 modifiers');
@@ -283,7 +284,7 @@ function route(S, r) {
     await settle(p);
     ok(S.enables === 1, 'confirming sent POST /api/books/enable exactly once (' + S.enables + ')');
     ok(await p.locator('[data-testid="ledger-switch-on"]').count() === 0 && await p.evaluate(() => document.getElementById('box_bk').classList.contains('lit')), 'switched on → Active, lit, and the button is gone');
-    ok(/Ledger up to/.test(await p.textContent('#f_bk')), 'and its facts arrive');
+    ok(/Ledger checked/.test(await p.textContent('#f_bk')), 'and its facts arrive');
     await ctx.close();
   }
   {
@@ -330,6 +331,7 @@ function route(S, r) {
   }
 
   const mine = threw.filter((m) => !/fonts|favicon/i.test(m));
+  ok(...C.finish());
   ok(mine.length === 0, 'no page error' + (mine.length ? ' — ' + mine.slice(0, 3).join(' | ').slice(0, 300) : ''));
   await b.close(); srv.close();
   console.log('\n  index-page: ' + pass + ' passed, ' + fail + ' failed');

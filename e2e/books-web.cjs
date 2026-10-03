@@ -77,7 +77,8 @@ function standIn() {
 /* BOOKS_SHOTS=<dir> keeps a picture of each screen to LOOK at (not a golden file; nothing compares them) */
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 const shot = async (p, name) => { if (process.env.BOOKS_SHOTS) await p.screenshot({ path: path.join(process.env.BOOKS_SHOTS, name + '.png') }).catch(() => {}); };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
 const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
 /* "today" the way the page computes it (bkToday: toISOString) — the strip reads the range's last day */
@@ -89,10 +90,10 @@ async function route(S, r) {
   if (p.startsWith('/api/books')) {
     /* routes/books.js: only GET /status and POST /enable (the owner's switch) answer while off */
     if (p === '/api/books/status' && m === 'GET') return J(r, 200, { migrated: true, enabled: !!S.enabled, walkin_grain: S.enabled ? 'day' : null });
-    if (p === '/api/books/enable' && m === 'POST') { S.enables = (S.enables || 0) + 1; S.enabled = true; return J(r, 200, { ok: true, accounts_added: 80, fiscal_year: '2026-27', parties_numbered: 3 }); }
+    if (p === '/api/books/enable' && m === 'POST') { S.enables = (S.enables || 0) + 1; S.enabled = true; return J(r, 200, books.enable({ parties_numbered: 3 })); }
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
     let x;
-    if (p === '/api/books/health') return J(r, 200, { enabled: true, last_check: { ok: true }, waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since, job: 'chit' })) });   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
+    if (p === '/api/books/health') return J(r, 200, books.health({ last_check: { ok: true }, waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) }));   /* routes/books.js GET /health: the sentence is `reason`; cheques are NOT here */
     if (p === '/api/books/cheques' && m === 'GET') { S.chequeLists++; /* 2026-10-02: a cheque recorded in the APP is held on the server too, and CB Accounts (a fresh page, no session memory) lists it from there */
     const held = Object.keys(S.payments).filter((k) => S.payments[k].mode === 'cheque' && !S.chequeSteps.some((x) => x.id === k && x.body.status === 'cleared')).map((k) => ({ payment_id: k, party_id: S.payments[k].party_id, name: 'Ravi Stores', amount_minor: Math.round(Number(S.payments[k].amount || 0) * 100), cheque_no: S.payments[k].cheque_no, cheque_bank: S.payments[k].cheque_bank, status: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? 'cheque_deposited' : 'cheque_received', next: S.chequeSteps.some((x) => x.id === k && x.body.status === 'deposited') ? ['cleared'] : ['deposited'] }));
       return J(r, 200, { currency: 'INR', cheques: held.concat(S.serverCheques.map((c) => Object.assign({ next: ['deposited'] }, c))) }); }   /* GET /cheques: the held ones, each with the steps the engine accepts now */
@@ -102,8 +103,8 @@ async function route(S, r) {
       if (S.refuseCheque) return J(r, 422, { error: 'A cleared cheque cannot be bounced here.' });
       return J(r, 200, { ok: true });
     }
-    if (p === '/api/books/dues') return J(r, 200, S.dues());
-    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, S.statement(x[1]));
+    if (p === '/api/books/dues') { const d = S.dues(); return J(r, 200, books.dues(d.parties, { asOf: d.as_of })); }
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const st = S.statement(x[1]); return J(r, 200, books.statement(x[1], { opening_minor: st.opening_minor, closing_minor: st.closing_minor, lines: st.lines })); }
     if (p === '/api/books/payments' && m === 'POST') {
       S.payPosts.push(body);                                  /* every POST that ARRIVED, a repeat included */
       const per = (new Date(body.received_at).getMonth() + 9) % 12 + 1;
@@ -129,11 +130,11 @@ async function route(S, r) {
       S.receipts[pay.party_id].push({ date: '2026-09-29', ref: pay.reference || x[1], amount: pay.amount_minor });
       return J(r, 200, { ok: true });
     }
-    if (p === '/api/books/trial-balance' && S.tbOff) return J(r, 200, { currency: 'INR', rows: [{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }], total_dr_minor: 600000, total_cr_minor: 599999 });
-    if (p === '/api/books/trial-balance') return J(r, 200, { currency: 'INR', rows: [{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 508475 }, { code: '2201', name: 'Output GST', dr_minor: 0, cr_minor: 91525 }], total_dr_minor: 600000, total_cr_minor: 600000 });
+    if (p === '/api/books/trial-balance' && S.tbOff) return J(r, 200, books.trialBalance([{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }], { total_dr_minor: 600000, total_cr_minor: 599999, balanced: false }));
+    if (p === '/api/books/trial-balance') return J(r, 200, books.trialBalance([{ code: '1300', name: 'Debtors', dr_minor: 600000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 508475 }, { code: '2201', name: 'Output GST', dr_minor: 0, cr_minor: 91525 }]));
     /* ⭐ each entry carries `source` (routes/books.js sourceOf, 2026-10-01): a bill names its number, counter and seller; a
        walk-in day its count; an entry with no chit has source null */
-    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: [
+    if (p === '/api/books/daybook') return J(r, 200, books.daybook([
       { entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: '2026-07-02', doc_date: '2026-07-02', event_type: 'sale_bill', source_chit_id: 'ch1', narration: 'Sale',
         source: { chit_id: 'ch1', ref: 'C2/26-27/0002', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'On credit', how_ref: null, split: null,
           doc_at: '2026-07-02T08:42:00.000Z', recorded_at: '2026-07-02T08:42:05.000Z' },
@@ -164,21 +165,21 @@ async function route(S, r) {
       { entry_id: 'e7', entry_no: 'JV/2026-27/000007', posting_date: TODAY, doc_date: TODAY, event_type: 'sale_bill', source_chit_id: 'ch71', narration: 'Sale',
         source: { chit_id: 'ch71', ref: 'C2/26-27/0045', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'UPI', how_ref: '9988776655443322', split: null,
           doc_at: TODAY + 'T06:20:00.000Z', recorded_at: TODAY + 'T06:20:03.000Z' },
-        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 690900, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 690900 }] }]) });
-    if (p === '/api/books/ledger/1300') return J(r, 200, { account: { code: '1300', name: 'Debtors' }, currency: 'INR', opening_minor: 0, closing_minor: 250000, lines: [
+        lines: [{ code: '1510', name: 'UPI collections', dr_minor: 690900, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 690900 }] }]).map(books.entry)));
+    if (p === '/api/books/ledger/1300') return J(r, 200, books.ledger('1300', 'Debtors', [
       { date: '2026-07-02', doc_date: '2026-07-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: 'ch1', source: { chit_id: 'ch1', ref: 'C2/26-27/0002', kind: 'bill', counter: 'C2', by: 'Athi', count: null, how: 'On credit', how_ref: null, split: null,
         doc_at: '2026-07-02T08:42:00.000Z', recorded_at: '2026-10-01T05:00:00.000Z' }, dr_minor: 300000, cr_minor: 0, running_minor: 300000 },
-      { date: '2026-07-03', what: 'Payment received', ref: 'JV/2026-27/000003', source_chit_id: null, source: null, dr_minor: 0, cr_minor: 50000, running_minor: 250000 }] });
-    if (p === '/api/books/pl') return J(r, 200, { currency: 'INR', income: [{ code: '4000', name: 'Sales', amount_minor: 508475 }], expense: [{ code: '6010', name: 'Rent', amount_minor: 100000 }], profit_minor: 408475 });
-    if (p === '/api/books/bs') return J(r, 200, { currency: 'INR', assets: [{ code: '1300', name: 'Debtors', amount_minor: 600000 }], liabilities: [{ code: '2201', name: 'Output GST', amount_minor: 91525 }], equity: [{ code: '3900', name: 'Profit', amount_minor: 508475 }], total_assets_minor: 600000, total_liab_equity_minor: 600000 });
-    if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
+      { date: '2026-07-03', what: 'Payment received', ref: 'JV/2026-27/000003', source_chit_id: null, source: null, dr_minor: 0, cr_minor: 50000, running_minor: 250000 }], { closing_minor: 250000 }));
+    if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 508475 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 408475 }));
+    if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [{ code: '2201', name: 'Output GST', amount_minor: 91525 }], [{ code: '3900', name: 'Profit', amount_minor: 508475 }], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
+    if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
     if (p === '/api/books/accounts' && m === 'POST') { const a = { code: '6011', name: body.name, parent_code: body.parent_code, is_group: false }; S.accounts.push(a); S.addedAccount = body; return J(r, 200, { account: a }); }
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: x[1], currency: 'INR', opening_minor: 0, lines: [], closing_minor: 0 });
-    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, { periods: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ fiscal_year: FYNOW, period: n, status: S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open' })) });
+    if (p === '/api/books/periods' && m === 'GET') return J(r, 200, books.periods([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => books.periodRow(FYNOW, n, S.hard && S.hard[n] ? 'hard_locked' : S.locked[n] ? 'soft_locked' : 'open'))));
     if ((x = p.match(/^\/api\/books\/periods\/([^/]+)\/(\d+)\/(lock|unlock)$/))) {
       if (x[3] === 'unlock' && !String(body.reason || '').trim()) return J(r, 422, { error: 'A reason is needed' });
       S.locked[+x[2]] = x[3] === 'lock'; S.hard = S.hard || {}; S.hard[+x[2]] = x[3] === 'lock' && !!body.hard; S.lastLock = { fy: x[1], p: +x[2], what: x[3], body };
-      return J(r, 200, { period: { status: x[3] === 'lock' ? (body.hard ? 'hard_locked' : 'soft_locked') : 'open' } });
+      return J(r, 200, books.lockAnswer(x[1], +x[2], x[3] === 'lock' ? (body.hard ? 'hard_locked' : 'soft_locked') : 'open'));
     }
     /* ⚠️ a pack row says whether it HAS a file (has_file); `hide` = an older list that does not say, so GET /packs/:id is asked */
     if (p === '/api/books/packs' && m === 'GET') return J(r, 200, { packs: S.packs.map((k) => { const o = Object.assign({}, k); delete o.hide; if (k.hide) delete o.has_file; return o; }) });
@@ -989,6 +990,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   }
 
   const mine = threw.filter((m) => /bk|party|pay|books|ledger/i.test(m));
+  ok(...C.finish());
   ok(mine.length === 0, 'no page error from the Ledger code' + (mine.length ? ' — ' + mine.join(' | ') : ''));
   if (threw.length) console.log('  (other page errors, not the Ledger: ' + threw.length + ' — ' + threw.slice(0, 3).join(' | ').slice(0, 300) + ')');
   await ctx.close(); await b.close(); srv.close();

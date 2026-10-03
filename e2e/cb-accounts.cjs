@@ -24,7 +24,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 
@@ -42,21 +43,21 @@ const VIEWS = [
 ];
 
 /* the control accounts' own statements: every line carries its party_id; the cashier (`by`) is the owner, never the party */
-const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', narration: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
-  source: { kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by } });
+const LINE = (id, date, no, party, dr, cr, run, kind, by) => ({ date, what: kind === 'purchase' ? 'Purchase' : 'Sale', ref: null, party_id: party, source_chit_id: id, dr_minor: dr, cr_minor: cr, running_minor: run,
+  source: books.source({ kind: kind || 'bill', ref: no, chit_id: id, how: kind === 'purchase' ? null : 'On credit', counter: kind === 'purchase' ? null : 'C2', by }) });
 const L1 = LINE('k1', '2026-09-05', 'C2/26-27/0016', 'c1', 300000, 0, 300000, 'bill', 'Mayur Bhavan');
 const L2 = LINE('k2', '2026-09-06', 'C2/26-27/0017', 'c2', 300000, 0, 600000, 'bill', 'Mayur Bhavan');
 const P1 = LINE('k3', '2026-09-03', 'AM-81', 's1', 0, 150000, -150000, 'purchase', 'Ravi');
 const P2 = LINE('k4', '2026-09-04', 'KV-12', 's2', 0, 100000, -250000, 'purchase', 'Ravi');
 const CONTROL = {
-  '1300': { account: { code: '1300', name: 'Customers (Sundry Debtors)' }, currency: 'INR', opening_minor: 0, closing_minor: 600000, lines: [L1, L2] },
-  '2100': { account: { code: '2100', name: 'Suppliers (Sundry Creditors)' }, currency: 'INR', opening_minor: 0, closing_minor: -250000, lines: [P1, P2] },
+  '1300': books.ledger('1300', 'Customers (Sundry Debtors)', [L1, L2], { closing_minor: 600000 }),
+  '2100': books.ledger('2100', 'Suppliers (Sundry Creditors)', [P1, P2], { closing_minor: -250000 }),
 };
 /* the journal behind a sale: its Dr/Cr lines, each tax and sales line carrying its rate the way the frozen invoice holds it */
-const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, narration: 'Sale',
-  source: { kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' },
-  lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0 }, { code: '4000', name: 'Sales', rate: 12, dr_minor: 0, cr_minor: 267857 },
-    { code: '2200', name: 'Output CGST', rate: 6, dr_minor: 0, cr_minor: 16072 }, { code: '2201', name: 'Output SGST', rate: 6, dr_minor: 0, cr_minor: 16071 }] }));
+const JOURNAL = [['k1', '2026-09-05', 'C2/26-27/0016', 'c1', 'Ravi Stores', 11], ['k2', '2026-09-06', 'C2/26-27/0017', 'c2', 'Chola Auto Care', 12]].map(([id, d, no, pid, pname, n]) => ({ entry_id: 'je' + n, entry_no: 'JV/2026-27/0000' + n, posting_date: d, doc_date: d, event_type: 'sale_bill', source_chit_id: id, reverses_entry_id: null, narration: 'Sale',
+  source: books.source({ kind: 'bill', ref: no, chit_id: id, how: 'On credit', counter: 'C2', by: 'Mayur Bhavan' }),
+  lines: [{ code: '1300', name: 'Customers (Sundry Debtors)', party_id: pid, party_name: pname, dr_minor: 300000, cr_minor: 0, counter: 'C2', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, rate: 12, dr_minor: 0, cr_minor: 267857, counter: 'C2' },
+    { code: '2200', name: 'Output CGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16072, counter: 'C2' }, { code: '2201', name: 'Output SGST', party_id: null, party_name: null, rate: 6, dr_minor: 0, cr_minor: 16071, counter: 'C2' }] }));
 const PARTY_LINES = { c1: [Object.assign({}, L1, { running_minor: 300000 })], c2: [Object.assign({}, L2, { running_minor: 300000 })], s1: [P1], s2: [Object.assign({}, P2, { running_minor: -100000 })] };
 
 /* ── the stand-in: one shop's chart, its trial balance, its two bills folders ───────────────────────────────── */
@@ -109,32 +110,30 @@ async function route(S, r) {
   let x;
   if ((x = p.match(/^\/api\/folders\/([^/]+)\/chits$/))) return J(r, 200, { chits: S.bills[x[1]] || [] });
   if (p.startsWith('/api/books')) {
-    if (p === '/api/books/enable' && m === 'POST') { S.enables++; S.enabled = true; return J(r, 200, { ok: true, accounts_added: 80 }); }
+    if (p === '/api/books/enable' && m === 'POST') { S.enables++; S.enabled = true; return J(r, 200, books.enable()); }
     if (!S.enabled) return J(r, 404, { error: 'Not found' });
-    if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, { enabled: true, last_posted_day: '2026-09-26', waiting: S.waiting.map((w) => ({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) }); }
-    if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts });
-    if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, { currency: 'INR', rows: S.tb, total_dr_minor: 1940000, total_cr_minor: 1840000 }); }
-    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, { currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl }); }
-    if (p === '/api/books/ledger/6010') return J(r, 200, { account: { code: '6010', name: 'Rent' }, currency: 'INR', opening_minor: 0, closing_minor: 100000,
-      lines: [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }] });
+    if (p === '/api/books/health') { if (S.healthStatus) return J(r, S.healthStatus, { error: 'down' }); return J(r, 200, books.health({ waiting: S.waiting.map((w) => books.waitingRow({ id: w.id, chit_id: w.chit_id, ref: w.ref, reason: w.why, tries: w.tries, since: w.since })) })); }
+    if (p === '/api/books/accounts' && m === 'GET') return J(r, 200, { accounts: S.accounts.map((a) => books.accountRow(Object.assign({ account_id: 'acc-' + a.code }, a))) });
+    if (p === '/api/books/trial-balance') { S.last = u.searchParams.get('asOf'); return J(r, 200, books.trialBalance(S.tb, { total_dr_minor: 1940000, total_cr_minor: 1840000, balanced: false })); }
+    if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) { const pl = PARTY_LINES[x[1]] || []; return J(r, 200, books.statement(x[1], { opening_minor: 0, closing_minor: pl.length ? pl[pl.length - 1].running_minor : 0, lines: pl.map((l) => ({ date: l.date, what: l.what, ref: l.ref, source_chit_id: l.source_chit_id, source: l.source, dr_minor: l.dr_minor, cr_minor: l.cr_minor, running_minor: l.running_minor })) })); }
+    if (p === '/api/books/ledger/6010') return J(r, 200, books.ledger('6010', 'Rent', [{ date: '2026-09-03', what: 'Expense', ref: 'JV/2026-27/000005', source_chit_id: 'x1', source: { kind: 'expense', ref: 'C2/26-27/0003', chit_id: 'x1' }, dr_minor: 100000, cr_minor: 0, running_minor: 100000 }], { closing_minor: 100000 }));
     if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/)) && CONTROL[x[1]]) return J(r, 200, Object.assign({}, CONTROL[x[1]], S.closing && S.closing[x[1]] != null ? { closing_minor: S.closing[x[1]] } : {}));
-    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, { account: { code: x[1], name: 'Cash' }, currency: 'INR', opening_minor: 0, closing_minor: 1240000,
-      lines: [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }] });
-    if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, event_type: 'walkin_day', source_chit_id: null, narration: 'Walk-in sales',
-      source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] }]) });
-    if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, S.todo || [
+    if ((x = p.match(/^\/api\/books\/ledger\/([^/]+)$/))) return J(r, 200, books.ledger(x[1], 'Cash', [{ date: '2026-09-02', what: 'Sale', ref: 'JV/2026-27/000001', source_chit_id: null, source: null, dr_minor: 1240000, cr_minor: 0, running_minor: 1240000 }], { closing_minor: 1240000 }));
+    if (p === '/api/books/daybook') return J(r, 200, books.daybook(JOURNAL.concat([{ entry_id: 'e1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales',
+      source: books.source({ kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }), lines: [{ code: '1400', name: 'Cash', party_id: null, party_name: null, dr_minor: 124000, cr_minor: 0, counter: 'C1', rate: null }, { code: '4000', name: 'Sales', party_id: null, party_name: null, dr_minor: 0, cr_minor: 124000, counter: 'C1', rate: null }] }])));
+    if (p === '/api/books/todo') return S.todoStatus ? J(r, S.todoStatus, { error: 'down' }) : J(r, 200, (S.todo || [
       { kind: 'bills_to_accept', count: 1, words: '1 supplier bill is waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
-      { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]);
-    if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [
+      { kind: 'months_not_locked', count: 2, words: '2 months are over but still open: August 2026, September 2026.', action: { label: 'Lock the months', screen: 'periods', call: 'POST /api/books/periods/:fy/:period/lock' } }]).map(books.todoRow));
+    if (p === '/api/books/dues') return J(r, 200, books.dues([
       { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 'c2', party_no: 'P-00002', name: 'Chola Auto Care', side: 'customer', balance_minor: 300000, oldest_due: '2026-09-06', disputed_minor: 0, buckets: { not_due: 0, lt_6m: 300000 } },
       { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } },
-      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }] });
+      { party_id: 's2', party_no: 'P-00004', name: 'Kavi Traders', side: 'supplier', balance_minor: -100000, oldest_due: '2026-09-04', disputed_minor: 0, buckets: { not_due: -100000 } }], { asOf: TODAY }));
     if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [{ payment_id: 'chq9', party_id: 'c2', name: 'Meena Traders', amount_minor: 50000, cheque_no: '778899', cheque_bank: 'SBI', status: 'cheque_received', next: ['deposited'] }] });
-    if (p === '/api/books/pl') return J(r, 200, { currency: 'INR', income: [{ code: '4000', name: 'Sales', amount_minor: 1590000 }], expense: [{ code: '6010', name: 'Rent', amount_minor: 100000 }], profit_minor: 1490000 });
-    if (p === '/api/books/bs') return J(r, 200, { currency: 'INR', assets: [{ code: '1300', name: 'Debtors', amount_minor: 600000 }], liabilities: [], equity: [], total_assets_minor: 600000, total_liab_equity_minor: 600000 });
+    if (p === '/api/books/pl') return J(r, 200, books.pl([{ code: '4000', name: 'Sales', amount_minor: 1590000 }], [{ code: '6010', name: 'Rent', amount_minor: 100000 }], { profit_minor: 1490000 }));
+    if (p === '/api/books/bs') return J(r, 200, books.bs([{ code: '1300', name: 'Debtors', amount_minor: 600000 }], [], [], { total_assets_minor: 600000, total_liab_equity_minor: 600000, balanced: true }));
     if (p === '/api/books/packs') return J(r, 200, { packs: [] });
-    if (p === '/api/books/periods') return J(r, 200, { periods: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => ({ fiscal_year: FYNOW, period: n, status: n === 5 ? 'soft_locked' : 'open' })) });
+    if (p === '/api/books/periods') return J(r, 200, books.periods([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => books.periodRow(FYNOW, n, n === 5 ? 'soft_locked' : 'open'))));
     return J(r, 404, { error: 'no stand-in for ' + p });
   }
   if (m === 'GET') return J(r, 200, {});
@@ -583,6 +582,7 @@ async function route(S, r) {
   }
 
   /* ── no page error, nothing left the machine ── */
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error from CB Accounts' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.filter((u) => !/fonts\.g|cdnjs\.cloudflare\.com\/ajax\/libs\/qrcode-generator/.test(u)).length === 0, 'nothing but the stand-in was reachable (the fonts and the QR script of the app page that Sign out opens, are refused)' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
