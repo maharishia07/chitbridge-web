@@ -1,653 +1,868 @@
 /**
- * ── ⭐⭐⭐ THE FIVE CONTROLS, WRITTEN ONCE ────────────────────────────────────────────────────────────────────────
+ * ── ⭐⭐⭐ CBList — THE LIST CONTROL, AS A SELF-SUSTAINING UNIT ───────────────────────────────────────────────────────
  *
- * Athi, 2026-09-14, after finding search silent and the list truncated at 100 for the third time:
+ * Athi, 2026-10-02: *"can we keep it as a control so it can be used anywhere … with its own ui/ux and as a self
+ * sustaining unit"* · *"whenever such type of control established anywhere, it is a must that column adjustable should
+ * be there, and also, the scrolling should be allowed only below the column header … create a control in place so i
+ * don't need to repeat."*   docs/design/list-control/PLAN.md is the contract; docs/design/list-standard/index.html is the
+ * FROZEN look (the pass mark); public/list-lab.html is this file on a bare page.
  *
- *   *"create a watcher and check all those have been handled every time when you are writing the control. this
- *    becomes very bad. i could have worked with human engineers — once I say, they follow and no drift. here my
- *    fingers are paining."*
+ * ONE FILE, ONE GLOBAL: `window.CBList`. Nothing else is exported and NOTHING IS READ FROM THE PAGE: not its escaping, its
+ * translator, its toast, its storage prefix, its stylesheet. A page that lacks every global it used to supply still gets a
+ * working list (e2e/list-unit.cjs); a page that makes this file reach for one fails e2e/list-unit-breaks.cjs.
  *
- * `e2e/list-controls.cjs` is the watcher that CHECKS the rule. This is the thing that makes it cheap to obey —
- * because a rule that costs eighty lines a screen gets skipped on the ninth screen, and then the watcher is just
- * a list of complaints. A screen declares its list once and gets search, filters, sort, a count and lazy
- * rendering. [[feedback-no-duplicate-functions]] [[project-js-unification]]
+ *   CBList.mount(el, { key, rows, columns, view, group, filters, sorts, search, next, actions, bulk, onOpen,
+ *                      head:{ title, period, notices, slot(el) }, t, store, ... }) → { refresh, destroy }
  *
- * ── WHAT IT IS FOR, AND WHAT IT IS NOT ─────────────────────────────────────────────────────────────────────────
+ * THE AVATAR SLOT: `head.slot(el)` is called with an empty span at the END of the title row (pushed to the far edge) every time the
+ * title row is drawn — a page with no chrome of its own mounts CBAvatar there, and the head stays three rows. The unit draws the span
+ * and reads nothing from the page: what goes in it is the page's business.
  *
- * ⭐ FOR A LIST THE BROWSER ALREADY HOLDS. Customers, suppliers, categories and co-assists all arrive whole —
- * the server sends no LIMIT — so the entire question is what to SHOW, and that is a browser question.
+ * WHAT A PAGE DECLARES: its columns (key · label · prio · w · num · sort · cell(row)), its grouping, filters, sorts, notices,
+ * period, what a row opens to (`next`), row actions and bulk operations. WHAT THE UNIT OWNS, FOR EVERY LIST, AND NO LIST
+ * CAN OPT OUT OF: the three-row head, ADJUSTABLE COLUMNS (drag, touch, ← → in 8 px, double-click resets, never narrower than
+ * the label, remembered), ONLY THE ROWS SCROLL (the head is fixed, the rows fill the rest of the window, the column header
+ * is sticky inside the one scroller), the ⚙ chooser (Shown / Available / Reset), ▤ grid / ☰ lines, ⇣ / ⇡ expand all (when
+ * the list has a next level), phone cards (a container query, not the page width), lazy rows (50 at a time, the count is the
+ * true one), the four states (loading under a kept header · empty · no match + Clear · could not load + Try again),
+ * keyboard (↑ ↓ Enter · Esc · ← → on a column edge) and ARIA.
  *
- * ⚠️ NOT FOR A SERVER-PAGED LIST. The Platform screen asks the server for one page at a time and gets `matched`
- * back with it; `platPagerHTML` is that, and it is right for 2,509 entities nobody wants in one payload. Using
- * this there would mean downloading everything to page it locally, which is the bug that shape exists to avoid.
+ * ESCAPING IS ITS OWN JOB: every value painted here goes through this file's `esc`. A column renders trusted markup only if it
+ * says so (`html: true`), and `next(row)` is trusted markup by contract: the page that builds it escapes its own data.
  *
- * ── ⚠️⚠️ WHY LAZY RENDERING AND NOT PAGE NUMBERS ───────────────────────────────────────────────────────────────
- *
- * Athi asked for page numbers on Platform — *"give the page numbers so the next page can be moved"* — and that
- * is right where a page is a round trip. Here nothing is fetched by scrolling: every row is already in memory
- * and the only cost is DOM. So the list grows as you reach the end, which is the same answer with no clicks.
- *
- * ⭐ AND THE COUNT NEVER LIES ABOUT IT. It says how many MATCHED, not how many are drawn — *"100 of 2,259"* with
- * no way to reach the rest is the complaint that started all of this. [[feedback-silence-is-the-bug]]
- *
- * ── ⚠️⚠️ THE ROWS ARE DRAWN BY `lazyWrap`, WHICH WAS ALREADY HERE — AND I WROTE A SECOND ONE FIRST ──────────────
- *
- * The first cut of this file had its own chunking and its own `onscroll` handler that grew the slice and then
- * put the scroll position back. It worked. It was also **the second implementation of one rule**, and the one
- * that was already in `app.html` — doing this job for the catalogue, the message thread and the disputes list
- * since August — is better than mine on every count: an IntersectionObserver instead of a scroll threshold, an
- * explicit *"↓ Show 50 more"* button as well as auto-reveal, *"50 of 812"* and *"812 total · end of list"*
- * written into the sentinel, and rows INSERTED before the sentinel rather than the container being rebuilt, so
- * there is no scroll position to lose in the first place.
- *
- * ⚠️ I searched this codebase for `PagerHTML`, `CountHTML` and `sortPresetSelect` before building, and never
- * searched for a lazy renderer. That is the motto missed by one query. [[feedback-adopt-dont-reinvent]]
- * [[feedback-search-before-you-build]] [[feedback-no-duplicate-functions]]
+ * SERVER-PAGED LISTS (Platform): pass `remote:{ total, onQuery(q), foot() }`. The unit then neither filters nor sorts: it draws
+ * the page it was given in its own look, asks the page's pager for the next one through `onQuery`, and paints `foot()` below.
  */
-'use strict';
+(function (root) {
+  'use strict';
+  if (root.CBList) return;
 
-/** key → { cfg, q, sort, f:{} } — one entry per list, kept across repaints so a search survives one */
-var LISTCTL = {};
+  /* ── its own words: every string is written here in English and goes through the host's translator (opts.t) when one is given (see T) ── */
+  /* ── its own escaping ── */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plain(h) { return String(h == null ? '' : h).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim(); }
 
-/**
- * ⚠️ HOW MANY ROWS ARE DRAWN IS `lazyWrap`'S BUSINESS, NOT THIS FILE'S — it keeps that in its own `LAZY` map.
- * But a control change must send it back to the top: narrowing 812 rows to 150 while it still believes 400 are
- * revealed would draw the entire narrowed answer at once, and look identical to nothing having been filtered.
- * ⚠️ `LAZY` is a top-level `const` in app.html, so it is NOT on `window` and it is in the temporal dead zone
- * until that script runs — `typeof` THROWS on a TDZ binding, hence the try. [[feedback-probe-the-right-scope]]
- */
-function listCtlResetRows(key) { try { if (LAZY) delete LAZY[key]; } catch (_) {} }
+  /* ── its own memory: browser storage under its own prefix, an in-memory fallback when storage throws ── */
+  var MEM = {};
+  function lsGet(k) { try { var v = root.localStorage.getItem(k); return v == null ? null : JSON.parse(v); } catch (_) { return MEM[k] === undefined ? null : MEM[k]; } }
+  function lsSet(k, v) { MEM[k] = v; try { root.localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} }
 
-/**
- * Declare a list. Safe to call on every render: the CONFIG is replaced (so a closure never goes stale) and the
- * STATE — what was typed, what was chosen, how far it was scrolled — is kept.
- *
- * @param key     a name for this list, e.g. 'customers'
- * @param cfg.rows      () => the full array the browser holds
- * @param cfg.text      (row) => the text a search should look in
- * @param cfg.sorts     [{ key, label, cmp }]  — the FIRST is the default
- * @param cfg.filters   [{ key, label, all, options:[{v,label}], match(row, v) }]
- * @param cfg.repaint   () => repaint the list body and the count
- * @param cfg.noun      'customer' — for "812 customers"
- */
-function listCtl(key, cfg) {
-  var s = LISTCTL[key] || (LISTCTL[key] = { q: '', sort: 0, f: {} });
-  s.cfg = cfg;
-  return s;
-}
-function listCtlS(key) { return LISTCTL[key] || { cfg: null, q: '', sort: 0, f: {} }; }
-
-/**
- * What the screen should draw: everything, what matched, and the slice to render.
- * ⚠️ `matched` is computed every call rather than cached. A cached count is a count that disagrees with the rows
- * the first time somebody adds a customer without telling the cache.
- */
-function listCtlView(key) {
-  var s = listCtlS(key), c = s.cfg;
-  if (!c) return { all: [], matched: [] };
-  var all = (c.rows && c.rows()) || [];
-  var q = String(s.q || '').trim().toLowerCase();
-  var matched = all.filter(function (row) {
-    if (q && String((c.text && c.text(row)) || '').toLowerCase().indexOf(q) < 0) return false;
-    for (var i = 0; i < (c.filters || []).length; i++) {
-      var f = c.filters[i], v = s.f[f.key];
-      if (v && !f.match(row, v)) return false;
-    }
-    return true;
-  });
-  var sorts = c.sorts || [];
-  var srt = sorts[s.sort] || sorts[0];
-  /* ⚠️ sort a COPY. Sorting `matched` in place is fine, but `matched` is `all` itself when nothing is filtered,
-     and reordering the screen's own array is how a list silently changes under everything else reading it. */
-  if (srt && srt.cmp) matched = matched.slice().sort(srt.cmp);
-  if (s.rev) matched = matched.slice().reverse();   /* a heading clicked twice (tblSortBy) */
-  return { all: all, matched: matched };
-}
-
-/**
- * ⭐ THE ROWS — every match handed to `lazyWrap`, which draws the first 50 and reveals the rest as the sentinel
- * comes into view or the reader presses its button. The COUNT it prints is the true one, because `matched` is
- * the true one: what changes is how many are DRAWN, never what the list claims to hold.
- */
-function listCtlRowsHTML(key, rowFn, emptyHTML) {
-  var v = listCtlView(key);
-  return lazyWrap(key, v.matched, rowFn, emptyHTML || '');
-}
-
-/* ── the controls ──────────────────────────────────────────────────────────────────────────────────────────── */
-
-/** search · filters · sort, in one row. The screen places it; this decides nothing about where. */
-function listCtlToolbarHTML(key) {
-  var s = listCtlS(key), c = s.cfg;
-  if (!c) return '';
-  var k = "'" + key + "'";
-  /* ⚠️ oninput, NOT onkeydown. Enter-only is how "search is broken" happens: the box takes typing and the list
-     does not move, with nothing on screen saying why. The watcher checks for exactly this. */
-  var search = '<div class="srch" style="flex:1 1 150px;min-width:130px">🔍 <input data-testid="listctl-search-' + esc(key) + '"'
-    + ' placeholder="' + esc(tx('Search')) + '" value="' + esc(s.q || '') + '"'
-    + ' oninput="listCtlSetQ(' + k + ',this.value)"></div>';
-
-  var filters = (c.filters || []).map(function (f) {
-    var opts = '<option value="">' + esc(f.all || tx('All')) + '</option>'
-      + (f.options || []).map(function (o) {
-        return '<option value="' + esc(o.v) + '"' + (s.f[f.key] === o.v ? ' selected' : '') + '>' + esc(o.label) + '</option>';
-      }).join('');
-    return '<select class="inp" data-testid="listctl-filter-' + esc(f.key) + '" title="' + esc(f.label) + '"'
-      + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)"'
-      + ' onchange="listCtlSetFilter(' + k + ',\'' + esc(f.key) + '\',this.value)">' + opts + '</select>';
-  }).join('');
-
-  var sorts = (c.sorts || []).length > 1
-    ? '<select class="inp" data-testid="listctl-sort-' + esc(key) + '" title="' + esc(tx('Sort order')) + '"'
-      + ' style="width:auto;padding:3px 6px;font-size:var(--fs-1)"'
-      + ' onchange="listCtlSetSort(' + k + ',this.value)">'
-      + c.sorts.map(function (o, i) { return '<option value="' + i + '"' + (i === s.sort ? ' selected' : '') + '>' + esc(o.label) + '</option>'; }).join('')
-      + '</select>'
-    : '';
-
-  return '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px">'
-    + search + filters + sorts + (c.tbl ? tblColsBoxHTML(key) : '') + '</div>';
-}
-
-/**
- * ⭐ HOW MANY MATCHED — and, only while some are undrawn, how many are drawn.
- * ⚠️ It never reports the drawn number ALONE. "100 customers" when there are 812 is the exact sentence that made
- * Athi ask for all of this.
- */
-function listCtlCountHTML(key) {
-  var s = listCtlS(key), c = s.cfg, v = listCtlView(key);
-  var noun = (c && c.noun) || 'row';
-  var plural = v.matched.length === 1 ? noun : (c && c.plural) || (noun + 's');
-  var narrowed = v.matched.length !== v.all.length;
-  /* ⭐ how many are DRAWN is not said here — lazyWrap's own sentinel says "50 of 812" at the foot of the rows,
-     where somebody who has run out of list is actually looking. Saying it twice would be two places to keep
-     agreeing, and the pager on the Platform screen taught that lesson once already. */
-  return esc(v.matched.length + ' ' + plural)
-    + (narrowed ? ' <span style="color:var(--grey-4)">' + esc(tx('of') + ' ' + v.all.length) + '</span>' : '');
-}
-
-/* ⚠️ EVERY CHANGE SENDS THE ROWS BACK TO THE TOP. Narrowing while lazyWrap still believes 400 are revealed
-   would draw the whole of a narrower answer at once — and look identical to no filtering having happened. */
-function listCtlSetQ(key, v) { var s = listCtlS(key); s.q = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
-function listCtlSetFilter(key, f, v) { var s = listCtlS(key); s.f[f] = v; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
-function listCtlSetSort(key, i) { var s = listCtlS(key); s.sort = Number(i) || 0; s.rev = false; listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint(); }
-
-/**
- * ⭐ THE EMPTY CASE IS TWO DIFFERENT SENTENCES, and telling them apart is the whole value of saying anything.
- * "No customers yet" is an invitation; "nothing matches 'ravi'" is a correction, and showing the first when the
- * second is true tells somebody their data is gone. [[feedback-write-for-the-shopkeeper]]
- */
-function listCtlEmptyHTML(key, icon, title, sub) {
-  var s = listCtlS(key), v = listCtlView(key);
-  var narrowed = s.q || Object.keys(s.f || {}).some(function (k) { return s.f[k]; });
-  if (v.all.length && narrowed) {
-    return emptyState(icon || '🔍', tx('Nothing matches'),
-      tx('No row here matches what you have typed or chosen. Clear the search or the filters to see the rest.'));
+  /* ── the look: injected ONCE (#cblist_css), design tokens only, a fallback for every one, so a bare page renders right ── */
+  var CSS = [
+    '.cbl{--cl-page:var(--page,var(--paper,#FCFAF5));--cl-card:var(--card,#FFFFFF);--cl-panel:var(--panel,#F3EFE6);--cl-line:var(--line,#DDD6C6);--cl-soft:var(--line-soft,#E6E0D2);--cl-hair:var(--hair,#F0ECE2);',
+    '--cl-ink:var(--ink,#1D1B16);--cl-muted:var(--muted,#5E594D);--cl-faint:var(--faint,#8A8374);--cl-ghost:var(--ghost,#A8A295);',
+    '--cl-green:var(--green,#16693F);--cl-amber-t:var(--amber-t,#FDF3DC);--cl-amber-b:var(--amber-b,#EFD39A);--cl-amber-i:var(--amber-i,#7A5205);',
+    '--cl-red-t:var(--red-t,#FBEAE3);--cl-red-b:var(--red-b,#E7B9A8);--cl-red-i:var(--red-i,#8E3517);',
+    '--cl-blue:var(--blue,#2F74C9);--cl-blue-t:var(--blue-t,#E4EEFA);--cl-blue-b:var(--blue-b,#B9D2EF);--cl-blue-i:var(--blue-i,#174A87);',
+    '--cl-shadow:var(--shadow,0 10px 28px rgba(29,27,22,.16));--cl-ui:var(--f-ui,"IBM Plex Sans","Segoe UI",system-ui,sans-serif);--cl-display:var(--f-display,"Bricolage Grotesque","Segoe UI",system-ui,sans-serif);--cl-num:var(--f-num,"IBM Plex Mono",ui-monospace,"Cascadia Mono",monospace);',
+    'display:flex;flex-direction:column;min-width:0;min-height:0;box-sizing:border-box;position:relative;background:var(--cl-page);color:var(--cl-ink);font:calc(15px * var(--k,1))/1.45 var(--cl-ui);container-type:inline-size;container-name:screen;text-align:start;letter-spacing:normal;text-transform:none}',
+    '.cbl *,.cbl *::before,.cbl *::after{box-sizing:border-box}',
+    '.cbl button,.cbl select,.cbl input{font:inherit;color:inherit}.cbl button{cursor:pointer;min-height:0;line-height:1.3}',
+    '.cbl :focus-visible{outline:2px solid var(--cl-blue);outline-offset:2px}',
+    '.cbl .cbl-num{font-family:var(--cl-num);font-variant-numeric:tabular-nums}',
+    /* row 1 · the title row */
+    '.cbl .cbl-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:8px 20px 6px;border-bottom:1px solid var(--cl-soft);background:var(--cl-page)}',
+    '.cbl .cbl-title h1{font:800 calc(24px * var(--k,1))/1.1 var(--cl-display);margin:0;letter-spacing:-.01em;text-wrap:balance;color:var(--cl-ink)}',
+    '.cbl .cbl-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:999px;padding:3px 10px;margin:0;font-size:calc(13.5px * var(--k,1));white-space:nowrap}',
+    '.cbl .cbl-chip.period{font-family:var(--cl-num);font-size:calc(13px * var(--k,1))}',
+    '.cbl .cbl-chip.warn{background:var(--cl-amber-t);border-color:var(--cl-amber-b);color:var(--cl-amber-i);font-weight:600}',
+    '.cbl .cbl-chip.bad{background:var(--cl-red-t);border-color:var(--cl-red-b);color:var(--cl-red-i);font-weight:600}',
+    '.cbl .cbl-chip.warn::before,.cbl .cbl-chip.bad::before{content:"⚠"}',
+    '.cbl button.cbl-chip.warn::after,.cbl button.cbl-chip.bad::after{content:"›";opacity:.7}',
+    /* row 2 · tools */
+    '.cbl .cbl-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;padding:6px 20px 8px;background:var(--cl-page)}',
+    '.cbl .cbl-search{flex:1 1 220px;min-width:0;display:flex;align-items:center;gap:6px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;height:34px}',
+    '.cbl .cbl-search input{border:0;outline:0;background:none;flex:1;min-width:0;font-size:calc(14px * var(--k,1));padding:0;margin:0;height:auto;box-shadow:none}',
+    '.cbl .cbl-search:focus-within{border-color:var(--cl-blue)}',
+    '.cbl .cbl-tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap;margin:0}',
+    '.cbl .cbl-tbtn[aria-pressed="true"],.cbl .cbl-tbtn.on{border-color:var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
+    '.cbl .cbl-tbtn .badge{background:var(--cl-blue);color:var(--cl-card);border-radius:999px;font-size:calc(11px * var(--k,1));padding:0 6px;font-weight:700}',
+    '.cbl .cbl-seg{display:inline-flex;border:1px solid var(--cl-line);border-radius:9px;overflow:hidden;background:var(--cl-card);height:34px}',
+    '.cbl .cbl-seg button{border:0;background:none;padding:0 10px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--cl-soft);margin:0;border-radius:0}',
+    '.cbl .cbl-seg button:first-child{border-inline-start:0}',
+    '.cbl .cbl-seg button[aria-pressed="true"]{background:var(--cl-ink);color:var(--cl-page);font-weight:600}',
+    '.cbl .cbl-ico{width:34px;justify-content:center;padding:0}',
+    '.cbl .cbl-count{font-family:var(--cl-num);font-size:calc(13px * var(--k,1));color:var(--cl-muted);padding:0 4px;white-space:nowrap}',
+    '.cbl .cbl-fchips{display:flex;flex-wrap:wrap;gap:6px;width:100%}.cbl .cbl-fchips:empty{display:none}',
+    '.cbl .cbl-fchip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--cl-blue-b);background:var(--cl-blue-t);color:var(--cl-blue-i);border-radius:999px;padding:1px 4px 1px 10px;font-size:calc(12.5px * var(--k,1))}',
+    '.cbl .cbl-fchip button{border:0;background:none;color:inherit;width:20px;height:20px;border-radius:50%;padding:0}',
+    '.cbl .cbl-anchor{position:relative}',
+    '.cbl .cbl-pop{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:20;background:var(--cl-card);border:1px solid var(--cl-line);border-radius:12px;box-shadow:var(--cl-shadow);padding:10px 12px;min-width:220px;max-height:min(70vh,480px);overflow:auto;font-size:calc(13.5px * var(--k,1));text-transform:none;font-weight:400;letter-spacing:normal;color:var(--cl-ink)}',
+    '.cbl .cbl-pop.left{inset-inline-end:auto;inset-inline-start:0}',
+    '.cbl .cbl-notes{display:flex;flex-direction:column;align-items:flex-start;gap:6px}',
+    '.cbl .cbl-pop h4{margin:4px 0 6px;font-size:calc(11px * var(--k,1));letter-spacing:.07em;text-transform:uppercase;color:var(--cl-faint);font-weight:700}',
+    '.cbl .cbl-pop .f{display:grid;grid-template-columns:80px 1fr;align-items:center;gap:8px;margin:6px 0}',
+    '.cbl .cbl-pop select{border:1px solid var(--cl-line);border-radius:7px;background:var(--cl-card);padding:3px 6px}',
+    '.cbl .cbl-preset{display:grid;gap:2px}',
+    '.cbl .cbl-preset button{text-align:start;border:0;background:none;border-radius:7px;padding:5px 8px}',
+    '.cbl .cbl-preset button[aria-pressed="true"]{background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
+    '.cbl .cbl-custom{display:flex;gap:6px;align-items:center;margin-top:6px;font-size:calc(13px * var(--k,1))}',
+    '.cbl .cbl-custom input{border:1px solid var(--cl-line);border-radius:7px;padding:2px 6px;background:var(--cl-card);font-family:var(--cl-num);font-size:calc(12.5px * var(--k,1));width:128px}',
+    '.cbl .cbl-btn{border:1px solid var(--cl-line);background:var(--cl-card);border-radius:9px;padding:3px 10px;font-size:calc(13px * var(--k,1));font-weight:500}',
+    '.cbl .cbl-acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}',
+    '.cbl .cbl-colrow{display:flex;align-items:center;gap:6px;padding:2px 0}',
+    '.cbl .cbl-colrow label{flex:1 1 auto!important;display:flex!important;flex-direction:row!important;align-items:center!important;gap:7px!important;padding:3px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;margin:0;font-weight:400}',
+    '.cbl .cbl-colrow label:has(input:checked){background:var(--cl-blue-t);color:var(--cl-blue-i);font-weight:600}',
+    '.cbl .cbl-colrow input{accent-color:var(--cl-blue);width:14px;height:14px}',
+    '.cbl .cbl-mv{width:24px;height:24px;border:1px solid var(--cl-line);background:var(--cl-card);border-radius:6px;padding:0;font-size:calc(12px * var(--k,1));flex:0 0 auto}',
+    '.cbl .cbl-mv:disabled{opacity:.3;cursor:default}.cbl .cbl-mvsp{width:24px;flex:0 0 auto}',
+    '.cbl .cbl-noroom{font-size:calc(11.5px * var(--k,1));color:var(--cl-amber-i);margin-inline-start:4px}',
+    /* row 3 · the column header + the rows: ONE scroll area, the header sticky inside it */
+    '.cbl .cbl-list{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--cl-line);background:var(--cl-card);container-type:inline-size;container-name:list;overscroll-behavior:contain}',
+    '.cbl .cbl-grid{display:grid;min-width:max-content}.cbl .cbl-grid.cbl-lines{min-width:0}',
+    '.cbl .cbl-hdr{position:sticky;top:0;z-index:5;display:grid;background:var(--cl-panel);border-bottom:1.5px solid var(--cl-line)}',
+    '.cbl .cbl-hc{position:relative;display:flex;align-items:center;gap:4px;padding:7px 12px;font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--cl-muted);white-space:nowrap;min-width:0;user-select:none}',
+    '.cbl .cbl-hc.r{justify-content:flex-end}',
+    '.cbl .cbl-hc .sort{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;display:inline-flex;gap:3px;align-items:center}',
+    '.cbl .cbl-hc .arrow{color:var(--cl-blue);font-size:calc(11px * var(--k,1))}',
+    '.cbl .cbl-rz{position:absolute;inset-inline-end:-4px;top:0;bottom:0;width:9px;cursor:col-resize;z-index:2;border:0;background:none;padding:0;touch-action:none}',
+    '.cbl .cbl-rz::after{content:"";position:absolute;inset-inline-start:4px;top:6px;bottom:6px;width:1px;background:var(--cl-line)}',
+    '.cbl .cbl-rz:hover::after,.cbl .cbl-rz:focus-visible::after,.cbl .cbl-rz.drag::after{width:3px;inset-inline-start:3px;background:var(--cl-blue)}',
+    '.cbl .cbl-row{display:grid;align-items:center;border-bottom:1px solid var(--cl-hair);cursor:pointer;position:relative}',
+    '.cbl .cbl-row:hover{background:var(--cl-page)}',
+    '.cbl .cbl-row.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
+    '.cbl .cbl-cell{padding:8px 12px;min-width:0;overflow-wrap:anywhere}',
+    '.cbl .cbl-cell.r{text-align:end}',
+    '.cbl .cbl-cell.mono{font-family:var(--cl-num);font-variant-numeric:tabular-nums;font-size:calc(13.5px * var(--k,1))}',
+    '.cbl .cbl-cell.strong{font-weight:700}',
+    '.cbl .cbl-lead{padding:8px 0 8px 12px;display:flex;align-items:center}',
+    '.cbl .cbl-tw{display:inline-block;width:14px;color:var(--cl-faint);transition:transform .15s}',
+    '.cbl .cbl-open>.cbl-cell>.cbl-tw,.cbl .cbl-open .cbl-tw{transform:rotate(90deg)}',
+    '.cbl .cbl-link{color:var(--cl-blue);text-decoration:underline;text-underline-offset:2px;font-family:var(--cl-num);font-size:calc(13.5px * var(--k,1))}',
+    '.cbl .cbl-dim{color:var(--cl-faint)}',
+    '.cbl .cbl-group{position:sticky;top:var(--cl-hdr-h,35px);z-index:3;display:flex;flex-wrap:wrap;gap:2px 8px;align-items:baseline;padding:7px 12px;background:var(--cl-page);border-bottom:1px solid var(--cl-line);font-size:calc(13.5px * var(--k,1))}',
+    '.cbl .cbl-group b{font-weight:700}.cbl .cbl-group .fig{font-family:var(--cl-num);font-size:calc(13px * var(--k,1));color:var(--cl-muted)}',
+    '.cbl .cbl-next{background:var(--cl-page);border-bottom:1px solid var(--cl-soft);padding:6px 12px 10px 38px;cursor:default;overflow-wrap:anywhere}',
+    '.cbl .cbl-next .gist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));margin-bottom:6px}',
+    /* ☰ lines */
+    '.cbl .cbl-lrec{border-bottom:1px solid var(--cl-hair);padding:8px 12px;cursor:pointer}',
+    '.cbl .cbl-lrec:hover{background:var(--cl-page)}',
+    '.cbl .cbl-lrec.sel{background:var(--cl-blue-t);box-shadow:inset 0 0 0 2px var(--cl-blue)}',
+    '.cbl .cbl-lline{display:flex;gap:4px 10px;align-items:baseline}',
+    '.cbl .cbl-lflow{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:2px 0}',
+    '.cbl .cbl-lflow > span:not(:last-child)::after{content:"·";color:var(--cl-ghost);margin:0 7px}',
+    '.cbl .cbl-lamt{font-family:var(--cl-num);font-weight:700;white-space:nowrap}',
+    '.cbl .cbl-lgist{color:var(--cl-muted);font-size:calc(13px * var(--k,1));padding-inline-start:22px;margin-top:1px}',
+    /* states */
+    '.cbl .cbl-state{padding:44px 20px;text-align:center;color:var(--cl-muted)}',
+    '.cbl .cbl-state .big{font:700 calc(18px * var(--k,1)) var(--cl-display);color:var(--cl-ink);margin-bottom:4px}',
+    '.cbl .cbl-state .cbl-btn{margin-top:10px}',
+    '.cbl .cbl-end{text-align:center;padding:12px 10px;font:calc(12px * var(--k,1)) var(--cl-num);color:var(--cl-muted)}',
+    '.cbl .cbl-end button{margin-inline-end:8px;border:1px solid var(--cl-blue);background:var(--cl-blue);color:var(--cl-card);border-radius:9px;padding:5px 11px;font-weight:700}',
+    '.cbl .cbl-skel{height:36px;margin:8px 12px;border-radius:8px;background:linear-gradient(90deg,var(--cl-hair),var(--cl-panel),var(--cl-hair));background-size:200% 100%;animation:cbl-sk 1.2s infinite linear}',
+    '@keyframes cbl-sk{to{background-position:-200% 0}}',
+    '@media (prefers-reduced-motion: reduce){.cbl .cbl-skel{animation:none}.cbl .cbl-tw{transition:none}}',
+    '.cbl .cbl-foot{padding:8px 12px;border-top:1px solid var(--cl-soft)}',
+    '.cbl .cbl-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}',
+    /* a phone, or any narrow pane: one card per row, label : value, nothing sideways (a container query, not the page width) */
+    '@container list (max-width: 620px){',
+    '.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}',
+    '.cbl .cbl-row{display:flex;flex-wrap:wrap;gap:0 10px;padding:8px 12px;margin:8px 10px;border:1px solid var(--cl-line);border-radius:12px;background:var(--cl-card)}',
+    '.cbl .cbl-row .cbl-cell{padding:2px 0}',
+    '.cbl .cbl-row .cbl-cell[data-l]:not([data-l=""])::before{content:attr(data-l) " ";color:var(--cl-faint);font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;margin-inline-end:4px;font-family:var(--cl-ui);font-weight:600}',
+    '.cbl .cbl-row .cbl-cell.first{width:100%;font-weight:600}.cbl .cbl-row .cbl-cell.amt{margin-inline-start:auto}',
+    '.cbl .cbl-row .cbl-lead{position:absolute;inset-inline-end:8px;top:6px;padding:0}',
+    '.cbl .cbl-next{margin:-6px 10px 8px;border-radius:0 0 12px 12px;padding-inline-start:14px}',
+    '.cbl .cbl-lline{flex-wrap:wrap}.cbl .cbl-lamt{margin-inline-start:auto}.cbl .cbl-lflow{flex:1 1 100%;order:2}',
+    '}',
+    '@container screen (max-width: 640px){',
+    '.cbl .cbl-title{padding:8px 16px 6px;gap:5px 8px}.cbl .cbl-tools{padding:6px 16px;gap:6px}.cbl .cbl-title h1{font-size:calc(21px * var(--k,1))}.cbl .cbl-search{flex-basis:100%}',
+    '.cbl .cbl-pop,.cbl .cbl-pop.left{position:fixed;inset-inline:8px;top:auto;bottom:8px;max-height:min(70%,520px);min-width:0;z-index:30}',
+    '.cbl .cbl-chip{font-size:calc(12px * var(--k,1));padding:3px 9px}.cbl .cbl-chip.period{font-size:calc(12px * var(--k,1))}.cbl .cbl-seg button,.cbl .cbl-tbtn{padding:0 8px}.cbl .cbl-ico{padding:0}',
+    '}'
+  ].join('\n');
+  function injectCss() {
+    var d = root.document;
+    if (!d || !d.head || d.getElementById('cblist_css')) return;
+    var s = d.createElement('style'); s.id = 'cblist_css'; s.textContent = CSS.replace(/\.cbl(?![\w-])/g, '.cbl:not(#_)'); d.head.appendChild(s);
   }
-  return emptyState(icon || '📄', title, sub);
-}
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
- * ⭐⭐⭐ THE TASK TABLE, WRITTEN ONCE — header · rows · column template · fit · hover peek · lazy rows · next level
- *
- * Athi, 2026-10-02: *"the same task header style has to be used in other places, so the information can be a proper
- * tabular format … if you expand the header show the next level of information"* and *"do not create new style
- * anywhere, the first question is how do i reuse."*
- *
- * ⚠️ MOVED, NOT COPIED, out of app.html (listHeader · rowGrid · colTemplate · fittedCols' arithmetic · rowPeek ·
- * lazyWrap and the CSS under them). The Task screen now calls THESE, and gives them what they used to read from
- * `UI.*` as arguments — the columns, the sort, the selection column — so CB Accounts (accounts.html, which does not
- * load app.html) draws its Waiting, Day book, Dues, ledger and party lists with the very same code. A screen that
- * draws its own rows is wrong even if it looks right (CLAUDE.md rule 5; e2e/books-web-breaks.cjs proves it is caught).
- *
- * A column is { key, label, w:'112px'|'minmax(110px,1.2fr)', align:'right'?, sort?, cell(row) → html }. Nothing here
- * decides what a row says: the screen's `cell` paints what the server sent.
- * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
-
-/* the table's look — the rules app.html always carried, injected FIRST in <head> so the Task screen's own variants
-   (.lrow.unread · .lrow.sel · .acc-*, which stay in app.html) still win the cascade exactly as before */
-var TBL_CSS = [
-  /* the ⚙ columns chooser — MOVED from app.html (2026-10-02): CB Accounts loads list-ctl.js but not app.html, and the chooser
-     opened unstyled there (Athi's live screenshot: arrows and checkboxes strewn down the Day book) */
-  ".colcog{border:0;background:none;cursor:pointer;font-size:var(--fs-2);color:var(--grey);justify-self:end;padding:0 2px}",
-  ".colmenu{position:absolute;inset-inline-end:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-2);text-transform:none;font-weight:400;color:var(--ink)}",
-  ".colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}",
-  ".colcog{font-size:var(--fs-1);color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}",
-  ".colcog:hover{text-decoration:underline}",
-  ".colmenu{max-height:60vh;overflow-y:auto;min-width:196px}",
-  ".colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:2px 0 1px;position:sticky;top:-8px;background:var(--card);padding:4px 0 2px}",
-  ".colmhd:first-child{margin-top:0}",
-  ".colmnone{font-size:var(--fs-1);color:var(--grey);padding:2px 0}",
-  ".colrow{display:flex;align-items:center;gap:8px}",
-  ".colrow label{flex:1;min-width:0;display:flex;align-items:center;gap:6px;cursor:pointer}",
-  ".mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}",
-  ".mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}",
-  ".mv-btn:disabled{opacity:.35;cursor:default}",
-  ".mv-sp{width:24px;flex:0 0 auto}",
-  ".colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}",
-  ".colmenu label:has(input:checked){background:var(--blue-tint-bg);color:var(--blue);font-weight:600}",
-  ".colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}",
-  ".listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}",
-  ".listend button{margin-inline-end:8px}",
-  ".lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}",
-  ".lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}",
-  ".lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}",
-  ".sarr{font-size:var(--fs-1);margin-inline-start:3px;color:var(--blue)}",
-  ".lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}",
-  ".lrow:hover{background:var(--paper)}",
-  "#rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:var(--fs-2);line-height:1.45}",
-  "#rowpeek .pkr{display:flex;gap:10px;padding:2px 0}",
-  "#rowpeek .pkr+.pkr{border-top:1px solid #f0f3f5}",
-  "#rowpeek .pkk{flex:0 0 84px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.3px}",
-  "#rowpeek .pkv{flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere}",
-  ".lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-  ".lcell.ra{text-align:end}",
-  ".lhcell.ra{justify-content:flex-end}",
-  ".lhcell{position:relative}",
-  ".colrz{position:absolute;inset-inline-end:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}",
-  ".colrz:hover{background:var(--blue);opacity:.5}",
-  ".lhead .lhcell:not(:last-child){border-inline-end:1px solid var(--line)}",
-  ".lrow .lcell:not(:last-child){border-inline-end:1px solid var(--line)}",
-  ".lhcell{padding-inline-end:4px}",
-  ".lcell{padding-inline-end:4px}",
-  ".colrz:hover{background:var(--blue);opacity:.35}",
-  /* the same rows on a narrow pane (or a phone): one card a row, each cell named by its column — only for tables that
-     opt in with the .tblx wrapper (CB Accounts); the Task screen's own fitting is untouched */
-  ".tblx{container:tblx/inline-size;min-width:0}",
-  "@container tblx (max-width:560px){.tblx .lhead{display:none}.tblx .lrow{display:flex;flex-wrap:wrap;gap:2px 10px;border:1px solid var(--line);border-radius:12px;margin:6px 0;padding:9px 10px}.tblx .lrow .lcell{border:0;white-space:normal;padding:0;flex:0 1 auto;max-width:100%}.tblx .lrow .lcell:first-child{flex:1 1 100%;font-weight:600}.tblx .lrow .lcell[data-l]:not(:first-child):not(:empty)::before{content:attr(data-l) \" · \";color:var(--grey);font-size:var(--fs-1)}.tblx .lrow .lcell.ra{text-align:start}}",
-  /* LINES: one record a line - the ticked fields flow inline joined by " · " in the chooser's order, the amount at the end, a grey line under it */
-  ".tbllines .lhead{display:none}",
-  ".tbllines .lrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 0}",
-  ".tbllines .lrow .lcell{border:0;white-space:normal;padding:0;flex:0 1 auto;max-width:100%;overflow:visible}",
-  ".tbllines .lrow .lcell:not(:first-child):not(.ra)::before{content:' · ';white-space:pre;color:var(--grey)}",
-  ".tbllines .lrow .lcell:first-child{margin-inline-end:8px}",
-  ".tbllines .lrow .lcell:first-child+.lcell::before{content:none}",
-  ".tbllines .lrow .lcell.ra{margin-inline-start:auto;padding-inline-start:12px}",
-  ".tbllines .lrow .lsub{flex:1 1 100%;color:var(--grey);font-size:var(--fs-1);padding:2px 0 0 22px}",
-].join('\n');
-(function () {
-  if (typeof document === 'undefined' || !document.head || document.getElementById('tbl_css')) return;
-  var s = document.createElement('style'); s.id = 'tbl_css'; s.textContent = TBL_CSS;
-  document.head.insertBefore(s, document.head.firstChild);
-})();
-
-/**
- * ⚠️ THE DECLARED MINIMUM, DELIBERATELY NOT A MANUAL WIDTH. A manual column resize is a PREFERENCE — "give Subject more
- * room" — and it was being read as a FLOOR. Athi had dragged Subject to 269px; that 269 then outranked Amount and
- * Status in the fit and pushed both off the right edge. Dragging one column wider must never evict another.
- */
-function colMinPx(c) { var m = /(\d+(?:\.\d+)?)px/.exec(c.w); return m ? parseFloat(m[1]) : 80; }
-
-/**
- * ⭐ FIT THE COLUMNS TO THE PANE (Task: 1089px of columns in a 653px pane, five unreachable). `prio` lists column keys
- * best-first; columns are dropped lowest-first until the rest fit. ⚠️ THE TOP-PRIORITY COLUMN IS UNCONDITIONAL — a row
- * you cannot identify is not a row. Whatever is folded away is shown in full by the hover peek (tblPeekShow).
- */
-function tblFit(chosen, avail, prio) {
-  if (!chosen.length) return chosen;
-  var order = chosen.slice().sort(function (a, b) { return prio.indexOf(a.key) - prio.indexOf(b.key); });
-  var must = order[0], keep = {}; keep[must.key] = 1; var used = colMinPx(must);
-  order.slice(1).forEach(function (c) { var need = colMinPx(c) + 8; if (used + need <= avail) { keep[c.key] = 1; used += need; } });
-  return chosen.filter(function (c) { return keep[c.key]; });
-}
-/**
- * ⭐ THE COLUMN CHOOSER — ONE CONTROL FOR EVERY TABLE (moved from app.html, where only the Task list had it).
- * Athi, 2026-10-02 ("Maximum three columns"): a list KEEPS every column, SHOWS its top three by the priority it already
- * declares, and the "⚙ columns" chooser shows or hides the rest and puts them in order, remembered per list. The row
- * stays the summary. Task keeps its own default set (`def`) and its own storage (`get`/`set`); every other list takes
- * the top three of its `prio` and stores under cb_cols_<key>.
- *  · the top-priority column is ticked and disabled — a row you cannot identify is not a row (see tblFit)
- *  · a tick that does not fit the pane is still dropped by tblFit, and the chooser says "hidden — no room" (silence is the bug)
- *  · below the card breakpoint every ticked column fits (tblAvail returns 9999), so each is a label : value line
- * `tblColsDeclare(key, {cols, prio, def?, get?, set?, repaint?, noroom?, isOpen?, setOpen?})` is called by tblFitBox on every paint.
- */
-/**
- * ⭐ ONE MOVE BUTTON, TWO FEATURES — reordering columns (← →) and reordering folder rules (↑ ↓). Extracted at the
- * second call site rather than copied, because the part worth sharing is not the markup, it is the JUDGMENT
- * baked into it:
- *   ⚠️ DISABLED AT THE ENDS, NEVER HIDDEN. A control that vanishes at the boundary makes the row reflow under
- *   the cursor you were about to click again — so the first press moves the item and the second lands on
- *   whatever slid into its place.
- *   ⚠️ THE GLYPH MUST MATCH THE AXIS. Columns move horizontally and take ← →; rules are a vertical list and take
- *   ↑ ↓. Up/down arrows on a "Move left" button ask the reader to translate, which is how that bug first shipped.
- * `js` is the click handler body, so each caller keeps its own action and its own stopPropagation decision.
- */
-function mvBtn(glyph, ok, title, js){
-  return '<button type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"'
-    + ' onclick="' + js + '">' + glyph + '</button>';
-}
-var TBL_COLS = {};
-function tblPlain(plain) { return !!plain && !(typeof UI !== 'undefined' && UI.vp === 'mob'); }   /* a rail is a card on a phone */
-function tblColsDeclare(key, spec) {
-  var o = TBL_COLS[key] || (TBL_COLS[key] = { open: false, mem: null });
-  Object.keys(spec).forEach(function (k) { o[k] = spec[k]; });
-  return o;
-}
-function tblColsAllKeys(s) { return s.cols.map(function (c) { return c.key; }); }
-function tblColsTop(s) { var all = tblColsAllKeys(s); return s.prio.filter(function (k) { return all.indexOf(k) >= 0; })[0]; }
-function tblColsStoreKey(key) { return typeof uk === 'function' ? uk('cb_cols_' + key) : 'cb_cols_' + key; }
-function tblColsSaved(key) {
-  var s = TBL_COLS[key], v = null;
-  if (s.get) return s.get();
-  try { v = JSON.parse(localStorage.getItem(tblColsStoreKey(key)) || 'null'); } catch (_) { v = null; }
-  return (Array.isArray(v) && v.length) ? v : s.mem;      /* storage may throw: the session still remembers what was ticked */
-}
-function tblColsStore(key, set) {
-  var s = TBL_COLS[key]; s.mem = set;
-  if (s.set) { s.set(set); return; }
-  try { localStorage.setItem(tblColsStoreKey(key), JSON.stringify(set)); } catch (_) {}
-}
-/** the keys shown, in the person's order: what was saved (stale keys dropped), else the default (Task's own, else the top three by priority) */
-function tblColsKeys(key) {
-  var s = TBL_COLS[key], all = tblColsAllKeys(s), top = tblColsTop(s), set = null, saved = tblColsSaved(key);
-  var real = function (k) { return all.indexOf(k) >= 0; };
-  if (Array.isArray(saved) && saved.length) set = saved.filter(real);
-  if (!set || !set.length) {
-    var three = s.prio.filter(real).slice(0, 3);
-    set = s.def ? s.def.filter(real) : (tblViewGet(key) === 'lines' ? all.slice() : all.filter(function (k) { return three.indexOf(k) >= 0; }));   /* declaration order; LINES show every field, GRID the top three */
+  /* ── small helpers ── */
+  function px(w, dflt) { if (typeof w === 'number') return w; var m = /(\d+(?:\.\d+)?)\s*px/.exec(String(w || '')); return m ? parseFloat(m[1]) : (dflt || 140); }
+  function val(x) { return typeof x === 'function' ? safe(x, undefined) : x; }
+  function safe(fn, dflt) { try { var v = fn(); return v === undefined ? dflt : v; } catch (_) { return dflt; } }
+  function cmpVals(a, b) {
+    var na = typeof a === 'number' ? a : parseFloat(String(a).replace(/[^\d.\-]/g, '')), nb = typeof b === 'number' ? b : parseFloat(String(b).replace(/[^\d.\-]/g, ''));
+    if (typeof a === 'number' || (isFinite(na) && isFinite(nb) && /^[\s\d.,\-−₹$€£]+$/.test(String(a)) && /^[\s\d.,\-−₹$€£]+$/.test(String(b)))) { return (na || 0) - (nb || 0); }
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
   }
-  if (top && set.indexOf(top) < 0) set = [top].concat(set);
-  return set;
-}
-function tblColsChosen(key) {
-  var s = TBL_COLS[key];
-  return tblColsKeys(key).map(function (k) { return s.cols.filter(function (c) { return c.key === k; })[0]; }).filter(Boolean);
-}
-function tblColsCommit(key, set) {
-  tblColsStore(key, set);
-  var s = TBL_COLS[key]; if (s.repaint) s.repaint(); else tblRepaint(key);
-  tblColsRefresh(key);
-}
-function tblColsToggle(key, ck) {
-  var s = TBL_COLS[key]; if (!s || ck === tblColsTop(s)) return;
-  var set = tblColsKeys(key).slice(), i = set.indexOf(ck);
-  if (i >= 0) set.splice(i, 1); else set.push(ck);
-  tblColsCommit(key, set);
-}
-function tblColsMove(key, ck, dir) {
-  var set = tblColsKeys(key).slice(), i = set.indexOf(ck), j = i + dir;
-  if (i < 0 || j < 0 || j >= set.length) return;
-  set.splice(j, 0, set.splice(i, 1)[0]);
-  tblColsCommit(key, set);
-}
-/** ⭐ GRID or LINES - the same table and the same column choice, drawn two ways; remembered per list like the columns. A phone is always lines (the card). */
-var TBL_VIEW = {};
-function tblViewKey(key) { return typeof uk === 'function' ? uk('cb_view_' + key) : 'cb_view_' + key; }
-function tblViewGet(key) {
-  var v = null;
-  try { v = localStorage.getItem(tblViewKey(key)); } catch (_) { v = null; }
-  v = v || TBL_VIEW[key] || (listCtlS(key).cfg || {}).view || 'grid';
-  return v === 'lines' ? 'lines' : 'grid';
-}
-function tblViewSet(key, v) {
-  TBL_VIEW[key] = v;
-  try { localStorage.setItem(tblViewKey(key), v); } catch (_) {}
-  tblRepaint(key); tblColsRefresh(key);
-}
-function tblViewHTML(key) {
-  var v = tblViewGet(key), pk = TBL_PEEK[key], card = !!(pk && pk.card);
-  var b = function (m, label) {
-    var on = card ? m === 'lines' : v === m;
-    return '<button class="colcog" data-testid="view-' + m + '-' + esc(key) + '" aria-pressed="' + on + '"' + (card ? ' disabled' : '') + ' style="' + (on ? 'font-weight:700;text-decoration:underline' : '') + '" onclick="event.stopPropagation();tblViewSet(\'' + esc(key) + '\',\'' + m + '\')">' + tx(label) + '</button>';
-  };
-  return b('grid', '\u25a4 grid') + b('lines', '\u2630 lines');
-}
-function tblColsMenuToggle(key) {
-  var s = TBL_COLS[key] || tblColsDeclare(key, { cols: [], prio: [] });
-  var v = !(s.isOpen ? s.isOpen() : s.open);
-  if (s.setOpen) s.setOpen(v); else s.open = v;
-  if (s.menuRepaint) s.menuRepaint(); else tblColsRefresh(key);
-}
-/** the chooser: SHOWN — in this order (checkbox, ← →), then AVAILABLE. The Task list's markup and styles, unchanged. */
-function tblColsMenuHTML(key) {
-  var s = TBL_COLS[key]; if (!s || !s.cols.length) return '';
-  var set = tblColsKeys(key), top = tblColsTop(s), pk = TBL_PEEK[key];
-  var noroom = s.noroom ? s.noroom() : ((pk && pk.noroom) || []);
-  var col = function (k) { return s.cols.filter(function (c) { return c.key === k; })[0]; };
-  var chosen = set.map(col).filter(Boolean), rest = s.cols.filter(function (c) { return set.indexOf(c.key) < 0; });
-  var q = "'" + esc(key) + "'";
-  var row = function (c, i, n, on) {
-    var arrow = function (dir, ok, title) {
-      if (!on) return '<span class="mv-sp"></span>';
-      return mvBtn(dir < 0 ? '←' : '→', ok, title, 'event.stopPropagation();tblColsMove(' + q + ",'" + esc(c.key) + "'," + dir + ')');
+
+  var INST = [];                /* every live mount; pruned when its element leaves the document */
+  var STATE = {};               /* key → the choices that must survive a repaint (search, filters, open rows) */
+  var DRAG = null;
+
+  function prune() {
+    INST = INST.filter(function (I) {
+      if (I.dead) return false;
+      if (!root.document.documentElement.contains(I.el)) { teardown(I); return false; }
+      return true;
+    });
+  }
+  function teardown(I) {
+    I.dead = true; try { if (I.io) I.io.disconnect(); } catch (_) {} clearTimeout(I.qt);
+    try { var lb = I.el.querySelector(':scope > .cbl-list'); if (lb && lb.__cblRO) lb.__cblRO.disconnect(); } catch (_) {}
+    (I.off || []).forEach(function (x) { try { I.el.removeEventListener(x[0], x[1]); } catch (_) {} }); I.off = [];
+  }
+
+  /* ═════ MOUNT ═════ */
+  function mount(el, o) {
+    if (!el || !o) return null;
+    injectCss();
+    prune();
+    var key = String(o.key || el.id || 'list');
+    el.innerHTML = '';
+    if (el.__cbl) { teardown(el.__cbl); INST = INST.filter(function (x) { return x !== el.__cbl; }); }
+    var I = { el: el, o: o, key: key, pop: null, limit: 50, nextCache: {}, dead: false };
+    var R = STATE[key] || (STATE[key] = { q: '', filt: {}, open: {}, allOpen: false, sel: {}, selMode: false, gcol: {}, hl: null });
+    I.r = R;
+    I.s = loadChoices(I);
+    el.__cbl = I;
+    el.classList.add('cbl');
+    el.setAttribute('data-cbl', key);
+    wire(I);
+    INST.push(I);
+    paintAll(I);
+    var api = {
+      refresh: function (x) { return refresh(I, x); },
+      destroy: function () { teardown(I); INST = INST.filter(function (y) { return y !== I; }); if (el.__cbl === I) { el.__cbl = null; el.innerHTML = ''; el.classList.remove('cbl'); } },
+      el: el,
+      state: function () { return { cols: I.s.cols.slice(), widths: JSON.parse(JSON.stringify(I.s.widths)), view: I.s.view, group: I.s.group, sort: I.s.sort, q: R.q, filt: JSON.parse(JSON.stringify(R.filt)) }; }
     };
-    var fixed = c.key === top, nr = on && noroom.indexOf(c.key) >= 0;
-    return '<div class="colrow">' + arrow(-1, i > 0, 'Move left')
-      + '<label' + (fixed ? ' title="' + esc(tx('Always shown — it names the row')) + '"' : '') + '><input type="checkbox" data-testid="cols-' + esc(key) + '-' + esc(c.key) + '" '
-      + (on ? 'checked ' : '') + (fixed ? 'disabled ' : '') + 'onchange="tblColsToggle(' + q + ",'" + esc(c.key) + "')\"> "
-      + esc(c.label || c.key) + (nr ? ' <span class="colmnone" data-testid="cols-noroom-' + esc(c.key) + '">' + esc(tx('hidden — no room')) + '</span>' : '') + '</label>'
-      + arrow(1, i < n - 1, 'Move right') + '</div>';
-  };
-  return '<div class="colmenu" data-testid="cols-menu-' + esc(key) + '" onclick="event.stopPropagation()">'
-    + '<div class="colmhd">' + tx('Shown — in this order') + '</div>'
-    + chosen.map(function (c, i) { return row(c, i, chosen.length, true); }).join('')
-    + (rest.length ? '<div class="colmhd">' + tx('Available') + '</div>' + rest.map(function (c) { return row(c, 0, 0, false); }).join('') : '')
-    + '</div>';
-}
-/** the button sits in the list's control bar; its menu opens under it */
-function tblColsBtnHTML(key) {
-  return '<button class="colcog" data-testid="cols-btn-' + esc(key) + '" onclick="event.stopPropagation();tblColsMenuToggle(\'' + esc(key) + '\')" title="' + esc(tx('Choose columns')) + '">' + tx('⚙ columns') + '</button>';
-}
-function tblColsInner(key) { var s = TBL_COLS[key]; return tblViewHTML(key) + tblColsBtnHTML(key) + ((s && (s.isOpen ? s.isOpen() : s.open)) ? tblColsMenuHTML(key) : ''); }
-function tblColsBoxHTML(key) { return '<span id="colbox_' + esc(key) + '" style="position:relative;display:inline-block">' + tblColsInner(key) + '</span>'; }
-function tblColsRefresh(key) { var el = document.getElementById('colbox_' + key); if (el) el.innerHTML = tblColsInner(key); }
+    I.api = api;
+    return api;
+  }
 
-/** the grid template: an optional lead track (the Task's select box), then each column's width — a manual width map wins */
-function tblTemplate(cols, o) {
-  o = o || {};
-  return (o.lead || '') + cols.map(function (c) { return (o.w && o.w[c.key]) ? o.w[c.key] : c.w; }).join(' ');
-}
-/**
- * the header: sortable cells call `o.onSort(key)` (a global function NAME, so the markup stays an onclick), the resize
- * handle calls `o.onResize(event, key)`. `o.sort`/`o.dir` say which arrow is lit; `o.label(col)` renames a heading.
- */
-function tblHeaderHTML(cols, o) {
-  o = o || {};
-  var cells = cols.map(function (c) {
-    var active = o.sort === c.sort && c.sort, arrow = active ? (o.dir === 'asc' ? ' ▲' : ' ▼') : (c.sort ? ' ⇅' : '');
-    return '<span class="lhcell' + (c.sort ? ' sortable' : '') + (c.align === 'right' ? ' ra' : '') + '" ' + (c.sort && o.onSort ? ('onclick="' + o.onSort + '(' + (o.arg ? '\'' + o.arg + '\',' : '') + '\'' + c.sort + '\')"') : '') + '>'
-      + esc(o.label ? o.label(c) : c.label) + '<span class="sarr">' + arrow + '</span>'
-      + (o.onResize ? '<span class="colrz" onmousedown="' + o.onResize + '(event,\'' + c.key + '\')" onclick="event.stopPropagation()"></span>' : '') + '</span>';
-  }).join('');
-  return '<div class="lhead" style="grid-template-columns:var(--coltpl)">' + (o.lead || '') + cells + '</div>';
-}
-/**
- * one row. `o.cls` extra classes · `o.lead` a leading cell · `o.attrs` extra attributes (a leading space) · `o.click` the
- * onclick body · `o.tid` a data-testid. `o.labels` puts each column's label on its cell (data-l) so a narrow pane can name it (the .tblx card fold).
- */
-function tblRowHTML(cols, row, o) {
-  o = o || {};
-  var cells = cols.filter(function (col) {
-    if (!o.lines || col.tid) return true;   /* LINES leave out a field the record has no value for */
-    var t = String(col.cell(row)).replace(/<[^>]*>/g, '').trim(); return t && t !== '\u2014';
-  }).map(function (col) {
-    return '<span class="lcell' + (col.align === 'right' ? ' ra' : '') + '"' + (o.labels ? ' data-l="' + esc(col.label || '') + '"' : '') + (col.tid ? ' data-testid="' + esc(col.tid(row)) + '"' : '') + '>' + col.cell(row) + '</span>';
-  }).join('');
-  return '<div class="lrow ' + (o.cls || '') + '" style="grid-template-columns:' + (o.tpl || 'var(--coltpl)') + '"' + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + (o.attrs || '') + (o.click ? ' onclick="' + o.click + '"' : '') + '>' + (o.lead || '') + cells + (o.lines && o.sub ? '<div class="lsub">' + o.sub + '</div>' : '') + '</div>';
-}
-/** ⭐ A TABLE's wrapper: carries the column template the header and rows read (--coltpl), and opts into the card fold */
-function tblWrapHTML(cols, inner, o) {
-  o = o || {};
-  return '<div class="' + (o.plain ? '' : 'tblx') + (o.lines ? ' tbllines' : '') + (o.cls ? ' ' + o.cls : '') + '"' + (o.id ? ' id="' + o.id + '"' : '') + (o.tid ? ' data-testid="' + esc(o.tid) + '"' : '') + ' style="--coltpl:' + tblTemplate(cols, o) + '">' + inner + '</div>';
-}
+  /* the choices a person made, remembered per list key: through opts.store when the host gives one, else under our own prefix */
+  function skey(I) { return 'cblist.' + (I.o.scope ? I.o.scope + '.' : '') + I.key; }
+  function loadChoices(I) {
+    var o = I.o, saved = null;
+    if (o.store && typeof o.store.get === 'function') saved = safe(function () { return o.store.get(I.key); }, null);
+    else saved = lsGet(skey(I));
+    saved = (saved && typeof saved === 'object') ? saved : {};
+    var s = { cols: Array.isArray(saved.cols) && saved.cols.length ? saved.cols.slice() : null, widths: (saved.widths && typeof saved.widths === 'object') ? saved.widths : {},
+      view: saved.view === 'lines' || saved.view === 'grid' ? saved.view : (o.view === 'lines' ? 'lines' : 'grid'), group: saved.group || (o.group && o.group.default) || null,
+      sort: saved.sort && saved.sort.key ? saved.sort : null };
+    return s;
+  }
+  function saveChoices(I) {
+    var s = I.s, v = { cols: s.cols, widths: s.widths, view: s.view, group: s.group, sort: s.sort };
+    if (I.o.store && typeof I.o.store.set === 'function') safe(function () { I.o.store.set(I.key, v); });
+    else lsSet(skey(I), v);
+  }
 
-/**
- * ⭐ A ROW'S NEXT LEVEL — the way Task's Group sum opens one (cap-folders.js gsToggle/_groupSumPane): a caret, and under the
- * row an indented block on the card colour. Rows inside it are `tblNextRow(cells, widths)`: the first cell takes the room,
- * the others are fixed-width and right-aligned, like the drill-down under a Group-sum item.
- */
-function tblCaretHTML(open) { return open ? '▾' : '<span class=arw>▸</span>'; }
-function tblNextHTML(inner, tid) { return '<div' + (tid ? ' data-testid="' + esc(tid) + '"' : '') + ' style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">' + inner + '</div>'; }
-function tblNextRow(cells, widths) {
-  return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">' + cells.map(function (c, i) {
-    return i === 0 ? '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + c + '</span>'
-      : '<span style="width:' + ((widths && widths[i - 1]) || 110) + 'px;text-align:end">' + c + '</span>';
-  }).join('') + '</div>';
-}
+  /* the host's words, else ours; never a raw key */
+  function T(I, s, vars) {
+    var r = s;
+    if (I.o.t) { r = safe(function () { return I.o.t(s); }, s); if (typeof r !== 'string' || !r) r = s; }
+    if (vars) Object.keys(vars).forEach(function (k) { r = r.split('{' + k + '}').join(vars[k]); });
+    return r;
+  }
 
-/* ── the hover peek: the ENTIRE line, including every column the fold dropped (rowpeek is one element for the page) ── */
-function tblPeekShow(ev, cols, row, o) {
-  o = o || {};
-  var rows = cols.map(function (col) {
-    if (o.skip && o.skip(col)) return '';
-    var v = ''; try { v = col.cell(row) || ''; } catch (_) { return ''; }
-    var plain = String(v).replace(/<[^>]*>/g, '').trim();
-    if (!plain || plain === '—') return '';                 /* the em-dash placeholder is "no value" — do not restate it */
-    if (o.noTid) v = String(v).replace(/ data-testid="[^"]*"/g, '');   /* the peek is a copy: a second element with the same test id would make the real one ambiguous */
-    return '<div class="pkr"><span class="pkk">' + esc(o.label ? o.label(col) : col.label) + '</span><span class="pkv">' + v + '</span></div>';
-  }).join('');
-  if (!rows) return;
-  var e = document.getElementById('rowpeek');
-  if (!e) { e = document.createElement('div'); e.id = 'rowpeek'; document.body.appendChild(e); }
-  e.innerHTML = rows; e.style.display = 'block';
-  var r = ev.currentTarget.getBoundingClientRect(), b = e.getBoundingClientRect();
-  e.style.top = Math.max(8, Math.min(r.top, window.innerHeight - b.height - 12)) + 'px';
-  e.style.left = Math.max(8, Math.min(r.right + 10, window.innerWidth - b.width - 12)) + 'px';
-}
-function tblPeekHide() { var e = document.getElementById('rowpeek'); if (e) e.style.display = 'none'; }
+  /* ═════ the data: rows → matched → ordered → grouped items ═════ */
+  function allRows(I) { var r = typeof I.o.rows === 'function' ? safe(function () { return I.o.rows(); }, []) : I.o.rows; return Array.isArray(r) ? r : []; }
+  function rid(I, row, i) { var v = I.o.id ? I.o.id(row) : row && row.id; return String(v == null ? 'r' + i : v); }
+  function columns(I) { return (typeof I.o.columns === 'function' ? I.o.columns() : I.o.columns) || []; }
+  function pinned(I) { return columns(I).filter(function (c) { return c.pin === 'end'; }); }
+  function choosable(I) { return columns(I).filter(function (c) { return c.pin !== 'end'; }); }
+  function topKey(I) {
+    var cs = choosable(I), best = null;
+    cs.forEach(function (c) { if (best == null || (c.prio || 99) < (best.prio || 99)) best = c; });
+    return best ? best.key : null;
+  }
+  function defaultCols(I) {
+    var cs = choosable(I), keys = cs.map(function (c) { return c.key; });
+    if (Array.isArray(I.o.defaultCols) && I.o.defaultCols.length) return I.o.defaultCols.filter(function (k) { return keys.indexOf(k) >= 0; });
+    var byPrio = cs.slice().sort(function (a, b) { return (a.prio || 99) - (b.prio || 99); }).slice(0, 3).map(function (c) { return c.key; });
+    return keys.filter(function (k) { return byPrio.indexOf(k) >= 0; });
+  }
+  /* the shown columns, in the person's order: stale keys dropped, the top column always present, then any pinned (the amount) at the end */
+  function shownKeys(I) {
+    var keys = choosable(I).map(function (c) { return c.key; }), set = (I.s.cols || defaultCols(I)).filter(function (k) { return keys.indexOf(k) >= 0; });
+    if (!set.length) set = defaultCols(I);
+    var top = topKey(I); if (top && set.indexOf(top) < 0) set = [top].concat(set);
+    return set;
+  }
+  /* in card mode (a narrow container) a page may cap the fields a card carries: the highest-priority ones stay, the rest are NAMED in the chooser */
+  function noRoomKeys(I) {
+    var keys = shownKeys(I), max = I.o.cardMax;
+    if (!I.card || !max || keys.length <= max) return [];
+    var by = {}; columns(I).forEach(function (c) { by[c.key] = c; });
+    var keep = keys.slice().sort(function (a, b) { return ((by[a] || {}).prio || 99) - ((by[b] || {}).prio || 99); }).slice(0, max);
+    return keys.filter(function (k) { return keep.indexOf(k) < 0; });
+  }
+  function shownCols(I) {
+    var by = {}, out = noRoomKeys(I); columns(I).forEach(function (c) { by[c.key] = c; });
+    return shownKeys(I).filter(function (k) { return out.indexOf(k) < 0; }).map(function (k) { return by[k]; }).filter(Boolean).concat(pinned(I));
+  }
+  function minW(I, c) { return Math.max(64, String(c.label || c.key).length * 9 + 40); }
+  function widthOf(I, c) { var w = I.s.widths[c.key]; if (typeof w !== 'number') w = Math.max(px(c.w, 140), minW(I, c)); return Math.max(minW(I, c), w); }
+  function leadOn(I) { return !!(I.o.lead && safe(function () { return I.o.lead.on(); }, false)) || (I.o.bulk && I.o.bulk.length && I.r.selMode); }
+  function template(I, cols) { return (leadOn(I) ? '34px ' : '') + cols.map(function (c) { return widthOf(I, c) + 'px'; }).join(' '); }
+  function remote(I) { return !!I.o.remote; }
 
-/* ── a declared list drawn as a Task table: its rows, a click on a header sorts by it, the count above ── */
-/**
- * `tblList(key, cols, rowFn)` — the table for list `key` (declared with listCtl): the header (a click on a sortable heading
- * picks the list's sort of that key, a second click reverses it), then every matched row through `rowFn(row, i)` (which
- * returns tblRowHTML(...) plus any open next level) handed to lazyWrap. Returns the whole table, wrapper included.
- */
-function tblList(key, cols, rowFn, emptyHTML, o) {
-  o = o || {};
-  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
-  var head = tblHeaderHTML(cols, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key, label: o.label, lead: o.lead });
-  return tblWrapHTML(cols, head + (o.rows ? o.rows : listCtlRowsHTML(key, rowFn, emptyHTML)), o);
-}
-/** a heading was clicked: the list's sort with that key (declared by the screen), reversed when it is already the one */
-function tblSortBy(key, sortKey) {
-  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], i = -1;
-  sorts.forEach(function (x, n) { if (x.key === sortKey && i < 0) i = n; });
-  if (i < 0) return;
-  if (s.sort === i) s.rev = !s.rev; else { s.sort = i; s.rev = false; }
-  listCtlResetRows(key); if (s.cfg && s.cfg.repaint) s.cfg.repaint();
-}
+  function sortOf(I, cols) {
+    var st = I.s.sort, sorts = I.o.sorts || [], e = null, dir = 1, cmp = null;
+    if (st) {
+      dir = st.dir === -1 ? -1 : 1;
+      for (var i = 0; i < sorts.length; i++) if (sorts[i].key === st.key) { e = sorts[i]; break; }
+      if (e) cmp = e.cmp;
+      else {
+        var col = null; columns(I).forEach(function (c) { if (!col && sortId(c) === st.key) col = c; });
+        if (col) cmp = function (a, b) { return cmpVals(sortVal(col, a), sortVal(col, b)); };
+      }
+    } else if (sorts[0] && sorts[0].cmp) cmp = sorts[0].cmp;
+    return cmp ? { cmp: cmp, dir: dir } : null;
+  }
+  /* the sort in force: the page's own (a server-sorted list), else the person's, else the first declared */
+  function curSort(I) {
+    if (I.o.sortNow) return safe(function () { return I.o.sortNow(); }, null);
+    return I.s.sort || (sortOf(I) && (I.o.sorts || [])[0] ? { key: I.o.sorts[0].key, dir: 1 } : null);
+  }
+  function sortId(c) { return c.sort === true ? c.key : (c.sort ? String(c.sort) : null); }
+  function sortVal(c, row) { if (c.value) return safe(function () { return c.value(row); }, ''); var v = safe(function () { return c.cell(row); }, ''); return c.html ? plain(v) : v; }
 
+  /* a filter choice the data no longer offers (a new date range) is dropped, never left hiding everything */
+  function cleanFilters(I) {
+    (I.o.filters || []).forEach(function (f) {
+      var v = I.r.filt[f.key], opts = fopts(f);
+      if (v && opts.length && !opts.some(function (x) { return x.v === v; })) delete I.r.filt[f.key];
+    });
+  }
+  function matched(I) {
+    var rows = allRows(I), R = I.r;
+    if (remote(I)) return { all: rows, rows: rows };
+    var q = String(R.q || '').trim().toLowerCase(), fl = I.o.filters || [];
+    var out = rows.filter(function (row) {
+      if (q) {
+        var text = I.o.search ? safe(function () { return I.o.search(row); }, '') : columns(I).map(function (c) { return sortVal(c, row); }).join(' ');
+        if (String(text || '').toLowerCase().indexOf(q) < 0) return false;
+      }
+      for (var i = 0; i < fl.length; i++) { var v = R.filt[fl[i].key]; if (v && !safe(function () { return fl[i].match ? fl[i].match(row, v) : row[fl[i].key] === v; }, true)) return false; }
+      return true;
+    });
+    var srt = sortOf(I);
+    if (srt) { var d = srt.dir; out = out.slice().sort(function (a, b) { return srt.cmp(a, b) * d; }); }
+    return { all: rows, rows: out };
+  }
+  function groupMode(I) { var g = I.o.group; if (!g) return null; var opts = g.options || []; var m = I.s.group; if (m && opts.length && !opts.some(function (x) { return x[0] === m; })) m = null; return m || g.default || (opts[0] && opts[0][0]) || 'on'; }
+  /* the rows (and, with a grouping, their group lines) in order: a group is ONE head and all its rows, groups in order of first appearance */
+  function itemsOf(I, rows) {
+    var g = I.o.group, mode = groupMode(I);
+    if (!g || !g.by || mode === 'none') return rows.map(function (r, i) { return { row: r, id: rid(I, r, i) }; });
+    var buckets = {}, order = [], loose = [];
+    rows.forEach(function (r, i) {
+      var k = safe(function () { return g.by(r, mode); }, null), it = { row: r, id: rid(I, r, i), g: k ? String(k[1]) : null };
+      if (!k) { loose.push(it); return; }
+      var key = String(k[1]);
+      if (!buckets[key]) { buckets[key] = { label: k[0], rows: [], items: [] }; order.push(key); }
+      buckets[key].rows.push(r); buckets[key].items.push(it);
+    });
+    if (g.order) order.sort(function (x, y) { return g.order.indexOf(x) - g.order.indexOf(y); });
+    var items = [];
+    order.forEach(function (key) {
+      var bk = buckets[key], fig = g.fig ? safe(function () { return g.fig(bk.rows, mode, key); }, '') : T(I, '{n} shown', { n: bk.rows.length });
+      items.push({ group: bk.label, gkey: key, fig: fig });
+      bk.items.forEach(function (it) { items.push(it); });
+    });
+    return items.concat(loose);
+  }
+  function isOpen(I, id) { var R = I.r; return R.allOpen ? !R.open[id + '#closed'] : !!R.open[id]; }
+  function hasNext(I) { return !!(I.o.next || (I.o.actions && I.o.actions.length)); }
 
-/**
- * ══ A SCREEN'S LIST AS THE TASK TABLE — declare it once, paint it, open a row's next level ═══════════════════════════
- * What the Ledger's lists (Waiting · Day book · Dues · the ledgers) and the CRM's Customers and Suppliers all do the same way:
- * `tblDeclare(key, {rows, text, sorts, filters, paint})` declares the list (listCtl*: search · filters · sort · count),
- * `tblListHTML(key)` is its controls and the box it paints into, `tblListPaint(key)` paints it. A screen's `paint()` fits the
- * columns to the box (`tblFitBox`), draws the header (`tblHeadFor`) and each row (`tblRowFor`: the Task row, its hover peek,
- * and — when the row is open — its next level under it). The screen declares columns and says what a next level holds; it draws
- * no row, card or expander of its own (e2e/books-web-breaks.cjs proves a screen that does is caught).
- */
-var TBL_OPEN = {};   /* 'list:id' → its next level is open */
-function tblIsOpen(list, id) { return !!TBL_OPEN[list + ':' + id]; }
-function tblRepaint(list) { var c = listCtlS(list).cfg; if (c && c.repaint) c.repaint(); }
-function tblToggle(list, id) { var k = list + ':' + id; if (TBL_OPEN[k]) delete TBL_OPEN[k]; else TBL_OPEN[k] = true; tblRepaint(list); }
-/** the caret of a row — Task's Group sum draws ▸ / ▾ the same way (tblCaretHTML) */
-function tblCaret(list, id) {
-  var open = tblIsOpen(list, id);
-  return '<span role="button" aria-label="' + esc(tx(open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + open + '" style="cursor:pointer;display:inline-block;width:14px;color:var(--grey)" onclick="event.stopPropagation();tblToggle(\'' + list + '\',\'' + esc(id) + '\')">' + tblCaretHTML(open) + '</span>';
-}
-/** the pane's width for fitting columns: a card per row (no fitting) below 560px, else what the box holds */
-function tblAvail(id, plain) {
-  var el = document.getElementById(id), w;
-  if (el) w = el.clientWidth;
-  /* not on screen yet (the first paint is a string): a rail is as wide as the screen says its pane is — the Task list reads UI.lw the same way */
-  else if (plain && typeof UI !== 'undefined') w = (UI.vp === 'mob') ? window.innerWidth : (UI[typeof lwKey === 'function' ? lwKey() : 'lw'] || UI.lw || 340);
-  else w = (document.getElementById('bk_body') || document.body).clientWidth || 900;
-  return (w <= 560 && !tblPlain(plain)) ? 9999 : w - 24;
-}
-/** the pane was dragged: every rail-style table (the CRM's) that is on screen is fitted again, as applyColTpl does for Task */
-function tblRefitRails() { Object.keys(TBL_PEEK).forEach(function (k) { if (TBL_PEEK[k].plain && document.getElementById(TBL_PEEK[k].box)) tblRepaint(k); }); }
-/** a declared list's markup: its controls, its count, and the box its table is painted into (tblListPaint) */
-function tblListHTML(key, extra) {
-  return listCtlToolbarHTML(key) + (extra || '') + '<div class="bkdv-count" id="bkc_' + key + '" data-testid="' + key + '-count"></div><div id="bkl_' + key + '" data-testid="' + key + '-list"></div>';
-}
-function tblListPaint(key) {
-  var c = listCtlS(key).cfg, box = document.getElementById('bkl_' + key); if (!c || !box) return;
-  box.innerHTML = c.paint();
-  var n = document.getElementById('bkc_' + key); if (n) n.innerHTML = listCtlCountHTML(key);
-}
-/** declare a list once: the screen's rows, text, sorts, filters, and `paint()` (its table); the repaint is the same for all */
-function tblDeclare(key, cfg) {
-  cfg.tbl = true;   /* its toolbar carries the columns button (tblColsBoxHTML) */
-  cfg.repaint = cfg.repaint || function () { tblListPaint(key); };
-  return listCtl(key, cfg);
-}
-/* a table's fitted columns, its header and its hover peek (the peek shows every column, the fitted ones and the folded) */
-var TBL_PEEK = {};
-/* `plain` = a rail (the CRM's lists, like the Task list): the columns that do not fit are folded away and the hover peek shows them — no card fold */
-function tblFitBox(key, cols, prio, boxId, plain) {
-  prio = prio || cols.map(function (c) { return c.key; });
-  tblColsDeclare(key, { cols: cols, prio: prio });
-  TBL_PEEK[key] = { cols: cols, by: {}, plain: tblPlain(plain), box: boxId };
-  var avail = tblAvail(boxId, plain), card = avail === 9999, lines = !card && tblViewGet(key) === 'lines';
-  TBL_PEEK[key].card = card; TBL_PEEK[key].lines = lines;
-  var chosen = tblColsChosen(key), fit = lines ? chosen : tblFit(chosen, avail, prio);   /* LINES wrap: every ticked field is shown */
-  /* a tick that does not fit is NOT silently ignored: the chooser names it "hidden - no room" (tblColsMenuHTML) */
-  TBL_PEEK[key].noroom = chosen.filter(function (c) { return fit.indexOf(c) < 0; }).map(function (c) { return c.key; });
-  return fit;
-}
-function tblWrapFor(key, fit, inner, o) { o = o || {}; o.plain = !!(TBL_PEEK[key] && TBL_PEEK[key].plain); o.lines = !!(TBL_PEEK[key] && TBL_PEEK[key].lines); return tblWrapHTML(fit, inner, o); }
-function tblHeadFor(key, fit) {
-  if (TBL_PEEK[key] && TBL_PEEK[key].lines) return '';
-  var s = listCtlS(key), sorts = (s.cfg && s.cfg.sorts) || [], cur = sorts[s.sort] || sorts[0] || {};
-  return tblHeaderHTML(fit, { sort: cur.key, dir: s.rev ? 'desc' : 'asc', onSort: 'tblSortBy', arg: key });
-}
-function tblPeek(ev, key, id) { var p = TBL_PEEK[key], row = p && p.by[id]; if (p && row) tblPeekShow(ev, p.cols, row, { noTid: true }); }
-/** one row of list `key`: the Task row, its hover peek, and (open) its next level under it */
-function tblRowFor(key, fit, row, id, o, next) {
-  o = o || {}; TBL_PEEK[key].by[id] = row;
-  return tblRowHTML(fit, row, { cls: o.cls, tid: o.tid, labels: !TBL_PEEK[key].plain, lines: TBL_PEEK[key].lines, sub: o.sub, click: o.click, lead: o.lead,
-    attrs: ' data-id="' + esc(id) + '" onmouseenter="tblPeek(event,\'' + key + '\',\'' + esc(id) + '\')" onmouseleave="tblPeekHide()"' + (o.attrs || '') })
-    + (tblIsOpen(key, id) && next ? (typeof next === 'function' ? next() : next) : '');
-}
+  /* ═════ painting ═════ */
+  function paintAll(I) { cleanFilters(I); paintTitle(I); paintTools(I); paintList(I); fit(I); }
+  function $(I, sel) { return I.el.querySelector(sel); }
 
+  function head(I) { return typeof I.o.head === 'function' ? safe(function () { return I.o.head(); }, null) : I.o.head; }
+  function paintTitle(I) {
+    var h = head(I), box = $(I, ':scope > .cbl-title');
+    if (!h || !(h.title || h.period || h.slot || (h.notices && h.notices.length) || (h.chips && h.chips.length))) { if (box) box.remove(); return; }
+    if (!box) { box = root.document.createElement('div'); box.className = 'cbl-title'; box.setAttribute('data-cbl-part', 'title'); I.el.insertBefore(box, I.el.firstChild); }
+    var out = '';
+    if (h.title) out += '<h1>' + esc(h.title) + '</h1>';
+    if (h.period) {
+      var p = h.period;
+      out += '<span class="cbl-anchor"><button type="button" class="cbl-chip period" data-cbl-pop="period" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'period') + '" data-testid="cbl-period-' + esc(I.key) + '">' + esc(p.label || '') + ' ▾</button>'
+        + (I.pop === 'period' ? periodPop(I, p) : '') + '</span>';
+    }
+    var chips = h.chips || [], notes = h.notices || [], chipHTML = function (c) { return '<span class="cbl-chip"' + (c.tid ? ' data-testid="' + esc(c.tid) + '"' : '') + '>' + esc(c.text) + '</span>'; };
+    var noteHTML = function (n, i) { return '<button type="button" class="cbl-chip ' + esc(n.cls === 'bad' ? 'bad' : 'warn') + '" data-notice="' + i + '"' + (n.tid ? ' data-testid="' + esc(n.tid) + '"' : '') + '>' + esc(n.text) + '</button>'; };
+    /* a narrow container folds the strip and the notices into ONE chip that opens them: the head stays within its 30% of a phone */
+    I.narrow = I.el.clientWidth > 0 && I.el.clientWidth <= 640;
+    if (I.narrow && chips.length + notes.length > 1) {
+      var bad = notes.some(function (n) { return n.cls === 'bad'; });
+      out += '<span class="cbl-anchor"><button type="button" class="cbl-chip ' + (notes.length ? (bad ? 'bad' : 'warn') : '') + '" data-cbl-pop="notes" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'notes') + '" data-testid="cbl-notes-' + esc(I.key) + '">'
+        + esc(T(I, notes.length ? '{n} notices' : '{n} details', { n: chips.length + notes.length })) + ' ▾</button>'
+        + (I.pop === 'notes' ? '<div class="cbl-pop left" role="dialog" aria-label="' + esc(T(I, 'Notices')) + '" data-testid="cbl-notes-pop-' + esc(I.key) + '"><div class="cbl-notes">' + chips.map(chipHTML).join('') + notes.map(noteHTML).join('') + '</div></div>' : '') + '</span>';
+    } else {
+      out += chips.map(chipHTML).join('') + notes.map(noteHTML).join('');
+    }
+    if (typeof h.slot === 'function') out += '<span class="cbl-slot" data-cbl-part="slot" style="margin-inline-start:auto;display:flex;align-items:center;gap:8px"></span>';
+    box.innerHTML = out;
+    if (typeof h.slot === 'function') { var sl = box.querySelector(':scope > .cbl-slot'); if (sl) safe(function () { h.slot(sl); }); }
+  }
+  function periodPop(I, p) {
+    var presets = p.presets || [], val = I.pv || p.value;
+    return '<div class="cbl-pop left" role="dialog" aria-label="' + esc(T(I, 'Period')) + '"><h4>' + esc(T(I, 'Period')) + '</h4><div class="cbl-preset">'
+      + presets.map(function (x) { return '<button type="button" data-period="' + esc(x[0]) + '" aria-pressed="' + (val === x[0]) + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>'
+      + (val === 'custom' ? '<div class="cbl-custom"><input data-cbl-from type="date" value="' + esc((p.custom && p.custom.from) || '') + '" aria-label="' + esc(T(I, 'From')) + '"> → <input data-cbl-to type="date" value="' + esc((p.custom && p.custom.to) || '') + '" aria-label="' + esc(T(I, 'To')) + '"></div>' : '')
+      + '</div>';
+  }
 
-/* ═══ ⭐ UNIVERSAL CLIENT-SIDE LAZY LIST — MOVED from app.html (the Task screen, the catalogue and every list keep calling lazyWrap) ═══ */
-/* ── universal client-side lazy list — reveals N rows at a time in ANY container ────────────
-   IntersectionObserver auto-reveal + a "Show more" button fallback (never stuck) + total/end marker.
-   For lists whose endpoint returns everything at once: lazyWrap(id, items, cardFn, emptyHtml). */
-var LAZY = {};
-/**
- * ── ⚠️⚠️⚠️ A REPAINT MUST NOT TAKE BACK THE ROWS SOMEBODY ASKED FOR ───────────────────────────────────────────
- *
- * Athi, INC-260912-0XJN: *"it says 500 products but only 12 rows are listed."*
- *
- * ⚠️⚠️ AND THE COUNT WAS RIGHT. `shown` was reset to 50 on EVERY rebuild — and this list rebuilds constantly:
- * the twenty-second refresh, the categories arriving, the tax slabs, the offers, every late loader calls
- * paintProdList. So you press "Show 50 more" three times, reach row 200, a timer fires, and you are back at
- * fifty while the header still says how many there really are. Measured on the deployed page: revealed 60,
- * repainted, `LAZY.prodlist.shown` was 50 again.
- *
- * ⚠️ AND IT TOOK THE SCROLL WITH IT. paintProdList carefully restores scrollTop onto a box that just lost
- * three quarters of its height, so the restore lands past the end and the list jumps. Two symptoms, one cause.
- *
- * ⭐ SO THE WINDOW IS KEPT, and it is kept HERE rather than at the one call site that complained — the same
- * reset was under the chit history, the message thread and both dispute lists, none of which had been
- * noticed. [[feedback-repaint-locally]]
- *
- * ⚠️ KEPT ONLY WHILE IT STILL FITS. If the list has shrunk below what was revealed — a filter narrowed it,
- * rows were deleted — the window goes back to one chunk: showing "150 of 12" is a worse lie than collapsing.
- * ⚠️ And never below `chunk`, so a list that grows never shows fewer rows than a fresh one would.
- */
-function lazyWrap(id, items, cardFn, empty){ items = items || [];
-  const kept = LAZY[id];
-  if(kept && kept._io){ try{ kept._io.disconnect(); }catch(_){} }
-  if(!items.length) return empty || '';
-  const chunk = 50;
-  var shown = Math.min(chunk, items.length);
-  if(kept && kept.shown > shown && kept.shown <= items.length) shown = kept.shown;
-  LAZY[id] = { items, cardFn, chunk, shown: shown, total: items.length, _io:null };
-  setTimeout(function(){ lazyAttach(id); }, 0);
-  return items.slice(0, LAZY[id].shown).map(cardFn).join("") + lazyBar(id); }
-function lazyBar(id){ const s=LAZY[id]; if(!s) return ''; const left=s.total-s.shown;
-  const inner = left<=0 ? ('<div class="listend">'+s.total+' total · end of list</div>')
-    : ('<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>');
-  return '<div class="lazysent" id="lzs_'+id+'">'+inner+'</div>'; }
-function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
-  const next=s.items.slice(s.shown, s.shown+s.chunk); if(next.length){ sent.insertAdjacentHTML('beforebegin', next.map(s.cardFn).join("")); s.shown+=next.length; }
-  const left=s.total-s.shown;
-  if(left<=0){ sent.innerHTML='<div class="listend">'+s.total+' total · end of list</div>'; if(s._io){ try{s._io.disconnect();}catch(_){} s._io=null; } }
-  else sent.innerHTML='<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>'; }
-function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
-  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
+  function activeFilters(I) { return (I.o.filters || []).filter(function (f) { return I.r.filt[f.key]; }); }
+  function countText(I, m) {
+    var t = T(I, '{n} shown', { n: m.rows.length });
+    if (remote(I)) { var tot = val(I.o.remote.total); if (tot != null && tot !== m.rows.length) t += ' ' + T(I, 'of') + ' ' + tot; }
+    else if (m.rows.length !== m.all.length) t += ' ' + T(I, 'of') + ' ' + m.all.length;
+    return t;
+  }
+  function fopts(f) { return (f.options || []).map(function (x) { return typeof x === 'object' ? x : { v: x, label: x }; }); }
+  function paintTools(I) {
+    var box = $(I, ':scope > .cbl-tools');
+    if (!box) { box = root.document.createElement('div'); box.className = 'cbl-tools'; box.setAttribute('data-cbl-part', 'tools'); box.setAttribute('role', 'toolbar'); box.setAttribute('aria-label', T(I, 'View')); var l = $(I, ':scope > .cbl-list'); I.el.insertBefore(box, l); }
+    var o = I.o, R = I.r, s = I.s, m = matched(I), fn = activeFilters(I).length, k = esc(I.key), sorts = sortChoices(I);
+    var tids = o.tids || {}, tl = o.tools || {}, h = tl.search === false ? '' : '<div class="cbl-search"><span aria-hidden="true">🔍</span><input type="search" data-cbl-q id="cbl-q-' + k + '" data-testid="listctl-search-' + k + '" placeholder="' + esc(o.searchHint || T(I, 'Search')) + '" value="' + esc(R.q) + '" aria-label="' + esc(T(I, 'Search')) + '"></div>';
+    if (!remote(I) && ((o.filters && o.filters.length) || sorts.length > 1)) {
+      h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn' + (fn ? ' on' : '') + '" data-cbl-pop="filt" id="cbl-filt-' + k + '" data-testid="cbl-filters-' + k + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'filt') + '">' + esc(T(I, 'Filters')) + ' ▾' + (fn ? ' <span class="badge">' + fn + '</span>' : '') + '</button>' + (I.pop === 'filt' ? filtPop(I, sorts) : '') + '</span>';
+    }
+    var g = o.group, gm = groupMode(I);
+    if (g && (g.options || []).length > 1) h += '<span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'Group by')) + '" data-testid="cbl-group-' + k + '">' + g.options.map(function (x) { return '<button type="button" data-group="' + esc(x[0]) + '"' + (g.tid ? ' data-testid="' + esc(g.tid) + '-group-' + esc(x[0]) + '"' : '') + ' aria-pressed="' + (gm === x[0]) + '">' + esc(T(I, x[1])) + '</button>'; }).join('') + '</span>';
+    if (hasNext(I)) h += '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-exp data-testid="' + esc(R.allOpen ? (tids.collapse || 'cbl-expand-' + k) : (tids.expand || 'cbl-expand-' + k)) + '" title="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-label="' + esc(T(I, R.allOpen ? 'Collapse all' : 'Expand all')) + '" aria-pressed="' + !!R.allOpen + '">' + (R.allOpen ? '⇡' : '⇣') + '</button>';
+    h += '<span class="cbl-seg" role="group" aria-label="' + esc(T(I, 'View')) + '"><button type="button" data-view="grid" data-testid="view-grid-' + k + '" title="' + esc(T(I, 'Grid: columns')) + '" aria-label="' + esc(T(I, 'Grid: columns')) + '" aria-pressed="' + (s.view === 'grid') + '">▤</button><button type="button" data-view="lines" data-testid="view-lines-' + k + '" title="' + esc(T(I, 'Lines: one line per record')) + '" aria-label="' + esc(T(I, 'Lines: one line per record')) + '" aria-pressed="' + (s.view === 'lines') + '">☰</button></span>';
+    h += '<span class="cbl-anchor"><button type="button" class="cbl-tbtn cbl-ico" data-cbl-pop="cols" id="cbl-cols-' + k + '" data-testid="cols-btn-' + k + '" title="' + esc(T(I, 'Choose columns')) + '" aria-label="' + esc(T(I, 'Choose columns')) + '" aria-haspopup="dialog" aria-expanded="' + (I.pop === 'cols') + '">⚙</button>' + (I.pop === 'cols' ? colsPop(I) : '') + '</span>';
+    if (o.csv !== false && tl.csv !== false) h += '<button type="button" class="cbl-tbtn cbl-ico" data-cbl-csv data-testid="' + esc(tids.csv || 'cbl-csv-' + k) + '" title="' + esc(T(I, 'Download CSV')) + '" aria-label="' + esc(T(I, 'Download CSV')) + '">⬇</button>';
+    if (o.bulk && o.bulk.length) h += '<button type="button" class="cbl-tbtn' + (R.selMode ? ' on' : '') + '" data-cbl-selmode data-testid="cbl-select-' + k + '" aria-pressed="' + !!R.selMode + '">☑ ' + esc(T(I, 'Select')) + '</button>';
+    h += '<span class="cbl-count" id="cbl-count-' + k + '" data-testid="' + esc(tids.count || (I.key + '-count')) + '" aria-live="polite">' + esc(countText(I, m)) + '</span>';
+    if (o.bulk && o.bulk.length && R.selMode) {
+      var n = selectedRows(I).length;
+      h += '<span class="cbl-acts" style="margin:0" data-testid="cbl-bulk-' + k + '"><button type="button" class="cbl-btn" data-cbl-selall>' + esc(T(I, 'Select all shown')) + '</button>' + o.bulk.map(function (b) { return '<button type="button" class="cbl-btn" data-bulk="' + esc(b.id) + '"' + (n ? '' : ' disabled') + '>' + esc(T(I, b.label)) + ' (' + n + ')</button>'; }).join('') + '</span>';
+    }
+    h += '<div class="cbl-fchips">' + activeFilters(I).map(function (f) {
+      var ov = fopts(f).filter(function (x) { return x.v === R.filt[f.key]; })[0];
+      return '<span class="cbl-fchip">' + esc(f.label || f.key) + ': ' + esc(ov ? ov.label : R.filt[f.key]) + '<button type="button" data-unfilt="' + esc(f.key) + '" aria-label="' + esc(T(I, 'Remove {x} filter', { x: f.label || f.key })) + '">×</button></span>';
+    }).join('') + '</div>';
+    var ae = root.document.activeElement, keepId = ae && box.contains(ae) ? ae.id : '', ss = null, se = null;
+    if (keepId && ae.setSelectionRange) { try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (_) {} }
+    box.innerHTML = h;
+    if (keepId) { var back = box.querySelector('#' + cssId(keepId)); if (back) { back.focus(); if (ss != null) { try { back.setSelectionRange(ss, se); } catch (_) {} } } }
+  }
+  function sortChoices(I) {
+    var out = [], seen = {};
+    (I.o.sorts || []).forEach(function (x) { out.push({ id: x.key, label: x.label || x.key }); seen[x.key] = 1; });
+    columns(I).forEach(function (c) { var id = sortId(c); if (id && !seen[id]) { out.push({ id: id, label: c.label || c.key }); seen[id] = 1; } });
+    return out;
+  }
+  function filtPop(I, sorts) {
+    var R = I.r, st = I.s.sort, cur = st ? st.key : ((I.o.sorts || [])[0] && I.o.sorts[0].key);
+    return '<div class="cbl-pop left" role="dialog" aria-label="' + esc(T(I, 'Filters')) + '" data-testid="cbl-filters-pop-' + esc(I.key) + '"><h4>' + esc(T(I, 'Filters')) + '</h4>'
+      + (I.o.filters || []).map(function (f) {
+        return '<div class="f"><span id="cbl-fl-' + esc(I.key) + '-' + esc(f.key) + '">' + esc(f.label || f.key) + '</span><select aria-labelledby="cbl-fl-' + esc(I.key) + '-' + esc(f.key) + '" data-filt="' + esc(f.key) + '" id="cbl-f-' + esc(I.key) + '-' + esc(f.key) + '" data-testid="listctl-filter-' + esc(f.key) + '"><option value="">' + esc(f.all || T(I, 'Any')) + '</option>'
+          + fopts(f).map(function (x) { return '<option value="' + esc(x.v) + '"' + (R.filt[f.key] === x.v ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></div>';
+      }).join('')
+      + (sorts.length > 1 ? '<div class="f"><span id="cbl-sl-' + esc(I.key) + '">' + esc(T(I, 'Sort by')) + '</span><select aria-labelledby="cbl-sl-' + esc(I.key) + '" data-cbl-sort id="cbl-sort-' + esc(I.key) + '" data-testid="listctl-sort-' + esc(I.key) + '">' + sorts.map(function (x) { return '<option value="' + esc(x.id) + '"' + (cur === x.id ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></div>' : '')
+      + '<div class="cbl-acts"><button type="button" class="cbl-btn" data-cbl-clearf>' + esc(T(I, 'Clear all')) + '</button></div></div>';
+  }
+  function colsPop(I) {
+    var all = choosable(I), shown = shownKeys(I), by = {}, top = topKey(I); all.forEach(function (c) { by[c.key] = c; });
+    var rest = all.filter(function (c) { return shown.indexOf(c.key) < 0; }), k = esc(I.key), nr = noRoomKeys(I);
+    function row(c, i, on) {
+      return '<div class="cbl-colrow">' + (on ? '<button type="button" class="cbl-mv" data-mv="' + esc(c.key) + '" data-d="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="' + esc(T(I, 'Move {x} left', { x: c.label })) + '" title="' + esc(T(I, 'Move {x} left', { x: c.label })) + '">←</button>' : '<span class="cbl-mvsp"></span>')
+        + '<label' + (c.key === top ? ' title="' + esc(T(I, 'Always shown — it names the row')) + '"' : '') + '><input type="checkbox" data-col="' + esc(c.key) + '" data-testid="cols-' + k + '-' + esc(c.key) + '"' + (on ? ' checked' : '') + (c.key === top ? ' disabled' : '') + '> ' + esc(c.label || c.key) + (on && nr.indexOf(c.key) >= 0 ? ' <span class="cbl-noroom" data-testid="cols-noroom-' + esc(c.key) + '">' + esc(T(I, 'hidden — no room')) + '</span>' : '') + '</label>'
+        + (on ? '<button type="button" class="cbl-mv" data-mv="' + esc(c.key) + '" data-d="1"' + (i === shown.length - 1 ? ' disabled' : '') + ' aria-label="' + esc(T(I, 'Move {x} right', { x: c.label })) + '" title="' + esc(T(I, 'Move {x} right', { x: c.label })) + '">→</button>' : '<span class="cbl-mvsp"></span>') + '</div>';
+    }
+    return '<div class="cbl-pop" role="dialog" aria-label="' + esc(T(I, 'Choose columns')) + '" data-testid="cols-menu-' + k + '"><h4>' + esc(T(I, 'Shown — in this order')) + '</h4>'
+      + shown.map(function (kk, i) { return by[kk] ? row(by[kk], i, true) : ''; }).join('')
+      + (rest.length ? '<h4>' + esc(T(I, 'Available')) + '</h4>' + rest.map(function (c) { return row(c, 0, false); }).join('') : '')
+      + '<div class="cbl-acts"><button type="button" class="cbl-btn" data-cbl-resetcols data-testid="cols-reset-' + k + '">' + esc(T(I, 'Reset to the standard columns')) + '</button></div></div>';
+  }
+
+  /* the rows area: header (sticky) + rows, or one of the four states */
+  function paintList(I) {
+    var box = $(I, ':scope > .cbl-list');
+    if (!box) { box = root.document.createElement('div'); box.className = 'cbl-list'; box.setAttribute('tabindex', '0'); box.setAttribute('data-cbl-part', 'list'); I.el.appendChild(box); }
+    box.setAttribute('aria-label', T(I, 'Rows'));
+    if (!box.__cblScroll) { box.__cblScroll = true; box.addEventListener('scroll', function () { if (I.o.onScroll) safe(function () { I.o.onScroll(box); }); }, { passive: true }); }
+    I.card = box.clientWidth > 0 && box.clientWidth <= 620;
+    if (!box.__cblRO && root.ResizeObserver) { box.__cblRO = new root.ResizeObserver(function () { if (I.dead) return; var c = box.clientWidth > 0 && box.clientWidth <= 620; if (c !== I.card) { paintTools(I); paintList(I); } }); try { box.__cblRO.observe(box); } catch (_) {} }
+    var keepTop = box.scrollTop, o = I.o, R = I.r, s = I.s, cols = shownCols(I), tpl = template(I, cols);
+    if (I.io) { try { I.io.disconnect(); } catch (_) {} I.io = null; }
+    I.el.classList.toggle('tbllines', s.view === 'lines');
+    var state = typeof o.state === 'function' ? o.state() : o.state;
+    var hdr = headerHTML(I, cols, tpl, state === 'loading');
+    var h = '';
+    if (state === 'loading') { box.innerHTML = '<div class="cbl-grid" role="grid" aria-busy="true">' + (s.view === 'grid' ? hdr : '') + '</div>' + new Array(7).join('<div class="cbl-skel"></div>'); setHdrH(I, box); return; }
+    if (state === 'error') {
+      var er = val(o.error) || {};
+      box.innerHTML = '<div class="cbl-state" role="alert" data-testid="cbl-error-' + esc(I.key) + '"><div class="big">' + esc(er.title || T(I, 'The list could not load.')) + '</div>' + esc(er.sub || T(I, 'Nothing was lost. Try again in a moment.')) + '<br><button type="button" class="cbl-btn" data-cbl-retry>' + esc(T(I, 'Try again')) + '</button></div>';
+      return;
+    }
+    var m = matched(I), items = itemsOf(I, m.rows);
+    if (!m.rows.length) {
+      var narrowed = (R.q && String(R.q).trim()) || activeFilters(I).length;
+      if (m.all.length && narrowed && !remote(I)) {
+        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' : T(I, 'These filters') + ' ') + esc(T(I, 'matches nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>';
+      } else if (remote(I) && narrowed) {
+        box.innerHTML = '<div class="cbl-state" data-testid="cbl-nomatch-' + esc(I.key) + '"><div class="big">' + esc(T(I, 'Nothing matches.')) + '</div>' + esc(R.q ? '“' + R.q + '” ' : T(I, 'These filters') + ' ') + esc(T(I, 'matches nothing here.')) + '<br><button type="button" class="cbl-btn" data-cbl-clear>' + esc(T(I, 'Clear search and filters')) + '</button></div>' + footHTML(I);
+      } else {
+        var em = val(o.empty) || {};
+        box.innerHTML = '<div class="cbl-state" data-testid="cbl-empty-' + esc(I.key) + '"><div class="big">' + esc(em.title || T(I, 'Nothing recorded yet.')) + '</div>' + esc(em.sub || '') + '</div>' + footHTML(I);
+      }
+      return;
+    }
+    /* the rows that can be drawn: a collapsed group's rows are not among them (so a collapsed group never leaves a "show more" behind) */
+    items = items.filter(function (x) { return x.group != null || !(x.g != null && R.gcol[x.g]); });
+    var drawn = 0, total = items.filter(function (x) { return x.group == null; }).length, limit = I.limit;
+    if (limit > total) limit = I.limit = Math.max(50, Math.min(limit, total));
+    var body = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      if (it.group != null) {
+        var shut = !!R.gcol[it.gkey], gt = o.group && o.group.tid;
+        body += '<div class="cbl-group" role="button" tabindex="0" aria-expanded="' + !shut + '" data-g="' + esc(it.gkey) + '"' + (gt || o.group.headTid ? ' data-testid="' + esc(o.group.headTid ? o.group.headTid(it.gkey) : gt + '-ghead-' + esc(it.gkey)) + '"' : '') + ' style="cursor:pointer"><span class="cbl-tw" aria-hidden="true">' + (shut ? '▸' : '▾') + '</span><b>' + esc(it.group) + '</b> <span class="fig"' + (gt ? ' data-testid="' + esc(gt) + '-gsum-' + esc(it.gkey) + '"' : '') + '>' + esc(it.fig) + '</span></div>';
+        continue;
+      }
+      if (!remote(I) && drawn >= limit) break;
+      drawn++;
+      body += s.view === 'grid' ? rowHTML(I, it, cols, tpl) : lineHTML(I, it, cols);
+    }
+    var end;
+    if (!remote(I) && drawn < total) end = '<div class="cbl-end" data-cbl-sentinel data-testid="cbl-more-' + esc(I.key) + '"><button type="button" data-cbl-more>' + esc(T(I, '↓ Show {n} more', { n: Math.min(50, total - drawn) })) + '</button> <span>' + drawn + ' ' + esc(T(I, 'of')) + ' ' + total + '</span></div>';
+    else end = remote(I) ? '' : '<div class="cbl-end" data-testid="cbl-end-' + esc(I.key) + '">' + total + ' · ' + esc(T(I, 'end of list')) + '</div>';
+    box.innerHTML = '<div class="cbl-grid' + (s.view === 'lines' ? ' cbl-lines' : '') + '" role="grid" aria-rowcount="' + total + '">' + (s.view === 'grid' ? hdr : '') + body + '</div>' + end + footHTML(I);
+    setHdrH(I, box);
+    box.scrollTop = keepTop;
+    if (!remote(I) && drawn < total) {
+      var sent = box.querySelector('[data-cbl-sentinel]');
+      if (sent && root.IntersectionObserver) {
+        try { I.io = new root.IntersectionObserver(function (es) { if (es.some(function (e) { return e.isIntersecting; })) { I.limit += 50; paintList(I); } }, { root: box, rootMargin: '0px' }); I.io.observe(sent); } catch (_) {}
+      }
+    }
+    var cnt = $(I, '.cbl-count'); if (cnt) cnt.textContent = countText(I, m);
+    resolveNext(I);
+  }
+  function footHTML(I) { var f = I.o.remote && I.o.remote.foot; var v = f ? safe(function () { return f(); }, '') : ''; return v ? '<div class="cbl-foot" data-testid="cbl-foot-' + esc(I.key) + '">' + v + '</div>' : ''; }
+  function setHdrH(I, box) { var h = box.querySelector('.cbl-hdr'); box.style.setProperty('--cl-hdr-h', (h ? h.offsetHeight : 0) + 'px'); }
+
+  function headerHTML(I, cols, tpl, plainHead) {
+    var st = curSort(I);
+    var lead = leadOn(I) ? '<div class="cbl-hc" role="columnheader" aria-label="' + esc(T(I, 'Select')) + '"></div>' : '';
+    return '<div class="cbl-hdr lhead" role="row" style="grid-template-columns:' + tpl + '">' + lead + cols.map(function (c) {
+      var id = sortId(c), sorted = !!(st && id && st.key === id), r = !!(c.num || c.pin === 'end'), label = esc(c.label || c.key);
+      return '<div class="cbl-hc lhcell' + (r ? ' r' : '') + (id ? ' sortable' : '') + '" role="columnheader" aria-sort="' + (sorted ? (st.dir === -1 ? 'descending' : 'ascending') : 'none') + '">'
+        + (id && !plainHead ? '<button type="button" class="sort" data-sort="' + esc(id) + '">' + label + ' <span class="arrow">' + (sorted ? (st.dir === -1 ? '▼' : '▲') : '⇅') + '</span></button>' : label)
+        + (plainHead ? '' : '<button type="button" class="cbl-rz colrz" data-rz="' + esc(c.key) + '" aria-label="' + esc(T(I, 'Resize {x} column (arrow keys)', { x: c.label || c.key })) + '" title="' + esc(T(I, 'Drag to resize · double-click resets')) + '"></button>') + '</div>';
+    }).join('') + '</div>';
+  }
+  function cellOf(I, c, row) { var v = safe(function () { return c.cell ? c.cell(row) : row[c.key]; }, ''); if (v == null) v = ''; return c.html ? String(v) : esc(v); }
+  function rowAttrs(I, row, id) {
+    var a = '', o = I.o, at = o.rowAttrs ? safe(function () { return o.rowAttrs(row); }, null) : null;
+    if (at) Object.keys(at).forEach(function (k) { if (/^[a-z][a-z0-9\-]*$/i.test(k) && !/^on/i.test(k)) a += ' ' + k + '="' + esc(at[k]) + '"'; });
+    var tid = o.rowTid ? safe(function () { return o.rowTid(row); }, '') : '';
+    return (tid ? ' data-testid="' + esc(tid) + '"' : '') + a;
+  }
+  function rowHTML(I, it, cols, tpl) {
+    var row = it.row, id = it.id, R = I.r, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o;
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (R.hl === id && o.hl !== false ? ' sel' : '');
+    var cells = cols.map(function (c, i) {
+      var amt = c.pin === 'end';
+      return '<div class="cbl-cell lcell' + (i === 0 ? ' first' : '') + (amt ? ' r mono strong amt' : '') + (c.num && !amt ? ' r mono' : '') + (c.mono ? ' mono' : '') + '" data-l="' + esc(i === 0 || amt ? '' : (c.label || '')) + '" role="gridcell"'
+        + (c.tid ? ' data-testid="' + esc(safe(function () { return c.tid(row); }, '')) + '"' : '') + '>'
+        + (i === 0 && nx ? '<span class="cbl-tw" data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>' : '') + cellOf(I, c, row) + '</div>';
+    }).join('');
+    var lead = leadOn(I) ? '<div class="cbl-lead" role="gridcell">' + leadCell(I, row, id) + '</div>' : '';
+    var out = '<div class="cbl-row lrow grow' + (open ? ' cbl-open open' : '') + (cls ? ' ' + esc(cls) : '') + '" role="row" data-row="' + esc(id) + '" tabindex="0"' + (nx ? ' aria-expanded="' + !!open + '"' : '') + ' style="grid-template-columns:' + tpl + '"' + rowAttrs(I, row, id) + '>' + lead + cells + '</div>';
+    if (open) out += nextHTML(I, row, id);
+    return out;
+  }
+  function leadCell(I, row, id) {
+    if (I.o.lead && safe(function () { return I.o.lead.on(); }, false)) return safe(function () { return I.o.lead.cell(row); }, '');
+    return '<input type="checkbox" data-selrow="' + esc(id) + '"' + (I.r.sel[id] ? ' checked' : '') + ' aria-label="' + esc(T(I, 'Select')) + '">';
+  }
+  function lineHTML(I, it, cols) {
+    var row = it.row, id = it.id, nx = hasNext(I), open = nx && isOpen(I, id), o = I.o, pin = cols.filter(function (c) { return c.pin === 'end'; })[0];
+    var cls = (o.rowClass ? safe(function () { return o.rowClass(row); }, '') : '') + (I.r.hl === id && o.hl !== false ? ' sel' : '');
+    var flow = cols.filter(function (c) { return c.pin !== 'end'; }).map(function (c) {
+      var v = cellOf(I, c, row), t = plain(v);
+      if (!t || t === '—') return '';
+      return '<span class="cbl-fl lcell' + (c.mono ? ' cbl-num' : '') + '" data-l="' + esc(c.label || '') + '"' + (c.tid ? ' data-testid="' + esc(safe(function () { return c.tid(row); }, '')) + '"' : '') + '>' + v + '</span>';
+    }).join('');
+    var gist = o.gist ? safe(function () { return o.gist(row); }, '') : '';
+    var lead = leadOn(I) ? '<span class="cbl-lead" style="padding:0 8px 0 0">' + leadCell(I, row, id) + '</span>' : '';
+    var out = '<div class="cbl-lrec lrow' + (open ? ' cbl-open open' : '') + (cls ? ' ' + esc(cls) : '') + '" role="row" data-row="' + esc(id) + '" tabindex="0"' + (nx ? ' aria-expanded="' + !!open + '"' : '') + rowAttrs(I, row, id) + '><div class="cbl-lline">' + lead
+      + (nx ? '<span class="cbl-tw" data-caret role="button" aria-label="' + esc(T(I, open ? 'Collapse' : 'Expand')) + '" aria-expanded="' + !!open + '">▸</span>' : '') + '<span class="cbl-lflow">' + flow + '</span>'
+      + (pin ? '<span class="cbl-lamt">' + cellOf(I, pin, row) + '</span>' : '') + '</div>' + (gist ? '<div class="cbl-lgist"' + (o.gistTid ? ' data-testid="' + esc(o.gistTid(row)) + '"' : '') + '>' + esc(gist) + '</div>' : '') + '</div>';
+    if (open) out += nextHTML(I, row, id);
+    return out;
+  }
+  /* what a row opens to: the page's markup (trusted by contract), then the row actions the unit draws itself */
+  function nextHTML(I, row, id) {
+    var o = I.o, inner = '';
+    if (o.next) {
+      if (I.nextCache[id] !== undefined) inner = I.nextCache[id];
+      else {
+        var v = safe(function () { return o.next(row, { view: I.s.view, id: id }); }, '');
+        if (v && typeof v.then === 'function') {
+          inner = '<span class="cbl-dim">' + esc(T(I, 'Reading…')) + '</span>';
+          I.pending = I.pending || {}; I.pending[id] = v;
+        } else { inner = v == null ? '' : String(v); }
+      }
+    }
+    var acts = (o.actions || []).filter(function (a) { return !a.when || safe(function () { return a.when(row); }, true); });
+    return '<div class="cbl-next" role="row" data-next="' + esc(id) + '"><div role="cell">' + inner + '</div>'
+      + (acts.length ? '<div class="cbl-acts">' + acts.map(function (a) { return '<button type="button" class="cbl-btn" data-act="' + esc(a.id) + '" data-actrow="' + esc(id) + '"' + (a.tid ? ' data-testid="' + esc(a.tid) + '"' : '') + '>' + (a.icon ? esc(a.icon) + ' ' : '') + esc(T(I, a.label)) + '</button>'; }).join('') + '</div>' : '') + '</div>';
+  }
+  function resolveNext(I) {
+    var p = I.pending; if (!p) return; I.pending = null;
+    Object.keys(p).forEach(function (id) {
+      p[id].then(function (html) {
+        I.nextCache[id] = html == null ? '' : String(html);
+        if (I.dead) return;
+        var n = I.el.querySelector('.cbl-next[data-next="' + (root.CSS && root.CSS.escape ? root.CSS.escape(id) : id) + '"] > div'); if (n) n.innerHTML = I.nextCache[id];
+      }, function () { I.nextCache[id] = '<span class="cbl-dim">' + esc(T(I, 'The list could not load.')) + '</span>'; if (!I.dead) paintList(I); });
+    });
+  }
+  function selectedRows(I) { var ids = I.r.sel; return allRows(I).filter(function (r, i) { return ids[rid(I, r, i)]; }); }
+
+  /* the rows area fills the rest of the window: from its top edge to the bottom of the viewport, recalculated on resize */
+  function fit(I) {
+    if (I.o.fill === false || !I.el.getBoundingClientRect) return;
+    var top = I.el.getBoundingClientRect().top, h = Math.max(300, Math.floor(root.innerHeight - top - (I.o.bottom == null ? 8 : I.o.bottom)));
+    I.el.style.height = h + 'px';
+  }
+
+  /* ═════ actions ═════ */
+  function persistRepaint(I, whole) { saveChoices(I); if (whole) paintAll(I); else paintList(I); }
+  function resetLimit(I) { I.limit = 50; }
+  function query(I, why, sort, now) {
+    if (!remote(I)) return false;
+    clearTimeout(I.qt);
+    var go = function () { safe(function () { I.o.remote.onQuery({ why: why || 'search', q: I.r.q, filt: JSON.parse(JSON.stringify(I.r.filt)), sort: sort || curSort(I), group: I.s.group }); }); };
+    if (now) go(); else I.qt = setTimeout(go, 250);
+    return true;
+  }
+  function refresh(I, x) {
+    if (I.dead) return;
+    if (Array.isArray(x)) I.o.rows = x;
+    else if (x && typeof x === 'object') { Object.keys(x).forEach(function (k) { if (k === 'remote' && I.o.remote) Object.assign(I.o.remote, x.remote); else I.o[k] = x[k]; }); }
+    I.nextCache = {};
+    paintAll(I);
+  }
+  function setQ(I, v) { I.r.q = v; resetLimit(I); if (query(I)) { var c = $(I, '.cbl-count'); return; } paintList(I); }
+  function toggleRow(I, id, focus) {
+    var R = I.r; R.hl = id;
+    if (R.allOpen) R.open[id + '#closed'] = !R.open[id + '#closed']; else R.open[id] = !R.open[id];
+    var keep = I.el.querySelector('.cbl-list'), top = keep ? keep.scrollTop : 0;
+    paintList(I); if (keep) { var k2 = $(I, ':scope > .cbl-list'); if (k2) k2.scrollTop = top; }
+    if (focus) refocusRow(I, id);
+  }
+  function refocusRow(I, id) { var n = I.el.querySelector('[data-row="' + (root.CSS && root.CSS.escape ? root.CSS.escape(id) : id) + '"]'); if (n) n.focus(); }
+  function rowById(I, id) { var all = allRows(I), r = null; all.forEach(function (x, i) { if (r == null && rid(I, x, i) === id) r = x; }); return r; }
+  function openRow(I, id, ev) {
+    var row = rowById(I, id); if (!row) return;
+    I.r.hl = id;
+    if (I.o.onOpen) { safe(function () { I.o.onOpen(row, ev); }); return; }
+    if (hasNext(I)) toggleRow(I, id, ev && ev.type === 'keydown');
+  }
+  function closePop(I, refocus) {
+    if (!I.pop) return; var was = I.pop; I.pop = null; I.pv = null; paintTitle(I); paintTools(I);
+    if (refocus) { var b = I.el.querySelector('[data-cbl-pop="' + was + '"]'); if (b) b.focus(); }
+  }
+  function togglePop(I, name) { I.pop = I.pop === name ? null : name; paintTitle(I); paintTools(I); var pop = I.el.querySelector('.cbl-pop'); if (pop) { var f = pop.querySelector('select,input:not([disabled]),button:not([disabled])'); if (f && name !== 'period') f.focus(); } }
+
+  function csv(I) {
+    var m = matched(I), cols = shownCols(I);
+    var q = function (v) { v = String(v == null ? '' : v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var lines = [cols.map(function (c) { return q(c.label || c.key); }).join(',')];
+    m.rows.forEach(function (r) { lines.push(cols.map(function (c) { var v = safe(function () { return c.cell ? c.cell(r) : r[c.key]; }, ''); return q(c.html ? plain(v) : v); }).join(',')); });
+    return lines.join('\r\n');
+  }
+  function download(I) {
+    if (typeof I.o.csv === 'function') { safe(function () { I.o.csv(matched(I).rows, shownCols(I), csv(I)); }); return; }
+    try {
+      var b = new root.Blob(['﻿' + csv(I)], { type: 'text/csv;charset=utf-8' }), u = root.URL.createObjectURL(b), a = root.document.createElement('a');
+      a.href = u; a.download = I.key + '.csv'; root.document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { root.URL.revokeObjectURL(u); }, 2000);
+    } catch (_) {}
+  }
+
+  /* ═════ events: one set of delegated listeners on the mount element, so it dies with it ═════ */
+  function wire(I) {
+    var el = I.el;
+    /* every listener is remembered so teardown can remove it: a list mounted again on the same element must not leave the old one answering too */
+    I.off = [];
+    var on = function (type, fn) { var h = function (ev) { if (!I.dead) fn(ev); }; el.addEventListener(type, h); I.off.push([type, h]); };
+    on('click', function (ev) { onClick(I, ev); });
+    on('input', function (ev) { var t = ev.target; if (t.hasAttribute && t.hasAttribute('data-cbl-q')) { setQ(I, t.value); } });
+    on('change', function (ev) { onChange(I, ev); });
+    on('keydown', function (ev) { onKey(I, ev); });
+    on('pointerdown', function (ev) { onPointerDown(I, ev); });
+    on('dblclick', function (ev) { var b = ev.target.closest && ev.target.closest('[data-rz]'); if (!b) return; delete I.s.widths[b.getAttribute('data-rz')]; saveChoices(I); paintList(I); refocusRz(I, b.getAttribute('data-rz')); });
+  }
+  function refocusRz(I, k) { var b = I.el.querySelector('[data-rz="' + k + '"]'); if (b) b.focus(); }
+  function onClick(I, ev) {
+    var t = ev.target; if (!t.closest) return;
+    var b = t.closest('button,[data-row],input[type=checkbox],select'), R = I.r, s = I.s, o = I.o;
+    var pop = t.closest('.cbl-pop');
+    var hcell = t.closest('.cbl-hc');
+    if (hcell && !t.closest('.cbl-rz') && !t.closest('[data-sort]') && I.el.contains(hcell)) { var sbtn = hcell.querySelector('[data-sort]'); if (sbtn) { sbtn.click(); return; } }
+    var gh = t.closest('[data-g]');
+    if (gh && I.el.contains(gh) && !(b && b.hasAttribute('data-row'))) { if (I.pop) { I.pop = null; paintTitle(I); paintTools(I); } R.gcol[gh.getAttribute('data-g')] = !R.gcol[gh.getAttribute('data-g')]; paintList(I); var g2 = I.el.querySelector('[data-g="' + cssId(gh.getAttribute('data-g')) + '"]'); if (g2) g2.focus(); return; }
+    if (!b) { if (I.pop && !pop) closePop(I); return; }
+    if (b.hasAttribute('data-rz')) return;
+    if (b.hasAttribute('data-cbl-pop')) { togglePop(I, b.getAttribute('data-cbl-pop')); return; }
+    if (I.pop && !pop) { /* any other click outside the popover closes it, then does its own job */ I.pop = null; paintTitle(I); paintTools(I); }
+    var d = b.dataset || {};
+    if (b.hasAttribute('data-period')) { var pp = head(I).period; if (pp) { I.pv = d.period; if (d.period !== 'custom') { I.pop = null; I.pv = null; } safe(function () { pp.onPick(d.period, null); }); paintTitle(I); paintTools(I); } return; }
+    if (d.notice != null) { var n = (head(I).notices || [])[+d.notice]; if (I.pop === 'notes') { I.pop = null; paintTitle(I); } if (n && n.onOpen) safe(function () { n.onOpen(); }); return; }
+    if (d.group) { s.group = d.group; resetLimit(I); saveChoices(I); if (!query(I)) { paintTools(I); paintList(I); } else paintTools(I); return; }
+    if (d.view) { s.view = d.view; saveChoices(I); paintTools(I); paintList(I); return; }
+    if (b.hasAttribute('data-cbl-exp')) { R.allOpen = !R.allOpen; R.open = {}; paintTools(I); paintList(I); return; }
+    if (b.hasAttribute('data-cbl-csv')) { download(I); return; }
+    if (d.unfilt) { delete R.filt[d.unfilt]; resetLimit(I); if (query(I)) paintTools(I); else paintAll(I); return; }
+    if (b.hasAttribute('data-cbl-clearf')) { R.filt = {}; resetLimit(I); I.pop = null; if (query(I)) paintTools(I); else paintAll(I); return; }
+    if (b.hasAttribute('data-cbl-clear')) { R.filt = {}; R.q = ''; I.pop = null; resetLimit(I); if (query(I)) paintTools(I); paintAll(I); return; }
+    if (b.hasAttribute('data-cbl-retry')) { if (o.onRetry) safe(function () { o.onRetry(); }); return; }
+    if (b.hasAttribute('data-cbl-more')) { I.limit += 50; paintList(I); return; }
+    if (b.hasAttribute('data-cbl-resetcols')) { s.cols = null; s.widths = {}; saveChoices(I); paintTools(I); paintList(I); return; }
+    if (b.hasAttribute('data-cbl-selmode')) { R.selMode = !R.selMode; if (!R.selMode) R.sel = {}; paintTools(I); paintList(I); return; }
+    if (b.hasAttribute('data-cbl-selall')) { matched(I).rows.forEach(function (r, i) { R.sel[rid(I, r, i)] = true; }); paintTools(I); paintList(I); return; }
+    if (d.bulk) { var bk = (o.bulk || []).filter(function (x) { return x.id === d.bulk; })[0]; if (bk) safe(function () { bk.run(selectedRows(I)); }); return; }
+    if (d.mv) { var set = shownKeys(I).slice(), i = set.indexOf(d.mv), j = i + (+d.d); if (i < 0 || j < 0 || j >= set.length) return; set.splice(j, 0, set.splice(i, 1)[0]); s.cols = set; saveChoices(I); paintTools(I); paintList(I); return; }
+    if (d.col) return;   /* the checkbox acts on 'change' */
+    if (d.sort) {
+      /* a server-sorted page decides its own direction: it is told which heading was clicked */
+      if (remote(I)) { query(I, 'sort', { key: d.sort }, true); return; }
+      var cur = curSort(I), col = columns(I).filter(function (c) { return sortId(c) === d.sort; })[0], d0 = col && col.dir0 === -1 ? -1 : 1;
+      s.sort = cur && cur.key === d.sort ? { key: d.sort, dir: -cur.dir } : { key: d.sort, dir: d0 }; resetLimit(I); saveChoices(I); paintList(I); return;
+    }
+    if (d.act) {
+      var act = (o.actions || []).filter(function (x) { return x.id === d.act; })[0], row = rowById(I, d.actrow); if (act && row) safe(function () { act.run(row); });
+      return;
+    }
+    if (b.hasAttribute('data-selrow')) { return; }
+    if (b.hasAttribute('data-caret') || t.closest('[data-caret]')) { var rr = t.closest('[data-row]'); if (rr) toggleRow(I, rr.getAttribute('data-row'), false); return; }
+    var rowEl = t.closest('[data-row]');
+    if (rowEl && b === rowEl) {
+      /* a control the page drew inside a cell (a link, a chip, a button with its own onclick) keeps its own job */
+      var inner = t.closest('a,button,input,select,textarea,label,[onclick],[data-nolist]');
+      if (inner && inner !== rowEl && rowEl.contains(inner)) return;
+      openRow(I, rowEl.getAttribute('data-row'), ev);
+    }
+  }
+  function onChange(I, ev) {
+    var t = ev.target, R = I.r, s = I.s;
+    if (t.hasAttribute('data-col')) {
+      var k = t.getAttribute('data-col'), set = shownKeys(I).slice(), i = set.indexOf(k);
+      if (t.checked && i < 0) set.push(k); else if (!t.checked && i >= 0 && k !== topKey(I)) set.splice(i, 1);
+      s.cols = set; saveChoices(I); paintTools(I); paintList(I); refocusCol(I, k); return;
+    }
+    if (t.hasAttribute('data-filt')) { var fk = t.getAttribute('data-filt'); if (t.value) R.filt[fk] = t.value; else delete R.filt[fk]; resetLimit(I); if (!query(I)) { paintTools(I); paintList(I); } else paintTools(I); var f = I.el.querySelector('#cbl-f-' + cssId(I.key) + '-' + cssId(fk)); if (f) f.focus(); return; }
+    if (t.hasAttribute('data-cbl-sort')) { var cur = s.sort ? s.sort.dir : 1; s.sort = { key: t.value, dir: 1 }; resetLimit(I); saveChoices(I); if (!query(I)) { paintTools(I); paintList(I); } var ss = I.el.querySelector('#cbl-sort-' + cssId(I.key)); if (ss) ss.focus(); return; }
+    if (t.hasAttribute('data-selrow')) { var id = t.getAttribute('data-selrow'); if (t.checked) R.sel[id] = true; else delete R.sel[id]; paintTools(I); return; }
+    if (t.hasAttribute('data-cbl-from') || t.hasAttribute('data-cbl-to')) {
+      var p = head(I).period, fr = I.el.querySelector('[data-cbl-from]'), to = I.el.querySelector('[data-cbl-to]');
+      if (p && fr && to && fr.value && to.value) { p.custom = { from: fr.value, to: to.value }; I.pv = null; I.pop = null; safe(function () { p.onPick('custom', p.custom); }); }
+    }
+  }
+  function cssId(s) { return String(s).replace(/[^A-Za-z0-9_\-]/g, '\\$&'); }
+  function refocusCol(I, k) { var c = I.el.querySelector('[data-col="' + k + '"]'); if (c) c.focus(); }
+
+  function onKey(I, ev) {
+    var t = ev.target, k = ev.key;
+    if (k === 'Escape' && I.pop) { ev.preventDefault(); closePop(I, true); return; }
+    if (t.hasAttribute && t.hasAttribute('data-rz') && (k === 'ArrowLeft' || k === 'ArrowRight')) {
+      ev.preventDefault();
+      var rtl = root.getComputedStyle(I.el).direction === 'rtl', dlt = (k === 'ArrowRight' ? 8 : -8) * (rtl ? -1 : 1);
+      resize(I, t.getAttribute('data-rz'), dlt, true); return;
+    }
+    if (t.hasAttribute && t.hasAttribute('data-g') && (k === 'Enter' || k === ' ')) { ev.preventDefault(); t.click(); return; }
+    var rowEl = t.closest && t.closest('[data-row]');
+    if (rowEl && t === rowEl) {
+      if (k === 'Enter' || k === ' ') { ev.preventDefault(); openRow(I, rowEl.getAttribute('data-row'), ev); return; }
+      if (k === 'ArrowRight' && hasNext(I) && !isOpen(I, rowEl.getAttribute('data-row'))) { ev.preventDefault(); toggleRow(I, rowEl.getAttribute('data-row'), true); return; }
+      if (k === 'ArrowLeft' && hasNext(I) && isOpen(I, rowEl.getAttribute('data-row'))) { ev.preventDefault(); toggleRow(I, rowEl.getAttribute('data-row'), true); return; }
+      if (k === 'ArrowDown' || k === 'ArrowUp') {
+        ev.preventDefault();
+        var all = [].slice.call(I.el.querySelectorAll('[data-row]')), i = all.indexOf(rowEl), nx = all[i + (k === 'ArrowDown' ? 1 : -1)];
+        if (nx) { nx.focus(); if (I.o.hl === false) return; I.r.hl = nx.getAttribute('data-row'); [].forEach.call(I.el.querySelectorAll('.cbl-row.sel,.cbl-lrec.sel'), function (n) { n.classList.remove('sel'); }); nx.classList.add('sel'); }
+      }
+    }
+  }
+
+  /* adjustable columns: pointer (mouse and touch), ← → in 8 px, double-click resets; never narrower than the label; remembered */
+  function colByKey(I, key) { return columns(I).filter(function (c) { return c.key === key; })[0]; }
+  function resize(I, key, delta, kb) {
+    var c = colByKey(I, key); if (!c) return;
+    I.s.widths[key] = Math.max(minW(I, c), widthOf(I, c) + delta);
+    saveChoices(I); paintList(I); if (kb) refocusRz(I, key);
+  }
+  function applyTpl(I) {
+    var tpl = template(I, shownCols(I));
+    [].forEach.call(I.el.querySelectorAll('.cbl-hdr,.cbl-row'), function (n) { n.style.gridTemplateColumns = tpl; });
+  }
+  function onPointerDown(I, ev) {
+    var b = ev.target.closest && ev.target.closest('[data-rz]'); if (!b) return;
+    var c = colByKey(I, b.getAttribute('data-rz')); if (!c) return;
+    ev.preventDefault();
+    DRAG = { I: I, key: c.key, x: ev.clientX, w: widthOf(I, c), c: c, btn: b };
+    b.classList.add('drag');
+    try { b.setPointerCapture(ev.pointerId); } catch (_) {}
+    root.document.addEventListener('pointermove', onPointerMove);
+    root.document.addEventListener('pointerup', onPointerUp);
+    root.document.addEventListener('pointercancel', onPointerUp);
+  }
+  function onPointerMove(ev) {
+    if (!DRAG) return; var I = DRAG.I, rtl = root.getComputedStyle(I.el).direction === 'rtl';
+    I.s.widths[DRAG.key] = Math.max(minW(I, DRAG.c), DRAG.w + (ev.clientX - DRAG.x) * (rtl ? -1 : 1));
+    applyTpl(I);
+  }
+  function onPointerUp() {
+    if (!DRAG) return; var I = DRAG.I;
+    DRAG.btn.classList.remove('drag');
+    root.document.removeEventListener('pointermove', onPointerMove);
+    root.document.removeEventListener('pointerup', onPointerUp);
+    root.document.removeEventListener('pointercancel', onPointerUp);
+    DRAG = null; saveChoices(I);
+  }
+
+  /* one document-level listener each: a click anywhere outside a mounted list closes its popover; a resize refits every list to its window */
+  if (root.document && root.document.addEventListener) {
+    root.document.addEventListener('click', function (ev) {
+      if (ev.target && ev.target.isConnected === false) return;   /* the click repainted its own button away: that was a click INSIDE the list */
+      INST.forEach(function (I) { if (I.pop && !I.dead && !I.el.contains(ev.target)) closePop(I); });
+    });
+    /* ↑ ↓ move the highlighted row and Enter opens it, wherever the focus is not (a page with a list on it, nothing focused): the page does not wire this */
+    root.document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape') { var open = INST.filter(function (I) { return !I.dead && I.pop; }); if (open.length) { ev.preventDefault(); closePop(open[open.length - 1], true); return; } }
+      if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp' && ev.key !== 'Enter') return;
+      if (ev.defaultPrevented) return;   /* a list's own handler already took it (and may have repainted its target away) */
+      var t = ev.target;
+      if (t && t.isConnected === false) return;
+      if (t && t.tagName && /^(INPUT|SELECT|TEXTAREA|BUTTON|A|SUMMARY)$/.test(t.tagName)) return;
+      if (t && t.closest && (t.closest('[data-cbl] [data-row]') || t.closest('dialog[open],[role=dialog],[aria-modal=true]'))) return;
+      var live = INST.filter(function (I) { return !I.dead && I.o.hl !== false && I.el.getClientRects().length; }), I = live[live.length - 1];
+      if (!I) return;
+      var rows = [].slice.call(I.el.querySelectorAll('[data-row]')); if (!rows.length) return;
+      if (ev.key === 'Enter') { if (I.r.hl) { ev.preventDefault(); openRow(I, I.r.hl, ev); } return; }
+      var at = rows.map(function (r) { return r.getAttribute('data-row'); }).indexOf(I.r.hl);
+      at = ev.key === 'ArrowDown' ? Math.min(rows.length - 1, at + 1) : Math.max(0, at < 0 ? 0 : at - 1);
+      ev.preventDefault(); I.r.hl = rows[at].getAttribute('data-row');
+      rows.forEach(function (r, i) { r.classList.toggle('sel', i === at); });
+      if (rows[at].scrollIntoView) rows[at].scrollIntoView({ block: 'nearest' });
+    });
+    root.addEventListener('resize', function () { prune(); INST.forEach(function (I) { fit(I); setHdrH(I, I.el.querySelector('.cbl-list') || I.el); var n = I.el.clientWidth > 0 && I.el.clientWidth <= 640; if (n !== I.narrow) paintTitle(I); }); });
+  }
+
+  /* the rows a next level is made of: the first cell takes the room, the others are fixed-width and right-aligned (cells are the page's own trusted markup) */
+  function nextRow(cells, widths) {
+    return '<div class="cbl-nrow" style="display:flex;align-items:center;font-size:calc(13.5px * var(--k,1));padding:3px 0">' + cells.map(function (c, i) {
+      return i === 0 ? '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + c + '</span>'
+        : '<span style="width:' + ((widths && widths[i - 1]) || 110) + 'px;text-align:end">' + c + '</span>';
+    }).join('') + '</div>';
+  }
+  function get(key) { prune(); var f = null; INST.forEach(function (I) { if (I.key === String(key) && !I.dead) f = I.api; }); return f; }
+
+  /* forget what a person typed, chose and opened in list `key` (a different record is on screen under the same list: a new ledger, the other tab) */
+  function reset(key) { delete STATE[String(key)]; }
+
+  root.CBList = { mount: mount, nextRow: nextRow, get: get, reset: reset };
+})(typeof window !== 'undefined' ? window : this);

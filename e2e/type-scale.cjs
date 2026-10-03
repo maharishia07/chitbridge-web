@@ -37,10 +37,10 @@ for(const f of files){ const s=fs.readFileSync(f,'utf8');
  * that fell one flag behind every time someone added a chip. `FS_BASE` is where appearanceApply reads the
  * scale, so it is the one that is true by construction.
  */
-const fsSrc = fs.readFileSync(path.join(__dirname,'..','public','app.html'),'utf8');
+const fsSrc = fs.readFileSync(path.join(__dirname,'..','public','app','avatar.js'),'utf8');   /* FS_BASE moved here from app.html with the rest of the appearance code */
 const fsDecl = (fsSrc.match(/var FS_BASE = \{([^}]*)\}/)||[])[1] || '';
 const SCALE = [...fsDecl.matchAll(/:\s*([0-9.]+)/g)].map(m=>parseFloat(m[1])).sort((a,b)=>a-b);
-if(!SCALE.length){ console.error('  ✗ could not read FS_BASE from app.html — this report would be fiction'); process.exit(1); }
+if(!SCALE.length){ console.error('  ✗ could not read FS_BASE from app/avatar.js — this report would be fiction'); process.exit(1); }
 const nearest=v=>SCALE.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a);
 let unchanged=0, shrink=0, grow=0, worst=0;
 Object.entries(raw).forEach(([v,n])=>{ v=parseFloat(v); const t=nearest(v);

@@ -166,7 +166,9 @@ async function route(S, r) {
     await scroller.evaluate((e) => { e.scrollTop = 120; });
     const before = await scroller.evaluate((e) => e.scrollTop);
     const hrefBefore = await p.evaluate(() => location.href);
-    await p.click('[data-testid="db-src-JV/2026-27/000001"]');
+    /* CBList: the list scrolls INSIDE the frozen head (.cbl-list), and the first entry sits at its very top - so a Playwright click would first scroll that row
+       back into view and reset the scroll this test is measuring. The click is dispatched on the element instead (the scroll is left as the person left it). */
+    await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click());
     await waitSheet(p, 'C2/26-27/0002');
     ok(await sheetOpen(p), 'tapping the bill number opens the sheet (a <dialog>) over the Day book');
     const head = await p.textContent('[data-testid="cs-head"]');
@@ -209,7 +211,7 @@ async function route(S, r) {
     await p.keyboard.press('Escape'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)), 'Esc closes the sheet');
     ok(await scroller.evaluate((e) => e.scrollTop) === before && before > 0, 'back on the Day book at the same scroll position (' + before + ')');
-    await p.click('[data-testid="db-src-JV/2026-27/000001"]'); await waitSheet(p, 'C2/26-27/0002');
+    await p.locator('[data-testid="db-src-JV/2026-27/000001"]').evaluate((e) => e.click()); await waitSheet(p, 'C2/26-27/0002');
     await p.click('[data-testid="cs-close"]'); await p.waitForTimeout(250);
     ok(!(await sheetOpen(p)) && await scroller.evaluate((e) => e.scrollTop) === before, 'Close does the same');
     await ctx.close();
@@ -324,7 +326,7 @@ async function route(S, r) {
     const body = await p.textContent('#bk_body');
     ok(!/sb1|bill:|\btries\b|\d tries/.test(body), 'no chit id and no "tries" on the list');
     ok(/September is locked/.test(await p.textContent('[data-testid="wait-1"]')) && await p.locator('[data-testid="wait-retry"]').count() === 1, 'a posting that genuinely failed shows its reason in the Step column, and Try again is offered');
-    await p.click('[data-testid="wait-0"] [role="button"]');
+    await p.click('[data-testid="wait-0"] [data-caret]');
     await p.waitForSelector('[data-testid="wait-lines-0"]', { timeout: 5000 }).catch(() => {});
     ok(/Basmati 25kg/.test(await p.textContent('[data-testid="wait-lines-0"]')) && !(await sheetOpen(p)), 'the caret opens the next level — the bill\'s lines — and does not open the sheet');
     await shot(p, 'one-table-waiting-laptop');

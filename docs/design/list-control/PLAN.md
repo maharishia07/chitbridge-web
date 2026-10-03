@@ -106,3 +106,24 @@ rule).
 ## Not in scope
 The detail page (its own unit: docs/design/chit-detail) · server paging (`platformScreen` stays server-paged; it uses the
 unit's look over its own pager).
+
+## Built (2026-10-03) — what is in `public/app/list-ctl.js` now
+**CBList is the file.** `window.CBList = { mount, nextRow, get, reset }` and nothing else; it reads nothing from its page (checked by
+`e2e/list-unit.cjs`: no `UI.`, no `tx(`, no `uk(`, a global-read trap on every name the old file borrowed). Added to the contract above, each
+because a real list needed it and none could be written without it:
+- `head: { title, period, notices, chips }` — `chips` are information (the Day book's per-counter and by-tender strip), `notices` are warnings that
+  open their fix. On a container ≤ 640 px they fold into ONE chip that opens them, so the head stays within 30% of a phone.
+- `remote: { total, onQuery, foot }` + `sortNow()` — a SERVER-paged list (Platform, Task): the unit draws the page it is given, a heading click asks the
+  page which sort it wants, `foot()` is the page's own pager. `tools: { search: false, csv: false }` for a page whose search lives in its own bar.
+- `fill: false` — a rail (Task, Customers, Suppliers, Platform) lets its pane size the list; every other list fills the rest of the window.
+- `cardMax` — on a narrow container a card carries at most N fields; the ticked ones left out are NAMED in the chooser ("hidden — no room").
+- `hl: false` (the page owns the highlight), `lead: { on, cell }` (a page-drawn select column), `store` (Task keeps its cb_cols key), `tids` (a page keeps its test ids).
+- `next(row, { view })` may return a Promise (the Ledger's journal is read on the first open); `CBList.nextRow(cells, widths)` is the row of a next level.
+**Moved onto it:** Task · Waiting · Day book · Dues · Ledger entries · Cheques · Bills (CB Accounts) · Customers · Suppliers · Platform.
+**Deleted, not moved:** the Platform's `platColMenuHTML` / `platColResize*` / `platToggleColMenu` / `platCols` (the unit's chooser and handles replace them),
+Task's `colResize*` / `applyColTpl` / `rowPeek*` / `fittedCols`, the hover peek, `tblFit` (nothing is folded away any more: a column that does not fit is reached by
+scrolling the rows sideways).
+**Kept, thin, until their callers move** (`public/app/list-legacy.js`): `listCtl*` for the two CARD lists (Intake, Disputes) and the Ledgers tree's search box, and
+`lazyWrap` for the catalogue, the message thread and the activity feeds. They borrow `tx()` / `esc()` from the page, which is why they are not in the unit.
+**The guard:** `e2e/list-standard.cjs` — a column header written anywhere but the unit fails the run; the hand-drawn tables that are still outside the nine lists
+are a named ratchet (it only goes down), the printed documents are named exceptions.

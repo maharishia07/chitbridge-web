@@ -6,6 +6,7 @@
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const W = path.join(__dirname, '..');
 const CAPB = 'public/app/cap-books.js', LCTL = 'public/app/list-ctl.js';
+const AV = 'public/app/avatar.js';   /* the avatar is CBAvatar now: its Profile link and its sign-out live here, not on the page */
 const PAGE = 'public/accounts.html', IDX = 'index.html', SHELL = 'public/app/accounts-shell.js';
 const A = 'e2e/cb-accounts.cjs', I = 'e2e/index-page.cjs';
 const BREAKS = [
@@ -22,19 +23,22 @@ const BREAKS = [
   ['a co-assist is offered Switch on', PAGE, `const isOwner = () => SESSION.role === 'entity';`, `const isOwner = () => true;`, A],
   ['Switch on is sent before the owner confirms', PAGE, `    ask: confirmAsk,\n    working: () => { b.disabled = true;`, `    ask: (t, bd, ok, go) => go(),\n    working: () => { b.disabled = true;`, A],
   ['a failed read is mistaken for a Ledger that is off', PAGE, `    if (e && e.status === 404) return offCard();\n    return failedCard();`, `    return offCard();`, A],
-  ['Sign out keeps the session', PAGE, `    localStorage.removeItem('cb_sess');\n    Object.keys`, `    Object.keys`, A],
+  ['Sign out keeps the session (the avatar\'s sign-out, public/app/avatar.js)', AV, `      root.localStorage.removeItem('cb_sess');\n`, ``, A],
   ['Home goes somewhere else', PAGE, `<a class="home" href="/" data-testid="acc-home">`, `<a class="home" href="/app.html" data-testid="acc-home">`, A],
-  ['Profile goes somewhere else', PAGE, `<a href="/app.html#/app/profile" data-testid="nav-profile">`, `<a href="/app.html#/app/settings" data-testid="nav-profile">`, A],
+  ['Profile goes somewhere else (the avatar\'s Profile link)', AV, `o.profileHref || '/app.html#/app/profile'`, `o.profileHref || '/app.html#/app/settings'`, A],
   ['a code the design never named vanishes', CAPB, `title = g ? g[1] : 'Other';`, `title = g ? g[1] : 'Other'; if (!g) return;`, A],
   ['the step chip is decided by the page, not the server', PAGE, `data-step="\${esc(b.step || '')}">\${esc(b.label)}</span>`, `data-step="\${esc(b.step || '')}">\${esc(b.step)}</span>`, A],
-  ['the phone overflows', LCTL, `.tblx{container:tblx/inline-size;min-width:0}`, `.tblx{container:tblx/inline-size;min-width:900px}`, A],
+  ['the phone overflows', LCTL, `.cbl .cbl-grid{min-width:0}.cbl .cbl-hdr{display:none}`, `.cbl .cbl-grid{min-width:900px}.cbl .cbl-hdr{display:none}`, A],
   ['the sidebar stays wide on a phone', PAGE, `  .side{width:64px}\n  .side .label,#toggleNav{display:none}`, `  .side .label,#toggleNav{display:none}`, A],
   ['a table scrolls sideways instead of folding into cards', PAGE, `#bk_body table.bktab thead{display:none}`, ``, A],
   /* ── ONE TABLE (docs/design/one-table): the Ledgers' folder tree and party leaves ── */
   ['ONE the ledger tree lists the per-party accounts as leaves', CAPB, `!/^(1300|2100)-/.test(String(a.code))`, `true`, A],
   ['ONE the control account hides its parties', CAPB, `if (open) inner += parties.map(function (p) {`, `if (false) inner += parties.map(function (p) {`, A],
   ['ONE the parties and the ledger may disagree unsaid', CAPB, `(total === closing ? '' : '<div data-testid="lg-parties-diff"`, `(true ? '' : '<div data-testid="lg-parties-diff"`, A],
-  ['ONE the ledger rows draw their own table', CAPB, `return tblWrapFor('ledger', fit, tblHeadFor('ledger', fit) +`, `return '<table class="bktab"><tbody><tr><td>x</td></tr></tbody></table>' + (false ? tblWrapFor('ledger', fit, tblHeadFor('ledger', fit) +`, A],
+  ['ONE the ledger rows draw their own table', CAPB, `  return CBList.mount(el, {
+    key: 'ledger',`, `  el.innerHTML = '<table class=bktab><tbody><tr><td>x</td></tr></tbody></table>';
+  return CBList.mount(document.createElement('div'), {
+    key: 'ledger',`, A],
   ['ONE an entry has no next level', CAPB, `  var e = bkLgEntry(l);\n`, `  var e = null;\n`, A],
   ['ONE a bill number opens no sheet in the ledger', CAPB, `function bkBillPart(s, tid) {\n`, `function bkBillPart(s, tid) {\n  s = Object.assign({}, s, { chit_id: null });\n`, A],
   ['the word accounting reaches the screen', PAGE, `<span class="brand-name">CB Accounts</span>`, `<span class="brand-name">CB Accounts accounting</span>`, A],

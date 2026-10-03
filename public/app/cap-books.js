@@ -140,13 +140,14 @@ async function booksDuesLoad(force) {
   return BK.dues;
 }
 /** the row chip: what this party owes you (or you them), and the oldest due date */
-function partyDueChipHTML(partyId) {
+function partyDueChipHTML(partyId, opts) {
   var d = BK.dues && BK.dues[partyId]; if (!d) return '';
-  var b = Number(d.balance_minor || 0); if (!b) return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" style="color:var(--grey)">' + esc(d.party_no || '') + ' · ' + tx('settled') + '</span>';
+  var no = opts && opts.noNo ? '' : esc(d.party_no || '') + ' · ';   /* CB CRM names the party in the same row: its number is not said twice */
+  var b = Number(d.balance_minor || 0); if (!b) return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" style="color:var(--grey)">' + no + tx('settled') + '</span>';
   var owes = b > 0;
   return '<span class="optchip" data-testid="party-due-' + esc(partyId) + '" title="' + esc(owes ? tx('They owe you') : tx('You owe them')) + (d.oldest_due ? ' · ' + esc(tx('oldest due')) + ' ' + esc(bkDate(d.oldest_due)) : '') + '"'
     + ' style="' + (owes ? 'background:var(--warn-tint);color:var(--warn-2);border-color:var(--warn-2)' : 'background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-d)') + '">'
-    + esc(d.party_no || '') + ' · ' + (owes ? '↓ ' : '↑ ') + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</span>';
+    + no + (owes ? '↓ ' : '↑ ') + esc(bkMoney(Math.abs(b), BK.duesCur)) + '</span>';
 }
 /**
  * ⭐ THE PARTY BLOCK in the Customer detail and the Supplier record: who they are for the ledger (party no, legal
@@ -264,19 +265,35 @@ function statementHTML(r, partyId) {
 }
 
 /* ── the party's own fields, edited where the party is shown ── */
-var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'VAT', 'TRN'];
+/* the schemes the server accepts (lib/party-fields.js): a party can carry several tax ids, so the sheet edits a LIST of them */
+var TAX_SCHEMES = ['GSTIN', 'PAN', 'TAN', 'TRN', 'VAT', 'TIN', 'CIN', 'UDYAM'];
 function partyRowOf(kind, partyId) {
   if (kind === 'supplier') return (UI.sups || []).find(function (s) { return s.supplier_entity_id === partyId; });
   return (UI.custs || []).find(function (c) { return c.customer_identity_id === partyId; });
 }
+/** one tax-id row of the edit sheet; the first keeps the ids the Ledger's own tests read (pe_scheme / pe_taxid) */
+function partyTaxRowHTML(kind, partyId, t, i) {
+  var sid = i === 0 ? 'pe_scheme' : 'pe_scheme' + i, vid = i === 0 ? 'pe_taxid' : 'pe_taxid' + i;
+  return '<div class="supacts pe_taxrow" style="display:flex;gap:6px"><select class="inp" id="' + sid + '" data-testid="' + sid + '" style="width:auto" aria-label="' + esc(tx('Scheme')) + '">' + TAX_SCHEMES.map(function (s) { return '<option' + (t.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>'
+    + '<input class="inp" id="' + vid + '" data-testid="' + vid + '" value="' + esc(t.value == null ? '' : t.value) + '" aria-label="' + esc(tx('Tax id')) + '" style="width:100%" oninput="partyDupCheck(\'' + kind + '\',\'' + esc(partyId) + '\')"></div>';
+}
+function partyTaxAdd(kind, partyId) {
+  var box = document.getElementById('pe_taxes'); if (!box) return;
+  var n = box.querySelectorAll('.pe_taxrow').length, d = document.createElement('div'); d.innerHTML = partyTaxRowHTML(kind, partyId, {}, n);
+  box.appendChild(d.firstChild);
+}
 function partyEditOpen(kind, partyId) {
   var r = partyRowOf(kind, partyId) || {};
-  var tid = (r.tax_ids && r.tax_ids[0]) || {};
+  var taxes = (r.tax_ids && r.tax_ids.length) ? r.tax_ids : [{}];
   var inp = function (id, v, ph, extra) { return '<input class="inp" id="' + id + '" data-testid="' + id + '" value="' + esc(v == null ? '' : v) + '" placeholder="' + esc(ph || '') + '" style="width:100%" ' + (extra || '') + '>'; };
+  /* a minted (local) party has no profile of its own: the shop holds its phone and e-mail, so the sheet edits them (a party on ChitBridge keeps its own) */
+  var contact = r.contacts ? '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Phone') + inp('pe_phone', r.contacts.phone, '', 'inputmode="tel"') + '</label><label style="flex:1">' + tx('E-mail') + inp('pe_email', r.contacts.email, '', 'inputmode="email"') + '</label></div>' : '';
   modal('<div class="mhd"><div class="t">' + esc(tx('Party')) + ' · ' + esc(r.display_name || r.nickname || '') + '</div></div><div class="mbody" style="display:flex;flex-direction:column;gap:8px">'
     + '<label>' + tx('Legal name') + inp('pe_legal', r.legal_name, tx('as on their tax registration')) + '</label>'
     + '<label>' + tx('Nickname') + inp('pe_nick', r.nickname, tx('what you call them')) + '</label>'
-    + '<label>' + tx('Tax id') + '<div class="supacts" style="display:flex;gap:6px"><select class="inp" id="pe_scheme" data-testid="pe_scheme" style="width:auto">' + TAX_SCHEMES.map(function (s) { return '<option' + (tid.scheme === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' + inp('pe_taxid', tid.value, '', 'oninput="partyDupCheck(\'' + kind + '\',\'' + esc(partyId) + '\')"') + '</div></label>'
+    + contact
+    + '<div><div style="font-weight:600;margin-bottom:4px">' + tx('Tax ids') + '</div><div id="pe_taxes" style="display:flex;flex-direction:column;gap:6px">' + taxes.map(function (t, i) { return partyTaxRowHTML(kind, partyId, t, i); }).join('') + '</div>'
+    + '<button type="button" data-testid="pe_taxadd" style="margin-top:6px" onclick="partyTaxAdd(\'' + kind + '\',\'' + esc(partyId) + '\')">+ ' + tx('Add a tax id') + '</button></div>'
     + '<div id="pe_dup" data-testid="pe_dup" style="font-size:var(--fs-1);color:var(--warn-2)"></div>'
     + '<div style="display:flex;gap:8px"><label style="flex:1">' + tx('Credit days') + inp('pe_days', r.credit_days, '30', 'inputmode="numeric"') + '</label>'
     + '<label style="flex:1">' + tx('Credit limit') + inp('pe_limit', r.credit_limit_minor != null ? (r.credit_limit_minor / Math.pow(10, bkDec())) : '', '', 'inputmode="decimal"') + '</label></div>'
@@ -284,16 +301,22 @@ function partyEditOpen(kind, partyId) {
     + '</div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="pe_save" onclick="partyEditSave(\'' + kind + '\',\'' + esc(partyId) + '\')">' + tx('Save') + '</button></div>');
   partyDupCheck(kind, partyId);
 }
+/** the sheet's tax-id rows → [{scheme, value}], blanks dropped */
+function partyTaxRows() {
+  return Array.prototype.slice.call(document.querySelectorAll('#pe_taxes .pe_taxrow')).map(function (row) {
+    return { scheme: (row.querySelector('select') || {}).value, value: String((row.querySelector('input') || {}).value || '').trim().toUpperCase() };
+  }).filter(function (t) { return t.value; });
+}
 /** ⚠️ duplicate parties come from free text with no tax-id check — warn before saving (the research's failure 5) */
 function partyDupCheck(kind, partyId) {
   var box = document.getElementById('pe_dup'); if (!box) return;
-  var v = String((document.getElementById('pe_taxid') || {}).value || '').trim().toUpperCase();
-  var sc = (document.getElementById('pe_scheme') || {}).value;
-  if (!v) { box.textContent = ''; return; }
+  var mine = partyTaxRows();
+  if (!mine.length) { box.textContent = ''; return; }
   var all = (UI.custs || []).map(function (c) { return { id: c.customer_identity_id, name: c.display_name, tax: c.tax_ids }; })
     .concat((UI.sups || []).map(function (s) { return { id: s.supplier_entity_id, name: s.display_name || s.nickname, tax: s.tax_ids }; }));
-  var hit = all.filter(function (p) { return p.id !== partyId && (p.tax || []).some(function (t) { return t.scheme === sc && String(t.value).toUpperCase() === v; }); })[0];
-  box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: sc }) : '';
+  var hit = null, hs = null;
+  mine.forEach(function (m) { if (hit) return; hit = all.filter(function (p) { return p.id !== partyId && (p.tax || []).some(function (t) { return t.scheme === m.scheme && String(t.value).toUpperCase() === m.value; }); })[0] || null; hs = hit ? m.scheme : hs; });
+  box.textContent = hit ? txf('{name} already has this {scheme}', { name: hit.name || '', scheme: hs }) : '';
 }
 async function partyEditSave(kind, partyId) {
   var g = function (id) { return String((document.getElementById(id) || {}).value || '').trim(); };
@@ -302,14 +325,18 @@ async function partyEditSave(kind, partyId) {
   var lim = g('pe_limit'), days = g('pe_days');
   var body = { legal_name: g('pe_legal') || null, nickname: g('pe_nick') || null, state_code: g('pe_state') || null,
     credit_days: days === '' ? null : parseInt(days, 10), credit_limit_minor: lim === '' ? null : bkToMinor(lim),
-    tax_ids: g('pe_taxid') ? [{ scheme: g('pe_scheme'), value: g('pe_taxid').toUpperCase() }] : [] };
+    tax_ids: partyTaxRows() };
+  if (document.getElementById('pe_phone')) { body.phone = g('pe_phone') || null; body.email = g('pe_email') || null; }
   if (body.credit_days != null && !(body.credit_days >= 0)) { toast(tx('Credit days: a whole number')); return; }
   if (body.credit_limit_minor != null && !(body.credit_limit_minor >= 0)) { toast(tx('Credit limit: an amount')); return; }
   try {
     await api(kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: listId }, body: body });
+    /* a party on both lists is one party: the words and tax ids it carries are written to the other list too (its credit terms are its own) */
+    if (r.also && r.also.id) await api(r.also.kind === 'supplier' ? 'supPatch' : 'custGroup', { params: { id: r.also.id }, body: { legal_name: body.legal_name, nickname: body.nickname, state_code: body.state_code, tax_ids: body.tax_ids } });
     Object.assign(r, body);
     closeModal(); toast(tx('Saved'));
     if (kind === 'supplier') { if (typeof paintSupSlide === 'function') paintSupSlide(); } else if (typeof paintCustDetail === 'function') paintCustDetail();
+    if (typeof crmAfterEdit === 'function') crmAfterEdit(kind, partyId);   /* CB CRM re-reads its list and the record */
   } catch (e) {
     /* the server's own duplicate check (409 DUPLICATE_PARTY) says the same as the warning, with authority */
     var box = document.getElementById('pe_dup'); if (box) box.textContent = bkWhy(e, tx('Could not save'));
@@ -442,6 +469,7 @@ function bkTab(t, silent) {
   if (f) f(body);
 }
 function bkRange(id) {
+  if (id === 'db' && BK.dbp) return { from: BK.dbp.from, to: BK.dbp.to };   /* the Day book's period chip (bkDbPeriod) */
   var from = (document.getElementById(id + '_from') || {}).value, to = (document.getElementById(id + '_to') || {}).value;
   var d = new Date(); var fyStart = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
   return { from: from || fyStart, to: to || bkToday() };
@@ -487,24 +515,6 @@ function bkDaySales(entries, day) {
   corder.sort();
   return { counters: corder.map(function (k) { return counters[k]; }), tenders: torder.map(function (k) { return tenders[k]; }), day_closed: hasDay };
 }
-function bkStripHTML(r, day) {
-  var c = r && r.currency;
-  var t = bkDaySales((r && r.entries) || [], day);
-  var row1 = t.counters.map(function (x) {
-    return '<span class="optchip bkchip" data-testid="strip-counter-' + esc(x.counter) + '">' + esc(x.counter) + ' <b>' + esc(bkMoney(x.amount_minor, c)) + '</b> · ' + esc(txf(x.bills === 1 ? '{n} bill' : '{n} bills', { n: x.bills })) + '</span>';
-  }).join('');
-  var row2 = t.tenders.map(function (x) {
-    return '<span class="optchip bkchip" data-testid="strip-tender-' + esc(x.how) + '">' + esc(tx(x.how)) + ' <b>' + esc(bkMoney(x.amount_minor, c)) + '</b></span>';
-  }).join('');
-  /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the
-     strip is not the whole day yet, and says so, muted (the counter holds the fix; this screen cannot close a day) */
-  var note = t.day_closed ? '' : '<div data-testid="strip-noclose" style="color:var(--grey);font-size:var(--fs-1)">' + tx('Walk-ins not closed yet — close the day on the counter') + '</div>';
-  if (!row1 && !note) return '';
-  return '<div id="bk_strip" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">'
-    + (row1 ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + row1 + '</div>' : '')
-    + (row2 ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + row2 + '</div>' : '')
-    + note + '</div>';
-}
 /**
  * ⭐ THE TO-DO — what waits on you, one line each, a tap away. Only a count above zero earns a row (SYSTEM rule 1);
  * all quiet collapses into one line. Every count is the server's: /health waiting[] (a received supplier bill waits
@@ -522,26 +532,12 @@ function bkTodoCounts(dues, cheques, health) {
   var chq = ((cheques && cheques.cheques) || []).filter(function (x) { return bkChequeNext({ status: bkChequeStatus(x.status), next: Array.isArray(x.next) ? x.next : null }).length > 0; });
   return { accept: confirm.length, acceptIds: confirm.map(function (w) { return w.chit_id; }).filter(Boolean), overdue: overdue.length, cheques: chq.length, waiting: waiting.length - confirm.length };
 }
-function bkTodoHTML(n) {
-  var card = function (tid, count, label, go) {
-    return '<button class="bktodo" data-testid="' + tid + '" onclick="' + go + '"><b>' + count + '</b> ' + esc(label) + '<span class="bkgo" aria-hidden="true">›</span></button>';
-  };
-  var items = [];
-  if (n.accept) items.push(card('todo-accept', n.accept, tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
-    /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
-    (n.accept === 1 && (n.acceptIds || []).length === 1) ? "openChitSheet('" + esc(n.acceptIds[0]) + "')" : "bkTab('waiting')"));
-  if (n.overdue) items.push(card('todo-overdue', n.overdue, tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), "bkTab('dues')"));
-  if (n.cheques) items.push(card('todo-cheques', n.cheques, tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), "bkTab('cheques')"));
-  if (n.waiting) items.push(card('todo-waiting', n.waiting, tx('waiting to be recorded'), "bkTab('waiting')"));
-  if (!items.length) return '<div data-testid="todo-none" style="color:var(--grey);font-size:var(--fs-1);margin-bottom:10px">' + tx('Nothing waiting on you') + '</div>';
-  return '<div id="bk_todo" style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">' + items.join('') + '</div>';
-}
 /**
  * ⭐ THE DAY BOOK, THE WAY A DAY BOOK READS (Athi, 2026-10-01: "expand all, collapse all, search, filter, daily view,
  * weekly view … do we need these many lines per sale? … the gist can be showcased as a summary."). ONE row per entry,
  * its GIST under it — the entry's own lines merged by ledger (GST = 2200–2212 together), each figure a sum of those
  * lines, never recomputed — and the rate-wise lines on a tap. Search, chips, Day / Week / Month heads and the CSV all
- * read the SAME shown list (bkDvShown); nothing here adds to a figure the server did not send.
+ * read the SAME shown list (the unit's); nothing here adds to a figure the server did not send.
  */
 var BK_KINDS = ['Sales', 'Receipts', 'Purchases', 'Payments', 'Expenses', 'Returns', 'Other'];
 function bkDvKind(e) {
@@ -593,15 +589,6 @@ function bkDvGroupOf(date, mode) {
   }
   return { key: day, label: bkDvFmt(day, { weekday: 'short', day: '2-digit', month: 'short' }) };
 }
-function bkDvGroups(list, mode) {
-  var out = [], by = {};
-  list.forEach(function (e) {
-    var g = bkDvGroupOf(e.posting_date, mode);
-    if (!by[g.key]) { by[g.key] = { key: g.key, label: g.label, entries: [] }; out.push(by[g.key]); }
-    by[g.key].entries.push(e);
-  });
-  return out;
-}
 /** the shown rows as a CSV — client-side, one line per row; a cell that starts like a formula is quoted as text */
 function bkDvCsv(list, c) {
   var pow = Math.pow(10, bkDec(c)), amt = function (m) { return (Number(m || 0) / pow).toFixed(bkDec(c)); };
@@ -614,9 +601,10 @@ function bkDvCsv(list, c) {
   });
   return rows.map(function (r, i) { return r.map(function (v) { return i && typeof v === 'string' && v.charAt(0) === '#' ? v.slice(1) : cell(v); }).join(','); }).join('\r\n') + '\r\n';
 }
-function bkDvDownload() {
+/** the rows the Day book is showing, in the order shown — what the CSV downloads (the unit hands them over: it holds the filters) */
+function bkDvDownload(rows) {
   var d = BK.dv; if (!d) return;
-  var blob = new Blob(['﻿' + bkDvCsv(bkDvShown(), d.r.currency)], { type: 'text/csv;charset=utf-8' });
+  var blob = new Blob(['﻿' + bkDvCsv(rows, d.r.currency)], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'day-book-' + d.range.from + '-' + d.range.to + '.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
 }
@@ -626,120 +614,112 @@ function bkDvText(e, c) {
   return [e.entry_no, e.source && e.source.ref, e.narration, bkDvParty(e), bkDvKind(e)].concat((e.lines || []).map(function (l) { return [l.name, l.party_name, bkPartyLabel(l.party_id, l.party_name)].join(' '); }),
     [(tot / pow).toFixed(bkDec(c)), String(Math.floor(tot / pow)), bkMoney(tot, c)], bkDvGist(e).map(function (x) { return (x.amt / pow).toFixed(bkDec(c)); })).join(' ');
 }
-function bkDvShown() { return listCtlView('daybook').matched; }
-/** the group row's words: how many entries, Dr, Cr, Sales and each tender — every figure a sum of the server's own lines */
-function bkDvGroupSummary(g, c) {
+/** the group head's words: how many entries, Dr, Cr, Sales and each tender — every figure a sum of the server's own lines (plain text: the unit escapes it) */
+function bkDvGroupSummary(entries, c) {
   var dr = 0, cr = 0, sales = 0;
-  g.entries.forEach(function (e) {
+  entries.forEach(function (e) {
     (e.lines || []).forEach(function (l) { dr += Number(l.dr_minor || 0); cr += Number(l.cr_minor || 0); });
     if (bkDvKind(e) === 'Sales') (e.lines || []).forEach(function (l) { if (/^4/.test(String(l.code))) sales += Number(l.cr_minor || 0) - Number(l.dr_minor || 0); });
   });
-  var tn = bkDaySales(g.entries, null).tenders;
-  var parts = [esc(txf(g.entries.length === 1 ? '{n} entry' : '{n} entries', { n: g.entries.length })), esc(tx('Dr')) + ' ' + esc(bkMoney(dr, c)), esc(tx('Cr')) + ' ' + esc(bkMoney(cr, c))];
-  if (sales) parts.push(esc(tx('Sales')) + ' ' + esc(bkMoney(sales, c)));
-  tn.forEach(function (x) { parts.push(esc(tx(x.how)) + ' ' + esc(bkMoney(x.amount_minor, c))); });
+  var tn = bkDaySales(entries, null).tenders;
+  var parts = [txf(entries.length === 1 ? '{n} entry' : '{n} entries', { n: entries.length }), tx('Dr') + ' ' + bkMoney(dr, c), tx('Cr') + ' ' + bkMoney(cr, c)];
+  if (sales) parts.push(tx('Sales') + ' ' + bkMoney(sales, c));
+  tn.forEach(function (x) { parts.push(tx(x.how) + ' ' + bkMoney(x.amount_minor, c)); });
   return parts.join(' · ');
 }
-/** Day / Week / Month heads are the Task table's group rows: one row across, a caret, the group's name and its sums */
-function bkDvGroupRow(g, c) {
-  var shut = BK.dv.gcol[g.key];
-  return tblRowHTML([{ key: 'g', label: '', w: '1fr', cell: function () {
-      return '<span aria-hidden="true" style="display:inline-block;width:14px;color:var(--grey)">' + (shut ? '▸' : '▾') + '</span><b>' + esc(g.label) + '</b> · <span data-testid="db-gsum-' + esc(g.key) + '" style="white-space:normal">' + bkDvGroupSummary(g, c) + '</span>'; } }],
-    g, { tpl: '1fr', click: "bkDvGroupToggle('" + esc(g.key) + "')", tid: 'db-ghead-' + g.key,
-      attrs: ' role="button" tabindex="0" aria-expanded="' + (shut ? 'false' : 'true') + '" data-g="' + esc(g.key) + '"' });
-}
-function bkDvGroupToggle(k) { if (!BK.dv) return; BK.dv.gcol[k] = !BK.dv.gcol[k]; bkDvPaint(); }
-/** what the Day book says about an entry — one fact a column (Athi, 2026-10-02: date · entry no · kind · party · bill · tender · counter · amount) */
+/** what the Day book says about an entry — one fact a column (Athi, 2026-10-02: date · entry no · kind · party · bill · tender · counter · amount); the unit draws the caret, the header and the widths */
 function bkDvCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>';
   var no = function (e) { return esc(e.entry_no); };
   return [
-    { key: 'date', label: tx('Date'), sort: 'date', w: '96px', cell: function (e) { return tblCaret('daybook', e.entry_no) + ' <span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'; } },
-    { key: 'no', label: tx('Entry'), sort: 'no', w: 'minmax(136px,1fr)', cell: function (e) { return '<span class="mono">' + no(e) + '</span>'; } },
-    { key: 'kind', label: tx('Kind'), sort: 'kind', w: '88px', cell: function (e) { return esc(tx(bkDvKind(e))); } },
-    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(130px,1.6fr)', cell: function (e) { return esc(bkDvParty(e)) || dash; } },
-    { key: 'bill', label: tx('Bill'), w: 'minmax(140px,1.5fr)', tid: function (e) { return 'db-head-' + e.entry_no; }, cell: function (e) {
+    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 96, html: true, cell: function (e) { return '<span class="bkdv-dt">' + esc(bkDvFmt(String(e.posting_date).slice(0, 10), { day: '2-digit', month: 'short' })) + '</span>'; } },
+    { key: 'no', label: tx('Entry'), prio: 6, sort: 'no', w: 150, html: true, cell: function (e) { return '<span class="mono">' + no(e) + '</span>'; } },
+    { key: 'kind', label: tx('Kind'), prio: 5, sort: 'kind', w: 100, html: true, cell: function (e) { return esc(tx(bkDvKind(e))); } },
+    { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 190, html: true, cell: function (e) { return esc(bkDvParty(e)) || dash; } },
+    { key: 'bill', label: tx('Bill'), prio: 4, w: 230, html: true, tid: function (e) { return 'db-head-' + e.entry_no; }, cell: function (e) {
         var s = e.source || {}, t = 'db-src-' + e.entry_no;
         if (s.kind === 'day') return esc(tx('Walk-in day')) + (s.count != null ? ' · ' + esc(txf(s.count === 1 ? '{n} bill' : '{n} bills', { n: s.count })) : '');
         if (s.ref || s.chit_id) return bkBillPart(s, t) + bkRecordedHTML(e, t);
         return esc(s.kind === 'receipt' ? tx('Received') : (e.narration || e.what || e.event_type || '')) + bkRecordedHTML(e, t) || dash;
       } },
-    { key: 'how', label: tx('Tender'), w: 'minmax(90px,1fr)', cell: function (e) { return bkHowPart(e.source, 'db-src-' + e.entry_no, c) || dash; } },
-    { key: 'counter', label: tx('Counter'), w: 'minmax(130px,1.5fr)', cell: function (e) {
+    { key: 'how', label: tx('Tender'), prio: 7, w: 160, html: true, cell: function (e) { return bkHowPart(e.source, 'db-src-' + e.entry_no, c) || dash; } },
+    { key: 'counter', label: tx('Counter'), prio: 8, w: 220, html: true, cell: function (e) {
         var s = e.source || {}, cw = s.counter ? esc(counterWord(s.counter)) : '', by = bkRungPart(s);
         /* the cashier and the counter are NOT the party: secondary text, never in the Party column */
         return (cw + (cw && by ? ' · ' : '') + (by ? '<span style="color:var(--grey)">' + by + '</span>' : '')) || dash; } },
-    { key: 'amount', label: tx('Amount'), sort: 'amount', align: 'right', w: '112px', cell: function (e) { return '<b data-testid="db-total-' + no(e) + '">' + esc(bkMoney(bkDvTotal(e), c)) + '</b>'; } },
+    { key: 'amount', label: tx('Amount'), prio: 2, pin: 'end', sort: 'amount', w: 130, html: true, cell: function (e) { return '<b data-testid="db-total-' + no(e) + '">' + esc(bkMoney(bkDvTotal(e), c)) + '</b>'; } },
   ];
 }
 /** its next level: the gist (the lines merged by ledger), then the Dr/Cr lines — each tax and sales line with its rate, as the line carries it */
 function bkDvGistHTML(e, c) { return bkDvGist(e).map(function (x) { return esc(x.name) + ' ' + esc(bkMoney(x.amt, c)); }).join(' · '); }
+function bkDvGistText(e, c) { return bkDvGist(e).map(function (x) { return x.name + ' ' + bkMoney(x.amt, c); }).join(' · '); }
 function bkDvNext(e, c, lines) {
   var no = esc(e.entry_no);
   var gist = bkDvGistHTML(e, c);
   /* ⭐ THE RATE (Athi, 2026-10-02): "Output CGST 6%", "Sales @12%" — as the line (the frozen invoice's) carries it, never worked out here */
   var rate = function (l) { var r = l.rate != null ? l.rate : l.rate_pct; return r != null && r !== '' && !/%/.test(String(l.name)) ? (/^4/.test(String(l.code)) ? ' @' : ' ') + esc(String(r)) + '%' : ''; };
   var grey = 'color:var(--grey);font-size:var(--fs-1);text-transform:uppercase';
-  return tblNextHTML((lines ? '' : '<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>')
-    + '<div style="' + grey + '">' + tblNextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
+  return '<div data-testid="db-lines-' + no + '">' + (lines ? '' : '<div data-testid="db-gist-' + no + '" style="color:var(--grey);font-size:var(--fs-1);padding:2px 0 4px">' + gist + '</div>')
+    + '<div style="' + grey + '">' + CBList.nextRow([esc(tx('Code')) + ' · ' + esc(tx('Ledger')), esc(tx('Debit')), esc(tx('Credit'))], [110, 110]) + '</div>'
     + (e.lines || []).map(function (l) {
-        return tblNextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
+        return CBList.nextRow(['<span class="mono">' + esc(l.code) + '</span> ' + esc(l.name) + rate(l) + (l.party_name ? ' · ' + esc(bkPartyLabel(l.party_id, l.party_name)) : ''),
           l.dr_minor ? esc(bkMoney(l.dr_minor, c)) : '', l.cr_minor ? esc(bkMoney(l.cr_minor, c)) : ''], [110, 110]);
-      }).join(''), 'db-lines-' + no);
+      }).join('') + '</div>';
 }
-function bkDvPaint() {
-  var box = document.getElementById('bk_dvlist'); if (!box || !BK.dv) return;
-  var d = BK.dv, c = d.r && d.r.currency, list = bkDvShown(), cols = bkDvCols(c);
-  var fit = tblFitBox('daybook', cols, ['date', 'amount', 'party', 'bill', 'kind', 'no', 'how', 'counter'], 'bk_dvlist'), flat = [];
-  bkDvGroups(list, d.group).forEach(function (g) { flat.push({ g: g }); if (!d.gcol[g.key]) g.entries.forEach(function (e) { flat.push({ e: e }); }); });
-  box.innerHTML = list.length ? tblWrapFor('daybook', fit, tblHeadFor('daybook', fit) + lazyWrap('daybook', flat, function (it) {
-    if (it.g) return bkDvGroupRow(it.g, c);
-    var e = it.e;
-    var ln = TBL_PEEK.daybook.lines;   /* LINES: the gist is the grey line under the record, always; the next level is the journal */
-    return tblRowFor('daybook', fit, e, e.entry_no, { sub: ln ? '<span data-testid="db-gist-' + esc(e.entry_no) + '">' + bkDvGistHTML(e, c) + '</span>' : '', tid: 'db-entry-' + e.entry_no, cls: d.hl === e.entry_no ? 'sel' : '', click: "bkDvToggle('" + esc(e.entry_no) + "')",
-      attrs: ' data-no="' + esc(e.entry_no) + '" aria-expanded="' + tblIsOpen('daybook', e.entry_no) + '"' }, bkDvNext(e, c, ln));
-  }, ''), { id: 'bkt_daybook' }) : emptyState('🔍', tx('Nothing matches'), '');
-  var n = document.getElementById('bkc_daybook'); if (n) n.innerHTML = listCtlCountHTML('daybook');
-  Array.prototype.forEach.call(document.querySelectorAll('[data-testid^="db-group-"]'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-testid') === 'db-group-' + d.group)); });
+/** the Day book's period: Today · This month · This FY · Custom — applies on pick (no Show button); bkRange('db') reads it */
+function bkDbPeriod(preset, custom) {
+  var today = bkToday(), d = new Date(), fy = (d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1) + '-04-01';
+  if (preset === 'today') return { preset: 'today', from: today, to: today };
+  if (preset === 'month') return { preset: 'month', from: today.slice(0, 7) + '-01', to: today };
+  if (preset === 'custom' && custom && custom.from && custom.to) return { preset: 'custom', from: custom.from, to: custom.to };
+  return { preset: 'fy', from: fy, to: today };
 }
-function bkDvOpenAll(on) {
-  var d = BK.dv; if (!d) return;
-  if (on) bkDvShown().forEach(function (e) { TBL_OPEN['daybook:' + e.entry_no] = true; }); else Object.keys(TBL_OPEN).forEach(function (k) { if (k.indexOf('daybook:') === 0) delete TBL_OPEN[k]; });
-  bkDvPaint();
+function bkDbPeriodLabel(q, preset) {
+  var o = { day: 'numeric', month: 'short' }, oy = { day: 'numeric', month: 'short', year: 'numeric' };
+  return preset === 'today' ? bkDvFmt(q.to, oy) : bkDvFmt(q.from, o) + ' – ' + bkDvFmt(q.to, oy);
 }
-function bkDvGroupBy(m) { if (!BK.dv) return; BK.dv.group = m; BK.dv.gcol = {}; bkDvPaint(); }
-function bkDvToggle(no) { var d = BK.dv; if (!d) return; d.hl = no; tblToggle('daybook', no); }
-/* keys: ↑ ↓ move the highlighted row, Enter opens it (its next level); Esc is the sheet's, never swallowed here */
-function bkDvOn() { return !!(BK.dv && document.getElementById('bk_dvlist')); }
-document.addEventListener('keydown', function (ev) {
-  if (!bkDvOn()) return;
-  if (ev.key === 'Escape') return;   /* the sheet's own dialog closes on Esc — this screen must not swallow it */
-  var typing = /^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test((ev.target && ev.target.tagName) || '');
-  if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
-    var rows = Array.prototype.slice.call(document.querySelectorAll('#bk_dvlist .lrow[data-no]')); if (!rows.length) return;
-    var at = rows.map(function (r) { return r.getAttribute('data-no'); }).indexOf(BK.dv.hl);
-    at = ev.key === 'ArrowDown' ? Math.min(rows.length - 1, at + 1) : Math.max(0, at < 0 ? 0 : at - 1);
-    BK.dv.hl = rows[at].getAttribute('data-no'); ev.preventDefault();
-    rows.forEach(function (r, i) { r.classList.toggle('sel', i === at); });
-    if (rows[at].scrollIntoView) rows[at].scrollIntoView({ block: 'nearest' });
-  } else if (ev.key === 'Enter' && !typing && BK.dv.hl) { ev.preventDefault(); bkDvToggle(BK.dv.hl); }
-  else if (ev.key === 'Enter' && ev.target && ev.target.hasAttribute && ev.target.hasAttribute('data-g')) { ev.target.click(); }
-});
-/** declare the Day book's list once per read: its text, its four filters (Kind · Tender · Counter · Person), its sorts */
-function bkDvDeclare() {
-  var d = BK.dv, c = d.r.currency, ents = d.r.entries || [], st = listCtlS('daybook');
+/** the head the Day book declares: its period, today's strip (sales per counter and by tender) as chips, and what waits on you as notices that open their fix */
+function bkDvHead() {
+  var d = BK.dv, r = d.r, c = r && r.currency, q = d.range, n = d.todo, p = BK.dbp || bkDbPeriod('fy');
+  var t = bkDaySales((r && r.entries) || [], q.to), chips = [], notices = [];
+  t.counters.forEach(function (x) { chips.push({ tid: 'strip-counter-' + x.counter, text: x.counter + ' ' + bkMoney(x.amount_minor, c) + ' · ' + txf(x.bills === 1 ? '{n} bill' : '{n} bills', { n: x.bills }) }); });
+  t.tenders.forEach(function (x) { chips.push({ tid: 'strip-tender-' + x.how, text: tx(x.how) + ' ' + bkMoney(x.amount_minor, c) }); });
+  /* ⚠️ walk-in cash/UPI/card reach the Day book only at day close — no walk-in day entry for this day means the strip is not the whole day yet, and says so (the counter holds the fix) */
+  if (!t.day_closed) notices.push({ cls: 'warn', tid: 'strip-noclose', text: tx('Walk-ins not closed yet — close the day on the counter'), onOpen: function () { if (typeof navTo === 'function') navTo('counter'); } });
+  if (n.accept) notices.push({ cls: 'warn', tid: 'todo-accept', text: n.accept + ' ' + tx(n.accept === 1 ? 'supplier bill to accept' : 'supplier bills to accept'),
+    /* one bill → its sheet over the Day book; several → the Waiting list, whose rows open the sheet. Never Intake. */
+    onOpen: function () { if (n.accept === 1 && (n.acceptIds || []).length === 1) openChitSheet(n.acceptIds[0]); else bkTab('waiting'); } });
+  if (n.overdue) notices.push({ cls: 'warn', tid: 'todo-overdue', text: n.overdue + ' ' + tx(n.overdue === 1 ? 'customer overdue' : 'customers overdue'), onOpen: function () { bkTab('dues'); } });
+  if (n.cheques) notices.push({ cls: 'warn', tid: 'todo-cheques', text: n.cheques + ' ' + tx(n.cheques === 1 ? 'cheque to deposit / clear' : 'cheques to deposit / clear'), onOpen: function () { bkTab('cheques'); } });
+  if (n.waiting) notices.push({ cls: 'warn', tid: 'todo-waiting', text: n.waiting + ' ' + tx('waiting to be recorded'), onOpen: function () { bkTab('waiting'); } });
+  if (!n.accept && !n.overdue && !n.cheques && !n.waiting) chips.push({ tid: 'todo-none', text: tx('Nothing waiting on you') });
+  return { period: { label: bkDbPeriodLabel(q, p.preset), value: p.preset, custom: { from: q.from, to: q.to },
+      presets: [['today', tx('Today')], ['month', tx('This month')], ['fy', tx('This FY (Apr–Mar)')], ['custom', tx('Custom')]],
+      onPick: function (v, range) { if (v === 'custom' && !range) return; BK.dbp = bkDbPeriod(v, range); bkTab('daybook', true); } },
+    chips: chips, notices: notices };
+}
+/** declare the Day book's list once per read: its columns, grouping, four filters (Kind · Tender · Counter · Person), sorts, search, next level, CSV — the page paints nothing else */
+function bkDvMount(el) {
+  var d = BK.dv, c = d.r.currency, ents = d.r.entries || [];
   var filters = BK_DV_DIMS.map(function (x) {
     var seen = [];
     ents.forEach(function (e) { bkDvVals(e, x[0]).forEach(function (v) { if (seen.indexOf(v) < 0) seen.push(v); }); });
     if (x[0] === 'kind') seen.sort(function (a, b) { return BK_KINDS.indexOf(a) - BK_KINDS.indexOf(b); }); else seen.sort();
-    if (st.f && st.f[x[0]] && seen.indexOf(st.f[x[0]]) < 0) st.f[x[0]] = '';   /* a choice the new range does not have is dropped, not left hiding everything */
     return { key: x[0], label: tx(x[1]), all: tx(x[1]), match: function (e, v) { return bkDvVals(e, x[0]).indexOf(v) >= 0; },
       options: seen.map(function (v) { return { v: v, label: x[0] === 'counter' ? tx('Counter') + ' ' + v : x[0] === 'by' ? v + (bkIsShopName(v) ? ' ' + tx('(owner)') : '') : tx(v) }; }) };
   });
   var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  tblDeclare('daybook', {
-    view: 'lines',   /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */
-    rows: function () { return d.r.entries || []; }, noun: 'entry', plural: 'entries', repaint: bkDvPaint, filters: filters, text: function (e) { return bkDvText(e, c); },
+  var cols = bkDvCols(c);
+  return CBList.mount(el, {
+    key: 'daybook', t: tx, view: 'lines',   /* the Day book reads as a line a record (Athi, 2026-10-02: "one after the other, so it is more readable") */
+    rows: function () { return d.r.entries || []; }, id: function (e) { return e.entry_no; },
+    head: bkDvHead, columns: cols, defaultCols: cols.filter(function (x) { return x.pin !== 'end'; }).map(function (x) { return x.key; }),
+    rowTid: function (e) { return 'db-entry-' + e.entry_no; }, rowAttrs: function (e) { return { 'data-no': e.entry_no }; },
+    gist: function (e) { return bkDvGistText(e, c); }, gistTid: function (e) { return 'db-gist-' + e.entry_no; },
+    next: function (e, ctx) { return bkDvNext(e, c, ctx.view === 'lines'); },
+    group: { default: 'day', tid: 'db', options: [['day', 'Day'], ['week', 'Week'], ['month', 'Month']],
+      by: function (e, mode) { var g = bkDvGroupOf(e.posting_date, mode); return [g.label, g.key]; }, fig: function (rows) { return bkDvGroupSummary(rows, c); } },
+    filters: filters, search: function (e) { return bkDvText(e, c); }, searchHint: tx('Search party, bill, amount'),
     sorts: [
       { key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } },
       { key: 'date', label: tx('Date'), cmp: function (a, b) { return String(a.posting_date).localeCompare(String(b.posting_date)) || String(a.entry_no).localeCompare(String(b.entry_no), undefined, { numeric: true }); } },
@@ -748,6 +728,9 @@ function bkDvDeclare() {
       { key: 'party', label: tx('Party'), cmp: by(function (e) { return bkDvParty(e); }) },
       { key: 'amount', label: tx('Amount'), cmp: by(bkDvTotal, true) },
     ],
+    csv: function (rows) { bkDvDownload(rows); },
+    tids: { expand: 'db-expand-all', collapse: 'db-collapse-all', csv: 'db-csv', count: 'db-count' },
+    empty: { title: tx('Nothing in these dates') },
   });
 }
 async function bkDaybook(body) {
@@ -756,20 +739,9 @@ async function bkDaybook(body) {
     /* the strip and the to-do read routes that already exist — the day book's own, dues, cheques, health — together */
     var rr = await Promise.all([api('booksDaybook', { query: q }), api('booksDues', { query: { asOf: bkToday() } }), bkChequesLoad(), bkHealthLoad()]);
     var r = rr[0]; bkDuesStore(rr[1]);   /* the same read names each entry's party (bkPartyLabel) */
-    var was = BK.dv || {};
-    BK.dv = { r: r, range: q, group: was.group || 'day', gcol: {}, hl: null };
-    bkDvDeclare();
-    var seg = function (m, l) { return '<button type="button" class="bkdv-seg" data-testid="db-group-' + m + '" onclick="bkDvGroupBy(\'' + m + '\')">' + esc(tx(l)) + '</button>'; };
-    /* the strip and the to-do sit above the entries; the strip reads the range's LAST day — today, by default */
-    body.innerHTML = bkRangeHTML('db', "bkTab('daybook')") + bkStripHTML(r, q.to) + bkTodoHTML(bkTodoCounts(rr[1], rr[2], rr[3]))
-      + ((r && r.entries && r.entries.length)
-        ? '<div id="bk_dv">' + listCtlToolbarHTML('daybook') + '<div class="bkdv-bar supacts">'
-          + '<span class="bkdv-segs" role="group" aria-label="' + esc(tx('Group by')) + '">' + seg('day', 'Day') + seg('week', 'Week') + seg('month', 'Month') + '</span>'
-          + '<button type="button" data-testid="db-expand-all" onclick="bkDvOpenAll(true)">' + tx('Expand all') + '</button><button type="button" data-testid="db-collapse-all" onclick="bkDvOpenAll(false)">' + tx('Collapse all') + '</button>'
-          + '<button type="button" data-testid="db-csv" onclick="bkDvDownload()">' + tx('Download CSV') + '</button></div>'
-          + '<div class="bkdv-count" id="bkc_daybook" data-testid="db-count"></div><div id="bk_dvlist" data-testid="db-list"></div></div>'
-        : emptyState('📖', tx('Nothing in these dates'), ''));
-    bkDvPaint();
+    BK.dv = { r: r, range: q, todo: bkTodoCounts(rr[1], rr[2], rr[3]) };
+    body.innerHTML = '<div id="bk_dvlist" data-testid="db-list"></div>';
+    bkDvMount(document.getElementById('bk_dvlist'));
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 
@@ -890,8 +862,8 @@ function bkLtPaneHTML() {
 }
 function bkLtBack() { BK.lt.sel = null; var el = document.getElementById('bk_lt'); if (el) el.classList.remove('has-sel'); bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML(); }
 function bkLtOpen(sel) {
-  BK.lt.sel = sel; BK.lt.r = null; BK.lt.day = null;
-  Object.keys(TBL_OPEN).forEach(function (k) { if (k.indexOf('ledger:') === 0) delete TBL_OPEN[k]; });   /* an open row belongs to the ledger it was opened in */
+  BK.lt.sel = sel; BK.lt.r = null; BK.lt.day = null; BK.lt.dayP = null;
+  CBList.reset('ledger');   /* an open row, a search and a filter belong to the ledger they were made in */
   var el = document.getElementById('bk_lt'); if (el) el.classList.add('has-sel');
   bkLtTreePaint(); var p = document.getElementById('lt_pane'); if (p) p.innerHTML = bkLtPaneHTML();
   bkLtLoad();
@@ -909,38 +881,43 @@ async function bkLtLoad() {
     if (sel.party) { r = await api('booksStatement', { params: { id: sel.party } }); BK.stmt[sel.party] = r; }
     else { var rr = await Promise.all([api('booksLedger', { params: { account: sel.code }, query: bkRange('lg') }), ctrl ? booksDuesLoad(true) : null]); r = rr[0]; if (ctrl) { bkLtTreePaint(); } }
     if (BK.lt.sel !== sel) return;
-    BK.lt.r = r; BK.lt.day = null; BK.lgR = r;
-    bkLgDeclare(r); bkLtEntriesPaint();
+    BK.lt.r = r; BK.lt.day = null; BK.lt.dayP = null; BK.lgR = r;
+    bkLtEntriesPaint();
   } catch (e) { var o = document.getElementById('lg_out'); if (o) o.innerHTML = bkErr(e); }
 }
-/** the Task table for a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
+/** the list of a ledger's entries (rows = the server's statement lines); its journal is read when a row first opens */
 function bkLgCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', money = function (v) { return v ? esc(bkMoney(v, c)) : ''; };
-  var idx = function (l) { return (BK.lt.r && BK.lt.r.lines || []).indexOf(l); };
   return [
-    { key: 'date', label: tx('Date'), sort: 'date', w: '84px', cell: function (l) { return tblCaret('ledger', idx(l)) + ' ' + esc(bkDate(l.date)); } },
-    { key: 'what', label: tx('What'), sort: 'what', w: 'minmax(170px,3fr)', tid: function (l) { return 'stmt-what-' + idx(l); }, cell: function (l) {
+    { key: 'date', label: tx('Date'), prio: 1, sort: 'date', w: 110, html: true, cell: function (l) { return esc(bkDate(l.date)); } },
+    { key: 'what', label: tx('What'), prio: 2, sort: 'what', w: 420, html: true, tid: function (l) { return 'stmt-what-' + l._ix; }, cell: function (l) {
         /* the entry's word, then where it came from — its bill (a link to the sheet), how it was paid, the counter, who rang it: all secondary, never where the party goes */
-        var parts = bkSourceParts(l.source, 'stmt-src-' + idx(l), c);
-        return bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + idx(l)) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
-    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(110px,1.3fr)', cell: function (l) { var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || ''); return pl ? esc(pl) : dash; } },
-    { key: 'dr', label: tx('Debit'), sort: 'dr', align: 'right', w: '92px', cell: function (l) { return money(l.dr_minor); } },
-    { key: 'cr', label: tx('Credit'), sort: 'cr', align: 'right', w: '92px', cell: function (l) { return money(l.cr_minor); } },
-    { key: 'bal', label: tx('Balance'), align: 'right', w: '100px', cell: function (l) { return '<b>' + esc(bkMoney(l.running_minor, c)) + '</b>'; } },
+        var parts = bkSourceParts(l.source, 'stmt-src-' + l._ix, c);
+        return bkEntryWord(l) + (parts.length ? ' <span style="color:var(--grey)">· ' + parts.join(' · ') + '</span>' : '') + bkRecordedHTML(l, 'stmt-src-' + l._ix) + (l.ref ? ' <span class="mono">' + esc(l.ref) + '</span>' : ''); } },
+    { key: 'party', label: tx('Party'), prio: 3, sort: 'party', w: 220, html: true, cell: function (l) { var pl = l.party_id ? bkPartyLabel(l.party_id, l.party_name) : (l.party_name || ''); return pl ? esc(pl) : dash; } },
+    { key: 'dr', label: tx('Debit'), prio: 4, sort: 'dr', num: true, w: 120, html: true, cell: function (l) { return money(l.dr_minor); } },
+    { key: 'cr', label: tx('Credit'), prio: 5, sort: 'cr', num: true, w: 120, html: true, cell: function (l) { return money(l.cr_minor); } },
+    { key: 'bal', label: tx('Balance'), prio: 6, num: true, w: 130, html: true, cell: function (l) { return '<b>' + esc(bkMoney(l.running_minor, c)) + '</b>'; } },
   ];
 }
 function bkEntryWord(e) {
   var s = e && e.source;
   return s && s.kind === 'day' ? esc(tx('Walk-in day')) : s && s.kind === 'receipt' ? esc(tx('Received')) : esc((e && (e.narration || e.what || e.event_type)) || '');
 }
-function bkLgDeclare(r) {
-  var by = function (f, num) { return function (a, b) { var x = f(a), y = f(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
-  tblDeclare('ledger', {
-    rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, noun: 'entry', plural: 'entries', paint: bkLgPaint, repaint: bkLtEntriesPaint,
-    text: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
+function bkLgMount(el, r) {
+  var by = function (g, num) { return function (a, b) { var x = g(a), y = g(b); return num ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); }; };
+  var c = r.currency || BK.duesCur;
+  (r.lines || []).forEach(function (l, i) { l._ix = i; });   /* a line's place in the statement is its row id */
+  return CBList.mount(el, {
+    key: 'ledger', t: tx, rows: function () { return (BK.lt.r && BK.lt.r.lines) || []; }, id: function (l) { return String(l._ix); },
+    columns: bkLgCols(c), rowTid: function (l) { return 'stmt-row-' + l._ix; },
+    search: function (l) { var s = l.source || {}; return [l.date, l.what, l.narration, l.ref, l.party_name, bkPartyLabel(l.party_id, l.party_name), s.ref, s.how, s.counter, s.by, (Number(l.dr_minor || l.cr_minor || 0) / Math.pow(10, bkDec(r.currency))).toFixed(bkDec(r.currency))].join(' '); },
     sorts: [{ key: 'rec', label: tx('As recorded'), cmp: function () { return 0; } }, { key: 'date', label: tx('Date'), cmp: by(function (l) { return l.date; }) },
       { key: 'what', label: tx('What'), cmp: by(function (l) { return l.what || l.narration || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (l) { return bkPartyLabel(l.party_id, l.party_name); }) },
       { key: 'dr', label: tx('Debit'), cmp: by(function (l) { return l.dr_minor || 0; }, true) }, { key: 'cr', label: tx('Credit'), cmp: by(function (l) { return l.cr_minor || 0; }, true) }],
+    /* its journal is read once, on the first open, and the row shows it when it arrives */
+    next: function (l) { return bkLgJournal().then(function () { return bkLgNext(l, c); }); },
+    empty: { title: tx('No entries in these dates') },
   });
 }
 /** a ledger line's journal: the day-book entry it belongs to (by its entry number, else its chit and date) — read once, on the first open */
@@ -948,25 +925,17 @@ function bkLgEntry(l) {
   var es = (BK.lt.day && BK.lt.day.entries) || [], d = String(l.date || '').slice(0, 10);
   return es.filter(function (e) { return (l.entry_no && e.entry_no === l.entry_no) || (l.entry_id && e.entry_id === l.entry_id) || (!l.entry_no && !l.entry_id && (l.source_chit_id || (l.source && l.source.chit_id)) && (e.source_chit_id || (e.source && e.source.chit_id)) === (l.source_chit_id || (l.source && l.source.chit_id)) && String(e.posting_date).slice(0, 10) === d); })[0];
 }
-async function bkLgJournal() {
-  if (BK.lt.day || BK.lt.dayBusy) return;
-  var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (l) { return String(l.date || '').slice(0, 10); }).filter(Boolean).sort();
-  BK.lt.dayBusy = true;
-  try { BK.lt.day = await api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }); } catch (_) { BK.lt.day = { entries: [], failed: true }; }
-  BK.lt.dayBusy = false; tblRepaint('ledger');
+function bkLgJournal() {
+  if (BK.lt.day) return Promise.resolve();
+  if (BK.lt.dayP) return BK.lt.dayP;
+  var ls = (BK.lt.r && BK.lt.r.lines) || [], ds = ls.map(function (l) { return String(l.date || '').slice(0, 10); }).filter(Boolean).sort(), me = BK.lt.r;
+  return (BK.lt.dayP = api('booksDaybook', { query: { from: ds[0] || bkRange('lg').from, to: ds[ds.length - 1] || bkToday() } }).then(function (d) { return d; }, function () { return { entries: [], failed: true }; })
+    .then(function (d) { if (BK.lt.r === me) BK.lt.day = d; BK.lt.dayP = null; }));
 }
 function bkLgNext(l, c) {
-  if (!BK.lt.day) { bkLgJournal(); return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Reading the journal…')) + '</div>', 'stmt-lines-' + (BK.lt.r.lines || []).indexOf(l)); }
   var e = bkLgEntry(l);
-  if (!e) return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('The journal lines of this entry are not on this page.')) + '</div>', 'stmt-lines-' + (BK.lt.r.lines || []).indexOf(l));
+  if (!e) return '<div data-testid="stmt-lines-' + l._ix + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('The journal lines of this entry are not on this page.')) + '</div>';
   return bkDvNext(e, c);
-}
-function bkLgPaint() {
-  var r = BK.lt.r, c = r.currency || BK.duesCur, cols = bkLgCols(c), fit = tblFitBox('ledger', cols, ['date', 'what', 'party', 'dr', 'cr', 'bal'], 'bkl_ledger');
-  return tblWrapFor('ledger', fit, tblHeadFor('ledger', fit) + lazyWrap('ledger', listCtlView('ledger').matched, function (l) {
-    var i = r.lines.indexOf(l);
-    return tblRowFor('ledger', fit, l, String(i), { tid: 'stmt-row-' + i, click: "tblToggle('ledger','" + i + "')" }, function () { return bkLgNext(l, c); });
-  }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_ledger' });
 }
 /** the ledger's right-hand pane: balance carried at the top, then the entries — and for a control account both figures that must agree */
 function bkLtEntriesPaint() {
@@ -981,8 +950,8 @@ function bkLtEntriesPaint() {
       + (total === closing ? '' : '<div data-testid="lg-parties-diff" style="color:var(--warn-2);font-size:var(--fs-1);margin:6px 0">'
         + esc(txf('The parties add up to {a} but the ledger closes at {b} — {d} apart.', { a: bkMoney(sign * total, c), b: bkMoney(sign * closing, c), d: bkMoney(Math.abs(total - closing), c) })) + '</div>');
   }
-  out.innerHTML = top + ((r.lines || []).length ? tblListHTML('ledger') : emptyState('📒', tx('No entries in these dates'), ''));
-  if ((r.lines || []).length) tblListPaint('ledger');
+  out.innerHTML = top + ((r.lines || []).length ? '<div id="lg_list" data-testid="ledger-list"></div>' : emptyState('📒', tx('No entries in these dates'), ''));
+  if ((r.lines || []).length) bkLgMount(document.getElementById('lg_list'), r);
 }
 async function bkLedgers(body) {
   try {
@@ -1051,14 +1020,14 @@ async function bkStmtRead(pid, list) {
   if (BK.stmt[pid] || (BK.stmtBusy || {})[pid]) return;
   BK.stmtBusy = BK.stmtBusy || {}; BK.stmtBusy[pid] = true;
   try { BK.stmt[pid] = await api('booksStatement', { params: { id: pid } }); } catch (_) { BK.stmt[pid] = { lines: [], failed: true }; }
-  delete BK.stmtBusy[pid]; tblRepaint(list);
+  delete BK.stmtBusy[pid]; var lst = CBList.get(list); if (lst) lst.refresh();
 }
 function bkDuesCols(c) {
   var dash = '<span style="color:var(--grey)">—</span>', amt = function (p, v) { return esc(bkMoney(bkDuesSide(p) === 'pay' ? -Number(v) : Number(v), c)); };
   return [
-    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(160px,2.4fr)', cell: function (p) { return tblCaret('dues', p.party_id) + ' ' + esc(bkPartyLabel(p.party_id, p.name)); } },
-    { key: 'due', label: tx('Total due'), sort: 'due', align: 'right', w: '120px', cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
-    { key: 'oldest', label: tx('Oldest due'), sort: 'oldest', w: '110px', cell: function (p) { return p.oldest_due ? esc(bkDate(p.oldest_due)) : dash; } },
+    { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 300, html: true, cell: function (p) { return esc(bkPartyLabel(p.party_id, p.name)); } },
+    { key: 'due', label: tx('Total due'), prio: 2, sort: 'due', num: true, w: 150, html: true, cell: function (p) { return '<b data-b="balance">' + amt(p, p.balance_minor) + '</b>'; } },
+    { key: 'oldest', label: tx('Oldest due'), prio: 3, sort: 'oldest', w: 130, html: true, cell: function (p) { return p.oldest_due ? esc(bkDate(p.oldest_due)) : dash; } },
   ];
 }
 /**
@@ -1072,7 +1041,7 @@ function bkPartyBillsHTML(pid, list, c) {
   /* a bill is a line that points at a chit and is not a receipt or a payment */
   var chitOf = function (l) { return l.source_chit_id || (l.source && l.source.chit_id); };
   var ls = (st.lines || []).filter(function (l) { return chitOf(l) && !(l.source && /receipt|payment/.test(String(l.source.kind))); });
-  return ls.length ? ls.map(function (l, i) { return tblNextRow([esc(bkDate(l.date)) + ' ' + bkBillPart(l.source || { ref: l.ref, chit_id: chitOf(l) }, 'bills-' + pid + '-' + i), amt(l.dr_minor || l.cr_minor || 0)], [120]); }).join('')
+  return ls.length ? ls.map(function (l, i) { return CBList.nextRow([esc(bkDate(l.date)) + ' ' + bkBillPart(l.source || { ref: l.ref, chit_id: chitOf(l) }, 'bills-' + pid + '-' + i), amt(l.dr_minor || l.cr_minor || 0)], [120]); }).join('')
     : '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No bills on the statement')) + '</div>';
 }
 /** its next level: the age buckets (the server's, Schedule III) and the bills on the party's statement */
@@ -1080,34 +1049,25 @@ function bkDuesNext(p, c) {
   var side = bkDuesSide(p), cols = side === 'pay' ? BK_BUCKETS_PAY : BK_BUCKETS, known = cols.map(function (k) { return k[0]; }), b = p.buckets || {};
   var amt = function (v) { return esc(bkMoney(side === 'pay' ? -Number(v) : Number(v), c)); };
   var other = Object.keys(b).filter(function (k) { return known.indexOf(k) < 0; }).reduce(function (s, k) { return s + Number(b[k] || 0); }, 0);
-  var rows = cols.filter(function (k) { return b[k[0]]; }).map(function (k) { return tblNextRow(['<span data-b="' + k[0] + '">' + esc(tx(k[1])) + '</span>', amt(b[k[0]])], [120]); }).join('')
-    + (other ? tblNextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amt(other)], [120]) : '')
-    + (p.disputed_minor ? tblNextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amt(p.disputed_minor)], [120]) : '');
-  return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Age')) + '</div>' + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing is overdue')) + '</div>')
-    + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' + esc(tx('Bills')) + '</div>' + bkPartyBillsHTML(p.party_id, 'dues', c), 'dues-next-' + esc(p.party_id));
-}
-function bkDuesPaint() {
-  var c = BK.duesCur, cols = bkDuesCols(c), fit = tblFitBox('dues', cols, ['party', 'due', 'oldest'], 'bkl_dues'), flat = [], by = { rcv: [], pay: [] };
-  listCtlView('dues').matched.forEach(function (p) { by[bkDuesSide(p)].push(p); });
-  [['rcv', 'They owe you'], ['pay', 'You owe']].forEach(function (s) {
-    if (!by[s[0]].length) return;
-    flat.push({ side: s[0], label: s[1], n: by[s[0]].length });
-    by[s[0]].forEach(function (p) { flat.push({ p: p }); });
-  });
-  return flat.length ? tblWrapFor('dues', fit, tblHeadFor('dues', fit) + lazyWrap('dues', flat, function (it) {
-    if (it.side) return tblRowHTML([{ key: 'g', label: '', w: '1fr', cell: function () { return '<b>' + esc(tx(it.label)) + '</b> · ' + esc(txf(it.n === 1 ? '{n} party' : '{n} parties', { n: it.n })); } }], it, { tpl: '1fr', tid: 'dues-side-' + it.side });
-    var p = it.p;
-    return tblRowFor('dues', fit, p, p.party_id, { tid: 'dues-' + p.party_id, click: "tblToggle('dues','" + esc(p.party_id) + "')" }, function () { return bkDuesNext(p, c); });
-  }, ''), { id: 'bkt_dues' }) : emptyState('🔍', tx('Nothing matches'), '');
+  var rows = cols.filter(function (k) { return b[k[0]]; }).map(function (k) { return CBList.nextRow(['<span data-b="' + k[0] + '">' + esc(tx(k[1])) + '</span>', amt(b[k[0]])], [120]); }).join('')
+    + (other ? CBList.nextRow(['<span data-b="other">' + esc(tx('Other')) + '</span>', amt(other)], [120]) : '')
+    + (p.disputed_minor ? CBList.nextRow(['<span data-b="disputed">' + esc(tx('Disputed')) + '</span>', amt(p.disputed_minor)], [120]) : '');
+  return '<div data-testid="dues-next-' + esc(p.party_id) + '">' + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Age')) + '</div>' + (rows || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('Nothing is overdue')) + '</div>')
+    + '<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:6px 0 2px">' + esc(tx('Bills')) + '</div>' + bkPartyBillsHTML(p.party_id, 'dues', c) + '</div>';
 }
 async function bkDues(body) {
   try {
     var r = await api('booksDues', { query: { asOf: bkToday() } }); var c = r && r.currency; bkDuesStore(r);
     var open = ((r && r.parties) || []).filter(function (p) { return Number(p.balance_minor); });
-    var num = function (f) { return function (a, b) { return Number(f(a)) - Number(f(b)); }; };
-    tblDeclare('dues', {
-      rows: function () { return open; }, noun: 'party', plural: 'parties', paint: bkDuesPaint,
-      text: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
+    var num = function (g) { return function (a, b) { return Number(g(a)) - Number(g(b)); }; };
+    body.innerHTML = '<div id="bkl_dues" data-testid="dues-list"></div>';
+    CBList.mount(document.getElementById('bkl_dues'), {
+      key: 'dues', t: tx, rows: function () { return open; }, id: function (p) { return p.party_id; }, columns: bkDuesCols(c),
+      rowTid: function (p) { return 'dues-' + p.party_id; },
+      /* They owe you / You owe: one head each, the customers first */
+      group: { default: 'side', order: ['rcv', 'pay'], by: function (p) { var s = bkDuesSide(p); return [tx(s === 'rcv' ? 'They owe you' : 'You owe'), s]; },
+        fig: function (rows) { return txf(rows.length === 1 ? '{n} party' : '{n} parties', { n: rows.length }); }, headTid: function (k) { return 'dues-side-' + k; } },
+      search: function (p) { return [p.party_no, p.name, bkPartyLabel(p.party_id, p.name), p.balance_minor ? (Math.abs(p.balance_minor) / Math.pow(10, bkDec(c))).toFixed(bkDec(c)) : ''].join(' '); },
       sorts: [
         { key: 'party', label: tx('Party no'), cmp: function (a, b) { return String(a.party_no || '').localeCompare(String(b.party_no || ''), undefined, { numeric: true }); } },
         { key: 'name', label: tx('Name'), cmp: function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); } },
@@ -1115,9 +1075,9 @@ async function bkDues(body) {
         { key: 'oldest', label: tx('Oldest due'), cmp: function (a, b) { return String(a.oldest_due || '9999').localeCompare(String(b.oldest_due || '9999')); } },
       ],
       filters: [{ key: 'side', label: tx('Side'), all: tx('Both sides'), options: [{ v: 'rcv', label: tx('They owe you') }, { v: 'pay', label: tx('You owe') }], match: function (p, v) { return bkDuesSide(p) === v; } }],
+      next: function (p) { return bkDuesNext(p, c); },
+      empty: { title: tx('Nothing is due') },
     });
-    body.innerHTML = open.length ? tblListHTML('dues') : emptyState('⏳', tx('Nothing is due'), '');
-    if (open.length) tblListPaint('dues');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 function bkFyNow() { var d = new Date(); var y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); }
@@ -1405,36 +1365,29 @@ function bkChequeList() { return Object.keys(BK.cheques).map(function (k) { retu
 function bkChequeCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'party', label: tx('Party'), sort: 'party', w: 'minmax(130px,1.6fr)', cell: function (c) { return tblCaret('cheques', c.payment_id) + ' ' + (esc(c.name || '') || dash); } },
-    { key: 'cheque', label: tx('Cheque'), sort: 'cheque', w: 'minmax(120px,1.3fr)', cell: function (c) { return '<span class="mono">' + esc(c.cheque_no || '') + '</span>' + (c.cheque_bank ? ' · ' + esc(c.cheque_bank) : ''); } },
-    { key: 'dated', label: tx('Dated'), sort: 'dated', w: '100px', cell: function (c) { return c.cheque_date ? esc(bkDate(c.cheque_date)) : dash; } },
-    { key: 'amount', label: tx('Amount'), sort: 'amount', align: 'right', w: '104px', cell: function (c) { return esc(bkMoney(c.amount_minor, c.currency)); } },
-    { key: 'status', label: tx('Status'), sort: 'status', w: 'minmax(210px,2.2fr)', tid: function (c) { return 'chq-steps-' + c.payment_id; }, cell: function (c) { return bkChequeStepsHTML(c); } },
+    { key: 'party', label: tx('Party'), prio: 1, sort: 'party', w: 220, html: true, cell: function (c) { return esc(c.name || '') || dash; } },
+    { key: 'cheque', label: tx('Cheque'), prio: 4, sort: 'cheque', w: 200, html: true, cell: function (c) { return '<span class="mono">' + esc(c.cheque_no || '') + '</span>' + (c.cheque_bank ? ' · ' + esc(c.cheque_bank) : ''); } },
+    { key: 'dated', label: tx('Dated'), prio: 5, sort: 'dated', w: 120, html: true, cell: function (c) { return c.cheque_date ? esc(bkDate(c.cheque_date)) : dash; } },
+    { key: 'amount', label: tx('Amount'), prio: 3, sort: 'amount', num: true, w: 130, html: true, cell: function (c) { return esc(bkMoney(c.amount_minor, c.currency)); } },
+    { key: 'status', label: tx('Status'), prio: 2, sort: 'status', w: 320, html: true, tid: function (c) { return 'chq-steps-' + c.payment_id; }, cell: function (c) { return bkChequeStepsHTML(c); } },
   ];
-}
-function bkChequesPaint() {
-  var cols = bkChequeCols(), fit = tblFitBox('cheques', cols, ['party', 'status', 'amount', 'cheque', 'dated'], 'bkl_cheques');
-  return tblWrapFor('cheques', fit, tblHeadFor('cheques', fit) + lazyWrap('cheques', listCtlView('cheques').matched, function (c) {
-    return tblRowFor('cheques', fit, c, c.payment_id, { tid: 'chq-' + c.payment_id, click: "tblToggle('cheques','" + esc(c.payment_id) + "')" }, function () {
-      return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Bills')) + '</div>' + (c.party_id ? bkPartyBillsHTML(c.party_id, 'cheques', c.currency || BK.duesCur) : ''), 'chq-next-' + esc(c.payment_id));
-    });
-  }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_cheques' });
 }
 async function bkChequesView(body) {
   try {
     await bkChequesLoad();
-    var list = bkChequeList(), by = function (f) { return function (a, b) { return String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true }); }; };
-    tblDeclare('cheques', {
-      rows: bkChequeList, noun: 'cheque', paint: bkChequesPaint,
-      text: function (c) { return [c.name, c.cheque_no, c.cheque_bank, c.status, (Number(c.amount_minor || 0) / Math.pow(10, bkDec(c.currency))).toFixed(bkDec(c.currency))].join(' '); },
+    var list = bkChequeList(), by = function (g) { return function (a, b) { return String(g(a)).localeCompare(String(g(b)), undefined, { numeric: true }); }; };
+    body.innerHTML = '<div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1);margin-bottom:6px"></div><div id="bkl_cheques" data-testid="cheques-list"></div>';
+    CBList.mount(document.getElementById('bkl_cheques'), {
+      key: 'cheques', t: tx, rows: bkChequeList, id: function (c) { return c.payment_id; }, columns: bkChequeCols(), rowTid: function (c) { return 'chq-' + c.payment_id; },
+      search: function (c) { return [c.name, c.cheque_no, c.cheque_bank, c.status, (Number(c.amount_minor || 0) / Math.pow(10, bkDec(c.currency))).toFixed(bkDec(c.currency))].join(' '); },
       sorts: [{ key: 'dated', label: tx('Dated'), cmp: by(function (c) { return c.cheque_date || ''; }) }, { key: 'party', label: tx('Party'), cmp: by(function (c) { return c.name; }) },
         { key: 'cheque', label: tx('Cheque'), cmp: by(function (c) { return c.cheque_no; }) }, { key: 'amount', label: tx('Amount'), cmp: function (a, b) { return Number(a.amount_minor || 0) - Number(b.amount_minor || 0); } },
         { key: 'status', label: tx('Status'), cmp: by(function (c) { return c.status; }) }],
       filters: [{ key: 'status', label: tx('Status'), all: tx('Every status'), options: Object.keys(BK_CHQ_WORD).map(function (k) { return { v: k, label: tx(BK_CHQ_WORD[k]) }; }), match: function (c, v) { return c.status === v; } }],
+      /* its next level is the party's bills (the statement route, read once on the first open) */
+      next: function (c) { return '<div data-testid="chq-next-' + esc(c.payment_id) + '"><div style="color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;padding:2px 0">' + esc(tx('Bills')) + '</div>' + (c.party_id ? bkPartyBillsHTML(c.party_id, 'cheques', c.currency || BK.duesCur) : '') + '</div>'; },
+      empty: { title: tx('No cheques held') },
     });
-    body.innerHTML = '<div id="chq_out" data-testid="chq_out" style="color:var(--warn-2);font-size:var(--fs-1);margin-bottom:6px"></div>'
-      + (list.length ? tblListHTML('cheques') : emptyState('🧾', tx('No cheques held'), ''));
-    if (list.length) tblListPaint('cheques');
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 /**
@@ -1451,11 +1404,11 @@ function bkWaitModel(w) { var r = w && w.chit_id && BK.wchit && BK.wchit[w.chit_
 function bkWaitCols() {
   var dash = '<span style="color:var(--grey)">—</span>';
   return [
-    { key: 'who', label: tx('Supplier'), sort: 'who', w: 'minmax(140px,2fr)', cell: function (w) { var m = bkWaitModel(w); return tblCaret('waiting', bkWaitId(w)) + ' ' + (m && m.who ? esc(m.who) : dash); } },
-    { key: 'no', label: tx('Bill no'), sort: 'no', w: 'minmax(110px,1.2fr)', cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
-    { key: 'amount', label: tx('Amount'), sort: 'amount', align: 'right', w: '112px', cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
-    { key: 'date', label: tx('Date'), sort: 'date', w: '92px', cell: function (w) { var m = bkWaitModel(w); return esc(bkDate((m && m.at) || w.since)); } },
-    { key: 'step', label: tx('Step'), sort: 'step', w: 'minmax(130px,1.4fr)', cell: function (w) {
+    { key: 'who', label: tx('Supplier'), prio: 1, sort: 'who', w: 240, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.who ? esc(m.who) : dash; } },
+    { key: 'no', label: tx('Bill no'), prio: 4, sort: 'no', w: 170, html: true, cell: function (w) { var m = bkWaitModel(w); return m && m.no ? '<span class="mono">' + esc(m.no) + '</span>' : dash; } },
+    { key: 'amount', label: tx('Amount'), prio: 2, sort: 'amount', num: true, w: 140, html: true, cell: function (w) { var m = bkWaitModel(w), t = m && m.money && m.money.total; return t != null ? esc(bkMajor(t, m.cur)) : dash; } },
+    { key: 'date', label: tx('Date'), prio: 5, sort: 'date', w: 120, html: true, cell: function (w) { var m = bkWaitModel(w); return esc(bkDate((m && m.at) || w.since)); } },
+    { key: 'step', label: tx('Step'), prio: 3, sort: 'step', w: 300, html: true, cell: function (w) {
         var i = (BK.waiting || []).indexOf(w), m = bkWaitModel(w);
         /* a posting that failed says why, in the server's words; a bill waiting on a person says which step it is at */
         if (bkWaitFailed(w)) return '<span data-testid="wait-why-' + i + '" style="color:var(--warn-2)">' + esc(w.reason || w.why || tx('No reason given')) + '</span>';
@@ -1465,21 +1418,14 @@ function bkWaitCols() {
 }
 function bkWaitDate(w) { var m = bkWaitModel(w); return String((m && m.at) || w.since || ''); }
 function bkWaitNext(w) {
-  var m = bkWaitModel(w), pre = '';
-  if (!m) return tblNextHTML('<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(w.chit_id ? 'Reading the bill…' : 'No bill attached')) + '</div>', 'wait-lines-' + (BK.waiting || []).indexOf(w));
+  var m = bkWaitModel(w), tid = 'wait-lines-' + (BK.waiting || []).indexOf(w);
+  if (!m) return '<div data-testid="' + tid + '" style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx(w.chit_id ? 'Reading the bill…' : 'No bill attached')) + '</div>';
   var ml = (m.money && m.money.lines) || [];
   var lines = (m.lines || []).map(function (l, i) {
     var f = ml[i], tot = f ? f.total : (l.total != null ? l.total : l.net), q = l.quantity != null ? l.quantity : (l.qty != null ? l.qty : '');
-    return tblNextRow([esc(l.particulars || l.name || ''), esc(String(q) + (l.unit && l.unit !== 'piece' ? ' ' + l.unit : '')), esc(bkMajor(tot, m.cur))], [90, 110]);
+    return CBList.nextRow([esc(l.particulars || l.name || ''), esc(String(q) + (l.unit && l.unit !== 'piece' ? ' ' + l.unit : '')), esc(bkMajor(tot, m.cur))], [90, 110]);
   }).join('');
-  return tblNextHTML(lines || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No lines on this bill')) + '</div>', 'wait-lines-' + (BK.waiting || []).indexOf(w));
-}
-function bkWaitPaint() {
-  var list = BK.waiting || [], cols = bkWaitCols(), fit = tblFitBox('waiting', cols, ['who', 'amount', 'step', 'no', 'date'], 'bkl_waiting'), view = listCtlView('waiting').matched;
-  return tblWrapFor('waiting', fit, tblHeadFor('waiting', fit) + lazyWrap('waiting', view, function (w) {
-    var i = list.indexOf(w), id = bkWaitId(w);
-    return tblRowFor('waiting', fit, w, id, { tid: 'wait-' + i, click: w.chit_id ? "openChitSheet('" + esc(w.chit_id) + "')" : '' }, function () { return bkWaitNext(w); });
-  }, emptyState('🔍', tx('Nothing matches'), '')), { id: 'bkt_waiting' });
+  return '<div data-testid="' + tid + '">' + (lines || '<div style="color:var(--grey);font-size:var(--fs-1)">' + esc(tx('No lines on this bill')) + '</div>') + '</div>';
 }
 /** one chit read per waiting row (four at a time); each row paints again when its bill arrives — the list never waits for them */
 async function bkWaitReads() {
@@ -1491,7 +1437,7 @@ async function bkWaitReads() {
     while (next < todo.length) {
       var w = todo[next++];
       try { BK.wchit[w.chit_id] = await api('chit', { params: { id: w.chit_id } }); } catch (_) { BK.wchit[w.chit_id] = false; }
-      if (BK.tab === 'waiting') tblRepaint('waiting');
+      if (BK.tab === 'waiting') { var wl = CBList.get('waiting'); if (wl) wl.refresh(); }
     }
   }
   await Promise.all([worker(), worker(), worker(), worker()]);
@@ -1499,26 +1445,31 @@ async function bkWaitReads() {
 async function bkWaitingView(body) {
   try {
     await bkHealthLoad();
-    var list = BK.waiting || [];
-    tblDeclare('waiting', {
-      rows: function () { return BK.waiting || []; }, noun: 'bill', plural: 'bills', paint: bkWaitPaint,
-      text: function (w) { var m = bkWaitModel(w); return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' '); },
+    var list = BK.waiting || [], failed = list.some(bkWaitFailed);
+    body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
+      + (list.length && failed ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' + tx('Try again') + '</button></div>' : '')
+      + '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>'
+      + (list.length ? '<div id="bkl_waiting" data-testid="waiting-list"></div>' : emptyState('✓', tx('Nothing is waiting'), ''));
+    if (!list.length) return;
+    CBList.mount(document.getElementById('bkl_waiting'), {
+      key: 'waiting', t: tx, rows: function () { return BK.waiting || []; }, id: bkWaitId, columns: bkWaitCols(),
+      rowTid: function (w) { return 'wait-' + (BK.waiting || []).indexOf(w); },
+      /* a row opens the bill's sheet; its caret opens the lines */
+      onOpen: function (w) { if (w.chit_id) openChitSheet(w.chit_id); },
+      search: function (w) { var m = bkWaitModel(w); return [m && m.who, m && m.no, m && m.money && m.money.total, w.reason, w.why].join(' '); },
       sorts: [
         { key: 'date', label: tx('Oldest first'), cmp: function (a, b) { return bkWaitDate(a) < bkWaitDate(b) ? -1 : bkWaitDate(a) > bkWaitDate(b) ? 1 : 0; } },
         { key: 'who', label: tx('Supplier'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).who || '').localeCompare(String((bkWaitModel(b) || {}).who || '')); } },
         { key: 'no', label: tx('Bill no'), cmp: function (a, b) { return String((bkWaitModel(a) || {}).no || '').localeCompare(String((bkWaitModel(b) || {}).no || ''), undefined, { numeric: true }); } },
-        { key: 'amount', label: tx('Amount'), cmp: function (a, b) { var f = function (w) { var m = bkWaitModel(w); return Number(m && m.money && m.money.total) || 0; }; return f(a) - f(b); } },
+        { key: 'amount', label: tx('Amount'), cmp: function (a, b) { var g = function (w) { var m = bkWaitModel(w); return Number(m && m.money && m.money.total) || 0; }; return g(a) - g(b); } },
         { key: 'step', label: tx('Step'), cmp: function (a, b) { return Number(bkWaitFailed(b)) - Number(bkWaitFailed(a)); } },
       ],
       filters: [{ key: 'what', label: tx('Step'), all: tx('Every step'), options: [{ v: 'confirm', label: tx('To accept') }, { v: 'failed', label: tx('Could not be recorded') }],
         match: function (w, v) { return v === 'failed' ? bkWaitFailed(w) : !bkWaitFailed(w); } }],
+      next: bkWaitNext,
+      empty: { title: tx('Nothing is waiting') },
     });
-    var failed = list.some(bkWaitFailed);
-    body.innerHTML = '<div class="sec">' + tx('Waiting to be recorded') + '</div>'
-      + (list.length ? (failed ? '<div class="supacts" style="display:flex;gap:7px;margin-bottom:9px"><button class="supact-pri" data-testid="wait-retry" onclick="bkWaitingRetry()">' + tx('Try again') + '</button></div>' : '')
-          + '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + tblListHTML('waiting')
-        : '<div id="wait_out" data-testid="wait_out" style="font-size:var(--fs-1);margin-bottom:6px"></div>' + emptyState('✓', tx('Nothing is waiting'), ''));
-    if (list.length) { tblListPaint('waiting'); bkWaitReads(); }
+    bkWaitReads();
   } catch (e) { body.innerHTML = bkErr(e); }
 }
 async function bkWaitingRetry() {

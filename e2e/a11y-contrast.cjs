@@ -113,20 +113,14 @@ function resolve(tok, map, depth) {
 }
 
 /**
- * The THEMES object, read as source. ⚠️ Deliberately NOT eval'd of the whole file — app.html is a browser
- * document and will not run under node. The object literal is extracted and evaluated alone.
+ * The THEMES are the ENGINE'S now (screen v1.15.0 APP_THEMES — 16, with Terminal), not a literal in app.html: the app, CB Accounts, the
+ * index page and the counter read ONE list, so this measures that list. The engine file is a UMD that attaches CBScreen to `window`.
  */
 function themes() {
-  const start = src.indexOf('var THEMES = {');
-  if (start < 0) throw new Error('THEMES not found in app.html');
-  let depth = 0, i = src.indexOf('{', start), end = -1;
-  for (; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
-  }
-  if (end < 0) throw new Error('THEMES literal did not close');
-  // eslint-disable-next-line no-new-func
-  return new Function('return ' + src.slice(src.indexOf('{', start), end))();
+  globalThis.window = globalThis;
+  require(path.join(__dirname, '..', 'public', 'engine', 'screen.js'));
+  if (!globalThis.CBScreen || !globalThis.CBScreen.APP_THEMES) throw new Error('APP_THEMES not found in public/engine/screen.js');
+  return globalThis.CBScreen.APP_THEMES;
 }
 
 /* ── the checks ──────────────────────────────────────────────────────────────────────────────────────────── */

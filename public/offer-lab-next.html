@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -749,6 +749,8 @@ button{cursor:pointer}
 .combohead{font-size:.92em;color:var(--muted);margin-bottom:12px;padding:10px 12px;background:var(--panel);border-radius:var(--r)}
 .combohead b{display:block;margin-top:4px;color:var(--green);font-size:1.05em}
 </style>
+<script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
 <body>
 <div class="wrap">
@@ -768,6 +770,7 @@ button{cursor:pointer}
     <input type="file" id="labImportFile" accept=".xlsx,.xls,.csv" hidden onchange="importSpreadsheet(this)">
     <button class="chip tool" onclick="exportCsv()" title="Everything on screen right now, as a CSV"><span class="g">↑</span><span class="tx">Export</span></button>
     <div class="bizSw" id="bizSw"></div>
+    <span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
   </div>
   <!-- ⚠️⚠️⚠️ [OFFR-01] SAID ONCE, ON EVERY SCREEN, NOT ONLY INSIDE ONE OVERLAY'S FOOTER. The modifier lab's
        own footer already said "Using a sample catalogue — Apply tries it here, not on a real product" —

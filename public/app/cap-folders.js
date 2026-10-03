@@ -356,6 +356,20 @@ function gsToggle(i){ _FLD.gsOpen = _FLD.gsOpen || {}; _FLD.gsOpen[i] = !_FLD.gs
  * ⚠️ THE SERVER ALREADY GROUPS BY CURRENCY here, so the shape only needs renaming — `{currency, total}` is
  * exactly what cbSumByCurrency produces, which is why one renderer can serve both.
  */
+/**
+ * ⭐ ONE MOVE BUTTON — reordering folder rules (↑ ↓). It was shared with the column chooser's ← → until the chooser moved INTO CBList
+ * (list-ctl.js owns its own); this is its only caller again. The judgment baked into it:
+ *   ⚠️ DISABLED AT THE ENDS, NEVER HIDDEN. A control that vanishes at the boundary makes the row reflow under the cursor you were
+ *   about to click again — so the first press moves the item and the second lands on whatever slid into its place.
+ *   ⚠️ THE GLYPH MUST MATCH THE AXIS. Rules are a vertical list and take ↑ ↓ ("Run earlier").
+ * `js` is the click handler body, so the caller keeps its own action and its own stopPropagation decision.
+ */
+function mvBtn(glyph, ok, title, js){
+  return '<button type="button" class="mv-btn" ' + (ok ? '' : 'disabled') + ' title="' + esc(title) + '"'
+    + ' onclick="' + js + '">' + glyph + '</button>';
+}
+/* the Group sum's drill-down block: an indented block on the card colour under its row */
+function _gsNext(inner){ return '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">' + inner + '</div>'; }
 function _gsMoney(v, mixed){
   if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
   return cbMoneyList(v.map(function(x){ return { currency: x.currency, total: x.total }; }),
@@ -451,7 +465,7 @@ function _groupSumPane(){
         + '<span style="width:74px;text-align:end;color:var(--grey);font-size:var(--fs-1)">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
-      var rows = open ? tblNextHTML(
+      var rows = open ? _gsNext(
         (l.breakdown || []).map(function(s){
             return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)

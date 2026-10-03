@@ -790,6 +790,8 @@
   .hide{ display:none !important; }
   @media (max-width:560px){ .chead{ flex-wrap:wrap; } .pri{ order:3; } }
 </style>
+<script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
 <body>
 
@@ -810,7 +812,7 @@
 <header>
   <div class="htop">
     <h1>Test Report</h1>
-    <span class="sub" id="who">…</span>
+    <span class="sub" id="who">…</span><span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
     <span class="sub" style="opacity:.75">· cases, results and the completion report — ISO/IEC/IEEE 29119-3</span>
   </div>
   <div class="tally" id="tally"></div>

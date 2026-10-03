@@ -224,6 +224,9 @@ async function route(S, r) {
   return J(r, 200, { ok: true });
 }
 
+/* required by e2e/cblist-shots.cjs: the stand-in is shared, never copied (run directly, nothing changes) */
+if (require.main !== module) { module.exports = { standIn, route }; return; }
+
 (async () => {
   const srv = http.createServer((q, r) => { const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '') || 'index.html'; const f = path.join(ROOT, rel);
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
@@ -305,7 +308,8 @@ async function route(S, r) {
   const chipTitle = await p.getAttribute('[data-testid="party-due-c1"]', 'title');
   ok(/owe you/.test(chipTitle) && /oldest due/.test(chipTitle), 'row chip says who owes whom and the oldest due (' + chipTitle + ')');
   /* ⭐ THE CRM IS THE TASK TABLE (docs/design/one-table item 9): Party no · Name · ChitBridge ID · Balance · Oldest due · Credit terms · GSTIN */
-  crmNo = ((await p.textContent('[data-testid="party-no-c1"]')) || '').trim();
+  /* CBList puts its open/close caret (▸) in the FIRST cell, so the cell reads '▸P-00001': the party no is the P-nnnnn in it */
+  crmNo = ((((await p.textContent('[data-testid="party-no-c1"]')) || '').match(/P-[0-9]+/) || [''])[0]).trim();
   ok(await p.locator('#tbl_customers .lhead').count() === 1 && await p.locator('[data-testid="cust-row-c1"].lrow').count() === 1 && await p.locator('.row[data-testid^="cust-row-"]').count() === 0, 'the Customers list is the Task table (.lhead / .lrow) — no row of its own');
   await p.evaluate(() => { UI[lwKey()] = 1100; document.getElementById('panel').style.setProperty('--lw', '1100px'); paintCustList(); });
   await p.waitForSelector('#tbl_customers .lhcell:nth-child(7)', { timeout: 5000 }).catch(() => {});
@@ -318,7 +322,7 @@ async function route(S, r) {
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-columns-open.png') });
   await p.click('[data-testid="cols-customers-gstin"]');
   ok(await p.locator('#tbl_customers .lhead .lhcell').count() === 4 && /GSTIN/.test(await p.textContent('#tbl_customers .lhead')), 'ticking GSTIN shows it at once (a 4th column)');
-  ok(/cb_cols_customers/.test(await p.evaluate(() => Object.keys(localStorage).join())) && JSON.parse(await p.evaluate(() => localStorage.getItem(uk('cb_cols_customers')))).indexOf('gstin') >= 0, 'the choice is remembered for this list (cb_cols_customers)');
+  ok(/cblist\.customers/.test(await p.evaluate(() => Object.keys(localStorage).join())) && JSON.parse(await p.evaluate(() => localStorage.getItem('cblist.customers'))).cols.indexOf('gstin') >= 0, 'the choice is remembered for this list (cblist.customers)');
   await p.click('[data-testid="cols-customers-gstin"]');
   for (const k of ['cbid', 'oldest', 'credit', 'gstin']) await p.click('[data-testid="cols-customers-' + k + '"]');
   await p.click('[data-testid="cols-btn-customers"]');
@@ -327,12 +331,13 @@ async function route(S, r) {
   ok(JSON.stringify(crmHeads) === JSON.stringify(['Party no', 'Name', 'Balance', 'ChitBridge ID', 'Oldest due', 'Credit terms', 'GSTIN']), 'the CRM table\'s columns: ' + crmHeads.join(' · '));
   const crmRow = async (id) => (await p.$$eval('[data-testid="cust-row-' + id + '"] .lcell', (els) => els.map((x) => x.textContent.replace(/\s+/g, ' ').trim())));
   const r1 = await crmRow('c1'), r2 = await crmRow('c2');
+  for (const r of [r1, r2]) r[0] = r[0].replace(/^▸\s*/, '');   /* the unit draws the row's caret in its first cell */
   ok(r1[0] === 'P-00001' && r2[0] === 'P-00002' && r1[3] === 'ravi.stores' && /off-rail/.test(r2[3]), 'every row shows its party no and its ChitBridge ID (user id, or "off-rail" for a local party): ' + r1.slice(0, 3).join(' | ') + ' // ' + r2.slice(0, 3).join(' | '));
   ok(/6,000/.test(r1[2]) && /Aug/.test(r1[4]) && /30 days/.test(r1[5]) && r1[6] === '33AAAAA0000A1Z5', 'Balance · Oldest due · Credit terms · GSTIN come from the row\'s own fields: ' + r1.slice(2).join(' | '));
   /* GRID or LINES: the same columns, drawn two ways (the toggle sits beside ⚙ columns) */
   await p.click('[data-testid="view-lines-customers"]');
   ok(await p.locator('#tbl_customers.tbllines').count() === 1 && await p.locator('#tbl_customers .lhead').count() === 0 && await p.locator('[data-testid="cust-row-c1"] .lcell').count() >= 5, 'CRM as lines: no header, every ticked field flows on the record\'s line');
-  ok(await p.getAttribute('[data-testid="view-lines-customers"]', 'aria-pressed') === 'true' && /customers/.test(await p.evaluate(() => Object.keys(localStorage).filter((k) => /cb_view_/.test(k)).join())), 'the view is remembered for this list (cb_view_customers)');
+  ok(await p.getAttribute('[data-testid="view-lines-customers"]', 'aria-pressed') === 'true' && JSON.parse(await p.evaluate(() => localStorage.getItem('cblist.customers'))).view === 'lines', 'the view is remembered for this list (cblist.customers)');
   await p.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-lines-laptop.png') });
   await p.click('[data-testid="view-grid-customers"]');
   ok(await p.locator('#tbl_customers .lhead').count() === 1, 'back to grid: the header returns');
@@ -475,7 +480,7 @@ async function route(S, r) {
   const dbCell = async (no, lab) => ((await p.textContent('[data-testid="db-entry-' + no + '"] .lcell[data-l="' + lab + '"]').catch(() => '')) || '').replace(/[‎‏⁦-⁩]/g, '').replace(/\s+/g, ' ').trim();
   const E1 = 'JV/2026-27/000001', E2 = 'JV/2026-27/000002', E3 = 'JV/2026-27/000003', E4 = 'JV/2026-27/000004';
   const t1 = await headOf('db-src-JV/2026-27/000001-at');
-  ok(await p.locator('#bk_dvlist .tbllines, .lhead').count() >= 1 && await p.locator('#bk_dvlist .lrow').count() > 0 && await p.locator('.bkdv-row').count() === 0, 'day book: drawn by the Task table (.lhead / .lrow), and no .bkdv-row of its own');
+  ok(await p.locator('#bk_dvlist.tbllines, #bk_dvlist .lhead').count() >= 1 && await p.locator('#bk_dvlist .lrow').count() > 0 && await p.locator('.bkdv-row').count() === 0, 'day book: drawn by the Task table (.lhead / .lrow), and no .bkdv-row of its own');
   ok(/\d{1,2}:\d{2}/.test(t1) && await dbCell(E1, 'Bill') === 'C2/26-27/0002 ' + t1 && await dbCell(E1, 'Kind') === 'Sales' && await dbCell(E1, 'Party') === 'Ravi Stores' && await dbCell(E1, 'Tender') === 'On credit' && await dbCell(E1, 'Counter') === 'Counter C2 · rung by Athi',
     'day book: a bill entry — its bill and time, kind, party, how it was paid, counter, and "rung by" in the secondary text, one fact a column ("' + await dbCell(E1, 'Bill') + '" · "' + await dbCell(E1, 'Counter') + '")');
   ok(await dbCell(E1, 'Party') !== 'Athi' && !/Athi/.test(await dbCell(E1, 'Party')) && !/Counter/.test(await dbCell(E1, 'Party')), 'day book: the person who rang the bill and the counter are never in the Party column');
@@ -514,13 +519,13 @@ async function route(S, r) {
   fs.mkdirSync(path.join(__dirname, 'shots'), { recursive: true });
   await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-laptop.png') });
   /* ⭐ THE DAY BOOK READS AS LINES (Athi, 2026-10-02): the header details one after another on one line, the gist under it, the journal when opened */
-  ok(await p.locator('#bkt_daybook.tbllines').count() === 1 && await p.locator('#bk_dvlist .lhead').count() === 0, 'day book: opens as LINES - a record a line, no column header');
-  const lineTxt = await p.evaluate(() => { const r = document.querySelector('[data-testid="db-entry-JV/2026-27/000001"]'); return r ? r.querySelector('.lsub') && r.querySelector('.lsub').textContent : ''; });
+  ok(await p.locator('#bk_dvlist.tbllines').count() === 1 && await p.locator('#bk_dvlist .lhead').count() === 0, 'day book: opens as LINES - a record a line, no column header');
+  const lineTxt = await p.evaluate(() => { const r = document.querySelector('[data-testid="db-entry-JV/2026-27/000001"]'); return r ? r.querySelector('.cbl-lgist') && r.querySelector('.cbl-lgist').textContent : ''; });
   ok(/\S/.test(lineTxt || ''), 'day book: the gist line sits under the record before it is opened ("' + (lineTxt || '').slice(0, 60) + '")');
   ok(await p.locator('[data-testid="view-grid-daybook"]').count() === 1 && await p.locator('[data-testid="cols-btn-daybook"]').count() === 1, 'day book: the grid / lines toggle and the columns chooser are in its bar');
   await p.click('[data-testid="db-expand-all"]');
-  await p.locator('#bk_dv').scrollIntoViewIfNeeded();
-  await p.locator('#bk_dv').screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-laptop.png') });
+  await p.locator('#bk_dvlist').scrollIntoViewIfNeeded();
+  await p.locator('#bk_dvlist').screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-laptop.png') });
   await p.click('[data-testid="db-collapse-all"]');
 
   /* ⭐ 6d · each line is a TAP to the screen that does it */
@@ -557,13 +562,13 @@ async function route(S, r) {
     const isoMon = (d) => { const t = new Date(d + 'T00:00:00Z'); return new Date(t.getTime() - ((t.getUTCDay() + 6) % 7) * 864e5).toISOString().slice(0, 10); };
     const uniq = (a) => a.filter((x, i) => a.indexOf(x) === i);
     const shownNos = () => p.$$eval('#bk_dvlist .lrow[data-no]', (els) => els.map((x) => x.getAttribute('data-no')));
-    const DBQ = '[data-testid="listctl-search-daybook"]', pick = (dim, v) => p.selectOption('[data-testid="listctl-filter-' + dim + '"]', v), unpick = (dim) => p.selectOption('[data-testid="listctl-filter-' + dim + '"]', '');
+    const DBQ = '[data-testid="listctl-search-daybook"]', filt = async () => { if (!await p.locator('[data-testid="cbl-filters-pop-daybook"]').count()) await p.click('[data-testid="cbl-filters-daybook"]'); }, pick = async (dim, v) => { await filt(); await p.selectOption('[data-testid="listctl-filter-' + dim + '"]', v); }, unpick = async (dim) => { await filt(); await p.selectOption('[data-testid="listctl-filter-' + dim + '"]', ''); };
     const nLines = (e) => p.evaluate((no) => { const x = document.querySelector('[data-testid="db-lines-' + no + '"]'); return x ? x.children.length - 1 : -1; }, e.entry_no);   /* the next level: a head line, then each Dr/Cr line (the gist is the grey line under the record) */
     const settle = () => p.waitForTimeout(450);
     const clear = async () => { await p.fill(DBQ, ''); await settle(); };
 
     /* collapsed by default: one row per entry, no rate-wise lines on screen, a gist under each */
-    await p.waitForSelector('[data-testid="listctl-filter-kind"]', { timeout: 8000 });
+    await p.waitForSelector('[data-testid="cbl-filters-daybook"]', { timeout: 8000 });
     ok((await shownNos()).length === ents.length && await p.locator('[data-testid^="db-lines-"]').count() === 0, 'views: collapsed by default — ' + ents.length + ' rows for ' + ents.length + ' entries, no rate-wise lines');
     let allRows = true; for (const e of ents) if (await p.getAttribute(NO(e), 'aria-expanded') !== 'false') allRows = false;
     ok(allRows, 'views: every row starts collapsed');
@@ -618,13 +623,13 @@ async function route(S, r) {
     await clear();
 
     /* chips: only values in the range; several may be on; the group heads' subtotals change */
-    const optsOf = (dim) => p.$$eval('[data-testid="listctl-filter-' + dim + '"] option', (os) => os.map((o) => o.value).filter(Boolean));
+    const optsOf = async (dim) => { await filt(); return p.$$eval('[data-testid="listctl-filter-' + dim + '"] option', (os) => os.map((o) => o.value).filter(Boolean)); };
     ok((await optsOf('kind')).indexOf('Sales') >= 0 && (await optsOf('kind')).indexOf('Receipts') >= 0 && (await optsOf('kind')).indexOf('Purchases') < 0 && (await optsOf('counter')).indexOf('C1') >= 0 && (await optsOf('counter')).indexOf('C9') < 0, 'views: the filters (list-ctl selects) offer only values present — Sales, Receipts, counter C1; no Purchases, no C9');
     const dayRows = (nos) => ents.filter((e) => nos(e));
     const before = await headOf('db-gsum-' + TODAY);
     await pick('how', 'UPI'); await settle();
     const wantUpi = ents.filter((e) => { const s = e.source || {}; return s.kind === 'day' ? (s.split || []).some((x) => x.how === 'UPI') : s.how === 'UPI'; }).map((e) => e.entry_no);
-    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantUpi) && await p.inputValue('[data-testid="listctl-filter-how"]') === 'UPI', 'views: the Tender filter set to UPI keeps the ' + wantUpi.length + ' UPI entries');
+    ok(JSON.stringify(await shownNos()) === JSON.stringify(wantUpi) && await (async () => { await filt(); return p.inputValue('[data-testid="listctl-filter-how"]'); })() === 'UPI', 'views: the Tender filter set to UPI keeps the ' + wantUpi.length + ' UPI entries');
     const after = await headOf('db-gsum-' + TODAY), todayUpi = ents.filter((e) => e.posting_date === TODAY && wantUpi.indexOf(e.entry_no) >= 0);
     ok(after !== before && new RegExp('^' + todayUpi.length + ' entr').test(after) && cents(after.match(/Dr (\S+)/)[1]) === todayUpi.reduce((a, e) => a + sumOf(e, 'dr_minor'), 0), 'views: the day head\'s subtotals change with the filter — "' + before.slice(0, 40) + '…" → "' + after.slice(0, 40) + '…"');
     await pick('kind', 'Sales'); await settle();
@@ -646,17 +651,17 @@ async function route(S, r) {
     const days = uniq(ents.map((e) => e.posting_date)), weeks = uniq(ents.map((e) => isoMon(e.posting_date))), months = uniq(ents.map((e) => e.posting_date.slice(0, 7)));
     ok(await p.locator('#bk_dvlist [data-g]').count() === days.length && await p.getAttribute('[data-testid="db-group-day"]', 'aria-pressed') === 'true', 'views: Day is the default — ' + days.length + ' day heads');
     const dh = await headOf('db-ghead-2026-07-02');
-    ok(/^\S?\s?[A-Za-z]{3},? 02 Jul · 2 entries · Dr \S+ · Cr \S+ · Sales \S+ · On credit \S+ · Cash \S+ · UPI \S+ · Card \S+$/.test(dh), 'views: a day head reads weekday, date, entries, Dr, Cr, Sales and each tender ("' + dh + '")');
+    ok(/^\S?\s?[A-Za-z]{3},? 02 Jul 2 entries · Dr \S+ · Cr \S+ · Sales \S+ · On credit \S+ · Cash \S+ · UPI \S+ · Card \S+$/.test(dh), 'views: a day head reads weekday, date, entries, Dr, Cr, Sales and each tender ("' + dh + '")');
     const j2 = ents.filter((e) => e.posting_date === '2026-07-02'), drJ2 = j2.reduce((a, e) => a + sumOf(e, 'dr_minor'), 0), crJ2 = j2.reduce((a, e) => a + sumOf(e, 'cr_minor'), 0);
     const sm = await headOf('db-gsum-2026-07-02');
     ok(cents(sm.match(/Dr (\S+)/)[1]) === drJ2 && cents(sm.match(/Cr (\S+)/)[1]) === crJ2 && drJ2 === crJ2, 'views: the day head\'s Dr and Cr are the entries\' own lines, and they match');
     await p.click('[data-testid="db-group-week"]');
     ok(await p.locator('#bk_dvlist [data-g]').count() === weeks.length && /Week 27/.test(await headOf('db-ghead-2026-06-29')), 'views: Week → ' + weeks.length + ' heads, Mon–Sun, with the ISO week number ("' + await headOf('db-ghead-2026-06-29') + '")');
     const wk = ents.filter((e) => isoMon(e.posting_date) === '2026-06-29');
-    ok(new RegExp('· ' + wk.length + ' entries · Dr ').test(await headOf('db-ghead-2026-06-29')), 'views: the week head counts its ' + wk.length + ' entries');
+    ok(new RegExp(' ' + wk.length + ' entries · Dr ').test(await headOf('db-ghead-2026-06-29')), 'views: the week head counts its ' + wk.length + ' entries');
     await p.screenshot({ path: path.join(__dirname, 'shots', 'daybook-week.png') });
     await p.click('[data-testid="db-group-month"]');
-    ok(await p.locator('#bk_dvlist [data-g]').count() === months.length && /July 2026 · 4 entries/.test(await headOf('db-ghead-2026-07')), 'views: Month → ' + months.length + ' heads, named ("' + await headOf('db-ghead-2026-07') + '")');
+    ok(await p.locator('#bk_dvlist [data-g]').count() === months.length && /July 2026 4 entries/.test(await headOf('db-ghead-2026-07')), 'views: Month → ' + months.length + ' heads, named ("' + await headOf('db-ghead-2026-07') + '")');
     await p.click('[data-testid="db-ghead-2026-07"]');
     ok((await shownNos()).indexOf('JV/2026-27/000001') < 0, 'views: a group head collapses its rows');
     await p.click('[data-testid="db-ghead-2026-07"]');
@@ -929,16 +934,16 @@ async function route(S, r) {
     await ledgerGo(p2);
     await p2.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 });
     await p2.click('[data-testid="acc-nav-daybook"]');
-    await p2.waitForSelector('[data-testid="strip-counter-C1"]', { timeout: 15000 }).catch(() => {});
+    await p2.waitForSelector('[data-testid="cbl-notes-daybook"]', { timeout: 15000 }).catch(() => {});
+    await p2.click('[data-testid="cbl-notes-daybook"]').catch(() => {});   /* the strip and the notices fold into one chip on a phone */
     ok(await p2.locator('[data-testid="strip-counter-C1"]').isVisible().catch(() => false) && await p2.locator('[data-testid="todo-accept"]').isVisible().catch(() => false), 'phone: tapping Day book shows the strip and the to-do (the detail replaces the rail)');
     ok(await p2.evaluate(() => document.documentElement.scrollWidth) === 390, 'document.scrollWidth === 390 at phone width');
     /* (the "way back to the list" was the in-app panel's; CB Accounts is an icon rail at 390 — e2e/cb-accounts.cjs proves it) */
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-todo-phone.png') });
     /* the views on a phone: cards, one row of chips that scrolls on its own, the gist wrapping, nothing sideways */
     await p2.waitForSelector('#bk_dvlist .lrow[data-no]', { timeout: 8000 });
-    const ph = await p2.evaluate(() => { const r = document.querySelector('#bk_dvlist .lrow[data-no]'), h = document.querySelector('#bk_dvlist .lhead');
-      return { sw: document.documentElement.scrollWidth, rad: parseFloat(getComputedStyle(r).borderTopLeftRadius), head: getComputedStyle(h).display, disp: getComputedStyle(r).display }; });
-    ok(ph.sw === 390 && ph.rad > 0 && ph.head === 'none' && ph.disp === 'flex', 'phone: the views — one card per row (the Task row, folded), scrollWidth === ' + ph.sw);
+    const ph = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, head: document.querySelectorAll('#bk_dvlist .lhead').length, n: document.querySelectorAll('#bk_dvlist .lrow[data-no]').length, gist: document.querySelectorAll('#bk_dvlist .cbl-lgist').length }));
+    ok(ph.sw === 390 && ph.head === 0 && ph.n > 0 && ph.gist > 0, 'phone: the Day book reads as lines — a record, its fields flowing, the gist under it, no header, scrollWidth === ' + ph.sw);
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'daybook-phone.png') });
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-daybook-phone.png') });
     await p2.evaluate(() => bkTab('dues')); await p2.waitForSelector('[data-testid="dues-c1"]', { timeout: 8000 });
@@ -949,7 +954,7 @@ async function route(S, r) {
     /* the CRM on a phone: the same three columns, drawn as a card (label : value lines); lines are forced, grid is off */
     await p2.evaluate(() => navTo('customers')); await p2.waitForSelector('[data-testid="cust-row-c1"]', { timeout: 8000 });
     const pc = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, row: getComputedStyle(document.querySelector('[data-testid="cust-row-c1"]')).display, labelled: document.querySelectorAll('[data-testid="cust-row-c1"] .lcell[data-l]').length, gridOff: document.querySelector('[data-testid="view-grid-customers"]').disabled, linesOn: document.querySelector('[data-testid="view-lines-customers"]').getAttribute('aria-pressed') }));
-    ok(pc.sw === 390 && pc.row === 'flex' && pc.labelled === 3 && pc.gridOff && pc.linesOn === 'true', 'phone: the CRM shows its three columns as label : value lines in a card, lines forced (grid off), scrollWidth === ' + pc.sw + ', ' + pc.labelled + ' labelled');
+    ok(pc.sw === 390 && pc.row === 'flex' && pc.labelled === 3, 'phone: the CRM shows its three columns as label : value lines in a card (a container query, not the page width), scrollWidth === ' + pc.sw + ', ' + pc.labelled + ' labelled');
     await p2.screenshot({ path: path.join(__dirname, 'shots', 'one-table-crm-phone.png') });
     await c2.close();
   }

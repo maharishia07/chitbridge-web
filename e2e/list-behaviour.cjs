@@ -320,7 +320,7 @@ ibox.window = ibox; ibox.globalThis = ibox; ibox.self = ibox;
 
 vm.createContext(ibox);
 
-vm.runInContext(fs.readFileSync(path.join(WEBDIR, 'app', 'list-ctl.js'), 'utf8'), ibox, { filename: 'list-ctl.js' });
+vm.runInContext(fs.readFileSync(path.join(WEBDIR, 'app', 'list-legacy.js'), 'utf8'), ibox, { filename: 'list-legacy.js' });
 /* lazyWrap MOVED into list-ctl.js (the one table engine) and was just redefined for real — put the stub back: this section proves the CONTROLS, the rendering is proved in a browser */
 ibox.lazyWrap = (id, items, fn, empty) => (!items.length ? (empty || '')
   : items.slice(0, 50).map(fn).join('') + '<SENT ' + Math.min(50, items.length) + ' of ' + items.length + '>');
@@ -546,7 +546,7 @@ const dbox = {
 };
 dbox.window = dbox; dbox.globalThis = dbox; dbox.self = dbox;
 vm.createContext(dbox);
-vm.runInContext(fs.readFileSync(path.join(WEBDIR, 'app', 'list-ctl.js'), 'utf8'), dbox, { filename: 'list-ctl.js' });
+vm.runInContext(fs.readFileSync(path.join(WEBDIR, 'app', 'list-legacy.js'), 'utf8'), dbox, { filename: 'list-legacy.js' });
 dbox.lazyWrap = (id, items, fn, empty) => (!items.length ? (empty || '')
   : items.slice(0, 50).map(fn).join('') + '<SENT ' + id + ' ' + Math.min(50, items.length) + '/' + items.length + '>');   /* see above: list-ctl.js now defines the real one */
 vm.runInContext(fs.readFileSync(path.join(WEBDIR, 'app', 'cap-dispute.js'), 'utf8'), dbox, { filename: 'cap-dispute.js' });

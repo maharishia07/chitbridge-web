@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -87,12 +87,14 @@ tr.has .whose{color:var(--ok)}
 .card h3{margin:0 0 4px;font-size:.95em}
 @media (max-width:560px){ th:nth-child(6),td:nth-child(6){display:none} }
 </style>
+<script src="/engine/screen.js"></script>
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — the same on every page -->
 </head>
 <body>
 <header>
   <h1>Product Lab</h1>
   <a data-testid="nav-home" href="/" title="The index — the whole shop on one page" style="color:inherit;opacity:.8;text-decoration:none;font-size:13px">⌂ Home</a>
-  <span class="u" id="who">…</span>
+  <span class="u" id="who">…</span><span id="cbav"></span><script>if(window.CBAvatar)CBAvatar.mount(document.getElementById('cbav'),{person:CBAvatar.sessionPerson(),items:['profile','support','signout']});</script>
 </header>
 <div class="wrap">
   <div class="steps" id="steps"></div>
