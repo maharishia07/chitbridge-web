@@ -133,6 +133,21 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 #bk_body label{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
 #bk_body table{max-width:100%}
 
+/* To do — one row a thing that needs doing: symbol · count · sentence · its one button; a phone puts the button under the sentence, full width */
+.todo{display:flex;flex-direction:column;gap:10px;max-width:760px}
+.todo-row{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:6px 12px;border:1px solid var(--amber-b);border-radius:12px;background:var(--amber-t);padding:12px 14px;color:var(--amber-i)}
+.todo-row.off{border-color:var(--line-3);background:var(--surface);color:var(--muted-2)}
+.todo-sym{font-size:18px}
+.todo-n{font-size:15px;font-weight:700;min-width:1.5ch}
+.todo-words{font-size:14px;color:var(--ink);overflow-wrap:anywhere}
+.todo-go{align-self:center;white-space:nowrap}
+.todo-ok{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--green-d);padding:18px 0}
+.todo-ok.off{color:var(--muted-2)}
+@media (max-width:620px){
+  .todo-row{grid-template-columns:auto auto 1fr}
+  .todo-go{grid-column:1 / -1;width:100%;min-height:44px}
+}
+
 /* toast (app/accounts-shell.js writes into #toast) */
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
 #toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 24px rgba(42,36,24,.25)}
@@ -244,6 +259,7 @@ function go(hash){ location.href = '/app.html' + hash; }   /* api()'s 401 → th
 
 /* the sidebar: the designer's NAV_ITEMS (data.js), with Bills after Dues. [id = the app's tab id, label, icon path] */
 const NAV = [
+  ['todo', 'To do', 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9'],
   ['daybook', 'Day book', 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5'],
   ['ledgers', 'Ledgers', 'M5 3h14v18H5zM9 7h6M9 11h6M9 15h4'],
   ['tb', 'Trial balance', 'M12 3v18M5 21h14M4 8h16M7 8l-3 7h6zM17 8l-3 7h6z'],
@@ -258,7 +274,7 @@ const NAV = [
   ['opening', 'Opening balances', 'M12 3v12M7 10l5 5 5-5M4 21h16'],
   ['accounts', 'Shop ledgers', 'M3 6h6l2 2h10v11H3z'],
 ];
-const TITLES = { ledgers: 'Chart of accounts' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
+const TITLES = { ledgers: 'Chart of accounts', todo: 'To do' };   /* the Ledgers view keeps the designer's heading; the rest are named as the menu names them */
 
 /* the Ledgers' grouping (bands → groups → ledgers, decided by CODE) lives in app/cap-books.js — one copy, drawn as the folder tree */
 const $ = (id) => document.getElementById(id);
@@ -309,7 +325,7 @@ function chrome(view){
   try{ history.replaceState(null, '', '#' + nav[0]); }catch(_){}
 }
 BK.onTab = (t) => chrome(t);
-BK.views = { bills: (body) => accBills(body) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
+BK.views = { bills: (body) => accBills(body), todo: (body) => accTodo(body) };   /* the Ledgers view is cap-books.js's own: the folder tree + the Task table */
 function show(view){
   if (!ON) return;
   $('content').innerHTML = '<div id="bk_body" data-testid="bk-body"></div>';
@@ -372,6 +388,42 @@ async function accBills(body){
       empty: { title: tx('Nothing open') },
     });
   }catch(e){ body.innerHTML = bkErr(e); }
+}
+
+/* ═══ TO DO — what the owner has to do next. GET /api/books/todo lists the checks (docs/design/cb-accounts-ia §1): a row is a symbol · a count · the server's sentence · ONE button.
+   The page decides nothing: it draws what the API sends, and opens the page the row's action names. ═══ */
+/* the API's `action.screen` → the tab that opens it. A screen with no page yet is not in here: its button says it starts after an update. */
+const TODO_SCREEN = { waiting: 'waiting', periods: 'lock', daybook: 'daybook', dues: 'dues', cheques: 'cheques', bills: 'bills', packs: 'packs', opening: 'opening' };
+/* an item the server could not check (503 · not migrated yet) is not a task: it says so, and its button waits */
+const todoOff = (it) => it && (it.status === 503 || it.not_migrated === true || it.migrated === false || it.available === false);
+function todoGo(i){
+  const it = ACC.todo && ACC.todo[i]; if (!it) return;
+  const tab = TODO_SCREEN[(it.action || {}).screen];
+  if (tab) show(tab); else toast(tx('This starts after an update'));
+}
+function todoRow(it, i){
+  const off = todoOff(it), a = it.action || {};
+  return `<div class="todo-row${off ? ' off' : ''}" data-testid="todo-row-${esc(it.kind)}" data-kind="${esc(it.kind)}">
+    <span class="todo-sym" aria-hidden="true">${off ? '⏳' : '⚠'}</span>
+    <span class="todo-n mono" data-testid="todo-n-${esc(it.kind)}">${off ? '' : Number(it.count) || 0}</span>
+    <span class="todo-words" data-testid="todo-words-${esc(it.kind)}">${esc(off ? tx('Starts after an update') : it.words)}</span>
+    <button type="button" class="act todo-go" data-testid="todo-go-${esc(it.kind)}" data-i="${i}"${off ? ' disabled' : ''}>${esc(a.label || tx('Open'))}</button>
+  </div>`;
+}
+async function accTodo(body){
+  const g = ACC.gen;
+  try{
+    const r = await api('booksTodo');
+    if (g !== ACC.gen) return;
+    const list = Array.isArray(r) ? r : ((r && (r.items || r.todo)) || []);
+    ACC.todo = list;
+    body.innerHTML = list.length
+      ? '<div class="todo" data-testid="todo-list">' + list.map(todoRow).join('') + '</div>'
+      : '<div class="todo-ok" data-testid="todo-none">✓ ' + esc(tx('Books up to date')) + '</div>';
+    body.querySelectorAll('.todo-go').forEach((b) => { b.onclick = () => todoGo(+b.getAttribute('data-i')); });
+  }catch(e){
+    body.innerHTML = e && e.status === 503 ? '<div class="todo-ok off" data-testid="todo-503">⏳ ' + esc(tx('Starts after an update')) + '</div>' : bkErr(e);
+  }
 }
 
 /* a table becomes one card per row on a phone: each cell is named by its column head (SYSTEM rule 8) */
@@ -451,7 +503,7 @@ async function start(){
   }
   if (!ON) return offCard();
   const first = (location.hash || '').replace(/^#\/?/, '');
-  show(NAV.some((n) => n[0] === first) ? first : 'daybook');
+  show(NAV.some((n) => n[0] === first) ? first : 'todo');
 }
 
 /* ⭐ THE ONLY READER OF THE `storage` EVENT HERE: a session gone, or now another SHOP's, signs this page out and says why */
