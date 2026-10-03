@@ -32,16 +32,12 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
-/* "@-26h" / "@+3d" → an ISO time relative to the run */
-function resolve(x, now) {
-  if (typeof x === 'string') { const m = /^@([+-])(\d+)(h|d)$/.exec(x); return m ? new Date(now + (m[1] === '-' ? -1 : 1) * Number(m[2]) * (m[3] === 'h' ? 3600e3 : 86400e3)).toISOString() : x; }
-  if (Array.isArray(x)) return x.map((v) => resolve(v, now));
-  if (x && typeof x === 'object') { const o = {}; Object.keys(x).forEach((k) => { o[k] = resolve(x[k], now); }); return o; }
-  return x;
-}
+const crmApi = require('./lib/crm-api.cjs'), books = require('./lib/books-api.cjs');
+const resolve = crmApi.resolve;   /* "@-26h" / "@+3d" → an ISO time relative to the run */
 function standIn(over) {
   const fx = resolve(JSON.parse(fs.readFileSync(FIX, 'utf8')), Date.now());
   return Object.assign({ fx, calls: [], bodies: [], ledger: true, migrated: true, interactionsOk: true, listFails: 0, logs: [], fu: clone(fx.followups), added: [], patches: [], dup: false, list: clone(fx.list) }, over || {});
@@ -59,50 +55,60 @@ async function route(S, r) {
   if (m !== 'GET') S.bodies.push({ m, p, body });
   let x;
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-  if (p === '/api/books/health') { if (!S.ledger) return J(r, 404, { error: 'Not found' }); return J(r, 200, { enabled: true, waiting: [] }); }
+  if (p === '/api/books/health') { if (!S.ledger) return J(r, 404, { error: 'Not found' }); return J(r, 200, books.health()); }
   if (p === '/api/books/enable' && m === 'POST') { S.ledger = true; return J(r, 200, { ok: true }); }
-  if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, { currency: 'INR', party_id: x[1], opening_minor: 0, closing_minor: 0, lines: [] });
+  if ((x = p.match(/^\/api\/books\/party\/([^/]+)\/statement$/))) return J(r, 200, books.statement(x[1]));
   if (p.startsWith('/api/chits/')) return J(r, 200, { header: { chit_id: p.split('/').pop() }, detail: {} });
   if (p === '/api/entities/search') { const k = String(u.searchParams.get('q') || '').toLowerCase(); return J(r, 200, { results: fx.search[k] || [] }); }
-  /* ── the CRM ── */
-  if (p.startsWith('/api/crm/') && !S.migrated) return J(r, 409, { error: 'needs migration b276' });
+  /* ── the CRM, answered as chitbridge-api answers it (e2e/lib/crm-api.cjs builds the shapes from the golden seed; the contract holds them) ── */
   if (p === '/api/crm/parties' && m === 'GET') {
     if (S.listFails > 0) { S.listFails--; return J(r, 500, { error: 'boom' }); }
-    /* ⚠️ the REAL API's shape: roles is an OBJECT { customer, supplier } (chitbridge-api lib/crm.js). The stand-in sent a list, so the
-       live page broke while this harness stayed green (2026-10-03). Serve what the API serves. */
-    const asApi = (pp) => Array.isArray(pp.roles) ? Object.assign({}, pp, { roles: { customer: pp.roles.indexOf('customer') >= 0, supplier: pp.roles.indexOf('supplier') >= 0 } }) : pp;
-    return J(r, 200, { parties: S.list.map(asApi), alerts: fx.alerts });
+    return J(r, 200, crmApi.list(S.list, { careless: S.careless, records: fx.records }));
   }
   if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) return J(r, 200, S.live.timeline);
-  if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') return S.live.recordFails ? J(r, 500, { error: 'Failed', message: 'boom' }) : J(r, 200, S.live.record);
+  if (S.live && (x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') return S.live.recordFails ? J(r, 500, { error: 'Failed', message: 'boom' }) : S.live.raw ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.live.record) }) /* a deliberately malformed answer: not held to the contract */ : J(r, 200, S.live.record);
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/timeline$/))) {
-    const id = x[1], tl = fx.timelines[id] || { counts: { all: 0 }, entries: [] }, all = tl.many || tl.entries, kind = u.searchParams.get('kind'), qq = String(u.searchParams.get('q') || '').toLowerCase();
-    let rows = all.filter((e) => (!kind || (KINDS[kind] || []).indexOf(e.kind) >= 0) && (!qq || e.line.toLowerCase().indexOf(qq) >= 0));
-    const start = Number(String(u.searchParams.get('before') || 'c0').slice(1)) || 0, page = rows.slice(start, start + 50);
-    const counts = Object.assign({}, tl.counts); if (kind) counts[kind] = rows.length; if (qq) counts[kind || 'all'] = rows.length;
-    return J(r, 200, { entries: page, next_before: start + 50 < rows.length ? 'c' + (start + 50) : null, counts });
+    const id = decodeURIComponent(x[1]);
+    S.tlQueries = (S.tlQueries || []).concat([u.search]);
+    return J(r, 200, crmApi.timeline(fx.timelines[id] || { entries: [] }, id, { before: u.searchParams.get('before'), limit: u.searchParams.get('limit') }));
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)\/interactions$/)) && m === 'POST') {
-    if (!S.interactionsOk) return J(r, 503, { error: 'not migrated yet' });
-    S.logs.push(body); return J(r, 201, { interaction_id: 'ix-new' });
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
+    if (['call', 'visit', 'message', 'note'].indexOf(body.kind) < 0) return J(r, 400, { code: 'REFUSED', error: 'Kind is call, visit, message or note.', message: 'Kind is call, visit, message or note.' });
+    S.logs.push(body); return J(r, 201, crmApi.interaction(body));
+  }
+  if (p === '/api/crm/walk-ins/add' && m === 'POST') { S.walkAdds = (S.walkAdds || []).concat([body]); return J(r, 201, { party: { party_id: 'pid-walk-new', user_id: '~mayur.cus-0001', display_name: 'Customer 0021', party_no: 'P-0099', kind: 'local', on_chitbridge: false }, points_claimed: 340 }); }
+  if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'DELETE') {
+    const row = S.list.find((q2) => q2.party_id === decodeURIComponent(x[1]));
+    S.removed = (S.removed || []).concat([decodeURIComponent(x[1])]);
+    if (row && row.balance_minor) return J(r, 409, { code: 'HAS_DUES', error: 'There are open dues on this party.', message: 'There are open dues on this party.' });
+    return J(r, 200, { ok: true, party_id: decodeURIComponent(x[1]) });
   }
   if ((x = p.match(/^\/api\/crm\/parties\/([^/]+)$/)) && m === 'GET') {
-    const key = decodeURIComponent(x[1]); let row = S.list.find((q2) => q2.party_id === key || q2.party_no === key), from = null;
-    if (row && row.merged_into) { from = row.party_no; row = S.list.find((q2) => q2.party_id === row.merged_into); }
-    if (!row) return J(r, 404, { error: 'Not found' });
-    const tl = fx.timelines[row.party_id] || { counts: { all: 0 }, entries: [] };
-    return J(r, 200, Object.assign({}, row, fx.records[row.party_id] || {}, { timeline_head: (tl.many || tl.entries).slice(0, 5), counts: tl.counts }, from ? { merged_from: from } : {}));
+    const key = decodeURIComponent(x[1]);
+    /* the API takes the party's ID (a party number is not one), and opens the survivor for the id of a merged party */
+    if (/^P-\d+$/.test(key)) return J(r, 400, { code: 'BAD_ID', error: 'That is not a party id.', message: 'That is not a party id.' });
+    let row = S.list.find((q2) => q2.party_id === key);
+    if (row && row.merged_into) row = S.list.find((q2) => q2.party_id === row.merged_into);
+    if (!row) return J(r, 404, { code: 'NOT_FOUND', error: 'Not found', message: 'Not your party.' });
+    const rec = crmApi.record(S.list, row.party_id, fx.records[row.party_id], S.fu);
+    if (!S.migrated) { rec.migrated = false; rec.followups = []; }
+    return J(r, 200, rec);
   }
   if (p === '/api/crm/followups' && m === 'GET') {
-    if (!S.interactionsOk) return J(r, 503, { error: 'not migrated yet' });
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
     const scope = u.searchParams.get('scope'), done = u.searchParams.get('done') === '1', me = S.me || 'Athi';
     S.fuQueries = (S.fuQueries || []).concat([scope + '/' + (done ? 1 : 0)]);
-    return J(r, 200, { followups: S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me)), co_assists: fx.co_assists });
+    return J(r, 200, crmApi.followups(S.fu.filter((f) => (done ? !!f.done_at : !f.done_at) && (scope !== 'mine' || f.assignee_name === me))));
   }
-  if (p === '/api/crm/followups' && m === 'POST') { S.fuAdded = body; return J(r, 201, { followup_id: 'fu-new' }); }
+  if (p === '/api/crm/followups' && m === 'POST') {
+    if (!S.interactionsOk || !S.migrated) return J(r, 503, { code: 'CRM_NOT_MIGRATED', error: 'Not migrated yet', message: 'CB CRM needs migration b276 — not run yet.' });
+    S.fuAdded = body;
+    return J(r, 201, { followup: crmApi.followupOne({ followup_id: 'fu-new', party_id: body.party_id, what: body.what, due_at: body.due_at, assignee_user_id: body.assignee_user_id || 'athi', source: body.source || 'manual', created_at: new Date().toISOString() }) });
+  }
   if ((x = p.match(/^\/api\/crm\/followups\/([^/]+)$/))) {
     const f = S.fu.find((y) => y.followup_id === x[1]);
-    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && body.due_at) { f.due_at = body.due_at; f.bucket = 'week'; f.late = false; } return J(r, 200, { ok: true }); }
+    if (m === 'PATCH') { S.fuPatch = body; if (f && body.done) f.done_at = new Date().toISOString(); if (f && body.due_at) { f.due_at = body.due_at; f.late = false; } return J(r, 200, { followup: crmApi.followupOne(f || { followup_id: x[1], party_id: 'pid-0001', what: '', due_at: new Date().toISOString() }) }); }
     if (m === 'DELETE') { S.fu = S.fu.filter((y) => y.followup_id !== x[1]); S.fuDeleted = x[1]; return J(r, 200, { ok: true }); }
   }
   /* ── the existing relationship routes ── */
@@ -174,7 +180,7 @@ async function route(S, r) {
   }
 
   /* ── 2 · HOME ───────────────────────────────────────────────────────────────────────────────────────────── */
-  const S0 = standIn();
+  const S0 = standIn({ careless: true });
   {
     const { ctx, p } = await open(S0);
     await homeReady(p);
@@ -185,7 +191,7 @@ async function route(S, r) {
     const chola = await text(p, '[data-testid="crm-row-P-0002"]');
     ok(/Customer/.test(chola) && /Supplier/.test(chola), 'that one row carries both role chips (Customer · Supplier)');
     ok(nm('P-0008') === 0 && !/Folded/.test(await text(p, '#crm_list')), 'the merged party (P-0008, merged_into P-0001) is never listed');
-    ok(/Local/.test(await text(p, '[data-testid="crm-row-P-0003"]')) && /On ChitBridge/.test(await text(p, '[data-testid="crm-row-P-0001"]')) && /Walk-in/.test(await text(p, '[data-testid="crm-row-walkin-9876500021"]')), 'chips: P-0003 Local · P-0001 On ChitBridge · the walk-in Walk-in');
+    ok(/Local/.test(await text(p, '[data-testid="crm-row-P-0003"]')) && /On ChitBridge/.test(await text(p, '[data-testid="crm-row-P-0001"]')) && /Walk-in/.test(await text(p, '[data-testid="crm-row-walkin-919876500021"]')), 'chips: P-0003 Local · P-0001 On ChitBridge · the walk-in Walk-in');
     const due1 = await text(p, '[data-testid="crm-row-P-0001"] [data-testid="party-due-pid-0001"]'), due2 = await text(p, '[data-testid="crm-row-P-0002"] [data-testid="party-due-pid-0002"]');
     ok(/↑/.test(due1) && /481\.65/.test(due1) && !/P-0001/.test(due1), 'P-0001 dues: ↑ you owe them ₹481.65 — the server\'s −48165, painted, the party number not said twice (' + due1.trim() + ')');
     ok(/↓/.test(due2) && /12,450\.00/.test(due2), 'P-0002 dues: ↓ they owe you ₹12,450.00 — ONE netted figure for both roles (' + due2.trim() + ')');
@@ -202,7 +208,7 @@ async function route(S, r) {
     ok(sc.t0 === sc.t1 && sc.page === 0 && sc.scr === 0, 'only the rows scroll: the column header stays at ' + sc.t1 + ' px, the page and the screen do not move');
     /* the alert line */
     const notes = await p.$$eval('#crm_list [data-notice]', (n) => n.map((x) => x.innerText.trim()));
-    ok(notes.length === 2 && /2 follow-ups late · Open follow-ups/.test(notes[0]) && /2 parties with late dues · See dues/.test(notes[1]), 'the alert line: ' + notes.join(' | ') + ' — each alert names its fix');
+    ok(notes.length === 1 && /2 follow-ups late · Open follow-ups/.test(notes[0]), 'the alert line: ' + notes.join(' | ') + ' — the late follow-ups (GET /followups counts them), each alert names its fix. The API sends no late-dues flag, so no dues alert.');
     ok(await p.locator('[data-testid="crm-nav-n-followups"]').textContent() === '2', 'the Follow-ups badge is the same number as the alert (2)');
     /* ONE read, no per-row fetch */
     const reads = S0.calls.filter((c) => /^GET \/api\/crm\/parties(\?|$)/.test(c)), perRow = S0.calls.filter((c) => /^GET \/api\/crm\/parties\/[^/?]+/.test(c));
@@ -250,13 +256,11 @@ async function route(S, r) {
     ok(/none — kept by you/.test(idt) && !/CB[0-9A-Z]{8}/.test(idt) && /~shop\.sup-0001/.test(idt) === false, 'a minted party shows no ChitBridge ID ("none — kept by you")');
     ok(/Not on ChitBridge — bills are yours only/.test(await text(p, '[data-testid="crm-verdict"]')), 'the verdict says it in words');
     const nx = await text(p, '[data-testid="crm-next"]');
-    ok(/Today/.test(nx) && /pipe rate/.test(nx) && /Mail bounced/.test(nx) && /ravi\.traders@gmial\.com/.test(nx), 'Next: today\'s follow-up and the bounced mail');
-    ok(await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 1 && await p.locator('[data-testid="crm-next-fix"]').count() === 1, 'every alert in Next has its fix button (Done · Fix address)');
+    ok(/Today/.test(nx) && /pipe rate/.test(nx), 'Next: today\'s follow-up (the API marks it today:true)');
+    ok(await p.locator('[data-testid="crm-next-done-fu-03"]').count() === 1, 'every alert in Next has its fix button (Done)');
     /* the timeline head: a CBList mount of the latest five */
     ok(await p.locator('#crm_tlhead.cbl').count() === 1 && await p.locator('#crm_tlhead [data-row]').count() === 5, 'the record\'s Timeline is a CBList mount of the latest 5 entries');
     const tlhead = await text(p, '#crm_tlhead');
-    ok(/Bounced/.test(tlhead) && /Fix address/.test(tlhead), 'the bounced mail is flagged with its fix in the timeline too');
-    ok(await p.evaluate(() => { const c = document.querySelector('[data-testid="crm-state-r3"]'); return !!c && c.classList.contains('amber'); }), 'the bounced chip is amber');
     ok(/Ravi Traders/.test(await text(p, '[data-testid="crm-sec-who"]')) === false && !/Ravi Traders Ravi Traders/.test(await text(p, '.rec')), 'the name is not said twice (Who shows a legal name only if it differs)');
     await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]');
     ok(await p.locator('[data-testid="crm-more-remove"]').count() === 1 && /dues open/.test(await text(p, '[data-testid="crm-more-remove"]')) && await p.locator('[data-testid="crm-more-remove"]').isDisabled(), 'owner: Remove from my parties is there, disabled "dues open" while P-0003 owes');
@@ -276,24 +280,19 @@ async function route(S, r) {
     ok(/CB4M8RT2KD/.test(await text(p, '[data-testid="crm-ident"]')) && /chola-auto/.test(await text(p, '[data-testid="crm-ident"]')), 'the identity block: party no · User ID · ChitBridge ID shown together');
     const chips = await text(p, '.rchips');
     ok(/Customer/.test(chips) && /Supplier/.test(chips) && /On ChitBridge/.test(chips) && /↓/.test(chips), 'header chips: both roles, On ChitBridge, the dues chip');
-    ok(/1 unread message/.test(await text(p, '[data-testid="crm-next-unread"]')) && await p.locator('[data-testid="crm-next-open-msgs"]').count() === 1, 'Next: the unread message with its Open');
-    ok(await p.locator('[data-testid="crm-next-dues"]').count() === 1 && await p.locator('[data-testid="crm-next-pay"]').count() === 1 && await p.locator('[data-testid="crm-next-remind"]').count() === 1, 'Next: late dues with Remind and Receive payment');
-    ok(/internal/.test(await text(p, '[data-testid="crm-entry-t5"]')), 'an internal message is tagged "internal"');
-    ok(await p.locator('[data-testid="crm-entry-t1"] .udot').count() === 1 && /Ravi K/.test(await text(p, '[data-testid="crm-entry-t1"]')), 'an unread external message carries its dot, and "theirs" is marked');
-    ok(/Sent/.test(await text(p, '[data-testid="crm-state-t2"]')) && /3,864\.00/.test(await text(p, '[data-testid="crm-amt-t2"]')), 'a chit shows the server\'s step word and amount (₹3,864.00)');
-    await p.click('[data-testid="crm-tl-t2"]'); await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
+    ok(/Sent/.test(await text(p, '[data-testid="crm-state-chit-ch-431"]')) && /3,864\.00/.test(await text(p, '[data-testid="crm-amt-chit-ch-431"]')), 'a chit shows its status word and amount (the API sends 3864 in MAJOR units → ₹3,864.00)');
+    await p.click('[data-testid="crm-tl-chit-ch-431"]'); await p.waitForFunction(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }, null, { timeout: 8000 }).catch(() => {});
     ok(await p.evaluate(() => { const d = document.getElementById('chitsheet'); return !!(d && d.open); }) && S.calls.some((c) => /\/api\/chits\/ch-431/.test(c)), 'an entry that is a chit opens the chit sheet in place (openChitSheet, ch-431)');
     await p.keyboard.press('Escape');
     await ctx.close();
   }
   {
+    /* the API sends no contact preferences and no mail bounces: Meena's record still opens, shows her own phone and e-mail, and does not invent "Not recorded" lines */
     const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/P-0005' });
     await recReady(p, 'Meena');
-    await p.click('[data-testid="crm-act-more"]'); await p.waitForSelector('[data-testid="crm-more-menu"]');
-    ok(await p.locator('[data-testid="crm-act-mail"]').count() === 0 && await p.locator('[data-testid="crm-act-mail-off"]').isDisabled() && /They asked not to be mailed/.test(await text(p, '[data-testid="crm-mail-why"]')), 'e-mail preference off: Mail is disabled with its reason ("They asked not to be mailed"), no mail link');
-    ok(await p.locator('a[href^="mailto:"]').count() === 0, 'no mailto: link for Meena anywhere on the page');
-    await p.click('h1');
-    ok(/E-mail: Not allowed/.test(await text(p, '[data-testid="crm-sec-who"]')) && /WhatsApp: Not recorded/.test(await text(p, '[data-testid="crm-sec-who"]')), 'contact preferences say three things: Not allowed · Not recorded');
+    const who = await text(p, '[data-testid="crm-sec-who"]');
+    ok(/meena/i.test(who) === true || /@/.test(who) || /\+91/.test(who), 'a record with no contacts block shows the phone and e-mail the party row carries (' + who.slice(0, 60) + ')');
+    ok(!/Contact preferences/.test(who) && !/Not recorded/.test(who), 'no preferences come from the API, so none are shown (not "Not recorded" for a thing nobody was asked)');
     await ctx.close();
   }
   {
@@ -308,17 +307,17 @@ async function route(S, r) {
   }
   {
     const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/P-0008' });
-    await recReady(p);
-    ok(/Agro Mills/.test(await text(p, '[data-testid="crm-rec-name"]')) && /Merged from P-0008/.test(await text(p, '[data-testid="crm-merged"]')) && /#\/party\/P-0001/.test(p.url()), 'a folded party opens its keeper once, "Merged from P-0008"');
+    await p.waitForSelector('[data-testid="crm-rec-missing"]', { timeout: 15000 });
+    ok(/Couldn't open this party/.test(await text(p, '[data-testid="crm-rec-missing"]')) && S.calls.some((c) => c === 'GET /api/crm/parties/P-0008'), 'an old party NUMBER cannot be opened: the API takes the party id (400 BAD_ID) - the page says so plainly and offers Back to parties (the merged party\'s id opens its keeper on the API: not reachable from a number)');
     await ctx.close();
   }
   {
-    const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/walkin-9876500021' });
+    const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/walkin-919876500021' });
     await recReady(p);
     ok(await p.locator('[data-testid="crm-act-walkin"]').count() === 1 && await p.locator('[data-testid="crm-act-message"]').count() === 0, 'walk-in: the primary action is "Add to my parties"');
     ok(/Walk-in/.test(await text(p, '[data-testid="crm-ident"]')) && /A party number comes when you add them/.test(await text(p, '[data-testid="crm-ident"]')), 'walk-in: no party number, said in words');
     await p.click('[data-testid="crm-act-walkin"]'); await p.waitForTimeout(700);
-    ok(S.added.length === 1 && S.added[0].body.phone && /340 points kept/.test(await text(p, '#toast')) || S.added.length === 1, 'Add to my parties mints a party by phone (custAdd) and the points are kept');
+    ok((S.walkAdds || []).length === 1 && S.walkAdds[0].phone && /340 points kept/.test(await text(p, '#toast')), 'Add to my parties: POST /api/crm/walk-ins/add { phone } - the API mints the local customer and moves the points (340 kept)');
     await ctx.close();
   }
   {
@@ -333,39 +332,38 @@ async function route(S, r) {
   /* ── 4 · THE TIMELINE ─────────────────────────────────────────────────────────────────────────────────────── */
   {
     const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/P-0006/timeline' });
-    await p.waitForSelector('[data-testid^="crm-tl-m"]', { timeout: 15000 }); await p.waitForTimeout(250);
+    await p.waitForSelector('[data-testid^="crm-tl-"]', { timeout: 15000 }); await p.waitForTimeout(250);
     const n = () => p.locator('#crm_tl [data-row]').count();
     const reads = () => S.calls.filter((c) => /\/timeline/.test(c));
     ok(reads().length === 1 && !/before=./.test(reads()[0]), 'the first page is one read, with no cursor (' + reads()[0] + ')');
     ok((await n()) === 50, 'the unit draws 50 rows of the 120');
     ok(await p.locator('#crm_tl .cbl-group').count() >= 2 && /Today|Yesterday/.test(await text(p, '#crm_tl .cbl-group')), 'day dividers ("Today" · "Yesterday" · a date)');
     await p.evaluate(() => { const l = document.querySelector('#crm_tl .cbl-list'); l.scrollTop = l.scrollHeight; });
-    await p.waitForFunction(() => /before=c50/.test(''), null, { timeout: 100 }).catch(() => {});
+    await p.waitForFunction(() => /before=2/.test(''), null, { timeout: 100 }).catch(() => {});
     await p.waitForTimeout(500);
-    ok(reads().length === 2 && /before=c50/.test(reads()[1]), 'scrolled to the end → the NEXT 50 are asked for with the server\'s cursor (' + (reads()[1] || '') + ') — never the whole history');
+    ok(reads().length === 2 && /before=20\d\d-/.test(reads()[1]), 'scrolled to the end → the NEXT 50 are asked for with the server\'s cursor, the time of the last row (' + (reads()[1] || '') + ') — never the whole history');
     ok(await p.locator('[data-testid="cbl-more-crm-timeline"]').count() === 1 || (await n()) > 50, 'the lazy sentinel offers the next rows');
-    ok(await p.evaluate(() => /of 120/.test(document.body.innerText)), 'the head says how many of 120 are loaded (the server\'s count)');
     /* kind filter + search are the SERVER's */
     await p.click('[data-testid="cbl-filters-crm-timeline"]');
     const opts = await p.$$eval('[data-testid="listctl-filter-kind"] option', (o) => o.map((x) => x.textContent));
-    ok(opts.length === 2 && /Notes & calls \(120\)/.test(opts[1]), 'the kind filter offers only kinds that have entries, with the server\'s counts: ' + opts.join(' | '));
+    ok(opts.length === 6 && /Notes & calls/.test(opts.join('|')) && !/\(\d+\)/.test(opts.join('|')), 'the API sends no per-kind counts: the kind filter offers the five kinds, with none: ' + opts.join(' | '));
     await p.selectOption('[data-testid="listctl-filter-kind"]', 'notes'); await p.waitForTimeout(500);
-    ok(reads().some((c) => /kind=notes/.test(c)), 'choosing Notes & calls asks the server (?kind=notes)' + (process.env.CRM_DEBUG ? ' ' + JSON.stringify(reads()) : ''));
+    ok(!reads().some((c) => /kind=/.test(c)) && (await n()) > 0, 'choosing Notes & calls filters the entries on the page: the API has no kind filter, so none is sent' + (process.env.CRM_DEBUG ? ' ' + JSON.stringify(reads()) : ''));
     await p.keyboard.press('Escape');
     await p.fill('[data-testid="listctl-search-crm-timeline"]', 'Entry number 77'); await p.waitForTimeout(800);
-    ok(reads().some((c) => /q=Entry\+number\+77|q=Entry%20number%2077/.test(c)) && await n() === 1, 'search is answered by the server (?q=) → 1 entry');
+    ok(!reads().some((c) => /[?&]q=/.test(c)) && await n() === 1, 'search is answered on the page (the API has no text filter): the history is read page by page until the entry is found → 1 entry');
     await ctx.close();
   }
   {
     const S = standIn(), { ctx, p } = await open(S, { hash: '#/party/P-0003/timeline' });
-    await p.waitForSelector('[data-testid^="crm-tl-r"]', { timeout: 15000 }); await p.waitForTimeout(250);
+    await p.waitForSelector('[data-testid^="crm-tl-interaction-r"]', { timeout: 15000 }); await p.waitForTimeout(250);
     await p.click('[data-testid="cbl-filters-crm-timeline"]');
     const opts = await p.$$eval('[data-testid="listctl-filter-kind"] option', (o) => o.map((x) => x.textContent.replace(/\s*\(\d+\)/, '')));
-    ok(opts.indexOf('Messages') < 0 && opts.indexOf('Bills') < 0 && opts.indexOf('Mail') >= 0, 'a local party: the kinds with nothing (Messages, Bills) are not offered: ' + opts.join(' | '));
+    ok(opts.length === 6, 'the kinds are all offered (no counts to hide an empty one): ' + opts.join(' | '));
     await p.keyboard.press('Escape'); await p.click('h1').catch(() => {});
-    await p.click('[data-testid="crm-tl-r2"] [data-caret]');
-    ok(!/cash discount/.test(await text(p, '[data-testid="crm-entry-r2"]')) && /…/.test(await text(p, '[data-testid="crm-entry-r2"]')), 'a long call ends "…" in its row …');
-    ok(/cash discount/.test(await text(p, '[data-testid="crm-entry-full-r2"]')), '… and expands in place to its whole text');
+    await p.click('[data-testid="crm-tl-interaction-r2"] [data-caret]');
+    ok(!/cash discount/.test(await text(p, '[data-testid="crm-entry-interaction-r2"]')) && /…/.test(await text(p, '[data-testid="crm-entry-interaction-r2"]')), 'a long call ends "…" in its row …');
+    ok(/cash discount/.test(await text(p, '[data-testid="crm-entry-full-interaction-r2"]')), '… and expands in place to its whole text');
     await p.screenshot({ path: path.join(SHOTS, 'crm-timeline-laptop.png') });
     await ctx.close();
   }
@@ -501,15 +499,12 @@ async function route(S, r) {
 
   /* ── 8 · THE STATES ───────────────────────────────────────────────────────────────────────────────────── */
   {
+    /* BEFORE b276 the API still answers the list (the record carries migrated:false); only follow-ups and the Log answer 503 CRM_NOT_MIGRATED */
     const S = standIn({ migrated: false }), { ctx, p } = await open(S);
-    await p.waitForSelector('[data-testid="cbl-error-crm-parties"]', { timeout: 15000 });
-    ok(/CB CRM needs one database step \(b276\)/.test(await text(p, '[data-testid="cbl-error-crm-parties"]')), 'migration not run (409): the owner is told the one step, not an error message');
-    await ctx.close();
-  }
-  {
-    const S = standIn({ migrated: false, me: 'Divya' }), { ctx, p } = await open(S, { session: EDITOR });
-    await p.waitForSelector('[data-testid="cbl-error-crm-parties"]', { timeout: 15000 });
-    ok(/Ask the owner to finish setting up CB CRM/.test(await text(p, '[data-testid="cbl-error-crm-parties"]')), 'migration not run: a co-assist is told to ask the owner');
+    await homeReady(p);
+    ok((await rowsOf(p)).length === 7 && await p.locator('[data-testid="cbl-error-crm-parties"]').count() === 0, 'migration not run: the list still loads (7 rows), no error - the API says migrated:false only where it matters');
+    await hash(p, '#/party/P-0002'); await recReady(p, 'Chola Auto Care');
+    ok(await p.locator('[data-testid="crm-rec-error"]').count() === 0, 'migration not run: the record opens (migrated:false, no follow-ups)');
     await ctx.close();
   }
   {
@@ -549,11 +544,11 @@ async function route(S, r) {
     await homeReady(p);
     let w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone home: document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
     const hd = await p.evaluate(() => document.querySelector('#crm_list .cbl-list').getBoundingClientRect().top / innerHeight);
-    ok(hd <= 0.32, 'phone: everything above the rows is ' + Math.round(100 * hd) + '% of the window (≤ 30% + the bar)');
+    ok(hd <= 0.35, 'phone: everything above the rows is ' + Math.round(100 * hd) + '% of the window (≤ 30% + the bar; the API sends one alert - the late follow-ups - and a lone alert is a line under the title, two would fold into one chip)');
     ok(await p.evaluate(() => getComputedStyle(document.querySelector('#crm_list [data-row]')).display !== 'none') && (await p.locator('#crm_list [data-row]').count()) === 7, 'phone: one card per party');
     ok(await p.locator('[data-testid="crm-add"]').isVisible(), 'phone: Add party stays reachable');
     await p.screenshot({ path: path.join(SHOTS, 'crm-home-phone.png') });
-    for (const [h, sel, tag] of [['#/party/P-0002', '[data-testid="crm-ident"]', 'record'], ['#/party/P-0003/timeline', '[data-testid^="crm-tl-r"]', 'timeline'], ['#/followups', '[data-testid^="crm-fu-fu-"]', 'followups']]) {
+    for (const [h, sel, tag] of [['#/party/P-0002', '[data-testid="crm-ident"]', 'record'], ['#/party/P-0003/timeline', '[data-testid^="crm-tl-interaction-r"]', 'timeline'], ['#/followups', '[data-testid^="crm-fu-fu-"]', 'followups']]) {
       await hash(p, h); await p.waitForSelector(sel, { timeout: 10000 }); await p.waitForTimeout(350);
       w = await sw(p); ok(w.sw === 390 && w.over <= 0, 'phone ' + tag + ': document.scrollWidth === ' + w.sw + ' (390), the screen scrolls sideways by ' + w.over + ' px');
       await p.screenshot({ path: path.join(SHOTS, 'crm-' + tag + '-phone.png') });
@@ -569,12 +564,9 @@ async function route(S, r) {
 
   /* ── 10 · THE RECORD AS THE REAL API SENDS IT (2026-10-03: the record sat on "Reading…" for good) ── */
   {
-    const base0 = JSON.parse(JSON.stringify(S0.list.find((q) => q.party_id === 'pid-0002'))), roles = { customer: true, supplier: true };
-    const rowApi = Object.assign({}, base0, { roles });
-    const record = Object.assign({}, rowApi, { merged_from: { party_id: 'pid-old', party_no: 'P-0009' }, relationship: { relationship: { ok: 1 }, completion: {} }, points: { programme: 'Club', points: 340, worth: 34 }, migrated: true,
-      followups: [{ followup_id: 'f1', party_id: 'pid-0002', what: 'Ring about the rate', due_at: new Date().toISOString(), due_day: '2026-10-03', late: false, today: true, assignee_name: 'Divya', source: 'manual' }],
-      customer: { segment: 'regular', segment_override: null, txn_count: 41, last_txn_at: null, groups: [], customer_type: 'entity', added_via: 'counter' }, supplier: { category: null, preferred: false, supply_kind: null, notes: null, added_via: 'counter' } });
-    delete record.timeline_head;
+    /* the record exactly as the API builds it (crm-api.cjs), then the three things this scenario is about: merged_from as an object, points as { points }, a follow-up due today */
+    const record = Object.assign(crmApi.record(S0.list, 'pid-0002', S0.fx.records['pid-0002'], []), { merged_from: { party_id: 'pid-old', party_no: 'P-0009' }, points: { programme: 'Club', points: 340, worth: 34 },
+      followups: [crmApi.followupOne({ followup_id: 'f1', party_id: 'pid-0002', party_no: 'P-0002', party_name: 'Chola Auto Care', what: 'Ring about the rate', due_at: new Date().toISOString(), assignee_user_id: 'u2', assignee_name: 'Divya', source: 'manual' })] });
     const timeline = { party_id: 'pid-0002', next_before: null, migrated: true, entries: [
       { kind: 'chit', at: new Date(Date.now() - 3600e3).toISOString(), chit_id: 'ch-1', direction: 'out', status: 'accepted', purpose: 'order', doc_kind: 'bill', bill_no: 'B-12', title: 'Bill B-12', value: 125.5, currency: 'INR', open_disputes: 0 },
       { kind: 'ledger', at: new Date(Date.now() - 7200e3).toISOString(), ref: 'R-1', ledger_kind: 'receipt', source: null, amount_minor: 5000, currency: 'INR', doc_date: '2026-10-03' },
@@ -595,12 +587,13 @@ async function route(S, r) {
     await o2.p.waitForSelector('[data-testid="crm-rec-error"]', { timeout: 8000 });
     ok(await o2.p.locator('[data-testid="crm-rec-retry"]').isVisible(), 'a failed record read ends the spinner: a plain line and Try again');
     await o2.ctx.close();
-    const bad2 = standIn({ live: { record: Object.assign({}, record, { tax_ids: 'oops', customer: 'oops' }), timeline } }), o3 = await open(bad2, { hash: '#/party/P-0002' });
+    const bad2 = standIn({ live: { raw: true, record: Object.assign({}, record, { tax_ids: 'oops', customer: 'oops' }), timeline } }), o3 = await open(bad2, { hash: '#/party/P-0002' });
     await o3.p.waitForSelector('[data-testid="crm-rec-error"], [data-testid="crm-ident"]', { timeout: 8000 }); await o3.p.waitForTimeout(400);
     ok(await o3.p.locator('[data-testid="crm-rec-loading"]').count() === 0, 'a record the painter cannot read never leaves a spinner behind');
     await o3.ctx.close();
   }
 
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error anywhere' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.length === 0, 'no request left for any host but the stand-in' + (offHost.length ? ': ' + offHost.slice(0, 3).join(' ') : ''));
   await b.close(); srv.close();

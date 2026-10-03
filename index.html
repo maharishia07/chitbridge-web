@@ -20,6 +20,7 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
+:root[data-themed]{--green-d:color-mix(in srgb,var(--ok-2,#0D4A2B) 80%,var(--ink))}   /* the avatar re-points --green-t and --green; the dark green text on it follows (a theme that sets --ok-2 wins the mix) */
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
   font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:calc(15px * var(--k,1));line-height:1.45}
@@ -356,9 +357,11 @@ function ledgerRead(){
   return read('/api/books/health').then(function(r){
     if (g !== GEN) return;
     ledgerState(true);
-    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to));
+    /* /health sends { enabled, currency, walkin_grain, last_check: { at, ok, problems, posted, engines } | null, waiting } - no day the books are posted up to: the nightly check's own time is the one date it has */
+    var upTo = r && (r.last_posted_day || r.last_posted || r.up_to || (r.last_check && r.last_check.posted_to)), checkedAt = r && r.last_check && r.last_check.at;
     var host = document.getElementById('f_bk'); host.innerHTML = ''; host.hidden = true;
     if (upTo) factLine('f_bk', 'Ledger up to <b>' + esc(day(upTo)) + '</b>');
+    else if (checkedAt) factLine('f_bk', 'Ledger checked <b>' + esc(day(checkedAt)) + '</b>');
     /* ⚠️ the deployed /health says enabled and nothing about days (seen live, 2026-10-01) — a ledger that is on
        must still say SOMETHING, or the box reads exactly like one that is off */
     else if (r && r.enabled !== false) factLine('f_bk', 'Ledger on');

@@ -246,7 +246,7 @@ function enWords(list, code, dateStep) {
 }
 function enSeen(r) {
   r = r || {};
-  return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, currency: r.currency, narration: r.narration,
+  return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, narration: (EN.v && EN.v.narration) || '',   /* the API's preview echoes no note and no currency: the note is the one the person typed */
     lines: (r.lines || []).map(function (l) { return Object.assign({}, l, { name: l.ledger || l.name }); }),
     refusals: enWords(r.refusals, r.code), warnings: enWords(r.flags || r.warnings, null).map(function (w, i) { return Object.assign(w, { code: 'FLAG' + i }); }) };
 }
@@ -332,7 +332,8 @@ function enReverse(id, no, fromSheet) {
     bkOnce('rev-' + id, null, async function () {
       EN.rev[id] = EN.rev[id] || bkRef();
       try {
-        var r = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id] } });
+        /* the API wants a reason with every reversal (422 "A reversal needs a reason.") - it was sent none, so Reverse never worked live */
+        var r = await api('booksReverse', { params: { id: id }, body: { client_ref: EN.rev[id], reason: 'Reversed from the Day book' } });
         delete EN.rev[id]; toast(txf('Reversed — new entry {no}', { no: (r && (r.entry_no || r.no)) || '' }));
         if (fromSheet) enClose();
         if (typeof BK !== 'undefined' && BK.tab === 'daybook') bkTab('daybook', true);
