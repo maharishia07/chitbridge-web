@@ -20,6 +20,7 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
 }
+:root[data-themed]{--green-d:color-mix(in srgb,var(--ok-2,#0D4A2B) 80%,var(--ink))}   /* the avatar re-points --green-t and --green; the dark green text on it follows (a theme that sets --ok-2 wins the mix) */
 *{box-sizing:border-box}
 body{margin:0;background:var(--page);color:var(--ink);
   font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:calc(15px * var(--k,1));line-height:1.45}

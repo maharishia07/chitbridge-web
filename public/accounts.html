@@ -32,13 +32,17 @@
   --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:#6f6450;   /* = the --muted below; --muted reads it, so a chosen theme's --grey reaches both */
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;   /* SYSTEM's neutrals, literal so e2e/a11y-contrast.cjs <page> can measure them */
   /* … and the names the app's search box (.srch) and the Ledgers tree's search paint with — CBList (list-ctl.js) carries its own look */
-  --paper:var(--sub); --sel:var(--hover); --blue-tint-bg:var(--blue-t); --on-card:var(--ink); --blue-2:var(--blue-i); --ink-2:#3d3527; --on-accent:var(--accent-ink);
-  --warn-2:var(--amber-i); --ok-2:var(--green-d); --blue-d:var(--blue-i); --warn-tint:var(--amber-t); --blue-tint:var(--blue-t);
+  --paper:var(--sub); --sel:var(--hover); --on-card:var(--ink); --ink-2:#3d3527; --on-accent:var(--accent-ink);
+  /* ⚠️ LITERAL, not aliases of --amber-i / --green-d / --blue-t …: the avatar's data-tokens="list" rule points THOSE at these (--amber-t:var(--warn-tint)), so an alias back is a CYCLE — an invalid colour in every
+     theme that does not carry the token. These are the Cream values the aliases resolved to. */
+  --warn-2:#7A5205; --ok-2:#0D4A2B; --blue-d:#174A87; --blue-2:#174A87; --warn-tint:#FDF3DC; --blue-tint:#E4EEFA; --blue-tint-bg:#E4EEFA; --ok-tint:#E8F4ED;
+  --accent-hover:#174a47; --accent-text:var(--accent); --tab-n:#e9dfc8; --shadow-toast:0 10px 24px rgba(42,36,24,.25);
 }
 /* ⭐ A THEME CHOSEN IN THE AVATAR (tokens inline on <html>, data-theme stamped) re-points THIS page's own names at the theme's. The fallbacks are
    the values above, and Cream is left alone, so a page nobody themed is exactly what it was. */
 :root[data-themed]{--ground:var(--paper,#fbf6ec);--sub:var(--paper,#fbf6ec);--surface:var(--card,#fffdf8);--side:var(--card,#f4ecdc);   /* the theme's own surface, not --gold-soft (a brown in Dark), Athi 2026-10-03 */
-  --muted-2:var(--grey,#5c5240);--line-2:var(--line,#efe6d3);--line-3:var(--line,#d8ccb0)}
+  --muted-2:var(--grey,#5c5240);--line-2:var(--line,#efe6d3);--line-3:var(--line,#d8ccb0);
+  --ink-2:var(--ink);--accent:var(--blue-2);--accent-text:var(--blue-d);--accent-ink:var(--card);--accent-hover:color-mix(in srgb,var(--accent) 82%,var(--ink));--tab-n:var(--ground);--shadow-toast:var(--shadow,0 10px 24px rgba(0,0,0,.4))}   /* an --ink-2 the theme sets inline wins */
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
 body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:calc(15px * var(--k,1));line-height:1.45}
@@ -62,7 +66,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .nav{flex-grow:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
 .nav-btn{width:100%;height:44px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;border:none;border-radius:8px;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500;text-align:left;white-space:nowrap}
 .nav-btn:hover{background:var(--hover)}
-.nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
+.nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent-text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
 .nav-btn .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--amber-t);color:var(--amber-i)}
 .nav-chev{transition:transform .2s ease}
 .side-foot{padding:8px;border-top:1px solid var(--line-3)}
@@ -87,7 +91,7 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .empty{padding:48px 20px;text-align:center;border:1px dashed var(--line-3);border-radius:14px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:12px}
 .empty strong,.empty .t{font-family:var(--serif);font-size:19px;color:var(--ink);font-weight:700}
 .empty .big{font-size:26px}
-.empty button{height:44px;padding:0 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent);font-size:13.5px;font-weight:600}
+.empty button{height:44px;padding:0 16px;border:1px solid var(--accent);border-radius:8px;background:transparent;color:var(--accent-text);font-size:13.5px;font-weight:600}
 
 /* the one card the page shows when something must happen first: Ledger off, signed out, another shop still here */
 .card{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:22px 22px 20px;max-width:560px;display:flex;flex-direction:column;gap:12px}
@@ -96,8 +100,8 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .card.bad{border-color:var(--red-b);background:var(--red-t)}
 .card.bad h2,.card.bad p{color:var(--red-i)}
 .act{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;height:44px;padding:0 20px;border:1px solid var(--accent);border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:700;text-decoration:none}
-.act:hover{background:#174a47}
-.act.ghost{background:transparent;color:var(--accent)}
+.act:hover{background:var(--accent-hover)}
+.act.ghost{background:transparent;color:var(--accent-text)}
 .act[disabled]{opacity:.6;cursor:default}
 
 /* Bills — the two system folders as two tabs, one step chip per bill (the server decides every step) */
@@ -105,7 +109,7 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 .tab{height:40px;padding:0 14px;display:flex;align-items:center;gap:8px;border:1px solid var(--line-3);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600}
 .tab .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
-.tab[aria-pressed="true"] .n{color:#e9dfc8}
+.tab[aria-pressed="true"] .n{color:var(--tab-n)}
 .bills{display:flex;flex-direction:column;gap:8px}
 .step{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--line-3);font-size:12px;font-weight:700;background:var(--panel,#F3EFE6);color:var(--ink-2);justify-self:end}
 .step.blue{background:var(--blue-t);border-color:var(--blue-b);color:var(--blue-i)}
@@ -178,7 +182,7 @@ h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:700;letter-spaci
 
 /* toast (app/accounts-shell.js writes into #toast) */
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
-#toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 24px rgba(42,36,24,.25)}
+#toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
 #toast .toast.warn{background:var(--amber-i)}
 #toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}

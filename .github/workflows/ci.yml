@@ -54,3 +54,5 @@ jobs:
           npm run check:eps
       - name: Every capability's CMDB record link resolves (shape-only without the API repo beside it)
         run: node e2e/cmdb-records.cjs
+      - name: No NEW raw colour in a page or app file (ratchet; e2e/token-guard.baseline.json)
+        run: node e2e/token-guard.cjs

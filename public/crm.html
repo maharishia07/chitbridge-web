@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-tokens="list">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,7 +17,7 @@
 /* CB Accounts' tokens, as shipped (accounts.html) — there is no shared stylesheet yet, so the shell's own lines are repeated here (named in the PR) */
 :root{
   --ground:#fbf6ec; --surface:#fffdf8; --side:#f4ecdc; --sub:#fbf6ec;
-  --ink:#2a2418; --ink-2:#3d3527; --muted:#6f6450; --muted-2:#5c5240;
+  --ink:#2a2418; --ink-2:#3d3527; --muted:var(--grey); --muted-2:#5c5240;
   --line:#e6dcc6; --line-2:#efe6d3; --line-3:#d8ccb0; --hover:#f3ead7;
   --accent:#1f5f5b; --accent-ink:#fbf6ec;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --serif:'Source Serif 4',Georgia,serif; --sans:'IBM Plex Sans',system-ui,sans-serif;
@@ -26,13 +26,24 @@
   --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
   --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
   /* the names cap-books.js (the dues chip, the statement) and CBList paint with, mapped onto this palette */
-  --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:var(--muted);
+  --fs-1:12px; --fs-2:13.5px; --fs-3:15px; --grey:#6f6450;   /* = the old --muted; --muted reads it, so a chosen theme's --grey reaches both */
   --page:#FCFAF5; --card:#fffdf8; --panel:#F3EFE6;
-  --paper:var(--sub); --sel:var(--hover); --blue-tint-bg:var(--blue-t); --on-card:var(--ink); --blue-2:var(--blue-i); --on-accent:var(--accent-ink);
-  --warn-2:var(--amber-i); --ok-2:var(--green-d); --blue-d:var(--blue-i); --warn-tint:var(--amber-t); --blue-tint:var(--blue-t); --ok-tint:var(--green-t); --grey-2:var(--muted-2);
+  --paper:var(--sub); --sel:var(--hover); --on-card:var(--ink); --on-accent:var(--accent-ink); --grey-2:var(--muted-2);
+  /* ⚠️ LITERAL, not aliases of --amber-i / --green-t …: the avatar's data-tokens="list" rule points THOSE at these (--amber-t:var(--warn-tint)), so an alias back is a CYCLE, and a cycle is an invalid
+     colour (a transparent chip) in every theme that does not carry the token. These are the Cream values the aliases resolved to. */
+  --warn-2:#7A5205; --ok-2:#0D4A2B; --blue-d:#174A87; --blue-2:#174A87; --warn-tint:#FDF3DC; --blue-tint:#E4EEFA; --blue-tint-bg:#E4EEFA; --ok-tint:#E8F4ED;
+  /* the few colours the shell paints that are not a palette entry — named here so a theme can re-point them */
+  --accent-hover:#174a47; --accent-text:var(--accent); --tab-n:#e9dfc8; --shadow-menu:0 10px 24px rgba(42,36,24,.16); --shadow-toast:0 10px 24px rgba(42,36,24,.25); --scrim:rgba(42,36,24,.4); --line-side:#e2d6bc; --hover-nav:#ece1c9;
 }
 /* a chosen theme (CBAvatar stamps data-themed) re-points this page's own names; Cream is untouched (as accounts.html, web #36) */
-:root[data-themed]{--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line)}
+:root[data-themed]{--ground:var(--paper);--surface:var(--card);--side:var(--card);--sub:var(--paper);--line-2:var(--line);--line-3:var(--line);--line-side:var(--line);
+  /* the names a theme does not (always) carry follow the theme's own: text steps from --ink / --grey, the accent from the theme's blue, hover from ink over the card.
+     A value the theme DOES set inline (--ink-2, --hover …) wins over these, so they only fill what a theme leaves out. */
+  --ink-2:var(--ink); --muted-2:var(--grey); --grey-2:var(--grey);
+  --hover:color-mix(in srgb,var(--ink) 8%,var(--card)); --hover-nav:var(--hover);
+  --accent:var(--blue-2); --accent-text:var(--blue-d); --accent-ink:var(--card); --accent-hover:color-mix(in srgb,var(--blue-2) 82%,var(--ink)); --tab-n:var(--ground);
+  --green-d:color-mix(in srgb,var(--ok-2) 80%,var(--ink)); --amber-b:var(--gold-line); --amber:var(--prog);
+  --shadow-menu:var(--shadow,0 10px 24px rgba(0,0,0,.4)); --shadow-toast:var(--shadow,0 10px 24px rgba(0,0,0,.4)); --scrim:color-mix(in srgb,var(--ink) 45%,transparent)}
 
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -45,28 +56,28 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .app{display:flex;height:100vh;overflow:hidden;position:relative}
 
 /* sidebar */
-.side{width:232px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid var(--line-3,#e2d6bc);display:flex;flex-direction:column;transition:width .2s ease}
+.side{width:232px;flex-shrink:0;height:100%;background:var(--side);border-right:1px solid var(--line-side);display:flex;flex-direction:column;transition:width .2s ease}
 .side.collapsed{width:68px}
 .side.collapsed .label{display:none}
 .side.collapsed .nav-chev{transform:rotate(180deg)}
-.brand{height:56px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-3,#e2d6bc)}
+.brand{height:56px;padding:0 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line-side)}
 .logo{width:32px;height:32px;flex-shrink:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:flex;align-items:center;justify-content:center}
 .brand-name{font-family:var(--serif);font-size:19px;font-weight:700;white-space:nowrap}
 .nav{flex-grow:1;overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
 .nav-btn{width:100%;height:44px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 12px;border:none;border-radius:8px;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500;text-align:left;white-space:nowrap;text-decoration:none}
-.nav-btn:hover{background:var(--hover,#ece1c9)}
-.nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
+.nav-btn:hover{background:var(--hover-nav)}
+.nav-btn.active{background:color-mix(in srgb,var(--accent) 14%,var(--side));color:var(--accent-text);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
 .nav-btn .n{margin-left:auto;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--amber-t);color:var(--amber-i)}
 .nav-btn .n.quiet{background:transparent;color:var(--muted-2)}
 .nav-chev{transition:transform .2s ease}
-.side-foot{padding:8px;border-top:1px solid var(--line-3,#e2d6bc)}
+.side-foot{padding:8px;border-top:1px solid var(--line-side)}
 .side-foot .nav-btn{font-size:13px;color:var(--muted-2)}
 
 /* main · a slim bar (shop · Home · the avatar's slot · the page's one action), then the screen */
 .main{flex-grow:1;min-width:0;height:100%;display:flex;flex-direction:column;overflow:hidden}
 .bar{flex-shrink:0;min-height:48px;background:color-mix(in srgb,var(--ground) 96%,transparent);border-bottom:1px solid var(--line);padding:6px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .crumb{display:flex;align-items:center;gap:8px;min-width:0;font-size:13.5px;color:var(--muted)}
-.crumb a{color:var(--accent);text-decoration:none;font-weight:600}
+.crumb a{color:var(--accent-text);text-decoration:none;font-weight:600}
 .crumb a:hover{text-decoration:underline}
 .who{display:flex;align-items:center;gap:10px;position:relative}
 .shop{font-size:13.5px;color:var(--muted)}
@@ -94,8 +105,8 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .card.bad{border-color:var(--red-b);background:var(--red-t)}
 .card.bad h2,.card.bad p{color:var(--red-i)}
 .act{display:inline-flex;align-items:center;justify-content:center;gap:6px;align-self:flex-start;min-height:40px;padding:0 16px;border:1px solid var(--accent);border-radius:9px;background:var(--accent);color:var(--accent-ink);font-size:14px;font-weight:700;text-decoration:none;white-space:nowrap}
-.act:hover{background:#174a47}
-.act.ghost{background:transparent;color:var(--accent)}
+.act:hover{background:var(--accent-hover)}
+.act.ghost{background:transparent;color:var(--accent-text)}
 .act.quiet{background:transparent;border-color:var(--line-3);color:var(--ink)}
 .act.sm{min-height:34px;padding:0 12px;font-size:13px}
 .act[disabled]{opacity:.6;cursor:default}
@@ -103,7 +114,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .tab{height:36px;padding:0 12px;display:flex;align-items:center;gap:8px;border:1px solid var(--line-3);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:600}
 .tab .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .tab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
-.tab[aria-pressed="true"] .n{color:#e9dfc8}
+.tab[aria-pressed="true"] .n{color:var(--tab-n)}
 .sec{font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted-2);margin:0 0 8px}
 .mono{font-family:var(--mono)}
 .inp{width:100%;border:1px solid var(--line-3);border-radius:9px;padding:10px 12px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink)}
@@ -113,7 +124,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .spin{display:inline-block;width:15px;height:15px;border:2px solid var(--line-3);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;max-width:min(520px,92vw)}
-#toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:0 10px 24px rgba(42,36,24,.25)}
+#toast .toast{background:var(--ink);color:var(--ground);padding:12px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow-toast)}
 #toast .toast.err{background:var(--red-i)}
 #toast .toast.warn{background:var(--amber-i)}
 #toast button{margin-left:10px;border:1px solid currentColor;background:transparent;color:inherit;border-radius:8px;padding:2px 10px}
@@ -167,7 +178,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 .nx .ic{display:inline-flex}
 .actbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .actbar .more{position:relative}
-.menu{position:absolute;top:calc(100% + 4px);right:0;z-index:20;min-width:220px;background:var(--surface);border:1px solid var(--line-3);border-radius:12px;box-shadow:0 10px 24px rgba(42,36,24,.16);padding:4px;display:flex;flex-direction:column}
+.menu{position:absolute;top:calc(100% + 4px);right:0;z-index:20;min-width:220px;background:var(--surface);border:1px solid var(--line-3);border-radius:12px;box-shadow:var(--shadow-menu);padding:4px;display:flex;flex-direction:column}
 .menu button{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:0;background:none;border-radius:8px;text-align:left;font-size:14px;color:var(--ink)}
 .menu button:hover:not([disabled]){background:var(--hover)}
 .menu button[disabled]{color:var(--muted)}
@@ -201,7 +212,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 
 /* a sheet (add party · log · follow-up · edit) — the same frame for each */
 dialog.sheet{border:1px solid var(--line-3);border-radius:14px;padding:0;width:min(520px,94vw);max-height:92vh;background:var(--surface);color:var(--ink);font:15px/1.45 var(--sans)}
-dialog.sheet::backdrop{background:rgba(42,36,24,.4)}
+dialog.sheet::backdrop{background:var(--scrim)}
 .mhd{padding:16px 20px 4px;display:flex;align-items:center;gap:10px}
 .mhd .t{font-family:var(--serif);font-size:20px;font-weight:700;flex:1}
 .mhd .sub{font-size:13px}
