@@ -119,7 +119,8 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     });
     await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, who || OWNER);
     const p = await ctx.newPage();
-    p.on('pageerror', (e) => threw.push(e.message));
+    p.on('pageerror', (e) => { threw.push(e.message); if (process.env.DEBUG_PE) console.log('  !! pageerror: ' + e.message); });
+    if (process.env.DEBUG_PE) p.on('console', (m) => { if (m.type() === 'error') console.log('  !! console: ' + m.text()); });
     await p.goto(base + '/accounts.html' + (hash ? '#' + hash : ''));
     return { ctx, p };
   }
@@ -131,9 +132,9 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
   /* ── 1 · CLOSING STOCK ── */
   {
     const S = stand(), { ctx, p } = await open(S, 'closingstock');
-    await p.waitForSelector('[data-testid="ps-form"]', { timeout: 15000 }); await p.waitForSelector('[data-testid="stock-list"] .cbl', { timeout: 8000 });
+    await p.waitForSelector('[data-testid="ps-form"]', { timeout: 15000 }); await p.waitForSelector('[data-testid="stock-list"].cbl', { timeout: 8000 });
     ok(await active(p) === 'Closing stock' && (await p.textContent('#title')).trim() === 'Closing stock', 'Closing stock opens, lit in the sidebar');
-    const rows = await p.$$eval('[data-testid^="stock-"]', (x) => x.length);
+    const rows = await p.$$eval('[data-testid^="stock-"]', (x) => x.filter((e) => /^stock-[0-9]+$/.test(e.getAttribute('data-testid'))).length);
     ok(rows === 2, 'the last counts are the stock lines the API named "Closing stock" (2 of 3 lines; the sale is not one) — got ' + rows);
     await shot(p, 'closingstock', 'laptop');
     await p.fill('#ps_val', '1,25,000.50'); await p.fill('#ps_nrv', '1,10,000');
@@ -154,7 +155,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
     const S2 = stand(), c2 = await open(S2, 'closingstock', RAVI);
-    await c2.p.waitForSelector('[data-testid="pe-readonly"]', { timeout: 15000 }); await c2.p.waitForSelector('[data-testid="stock-list"] .cbl', { timeout: 8000 });
+    await c2.p.waitForSelector('[data-testid="pe-readonly"]', { timeout: 15000 }); await c2.p.waitForSelector('[data-testid="stock-list"].cbl', { timeout: 8000 });
     ok(await c2.p.locator('[data-testid="ps-form"], [data-testid="ps-save"]').count() === 0, 'a co-assist: no form, no Save button — the counts are read-only');
     await c2.ctx.close();
     const S3 = stand(), c3 = await open(S3, 'closingstock', OWNER, { width: 390, height: 844 });
@@ -167,10 +168,10 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
   /* ── 2 · ASSETS & DEPRECIATION ── */
   {
     const S = stand(), { ctx, p } = await open(S, 'assets');
-    await p.waitForSelector('[data-testid="assets-list"] .cbl', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="assets-list"].cbl', { timeout: 15000 });
     ok(await active(p) === 'Assets & depreciation', 'Assets & depreciation opens');
     const txt = await p.textContent('[data-testid="assets-list"]');
-    ok(/Display fridge/.test(txt) && /Old scooter/.test(txt) && /Furniture/.test(txt) && /40,50,000|40,50,000\.00/.test(txt), 'the register lists name · kind · cost · put to use · WDV, in the API\'s words and figures');
+    ok(/Display fridge/.test(txt) && /Old scooter/.test(txt) && /45,000\.00/.test(txt) && /40,500\.00/.test(txt), 'the register lists asset, written-down value and cost (the top three columns; kind and put-to-use are in the column chooser), in the API figures');
     ok(await p.locator('[data-testid="asset-sold-a2"]').count() === 1, 'a disposed asset carries the Sold chip');
     ok(await p.locator('[data-testid="pa-differs-computers"]').count() === 1 && /differ/.test(await p.textContent('[data-testid="pa-differs-computers"]')), 'a class where the register and the Ledger differ is a notice');
     await shot(p, 'assets', 'laptop');
@@ -205,7 +206,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     ok(S2.calls.filter((c) => /assets/.test(c)).length === 0 && await c2.p.locator('[data-testid="pa-add-open"]').count() === 0, 'a co-assist: no register read, no Add, no depreciation');
     await c2.ctx.close();
     const S3 = stand(), c3 = await open(S3, 'assets', OWNER, { width: 390, height: 844 });
-    await c3.p.waitForSelector('[data-testid="assets-list"] .cbl', { timeout: 15000 });
+    await c3.p.waitForSelector('[data-testid="assets-list"].cbl', { timeout: 15000 });
     const m = await noSide(c3.p); ok(m.d === 390 && m.m, '390 px: nothing scrolls sideways (' + m.d + ')');
     await shot(c3.p, 'assets', 'phone'); await c3.ctx.close();
   }
@@ -214,7 +215,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
   {
     const S = stand({ todo: [{ kind: 'accrual_reversals_due', count: 1, words: '1 accrual is due to turn back: ELEC-2026-08.', action: { label: 'Reverse now', screen: 'accruals' }, items: [{ ref: 'ELEC-2026-08', due: '2026-09-01', posted_on: '2026-08-31' }] }] });
     const { ctx, p } = await open(S, 'accruals');
-    await p.waitForSelector('[data-testid="recurring-list"] .cbl', { timeout: 15000 });
+    await p.waitForSelector('[data-testid="recurring-list"].cbl', { timeout: 15000 });
     ok(await active(p) === 'Accruals & recurring', 'Accruals & recurring opens on the repeating entries');
     ok(await p.locator('[data-testid="rec-due-r1"]').count() === 1 && await p.locator('[data-testid="rec-due-r2"]').count() === 0, 'only the entry whose day has come carries Due');
     await shot(p, 'accruals', 'laptop');
@@ -235,7 +236,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     await p.click('[data-testid="pr-save"]'); await p.waitForSelector('#pr_fout [data-testid="pe-refused"]');
     ok(/first one due/.test(await p.textContent('#pr_fout')), 'a refusal is the server\'s sentence');
     await p.click('[data-testid="pr-cancel"]');
-    await p.click('[data-testid="pr-tab-acc"]'); await p.waitForSelector('[data-testid="accruals-list"] .cbl');
+    await p.click('[data-testid="pr-tab-acc"]'); await p.waitForSelector('[data-testid="accruals-list"].cbl');
     ok(await p.locator('[data-testid="accr-due-ELEC-2026-08"]').count() === 1, 'accruals: the one the To-do feed says is due to turn back is listed, marked Due');
     await p.click('[data-testid="accr-ELEC-2026-08"] [data-caret]'); await p.click('[data-testid="accr-reverse"]'); await p.waitForSelector('[data-testid="pe-ok"]');
     ok(posts(S, /accruals\/ELEC-2026-08\/reverse/).length === 1 && /JV\/26-27\/0023/.test(await p.textContent('[data-testid="pe-ok"]')), 'Turn it back now: POST /accruals/:ref/reverse; the API\'s JV number is shown');
@@ -243,19 +244,19 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     await p.click('[data-testid="pc-save"]'); await p.waitForSelector('[data-testid="pe-ok"]');
     const cb = posts(S, /\/accruals$/)[0].body;
     ok(cb.ref === 'ELEC-2026-09' && cb.kind === 'outstanding' && cb.class === '6020' && cb.amount_minor === 310000 && /^web-/.test(cb.client_ref), 'POST /accruals { ref, kind, class, amount_minor 310000, date, client_ref }');
-    ok(/turns back on/.test(await p.textContent('[data-testid="pe-ok"]')) && await p.locator('[data-testid="accr-ELEC-2026-09"]').count() === 1, 'it says when it turns back (the API\'s reverses_on) and joins the list');
+    await p.waitForSelector('[data-testid="accr-ELEC-2026-09"]', { timeout: 5000 }).catch(() => {}); ok(/turns back on/.test(await p.textContent('[data-testid="pe-ok"]')) && await p.locator('[data-testid="accr-ELEC-2026-09"]').count() === 1, 'it says when it turns back (the API\'s reverses_on) and joins the list');
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
     const S2 = stand({ rec503: true }), c2 = await open(S2, 'accruals');
     await c2.p.waitForSelector('[data-testid="pe-refused"]', { timeout: 15000 });
-    ok((await c2.p.textContent('[data-testid="pe-refused"]')).trim() === 'Starts after an update' && !/raw table/.test(await c2.p.textContent('#bk_body')), 'a 503 (not migrated) is one calm line, never a raw message');
+    ok((await c2.p.textContent('[data-testid="pe-refused"]')).trim() === '⏳ Starts after an update' && !/raw table/.test(await c2.p.textContent('#bk_body')), 'a 503 (not migrated) is one calm line, never a raw message');
     await c2.ctx.close();
     const S3 = stand(), c3 = await open(S3, 'accruals', RAVI);
     await c3.p.waitForSelector('[data-testid="pe-readonly"]', { timeout: 15000 });
     ok(S3.calls.filter((c) => /recurring|accruals/.test(c)).length === 0 && await c3.p.locator('button[data-testid^="pr-"], button[data-testid^="pc-"]').count() === 0, 'a co-assist: nothing read, nothing offered');
     await c3.ctx.close();
     const S4 = stand(), c4 = await open(S4, 'accruals', OWNER, { width: 390, height: 844 });
-    await c4.p.waitForSelector('[data-testid="recurring-list"] .cbl', { timeout: 15000 });
+    await c4.p.waitForSelector('[data-testid="recurring-list"].cbl', { timeout: 15000 });
     const m = await noSide(c4.p); ok(m.d === 390 && m.m, '390 px: nothing scrolls sideways (' + m.d + ')');
     await shot(c4.p, 'accruals', 'phone'); await c4.ctx.close();
   }

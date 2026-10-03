@@ -251,7 +251,7 @@ const PE_ACCR = [['outstanding', 'Owed, not yet paid'], ['prepaid', 'Paid in adv
 async function peAccrualsView(body) {
   if (!peOwner()) { body.innerHTML = peNoOwner('Only the owner sees repeating entries and accruals'); return; }
   body.innerHTML = '<div class="tabs" role="tablist">'
-    + [['rec', 'Repeating'], ['acc', 'Accruals']].map((t) => '<button type="button" class="tab" role="tab" data-testid="pr-tab-' + t[0] + '" aria-pressed="' + (PE.tab === t[0]) + '" onclick="peAccrTab(\'' + t[0] + '\')">' + peE(tx(t[1])) + '</button>').join('') + '</div>'
+    + [['rec', 'Repeating'], ['acc', 'Accruals']].map((t) => '<button type="button" class="pe-tab" role="tab" data-testid="pr-tab-' + t[0] + '" aria-pressed="' + (PE.tab === t[0]) + '" onclick="peAccrTab(\'' + t[0] + '\')">' + peE(tx(t[1])) + '</button>').join('') + '</div>'
     + '<div id="pr_body"></div>';
   peAccrPaint();
 }
