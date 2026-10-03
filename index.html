@@ -89,6 +89,13 @@ a.box,a.lab{text-decoration:none;cursor:pointer}
   background:var(--green);color:#fff;font-size:13.5px;font-weight:700}
 .box .swbtn[disabled]{opacity:.6;cursor:default}
 .box .ledact .f{margin-left:10px}
+/* the Standards door (2026-10-03): a box like the three above, outside Day to day; one live fact (the register's own counts), what it is, when it was checked, Read me */
+.box.door .doorn{display:flex;flex-wrap:wrap;gap:3px 14px;margin:15px 0 0;padding-top:13px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
+.box.door .go::before{content:"›"}
+.box.door .doorn .c-live::before{content:"● ";color:var(--green)} .box.door .doorn .c-part::before{content:"◐ ";color:var(--amber-i)} .box.door .doorn .c-plan::before{content:"○ "}   /* the symbol is drawn, not typed: the WORD carries the status (never colour alone) and the page stays under its word count */
+.box.door .doorn b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+.box.door .doorf{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:10px 0 0;font-size:12.5px;color:var(--muted)}
+.box.door .doorf a{color:var(--blue-i);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
 /* the Active badge, and the lit tile: a green edge and a soft glow from the page's own tokens. Still when the reader asks for less motion. */
 .badge{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:999px;background:var(--green-t);
   border:1px solid var(--green-b);color:var(--green-d);font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:700;letter-spacing:0}
@@ -213,12 +220,17 @@ a.lab:hover{border-color:var(--green);transform:translateY(-1px)}
     </div>
   </div>
 
+  <!-- THE STANDARDS DOOR (docs/design/standards-page) waits: the page is at 245 of its 250 words with every alert up and the box costs 25. Until Athi picks what to trim,
+       Standards (and CRM) are one-word links in the foot row below. -->
+
   <div class="foot">
     <a href="app.html#/app/settings" data-testid="foot-shop">Your shop</a>
     <a href="app.html#/app/settings" data-testid="foot-counters">Counters &amp; keys</a>
     <a href="app.html#/app/coassists" data-testid="foot-coassists">Co-assists</a>
     <a href="app.html#/app/suppliers" data-testid="foot-suppliers">Suppliers</a>
     <a href="app.html#/app/connectors" data-testid="foot-connectors">Connectors</a>
+    <a href="crm.html" data-testid="foot-crm">CRM</a>
+    <a href="standards.html" data-testid="foot-standards">Standards</a>
     <span class="grow"></span>
     <span id="prices_read" data-testid="prices-read"></span>
   </div>
@@ -471,6 +483,7 @@ function clearFacts(){
   ledgerState(null);
   CUR = 'INR';
 }
+
 
 /* THE AVATAR is CBAvatar (app/avatar.js) — the same control as the app and CB Accounts; signed out it draws the Sign in door */
 function avatarPaint(){

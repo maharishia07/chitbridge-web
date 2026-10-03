@@ -1,4 +1,8 @@
-// standards.spec.js — Settings › Standards: what the platform follows, what you follow, what your trade follows.
+// standards.spec.js — the Standards page (/standards.html: the matrix, the list, the two sheets) and Settings › Standards (what YOU follow, and the door).
+//
+// 2026-10-03: the register moved off Settings onto its own page (docs/design/standards-page). The offline proof of the page is e2e/standards-page.cjs;
+// this spec keeps the live-app checks — the register as the app loads it, Settings' live reading of your own settings, the Legend — and reads the page
+// where it used to read Settings' tabs.
 //
 // ⚠️⚠️ THE STATUS COLUMN IS WHAT THIS SPEC PROTECTS. A standards page is the page someone quotes to a buyer, so
 // an overstatement here does more harm than a gap. Every row declares live / part / plan, and anything not in
@@ -8,7 +12,7 @@
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
-const open = async (page, tab) => {
+const open = async (page) => {
   await page.evaluate(() => window.navTo('settings'));
   await page.waitForTimeout(1200);
   await page.getByTestId('set-sec-standards').click();
@@ -21,18 +25,24 @@ const open = async (page, tab) => {
   await page.waitForFunction(() => Array.isArray(window.STANDARDS) && window.STANDARDS.length > 0,
     null, { timeout: 30_000 });
   await page.waitForTimeout(300);
-  if (tab) { await page.getByTestId('std-tab-' + tab).click(); await page.waitForTimeout(600); }
+};
+
+/* the Standards page itself, as the deployed site serves it (a plain page: the register is read from cap-standards.js, no sign-in needed) */
+const openPage = async (page) => {
+  await page.goto('/standards.html');
+  await page.waitForSelector('[data-testid="std-matrix"] .mx', { timeout: 30_000 });
 };
 
 test.describe('Settings › Standards', () => {
   test.describe.configure({ timeout: 240_000 });
 
-  test('[STD-01] the section exists with all three views', async ({ page }) => {
+  test('[STD-01] the section keeps what YOU follow, and is the door to the Standards page', async ({ page }) => {
     await mintEntity(page);
     await open(page);
-    for (const t of ['platform', 'yours', 'commercial']) {
-      await expect(page.getByTestId('std-tab-' + t), t + ' view').toBeVisible();
-    }
+    await expect(page.getByTestId('std-yours'), 'your own settings, read live').toBeVisible();
+    await expect(page.getByTestId('std-open-page'), 'the door to /standards.html').toHaveAttribute('href', '/standards.html');
+    /* the old tabs are gone: the register is not listed a second time here */
+    await expect(page.getByTestId('std-tab-platform')).toHaveCount(0);
   });
 
   test('[STD-02] ⚠️ every standard declares a status, and nothing unfinished claims otherwise', async ({ page }) => {
@@ -54,34 +64,37 @@ test.describe('Settings › Standards', () => {
     }
   });
 
-  test('[STD-03] the platform view counts them honestly rather than showing ticks', async ({ page }) => {
-    await mintEntity(page);
-    await open(page, 'platform');
-    const body = await page.locator('#setbody').textContent();
-    expect(body, 'in-force count is stated').toMatch(/\d+ in force/);
-    expect(body, 'partial count is stated').toMatch(/\d+ partly/);
-    expect(body, 'planned count is stated').toMatch(/\d+ planned/);
+  test('[STD-03] the page counts them honestly rather than showing ticks', async ({ page }) => {
+    await openPage(page);
+    const real = await page.evaluate(() => { const n = { live: 0, part: 0, plan: 0 }; STANDARDS.forEach((x) => { n[x.s]++; }); return n; });
+    /* the matrix's All row says each count once, and it is the register's own */
+    for (const st of ['live', 'part', 'plan']) {
+      await expect(page.getByTestId('std-cell-*-' + st), st + ' count is stated').toHaveText(String(real[st]));
+    }
     /* The standards themselves — a page that named none of them would pass every structural check above. */
+    const names = await page.evaluate(() => STANDARDS.map((x) => x.n).join('|'));
     for (const std of ['BCP 47', 'RFC 4647', 'Okabe', 'WCAG 2.2', 'RFC 7386', 'PostgreSQL RLS']) {
-      expect(body, std + ' is named').toContain(std);
+      expect(names, std + ' is named').toContain(std);
     }
     /* ⚠️ The RLS row must keep naming the carve-out. "Tenant isolation enforced by the database" alone would be
-       true of the six direct tables and misleading about identities, which deliberately has no policy. */
-    expect(body, 'the RLS carve-out is disclosed, not glossed').toMatch(/carve-out/i);
+       true of the six direct tables and misleading about identities, which deliberately has no policy. It is in the row's opened note. */
+    await page.getByTestId('listctl-search-standards').fill('PostgreSQL RLS');
+    await page.getByTestId('std-row-' + (await page.evaluate(() => STANDARDS.findIndex((x) => x.n === 'PostgreSQL RLS')))).click();
+    expect(await page.locator('[data-testid^="std-detail-"]').first().textContent(), 'the RLS carve-out is disclosed, not glossed').toMatch(/carve-out/i);
   });
 
   test('[STD-04] ⭐ "what you follow" is a LIVE reading, not a stored copy', async ({ page }) => {
     await mintEntity(page);
     try {
       await page.evaluate(() => { window.CBLocale.setRegion('AE'); window.CBLocale.setLangs(['ar', 'en']); });
-      await open(page, 'yours');
+      await open(page);
       let body = await page.locator('#setbody').textContent();
       expect(body, 'Arabic first means right-to-left').toMatch(/Right to left/i);
 
       /* Flip the order — same region, same two languages, opposite reading order. This is the assertion that
          proves direction follows the LANGUAGE rather than the region, from the UI rather than from a unit test. */
       await page.evaluate(() => window.CBLocale.setLangs(['en', 'ar']));
-      await open(page, 'yours');
+      await open(page);
       body = await page.locator('#setbody').textContent();
       expect(body, 'English first means left-to-right, in the SAME region').toMatch(/Left to right/i);
     } finally {
@@ -92,15 +105,16 @@ test.describe('Settings › Standards', () => {
     }
   });
 
-  test('[STD-05] the commercial view separates carried from enforced', async ({ page }) => {
-    await mintEntity(page);
-    await open(page, 'commercial');
-    const body = await page.locator('#setbody').textContent();
+  test('[STD-05] the page separates carried from enforced', async ({ page }) => {
+    await openPage(page);
+    await page.getByTestId('listctl-search-standards').fill('Incoterms');
+    const row = page.locator('[data-testid^="std-row-"]').first();
+    const body = await row.textContent();
     expect(body, 'Incoterms is named').toContain('Incoterms');
     /* ⚠️ The distinction a buyer would care about most, and the one easiest to blur. An Incoterm on a chit
-       records what was agreed; it does not check the shipment against it. Saying so here is the difference
+       records what was agreed; it does not check the shipment against it. Saying so IN THE ROW is the difference
        between a standards page and a claim. */
-    expect(body, 'and the gap is stated rather than left for a dispute').toMatch(/not the same as enforced/i);
+    expect(body, 'and the gap is stated in the row rather than left for a dispute').toMatch(/Missing:.*not checked against the shipment/i);
   });
 });
 
@@ -127,9 +141,9 @@ test.describe('Standards · where they bite, and why we bother', () => {
   });
 
   test('[STD-07] ⚠️ the argument states its COSTS, not only its benefits', async ({ page }) => {
-    await mintEntity(page);
-    await open(page, 'why');
-    const body = await page.locator('#setbody').textContent();
+    await openPage(page);
+    await page.getByTestId('std-open-why').click();
+    const body = await page.getByTestId('std-sheet-why').textContent();
 
     expect(body, 'the structural reason, not "quality"').toMatch(/crosses a boundary/i);
     /* ⚠️ A page listing only benefits would be the same overclaim the status column exists to prevent, one level
@@ -230,9 +244,9 @@ test.describe('Standards · made visible', () => {
   });
 
   test('[STD-12] ⚠️ the sample record marks what is NOT built rather than omitting it', async ({ page }) => {
-    await mintEntity(page);
-    await open(page, 'platform');
-    const body = await page.locator('#setbody').textContent();
+    await openPage(page);
+    await page.getByTestId('std-open-record').click();
+    const body = await page.getByTestId('std-sheet-record').textContent();
     expect(body, 'the worked record is shown').toMatch(/One chit, every standard in it/i);
     expect(body, 'a real HS code').toContain('0904.11');
     expect(body, 'a real GTIN').toContain('08901234567894');

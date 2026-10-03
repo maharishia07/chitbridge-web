@@ -3637,7 +3637,7 @@ var SET_SECS = [
    * those three into one tick is worse than no page, because someone will rely on it. Anything not in force
    * says what is missing, in its own row.
    */
-  { key:'standards',  name:'Standards',    q:'What we follow, what you follow' }
+  { key:'standards',  name:'Standards',    q:'What you follow, and the register' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -3748,188 +3748,64 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
  */
 
 /**
- * ⭐ THE REGISTER OF STANDARDS. One row per standard, so adding one is a line of data and never a screen edit.
+ * ⭐ SETTINGS › STANDARDS KEEPS WHAT IS ABOUT YOUR OWN SETTINGS (2026-10-03). The register itself — what ChitBridge follows, what is
+ * still missing, the argument for following standards, the sample record, the commercial standards — is READ on its own page,
+ * /standards.html (docs/design/standards-page), with the matrix, the list and the two sheets; the register's data stays in
+ * cap-standards.js, which that page and the Legend read. Here is the one thing that belongs next to the settings it describes:
+ * a live reading of the conventions YOUR screens follow, and the door to the page.
  *
- * ⚠️ STATUS IS NOT DECORATION. `live` means implemented and covered by a test; `part` means partly, and the
- * row MUST say what is missing; `plan` means decided but not built. Athi's standing rule is that we name what
- * is unproven rather than oversell it — and a standards page is exactly where overselling would do most harm,
- * because it is the page someone would quote to a buyer.
+ * ⚠️ THE STATUS COLUMN WAS THE WHOLE POINT of the old four tabs and it moved with them: In force / Partly / Planned, and what is
+ * missing in the row itself, are on the page. Do not rebuild a second list here.
  */
-function stdTab(){ return UI.stdTab || 'platform'; }
-function setStdTab(k){ UI.stdTab = k; renderApp(); _capShowDetail(); loadSettings(); }
-
 function standardsSettingsHTML(){
-  var Q = String.fromCharCode(39);
   var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
-  var tab = stdTab();
+  /* ⚠️ READ FROM THE LIVE SETTINGS, never a stored copy. A page describing what you follow that had drifted
+   from what you actually set would be the one place a wrong answer is guaranteed to be believed. */
+  var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+  var r = CBLocale.regionInfo();
+  var th = (typeof THEMES !== 'undefined' && THEMES[typeof themeGet === 'function' ? themeGet() : 'cream']) || {};
+  var mine = [
+    ['Region',        r ? r.name : 'Not set'],
+    ['Languages',     CBLocale.langs().map(function(x, i){ return (i + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
+    ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
+    ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
+    ['Numbers',       esc(CBLocale.number(123456789.5))],
+    ['Money',         esc(CBLocale.money(123456.5, (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'))],
+    ['Date',          esc(CBLocale.date(Date.now()))],
+    ['Time',          esc(CBLocale.time(Date.now()))],
+    ['Time zone',     esc(CBLocale.timezone())],
+    ['Working days',  CBLocale.workdays().map(function(d){ return DAY[d]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
+    ['Theme',         esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
+    ['Text size',     (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function')
+                        ? (function(){ var m = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0]; return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—'; })() : '—'],
+    ['Motion',        (typeof motionPref === 'function') ? ({ auto:'Follow my device', reduce:'Reduced', full:'Always animate' }[motionPref()] || '—') : '—']
+  ];
+  var body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+      + 'The conventions <b>your</b> screens follow. Every line here is a live reading of your own settings, '
+      + 'not a stored copy — change one in Localisation or Appearance and this moves with it.'
+      + '</div>')
+    + card('<div data-testid="std-yours">' + mine.map(function(x){
+        return '<div style="display:flex;gap:10px;padding:5px 0;border-block-start:1px solid var(--line);font-size:var(--fs-2)">'
+          + '<span style="min-width:112px;color:var(--grey)">' + x[0] + '</span>'
+          + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + x[1] + '</b></div>';
+      }).join('') + '</div>')
+    + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
+      + '⚠️ <b>' + tx('None of this changes what anyone wrote.') + '</b> These settings govern the chrome and the way figures '
+      + 'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the '
+      + 'language and the currency their author used — a chit is a shared record, and one that read differently '
+      + 'to each party would not be a record.</div>');
 
-  var BADGE = {
-    live: ['In force',  'var(--ok-tint)',     'var(--ok-2)'],
-    part: ['Partly',    'var(--warn-tint)',   'var(--warn-2)'],
-    plan: ['Planned',   'var(--neutral-tint)','var(--grey)']
-  };
+  /* the door to the page: its counts are the register's own (stdCounts), never typed here */
+  var n = stdCounts();
+  var door = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+      + '<b>' + tx('What ChitBridge follows, and what is still missing') + '</b> — the laws and standards, each with its status, '
+      + 'now has its own page.'
+      + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)" data-testid="std-door-counts">'
+      + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · <b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned.</div>'
+      + '<div style="margin-top:9px"><a href="/standards.html" data-testid="std-open-page" style="color:var(--blue);font-weight:700">' + tx('Open Standards') + ' <span class=arw>→</span></a></div>'
+      + '</div>');
 
-  var seg = [['platform','What we follow'],['yours','What you follow'],['commercial','Your trade'],['why','Why bother']].map(function(x){
-    var on = tab === x[0];
-    return '<button type="button" data-testid="std-tab-' + x[0] + '" onclick="setStdTab(' + Q + x[0] + Q + ')"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + ' style="flex:1;cursor:pointer;font:inherit;padding:7px 8px;font-size:var(--fs-2);font-weight:' + (on ? 800 : 500) + ';'
-      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;'
-      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
-  }).join('');
-
-  var row = function(st){
-    var b = BADGE[st.s] || BADGE.plan;
-    return '<div style="padding:8px 0;border-block-start:1px solid var(--line)">'
-      + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
-      +   '<b style="font-size:var(--fs-2);color:var(--on-card)">' + esc(st.n) + '</b>'
-      +   '<span style="font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
-      +     'background:' + b[1] + ';color:' + b[2] + ';border-radius:4px;padding:1px 6px">' + b[0] + '</span>'
-      + '</div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">' + esc(st.w) + '</div>'
-      /* ⚠️ A "partly" or "planned" row without this line would be the overclaim the status was meant to prevent. */
-      + (st.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:3px;line-height:1.5">⚠️ ' + esc(st.note) + '</div>' : '')
-      /**
-       * ⭐ WHERE IT BITES, AND WHAT IT REMOVES. Athi, 2026-08-18: *"where the standards or the implementation can
-       * be seen… we are actually redirecting them where it is being used and how effective it is going to be."*
-       *
-       * ⚠️ A standard named without a place is trivia. The row that says "GS1 — SKU identity" tells a reader
-       * nothing they can act on; the row that says "used in Catalogue › product identity, because the three-way
-       * match needs both sides to agree this is the same product" is the difference between a compliance list
-       * and an explanation. Where it is USED makes it checkable; what it REMOVES makes it worth having.
-       */
-      + (st.at ? '<div style="font-size:var(--fs-1);margin-top:4px;line-height:1.5">'
-          + '<span style="color:var(--grey)">' + tx('Used in') + ' </span>'
-          + (st.go
-              ? '<a href="#" data-testid="std-go-' + esc(st.go) + '" onclick="stdGoto(' + Q + esc(st.go) + Q + ');return false" style="color:var(--blue);font-weight:600">' + esc(st.at) + ' <span class=arw>→</span></a>'
-              : '<b style="color:var(--on-card)">' + esc(st.at) + '</b>')
-          + '</div>' : '')
-      /**
-       * ⭐⭐ THE WORKED VALUE. Athi, 2026-08-18: *"whenever we are saying we have followed the standard, is there
-       * any way we can show some sample record and how that will behave — example, HS code, other system
-       * reference and so on, so people can visualise."*
-       *
-       * ⚠️ "We follow GS1" is a claim a reader has to take on trust. "08901234567894 — the last digit is
-       * computed from the other thirteen, so a typo is detectable, and both sides know it is the same product
-       * without comparing names" is a claim they can SEE working. The second one survives being forwarded to a
-       * sceptical colleague; the first does not.
-       *
-       * ⚠️ The value is shown in a monospace block because it is a LITERAL — the exact bytes another system
-       * would receive. Rendering it as prose would invite the reader to think it was illustrative.
-       */
-      + (st.ex && st.ex !== '—' ? '<div style="margin-top:6px">'
-          + '<code style="display:inline-block;font-family:' + Q + 'Space Mono' + Q + ',ui-monospace,monospace;font-size:var(--fs-1);'
-          + 'background:var(--neutral-tint);color:var(--on-card);border:1px solid var(--line);border-radius:5px;'
-          + 'padding:2px 7px;word-break:break-all;max-width:100%">' + esc(st.ex) + '</code>'
-          + (st.exWhy ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.55">' + st.exWhy + '</div>' : '')
-          + '</div>' : '')
-      + (st.why ? '<div style="font-size:var(--fs-1);color:var(--on-card);margin-top:4px;line-height:1.55;'
-          + 'border-inline-start:2px solid var(--line);padding-inline-start:8px">' + st.why + '</div>' : '')
-      + '</div>';
-  };
-
-  var groupsOf = function(list){
-    var seen = [], out = '';
-    list.forEach(function(st){ if (seen.indexOf(st.g) < 0) seen.push(st.g); });
-    seen.forEach(function(g){
-      out += card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:2px">' + esc(g) + '</div>'
-        + list.filter(function(st){ return st.g === g; }).map(row).join(''));
-    });
-    return out;
-  };
-
-  var body;
-  if (tab === 'platform') {
-    var plat = STANDARDS.filter(function(st){ return st.g !== 'Commercial'; });
-    var n = { live:0, part:0, plan:0 };
-    STANDARDS.forEach(function(st){ n[st.s]++; });
-    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + 'What ChitBridge itself implements. <b>' + tx('We adopt standards rather than invent formats') + '</b> — a record '
-        + 'that only this platform can read is a record you do not own.'
-        + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">'
-        + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
-        + '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · '
-        + n.plan + ' planned. '
-        + 'Rows that are not in force say what is missing — a page like this is quoted to buyers, so an '
-        + 'overstatement here would do more harm than a gap.'
-        + '</div></div>')
-      /* ⚠️ THE RECORD COMES FIRST. The list answers "what do you follow"; the record answers "what does that
-         get me", and a reader who sees the answer to the second reads the first differently. */
-      + (typeof stdRecordHTML === 'function' ? stdRecordHTML({ compact: false }) : '')
-      + groupsOf(plat);
-
-  } else if (tab === 'yours') {
-    /* ⚠️ READ FROM THE LIVE SETTINGS, never a stored copy. A page describing what you follow that had drifted
-       from what you actually set would be the one place a wrong answer is guaranteed to be believed. */
-    var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
-    var r = CBLocale.regionInfo();
-    var th = (typeof THEMES !== 'undefined' && THEMES[typeof themeGet === 'function' ? themeGet() : 'cream']) || {};
-    var mine = [
-      ['Region',        r ? r.name : 'Not set'],
-      ['Languages',     CBLocale.langs().map(function(x, i){ return (i + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
-      ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
-      ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
-      ['Numbers',       esc(CBLocale.number(123456789.5))],
-      ['Money',         esc(CBLocale.money(123456.5, (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'))],
-      ['Date',          esc(CBLocale.date(Date.now()))],
-      ['Time',          esc(CBLocale.time(Date.now()))],
-      ['Time zone',     esc(CBLocale.timezone())],
-      ['Working days',  CBLocale.workdays().map(function(d){ return DAY[d]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
-      ['Theme',         esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
-      ['Text size',     (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function')
-                          ? (function(){ var m = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0]; return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—'; })() : '—'],
-      ['Motion',        (typeof motionPref === 'function') ? ({ auto:'Follow my device', reduce:'Reduced', full:'Always animate' }[motionPref()] || '—') : '—']
-    ];
-    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + 'The conventions <b>your</b> screens follow. Every line here is a live reading of your own settings, '
-        + 'not a stored copy — change one in Localisation or Appearance and this moves with it.'
-        + '</div>')
-      + card('<div data-testid="std-yours">' + mine.map(function(x){
-          return '<div style="display:flex;gap:10px;padding:5px 0;border-block-start:1px solid var(--line);font-size:var(--fs-2)">'
-            + '<span style="min-width:112px;color:var(--grey)">' + x[0] + '</span>'
-            + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + x[1] + '</b></div>';
-        }).join('') + '</div>')
-      + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
-        + '⚠️ <b>' + tx('None of this changes what anyone wrote.') + '</b> These settings govern the chrome and the way figures '
-        + 'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the '
-        + 'language and the currency their author used — a chit is a shared record, and one that read differently '
-        + 'to each party would not be a record.</div>');
-
-  } else if (tab === 'why') {
-    /**
-     * ⭐⭐ THE ARGUMENT, AND ITS COSTS ON THE SAME PAGE.
-     *
-     * ⚠️ A page that listed only the benefits would be the same overclaim the status column exists to prevent,
-     * one level up. The costs are real — slower to build, bigger than the need, moving targets, and an
-     * obligation to be honest that we then have to keep. Stating them is what makes the benefits believable.
-     */
-    var col = function(title, items, tint, ink){
-      return card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:' + ink + ';margin-bottom:6px">' + title + '</div>'
-        + items.map(function(x){
-            return '<div style="padding:6px 0;border-block-start:1px solid var(--line)">'
-              + '<b style="font-size:var(--fs-2);color:var(--on-card)">' + x[0] + '</b>'
-              + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.55">' + x[1] + '</div></div>';
-          }).join(''));
-    };
-    /* ⚠️ ONE RENDERER, TWO SURFACES — see stdWhyHTML in cap-standards.js. The argument used to be written out
-       here; the Legend needing it made a second copy the obvious move and the wrong one. */
-    body = stdWhyHTML({ compact: false });
-  } else {
-    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + 'The commercial standards <b>your entity</b> trades under. These are not platform settings — they are '
-        + 'terms you and your counterparty agree, and the platform\'s job is to carry them onto the record so '
-        + 'nobody has to remember which version applied.'
-        + '</div>')
-      + groupsOf(STANDARDS.filter(function(st){ return st.g === 'Commercial'; }))
-      + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
-        + '⚠️ <b>Carried is not the same as enforced,</b> and the difference matters to a buyer. An Incoterm on a '
-        + 'chit today records what was agreed; it does not yet check the shipment against it. That gap is stated '
-        + 'here rather than left for someone to discover in a dispute.</div>');
-  }
-
-  return _misHead('Standards', '')
-    + '<div style="display:flex;gap:7px;margin-bottom:10px">' + seg + '</div>'
-    + body;
+  return _misHead('Standards', '') + door + body;
 }
 
 function appearanceSettingsHTML(){

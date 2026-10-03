@@ -1,0 +1,436 @@
+/* standards-page.cjs — THE STANDARDS PAGE, PROVED (docs/design/standards-page/README.md · docs/design/standards/REQUIREMENT.md · docs/design/SYSTEM.md).
+ * Pattern: cb-accounts.cjs + crm-themes.cjs — Playwright, a stand-in API answering INSIDE the page; the static server takes a free port from the OS.
+ * Nothing here reaches localhost:3000, port 7351 or the live site: every /api/** call is fulfilled by ctx.route before it can leave the browser (and the
+ * page is made to refuse any other host). The Standards page itself reads NO API (the register is cap-standards.js), so the stand-in's job is to PROVE that.
+ *
+ *  1  the register (cap-standards.js): 61 rows, 33 in force · 16 partly · 12 planned; every row has area · kind · applies-in · plain words; every Partly and Planned
+ *     row says what is missing; the first 44 rows' words are the register's own, unchanged; the 17 additions carry their stated statuses; no second WCAG row
+ *  2  laptop 1366×768: title · "checked 3 Oct 2026" · the matrix beside the list; the matrix's All row IS the register's counts; the list is a CBList mount
+ *     (three columns, a resize handle on each, only the rows scroll) with the head at most 20% of the window; no sideways scroll
+ *  3  THE CELL IS THE LIST'S FILTER: Money & GST × Partly → 3 rows, two of the unit's own chips, one lit cell; a row heading filters the row, a column heading the
+ *     status; a "—" cell does nothing; clearing a chip clears the cell; changing the unit's Filters popover moves the lit cell; Count by Country and Kind
+ *  4  search · no match · Group by · a row opens with label : value and the two buttons; Copy puts the standard, clause, status and what is missing on the clipboard;
+ *     Open in the app goes to the app's own door; a row with no place in the app has no such button; a New row says so
+ *  5  the two sheets (Why follow standards · One record, every standard) render the register's own renderers; a planned field is dimmed by ink, not by opacity
+ *  6  the Standards door on the index page: the register's own counts, the date, Read me opens the sheet; Settings › Standards keeps What you follow and the door
+ *  7  phone 390×844: the matrix is page one, the list page two with ‹ back; document.scrollWidth === 390 on every view, with a row open and with a sheet open
+ *  8  EVERY THEME, MEASURED: all 16 themes of CBScreen.APP_THEMES + Cream, on the laptop and the phone, on the matrix, a chosen cell with a row opened, and both
+ *     sheets — every visible text pair clears WCAG AA (lib/theme-measure.cjs, the measurement e2e/crm-themes.cjs uses)
+ *  +  no alert(), no "accounting" / "books of account", no page error, nothing leaves the browser, the page makes no /api call
+ * Screenshots: e2e/shots/standards-{laptop,cell,row,phone-matrix,phone-list,sheet-why,sheet-record}.png, standards-dark-laptop.png, standards-terminal-phone.png
+ * Playwright is not in the cloud image: `npm i @playwright/test` in a temp dir and NODE_PATH at it.                                                             */
+'use strict';
+const { chromium } = require('@playwright/test');
+const http = require('http'), fs = require('fs'), path = require('path'), vm = require('vm');
+const ROOT = path.join(__dirname, '..');
+const PUB = process.env.STP_PUB || path.join(ROOT, 'public');        /* STP_PUB=<dir> runs against another copy */
+const SHOTS = path.join(__dirname, 'shots');
+const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const { measure } = require('./lib/theme-measure.cjs');
+
+let pass = 0, fail = 0;
+const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
+const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+
+/* ── the register, read the way a page reads it: the file itself, run with the two helpers it asks its page for ── */
+function readRegister(file) {
+  const ctx = { tx: (s) => s, esc: (s) => String(s) };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(file, 'utf8') + ';this.R = { S: STANDARDS, A: STD_AREAS, K: STD_KINDS, C: STD_COUNTRIES, ST: STD_STATUS, CH: STD_CHECKED, WHY: STD_WHY, REC: STD_RECORD };', ctx);
+  return ctx.R;
+}
+const REG = readRegister(path.join(PUB, 'app', 'cap-standards.js'));
+const COUNT = { live: 0, part: 0, plan: 0 }; REG.S.forEach((r) => { COUNT[r.s]++; });
+const DESIGN = (() => { const g = { window: {} }; vm.createContext(g); vm.runInContext(fs.readFileSync(path.join(ROOT, 'docs', 'design', 'standards-page', 'data.js'), 'utf8'), g); return g.window.STD_PAGE; })();
+
+/* the stand-in: every /api call is recorded and answered with nothing — the page is expected to ask for none */
+async function route(S, r) { const q = r.request(), u = new URL(q.url()); S.calls.push(q.method() + ' ' + u.pathname); return J(r, 200, {}); }
+
+(async () => {
+  fs.mkdirSync(SHOTS, { recursive: true });
+  const srv = http.createServer((q, r) => {
+    const rel = decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/, '');
+    const f = (!rel || rel === 'index.html') ? path.join(ROOT, 'index.html') : path.join(PUB, rel);
+    if (((!f.startsWith(PUB)) && f !== path.join(ROOT, 'index.html')) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end('no'); }
+    r.writeHead(200, { 'content-type': T[path.extname(f)] || 'application/octet-stream', 'cache-control': 'no-store' });
+    fs.createReadStream(f).pipe(r);
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + srv.address().port;
+  const b = await chromium.launch();
+  const threw = [], offHost = [];
+  const tokFor = (c) => { const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return b64({ alg: 'none' }) + '.' + b64(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; };
+  const OWNER = { token: tokFor({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
+
+  async function open(S, o) {
+    o = o || {};
+    const ctx = await b.newContext({ viewport: o.viewport || { width: 1366, height: 768 }, locale: 'en-IN', timezoneId: 'Asia/Kolkata', serviceWorkers: 'block', permissions: ['clipboard-read', 'clipboard-write'] });
+    /* Playwright runs the LAST-registered matching route first: the catch-all goes in first so the stand-in below wins for /api/** */
+    await ctx.route(/^https?:\/\/(?!127\.0\.0\.1)/, (r) => { offHost.push(r.request().url()); return r.abort(); });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    await ctx.route('**/api/**', (r) => route(S, r));
+    /* the app's own door is not loaded here: "Open in the app" is proved by WHERE it goes */
+    await ctx.route('**/app.html**', (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>app</title>the app' }));
+    if (o.session !== null) await ctx.addInitScript((s) => { try { if (!localStorage.getItem('cb_seeded')) { localStorage.setItem('cb_seeded', '1'); localStorage.setItem('cb_sess', JSON.stringify(s)); } } catch (_) {} }, o.session || OWNER);
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => threw.push(e.message));
+    await p.goto(base + (o.path || '/standards.html'));
+    if (!o.noWait) await p.waitForSelector('[data-testid="std-matrix"] .mx .mx-all', { timeout: 15000 });
+    await p.waitForFunction(() => window.CBScreen && window.CBAvatar);
+    await p.waitForTimeout(250);
+    return { ctx, p };
+  }
+  const width = (p) => p.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+  const count = (p) => p.evaluate(() => (document.querySelector('.cbl-count') || {}).textContent || '');
+  const rowIds = (p) => p.$$eval('[data-testid^="std-row-"]', (n) => n.map((x) => x.getAttribute('data-testid').replace('std-row-', '')));
+  const chips = (p) => p.$$eval('.cbl-fchip', (n) => n.map((x) => x.textContent.replace('×', '').trim()));
+  const pressed = (p) => p.$$eval('#mxBody [aria-pressed="true"]:not([data-dim])', (n) => n.map((x) => x.getAttribute('data-testid')));
+  const idx = (name) => REG.S.findIndex((r) => r.n === name);
+
+  /* ── 1 · the register ───────────────────────────────────────────────────────────────────────────────────── */
+  {
+    ok(REG.S.length === 61, 'the register holds 61 standards (44 + the 17 adopted 2–3 Oct 2026): ' + REG.S.length);
+    ok(COUNT.live === 33 && COUNT.part === 16 && COUNT.plan === 12, 'in force 33 · partly 16 · planned 12 (' + COUNT.live + ' · ' + COUNT.part + ' · ' + COUNT.plan + ')');
+    const fields = REG.S.filter((r) => !r.a || !r.k || !Array.isArray(r.c) || !r.c.length || !r.p);
+    ok(fields.length === 0, 'every row has an area, a kind, an applies-in and the plain-words line' + (fields.length ? ' — missing on ' + fields.map((r) => r.n).join('; ') : ''));
+    const areas = REG.A.map((a) => a[0]), kinds = REG.K.map((k) => k[0]), ctry = REG.C.map((c) => c[0]);
+    ok(REG.S.every((r) => areas.indexOf(r.a) >= 0 && kinds.indexOf(r.k) >= 0 && r.c.every((c) => ctry.indexOf(c) >= 0)), 'every area, kind and country code is one the vocabularies define');
+    const noMiss = REG.S.filter((r) => r.s !== 'live' && !(r.m && r.m.length > 3));
+    ok(noMiss.length === 0, 'every Partly and Planned row says what is missing' + (noMiss.length ? ' — ' + noMiss.map((r) => r.n).join('; ') : ''));
+    ok(REG.S.every((r) => r.s !== 'live' || !r.m), 'an In force row carries no "missing" line (a stated limit is `limit`, shown as Limit:)');
+    ok(REG.S.filter((r) => r.limit).map((r) => r.n).sort().join('|') === ['AS 2 / Ind AS 2', 'CGST Act s.9(3)/9(4) + notifications; s.49(4), Rule 86(2)', 'Schedule III, Companies Act (Division I)'].sort().join('|'), 'the three In force rows with a stated limit carry it: Schedule III, AS 2, reverse charge');
+    /* the words are the register's own: row by row against the designer's data (which was built from the register), every field both hold */
+    const keys = ['g', 'n', 'w', 'ex', 'exWhy', 's', 'note', 'at', 'go', 'why', 'a', 'k', 'p', 'm', 'limit', 'eq'];
+    const diff = [];
+    DESIGN.rows.forEach((d, i) => { const r = REG.S[i]; keys.forEach((k) => { if ((r && r[k] || undefined) !== (d[k] || undefined)) diff.push(i + ':' + k); }); if (!r || JSON.stringify(r.c) !== JSON.stringify(d.c)) diff.push(i + ':c'); });
+    ok(DESIGN.rows.length === REG.S.length && diff.length === 0, 'all 61 rows equal the designer\'s data, field for field' + (diff.length ? ' — ' + diff.slice(0, 6).join(' ') : ''));
+    const added = REG.S.filter((r) => r.added);
+    ok(added.length === 17 && added.filter((r) => r.s === 'live').length === 11 && added.filter((r) => r.s === 'part').length === 4 && added.filter((r) => r.s === 'plan').length === 2, 'the 17 additions carry their stated statuses: 11 in force, 4 partly, 2 planned');
+    ok(REG.S.filter((r) => /WCAG/.test(r.n) && /1\.4\.3/.test(r.n)).length === 1 && /16 themes/.test(REG.S[11].note), 'no second WCAG contrast row: the existing one now says all 16 themes');
+    ok(REG.CH === '2026-10-03', 'the register says when it was last checked (STD_CHECKED)');
+    ok(new Set(REG.S.map((r) => r.n)).size === REG.S.length, 'no standard is listed twice');
+  }
+
+  /* ── the page's own source ── */
+  {
+    const src = fs.readFileSync(path.join(PUB, 'standards.html'), 'utf8');
+    ok(!/\balert\s*\(/.test(src), 'no alert() anywhere in the page');
+    ok(!/accounting|books of account/i.test(src), 'the source carries neither forbidden string');
+    ok(/<title>Standards<\/title>/.test(src), 'the page is named Standards');
+    ok(/CBList\.mount\(/.test(src) && /src="\/app\/list-ctl\.js"/.test(src) && /src="\/app\/cap-standards\.js"/.test(src), 'the list is a CBList mount and the register is cap-standards.js');
+    ok(/stdWhyHTML\(/.test(src) && /stdRecordHTML\(/.test(src) && /stdGoto\(/.test(src), 'the sheets are the register\'s stdWhyHTML / stdRecordHTML and the app door is its stdGoto');
+    ok(!/PROTOTYPE|kural|kbar/i.test(src), 'the purple prototype strip and the kural footer are not built');
+    ok(!/\bSTANDARDS\s*=\s*\[|window\.STD_PAGE/.test(src), 'the page holds no copy of the register');
+  }
+
+  /* ── 2 · LAPTOP ──────────────────────────────────────────────────────────────────────────────────────────── */
+  const S = { calls: [] };
+  {
+    const { ctx, p } = await open(S);
+    ok(/^Standards$/.test((await p.textContent('.cbl-title h1')).trim()), 'the title row says Standards');
+    ok(/checked 3 Oct 2026/.test(await p.textContent('[data-testid="std-checked"]')), 'and "checked 3 Oct 2026" — once; the counts are in the matrix, not repeated up here');
+    ok(await p.locator('.cbl-title').innerText().then((t) => !/\b33\b/.test(t)), 'the title row does not repeat the totals the matrix\'s All row says');
+    ok((await p.textContent('[data-testid="shop-name"]')).trim() === 'Mayur Bhavan', 'the signed-in shop is named in the title row');
+    ok(await p.locator('#std_list.cbl').count() === 1 && await p.locator('#std_list .cbl-hdr').count() === 1, 'the list is a CBList mount (its header, its tools)');
+    const heads = await p.$$eval('#std_list .cbl-hc', (h) => h.map((x) => x.innerText.replace(/[▲▼⇅]/g, '').trim()));
+    ok(heads.join('|') === 'WHAT IT DOES FOR YOU|REFERENCE|APPLIES IN|STATUS', 'three columns and the status: ' + heads.join(' · '));
+    ok(await p.locator('#std_list .cbl-rz').count() === 4, 'every column has a resize handle (the unit\'s)');
+    ok(/61 shown/.test(await count(p)), 'all 61 are listed: ' + (await count(p)));
+    const mxAll = await p.$$eval('[data-testid^="std-cell-*-"]', (n) => n.map((x) => x.textContent.trim()));
+    ok(mxAll.join(' ') === COUNT.live + ' ' + COUNT.part + ' ' + COUNT.plan, 'the matrix\'s All row is the register\'s own counts: ' + mxAll.join(' · '));
+    const areaRows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
+    ok(areaRows.join('|') === 'Selling|Buying|Money & GST|Books|People & privacy|Look & access|How we build|All', 'Count by Area: seven areas and All');
+    /* every matrix cell is the register's own count */
+    let cellsOk = true;
+    for (const a of REG.A) for (const st of ['live', 'part', 'plan']) {
+      const want = REG.S.filter((r) => r.a === a[0] && r.s === st).length;
+      const el = p.locator('[data-testid="std-cell-' + a[0] + '-' + st + '"]');
+      const got = want ? (await el.count() ? (await el.textContent()).trim() : 'missing') : (await p.locator('#mxBody [aria-label="' + a[1] + ', ' + REG.ST.filter((x) => x[0] === st)[0][1] + ': none"]').count() ? '0' : 'missing');
+      if (String(want) !== got) { cellsOk = false; console.log('     cell ' + a[0] + '/' + st + ' want ' + want + ' got ' + got); }
+    }
+    ok(cellsOk, 'all 21 area × status cells equal the register\'s own count (and a nothing is "—")');
+    const hdrB = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom), ih = 768;
+    ok(hdrB / ih <= 0.20, 'the head (title · tools · column header) is ' + Math.round(hdrB / ih * 100) + '% of the window (limit 20%)');
+    ok(await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); return l.scrollHeight > l.clientHeight && getComputedStyle(l).overflowY !== 'visible'; }), 'only the rows scroll (the list is its own scroller; the head stays)');
+    const w = await width(p);
+    ok(w.sw <= w.iw, 'no sideways scroll on the laptop (' + w.sw + '/' + w.iw + ')');
+    ok(await p.locator('.cbl-hc [data-sort]').count() >= 3 && await p.locator('[data-testid="cbl-filters-standards"]').count() === 1, 'sortable columns and a Filters button (the unit\'s)');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-laptop.png') });
+
+    /* ── 3 · THE CELL IS THE LIST'S FILTER ── */
+    await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(250);
+    const want3 = REG.S.map((r, i) => [r, i]).filter(([r]) => r.a === 'money' && r.s === 'part').map(([, i]) => String(i)).sort();
+    ok((await rowIds(p)).sort().join() === want3.join() && want3.length === 3, 'Money & GST × Partly: the list shows exactly those 3 (' + (await count(p)) + ')');
+    ok(/3 shown of 61/.test(await count(p)), 'and says "3 shown of 61"');
+    const ch = await chips(p);
+    ok(ch.length === 2 && ch.indexOf('Status: Partly') >= 0 && ch.indexOf('Area: Money & GST') >= 0, 'the unit\'s own chips carry the choice (' + ch.join(' · ') + ')');
+    ok((await pressed(p)).join() === 'std-cell-money-part', 'exactly one cell is lit');
+    const missing = await p.$$eval('[data-testid^="std-row-"] .miss', (n) => n.length);
+    ok(missing === 3, 'each of the three rows says what is missing IN the row (' + missing + ')');
+    const hdrB2 = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr').getBoundingClientRect().bottom);
+    console.log('     head with a cell chosen: ' + Math.round(hdrB2 / ih * 100) + '% (two chips; the unit wraps them to a line of their own)');
+    ok(hdrB2 / ih <= 0.25, 'the head with a cell chosen stays within 25% (' + Math.round(hdrB2 / ih * 100) + '%)');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-cell.png') });
+    /* the same cell again clears it */
+    await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(200);
+    ok(/61 shown/.test(await count(p)) && (await chips(p)).length === 0 && (await pressed(p)).join() === 'std-mx-row-*', 'choosing the lit cell again clears it (the All row is lit, no chips)');
+    /* a row heading filters the row */
+    await p.click('[data-testid="std-mx-row-books"]'); await p.waitForTimeout(200);
+    ok(REG.S.filter((r) => r.a === 'books').length + ' shown of 61' === (await count(p)).replace(/^(\d+) shown of 61$/, '$1 shown of 61') && (await chips(p)).join() === 'Area: Books', 'a row heading filters the row: Books → ' + (await count(p)));
+    /* a column heading filters the status */
+    await p.click('[data-testid="std-mx-col-plan"]'); await p.waitForTimeout(200);
+    ok((await count(p)).indexOf(COUNT.plan + ' shown of 61') === 0 && (await chips(p)).join() === 'Status: Planned' && (await pressed(p)).join() === 'std-mx-col-plan,std-cell-*-plan', 'a column heading filters the status: Planned → ' + (await count(p)) + ', one chip, that heading lit with the All × Planned cell (the same filter)');
+    /* a "—" cell does nothing */
+    const nilSel = '#mxBody .mx-c.nil';
+    const before = await count(p), nilTag = await p.$eval(nilSel, (e) => e.tagName.toLowerCase());
+    await p.click(nilSel, { force: true }); await p.waitForTimeout(150);
+    ok(nilTag === 'span' && before === await count(p), 'a cell with nothing in it ("—") is not a control and does nothing');
+    /* clearing the chip clears the cell */
+    await p.click('.cbl-fchip button'); await p.waitForTimeout(200);
+    ok(/61 shown/.test(await count(p)), 'removing the unit\'s chip returns all 61');
+    /* the unit's Filters popover and the matrix are one state */
+    await p.click('[data-testid="cbl-filters-standards"]');
+    await p.selectOption('[data-testid="cbl-filters-pop-standards"] select[data-filt="status"]', 'part'); await p.waitForTimeout(250);
+    await p.keyboard.press('Escape');
+    ok((await pressed(p)).join() === 'std-mx-col-part,std-cell-*-part', 'choosing Status: Partly in the Filters popover lights the matrix\'s Partly heading (one state, shown twice)');
+    await p.click('[data-testid="std-mx-row-*"]'); await p.waitForTimeout(150);
+    ok(/61 shown/.test(await count(p)), 'the All row clears everything');
+
+    /* Count by Country and Kind */
+    await p.click('[data-testid="std-dim-country"]'); await p.waitForTimeout(150);
+    const crows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.trim()));
+    ok(crows.join('|') === 'India|Global|All', 'Count by Country: India, Global, All');
+    await p.click('[data-testid="std-cell-IN-part"]'); await p.waitForTimeout(250);
+    const inPart = REG.S.filter((r) => r.c.indexOf('IN') >= 0 && r.s === 'part').length;
+    ok((await count(p)).indexOf(inPart + ' shown') === 0 && (await chips(p)).join('|').indexOf('Applies in: India') >= 0, 'India × Partly filters by Applies in: India → ' + (await count(p)) + ' (' + (await chips(p)).join(' · ') + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-country.png') });
+    await p.click('[data-testid="std-dim-kind"]'); await p.waitForTimeout(250);
+    const krows = await p.$$eval('#mxBody .mx-rh', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    ok(krows.join('|') === 'Lawyou must|Standardagreed worldwide|Practicethe common way|All', 'Count by Kind: Law, Standard, Practice (with what each means), All');
+    ok(/61 shown/.test(await count(p)) && (await chips(p)).length === 0, 'switching what the rows count by clears the cell choice (a cell of one view means nothing in another)');
+    await p.click('[data-testid="std-cell-law-live"]'); await p.waitForTimeout(250);
+    ok((await count(p)).indexOf(REG.S.filter((r) => r.k === 'law' && r.s === 'live').length + ' shown') === 0, 'Law × In force filters by Kind → ' + (await count(p)));
+    await p.click('[data-testid="std-dim-area"]'); await p.waitForTimeout(200);
+
+    /* ── 4 · search · no match · group · a row opens ── */
+    await p.fill('[data-testid="listctl-search-standards"]', 'privacy'); await p.waitForTimeout(300);
+    const privIds = await rowIds(p);
+    ok(privIds.length > 0 && privIds.every((i) => JSON.stringify(REG.S[+i]).toLowerCase().indexOf('privacy') >= 0 || /privacy/i.test(REG.A.filter((a) => a[0] === REG.S[+i].a)[0][1])), 'search "privacy" lists only standards that say it (' + privIds.length + ')');
+    ok(await p.locator('[data-testid="std-mx-note"]').count() === 1, 'and the matrix says it still counts the whole register while a search is on');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-search.png') });
+    await p.fill('[data-testid="listctl-search-standards"]', 'zzzz'); await p.waitForTimeout(300);
+    ok(await p.locator('[data-testid="cbl-nomatch-standards"]').count() === 1 && /Nothing matches/.test(await p.textContent('[data-testid="cbl-nomatch-standards"]')), 'a search with no match says so and offers Clear');
+    await p.click('[data-testid="cbl-nomatch-standards"] button'); await p.waitForTimeout(250);
+    ok(/61 shown/.test(await count(p)), 'Clear brings the 61 back');
+    await p.click('[data-testid="cbl-group-standards"] [data-group="kind"]'); await p.waitForTimeout(200);
+    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(500);   /* the unit draws 50 rows at a time; the last group's head arrives with its rows */
+    await p.evaluate(() => { const l = document.querySelector('#std_list .cbl-list'); l.scrollTop = l.scrollHeight; }); await p.waitForTimeout(300);
+    const gk = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+    console.log('     groups: ' + JSON.stringify(gk));
+    ok(gk.length === 3 && /Law/.test(gk[0]) && /Standard/.test(gk[1]) && /Practice/.test(gk[2]), 'Group by Kind: Law · Standard · Practice, in that order, each with its count: ' + gk[0]);
+    await p.click('[data-testid="cbl-group-standards"] [data-group="country"]'); await p.waitForTimeout(200);
+    const gc = await p.$$eval('#std_list .cbl-group', (n) => n.map((x) => x.textContent.replace(/^[^A-Za-z]+/, '').replace(/\s+/g, ' ').trim().split(' ·')[0].replace(/\s*\d+$/, '').trim()));
+    ok(gc.join('|') === 'India|India and global|Global', 'Group by Country: India · India and global · Global (' + gc.join(' | ') + ')');
+    await p.click('[data-testid="cbl-group-standards"] [data-group="area"]'); await p.waitForTimeout(200);
+
+    /* a row opens: the GSTR row (Partly, Money & GST) */
+    const gi = idx('GSTR-1 / GSTR-3B (GSTN schema)');
+    await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + gi + '"]'); await p.waitForTimeout(250);
+    const dl = await p.textContent('[data-testid="std-detail-' + gi + '"]');
+    console.log('     dl: ' + dl.replace(/\s+/g, ' ').slice(0, 400));
+    ok(/Covers/.test(dl) && /Kind\s*Law\s*you must/.test(dl) && /Source/.test(dl) && !/Missing:/.test(dl), 'the row opens to label : value — Covers · Kind · Source (what is missing is already in the row, not said twice)');
+    ok(/New\s*Adopted 2–3 Oct 2026; not yet in the register/.test(dl), 'a 2–3 Oct 2026 addition says it is New and not yet in the register');
+    ok(/Why it matters|Elsewhere|In the app/.test(dl), 'and the rest of what a buyer or CA checks (why it matters · in the app)');
+    ok(await p.locator('[data-testid="std-go"]').count() === 1 && await p.locator('[data-testid="std-copy"]').count() === 1, 'two buttons: Open in the app › and Copy for a buyer or CA');
+    ok(/Open in the app ›/.test(await p.textContent('[data-testid="std-go"]')) && /Copy for a buyer or CA/.test(await p.textContent('[data-testid="std-copy"]')), 'their words are the design\'s');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-row.png') });
+    await p.click('[data-testid="std-copy"]'); await p.waitForTimeout(250);
+    const clip = await p.evaluate(() => navigator.clipboard.readText());
+    ok(/GSTR-1 \/ GSTR-3B/.test(clip) && /Status: Partly/.test(clip) && /Missing: /.test(clip) && /Kind: Law/.test(clip) && /Checked 3 Oct 2026/.test(clip), 'Copy puts the standard, kind, status, what is missing and the date on the clipboard');
+    ok(!/<[a-z]/i.test(clip) && clip.indexOf('⭐') < 0, 'and it is plain text — no markup, no code-comment markers');
+    ok(/Copied/.test(await p.textContent('#toast')), 'and says Copied');
+    /* a row with a long note says what is missing IN FULL when opened */
+    const gs1 = idx('GS1');
+    await p.fill('[data-testid="listctl-search-standards"]', 'GS1'); await p.waitForTimeout(300);
+    const gsRow = p.locator('[data-testid="std-row-' + gs1 + '"]');
+    await gsRow.click(); await p.waitForTimeout(250);
+    const gdl = await p.textContent('[data-testid="std-detail-' + gs1 + '"]');
+    ok(/What is missing, in full/.test(gdl) && /check-digit validation is not enforced/.test(gdl) && /In the register/.test(gdl) && !/New/.test(gdl), 'a Partly row from the register opens to "What is missing, in full" (the register\'s own note) and says it is In the register');
+    await gsRow.click(); await p.waitForTimeout(150);
+    await p.fill('[data-testid="listctl-search-standards"]', 'GSTR-1'); await p.waitForTimeout(300);
+    const goTo = REG.S[gi].go;
+    await Promise.all([p.waitForURL(/\/app\.html#\/app\//), p.click('[data-testid="std-go"]')]);
+    ok(p.url().indexOf('/app.html#/app/' + goTo) > 0 || p.url().indexOf('/app.html#/app/settings') > 0, 'Open in the app › goes to the app\'s own door (' + p.url().replace(base, '') + ')');
+    await ctx.close();
+  }
+  {
+    /* a row whose place in the app is not named has no Open button */
+    const { ctx, p } = await open(S);
+    const noGo = REG.S.map((r, i) => [r, i]).filter(([r]) => !r.go)[0];
+    ok(!!noGo, 'the register has a row with no place in the app: ' + (noGo && noGo[0].n));
+    await p.fill('[data-testid="listctl-search-standards"]', noGo[0].n); await p.waitForTimeout(300);
+    await p.click('[data-testid="std-row-' + noGo[1] + '"]'); await p.waitForTimeout(200);
+    ok(await p.locator('[data-testid="std-go"]').count() === 0 && await p.locator('[data-testid="std-copy"]').count() === 1, 'it offers Copy only — never a button that goes nowhere');
+    await ctx.close();
+  }
+
+  /* ── 5 · THE TWO SHEETS ── */
+  {
+    const { ctx, p } = await open(S);
+    await p.click('[data-testid="std-open-why"]'); await p.waitForSelector('dialog[open] [data-testid="std-sheet-why"]'); await p.waitForTimeout(200);
+    const why = await p.textContent('[data-testid="std-sheet-why"]');
+    ok(/crosses a boundary/i.test(why) && /What it buys/i.test(why) && /What it costs/i.test(why) && /What it has actually caught here/i.test(why), 'Why follow standards: the structural claim · what it buys · what it costs · what it has actually caught');
+    ok(/117 real failures/.test(why) && /broken promise/.test(why), 'with the evidence and the obligation it creates, in the register\'s own words');
+    const sb = await p.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { w: r.width, l: r.left, iw: window.innerWidth }; });
+    ok(sb.w <= 560 && sb.l > 700, 'on a laptop it is a side sheet (' + Math.round(sb.w) + ' px wide, from ' + Math.round(sb.l) + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-sheet-why.png') });
+    await p.keyboard.press('Escape'); await p.waitForTimeout(150);
+    ok(await p.locator('dialog[open]').count() === 0, 'Esc closes the sheet');
+    await p.click('[data-testid="std-open-record"]'); await p.waitForSelector('dialog[open] [data-testid="std-sheet-record"]'); await p.waitForTimeout(200);
+    const rec = await p.textContent('[data-testid="std-sheet-record"]');
+    ok(/One chit, every standard in it/i.test(rec) && rec.indexOf('0904.11') > 0 && rec.indexOf('08901234567894') > 0, 'One record, every standard: the pepper chit, a real HS code and a real GTIN');
+    ok(/ISO 6523 · planned/i.test(rec) && /Greyed fields are not built yet/i.test(rec) && /never translated/i.test(rec), 'planned fields are labelled planned, "not built yet" is said, and the product name is marked never translated');
+    const dim = await p.evaluate(() => {
+      const planned = Array.from(document.querySelectorAll('[data-testid="std-sheet-record"] div')).filter((d) => /ISO 6523 · planned/.test(d.textContent) && d.children.length >= 2 && d.style.borderBlockStart !== '').pop();
+      const live = Array.from(document.querySelectorAll('[data-testid="std-sheet-record"] div')).filter((d) => /ISO 4217 · in force/.test(d.textContent) && d.children.length >= 2 && d.style.borderBlockStart !== '').pop();
+      const op = (n) => { let a = 1; for (; n && n !== document.body; n = n.parentElement) a *= Number(getComputedStyle(n).opacity); return a; };
+      const val = (d) => getComputedStyle(d.querySelector('span:nth-child(2)')).color;
+      return { opP: op(planned), opL: op(live), cP: val(planned), cL: val(live) };
+    });
+    ok(dim.opP === 1 && dim.opL === 1 && dim.cP !== dim.cL, 'a planned field is dimmed by the theme\'s muted ink (' + dim.cP + ' vs ' + dim.cL + '), not by opacity (' + dim.opP + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-sheet-record.png') });
+    await p.click('[data-testid="std-sheet-x"]'); await p.waitForTimeout(150);
+    ok(await p.locator('dialog[open]').count() === 0, 'the ✕ closes it');
+    await ctx.close();
+    const o2 = await open(S, { path: '/standards.html?sheet=why' });
+    ok(await o2.p.locator('dialog[open] [data-testid="std-sheet-why"]').count() === 1, '/standards.html?sheet=why opens the first sheet (the door\'s Read me)');
+    await o2.ctx.close();
+  }
+
+  /* ── 6 · THE WAY IN from the index page (a foot link while the door box waits for room in the 250-word budget), and Settings ── */
+  {
+    const SI = { calls: [] };
+    const { ctx, p } = await open(SI, { path: '/', noWait: true });
+    await p.waitForSelector('[data-testid="foot-standards"]', { timeout: 15000 });
+    ok(await p.getAttribute('[data-testid="foot-standards"]', 'href') === 'standards.html', 'the index page links Standards from its foot row');
+    ok(await p.getAttribute('[data-testid="foot-crm"]', 'href') === 'crm.html', 'and CRM beside it');
+    ok(await p.locator('[data-testid="day-to-day"] .box').count() === 3, 'the three boxes under Day to day are still three');
+    await ctx.close();
+  }
+  {
+    /* Settings › Standards: run the function as the app does, with the helpers it needs */
+    const src = fs.readFileSync(path.join(PUB, 'app', 'cap-admin.js'), 'utf8');
+    const a = src.indexOf('function standardsSettingsHTML(){'), z = src.indexOf('function appearanceSettingsHTML(){');
+    const fnSrc = src.slice(a, z);
+    ok(a > 0 && z > a, 'cap-admin.js still has standardsSettingsHTML');
+    ok(!/setStdTab|std-tab-|groupsOf|BADGE/.test(fnSrc) && !/function stdTab\(|function setStdTab\(/.test(src), 'Settings no longer lists the register: its tabs, rows and badges are gone from cap-admin.js');
+    const g = { _CARD: '', _misHead: (t) => '<h2>' + t + '</h2>', esc: (s) => String(s), tx: (s) => s, stdCounts: null,
+      CBLocale: { regionInfo: () => ({ name: 'India' }), langs: () => ['en'], langName: (x) => x, dir: () => 'ltr', tag: () => 'en-IN', number: () => '1,23,45,678.5', money: () => '₹1,23,456.50', date: () => '3 Oct 2026', time: () => '10:00', timezone: () => 'Asia/Kolkata', workdays: () => [1, 2, 3, 4, 5, 6], hasWorkdayOverride: () => false } };
+    vm.createContext(g);
+    vm.runInContext(fs.readFileSync(path.join(PUB, 'app', 'cap-standards.js'), 'utf8'), g);
+    const html = vm.runInContext(fnSrc + ';standardsSettingsHTML()', g);
+    ok(/data-testid="std-yours"/.test(html) && /Region/.test(html) && /Reading order/.test(html), 'Settings › Standards keeps What you follow — the live reading of the person\'s own settings');
+    ok(/href="\/standards\.html"/.test(html) && new RegExp(COUNT.live + ' in force').test(html) && new RegExp(COUNT.part + ' partly').test(html), 'and the door to the page, with the register\'s own counts');
+    ok(!/Incoterms|BCP 47|GS1|What we follow<|Your trade|Why bother/.test(html), 'and lists no standard (the register is read on the page)');
+  }
+
+  /* ── 7 · PHONE ───────────────────────────────────────────────────────────────────────────────────────────── */
+  {
+    const { ctx, p } = await open(S, { viewport: { width: 390, height: 844 } });
+    let w = await width(p);
+    ok(w.sw === 390, 'phone, matrix page: document.scrollWidth === 390 (' + w.sw + ')');
+    ok(await p.locator('#mxp').isVisible() && !(await p.locator('#main').isVisible()), 'the matrix is page one (the list is not on it)');
+    ok(await p.locator('.who .back').isHidden(), 'and it has no ‹ back');
+    const mb = await p.evaluate(() => document.querySelector('#mxBody .mx').getBoundingClientRect().right);
+    ok(mb <= 390, 'the matrix fits the width (right edge ' + Math.round(mb) + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-phone-matrix.png') });
+    await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(300);
+    ok(await p.locator('#main').isVisible() && !(await p.locator('#mxp').isVisible()), 'a cell opens page two: the list');
+    ok((await rowIds(p)).length === 3, 'with the 3 rows of the cell');
+    ok(await p.locator('.who .back').isVisible(), 'and a ‹ back');
+    w = await width(p);
+    ok(w.sw === 390, 'phone, list page: document.scrollWidth === 390 (' + w.sw + ')');
+    const cards = await p.evaluate(() => { const r = document.querySelector('[data-testid^="std-row-"]'); return { card: !!r.closest('.cbl-card, .cbl-row') && getComputedStyle(r).display, w: r.getBoundingClientRect().width, labs: Array.from(r.querySelectorAll('.cbl-cell')).length }; });
+    ok(cards.w <= 390 && cards.labs <= 4, 'each row is a card within the width, at most plain words · reference · applies in · status (' + cards.labs + ' fields)');
+    const head = await p.evaluate(() => document.querySelector('#std_list .cbl-hdr, #std_list .cbl-list').getBoundingClientRect().top);
+    ok(head / 844 <= 0.35, 'the head on the list page is ' + Math.round(head / 844 * 100) + '% of the phone (limit 35% with a cell chosen)');
+    await p.click('[data-testid^="std-row-"]'); await p.waitForTimeout(250);
+    ok(await p.locator('[data-testid^="std-detail-"]').count() === 1, 'a card opens');
+    w = await width(p);
+    ok(w.sw === 390, 'phone, a row open: document.scrollWidth === 390 (' + w.sw + ')');
+    await p.screenshot({ path: path.join(SHOTS, 'standards-phone-list.png') });
+    await p.click('[data-testid="std-back"]'); await p.waitForTimeout(200);
+    ok(await p.locator('#mxp').isVisible() && !(await p.locator('#main').isVisible()), '‹ back returns to the matrix');
+    await p.click('[data-testid="std-open-record"]'); await p.waitForSelector('dialog[open]'); await p.waitForTimeout(200);
+    const sb = await p.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { w: r.width, h: r.height }; });
+    w = await width(p);
+    ok(sb.w >= 389 && sb.h >= 843 && w.sw === 390, 'on a phone a sheet fills the screen and nothing scrolls sideways (' + Math.round(sb.w) + '×' + Math.round(sb.h) + ', scrollWidth ' + w.sw + ')');
+    await p.keyboard.press('Escape');
+    await p.click('[data-testid="std-open-why"]'); await p.waitForSelector('dialog[open]'); await p.waitForTimeout(200);
+    w = await width(p);
+    ok(w.sw === 390, 'Why follow standards on the phone: scrollWidth === 390 (' + w.sw + ')');
+    await ctx.close();
+  }
+
+  /* ── 8 · EVERY THEME, MEASURED ───────────────────────────────────────────────────────────────────────────── */
+  {
+    const probe = await open(S);
+    const keys = await probe.p.evaluate(() => Object.keys(CBScreen.APP_THEMES));
+    await probe.ctx.close();
+    ok(keys.length === 16 && keys.indexOf('terminal') >= 0 && keys.indexOf('dark') >= 0, 'APP_THEMES has all 16 themes (' + keys.join(' ') + ')');
+    const th = ['cream'].concat(keys.filter((k) => k !== 'cream'));
+    const fails = [], table = {};
+    const VIEWPORTS = [['laptop', { width: 1366, height: 768 }], ['phone', { width: 390, height: 844 }]];
+    for (const [vname, vp] of VIEWPORTS) {
+      const { ctx, p } = await open(S, { viewport: vp });
+      const states = [];
+      /* [name, how to reach it from the clean matrix page] */
+      states.push(['matrix', async () => {}]);
+      states.push(['cell + row opened', async () => {
+        await p.click('[data-testid="std-cell-money-part"]'); await p.waitForTimeout(150);
+        await p.click('[data-testid^="std-row-"]'); await p.waitForTimeout(150);
+      }]);
+      states.push(['why sheet', async () => { await p.click('[data-testid="std-open-why"]'); await p.waitForSelector('dialog[open]'); await p.waitForTimeout(100); }]);
+      states.push(['record sheet', async () => { await p.click('[data-testid="std-open-record"]'); await p.waitForSelector('dialog[open]'); await p.waitForTimeout(100); }]);
+      for (const [sname, go] of states) {
+        /* a fresh page for each state: the cell choice and the sheets are state */
+        await p.goto(base + '/standards.html'); await p.waitForSelector('#mxBody .mx-all'); await p.waitForFunction(() => window.CBScreen && window.CBAvatar);
+        if (sname === 'cell + row opened') { await go(); } else if (/sheet/.test(sname)) { await p.goto(base + '/standards.html?view=matrix'); await p.waitForSelector('#mxBody .mx-all'); await go(); } else { await go(); }
+        const key = vname + ' · ' + sname; table[key] = {};
+        for (const k of th) {
+          await p.evaluate((kk) => { CBAvatar.applyTheme(kk); }, k);
+          await p.waitForTimeout(40);
+          const pairs = await p.evaluate(measure);
+          const bad = pairs.filter((x) => x.ratio < x.need);
+          table[key][k] = [pairs.length, bad.length];
+          bad.forEach((x) => fails.push(Object.assign({ screen: key, theme: k }, x)));
+          if (k === 'dark' && sname === 'cell + row opened' && vname === 'laptop') await p.screenshot({ path: path.join(SHOTS, 'standards-dark-laptop.png') });
+          if (k === 'terminal' && sname === 'cell + row opened' && vname === 'phone') await p.screenshot({ path: path.join(SHOTS, 'standards-terminal-phone.png') });
+        }
+        await p.evaluate(() => { try { CBAvatar.applyTheme('cream'); } catch (_) {} });
+      }
+      await ctx.close();
+    }
+    const total = Object.keys(table).reduce((a, s) => a + th.reduce((c, k) => c + table[s][k][0], 0), 0);
+    console.log('\n  PAGE-STATE × THEME (failing pairs; . = none)');
+    console.log('   ' + ''.padEnd(28) + th.map((k) => k.slice(0, 4).padStart(5)).join(''));
+    Object.keys(table).forEach((s) => console.log('   ' + s.padEnd(28) + th.map((k) => String(table[s][k][1] || '.').padStart(5)).join('')));
+    if (fails.length) {
+      const grouped = {};
+      fails.forEach((f) => { const g = f.screen + ' | ' + f.theme + ' | ' + f.cat; (grouped[g] = grouped[g] || []).push(f); });
+      console.log('\n  FAILING PAIRS (' + fails.length + '):');
+      Object.keys(grouped).slice(0, 60).forEach((g) => { const a = grouped[g]; console.log('   ' + g + ' | ' + a.length + 'x | worst ' + Math.min.apply(null, a.map((f) => f.ratio)) + ' (need ' + a[0].need + ') e.g. "' + a[0].text + '" ' + a[0].html); });
+    }
+    ok(total > 2000, 'a measurement of something: ' + total + ' text pairs measured across ' + Object.keys(table).length + ' views × ' + th.length + ' themes');
+    ok(fails.length === 0, 'every visible text pair, in all 16 themes + Cream, on the laptop and the phone, on the matrix · a chosen cell with a row open · both sheets, clears WCAG AA (' + fails.length + ' failing)');
+  }
+
+  const other = S.calls.filter((c) => c !== 'GET /api/entities/me');
+  ok(other.length === 0, 'the Standards page reads nothing from the API — the register is the file; the only call is the avatar\'s own GET /api/entities/me (' + S.calls.length + ' of it' + (other.length ? '; ALSO ' + other[0] : '') + ')');
+  ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
+  ok(offHost.length === 0, 'nothing tried to leave the browser' + (offHost.length ? ': ' + offHost[0] : ''));
+  await b.close(); srv.close();
+  console.log('\nstandards-page: ' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
+})().catch((e) => { console.error(e); process.exit(1); });

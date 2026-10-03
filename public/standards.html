@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en" data-tokens="list">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Standards</title>
+<!-- ⭐ STANDARDS — the laws and standards we follow, and what is still missing (docs/design/standards-page is the design; docs/design/standards/REQUIREMENT.md the ask).
+     It replaces Settings › Standards as the place to READ the register; Settings keeps what is about your own settings.
+     REUSE (CLAUDE.md rule 1, named in the PR): the list is a CBList mount (app/list-ctl.js) with its filters · groups · sorts · ⚙ columns ·
+     opened row · row actions; the data is the register in app/cap-standards.js (STANDARDS · STD_AREAS/KINDS/COUNTRIES/STATUS · STD_CHECKED);
+     the two sheets are its stdWhyHTML() and stdRecordHTML(); "Open in the app" is its stdGoto(); the avatar is CBAvatar (app/avatar.js).
+     NEW here and nowhere else: the matrix pane (counts by Area · Country · Kind × In force · Partly · Planned), whose every cell IS the list's
+     own filter — it sets the unit's Status and Area / Kind / Applies in filters and keeps no filter of its own (one value, one control).
+     The page paints the register and counts it; it reads nothing from the API and computes nothing a shop's figure depends on. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* tokens — docs/design/SYSTEM.md §2, as index.html carries them; a chosen theme (CBAvatar) re-points every one */
+:root{
+  --page:#FCFAF5; --card:#FFFFFF; --panel:#F3EFE6;
+  --line:#DDD6C6; --line-soft:#E6E0D2; --hair:#F0ECE2;
+  --ink:#1D1B16; --muted:#5E594D; --faint:#8A8374; --ghost:#A8A295;
+  --green:#16693F; --green-d:#0D4A2B; --green-t:#E8F4ED; --green-b:#A9D3BC;
+  --amber:#E0A020; --amber-t:#FDF3DC; --amber-b:#EFD39A; --amber-i:#7A5205;
+  --red:#C4562F; --red-t:#FBEAE3; --red-b:#E7B9A8; --red-i:#8E3517;
+  --blue:#2F74C9; --blue-t:#E4EEFA; --blue-b:#B9D2EF; --blue-i:#174A87;
+  /* the names cap-standards.js paints the two sheets with (stdWhyHTML · stdRecordHTML), mapped onto this palette so a chosen theme reaches them */
+  --grey:var(--muted); --on-card:var(--ink); --ok-2:var(--green-d); --warn-2:var(--amber-i); --blue-2:var(--blue-i);
+  --ok-tint:var(--green-t); --warn-tint:var(--amber-t); --neutral-tint:var(--panel);
+  --shadow:0 10px 28px rgba(29,27,22,.16);
+}
+:root[data-themed]{--green-d:color-mix(in srgb,var(--ok-2,#0D4A2B) 80%,var(--ink))}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--page);color:var(--ink);font-family:var(--f-ui,'IBM Plex Sans',system-ui,sans-serif);font-size:calc(15px * var(--k,1));line-height:1.45}
+button,a,select,input{font:inherit;color:inherit} button{cursor:pointer} a{text-decoration:none}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* the screen: the matrix pane beside the list — the frame Ledgers uses (a set on the left, the list on the right) */
+.app{height:100%;display:flex;flex-direction:column;container-type:inline-size;container-name:stdpage}
+.body{flex:1;min-height:0;display:flex}
+.main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.main #std_list{flex:1;min-height:0}
+/* the title row's right end: ‹ back (phone, list page) · shop · Home · avatar */
+.who{display:flex;align-items:center;gap:8px;min-width:0}
+.who .shop{font-size:calc(13.5px * var(--k,1));color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+.who .home,.who .back{display:inline-flex;align-items:center;height:34px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:calc(13.5px * var(--k,1));font-weight:600;white-space:nowrap}
+.who .back{display:none}
+.who #cb-avatar{display:inline-block;min-width:0;min-height:0}
+
+/* the row: plain words first; what is missing IN the row, never one tap away */
+.miss,.lim{display:block;margin-top:3px;font-size:calc(13px * var(--k,1));line-height:1.4}
+.miss{color:var(--amber-i)} .lim{color:var(--muted)}
+.miss b,.lim b{font-weight:600}
+.sn{font-family:var(--f-num,'IBM Plex Mono',monospace);font-size:calc(13px * var(--k,1));font-weight:500}
+.kind{display:inline-block;font-weight:600;font-size:calc(11px * var(--k,1));line-height:1.5;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:6px;padding:0 6px;margin-inline-start:2px;color:var(--muted);vertical-align:1px;white-space:nowrap}
+.kind.k-law{border-color:var(--ink);color:var(--ink)}
+.st{font-weight:600;white-space:nowrap}
+.st-live,.c-live,.c-live b{color:var(--green)} .st-part,.c-part,.c-part b{color:var(--amber-i)} .st-plan,.c-plan,.c-plan b{color:var(--muted)}
+/* what a row opens to: a label · value sheet, never sideways */
+.sd{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:6px 16px;margin:2px 0 0;max-width:820px;font-size:calc(14px * var(--k,1))}
+.sd dt{color:var(--muted);font-size:calc(12px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding-top:2px}
+.sd dd{margin:0;line-height:1.5;min-width:0;overflow-wrap:anywhere}
+.sd code{font-family:var(--f-num,'IBM Plex Mono',monospace);font-size:calc(13px * var(--k,1));background:var(--panel);border-radius:5px;padding:1px 6px}
+.exw{color:var(--muted);font-size:calc(13px * var(--k,1));margin-top:4px}
+.new{display:inline-block;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.05em;text-transform:uppercase;color:var(--blue-i);background:var(--blue-t);border:1px solid var(--blue-b);border-radius:6px;padding:0 6px;margin-inline-end:6px}
+
+/* ── the matrix pane ── */
+.mxp{width:min(340px,32%);flex:0 0 auto;display:flex;flex-direction:column;min-height:0;background:var(--page);border-inline-end:1px solid var(--line)}
+.mx-body{flex:1;min-height:0;overflow:auto;padding:12px 14px 20px 16px}
+.mx-tools{display:flex;align-items:center;gap:8px;margin:2px 0 10px;flex-wrap:wrap}
+.mx-lab{font-size:calc(12px * var(--k,1));font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card);height:34px}
+.seg button{border:0;background:none;padding:0 12px;font-size:calc(13.5px * var(--k,1));border-inline-start:1px solid var(--line-soft)}
+.seg button:first-child{border-inline-start:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--page);font-weight:600}
+.mx{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,64px);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card)}
+.mx-r{display:contents}
+.mx-r > *{border-bottom:1px solid var(--hair);min-height:44px}
+.mx-h > *{background:var(--panel);border-bottom:1.5px solid var(--line);min-height:38px}
+.mx-ch{border:0;font-weight:700;font-size:calc(11px * var(--k,1));letter-spacing:.04em;text-transform:uppercase;padding:5px 2px;text-align:center;line-height:1.2;display:flex;flex-direction:column;align-items:center;gap:1px}
+.mx-ch .sym{font-size:calc(14px * var(--k,1))}
+.mx-rh{border:0;background:none;text-align:start;padding:6px 10px;font-weight:600;display:flex;flex-direction:column;justify-content:center;line-height:1.25}
+.mx-sub{font-size:calc(12px * var(--k,1));color:var(--muted);font-weight:400}
+.mx-c{border:0;background:none;font-weight:600;font-size:calc(16px * var(--k,1));font-family:var(--f-num,'IBM Plex Mono',monospace);font-variant-numeric:tabular-nums;text-align:center;display:grid;place-items:center}
+.mx-c.nil{color:var(--muted);font-weight:400}
+.mx .c-live,.mx .c-live b{color:var(--green-d)}   /* the deeper green: on the panel behind the headings, --green falls under AA in Vibrant and Flowery (measured) */
+.mx-c:hover,.mx-rh:hover,.mx-ch:hover{background:var(--page)}
+.mx-c[aria-pressed="true"],.mx-rh[aria-pressed="true"],.mx-ch[aria-pressed="true"]{background:var(--blue-t);box-shadow:inset 0 0 0 2px var(--blue)}
+.mx-all > *{border-bottom:0;border-top:1.5px solid var(--line);background:var(--panel)}
+.mx-all .mx-rh{font-weight:700}
+.mx-note{font-size:calc(12.5px * var(--k,1));color:var(--muted);margin:8px 2px 0}
+.mx-more{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tbtn{height:34px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:0 10px;font-size:calc(13.5px * var(--k,1));white-space:nowrap}
+
+/* ── the two sheets: a side sheet on a laptop, the whole screen on a phone ── */
+dialog.sheet{position:fixed;inset-block:0;inset-inline:auto 0;margin:0;width:min(560px,100%);max-width:100%;height:100%;max-height:100%;padding:0;border:0;border-inline-start:1px solid var(--line);
+  background:var(--card);color:var(--ink);box-shadow:var(--shadow);flex-direction:column}
+dialog.sheet[open]{display:flex}
+dialog.sheet::backdrop{background:color-mix(in srgb,var(--ink) 40%,transparent)}
+.sh-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px 10px 20px;border-bottom:1px solid var(--line-soft)}
+.sh-head h2{margin:0;font-family:var(--f-display,'Bricolage Grotesque',sans-serif);font-weight:800;font-size:calc(20px * var(--k,1));line-height:1.2}
+.sh-x{border:1px solid var(--line);background:var(--card);border-radius:9px;min-width:40px;min-height:40px}
+.sh-body{flex:1;overflow:auto;padding:14px 20px calc(24px + env(safe-area-inset-bottom,0px))}
+.sh-lead{margin:0 0 12px;line-height:1.55;color:var(--muted);font-size:calc(14px * var(--k,1))}
+
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--page);padding:10px 16px;border-radius:10px;font-size:calc(14px * var(--k,1))}
+#toast[hidden]{display:none}
+
+/* ── phone: the matrix is the first page, the list the second (‹ back), like Ledgers ── */
+@container stdpage (max-width: 640px){
+  .body{display:block}
+  .mxp{width:100%;height:100%;border-inline-end:0}
+  .app[data-view="list"] .mxp{display:none}
+  .app[data-view="matrix"] .main{display:none}
+  .app[data-view="list"] .main{height:100%}
+  .app[data-view="list"] .who .back{display:inline-flex}
+  .who .shop{display:none}
+  .who .home{width:34px;padding:0;justify-content:center}
+  .who .home .hw{display:none}
+  .mx-body{padding:12px 16px 20px}
+  .sd{grid-template-columns:minmax(0,1fr);gap:2px}
+  .sd dd{margin-bottom:6px}
+  dialog.sheet{width:100%}
+}
+@container stdpage (max-width: 1200px) and (min-width: 641px){ .who .shop{display:none} }
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+</head>
+<body>
+<div class="app" id="app" data-view="matrix">
+  <div class="body">
+    <!-- the matrix pane: count by Area · Country · Kind × In force · Partly · Planned. A cell is the list's own filter. -->
+    <nav class="mxp" id="mxp" aria-label="Standards matrix"><div class="mx-body" id="mxBody" data-testid="std-matrix"></div></nav>
+    <main class="main" id="main"><div id="std_list" data-testid="std-list"></div></main>
+  </div>
+</div>
+<dialog class="sheet" id="sheet" data-testid="std-sheet" aria-label="Detail"></dialog>
+<div id="toast" role="status" hidden></div>
+
+<script src="/engine/screen.js"></script>   <!-- APP_THEMES: the themes the avatar applies (engines screen) -->
+<script src="/app/avatar.js"></script>   <!-- CBAvatar: the one avatar (Profile · Support · Sign out) and the look it owns — nothing of it is drawn here -->
+<script>
+'use strict';
+/* the two helpers cap-standards.js paints with (it calls esc() and tx() from whatever page loads it); this page is English, so tx() is the identity */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function tx(s){ return s; }
+/* the places stdGoto() sends a reader to: the app's screens (#/app/<nav> is the app's own deep link), Settings sections as Settings */
+function navTo(k){ location.href = '/app.html#/app/' + encodeURIComponent(k); }
+function setSetSec(){ navTo('settings'); }
+</script>
+<script src="/app/list-ctl.js"></script>   <!-- CBList: the list here is a mount on it -->
+<script src="/app/cap-standards.js"></script>   <!-- the register, its vocabularies, the two sheets, stdGoto -->
+<script>
+'use strict';
+/* ═══ STANDARDS — the page: the matrix pane, the CBList mount, the two sheets. The register is cap-standards.js. ═══ */
+const $ = (id) => document.getElementById(id);
+function apiBase(){
+  try{ var f = localStorage.getItem('cb_api_base'); if (f) return f === 'stage' ? 'https://chitbridge-api-production.up.railway.app' : f;
+    var h = location.hostname; if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000'; }catch(_){}
+  return 'https://chitbridge-api-production.up.railway.app';
+}
+function session(){ try{ return JSON.parse(localStorage.getItem('cb_sess') || 'null'); }catch(_){ return null; } }
+function store(k, v){ try{ if (v === undefined) return localStorage.getItem('cb.standards.' + k); localStorage.setItem('cb.standards.' + k, v); }catch(_){ return null; } }
+function lab(list, id, at){ for (var i = 0; i < list.length; i++) if (list[i][0] === id) return list[i][at == null ? 1 : at]; return id; }
+function plain(s){ return String(s == null ? '' : s).replace(/<[^>]+>/g, ''); }
+/* the register's own prose carries <b> and <code>; keep exactly those, escape everything else (the ⭐ ⚠️ markers are the code comments' voice, not the reader's) */
+function rich(s){ return esc(String(s == null ? '' : s).replace(/⭐\s*/g, '').replace(/⚠️\s*/g, '')).replace(/&lt;(\/?)(b|code)&gt;/g, '<$1$2>'); }
+function checkedLabel(){ try{ return new Date(STD_CHECKED + 'T12:00:00Z').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }catch(_){ return STD_CHECKED; } }
+
+/* a row of the register, as the list holds it: the register's row itself (never a copy of its words) and its place */
+const ROWS = STANDARDS.map((r, i) => ({ ix: i, r: r }));
+const AREA = (r) => lab(STD_AREAS, r.a), KIND = (r) => lab(STD_KINDS, r.k), COUNTRY = (r) => r.c.map((c) => lab(STD_COUNTRIES, c)).join(' · '), STATUS = (r) => lab(STD_STATUS, r.s);
+const SORD = { live: 0, part: 1, plan: 2 };
+function countOf(rows){ var n = { live: 0, part: 0, plan: 0 }; rows.forEach((r) => { n[r.s]++; }); return n; }
+
+/* ═════ THE DECLARATION — what this page tells CBList ═════ */
+const FILTERS = [
+  { key: 'status', label: 'Status', all: 'Any', options: STD_STATUS.map((s) => ({ v: s[0], label: s[1] })), match: (x, v) => x.r.s === v },
+  { key: 'area', label: 'Area', all: 'Any', options: STD_AREAS.map((a) => ({ v: a[0], label: a[1] })), match: (x, v) => x.r.a === v },
+  { key: 'kind', label: 'Kind', all: 'Any', options: STD_KINDS.map((k) => ({ v: k[0], label: k[1] })), match: (x, v) => x.r.k === v },
+  { key: 'country', label: 'Applies in', all: 'Any', options: STD_COUNTRIES.map((c) => ({ v: c[0], label: c[1] })), match: (x, v) => x.r.c.indexOf(v) >= 0 },
+];
+function groupBy(x, mode){
+  var r = x.r;
+  if (mode === 'area') return [lab(STD_AREAS, r.a), r.a];
+  if (mode === 'kind') return [lab(STD_KINDS, r.k), r.k];
+  if (mode === 'country'){ var l = r.c.indexOf('IN') >= 0 && r.c.length === 1 ? 'India' : r.c.length > 1 ? 'India and global' : 'Global'; return [l, l]; }
+  return null;
+}
+const GROUP_ORDER = STD_AREAS.map((a) => a[0]).concat(STD_KINDS.map((k) => k[0]), ['India', 'India and global', 'Global']);
+function cols(){
+  return [
+    { key: 'what', label: 'What it does for you', prio: 1, w: 250, sort: 'what', html: true, value: (x) => x.r.p,
+      cell: (x) => esc(x.r.p) + (x.r.m ? '<span class="miss"><b>Missing:</b> ' + esc(x.r.m) + '</span>' : x.r.limit ? '<span class="lim"><b>Limit:</b> ' + esc(x.r.limit) + '</span>' : '') },
+    { key: 'std', label: 'Reference', prio: 2, w: 230, sort: 'std', html: true, value: (x) => x.r.n,
+      cell: (x) => '<span class="sn">' + esc(x.r.n) + '</span> <span class="kind k-' + esc(x.r.k) + '">' + esc(KIND(x.r)) + '</span>' },
+    { key: 'where', label: 'Applies in', prio: 3, w: 120, sort: 'where', cell: (x) => COUNTRY(x.r) },
+    { key: 'area', label: 'Area', prio: 4, w: 150, sort: 'area', cell: (x) => AREA(x.r) },
+    { key: 'at', label: 'Where in the app', prio: 5, w: 220, cell: (x) => x.r.at || '—' },
+    { key: 'ex', label: 'Clause or example', prio: 6, w: 230, mono: true, cell: (x) => plain(x.r.ex) || '—' },
+    /* the status: a symbol AND a word AND a colour, never colour alone; pinned at the end like an amount */
+    { key: 'status', label: 'Status', pin: 'end', w: 120, sort: 'status', html: true, value: (x) => SORD[x.r.s],
+      cell: (x) => '<span class="st st-' + esc(x.r.s) + '"><span aria-hidden="true">' + esc(lab(STD_STATUS, x.r.s, 2)) + '</span> ' + esc(STATUS(x.r)) + '</span>' },
+  ];
+}
+const byText = (f) => (a, b) => String(f(a)).localeCompare(String(f(b)), undefined, { numeric: true, sensitivity: 'base' });
+const SORTS = [
+  { key: 'status', label: 'Status', cmp: (a, b) => SORD[a.r.s] - SORD[b.r.s] || byText((x) => x.r.p)(a, b) },
+  { key: 'what', label: 'What it does for you', cmp: byText((x) => x.r.p) },
+  { key: 'std', label: 'Reference', cmp: byText((x) => x.r.n) },
+  { key: 'where', label: 'Applies in', cmp: byText((x) => COUNTRY(x.r)) },
+  { key: 'area', label: 'Area', cmp: byText((x) => AREA(x.r)) },
+];
+
+/* what a row opens to: everything a buyer or CA checks, nothing the row already shows */
+function nextOf(x){
+  var r = x.r, shown = (CBList.get('standards') && CBList.get('standards').state().cols) || [], h = '<dl class="sd" data-testid="std-detail-' + x.ix + '">';
+  h += '<dt>Covers</dt><dd>' + esc(r.w) + '</dd>';
+  if (shown.indexOf('std') < 0) h += '<dt>Reference</dt><dd>' + esc(r.n) + '</dd>';
+  h += '<dt>Kind</dt><dd><span class="kind k-' + esc(r.k) + '">' + esc(KIND(r)) + '</span> ' + esc(lab(STD_KINDS, r.k, 2)) + '</dd>';
+  if (r.ex && plain(r.ex) !== '—' && shown.indexOf('ex') < 0) h += '<dt>Clause or example</dt><dd><code>' + esc(plain(r.ex)) + '</code>' + (r.exWhy ? '<div class="exw">' + rich(r.exWhy) + '</div>' : '') + '</dd>';
+  if (r.note) h += '<dt>' + (r.s === 'live' ? 'Note' : 'What is missing, in full') + '</dt><dd>' + rich(r.note) + '</dd>';
+  if (r.eq) h += '<dt>Elsewhere</dt><dd>' + esc(r.eq) + '</dd>';
+  if (shown.indexOf('at') < 0 && r.at) h += '<dt>In the app</dt><dd>' + esc(r.at) + '</dd>';
+  if (r.why) h += '<dt>Why it matters</dt><dd>' + rich(r.why) + '</dd>';
+  h += '<dt>Source</dt><dd>' + (r.added ? '<span class="new">New</span> Adopted 2–3 Oct 2026; not yet in the register' : 'In the register') + '</dd></dl>';
+  return h;
+}
+/* the statement a buyer or a CA pastes into an e-mail: the standard, the clause, the status, and what is missing — in the register's words */
+function statementOf(r){
+  var t = [r.n + ' — ' + r.p, 'Kind: ' + KIND(r) + ' (' + lab(STD_KINDS, r.k, 2) + ') · Applies in: ' + COUNTRY(r), 'Status: ' + STATUS(r) + (r.limit ? ' · Limit: ' + r.limit : '')];
+  if (r.ex && plain(r.ex) !== '—') t.push('Clause or example: ' + plain(r.ex));
+  if (r.m) t.push('Missing: ' + r.m);
+  if (r.note && r.s !== 'live') t.push('In full: ' + plain(r.note));
+  if (r.eq) t.push('Elsewhere: ' + r.eq);
+  t.push('Checked ' + checkedLabel() + ' (ChitBridge standards register)');
+  return t.join('\n');
+}
+var tt;
+function toast(t){ var e = $('toast'); e.textContent = t; e.hidden = false; clearTimeout(tt); tt = setTimeout(() => { e.hidden = true; }, 2600); }
+function copyText(t){
+  var done = () => toast('Copied. Paste it where you need it.');
+  try{ if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(done, () => fallbackCopy(t, done)); }catch(_){}
+  fallbackCopy(t, done);
+}
+function fallbackCopy(t, done){
+  var a = document.createElement('textarea'); a.value = t; a.setAttribute('readonly', ''); a.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(a); a.select();
+  var ok = false; try{ ok = document.execCommand('copy'); }catch(_){} a.remove();
+  if (ok) done(); else toast('Could not copy. Select the text in the row and copy it.');
+}
+
+/* ═════ the title row's right end (the unit's head.slot): ‹ back · shop · Home · the avatar ═════ */
+function slot(el){
+  var s = session(), name = s ? (s.entity || s.name || '') : '';
+  el.innerHTML = '<span class="who"><button type="button" class="back" data-act="back" data-testid="std-back" aria-label="Back to the matrix">‹ Matrix</button>'
+    + (name ? '<span class="shop" data-testid="shop-name">' + esc(name) + '</span>' : '')
+    + '<a class="home" href="/" data-testid="std-home" aria-label="Home">⌂<span class="hw">&nbsp;Home</span></a><span id="cb-avatar" data-cb-avatar data-testid="avatar-slot"></span></span>';
+  if (typeof CBAvatar !== 'undefined') CBAvatar.mount($('cb-avatar'), { person: s ? CBAvatar.personOf(s) : null, items: ['profile', 'support', 'signout'], apiBase: apiBase(), token: s && s.token });
+}
+
+/* the unit remembers a person's choices per list key through the host's `store` when one is given (list-ctl.js › loadChoices). This one keeps them in
+   the browser as the unit would, and always hands back a column choice — the unit's state() reads it, and a first visit has none yet. */
+const DEFAULT_COLS = ['what', 'std', 'where'];
+const choices = {
+  get: (k) => { var v = null; try{ v = JSON.parse(localStorage.getItem('cb.standards.list.' + k) || 'null'); }catch(_){} v = v && typeof v === 'object' ? v : {}; if (!Array.isArray(v.cols) || !v.cols.length) v.cols = DEFAULT_COLS.slice(); return v; },
+  set: (k, v) => { try{ localStorage.setItem('cb.standards.list.' + k, JSON.stringify(v)); }catch(_){} },
+};
+let LIST = null;
+function mountList(){
+  LIST = CBList.mount($('std_list'), {
+    key: 'standards', rows: ROWS, id: (x) => 's' + x.ix, rowTid: (x) => 'std-row-' + x.ix, fill: false,
+    columns: cols, defaultCols: DEFAULT_COLS, cardMax: 3, store: choices,
+    head: () => ({ title: 'Standards', chips: [{ text: 'checked ' + checkedLabel(), tid: 'std-checked' }], slot: slot }),
+    search: (x) => { var r = x.r; return [r.p, r.n, r.w, r.m, r.limit, r.note, r.at, plain(r.ex), r.eq, AREA(r), KIND(r), COUNTRY(r), STATUS(r), r.g].join(' '); },
+    searchHint: 'Search standards',
+    filters: FILTERS, sorts: SORTS,
+    group: { options: [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind'], ['none', 'None']], default: 'area', tid: 'std', by: groupBy, order: GROUP_ORDER,
+      fig: (rows) => { var n = countOf(rows.map((x) => x.r)); return rows.length + ' · ● ' + n.live + ' ◐ ' + n.part + ' ○ ' + n.plan; } },
+    next: nextOf,
+    actions: [
+      { id: 'go', label: 'Open in the app ›', tid: 'std-go', when: (x) => !!x.r.go, run: (x) => stdGoto(x.r.go) },
+      { id: 'copy', label: 'Copy for a buyer or CA', tid: 'std-copy', run: (x) => copyText(statementOf(x.r)) },
+    ],
+    empty: { title: 'No standards on the register', sub: 'The register could not be read.' },
+  });
+}
+
+/* ═════ THE MATRIX — the second pane ═════
+   Rows by Area, Country or Kind; columns In force · Partly · Planned. A cell sets the LIST'S OWN filters (a row and a status), so the unit's chips
+   and the lit cell are the same state shown twice, and the Filters popover can undo it. The matrix counts the whole register. */
+let DIM = (['area', 'country', 'kind'].indexOf(store('dim')) >= 0 && store('dim')) || 'area';
+const DIMS = [['area', 'Area'], ['country', 'Country'], ['kind', 'Kind']];
+function mxRows(){
+  if (DIM === 'country') return STD_COUNTRIES.map((c) => ({ id: c[0], label: c[1], has: (r) => r.c.indexOf(c[0]) >= 0 }));
+  if (DIM === 'kind') return STD_KINDS.map((k) => ({ id: k[0], label: k[1], sub: k[2], has: (r) => r.k === k[0] }));
+  return STD_AREAS.map((a) => ({ id: a[0], label: a[1], has: (r) => r.a === a[0] }));
+}
+function nowFilt(){ var s = LIST && LIST.state(); return (s && s.filt) || {}; }
+function paintMatrix(){
+  var f = nowFilt(), fk = DIM, rowsAll = STANDARDS;
+  var other = Object.keys(f).filter((k) => f[k] && k !== 'status' && k !== fk).length || (LIST && LIST.state().q.trim());
+  var h = '<div class="mx-tools"><span class="mx-lab" id="mxLab">Count by</span><span class="seg" role="group" aria-labelledby="mxLab">'
+    + DIMS.map((d) => '<button type="button" data-dim="' + d[0] + '" data-testid="std-dim-' + d[0] + '" aria-pressed="' + (DIM === d[0]) + '">' + d[1] + '</button>').join('') + '</span></div>';
+  h += '<div class="mx" role="table" aria-label="Standards by ' + DIM + ' and status"><div class="mx-r mx-h" role="row"><span role="columnheader"></span>'
+    + STD_STATUS.map((t) => { var on = f.status === t[0] && !f[fk];
+      return '<button type="button" role="columnheader" class="mx-ch c-' + t[0] + '" data-mxs="' + t[0] + '" data-testid="std-mx-col-' + t[0] + '" aria-pressed="' + on + '" title="Show every ' + t[1].toLowerCase() + ' standard"><span class="sym" aria-hidden="true">' + t[2] + '</span>' + t[1] + '</button>'; }).join('') + '</div>';
+  mxRows().concat([{ id: '*', label: 'All', has: () => true }]).forEach((r) => {
+    var n = countOf(rowsAll.filter((x) => r.has(x))), all = r.id === '*', rowOn = all ? !f[fk] && !f.status : f[fk] === r.id && !f.status;
+    h += '<div class="mx-r' + (all ? ' mx-all' : '') + '" role="row"><button type="button" role="rowheader" class="mx-rh" data-mxr="' + esc(r.id) + '" data-testid="std-mx-row-' + esc(r.id) + '" aria-pressed="' + rowOn + '">' + esc(r.label) + (r.sub ? '<span class="mx-sub">' + esc(r.sub) + '</span>' : '') + '</button>'
+      + STD_STATUS.map((t) => { var c = n[t[0]], on = f.status === t[0] && (all ? !f[fk] : f[fk] === r.id);
+        return c ? '<button type="button" role="cell" class="mx-c c-' + t[0] + '" data-mxr="' + esc(r.id) + '" data-mxs="' + t[0] + '" data-testid="std-cell-' + esc(r.id) + '-' + t[0] + '" aria-pressed="' + on + '" aria-label="' + esc(r.label) + ', ' + t[1] + ': ' + c + '">' + c + '</button>'
+          : '<span role="cell" class="mx-c nil" aria-label="' + esc(r.label) + ', ' + t[1] + ': none">—</span>'; }).join('') + '</div>';
+  });
+  h += '</div>';
+  if (other) h += '<p class="mx-note" data-testid="std-mx-note">The matrix counts the whole register; the list also has your search or other filters.</p>';
+  h += '<div class="mx-more"><button type="button" class="tbtn" data-sheet="why" data-testid="std-open-why">Why follow standards ›</button><button type="button" class="tbtn" data-sheet="record" data-testid="std-open-record">One record, every standard ›</button></div>';
+  $('mxBody').innerHTML = h;
+  LAST = JSON.stringify(f) + '|' + LIST.state().q;
+}
+let LAST = '';
+
+/* the unit has no setter, and its filters are its own: the matrix speaks to it the way its Filters popover does — one change event on a
+   select that carries data-filt, which the unit's delegated listener handles (set the filter, repaint the tools and the rows). */
+function setFilters(want){
+  var host = $('std_list'), cur = nowFilt();
+  FILTERS.forEach((fl) => {
+    var v = want[fl.key] || '';
+    if ((cur[fl.key] || '') === v) return;
+    var sel = document.createElement('select'); sel.setAttribute('data-filt', fl.key); sel.hidden = true;
+    sel.innerHTML = '<option value=""></option><option value="' + esc(v) + '"></option>'; sel.value = v;
+    host.appendChild(sel); sel.dispatchEvent(new Event('change', { bubbles: true })); sel.remove();
+  });
+}
+function clearSearch(){
+  var q = $('std_list').querySelector('[data-cbl-q]'); if (q && q.value){ q.value = ''; q.dispatchEvent(new Event('input', { bubbles: true })); }
+}
+function mxPick(rowId, status){
+  var f = nowFilt(), cell = rowId && rowId !== '*' ? rowId : null;
+  var same = (f.status || null) === (status || null) && (f[DIM] || null) === cell && !FILTERS.some((fl) => fl.key !== 'status' && fl.key !== DIM && f[fl.key]);
+  var want = {};
+  if (!same){ if (status) want.status = status; if (cell) want[DIM] = cell; }
+  clearSearch(); setFilters(want);
+  $('app').setAttribute('data-view', 'list'); paintMatrix();
+  var l = $('std_list').querySelector('.cbl-list'); if (l) l.scrollTop = 0;
+}
+
+/* the matrix follows the list: a filter changed in the Filters popover moves the lit cell too */
+function watch(){
+  var host = $('std_list');
+  new MutationObserver(() => { if (!LIST) return; var now = JSON.stringify(nowFilt()) + '|' + LIST.state().q; if (now !== LAST) paintMatrix(); }).observe(host, { childList: true, subtree: true, characterData: true });
+}
+
+/* ═════ the two sheets — their content is the register's own renderers, called once ═════ */
+function openSheet(which){
+  var d = $('sheet'), W = which === 'why';
+  d.innerHTML = '<div class="sh-head"><h2>' + (W ? 'Why follow standards' : 'One record, every standard') + '</h2><button type="button" class="sh-x" data-act="sheetx" data-testid="std-sheet-x" aria-label="Close">✕</button></div>'
+    + '<div class="sh-body" data-testid="std-sheet-' + which + '">' + (W ? stdWhyHTML({ compact: false }) : stdRecordHTML({ compact: false })) + '</div>';
+  if (!d.open){ try{ d.showModal(); }catch(_){ d.setAttribute('open', ''); } }
+  try{ history.replaceState(null, '', '?sheet=' + which); }catch(_){}
+}
+function closeSheet(){
+  var d = $('sheet'); try{ d.close(); }catch(_){ d.removeAttribute('open'); } d.innerHTML = '';
+  try{ history.replaceState(null, '', location.pathname); }catch(_){}
+}
+$('sheet').addEventListener('cancel', (e) => { e.preventDefault(); closeSheet(); });
+$('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
+
+document.addEventListener('click', (ev) => {
+  var t = ev.target.closest && ev.target.closest('[data-dim],[data-mxr],[data-mxs],[data-sheet],[data-act]'); if (!t) return;
+  if (t.hasAttribute('data-dim')){ DIM = t.getAttribute('data-dim'); store('dim', DIM); setFilters({}); paintMatrix(); return; }
+  if (t.hasAttribute('data-mxr') || t.hasAttribute('data-mxs')){ mxPick(t.getAttribute('data-mxr'), t.getAttribute('data-mxs')); return; }
+  if (t.hasAttribute('data-sheet')){ openSheet(t.getAttribute('data-sheet')); return; }
+  var a = t.getAttribute('data-act');
+  if (a === 'back') $('app').setAttribute('data-view', 'matrix');
+  else if (a === 'sheetx') closeSheet();
+});
+
+/* ═══ START ═══ */
+mountList();
+paintMatrix();
+watch();
+(function(){
+  var q = new URLSearchParams(location.search);
+  if (q.get('sheet') === 'why' || q.get('sheet') === 'record') openSheet(q.get('sheet'));
+  if (q.get('view') === 'list') $('app').setAttribute('data-view', 'list');
+})();
+</script>
+</body>
+</html>
