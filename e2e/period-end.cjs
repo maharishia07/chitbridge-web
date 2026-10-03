@@ -19,7 +19,8 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 const PREV = (() => { const y = Number(FYNOW.slice(0, 4)) - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
@@ -152,6 +153,7 @@ const GST_CLOSED = { fy: FYNOW, period: 6, date: '2026-09-30', utilised: [{ from
     ok(refs.length === 3 && refs[1] === refs[2] && refs[0] !== refs[1], 'a retry after a refusal carries the SAME client_ref; a saved one is replaced');
     await p.click('[data-testid="pe-fix"]'); await p.waitForFunction(() => document.querySelector('.nav-btn.active').getAttribute('aria-label') === 'Month lock', null, { timeout: 5000 }).catch(() => {});
     ok(await active(p) === 'Month lock', 'the fix button opens Month lock');
+    ok(...C.finish());
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
     const S2 = stand(), c2 = await open(S2, 'closingstock', RAVI);

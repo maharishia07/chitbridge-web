@@ -27,7 +27,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const SEC = { dr: 'Dr', cr: 'Cr' };
 
@@ -348,6 +349,7 @@ async function route(S, r) {
     await ctx.close();
   }
 
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   ok(offHost.length === 0, 'nothing tried to leave for another host' + (offHost.length ? ': ' + offHost[0] : ''));
   await b.close(); srv.close();

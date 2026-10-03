@@ -77,7 +77,8 @@ function standIn() {
 /* BOOKS_SHOTS=<dir> keeps a picture of each screen to LOOK at (not a golden file; nothing compares them) */
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 const shot = async (p, name) => { if (process.env.BOOKS_SHOTS) await p.screenshot({ path: path.join(process.env.BOOKS_SHOTS, name + '.png') }).catch(() => {}); };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 /* the bytes of "the pack" — what Download must bring down (a zip's first four bytes, then a marker) */
 const ZIP = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('stand-in ledger pack', 'utf8')]);
 /* "today" the way the page computes it (bkToday: toISOString) — the strip reads the range's last day */
@@ -989,6 +990,7 @@ if (require.main !== module) { module.exports = { standIn, route }; return; }
   }
 
   const mine = threw.filter((m) => /bk|party|pay|books|ledger/i.test(m));
+  ok(...C.finish());
   ok(mine.length === 0, 'no page error from the Ledger code' + (mine.length ? ' — ' + mine.join(' | ') : ''));
   if (threw.length) console.log('  (other page errors, not the Ledger: ' + threw.length + ' — ' + threw.slice(0, 3).join(' | ').slice(0, 300) + ')');
   await ctx.close(); await b.close(); srv.close();

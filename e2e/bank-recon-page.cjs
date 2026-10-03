@@ -17,7 +17,8 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const tok = (c) => { const e = (o) => Buffer.from(JSON.stringify(o)).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_'); return e({ alg: 'none' }) + '.' + e(Object.assign({ exp: Math.floor(Date.now() / 1000) + 3600 }, c)) + '.x'; };
 const OWNER = { token: tok({ identity_id: 'ent-M', identity_type: 'entity' }), role: 'entity', name: 'Mayur', entity: 'Mayur Bhavan' };
 const RAVI = { token: tok({ identity_id: 'act-1', identity_type: 'actor', parent_entity_id: 'ent-M', parent_entity_name: 'Mayur Bhavan', display_name: 'Ravi' }), role: 'actor', name: 'Ravi', entity: 'Mayur Bhavan' };
@@ -147,6 +148,7 @@ const closing = (S) => S.opening + S.lines.reduce((t, l) => t + l.dr_minor - l.c
   ok(await p.locator('[data-testid="brs-issued"] .pe-row').count() === 1 && await p.locator('[data-testid="brs-bankcr"] .pe-row').count() === 2 && await p.locator('[data-testid="brs-bankdr"] .pe-row').count() === 1, 'every reconciling item is named: 1 cheque not presented · 2 bank credits not in the books · 1 bank debit');
   ok(/Difference/.test(brs) && /0\.00/.test(brs.slice(brs.indexOf('Difference'))), 'the difference is nothing');
   await p.screenshot({ path: path.join(SHOTS, 'bank-brs-laptop.png') });
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
   await ctx.close();
 

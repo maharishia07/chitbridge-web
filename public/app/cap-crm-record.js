@@ -10,8 +10,7 @@
  * `balance_minor` / `credit_limit_minor` painted by bkMoney; "late" is the server's; a bill's step word is the server's `state.word`;
  * the place-of-supply words are mapped from the server's `supply_type`.
  * ⭐ NEW PATHS (rule 4): the identity block + Next block + entry grammar (REQUIREMENT-record §4 — nothing gathered these per party; each
- * is an arrangement of existing tokens), the Log sheet (no store or sheet for a call/visit/note existed), `custDel` (customers had no
- * remove route; same shape as supDel).
+ * is an arrangement of existing tokens), the Log sheet (no store or sheet for a call/visit/note existed), `crmRemove` (DELETE /api/crm/parties/:id).
  */
 'use strict';
 var CRMR = { tok: 0, p: null, rec: null, menu: false, tl: null, tlApi: null, headApi: null, keep: {} };
@@ -37,17 +36,22 @@ function crmRecordFrom(rec, p) {
   if (r.merged_from && typeof r.merged_from === 'object') r.merged_from = r.merged_from.party_no || r.merged_from.party_id || null;
   if (r.points && r.points.balance == null && r.points.points != null) r.points = Object.assign({}, r.points, { balance: r.points.points });
   if (!r.contacts) { var ph = r.phone || r.otp_contact || (p && p.phone) || '', em = r.email || (p && p.email) || ''; r.contacts = { phones: ph ? [ph] : [], emails: em ? [em] : [], address: null }; }
-  if (!Array.isArray(r.prefs)) r.prefs = [];
+  if (r.gstn_profile === undefined) r.gstn_profile = r.gstin && r.gstin.differs ? r.gstin.theirs : null;   // the API says "differs"; the page offers "Use theirs"
+  /* the credit terms come in `terms`, one per side; the painter and the edit sheet read them off the side */
+  ['customer', 'supplier'].forEach(function (s) { if (r[s] && r.terms && r.terms[s]) r[s] = Object.assign({}, r[s], r.terms[s]); });
+  if (r.customer && r.customer.last_bill_at === undefined) r.customer = Object.assign({}, r.customer, { last_bill_at: r.customer.last_txn_at });
   if (!Array.isArray(r.followups)) r.followups = [];
   return r;
 }
 /** the timeline as the API sends it ({ entries: [{ kind, at, … }] }, kinds chit · message · dispute · ledger · interaction · followup · followup_done · change) → the page's entry grammar */
 function crmEntryFrom(e, i) {
   if (e && e.line != null && e.id != null) return e;   // already the page's grammar (the design stand-in's) — accepted as is
-  var at = e.at || '', k = e.kind, o = { at: at, kind: k, line: '', by: '', id: k + '-' + (e.interaction_id || e.followup_id || e.dispute_id || e.ref || e.chit_id || '') + '-' + at + '-' + i };
+  var at = e.at || '', k = e.kind, key = e.interaction_id || e.followup_id || e.dispute_id || e.chit_id || e.ref || e.field || '';
+  /* a stable id (it is the row's test id and its key): the API's own id for the thing, plus the time where the same id can appear twice (a message, a ledger item, a change) */
+  var o = { at: at, kind: k, line: '', by: '', id: k + '-' + key + (/^(message|ledger|change|followup_done)$/.test(k) ? '-' + Date.parse(at) : '') };
   if (e.chit_id) o.chit_id = e.chit_id;
   if (e.followup_id) o.followup_id = e.followup_id;
-  var word = function (s) { return s ? tx(String(s).replace(/_/g, ' ')) : ''; };
+  var word = function (s) { s = String(s || '').replace(/_/g, ' '); return s ? tx(s.charAt(0).toUpperCase() + s.slice(1)) : ''; };
   if (k === 'chit') {
     o.kind = e.doc_kind === 'bill' ? 'bill' : 'chit'; o.line = e.title || e.bill_no || word(e.purpose) || tx('Chit');
     if (e.status) o.state = { word: word(e.status) };
@@ -119,7 +123,8 @@ async function crmRecordOpen(route) {
   s.innerHTML = '<div class="rec" data-testid="crm-record">' + crmHeaderHTML(p) + '<div class="loadwrap" role="status" data-testid="crm-rec-loading"><span class="spin"></span>' + esc(tx('Reading…')) + '</div></div>';
   var rec, head = null;
   try {
-    var got = await Promise.all([api('crmParty', { params: { id: p.party_id } }), api('crmTimeline', { params: { id: p.party_id }, query: { limit: 5 } }).catch(function () { return null; })]);
+    /* a walk-in is a phone that holds points, not a party: the API has no record of it (its party_id is null) - the row is all there is */
+    var got = p.kind === 'walk-in' ? [{}, null] : await Promise.all([api('crmParty', { params: { id: p.party_id } }), api('crmTimeline', { params: { id: p.party_id }, query: { limit: 5 } }).catch(function () { return null; })]);
     rec = got[0]; head = got[1];
     if (tok !== CRMR.tok) return;
     rec = crmRecordFrom(rec, p);
@@ -233,11 +238,12 @@ function crmRecordPaint(p, rec) {
   secs.push(crmSec('timeline', 'Timeline', all ? esc(crmPlural(all, 'entry', 'entries')) : '', '<div class="tl-wrap"><div id="crm_tlhead" data-testid="crm-tl-head"></div></div>'
     + (all > 5 ? '<div style="padding-top:10px"><a class="act sm ghost" href="#/party/' + esc(crmKey(p)) + '/timeline" data-testid="crm-tl-all">' + esc(txf('See all {n}', { n: all })) + '</a></div>' : ''), true));
   /* Who & contact */
+  var prefsSent = Array.isArray(rec.prefs);   // the API sends no contact preferences today - then the row is left out, not filled with "Not recorded"
   var prefs = (rec.prefs || []).map(function (x) { return CRM_CHAN[x.channel] ? esc(tx(CRM_CHAN[x.channel])) + ': ' + esc(x.allowed === false ? tx('Not allowed') : x.allowed ? tx('Allowed') + (x.purpose ? ' · ' + tx(x.purpose) : '') : tx('Not recorded')) : ''; }).filter(Boolean);
-  ['email', 'phone', 'whatsapp'].forEach(function (ch) { if (!(rec.prefs || []).some(function (x) { return x.channel === ch; })) prefs.push(esc(tx(CRM_CHAN[ch])) + ': ' + esc(tx('Not recorded'))); });
+  if (prefsSent) ['email', 'phone', 'whatsapp'].forEach(function (ch) { if (!(rec.prefs || []).some(function (x) { return x.channel === ch; })) prefs.push(esc(tx(CRM_CHAN[ch])) + ': ' + esc(tx('Not recorded'))); });
   var who = crmKV('Legal name', R.legal_name && R.legal_name !== R.display_name ? esc(R.legal_name) : '')
     + crmKV('Phone', (c.phones || []).map(esc).join('<br>')) + crmKV('E-mail', (c.emails || []).map(function (m) { return esc(m) + (rec.mail_bounced && rec.mail_bounced.to === m ? ' <span class="tag amber">' + esc(tx('bounced')) + '</span>' : ''); }).join('<br>'))
-    + crmKV('Address', esc(c.address || '')) + (p.city ? crmKV('City', esc(p.city)) : '') + crmKV('Contact preferences', prefs.join('<br>'))
+    + crmKV('Address', esc(c.address || '')) + (p.city ? crmKV('City', esc(p.city)) : '') + crmKV('Contact preferences', prefsSent ? prefs.join('<br>') : '')
     + (!(c.phones || []).length && !(c.emails || []).length && p.kind !== 'walk-in' ? '<div class="kv"><span>' + esc(tx('No phone or e-mail yet')) + '</span></div>' : '');
   secs.push(crmSec('who', 'Who & contact', esc((c.phones || [])[0] || (c.emails || [])[0] || ''), who || '<div class="hint">' + esc(tx('Nothing more is recorded')) + '</div>', true));
   /* Tax & terms */
@@ -302,14 +308,27 @@ function crmAfterEdit(kind, partyId) { crmLoad(true).then(function () { if (CRM.
 /* ═══ THE TIMELINE — the whole history, answered 50 at a time by the server (never read all at once) ════════════════════
    A CBList mount like every list: the kind filter and the search sit in the unit's own Filters and search box (the head stays three rows);
    the page asks the server again when either changes (crmWatch), and asks for the next 50 when the rows are scrolled to the end. */
+/** which entry kinds each tab of the timeline shows */
+var CRM_TAB_KINDS = { messages: ['message', 'message_internal'], bills: ['bill', 'payment', 'chit', 'dispute'], notes: ['call', 'visit', 'whatsapp', 'note'], mail: ['mail'], followups: ['followup'] };
+function crmTlWant(T, e) {
+  if (T.kind && T.kind !== 'all' && (CRM_TAB_KINDS[T.kind] || []).indexOf(e.kind) < 0) return false;
+  return !T.q || String(e.line || '').toLowerCase().indexOf(String(T.q).toLowerCase()) >= 0;
+}
 async function crmTlLoad(more) {
   var T = CRMR.tl; if (!T || (more && (T.busy || !T.next))) return;
   var g = ++T.gen; T.busy = !!more;
   if (!more) { T.state = 'loading'; T.entries = []; if (CRMR.tlApi) CRMR.tlApi.refresh(); }
   try {
-    var r = await api('crmTimeline', { params: { id: T.p.party_id }, query: { kind: T.kind === 'all' ? '' : T.kind, q: T.q || '', before: more ? T.next : '' } });
-    if (g !== T.gen) return;
-    T.entries = (more ? T.entries : []).concat(crmEntriesFrom(r)); T.next = (r && r.next_before) || null; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
+    /* the API pages by time only (?before=<iso>&limit=<n>): it has no kind or text filter and sends no per-kind counts. The page keeps the entries that fit
+       the tab and the search, and asks for the next page until it has a screenful or the history ends. */
+    var got = [], next = more ? T.next : '', pages = 0, r;
+    do {
+      r = await api('crmTimeline', { params: { id: T.p.party_id }, query: { before: next || '', limit: 50 } });
+      if (g !== T.gen) return;
+      got = got.concat(crmEntriesFrom(r).filter(function (e) { return crmTlWant(T, e); }));
+      next = (r && r.next_before) || null; pages++;
+    } while (next && got.length < 30 && pages < 8);
+    T.entries = (more ? T.entries : []).concat(got); T.next = next; T.counts = (r && r.counts) || T.counts || {}; T.state = 'ready';
   } catch (e) { if (g !== T.gen) return; T.state = 'error'; T.err = e; }
   T.busy = false;
   if (CRMR.tlApi) CRMR.tlApi.refresh({ filters: crmTlFilters(T) });
@@ -363,7 +382,7 @@ async function crmLogSave() {
   if (!g('crm_log_body')) { msg.textContent = tx('Say what happened.'); return; }
   LOG.busy = true;
   try {
-    await api('crmLog', { params: { id: p.party_id }, body: { kind: LOG.kind, direction: LOG.kind === 'note' ? null : LOG.dir, body: g('crm_log_body') } });
+    await api('crmLog', { params: { id: p.party_id }, body: { kind: LOG.kind === 'whatsapp' ? 'message' : LOG.kind, direction: LOG.kind === 'note' ? null : LOG.dir, body: g('crm_log_body') } });
     if (LOG.fu && g('crm_log_fuwhat') && g('crm_log_fudue')) await api('crmFollowAdd', { body: { party_id: p.party_id, what: g('crm_log_fuwhat'), due_at: new Date(g('crm_log_fudue') + 'T09:00:00').toISOString(), source: 'interaction' } });
     closeModal(); toast(tx('Logged')); crmLoad(true);
     if (CRM.route && CRM.route.view === 'party') crmRecordOpen(CRM.route);
@@ -421,10 +440,11 @@ function crmLedgerOn() {
 }
 async function crmWalkin(p) {
   try {
-    var r = await api('custAdd', { body: { name: p.display_name, phone: p.phone } });
-    var made = (r && r.customer) || {}, pts = r && r.points_claimed != null ? r.points_claimed : (p.points && p.points.balance);
+    /* the CRM's own door: the phone becomes a local customer and its points move to them (the API names them "Customer 0021" until the shop says otherwise) */
+    var r = await api('crmWalkIn', { body: { phone: p.phone } });
+    var made = (r && r.party) || {}, pts = r && r.points_claimed != null ? r.points_claimed : 0;
     toast(tx('Added to your parties') + (pts ? ' — ' + txf('{n} points kept', { n: pts }) : '')); await crmLoad(true);
-    var np = made.customer_identity_id && CRM.byKey[made.customer_identity_id]; crmGo(np ? '#/party/' + encodeURIComponent(crmKey(np)) : '#/parties');
+    var np = made.party_id && CRM.byKey[made.party_id]; crmGo(np ? '#/party/' + encodeURIComponent(crmKey(np)) : '#/parties');
   } catch (e) { toast((e && e.message) || tx("Couldn't add that. Try again.")); }
 }
 async function crmAlsoRole(p, rec) {
@@ -435,9 +455,8 @@ async function crmAlsoRole(p, rec) {
 function crmRemove(p, rec) {
   confirmAsk(tx('Remove from my parties?'), esc(txf('{name} is hidden from your parties. Nothing is deleted.', { name: p.display_name })), tx('Remove'), async function () {
     try {
-      if (rec.customer) await api('custDel', { params: { id: rec.customer.list_id } });
-      if (rec.supplier) await api('supDel', { params: { id: rec.supplier.list_id } });
+      await api('crmRemove', { params: { id: p.party_id } });   // ONE call hides the party from both lists; the API refuses (409 HAS_DUES) with dues open
       toast(tx('Removed')); await crmLoad(true); crmGo('#/parties');
-    } catch (e) { toast((e && e.message) || tx("Couldn't remove that. Try again.")); }
+    } catch (e) { toast(e && e.status === 409 ? tx('There are dues open on this party.') : tx("Couldn't remove that. Try again.")); }
   }, true);
 }

@@ -17,7 +17,8 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 
 const SEVERAL = [
   { kind: 'bills_to_accept', count: 3, words: '3 supplier bills are waiting for you to confirm the goods. Confirm them and they post.', action: { label: 'Open the bills', screen: 'waiting', call: 'GET /api/books/health' } },
@@ -98,6 +99,7 @@ const SEVERAL = [
     await p.click('[data-testid="todo-go-gstr2b_missing"]');
     await p.waitForSelector('#toast .toast', { timeout: 3000 }).catch(() => {});
     ok(/starts after an update/i.test(await p.textContent('#toast').catch(() => '')) && await p.locator('[data-testid="todo-list"]').count() === 1, 'a screen with no page yet says it starts after an update and stays on To do');
+    ok(...C.finish());
     ok(threw.length === 0, 'no page error' + (threw.length ? ': ' + threw[0] : ''));
     await ctx.close();
   }

@@ -25,7 +25,8 @@ var CRM_EP = {
   crmFollowAdd:  { m: 'POST',   p: '/api/crm/followups',                   ok: 'y' },
   crmFollowSet:  { m: 'PATCH',  p: '/api/crm/followups/:id',               ok: 'y' },   // { done:true } · { due_at } · { assignee_user_id }
   crmFollowDel:  { m: 'DELETE', p: '/api/crm/followups/:id',               ok: 'y' },
-  custDel:       { m: 'DELETE', p: '/api/relationships/customers/:id',     ok: 'y' },   // new: customers had no remove route (same shape as supDel)
+  crmWalkIn:     { m: 'POST',   p: '/api/crm/walk-ins/add',               ok: 'y' },   // { phone, name? } → 201 { party, points_claimed }: a phone that holds points becomes a local customer
+  crmRemove:     { m: 'DELETE', p: '/api/crm/parties/:id',                 ok: 'y' },   // "Remove from my parties" - owner only, 409 HAS_DUES, hides the party and deletes nothing
 };
 
 var CRM = { gen: 0, loadGen: 0, rows: [], byKey: {}, alerts: {}, currency: 'INR', state: 'loading', err: null, loaded: false, api: null,
@@ -100,10 +101,57 @@ function crmPartyCell(p) {
 }
 
 /* ═══ THE READ — one call, one row per party ═════════════════════════════════════════════════════════════════════ */
+/* ═══ THE API'S REAL SHAPES → the row this page paints (chitbridge-api lib/crm.js assemble; contract: docs/contracts/web-api.json) ═══
+   The design stand-in sent a FLAT row (balance_minor · segment · groups · last_at · why_not · next_followup_*); the API sends the nested one:
+   dues { balance_minor, oldest_due, side } · customer { segment, groups, txn_count … } · supplier { … } · last_activity · may_trade { ok, why }.
+   Mapped HERE, once, so every painter below still reads one row. A row that already carries the flat names (the older shape) is left as it is. */
+function crmPartyFrom(p) {
+  if (!p || (p.dues === undefined && !p.may_trade && !p.customer && !p.supplier)) return p;
+  var q = Object.assign({}, p), c = p.customer || null, d = p.dues;
+  q.roles = crmRolesList(p.roles);
+  if (q.balance_minor === undefined) { q.balance_minor = d ? d.balance_minor : null; q.oldest_due = d ? d.oldest_due : null; }
+  if (q.segment === undefined) q.segment = c ? c.segment : null;
+  if (q.groups === undefined) q.groups = c && Array.isArray(c.groups) ? c.groups : [];
+  if (q.txn_count === undefined) q.txn_count = c ? c.txn_count : 0;
+  if (q.last_at === undefined) q.last_at = p.last_activity || null;
+  if (q.why_not === undefined) q.why_not = p.may_trade && p.may_trade.ok === false ? (p.may_trade.why || 'local') : null;
+  if (q.dues_overdue === undefined) q.dues_overdue = false;           // the API sends no overdue flag; the page does not work lateness out
+  if (q.unread === undefined) q.unread = 0;                           // nor an unread count on the list
+  if (q.next_followup_at === undefined) { q.next_followup_at = null; q.next_followup_late = false; }   // filled from GET /followups (crmFuJoin)
+  return q;
+}
+/** a walk-in as the API sends it ({ walk_in: true, party_id: null, kind: 'walk-in', phone, points, last_activity }) → a row with a key of its own */
+function crmWalkInFrom(w) {
+  if (w.party_id) return w;
+  var digits = String(w.phone || '').replace(/[^0-9]/g, '');
+  return { party_id: 'walkin-' + digits, party_no: null, display_name: 'Walk-in ' + (digits.length > 4 ? digits.slice(0, 2) + '…' + digits.slice(-2) : digits), kind: 'walk-in', roles: ['customer'], phone: w.phone || null, email: null, city: null,
+    user_id: null, bridge_id: null, on_chitbridge: false, why_not: null, tax_ids: [], groups: [], segment: null, txn_count: 0, last_at: w.last_activity || null, balance_minor: null, oldest_due: null,
+    dues_overdue: false, next_followup_at: null, next_followup_late: false, unread: 0, points: { balance: Number(w.points) || 0, programme: '' }, nickname: null, legal_name: null, state_code: null };
+}
+/** a follow-up as the API sends it (late · today · due_day · party_listed, NO bucket) → the page's row */
+function crmFuFrom(f) {
+  if (!f || f.bucket) return f;
+  var o = Object.assign({}, f), t = crmLocalISO(new Date()), wk = crmLocalISO(new Date(Date.now() + 6 * 86400000));   // This week = the next six days after today
+  o.bucket = f.late ? 'late' : f.today ? 'today' : (f.due_day && f.due_day <= wk && f.due_day > t) ? 'week' : 'later';
+  if (f.party_listed === false) o.party_removed = true;
+  if (f.assignee_user_id && !f.assignee_name) o.assignee_left = true;   // an assignee with no name on file has left the team
+  return o;
+}
+/** the soonest open follow-up of each party, and the server's own late count, from GET /followups (the list row carries neither) */
+async function crmFuJoin(rows, r) {
+  if (r && r.alerts) return;                                          // the older shape sent them with the list
+  var f;
+  try { f = await api('crmFollowups', { query: { scope: crmOwner() ? 'all' : 'mine', done: '0' } }); } catch (_) { return; }
+  var list = ((f && f.followups) || []).map(crmFuFrom), by = {}, late = {};
+  list.forEach(function (x) { var k = String(x.party_id), cur = by[k]; if (!cur || String(x.due_at) < String(cur.due_at)) by[k] = x; if (x.late) late[k] = true; });
+  rows.forEach(function (p) { var x = by[String(p.party_id)]; if (x) { p.next_followup_at = x.due_at; p.next_followup_late = !!late[String(p.party_id)]; } });
+  CRM.alerts = Object.assign({}, CRM.alerts, { followups_overdue: f && f.late != null ? Number(f.late) : list.filter(function (x) { return x.late; }).length });
+}
 /** the page's own guard on the list (the server already does both): a merged party is never a row; the same party twice is one row with both roles */
 function crmNormalize(parties) {
   var by = {}, out = [];
   (parties || []).forEach(function (p) {
+    p = crmPartyFrom(p);
     if (!p || p.merged_into) return;
     var k = p.party_id, seen = by[k];
     p.roles = crmRolesList(p.roles);
@@ -124,10 +172,9 @@ function crmIndex() {
   UI.custs = CRM.rows.filter(function (p) { return p.roles.indexOf('customer') >= 0; }).map(function (p) { return mk(p, 'customer'); });
   UI.sups = CRM.rows.filter(function (p) { return p.roles.indexOf('supplier') >= 0; }).map(function (p) { return mk(p, 'supplier'); });
 }
-/** what a failure says; a migration answer is a state, never a stack trace (409 on /api/crm/* · 503 on calls and follow-ups) */
+/** what a failure says; a migration answer is a state, never a stack trace (503 CRM_NOT_MIGRATED on calls and follow-ups; the list and the record answer before b276) */
 function crmErrWords(e, what) {
   var st = e && e.status;
-  if (st === 409) return crmOwner() ? { title: tx('CB CRM needs one database step (b276).'), sub: tx('Run the update, then try again. Nothing is lost.') } : { title: tx('Ask the owner to finish setting up CB CRM.'), sub: '' };
   if (st === 503) return { title: tx('Calls and follow-ups start after an update.'), sub: tx('Nothing is lost.') };
   return { title: tx("Couldn't load " + what + "."), sub: tx('Check the connection and try again.') };
 }
@@ -140,8 +187,10 @@ async function crmLoad(quiet) {
   try {
     var r = await api('crmParties');
     if (g !== CRM.loadGen) return;
-    var rows = (r && r.parties) || (Array.isArray(r) ? r : []);
+    var rows = ((r && r.parties) || (Array.isArray(r) ? r : [])).concat(((r && r.walk_ins) || []).map(crmWalkInFrom));
     CRM.rows = crmNormalize(rows); CRM.alerts = (r && r.alerts) || {}; CRM.currency = (CRM.rows[0] && CRM.rows[0].currency) || CRM.currency;
+    await crmFuJoin(CRM.rows, r);
+    if (g !== CRM.loadGen) return;
     crmIndex(); CRM.state = 'ready'; CRM.loaded = true; CRM.err = null;
   } catch (e) {
     if (g !== CRM.loadGen) return;
@@ -284,7 +333,7 @@ async function crmFuLoad() {
   try {
     var scope = CRM.fuScope || (crmOwner() ? 'all' : 'mine');
     var r = await api('crmFollowups', { query: { scope: scope, done: CRM.fuDone ? '1' : '0' } });
-    CRM.fu = (r && r.followups) || (Array.isArray(r) ? r : []); CRM.coAssists = (r && r.co_assists) || CRM.coAssists; CRM.fuState = CRM.fu.length ? 'ready' : 'ready'; CRM.fuErr = null;
+    CRM.fu = ((r && r.followups) || (Array.isArray(r) ? r : [])).map(crmFuFrom); CRM.coAssists = (r && r.co_assists) || CRM.coAssists; CRM.fuState = CRM.fu.length ? 'ready' : 'ready'; CRM.fuErr = null;
   } catch (e) { CRM.fuState = e && e.status === 503 ? 'notyet' : 'error'; CRM.fuErr = e; }
   crmFuRefresh();
 }

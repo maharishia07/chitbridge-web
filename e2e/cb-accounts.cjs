@@ -24,7 +24,8 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const J = (r, status, o) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(o) });
+const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const FYNOW = (() => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String((y + 1) % 100).padStart(2, '0'); })();
 
@@ -583,6 +584,7 @@ async function route(S, r) {
   }
 
   /* ── no page error, nothing left the machine ── */
+  ok(...C.finish());
   ok(threw.length === 0, 'no page error from CB Accounts' + (threw.length ? ': ' + threw.slice(0, 3).join(' | ') : ''));
   ok(offHost.filter((u) => !/fonts\.g|cdnjs\.cloudflare\.com\/ajax\/libs\/qrcode-generator/.test(u)).length === 0, 'nothing but the stand-in was reachable (the fonts and the QR script of the app page that Sign out opens, are refused)' + (offHost.length ? ' — refused: ' + offHost.join(' ') : ''));
   await b.close(); srv.close();
