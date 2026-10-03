@@ -27,7 +27,7 @@ const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', 
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 const TODAY = new Date().toISOString().slice(0, 10);
 const SEC = { dr: 'Dr', cr: 'Cr' };
@@ -84,10 +84,13 @@ function compose(b, S) {
   return out;
 }
 const locked = (d) => String(d || '') < '2025-01-01';
+/* an entry as GET /api/books/daybook sends it: a manual entry has NO source (null); a walk-in day's source carries every key */
+const LN = (code, name, dr, cr) => ({ code, name, party_id: null, party_name: null, dr_minor: dr, cr_minor: cr, counter: null });
+const DAYSRC = { chit_id: null, ref: null, kind: 'day', counter: 'C1', by: null, count: 11, how: 'Cash', how_ref: null, split: [{ how: 'Cash', amount_minor: 124000 }], doc_at: null, recorded_at: '2026-10-03T05:00:00.000Z' };
 const ENTRIES = [
-  { entry_id: 'mj9', entry_no: 'MJ/2026-27/000009', posting_date: TODAY, doc_date: TODAY, event_type: 'manual', source_chit_id: null, reverses_entry_id: null, narration: 'Rent paid', source: { kind: 'manual', by: 'Mayur' }, lines: [{ code: '6010', name: 'Rent', dr_minor: 1000000, cr_minor: 0 }, { code: '1400', name: 'Cash', dr_minor: 0, cr_minor: 1000000 }] },
-  { entry_id: 'je1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales', source: { kind: 'day', counter: 'C1', count: 11, how: 'Cash', split: [{ how: 'Cash', amount_minor: 124000 }] }, lines: [{ code: '1400', name: 'Cash', dr_minor: 124000, cr_minor: 0 }, { code: '4000', name: 'Sales', dr_minor: 0, cr_minor: 124000 }] },
-  { entry_id: 'rv1', entry_no: 'MJ/2026-27/000008', posting_date: TODAY, doc_date: TODAY, event_type: 'reversal', source_chit_id: null, reverses_entry_id: 'mj7', narration: 'Reversal of MJ/2026-27/000007', source: { kind: 'manual', by: 'Mayur' }, lines: [{ code: '1400', name: 'Cash', dr_minor: 500, cr_minor: 0 }, { code: '6090', name: 'Bank charges', dr_minor: 0, cr_minor: 500 }] },
+  { entry_id: 'mj9', entry_no: 'MJ/2026-27/000009', posting_date: TODAY, doc_date: TODAY, event_type: 'manual', source_chit_id: null, reverses_entry_id: null, narration: 'Rent paid', source: null, lines: [LN('6010', 'Rent', 1000000, 0), LN('1400', 'Cash', 0, 1000000)] },
+  { entry_id: 'je1', entry_no: 'JV/2026-27/000001', posting_date: TODAY, doc_date: TODAY, event_type: 'walkin_day', source_chit_id: null, reverses_entry_id: null, narration: 'Walk-in sales', source: DAYSRC, lines: [LN('1400', 'Cash', 124000, 0), LN('4000', 'Sales', 0, 124000)] },
+  { entry_id: 'rv1', entry_no: 'MJ/2026-27/000008', posting_date: TODAY, doc_date: TODAY, event_type: 'reversal', source_chit_id: null, reverses_entry_id: 'mj7', narration: 'Reversal of MJ/2026-27/000007', source: null, lines: [LN('1400', 'Cash', 500, 0), LN('6090', 'Bank charges', 0, 500)] },
 ];
 
 function standIn() {
@@ -100,17 +103,20 @@ async function route(S, r) {
   if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
   if (p === '/api/folders') return J(r, 200, { folders: [] });
   if (!p.startsWith('/api/books')) return J(r, m === 'GET' ? 200 : 200, m === 'GET' ? {} : { ok: true });
-  if (p === '/api/books/health') return J(r, 200, { enabled: true, last_posted_day: TODAY, waiting: [] });
-  if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS });
-  if (p === '/api/books/events' && m === 'GET') return J(r, 200, { events: EVENTS, picks: PICKS, pending: [], golden: GOLDEN });
-  if (p === '/api/books/events' && m === 'POST') { const b0 = body(); S.saves.push({ path: p, body: b0 }); await new Promise((z) => setTimeout(z, S.delay)); if (S.failSave) return J(r, 500, { error: 'Server error' }); return J(r, 200, { ok: true, kind: b0.event, entry_id: 'mj' + S.saves.length, entry_no: 'MJ/2026-27/00000' + S.saves.length, voucher: { type: KIND[b0.event], series: 'MJ' } }); }
+  if (p === '/api/books/health') return J(r, 200, books.health());
+  if (p === '/api/books/accounts') return J(r, 200, { accounts: ACCOUNTS.map((a) => Object.assign({ account_id: 'acc-' + a.code, tally_group: 'Group', nature: 'asset', parent_code: 'G1000', active: true }, a)) });
+  if (p === '/api/books/events' && m === 'GET') return J(r, 200, { events: EVENTS.map((e) => Object.assign({ ledger_group: null }, e)), picks: PICKS, pending: [], golden: GOLDEN });
+  if (p === '/api/books/events' && m === 'POST') { const b0 = body(); S.saves.push({ path: p, body: b0 }); await new Promise((z) => setTimeout(z, S.delay)); if (S.failSave) return J(r, 500, { error: 'Server error' }); return J(r, 200, { ok: true, kind: b0.event, entry_id: 'mj' + S.saves.length, entry_no: 'MJ/2026-27/00000' + S.saves.length, posting_date: b0.date || TODAY, doc_date: b0.date || TODAY, moved: false, lines: 2, items: 0, note: null }); }
   if (p === '/api/books/preview') { const b = body(); S.previews.push(b); return J(r, 200, compose(b, S)); }
   let x;
-  if ((x = p.match(/^\/api\/books\/entries\/([^/]+)\/reverse$/))) { S.reverses.push({ id: x[1], body: body() }); await new Promise((z) => setTimeout(z, S.delay)); return J(r, 200, { ok: true, entry_id: 'mj10', entry_no: 'MJ/2026-27/000010' }); }
-  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', entries: ENTRIES });
-  if (p === '/api/books/dues') return J(r, 200, { currency: 'INR', as_of: TODAY, parties: [
-    { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', disputed_minor: 0, buckets: { lt_6m: 300000 } },
-    { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', disputed_minor: 0, buckets: { not_due: -150000 } }] });
+  if ((x = p.match(/^\/api\/books\/entries\/([^/]+)\/reverse$/))) { S.reverses.push({ id: x[1], body: body() }); await new Promise((z) => setTimeout(z, S.delay));
+    /* the API refuses a reversal with no reason (lib/books B.reverseEntry: "A reversal needs a reason.", 422) */
+    if (!String(body().reason || '').trim()) return J(r, 422, { error: 'A reversal needs a reason.', message: 'A reversal needs a reason.' });
+    return J(r, 200, { ok: true, entry_id: 'mj10', entry_no: 'MJ/2026-27/000010', posting_date: TODAY, moved: false, reverses: 'MJ/2026-27/000009', items: 0 }); }
+  if (p === '/api/books/daybook') return J(r, 200, { currency: 'INR', from: TODAY, to: TODAY, entries: ENTRIES, count: ENTRIES.length });
+  if (p === '/api/books/dues') return J(r, 200, books.dues([
+    { party_id: 'c1', party_no: 'P-00001', name: 'Ravi Stores', side: 'customer', balance_minor: 300000, oldest_due: '2026-08-01', buckets: { not_due: 0, lt_6m: 300000, m6_1y: 0, y1_2: 0, y2_3: 0, gt_3y: 0 } },
+    { party_id: 's1', party_no: 'P-00003', name: 'Agro Mills', side: 'supplier', balance_minor: -150000, oldest_due: '2026-09-03', buckets: { not_due: -150000, lt_1y: 0, y1_2: 0, y2_3: 0, gt_3y: 0 } }], { asOf: TODAY }));
   if (p === '/api/books/cheques') return J(r, 200, { currency: 'INR', cheques: [] });
   if (p === '/api/books/periods') return J(r, 200, { periods: [] });
   return J(r, 404, { error: 'no stand-in for ' + p });
@@ -143,6 +149,8 @@ async function route(S, r) {
     const p = await ctx.newPage();
     p.on('pageerror', (e) => threw.push(e.message));
     await p.goto(base + '/accounts.html');
+    /* CB Accounts opens on To do (web #41): the Day book, where ＋ Entry lives, is one tap in */
+    await p.waitForSelector('[data-testid="acc-nav-daybook"]', { timeout: 15000 }); await p.click('[data-testid="acc-nav-daybook"]');
     await p.waitForSelector('[data-testid="db-add"]', { timeout: 15000 });
     return { ctx, p };
   }
@@ -321,7 +329,7 @@ async function route(S, r) {
     await t(p, 'confirm').waitFor();
     ok(/Reverse this entry\?/.test(await t(p, 'confirm').innerText()) && S.reverses.length === 0, 'a plain confirm asks first; nothing is posted yet');
     await t(p, 'confirm-ok').click(); await p.waitForTimeout(600);
-    ok(S.reverses.length === 1 && S.reverses[0].id === 'mj9' && /^web-/.test(S.reverses[0].body.client_ref || ''), 'Reverse posts the mirror once, to /entries/mj9/reverse, with a client_ref');
+    ok(S.reverses.length === 1 && S.reverses[0].id === 'mj9' && /^web-/.test(S.reverses[0].body.client_ref || '') && String(S.reverses[0].body.reason || '').length > 3, 'Reverse posts the mirror once, to /entries/mj9/reverse, with a client_ref AND a reason (the API refuses a reversal without one: 422)');
     ok(await p.evaluate(() => /MJ\/2026-27\/000010/.test(document.body.innerText)), 'the new entry number is told');
     await ctx.close();
   }

@@ -17,7 +17,7 @@ const ROOT = path.join(__dirname, '..'), PUB = path.join(ROOT, 'public'), SHOTS 
 const T = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  ok  ' + m); } else { fail++; console.log('  XX  ' + m); } };
-const C = require('./lib/contract.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
+const C = require('./lib/contract.cjs'), books = require('./lib/books-api.cjs');   /* every answer served for a route in the API contract is checked (e2e/fixtures/web-api.contract.json) */
 const J = C.json;
 
 const SEVERAL = [
@@ -52,8 +52,8 @@ const SEVERAL = [
     await ctx.route('**/api/**', (r) => {
       const u = new URL(r.request().url()), p = u.pathname; S.calls.push(r.request().method() + ' ' + p);
       if (p === '/api/entities/me') return J(r, 200, { entity: { display_name: 'Mayur Bhavan', currency_code: 'INR' } });
-      if (p === '/api/books/health') return J(r, 200, { enabled: true, waiting: [] });
-      if (p === '/api/books/todo') return S.status ? J(r, S.status, { error: 'internal detail that must never reach the screen' }) : J(r, 200, S.todo);
+      if (p === '/api/books/health') return J(r, 200, books.health());
+      if (p === '/api/books/todo') return S.status ? J(r, S.status, { error: 'internal detail that must never reach the screen' }) : (S.rawTodo ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(S.todo) }) /* the page's defensive per-item 503 is not an API shape: not held to the contract */ : J(r, 200, S.todo.map((x) => Object.assign({ items: [] }, x))));
       if (p === '/api/books/periods') return J(r, 200, { periods: [] });
       if (p.startsWith('/api/books')) return J(r, 200, {});
       return J(r, 200, {});
@@ -116,7 +116,7 @@ const SEVERAL = [
   /* ── 4 · A 503 ITEM · A 503 ON THE WHOLE CALL ── */
   {
     const off = SEVERAL.slice(0, 1).concat([{ kind: 'year_close_possible', count: 1, status: 503, words: 'internal detail that must never reach the screen', action: { label: 'Close the year', screen: 'year-close', call: 'POST /api/books/year/2025-26/close' } }]);
-    const S = stand(off), { ctx, p } = await open(S);
+    const S = stand(off); S.rawTodo = true; const { ctx, p } = await open(S);
     await p.waitForSelector('[data-testid="todo-list"]', { timeout: 15000 });
     const w = (await p.textContent('[data-testid="todo-words-year_close_possible"]')).trim();
     ok(w === 'Starts after an update' && !/internal/.test(await p.textContent('#bk_body')), 'a 503 item says "Starts after an update" — never the raw message (' + w + ')');
