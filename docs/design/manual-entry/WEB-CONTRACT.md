@@ -1,16 +1,17 @@
 # ＋ Entry — what the page asks of the API (web side, `public/app/cap-entry.js`)
 
-The page holds no rules and computes no money. The stand-in in `e2e/manual-entry.cjs` is the executable form of this file; the API
-(chitbridge-api `cloud/manual-entry-api`) must answer in these shapes, or this page and that branch each get one small adapter.
-**Assumed — not read from the API repo (out of scope for this task). Check against the real routes before merging.**
+The page holds no rules and computes no money. This file is READ FROM THE MERGED API (chitbridge-api #20: `routes/books.js`, `lib/books-manual.js`,
+`tests/books-preview*.test.cjs`); the stand-in in `e2e/manual-entry.cjs` speaks exactly these shapes.
 
 | Call | Page sends | Page reads |
 |---|---|---|
-| `GET /api/books/events` | – | `events[]`: `id`, `group`, `icon`, `label`, `narration` (prefill), `kind` (`'journal'` for the free journal), `route {m,p}` (where Save posts), `fields[]` — each `{key, kind, label?, step?, side?, options?, required?}`; kinds: `party · ledger · bank · asset_class · loan · amount · date · paid_by · doc_no · photo · narration · lines · text · choice`. 403 → "not allowed" card. |
-| `POST /api/books/preview` | `{event, <field keys>…, amount_minor, date, narration, lines?[{code, side:'dr'\|'cr', amount_minor}]}`; for the date check only `{event, date, check:'date'}` | `{currency, voucher{series:'MJ', kind}, narration, lines[{code,name,dr_minor,cr_minor,type:'personal\|real\|nominal',rule,rate?,party_name?}], balanced:true\|false, refusals[{code,message,fix{label,step,focus}}], warnings[…same]}`. With `check:'date'` only `refusals` is read (`PERIOD_LOCKED`). |
-| `POST <event.route.p>` (default `POST /api/books/entries`) | the preview body + `client_ref` (one per sheet, reused on retry) + `attachment{name,type,data}` (data-URL, optional) | `{entry_id, entry_no}` |
+| `GET /api/books/events` | – | `events[]`: `kind`, `words`, `icon` (a name), `band`, `voucher`, `fields[]` (`{key, kind: amount\|date\|text\|lines\|pick, pick: mode\|expense_class\|income_class\|ledger, options?, group?, required}`), `preview`, `post`; an event with `route` / `preview:false` (asset, loan …) is NOT offered on the sheet. `picks{mode[], expense_class[{role,code,name}], income_class[…]}`. |
+| `POST /api/books/preview` | `{event: <kind>, <field keys>…, amount_minor, date, lines?[{code, dr_minor \| cr_minor}]}` | `{ok, voucher{series:'MJ', type}, lines[{code, ledger, dr_minor, cr_minor, type:'personal\|real\|nominal', rule}], balanced, totals, flags[], refusals[] (plain sentences), code}` — nothing is written; a locked month is `code:'PERIOD_LOCKED'`. |
+| `POST /api/books/events` | the preview body + `client_ref` (one per sheet, reused on retry) | `{entry_id, entry_no, voucher}` (owner only; a repeat client_ref answers the first entry) |
 | `POST /api/books/entries/:id/reverse` | `{client_ref}` | `{entry_no}` of the mirror |
-| `GET /api/books/daybook` rows | – | existing; a row offers Reverse when it has `entry_id` and neither `reversed_by` nor `reversal_of` |
+| `GET /api/books/daybook` rows | – | `entry_id`, `entry_no`, `event_type`, `reverses_entry_id`; a row offers Reverse unless it is itself a reversal |
 
-Save is enabled only when `balanced === true` and `refusals` is empty. Parties come from the existing `/dues` read (`BK.dues`), ledgers
-from `/accounts` (grouped by the Ledgers view's own `bkLtModel`), banks from its "Cash & bank" group unless the event lists `options`.
+Save is enabled only when `balanced === true` and `refusals` is empty. The lock check at the date is a preview with what is filled in so far,
+of which only `code === 'PERIOD_LOCKED'` is read. Staff ledgers are the shop's own ledgers (no role) under "Stock & advances"; the server
+still refuses a wrong one in words. Not on this API: attachments, a supplier on credit, a `fix` object on a refusal (the page offers "Change it"
+and, for a locked month, "Pick another date").

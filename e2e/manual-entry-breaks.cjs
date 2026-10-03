@@ -13,17 +13,22 @@ const BREAKS = [
   /* the rest */
   ['Save is on while the server refuses the entry', ENT, `&& !(pv.refusals || []).length && !EN.pvBusy`, `&& !EN.pvBusy`, A],
   ['the page sends a different amount than was typed', ENT, `b.amount_minor = bkToMinor(EN.v.amount);`, `b.amount_minor = bkToMinor(EN.v.amount) + 1;`, A],
-  ['a locked month is not refused at the date', ENT, `EN.dateRef = (r && r.refusals) || [];`, `EN.dateRef = [];`, A],
+  ['a locked month is not refused at the date', ENT, `EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : [];`, `EN.dateRef = [];`, A],
   /* three layers stand in the way of a second post (the page's EN.saving, bkOnce, and api()'s own in-flight lock): the break removes all three */
-  ['a double tap posts twice', ENT, `await bkOnce('entry-save', btn, async function () {\n    EN.saving = true; var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';\n    try {\n      var r = await api(key, { body: body });`, `await (function (k, b, fn) { return fn(); })('entry-save', btn, async function () {\n    var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';\n    try {\n      var r = await api(key, { body: body, params: { n: Math.random() } });`, A],
+  ['a double tap posts twice', ENT, `await bkOnce('entry-save', btn, async function () {\n    EN.saving = true; var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = 'booksEventPost';\n    try {\n      var r = await api(key, { body: body });`, `await (function (k, b, fn) { return fn(); })('entry-save', btn, async function () {\n    var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;\n    var key = 'booksEventPost';\n    try {\n      var r = await api(key, { body: body, params: { n: Math.random() } });`, A],
   ['a retry loses its client_ref', ENT, `body.client_ref = EN.ref;`, `body.client_ref = bkRef();`, A],
-  ['Save posts to the wrong route', ENT, `var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';`, `var key = 'booksEntrySave';`, A],
+  ['Save posts to the wrong route', ENT, `var key = 'booksEventPost';`, `var key = 'booksPreview';`, A],
   ['Reverse posts without asking first', ENT, `if (!id) return;\n  confirmAsk(`, `if (!id) return;\n  (function (a, b, c, go) { go(); })(`, A],
   ['a line does not name the rule that placed it', ENT, `enE(l.rule || '')`, `enE('')`, A],
   ['a line does not name its type', ENT, `enE(tx(l.type || ''))`, `enE('')`, A],
   ['a warning has no fix button', ENT, `'<button type="button" data-testid="en-wfix-'`, `'<i hidden data-testid="en-wfix-'`, A],
   ['the word accounting reaches the screen', ENT, `'Which lines?'`, `'Which accounting lines?'`, A],
   ['the journal sheet is wider than the phone', ENT, `grid-template-columns:minmax(0,1fr) 84px minmax(0,96px) 44px`, `grid-template-columns:260px 84px minmax(0,96px) 44px`, A],
+  /* the real shapes (api #20) */
+  ['the journal sends lines the server does not read', ENT, `o[l.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkToMinor(l.amt);`, `o.amount_minor = bkToMinor(l.amt); o.side = l.side;`, A],
+  ['the voucher is shown without its kind', ENT, `kind: r.voucher.type }`, `kind: '' }`, A],
+  ['an event with a route of its own is offered on the sheet', ENT, `e.preview !== false && !e.route`, `true`, A],
+  ['the page reads the server\'s refusals as nothing', ENT, `refusals: enWords(r.refusals, r.code),`, `refusals: [],`, A],
   ['an alert() sneaks in', ENT, `function enClose() {`, `function enClose() { alert('hi');`, A],
 ];
 const ONLY = process.env.BREAK_ONLY || '';

@@ -735,7 +735,7 @@ function bkDvMount(el) {
     ],
     csv: function (rows) { bkDvDownload(rows); },
     /* Reverse this entry: insert-only — adds the mirror entry, never edits (cap-entry.js enReverse asks first) */
-    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'db-reverse', when: function (e) { return !!e.entry_id && !e.reversed_by && !e.reversal_of; }, run: function (e) { enReverse(e.entry_id, e.entry_no); } }] : undefined,
+    actions: typeof enReverse === 'function' ? [{ id: 'reverse', icon: '↩', label: 'Reverse this entry', tid: 'db-reverse', when: function (e) { return !!e.entry_id && !e.reversed_by && !e.reverses_entry_id && e.event_type !== 'reversal'; }, run: function (e) { enReverse(e.entry_id, e.entry_no); } }] : undefined,
     tids: { expand: 'db-expand-all', collapse: 'db-collapse-all', csv: 'db-csv', count: 'db-count' },
     empty: { title: tx('Nothing in these dates') },
   });

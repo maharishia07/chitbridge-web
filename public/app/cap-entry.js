@@ -1,5 +1,5 @@
 /* cap-entry.js — ＋ ENTRY on the Day book: what happened → with whom / what → how much, when, on what paper → check and save.
- * Contract: docs/design/manual-entry/REQUIREMENT.md. Loaded by accounts.html after cap-books.js; the Day book offers the ＋ only when
+ * Contract: docs/design/manual-entry/REQUIREMENT.md; the server's shapes: chitbridge-api routes/books.js (GET /events · POST /preview · POST /events · POST /entries/:id/reverse) and lib/books-manual.js. Loaded by accounts.html after cap-books.js; the Day book offers the ＋ only when
  * enOpen exists (cap-books.js bkDvHead), and offers Reverse on a row through CBList's own `actions`.
  *
  * ⭐ THE PAGE HOLDS NO RULES AND COMPUTES NO MONEY. The events, their words, icons, fields and save routes are GET /api/books/events;
@@ -15,13 +15,18 @@
 if (typeof EP !== 'undefined') { Object.assign(EP, {
   booksEvents:    { m: 'GET',  p: '/api/books/events' },
   booksPreview:   { m: 'POST', p: '/api/books/preview' },
-  booksEntrySave: { m: 'POST', p: '/api/books/entries' },            /* the default save route; an event names its own (ev.route) */
+  booksEventPost: { m: 'POST', p: '/api/books/events' },             /* ONE save door for every event (the server's own composition); `event` names which */
   booksReverse:   { m: 'POST', p: '/api/books/entries/:id/reverse' },
 }); }
 
+/* the server names a band, an icon and a pick; the page only gives them words and a glyph (display, never a rule) */
+var EN_BAND = { paid: 'Paid', received: 'Received', owner: 'The owner', staff: 'Staff', money: 'Money moves', adjust: 'Your own journal' };
+var EN_ICON = { receipt: '🧾', coins: '🪙', 'wallet-in': '👛', 'wallet-out': '💸', 'person-out': '🧑', 'person-in': '🧑', swap: '🔁', pen: '✍️' };
+var EN_MODE = { cash: 'Cash', bank: 'Bank', upi: 'UPI', card: 'Card' };
+var EN_LABEL = { class: 'What for', paid_from: 'Paid from', into: 'Came into', from: 'Taken from', to: 'Put into', ledger: 'Which staff ledger', amount: 'How much', date: 'Date', narration: 'Note' };
 var EN = { step: 1, events: null, ev: null, v: {}, lines: [], pv: null, pvBusy: false, dateRef: null, ref: null, saved: null, err: null, denied: false, photo: null, rev: {}, seq: 0 };
 /* the four kinds of "who / what" field live on step 2; the rest are step 3 — a layout choice, never a rule of the books. A field may name its own step. */
-var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, text: 1, lines: 1, choice: 1 };
+var EN_STEP2 = { party: 1, ledger: 1, bank: 1, asset_class: 1, loan: 1, lines: 1, choice: 1 };
 
 function enE(v) { return typeof esc === 'function' ? esc(v) : String(v == null ? '' : v).replace(/[<>"&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c]; }); }
 function enCss() {
@@ -72,18 +77,24 @@ async function enOpen() {
   if (!d.open) { if (d.showModal) d.showModal(); else d.setAttribute('open', ''); }
   try {
     var rr = await Promise.all([api('booksEvents'), api('booksAccounts').catch(function () { return { accounts: [] }; }), typeof booksDuesLoad === 'function' ? booksDuesLoad(false).catch(function () {}) : null]);
-    EN.events = (rr[0] && rr[0].events) || []; EN.accounts = (rr[1] && rr[1].accounts) || [];
-    EN.events.forEach(function (ev) { if (ev.route && ev.route.p) EP['booksEntry:' + ev.id] = { m: ev.route.m || 'POST', p: ev.route.p }; });
+    EN.picks = (rr[0] && rr[0].picks) || {}; EN.accounts = (rr[1] && rr[1].accounts) || [];
+    /* the events that POST /events can preview and save; the ones with a route of their own (asset, loan …) are not offered on this sheet */
+    EN.events = ((rr[0] && rr[0].events) || []).filter(function (e) { return e.preview !== false && !e.route; }).map(enNorm);
   } catch (e) { if (e && (e.status === 403 || /not allowed|forbidden|403/i.test(String(e.message)))) EN.denied = true; else EN.err = bkWhy(e, tx('Could not be read')); }
   enPaint();
 }
+
+/** the server's event → the page's: id = kind, label = words, group = its band's words, icon = a glyph for the server's icon name */
+function enNorm(e) { return Object.assign({}, e, { id: e.kind, label: e.words || e.label || e.kind, group: EN_BAND[e.band] || e.group || '', icon: EN_ICON[e.icon] || e.icon || '＋', fields: e.fields || [] }); }
+/** a field's kind as the page lays it out: pick → ledger / mode / class by what the server says it picks */
+function enKind(f) { return f.kind === 'pick' ? (f.pick === 'ledger' ? 'ledger' : 'pick') : f.kind; }
 
 /* ── paint ── */
 function enSteps() { return EN.ev && enFields(2).length === 0 ? [1, 3, 4] : [1, 2, 3, 4]; }
 function enFields(step) {
   if (!EN.ev) return [];
   return (EN.ev.fields || []).map(function (f) { return typeof f === 'string' ? { key: f, kind: f } : f; }).filter(function (f) {
-    return (f.step ? Number(f.step) : (EN_STEP2[f.kind] ? 2 : 3)) === step;
+    return (f.step ? Number(f.step) : (EN_STEP2[enKind(f)] || (f.kind === 'pick' && f.pick !== 'mode') ? 2 : 3)) === step;
   });
 }
 function enStepWord(n) { return { 1: 'What happened?', 2: EN.ev && EN.ev.kind === 'journal' ? 'Which lines?' : 'With whom / what?', 3: EN.ev && EN.ev.kind === 'journal' ? 'When, on what paper?' : 'How much, when, on what paper?', 4: 'Check and save' }[n]; }
@@ -126,22 +137,22 @@ function enGridHTML() {
   }).join('');
 }
 /* the free journal is the one tile the page may supply itself when the server's list has none: its fields are the CA's own (lines, date, paper, note) */
-function enJournalEv() { return { id: 'journal', kind: 'journal', icon: '✍️', label: 'Write a journal', fields: [{ key: 'lines', kind: 'lines' }, { key: 'date', kind: 'date' }, { key: 'doc_no', kind: 'doc_no' }, { key: 'photo', kind: 'photo' }, { key: 'narration', kind: 'narration' }] }; }
+function enJournalEv() { return { id: 'journal', kind: 'journal', icon: '✍️', label: 'Write a journal', fields: [{ key: 'lines', kind: 'lines', required: true }, { key: 'narration', kind: 'text', required: true }, { key: 'date', kind: 'date' }] }; }
 function enPick(id) {
   var ev = EN.events.filter(function (e) { return e.id === id; })[0];
   if (!ev && id === 'journal') ev = enJournalEv();
   if (!ev) return;
   EN.ev = ev; EN.v = { date: bkToday() }; EN.pv = null; EN.dateRef = null; EN.photo = null;
-  if (ev.narration) EN.v.narration = ev.narration;
   if (ev.kind === 'journal') EN.lines = [{ code: '', side: 'dr', amt: '' }, { code: '', side: 'cr', amt: '' }];
-  EN.step = enSteps()[1]; enPaint(); enCheckDate();
+  EN.step = enSteps()[1]; enPaint();
 }
 function enBack() { var o = enSteps(), i = o.indexOf(EN.step); EN.step = i > 0 ? o[i - 1] : 1; EN.pv = null; enPaint(); }
 function enNext() { var o = enSteps(), i = o.indexOf(EN.step); if (!enStepReady(EN.step) || i < 0) return; EN.step = o[i + 1]; enPaint(); if (EN.step === 4) enPreview(); }
 
 /* ── the fields ── */
 function enOptions(f) {
-  if (f.options && f.options.length) return f.options.map(function (o) { return typeof o === 'object' ? o : { v: o, l: o }; }).map(function (o) { return { v: o.v != null ? o.v : o.code, l: o.l || o.label || o.name || o.v }; });
+  if (f.kind === 'pick' && f.pick !== 'ledger' && !(f.options && f.options.length)) return ((EN.picks || {})[f.pick] || []).map(function (o) { return { v: o.role || o.code, l: o.name }; });
+  if (f.options && f.options.length) return f.options.map(function (o) { return typeof o === 'object' ? o : { v: o, l: tx(EN_MODE[o] || o) }; }).map(function (o) { return { v: o.v != null ? o.v : o.code, l: o.l || o.label || o.name || o.v }; });
   if (f.kind === 'party') {
     /* the one /dues read the whole page shares (cap-books.js booksDuesLoad → BK.dues, party_id → party) */
     var ps = Object.keys(BK.dues || {}).map(function (k) { return BK.dues[k]; });
@@ -149,23 +160,27 @@ function enOptions(f) {
   }
   return [];
 }
+/** a ledger the shop added itself (the chart carries no role on it) — the server still refuses one outside Loans and advances, in words */
+function enShopLedger(code) { var a = (EN.accounts || []).filter(function (x) { return String(x.code) === String(code); })[0]; return !!a && !a.role; }
 function enLedgerSelect(id, cur, onch, onlyGroup) {
   var bands = bkLtModel(EN.accounts || []), h = '<option value="">' + enE(tx('Choose…')) + '</option>';
   bands.forEach(function (b) {
-    var gs = b.groups.filter(function (g) { return !onlyGroup || g.title === onlyGroup; }); var inner = '';
-    gs.forEach(function (g) { g.accts.forEach(function (a) { inner += '<option value="' + enE(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + enE(a.code + ' · ' + a.name) + '</option>'; }); });
+    var gs = b.groups.filter(function (g) { return !onlyGroup || g.title === onlyGroup; }); var inner = '', own = onlyGroup === 'Stock & advances';
+    gs.forEach(function (g) { g.accts.forEach(function (a) { if (own && !enShopLedger(a.code)) return; inner += '<option value="' + enE(a.code) + '"' + (a.code === cur ? ' selected' : '') + '>' + enE(a.code + ' · ' + a.name) + '</option>'; }); });
     if (inner) h += '<optgroup label="' + enE(tx(b.title)) + '">' + inner + '</optgroup>';
   });
   return '<select id="' + id + '" onchange="' + onch + '">' + h + '</select>';
 }
 function enFieldHTML(f) {
-  var k = f.key, v = EN.v[k] == null ? '' : EN.v[k], lab = tx(f.label || ({ party: 'Who', ledger: 'Which ledger', bank: 'Which bank', asset_class: 'What kind', loan: 'Which loan', amount: 'How much', date: 'Date', paid_by: 'Paid by', doc_no: 'Bill / receipt no.', photo: 'Photo of the paper', narration: 'Note', text: k })[f.kind] || k), tid = 'en-f-' + k;
+  var k = f.key, v = EN.v[k] == null ? '' : EN.v[k], lab = tx(f.label || EN_LABEL[k] || ({ party: 'Who', ledger: 'Which ledger', bank: 'Which bank', asset_class: 'What kind', loan: 'Which loan', amount: 'How much', date: 'Date', paid_by: 'Paid by', doc_no: 'Bill / receipt no.', photo: 'Photo of the paper', narration: 'Note', text: k })[f.kind] || k), tid = 'en-f-' + k;
   var wrap = function (inner) { return '<label class="en-f"><span>' + enE(lab) + '</span>' + inner + '</label>'; };
   var on = 'enSet(\'' + enE(k) + '\',this.value)';
+  if (f.kind === 'pick' && f.pick === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on, 'Stock & advances').replace('<select ', '<select data-testid="' + tid + '" ')  + '</label>';
+  if (f.kind === 'pick') return wrap(enSelect(tid, enOptions(f), v, on));
   if (f.kind === 'ledger') return '<label class="en-f"><span>' + enE(lab) + '</span>' + enLedgerSelect(tid, v, on).replace('<select ', '<select data-testid="' + tid + '" ') + '</label>';
   if (f.kind === 'bank') return '<label class="en-f"><span>' + enE(lab) + '</span>' + (enOptions(f).length ? enSelect(tid, enOptions(f), v, on) : enLedgerSelect(tid, v, on, 'Cash & bank').replace('<select ', '<select data-testid="' + tid + '" ')) + '</label>';
   if (f.kind === 'party' || f.kind === 'asset_class' || f.kind === 'loan' || f.kind === 'choice') { var o = enOptions(f); return o.length ? wrap(enSelect(tid, o, v, on)) : wrap('<input data-testid="' + tid + '" value="' + enE(v) + '" oninput="' + on + '">'); }
-  if (f.kind === 'amount') return wrap('<input data-testid="' + tid + '" inputmode="decimal" autocomplete="off" placeholder="0.00" value="' + enE(v) + '" oninput="' + on + '">');
+  if (f.kind === 'amount') return wrap('<input data-testid="' + tid + '" inputmode="decimal" autocomplete="off" placeholder="0.00" value="' + enE(v) + '" oninput="' + on + '" onchange="enCheckDate()">');
   if (f.kind === 'date') return wrap('<input data-testid="' + tid + '" type="date" value="' + enE(v) + '" onchange="enSet(\'date\',this.value);enCheckDate()">') + '<div id="en_dateref">' + enRefusalHTML(EN.dateRef) + '</div>';
   if (f.kind === 'paid_by') {
     var m = (f.options && f.options.length ? enOptions(f) : [{ v: 'cash', l: tx('Cash') }, { v: 'bank', l: tx('Bank') }, { v: 'upi', l: tx('UPI') }, { v: 'cheque', l: tx('Cheque') }]);
@@ -181,10 +196,10 @@ function enSet(k, v) { EN.v[k] = v; EN.pv = null; var b = document.getElementByI
 function enPaintKeep() { enPaint(); }
 function enStepReady(step) {
   return enFields(step).every(function (f) {
+    if (f.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
     if (f.required === false || f.kind === 'photo' || f.kind === 'narration' || f.kind === 'doc_no') return !(f.kind === 'doc_no' && f.required);
     if (f.kind === 'lines') return EN.lines.length >= 2 && EN.lines.every(function (l) { return l.code && String(l.amt).trim() !== ''; });
     if (f.kind === 'amount') return String(EN.v[f.key] || '').trim() !== '';
-    if (f.kind === 'date') return !!EN.v.date && !(EN.dateRef && EN.dateRef.length);
     if (f.kind === 'paid_by') return !!EN.v.paid_by && (EN.v.paid_by !== 'cheque' || !!EN.v.cheque_no);
     return String(EN.v[f.key] == null ? '' : EN.v[f.key]).trim() !== '';
   });
@@ -212,15 +227,28 @@ function enLineDel(i) { if (EN.lines.length > 2) EN.lines.splice(i, 1); enPaint(
 /* the app's api() refuses a second POST to the same route while one is out, so the page asks one preview at a time and the newest answer wins (EN.seq) */
 function enAsk(body) { var go = function () { return api('booksPreview', { body: body }); }; var p = (EN.q || Promise.resolve()).then(go, go); EN.q = p.catch(function () {}); return p; }
 function enBody() {
-  var b = { event: EN.ev.id };
+  var b = { event: EN.ev.kind || EN.ev.id };
   Object.keys(EN.v).forEach(function (k) { if (EN.v[k] !== '' && EN.v[k] != null) b[k] = EN.v[k]; });
   if (EN.v.amount != null && EN.v.amount !== '') { b.amount_minor = bkToMinor(EN.v.amount); delete b.amount; }
-  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (l) { return { code: l.code, side: l.side, amount_minor: bkToMinor(l.amt) }; });
+  if (EN.ev.kind === 'journal') b.lines = EN.lines.map(function (l) { var o = { code: l.code }; o[l.side === 'cr' ? 'cr_minor' : 'dr_minor'] = bkToMinor(l.amt); return o; });
   return b;
+}
+/** the server's refusals are plain sentences (and `code` for the first); give each a button back to the form. Nothing here decides anything. */
+function enWords(list, code, dateStep) {
+  return (list || []).map(function (m, i) {
+    var c = i === 0 && code ? code : null, msg = typeof m === 'object' && m ? m.message : m;
+    return { code: c || (typeof m === 'object' && m && m.code) || 'R' + i, message: String(msg), fix: c === 'PERIOD_LOCKED' ? { label: tx('Pick another date'), step: dateStep || 3, focus: 'date' } : { label: tx('Change it'), step: enSteps()[1] } };
+  });
+}
+function enSeen(r) {
+  r = r || {};
+  return { balanced: r.balanced === true, voucher: r.voucher ? { series: r.voucher.series, kind: r.voucher.type } : null, currency: r.currency, narration: r.narration,
+    lines: (r.lines || []).map(function (l) { return Object.assign({}, l, { name: l.ledger || l.name }); }),
+    refusals: enWords(r.refusals, r.code), warnings: enWords(r.flags || r.warnings, null).map(function (w, i) { return Object.assign(w, { code: 'FLAG' + i }); }) };
 }
 async function enPreview() {
   var seq = ++EN.seq; EN.pvBusy = true; EN.err = null; enPaint2();
-  try { var r = await enAsk(enBody()); if (seq !== EN.seq) return; EN.pv = r || {}; }
+  try { var r = await enAsk(enBody()); if (seq !== EN.seq) return; EN.pv = enSeen(r); }
   catch (e) { if (seq !== EN.seq) return; EN.pv = { balanced: false, refusals: [{ code: 'READ', message: bkWhy(e, tx('Could not check this entry')), fix: { label: tx('Try again'), retry: true } }], lines: [] }; }
   EN.pvBusy = false; enPaint2();
 }
@@ -229,7 +257,8 @@ function enPaint2() { var b = document.getElementById('en_body'); if (!b) return
 async function enCheckDate() {
   var seq = ++EN.seq, d = EN.v.date; EN.dateRef = null;
   if (!EN.ev || !d) return;
-  try { var r = await enAsk({ event: EN.ev.id, date: d, check: 'date' }); if (seq !== EN.seq) return; EN.dateRef = (r && r.refusals) || []; }
+  /* the server has no date-only question: it is asked with what is filled in so far, and only its "month is locked" answer is read here */
+  try { var r = await enAsk(enBody()); if (seq !== EN.seq) return; EN.dateRef = r && r.code === 'PERIOD_LOCKED' ? enWords(r.refusals, r.code).slice(0, 1) : []; }
   catch (e) { if (seq !== EN.seq) return; EN.dateRef = [{ code: 'READ', message: bkWhy(e, tx('Could not check this date')), fix: { label: tx('Try again'), retry: true } }]; }
   var el = document.getElementById('en_dateref'); if (el) el.innerHTML = enRefusalHTML(EN.dateRef); var n = document.getElementById('en_next'); if (n) n.disabled = !enStepReady(EN.step);
 }
@@ -270,7 +299,7 @@ async function enSave(btn) {
   if (!enCanSave() || !EN.ev) return;
   await bkOnce('entry-save', btn, async function () {
     EN.saving = true; var body = enBody(); body.client_ref = EN.ref; if (EN.photo) body.attachment = EN.photo;
-    var key = EP['booksEntry:' + EN.ev.id] ? 'booksEntry:' + EN.ev.id : 'booksEntrySave';
+    var key = 'booksEventPost';
     try {
       var r = await api(key, { body: body });
       EN.saved = r || {}; EN.saving = false; EN.ref = null;
