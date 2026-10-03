@@ -47,7 +47,7 @@ const BREAKS = [
   ['LP the chosen ledger is a solid block', CAPB, `background:color-mix(in srgb,var(--blue-tint-bg,var(--blue-t,#E4EEFA)) 60%,transparent);`, `background:var(--blue-2,#174A87);`, A],
   ['LP every node is a tab stop', CAPB, `tabindex="-1" data-testid="' + esc(tid) + '"`, `tabindex="0" data-testid="' + esc(tid) + '"`, A],
   ['LP the arrow keys do nothing in the tree', CAPB, `if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); var nx =`, `if (false) { ev.preventDefault(); var nx =`, A],
-  ['LP the find box marks nothing', CAPB, `return esc(s.slice(0, i)) + '<mark>'`, `return esc(s) + '<mark>'`, A],
+  ['LP the find box marks nothing', CAPB, `var i = String(s).toLowerCase().indexOf(q.toLowerCase()); if (i < 0) return esc(s);`, `var i = String(s).toLowerCase().indexOf(q.toLowerCase()); return esc(s);`, A],
   ['LP the pane cannot be resized', CAPB, `function bkLtWidth(w, quiet) {\n`, `function bkLtWidth(w, quiet) {\n  return;\n`, A],
   ['LP a banner row sits above the list (the head grows past 20%)', CAPB, `return '<div id="lg_out" data-testid="lg_out"></div>';`, `return '<div style="height:90px">banner</div><div id="lg_out" data-testid="lg_out"></div>';`, A],
   ['LP the figures are said twice', CAPB, `    h.chips.push({ tid: 'lg-sum', text: f.text });`, `    h.chips.push({ tid: 'lg-sum', text: f.text }); h.chips.push({ tid: 'lg-sum', text: f.text });`, A],
